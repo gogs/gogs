@@ -83,11 +83,11 @@ func retrieveFeeds(ctx *middleware.Context, ctxUserID, userID, offset int64, isP
 }
 
 func Dashboard(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("dashboard")
+  ctxUser := getDashboardContextUser(ctx)
+	ctx.Data["Title"] = ctxUser.DisplayName() + " " + ctx.Tr("dashboard")
 	ctx.Data["PageIsDashboard"] = true
 	ctx.Data["PageIsNews"] = true
 
-	ctxUser := getDashboardContextUser(ctx)
 	if ctx.Written() {
 		return
 	}
