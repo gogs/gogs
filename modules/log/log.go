@@ -26,7 +26,7 @@ func NewLogger(bufLen int64, mode, config string) {
 	for _, l := range loggers {
 		if l.adapter == mode {
 			isExist = true
-			l = logger
+			logger = l
 		}
 	}
 	if !isExist {
