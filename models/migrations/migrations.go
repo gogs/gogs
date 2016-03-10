@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
@@ -65,6 +66,7 @@ var migrations = []Migration{
 	NewMigration("rename pull request fields", renamePullRequestFields),                // V8 -> V9:v0.6.16
 	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                 // V9 -> V10:v0.6.20
 	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt), // V10 -> V11:v0.8.5
+	NewMigration("convert date to unix timestamp", convertDateToUnix),                  // V11 -> V12:v0.9.2
 }
 
 // Migrate database to current version
@@ -452,4 +454,222 @@ func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+type TAction struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+}
+
+func (t *TAction) TableName() string { return "action" }
+
+type TNotice struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+}
+
+func (t *TNotice) TableName() string { return "notice" }
+
+type TComment struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+}
+
+func (t *TComment) TableName() string { return "comment" }
+
+type TIssue struct {
+	ID           int64 `xorm:"pk autoincr"`
+	DeadlineUnix int64
+	CreatedUnix  int64
+	UpdatedUnix  int64
+}
+
+func (t *TIssue) TableName() string { return "issue" }
+
+type TMilestone struct {
+	ID             int64 `xorm:"pk autoincr"`
+	DeadlineUnix   int64
+	ClosedDateUnix int64
+}
+
+func (t *TMilestone) TableName() string { return "milestone" }
+
+type TAttachment struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+}
+
+func (t *TAttachment) TableName() string { return "attachment" }
+
+type TLoginSource struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TLoginSource) TableName() string { return "login_source" }
+
+type TPull struct {
+	ID         int64 `xorm:"pk autoincr"`
+	MergedUnix int64
+}
+
+func (t *TPull) TableName() string { return "pull_request" }
+
+type TRelease struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+}
+
+func (t *TRelease) TableName() string { return "release" }
+
+type TRepo struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TRepo) TableName() string { return "repository" }
+
+type TMirror struct {
+	ID             int64 `xorm:"pk autoincr"`
+	UpdatedUnix    int64
+	NextUpdateUnix int64
+}
+
+func (t *TMirror) TableName() string { return "mirror" }
+
+type TPublicKey struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TPublicKey) TableName() string { return "public_key" }
+
+type TDeployKey struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TDeployKey) TableName() string { return "deploy_key" }
+
+type TAccessToken struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TAccessToken) TableName() string { return "access_token" }
+
+type TUser struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TUser) TableName() string { return "user" }
+
+type TWebhook struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+	UpdatedUnix int64
+}
+
+func (t *TWebhook) TableName() string { return "webhook" }
+
+func convertDateToUnix(x *xorm.Engine) (err error) {
+	type Bean struct {
+		ID         int64 `xorm:"pk autoincr"`
+		Created    time.Time
+		Updated    time.Time
+		Merged     time.Time
+		Deadline   time.Time
+		ClosedDate time.Time
+		NextUpdate time.Time
+	}
+
+	var tables = []struct {
+		name string
+		cols []string
+		bean interface{}
+	}{
+		{"action", []string{"created"}, new(TAction)},
+		{"notice", []string{"created"}, new(TNotice)},
+		{"comment", []string{"created"}, new(TComment)},
+		{"issue", []string{"deadline", "created", "updated"}, new(TIssue)},
+		{"milestone", []string{"deadline", "closed_date"}, new(TMilestone)},
+		{"attachment", []string{"created"}, new(TAttachment)},
+		{"login_source", []string{"created", "updated"}, new(TLoginSource)},
+		{"pull_request", []string{"merged"}, new(TPull)},
+		{"release", []string{"created"}, new(TRelease)},
+		{"repository", []string{"created", "updated"}, new(TRepo)},
+		{"mirror", []string{"updated", "next_update"}, new(TMirror)},
+		{"public_key", []string{"created", "updated"}, new(TPublicKey)},
+		{"deploy_key", []string{"created", "updated"}, new(TDeployKey)},
+		{"access_token", []string{"created", "updated"}, new(TAccessToken)},
+		{"user", []string{"created", "updated"}, new(TUser)},
+		{"webhook", []string{"created", "updated"}, new(TWebhook)},
+	}
+
+	for _, table := range tables {
+		log.Info("Converting table: %s", table.name)
+		if err = x.Sync2(table.bean); err != nil {
+			return fmt.Errorf("Sync [table: %s]: %v", table.name, err)
+		}
+
+		offset := 0
+		for {
+			beans := make([]*Bean, 0, 100)
+			if err = x.Sql(fmt.Sprintf("SELECT * FROM `%s` ORDER BY id ASC LIMIT 100 OFFSET %d",
+				table.name, offset)).Find(&beans); err != nil {
+				return fmt.Errorf("select beans [table: %s, offset: %d]: %v", table.name, offset, err)
+			}
+			log.Trace("Table [%s]: offset: %d, beans: %d", table.name, offset, len(beans))
+			if len(beans) == 0 {
+				break
+			}
+			offset += 100
+
+			baseSQL := "UPDATE `" + table.name + "` SET "
+			for _, bean := range beans {
+				valSQLs := make([]string, 0, len(table.cols))
+				for _, col := range table.cols {
+					fieldSQL := ""
+					fieldSQL += col + "_unix = "
+
+					switch col {
+					case "deadline":
+						if bean.Deadline.IsZero() {
+							continue
+						}
+						fieldSQL += com.ToStr(bean.Deadline.UTC().Unix())
+					case "created":
+						fieldSQL += com.ToStr(bean.Created.UTC().Unix())
+					case "updated":
+						fieldSQL += com.ToStr(bean.Updated.UTC().Unix())
+					case "closed_date":
+						fieldSQL += com.ToStr(bean.ClosedDate.UTC().Unix())
+					case "merged":
+						fieldSQL += com.ToStr(bean.Merged.UTC().Unix())
+					case "next_update":
+						fieldSQL += com.ToStr(bean.NextUpdate.UTC().Unix())
+					}
+
+					valSQLs = append(valSQLs, fieldSQL)
+				}
+
+				if len(valSQLs) == 0 {
+					continue
+				}
+
+				if _, err = x.Exec(baseSQL + strings.Join(valSQLs, ",") + " WHERE id = " + com.ToStr(bean.ID)); err != nil {
+					return fmt.Errorf("update bean [table: %s, id: %d]: %v", table.name, bean.ID, err)
+				}
+			}
+		}
+	}
+
+	return nil
 }

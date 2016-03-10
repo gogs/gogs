@@ -52,12 +52,26 @@ type Issue struct {
 	RenderedContent string `xorm:"-"`
 	Priority        int
 	NumComments     int
-	Deadline        time.Time
-	Created         time.Time `xorm:"CREATED"`
-	Updated         time.Time `xorm:"UPDATED"`
+
+	Deadline     time.Time `xorm:"-"`
+	DeadlineUnix int64
+	Created      time.Time `xorm:"-"`
+	CreatedUnix  int64
+	Updated      time.Time `xorm:"-"`
+	UpdatedUnix  int64
 
 	Attachments []*Attachment `xorm:"-"`
 	Comments    []*Comment    `xorm:"-"`
+}
+
+func (i *Issue) BeforeInsert() {
+	i.CreatedUnix = time.Now().UTC().Unix()
+	i.UpdatedUnix = i.CreatedUnix
+}
+
+func (i *Issue) BeforeUpdate() {
+	i.UpdatedUnix = time.Now().UTC().Unix()
+	i.DeadlineUnix = i.Deadline.UTC().Unix()
 }
 
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
@@ -92,8 +106,12 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
-	case "created":
-		i.Created = regulateTimeZone(i.Created)
+	case "deadline_unix":
+		i.Deadline = time.Unix(i.DeadlineUnix, 0).Local()
+	case "created_unix":
+		i.Created = time.Unix(i.CreatedUnix, 0).Local()
+	case "updated_unix":
+		i.Updated = time.Unix(i.UpdatedUnix, 0).Local()
 	}
 }
 
@@ -951,12 +969,19 @@ type Milestone struct {
 	IsClosed        bool
 	NumIssues       int
 	NumClosedIssues int
-	NumOpenIssues   int `xorm:"-"`
-	Completeness    int // Percentage(1-100).
-	Deadline        time.Time
-	DeadlineString  string `xorm:"-"`
-	IsOverDue       bool   `xorm:"-"`
-	ClosedDate      time.Time
+	NumOpenIssues   int  `xorm:"-"`
+	Completeness    int  // Percentage(1-100).
+	IsOverDue       bool `xorm:"-"`
+
+	DeadlineString string    `xorm:"-"`
+	Deadline       time.Time `xorm:"-"`
+	DeadlineUnix   int64
+	ClosedDate     time.Time `xorm:"-"`
+	ClosedDateUnix int64
+}
+
+func (m *Milestone) BeforeInsert() {
+	m.DeadlineUnix = m.Deadline.UTC().Unix()
 }
 
 func (m *Milestone) BeforeUpdate() {
@@ -965,19 +990,25 @@ func (m *Milestone) BeforeUpdate() {
 	} else {
 		m.Completeness = 0
 	}
+
+	m.DeadlineUnix = m.Deadline.UTC().Unix()
+	m.ClosedDateUnix = m.ClosedDate.UTC().Unix()
 }
 
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
-	if colName == "deadline" {
+	switch colName {
+	case "deadline_unix":
+		m.Deadline = time.Unix(m.DeadlineUnix, 0).Local()
 		if m.Deadline.Year() == 9999 {
 			return
 		}
-		m.Deadline = regulateTimeZone(m.Deadline)
 
 		m.DeadlineString = m.Deadline.Format("2006-01-02")
-		if time.Now().After(m.Deadline) {
+		if time.Now().Local().After(m.Deadline) {
 			m.IsOverDue = true
 		}
+	case "closed_date_unix":
+		m.ClosedDate = time.Unix(m.ClosedDateUnix, 0).Local()
 	}
 }
 
@@ -1252,7 +1283,20 @@ type Attachment struct {
 	CommentID int64
 	ReleaseID int64 `xorm:"INDEX"`
 	Name      string
-	Created   time.Time `xorm:"CREATED"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+}
+
+func (a *Attachment) BeforeInsert() {
+	a.CreatedUnix = time.Now().UTC().Unix()
+}
+
+func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created_unix":
+		a.Created = time.Unix(a.CreatedUnix, 0).Local()
+	}
 }
 
 // AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.

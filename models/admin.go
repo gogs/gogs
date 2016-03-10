@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -29,7 +30,19 @@ type Notice struct {
 	ID          int64 `xorm:"pk autoincr"`
 	Type        NoticeType
 	Description string    `xorm:"TEXT"`
-	Created     time.Time `xorm:"CREATED"`
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+}
+
+func (n *Notice) BeforeInsert() {
+	n.CreatedUnix = time.Now().UTC().Unix()
+}
+
+func (n *Notice) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created_unix":
+		n.Created = time.Unix(n.CreatedUnix, 0).Local()
+	}
 }
 
 // TrStr returns a translation format string.
