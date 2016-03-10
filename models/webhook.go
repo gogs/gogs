@@ -94,8 +94,20 @@ type Webhook struct {
 	HookTaskType HookTaskType
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
 	LastStatus   HookStatus // Last delivery status
-	Created      time.Time  `xorm:"CREATED"`
-	Updated      time.Time  `xorm:"UPDATED"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
+}
+
+func (w *Webhook) BeforeInsert() {
+	w.CreatedUnix = time.Now().UTC().Unix()
+	w.UpdatedUnix = w.CreatedUnix
+}
+
+func (w *Webhook) BeforeUpdate() {
+	w.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
@@ -106,8 +118,10 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 			log.Error(3, "Unmarshal[%d]: %v", w.ID, err)
 		}
-	case "created":
-		w.Created = regulateTimeZone(w.Created)
+	case "created_unix":
+		w.Created = time.Unix(w.CreatedUnix, 0).Local()
+	case "updated_unix":
+		w.Updated = time.Unix(w.UpdatedUnix, 0).Local()
 	}
 }
 
