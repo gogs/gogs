@@ -215,7 +215,6 @@ func RepoAssignment(args ...bool) macaron.Handler {
 				}
 			}
 		}
-		fmt.Println(222222, ctx.Repo.PullRequest)
 		ctx.Data["PullRequestCtx"] = ctx.Repo.PullRequest
 
 		if ctx.Query("go-get") == "1" {
