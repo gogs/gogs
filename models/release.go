@@ -131,7 +131,7 @@ func GetReleaseByID(id int64) (*Release, error) {
 
 // GetReleasesByRepoID returns a list of releases of repository.
 func GetReleasesByRepoID(repoID int64) (rels []*Release, err error) {
-	err = x.Desc("created").Find(&rels, Release{RepoID: repoID})
+	err = x.Desc("created_unix").Find(&rels, Release{RepoID: repoID})
 	return rels, err
 }
 
