@@ -441,30 +441,30 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
-	"\/plugins\/highlight-9.1.0\/default.css": {
+	"\/plugins\/highlight-9.2.0\/default.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/highlight-9.1.0\/default.css",
+		"inputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/default.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/plugins\/highlight-9.1.0\/github.css": {
+	"\/plugins\/highlight-9.2.0\/github.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/highlight-9.1.0\/github.css",
+		"inputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/github.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/plugins\/highlight-9.1.0\/highlight.pack.js": {
+	"\/plugins\/highlight-9.2.0\/highlight.pack.js": {
 		"fileType": 64,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/highlight-9.1.0\/highlight.pack.js",
-		"outputAbbreviatedPath": "\/plugins\/highlight-9.1.0\/min\/highlight.pack-min.js",
+		"inputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/highlight.pack.js",
+		"outputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/min\/highlight.pack-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,

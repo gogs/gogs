@@ -1049,11 +1049,16 @@ func CountPublicRepositories() int64 {
 	return countRepositories(false)
 }
 
+func Repositories(page, pageSize int) (_ []*Repository, err error) {
+	repos := make([]*Repository, 0, pageSize)
+	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
+}
+
 // RepositoriesWithUsers returns number of repos in given page.
 func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
-	repos := make([]*Repository, 0, pageSize)
-	if err = x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos); err != nil {
-		return nil, err
+	repos, err := Repositories(page, pageSize)
+	if err != nil {
+		return nil, fmt.Errorf("Repositories: %v", err)
 	}
 
 	for i := range repos {
@@ -1474,9 +1479,9 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories(page int) (repos []*Repository, err error) {
-	return repos, x.Limit(setting.ExplorePagingNum, (page-1)*setting.ExplorePagingNum).
-		Where("is_private=?", false).Limit(setting.ExplorePagingNum).Desc("updated_unix").Find(&repos)
+func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err error) {
+	return repos, x.Limit(pageSize, (page-1)*pageSize).
+		Where("is_private=?", false).Limit(pageSize).Desc("updated_unix").Find(&repos)
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {
@@ -1488,32 +1493,52 @@ func GetRepositoryCount(u *User) (int64, error) {
 	return getRepositoryCount(x, u)
 }
 
-type SearchOption struct {
-	Keyword string
-	Uid     int64
-	Limit   int
-	Private bool
+type SearchRepoOptions struct {
+	Keyword  string
+	OwnerID  int64
+	OrderBy  string
+	Private  bool // Include private repositories in results
+	Page     int
+	PageSize int // Can be smaller than or equal to setting.ExplorePagingNum
 }
 
-// SearchRepositoryByName returns given number of repositories whose name contains keyword.
-func SearchRepositoryByName(opt SearchOption) (repos []*Repository, err error) {
-	if len(opt.Keyword) == 0 {
-		return repos, nil
+// SearchRepositoryByName takes keyword and part of repository name to search,
+// it returns results in given range and number of total results.
+func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int64, _ error) {
+	if len(opts.Keyword) == 0 {
+		return repos, 0, nil
 	}
-	opt.Keyword = strings.ToLower(opt.Keyword)
+	opts.Keyword = strings.ToLower(opts.Keyword)
 
-	repos = make([]*Repository, 0, opt.Limit)
-
-	// Append conditions.
-	sess := x.Limit(opt.Limit)
-	if opt.Uid > 0 {
-		sess.Where("owner_id=?", opt.Uid)
+	if opts.PageSize <= 0 || opts.PageSize > setting.ExplorePagingNum {
+		opts.PageSize = setting.ExplorePagingNum
 	}
-	if !opt.Private {
+	if opts.Page <= 0 {
+		opts.Page = 1
+	}
+
+	repos = make([]*Repository, 0, opts.PageSize)
+
+	// Append conditions
+	sess := x.Where("lower_name like ?", "%"+opts.Keyword+"%")
+	if opts.OwnerID > 0 {
+		sess.And("owner_id = ?", opts.OwnerID)
+	}
+	if !opts.Private {
 		sess.And("is_private=?", false)
 	}
-	sess.And("lower_name like ?", "%"+opt.Keyword+"%").Find(&repos)
-	return repos, err
+	if len(opts.OrderBy) > 0 {
+		sess.OrderBy(opts.OrderBy)
+	}
+
+	var countSess xorm.Session
+	countSess = *sess
+	count, err := countSess.Count(new(Repository))
+	if err != nil {
+		return nil, 0, fmt.Errorf("Count: %v", err)
+	}
+
+	return repos, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
 }
 
 // DeleteRepositoryArchives deletes all repositories' archives.

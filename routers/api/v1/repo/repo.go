@@ -21,21 +21,21 @@ import (
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#search-repositories
 func Search(ctx *context.Context) {
-	opt := models.SearchOption{
-		Keyword: path.Base(ctx.Query("q")),
-		Uid:     com.StrTo(ctx.Query("uid")).MustInt64(),
-		Limit:   com.StrTo(ctx.Query("limit")).MustInt(),
+	opts := &models.SearchRepoOptions{
+		Keyword:  path.Base(ctx.Query("q")),
+		OwnerID:  com.StrTo(ctx.Query("uid")).MustInt64(),
+		PageSize: com.StrTo(ctx.Query("limit")).MustInt(),
 	}
-	if opt.Limit == 0 {
-		opt.Limit = 10
+	if opts.PageSize == 0 {
+		opts.PageSize = 10
 	}
 
 	// Check visibility.
-	if ctx.IsSigned && opt.Uid > 0 {
-		if ctx.User.Id == opt.Uid {
-			opt.Private = true
+	if ctx.IsSigned && opts.OwnerID > 0 {
+		if ctx.User.Id == opts.OwnerID {
+			opts.Private = true
 		} else {
-			u, err := models.GetUserByID(opt.Uid)
+			u, err := models.GetUserByID(opts.OwnerID)
 			if err != nil {
 				ctx.JSON(500, map[string]interface{}{
 					"ok":    false,
@@ -44,13 +44,13 @@ func Search(ctx *context.Context) {
 				return
 			}
 			if u.IsOrganization() && u.IsOwnedBy(ctx.User.Id) {
-				opt.Private = true
+				opts.Private = true
 			}
 			// FIXME: how about collaborators?
 		}
 	}
 
-	repos, err := models.SearchRepositoryByName(opt)
+	repos, _, err := models.SearchRepositoryByName(opts)
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{
 			"ok":    false,
