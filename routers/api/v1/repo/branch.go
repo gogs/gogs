@@ -7,12 +7,12 @@ package repo
 import (
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get-branch
-func GetBranch(ctx *middleware.Context) {
+func GetBranch(ctx *context.Context) {
 	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params(":branchname"))
 	if err != nil {
 		ctx.APIError(500, "GetBranch", err)
@@ -29,7 +29,7 @@ func GetBranch(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-branches
-func ListBranches(ctx *middleware.Context) {
+func ListBranches(ctx *context.Context) {
 	branches, err := ctx.Repo.Repository.GetBranches()
 	if err != nil {
 		ctx.APIError(500, "GetBranches", err)

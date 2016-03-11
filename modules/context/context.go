@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package middleware
+package context
 
 import (
 	"fmt"
@@ -27,14 +27,14 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-type PullRequestContext struct {
+type PullRequest struct {
 	BaseRepo *models.Repository
 	Allowed  bool
 	SameRepo bool
 	HeadInfo string // [<user>:]<branch>
 }
 
-type RepoContext struct {
+type Repository struct {
 	AccessMode   models.AccessMode
 	IsWatching   bool
 	IsViewBranch bool
@@ -54,7 +54,27 @@ type RepoContext struct {
 	CommitsCount int64
 	Mirror       *models.Mirror
 
-	PullRequest *PullRequestContext
+	PullRequest *PullRequest
+}
+
+// IsOwner returns true if current user is the owner of repository.
+func (r *Repository) IsOwner() bool {
+	return r.AccessMode >= models.ACCESS_MODE_OWNER
+}
+
+// IsAdmin returns true if current user has admin or higher access of repository.
+func (r *Repository) IsAdmin() bool {
+	return r.AccessMode >= models.ACCESS_MODE_ADMIN
+}
+
+// IsWriter returns true if current user has write or higher access of repository.
+func (r *Repository) IsWriter() bool {
+	return r.AccessMode >= models.ACCESS_MODE_WRITE
+}
+
+// HasAccess returns true if the current user has at least read access for this repository
+func (r *Repository) HasAccess() bool {
+	return r.AccessMode >= models.ACCESS_MODE_READ
 }
 
 // Context represents context of a request.
@@ -69,7 +89,7 @@ type Context struct {
 	IsSigned    bool
 	IsBasicAuth bool
 
-	Repo *RepoContext
+	Repo *Repository
 
 	Org struct {
 		IsOwner      bool
@@ -81,26 +101,6 @@ type Context struct {
 
 		Team *models.Team
 	}
-}
-
-// IsOwner returns true if current user is the owner of repository.
-func (r *RepoContext) IsOwner() bool {
-	return r.AccessMode >= models.ACCESS_MODE_OWNER
-}
-
-// IsAdmin returns true if current user has admin or higher access of repository.
-func (r *RepoContext) IsAdmin() bool {
-	return r.AccessMode >= models.ACCESS_MODE_ADMIN
-}
-
-// IsWriter returns true if current user has write or higher access of repository.
-func (r *RepoContext) IsWriter() bool {
-	return r.AccessMode >= models.ACCESS_MODE_WRITE
-}
-
-// HasAccess returns true if the current user has at least read access for this repository
-func (r *RepoContext) HasAccess() bool {
-	return r.AccessMode >= models.ACCESS_MODE_READ
 }
 
 // HasError returns true if error occurs in form validation.
@@ -220,8 +220,8 @@ func Contexter() macaron.Handler {
 			csrf:    x,
 			Flash:   f,
 			Session: sess,
-			Repo: &RepoContext{
-				PullRequest: &PullRequestContext{},
+			Repo: &Repository{
+				PullRequest: &PullRequest{},
 			},
 		}
 		// Compute current URL for real-time change language.

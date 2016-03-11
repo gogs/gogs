@@ -110,7 +110,7 @@ func (u *User) GetAccessibleRepositories() ([]*Repository, error) {
 		repoIDs = append(repoIDs, access.RepoID)
 	}
 	repos := make([]*Repository, 0, len(repoIDs))
-	return repos, x.Where("owner_id != ?", u.Id).In("id", repoIDs).Desc("updated").Find(&repos)
+	return repos, x.Where("owner_id != ?", u.Id).In("id", repoIDs).Desc("updated_unix").Find(&repos)
 }
 
 func maxAccessMode(modes ...AccessMode) AccessMode {

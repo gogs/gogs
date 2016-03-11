@@ -8,12 +8,12 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/repo"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-raw-content
-func GetRawFile(ctx *middleware.Context) {
+func GetRawFile(ctx *context.Context) {
 	if !ctx.Repo.HasAccess() {
 		ctx.Error(404)
 		return
@@ -34,7 +34,7 @@ func GetRawFile(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-archive
-func GetArchive(ctx *middleware.Context) {
+func GetArchive(ctx *context.Context) {
 	repoPath := models.RepoPath(ctx.Params(":username"), ctx.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {

@@ -8,11 +8,11 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-func responseApiUsers(ctx *middleware.Context, users []*models.User) {
+func responseApiUsers(ctx *context.Context, users []*models.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
 		apiUsers[i] = convert.ToApiUser(users[i])
@@ -20,7 +20,7 @@ func responseApiUsers(ctx *middleware.Context, users []*models.User) {
 	ctx.JSON(200, &apiUsers)
 }
 
-func listUserFollowers(ctx *middleware.Context, u *models.User) {
+func listUserFollowers(ctx *context.Context, u *models.User) {
 	users, err := u.GetFollowers(ctx.QueryInt("page"))
 	if err != nil {
 		ctx.APIError(500, "GetUserFollowers", err)
@@ -29,12 +29,12 @@ func listUserFollowers(ctx *middleware.Context, u *models.User) {
 	responseApiUsers(ctx, users)
 }
 
-func ListMyFollowers(ctx *middleware.Context) {
+func ListMyFollowers(ctx *context.Context) {
 	listUserFollowers(ctx, ctx.User)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#list-followers-of-a-user
-func ListFollowers(ctx *middleware.Context) {
+func ListFollowers(ctx *context.Context) {
 	u := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -42,7 +42,7 @@ func ListFollowers(ctx *middleware.Context) {
 	listUserFollowers(ctx, u)
 }
 
-func listUserFollowing(ctx *middleware.Context, u *models.User) {
+func listUserFollowing(ctx *context.Context, u *models.User) {
 	users, err := u.GetFollowing(ctx.QueryInt("page"))
 	if err != nil {
 		ctx.APIError(500, "GetFollowing", err)
@@ -51,12 +51,12 @@ func listUserFollowing(ctx *middleware.Context, u *models.User) {
 	responseApiUsers(ctx, users)
 }
 
-func ListMyFollowing(ctx *middleware.Context) {
+func ListMyFollowing(ctx *context.Context) {
 	listUserFollowing(ctx, ctx.User)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#list-users-followed-by-another-user
-func ListFollowing(ctx *middleware.Context) {
+func ListFollowing(ctx *context.Context) {
 	u := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -64,7 +64,7 @@ func ListFollowing(ctx *middleware.Context) {
 	listUserFollowing(ctx, u)
 }
 
-func checkUserFollowing(ctx *middleware.Context, u *models.User, followID int64) {
+func checkUserFollowing(ctx *context.Context, u *models.User, followID int64) {
 	if u.IsFollowing(followID) {
 		ctx.Status(204)
 	} else {
@@ -73,7 +73,7 @@ func checkUserFollowing(ctx *middleware.Context, u *models.User, followID int64)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#check-if-you-are-following-a-user
-func CheckMyFollowing(ctx *middleware.Context) {
+func CheckMyFollowing(ctx *context.Context) {
 	target := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -82,7 +82,7 @@ func CheckMyFollowing(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#check-if-one-user-follows-another
-func CheckFollowing(ctx *middleware.Context) {
+func CheckFollowing(ctx *context.Context) {
 	u := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -95,7 +95,7 @@ func CheckFollowing(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#follow-a-user
-func Follow(ctx *middleware.Context) {
+func Follow(ctx *context.Context) {
 	target := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -108,7 +108,7 @@ func Follow(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#unfollow-a-user
-func Unfollow(ctx *middleware.Context) {
+func Unfollow(ctx *context.Context) {
 	target := GetUserByParams(ctx)
 	if ctx.Written() {
 		return

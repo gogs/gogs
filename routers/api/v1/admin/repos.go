@@ -7,13 +7,13 @@ package admin
 import (
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/repo"
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Repositories#create-a-new-repository
-func CreateRepo(ctx *middleware.Context, form api.CreateRepoOption) {
+func CreateRepo(ctx *context.Context, form api.CreateRepoOption) {
 	owner := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return

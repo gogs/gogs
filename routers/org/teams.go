@@ -12,8 +12,8 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 	TEAM_REPOSITORIES base.TplName = "org/team/repositories"
 )
 
-func Teams(ctx *middleware.Context) {
+func Teams(ctx *context.Context) {
 	org := ctx.Org.Organization
 	ctx.Data["Title"] = org.FullName
 	ctx.Data["PageIsOrgTeams"] = true
@@ -39,7 +39,7 @@ func Teams(ctx *middleware.Context) {
 	ctx.HTML(200, TEAMS)
 }
 
-func TeamsAction(ctx *middleware.Context) {
+func TeamsAction(ctx *context.Context) {
 	uid := com.StrTo(ctx.Query("uid")).MustInt64()
 	if uid == 0 {
 		ctx.Redirect(ctx.Org.OrgLink + "/teams")
@@ -107,7 +107,7 @@ func TeamsAction(ctx *middleware.Context) {
 	}
 }
 
-func TeamsRepoAction(ctx *middleware.Context) {
+func TeamsRepoAction(ctx *context.Context) {
 	if !ctx.Org.IsOwner {
 		ctx.Error(404)
 		return
@@ -141,7 +141,7 @@ func TeamsRepoAction(ctx *middleware.Context) {
 	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName + "/repositories")
 }
 
-func NewTeam(ctx *middleware.Context) {
+func NewTeam(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
 	ctx.Data["PageIsOrgTeamsNew"] = true
@@ -149,7 +149,7 @@ func NewTeam(ctx *middleware.Context) {
 	ctx.HTML(200, TEAM_NEW)
 }
 
-func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
+func NewTeamPost(ctx *context.Context, form auth.CreateTeamForm) {
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
 	ctx.Data["PageIsOrgTeamsNew"] = true
@@ -195,7 +195,7 @@ func NewTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
-func TeamMembers(ctx *middleware.Context) {
+func TeamMembers(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Org.Team.Name
 	ctx.Data["PageIsOrgTeams"] = true
 	if err := ctx.Org.Team.GetMembers(); err != nil {
@@ -205,7 +205,7 @@ func TeamMembers(ctx *middleware.Context) {
 	ctx.HTML(200, TEAM_MEMBERS)
 }
 
-func TeamRepositories(ctx *middleware.Context) {
+func TeamRepositories(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Org.Team.Name
 	ctx.Data["PageIsOrgTeams"] = true
 	if err := ctx.Org.Team.GetRepositories(); err != nil {
@@ -215,7 +215,7 @@ func TeamRepositories(ctx *middleware.Context) {
 	ctx.HTML(200, TEAM_REPOSITORIES)
 }
 
-func EditTeam(ctx *middleware.Context) {
+func EditTeam(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
 	ctx.Data["team_name"] = ctx.Org.Team.Name
@@ -223,7 +223,7 @@ func EditTeam(ctx *middleware.Context) {
 	ctx.HTML(200, TEAM_NEW)
 }
 
-func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
+func EditTeamPost(ctx *context.Context, form auth.CreateTeamForm) {
 	t := ctx.Org.Team
 	ctx.Data["Title"] = ctx.Org.Organization.FullName
 	ctx.Data["PageIsOrgTeams"] = true
@@ -270,7 +270,7 @@ func EditTeamPost(ctx *middleware.Context, form auth.CreateTeamForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
-func DeleteTeam(ctx *middleware.Context) {
+func DeleteTeam(ctx *context.Context) {
 	if err := models.DeleteTeam(ctx.Org.Team); err != nil {
 		ctx.Flash.Error("DeleteTeam: " + err.Error())
 	} else {

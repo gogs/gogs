@@ -8,13 +8,13 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
-func ListEmails(ctx *middleware.Context) {
+func ListEmails(ctx *context.Context) {
 	emails, err := models.GetEmailAddresses(ctx.User.Id)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
@@ -28,7 +28,7 @@ func ListEmails(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#add-email-addresses
-func AddEmail(ctx *middleware.Context, form api.CreateEmailOption) {
+func AddEmail(ctx *context.Context, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
 		ctx.Status(422)
 		return
@@ -60,7 +60,7 @@ func AddEmail(ctx *middleware.Context, form api.CreateEmailOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#delete-email-addresses
-func DeleteEmail(ctx *middleware.Context, form api.CreateEmailOption) {
+func DeleteEmail(ctx *context.Context, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
 		ctx.Status(204)
 		return

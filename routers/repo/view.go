@@ -16,9 +16,9 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
 )
@@ -29,7 +29,7 @@ const (
 	FORKS    base.TplName = "repo/forks"
 )
 
-func Home(ctx *middleware.Context) {
+func Home(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Repo.Repository.Name
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
@@ -219,7 +219,7 @@ func Home(ctx *middleware.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func RenderUserCards(ctx *middleware.Context, total int, getter func(page int) ([]*models.User, error), tpl base.TplName) {
+func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*models.User, error), tpl base.TplName) {
 	page := ctx.QueryInt("page")
 	if page <= 0 {
 		page = 1
@@ -237,21 +237,21 @@ func RenderUserCards(ctx *middleware.Context, total int, getter func(page int) (
 	ctx.HTML(200, tpl)
 }
 
-func Watchers(ctx *middleware.Context) {
+func Watchers(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.watchers")
 	ctx.Data["CardsTitle"] = ctx.Tr("repo.watchers")
 	ctx.Data["PageIsWatchers"] = true
 	RenderUserCards(ctx, ctx.Repo.Repository.NumWatches, ctx.Repo.Repository.GetWatchers, WATCHERS)
 }
 
-func Stars(ctx *middleware.Context) {
+func Stars(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
 	ctx.Data["CardsTitle"] = ctx.Tr("repo.stargazers")
 	ctx.Data["PageIsStargazers"] = true
 	RenderUserCards(ctx, ctx.Repo.Repository.NumStars, ctx.Repo.Repository.GetStargazers, WATCHERS)
 }
 
-func Forks(ctx *middleware.Context) {
+func Forks(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repos.forks")
 
 	forks, err := ctx.Repo.Repository.GetForks()

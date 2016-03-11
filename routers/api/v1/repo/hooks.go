@@ -12,12 +12,12 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
-func ListHooks(ctx *middleware.Context) {
+func ListHooks(ctx *context.Context) {
 	hooks, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.APIError(500, "GetWebhooksByRepoID", err)
@@ -33,7 +33,7 @@ func ListHooks(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
-func CreateHook(ctx *middleware.Context, form api.CreateHookOption) {
+func CreateHook(ctx *context.Context, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
 		ctx.APIError(422, "", "Invalid hook type")
 		return
@@ -98,7 +98,7 @@ func CreateHook(ctx *middleware.Context, form api.CreateHookOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
-func EditHook(ctx *middleware.Context, form api.EditHookOption) {
+func EditHook(ctx *context.Context, form api.EditHookOption) {
 	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrWebhookNotExist(err) {

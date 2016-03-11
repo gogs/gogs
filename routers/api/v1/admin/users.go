@@ -8,15 +8,15 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func parseLoginSource(ctx *middleware.Context, u *models.User, sourceID int64, loginName string) {
+func parseLoginSource(ctx *context.Context, u *models.User, sourceID int64, loginName string) {
 	if sourceID == 0 {
 		return
 	}
@@ -37,7 +37,7 @@ func parseLoginSource(ctx *middleware.Context, u *models.User, sourceID int64, l
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-new-user
-func CreateUser(ctx *middleware.Context, form api.CreateUserOption) {
+func CreateUser(ctx *context.Context, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
 		Email:     form.Email,
@@ -73,7 +73,7 @@ func CreateUser(ctx *middleware.Context, form api.CreateUserOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
-func EditUser(ctx *middleware.Context, form api.EditUserOption) {
+func EditUser(ctx *context.Context, form api.EditUserOption) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -122,7 +122,7 @@ func EditUser(ctx *middleware.Context, form api.EditUserOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user
-func DeleteUser(ctx *middleware.Context) {
+func DeleteUser(ctx *context.Context) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -143,7 +143,7 @@ func DeleteUser(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-public-key-for-user
-func CreatePublicKey(ctx *middleware.Context, form api.CreateKeyOption) {
+func CreatePublicKey(ctx *context.Context, form api.CreateKeyOption) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return

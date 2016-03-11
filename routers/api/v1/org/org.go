@@ -8,12 +8,12 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func listUserOrgs(ctx *middleware.Context, u *models.User, all bool) {
+func listUserOrgs(ctx *context.Context, u *models.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
 		ctx.APIError(500, "GetOrganizations", err)
 		return
@@ -27,12 +27,12 @@ func listUserOrgs(ctx *middleware.Context, u *models.User, all bool) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-your-organizations
-func ListMyOrgs(ctx *middleware.Context) {
+func ListMyOrgs(ctx *context.Context) {
 	listUserOrgs(ctx, ctx.User, true)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-user-organizations
-func ListUserOrgs(ctx *middleware.Context) {
+func ListUserOrgs(ctx *context.Context) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -41,7 +41,7 @@ func ListUserOrgs(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#get-an-organization
-func Get(ctx *middleware.Context) {
+func Get(ctx *context.Context) {
 	org := user.GetUserByParamsName(ctx, ":orgname")
 	if ctx.Written() {
 		return
@@ -50,7 +50,7 @@ func Get(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#edit-an-organization
-func Edit(ctx *middleware.Context, form api.EditOrgOption) {
+func Edit(ctx *context.Context, form api.EditOrgOption) {
 	org := user.GetUserByParamsName(ctx, ":orgname")
 	if ctx.Written() {
 		return

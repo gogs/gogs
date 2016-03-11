@@ -22,11 +22,11 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/template/highlight"
@@ -97,7 +97,7 @@ func GlobalInit() {
 	markdown.BuildSanitizer()
 }
 
-func InstallInit(ctx *middleware.Context) {
+func InstallInit(ctx *context.Context) {
 	if setting.InstallLock {
 		ctx.Handle(404, "Install", errors.New("Installation is prohibited"))
 		return
@@ -116,7 +116,7 @@ func InstallInit(ctx *middleware.Context) {
 	ctx.Data["DbOptions"] = dbOpts
 }
 
-func Install(ctx *middleware.Context) {
+func Install(ctx *context.Context) {
 	form := auth.InstallForm{}
 
 	// Database settings
@@ -177,7 +177,7 @@ func Install(ctx *middleware.Context) {
 	ctx.HTML(200, INSTALL)
 }
 
-func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
+func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = form.DbType
 
 	if ctx.HasError() {

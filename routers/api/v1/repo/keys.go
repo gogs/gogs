@@ -10,7 +10,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
@@ -20,7 +20,7 @@ func composeDeployKeysAPILink(repoPath string) string {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
-func ListDeployKeys(ctx *middleware.Context) {
+func ListDeployKeys(ctx *context.Context) {
 	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "ListDeployKeys", err)
@@ -41,7 +41,7 @@ func ListDeployKeys(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
-func GetDeployKey(ctx *middleware.Context) {
+func GetDeployKey(ctx *context.Context) {
 	key, err := models.GetDeployKeyByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrDeployKeyNotExist(err) {
@@ -61,7 +61,7 @@ func GetDeployKey(ctx *middleware.Context) {
 	ctx.JSON(200, convert.ToApiDeployKey(apiLink, key))
 }
 
-func HandleCheckKeyStringError(ctx *middleware.Context, err error) {
+func HandleCheckKeyStringError(ctx *context.Context, err error) {
 	if models.IsErrKeyUnableVerify(err) {
 		ctx.APIError(422, "", "Unable to verify key content")
 	} else {
@@ -69,7 +69,7 @@ func HandleCheckKeyStringError(ctx *middleware.Context, err error) {
 	}
 }
 
-func HandleAddKeyError(ctx *middleware.Context, err error) {
+func HandleAddKeyError(ctx *context.Context, err error) {
 	switch {
 	case models.IsErrKeyAlreadyExist(err):
 		ctx.APIError(422, "", "Key content has been used as non-deploy key")
@@ -81,7 +81,7 @@ func HandleAddKeyError(ctx *middleware.Context, err error) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
-func CreateDeployKey(ctx *middleware.Context, form api.CreateKeyOption) {
+func CreateDeployKey(ctx *context.Context, form api.CreateKeyOption) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
 		HandleCheckKeyStringError(ctx, err)
@@ -100,7 +100,7 @@ func CreateDeployKey(ctx *middleware.Context, form api.CreateKeyOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
-func DeleteDeploykey(ctx *middleware.Context) {
+func DeleteDeploykey(ctx *context.Context) {
 	if err := models.DeleteDeployKey(ctx.User, ctx.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {
 			ctx.APIError(403, "", "You do not have access to this key")
