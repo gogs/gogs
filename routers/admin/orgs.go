@@ -9,7 +9,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -17,7 +17,7 @@ const (
 	ORGS base.TplName = "admin/org/list"
 )
 
-func Organizations(ctx *middleware.Context) {
+func Organizations(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.organizations")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminOrganizations"] = true
@@ -28,15 +28,15 @@ func Organizations(ctx *middleware.Context) {
 		page = 1
 	}
 	ctx.Data["Page"] = paginater.New(int(total), setting.AdminOrgPagingNum, page, 5)
- 
-    orgs, err := models.Organizations(page, setting.AdminOrgPagingNum)
-	
+
+	orgs, err := models.Organizations(page, setting.AdminOrgPagingNum)
+
 	if err != nil {
 		ctx.Handle(500, "Organizations", err)
 		return
 	}
-	
- 	ctx.Data["Orgs"] = orgs
+
+	ctx.Data["Orgs"] = orgs
 	ctx.Data["Total"] = total
 
 	ctx.HTML(200, ORGS)

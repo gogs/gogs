@@ -8,11 +8,11 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#list-access-tokens-for-a-user
-func ListAccessTokens(ctx *middleware.Context) {
+func ListAccessTokens(ctx *context.Context) {
 	tokens, err := models.ListAccessTokens(ctx.User.Id)
 	if err != nil {
 		ctx.APIError(500, "ListAccessTokens", err)
@@ -27,7 +27,7 @@ func ListAccessTokens(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#create-a-access-token
-func CreateAccessToken(ctx *middleware.Context, form api.CreateAccessTokenOption) {
+func CreateAccessToken(ctx *context.Context, form api.CreateAccessTokenOption) {
 	t := &models.AccessToken{
 		UID:  ctx.User.Id,
 		Name: form.Name,

@@ -13,9 +13,9 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -25,7 +25,7 @@ const (
 	USER_EDIT base.TplName = "admin/user/edit"
 )
 
-func Users(ctx *middleware.Context) {
+func Users(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
@@ -48,7 +48,7 @@ func Users(ctx *middleware.Context) {
 	ctx.HTML(200, USERS)
 }
 
-func NewUser(ctx *middleware.Context) {
+func NewUser(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.new_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
@@ -66,7 +66,7 @@ func NewUser(ctx *middleware.Context) {
 	ctx.HTML(200, USER_NEW)
 }
 
-func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
+func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.new_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
@@ -132,7 +132,7 @@ func NewUserPost(ctx *middleware.Context, form auth.AdminCrateUserForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
 }
 
-func prepareUserInfo(ctx *middleware.Context) *models.User {
+func prepareUserInfo(ctx *context.Context) *models.User {
 	u, err := models.GetUserByID(ctx.ParamsInt64(":userid"))
 	if err != nil {
 		ctx.Handle(500, "GetUserByID", err)
@@ -160,7 +160,7 @@ func prepareUserInfo(ctx *middleware.Context) *models.User {
 	return u
 }
 
-func EditUser(ctx *middleware.Context) {
+func EditUser(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
@@ -173,7 +173,7 @@ func EditUser(ctx *middleware.Context) {
 	ctx.HTML(200, USER_EDIT)
 }
 
-func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
+func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
@@ -231,7 +231,7 @@ func EditUserPost(ctx *middleware.Context, form auth.AdminEditUserForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
 }
 
-func DeleteUser(ctx *middleware.Context) {
+func DeleteUser(ctx *context.Context) {
 	u, err := models.GetUserByID(ctx.ParamsInt64(":userid"))
 	if err != nil {
 		ctx.Handle(500, "GetUserByID", err)

@@ -2,66 +2,23 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package middleware
+package context
 
 import (
-	"fmt"
 	"net/url"
 
 	"github.com/go-macaron/csrf"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 type ToggleOptions struct {
-	SignInRequire  bool
-	SignOutRequire bool
-	AdminRequire   bool
-	DisableCsrf    bool
-}
-
-// AutoSignIn reads cookie and try to auto-login.
-func AutoSignIn(ctx *Context) (bool, error) {
-	if !models.HasEngine {
-		return false, nil
-	}
-
-	uname := ctx.GetCookie(setting.CookieUserName)
-	if len(uname) == 0 {
-		return false, nil
-	}
-
-	isSucceed := false
-	defer func() {
-		if !isSucceed {
-			log.Trace("auto-login cookie cleared: %s", uname)
-			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
-			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
-		}
-	}()
-
-	u, err := models.GetUserByName(uname)
-	if err != nil {
-		if !models.IsErrUserNotExist(err) {
-			return false, fmt.Errorf("GetUserByName: %v", err)
-		}
-		return false, nil
-	}
-
-	if val, _ := ctx.GetSuperSecureCookie(
-		base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
-		return false, nil
-	}
-
-	isSucceed = true
-	ctx.Session.Set("uid", u.Id)
-	ctx.Session.Set("uname", u.Name)
-	return true, nil
+	SignInRequired  bool
+	SignOutRequired bool
+	AdminRequired   bool
+	DisableCSRF     bool
 }
 
 func Toggle(options *ToggleOptions) macaron.Handler {
@@ -79,19 +36,19 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
-		if options.SignOutRequire && ctx.IsSigned && ctx.Req.RequestURI != "/" {
+		if options.SignOutRequired && ctx.IsSigned && ctx.Req.RequestURI != "/" {
 			ctx.Redirect(setting.AppSubUrl + "/")
 			return
 		}
 
-		if !options.SignOutRequire && !options.DisableCsrf && ctx.Req.Method == "POST" && !auth.IsAPIPath(ctx.Req.URL.Path) {
+		if !options.SignOutRequired && !options.DisableCSRF && ctx.Req.Method == "POST" && !auth.IsAPIPath(ctx.Req.URL.Path) {
 			csrf.Validate(ctx.Context, ctx.csrf)
 			if ctx.Written() {
 				return
 			}
 		}
 
-		if options.SignInRequire {
+		if options.SignInRequired {
 			if !ctx.IsSigned {
 				// Restrict API calls with error message.
 				if auth.IsAPIPath(ctx.Req.URL.Path) {
@@ -109,15 +66,15 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			}
 		}
 
-		// Auto-signin info is provided and has not signed in.
-		if !options.SignOutRequire && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) &&
+		// Redirect to log in page if auto-signin info is provided and has not signed in.
+		if !options.SignOutRequired && !ctx.IsSigned && !auth.IsAPIPath(ctx.Req.URL.Path) &&
 			len(ctx.GetCookie(setting.CookieUserName)) > 0 {
 			ctx.SetCookie("redirect_to", url.QueryEscape(setting.AppSubUrl+ctx.Req.RequestURI), 0, setting.AppSubUrl)
 			ctx.Redirect(setting.AppSubUrl + "/user/login")
 			return
 		}
 
-		if options.AdminRequire {
+		if options.AdminRequired {
 			if !ctx.User.IsAdmin {
 				ctx.Error(403)
 				return

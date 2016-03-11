@@ -14,7 +14,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -23,7 +23,7 @@ const (
 	DIFF    base.TplName = "repo/diff"
 )
 
-func RefCommits(ctx *middleware.Context) {
+func RefCommits(ctx *context.Context) {
 	switch {
 	case len(ctx.Repo.TreeName) == 0:
 		Commits(ctx)
@@ -43,7 +43,7 @@ func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
 	return newCommits
 }
 
-func Commits(ctx *middleware.Context) {
+func Commits(ctx *context.Context) {
 	ctx.Data["PageIsCommits"] = true
 
 	commitsCount, err := ctx.Repo.Commit.CommitsCount()
@@ -75,7 +75,7 @@ func Commits(ctx *middleware.Context) {
 	ctx.HTML(200, COMMITS)
 }
 
-func SearchCommits(ctx *middleware.Context) {
+func SearchCommits(ctx *context.Context) {
 	ctx.Data["PageIsCommits"] = true
 
 	keyword := ctx.Query("q")
@@ -101,7 +101,7 @@ func SearchCommits(ctx *middleware.Context) {
 	ctx.HTML(200, COMMITS)
 }
 
-func FileHistory(ctx *middleware.Context) {
+func FileHistory(ctx *context.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
 	fileName := ctx.Repo.TreeName
@@ -143,7 +143,7 @@ func FileHistory(ctx *middleware.Context) {
 	ctx.HTML(200, COMMITS)
 }
 
-func Diff(ctx *middleware.Context) {
+func Diff(ctx *context.Context) {
 	ctx.Data["PageIsDiff"] = true
 
 	userName := ctx.Repo.Owner.Name
@@ -187,7 +187,7 @@ func Diff(ctx *middleware.Context) {
 	ctx.HTML(200, DIFF)
 }
 
-func CompareDiff(ctx *middleware.Context) {
+func CompareDiff(ctx *context.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["IsDiffCompare"] = true
 	userName := ctx.Repo.Owner.Name

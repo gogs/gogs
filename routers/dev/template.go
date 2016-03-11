@@ -7,11 +7,11 @@ package dev
 import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func TemplatePreview(ctx *middleware.Context) {
+func TemplatePreview(ctx *context.Context) {
 	ctx.Data["User"] = models.User{Name: "Unknown"}
 	ctx.Data["AppName"] = setting.AppName
 	ctx.Data["AppVer"] = setting.AppVer

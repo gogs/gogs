@@ -15,9 +15,9 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -33,13 +33,13 @@ const (
 	SECURITY              base.TplName = "user/security"
 )
 
-func Settings(ctx *middleware.Context) {
+func Settings(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsProfile"] = true
 	ctx.HTML(200, SETTINGS_PROFILE)
 }
 
-func handleUsernameChange(ctx *middleware.Context, newName string) {
+func handleUsernameChange(ctx *context.Context, newName string) {
 	// Non-local users are not allowed to change their username.
 	if len(newName) == 0 || !ctx.User.IsLocal() {
 		return
@@ -74,7 +74,7 @@ func handleUsernameChange(ctx *middleware.Context, newName string) {
 	ctx.User.LowerName = strings.ToLower(newName)
 }
 
-func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
+func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsProfile"] = true
 
@@ -107,7 +107,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateProfileForm) {
 }
 
 // FIXME: limit size.
-func UpdateAvatarSetting(ctx *middleware.Context, form auth.UploadAvatarForm, ctxUser *models.User) error {
+func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUser *models.User) error {
 	ctxUser.UseCustomAvatar = form.Enable
 
 	if form.Avatar != nil {
@@ -144,7 +144,7 @@ func UpdateAvatarSetting(ctx *middleware.Context, form auth.UploadAvatarForm, ct
 	return nil
 }
 
-func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
+func SettingsAvatar(ctx *context.Context, form auth.UploadAvatarForm) {
 	if err := UpdateAvatarSetting(ctx, form, ctx.User); err != nil {
 		ctx.Flash.Error(err.Error())
 	} else {
@@ -154,7 +154,7 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 	ctx.Redirect(setting.AppSubUrl + "/user/settings")
 }
 
-func SettingsDeleteAvatar(ctx *middleware.Context) {
+func SettingsDeleteAvatar(ctx *context.Context) {
 	if err := ctx.User.DeleteAvatar(); err != nil {
 		ctx.Flash.Error(err.Error())
 	}
@@ -162,13 +162,13 @@ func SettingsDeleteAvatar(ctx *middleware.Context) {
 	ctx.Redirect(setting.AppSubUrl + "/user/settings")
 }
 
-func SettingsPassword(ctx *middleware.Context) {
+func SettingsPassword(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsPassword"] = true
 	ctx.HTML(200, SETTINGS_PASSWORD)
 }
 
-func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm) {
+func SettingsPasswordPost(ctx *context.Context, form auth.ChangePasswordForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsPassword"] = true
 
@@ -196,7 +196,7 @@ func SettingsPasswordPost(ctx *middleware.Context, form auth.ChangePasswordForm)
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/password")
 }
 
-func SettingsEmails(ctx *middleware.Context) {
+func SettingsEmails(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsEmails"] = true
 
@@ -210,7 +210,7 @@ func SettingsEmails(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_EMAILS)
 }
 
-func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
+func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsEmails"] = true
 
@@ -269,7 +269,7 @@ func SettingsEmailPost(ctx *middleware.Context, form auth.AddEmailForm) {
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
 }
 
-func DeleteEmail(ctx *middleware.Context) {
+func DeleteEmail(ctx *context.Context) {
 	if err := models.DeleteEmailAddress(&models.EmailAddress{ID: ctx.QueryInt64("id")}); err != nil {
 		ctx.Handle(500, "DeleteEmail", err)
 		return
@@ -282,7 +282,7 @@ func DeleteEmail(ctx *middleware.Context) {
 	})
 }
 
-func SettingsSSHKeys(ctx *middleware.Context) {
+func SettingsSSHKeys(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
@@ -296,7 +296,7 @@ func SettingsSSHKeys(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_SSH_KEYS)
 }
 
-func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
+func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
@@ -342,7 +342,7 @@ func SettingsSSHKeysPost(ctx *middleware.Context, form auth.AddSSHKeyForm) {
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/ssh")
 }
 
-func DeleteSSHKey(ctx *middleware.Context) {
+func DeleteSSHKey(ctx *context.Context) {
 	if err := models.DeletePublicKey(ctx.User, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeletePublicKey: " + err.Error())
 	} else {
@@ -354,7 +354,7 @@ func DeleteSSHKey(ctx *middleware.Context) {
 	})
 }
 
-func SettingsApplications(ctx *middleware.Context) {
+func SettingsApplications(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
@@ -368,7 +368,7 @@ func SettingsApplications(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_APPLICATIONS)
 }
 
-func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenForm) {
+func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
@@ -398,7 +398,7 @@ func SettingsApplicationsPost(ctx *middleware.Context, form auth.NewAccessTokenF
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/applications")
 }
 
-func SettingsDeleteApplication(ctx *middleware.Context) {
+func SettingsDeleteApplication(ctx *context.Context) {
 	if err := models.DeleteAccessTokenByID(ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
@@ -410,7 +410,7 @@ func SettingsDeleteApplication(ctx *middleware.Context) {
 	})
 }
 
-func SettingsDelete(ctx *middleware.Context) {
+func SettingsDelete(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsDelete"] = true
 
