@@ -27,7 +27,7 @@ func CreateOrg(ctx *context.Context, form api.CreateOrgOption) {
 		Website:     form.Website,
 		Location:    form.Location,
 		IsActive:    true,
-		Type:        models.ORGANIZATION,
+		Type:        models.USER_TYPE_ORGANIZATION,
 	}
 	if err := models.CreateOrganization(org, u); err != nil {
 		if models.IsErrUserAlreadyExist(err) ||

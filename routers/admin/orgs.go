@@ -5,12 +5,11 @@
 package admin
 
 import (
-	"github.com/Unknwon/paginater"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/routers"
 )
 
 const (
@@ -22,22 +21,6 @@ func Organizations(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminOrganizations"] = true
 
-	total := models.CountOrganizations()
-	page := ctx.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
-	ctx.Data["Page"] = paginater.New(int(total), setting.AdminOrgPagingNum, page, 5)
-
-	orgs, err := models.Organizations(page, setting.AdminOrgPagingNum)
-
-	if err != nil {
-		ctx.Handle(500, "Organizations", err)
-		return
-	}
-
-	ctx.Data["Orgs"] = orgs
-	ctx.Data["Total"] = total
-
-	ctx.HTML(200, ORGS)
+	routers.RenderUserSearch(ctx, models.USER_TYPE_ORGANIZATION, models.CountOrganizations, models.Organizations,
+		setting.AdminOrgPagingNum, "id ASC", ORGS)
 }
