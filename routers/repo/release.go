@@ -176,7 +176,6 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 	}
 
 	timeCreate := time.Now()
-	timeCreateUnix := timeCreate.UTC().Unix()
 	rel := &models.Release{
 		RepoID:       ctx.Repo.Repository.ID,
 		PublisherID:  ctx.User.Id,
@@ -189,7 +188,6 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		IsDraft:      len(form.Draft) > 0,
 		IsPrerelease: form.Prerelease,
 		Created:      timeCreate,
-		CreatedUnix:  timeCreateUnix,
 	}
 
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
