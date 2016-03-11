@@ -1139,11 +1139,7 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 
 	users = make([]*User, 0, opts.PageSize)
 	// Append conditions
-	fmt.Println(opts.Type)
 	sess := x.Where("lower_name like ?", "%"+opts.Keyword+"%").And("type = ?", opts.Type)
-	if len(opts.OrderBy) > 0 {
-		sess.OrderBy(opts.OrderBy)
-	}
 
 	var countSess xorm.Session
 	countSess = *sess
@@ -1152,6 +1148,9 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 		return nil, 0, fmt.Errorf("Count: %v", err)
 	}
 
+	if len(opts.OrderBy) > 0 {
+		sess.OrderBy(opts.OrderBy)
+	}
 	return users, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&users)
 }
 
