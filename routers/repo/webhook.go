@@ -18,7 +18,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -28,7 +28,7 @@ const (
 	ORG_HOOK_NEW base.TplName = "org/settings/hook_new"
 )
 
-func Webhooks(ctx *middleware.Context) {
+func Webhooks(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.hooks")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["BaseLink"] = ctx.Repo.RepoLink
@@ -52,7 +52,7 @@ type OrgRepoCtx struct {
 }
 
 // getOrgRepoCtx determines whether this is a repo context or organization context.
-func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
+func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 	if len(ctx.Repo.RepoLink) > 0 {
 		return &OrgRepoCtx{
 			RepoID:      ctx.Repo.Repository.ID,
@@ -72,7 +72,7 @@ func getOrgRepoCtx(ctx *middleware.Context) (*OrgRepoCtx, error) {
 	return nil, errors.New("Unable to set OrgRepo context")
 }
 
-func checkHookType(ctx *middleware.Context) string {
+func checkHookType(ctx *context.Context) string {
 	hookType := strings.ToLower(ctx.Params(":type"))
 	if !com.IsSliceContainsStr(setting.Webhook.Types, hookType) {
 		ctx.Handle(404, "checkHookType", nil)
@@ -81,7 +81,7 @@ func checkHookType(ctx *middleware.Context) string {
 	return hookType
 }
 
-func WebhooksNew(ctx *middleware.Context) {
+func WebhooksNew(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.add_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
@@ -114,7 +114,7 @@ func ParseHookEvent(form auth.WebhookForm) *models.HookEvent {
 	}
 }
 
-func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
+func WebHooksNewPost(ctx *context.Context, form auth.NewWebhookForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.add_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
@@ -160,7 +160,7 @@ func WebHooksNewPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Redirect(orCtx.Link + "/settings/hooks")
 }
 
-func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
+func SlackHooksNewPost(ctx *context.Context, form auth.NewSlackHookForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksNew"] = true
@@ -210,7 +210,7 @@ func SlackHooksNewPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Redirect(orCtx.Link + "/settings/hooks")
 }
 
-func checkWebhook(ctx *middleware.Context) (*OrgRepoCtx, *models.Webhook) {
+func checkWebhook(ctx *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	ctx.Data["RequireHighlightJS"] = true
 
 	orCtx, err := getOrgRepoCtx(ctx)
@@ -245,7 +245,7 @@ func checkWebhook(ctx *middleware.Context) (*OrgRepoCtx, *models.Webhook) {
 	return orCtx, w
 }
 
-func WebHooksEdit(ctx *middleware.Context) {
+func WebHooksEdit(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.update_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksEdit"] = true
@@ -259,7 +259,7 @@ func WebHooksEdit(ctx *middleware.Context) {
 	ctx.HTML(200, orCtx.NewTemplate)
 }
 
-func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
+func WebHooksEditPost(ctx *context.Context, form auth.NewWebhookForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.update_webhook")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksEdit"] = true
@@ -297,7 +297,7 @@ func WebHooksEditPost(ctx *middleware.Context, form auth.NewWebhookForm) {
 	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
 }
 
-func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
+func SlackHooksEditPost(ctx *context.Context, form auth.NewSlackHookForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["PageIsSettingsHooksEdit"] = true
@@ -340,7 +340,7 @@ func SlackHooksEditPost(ctx *middleware.Context, form auth.NewSlackHookForm) {
 	ctx.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
 }
 
-func TestWebhook(ctx *middleware.Context) {
+func TestWebhook(ctx *context.Context) {
 	p := &api.PushPayload{
 		Ref:    git.BRANCH_PREFIX + ctx.Repo.Repository.DefaultBranch,
 		Before: ctx.Repo.CommitID,
@@ -378,7 +378,7 @@ func TestWebhook(ctx *middleware.Context) {
 	}
 }
 
-func DeleteWebhook(ctx *middleware.Context) {
+func DeleteWebhook(ctx *context.Context) {
 	if err := models.DeleteWebhook(ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteWebhook: " + err.Error())
 	} else {

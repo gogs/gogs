@@ -10,11 +10,11 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#search-users
-func Search(ctx *middleware.Context) {
+func Search(ctx *context.Context) {
 	opt := models.SearchOption{
 		Keyword: ctx.Query("q"),
 		Limit:   com.StrTo(ctx.Query("limit")).MustInt(),
@@ -52,7 +52,7 @@ func Search(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#get-a-single-user
-func GetInfo(ctx *middleware.Context) {
+func GetInfo(ctx *context.Context) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {

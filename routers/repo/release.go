@@ -10,9 +10,9 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/middleware"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 )
 
 // calReleaseNumCommitsBehind calculates given release has how many commits behind default branch.
-func calReleaseNumCommitsBehind(repoCtx *middleware.RepoContext, release *models.Release, countCache map[string]int64) error {
+func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *models.Release, countCache map[string]int64) error {
 	// Fast return if release target is same as default branch.
 	if repoCtx.BranchName == release.Target {
 		release.NumCommitsBehind = repoCtx.CommitsCount - release.NumCommits
@@ -43,7 +43,7 @@ func calReleaseNumCommitsBehind(repoCtx *middleware.RepoContext, release *models
 	return nil
 }
 
-func Releases(ctx *middleware.Context) {
+func Releases(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.releases")
 	ctx.Data["PageIsReleaseList"] = true
 
@@ -141,14 +141,14 @@ func Releases(ctx *middleware.Context) {
 	ctx.HTML(200, RELEASES)
 }
 
-func NewRelease(ctx *middleware.Context) {
+func NewRelease(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["tag_target"] = ctx.Repo.Repository.DefaultBranch
 	ctx.HTML(200, RELEASE_NEW)
 }
 
-func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
+func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
 	ctx.Data["PageIsReleaseList"] = true
 
@@ -201,7 +201,7 @@ func NewReleasePost(ctx *middleware.Context, form auth.NewReleaseForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
 }
 
-func EditRelease(ctx *middleware.Context) {
+func EditRelease(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
@@ -226,7 +226,7 @@ func EditRelease(ctx *middleware.Context) {
 	ctx.HTML(200, RELEASE_NEW)
 }
 
-func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
+func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
@@ -263,7 +263,7 @@ func EditReleasePost(ctx *middleware.Context, form auth.EditReleaseForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
 }
 
-func DeleteRelease(ctx *middleware.Context) {
+func DeleteRelease(ctx *context.Context) {
 	if err := models.DeleteReleaseByID(ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteReleaseByID: " + err.Error())
 	} else {

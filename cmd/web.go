@@ -34,8 +34,8 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/routers"
@@ -169,7 +169,7 @@ func newMacaron() *macaron.Macaron {
 			},
 		},
 	}))
-	m.Use(middleware.Contexter())
+	m.Use(context.Contexter())
 	return m
 }
 
@@ -182,10 +182,10 @@ func runWeb(ctx *cli.Context) {
 
 	m := newMacaron()
 
-	reqSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true})
-	ignSignIn := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: setting.Service.RequireSignInView})
-	ignSignInAndCsrf := middleware.Toggle(&middleware.ToggleOptions{DisableCsrf: true})
-	reqSignOut := middleware.Toggle(&middleware.ToggleOptions{SignOutRequire: true})
+	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
+	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: setting.Service.RequireSignInView})
+	ignSignInAndCsrf := context.Toggle(&context.ToggleOptions{DisableCSRF: true})
+	reqSignOut := context.Toggle(&context.ToggleOptions{SignOutRequired: true})
 
 	bindIgnErr := binding.BindIgnErr
 
@@ -231,7 +231,7 @@ func runWeb(ctx *cli.Context) {
 			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
-	}, reqSignIn, func(ctx *middleware.Context) {
+	}, reqSignIn, func(ctx *context.Context) {
 		ctx.Data["PageIsUserSettings"] = true
 	})
 
@@ -246,7 +246,7 @@ func runWeb(ctx *cli.Context) {
 	})
 	// ***** END: User *****
 
-	adminReq := middleware.Toggle(&middleware.ToggleOptions{SignInRequire: true, AdminRequire: true})
+	adminReq := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
@@ -295,7 +295,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/stars", user.Stars)
 		})
 
-		m.Get("/attachments/:uuid", func(ctx *middleware.Context) {
+		m.Get("/attachments/:uuid", func(ctx *context.Context) {
 			attach, err := models.GetAttachmentByUUID(ctx.Params(":uuid"))
 			if err != nil {
 				if models.IsErrAttachmentNotExist(err) {
@@ -332,8 +332,8 @@ func runWeb(ctx *cli.Context) {
 		m.Get("/template/*", dev.TemplatePreview)
 	}
 
-	reqRepoAdmin := middleware.RequireRepoAdmin()
-	reqRepoWriter := middleware.RequireRepoWriter()
+	reqRepoAdmin := context.RequireRepoAdmin()
+	reqRepoWriter := context.RequireRepoWriter()
 
 	// ***** START: Organization *****
 	m.Group("/org", func() {
@@ -347,14 +347,14 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/members/action/:action", org.MembersAction)
 
 			m.Get("/teams", org.Teams)
-		}, middleware.OrgAssignment(true))
+		}, context.OrgAssignment(true))
 
 		m.Group("/:org", func() {
 			m.Get("/teams/:team", org.TeamMembers)
 			m.Get("/teams/:team/repositories", org.TeamRepositories)
 			m.Route("/teams/:team/action/:action", "GET,POST", org.TeamsAction)
 			m.Route("/teams/:team/action/repo/:action", "GET,POST", org.TeamsRepoAction)
-		}, middleware.OrgAssignment(true, false, true))
+		}, context.OrgAssignment(true, false, true))
 
 		m.Group("/:org", func() {
 			m.Get("/teams/new", org.NewTeam)
@@ -384,7 +384,7 @@ func runWeb(ctx *cli.Context) {
 			})
 
 			m.Route("/invitations/new", "GET,POST", org.Invitation)
-		}, middleware.OrgAssignment(true, true))
+		}, context.OrgAssignment(true, true))
 	}, reqSignIn)
 	// ***** END: Organization *****
 
@@ -423,7 +423,7 @@ func runWeb(ctx *cli.Context) {
 					m.Get("", repo.GitHooks)
 					m.Combo("/:name").Get(repo.GitHooksEdit).
 						Post(repo.GitHooksEditPost)
-				}, middleware.GitHookService())
+				}, context.GitHookService())
 			})
 
 			m.Group("/keys", func() {
@@ -432,15 +432,15 @@ func runWeb(ctx *cli.Context) {
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
-		}, func(ctx *middleware.Context) {
+		}, func(ctx *context.Context) {
 			ctx.Data["PageIsSettings"] = true
 		})
-	}, reqSignIn, middleware.RepoAssignment(), reqRepoAdmin, middleware.RepoRef())
+	}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
 
-	m.Get("/:username/:reponame/action/:action", reqSignIn, middleware.RepoAssignment(), repo.Action)
+	m.Get("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
 		m.Group("/issues", func() {
-			m.Combo("/new", repo.MustEnableIssues).Get(middleware.RepoRef(), repo.NewIssue).
+			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
 			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
@@ -460,7 +460,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
-		}, reqRepoWriter, middleware.RepoRef())
+		}, reqRepoWriter, context.RepoRef())
 		m.Group("/milestones", func() {
 			m.Combo("/new").Get(repo.NewMilestone).
 				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
@@ -468,7 +468,7 @@ func runWeb(ctx *cli.Context) {
 			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
-		}, reqRepoWriter, middleware.RepoRef())
+		}, reqRepoWriter, context.RepoRef())
 
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
@@ -476,11 +476,11 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/edit/:tagname", repo.EditRelease)
 			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
-		}, reqRepoWriter, middleware.RepoRef())
+		}, reqRepoWriter, context.RepoRef())
 
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
-	}, reqSignIn, middleware.RepoAssignment(), repo.MustBeNotBare)
+	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
@@ -489,7 +489,7 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 			m.Get("/milestones", repo.Milestones)
-		}, middleware.RepoRef())
+		}, context.RepoRef())
 
 		// m.Get("/branches", repo.Branches)
 
@@ -504,13 +504,13 @@ func runWeb(ctx *cli.Context) {
 					Post(bindIgnErr(auth.NewWikiForm{}), repo.EditWikiPost)
 				m.Post("/:page/delete", repo.DeleteWikiPagePost)
 			}, reqSignIn, reqRepoWriter)
-		}, repo.MustEnableWiki, middleware.RepoRef())
+		}, repo.MustEnableWiki, context.RepoRef())
 
 		m.Get("/archive/*", repo.Download)
 
 		m.Group("/pulls/:index", func() {
-			m.Get("/commits", middleware.RepoRef(), repo.ViewPullCommits)
-			m.Get("/files", middleware.RepoRef(), repo.ViewPullFiles)
+			m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
+			m.Get("/files", context.RepoRef(), repo.ViewPullFiles)
 			m.Post("/merge", reqRepoWriter, repo.MergePullRequest)
 		}, repo.MustAllowPulls)
 
@@ -520,20 +520,20 @@ func runWeb(ctx *cli.Context) {
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/*", repo.Diff)
 			m.Get("/forks", repo.Forks)
-		}, middleware.RepoRef())
+		}, context.RepoRef())
 
 		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
-	}, ignSignIn, middleware.RepoAssignment(), repo.MustBeNotBare)
+	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
 		m.Get("/watchers", repo.Watchers)
-	}, ignSignIn, middleware.RepoAssignment(), middleware.RepoRef())
+	}, ignSignIn, context.RepoAssignment(), context.RepoRef())
 
 	m.Group("/:username", func() {
 		m.Group("/:reponame", func() {
 			m.Get("", repo.Home)
 			m.Get("\\.git$", repo.Home)
-		}, ignSignIn, middleware.RepoAssignment(true), middleware.RepoRef())
+		}, ignSignIn, context.RepoAssignment(true), context.RepoRef())
 
 		m.Group("/:reponame", func() {
 			m.Any("/*", ignSignInAndCsrf, repo.HTTP)
@@ -543,7 +543,7 @@ func runWeb(ctx *cli.Context) {
 	// ***** END: Repository *****
 
 	// robots.txt
-	m.Get("/robots.txt", func(ctx *middleware.Context) {
+	m.Get("/robots.txt", func(ctx *context.Context) {
 		if setting.HasRobotsTxt {
 			ctx.ServeFileContent(path.Join(setting.CustomPath, "robots.txt"))
 		} else {

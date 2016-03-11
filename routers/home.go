@@ -11,7 +11,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/user"
 )
@@ -21,7 +21,7 @@ const (
 	EXPLORE_REPOS base.TplName = "explore/repos"
 )
 
-func Home(ctx *middleware.Context) {
+func Home(ctx *context.Context) {
 	if ctx.IsSigned {
 		if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
 			ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
@@ -43,7 +43,7 @@ func Home(ctx *middleware.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func Explore(ctx *middleware.Context) {
+func Explore(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("explore")
 	ctx.Data["PageIsExplore"] = true
 	ctx.Data["PageIsExploreRepositories"] = true
@@ -71,7 +71,7 @@ func Explore(ctx *middleware.Context) {
 	ctx.HTML(200, EXPLORE_REPOS)
 }
 
-func NotFound(ctx *middleware.Context) {
+func NotFound(ctx *context.Context) {
 	ctx.Data["Title"] = "Page Not Found"
 	ctx.Handle(404, "home.NotFound", nil)
 }

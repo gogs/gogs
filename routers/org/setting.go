@@ -12,8 +12,8 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/user"
 )
@@ -24,13 +24,13 @@ const (
 	SETTINGS_HOOKS   base.TplName = "org/settings/hooks"
 )
 
-func Settings(ctx *middleware.Context) {
+func Settings(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("org.settings")
 	ctx.Data["PageIsSettingsOptions"] = true
 	ctx.HTML(200, SETTINGS_OPTIONS)
 }
 
-func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
+func SettingsPost(ctx *context.Context, form auth.UpdateOrgSettingForm) {
 	ctx.Data["Title"] = ctx.Tr("org.settings")
 	ctx.Data["PageIsSettingsOptions"] = true
 
@@ -85,7 +85,7 @@ func SettingsPost(ctx *middleware.Context, form auth.UpdateOrgSettingForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
-func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
+func SettingsAvatar(ctx *context.Context, form auth.UploadAvatarForm) {
 	form.Enable = true
 	if err := user.UpdateAvatarSetting(ctx, form, ctx.Org.Organization); err != nil {
 		ctx.Flash.Error(err.Error())
@@ -96,7 +96,7 @@ func SettingsAvatar(ctx *middleware.Context, form auth.UploadAvatarForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
-func SettingsDeleteAvatar(ctx *middleware.Context) {
+func SettingsDeleteAvatar(ctx *context.Context) {
 	if err := ctx.Org.Organization.DeleteAvatar(); err != nil {
 		ctx.Flash.Error(err.Error())
 	}
@@ -104,7 +104,7 @@ func SettingsDeleteAvatar(ctx *middleware.Context) {
 	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
-func SettingsDelete(ctx *middleware.Context) {
+func SettingsDelete(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("org.settings")
 	ctx.Data["PageIsSettingsDelete"] = true
 
@@ -136,7 +136,7 @@ func SettingsDelete(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_DELETE)
 }
 
-func Webhooks(ctx *middleware.Context) {
+func Webhooks(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("org.settings")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["BaseLink"] = ctx.Org.OrgLink
@@ -164,7 +164,7 @@ func Webhooks(ctx *middleware.Context) {
 	ctx.HTML(200, SETTINGS_HOOKS)
 }
 
-func DeleteWebhook(ctx *middleware.Context) {
+func DeleteWebhook(ctx *context.Context) {
 	if err := models.DeleteWebhook(ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteWebhook: " + err.Error())
 	} else {

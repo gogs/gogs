@@ -11,10 +11,10 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 )
 
-func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
+func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 	buf := make([]byte, 1024)
 	n, _ := reader.Read(buf)
 	if n > 0 {
@@ -36,7 +36,7 @@ func ServeData(ctx *middleware.Context, name string, reader io.Reader) error {
 	return err
 }
 
-func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
+func ServeBlob(ctx *context.Context, blob *git.Blob) error {
 	dataRc, err := blob.Data()
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func ServeBlob(ctx *middleware.Context, blob *git.Blob) error {
 	return ServeData(ctx, ctx.Repo.TreeName, dataRc)
 }
 
-func SingleDownload(ctx *middleware.Context) {
+func SingleDownload(ctx *context.Context) {
 	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
 	if err != nil {
 		if git.IsErrNotExist(err) {
