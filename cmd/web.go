@@ -194,6 +194,9 @@ func runWeb(ctx *cli.Context) {
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Group("/explore", func() {
+		m.Get("", func(ctx *context.Context) {
+			ctx.Redirect(setting.AppSubUrl + "/explore/repos")
+		})
 		m.Get("/repos", routers.ExploreRepos)
 		m.Get("/users", routers.ExploreUsers)
 	}, ignSignIn)
