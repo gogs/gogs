@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -174,6 +175,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		return
 	}
 
+	timeCreate := time.Now()
 	rel := &models.Release{
 		RepoID:       ctx.Repo.Repository.ID,
 		PublisherID:  ctx.User.Id,
@@ -185,6 +187,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		Note:         form.Content,
 		IsDraft:      len(form.Draft) > 0,
 		IsPrerelease: form.Prerelease,
+		Created:      timeCreate,
 	}
 
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {

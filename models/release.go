@@ -33,9 +33,8 @@ type Release struct {
 	Note             string `xorm:"TEXT"`
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
 	IsPrerelease     bool
-
-	Created     time.Time `xorm:"-"`
-	CreatedUnix int64
+	Created          time.Time `xorm:"-"`
+	CreatedUnix      int64
 }
 
 func (r *Release) BeforeInsert() {
