@@ -1464,7 +1464,8 @@ func GetRepositoryByID(id int64) (*Repository, error) {
 // GetRepositories returns a list of repositories of given user.
 func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	sess := x.Desc("updated")
+	sess := x.Desc("updated_unix")
+
 	if !private {
 		sess.Where("is_private=?", false)
 	}
@@ -1475,7 +1476,7 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
 func GetRecentUpdatedRepositories(page int) (repos []*Repository, err error) {
 	return repos, x.Limit(setting.ExplorePagingNum, (page-1)*setting.ExplorePagingNum).
-		Where("is_private=?", false).Limit(setting.ExplorePagingNum).Desc("updated").Find(&repos)
+		Where("is_private=?", false).Limit(setting.ExplorePagingNum).Desc("updated_unix").Find(&repos)
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {
