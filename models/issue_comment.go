@@ -310,7 +310,7 @@ func GetCommentByID(id int64) (*Comment, error) {
 // GetCommentsByIssueID returns all comments of issue by given ID.
 func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	return comments, x.Where("issue_id=?", issueID).Asc("created").Find(&comments)
+	return comments, x.Where("issue_id=?", issueID).Asc("created_unix").Find(&comments)
 }
 
 // UpdateComment updates information of comment.
