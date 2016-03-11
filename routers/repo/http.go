@@ -23,18 +23,18 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func authRequired(ctx *middleware.Context) {
+func authRequired(ctx *context.Context) {
 	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
 	ctx.Error(401)
 }
 
-func HTTP(ctx *middleware.Context) {
+func HTTP(ctx *context.Context) {
 	username := ctx.Params(":username")
 	reponame := strings.TrimSuffix(ctx.Params(":reponame"), ".git")
 
@@ -293,7 +293,7 @@ func getGitDir(config *Config, fPath string) (string, error) {
 }
 
 // Request handling function
-func HTTPBackend(ctx *middleware.Context, config *Config) http.HandlerFunc {
+func HTTPBackend(ctx *context.Context, config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		for _, route := range routes {
 			r.URL.Path = strings.ToLower(r.URL.Path) // blue: In case some repo name has upper case name

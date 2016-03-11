@@ -14,7 +14,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/admin"
 	"github.com/gogits/gogs/routers/api/v1/misc"
 	"github.com/gogits/gogs/routers/api/v1/org"
@@ -23,7 +23,7 @@ import (
 )
 
 func RepoAssignment() macaron.Handler {
-	return func(ctx *middleware.Context) {
+	return func(ctx *context.Context) {
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
 
@@ -82,7 +82,7 @@ func RepoAssignment() macaron.Handler {
 
 // Contexter middleware already checks token for user sign in process.
 func ReqToken() macaron.Handler {
-	return func(ctx *middleware.Context) {
+	return func(ctx *context.Context) {
 		if !ctx.IsSigned {
 			ctx.Error(401)
 			return
@@ -91,7 +91,7 @@ func ReqToken() macaron.Handler {
 }
 
 func ReqBasicAuth() macaron.Handler {
-	return func(ctx *middleware.Context) {
+	return func(ctx *context.Context) {
 		if !ctx.IsBasicAuth {
 			ctx.Error(401)
 			return
@@ -100,7 +100,7 @@ func ReqBasicAuth() macaron.Handler {
 }
 
 func ReqAdmin() macaron.Handler {
-	return func(ctx *middleware.Context) {
+	return func(ctx *context.Context) {
 		if !ctx.User.IsAdmin {
 			ctx.Error(403)
 			return
@@ -181,11 +181,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Combo("/hooks").Get(repo.ListHooks).
 					Post(bind(api.CreateHookOption{}), repo.CreateHook)
 				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
-				m.Get("/raw/*", middleware.RepoRef(), repo.GetRawFile)
+				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
 				m.Group("/branches", func() {
-					m.Get("",repo.ListBranches)
-					m.Get("/:branchname",repo.GetBranch)
+					m.Get("", repo.ListBranches)
+					m.Get("/:branchname", repo.GetBranch)
 				})
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
@@ -201,7 +201,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Get("/users/:username/orgs", org.ListUserOrgs)
 		m.Combo("/orgs/:orgname").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
 
-		m.Any("/*", func(ctx *middleware.Context) {
+		m.Any("/*", func(ctx *context.Context) {
 			ctx.Error(404)
 		})
 

@@ -13,14 +13,14 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#search-repositories
-func Search(ctx *middleware.Context) {
+func Search(ctx *context.Context) {
 	opt := models.SearchOption{
 		Keyword: path.Base(ctx.Query("q")),
 		Uid:     com.StrTo(ctx.Query("uid")).MustInt64(),
@@ -81,7 +81,7 @@ func Search(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
-func ListMyRepos(ctx *middleware.Context) {
+func ListMyRepos(ctx *context.Context) {
 	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
 	if err != nil {
 		ctx.APIError(500, "GetRepositories", err)
@@ -113,7 +113,7 @@ func ListMyRepos(ctx *middleware.Context) {
 	ctx.JSON(200, &repos)
 }
 
-func CreateUserRepo(ctx *middleware.Context, owner *models.User, opt api.CreateRepoOption) {
+func CreateUserRepo(ctx *context.Context, owner *models.User, opt api.CreateRepoOption) {
 	repo, err := models.CreateRepository(owner, models.CreateRepoOptions{
 		Name:        opt.Name,
 		Description: opt.Description,
@@ -143,7 +143,7 @@ func CreateUserRepo(ctx *middleware.Context, owner *models.User, opt api.CreateR
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create
-func Create(ctx *middleware.Context, opt api.CreateRepoOption) {
+func Create(ctx *context.Context, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
 	if ctx.User.IsOrganization() {
 		ctx.APIError(422, "", "not allowed creating repository for organization")
@@ -152,7 +152,7 @@ func Create(ctx *middleware.Context, opt api.CreateRepoOption) {
 	CreateUserRepo(ctx, ctx.User, opt)
 }
 
-func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
+func CreateOrgRepo(ctx *context.Context, opt api.CreateRepoOption) {
 	org, err := models.GetOrgByName(ctx.Params(":org"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
@@ -171,7 +171,7 @@ func CreateOrgRepo(ctx *middleware.Context, opt api.CreateRepoOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#migrate
-func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
+func Migrate(ctx *context.Context, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
@@ -242,7 +242,7 @@ func Migrate(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	ctx.JSON(201, convert.ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
 
-func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repository) {
+func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) {
 	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
@@ -267,7 +267,7 @@ func parseOwnerAndRepo(ctx *middleware.Context) (*models.User, *models.Repositor
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get
-func Get(ctx *middleware.Context) {
+func Get(ctx *context.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return
@@ -277,7 +277,7 @@ func Get(ctx *middleware.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
-func Delete(ctx *middleware.Context) {
+func Delete(ctx *context.Context) {
 	owner, repo := parseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return

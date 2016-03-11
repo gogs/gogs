@@ -14,8 +14,8 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -25,7 +25,7 @@ const (
 	AUTH_EDIT base.TplName = "admin/auth/edit"
 )
 
-func Authentications(ctx *middleware.Context) {
+func Authentications(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.authentication")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
@@ -53,7 +53,7 @@ var authSources = []AuthSource{
 	{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
 }
 
-func NewAuthSource(ctx *middleware.Context) {
+func NewAuthSource(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
@@ -102,7 +102,7 @@ func parseSMTPConfig(form auth.AuthenticationForm) *models.SMTPConfig {
 	}
 }
 
-func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
+func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
@@ -147,7 +147,7 @@ func NewAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/auths")
 }
 
-func EditAuthSource(ctx *middleware.Context) {
+func EditAuthSource(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
@@ -163,7 +163,7 @@ func EditAuthSource(ctx *middleware.Context) {
 	ctx.HTML(200, AUTH_EDIT)
 }
 
-func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
+func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
@@ -210,7 +210,7 @@ func EditAuthSourcePost(ctx *middleware.Context, form auth.AuthenticationForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/auths/" + com.ToStr(form.ID))
 }
 
-func DeleteAuthSource(ctx *middleware.Context) {
+func DeleteAuthSource(ctx *context.Context) {
 	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
 	if err != nil {
 		ctx.Handle(500, "GetLoginSourceByID", err)

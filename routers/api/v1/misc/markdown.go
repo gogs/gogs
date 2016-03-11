@@ -7,12 +7,12 @@ package misc
 import (
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/middleware"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
-func Markdown(ctx *middleware.Context, form api.MarkdownOption) {
+func Markdown(ctx *context.Context, form api.MarkdownOption) {
 	if ctx.HasApiError() {
 		ctx.APIError(422, "", ctx.GetErrMsg())
 		return
@@ -32,7 +32,7 @@ func Markdown(ctx *middleware.Context, form api.MarkdownOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
-func MarkdownRaw(ctx *middleware.Context) {
+func MarkdownRaw(ctx *context.Context) {
 	body, err := ctx.Req.Body().Bytes()
 	if err != nil {
 		ctx.APIError(422, "", err)

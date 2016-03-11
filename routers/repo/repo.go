@@ -17,8 +17,8 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -27,13 +27,13 @@ const (
 	MIGRATE base.TplName = "repo/migrate"
 )
 
-func MustBeNotBare(ctx *middleware.Context) {
+func MustBeNotBare(ctx *context.Context) {
 	if ctx.Repo.Repository.IsBare {
 		ctx.Handle(404, "MustBeNotBare", nil)
 	}
 }
 
-func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
+func checkContextUser(ctx *context.Context, uid int64) *models.User {
 	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated_unix")
 	if err != nil {
 		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
@@ -64,7 +64,7 @@ func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
 	return org
 }
 
-func Create(ctx *middleware.Context) {
+func Create(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_repo")
 
 	// Give default value for template to render.
@@ -84,7 +84,7 @@ func Create(ctx *middleware.Context) {
 	ctx.HTML(200, CREATE)
 }
 
-func handleCreateError(ctx *middleware.Context, owner *models.User, err error, name string, tpl base.TplName, form interface{}) {
+func handleCreateError(ctx *context.Context, owner *models.User, err error, name string, tpl base.TplName, form interface{}) {
 	switch {
 	case models.IsErrReachLimitOfRepo(err):
 		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
@@ -102,7 +102,7 @@ func handleCreateError(ctx *middleware.Context, owner *models.User, err error, n
 	}
 }
 
-func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
+func CreatePost(ctx *context.Context, form auth.CreateRepoForm) {
 	ctx.Data["Title"] = ctx.Tr("new_repo")
 
 	ctx.Data["Gitignores"] = models.Gitignores
@@ -144,7 +144,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateRepoForm) {
 	handleCreateError(ctx, ctxUser, err, "CreatePost", CREATE, &form)
 }
 
-func Migrate(ctx *middleware.Context) {
+func Migrate(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
 	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
@@ -159,7 +159,7 @@ func Migrate(ctx *middleware.Context) {
 	ctx.HTML(200, MIGRATE)
 }
 
-func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
+func MigratePost(ctx *context.Context, form auth.MigrateRepoForm) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 
 	ctxUser := checkContextUser(ctx, form.Uid)
@@ -227,7 +227,7 @@ func MigratePost(ctx *middleware.Context, form auth.MigrateRepoForm) {
 	handleCreateError(ctx, ctxUser, err, "MigratePost", MIGRATE, &form)
 }
 
-func Action(ctx *middleware.Context) {
+func Action(ctx *context.Context) {
 	var err error
 	switch ctx.Params(":action") {
 	case "watch":
@@ -261,7 +261,7 @@ func Action(ctx *middleware.Context) {
 	ctx.Redirect(redirectTo)
 }
 
-func Download(ctx *middleware.Context) {
+func Download(ctx *context.Context) {
 	var (
 		uri         = ctx.Params("*")
 		refName     string

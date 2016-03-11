@@ -6,14 +6,14 @@ package repo
 
 import (
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 )
 
 const (
 	BRANCH base.TplName = "repo/branch"
 )
 
-func Branches(ctx *middleware.Context) {
+func Branches(ctx *context.Context) {
 	ctx.Data["Title"] = "Branches"
 	ctx.Data["IsRepoToolbarBranches"] = true
 

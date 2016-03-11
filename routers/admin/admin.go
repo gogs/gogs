@@ -15,9 +15,9 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -124,7 +124,7 @@ const (
 	REINIT_MISSING_REPOSITORY
 )
 
-func Dashboard(ctx *middleware.Context) {
+func Dashboard(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.dashboard")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminDashboard"] = true
@@ -175,7 +175,7 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.HTML(200, DASHBOARD)
 }
 
-func SendTestMail(ctx *middleware.Context) {
+func SendTestMail(ctx *context.Context) {
 	email := ctx.Query("email")
 	// Send a test email to the user's email address and redirect back to Config
 	if err := mailer.SendTestMail(email); err != nil {
@@ -187,7 +187,7 @@ func SendTestMail(ctx *middleware.Context) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/config")
 }
 
-func Config(ctx *middleware.Context) {
+func Config(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.config")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminConfig"] = true
@@ -236,7 +236,7 @@ func Config(ctx *middleware.Context) {
 	ctx.HTML(200, CONFIG)
 }
 
-func Monitor(ctx *middleware.Context) {
+func Monitor(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.monitor")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminMonitor"] = true
