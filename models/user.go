@@ -36,8 +36,8 @@ import (
 type UserType int
 
 const (
-	INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
-	ORGANIZATION
+	USER_TYPE_INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
+	USER_TYPE_ORGANIZATION
 )
 
 var (
@@ -389,7 +389,7 @@ func (u *User) IsWriterOfRepo(repo *Repository) bool {
 
 // IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
-	return u.Type == ORGANIZATION
+	return u.Type == USER_TYPE_ORGANIZATION
 }
 
 // IsUserOrgOwner returns true if user is in the owner team of given organization.
@@ -1114,16 +1114,45 @@ func GetUserByEmail(email string) (*User, error) {
 	return nil, ErrUserNotExist{0, email}
 }
 
-// SearchUserByName returns given number of users whose name contains keyword.
-func SearchUserByName(opt SearchOption) (us []*User, err error) {
-	if len(opt.Keyword) == 0 {
-		return us, nil
-	}
-	opt.Keyword = strings.ToLower(opt.Keyword)
+type SearchUserOptions struct {
+	Keyword  string
+	Type     UserType
+	OrderBy  string
+	Page     int
+	PageSize int // Can be smaller than or equal to setting.ExplorePagingNum
+}
 
-	us = make([]*User, 0, opt.Limit)
-	err = x.Limit(opt.Limit).Where("type=0").And("lower_name like ?", "%"+opt.Keyword+"%").Find(&us)
-	return us, err
+// SearchUserByName takes keyword and part of user name to search,
+// it returns results in given range and number of total results.
+func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error) {
+	if len(opts.Keyword) == 0 {
+		return users, 0, nil
+	}
+	opts.Keyword = strings.ToLower(opts.Keyword)
+
+	if opts.PageSize <= 0 || opts.PageSize > setting.ExplorePagingNum {
+		opts.PageSize = setting.ExplorePagingNum
+	}
+	if opts.Page <= 0 {
+		opts.Page = 1
+	}
+
+	users = make([]*User, 0, opts.PageSize)
+	// Append conditions
+	fmt.Println(opts.Type)
+	sess := x.Where("lower_name like ?", "%"+opts.Keyword+"%").And("type = ?", opts.Type)
+	if len(opts.OrderBy) > 0 {
+		sess.OrderBy(opts.OrderBy)
+	}
+
+	var countSess xorm.Session
+	countSess = *sess
+	count, err := countSess.Count(new(User))
+	if err != nil {
+		return nil, 0, fmt.Errorf("Count: %v", err)
+	}
+
+	return users, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&users)
 }
 
 // ___________    .__  .__

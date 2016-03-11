@@ -15,15 +15,16 @@ import (
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#search-users
 func Search(ctx *context.Context) {
-	opt := models.SearchOption{
-		Keyword: ctx.Query("q"),
-		Limit:   com.StrTo(ctx.Query("limit")).MustInt(),
+	opts := &models.SearchUserOptions{
+		Keyword:  ctx.Query("q"),
+		Type:     models.USER_TYPE_INDIVIDUAL,
+		PageSize: com.StrTo(ctx.Query("limit")).MustInt(),
 	}
-	if opt.Limit == 0 {
-		opt.Limit = 10
+	if opts.PageSize == 0 {
+		opts.PageSize = 10
 	}
 
-	us, err := models.SearchUserByName(opt)
+	users, _, err := models.SearchUserByName(opts)
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{
 			"ok":    false,
@@ -32,16 +33,16 @@ func Search(ctx *context.Context) {
 		return
 	}
 
-	results := make([]*api.User, len(us))
-	for i := range us {
+	results := make([]*api.User, len(users))
+	for i := range users {
 		results[i] = &api.User{
-			ID:        us[i].Id,
-			UserName:  us[i].Name,
-			AvatarUrl: us[i].AvatarLink(),
-			FullName:  us[i].FullName,
+			ID:        users[i].Id,
+			UserName:  users[i].Name,
+			AvatarUrl: users[i].AvatarLink(),
+			FullName:  users[i].FullName,
 		}
 		if ctx.IsSigned {
-			results[i].Email = us[i].Email
+			results[i].Email = users[i].Email
 		}
 	}
 

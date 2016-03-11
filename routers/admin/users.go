@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
-	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -17,6 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/routers"
 )
 
 const (
@@ -30,22 +30,8 @@ func Users(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
 
-	total := models.CountUsers()
-	page := ctx.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
-	ctx.Data["Page"] = paginater.New(int(total), setting.AdminUserPagingNum, page, 5)
-
-	users, err := models.Users(page, setting.AdminUserPagingNum)
-	if err != nil {
-		ctx.Handle(500, "Users", err)
-		return
-	}
-	ctx.Data["Users"] = users
-
-	ctx.Data["Total"] = total
-	ctx.HTML(200, USERS)
+	routers.RenderUserSearch(ctx, models.USER_TYPE_INDIVIDUAL, models.CountUsers, models.Users,
+		setting.AdminUserPagingNum, "id ASC", USERS)
 }
 
 func NewUser(ctx *context.Context) {

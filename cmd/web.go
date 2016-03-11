@@ -193,7 +193,10 @@ func runWeb(ctx *cli.Context) {
 	// Especially some AJAX requests, we can reduce middleware number to improve performance.
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
-	m.Get("/explore", ignSignIn, routers.Explore)
+	m.Group("/explore", func() {
+		m.Get("/repos", routers.ExploreRepos)
+		m.Get("/users", routers.ExploreUsers)
+	}, ignSignIn)
 	m.Combo("/install", routers.InstallInit).Get(routers.Install).
 		Post(bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)

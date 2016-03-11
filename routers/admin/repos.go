@@ -5,13 +5,12 @@
 package admin
 
 import (
-	"github.com/Unknwon/paginater"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/routers"
 )
 
 const (
@@ -23,22 +22,8 @@ func Repos(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminRepositories"] = true
 
-	total := models.CountRepositories()
-	page := ctx.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
-	ctx.Data["Page"] = paginater.New(int(total), setting.AdminRepoPagingNum, page, 5)
-
-	repos, err := models.RepositoriesWithUsers(page, setting.AdminRepoPagingNum)
-	if err != nil {
-		ctx.Handle(500, "RepositoriesWithUsers", err)
-		return
-	}
-	ctx.Data["Repos"] = repos
-
-	ctx.Data["Total"] = total
-	ctx.HTML(200, REPOS)
+	routers.RenderRepoSearch(ctx, models.CountRepositories, models.Repositories,
+		setting.AdminRepoPagingNum, "id ASC", REPOS)
 }
 
 func DeleteRepo(ctx *context.Context) {
