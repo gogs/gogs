@@ -34,7 +34,7 @@ func MustBeNotBare(ctx *middleware.Context) {
 }
 
 func checkContextUser(ctx *middleware.Context, uid int64) *models.User {
-	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated")
+	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated_unix")
 	if err != nil {
 		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
 		return nil
