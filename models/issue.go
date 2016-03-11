@@ -495,11 +495,11 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 
 	switch opts.SortType {
 	case "oldest":
-		sess.Asc("created")
+		sess.Asc("created_unix")
 	case "recentupdate":
-		sess.Desc("updated")
+		sess.Desc("updated_unix")
 	case "leastupdate":
-		sess.Asc("updated")
+		sess.Asc("updated_unix")
 	case "mostcomment":
 		sess.Desc("num_comments")
 	case "leastcomment":
@@ -507,7 +507,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	case "priority":
 		sess.Desc("priority")
 	default:
-		sess.Desc("created")
+		sess.Desc("created_unix")
 	}
 
 	labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
