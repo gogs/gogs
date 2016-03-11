@@ -202,9 +202,11 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		}
 	}
 
-	// Notify watchers for whatever action comes in
-	if err = notifyWatchers(e, act); err != nil {
-		return nil, fmt.Errorf("notifyWatchers: %v", err)
+	// Notify watchers for whatever action comes in, ignore if no action type
+	if act.OpType > 0 {
+		if err = notifyWatchers(e, act); err != nil {
+			return nil, fmt.Errorf("notifyWatchers: %v", err)
+		}
 	}
 
 	return comment, nil
