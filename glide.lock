@@ -1,5 +1,5 @@
 hash: 81254bce31966708f508a845836851efb77d96d8c522e745e67d0daeffd76cc5
-updated: 2016-03-11T12:10:01.422583647-05:00
+updated: 2016-03-12T14:42:55.945562115-05:00
 imports:
 - name: github.com/bradfitz/gomemcache
   version: fb1f79c6b65acda83063cbc69f6bba1522558bfc
@@ -127,7 +127,7 @@ imports:
 - name: gopkg.in/ldap.v2
   version: 07a7330929b9ee80495c88a4439657d89c7dbd87
 - name: gopkg.in/macaron.v1
-  version: b9eee382bef2f2f678fadbcf368fc1e52306bed1
+  version: 7c9e5e5b8c1176ce95a6f41b4e1cd60a44f8839d
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
 devImports: []
