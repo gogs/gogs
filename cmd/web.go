@@ -86,7 +86,7 @@ func checkVersion() {
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
-		{"gopkg.in/macaron.v1", macaron.Version, "0.8.0"},
+		{"gopkg.in/macaron.v1", macaron.Version, "1.1.1"},
 		{"github.com/gogits/git-module", git.Version, "0.2.9"},
 		{"github.com/gogits/go-gogs-client", gogs.Version, "0.7.3"},
 	}
@@ -124,9 +124,10 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 	m.Use(macaron.Renderer(macaron.RenderOptions{
-		Directory:  path.Join(setting.StaticRootPath, "templates"),
-		Funcs:      template.NewFuncMap(),
-		IndentJSON: macaron.Env != macaron.PROD,
+		Directory:         path.Join(setting.StaticRootPath, "templates"),
+		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
+		Funcs:             template.NewFuncMap(),
+		IndentJSON:        macaron.Env != macaron.PROD,
 	}))
 
 	localeNames, err := bindata.AssetDir("conf/locale")
