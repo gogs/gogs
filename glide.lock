@@ -17,7 +17,7 @@ imports:
 - name: github.com/go-macaron/captcha
   version: 8aa5919789ab301e865595eb4b1114d6b9847deb
 - name: github.com/go-macaron/csrf
-  version: 546646cf80d2feabea4e4098d2d824d5582f3416
+  version: 6a9a7df172cc1fcd81e4585f44b09200b6087cc0
 - name: github.com/go-macaron/gzip
   version: cad1c6580a07c56f5f6bc52d66002a05985c5854
 - name: github.com/go-macaron/i18n
@@ -127,7 +127,7 @@ imports:
 - name: gopkg.in/ldap.v2
   version: 07a7330929b9ee80495c88a4439657d89c7dbd87
 - name: gopkg.in/macaron.v1
-  version: 7c9e5e5b8c1176ce95a6f41b4e1cd60a44f8839d
+  version: 53b60f3c7d9e575050852ada71ec2953e8d685ad
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
 devImports: []
