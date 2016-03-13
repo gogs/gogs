@@ -13,9 +13,9 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func listUserOrgs(ctx *context.Context, u *models.User, all bool) {
+func listUserOrgs(ctx *context.APIContext, u *models.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
-		ctx.APIError(500, "GetOrganizations", err)
+		ctx.Error(500, "GetOrganizations", err)
 		return
 	}
 
@@ -27,12 +27,12 @@ func listUserOrgs(ctx *context.Context, u *models.User, all bool) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-your-organizations
-func ListMyOrgs(ctx *context.Context) {
+func ListMyOrgs(ctx *context.APIContext) {
 	listUserOrgs(ctx, ctx.User, true)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-user-organizations
-func ListUserOrgs(ctx *context.Context) {
+func ListUserOrgs(ctx *context.APIContext) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -41,7 +41,7 @@ func ListUserOrgs(ctx *context.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#get-an-organization
-func Get(ctx *context.Context) {
+func Get(ctx *context.APIContext) {
 	org := user.GetUserByParamsName(ctx, ":orgname")
 	if ctx.Written() {
 		return
@@ -50,14 +50,14 @@ func Get(ctx *context.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#edit-an-organization
-func Edit(ctx *context.Context, form api.EditOrgOption) {
+func Edit(ctx *context.APIContext, form api.EditOrgOption) {
 	org := user.GetUserByParamsName(ctx, ":orgname")
 	if ctx.Written() {
 		return
 	}
 
 	if !org.IsOwnedBy(ctx.User.Id) {
-		ctx.Error(403)
+		ctx.Status(403)
 		return
 	}
 
@@ -66,7 +66,7 @@ func Edit(ctx *context.Context, form api.EditOrgOption) {
 	org.Website = form.Website
 	org.Location = form.Location
 	if err := models.UpdateUser(org); err != nil {
-		ctx.APIError(500, "UpdateUser", err)
+		ctx.Error(500, "UpdateUser", err)
 		return
 	}
 

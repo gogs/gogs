@@ -206,12 +206,6 @@ func runWeb(ctx *cli.Context) {
 		Post(bindIgnErr(auth.InstallForm{}), routers.InstallPost)
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
-	// ***** START: API *****
-	m.Group("/api", func() {
-		apiv1.RegisterRoutes(m)
-	}, ignSignIn)
-	// ***** END: API *****
-
 	// ***** START: User *****
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
@@ -549,6 +543,10 @@ func runWeb(ctx *cli.Context) {
 		})
 	})
 	// ***** END: Repository *****
+
+	m.Group("/api", func() {
+		apiv1.RegisterRoutes(m)
+	}, ignSignIn)
 
 	// robots.txt
 	m.Get("/robots.txt", func(ctx *context.Context) {

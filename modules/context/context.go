@@ -112,25 +112,6 @@ func (ctx *Context) HandleText(status int, title string) {
 	ctx.PlainText(status, []byte(title))
 }
 
-// APIError logs error with title if status is 500.
-func (ctx *Context) APIError(status int, title string, obj interface{}) {
-	var message string
-	if err, ok := obj.(error); ok {
-		message = err.Error()
-	} else {
-		message = obj.(string)
-	}
-
-	if status == 500 {
-		log.Error(4, "%s: %s", title, message)
-	}
-
-	ctx.JSON(status, map[string]string{
-		"message": message,
-		"url":     base.DOC_URL,
-	})
-}
-
 func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
 	modtime := time.Now()
 	for _, p := range params {

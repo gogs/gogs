@@ -12,9 +12,9 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
-func Markdown(ctx *context.Context, form api.MarkdownOption) {
+func Markdown(ctx *context.APIContext, form api.MarkdownOption) {
 	if ctx.HasApiError() {
-		ctx.APIError(422, "", ctx.GetErrMsg())
+		ctx.Error(422, "", ctx.GetErrMsg())
 		return
 	}
 
@@ -32,10 +32,10 @@ func Markdown(ctx *context.Context, form api.MarkdownOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
-func MarkdownRaw(ctx *context.Context) {
+func MarkdownRaw(ctx *context.APIContext) {
 	body, err := ctx.Req.Body().Bytes()
 	if err != nil {
-		ctx.APIError(422, "", err)
+		ctx.Error(422, "", err)
 		return
 	}
 	ctx.Write(markdown.RenderRaw(body, ""))
