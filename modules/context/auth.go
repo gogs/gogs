@@ -52,7 +52,9 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			if !ctx.IsSigned {
 				// Restrict API calls with error message.
 				if auth.IsAPIPath(ctx.Req.URL.Path) {
-					ctx.APIError(403, "", "Only signed in user is allowed to call APIs.")
+					ctx.JSON(403, map[string]string{
+						"message": "Only signed in user is allowed to call APIs.",
+					})
 					return
 				}
 

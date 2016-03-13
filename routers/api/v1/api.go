@@ -23,7 +23,7 @@ import (
 )
 
 func RepoAssignment() macaron.Handler {
-	return func(ctx *context.Context) {
+	return func(ctx *context.APIContext) {
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
 
@@ -39,9 +39,9 @@ func RepoAssignment() macaron.Handler {
 			owner, err = models.GetUserByName(userName)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
-					ctx.Error(404)
+					ctx.Status(404)
 				} else {
-					ctx.APIError(500, "GetUserByName", err)
+					ctx.Error(500, "GetUserByName", err)
 				}
 				return
 			}
@@ -52,19 +52,19 @@ func RepoAssignment() macaron.Handler {
 		repo, err := models.GetRepositoryByName(owner.Id, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
-				ctx.Error(404)
+				ctx.Status(404)
 			} else {
-				ctx.APIError(500, "GetRepositoryByName", err)
+				ctx.Error(500, "GetRepositoryByName", err)
 			}
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.APIError(500, "GetOwner", err)
+			ctx.Error(500, "GetOwner", err)
 			return
 		}
 
 		mode, err := models.AccessLevel(ctx.User, repo)
 		if err != nil {
-			ctx.APIError(500, "AccessLevel", err)
+			ctx.Error(500, "AccessLevel", err)
 			return
 		}
 
@@ -72,7 +72,7 @@ func RepoAssignment() macaron.Handler {
 
 		// Check access.
 		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
-			ctx.Error(404)
+			ctx.Status(404)
 			return
 		}
 
@@ -193,6 +193,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("/:id").Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
 				})
+				m.Group("/issue", func() {
+					m.Combo("").Get().Post()
+					m.Combo("/:index").Get().Patch()
+				})
 			}, RepoAssignment())
 		}, ReqToken())
 
@@ -218,5 +222,5 @@ func RegisterRoutes(m *macaron.Macaron) {
 				})
 			})
 		}, ReqAdmin())
-	})
+	}, context.APIContexter())
 }

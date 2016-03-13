@@ -13,7 +13,7 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Repositories#create-a-new-repository
-func CreateRepo(ctx *context.Context, form api.CreateRepoOption) {
+func CreateRepo(ctx *context.APIContext, form api.CreateRepoOption) {
 	owner := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return

@@ -14,13 +14,13 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/repo"
 )
 
-func GetUserByParamsName(ctx *context.Context, name string) *models.User {
+func GetUserByParamsName(ctx *context.APIContext, name string) *models.User {
 	user, err := models.GetUserByName(ctx.Params(name))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Error(404)
+			ctx.Status(404)
 		} else {
-			ctx.APIError(500, "GetUserByName", err)
+			ctx.Error(500, "GetUserByName", err)
 		}
 		return nil
 	}
@@ -28,7 +28,7 @@ func GetUserByParamsName(ctx *context.Context, name string) *models.User {
 }
 
 // GetUserByParams returns user whose name is presented in URL paramenter.
-func GetUserByParams(ctx *context.Context) *models.User {
+func GetUserByParams(ctx *context.APIContext) *models.User {
 	return GetUserByParamsName(ctx, ":username")
 }
 
@@ -36,10 +36,10 @@ func composePublicKeysAPILink() string {
 	return setting.AppUrl + "api/v1/user/keys/"
 }
 
-func listPublicKeys(ctx *context.Context, uid int64) {
+func listPublicKeys(ctx *context.APIContext, uid int64) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {
-		ctx.APIError(500, "ListPublicKeys", err)
+		ctx.Error(500, "ListPublicKeys", err)
 		return
 	}
 
@@ -53,12 +53,12 @@ func listPublicKeys(ctx *context.Context, uid int64) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-your-public-keys
-func ListMyPublicKeys(ctx *context.Context) {
+func ListMyPublicKeys(ctx *context.APIContext) {
 	listPublicKeys(ctx, ctx.User.Id)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-public-keys-for-a-user
-func ListPublicKeys(ctx *context.Context) {
+func ListPublicKeys(ctx *context.APIContext) {
 	user := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -67,13 +67,13 @@ func ListPublicKeys(ctx *context.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#get-a-single-public-key
-func GetPublicKey(ctx *context.Context) {
+func GetPublicKey(ctx *context.APIContext) {
 	key, err := models.GetPublicKeyByID(ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrKeyNotExist(err) {
-			ctx.Error(404)
+			ctx.Status(404)
 		} else {
-			ctx.Handle(500, "GetPublicKeyByID", err)
+			ctx.Error(500, "GetPublicKeyByID", err)
 		}
 		return
 	}
@@ -83,7 +83,7 @@ func GetPublicKey(ctx *context.Context) {
 }
 
 // CreateUserPublicKey creates new public key to given user by ID.
-func CreateUserPublicKey(ctx *context.Context, form api.CreateKeyOption, uid int64) {
+func CreateUserPublicKey(ctx *context.APIContext, form api.CreateKeyOption, uid int64) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
 		repo.HandleCheckKeyStringError(ctx, err)
@@ -100,17 +100,17 @@ func CreateUserPublicKey(ctx *context.Context, form api.CreateKeyOption, uid int
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
-func CreatePublicKey(ctx *context.Context, form api.CreateKeyOption) {
+func CreatePublicKey(ctx *context.APIContext, form api.CreateKeyOption) {
 	CreateUserPublicKey(ctx, form, ctx.User.Id)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#delete-a-public-key
-func DeletePublicKey(ctx *context.Context) {
+func DeletePublicKey(ctx *context.APIContext) {
 	if err := models.DeletePublicKey(ctx.User, ctx.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {
-			ctx.APIError(403, "", "You do not have access to this key")
+			ctx.Error(403, "", "You do not have access to this key")
 		} else {
-			ctx.APIError(500, "DeletePublicKey", err)
+			ctx.Error(500, "DeletePublicKey", err)
 		}
 		return
 	}

@@ -14,7 +14,7 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#search-users
-func Search(ctx *context.Context) {
+func Search(ctx *context.APIContext) {
 	opts := &models.SearchUserOptions{
 		Keyword:  ctx.Query("q"),
 		Type:     models.USER_TYPE_INDIVIDUAL,
@@ -53,13 +53,13 @@ func Search(ctx *context.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#get-a-single-user
-func GetInfo(ctx *context.Context) {
+func GetInfo(ctx *context.APIContext) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Error(404)
+			ctx.Status(404)
 		} else {
-			ctx.APIError(500, "GetUserByName", err)
+			ctx.Error(500, "GetUserByName", err)
 		}
 		return
 	}

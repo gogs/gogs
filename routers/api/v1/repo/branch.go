@@ -12,16 +12,16 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get-branch
-func GetBranch(ctx *context.Context) {
+func GetBranch(ctx *context.APIContext) {
 	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params(":branchname"))
 	if err != nil {
-		ctx.APIError(500, "GetBranch", err)
+		ctx.Error(500, "GetBranch", err)
 		return
 	}
 
 	c, err := branch.GetCommit()
 	if err != nil {
-		ctx.APIError(500, "GetCommit", err)
+		ctx.Error(500, "GetCommit", err)
 		return
 	}
 
@@ -29,10 +29,10 @@ func GetBranch(ctx *context.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-branches
-func ListBranches(ctx *context.Context) {
+func ListBranches(ctx *context.APIContext) {
 	branches, err := ctx.Repo.Repository.GetBranches()
 	if err != nil {
-		ctx.APIError(500, "GetBranches", err)
+		ctx.Error(500, "GetBranches", err)
 		return
 	}
 
@@ -40,7 +40,7 @@ func ListBranches(ctx *context.Context) {
 	for i := range branches {
 		c, err := branches[i].GetCommit()
 		if err != nil {
-			ctx.APIError(500, "GetCommit", err)
+			ctx.Error(500, "GetCommit", err)
 			return
 		}
 		apiBranches[i] = convert.ToApiBranch(branches[i], c)

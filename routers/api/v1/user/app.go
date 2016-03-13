@@ -12,10 +12,10 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#list-access-tokens-for-a-user
-func ListAccessTokens(ctx *context.Context) {
+func ListAccessTokens(ctx *context.APIContext) {
 	tokens, err := models.ListAccessTokens(ctx.User.Id)
 	if err != nil {
-		ctx.APIError(500, "ListAccessTokens", err)
+		ctx.Error(500, "ListAccessTokens", err)
 		return
 	}
 
@@ -27,13 +27,13 @@ func ListAccessTokens(ctx *context.Context) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#create-a-access-token
-func CreateAccessToken(ctx *context.Context, form api.CreateAccessTokenOption) {
+func CreateAccessToken(ctx *context.APIContext, form api.CreateAccessTokenOption) {
 	t := &models.AccessToken{
 		UID:  ctx.User.Id,
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
-		ctx.APIError(500, "NewAccessToken", err)
+		ctx.Error(500, "NewAccessToken", err)
 		return
 	}
 	ctx.JSON(201, &api.AccessToken{t.Name, t.Sha1})

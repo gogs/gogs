@@ -13,35 +13,35 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-raw-content
-func GetRawFile(ctx *context.Context) {
+func GetRawFile(ctx *context.APIContext) {
 	if !ctx.Repo.HasAccess() {
-		ctx.Error(404)
+		ctx.Status(404)
 		return
 	}
 
 	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
 	if err != nil {
 		if git.IsErrNotExist(err) {
-			ctx.Error(404)
+			ctx.Status(404)
 		} else {
-			ctx.APIError(500, "GetBlobByPath", err)
+			ctx.Error(500, "GetBlobByPath", err)
 		}
 		return
 	}
-	if err = repo.ServeBlob(ctx, blob); err != nil {
-		ctx.APIError(500, "ServeBlob", err)
+	if err = repo.ServeBlob(ctx.Context, blob); err != nil {
+		ctx.Error(500, "ServeBlob", err)
 	}
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-archive
-func GetArchive(ctx *context.Context) {
+func GetArchive(ctx *context.APIContext) {
 	repoPath := models.RepoPath(ctx.Params(":username"), ctx.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
-		ctx.APIError(500, "OpenRepository", err)
+		ctx.Error(500, "OpenRepository", err)
 		return
 	}
 	ctx.Repo.GitRepo = gitRepo
 
-	repo.Download(ctx)
+	repo.Download(ctx.Context)
 }

@@ -14,7 +14,7 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Organizations#create-a-new-organization
-func CreateOrg(ctx *context.Context, form api.CreateOrgOption) {
+func CreateOrg(ctx *context.APIContext, form api.CreateOrgOption) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -33,9 +33,9 @@ func CreateOrg(ctx *context.Context, form api.CreateOrgOption) {
 		if models.IsErrUserAlreadyExist(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
-			ctx.APIError(422, "CreateOrganization", err)
+			ctx.Error(422, "CreateOrganization", err)
 		} else {
-			ctx.APIError(500, "CreateOrganization", err)
+			ctx.Error(500, "CreateOrganization", err)
 		}
 		return
 	}
