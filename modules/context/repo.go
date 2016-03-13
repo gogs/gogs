@@ -18,6 +18,56 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+type PullRequest struct {
+	BaseRepo *models.Repository
+	Allowed  bool
+	SameRepo bool
+	HeadInfo string // [<user>:]<branch>
+}
+
+type Repository struct {
+	AccessMode   models.AccessMode
+	IsWatching   bool
+	IsViewBranch bool
+	IsViewTag    bool
+	IsViewCommit bool
+	Repository   *models.Repository
+	Owner        *models.User
+	Commit       *git.Commit
+	Tag          *git.Tag
+	GitRepo      *git.Repository
+	BranchName   string
+	TagName      string
+	TreeName     string
+	CommitID     string
+	RepoLink     string
+	CloneLink    models.CloneLink
+	CommitsCount int64
+	Mirror       *models.Mirror
+
+	PullRequest *PullRequest
+}
+
+// IsOwner returns true if current user is the owner of repository.
+func (r *Repository) IsOwner() bool {
+	return r.AccessMode >= models.ACCESS_MODE_OWNER
+}
+
+// IsAdmin returns true if current user has admin or higher access of repository.
+func (r *Repository) IsAdmin() bool {
+	return r.AccessMode >= models.ACCESS_MODE_ADMIN
+}
+
+// IsWriter returns true if current user has write or higher access of repository.
+func (r *Repository) IsWriter() bool {
+	return r.AccessMode >= models.ACCESS_MODE_WRITE
+}
+
+// HasAccess returns true if the current user has at least read access for this repository
+func (r *Repository) HasAccess() bool {
+	return r.AccessMode >= models.ACCESS_MODE_READ
+}
+
 func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 	// Non-fork repository will not return error in this method.
 	if err := repo.GetBaseRepo(); err != nil {
