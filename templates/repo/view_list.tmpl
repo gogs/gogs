@@ -36,6 +36,11 @@
 							{{$entry.Name}} @ {{ShortSha $commit.RefId}}
 						{{end}}
 					</td>
+				{{else if $entry.IsJumpableDir}}
+					<td class="name">
+						<span class="icon octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+						<a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreePath}}{{EscapePound $entry.JumpablePath}}{{EscapePound $entry.JumpableName}}"><span style="color:#ccc">{{$entry.JumpablePath}}</span>{{$entry.JumpableName}}</a>
+					</td>
 				{{else}}
 					<td class="name">
 						<span class="icon octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
