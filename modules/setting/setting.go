@@ -156,7 +156,8 @@ var (
 	CacheConn     string
 
 	// Session settings
-	SessionConfig session.Options
+	SessionConfig  session.Options
+	CSRFCookieName = "_csrf"
 
 	// Git settings
 	Git struct {
