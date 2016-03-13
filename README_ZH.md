@@ -77,6 +77,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs)（IT）
 - [Kanboard](http://kanboard.net/plugin/gogs-webhook)（项目管理）
 - [BearyChat](https://bearychat.com/)（团队交流）
+- [HiWork](http://www.hiwork.cc/)（团队交流）
 
 ### 产品支持
 

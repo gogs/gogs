@@ -13,6 +13,17 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+type Organization struct {
+	IsOwner      bool
+	IsMember     bool
+	IsTeamMember bool // Is member of team.
+	IsTeamAdmin  bool // In owner team or team that has admin permission level.
+	Organization *models.User
+	OrgLink      string
+
+	Team *models.Team
+}
+
 func HandleOrgAssignment(ctx *Context, args ...bool) {
 	var (
 		requireMember     bool

@@ -105,6 +105,7 @@ There are 5 ways to install Gogs:
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs) (IT)
 - [Kanboard](http://kanboard.net/plugin/gogs-webhook) (Project Management)
 - [BearyChat](https://bearychat.com/) (Team Communication)
+- [HiWork](http://www.hiwork.cc/) (Team Communication)
 
 ### Product Support
 
