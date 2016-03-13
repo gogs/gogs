@@ -2376,6 +2376,9 @@ footer .container .links > *:first-child {
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
 }
+.user.profile .ui.card #profile-avatar {
+  height: 290px;
+}
 .user.profile .ui.card .username {
   display: block;
 }
