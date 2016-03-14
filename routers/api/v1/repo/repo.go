@@ -69,7 +69,7 @@ func Search(ctx *context.APIContext) {
 			return
 		}
 		results[i] = &api.Repository{
-			Id:       repos[i].ID,
+			ID:       repos[i].ID,
 			FullName: path.Join(repos[i].Owner.Name, repos[i].Name),
 		}
 	}
@@ -97,12 +97,12 @@ func ListMyRepos(ctx *context.APIContext) {
 
 	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
-		repos[i] = convert.ToApiRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
+		repos[i] = convert.ToRepository(ctx.User, ownRepos[i], api.Permission{true, true, true})
 	}
 	i := numOwnRepos
 
 	for repo, access := range accessibleRepos {
-		repos[i] = convert.ToApiRepository(repo.Owner, repo, api.Permission{
+		repos[i] = convert.ToRepository(repo.Owner, repo, api.Permission{
 			Admin: access >= models.ACCESS_MODE_ADMIN,
 			Push:  access >= models.ACCESS_MODE_WRITE,
 			Pull:  true,
@@ -139,7 +139,7 @@ func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateR
 		return
 	}
 
-	ctx.JSON(201, convert.ToApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, convert.ToRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create
@@ -239,7 +239,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
-	ctx.JSON(201, convert.ToApiRepository(ctxUser, repo, api.Permission{true, true, true}))
+	ctx.JSON(201, convert.ToRepository(ctxUser, repo, api.Permission{true, true, true}))
 }
 
 func parseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repository) {
@@ -273,7 +273,7 @@ func Get(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToApiRepository(owner, repo, api.Permission{true, true, true}))
+	ctx.JSON(200, convert.ToRepository(owner, repo, api.Permission{true, true, true}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete

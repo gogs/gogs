@@ -69,7 +69,7 @@ func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 		mailer.SendRegisterNotifyMail(ctx.Context.Context, u)
 	}
 
-	ctx.JSON(201, convert.ToApiUser(u))
+	ctx.JSON(201, convert.ToUser(u))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
@@ -118,7 +118,7 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 	}
 	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
 
-	ctx.JSON(200, convert.ToApiUser(u))
+	ctx.JSON(200, convert.ToUser(u))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user

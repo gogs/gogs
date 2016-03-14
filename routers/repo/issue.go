@@ -195,16 +195,6 @@ func Issues(ctx *context.Context) {
 
 	// Get posters.
 	for i := range issues {
-		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
-			return
-		}
-
-		if err = issues[i].GetLabels(); err != nil {
-			ctx.Handle(500, "GetLabels", fmt.Errorf("[#%d]%v", issues[i].ID, err))
-			return
-		}
-
 		if !ctx.IsSigned {
 			issues[i].IsRead = true
 			continue
@@ -405,7 +395,7 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	return labelIDs, milestoneID, assigneeID
 }
 
-func notifyWatchersAndMentions(ctx *context.Context, issue *models.Issue) {
+func MailWatchersAndMentions(ctx *context.Context, issue *models.Issue) error {
 	// Update mentions
 	mentions := markdown.MentionPattern.FindAllString(issue.Content, -1)
 	if len(mentions) > 0 {
@@ -414,8 +404,7 @@ func notifyWatchersAndMentions(ctx *context.Context, issue *models.Issue) {
 		}
 
 		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
-			ctx.Handle(500, "UpdateMentions", err)
-			return
+			return fmt.Errorf("UpdateMentions: %v", err)
 		}
 	}
 
@@ -425,8 +414,7 @@ func notifyWatchersAndMentions(ctx *context.Context, issue *models.Issue) {
 	if setting.Service.EnableNotifyMail {
 		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
 		if err != nil {
-			ctx.Handle(500, "SendIssueNotifyMail", err)
-			return
+			return fmt.Errorf("SendIssueNotifyMail: %v", err)
 		}
 
 		tos = append(tos, ctx.User.LowerName)
@@ -440,10 +428,11 @@ func notifyWatchersAndMentions(ctx *context.Context, issue *models.Issue) {
 		}
 		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
 			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			ctx.Handle(500, "SendIssueMentionMail", err)
-			return
+			return fmt.Errorf("SendIssueMentionMail: %v", err)
 		}
 	}
+
+	return nil
 }
 
 func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
@@ -471,9 +460,8 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	}
 
 	issue := &models.Issue{
-		RepoID:      ctx.Repo.Repository.ID,
-		Index:       repo.NextIssueIndex(),
-		Name:        strings.TrimSpace(form.Title),
+		RepoID:      repo.ID,
+		Name:        form.Title,
 		PosterID:    ctx.User.Id,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
@@ -483,10 +471,8 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	if err := models.NewIssue(repo, issue, labelIDs, attachments); err != nil {
 		ctx.Handle(500, "NewIssue", err)
 		return
-	}
-
-	notifyWatchersAndMentions(ctx, issue)
-	if ctx.Written() {
+	} else if err := MailWatchersAndMentions(ctx, issue); err != nil {
+		ctx.Handle(500, "MailWatchersAndMentions", err)
 		return
 	}
 
@@ -586,10 +572,6 @@ func ViewIssue(ctx *context.Context) {
 		ctx.Data["PageIsIssueList"] = true
 	}
 
-	if err = issue.GetPoster(); err != nil {
-		ctx.Handle(500, "GetPoster", err)
-		return
-	}
 	issue.RenderedContent = string(markdown.Render([]byte(issue.Content), ctx.Repo.RepoLink,
 		ctx.Repo.Repository.ComposeMetas()))
 
@@ -610,10 +592,6 @@ func ViewIssue(ctx *context.Context) {
 
 	// Metas.
 	// Check labels.
-	if err = issue.GetLabels(); err != nil {
-		ctx.Handle(500, "GetLabels", err)
-		return
-	}
 	labelIDMark := make(map[int64]bool)
 	for i := range issue.Labels {
 		labelIDMark[issue.Labels[i].ID] = true
@@ -698,7 +676,7 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["Participants"] = participants
 	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && (issue.IsPoster(ctx.User.Id) || ctx.User.IsAdmin))
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
 
 	ctx.Data["RequireHighlightJS"] = true
@@ -725,7 +703,7 @@ func UpdateIssueTitle(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.Id != issue.PosterID && !ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
+	if !ctx.IsSigned || (!issue.IsPoster(ctx.User.Id) && !ctx.Repo.IsWriter()) {
 		ctx.Error(403)
 		return
 	}
@@ -752,7 +730,7 @@ func UpdateIssueContent(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.Id != issue.PosterID && !ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
+	if !ctx.IsSigned || (ctx.User.Id != issue.PosterID && !ctx.Repo.IsWriter()) {
 		ctx.Error(403)
 		return
 	}
@@ -955,7 +933,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 		return
 	}
 
-	notifyWatchersAndMentions(ctx, &models.Issue{
+	MailWatchersAndMentions(ctx, &models.Issue{
 		ID:      issue.ID,
 		Index:   issue.Index,
 		Name:    issue.Name,
@@ -1099,7 +1077,6 @@ func Milestones(ctx *context.Context) {
 	}
 	for _, m := range miles {
 		m.RenderedContent = string(markdown.Render([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
-		m.CalOpenIssues()
 	}
 	ctx.Data["Milestones"] = miles
 

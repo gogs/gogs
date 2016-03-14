@@ -22,7 +22,7 @@ func ListEmails(ctx *context.APIContext) {
 	}
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
-		apiEmails[i] = convert.ToApiEmail(emails[i])
+		apiEmails[i] = convert.ToEmail(emails[i])
 	}
 	ctx.JSON(200, &apiEmails)
 }
@@ -54,7 +54,7 @@ func AddEmail(ctx *context.APIContext, form api.CreateEmailOption) {
 
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
-		apiEmails[i] = convert.ToApiEmail(emails[i])
+		apiEmails[i] = convert.ToEmail(emails[i])
 	}
 	ctx.JSON(201, &apiEmails)
 }

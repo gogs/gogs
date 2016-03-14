@@ -88,6 +88,23 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 			log.Error(3, "GetCommentsByIssueID[%d]: %v", i.ID, err)
 		}
 
+		i.Labels, err = GetLabelsByIssueID(i.ID)
+		if err != nil {
+			log.Error(3, "GetLabelsByIssueID[%d]: %v", i.ID, err)
+		}
+
+	case "poster_id":
+		i.Poster, err = GetUserByID(i.PosterID)
+		if err != nil {
+			if IsErrUserNotExist(err) {
+				i.PosterID = -1
+				i.Poster = NewFakeUser()
+			} else {
+				log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
+			}
+			return
+		}
+
 	case "milestone_id":
 		if i.MilestoneID == 0 {
 			return
@@ -97,6 +114,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetMilestoneById[%d]: %v", i.ID, err)
 		}
+
 	case "assignee_id":
 		if i.AssigneeID == 0 {
 			return
@@ -106,6 +124,7 @@ func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
 		}
+
 	case "deadline_unix":
 		i.Deadline = time.Unix(i.DeadlineUnix, 0).Local()
 	case "created_unix":
@@ -120,19 +139,17 @@ func (i *Issue) HashTag() string {
 	return "issue-" + com.ToStr(i.ID)
 }
 
+// State returns string representation of issue status.
+func (i *Issue) State() string {
+	if i.IsClosed {
+		return "closed"
+	}
+	return "open"
+}
+
 // IsPoster returns true if given user by ID is the poster.
 func (i *Issue) IsPoster(uid int64) bool {
 	return i.PosterID == uid
-}
-
-func (i *Issue) GetPoster() (err error) {
-	i.Poster, err = GetUserByID(i.PosterID)
-	if IsErrUserNotExist(err) {
-		i.PosterID = -1
-		i.Poster = NewFakeUser()
-		return nil
-	}
-	return err
 }
 
 func (i *Issue) hasLabel(e Engine, labelID int64) bool {
@@ -173,11 +190,6 @@ func (i *Issue) getLabels(e Engine) (err error) {
 		return fmt.Errorf("getLabelsByIssueID: %v", err)
 	}
 	return nil
-}
-
-// GetLabels retrieves all labels of issue and assign to corresponding field.
-func (i *Issue) GetLabels() error {
-	return i.getLabels(x)
 }
 
 func (i *Issue) removeLabel(e *xorm.Session, label *Label) error {
@@ -303,6 +315,19 @@ func (i *Issue) GetPullRequest() (err error) {
 
 // It's caller's responsibility to create action.
 func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64, uuids []string, isPull bool) (err error) {
+	issue.Name = strings.TrimSpace(issue.Name)
+	issue.Index = repo.NextIssueIndex()
+
+	if issue.AssigneeID > 0 {
+		// Silently drop invalid assignee
+		valid, err := hasAccess(e, &User{Id: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
+		if err != nil {
+			return fmt.Errorf("hasAccess: %v", err)
+		} else if !valid {
+			issue.AssigneeID = 0
+		}
+	}
+
 	if _, err = e.Insert(issue); err != nil {
 		return err
 	}
@@ -325,6 +350,10 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 		}
 
 		for _, label := range labels {
+			if label.RepoID != repo.ID {
+				continue
+			}
+
 			if err = issue.addLabel(e, label); err != nil {
 				return fmt.Errorf("addLabel: %v", err)
 			}
@@ -377,6 +406,10 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
 	// Notify watchers.
 	act := &Action{
 		ActUserID:    issue.Poster.Id,
@@ -389,11 +422,11 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}
-	if err = notifyWatchers(sess, act); err != nil {
-		return err
+	if err = NotifyWatchers(act); err != nil {
+		log.Error(4, "notifyWatchers: %v", err)
 	}
 
-	return sess.Commit()
+	return nil
 }
 
 // GetIssueByRef returns an Issue specified by a GFM reference.
@@ -467,6 +500,10 @@ type IssuesOptions struct {
 
 // Issues returns a list of issues by given conditions.
 func Issues(opts *IssuesOptions) ([]*Issue, error) {
+	if opts.Page <= 0 {
+		opts.Page = 1
+	}
+
 	sess := x.Limit(setting.IssuePagingNum, (opts.Page-1)*setting.IssuePagingNum)
 
 	if opts.RepoID > 0 {
@@ -997,6 +1034,9 @@ func (m *Milestone) BeforeUpdate() {
 
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
+	case "num_closed_issues":
+		m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+
 	case "deadline_unix":
 		m.Deadline = time.Unix(m.DeadlineUnix, 0).Local()
 		if m.Deadline.Year() == 9999 {
@@ -1007,14 +1047,18 @@ func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 		if time.Now().Local().After(m.Deadline) {
 			m.IsOverDue = true
 		}
+
 	case "closed_date_unix":
 		m.ClosedDate = time.Unix(m.ClosedDateUnix, 0).Local()
 	}
 }
 
-// CalOpenIssues calculates the open issues of milestone.
-func (m *Milestone) CalOpenIssues() {
-	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+// State returns string representation of milestone status.
+func (m *Milestone) State() string {
+	if m.IsClosed {
+		return "closed"
+	}
+	return "open"
 }
 
 // NewMilestone creates new milestone of repository.

@@ -25,7 +25,7 @@ func GetBranch(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToApiBranch(branch, c))
+	ctx.JSON(200, convert.ToBranch(branch, c))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-branches
@@ -43,7 +43,7 @@ func ListBranches(ctx *context.APIContext) {
 			ctx.Error(500, "GetCommit", err)
 			return
 		}
-		apiBranches[i] = convert.ToApiBranch(branches[i], c)
+		apiBranches[i] = convert.ToBranch(branches[i], c)
 	}
 
 	ctx.JSON(200, &apiBranches)

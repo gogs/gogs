@@ -284,11 +284,6 @@ func Issues(ctx *context.Context) {
 			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d]%v", issues[i].ID, err))
 			return
 		}
-
-		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
-			return
-		}
 	}
 	ctx.Data["Issues"] = issues
 
