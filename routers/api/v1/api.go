@@ -62,16 +62,18 @@ func RepoAssignment() macaron.Handler {
 			return
 		}
 
-		mode, err := models.AccessLevel(ctx.User, repo)
-		if err != nil {
-			ctx.Error(500, "AccessLevel", err)
-			return
+		if ctx.IsSigned && ctx.User.IsAdmin {
+			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
+		} else {
+			mode, err := models.AccessLevel(ctx.User, repo)
+			if err != nil {
+				ctx.Error(500, "AccessLevel", err)
+				return
+			}
+			ctx.Repo.AccessMode = mode
 		}
 
-		ctx.Repo.AccessMode = mode
-
-		// Check access.
-		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
+		if !ctx.Repo.HasAccess() {
 			ctx.Status(404)
 			return
 		}
@@ -193,9 +195,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("/:id").Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
 				})
-				m.Group("/issue", func() {
-					m.Combo("").Get().Post()
-					m.Combo("/:index").Get().Patch()
+				m.Group("/issues", func() {
+					m.Combo("").Get(repo.ListIssues).Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
+					m.Combo("/:index").Get(repo.GetIssue).Patch(bind(api.EditIssueOption{}), repo.EditIssue)
 				})
 			}, RepoAssignment())
 		}, ReqToken())

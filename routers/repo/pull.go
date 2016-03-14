@@ -156,10 +156,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		return nil
 	}
 
-	if err = issue.GetPoster(); err != nil {
-		ctx.Handle(500, "GetPoster", err)
-		return nil
-	} else if err = issue.GetPullRequest(); err != nil {
+	if err = issue.GetPullRequest(); err != nil {
 		ctx.Handle(500, "GetPullRequest", err)
 		return nil
 	} else if err = issue.GetHeadRepo(); err != nil {
@@ -682,10 +679,8 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	} else if err := pullRequest.PushToBaseRepo(); err != nil {
 		ctx.Handle(500, "PushToBaseRepo", err)
 		return
-	}
-
-	notifyWatchersAndMentions(ctx, pullIssue)
-	if ctx.Written() {
+	} else if err := MailWatchersAndMentions(ctx, pullIssue); err != nil {
+		ctx.Handle(500, "MailWatchersAndMentions", err)
 		return
 	}
 

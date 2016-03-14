@@ -21,7 +21,7 @@ func listUserOrgs(ctx *context.APIContext, u *models.User, all bool) {
 
 	apiOrgs := make([]*api.Organization, len(u.Orgs))
 	for i := range u.Orgs {
-		apiOrgs[i] = convert.ToApiOrganization(u.Orgs[i])
+		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
 	}
 	ctx.JSON(200, &apiOrgs)
 }
@@ -46,7 +46,7 @@ func Get(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	ctx.JSON(200, convert.ToApiOrganization(org))
+	ctx.JSON(200, convert.ToOrganization(org))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#edit-an-organization
@@ -70,5 +70,5 @@ func Edit(ctx *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToApiOrganization(org))
+	ctx.JSON(200, convert.ToOrganization(org))
 }

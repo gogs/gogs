@@ -40,5 +40,5 @@ func CreateOrg(ctx *context.APIContext, form api.CreateOrgOption) {
 		return
 	}
 
-	ctx.JSON(201, convert.ToApiOrganization(org))
+	ctx.JSON(201, convert.ToOrganization(org))
 }

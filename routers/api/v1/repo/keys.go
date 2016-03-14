@@ -34,7 +34,7 @@ func ListDeployKeys(ctx *context.APIContext) {
 			ctx.Error(500, "GetContent", err)
 			return
 		}
-		apiKeys[i] = convert.ToApiDeployKey(apiLink, keys[i])
+		apiKeys[i] = convert.ToDeployKey(apiLink, keys[i])
 	}
 
 	ctx.JSON(200, &apiKeys)
@@ -58,7 +58,7 @@ func GetDeployKey(ctx *context.APIContext) {
 	}
 
 	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
-	ctx.JSON(200, convert.ToApiDeployKey(apiLink, key))
+	ctx.JSON(200, convert.ToDeployKey(apiLink, key))
 }
 
 func HandleCheckKeyStringError(ctx *context.APIContext, err error) {
@@ -96,7 +96,7 @@ func CreateDeployKey(ctx *context.APIContext, form api.CreateKeyOption) {
 
 	key.Content = content
 	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
-	ctx.JSON(201, convert.ToApiDeployKey(apiLink, key))
+	ctx.JSON(201, convert.ToDeployKey(apiLink, key))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key

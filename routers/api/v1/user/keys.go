@@ -46,7 +46,7 @@ func listPublicKeys(ctx *context.APIContext, uid int64) {
 	apiLink := composePublicKeysAPILink()
 	apiKeys := make([]*api.PublicKey, len(keys))
 	for i := range keys {
-		apiKeys[i] = convert.ToApiPublicKey(apiLink, keys[i])
+		apiKeys[i] = convert.ToPublicKey(apiLink, keys[i])
 	}
 
 	ctx.JSON(200, &apiKeys)
@@ -79,7 +79,7 @@ func GetPublicKey(ctx *context.APIContext) {
 	}
 
 	apiLink := composePublicKeysAPILink()
-	ctx.JSON(200, convert.ToApiPublicKey(apiLink, key))
+	ctx.JSON(200, convert.ToPublicKey(apiLink, key))
 }
 
 // CreateUserPublicKey creates new public key to given user by ID.
@@ -96,7 +96,7 @@ func CreateUserPublicKey(ctx *context.APIContext, form api.CreateKeyOption, uid 
 		return
 	}
 	apiLink := composePublicKeysAPILink()
-	ctx.JSON(201, convert.ToApiPublicKey(apiLink, key))
+	ctx.JSON(201, convert.ToPublicKey(apiLink, key))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
