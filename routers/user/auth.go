@@ -343,6 +343,12 @@ func ForgotPasswdPost(ctx *context.Context) {
 		return
 	}
 
+	if !u.IsLocal() {
+		ctx.Data["Err_Email"] = true
+		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil)
+		return
+	}
+
 	if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
 		ctx.Data["ResendLimited"] = true
 		ctx.HTML(200, FORGOT_PASSWORD)
