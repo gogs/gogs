@@ -172,23 +172,36 @@ func processMailQueue() {
 	if err != nil {
 		return
 	}
-
-	log.Debug("Mailer: Dialing %s", opts.Host)
-	conn, err := dialer.Dial()
-	if err != nil {
-		log.Error(4, "Mailer: Failed to connect: %v", err)
-		return
-	}
-	defer conn.Close()
+	open := false
+	var conn gomail.SendCloser
 
 	for {
 		select {
+		// A new message is pending
 		case msg := <-mailQueue:
+			// Dial SMTP if neccessary
+			if !open {
+				var err error
+				if conn, err = dialer.Dial(); err != nil {
+					panic(err)
+				}
+				open = true
+			}
+
+			// Send SMTP message
 			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
 			if err := conn.Send(opts.From, msg.GetHeader("To"), msg.Message); err != nil {
 				log.Error(4, "Fail to send e-mails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 			} else {
 				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
+			}
+
+		// Close the connection to the SMTP server if no email was sent in the last 30 seconds
+		case <-time.After(30 * time.Second):
+			if open {
+				if err := conn.Close(); err != nil {
+					panic(err)
+				}
 			}
 		}
 	}
