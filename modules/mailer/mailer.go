@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 	"strconv"
+	"net/textproto"
 
 	"gopkg.in/gomail.v2"
 
@@ -46,14 +47,12 @@ func NewMessage(to []string, subject, body string) *Message {
 func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 	host, port, err := net.SplitHostPort(opts.Host)
 	if err != nil {
-		log.Error(3, "Mailer: Failed convert hostname %s: %v", opts.Host, err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to convert hostname %s: %v", opts.Host, err)
 	}
 
 	portI, err := strconv.Atoi(port)
 	if err != nil {
-		log.Error(3, "Mailer: Failed convert port %s: %v", port, err)
-		return nil, fmt.Errorf("Cannot convert '%s' to a port number", port)
+		return nil, fmt.Errorf("Failed to convert '%s' to a port number", port)
 	}
 
 	dialer := &gomail.Dialer {
@@ -106,11 +105,14 @@ func Test(opts *setting.Mailer) error {
 	log.Debug("Mailer: Dialing %s", opts.Host)
 	conn, err := dialer.Dial()
 	if err != nil {
-		log.Error(3, "Mailer: Failed to connect: %v", err)
+		if terr, ok := err.(*textproto.Error); ok {
+			terr.Msg = "Failed to connect: " + terr.Msg
+		}
+		return err
 	} else {
 		conn.Close()
 	}
-	return err
+	return nil
 }
 
 func Send(msg *Message) error {
@@ -124,16 +126,17 @@ func Send(msg *Message) error {
 	log.Debug("Mailer: Dialing %s", opts.Host)
 	conn, err := dialer.Dial()
 	if err != nil {
-		log.Error(4, "Mailer: Failed to connect: %v", err)
+		if terr, ok := err.(*textproto.Error); ok {
+			terr.Msg = "Failed to connect: " + terr.Msg
+		}
 		return err
 	}
 	defer conn.Close()
 
 	if err := conn.Send(opts.From, msg.GetHeader("To"), msg.Message); err != nil {
-		log.Error(4, "Fail to send e-mails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 		return err
 	} else {
-		log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
+		log.Trace("E-mail sent %s: %s", msg.GetHeader("To"), msg.Info)
 	}
 	return nil
 }

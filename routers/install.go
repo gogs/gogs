@@ -265,6 +265,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		if len(form.SMTPFrom) == 0 {
 			ctx.Data["Err_SMTP"] = true
 			ctx.Data["Err_SMTPFrom"] = true
+			ctx.Data["Err_SMTPMessage"] = "From cannot be empty!"
 
 			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_settings"), INSTALL, form)
 			return
@@ -298,7 +299,7 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 				}
 			} else {
 				switch true {
-					case strings.HasPrefix(err.Error(), "missing port"), strings.HasPrefix(err.Error(), "dial tcp"), strings.HasPrefix(err.Error(), "Cannot convert"):
+					case strings.HasPrefix(err.Error(), "Failed to convert "), strings.HasPrefix(err.Error(), "dial tcp"):
 						ctx.Data["Err_SMTPHost"] = true
 						ctx.Data["Err_SMTPMessage"] = err.Error() + ". Typical setting: hostname:25"
 					case err.Error() == "EOF":
