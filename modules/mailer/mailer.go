@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"net/smtp"
 	"os"
 	"time"
 	"strconv"
@@ -44,33 +43,6 @@ func NewMessage(to []string, subject, body string) *Message {
 	return NewMessageFrom(to, setting.MailService.From, subject, body)
 }
 
-type loginAuth struct {
-	username, password string
-}
-
-// SMTP AUTH LOGIN Auth Handler
-func LoginAuth(username, password string) smtp.Auth {
-	return &loginAuth{username, password}
-}
-
-func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
-	return "LOGIN", []byte{}, nil
-}
-
-func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
-	if more {
-		switch string(fromServer) {
-		case "Username:":
-			return []byte(a.username), nil
-		case "Password:":
-			return []byte(a.password), nil
-		default:
-			return nil, fmt.Errorf("unknwon fromServer: %s", string(fromServer))
-		}
-	}
-	return nil, nil
-}
-
 func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 	host, port, err := net.SplitHostPort(opts.Host)
 	if err != nil {
@@ -87,7 +59,8 @@ func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 	dialer := &gomail.Dialer {
 		Host: host,
 		Port: portI,
-		Auth: LoginAuth(opts.User, opts.Passwd),
+		Username: opts.User,
+		Password: opts.Passwd,
 		TLSConfig: &tls.Config {
 			InsecureSkipVerify: opts.SkipVerify,
 			ServerName:         host,
