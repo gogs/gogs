@@ -26,9 +26,8 @@ func ListHooks(ctx *context.APIContext) {
 
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = convert.ToApiHook(ctx.Repo.RepoLink, hooks[i])
+		apiHooks[i] = convert.ToHook(ctx.Repo.RepoLink, hooks[i])
 	}
-
 	ctx.JSON(200, &apiHooks)
 }
 
@@ -94,7 +93,7 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 		return
 	}
 
-	ctx.JSON(201, convert.ToApiHook(ctx.Repo.RepoLink, w))
+	ctx.JSON(201, convert.ToHook(ctx.Repo.RepoLink, w))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
@@ -161,5 +160,5 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToApiHook(ctx.Repo.RepoLink, w))
+	ctx.JSON(200, convert.ToHook(ctx.Repo.RepoLink, w))
 }

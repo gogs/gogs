@@ -35,7 +35,7 @@ imports:
 - name: github.com/go-xorm/core
   version: 502158401cde814951eae62f064d9e5ff39e13ce
 - name: github.com/go-xorm/xorm
-  version: bb8c5c04d7d65453c3f0176a307276857dccc3b0
+  version: 99686972253975273816d1ebb4cdb0a53bf39100
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
@@ -43,7 +43,7 @@ imports:
 - name: github.com/gogits/git-module
   version: 76e8cce6c7ef3ba1cf75752261c721ebf14cd129
 - name: github.com/gogits/go-gogs-client
-  version: d584b1e0fb4d8ad0e8cf2fae2368838f2526b408
+  version: 788ec59749df076b98e208909b44fdef02779deb
 - name: github.com/issue9/identicon
   version: f8c0d2ce04db79c663b1da33d3a9f62be753ee88
 - name: github.com/klauspost/compress
