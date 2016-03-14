@@ -182,7 +182,10 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = form.DbType
 
 	if ctx.HasError() {
-		if ctx.HasValue("Err_SMTPEmail") {
+		if ctx.HasValue("Err_SMTPEmail") ||
+			ctx.HasValue("Err_SMTPFrom") ||
+			ctx.HasValue("Err_SMTPHost") ||
+			ctx.HasValue("Err_SMTPAuth") {
 			ctx.Data["Err_SMTP"] = true
 		}
 		if ctx.HasValue("Err_AdminName") ||
@@ -263,7 +266,6 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 	// Check mail server
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
 		if len(form.SMTPFrom) == 0 {
-			ctx.Data["Err_SMTP"] = true
 			ctx.Data["Err_SMTPFrom"] = true
 			ctx.Data["Err_SMTPMessage"] = "From cannot be empty!"
 
@@ -283,7 +285,6 @@ func InstallPost(ctx *middleware.Context, form auth.InstallForm) {
 		}
 
 		if err := mailer.Test(opts); err != nil {
-			ctx.Data["Err_SMTP"] = true
 			ctx.Data["Err_SMTPMessage"] = err
 
 			if te, ok := err.(*textproto.Error); ok {
