@@ -357,6 +357,7 @@ OUTER_LOOP:
 
 // Render renders Markdown to HTML with special links.
 func Render(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	urlPrefix = strings.Replace(urlPrefix, string(spaceBytes), string(spaceEncodedBytes), -1)
 	result := RenderRaw(rawBytes, urlPrefix)
 	result = PostProcess(result, urlPrefix, metas)
 	result = Sanitizer.SanitizeBytes(result)
