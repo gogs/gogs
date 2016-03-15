@@ -1140,6 +1140,7 @@ footer .container .links > *:first-child {
   border-bottom: none;
 }
 .repository .filter.menu .label.color {
+  border-radius: 3px;
   margin-left: 15px;
   padding: 0 8px;
 }
