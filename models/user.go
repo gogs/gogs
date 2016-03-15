@@ -1142,7 +1142,6 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 	// Append conditions
 	sess := x.Where("lower_name like ?", searchQuery).
 		Or("full_name like ?", searchQuery).
-		Or("email like ?", searchQuery).
 		And("type = ?", opts.Type)
 
 	var countSess xorm.Session
