@@ -22,8 +22,14 @@ func Repos(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminRepositories"] = true
 
-	routers.RenderRepoSearch(ctx, models.CountRepositories, models.Repositories,
-		setting.AdminRepoPagingNum, "id ASC", REPOS)
+	routers.RenderRepoSearch(ctx, &routers.RepoSearchOptions{
+		Counter:  models.CountRepositories,
+		Ranger:   models.Repositories,
+		Private:  true,
+		PageSize: setting.AdminRepoPagingNum,
+		OrderBy:  "id ASC",
+		TplName:  REPOS,
+	})
 }
 
 func DeleteRepo(ctx *context.Context) {

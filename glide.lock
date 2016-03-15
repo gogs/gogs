@@ -1,5 +1,5 @@
-hash: 81254bce31966708f508a845836851efb77d96d8c522e745e67d0daeffd76cc5
-updated: 2016-03-12T14:42:55.945562115-05:00
+hash: f2fa73b9a379e1fa12f2b48fb0b9942a545b4518a2d71cbd956ee81093347773
+updated: 2016-03-15T13:58:01.074601588-04:00
 imports:
 - name: github.com/bradfitz/gomemcache
   version: fb1f79c6b65acda83063cbc69f6bba1522558bfc
@@ -46,8 +46,10 @@ imports:
   version: 788ec59749df076b98e208909b44fdef02779deb
 - name: github.com/issue9/identicon
   version: f8c0d2ce04db79c663b1da33d3a9f62be753ee88
+- name: github.com/kardianos/minwinsvc
+  version: cad6b2b879b0970e4245a20ebf1a81a756e2bb70
 - name: github.com/klauspost/compress
-  version: 2d3d403f37d2e70b722590bc286076a17422e1f2
+  version: 006acde2c5d283d2f8b8aa03d8f0cd2891c680cf
   subpackages:
   - gzip
   - flate
@@ -59,10 +61,14 @@ imports:
   version: 165a3529e799da61ab10faed1fabff3662d6193f
   subpackages:
   - oid
+- name: github.com/mattn/go-sqlite3
+  version: 76e335f60bbcee20755df9864f0153af1a80ad2d
 - name: github.com/mcuadros/go-version
   version: d52711f8d6bea8dc01efafdb68ad95a4e2606630
 - name: github.com/microcosm-cc/bluemonday
   version: 4ac6f27528d0a3f2a59e0b0a6f6b3ff0bb89fe20
+- name: github.com/msteinert/pam
+  version: 02ccfbfaf0cc627aa3aec8ef7ed5cfeec5b43f63
 - name: github.com/nfnt/resize
   version: 4d93a29130b1b6aba503e2aa8b50f516213ea80e
 - name: github.com/russross/blackfriday
@@ -86,18 +92,23 @@ imports:
 - name: github.com/Unknwon/paginater
   version: 7748a72e01415173a27d79866b984328e7b0c12b
 - name: golang.org/x/crypto
-  version: de93d05161db39bcbd84d3da2e54c4a18f37f0b1
+  version: 6025851c7c2bf210daf74d22300c699b16541847
   subpackages:
   - ssh
   - curve25519
 - name: golang.org/x/net
-  version: e7da8edaa52631091740908acaf2c2d4c9b3ce90
+  version: 35b06af0720201bc2f326773a80767387544f8c4
   subpackages:
   - html
   - html/charset
   - html/atom
+- name: golang.org/x/sys
+  version: 9d4e42a20653790449273b3c85e67d6d8bae6e2e
+  subpackages:
+  - windows/svc
+  - windows
 - name: golang.org/x/text
-  version: a71fd10341b064c10f4a81ceac72bcf70f26ea34
+  version: c20b6f20120f3c96689c10ffa47eee07776b9fe1
   subpackages:
   - transform
   - encoding
@@ -121,7 +132,7 @@ imports:
 - name: gopkg.in/bufio.v1
   version: 567b2bfa514e796916c4747494d6ff5132a1dfce
 - name: gopkg.in/gomail.v2
-  version: 5ceb8e65415e45e1262fb385212b8193b55c0f99
+  version: afff51fd8cbc246672451a1b0b67e8f4a507bad8
 - name: gopkg.in/ini.v1
   version: 776aa739ce9373377cd16f526cdf06cb4c89b40f
 - name: gopkg.in/ldap.v2

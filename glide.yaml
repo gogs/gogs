@@ -28,9 +28,12 @@ import:
 - package: github.com/gogits/git-module
 - package: github.com/gogits/go-gogs-client
 - package: github.com/issue9/identicon
+- package: github.com/kardianos/minwinsvc
 - package: github.com/lib/pq
+- package: github.com/mattn/go-sqlite3
 - package: github.com/mcuadros/go-version
 - package: github.com/microcosm-cc/bluemonday
+- package: github.com/msteinert/pam
 - package: github.com/nfnt/resize
 - package: github.com/russross/blackfriday
 - package: github.com/satori/go.uuid
