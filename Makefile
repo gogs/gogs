@@ -6,6 +6,7 @@ LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
 GENERATED  := modules/bindata/bindata.go public/css/gogs.css
 
 TAGS = ""
+BUILD_FLAGS = "-v"
 
 RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
@@ -16,14 +17,14 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 .IGNORE: public/css/gogs.css
 
 build: $(GENERATED)
-	go install -v -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
+	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
 govet:
 	go tool vet -composites=false -methods=false -structtags=false .
 
 build-dev: $(GENERATED) govet
-	go install -v -race -tags '$(TAGS)'
+	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
 pack:
