@@ -159,6 +159,8 @@ var (
 	svgSuffixWithMark = []byte(".svg?")
 	spaceBytes        = []byte(" ")
 	spaceEncodedBytes = []byte("%20")
+	space             = " "
+	spaceEncoded      = "%20"
 )
 
 // Image defines how images should be processed to produce corresponding HTML elements.
@@ -357,7 +359,7 @@ OUTER_LOOP:
 
 // Render renders Markdown to HTML with special links.
 func Render(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
-	urlPrefix = strings.Replace(urlPrefix, string(spaceBytes), string(spaceEncodedBytes), -1)
+	urlPrefix = strings.Replace(urlPrefix, space, spaceEncoded, -1)
 	result := RenderRaw(rawBytes, urlPrefix)
 	result = PostProcess(result, urlPrefix, metas)
 	result = Sanitizer.SanitizeBytes(result)
