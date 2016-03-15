@@ -44,9 +44,16 @@ func Home(ctx *context.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func RenderRepoSearch(ctx *context.Context,
-	counter func() int64, ranger func(int, int) ([]*models.Repository, error),
-	pagingNum int, orderBy string, tplName base.TplName) {
+type RepoSearchOptions struct {
+	Counter  func() int64
+	Ranger   func(int, int) ([]*models.Repository, error)
+	Private  bool
+	PageSize int
+	OrderBy  string
+	TplName  base.TplName
+}
+
+func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
@@ -60,18 +67,19 @@ func RenderRepoSearch(ctx *context.Context,
 
 	keyword := ctx.Query("q")
 	if len(keyword) == 0 {
-		repos, err = ranger(page, pagingNum)
+		repos, err = opts.Ranger(page, opts.PageSize)
 		if err != nil {
-			ctx.Handle(500, "ranger", err)
+			ctx.Handle(500, "opts.Ranger", err)
 			return
 		}
-		count = counter()
+		count = opts.Counter()
 	} else {
 		repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
 			Keyword:  keyword,
-			OrderBy:  orderBy,
+			OrderBy:  opts.OrderBy,
+			Private:  opts.Private,
 			Page:     page,
-			PageSize: pagingNum,
+			PageSize: opts.PageSize,
 		})
 		if err != nil {
 			ctx.Handle(500, "SearchRepositoryByName", err)
@@ -80,7 +88,7 @@ func RenderRepoSearch(ctx *context.Context,
 	}
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["Total"] = count
-	ctx.Data["Page"] = paginater.New(int(count), pagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(int(count), opts.PageSize, page, 5)
 
 	for _, repo := range repos {
 		if err = repo.GetOwner(); err != nil {
@@ -90,7 +98,7 @@ func RenderRepoSearch(ctx *context.Context,
 	}
 	ctx.Data["Repos"] = repos
 
-	ctx.HTML(200, tplName)
+	ctx.HTML(200, opts.TplName)
 }
 
 func ExploreRepos(ctx *context.Context) {
@@ -98,13 +106,25 @@ func ExploreRepos(ctx *context.Context) {
 	ctx.Data["PageIsExplore"] = true
 	ctx.Data["PageIsExploreRepositories"] = true
 
-	RenderRepoSearch(ctx, models.CountPublicRepositories, models.GetRecentUpdatedRepositories,
-		setting.ExplorePagingNum, "updated_unix DESC", EXPLORE_REPOS)
+	RenderRepoSearch(ctx, &RepoSearchOptions{
+		Counter:  models.CountPublicRepositories,
+		Ranger:   models.GetRecentUpdatedRepositories,
+		PageSize: setting.ExplorePagingNum,
+		OrderBy:  "updated_unix DESC",
+		TplName:  EXPLORE_REPOS,
+	})
 }
 
-func RenderUserSearch(ctx *context.Context, userType models.UserType,
-	counter func() int64, ranger func(int, int) ([]*models.User, error),
-	pagingNum int, orderBy string, tplName base.TplName) {
+type UserSearchOptions struct {
+	Type     models.UserType
+	Counter  func() int64
+	Ranger   func(int, int) ([]*models.User, error)
+	PageSize int
+	OrderBy  string
+	TplName  base.TplName
+}
+
+func RenderUserSearch(ctx *context.Context, opts *UserSearchOptions) {
 	page := ctx.QueryInt("page")
 	if page <= 1 {
 		page = 1
@@ -118,19 +138,19 @@ func RenderUserSearch(ctx *context.Context, userType models.UserType,
 
 	keyword := ctx.Query("q")
 	if len(keyword) == 0 {
-		users, err = ranger(page, pagingNum)
+		users, err = opts.Ranger(page, opts.PageSize)
 		if err != nil {
-			ctx.Handle(500, "ranger", err)
+			ctx.Handle(500, "opts.Ranger", err)
 			return
 		}
-		count = counter()
+		count = opts.Counter()
 	} else {
 		users, count, err = models.SearchUserByName(&models.SearchUserOptions{
 			Keyword:  keyword,
-			Type:     userType,
-			OrderBy:  orderBy,
+			Type:     opts.Type,
+			OrderBy:  opts.OrderBy,
 			Page:     page,
-			PageSize: pagingNum,
+			PageSize: opts.PageSize,
 		})
 		if err != nil {
 			ctx.Handle(500, "SearchUserByName", err)
@@ -139,10 +159,10 @@ func RenderUserSearch(ctx *context.Context, userType models.UserType,
 	}
 	ctx.Data["Keyword"] = keyword
 	ctx.Data["Total"] = count
-	ctx.Data["Page"] = paginater.New(int(count), pagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(int(count), opts.PageSize, page, 5)
 	ctx.Data["Users"] = users
 
-	ctx.HTML(200, tplName)
+	ctx.HTML(200, opts.TplName)
 }
 
 func ExploreUsers(ctx *context.Context) {
@@ -150,8 +170,14 @@ func ExploreUsers(ctx *context.Context) {
 	ctx.Data["PageIsExplore"] = true
 	ctx.Data["PageIsExploreUsers"] = true
 
-	RenderUserSearch(ctx, models.USER_TYPE_INDIVIDUAL, models.CountUsers, models.Users,
-		setting.ExplorePagingNum, "updated_unix DESC", EXPLORE_USERS)
+	RenderUserSearch(ctx, &UserSearchOptions{
+		Type:     models.USER_TYPE_INDIVIDUAL,
+		Counter:  models.CountUsers,
+		Ranger:   models.Users,
+		PageSize: setting.ExplorePagingNum,
+		OrderBy:  "updated_unix DESC",
+		TplName:  EXPLORE_USERS,
+	})
 }
 
 func NotFound(ctx *context.Context) {
