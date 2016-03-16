@@ -1520,7 +1520,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	repos = make([]*Repository, 0, opts.PageSize)
 
 	// Append conditions
-	sess := x.Where("lower_name like ?", "%"+opts.Keyword+"%")
+	sess := x.Where("LOWER(lower_name) LIKE ?", "%"+opts.Keyword+"%")
 	if opts.OwnerID > 0 {
 		sess.And("owner_id = ?", opts.OwnerID)
 	}
