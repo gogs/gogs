@@ -1140,8 +1140,8 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 	searchQuery := "%" + opts.Keyword + "%"
 	users = make([]*User, 0, opts.PageSize)
 	// Append conditions
-	sess := x.Where("lower_name like ?", searchQuery).
-		Or("full_name like ?", searchQuery).
+	sess := x.Where("LOWER(lower_name) LIKE ?", searchQuery).
+		Or("LOWER(full_name) LIKE ?", searchQuery).
 		And("type = ?", opts.Type)
 
 	var countSess xorm.Session
