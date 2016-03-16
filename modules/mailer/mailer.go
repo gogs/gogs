@@ -72,18 +72,14 @@ func newDialer(opts *setting.Mailer) (*gomail.Dialer, error) {
 		dialer.SSL = false
 	}
 
-	if !opts.DisableHelo {
-		hostname := opts.HeloHostname
-	        if len(hostname) == 0 {
-			hostname, err = os.Hostname()
-			if err != nil {
-				return nil, err
-			}
+	hostname := opts.HeloHostname
+	if len(hostname) == 0 {
+		hostname, err = os.Hostname()
+		if err != nil {
+			return nil, err
 		}
-		dialer.LocalName = hostname
-	} else {
-		dialer.LocalName = ""
 	}
+	dialer.LocalName = hostname
 
 	if opts.UseCertificate {
 		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)

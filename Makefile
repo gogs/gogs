@@ -11,7 +11,7 @@ RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
-.PHONY: build pack release bindata clean
+.PHONY: build pack release clean
 
 .IGNORE: public/css/gogs.css
 
@@ -34,11 +34,6 @@ pack:
 	cd $(RELEASE_ROOT) && zip -r gogs.$(NOW).zip "gogs"
 
 release: build pack
-
-bindata: modules/bindata/bindata.go
-
-modules/bindata/bindata.go: $(DATA_FILES)
-	go-bindata -o=$@ -ignore="\\.DS_Store|README.md|TRANSLATORS" -pkg=bindata conf/...
 
 less: public/css/gogs.css
 
