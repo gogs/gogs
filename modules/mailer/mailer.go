@@ -155,7 +155,7 @@ func processMailQueue() {
 			if !open {
 				var err error
 				if conn, err = dialer.Dial(); err != nil {
-					panic(err)
+					log.Error(4, "Fail to connect to SMTP server: %v", err)
 				}
 				open = true
 			}
@@ -172,8 +172,9 @@ func processMailQueue() {
 		case <-time.After(30 * time.Second):
 			if open {
 				if err := conn.Close(); err != nil {
-					panic(err)
+					log.Error(4, "Fail to close SMTP connection: %v", err)
 				}
+				open = false
 			}
 		}
 	}
