@@ -7,7 +7,7 @@ github.com/codegangsta/cli = commit:a294348
 github.com/go-macaron/binding = commit:a68f342
 github.com/go-macaron/cache = commit:5617353
 github.com/go-macaron/captcha = commit:8aa5919
-github.com/go-macaron/csrf = commit:546646c
+github.com/go-macaron/csrf = commit:6a9a7df
 github.com/go-macaron/gzip = commit:cad1c65
 github.com/go-macaron/i18n = commit:d2d3329
 github.com/go-macaron/inject = commit:c5ab7bf
@@ -46,7 +46,7 @@ gopkg.in/asn1-ber.v1 = commit:4e86f43
 gopkg.in/gomail.v2 = commit:5ceb8e6
 gopkg.in/ini.v1 = commit:776aa73
 gopkg.in/ldap.v2 = commit:07a7330
-gopkg.in/macaron.v1 = commit:b9eee38
+gopkg.in/macaron.v1 = commit:53b60f3
 gopkg.in/redis.v2 = commit:e617904962
 
 [res]
