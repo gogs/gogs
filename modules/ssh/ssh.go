@@ -62,12 +62,12 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					}
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
-					os.Setenv("SSH_ORIGINAL_COMMAND", cmdName)
 					log.Trace("SSH: Payload: %v", cmdName)
 
 					args := []string{"serv", "key-" + keyID, "--config=" + setting.CustomConf}
 					log.Trace("SSH: Arguments: %v", args)
 					cmd := exec.Command(setting.AppPath, args...)
+					cmd.Env = append(os.Environ(), "SSH_ORIGINAL_COMMAND="+cmdName)
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
