@@ -1,5 +1,5 @@
 hash: f2fa73b9a379e1fa12f2b48fb0b9942a545b4518a2d71cbd956ee81093347773
-updated: 2016-03-15T13:58:01.074601588-04:00
+updated: 2016-03-19T14:44:26.835671547-04:00
 imports:
 - name: github.com/bradfitz/gomemcache
   version: fb1f79c6b65acda83063cbc69f6bba1522558bfc
@@ -35,7 +35,7 @@ imports:
 - name: github.com/go-xorm/core
   version: 502158401cde814951eae62f064d9e5ff39e13ce
 - name: github.com/go-xorm/xorm
-  version: 99686972253975273816d1ebb4cdb0a53bf39100
+  version: 769f6b3ae663248e8f1b1d8fecbe1eb26ac77ac7
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
@@ -72,7 +72,7 @@ imports:
 - name: github.com/nfnt/resize
   version: 4d93a29130b1b6aba503e2aa8b50f516213ea80e
 - name: github.com/russross/blackfriday
-  version: 006144af03eeeff1037240a71865a9fd61f1c25f
+  version: b43df972fb5fdf3af8d2e90f38a69d374fe26dd0
 - name: github.com/satori/go.uuid
   version: e673fdd4dea8a7334adbbe7f57b7e4b00bdc5502
 - name: github.com/sergi/go-diff
@@ -92,7 +92,7 @@ imports:
 - name: github.com/Unknwon/paginater
   version: 7748a72e01415173a27d79866b984328e7b0c12b
 - name: golang.org/x/crypto
-  version: 6025851c7c2bf210daf74d22300c699b16541847
+  version: c197bcf24cde29d3f73c7b4ac6fd41f4384e8af6
   subpackages:
   - ssh
   - curve25519
@@ -108,7 +108,7 @@ imports:
   - windows/svc
   - windows
 - name: golang.org/x/text
-  version: c20b6f20120f3c96689c10ffa47eee07776b9fe1
+  version: 1b466db55e0ba5d56ef5315c728216b42f796491
   subpackages:
   - transform
   - encoding
@@ -132,13 +132,13 @@ imports:
 - name: gopkg.in/bufio.v1
   version: 567b2bfa514e796916c4747494d6ff5132a1dfce
 - name: gopkg.in/gomail.v2
-  version: afff51fd8cbc246672451a1b0b67e8f4a507bad8
+  version: 060a5f4e98dbf37408cf0c745681e4001d877827
 - name: gopkg.in/ini.v1
   version: 776aa739ce9373377cd16f526cdf06cb4c89b40f
 - name: gopkg.in/ldap.v2
   version: 07a7330929b9ee80495c88a4439657d89c7dbd87
 - name: gopkg.in/macaron.v1
-  version: 53b60f3c7d9e575050852ada71ec2953e8d685ad
+  version: 94a5ef7105036242f79e5e07a8eb8651d06c8533
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
 devImports: []
