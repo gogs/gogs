@@ -361,12 +361,6 @@ func NewContext() {
 		} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
 			log.Fatal(4, "Fail to create '%s': %v", SSH.KeyTestPath, err)
 		}
-
-		if !filepath.IsAbs(SSH.KeygenPath) {
-			if _, err := exec.LookPath(SSH.KeygenPath); err != nil {
-				log.Fatal(4, "Fail to test '%s' command: %v (forgotten install?)", SSH.KeygenPath, err)
-			}
-		}
 	}
 
 	SSH.MinimumKeySizeCheck = sec.Key("MINIMUM_KEY_SIZE_CHECK").MustBool()
