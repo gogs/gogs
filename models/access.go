@@ -20,6 +20,33 @@ const (
 	ACCESS_MODE_OWNER                   // 4
 )
 
+func (mode AccessMode) String() string {
+	switch mode {
+	case ACCESS_MODE_READ:
+		return "read"
+	case ACCESS_MODE_WRITE:
+		return "write"
+	case ACCESS_MODE_ADMIN:
+		return "admin"
+	case ACCESS_MODE_OWNER:
+		return "owner"
+	default:
+		return "none"
+	}
+}
+
+// ParseAccessMode returns corresponding access mode to given permission string.
+func ParseAccessMode(permission string) AccessMode {
+	switch permission {
+	case "write":
+		return ACCESS_MODE_WRITE
+	case "admin":
+		return ACCESS_MODE_ADMIN
+	default:
+		return ACCESS_MODE_READ
+	}
+}
+
 // Access represents the highest access level of a user to the repository. The only access type
 // that is not in this table is the real owner of a repository. In case of an organization
 // repository, the members of the owners team are in this table.
