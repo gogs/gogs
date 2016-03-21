@@ -34,5 +34,5 @@ func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToTeam(team))
+	ctx.JSON(201, convert.ToTeam(team))
 }
