@@ -223,6 +223,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
 			})
+
+			m.Group("/orgs/:orgname", func() {
+				m.Combo("/teams").Get(admin.ListTeams).Post(bind(api.CreateTeamOption{}), admin.CreateTeam)
+			})
 		}, ReqAdmin())
 	}, context.APIContexter())
 }

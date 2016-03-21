@@ -154,25 +154,11 @@ func NewTeamPost(ctx *context.Context, form auth.CreateTeamForm) {
 	ctx.Data["PageIsOrgTeams"] = true
 	ctx.Data["PageIsOrgTeamsNew"] = true
 
-	// Validate permission level.
-	var auth models.AccessMode
-	switch form.Permission {
-	case "read":
-		auth = models.ACCESS_MODE_READ
-	case "write":
-		auth = models.ACCESS_MODE_WRITE
-	case "admin":
-		auth = models.ACCESS_MODE_ADMIN
-	default:
-		ctx.Error(401)
-		return
-	}
-
 	t := &models.Team{
 		OrgID:       ctx.Org.Organization.Id,
 		Name:        form.TeamName,
 		Description: form.Description,
-		Authorize:   auth,
+		Authorize:   models.ParseAccessMode(form.Permission),
 	}
 	ctx.Data["Team"] = t
 
