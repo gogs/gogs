@@ -196,3 +196,12 @@ func ToOrganization(org *models.User) *api.Organization {
 		Location:    org.Location,
 	}
 }
+
+func ToTeam(team *models.Team) *api.Team {
+	return &api.Team{
+		ID:          team.ID,
+		Name:        team.Name,
+		Description: team.Description,
+		Permission:  team.Authorize.String(),
+	}
+}
