@@ -105,9 +105,8 @@ func Test(opts *setting.Mailer) error {
 			terr.Msg = "Failed to connect: " + terr.Msg
 		}
 		return err
-	} else {
-		conn.Close()
 	}
+	conn.Close()
 	return nil
 }
 
@@ -131,9 +130,8 @@ func Send(msg *Message) error {
 
 	if err := conn.Send(opts.From, msg.GetHeader("To"), msg.Message); err != nil {
 		return err
-	} else {
-		log.Trace("E-mail sent %s: %s", msg.GetHeader("To"), msg.Info)
 	}
+	log.Trace("E-mail sent %s: %s", msg.GetHeader("To"), msg.Info)
 	return nil
 }
 
