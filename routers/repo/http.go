@@ -511,7 +511,7 @@ func gitCommand(gitBinPath, dir string, args ...string) []byte {
 	out, err := command.Output()
 
 	if err != nil {
-		log.GitLogger.Error(4, err.Error())
+		log.GitLogger.Error(4, fmt.Sprintf("%v - %s", err, out))
 	}
 
 	return out
