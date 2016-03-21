@@ -13,24 +13,6 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func ListTeams(ctx *context.APIContext) {
-	org := user.GetUserByParamsName(ctx, ":orgname")
-	if ctx.Written() {
-		return
-	}
-
-	if err := org.GetTeams(); err != nil {
-		ctx.Error(500, "GetTeams", err)
-		return
-	}
-
-	apiTeams := make([]*api.Team, len(org.Teams))
-	for i := range org.Teams {
-		apiTeams[i] = convert.ToTeam(org.Teams[i])
-	}
-	ctx.JSON(200, apiTeams)
-}
-
 func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
 	org := user.GetUserByParamsName(ctx, ":orgname")
 	if ctx.Written() {
@@ -45,7 +27,7 @@ func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
 	}
 	if err := models.NewTeam(team); err != nil {
 		if models.IsErrTeamAlreadyExist(err) {
-			ctx.Error(422, "NewTeam", err)
+			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "NewTeam", err)
 		}

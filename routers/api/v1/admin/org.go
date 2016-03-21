@@ -33,7 +33,7 @@ func CreateOrg(ctx *context.APIContext, form api.CreateOrgOption) {
 		if models.IsErrUserAlreadyExist(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
-			ctx.Error(422, "CreateOrganization", err)
+			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "CreateOrganization", err)
 		}
