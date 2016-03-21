@@ -205,7 +205,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 		// Organizations
 		m.Get("/user/orgs", ReqToken(), org.ListMyOrgs)
 		m.Get("/users/:username/orgs", org.ListUserOrgs)
-		m.Combo("/orgs/:orgname").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
+		m.Group("/orgs/:orgname", func() {
+			m.Combo("").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
+			m.Combo("/teams").Get(org.ListTeams)
+		})
 
 		m.Any("/*", func(ctx *context.Context) {
 			ctx.Error(404)
@@ -225,7 +228,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 			})
 
 			m.Group("/orgs/:orgname", func() {
-				m.Combo("/teams").Get(admin.ListTeams).Post(bind(api.CreateTeamOption{}), admin.CreateTeam)
+				m.Combo("/teams").Post(bind(api.CreateTeamOption{}), admin.CreateTeam)
 			})
 		}, ReqAdmin())
 	}, context.APIContexter())
