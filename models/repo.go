@@ -129,8 +129,7 @@ func NewRepoContext() {
 		log.Fatal(4, "Fail to execute 'git config --global core.quotepath false': %s", stderr)
 	}
 
-	// Clean up temporary data.
-	os.RemoveAll(filepath.Join(setting.AppDataPath, "tmp"))
+	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(setting.AppDataPath, "tmp"))
 }
 
 // Repository represents a git repository.
