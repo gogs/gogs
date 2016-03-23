@@ -1506,6 +1506,7 @@ footer .container .links > *:first-child {
 }
 .repository.view.issue .comment-list .comment .ui.form textarea {
   height: 200px;
+  font-family: "Consolas", monospace;
 }
 .repository.view.issue .comment-list .comment .edit.buttons {
   margin-top: 10px;
@@ -1587,6 +1588,7 @@ footer .container .links > *:first-child {
 }
 .repository .comment.form .content textarea {
   height: 200px;
+  font-family: "Consolas", monospace;
 }
 .repository .label.list {
   list-style: none;
@@ -1965,6 +1967,9 @@ footer .container .links > *:first-child {
 }
 .repository.wiki.start .ui.segment .mega-octicon {
   font-size: 48px;
+}
+.repository.wiki.new .CodeMirror .CodeMirror-code {
+  font-family: "Consolas", monospace;
 }
 .repository.wiki.new .CodeMirror .CodeMirror-code .cm-comment {
   background: inherit;

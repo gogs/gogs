@@ -70,8 +70,8 @@
 		}
 	}
 	.header-wrapper {
-		background-color: #FAFAFA; 
-		margin-top: -15px; 
+		background-color: #FAFAFA;
+		margin-top: -15px;
 		padding-top: 15px;
 
 		.ui.tabs.divider {
@@ -281,7 +281,7 @@
 				#avatar-arrow;
 				&:after {
 					border-right-color: #fff;
-				}				
+				}
 				.markdown {
 					font-size: 14px;
 				}
@@ -456,6 +456,7 @@
 					}
 					textarea {
 						height: 200px;
+						font-family: "Consolas", monospace;
 					}
 				}
 
@@ -531,6 +532,7 @@
 			}
 			textarea {
 				height: 200px;
+                font-family: "Consolas", monospace;
 			}
 		}
 	}
@@ -992,8 +994,11 @@
 
 		&.new {
 			.CodeMirror {
-				.CodeMirror-code .cm-comment {
-					background: inherit;
+				.CodeMirror-code {
+					font-family: "Consolas", monospace;
+					.cm-comment {
+						background: inherit;
+					}
 				}
 			}
 
@@ -1302,7 +1307,7 @@
 		border-right-color: #D4D4D5;
 		border-width: 9px;
 		margin-top: -9px;
-	}	
+	}
 	&:after {
 		border-right-color: #f7f7f7;
 		border-width: 8px;
