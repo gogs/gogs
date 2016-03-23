@@ -12,7 +12,7 @@ For bug reports, please give the relevant info:
   - [ ] MySQL
   - [ ] SQLite
 - Can you reproduce the bug at http://try.gogs.io:
-  - [ ] Yes
+  - [ ] Yes (provide example URL)
   - [ ] No
   - [ ] Not relevant
 - Log gist:
