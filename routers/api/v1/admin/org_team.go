@@ -14,13 +14,8 @@ import (
 )
 
 func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
-	org := user.GetUserByParamsName(ctx, ":orgname")
-	if ctx.Written() {
-		return
-	}
-
 	team := &models.Team{
-		OrgID:       org.Id,
+		OrgID:       ctx.Org.Organization.Id,
 		Name:        form.Name,
 		Description: form.Description,
 		Authorize:   models.ParseAccessMode(form.Permission),
@@ -35,4 +30,31 @@ func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
 	}
 
 	ctx.JSON(201, convert.ToTeam(team))
+}
+
+func AddTeamMember(ctx *context.APIContext) {
+	u := user.GetUserByParams(ctx)
+	if ctx.Written() {
+		return
+	}
+	if err := ctx.Org.Team.AddMember(u.Id); err != nil {
+		ctx.Error(500, "AddMember", err)
+		return
+	}
+
+	ctx.Status(204)
+}
+
+func RemoveTeamMember(ctx *context.APIContext) {
+	u := user.GetUserByParams(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	if err := ctx.Org.Team.RemoveMember(u.Id); err != nil {
+		ctx.Error(500, "RemoveMember", err)
+		return
+	}
+
+	ctx.Status(204)
 }
