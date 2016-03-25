@@ -18,6 +18,7 @@ import (
 
 type APIContext struct {
 	*Context
+	Org *APIOrganization
 }
 
 // Error responses error message to client with given message.
@@ -40,6 +41,7 @@ func (ctx *APIContext) Error(status int, title string, obj interface{}) {
 	})
 }
 
+// SetLinkHeader sets pagination link header by given totol number and page size.
 func (ctx *APIContext) SetLinkHeader(total, pageSize int) {
 	page := paginater.New(total, pageSize, ctx.QueryInt("page"), 0)
 	links := make([]string, 0, 4)

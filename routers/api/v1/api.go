@@ -110,6 +110,42 @@ func ReqAdmin() macaron.Handler {
 	}
 }
 
+func OrgAssignment(args ...bool) macaron.Handler {
+	var (
+		assignTeam bool
+	)
+
+	if len(args) > 0 {
+		assignTeam = args[0]
+	}
+	return func(ctx *context.APIContext) {
+		org, err := models.GetUserByName(ctx.Params(":orgname"))
+		if err != nil {
+			if models.IsErrUserNotExist(err) {
+				ctx.Status(404)
+			} else {
+				ctx.Error(500, "GetUserByName", err)
+			}
+			return
+		}
+		ctx.Org = &context.APIOrganization{
+			Organization: org,
+		}
+
+		if assignTeam {
+			ctx.Org.Team, err = models.GetTeamByID(ctx.ParamsInt64(":teamid"))
+			if err != nil {
+				if models.IsErrUserNotExist(err) {
+					ctx.Status(404)
+				} else {
+					ctx.Error(500, "GetTeamById", err)
+				}
+				return
+			}
+		}
+	}
+}
+
 // RegisterRoutes registers all v1 APIs routes to web application.
 // FIXME: custom form error response
 func RegisterRoutes(m *macaron.Macaron) {
@@ -208,7 +244,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Group("/orgs/:orgname", func() {
 			m.Combo("").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
 			m.Combo("/teams").Get(org.ListTeams)
-		})
+		}, OrgAssignment())
 
 		m.Any("/*", func(ctx *context.Context) {
 			ctx.Error(404)
@@ -228,7 +264,13 @@ func RegisterRoutes(m *macaron.Macaron) {
 			})
 
 			m.Group("/orgs/:orgname", func() {
-				m.Combo("/teams").Post(bind(api.CreateTeamOption{}), admin.CreateTeam)
+				m.Group("/teams", func() {
+					m.Post("", OrgAssignment(), bind(api.CreateTeamOption{}), admin.CreateTeam)
+
+					m.Group("/:teamid", func() {
+						m.Combo("/memberships/:username").Put(admin.AddTeamMember).Delete(admin.RemoveTeamMember)
+					}, OrgAssignment(true))
+				})
 			})
 		}, ReqAdmin())
 	}, context.APIContexter())
