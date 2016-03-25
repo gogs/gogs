@@ -97,7 +97,7 @@ func NewFuncMap() []template.FuncMap {
 		"ActionContent2Commits": ActionContent2Commits,
 		"ToUtf8":                ToUtf8,
 		"EscapePound": func(str string) string {
-			return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
+			return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20").Replace(str)
 		},
 		"RenderCommitMessage": RenderCommitMessage,
 		"ThemeColorMetaTag": func() string {
