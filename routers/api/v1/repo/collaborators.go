@@ -5,11 +5,13 @@
 package repo
 
 import (
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/middleware"
 )
 
-func AddCollaborator(ctx *middleware.Context) {
+func AddCollaborator(ctx *middleware.Context, form api.AddCollaboratorOption) {
 	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
 
 	if err != nil {
@@ -23,6 +25,22 @@ func AddCollaborator(ctx *middleware.Context) {
 
 	if err := ctx.Repo.Repository.AddCollaborator(collaborator); err != nil {
 		ctx.APIError(500, "AddCollaborator", err)
+		return
+	}
+
+	mode := models.ACCESS_MODE_WRITE
+	if form.Permission != nil && *form.Permission == "pull" {
+		mode = models.ACCESS_MODE_READ
+	} else if form.Permission != nil && *form.Permission == "push" {
+		mode = models.ACCESS_MODE_WRITE
+	} else if form.Permission != nil && *form.Permission == "admin" {
+		mode = models.ACCESS_MODE_ADMIN
+	} else if form.Permission != nil {
+		ctx.APIError(500, "Permission", "Invalid permission type")
+		return
+	}
+	if err := ctx.Repo.Repository.ChangeCollaborationAccessMode(collaborator.Id, mode); err != nil {
+		ctx.APIError(500, "ChangeCollaborationAccessMode", err)
 		return
 	}
 
