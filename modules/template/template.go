@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -255,7 +256,7 @@ func ActionIcon(opType int) string {
 func ActionContent2Commits(act Actioner) *models.PushCommits {
 	push := models.NewPushCommits()
 	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
-		return nil
+		log.Error(4, "json.Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push
 }
