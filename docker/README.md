@@ -43,9 +43,11 @@ If you're more comfortable with mounting data to a data container, the commands 
 ```
 # Create data container
 docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
+
 # Use `docker run` for the first time.
 docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/gogs
 ```
+
 #### Using Docker 1.9 Volume command
 
 ```
