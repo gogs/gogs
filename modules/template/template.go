@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -97,7 +98,7 @@ func NewFuncMap() []template.FuncMap {
 		"ActionContent2Commits": ActionContent2Commits,
 		"ToUtf8":                ToUtf8,
 		"EscapePound": func(str string) string {
-			return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
+			return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20").Replace(str)
 		},
 		"RenderCommitMessage": RenderCommitMessage,
 		"ThemeColorMetaTag": func() string {
@@ -255,7 +256,7 @@ func ActionIcon(opType int) string {
 func ActionContent2Commits(act Actioner) *models.PushCommits {
 	push := models.NewPushCommits()
 	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
-		return nil
+		log.Error(4, "json.Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push
 }
