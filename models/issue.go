@@ -552,10 +552,10 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	}
 
 	if opts.IsMention {
-		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id AND issue_user.is_mentioned = 1")
+		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id").And("issue_user.is_mentioned = ?", true)
 
 		if opts.UserID > 0 {
-			sess.Where("issue_user.uid = ?", opts.UserID)
+			sess.And("issue_user.uid = ?", opts.UserID)
 		}
 	}
 
