@@ -5,7 +5,6 @@
 package models
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -513,7 +512,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		if len(opts.RepoIDs) == 0 {
 			return make([]*Issue, 0), nil
 		}
-		sess.Where("issue.repo_id IN ("+strings.Join(base.Int64sToStrings(opts.RepoIDs), ",")+")").And("issue.is_closed=?", opts.IsClosed)
+		sess.In("issue.repo_id", base.Int64sToStrings(opts.RepoIDs)).And("issue.is_closed=?", opts.IsClosed)
 	} else {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
@@ -684,18 +683,8 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 		return []*IssueUser{}, nil
 	}
 
-	buf := bytes.NewBufferString("")
-	for _, rid := range rids {
-		buf.WriteString("repo_id=")
-		buf.WriteString(com.ToStr(rid))
-		buf.WriteString(" OR ")
-	}
-	cond := strings.TrimSuffix(buf.String(), " OR ")
 	ius := make([]*IssueUser, 0, 10)
-	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed)
-	if len(cond) > 0 {
-		sess.And(cond)
-	}
+	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed).In("repo_id", rids)
 	err := sess.Find(&ius)
 	return ius, err
 }
