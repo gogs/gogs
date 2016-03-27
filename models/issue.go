@@ -5,7 +5,6 @@
 package models
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -513,7 +512,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		if len(opts.RepoIDs) == 0 {
 			return make([]*Issue, 0), nil
 		}
-		sess.Where("issue.repo_id IN ("+strings.Join(base.Int64sToStrings(opts.RepoIDs), ",")+")").And("issue.is_closed=?", opts.IsClosed)
+		sess.In("issue.repo_id", base.Int64sToStrings(opts.RepoIDs)).And("issue.is_closed=?", opts.IsClosed)
 	} else {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
@@ -548,27 +547,16 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	}
 
 	labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-	if len(labelIDs) > 0 {
-		validJoin := false
-		queryStr := "issue.id=issue_label.issue_id"
-		for _, id := range labelIDs {
-			if id == 0 {
-				continue
-			}
-			validJoin = true
-			queryStr += " AND issue_label.label_id=" + com.ToStr(id)
-		}
-		if validJoin {
-			sess.Join("INNER", "issue_label", queryStr)
-		}
+	if len(labelIDs) > 1 {
+		sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 	}
 
 	if opts.IsMention {
-		queryStr := "issue.id=issue_user.issue_id AND issue_user.is_mentioned=1"
+		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id AND issue_user.is_mentioned = 1")
+
 		if opts.UserID > 0 {
-			queryStr += " AND issue_user.uid=" + com.ToStr(opts.UserID)
+			sess.Where("issue_user.uid = ?", opts.UserID)
 		}
-		sess.Join("INNER", "issue_user", queryStr)
 	}
 
 	issues := make([]*Issue, 0, setting.IssuePagingNum)
@@ -684,18 +672,8 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 		return []*IssueUser{}, nil
 	}
 
-	buf := bytes.NewBufferString("")
-	for _, rid := range rids {
-		buf.WriteString("repo_id=")
-		buf.WriteString(com.ToStr(rid))
-		buf.WriteString(" OR ")
-	}
-	cond := strings.TrimSuffix(buf.String(), " OR ")
 	ius := make([]*IssueUser, 0, 10)
-	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed)
-	if len(cond) > 0 {
-		sess.And(cond)
-	}
+	sess := x.Limit(20, (page-1)*20).Where("is_closed=?", isClosed).In("repo_id", rids)
 	err := sess.Find(&ius)
 	return ius, err
 }
