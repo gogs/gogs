@@ -268,7 +268,7 @@ func Issues(ctx *context.Context) {
 		SortType:   sortType,
 	})
 	if err != nil {
-		ctx.Handle(500, "Issues: %v", err)
+		ctx.Handle(500, "Issues", err)
 		return
 	}
 
