@@ -547,27 +547,16 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	}
 
 	labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-	if len(labelIDs) > 0 {
-		validJoin := false
-		queryStr := "issue.id=issue_label.issue_id"
-		for _, id := range labelIDs {
-			if id == 0 {
-				continue
-			}
-			validJoin = true
-			queryStr += " AND issue_label.label_id=" + com.ToStr(id)
-		}
-		if validJoin {
-			sess.Join("INNER", "issue_label", queryStr)
-		}
+	if len(labelIDs) > 1 {
+		sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 	}
 
 	if opts.IsMention {
-		queryStr := "issue.id=issue_user.issue_id AND issue_user.is_mentioned=1"
+		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id AND issue_user.is_mentioned = 1")
+
 		if opts.UserID > 0 {
-			queryStr += " AND issue_user.uid=" + com.ToStr(opts.UserID)
+			sess.Where("issue_user.uid = ?", opts.UserID)
 		}
-		sess.Join("INNER", "issue_user", queryStr)
 	}
 
 	issues := make([]*Issue, 0, setting.IssuePagingNum)
