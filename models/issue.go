@@ -483,18 +483,19 @@ func GetIssueByID(id int64) (*Issue, error) {
 }
 
 type IssuesOptions struct {
-	UserID      int64
-	AssigneeID  int64
-	RepoID      int64
-	PosterID    int64
-	MilestoneID int64
-	RepoIDs     []int64
-	Page        int
-	IsClosed    bool
-	IsMention   bool
-	IsPull      bool
-	Labels      string
-	SortType    string
+	UserID       int64
+	AssigneeID   int64
+	RepoID       int64
+	PosterID     int64
+	MilestoneID  int64
+	RepoIDs      []int64
+	Page         int
+	IsClosed     bool
+	IsUnassigned bool
+	IsMention    bool
+	IsPull       bool
+	Labels       string
+	SortType     string
 }
 
 // Issues returns a list of issues by given conditions.
@@ -517,10 +518,14 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
 
-	if opts.AssigneeID > 0 {
-		sess.And("issue.assignee_id=?", opts.AssigneeID)
-	} else if opts.PosterID > 0 {
-		sess.And("issue.poster_id=?", opts.PosterID)
+	if opts.IsUnassigned {
+		sess.And("issue.assignee_id=?", 0)
+	} else {
+		if opts.AssigneeID > 0 {
+			sess.And("issue.assignee_id=?", opts.AssigneeID)
+		} else if opts.PosterID > 0 {
+			sess.And("issue.poster_id=?", opts.PosterID)
+		}
 	}
 
 	if opts.MilestoneID > 0 {

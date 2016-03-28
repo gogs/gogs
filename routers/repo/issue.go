@@ -143,6 +143,7 @@ func Issues(ctx *context.Context) {
 	selectLabels := ctx.Query("labels")
 	milestoneID := ctx.QueryInt64("milestone")
 	isShowClosed := ctx.Query("state") == "closed"
+	isUnassigned := ctx.Query("unassigned") == "true"
 	issueStats := models.GetIssueStats(&models.IssueStatsOptions{
 		RepoID:      repo.ID,
 		UserID:      uid,
@@ -169,17 +170,18 @@ func Issues(ctx *context.Context) {
 
 	// Get issues.
 	issues, err := models.Issues(&models.IssuesOptions{
-		UserID:      uid,
-		AssigneeID:  assigneeID,
-		RepoID:      repo.ID,
-		PosterID:    posterID,
-		MilestoneID: milestoneID,
-		Page:        pager.Current(),
-		IsClosed:    isShowClosed,
-		IsMention:   filterMode == models.FM_MENTION,
-		IsPull:      isPullList,
-		Labels:      selectLabels,
-		SortType:    sortType,
+		UserID:       uid,
+		AssigneeID:   assigneeID,
+		RepoID:       repo.ID,
+		PosterID:     posterID,
+		MilestoneID:  milestoneID,
+		Page:         pager.Current(),
+		IsClosed:     isShowClosed,
+		IsUnassigned: isUnassigned,
+		IsMention:    filterMode == models.FM_MENTION,
+		IsPull:       isPullList,
+		Labels:       selectLabels,
+		SortType:     sortType,
 	})
 	if err != nil {
 		ctx.Handle(500, "Issues: %v", err)
