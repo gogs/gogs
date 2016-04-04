@@ -112,24 +112,29 @@ func ReqAdmin() macaron.Handler {
 
 func OrgAssignment(args ...bool) macaron.Handler {
 	var (
+		assignOrg  bool
 		assignTeam bool
 	)
-
 	if len(args) > 0 {
-		assignTeam = args[0]
+		assignOrg = args[0]
+	}
+	if len(args) > 1 {
+		assignTeam = args[1]
 	}
 	return func(ctx *context.APIContext) {
-		org, err := models.GetUserByName(ctx.Params(":orgname"))
-		if err != nil {
-			if models.IsErrUserNotExist(err) {
-				ctx.Status(404)
-			} else {
-				ctx.Error(500, "GetUserByName", err)
+		ctx.Org = new(context.APIOrganization)
+
+		var err error
+		if assignOrg {
+			ctx.Org.Organization, err = models.GetUserByName(ctx.Params(":orgname"))
+			if err != nil {
+				if models.IsErrUserNotExist(err) {
+					ctx.Status(404)
+				} else {
+					ctx.Error(500, "GetUserByName", err)
+				}
+				return
 			}
-			return
-		}
-		ctx.Org = &context.APIOrganization{
-			Organization: org,
 		}
 
 		if assignTeam {
@@ -244,7 +249,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Group("/orgs/:orgname", func() {
 			m.Combo("").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
 			m.Combo("/teams").Get(org.ListTeams)
-		}, OrgAssignment())
+		}, OrgAssignment(true))
 
 		m.Any("/*", func(ctx *context.Context) {
 			ctx.Error(404)
@@ -265,12 +270,14 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 			m.Group("/orgs/:orgname", func() {
 				m.Group("/teams", func() {
-					m.Post("", OrgAssignment(), bind(api.CreateTeamOption{}), admin.CreateTeam)
-
-					m.Group("/:teamid", func() {
-						m.Combo("/memberships/:username").Put(admin.AddTeamMember).Delete(admin.RemoveTeamMember)
-					}, OrgAssignment(true))
+					m.Post("", OrgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
 				})
+			})
+			m.Group("/teams", func() {
+				m.Group("/:teamid", func() {
+					m.Combo("/members/:username").Put(admin.AddTeamMember).Delete(admin.RemoveTeamMember)
+					m.Combo("/repos/:reponame").Put(admin.AddTeamRepository).Delete(admin.RemoveTeamRepository)
+				}, OrgAssignment(false, true))
 			})
 		}, ReqAdmin())
 	}, context.APIContexter())
