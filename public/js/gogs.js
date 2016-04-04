@@ -1043,10 +1043,14 @@ $(window).load(function () {
         var $num_list = $('.code-view .lines-num');
 
         // Building blocks.
+        var $toappendblock = [];
+        var $toappendnum_list = [];
         for (var i = 0; i < lines.length; i++) {
-            $block.append('<li class="L' + (i + 1) + '" rel="L' + (i + 1) + '">' + lines[i] + '</li>');
-            $num_list.append('<span id="L' + (i + 1) + '">' + (i + 1) + '</span>');
+            $toappendblock.push('<li class="L' + (i + 1) + '" rel="L' + (i + 1) + '">' + lines[i] + '</li>');
+            $toappendnum_list.push('<span id="L' + (i + 1) + '">' + (i + 1) + '</span>');
         }
+        $block.append($toappendblock.join(''));
+        $num_list.append($toappendnum_list.join(''));
 
         $(document).on('click', '.lines-num span', function (e) {
             var $select = $(this);
