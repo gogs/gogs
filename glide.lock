@@ -43,7 +43,7 @@ imports:
 - name: github.com/gogits/git-module
   version: 76e8cce6c7ef3ba1cf75752261c721ebf14cd129
 - name: github.com/gogits/go-gogs-client
-  version: 788ec59749df076b98e208909b44fdef02779deb
+  version: 1da1834d366c2c0b0b4495d34089082f4e38aed5
 - name: github.com/issue9/identicon
   version: f8c0d2ce04db79c663b1da33d3a9f62be753ee88
 - name: github.com/kardianos/minwinsvc
