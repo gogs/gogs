@@ -122,7 +122,6 @@ func Home(ctx *context.Context) {
 					lines := strings.Split(filecontent, "\n")
 					for index, line := range lines {
 						output += fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line))
-						fmt.Printf("%s\n", line)
 					}
 					ctx.Data["FileContent"] = htmltemplate.HTML(output)
 
