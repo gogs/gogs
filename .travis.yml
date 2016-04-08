@@ -8,14 +8,14 @@ go:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libpam-dev
-  - go get github.com/msteinert/pam 
+  - go get github.com/msteinert/pam
 
 install:
-  - go get -t -v ./...
+  - go get -t -v -tags 'sqlite' ./...
 
-script: 
+script:
   - go build -v -tags "pam"
-  - go test -v -cover -race ./...
+  - go test -v -tags 'sqlite' ./...
 
 notifications:
   email:
@@ -24,6 +24,6 @@ notifications:
   webhooks:
     urls:
       - https://webhooks.gitter.im/e/b590f8e03882f7aedc3e
-    on_success: change 
-    on_failure: always 
-    on_start: never     
+    on_success: change
+    on_failure: always
+    on_start: never

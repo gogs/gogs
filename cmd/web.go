@@ -98,7 +98,7 @@ func checkVersion() {
 }
 
 // newMacaron initializes Macaron instance.
-func newMacaron() *macaron.Macaron {
+func NewMacaron() *macaron.Macaron {
 	m := macaron.New()
 	if !setting.DisableRouterLog {
 		m.Use(macaron.Logger())
@@ -172,17 +172,6 @@ func newMacaron() *macaron.Macaron {
 		},
 	}))
 	m.Use(context.Contexter())
-	return m
-}
-
-func runWeb(ctx *cli.Context) error {
-	if ctx.IsSet("config") {
-		setting.CustomConf = ctx.String("config")
-	}
-	routers.GlobalInit()
-	checkVersion()
-
-	m := newMacaron()
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
 	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: setting.Service.RequireSignInView})
@@ -560,6 +549,18 @@ func runWeb(ctx *cli.Context) error {
 
 	// Not found handler.
 	m.NotFound(routers.NotFound)
+
+	return m
+}
+
+func runWeb(ctx *cli.Context) error {
+	if ctx.IsSet("config") {
+		setting.CustomConf = ctx.String("config")
+	}
+	routers.GlobalInit()
+	checkVersion()
+
+	m := NewMacaron()
 
 	// Flag for port number in case first time run conflict.
 	if ctx.IsSet("port") {
