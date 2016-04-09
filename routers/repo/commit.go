@@ -14,7 +14,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -23,7 +23,7 @@ const (
 	DIFF    base.TplName = "repo/diff"
 )
 
-func RefCommits(ctx *middleware.Context) {
+func RefCommits(ctx *context.Context) {
 	switch {
 	case len(ctx.Repo.TreeName) == 0:
 		Commits(ctx)
@@ -43,7 +43,7 @@ func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
 	return newCommits
 }
 
-func Commits(ctx *middleware.Context) {
+func Commits(ctx *context.Context) {
 	ctx.Data["PageIsCommits"] = true
 
 	commitsCount, err := ctx.Repo.Commit.CommitsCount()
@@ -75,7 +75,7 @@ func Commits(ctx *middleware.Context) {
 	ctx.HTML(200, COMMITS)
 }
 
-func SearchCommits(ctx *middleware.Context) {
+func SearchCommits(ctx *context.Context) {
 	ctx.Data["PageIsCommits"] = true
 
 	keyword := ctx.Query("q")
@@ -101,7 +101,7 @@ func SearchCommits(ctx *middleware.Context) {
 	ctx.HTML(200, COMMITS)
 }
 
-func FileHistory(ctx *middleware.Context) {
+func FileHistory(ctx *context.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
 	fileName := ctx.Repo.TreeName
@@ -143,14 +143,19 @@ func FileHistory(ctx *middleware.Context) {
 	ctx.HTML(200, COMMITS)
 }
 
-func Diff(ctx *middleware.Context) {
+func Diff(ctx *context.Context) {
 	ctx.Data["PageIsDiff"] = true
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
-	commitID := ctx.Repo.CommitID
+	commitID := ctx.Params(":sha")
 
-	commit := ctx.Repo.Commit
+	commit, err := ctx.Repo.GitRepo.GetCommit(commitID)
+	if err != nil {
+		ctx.Handle(500, "Repo.GitRepo.GetCommit", err)
+		return
+	}
+
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
 		commitID, setting.Git.MaxGitDiffLines)
 	if err != nil {
@@ -168,12 +173,7 @@ func Diff(ctx *middleware.Context) {
 		}
 	}
 
-	for _, diffFile := range diff.Files {
-		for _, diffSection := range diffFile.Sections {
-			diffSection.ComputeLinesDiff()
-		}
-	}
-
+	ctx.Data["CommitID"] = commitID
 	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
@@ -189,10 +189,15 @@ func Diff(ctx *middleware.Context) {
 		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitID)
+	ctx.Data["RequireHighlightJS"] = true
 	ctx.HTML(200, DIFF)
 }
 
-func CompareDiff(ctx *middleware.Context) {
+func RawDiff(ctx *context.Context) {
+	panic("not implemented")
+}
+
+func CompareDiff(ctx *context.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 	ctx.Data["IsDiffCompare"] = true
 	userName := ctx.Repo.Owner.Name

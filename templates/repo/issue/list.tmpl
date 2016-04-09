@@ -8,7 +8,7 @@
 				{{if .PageIsIssueList}}
 					<a class="ui green button" href="{{.RepoLink}}/issues/new">{{.i18n.Tr "repo.issues.new"}}</a>
 				{{else}}
-					<a class="ui green button {{if not .HasForkedRepo}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.BranchName}}...{{.SignedUserName}}:{{.BranchName}}">{{.i18n.Tr "repo.pulls.new"}}</a>
+					<a class="ui green button {{if not .PullRequestCtx.Allowed}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.Repository.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">{{.i18n.Tr "repo.pulls.new"}}</a>
 				{{end}}
 			</div>
 		</div>
@@ -102,10 +102,10 @@
 				{{ $timeStr:= TimeSince .Created $.Lang }}
 				<li class="item">
 					<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Index}}</div>
-					<a class="title" href="{{$.Link}}/{{.Index}}">{{.Name}}</a>
+					<a class="title has-emoji" href="{{$.Link}}/{{.Index}}">{{.Name}}</a>
 
 					{{range .Labels}}
-						<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="background-color: {{.Color}}">{{.Name}}</a>
+						<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name}}</a>
 					{{end}}
 
 					{{if .NumComments}}

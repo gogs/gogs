@@ -14,7 +14,8 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/markdown"
 )
 
 const (
@@ -24,7 +25,7 @@ const (
 	WIKI_PAGES base.TplName = "repo/wiki/pages"
 )
 
-func MustEnableWiki(ctx *middleware.Context) {
+func MustEnableWiki(ctx *context.Context) {
 	if !ctx.Repo.Repository.EnableWiki {
 		ctx.Handle(404, "MustEnableWiki", nil)
 		return
@@ -42,7 +43,7 @@ type PageMeta struct {
 	Updated time.Time
 }
 
-func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, string) {
+func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, string) {
 	wikiRepo, err := git.OpenRepository(ctx.Repo.Repository.WikiPath())
 	if err != nil {
 		ctx.Handle(500, "OpenRepository", err)
@@ -106,7 +107,7 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 		return nil, ""
 	}
 	if isViewPage {
-		ctx.Data["content"] = string(base.RenderMarkdown(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		ctx.Data["content"] = string(markdown.Render(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	} else {
 		ctx.Data["content"] = string(data)
 	}
@@ -114,7 +115,7 @@ func renderWikiPage(ctx *middleware.Context, isViewPage bool) (*git.Repository, 
 	return wikiRepo, pageName
 }
 
-func Wiki(ctx *middleware.Context) {
+func Wiki(ctx *context.Context) {
 	ctx.Data["PageIsWiki"] = true
 
 	if !ctx.Repo.Repository.HasWiki() {
@@ -139,7 +140,7 @@ func Wiki(ctx *middleware.Context) {
 	ctx.HTML(200, WIKI_VIEW)
 }
 
-func WikiPages(ctx *middleware.Context) {
+func WikiPages(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.wiki.pages")
 	ctx.Data["PageIsWiki"] = true
 
@@ -185,7 +186,7 @@ func WikiPages(ctx *middleware.Context) {
 	ctx.HTML(200, WIKI_PAGES)
 }
 
-func NewWiki(ctx *middleware.Context) {
+func NewWiki(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
 	ctx.Data["PageIsWiki"] = true
 	ctx.Data["RequireSimpleMDE"] = true
@@ -197,7 +198,7 @@ func NewWiki(ctx *middleware.Context) {
 	ctx.HTML(200, WIKI_NEW)
 }
 
-func NewWikiPost(ctx *middleware.Context, form auth.NewWikiForm) {
+func NewWikiPost(ctx *context.Context, form auth.NewWikiForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
 	ctx.Data["PageIsWiki"] = true
 	ctx.Data["RequireSimpleMDE"] = true
@@ -220,7 +221,7 @@ func NewWikiPost(ctx *middleware.Context, form auth.NewWikiForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(form.Title))
 }
 
-func EditWiki(ctx *middleware.Context) {
+func EditWiki(ctx *context.Context) {
 	ctx.Data["PageIsWiki"] = true
 	ctx.Data["PageIsWikiEdit"] = true
 	ctx.Data["RequireSimpleMDE"] = true
@@ -238,7 +239,7 @@ func EditWiki(ctx *middleware.Context) {
 	ctx.HTML(200, WIKI_NEW)
 }
 
-func EditWikiPost(ctx *middleware.Context, form auth.NewWikiForm) {
+func EditWikiPost(ctx *context.Context, form auth.NewWikiForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
 	ctx.Data["PageIsWiki"] = true
 	ctx.Data["RequireSimpleMDE"] = true
@@ -254,4 +255,21 @@ func EditWikiPost(ctx *middleware.Context, form auth.NewWikiForm) {
 	}
 
 	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(form.Title))
+}
+
+func DeleteWikiPagePost(ctx *context.Context) {
+	pageURL := ctx.Params(":page")
+	if len(pageURL) == 0 {
+		pageURL = "Home"
+	}
+
+	pageName := models.ToWikiPageName(pageURL)
+	if err := ctx.Repo.Repository.DeleteWikiPage(ctx.User, pageName); err != nil {
+		ctx.Handle(500, "DeleteWikiPage", err)
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/wiki/",
+	})
 }

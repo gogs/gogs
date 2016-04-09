@@ -1,9 +1,9 @@
-Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Docker Repository on Quay](https://quay.io/repository/gogs/gogs/status "Docker Repository on Quay")](https://quay.io/repository/gogs/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 =====================
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.8.23
+##### Current version: 0.9.15
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -11,15 +11,14 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 |![Profile](https://gogs.io/img/screenshots/4.png)|![Admin Dashboard](https://gogs.io/img/screenshots/5.png)|![Diff](https://gogs.io/img/screenshots/6.png)|
 |![Issues](https://gogs.io/img/screenshots/7.png)|![Releases](https://gogs.io/img/screenshots/8.png)|![Organization](https://gogs.io/img/screenshots/9.png)|
 
-### NOTICES
+### Important Notes
 
-- :bangbang: You **MUST** read [CONTRIBUTING.md](CONTRIBUTING.md) for bug report and contributing code. :bangbang:
-- Please [start discussion](http://forum.gogs.io/category/2/general-discussion) or [ask a question](http://forum.gogs.io/category/4/getting-help) on [the forum](http://forum.gogs.io/). GitHub issue tracker only keeps **bugs** and **feature requests**, all other topics will be closed without reason.
-- Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-- The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
-- If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
-- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
-- If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
+1. **YOU MUST READ [Contributing Code](https://github.com/gogits/gogs/wiki/Contributing-Code) BEFORE STARTING TO WORK ON A PULL REQUEST**.
+2. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
+3. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
+4. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
+5. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+6. If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
 [简体中文](README_ZH.md)
 
@@ -32,7 +31,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Please see the [Documentation](http://gogs.io/docs/intro) for common usages and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
-- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html).
+- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html) or [User Forum](https://discuss.gogs.io/).
 - Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
 
 ## Features
@@ -50,7 +49,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
-- Multi-language support ([14 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([15 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
@@ -96,6 +95,7 @@ There are 5 ways to install Gogs:
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
+- [YunoHost](https://github.com/mbugeia/gogs_ynh)
 
 ## Software and Service Support
 
@@ -105,6 +105,7 @@ There are 5 ways to install Gogs:
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs) (IT)
 - [Kanboard](http://kanboard.net/plugin/gogs-webhook) (Project Management)
 - [BearyChat](https://bearychat.com/) (Team Communication)
+- [HiWork](http://www.hiwork.cc/) (Team Communication)
 
 ### Product Support
 
@@ -114,11 +115,11 @@ There are 5 ways to install Gogs:
 ## Acknowledgments
 
 - Router and middleware mechanism of [Macaron](https://github.com/go-macaron/macaron).
-- Modules design is inspired by [WeTalk](https://github.com/beego/wetalk).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 - Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
+- Thanks [KeyCDN](https://www.keycdn.com/) for providing CDN service.
 
 ## Contributors
 

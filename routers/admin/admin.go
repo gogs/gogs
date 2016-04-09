@@ -14,9 +14,10 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/models/cron"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/cron"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -120,9 +121,10 @@ const (
 	GIT_GC_REPOS
 	SYNC_SSH_AUTHORIZED_KEY
 	SYNC_REPOSITORY_UPDATE_HOOK
+	REINIT_MISSING_REPOSITORY
 )
 
-func Dashboard(ctx *middleware.Context) {
+func Dashboard(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.dashboard")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminDashboard"] = true
@@ -152,6 +154,9 @@ func Dashboard(ctx *middleware.Context) {
 		case SYNC_REPOSITORY_UPDATE_HOOK:
 			success = ctx.Tr("admin.dashboard.resync_all_update_hooks_success")
 			err = models.RewriteRepositoryUpdateHook()
+		case REINIT_MISSING_REPOSITORY:
+			success = ctx.Tr("admin.dashboard.reinit_missing_repos_success")
+			err = models.ReinitMissingRepositories()
 		}
 
 		if err != nil {
@@ -170,7 +175,19 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.HTML(200, DASHBOARD)
 }
 
-func Config(ctx *middleware.Context) {
+func SendTestMail(ctx *context.Context) {
+	email := ctx.Query("email")
+	// Send a test email to the user's email address and redirect back to Config
+	if err := mailer.SendTestMail(email); err != nil {
+		ctx.Flash.Error(ctx.Tr("admin.config.test_mail_failed", email, err))
+	} else {
+		ctx.Flash.Info(ctx.Tr("admin.config.test_mail_sent", email))
+	}
+
+	ctx.Redirect(setting.AppSubUrl + "/admin/config")
+}
+
+func Config(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.config")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminConfig"] = true
@@ -186,6 +203,8 @@ func Config(ctx *middleware.Context) {
 	ctx.Data["LogRootPath"] = setting.LogRootPath
 	ctx.Data["ScriptType"] = setting.ScriptType
 	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
+
+	ctx.Data["SSH"] = setting.SSH
 
 	ctx.Data["Service"] = setting.Service
 	ctx.Data["DbCfg"] = models.DbCfg
@@ -203,7 +222,6 @@ func Config(ctx *middleware.Context) {
 
 	ctx.Data["SessionConfig"] = setting.SessionConfig
 
-	ctx.Data["PictureService"] = setting.PictureService
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
 
 	type logger struct {
@@ -218,7 +236,7 @@ func Config(ctx *middleware.Context) {
 	ctx.HTML(200, CONFIG)
 }
 
-func Monitor(ctx *middleware.Context) {
+func Monitor(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.monitor")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminMonitor"] = true

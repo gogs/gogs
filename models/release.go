@@ -33,13 +33,19 @@ type Release struct {
 	Note             string `xorm:"TEXT"`
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
 	IsPrerelease     bool
-	Created          time.Time `xorm:"CREATED"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+}
+
+func (r *Release) BeforeInsert() {
+	r.CreatedUnix = time.Now().UTC().Unix()
 }
 
 func (r *Release) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "created":
-		r.Created = regulateTimeZone(r.Created)
+	case "created_unix":
+		r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	}
 }
 
@@ -125,7 +131,7 @@ func GetReleaseByID(id int64) (*Release, error) {
 
 // GetReleasesByRepoID returns a list of releases of repository.
 func GetReleasesByRepoID(repoID int64) (rels []*Release, err error) {
-	err = x.Desc("created").Find(&rels, Release{RepoID: repoID})
+	err = x.Desc("created_unix").Find(&rels, Release{RepoID: repoID})
 	return rels, err
 }
 

@@ -37,6 +37,7 @@ func NewLogger(bufLen int64, mode, config string) {
 	}
 }
 
+// FIXME: use same log level as other loggers.
 func NewGitLogger(logPath string) {
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
 	GitLogger = newLogger(0)

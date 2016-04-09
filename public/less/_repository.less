@@ -69,8 +69,18 @@
 			}
 		}
 	}
+	.header-wrapper {
+		background-color: #FAFAFA;
+		margin-top: -15px;
+		padding-top: 15px;
+
+		.ui.tabs.divider {
+			border-bottom: none;
+		}
+	}
 	.filter.menu {
 		.label.color {
+			border-radius: 3px;
 			margin-left: 15px;
 			padding: 0 8px;
 		}
@@ -268,6 +278,10 @@
 			}
 			.content {
 				margin-left: 4em;
+				#avatar-arrow;
+				&:after {
+					border-right-color: #fff;
+				}
 				.markdown {
 					font-size: 14px;
 				}
@@ -287,7 +301,7 @@
 			padding-bottom: 0!important;
 			h1 {
 				font-weight: 300;
-				font-size: 3rem;
+				font-size: 2.3rem;
 				margin-bottom: 5px;
 				.ui.input	{
 					font-size: 0.5em;
@@ -376,8 +390,10 @@
 				.content {
 					margin-left: 4em;
 					.header {
+						#avatar-arrow;
 						font-weight: normal;
 						padding: auto 15px;
+						position: relative;
 						color: #767676;
 						background-color: #f7f7f7;
 						border-bottom: 1px solid #eee;
@@ -398,8 +414,33 @@
 					}
 					> .bottom.segment {
 						background: #f3f4f5;
+						.ui.images::after {
+							clear: both;
+							content: ' ';
+							display: block;
+						}
+						a {
+							display: block;
+							float: left;
+							margin: 5px;
+							padding: 5px;
+							height: 150px;
+							border: solid 1px #eee;
+							border-radius: 3px;
+							max-width: 150px;
+							background-color: #fff;
+							&:before {
+								content:' ';
+								display: inline-block;
+								height: 100%;
+								vertical-align: middle;
+							}
+						}
 						.ui.image {
-							max-height: 150px;
+							max-height: 100%;
+							width: auto;
+							margin: 0;
+							vertical-align: middle;
 						}
 					}
 				}
@@ -415,6 +456,7 @@
 					}
 					textarea {
 						height: 200px;
+						font-family: "Consolas", monospace;
 					}
 				}
 
@@ -460,6 +502,13 @@
 		.ui.segment.metas {
 			margin-top: -3px;
 		}
+
+		.ui.participants {
+			img {
+				margin-top: 5px;
+				margin-right: 5px;
+			}
+		}
 	}
 	.comment.form {
 		.ui.comments {
@@ -470,6 +519,12 @@
 			.field:first-child {
 				clear: none;
 			}
+			.form {
+				#avatar-arrow;
+				&:after {
+					border-right-color: #fff;
+				}
+			}
 			.tab.segment {
 				border: none;
 				padding: 0;
@@ -477,6 +532,7 @@
 			}
 			textarea {
 				height: 200px;
+                font-family: "Consolas", monospace;
 			}
 		}
 	}
@@ -499,6 +555,9 @@
 				&.open-issues {
 					margin-right: 30px;
 				}
+			}
+			.ui.label {
+				font-size: 1em;
 			}
 		}
 	}
@@ -567,6 +626,14 @@
 		.choose.branch {
 			.octicon {
 				padding-right: 10px;
+			}
+		}
+		.comment.form {
+			.content {
+				#avatar-arrow;
+				&:after {
+					border-right-color: #fff;
+				}
 			}
 		}
 	}
@@ -927,8 +994,11 @@
 
 		&.new {
 			.CodeMirror {
-				.CodeMirror-code .cm-comment {
-					background: inherit;
+				.CodeMirror-code {
+					font-family: "Consolas", monospace;
+					.cm-comment {
+						background: inherit;
+					}
 				}
 			}
 
@@ -962,8 +1032,9 @@
 			.collaborator.list {
 				padding: 0;
 
-				.item {
-					padding: 10px 20px;
+				>.item {
+					margin: 0;
+					line-height: 2em;
 
 					&:not(:last-child) {
 						border-bottom: 1px solid #DDD;
@@ -1218,6 +1289,29 @@
 				height: 15px;
 			}
 		}
+	}
+}
+
+#avatar-arrow {
+	&:before, &:after {
+		right: 100%;
+		top: 20px;
+		border: solid transparent;
+		content: " ";
+		height: 0;
+		width: 0;
+		position: absolute;
+		pointer-events: none;
+	}
+	&:before {
+		border-right-color: #D4D4D5;
+		border-width: 9px;
+		margin-top: -9px;
+	}
+	&:after {
+		border-right-color: #f7f7f7;
+		border-width: 8px;
+		margin-top: -8px;
 	}
 }
 

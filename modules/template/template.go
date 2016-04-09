@@ -18,86 +18,92 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-var Funcs template.FuncMap = map[string]interface{}{
-	"GoVer": func() string {
-		return strings.Title(runtime.Version())
-	},
-	"UseHTTPS": func() bool {
-		return strings.HasPrefix(setting.AppUrl, "https")
-	},
-	"AppName": func() string {
-		return setting.AppName
-	},
-	"AppSubUrl": func() string {
-		return setting.AppSubUrl
-	},
-	"AppUrl": func() string {
-		return setting.AppUrl
-	},
-	"AppVer": func() string {
-		return setting.AppVer
-	},
-	"AppDomain": func() string {
-		return setting.Domain
-	},
-	"DisableGravatar": func() bool {
-		return setting.DisableGravatar
-	},
-	"LoadTimes": func(startTime time.Time) string {
-		return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
-	},
-	"AvatarLink":   base.AvatarLink,
-	"Safe":         Safe,
-	"Str2html":     Str2html,
-	"TimeSince":    base.TimeSince,
-	"RawTimeSince": base.RawTimeSince,
-	"FileSize":     base.FileSize,
-	"Subtract":     base.Subtract,
-	"Add": func(a, b int) int {
-		return a + b
-	},
-	"ActionIcon": ActionIcon,
-	"DateFmtLong": func(t time.Time) string {
-		return t.Format(time.RFC1123Z)
-	},
-	"DateFmtShort": func(t time.Time) string {
-		return t.Format("Jan 02, 2006")
-	},
-	"List": List,
-	"Mail2Domain": func(mail string) string {
-		if !strings.Contains(mail, "@") {
-			return "try.gogs.io"
-		}
+func NewFuncMap() []template.FuncMap {
+	return []template.FuncMap{map[string]interface{}{
+		"GoVer": func() string {
+			return strings.Title(runtime.Version())
+		},
+		"UseHTTPS": func() bool {
+			return strings.HasPrefix(setting.AppUrl, "https")
+		},
+		"AppName": func() string {
+			return setting.AppName
+		},
+		"AppSubUrl": func() string {
+			return setting.AppSubUrl
+		},
+		"AppUrl": func() string {
+			return setting.AppUrl
+		},
+		"AppVer": func() string {
+			return setting.AppVer
+		},
+		"AppDomain": func() string {
+			return setting.Domain
+		},
+		"DisableGravatar": func() bool {
+			return setting.DisableGravatar
+		},
+		"LoadTimes": func(startTime time.Time) string {
+			return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
+		},
+		"AvatarLink":   base.AvatarLink,
+		"Safe":         Safe,
+		"Str2html":     Str2html,
+		"TimeSince":    base.TimeSince,
+		"RawTimeSince": base.RawTimeSince,
+		"FileSize":     base.FileSize,
+		"Subtract":     base.Subtract,
+		"Add": func(a, b int) int {
+			return a + b
+		},
+		"ActionIcon": ActionIcon,
+		"DateFmtLong": func(t time.Time) string {
+			return t.Format(time.RFC1123Z)
+		},
+		"DateFmtShort": func(t time.Time) string {
+			return t.Format("Jan 02, 2006")
+		},
+		"List": List,
+		"Mail2Domain": func(mail string) string {
+			if !strings.Contains(mail, "@") {
+				return "try.gogs.io"
+			}
 
-		return strings.SplitN(mail, "@", 2)[1]
-	},
-	"SubStr": func(str string, start, length int) string {
-		if len(str) == 0 {
-			return ""
-		}
-		end := start + length
-		if length == -1 {
-			end = len(str)
-		}
-		if len(str) < end {
-			return str
-		}
-		return str[start:end]
-	},
-	"DiffTypeToStr":     DiffTypeToStr,
-	"DiffLineTypeToStr": DiffLineTypeToStr,
-	"Sha1":              Sha1,
-	"ShortSha":          base.ShortSha,
-	"MD5":               base.EncodeMD5,
-	"ActionContent2Commits": ActionContent2Commits,
-	"ToUtf8":                ToUtf8,
-	"EscapePound": func(str string) string {
-		return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
-	},
-	"RenderCommitMessage": RenderCommitMessage,
+			return strings.SplitN(mail, "@", 2)[1]
+		},
+		"SubStr": func(str string, start, length int) string {
+			if len(str) == 0 {
+				return ""
+			}
+			end := start + length
+			if length == -1 {
+				end = len(str)
+			}
+			if len(str) < end {
+				return str
+			}
+			return str[start:end]
+		},
+		"DiffTypeToStr":     DiffTypeToStr,
+		"DiffLineTypeToStr": DiffLineTypeToStr,
+		"Sha1":              Sha1,
+		"ShortSha":          base.ShortSha,
+		"MD5":               base.EncodeMD5,
+		"ActionContent2Commits": ActionContent2Commits,
+		"ToUtf8":                ToUtf8,
+		"EscapePound": func(str string) string {
+			return strings.Replace(strings.Replace(str, "%", "%25", -1), "#", "%23", -1)
+		},
+		"RenderCommitMessage": RenderCommitMessage,
+		"ThemeColorMetaTag": func() string {
+			return setting.ThemeColorMetaTag
+		},
+	}}
 }
 
 func Safe(raw string) template.HTML {
@@ -105,7 +111,7 @@ func Safe(raw string) template.HTML {
 }
 
 func Str2html(raw string) template.HTML {
-	return template.HTML(base.Sanitizer.Sanitize(raw))
+	return template.HTML(markdown.Sanitizer.Sanitize(raw))
 }
 
 func Range(l int) []int {
@@ -185,7 +191,7 @@ func ReplaceLeft(s, old, new string) string {
 // RenderCommitMessage renders commit message with XSS-safe and special links.
 func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) template.HTML {
 	cleanMsg := template.HTMLEscapeString(msg)
-	fullMessage := string(base.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
+	fullMessage := string(markdown.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
 	numLines := len(msgLines)
 	if numLines == 0 {
@@ -225,7 +231,7 @@ type Actioner interface {
 // and returns a icon class name.
 func ActionIcon(opType int) string {
 	switch opType {
-	case 1, 8: // Create, transfer repository
+	case 1, 8: // Create and transfer repository
 		return "repo"
 	case 5, 9: // Commit repository
 		return "git-commit"
@@ -237,6 +243,10 @@ func ActionIcon(opType int) string {
 		return "comment"
 	case 11: // Merge pull request
 		return "git-merge"
+	case 12, 14: // Close issue or pull request
+		return "issue-closed"
+	case 13, 15: // Reopen issue or pull request
+		return "issue-reopened"
 	default:
 		return "invalid type"
 	}

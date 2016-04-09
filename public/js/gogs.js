@@ -18,6 +18,9 @@ function initCommentPreviewTab($form) {
                 var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
                 $preview_tab.html(data);
                 emojify.run($preview_tab[0]);
+                $('pre code', $preview_tab[0]).each(function (i, block) {
+                    hljs.highlightBlock(block);
+                });
             }
         );
     });
@@ -319,8 +322,7 @@ function initRepository() {
         };
         $('#edit-title').click(editTitleToggle);
         $('#cancel-edit-title').click(editTitleToggle);
-        $('#save-edit-title').click(editTitleToggle).
-        click(function () {
+        $('#save-edit-title').click(editTitleToggle).click(function () {
             if ($edit_input.val().length == 0 ||
                 $edit_input.val() == $issue_title.text()) {
                 $edit_input.val($issue_title.text());
@@ -382,6 +384,9 @@ function initRepository() {
                             } else {
                                 $render_content.html(data.content);
                                 emojify.run($render_content[0]);
+                                $('pre code', $render_content[0]).each(function (i, block) {
+                                    hljs.highlightBlock(block);
+                                });
                             }
                         });
                 });
@@ -434,12 +439,14 @@ function initRepository() {
         $('#repo-clone-url').val($(this).data('link'));
         $(this).addClass('blue');
         $('#repo-clone-https').removeClass('blue');
+        localStorage.setItem('repo-clone-protocol', 'ssh');
     });
     $('#repo-clone-https').click(function () {
         $('.clone-url').text($(this).data('link'));
         $('#repo-clone-url').val($(this).data('link'));
         $(this).addClass('blue');
         $('#repo-clone-ssh').removeClass('blue');
+        localStorage.setItem('repo-clone-protocol', 'https');
     });
     $('#repo-clone-url').click(function () {
         $(this).select();
@@ -449,6 +456,20 @@ function initRepository() {
     if ($('.repository.compare.pull').length > 0) {
         initFilterSearchDropdown('.choose.branch .dropdown');
     }
+}
+
+function initRepositoryCollaboration(){
+    console.log('initRepositoryCollaboration');
+
+// Change collaborator access mode
+    $('.access-mode.menu .item').click(function(){
+        var $menu = $(this).parent();
+        $.post($menu.data('url'), {
+            "_csrf": csrf,
+            "uid": $menu.data('uid'),
+            "mode": $(this).data('value')
+        })
+    });
 }
 
 function initWiki() {
@@ -513,10 +534,8 @@ function initOrganization() {
     }
 }
 
-function initUser() {
-    if ($('.user').length == 0) {
-        return;
-    }
+function initUserSettings() {
+    console.log('initUserSettings');
 
     // Options
     if ($('.user.settings.profile').length > 0) {
@@ -788,10 +807,7 @@ $(document).ready(function () {
 
     // Show exact time
     $('.time-since').each(function () {
-        $(this).addClass('poping up').
-        attr('data-content', $(this).attr('title')).
-        attr('data-variation', 'inverted tiny').
-        attr('title', '');
+        $(this).addClass('poping up').attr('data-content', $(this).attr('title')).attr('data-variation', 'inverted tiny').attr('title', '');
     });
 
     // Semantic UI modules.
@@ -870,7 +886,10 @@ $(document).ready(function () {
         img_dir: suburl + '/img/emoji',
         ignore_emoticons: true
     });
-    emojify.run();
+    var hasEmoji = document.getElementsByClassName('has-emoji');
+    for (var i = 0; i < hasEmoji.length; i++) {
+        emojify.run(hasEmoji[i]);
+    }
 
     // Clipboard JS
     var clipboard = new Clipboard('.clipboard');
@@ -917,6 +936,14 @@ $(document).ready(function () {
     $('.show-modal.button').click(function () {
         $($(this).data('modal')).modal('show');
     });
+    $('.delete-post.button').click(function(){
+        var $this = $(this);
+        $.post($this.data('request-url'),{
+            "_csrf": csrf
+        }).done(function(){
+            window.location.href = $this.data('done-url');
+        });
+    });
 
     // Set anchor.
     $('.markdown').each(function () {
@@ -942,15 +969,26 @@ $(document).ready(function () {
     searchUsers();
     searchRepositories();
 
-
     initCommentForm();
     initInstall();
     initRepository();
     initWiki();
     initOrganization();
-    initUser();
     initWebhook();
     initAdmin();
+
+    var routes = {
+        'div.user.settings': initUserSettings,
+        'div.repository.settings.collaboration': initRepositoryCollaboration
+    };
+
+    var selector;
+    for (selector in routes) {
+        if ($(selector).length > 0) {
+            routes[selector]();
+            break;
+        }
+    }
 });
 
 $(window).load(function () {
@@ -1034,5 +1072,20 @@ $(window).load(function () {
                 $("html, body").scrollTop($first.offset().top - 200);
             }
         }).trigger('hashchange');
+    }
+
+    // Repo clone url.
+    if ($('#repo-clone-url').length > 0) {
+        switch (localStorage.getItem('repo-clone-protocol')) {
+            case 'ssh':
+                if ($('#repo-clone-ssh').click().length === 0) {
+                    $('#repo-clone-https').click();
+                }
+                ;
+                break;
+            default:
+                $('#repo-clone-https').click();
+                break;
+        }
     }
 });

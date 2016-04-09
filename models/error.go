@@ -392,6 +392,26 @@ func (err ErrReleaseNotExist) Error() string {
 	return fmt.Sprintf("Release tag does not exist [id: %d, tag_name: %s]", err.ID, err.TagName)
 }
 
+// __________                             .__
+// \______   \____________    ____   ____ |  |__
+//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
+//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
+//  |______  / |__|  (____  /___|  /\___  >___|  /
+//         \/             \/     \/     \/     \/
+
+type ErrBranchNotExist struct {
+	Name string
+}
+
+func IsErrBranchNotExist(err error) bool {
+	_, ok := err.(ErrBranchNotExist)
+	return ok
+}
+
+func (err ErrBranchNotExist) Error() string {
+	return fmt.Sprintf("Branch does not exist [name: %s]", err.Name)
+}
+
 //  __      __      ___.   .__                   __
 // /  \    /  \ ____\_ |__ |  |__   ____   ____ |  | __
 // \   \/\/   // __ \| __ \|  |  \ /  _ \ /  _ \|  |/ /
@@ -559,5 +579,26 @@ func IsErrAuthenticationNotExist(err error) bool {
 }
 
 func (err ErrAuthenticationNotExist) Error() string {
-	return fmt.Sprintf("Authentication does not exist [id: %d]", err.ID)
+	return fmt.Sprintf("authentication does not exist [id: %d]", err.ID)
+}
+
+// ___________
+// \__    ___/___ _____    _____
+//   |    |_/ __ \\__  \  /     \
+//   |    |\  ___/ / __ \|  Y Y  \
+//   |____| \___  >____  /__|_|  /
+//              \/     \/      \/
+
+type ErrTeamAlreadyExist struct {
+	OrgID int64
+	Name  string
+}
+
+func IsErrTeamAlreadyExist(err error) bool {
+	_, ok := err.(ErrTeamAlreadyExist)
+	return ok
+}
+
+func (err ErrTeamAlreadyExist) Error() string {
+	return fmt.Sprintf("team already exists [org_id: %d, name: %s]", err.OrgID, err.Name)
 }

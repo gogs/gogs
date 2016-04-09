@@ -3,14 +3,13 @@
 	{{template "repo/header" .}}
 	<div class="ui container">
 		<p id="repo-desc">
-			{{if .Repository.DescriptionHtml}}<span class="description">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
+			{{if .Repository.DescriptionHtml}}<span class="description has-emoji">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
 			<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
 		</p>
 		<div class="ui secondary menu">
-			{{if .CanPullRequest}}
+			{{if .PullRequestCtx.Allowed}}
 				<div class="fitted item">
-					{{ $baseRepo := .Repository.BaseRepo}}
-					<a href="{{AppSubUrl}}/{{$baseRepo.Owner.Name}}/{{$baseRepo.Name}}/compare/{{$.BaseDefaultBranch}}...{{$.Owner.Name}}:{{$.BranchName}}">
+					<a href="{{.BaseRepo.RepoLink}}/compare/{{.BaseRepo.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">
 						<button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
 					</a>
 				</div>
@@ -35,7 +34,7 @@
 			{{if eq $n 0}}
 				<div class="right fitted item">
 					<div class="ui action small input" id="clone-panel">
-						<button class="ui blue basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
+						<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
 							{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
 						</button>
 						{{if not $.DisableSSH}}

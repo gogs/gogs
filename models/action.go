@@ -28,17 +28,21 @@ import (
 type ActionType int
 
 const (
-	CREATE_REPO         ActionType = iota + 1 // 1
-	RENAME_REPO                               // 2
-	STAR_REPO                                 // 3
-	FOLLOW_REPO                               // 4
-	COMMIT_REPO                               // 5
-	CREATE_ISSUE                              // 6
-	CREATE_PULL_REQUEST                       // 7
-	TRANSFER_REPO                             // 8
-	PUSH_TAG                                  // 9
-	COMMENT_ISSUE                             // 10
-	MERGE_PULL_REQUEST                        // 11
+	ACTION_CREATE_REPO         ActionType = iota + 1 // 1
+	ACTION_RENAME_REPO                               // 2
+	ACTION_STAR_REPO                                 // 3
+	ACTION_WATCH_REPO                                // 4
+	ACTION_COMMIT_REPO                               // 5
+	ACTION_CREATE_ISSUE                              // 6
+	ACTION_CREATE_PULL_REQUEST                       // 7
+	ACTION_TRANSFER_REPO                             // 8
+	ACTION_PUSH_TAG                                  // 9
+	ACTION_COMMENT_ISSUE                             // 10
+	ACTION_MERGE_PULL_REQUEST                        // 11
+	ACTION_CLOSE_ISSUE                               // 12
+	ACTION_REOPEN_ISSUE                              // 13
+	ACTION_CLOSE_PULL_REQUEST                        // 14
+	ACTION_REOPEN_PULL_REQUEST                       // 15
 )
 
 var (
@@ -80,13 +84,18 @@ type Action struct {
 	RefName      string
 	IsPrivate    bool      `xorm:"NOT NULL DEFAULT false"`
 	Content      string    `xorm:"TEXT"`
-	Created      time.Time `xorm:"created"`
+	Created      time.Time `xorm:"-"`
+	CreatedUnix  int64
+}
+
+func (a *Action) BeforeInsert() {
+	a.CreatedUnix = time.Now().UTC().Unix()
 }
 
 func (a *Action) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "created":
-		a.Created = regulateTimeZone(a.Created)
+	case "created_unix":
+		a.Created = time.Unix(a.CreatedUnix, 0).Local()
 	}
 }
 
@@ -178,7 +187,7 @@ func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 		ActUserID:    u.Id,
 		ActUserName:  u.Name,
 		ActEmail:     u.Email,
-		OpType:       CREATE_REPO,
+		OpType:       ACTION_CREATE_REPO,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
@@ -201,7 +210,7 @@ func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Reposit
 		ActUserID:    actUser.Id,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
-		OpType:       RENAME_REPO,
+		OpType:       ACTION_RENAME_REPO,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
@@ -366,7 +375,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 				continue
 			}
 
-			if err = issue.ChangeStatus(u, true); err != nil {
+			if err = issue.ChangeStatus(u, repo, true); err != nil {
 				return err
 			}
 		}
@@ -406,7 +415,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 				continue
 			}
 
-			if err = issue.ChangeStatus(u, false); err != nil {
+			if err = issue.ChangeStatus(u, repo, false); err != nil {
 				return err
 			}
 		}
@@ -443,10 +452,10 @@ func CommitRepoAction(
 	}
 
 	isNewBranch := false
-	opType := COMMIT_REPO
+	opType := ACTION_COMMIT_REPO
 	// Check it's tag push or branch.
 	if strings.HasPrefix(refFullName, "refs/tags/") {
-		opType = PUSH_TAG
+		opType = ACTION_PUSH_TAG
 		commit = &PushCommits{}
 	} else {
 		// if not the first commit, set the compareUrl
@@ -498,11 +507,11 @@ func CommitRepoAction(
 	payloadSender := &api.PayloadUser{
 		UserName:  pusher.Name,
 		ID:        pusher.Id,
-		AvatarUrl: setting.AppUrl + pusher.RelAvatarLink(),
+		AvatarUrl: pusher.AvatarLink(),
 	}
 
 	switch opType {
-	case COMMIT_REPO: // Push
+	case ACTION_COMMIT_REPO: // Push
 		p := &api.PushPayload{
 			Ref:        refFullName,
 			Before:     oldCommitID,
@@ -530,7 +539,7 @@ func CommitRepoAction(
 			})
 		}
 
-	case PUSH_TAG: // Create
+	case ACTION_PUSH_TAG: // Create
 		return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 			Ref:     refName,
 			RefType: "tag",
@@ -547,7 +556,7 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		ActUserID:    actUser.Id,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
-		OpType:       TRANSFER_REPO,
+		OpType:       ACTION_TRANSFER_REPO,
 		RepoID:       repo.ID,
 		RepoUserName: newOwner.Name,
 		RepoName:     repo.Name,
@@ -578,7 +587,7 @@ func mergePullRequestAction(e Engine, actUser *User, repo *Repository, pull *Iss
 		ActUserID:    actUser.Id,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
-		OpType:       MERGE_PULL_REQUEST,
+		OpType:       ACTION_MERGE_PULL_REQUEST,
 		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -593,12 +602,29 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 }
 
 // GetFeeds returns action list of given user in given context.
-func GetFeeds(uid, offset int64, isProfile bool) ([]*Action, error) {
+// userID is the user who's requesting, ctxUserID is the user/org that is requested.
+// userID can be -1, if isProfile is true or in order to skip the permission check.
+func GetFeeds(ctxUserID, userID, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
-	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", uid)
+	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", ctxUserID)
 	if isProfile {
-		sess.And("is_private=?", false).And("act_user_id=?", uid)
+		sess.And("is_private=?", false).And("act_user_id=?", ctxUserID)
+	} else if ctxUserID != -1 {
+		ctxUser := &User{Id: ctxUserID}
+		if err := ctxUser.GetUserRepositories(userID); err != nil {
+			return nil, err
+		}
+
+		var repoIDs []int64
+		for _, repo := range ctxUser.Repos {
+			repoIDs = append(repoIDs, repo.ID)
+		}
+
+		if len(repoIDs) > 0 {
+			sess.In("repo_id", repoIDs)
+		}
 	}
+
 	err := sess.Find(&actions)
 	return actions, err
 }

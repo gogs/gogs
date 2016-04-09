@@ -5,6 +5,7 @@
 package user
 
 import (
+	"fmt"
 	"net/url"
 
 	"github.com/go-macaron/captcha"
@@ -12,9 +13,9 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -26,11 +27,51 @@ const (
 	RESET_PASSWORD  base.TplName = "user/auth/reset_passwd"
 )
 
-func SignIn(ctx *middleware.Context) {
+// AutoSignIn reads cookie and try to auto-login.
+func AutoSignIn(ctx *context.Context) (bool, error) {
+	if !models.HasEngine {
+		return false, nil
+	}
+
+	uname := ctx.GetCookie(setting.CookieUserName)
+	if len(uname) == 0 {
+		return false, nil
+	}
+
+	isSucceed := false
+	defer func() {
+		if !isSucceed {
+			log.Trace("auto-login cookie cleared: %s", uname)
+			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
+		}
+	}()
+
+	u, err := models.GetUserByName(uname)
+	if err != nil {
+		if !models.IsErrUserNotExist(err) {
+			return false, fmt.Errorf("GetUserByName: %v", err)
+		}
+		return false, nil
+	}
+
+	if val, _ := ctx.GetSuperSecureCookie(
+		base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
+		return false, nil
+	}
+
+	isSucceed = true
+	ctx.Session.Set("uid", u.Id)
+	ctx.Session.Set("uname", u.Name)
+	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	return true, nil
+}
+
+func SignIn(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
 	// Check auto-login.
-	isSucceed, err := middleware.AutoSignIn(ctx)
+	isSucceed, err := AutoSignIn(ctx)
 	if err != nil {
 		ctx.Handle(500, "AutoSignIn", err)
 		return
@@ -49,7 +90,7 @@ func SignIn(ctx *middleware.Context) {
 	ctx.HTML(200, SIGNIN)
 }
 
-func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
+func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
 	if ctx.HasError() {
@@ -76,6 +117,10 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 
 	ctx.Session.Set("uid", u.Id)
 	ctx.Session.Set("uname", u.Name)
+
+	// Clear whatever CSRF has right now, force to generate a new one
+	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
 		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 		ctx.Redirect(redirectTo)
@@ -85,7 +130,7 @@ func SignInPost(ctx *middleware.Context, form auth.SignInForm) {
 	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
-func SignOut(ctx *middleware.Context) {
+func SignOut(ctx *context.Context) {
 	ctx.Session.Delete("uid")
 	ctx.Session.Delete("uname")
 	ctx.Session.Delete("socialId")
@@ -93,10 +138,11 @@ func SignOut(ctx *middleware.Context) {
 	ctx.Session.Delete("socialEmail")
 	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
 	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
+	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
 	ctx.Redirect(setting.AppSubUrl + "/")
 }
 
-func SignUp(ctx *middleware.Context) {
+func SignUp(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
 	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
@@ -110,7 +156,7 @@ func SignUp(ctx *middleware.Context) {
 	ctx.HTML(200, SIGNUP)
 }
 
-func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.RegisterForm) {
+func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
 	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
@@ -191,7 +237,7 @@ func SignUpPost(ctx *middleware.Context, cpt *captcha.Captcha, form auth.Registe
 	ctx.Redirect(setting.AppSubUrl + "/user/login")
 }
 
-func Activate(ctx *middleware.Context) {
+func Activate(ctx *context.Context) {
 	code := ctx.Query("code")
 	if len(code) == 0 {
 		ctx.Data["IsActivatePage"] = true
@@ -243,7 +289,7 @@ func Activate(ctx *middleware.Context) {
 	ctx.HTML(200, ACTIVATE)
 }
 
-func ActivateEmail(ctx *middleware.Context) {
+func ActivateEmail(ctx *context.Context) {
 	code := ctx.Query("code")
 	email_string := ctx.Query("email")
 
@@ -261,7 +307,7 @@ func ActivateEmail(ctx *middleware.Context) {
 	return
 }
 
-func ForgotPasswd(ctx *middleware.Context) {
+func ForgotPasswd(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
 
 	if setting.MailService == nil {
@@ -274,7 +320,7 @@ func ForgotPasswd(ctx *middleware.Context) {
 	ctx.HTML(200, FORGOT_PASSWORD)
 }
 
-func ForgotPasswdPost(ctx *middleware.Context) {
+func ForgotPasswdPost(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
 
 	if setting.MailService == nil {
@@ -297,6 +343,12 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 		return
 	}
 
+	if !u.IsLocal() {
+		ctx.Data["Err_Email"] = true
+		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil)
+		return
+	}
+
 	if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
 		ctx.Data["ResendLimited"] = true
 		ctx.HTML(200, FORGOT_PASSWORD)
@@ -313,7 +365,7 @@ func ForgotPasswdPost(ctx *middleware.Context) {
 	ctx.HTML(200, FORGOT_PASSWORD)
 }
 
-func ResetPasswd(ctx *middleware.Context) {
+func ResetPasswd(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.reset_password")
 
 	code := ctx.Query("code")
@@ -326,7 +378,7 @@ func ResetPasswd(ctx *middleware.Context) {
 	ctx.HTML(200, RESET_PASSWORD)
 }
 
-func ResetPasswdPost(ctx *middleware.Context) {
+func ResetPasswdPost(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("auth.reset_password")
 
 	code := ctx.Query("code")

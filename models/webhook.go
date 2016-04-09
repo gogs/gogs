@@ -15,13 +15,13 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	gouuid "github.com/satori/go.uuid"
 
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/uuid"
 )
 
 type HookContentType int
@@ -94,8 +94,20 @@ type Webhook struct {
 	HookTaskType HookTaskType
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
 	LastStatus   HookStatus // Last delivery status
-	Created      time.Time  `xorm:"CREATED"`
-	Updated      time.Time  `xorm:"UPDATED"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
+}
+
+func (w *Webhook) BeforeInsert() {
+	w.CreatedUnix = time.Now().UTC().Unix()
+	w.UpdatedUnix = w.CreatedUnix
+}
+
+func (w *Webhook) BeforeUpdate() {
+	w.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
@@ -106,8 +118,10 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 			log.Error(3, "Unmarshal[%d]: %v", w.ID, err)
 		}
-	case "created":
-		w.Created = regulateTimeZone(w.Created)
+	case "created_unix":
+		w.Created = time.Unix(w.CreatedUnix, 0).Local()
+	case "updated_unix":
+		w.Updated = time.Unix(w.UpdatedUnix, 0).Local()
 	}
 }
 
@@ -285,7 +299,7 @@ type HookTask struct {
 	HookID          int64
 	UUID            string
 	Type            HookTaskType
-	URL             string
+	URL             string `xorm:"TEXT"`
 	api.Payloader   `xorm:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
@@ -361,7 +375,7 @@ func CreateHookTask(t *HookTask) error {
 	if err != nil {
 		return err
 	}
-	t.UUID = uuid.NewV4().String()
+	t.UUID = gouuid.NewV4().String()
 	t.PayloadContent = string(data)
 	_, err = x.Insert(t)
 	return err
@@ -398,6 +412,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 		return nil
 	}
 
+	var payloader api.Payloader
 	for _, w := range ws {
 		switch event {
 		case HOOK_EVENT_CREATE:
@@ -410,14 +425,16 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 			}
 		}
 
+		// Use separate objects so modifcations won't be made on payload on non-Gogs type hooks.
 		switch w.HookTaskType {
 		case SLACK:
-			p, err = GetSlackPayload(p, event, w.Meta)
+			payloader, err = GetSlackPayload(p, event, w.Meta)
 			if err != nil {
 				return fmt.Errorf("GetSlackPayload: %v", err)
 			}
 		default:
 			p.SetSecret(w.Secret)
+			payloader = p
 		}
 
 		if err = CreateHookTask(&HookTask{
@@ -425,7 +442,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 			HookID:      w.ID,
 			Type:        w.HookTaskType,
 			URL:         w.URL,
-			Payloader:   p,
+			Payloader:   payloader,
 			ContentType: w.ContentType,
 			EventType:   HOOK_EVENT_PUSH,
 			IsSSL:       w.IsSSL,

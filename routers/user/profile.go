@@ -11,7 +11,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/repo"
 )
@@ -21,11 +21,11 @@ const (
 	STARS     base.TplName = "user/meta/stars"
 )
 
-func GetUserByName(ctx *middleware.Context, name string) *models.User {
+func GetUserByName(ctx *context.Context, name string) *models.User {
 	user, err := models.GetUserByName(name)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Error(404)
+			ctx.Handle(404, "GetUserByName", nil)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
 		}
@@ -35,11 +35,11 @@ func GetUserByName(ctx *middleware.Context, name string) *models.User {
 }
 
 // GetUserByParams returns user whose name is presented in URL paramenter.
-func GetUserByParams(ctx *middleware.Context) *models.User {
+func GetUserByParams(ctx *context.Context) *models.User {
 	return GetUserByName(ctx, ctx.Params(":username"))
 }
 
-func Profile(ctx *middleware.Context) {
+func Profile(ctx *context.Context) {
 	uname := ctx.Params(":username")
 	// Special handle for FireFox requests favicon.ico.
 	if uname == "favicon.ico" {
@@ -74,19 +74,20 @@ func Profile(ctx *middleware.Context) {
 	ctx.Data["Title"] = u.DisplayName()
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Owner"] = u
-	
-	orgs, err := models.GetOwnedOrgsByUserIDDesc(u.Id, "updated")
+
+	orgs, err := models.GetOrgsByUserID(u.Id, ctx.IsSigned && (ctx.User.IsAdmin || ctx.User.Id == u.Id))
 	if err != nil {
-		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
+		ctx.Handle(500, "GetOrgsByUserIDDesc", err)
 		return
 	}
+
 	ctx.Data["Orgs"] = orgs
 
 	tab := ctx.Query("tab")
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		retrieveFeeds(ctx, u.Id, 0, true)
+		retrieveFeeds(ctx, u.Id, -1, 0, true)
 		if ctx.Written() {
 			return
 		}
@@ -102,7 +103,7 @@ func Profile(ctx *middleware.Context) {
 	ctx.HTML(200, PROFILE)
 }
 
-func Followers(ctx *middleware.Context) {
+func Followers(ctx *context.Context) {
 	u := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -114,7 +115,7 @@ func Followers(ctx *middleware.Context) {
 	repo.RenderUserCards(ctx, u.NumFollowers, u.GetFollowers, FOLLOWERS)
 }
 
-func Following(ctx *middleware.Context) {
+func Following(ctx *context.Context) {
 	u := GetUserByParams(ctx)
 	if ctx.Written() {
 		return
@@ -126,11 +127,11 @@ func Following(ctx *middleware.Context) {
 	repo.RenderUserCards(ctx, u.NumFollowing, u.GetFollowing, FOLLOWERS)
 }
 
-func Stars(ctx *middleware.Context) {
+func Stars(ctx *context.Context) {
 
 }
 
-func Action(ctx *middleware.Context) {
+func Action(ctx *context.Context) {
 	u := GetUserByParams(ctx)
 	if ctx.Written() {
 		return

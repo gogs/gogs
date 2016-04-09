@@ -1,6 +1,6 @@
 [run]
 init_cmds = [
-	#["grep", "-rn", "FIXME", "."],
+	["make", "build-dev", "TAGS=sqlite"],
 	["./gogs", "web"]
 ]
 watch_all = true
@@ -11,9 +11,9 @@ watch_dirs = [
 	"$WORKDIR/routers"
 ]
 watch_exts = [".go"]
+ignore_files = [".+_test.go"]
 build_delay = 1500
 cmds = [
-	["go", "install", "-v", "-race"], # sqlite redis memcache cert pam tidb
-	["go", "build", "-race"],
+	["make", "build-dev", "TAGS=sqlite"], # cert pam tidb
 	["./gogs", "web"]
 ]

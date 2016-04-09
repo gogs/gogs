@@ -4,7 +4,7 @@
 	<div class="ui container">
 		<div class="navbar">
 			{{template "repo/issue/navbar" .}}
-			{{if .IsRepositoryAdmin}}
+			{{if .IsRepositoryWriter}}
 				<div class="ui right">
 					<a class="ui green button" href="{{$.Link}}/new">{{.i18n.Tr "repo.milestones.new"}}</a>
 				</div>
@@ -49,7 +49,7 @@
 							<i class="octicon octicon-issue-closed"></i> {{$.i18n.Tr "repo.issues.close_tab" .NumClosedIssues}}
 						</span>
 					</div>
-					{{if $.IsRepositoryAdmin}}
+					{{if $.IsRepositoryWriter}}
 						<div class="ui right operate">
 							<a href="{{$.Link}}/{{.ID}}/edit" data-id={{.ID}} data-title={{.Name}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
 							{{if .IsClosed}}
@@ -93,7 +93,7 @@
 	</div>
 </div>
 
-{{if .IsRepositoryAdmin}}
+{{if .IsRepositoryWriter}}
 	<div class="ui small basic delete modal">
 		<div class="ui icon header">
 			<i class="trash icon"></i>

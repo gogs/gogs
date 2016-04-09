@@ -10,14 +10,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 )
 
 var (
-	ErrOrgNotExist      = errors.New("Organization does not exist")
-	ErrTeamAlreadyExist = errors.New("Team already exist")
-	ErrTeamNotExist     = errors.New("Team does not exist")
-	ErrTeamNameIllegal  = errors.New("Team name contains illegal characters")
+	ErrOrgNotExist  = errors.New("Organization does not exist")
+	ErrTeamNotExist = errors.New("Team does not exist")
 )
 
 // IsOwnedBy returns true if given user is in the owner team.
@@ -170,7 +169,7 @@ func GetOrgByName(name string) (*User, error) {
 	}
 	u := &User{
 		LowerName: strings.ToLower(name),
-		Type:      ORGANIZATION,
+		Type:      USER_TYPE_ORGANIZATION,
 	}
 	has, err := x.Get(u)
 	if err != nil {
@@ -255,6 +254,27 @@ func IsPublicMembership(orgId, uid int64) bool {
 	return has
 }
 
+func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, error) {
+	orgs := make([]*User, 0, 10)
+	if !showAll {
+		sess.And("`org_user`.is_public=?", true)
+	}
+	return orgs, sess.And("`org_user`.uid=?", userID).
+		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
+}
+
+// GetOrgsByUserID returns a list of organizations that the given user ID
+// has joined.
+func GetOrgsByUserID(userID int64, showAll bool) ([]*User, error) {
+	return getOrgsByUserID(x.NewSession(), userID, showAll)
+}
+
+// GetOrgsByUserIDDesc returns a list of organizations that the given user ID
+// has joined, ordered descending by the given condition.
+func GetOrgsByUserIDDesc(userID int64, desc string, showAll bool) ([]*User, error) {
+	return getOrgsByUserID(x.NewSession().Desc(desc), userID, showAll)
+}
+
 func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 	orgs := make([]*User, 0, 10)
 	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
@@ -268,7 +288,7 @@ func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
 }
 
 // GetOwnedOrganizationsByUserIDDesc returns a list of organizations are owned by
-// given user ID and descring order by given condition.
+// given user ID, ordered descending by the given condition.
 func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 	sess := x.NewSession()
 	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
@@ -598,9 +618,9 @@ func (t *Team) RemoveRepository(repoID int64) error {
 
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
-func NewTeam(t *Team) (err error) {
-	if err = IsUsableName(t.Name); err != nil {
-		return err
+func NewTeam(t *Team) error {
+	if len(t.Name) == 0 {
+		return errors.New("empty team name")
 	}
 
 	has, err := x.Id(t.OrgID).Get(new(User))
@@ -615,7 +635,7 @@ func NewTeam(t *Team) (err error) {
 	if err != nil {
 		return err
 	} else if has {
-		return ErrTeamAlreadyExist
+		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
 	}
 
 	sess := x.NewSession()
@@ -674,8 +694,8 @@ func GetTeamById(teamId int64) (*Team, error) {
 
 // UpdateTeam updates information of team.
 func UpdateTeam(t *Team, authChanged bool) (err error) {
-	if err = IsUsableName(t.Name); err != nil {
-		return err
+	if len(t.Name) == 0 {
+		return errors.New("empty team name")
 	}
 
 	if len(t.Description) > 255 {
@@ -689,6 +709,13 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
+	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(new(Team))
+	if err != nil {
+		return err
+	} else if has {
+		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
+	}
+
 	if _, err = sess.Id(t.ID).AllCols().Update(t); err != nil {
 		return fmt.Errorf("update: %v", err)
 	}
@@ -1022,4 +1049,55 @@ func removeOrgRepo(e Engine, orgID, repoID int64) error {
 // RemoveOrgRepo removes all team-repository relations of given organization.
 func RemoveOrgRepo(orgID, repoID int64) error {
 	return removeOrgRepo(x, orgID, repoID)
+}
+
+// GetUserRepositories gets all repositories of an organization,
+// that the user with the given userID has access to.
+func (org *User) GetUserRepositories(userID int64) (err error) {
+	teams := make([]*Team, 0, org.NumTeams)
+	if err = x.Sql(`SELECT team.id FROM team 
+INNER JOIN team_user ON team_user.team_id = team.id
+WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams); err != nil {
+		return fmt.Errorf("get teams: %v", err)
+	}
+
+	teamIDs := make([]string, len(teams))
+	for i := range teams {
+		teamIDs[i] = com.ToStr(teams[i].ID)
+	}
+	if len(teamIDs) == 0 {
+		// user has no team but "IN ()" is invalid SQL
+		teamIDs = append(teamIDs, "-1") // there is no repo with id=-1
+	}
+
+	repos := make([]*Repository, 0, 5)
+	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
+INNER JOIN team_repo ON team_repo.repo_id = repository.id
+WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
+GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.Id, false).Find(&repos); err != nil {
+		return fmt.Errorf("get repositories: %v", err)
+	}
+	org.Repos = repos
+
+	// FIXME: should I change this value inside method,
+	// or only in location of caller where it's really needed?
+	org.NumRepos = len(org.Repos)
+	return nil
+}
+
+// GetTeams returns all teams that belong to organization,
+// and that the user has joined.
+func (org *User) GetUserTeams(userID int64) error {
+	teams := make([]*Team, 0, 5)
+	if err := x.Sql(`SELECT team.* FROM team
+INNER JOIN team_user ON team_user.team_id = team.id
+WHERE team_user.org_id = ? AND team_user.uid = ?`,
+		org.Id, userID).Find(&teams); err != nil {
+		return fmt.Errorf("get teams: %v", err)
+	}
+
+	// FIXME: should I change this value inside method,
+	// or only in location of caller where it's really needed?
+	org.NumTeams = len(org.Teams)
+	return nil
 }

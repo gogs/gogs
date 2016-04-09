@@ -58,20 +58,25 @@ type PullRequest struct {
 
 	HasMerged      bool
 	MergedCommitID string `xorm:"VARCHAR(40)"`
-	Merged         time.Time
 	MergerID       int64
-	Merger         *User `xorm:"-"`
+	Merger         *User     `xorm:"-"`
+	Merged         time.Time `xorm:"-"`
+	MergedUnix     int64
+}
+
+func (pr *PullRequest) BeforeUpdate() {
+	pr.MergedUnix = pr.Merged.UTC().Unix()
 }
 
 // Note: don't try to get Pull because will end up recursive querying.
 func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
-	case "merged":
+	case "merged_unix":
 		if !pr.HasMerged {
 			return
 		}
 
-		pr.Merged = regulateTimeZone(pr.Merged)
+		pr.Merged = time.Unix(pr.MergedUnix, 0).Local()
 	}
 }
 
@@ -138,7 +143,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return err
 	}
 
-	if err = pr.Issue.changeStatus(sess, doer, true); err != nil {
+	if err = pr.Issue.changeStatus(sess, doer, pr.Issue.Repo, true); err != nil {
 		return fmt.Errorf("Issue.changeStatus: %v", err)
 	}
 
@@ -256,6 +261,7 @@ var patchConflicts = []string{
 	"patch does not apply",
 	"already exists in working directory",
 	"unrecognized input",
+	"error:",
 }
 
 // testPatch checks if patch can be merged to base repository without conflit.
@@ -279,7 +285,7 @@ func (pr *PullRequest) testPatch() (err error) {
 		return nil
 	}
 
-	log.Trace("PullRequest[%d].testPatch(patchPath): %s", pr.ID, patchPath)
+	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
 	if err := pr.BaseRepo.UpdateLocalCopy(); err != nil {
 		return fmt.Errorf("UpdateLocalCopy: %v", err)
@@ -287,7 +293,7 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	// Checkout base branch.
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("PullRequest.Merge(git checkout): %v", pr.BaseRepo.ID),
+		fmt.Sprintf("PullRequest.Merge (git checkout): %v", pr.BaseRepo.ID),
 		"git", "checkout", pr.BaseBranch)
 	if err != nil {
 		return fmt.Errorf("git checkout: %s", stderr)
@@ -295,12 +301,12 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	pr.Status = PULL_REQUEST_STATUS_CHECKING
 	_, stderr, err = process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("testPatch(git apply --check): %d", pr.BaseRepo.ID),
+		fmt.Sprintf("testPatch (git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
 		for i := range patchConflicts {
 			if strings.Contains(stderr, patchConflicts[i]) {
-				log.Trace("PullRequest[%d].testPatch(apply): has conflit", pr.ID)
+				log.Trace("PullRequest[%d].testPatch (apply): has conflit", pr.ID)
 				fmt.Println(stderr)
 				pr.Status = PULL_REQUEST_STATUS_CONFLICT
 				return nil
@@ -329,7 +335,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		ActUserID:    pull.Poster.Id,
 		ActUserName:  pull.Poster.Name,
 		ActEmail:     pull.Poster.Email,
-		OpType:       CREATE_PULL_REQUEST,
+		OpType:       ACTION_CREATE_PULL_REQUEST,
 		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -481,6 +487,37 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	return nil
 }
 
+// PushToBaseRepo pushes commits from branches of head repository to
+// corresponding branches of base repository.
+// FIXME: Only push branches that are actually updates?
+func (pr *PullRequest) PushToBaseRepo() (err error) {
+	log.Trace("PushToBaseRepo[%d]: pushing commits to base repo 'refs/pull/%d/head'", pr.BaseRepoID, pr.Index)
+
+	headRepoPath := pr.HeadRepo.RepoPath()
+	headGitRepo, err := git.OpenRepository(headRepoPath)
+	if err != nil {
+		return fmt.Errorf("OpenRepository: %v", err)
+	}
+
+	tmpRemoteName := fmt.Sprintf("tmp-pull-%d", pr.ID)
+	if err = headGitRepo.AddRemote(tmpRemoteName, pr.BaseRepo.RepoPath(), false); err != nil {
+		return fmt.Errorf("headGitRepo.AddRemote: %v", err)
+	}
+	// Make sure to remove the remote even if the push fails
+	defer headGitRepo.RemoveRemote(tmpRemoteName)
+
+	headFile := fmt.Sprintf("refs/pull/%d/head", pr.Index)
+
+	// Remove head in case there is a conflict.
+	os.Remove(path.Join(pr.BaseRepo.RepoPath(), headFile))
+
+	if err = git.Push(headRepoPath, tmpRemoteName, fmt.Sprintf("%s:%s", pr.HeadBranch, headFile)); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
+}
+
 // AddToTaskQueue adds itself to pull request test task queue.
 func (pr *PullRequest) AddToTaskQueue() {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
@@ -496,6 +533,9 @@ func addHeadRepoTasks(prs []*PullRequest) {
 		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
 		if err := pr.UpdatePatch(); err != nil {
 			log.Error(4, "UpdatePatch: %v", err)
+			continue
+		} else if err := pr.PushToBaseRepo(); err != nil {
+			log.Error(4, "PushToBaseRepo: %v", err)
 			continue
 		}
 
@@ -523,6 +563,14 @@ func AddTestPullRequestTask(repoID int64, branch string) {
 	for _, pr := range prs {
 		pr.AddToTaskQueue()
 	}
+}
+
+func ChangeUsernameInPullRequests(oldUserName, newUserName string) error {
+	pr := PullRequest{
+		HeadUserName: strings.ToLower(newUserName),
+	}
+	_, err := x.Cols("head_user_name").Where("head_user_name = ?", strings.ToLower(oldUserName)).Update(pr)
+	return err
 }
 
 // checkAndUpdateStatus checks if pull request is possible to levaing checking status,

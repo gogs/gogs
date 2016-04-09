@@ -1,714 +1,3 @@
-@font-face {
-  font-family: 'octicons';
-  src: url('../fonts/octicons.eot?#iefix&v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('embedded-opentype'), url('../fonts/octicons.woff?v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('woff'), url('../fonts/octicons.ttf?v=30e752e9a0821a0a098947055eeece0b0f46bc34') format('truetype'), url('../fonts/octicons.svg?v=30e752e9a0821a0a098947055eeece0b0f46bc34#octicons') format('svg');
-  font-weight: normal;
-  font-style: normal;
-}
-.octicon,
-.mega-octicon {
-  font: normal normal normal 16px/1 octicons;
-  display: inline-block;
-  text-decoration: none;
-  text-rendering: auto;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-.mega-octicon {
-  font-size: 32px;
-}
-.octicon-alert:before {
-  content: '\f02d';
-}
-/*  */
-.octicon-arrow-down:before {
-  content: '\f03f';
-}
-/*  */
-.octicon-arrow-left:before {
-  content: '\f040';
-}
-/*  */
-.octicon-arrow-right:before {
-  content: '\f03e';
-}
-/*  */
-.octicon-arrow-small-down:before {
-  content: '\f0a0';
-}
-/*  */
-.octicon-arrow-small-left:before {
-  content: '\f0a1';
-}
-/*  */
-.octicon-arrow-small-right:before {
-  content: '\f071';
-}
-/*  */
-.octicon-arrow-small-up:before {
-  content: '\f09f';
-}
-/*  */
-.octicon-arrow-up:before {
-  content: '\f03d';
-}
-/*  */
-.octicon-microscope:before,
-.octicon-beaker:before {
-  content: '\f0dd';
-}
-/*  */
-.octicon-bell:before {
-  content: '\f0de';
-}
-/*  */
-.octicon-bold:before {
-  content: '\f0e2';
-}
-/*  */
-.octicon-book:before {
-  content: '\f007';
-}
-/*  */
-.octicon-bookmark:before {
-  content: '\f07b';
-}
-/*  */
-.octicon-briefcase:before {
-  content: '\f0d3';
-}
-/*  */
-.octicon-broadcast:before {
-  content: '\f048';
-}
-/*  */
-.octicon-browser:before {
-  content: '\f0c5';
-}
-/*  */
-.octicon-bug:before {
-  content: '\f091';
-}
-/*  */
-.octicon-calendar:before {
-  content: '\f068';
-}
-/*  */
-.octicon-check:before {
-  content: '\f03a';
-}
-/*  */
-.octicon-checklist:before {
-  content: '\f076';
-}
-/*  */
-.octicon-chevron-down:before {
-  content: '\f0a3';
-}
-/*  */
-.octicon-chevron-left:before {
-  content: '\f0a4';
-}
-/*  */
-.octicon-chevron-right:before {
-  content: '\f078';
-}
-/*  */
-.octicon-chevron-up:before {
-  content: '\f0a2';
-}
-/*  */
-.octicon-circle-slash:before {
-  content: '\f084';
-}
-/*  */
-.octicon-circuit-board:before {
-  content: '\f0d6';
-}
-/*  */
-.octicon-clippy:before {
-  content: '\f035';
-}
-/*  */
-.octicon-clock:before {
-  content: '\f046';
-}
-/*  */
-.octicon-cloud-download:before {
-  content: '\f00b';
-}
-/*  */
-.octicon-cloud-upload:before {
-  content: '\f00c';
-}
-/*  */
-.octicon-code:before {
-  content: '\f05f';
-}
-/*  */
-.octicon-color-mode:before {
-  content: '\f065';
-}
-/*  */
-.octicon-comment-add:before,
-.octicon-comment:before {
-  content: '\f02b';
-}
-/*  */
-.octicon-comment-discussion:before {
-  content: '\f04f';
-}
-/*  */
-.octicon-credit-card:before {
-  content: '\f045';
-}
-/*  */
-.octicon-dash:before {
-  content: '\f0ca';
-}
-/*  */
-.octicon-dashboard:before {
-  content: '\f07d';
-}
-/*  */
-.octicon-database:before {
-  content: '\f096';
-}
-/*  */
-.octicon-clone:before,
-.octicon-desktop-download:before {
-  content: '\f0dc';
-}
-/*  */
-.octicon-device-camera:before {
-  content: '\f056';
-}
-/*  */
-.octicon-device-camera-video:before {
-  content: '\f057';
-}
-/*  */
-.octicon-device-desktop:before {
-  content: '\f27c';
-}
-/*  */
-.octicon-device-mobile:before {
-  content: '\f038';
-}
-/*  */
-.octicon-diff:before {
-  content: '\f04d';
-}
-/*  */
-.octicon-diff-added:before {
-  content: '\f06b';
-}
-/*  */
-.octicon-diff-ignored:before {
-  content: '\f099';
-}
-/*  */
-.octicon-diff-modified:before {
-  content: '\f06d';
-}
-/*  */
-.octicon-diff-removed:before {
-  content: '\f06c';
-}
-/*  */
-.octicon-diff-renamed:before {
-  content: '\f06e';
-}
-/*  */
-.octicon-ellipsis:before {
-  content: '\f09a';
-}
-/*  */
-.octicon-eye-unwatch:before,
-.octicon-eye-watch:before,
-.octicon-eye:before {
-  content: '\f04e';
-}
-/*  */
-.octicon-file-binary:before {
-  content: '\f094';
-}
-/*  */
-.octicon-file-code:before {
-  content: '\f010';
-}
-/*  */
-.octicon-file-directory:before {
-  content: '\f016';
-}
-/*  */
-.octicon-file-media:before {
-  content: '\f012';
-}
-/*  */
-.octicon-file-pdf:before {
-  content: '\f014';
-}
-/*  */
-.octicon-file-submodule:before {
-  content: '\f017';
-}
-/*  */
-.octicon-file-symlink-directory:before {
-  content: '\f0b1';
-}
-/*  */
-.octicon-file-symlink-file:before {
-  content: '\f0b0';
-}
-/*  */
-.octicon-file-text:before {
-  content: '\f011';
-}
-/*  */
-.octicon-file-zip:before {
-  content: '\f013';
-}
-/*  */
-.octicon-flame:before {
-  content: '\f0d2';
-}
-/*  */
-.octicon-fold:before {
-  content: '\f0cc';
-}
-/*  */
-.octicon-gear:before {
-  content: '\f02f';
-}
-/*  */
-.octicon-gift:before {
-  content: '\f042';
-}
-/*  */
-.octicon-gist:before {
-  content: '\f00e';
-}
-/*  */
-.octicon-gist-secret:before {
-  content: '\f08c';
-}
-/*  */
-.octicon-git-branch-create:before,
-.octicon-git-branch-delete:before,
-.octicon-git-branch:before {
-  content: '\f020';
-}
-/*  */
-.octicon-git-commit:before {
-  content: '\f01f';
-}
-/*  */
-.octicon-git-compare:before {
-  content: '\f0ac';
-}
-/*  */
-.octicon-git-merge:before {
-  content: '\f023';
-}
-/*  */
-.octicon-git-pull-request-abandoned:before,
-.octicon-git-pull-request:before {
-  content: '\f009';
-}
-/*  */
-.octicon-globe:before {
-  content: '\f0b6';
-}
-/*  */
-.octicon-graph:before {
-  content: '\f043';
-}
-/*  */
-.octicon-heart:before {
-  content: '\2665';
-}
-/* ♥ */
-.octicon-history:before {
-  content: '\f07e';
-}
-/*  */
-.octicon-home:before {
-  content: '\f08d';
-}
-/*  */
-.octicon-horizontal-rule:before {
-  content: '\f070';
-}
-/*  */
-.octicon-hubot:before {
-  content: '\f09d';
-}
-/*  */
-.octicon-inbox:before {
-  content: '\f0cf';
-}
-/*  */
-.octicon-info:before {
-  content: '\f059';
-}
-/*  */
-.octicon-issue-closed:before {
-  content: '\f028';
-}
-/*  */
-.octicon-issue-opened:before {
-  content: '\f026';
-}
-/*  */
-.octicon-issue-reopened:before {
-  content: '\f027';
-}
-/*  */
-.octicon-italic:before {
-  content: '\f0e4';
-}
-/*  */
-.octicon-jersey:before {
-  content: '\f019';
-}
-/*  */
-.octicon-key:before {
-  content: '\f049';
-}
-/*  */
-.octicon-keyboard:before {
-  content: '\f00d';
-}
-/*  */
-.octicon-law:before {
-  content: '\f0d8';
-}
-/*  */
-.octicon-light-bulb:before {
-  content: '\f000';
-}
-/*  */
-.octicon-link:before {
-  content: '\f05c';
-}
-/*  */
-.octicon-link-external:before {
-  content: '\f07f';
-}
-/*  */
-.octicon-list-ordered:before {
-  content: '\f062';
-}
-/*  */
-.octicon-list-unordered:before {
-  content: '\f061';
-}
-/*  */
-.octicon-location:before {
-  content: '\f060';
-}
-/*  */
-.octicon-gist-private:before,
-.octicon-mirror-private:before,
-.octicon-git-fork-private:before,
-.octicon-lock:before {
-  content: '\f06a';
-}
-/*  */
-.octicon-logo-gist:before {
-  content: '\f0ad';
-}
-/*  */
-.octicon-logo-github:before {
-  content: '\f092';
-}
-/*  */
-.octicon-mail:before {
-  content: '\f03b';
-}
-/*  */
-.octicon-mail-read:before {
-  content: '\f03c';
-}
-/*  */
-.octicon-mail-reply:before {
-  content: '\f051';
-}
-/*  */
-.octicon-mark-github:before {
-  content: '\f00a';
-}
-/*  */
-.octicon-markdown:before {
-  content: '\f0c9';
-}
-/*  */
-.octicon-megaphone:before {
-  content: '\f077';
-}
-/*  */
-.octicon-mention:before {
-  content: '\f0be';
-}
-/*  */
-.octicon-milestone:before {
-  content: '\f075';
-}
-/*  */
-.octicon-mirror-public:before,
-.octicon-mirror:before {
-  content: '\f024';
-}
-/*  */
-.octicon-mortar-board:before {
-  content: '\f0d7';
-}
-/*  */
-.octicon-mute:before {
-  content: '\f080';
-}
-/*  */
-.octicon-no-newline:before {
-  content: '\f09c';
-}
-/*  */
-.octicon-octoface:before {
-  content: '\f008';
-}
-/*  */
-.octicon-organization:before {
-  content: '\f037';
-}
-/*  */
-.octicon-package:before {
-  content: '\f0c4';
-}
-/*  */
-.octicon-paintcan:before {
-  content: '\f0d1';
-}
-/*  */
-.octicon-pencil:before {
-  content: '\f058';
-}
-/*  */
-.octicon-person-add:before,
-.octicon-person-follow:before,
-.octicon-person:before {
-  content: '\f018';
-}
-/*  */
-.octicon-pin:before {
-  content: '\f041';
-}
-/*  */
-.octicon-plug:before {
-  content: '\f0d4';
-}
-/*  */
-.octicon-repo-create:before,
-.octicon-gist-new:before,
-.octicon-file-directory-create:before,
-.octicon-file-add:before,
-.octicon-plus:before {
-  content: '\f05d';
-}
-/*  */
-.octicon-primitive-dot:before {
-  content: '\f052';
-}
-/*  */
-.octicon-primitive-square:before {
-  content: '\f053';
-}
-/*  */
-.octicon-pulse:before {
-  content: '\f085';
-}
-/*  */
-.octicon-question:before {
-  content: '\f02c';
-}
-/*  */
-.octicon-quote:before {
-  content: '\f063';
-}
-/*  */
-.octicon-radio-tower:before {
-  content: '\f030';
-}
-/*  */
-.octicon-repo-delete:before,
-.octicon-repo:before {
-  content: '\f001';
-}
-/*  */
-.octicon-repo-clone:before {
-  content: '\f04c';
-}
-/*  */
-.octicon-repo-force-push:before {
-  content: '\f04a';
-}
-/*  */
-.octicon-gist-fork:before,
-.octicon-repo-forked:before {
-  content: '\f002';
-}
-/*  */
-.octicon-repo-pull:before {
-  content: '\f006';
-}
-/*  */
-.octicon-repo-push:before {
-  content: '\f005';
-}
-/*  */
-.octicon-rocket:before {
-  content: '\f033';
-}
-/*  */
-.octicon-rss:before {
-  content: '\f034';
-}
-/*  */
-.octicon-ruby:before {
-  content: '\f047';
-}
-/*  */
-.octicon-search-save:before,
-.octicon-search:before {
-  content: '\f02e';
-}
-/*  */
-.octicon-server:before {
-  content: '\f097';
-}
-/*  */
-.octicon-settings:before {
-  content: '\f07c';
-}
-/*  */
-.octicon-shield:before {
-  content: '\f0e1';
-}
-/*  */
-.octicon-log-in:before,
-.octicon-sign-in:before {
-  content: '\f036';
-}
-/*  */
-.octicon-log-out:before,
-.octicon-sign-out:before {
-  content: '\f032';
-}
-/*  */
-.octicon-squirrel:before {
-  content: '\f0b2';
-}
-/*  */
-.octicon-star-add:before,
-.octicon-star-delete:before,
-.octicon-star:before {
-  content: '\f02a';
-}
-/*  */
-.octicon-stop:before {
-  content: '\f08f';
-}
-/*  */
-.octicon-repo-sync:before,
-.octicon-sync:before {
-  content: '\f087';
-}
-/*  */
-.octicon-tag-remove:before,
-.octicon-tag-add:before,
-.octicon-tag:before {
-  content: '\f015';
-}
-/*  */
-.octicon-tasklist:before {
-  content: '\f0e5';
-}
-/*  */
-.octicon-telescope:before {
-  content: '\f088';
-}
-/*  */
-.octicon-terminal:before {
-  content: '\f0c8';
-}
-/*  */
-.octicon-text-size:before {
-  content: '\f0e3';
-}
-/*  */
-.octicon-three-bars:before {
-  content: '\f05e';
-}
-/*  */
-.octicon-thumbsdown:before {
-  content: '\f0db';
-}
-/*  */
-.octicon-thumbsup:before {
-  content: '\f0da';
-}
-/*  */
-.octicon-tools:before {
-  content: '\f031';
-}
-/*  */
-.octicon-trashcan:before {
-  content: '\f0d0';
-}
-/*  */
-.octicon-triangle-down:before {
-  content: '\f05b';
-}
-/*  */
-.octicon-triangle-left:before {
-  content: '\f044';
-}
-/*  */
-.octicon-triangle-right:before {
-  content: '\f05a';
-}
-/*  */
-.octicon-triangle-up:before {
-  content: '\f0aa';
-}
-/*  */
-.octicon-unfold:before {
-  content: '\f039';
-}
-/*  */
-.octicon-unmute:before {
-  content: '\f0ba';
-}
-/*  */
-.octicon-versions:before {
-  content: '\f064';
-}
-/*  */
-.octicon-watch:before {
-  content: '\f0e0';
-}
-/*  */
-.octicon-remove-close:before,
-.octicon-x:before {
-  content: '\f081';
-}
-/*  */
-.octicon-zap:before {
-  content: '\26A1';
-}
-/* ⚡ */
 .emoji {
   width: 1.5em;
   height: 1.5em;
@@ -716,17 +5,19 @@
   background-size: contain;
 }
 body {
-  font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif, '微软雅黑';
-  background-color: #FAFAFA;
+  font-family: "Helvetica Neue", "Meiryo Ui", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+  background-color: #fff;
   overflow-y: scroll;
 }
 img {
   border-radius: 3px;
 }
-pre {
+pre,
+code {
   font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
-pre.raw {
+pre.raw,
+code.raw {
   padding: 7px 12px;
   margin: 10px 0;
   background-color: #f8f8f8;
@@ -736,7 +27,8 @@ pre.raw {
   line-height: 1.5;
   overflow: auto;
 }
-pre.wrap {
+pre.wrap,
+code.wrap {
   white-space: pre-wrap;
   /* CSS 3 */
   word-break: break-word;
@@ -808,6 +100,12 @@ pre.wrap {
 }
 .ui.right {
   float: right;
+}
+.ui.container.fluid.padded {
+  padding: 0 10px 0 10px;
+}
+.ui.form .ui.button {
+  font-weight: normal;
 }
 .ui .text.red {
   color: #d95c5c !important;
@@ -938,6 +236,10 @@ pre.wrap {
 }
 .ui.status.buttons .octicon {
   margin-right: 4px;
+}
+.ui.inline.delete-button {
+  padding: 8px 15px;
+  font-weight: normal;
 }
 .overflow.menu .items {
   max-height: 300px;
@@ -1095,30 +397,35 @@ footer .container .links > *:first-child {
     width: 95%;
   }
 }
-.markdown {
+/* Overrides some styles of the Highlight.js plugin */
+.hljs {
+  background: inherit !important;
+  padding: 0 !important;
+}
+.markdown:not(code) {
   overflow: hidden;
   font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
   font-size: 16px;
   line-height: 1.6 !important;
   word-wrap: break-word;
 }
-.markdown.file-view {
+.markdown:not(code).file-view {
   padding: 2em 2em 2em !important;
 }
-.markdown > *:first-child {
+.markdown:not(code) > *:first-child {
   margin-top: 0 !important;
 }
-.markdown > *:last-child {
+.markdown:not(code) > *:last-child {
   margin-bottom: 0 !important;
 }
-.markdown a:not([href]) {
+.markdown:not(code) a:not([href]) {
   color: inherit;
   text-decoration: none;
 }
-.markdown .absent {
+.markdown:not(code) .absent {
   color: #c00;
 }
-.markdown .anchor {
+.markdown:not(code) .anchor {
   position: absolute;
   top: 0;
   left: 0;
@@ -1127,217 +434,217 @@ footer .container .links > *:first-child {
   padding-left: 30px;
   margin-left: -30px;
 }
-.markdown .anchor:focus {
+.markdown:not(code) .anchor:focus {
   outline: none;
 }
-.markdown h1,
-.markdown h2,
-.markdown h3,
-.markdown h4,
-.markdown h5,
-.markdown h6 {
+.markdown:not(code) h1,
+.markdown:not(code) h2,
+.markdown:not(code) h3,
+.markdown:not(code) h4,
+.markdown:not(code) h5,
+.markdown:not(code) h6 {
   position: relative;
   margin-top: 1em;
   margin-bottom: 16px;
   font-weight: bold;
   line-height: 1.4;
 }
-.markdown h1:first-of-type,
-.markdown h2:first-of-type,
-.markdown h3:first-of-type,
-.markdown h4:first-of-type,
-.markdown h5:first-of-type,
-.markdown h6:first-of-type {
+.markdown:not(code) h1:first-of-type,
+.markdown:not(code) h2:first-of-type,
+.markdown:not(code) h3:first-of-type,
+.markdown:not(code) h4:first-of-type,
+.markdown:not(code) h5:first-of-type,
+.markdown:not(code) h6:first-of-type {
   margin-top: 0 !important;
 }
-.markdown h1 .octicon-link,
-.markdown h2 .octicon-link,
-.markdown h3 .octicon-link,
-.markdown h4 .octicon-link,
-.markdown h5 .octicon-link,
-.markdown h6 .octicon-link {
+.markdown:not(code) h1 .octicon-link,
+.markdown:not(code) h2 .octicon-link,
+.markdown:not(code) h3 .octicon-link,
+.markdown:not(code) h4 .octicon-link,
+.markdown:not(code) h5 .octicon-link,
+.markdown:not(code) h6 .octicon-link {
   display: none;
   color: #000;
   vertical-align: middle;
 }
-.markdown h1:hover .anchor,
-.markdown h2:hover .anchor,
-.markdown h3:hover .anchor,
-.markdown h4:hover .anchor,
-.markdown h5:hover .anchor,
-.markdown h6:hover .anchor {
+.markdown:not(code) h1:hover .anchor,
+.markdown:not(code) h2:hover .anchor,
+.markdown:not(code) h3:hover .anchor,
+.markdown:not(code) h4:hover .anchor,
+.markdown:not(code) h5:hover .anchor,
+.markdown:not(code) h6:hover .anchor {
   padding-left: 8px;
   margin-left: -30px;
   text-decoration: none;
 }
-.markdown h1:hover .anchor .octicon-link,
-.markdown h2:hover .anchor .octicon-link,
-.markdown h3:hover .anchor .octicon-link,
-.markdown h4:hover .anchor .octicon-link,
-.markdown h5:hover .anchor .octicon-link,
-.markdown h6:hover .anchor .octicon-link {
+.markdown:not(code) h1:hover .anchor .octicon-link,
+.markdown:not(code) h2:hover .anchor .octicon-link,
+.markdown:not(code) h3:hover .anchor .octicon-link,
+.markdown:not(code) h4:hover .anchor .octicon-link,
+.markdown:not(code) h5:hover .anchor .octicon-link,
+.markdown:not(code) h6:hover .anchor .octicon-link {
   display: inline-block;
 }
-.markdown h1 tt,
-.markdown h1 code,
-.markdown h2 tt,
-.markdown h2 code,
-.markdown h3 tt,
-.markdown h3 code,
-.markdown h4 tt,
-.markdown h4 code,
-.markdown h5 tt,
-.markdown h5 code,
-.markdown h6 tt,
-.markdown h6 code {
+.markdown:not(code) h1 tt,
+.markdown:not(code) h1 code,
+.markdown:not(code) h2 tt,
+.markdown:not(code) h2 code,
+.markdown:not(code) h3 tt,
+.markdown:not(code) h3 code,
+.markdown:not(code) h4 tt,
+.markdown:not(code) h4 code,
+.markdown:not(code) h5 tt,
+.markdown:not(code) h5 code,
+.markdown:not(code) h6 tt,
+.markdown:not(code) h6 code {
   font-size: inherit;
 }
-.markdown h1 {
+.markdown:not(code) h1 {
   padding-bottom: 0.3em;
   font-size: 2.25em;
   line-height: 1.2;
   border-bottom: 1px solid #eee;
 }
-.markdown h1 .anchor {
+.markdown:not(code) h1 .anchor {
   line-height: 1;
 }
-.markdown h2 {
+.markdown:not(code) h2 {
   padding-bottom: 0.3em;
   font-size: 1.75em;
   line-height: 1.225;
   border-bottom: 1px solid #eee;
 }
-.markdown h2 .anchor {
+.markdown:not(code) h2 .anchor {
   line-height: 1;
 }
-.markdown h3 {
+.markdown:not(code) h3 {
   font-size: 1.5em;
   line-height: 1.43;
 }
-.markdown h3 .anchor {
+.markdown:not(code) h3 .anchor {
   line-height: 1.2;
 }
-.markdown h4 {
+.markdown:not(code) h4 {
   font-size: 1.25em;
 }
-.markdown h4 .anchor {
+.markdown:not(code) h4 .anchor {
   line-height: 1.2;
 }
-.markdown h5 {
+.markdown:not(code) h5 {
   font-size: 1em;
 }
-.markdown h5 .anchor {
+.markdown:not(code) h5 .anchor {
   line-height: 1.1;
 }
-.markdown h6 {
+.markdown:not(code) h6 {
   font-size: 1em;
   color: #777;
 }
-.markdown h6 .anchor {
+.markdown:not(code) h6 .anchor {
   line-height: 1.1;
 }
-.markdown p,
-.markdown blockquote,
-.markdown ul,
-.markdown ol,
-.markdown dl,
-.markdown table,
-.markdown pre {
+.markdown:not(code) p,
+.markdown:not(code) blockquote,
+.markdown:not(code) ul,
+.markdown:not(code) ol,
+.markdown:not(code) dl,
+.markdown:not(code) table,
+.markdown:not(code) pre {
   margin-top: 0;
   margin-bottom: 16px;
 }
-.markdown blockquote {
+.markdown:not(code) blockquote {
   margin-left: 0;
 }
-.markdown hr {
+.markdown:not(code) hr {
   height: 4px;
   padding: 0;
   margin: 16px 0;
   background-color: #e7e7e7;
   border: 0 none;
 }
-.markdown ul,
-.markdown ol {
+.markdown:not(code) ul,
+.markdown:not(code) ol {
   padding-left: 2em;
 }
-.markdown ul.no-list,
-.markdown ol.no-list {
+.markdown:not(code) ul.no-list,
+.markdown:not(code) ol.no-list {
   padding: 0;
   list-style-type: none;
 }
-.markdown ul ul,
-.markdown ul ol,
-.markdown ol ol,
-.markdown ol ul {
+.markdown:not(code) ul ul,
+.markdown:not(code) ul ol,
+.markdown:not(code) ol ol,
+.markdown:not(code) ol ul {
   margin-top: 0;
   margin-bottom: 0;
 }
-.markdown ol ol,
-.markdown ul ol {
+.markdown:not(code) ol ol,
+.markdown:not(code) ul ol {
   list-style-type: lower-roman;
 }
-.markdown li > p {
+.markdown:not(code) li > p {
   margin-top: 16px;
 }
-.markdown dl {
+.markdown:not(code) dl {
   padding: 0;
 }
-.markdown dl dt {
+.markdown:not(code) dl dt {
   padding: 0;
   margin-top: 16px;
   font-size: 1em;
   font-style: italic;
   font-weight: bold;
 }
-.markdown dl dd {
+.markdown:not(code) dl dd {
   padding: 0 16px;
   margin-bottom: 16px;
 }
-.markdown blockquote {
+.markdown:not(code) blockquote {
   padding: 0 15px;
   color: #777;
   border-left: 4px solid #ddd;
 }
-.markdown blockquote > :first-child {
+.markdown:not(code) blockquote > :first-child {
   margin-top: 0;
 }
-.markdown blockquote > :last-child {
+.markdown:not(code) blockquote > :last-child {
   margin-bottom: 0;
 }
-.markdown table {
+.markdown:not(code) table {
   display: block;
   width: 100%;
   overflow: auto;
   word-break: normal;
   word-break: keep-all;
 }
-.markdown table th {
+.markdown:not(code) table th {
   font-weight: bold;
 }
-.markdown table th,
-.markdown table td {
+.markdown:not(code) table th,
+.markdown:not(code) table td {
   padding: 6px 13px !important;
   border: 1px solid #ddd !important;
 }
-.markdown table tr {
+.markdown:not(code) table tr {
   background-color: #fff;
   border-top: 1px solid #ccc;
 }
-.markdown table tr:nth-child(2n) {
+.markdown:not(code) table tr:nth-child(2n) {
   background-color: #f8f8f8;
 }
-.markdown img {
+.markdown:not(code) img {
   max-width: 100%;
   box-sizing: border-box;
 }
-.markdown .emoji {
+.markdown:not(code) .emoji {
   max-width: none;
 }
-.markdown span.frame {
+.markdown:not(code) span.frame {
   display: block;
   overflow: hidden;
 }
-.markdown span.frame > span {
+.markdown:not(code) span.frame > span {
   display: block;
   float: left;
   width: auto;
@@ -1346,69 +653,69 @@ footer .container .links > *:first-child {
   overflow: hidden;
   border: 1px solid #ddd;
 }
-.markdown span.frame span img {
+.markdown:not(code) span.frame span img {
   display: block;
   float: left;
 }
-.markdown span.frame span span {
+.markdown:not(code) span.frame span span {
   display: block;
   padding: 5px 0 0;
   clear: both;
   color: #333;
 }
-.markdown span.align-center {
+.markdown:not(code) span.align-center {
   display: block;
   overflow: hidden;
   clear: both;
 }
-.markdown span.align-center > span {
+.markdown:not(code) span.align-center > span {
   display: block;
   margin: 13px auto 0;
   overflow: hidden;
   text-align: center;
 }
-.markdown span.align-center span img {
+.markdown:not(code) span.align-center span img {
   margin: 0 auto;
   text-align: center;
 }
-.markdown span.align-right {
+.markdown:not(code) span.align-right {
   display: block;
   overflow: hidden;
   clear: both;
 }
-.markdown span.align-right > span {
+.markdown:not(code) span.align-right > span {
   display: block;
   margin: 13px 0 0;
   overflow: hidden;
   text-align: right;
 }
-.markdown span.align-right span img {
+.markdown:not(code) span.align-right span img {
   margin: 0;
   text-align: right;
 }
-.markdown span.float-left {
+.markdown:not(code) span.float-left {
   display: block;
   float: left;
   margin-right: 13px;
   overflow: hidden;
 }
-.markdown span.float-left span {
+.markdown:not(code) span.float-left span {
   margin: 13px 0 0;
 }
-.markdown span.float-right {
+.markdown:not(code) span.float-right {
   display: block;
   float: right;
   margin-left: 13px;
   overflow: hidden;
 }
-.markdown span.float-right > span {
+.markdown:not(code) span.float-right > span {
   display: block;
   margin: 13px auto 0;
   overflow: hidden;
   text-align: right;
 }
-.markdown code,
-.markdown tt {
+.markdown:not(code) code,
+.markdown:not(code) tt {
   padding: 0;
   padding-top: 0.2em;
   padding-bottom: 0.2em;
@@ -1417,21 +724,21 @@ footer .container .links > *:first-child {
   background-color: rgba(0, 0, 0, 0.04);
   border-radius: 3px;
 }
-.markdown code:before,
-.markdown code:after,
-.markdown tt:before,
-.markdown tt:after {
+.markdown:not(code) code:before,
+.markdown:not(code) code:after,
+.markdown:not(code) tt:before,
+.markdown:not(code) tt:after {
   letter-spacing: -0.2em;
   content: "\00a0";
 }
-.markdown code br,
-.markdown tt br {
+.markdown:not(code) code br,
+.markdown:not(code) tt br {
   display: none;
 }
-.markdown del code {
+.markdown:not(code) del code {
   text-decoration: inherit;
 }
-.markdown pre > code {
+.markdown:not(code) pre > code {
   padding: 0;
   margin: 0;
   font-size: 100%;
@@ -1440,11 +747,11 @@ footer .container .links > *:first-child {
   background: transparent;
   border: 0;
 }
-.markdown .highlight {
+.markdown:not(code) .highlight {
   margin-bottom: 16px;
 }
-.markdown .highlight pre,
-.markdown pre {
+.markdown:not(code) .highlight pre,
+.markdown:not(code) pre {
   padding: 16px;
   overflow: auto;
   font-size: 85%;
@@ -1452,15 +759,15 @@ footer .container .links > *:first-child {
   background-color: #f7f7f7;
   border-radius: 3px;
 }
-.markdown .highlight pre {
+.markdown:not(code) .highlight pre {
   margin-bottom: 0;
   word-break: normal;
 }
-.markdown pre {
+.markdown:not(code) pre {
   word-wrap: normal;
 }
-.markdown pre code,
-.markdown pre tt {
+.markdown:not(code) pre code,
+.markdown:not(code) pre tt {
   display: inline;
   max-width: initial;
   padding: 0;
@@ -1471,13 +778,13 @@ footer .container .links > *:first-child {
   background-color: transparent;
   border: 0;
 }
-.markdown pre code:before,
-.markdown pre code:after,
-.markdown pre tt:before,
-.markdown pre tt:after {
+.markdown:not(code) pre code:before,
+.markdown:not(code) pre code:after,
+.markdown:not(code) pre tt:before,
+.markdown:not(code) pre tt:after {
   content: normal;
 }
-.markdown kbd {
+.markdown:not(code) kbd {
   display: inline-block;
   padding: 3px 5px;
   font-size: 11px;
@@ -1490,11 +797,11 @@ footer .container .links > *:first-child {
   border-radius: 3px;
   box-shadow: inset 0 -1px 0 #bbb;
 }
-.markdown input[type="checkbox"] {
+.markdown:not(code) input[type="checkbox"] {
   vertical-align: middle !important;
 }
-.markdown .csv-data td,
-.markdown .csv-data th {
+.markdown:not(code) .csv-data td,
+.markdown:not(code) .csv-data th {
   padding: 5px;
   overflow: hidden;
   font-size: 12px;
@@ -1502,16 +809,16 @@ footer .container .links > *:first-child {
   text-align: left;
   white-space: nowrap;
 }
-.markdown .csv-data .blob-num {
+.markdown:not(code) .csv-data .blob-num {
   padding: 10px 8px 9px;
   text-align: right;
   background: #fff;
   border: 0;
 }
-.markdown .csv-data tr {
+.markdown:not(code) .csv-data tr {
   border-top: 0;
 }
-.markdown .csv-data th {
+.markdown:not(code) .csv-data th {
   font-weight: bold;
   background: #f8f8f8;
   border-top: 0;
@@ -1824,7 +1131,16 @@ footer .container .links > *:first-child {
 .repository .metas .ui.list a .text:hover {
   color: #000;
 }
+.repository .header-wrapper {
+  background-color: #FAFAFA;
+  margin-top: -15px;
+  padding-top: 15px;
+}
+.repository .header-wrapper .ui.tabs.divider {
+  border-bottom: none;
+}
 .repository .filter.menu .label.color {
+  border-radius: 3px;
   margin-left: 15px;
   padding: 0 8px;
 }
@@ -1989,6 +1305,30 @@ footer .container .links > *:first-child {
 .repository.new.issue .comment.form .content {
   margin-left: 4em;
 }
+.repository.new.issue .comment.form .content:before,
+.repository.new.issue .comment.form .content:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.new.issue .comment.form .content:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.new.issue .comment.form .content:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository.new.issue .comment.form .content:after {
+  border-right-color: #fff;
+}
 .repository.new.issue .comment.form .content .markdown {
   font-size: 14px;
 }
@@ -2004,7 +1344,7 @@ footer .container .links > *:first-child {
 }
 .repository.view.issue .title h1 {
   font-weight: 300;
-  font-size: 3rem;
+  font-size: 2.3rem;
   margin-bottom: 5px;
 }
 .repository.view.issue .title h1 .ui.input {
@@ -2085,11 +1425,33 @@ footer .container .links > *:first-child {
 .repository.view.issue .comment-list .comment .content .header {
   font-weight: normal;
   padding: auto 15px;
+  position: relative;
   color: #767676;
   background-color: #f7f7f7;
   border-bottom: 1px solid #eee;
   border-top-left-radius: 3px;
   border-top-right-radius: 3px;
+}
+.repository.view.issue .comment-list .comment .content .header:before,
+.repository.view.issue .comment-list .comment .content .header:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.view.issue .comment-list .comment .content .header:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.view.issue .comment-list .comment .content .header:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
 }
 .repository.view.issue .comment-list .comment .content .header .text {
   max-width: 78%;
@@ -2106,8 +1468,33 @@ footer .container .links > *:first-child {
 .repository.view.issue .comment-list .comment .content > .bottom.segment {
   background: #f3f4f5;
 }
+.repository.view.issue .comment-list .comment .content > .bottom.segment .ui.images::after {
+  clear: both;
+  content: ' ';
+  display: block;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment a {
+  display: block;
+  float: left;
+  margin: 5px;
+  padding: 5px;
+  height: 150px;
+  border: solid 1px #eee;
+  border-radius: 3px;
+  max-width: 150px;
+  background-color: #fff;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment a:before {
+  content: ' ';
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle;
+}
 .repository.view.issue .comment-list .comment .content > .bottom.segment .ui.image {
-  max-height: 150px;
+  max-height: 100%;
+  width: auto;
+  margin: 0;
+  vertical-align: middle;
 }
 .repository.view.issue .comment-list .comment .ui.form .field:first-child {
   clear: none;
@@ -2119,6 +1506,7 @@ footer .container .links > *:first-child {
 }
 .repository.view.issue .comment-list .comment .ui.form textarea {
   height: 200px;
+  font-family: "Consolas", monospace;
 }
 .repository.view.issue .comment-list .comment .edit.buttons {
   margin-top: 10px;
@@ -2158,12 +1546,40 @@ footer .container .links > *:first-child {
 .repository.view.issue .ui.segment.metas {
   margin-top: -3px;
 }
+.repository.view.issue .ui.participants img {
+  margin-top: 5px;
+  margin-right: 5px;
+}
 .repository .comment.form .ui.comments {
   margin-top: -12px;
   max-width: 100%;
 }
 .repository .comment.form .content .field:first-child {
   clear: none;
+}
+.repository .comment.form .content .form:before,
+.repository .comment.form .content .form:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository .comment.form .content .form:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository .comment.form .content .form:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository .comment.form .content .form:after {
+  border-right-color: #fff;
 }
 .repository .comment.form .content .tab.segment {
   border: none;
@@ -2172,6 +1588,7 @@ footer .container .links > *:first-child {
 }
 .repository .comment.form .content textarea {
   height: 200px;
+  font-family: "Consolas", monospace;
 }
 .repository .label.list {
   list-style: none;
@@ -2193,6 +1610,9 @@ footer .container .links > *:first-child {
 }
 .repository .label.list .item a.open-issues {
   margin-right: 30px;
+}
+.repository .label.list .item .ui.label {
+  font-size: 1em;
 }
 .repository .milestone.list {
   list-style: none;
@@ -2253,6 +1673,30 @@ footer .container .links > *:first-child {
 }
 .repository.compare.pull .choose.branch .octicon {
   padding-right: 10px;
+}
+.repository.compare.pull .comment.form .content:before,
+.repository.compare.pull .comment.form .content:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.compare.pull .comment.form .content:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.compare.pull .comment.form .content:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository.compare.pull .comment.form .content:after {
+  border-right-color: #fff;
 }
 .repository .filter.dropdown .menu {
   margin-top: 1px!important;
@@ -2524,6 +1968,9 @@ footer .container .links > *:first-child {
 .repository.wiki.start .ui.segment .mega-octicon {
   font-size: 48px;
 }
+.repository.wiki.new .CodeMirror .CodeMirror-code {
+  font-family: "Consolas", monospace;
+}
 .repository.wiki.new .CodeMirror .CodeMirror-code .cm-comment {
   background: inherit;
 }
@@ -2550,10 +1997,11 @@ footer .container .links > *:first-child {
 .repository.settings.collaboration .collaborator.list {
   padding: 0;
 }
-.repository.settings.collaboration .collaborator.list .item {
-  padding: 10px 20px;
+.repository.settings.collaboration .collaborator.list > .item {
+  margin: 0;
+  line-height: 2em;
 }
-.repository.settings.collaboration .collaborator.list .item:not(:last-child) {
+.repository.settings.collaboration .collaborator.list > .item:not(:last-child) {
   border-bottom: 1px solid #DDD;
 }
 .repository.settings.collaboration #repo-collab-form #search-user-box .results {
@@ -2770,6 +2218,27 @@ footer .container .links > *:first-child {
   width: 15px;
   height: 15px;
 }
+#avatar-arrow:before,
+#avatar-arrow:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+#avatar-arrow:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+#avatar-arrow:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
 #transfer-repo-modal .ui.message,
 #delete-repo-modal .ui.message {
   width: 100%!important;
@@ -2912,6 +2381,9 @@ footer .container .links > *:first-child {
 }
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
+}
+.user.profile .ui.card #profile-avatar {
+  height: 290px;
 }
 .user.profile .ui.card .username {
   display: block;
@@ -3124,9 +2596,16 @@ footer .container .links > *:first-child {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.admin.config #test-mail-btn {
+  margin-left: 5px;
+}
 .explore {
   padding-top: 15px;
   padding-bottom: 80px;
+}
+.explore .navbar .octicon {
+  width: 16px;
+  text-align: center;
 }
 .ui.repository.list .item {
   padding-bottom: 25px;
@@ -3153,4 +2632,27 @@ footer .container .links > *:first-child {
 .ui.repository.list .item .time {
   font-size: 12px;
   color: #808080;
+}
+.ui.user.list .item {
+  padding-bottom: 25px;
+}
+.ui.user.list .item:not(:first-child) {
+  border-top: 1px solid #eee;
+  padding-top: 25px;
+}
+.ui.user.list .item .ui.avatar.image {
+  width: 40px;
+  height: 40px;
+}
+.ui.user.list .item .description {
+  margin-top: 5px;
+}
+.ui.user.list .item .description .octicon:not(:first-child) {
+  margin-left: 5px;
+}
+.ui.user.list .item .description a {
+  color: #333;
+}
+.ui.user.list .item .description a:hover {
+  text-decoration: underline;
 }

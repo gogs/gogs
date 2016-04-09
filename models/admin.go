@@ -5,12 +5,18 @@
 package models
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type NoticeType int
@@ -24,7 +30,19 @@ type Notice struct {
 	ID          int64 `xorm:"pk autoincr"`
 	Type        NoticeType
 	Description string    `xorm:"TEXT"`
-	Created     time.Time `xorm:"CREATED"`
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+}
+
+func (n *Notice) BeforeInsert() {
+	n.CreatedUnix = time.Now().UTC().Unix()
+}
+
+func (n *Notice) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created_unix":
+		n.Created = time.Unix(n.CreatedUnix, 0).Local()
+	}
 }
 
 // TrStr returns a translation format string.
@@ -45,6 +63,25 @@ func CreateNotice(tp NoticeType, desc string) error {
 // CreateRepositoryNotice creates new system notice with type NOTICE_REPOSITORY.
 func CreateRepositoryNotice(desc string) error {
 	return CreateNotice(NOTICE_REPOSITORY, desc)
+}
+
+// RemoveAllWithNotice removes all directories in given path and
+// creates a system notice when error occurs.
+func RemoveAllWithNotice(title, path string) {
+	var err error
+	if setting.IsWindows {
+		err = exec.Command("cmd", "/C", "rmdir", "/S", "/Q", path).Run()
+	} else {
+		err = os.RemoveAll(path)
+	}
+
+	if err != nil {
+		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
+		log.Warn(desc)
+		if err = CreateRepositoryNotice(desc); err != nil {
+			log.Error(4, "CreateRepositoryNotice: %v", err)
+		}
+	}
 }
 
 // CountNotices returns number of notices.

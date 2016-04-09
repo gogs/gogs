@@ -13,7 +13,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -24,7 +24,7 @@ const (
 	ORG_HOME  base.TplName = "org/home"
 )
 
-func getDashboardContextUser(ctx *middleware.Context) *models.User {
+func getDashboardContextUser(ctx *context.Context) *models.User {
 	ctxUser := ctx.User
 	orgName := ctx.Params(":org")
 	if len(orgName) > 0 {
@@ -51,8 +51,8 @@ func getDashboardContextUser(ctx *middleware.Context) *models.User {
 	return ctxUser
 }
 
-func retrieveFeeds(ctx *middleware.Context, uid, offset int64, isProfile bool) {
-	actions, err := models.GetFeeds(uid, offset, isProfile)
+func retrieveFeeds(ctx *context.Context, ctxUserID, userID, offset int64, isProfile bool) {
+	actions, err := models.GetFeeds(ctxUserID, userID, offset, isProfile)
 	if err != nil {
 		ctx.Handle(500, "GetFeeds", err)
 		return
@@ -82,12 +82,12 @@ func retrieveFeeds(ctx *middleware.Context, uid, offset int64, isProfile bool) {
 	ctx.Data["Feeds"] = feeds
 }
 
-func Dashboard(ctx *middleware.Context) {
-	ctx.Data["Title"] = ctx.Tr("dashboard")
+func Dashboard(ctx *context.Context) {
+	ctxUser := getDashboardContextUser(ctx)
+	ctx.Data["Title"] = ctxUser.DisplayName() + " - " + ctx.Tr("dashboard")
 	ctx.Data["PageIsDashboard"] = true
 	ctx.Data["PageIsNews"] = true
 
-	ctxUser := getDashboardContextUser(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -109,10 +109,20 @@ func Dashboard(ctx *middleware.Context) {
 		ctx.Data["CollaborativeRepos"] = collaborateRepos
 	}
 
-	repos, err := models.GetRepositories(ctxUser.Id, true)
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	var repos []*models.Repository
+	if ctxUser.IsOrganization() {
+		if err := ctxUser.GetUserRepositories(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetUserRepositories", err)
+			return
+		}
+		repos = ctxUser.Repos
+	} else {
+		var err error
+		repos, err = models.GetRepositories(ctxUser.Id, true)
+		if err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
 	}
 	ctx.Data["Repos"] = repos
 
@@ -120,7 +130,7 @@ func Dashboard(ctx *middleware.Context) {
 	mirrors := make([]*models.Repository, 0, 5)
 	for _, repo := range repos {
 		if repo.IsMirror {
-			if err = repo.GetMirror(); err != nil {
+			if err := repo.GetMirror(); err != nil {
 				ctx.Handle(500, "GetMirror: "+repo.Name, err)
 				return
 			}
@@ -130,14 +140,14 @@ func Dashboard(ctx *middleware.Context) {
 	ctx.Data["MirrorCount"] = len(mirrors)
 	ctx.Data["Mirrors"] = mirrors
 
-	retrieveFeeds(ctx, ctxUser.Id, 0, false)
+	retrieveFeeds(ctx, ctxUser.Id, ctx.User.Id, 0, false)
 	if ctx.Written() {
 		return
 	}
 	ctx.HTML(200, DASHBOARD)
 }
 
-func Issues(ctx *middleware.Context) {
+func Issues(ctx *context.Context) {
 	isPullList := ctx.Params(":type") == "pulls"
 	if isPullList {
 		ctx.Data["Title"] = ctx.Tr("pull_requests")
@@ -183,11 +193,18 @@ func Issues(ctx *middleware.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	// Get repositories.
-	repos, err := models.GetRepositories(ctxUser.Id, true)
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	if ctxUser.IsOrganization() {
+		if err := ctxUser.GetUserRepositories(ctx.User.Id); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+	} else {
+		if err := ctxUser.GetRepositories(); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
 	}
+	repos := ctxUser.Repos
 
 	allCount := 0
 	repoIDs := make([]int64, 0, len(repos))
@@ -267,11 +284,6 @@ func Issues(ctx *middleware.Context) {
 			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d]%v", issues[i].ID, err))
 			return
 		}
-
-		if err = issues[i].GetPoster(); err != nil {
-			ctx.Handle(500, "GetPoster", fmt.Errorf("[#%d]%v", issues[i].ID, err))
-			return
-		}
 	}
 	ctx.Data["Issues"] = issues
 
@@ -289,7 +301,7 @@ func Issues(ctx *middleware.Context) {
 	ctx.HTML(200, ISSUES)
 }
 
-func ShowSSHKeys(ctx *middleware.Context, uid int64) {
+func ShowSSHKeys(ctx *context.Context, uid int64) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
@@ -304,9 +316,9 @@ func ShowSSHKeys(ctx *middleware.Context, uid int64) {
 	ctx.PlainText(200, buf.Bytes())
 }
 
-func showOrgProfile(ctx *middleware.Context) {
+func showOrgProfile(ctx *context.Context) {
 	ctx.SetParams(":org", ctx.Params(":username"))
-	middleware.HandleOrgAssignment(ctx)
+	context.HandleOrgAssignment(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -314,29 +326,42 @@ func showOrgProfile(ctx *middleware.Context) {
 	org := ctx.Org.Organization
 	ctx.Data["Title"] = org.FullName
 
-	repos, err := models.GetRepositories(org.Id, ctx.IsSigned && (ctx.User.IsAdmin || org.IsOrgMember(ctx.User.Id)))
-	if err != nil {
-		ctx.Handle(500, "GetRepositories", err)
-		return
+	if ctx.IsSigned {
+		if ctx.User.IsAdmin {
+			repos, err := models.GetRepositories(org.Id, true)
+			if err != nil {
+				ctx.Handle(500, "GetRepositoriesAsAdmin", err)
+				return
+			}
+			ctx.Data["Repos"] = repos
+		} else {
+			if err := org.GetUserRepositories(ctx.User.Id); err != nil {
+				ctx.Handle(500, "GetUserRepositories", err)
+				return
+			}
+			ctx.Data["Repos"] = org.Repos
+		}
+	} else {
+		repos, err := models.GetRepositories(org.Id, false)
+		if err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+		ctx.Data["Repos"] = repos
 	}
-	ctx.Data["Repos"] = repos
 
-	if err = org.GetMembers(); err != nil {
+	if err := org.GetMembers(); err != nil {
 		ctx.Handle(500, "GetMembers", err)
 		return
 	}
 	ctx.Data["Members"] = org.Members
 
-	if err = org.GetTeams(); err != nil {
-		ctx.Handle(500, "GetTeams", err)
-		return
-	}
 	ctx.Data["Teams"] = org.Teams
 
 	ctx.HTML(200, ORG_HOME)
 }
 
-func Email2User(ctx *middleware.Context) {
+func Email2User(ctx *context.Context) {
 	u, err := models.GetUserByEmail(ctx.Query("email"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {

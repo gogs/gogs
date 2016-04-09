@@ -23,18 +23,18 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func authRequired(ctx *middleware.Context) {
+func authRequired(ctx *context.Context) {
 	ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
 	ctx.Data["ErrorMsg"] = "no basic auth and digit auth"
 	ctx.Error(401)
 }
 
-func HTTP(ctx *middleware.Context) {
+func HTTP(ctx *context.Context) {
 	username := ctx.Params(":username")
 	reponame := strings.TrimSuffix(ctx.Params(":reponame"), ".git")
 
@@ -134,7 +134,6 @@ func HTTP(ctx *middleware.Context) {
 				ctx.Handle(500, "GetUserByID", err)
 				return
 			}
-			authUsername = authUser.Name
 		}
 
 		if !isPublicPull {
@@ -202,7 +201,15 @@ func HTTP(ctx *middleware.Context) {
 					refName := fields[2]
 
 					// FIXME: handle error.
-					if err = models.Update(refName, oldCommitId, newCommitId, authUsername, username, reponame, authUser.Id); err == nil {
+					if err = models.PushUpdate(models.PushUpdateOptions{
+						RefName:      refName,
+						OldCommitID:  oldCommitId,
+						NewCommitID:  newCommitId,
+						PusherID:     authUser.Id,
+						PusherName:   authUser.Name,
+						RepoUserName: username,
+						RepoName:     reponame,
+					}); err == nil {
 						go models.HookQueue.Add(repo.ID)
 						go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
 					}
@@ -215,7 +222,7 @@ func HTTP(ctx *middleware.Context) {
 		}
 	}
 
-	HTTPBackend(&Config{
+	HTTPBackend(ctx, &Config{
 		RepoRootPath: setting.RepoRootPath,
 		GitBinPath:   "git",
 		UploadPack:   true,
@@ -286,7 +293,7 @@ func getGitDir(config *Config, fPath string) (string, error) {
 }
 
 // Request handling function
-func HTTPBackend(config *Config) http.HandlerFunc {
+func HTTPBackend(ctx *context.Context, config *Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		for _, route := range routes {
 			r.URL.Path = strings.ToLower(r.URL.Path) // blue: In case some repo name has upper case name
@@ -300,7 +307,7 @@ func HTTPBackend(config *Config) http.HandlerFunc {
 				dir, err := getGitDir(config, m[1])
 				if err != nil {
 					log.GitLogger.Error(4, err.Error())
-					renderNotFound(w)
+					ctx.Handle(404, "HTTPBackend", err)
 					return
 				}
 
@@ -309,7 +316,7 @@ func HTTPBackend(config *Config) http.HandlerFunc {
 			}
 		}
 
-		renderNotFound(w)
+		ctx.Handle(404, "HTTPBackend", nil)
 		return
 	}
 }
@@ -433,8 +440,6 @@ func sendFile(contentType string, hr handler) {
 	w, r := hr.w, hr.r
 	reqFile := path.Join(hr.Dir, hr.File)
 
-	// fmt.Println("sendFile:", reqFile)
-
 	f, err := os.Stat(reqFile)
 	if os.IsNotExist(err) {
 		renderNotFound(w)
@@ -506,7 +511,7 @@ func gitCommand(gitBinPath, dir string, args ...string) []byte {
 	out, err := command.Output()
 
 	if err != nil {
-		log.GitLogger.Error(4, err.Error())
+		log.GitLogger.Error(4, fmt.Sprintf("%v - %s", err, out))
 	}
 
 	return out

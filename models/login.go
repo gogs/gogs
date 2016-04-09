@@ -28,11 +28,11 @@ type LoginType int
 // Note: new type must be added at the end of list to maintain compatibility.
 const (
 	LOGIN_NOTYPE LoginType = iota
-	LOGIN_PLAIN
-	LOGIN_LDAP
-	LOGIN_SMTP
-	LOGIN_PAM
-	LOGIN_DLDAP
+	LOGIN_PLAIN            // 1
+	LOGIN_LDAP             // 2
+	LOGIN_SMTP             // 3
+	LOGIN_PAM              // 4
+	LOGIN_DLDAP            // 5
 )
 
 var (
@@ -42,7 +42,7 @@ var (
 
 var LoginNames = map[LoginType]string{
 	LOGIN_LDAP:  "LDAP (via BindDN)",
-	LOGIN_DLDAP: "LDAP (simple auth)",
+	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
 	LOGIN_SMTP:  "SMTP",
 	LOGIN_PAM:   "PAM",
 }
@@ -101,8 +101,20 @@ type LoginSource struct {
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
 	Cfg       core.Conversion `xorm:"TEXT"`
-	Created   time.Time       `xorm:"CREATED"`
-	Updated   time.Time       `xorm:"UPDATED"`
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
+}
+
+func (s *LoginSource) BeforeInsert() {
+	s.CreatedUnix = time.Now().UTC().Unix()
+	s.UpdatedUnix = s.CreatedUnix
+}
+
+func (s *LoginSource) BeforeUpdate() {
+	s.UpdatedUnix = time.Now().UTC().Unix()
 }
 
 // Cell2Int64 converts a xorm.Cell type to int64,
@@ -129,6 +141,15 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 		default:
 			panic("unrecognized login source type: " + com.ToStr(*val))
 		}
+	}
+}
+
+func (s *LoginSource) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created_unix":
+		s.Created = time.Unix(s.CreatedUnix, 0).Local()
+	case "updated_unix":
+		s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 	}
 }
 

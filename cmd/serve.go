@@ -15,13 +15,13 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/codegangsta/cli"
+	gouuid "github.com/satori/go.uuid"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/uuid"
 )
 
 const (
@@ -41,11 +41,6 @@ var CmdServ = cli.Command{
 func setup(logPath string) {
 	setting.NewContext()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
-
-	if setting.DisableSSH {
-		println("Gogs: SSH has been disabled")
-		os.Exit(1)
-	}
 
 	models.LoadConfigs()
 
@@ -104,8 +99,15 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 		return
 	}
 
-	if err = models.Update(task.RefName, task.OldCommitID, task.NewCommitID,
-		user.Name, repoUser.Name, reponame, user.Id); err != nil {
+	if err = models.PushUpdate(models.PushUpdateOptions{
+		RefName:      task.RefName,
+		OldCommitID:  task.OldCommitID,
+		NewCommitID:  task.NewCommitID,
+		PusherID:     user.Id,
+		PusherName:   user.Name,
+		RepoUserName: repoUser.Name,
+		RepoName:     reponame,
+	}); err != nil {
 		log.GitLogger.Error(2, "Update: %v", err)
 	}
 
@@ -131,7 +133,13 @@ func runServ(c *cli.Context) {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
+
 	setup("serv.log")
+
+	if setting.SSH.Disabled {
+		println("Gogs: SSH has been disabled")
+		return
+	}
 
 	if len(c.Args()) < 1 {
 		fail("Not enough arguments", "Not enough arguments")
@@ -243,7 +251,7 @@ func runServ(c *cli.Context) {
 		}
 	}
 
-	uuid := uuid.NewV4().String()
+	uuid := gouuid.NewV4().String()
 	os.Setenv("uuid", uuid)
 
 	// Special handle for Windows.

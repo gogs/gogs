@@ -13,14 +13,14 @@
 					<div class="required field {{if .Err_TeamName}}error{{end}}">
 						<label for="team_name">{{.i18n.Tr "org.team_name"}}</label>
 						{{if eq .Team.LowerName "owners"}}
-							<input type="hidden" name="team_name" value="{{.team_name}}">
+							<input type="hidden" name="team_name" value="{{.Team.Name}}">
 						{{end}}
-						<input id="team_name" name="team_name" value="{{.team_name}}" required {{if eq .Team.LowerName "owners"}}disabled{{end}} autofocus>
+						<input id="team_name" name="team_name" value="{{.Team.Name}}" required {{if eq .Team.LowerName "owners"}}disabled{{end}} autofocus>
 						<span class="help">{{.i18n.Tr "org.team_name_helper"}}</span>
 					</div>
 					<div class="field {{if .Err_Description}}error{{end}}">
-						<label for="desc">{{.i18n.Tr "org.team_desc"}}</label>
-						<input id="desc" name="desc" value="{{.desc}}">
+						<label for="description">{{.i18n.Tr "org.team_desc"}}</label>
+						<input id="description" name="description" value="{{.Team.Description}}">
 						<span class="help">{{.i18n.Tr "org.team_desc_helper"}}</span>
 					</div>
 					{{if not (eq .Team.LowerName "owners")}}

@@ -4,29 +4,9 @@
 		<div class="ui grid">
 			{{template "explore/navbar" .}}
 			<div class="twelve wide column content">
+				{{template "explore/search" .}}
 				{{template "explore/repo_list" .}}
-
-				{{with .Page}}
-					{{if gt .TotalPages 1}}
-						<div class="center page buttons">
-							<div class="ui borderless pagination menu">
-								<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?page={{.Previous}}"{{end}}>
-									<i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
-								</a>
-								{{range .Pages}}
-									{{if eq .Num -1}}
-										<a class="disabled item">...</a>
-									{{else}}
-										<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?page={{.Num}}"{{end}}>{{.Num}}</a>
-									{{end}}
-								{{end}}
-								<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?page={{.Next}}"{{end}}>
-									{{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
-								</a>
-							</div>
-						</div>
-					{{end}}
-				{{end}}
+				{{template "explore/page" .}}
 			</div>
 		</div>
 	</div>

@@ -7,14 +7,14 @@ package misc
 import (
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/markdown"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
-func Markdown(ctx *middleware.Context, form api.MarkdownOption) {
+func Markdown(ctx *context.APIContext, form api.MarkdownOption) {
 	if ctx.HasApiError() {
-		ctx.APIError(422, "", ctx.GetErrMsg())
+		ctx.Error(422, "", ctx.GetErrMsg())
 		return
 	}
 
@@ -25,18 +25,18 @@ func Markdown(ctx *middleware.Context, form api.MarkdownOption) {
 
 	switch form.Mode {
 	case "gfm":
-		ctx.Write(base.RenderMarkdown([]byte(form.Text), form.Context, nil))
+		ctx.Write(markdown.Render([]byte(form.Text), form.Context, nil))
 	default:
-		ctx.Write(base.RenderRawMarkdown([]byte(form.Text), ""))
+		ctx.Write(markdown.RenderRaw([]byte(form.Text), ""))
 	}
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
-func MarkdownRaw(ctx *middleware.Context) {
+func MarkdownRaw(ctx *context.APIContext) {
 	body, err := ctx.Req.Body().Bytes()
 	if err != nil {
-		ctx.APIError(422, "", err)
+		ctx.Error(422, "", err)
 		return
 	}
-	ctx.Write(base.RenderRawMarkdown(body, ""))
+	ctx.Write(markdown.RenderRaw(body, ""))
 }

@@ -68,7 +68,7 @@
 						<div class="inline required field {{if or .Err_DbPath .Err_DbSetting}}error{{end}}">
 							<label for="db_path">{{.i18n.Tr "install.path"}}</label>
 							<input id="db_path" name="db_path" value="{{.db_path}}">
-							<span class="help">{{.i18n.Tr "install.sqlite_helper"}}</span>
+							<span class="help">{{.i18n.Tr "install.sqlite_helper" | Safe}}</span>
 						</div>
 					</div>
 
@@ -109,6 +109,12 @@
 						<input id="app_url" name="app_url" value="{{.app_url}}" placeholder="e.g. https://try.gogs.io" required>
 						<span class="help">{{.i18n.Tr "install.app_url_helper"}}</span>
 					</div>
+					<div class="inline required field">
+						<label for="log_root_path">{{.i18n.Tr "install.log_root_path"}}</label>
+						<input id="log_root_path" name="log_root_path" value="{{.log_root_path}}" placeholder="log" required>
+						<span class="help">{{.i18n.Tr "install.log_root_path_helper"}}</span>
+					</div>
+
 
 					<!-- Optional Settings -->
 					<h4 class="ui dividing header">{{.i18n.Tr "install.optional_title"}}</h4>

@@ -15,32 +15,20 @@ import (
 	"hash"
 	"html/template"
 	"math"
-	"regexp"
+	"net/http"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
-	"github.com/microcosm-cc/bluemonday"
 
 	"github.com/gogits/chardet"
 
-	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
-
-func BuildSanitizer() (p *bluemonday.Policy) {
-	p = bluemonday.UGCPolicy()
-	p.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
-
-	p.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
-	p.AllowAttrs("checked", "disabled").OnElements("input")
-	return p
-}
-
-var Sanitizer = BuildSanitizer()
 
 // EncodeMD5 encodes string to md5 hex value.
 func EncodeMD5(str string) string {
@@ -109,6 +97,7 @@ func GetRandomString(n int, alphabets ...byte) string {
 }
 
 // http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
+// FIXME: use https://godoc.org/golang.org/x/crypto/pbkdf2?
 func PBKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
 	prf := hmac.New(h, password)
 	hashLen := prf.Size()
@@ -206,17 +195,22 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 	return code
 }
 
-// AvatarLink returns avatar link by given e-mail.
+// HashEmail hashes email address to MD5 string.
+// https://en.gravatar.com/site/implement/hash/
+func HashEmail(email string) string {
+	email = strings.ToLower(strings.TrimSpace(email))
+	h := md5.New()
+	h.Write([]byte(email))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// AvatarLink returns avatar link by given email.
 func AvatarLink(email string) string {
 	if setting.DisableGravatar || setting.OfflineMode {
 		return setting.AppSubUrl + "/img/avatar_default.jpg"
 	}
 
-	gravatarHash := avatar.HashEmail(email)
-	if setting.Service.EnableCacheAvatar {
-		return setting.AppSubUrl + "/avatar/" + gravatarHash
-	}
-	return setting.GravatarSource + gravatarHash
+	return setting.GravatarSource + HashEmail(email)
 }
 
 // Seconds-based time units
@@ -471,6 +465,15 @@ func EllipsisString(str string, length int) string {
 	return str[:length-3] + "..."
 }
 
+// TruncateString returns a truncated string with given limit,
+// it returns input string if length is not reached limit.
+func TruncateString(str string, limit int) string {
+	if len(str) < limit {
+		return str
+	}
+	return str[:limit]
+}
+
 // StringsToInt64s converts a slice of string to a slice of int64.
 func StringsToInt64s(strs []string) []int64 {
 	ints := make([]int64, len(strs))
@@ -496,4 +499,26 @@ func Int64sToMap(ints []int64) map[int64]bool {
 		m[i] = true
 	}
 	return m
+}
+
+// IsLetter reports whether the rune is a letter (category L).
+// https://github.com/golang/go/blob/master/src/go/scanner/scanner.go#L257
+func IsLetter(ch rune) bool {
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
+}
+
+func IsTextFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "text/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
+}
+
+func IsImageFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "image/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
 }

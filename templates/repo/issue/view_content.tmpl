@@ -65,7 +65,7 @@
 											{{if eq .ShowTag 1}}
 												{{$.i18n.Tr "repo.issues.poster"}}
 											{{else if eq .ShowTag 2}}
-												{{$.i18n.Tr "repo.issues.admin"}}
+												{{$.i18n.Tr "repo.issues.collaborator"}}
 											{{else if eq .ShowTag 3}}
 												{{$.i18n.Tr "repo.issues.owner"}}
 											{{end}}
@@ -165,7 +165,7 @@
 									<span class="octicon octicon-check"></span>
 									{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
 								</div>
-								{{if .IsRepositoryAdmin}}
+								{{if .IsRepositoryWriter}}
 									<div class="ui divider"></div>
 									<div>
 										<form class="ui form" action="{{.Link}}/merge" method="post">
@@ -231,7 +231,7 @@
 
 	<div class="four wide column">
 		<div class="ui segment metas">
-			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} floating jump select-label dropdown">
+			<div class="ui {{if not .IsRepositoryWriter}}disabled{{end}} floating jump select-label dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.labels"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -246,13 +246,16 @@
 			<div class="ui labels list">
 				<span class="no-select item {{if .HasSelectedLabel}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_label"}}</span>
 				{{range .Labels}}
-					<a class="{{if not .IsChecked}}hide{{end}} item" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}"><span class="label color" style="background-color: {{.Color}}"></span> <span class="text">{{.Name}}</span></a>
+					<div class="item">
+						<a class="ui label {{if not .IsChecked}}hide{{end}}" id="label_{{.ID}}" href="{{$.RepoLink}}/issues?labels={{.ID}}" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name}}</a>
+					</div>
+					
 				{{end}}
 			</div>
 
 			<div class="ui divider"></div>
 
-			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} floating jump select-milestone dropdown">
+			<div class="ui {{if not .IsRepositoryWriter}}disabled{{end}} floating jump select-milestone dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.milestone"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -293,7 +296,7 @@
 			<div class="ui divider"></div>
 
 			<input id="assignee_id" name="assignee_id" type="hidden" value="{{.assignee_id}}">
-			<div class="ui {{if not .IsRepositoryAdmin}}disabled{{end}} floating jump select-assignee dropdown">
+			<div class="ui {{if not .IsRepositoryWriter}}disabled{{end}} floating jump select-assignee dropdown">
 				<span class="text">
 					<strong>{{.i18n.Tr "repo.issues.new.assignee"}}</strong>
 					<span class="octicon octicon-gear"></span>
@@ -310,6 +313,19 @@
 				<div class="selected">
 					{{if .Issue.Assignee}}
 						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.Id}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
+					{{end}}
+				</div>
+			</div>
+
+			<div class="ui divider"></div>
+
+			<div class="ui participants">
+				<span class="text"><strong>{{.i18n.Tr "repo.issues.num_participants" .NumParticipants}}</strong></span>
+				<div>
+					{{range .Participants}}
+						<a href="{{.HomeLink}}">
+							<img class="ui avatar image poping up" src="{{.AvatarLink}}" data-content="{{.DisplayName}}" data-position="top center" data-variation="small inverted">
+						</a>
 					{{end}}
 				</div>
 			</div>

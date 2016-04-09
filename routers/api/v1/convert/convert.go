@@ -9,14 +9,19 @@ import (
 
 	"github.com/Unknwon/com"
 
+	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
-// ToApiUser converts user to its API format.
-func ToApiUser(u *models.User) *api.User {
+func ToUser(u *models.User) *api.User {
+	if u == nil {
+		return nil
+	}
+
 	return &api.User{
 		ID:        u.Id,
 		UserName:  u.Name,
@@ -26,7 +31,7 @@ func ToApiUser(u *models.User) *api.User {
 	}
 }
 
-func ToApiEmail(email *models.EmailAddress) *api.Email {
+func ToEmail(email *models.EmailAddress) *api.Email {
 	return &api.Email{
 		Email:    email.Email,
 		Verified: email.IsActivated,
@@ -34,12 +39,11 @@ func ToApiEmail(email *models.EmailAddress) *api.Email {
 	}
 }
 
-// ToApiRepository converts repository to API format.
-func ToApiRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
+func ToRepository(owner *models.User, repo *models.Repository, permission api.Permission) *api.Repository {
 	cl := repo.CloneLink()
 	return &api.Repository{
-		Id:          repo.ID,
-		Owner:       *ToApiUser(owner),
+		ID:          repo.ID,
+		Owner:       ToUser(owner),
 		FullName:    owner.Name + "/" + repo.Name,
 		Private:     repo.IsPrivate,
 		Fork:        repo.IsFork,
@@ -50,8 +54,27 @@ func ToApiRepository(owner *models.User, repo *models.Repository, permission api
 	}
 }
 
-// ToApiPublicKey converts public key to its API format.
-func ToApiPublicKey(apiLink string, key *models.PublicKey) *api.PublicKey {
+func ToBranch(b *models.Branch, c *git.Commit) *api.Branch {
+	return &api.Branch{
+		Name:   b.Name,
+		Commit: ToCommit(c),
+	}
+}
+
+func ToCommit(c *git.Commit) *api.PayloadCommit {
+	return &api.PayloadCommit{
+		ID:      c.ID.String(),
+		Message: c.Message(),
+		URL:     "Not implemented",
+		Author: &api.PayloadAuthor{
+			Name:  c.Committer.Name,
+			Email: c.Committer.Email,
+			/* UserName: c.Committer.UserName, */
+		},
+	}
+}
+
+func ToPublicKey(apiLink string, key *models.PublicKey) *api.PublicKey {
 	return &api.PublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
@@ -61,8 +84,7 @@ func ToApiPublicKey(apiLink string, key *models.PublicKey) *api.PublicKey {
 	}
 }
 
-// ToApiHook converts webhook to its API format.
-func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
+func ToHook(repoLink string, w *models.Webhook) *api.Hook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
@@ -87,8 +109,7 @@ func ToApiHook(repoLink string, w *models.Webhook) *api.Hook {
 	}
 }
 
-// ToApiDeployKey converts deploy key to its API format.
-func ToApiDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
+func ToDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
 	return &api.DeployKey{
 		ID:       key.ID,
 		Key:      key.Content,
@@ -99,7 +120,72 @@ func ToApiDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
 	}
 }
 
-func ToApiOrganization(org *models.User) *api.Organization {
+func ToLabel(label *models.Label) *api.Label {
+	return &api.Label{
+		Name:  label.Name,
+		Color: label.Color,
+	}
+}
+
+func ToMilestone(milestone *models.Milestone) *api.Milestone {
+	if milestone == nil {
+		return nil
+	}
+
+	apiMilestone := &api.Milestone{
+		ID:           milestone.ID,
+		State:        milestone.State(),
+		Title:        milestone.Name,
+		Description:  milestone.Content,
+		OpenIssues:   milestone.NumOpenIssues,
+		ClosedIssues: milestone.NumClosedIssues,
+	}
+	if milestone.IsClosed {
+		apiMilestone.Closed = &milestone.ClosedDate
+	}
+	if milestone.Deadline.Year() < 9999 {
+		apiMilestone.Deadline = &milestone.Deadline
+	}
+	return apiMilestone
+}
+
+func ToIssue(issue *models.Issue) *api.Issue {
+	apiLabels := make([]*api.Label, len(issue.Labels))
+	for i := range issue.Labels {
+		apiLabels[i] = ToLabel(issue.Labels[i])
+	}
+
+	apiIssue := &api.Issue{
+		ID:        issue.ID,
+		Index:     issue.Index,
+		State:     issue.State(),
+		Title:     issue.Name,
+		Body:      issue.Content,
+		User:      ToUser(issue.Poster),
+		Labels:    apiLabels,
+		Assignee:  ToUser(issue.Assignee),
+		Milestone: ToMilestone(issue.Milestone),
+		Comments:  issue.NumComments,
+		Created:   issue.Created,
+		Updated:   issue.Updated,
+	}
+	if issue.IsPull {
+		if err := issue.GetPullRequest(); err != nil {
+			log.Error(4, "GetPullRequest", err)
+		} else {
+			apiIssue.PullRequest = &api.PullRequestMeta{
+				HasMerged: issue.PullRequest.HasMerged,
+			}
+			if issue.PullRequest.HasMerged {
+				apiIssue.PullRequest.Merged = &issue.PullRequest.Merged
+			}
+		}
+	}
+
+	return apiIssue
+}
+
+func ToOrganization(org *models.User) *api.Organization {
 	return &api.Organization{
 		ID:          org.Id,
 		AvatarUrl:   org.AvatarLink(),
@@ -108,5 +194,14 @@ func ToApiOrganization(org *models.User) *api.Organization {
 		Description: org.Description,
 		Website:     org.Website,
 		Location:    org.Location,
+	}
+}
+
+func ToTeam(team *models.Team) *api.Team {
+	return &api.Team{
+		ID:          team.ID,
+		Name:        team.Name,
+		Description: team.Description,
+		Permission:  team.Authorize.String(),
 	}
 }

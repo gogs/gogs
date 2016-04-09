@@ -1,14 +1,14 @@
 @footer-margin: 40px;
 
 body {
-	font-family: 'Helvetica Neue',Arial,Helvetica,sans-serif,'微软雅黑';
-	background-color: #FAFAFA;
+	font-family: "Helvetica Neue", "Meiryo Ui", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+	background-color: #fff;
 	overflow-y: scroll;
 }
 img {
 	border-radius: 3px;
 }
-pre {
+pre, code {
 	font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
 	&.raw {
 		padding: 7px 12px;
@@ -99,6 +99,20 @@ pre {
 	}
 	&.right {
 		float: right;
+	}
+
+	&.container {
+		&.fluid {
+			&.padded {
+				padding: 0 10px 0 10px;
+			}
+		}
+	}
+
+	&.form {
+		.ui.button {
+			font-weight: normal;
+		}
 	}
 
 	.text {
@@ -252,6 +266,11 @@ pre {
 			margin-right: 4px;
 		}
 	}
+
+	&.inline.delete-button {
+		padding: 8px 15px;
+		font-weight: normal;
+	}
 }
 
 .overflow.menu {
@@ -366,4 +385,10 @@ footer {
 	.ui.container {
 		width: 95%;
 	}
+}
+
+/* Overrides some styles of the Highlight.js plugin */
+.hljs {
+	background: inherit !important;
+	padding: 0 !important;
 }

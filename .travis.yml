@@ -3,6 +3,7 @@ language: go
 go:
   - 1.4
   - 1.5
+  - 1.6
 
 before_install:
   - sudo apt-get update -qq
@@ -12,7 +13,9 @@ before_install:
 install:
   - go get -t -v ./...
 
-script: go build -v -tags "pam"
+script: 
+  - go build -v -tags "pam"
+  - go test -v -cover -race ./...
 
 notifications:
   email:

@@ -12,7 +12,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 有关基本用法和变更日志，请通过 [使用手册](http://gogs.io/docs/intro/) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
 - 想要先睹为快？直接去 [在线体验](https://try.gogs.io/gogs/gogs) 。
-- 使用过程中遇到问题？尝试从 [故障排查](http://gogs.io/docs/intro/troubleshooting.html) 页面获取帮助。
+- 使用过程中遇到问题？尝试从 [故障排查](http://gogs.io/docs/intro/troubleshooting.html) 页面或 [用户论坛](https://discuss.gogs.io/) 获取帮助。
 - 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](http://gogs.io/docs/features/i18n.html)！
 
 ## 功能特性
@@ -30,7 +30,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持邮件服务
 - 支持后台管理面板
 - 支持 MySQL、PostgreSQL、SQLite3 和 [TiDB](https://github.com/pingcap/tidb)（实验性支持） 数据库
-- 支持多语言本地化（[14 种语言]([more](https://crowdin.com/project/gogs))）
+- 支持多语言本地化（[15 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 系统要求
 
@@ -67,6 +67,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
+- [YunoHost](https://github.com/mbugeia/gogs_ynh)
 
 ## 软件及服务支持
 
@@ -76,6 +77,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs)（IT）
 - [Kanboard](http://kanboard.net/plugin/gogs-webhook)（项目管理）
 - [BearyChat](https://bearychat.com/)（团队交流）
+- [HiWork](http://www.hiwork.cc/)（团队交流）
 
 ### 产品支持
 
@@ -85,11 +87,11 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 ## 特别鸣谢
 
 - 基于 [Macaron](https://github.com/go-macaron/macaron) 的路由与中间件机制。
-- 基于 [WeTalk](https://github.com/beego/wetalk) 修改的模块设计。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
 - 感谢 [DigitalOcean](https://www.digitalocean.com) 提供主站和体验站点的服务器赞助。
+- 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
 
 ## 贡献成员
 

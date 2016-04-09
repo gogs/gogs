@@ -35,9 +35,10 @@
 								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
 							{{end}}
 						</td>
-						<td class="message collapsing">
+
+						<td class="message collapsing has-emoji">
 							<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
-							{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}
+							<span {{if gt .ParentCount 1}}class="grey text"{{end}}>{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}</span>
 						</td>
 						<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
 					</tr>

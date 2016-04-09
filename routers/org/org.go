@@ -8,8 +8,8 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/middleware"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -17,12 +17,12 @@ const (
 	CREATE base.TplName = "org/create"
 )
 
-func Create(ctx *middleware.Context) {
+func Create(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_org")
 	ctx.HTML(200, CREATE)
 }
 
-func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
+func CreatePost(ctx *context.Context, form auth.CreateOrgForm) {
 	ctx.Data["Title"] = ctx.Tr("new_org")
 
 	if ctx.HasError() {
@@ -33,7 +33,7 @@ func CreatePost(ctx *middleware.Context, form auth.CreateOrgForm) {
 	org := &models.User{
 		Name:     form.OrgName,
 		IsActive: true,
-		Type:     models.ORGANIZATION,
+		Type:     models.USER_TYPE_ORGANIZATION,
 	}
 
 	if err := models.CreateOrganization(org, ctx.User); err != nil {
