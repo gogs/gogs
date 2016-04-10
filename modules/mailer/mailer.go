@@ -18,6 +18,7 @@ import (
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/jaytaylor/html2text"
 )
 
 type Message struct {
@@ -26,14 +27,18 @@ type Message struct {
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
-func NewMessageFrom(to []string, from, subject, body string) *Message {
+func NewMessageFrom(to []string, from, subject, htmlbody string) *Message {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 	msg.SetDateHeader("Date", time.Now())
-	msg.SetBody("text/plain", body)
-	msg.AddAlternative("text/html", body)
+	msg.SetBody("text/html", htmlbody)
+	body, err := html2text.FromString(htmlbody)
+	if err != nil {
+		// TODO: report error ?
+	}
+	msg.AddAlternative("text/plain", body)
 
 	return &Message{
 		Message: msg,
