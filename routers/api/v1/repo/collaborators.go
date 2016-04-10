@@ -8,23 +8,23 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/middleware"
+	"github.com/gogits/gogs/modules/context"
 )
 
-func AddCollaborator(ctx *middleware.Context, form api.AddCollaboratorOption) {
+func AddCollaborator(ctx *context.APIContext, form api.AddCollaboratorOption) {
 	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
 
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.APIError(422, "", err)
+			ctx.Error(422, "", err)
 		} else {
-			ctx.APIError(500, "GetUserByName", err)
+			ctx.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
 	if err := ctx.Repo.Repository.AddCollaborator(collaborator); err != nil {
-		ctx.APIError(500, "AddCollaborator", err)
+		ctx.Error(500, "AddCollaborator", err)
 		return
 	}
 
@@ -36,11 +36,11 @@ func AddCollaborator(ctx *middleware.Context, form api.AddCollaboratorOption) {
 	} else if form.Permission != nil && *form.Permission == "admin" {
 		mode = models.ACCESS_MODE_ADMIN
 	} else if form.Permission != nil {
-		ctx.APIError(500, "Permission", "Invalid permission type")
+		ctx.Error(500, "Permission", "Invalid permission type")
 		return
 	}
 	if err := ctx.Repo.Repository.ChangeCollaborationAccessMode(collaborator.Id, mode); err != nil {
-		ctx.APIError(500, "ChangeCollaborationAccessMode", err)
+		ctx.Error(500, "ChangeCollaborationAccessMode", err)
 		return
 	}
 
