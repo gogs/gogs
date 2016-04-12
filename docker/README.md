@@ -86,7 +86,7 @@ This container have some options available via environment variables, these opti
       Bind linked docker container to localhost socket using socat.
       Any exported port from a linked container will be binded to the matching port on localhost.
   - <u>Disclaimer:</u>
-      As this option rely on the environment variable created by docker when a container is linked, this option should be deactivated in managed environment such as Rancher or Kubernetes (set to `0` or `false`)
+      As this option rely on the environment variable created by docker when a container is linked, this option should not be activated in managed environment such as Rancher or Kubernetes.
 - **RUN_CROND**:
   - <u>Possible value:</u>
       `true`, `false`, `1`, `0`
