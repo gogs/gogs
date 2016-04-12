@@ -93,7 +93,7 @@ func Profile(ctx *context.Context) {
 		}
 	default:
 		var err error
-		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
+		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && (ctx.User.IsAdmin || ctx.User.Id == u.Id))
 		if err != nil {
 			ctx.Handle(500, "GetRepositories", err)
 			return

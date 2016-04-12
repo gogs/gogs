@@ -67,7 +67,11 @@ func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 		return mode, nil
 	}
 
-	if u.Id == repo.OwnerID {
+	else if u.IsAdmin {
+		return ACCESS_MODE_ADMIN, nil
+	}
+
+	else if u.Id == repo.OwnerID {
 		return ACCESS_MODE_OWNER, nil
 	}
 
