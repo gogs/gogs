@@ -483,7 +483,7 @@ function initWiki() {
         var simplemde = new SimpleMDE({
             autoDownloadFontAwesome: false,
             element: $edit_area[0],
-						forceSync: true,
+            forceSync: true,
             previewRender: function (plainText, preview) { // Async method
                 setTimeout(function () {
                     // FIXME: still send render request when return back to edit mode
