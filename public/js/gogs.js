@@ -1093,3 +1093,7 @@ $(window).load(function () {
         }
     }
 });
+
+$(function() {
+	$('form').areYouSure();
+});
