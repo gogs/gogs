@@ -96,6 +96,7 @@ type RepoSettingForm struct {
 	EnableIssues          bool
 	EnableExternalTracker bool
 	TrackerURLFormat      string
+	TrackerIssueStyle     string
 	EnablePulls           bool
 }
 

@@ -116,6 +116,21 @@
 							<input id="tracker_url_format" name="tracker_url_format" type="url" value="{{.Repository.ExternalTrackerFormat}}" placeholder="e.g. https://github.com/{user}/{repo}/issues/{index}">
 							<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2html}}</p>
 						</div>
+						<div class="inline fields">
+							<label for="issue_style">{{.i18n.Tr "repo.settings.tracker_issue_style"}}</label>
+							<div class="field">
+								<div class="ui radio checkbox">
+									<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="numeric"  {{if eq .Repository.ExternalTrackerStyle "numeric"}}checked=""{{end}}/>
+									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.numeric" | Safe}}</label>
+								</div>
+							</div>
+							<div class="field">
+								<div class="ui radio checkbox">
+									<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="alphanumeric"  {{if eq .Repository.ExternalTrackerStyle "alphanumeric"}}checked=""{{end}}/>
+									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.alphanumeric" | Safe}}</label>
+								</div>
+							</div>
+						</div>
 
 						{{if .Repository.CanEnablePulls}}
 							<div class="ui divider"></div>
