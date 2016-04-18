@@ -1,3 +1,6 @@
+%define gogsuser git
+%define gogsgroup git
+%define homedir   /usr/local
 Name: gogs
 Version: 0.9
 Release: 20
@@ -30,16 +33,16 @@ Gogs is a painless self-hosted Git Service written in Go. It aims to make the ea
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}
-mkdir -p %{buildroot}/usr/local/gogs
+mkdir -p %{buildroot}%{homedir}/gogs
 mkdir -p %{buildroot}/var/log/gogs
 touch  %{buildroot}/var/log/gogs/gogs.log
 
 mkdir -p $RPM_BUILD_ROOT%{_localstatedir}/gogs/log
-rsync -azp  .  --exclude=gogs/rpmbuild  --exclude=#.* %{buildroot}/usr/local/gogs
+rsync -azp  .  --exclude=gogs/rpmbuild  --exclude=#.* %{buildroot}%{homedir}/gogs
 
 # systemd gogs.service file
 mkdir -p %{buildroot}/etc/systemd/system
-sudo rsync -azpv  %{buildroot}/usr/local/gogs/contrib/gogs.service  %{buildroot}/etc/systemd/system/gogs.service
+sudo rsync -azpv  %{buildroot}%{homedir}/gogs/contrib/gogs.service  %{buildroot}/etc/systemd/system/gogs.service
 #touch /var/log/gogs.log && chown gogs:gogs /var/log/gogs.log
 %preun
 #shutdown gogs if running
@@ -50,18 +53,18 @@ sudo rsync -azpv  %{buildroot}/usr/local/gogs/contrib/gogs.service  %{buildroot}
 # https://www.redhat.com/archives/rpm-list/2008-September/msg00007.html
 %files
 %ghost %{_localstatedir}/log/gogs/%{name}.log
-%attr(-,gogs,gogs) %{_localstatedir}/log/gogs/%{name}.log
+%attr(-,%{gogsuser},%{gogsgroup}) %{_localstatedir}/log/gogs/%{name}.log
 
 %ghost /etc/systemd/system/gogs.service
 %attr(-,root,root) /etc/systemd/system/gogs.service
 
-%dir /usr/local/%{name}
-%attr(-,gogs,gogs) /usr/local/%{name}
+%dir %{homedir}/%{name}
+%attr(-,%{gogsuser},%{gogsgroup}) %{homedir}/%{name}
 
 %post
 # remove all the binary and configs
 # hack before fix
-rsync -azp  /usr/local/gogs/contrib/gogs.service  /etc/systemd/system/gogs.service
+rsync -azp  %{homedir}/gogs/contrib/gogs.service  /etc/systemd/system/gogs.service
 chmod 755    /etc/systemd/system/gogs.service
 chown root:root /etc/systemd/system/gogs.service
 # run a mysql -root to drop  all data in gogsdb  ?

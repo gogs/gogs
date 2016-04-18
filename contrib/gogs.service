@@ -1,4 +1,4 @@
-[Unit]o
+[Unit]
 Description=Gogs (Go Git Service)
 After=syslog.target
 After=network.target
