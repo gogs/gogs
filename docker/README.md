@@ -43,9 +43,11 @@ If you're more comfortable with mounting data to a data container, the commands 
 ```
 # Create data container
 docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
+
 # Use `docker run` for the first time.
 docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/gogs
 ```
+
 #### Using Docker 1.9 Volume command
 
 ```
@@ -71,9 +73,27 @@ Most of settings are obvious and easy to understand, but there are some settings
 
 Full documentation of application settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
-### Crond
+### Container options
 
-Please set environment variable `RUN_CROND` to be `true` or `1` in order to start `crond` inside the container.
+This container have some options available via environment variables, these options are opt-in features that can help the administration of this container:
+
+- **SOCAT_LINK**:
+  - <u>Possible value:</u>
+      `true`, `false`, `1`, `0`
+  - <u>Default:</u>
+      `true`
+  - <u>Action:</u>
+      Bind linked docker container to localhost socket using socat.
+      Any exported port from a linked container will be binded to the matching port on localhost.
+  - <u>Disclaimer:</u>
+      As this option rely on the environment variable created by docker when a container is linked, this option should be deactivated in managed environment such as Rancher or Kubernetes (set to `0` or `false`)
+- **RUN_CROND**:
+  - <u>Possible value:</u>
+      `true`, `false`, `1`, `0`
+  - <u>Default:</u>
+      `false`
+  - <u>Action:</u>
+      Request crond to be run inside the container. Its default configuration will periodically run all scripts from `/etc/periodic/${period}` but custom crontabs can be added to `/var/spool/cron/crontabs/`.
 
 ## Upgrade
 

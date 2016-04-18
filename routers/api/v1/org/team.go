@@ -9,15 +9,10 @@ import (
 
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
 func ListTeams(ctx *context.APIContext) {
-	org := user.GetUserByParamsName(ctx, ":orgname")
-	if ctx.Written() {
-		return
-	}
-
+	org := ctx.Org.Organization
 	if err := org.GetTeams(); err != nil {
 		ctx.Error(500, "GetTeams", err)
 		return
