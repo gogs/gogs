@@ -1,4 +1,7 @@
-#Usage: cd contrib;make
+#Usage: 
+# 1. genereate gogs at gogs top  directory.
+# 2. cd contrib;make
+#
 RPM=rpm
 ALL=$(RPM)
 WDIR=$(HOME)
