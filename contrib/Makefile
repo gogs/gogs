@@ -1,18 +1,22 @@
+#Usage: cd contrib;make
 RPM=rpm
-
 ALL=$(RPM)
-
 WDIR=$(HOME)
+VER=0.9
+REV=20
+RPMVERSION=$(VER)-$(REV)
+GOGSVERSION=gogs-$(VER).$(REV)
+
 ##############################################################################
-# standard targets (all, clean, distclean, devclean, install)
+# standard targets (all, clean, installrpm,removerpm)
 
 all: $(ALL)
 
 clean:
 	find .. -type f -name "*~" -exec rm  -f  {} \;
-	(rm -rf $(WDIR)/rpmbuild/RPMS/x86_64/gogs-0.9-20.x86_64.rpm \
-           $(WDIR)/rpmbuild/SRPMS/gogs-0.9-20.src.rpm \
-          ../gogs-0.9.20.tar.gz)
+	(rm -rf $(WDIR)/rpmbuild/RPMS/x86_64/gogs-$(RPMVERSION).x86_64.rpm \
+           $(WDIR)/rpmbuild/SRPMS/gogs-$(RPMVERSION).src.rpm \
+          ../$(GOGSVERSION).tar.gz)
  
 
 # rpm making automation for CentOS/RHEL.
@@ -30,13 +34,13 @@ endif
 # RPM_ARCH := noarch
 rpm:
 	# @create gogs tar ball.
-	(cd ..;rm -f gogs-0.9.20)
-	(cd ..;ln -s . gogs-0.9.20)
-	(cd ..;tar zhcf gogs-0.9.20.tar.gz --exclude gogs-0.9.20/gogs-0.9.20.tar.gz --exclude gogs-0.9.20/gogs-0.9.20 --exclude RCS --exclude CVS --exclude build-* --exclude *~ --exclude .git* gogs-0.9.20/)
-	(cd ..;rm -f gogs-0.9.20)
+	(cd ..;rm -f $(GOGSVERSION))
+	(cd ..;ln -s . $(GOGSVERSION))
+	(cd ..;tar zhcf $(GOGSVERSION).tar.gz --exclude $(GOGSVERSION)/$(GOGSVERSION).tar.gz --exclude $(GOGSVERSION)/$(GOGSVERSION) --exclude RCS --exclude CVS --exclude build-* --exclude *~ --exclude .git* $(GOGSVERSION)/)
+	(cd ..;rm -f $(GOGSVERSION))
 	# build the rpm using rpmbuild from ./rmbuild as topdir
 	rm -rf ${WDIR}/rpmbuild && mkdir -p ${WDIR}/rpmbuild/SOURCES
-	cp  ../gogs-0.9.20.tar.gz ${WDIR}/rpmbuild/SOURCES/gogs-0.9.20.tar.gz
+	cp  ../$(GOGSVERSION).tar.gz ${WDIR}/rpmbuild/SOURCES/$(GOGSVERSION).tar.gz
 	rpmbuild -ba --define "_topdir ${WDIR}/rpmbuild"   ./gogs.spec
 gitcommit:
 	git commit -a -m "lazy commit via make gitpush"
@@ -45,6 +49,6 @@ gitpush:
 	git push origin develop
 
 installrpm: 
-	sudo $(RPM) -Uvh $(home)/rpmbuild/RPMS/x86_64/gogs-0.9-20.x86_64.rpm
+	sudo $(RPM) -Uvh $(home)/rpmbuild/RPMS/x86_64/gogs-$(RPMVERSION).x86_64.rpm
 removerpm:
 	sudo $(RPM) -e gogs
