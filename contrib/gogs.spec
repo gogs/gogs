@@ -25,6 +25,7 @@ Requires:  sqlite,mariadb-server,mariadb
 
 %description
 Gogs is a painless self-hosted Git Service written in Go. It aims to make the easiest, fastest and most painless way to set up a self-hosted Git service. With Go, this can be done in independent binary distribution across ALL platforms that Go supports, including Linux, Mac OS X, and Windows.
+packager Note: this version of gogs binary has all "sqlite tidb pam cert" components.
 
 %prep
 
