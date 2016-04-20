@@ -29,7 +29,7 @@ func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
 	} else {
-		ctx.Resp.Header().Set("Content-Type", "text/plain")
+		ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 	ctx.Resp.Write(buf)
 	_, err := io.Copy(ctx.Resp, reader)
