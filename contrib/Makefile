@@ -44,10 +44,12 @@ rpm:
 gitcommit:
 	git commit -a -m "lazy commit via make gitpush"
 
-gitpush:
+gitpush: gitcommit
 	git push origin develop
 
 installrpm: 
 	sudo $(RPM) -Uvh $(home)/rpmbuild/RPMS/x86_64/gogs-$(RPMVERSION).x86_64.rpm
 removerpm:
 	sudo $(RPM) -e gogs
+
+-include Makefile.my # extra targets for your environment
