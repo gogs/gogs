@@ -52,4 +52,4 @@ installrpm:
 removerpm:
 	sudo $(RPM) -e gogs
 
--include Makefile.my # extra targets for your environment
+-include Makefile.my # Put your extra targets for your environment in this makefile.
