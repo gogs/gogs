@@ -22,6 +22,11 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
+const (
+	ISSUE_NAME_STYLE_NUMERIC = "numeric"
+	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
+)
+
 var Sanitizer = bluemonday.UGCPolicy()
 
 // BuildSanitizer initializes sanitizer with allowed attributes based on settings.
@@ -79,8 +84,10 @@ var (
 	// IssueFullPattern matches link to an issue with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/issues/4#issue-685
 	IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
-	// IssueIndexPattern matches string that references to an issue, e.g. #1287
-	IssueIndexPattern = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
+	// IssueNumericPattern matches string that references to a numeric issue, e.g. #1287
+	IssueNumericPattern = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
+	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
+	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\()[A-Z]{1,10}-[1-9][0-9]*\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
@@ -208,22 +215,30 @@ func cutoutVerbosePrefix(prefix string) string {
 // RenderIssueIndexPattern renders issue indexes to corresponding links.
 func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	urlPrefix = cutoutVerbosePrefix(urlPrefix)
-	ms := IssueIndexPattern.FindAll(rawBytes, -1)
+
+	pattern := IssueNumericPattern
+	if metas["style"] == ISSUE_NAME_STYLE_ALPHANUMERIC {
+		pattern = IssueAlphanumericPattern
+	}
+
+	ms := pattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		var space string
-		if m[0] != '#' {
-			space = string(m[0])
-			m = m[1:]
+		if m[0] == ' ' || m[0] == '('  {
+			m = m[1:] // ignore leading space or opening parentheses
 		}
+		var link string
 		if metas == nil {
-			rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s/issues/%s">%s</a>`,
-				space, urlPrefix, m[1:], m)), 1)
+			link = fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)
 		} else {
 			// Support for external issue tracker
-			metas["index"] = string(m[1:])
-			rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(`%s<a href="%s">%s</a>`,
-				space, com.Expand(metas["format"], metas), m)), 1)
+			if metas["style"] == ISSUE_NAME_STYLE_ALPHANUMERIC {
+				metas["index"] = string(m)
+			} else {
+				metas["index"] = string(m[1:])
+			}
+			link = fmt.Sprintf(`<a href="%s">%s</a>`, com.Expand(metas["format"], metas), m)
 		}
+		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
 	return rawBytes
 }
