@@ -206,6 +206,10 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 		repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
 	case "num_closed_milestones":
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
+	case "external_tracker_style":
+		if len(repo.ExternalTrackerStyle) == 0 {
+			repo.ExternalTrackerStyle = markdown.ISSUE_NAME_STYLE_NUMERIC
+		}
 	case "created_unix":
 		repo.Created = time.Unix(repo.CreatedUnix, 0).Local()
 	case "updated_unix":
