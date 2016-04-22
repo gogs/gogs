@@ -170,6 +170,7 @@ type Repository struct {
 	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
 	EnableExternalTracker bool
 	ExternalTrackerFormat string
+	ExternalTrackerStyle  string
 	ExternalMetas         map[string]string `xorm:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
 
@@ -254,6 +255,13 @@ func (repo *Repository) ComposeMetas() map[string]string {
 			"user":   repo.MustOwner().Name,
 			"repo":   repo.Name,
 		}
+		switch repo.ExternalTrackerStyle {
+		case markdown.ISSUE_NAME_STYLE_ALPHANUMERIC:
+			repo.ExternalMetas["style"] = markdown.ISSUE_NAME_STYLE_ALPHANUMERIC
+		default:
+			repo.ExternalMetas["style"] = markdown.ISSUE_NAME_STYLE_NUMERIC
+		}
+
 	}
 	return repo.ExternalMetas
 }
