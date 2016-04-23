@@ -49,7 +49,7 @@ DAEMON_OPTS="--check $NAME"
 start() {
   cd ${GOGS_HOME}
   echo -n "Starting ${SERVICENAME}: "
-  daemon $DAEMON_OPTS "${GOGS_PATH} web > ${LOGFILE} 2>&1 &"
+  daemon $DAEMON_OPTS "${GOGS_PATH} run web > ${LOGFILE} 2>&1 &"
   RETVAL=$?
   echo
   [ $RETVAL = 0 ] && touch ${LOCKFILE}
