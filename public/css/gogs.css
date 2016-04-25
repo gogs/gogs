@@ -312,6 +312,11 @@ footer .container .links > * {
 footer .container .links > *:first-child {
   border-left: none;
 }
+footer .ui.language .menu {
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 7px;
+}
 .hide {
   display: none;
 }
