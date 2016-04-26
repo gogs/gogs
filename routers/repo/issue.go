@@ -146,7 +146,7 @@ func Issues(ctx *context.Context) {
 	issueStats := models.GetIssueStats(&models.IssueStatsOptions{
 		RepoID:      repo.ID,
 		UserID:      uid,
-		LabelID:     com.StrTo(selectLabels).MustInt64(),
+		Labels:      selectLabels,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
 		FilterMode:  filterMode,

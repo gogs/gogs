@@ -547,7 +547,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	}
 
 	labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-	if len(labelIDs) > 1 {
+	if opts.Labels != "" && len(labelIDs) > 0 {
 		sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 	}
 
@@ -769,7 +769,7 @@ func parseCountResult(results []map[string][]byte) int64 {
 type IssueStatsOptions struct {
 	RepoID      int64
 	UserID      int64
-	LabelID     int64
+	Labels      string
 	MilestoneID int64
 	AssigneeID  int64
 	FilterMode  int
@@ -780,41 +780,58 @@ type IssueStatsOptions struct {
 func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	stats := &IssueStats{}
 
-	queryStr := "SELECT COUNT(*) FROM `issue` "
-	if opts.LabelID > 0 {
-		queryStr += "INNER JOIN `issue_label` ON `issue`.id=`issue_label`.issue_id AND `issue_label`.label_id=" + com.ToStr(opts.LabelID)
-	}
+	countSession := func(opts *IssueStatsOptions) *xorm.Session {
+		sess := x.Where("issue.repo_id = ?", opts.RepoID).And("issue.is_pull = ?", opts.IsPull)
 
-	baseCond := " WHERE issue.repo_id=" + com.ToStr(opts.RepoID) + " AND issue.is_closed=?"
-	if opts.MilestoneID > 0 {
-		baseCond += " AND issue.milestone_id=" + com.ToStr(opts.MilestoneID)
+		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
+		if opts.Labels != "" && len(labelIDs) > 0 {
+			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
+		}
+
+		if opts.MilestoneID > 0 {
+			sess.And("issue.milestone_id = ?", opts.MilestoneID)
+		}
+
+		if opts.AssigneeID > 0 {
+			sess.And("assignee_id = ?", opts.AssigneeID)
+		}
+
+		return sess
 	}
-	if opts.AssigneeID > 0 {
-		baseCond += " AND assignee_id=" + com.ToStr(opts.AssigneeID)
-	}
-	baseCond += " AND issue.is_pull=?"
 
 	switch opts.FilterMode {
 	case FM_ALL, FM_ASSIGN:
-		results, _ := x.Query(queryStr+baseCond, false, opts.IsPull)
-		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true, opts.IsPull)
-		stats.ClosedCount = parseCountResult(results)
+		stats.OpenCount, _ = countSession(opts).
+			And("issue.is_closed = ?", false).
+			Count(&Issue{})
 
+		stats.ClosedCount, _ = countSession(opts).
+			And("issue.is_closed = ?", true).
+			Count(&Issue{})
 	case FM_CREATE:
-		baseCond += " AND poster_id=?"
-		results, _ := x.Query(queryStr+baseCond, false, opts.IsPull, opts.UserID)
-		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true, opts.IsPull, opts.UserID)
-		stats.ClosedCount = parseCountResult(results)
+		stats.OpenCount, _ = countSession(opts).
+			And("poster_id = ?", opts.UserID).
+			And("issue.is_closed = ?", false).
+			Count(&Issue{})
 
+		stats.ClosedCount, _ = countSession(opts).
+			And("poster_id = ?", opts.UserID).
+			And("issue.is_closed = ?", true).
+			Count(&Issue{})
 	case FM_MENTION:
-		queryStr += " INNER JOIN `issue_user` ON `issue`.id=`issue_user`.issue_id"
-		baseCond += " AND `issue_user`.uid=? AND `issue_user`.is_mentioned=?"
-		results, _ := x.Query(queryStr+baseCond, false, opts.IsPull, opts.UserID, true)
-		stats.OpenCount = parseCountResult(results)
-		results, _ = x.Query(queryStr+baseCond, true, opts.IsPull, opts.UserID, true)
-		stats.ClosedCount = parseCountResult(results)
+		stats.OpenCount, _ = countSession(opts).
+			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
+			And("issue_user.uid = ?", opts.UserID).
+			And("issue_user.is_mentioned = ?", true).
+			And("issue.is_closed = ?", false).
+			Count(&Issue{})
+
+		stats.ClosedCount, _ = countSession(opts).
+			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
+			And("issue_user.uid = ?", opts.UserID).
+			And("issue_user.is_mentioned = ?", true).
+			And("issue.is_closed = ?", true).
+			Count(&Issue{})
 	}
 	return stats
 }
@@ -823,64 +840,70 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPull bool) *IssueStats {
 	stats := &IssueStats{}
 
-	queryStr := "SELECT COUNT(*) FROM `issue` "
-	baseCond := " WHERE issue.is_closed=?"
-	if repoID > 0 || len(repoIDs) == 0 {
-		baseCond += " AND issue.repo_id=" + com.ToStr(repoID)
-	} else {
-		baseCond += " AND issue.repo_id IN (" + strings.Join(base.Int64sToStrings(repoIDs), ",") + ")"
+	countSession := func(isClosed, isPull bool, repoID int64, repoIDs []int64) *xorm.Session {
+		sess := x.Where("issue.is_closed = ?", isClosed).And("issue.is_pull = ?", isPull)
+
+		if repoID > 0 || len(repoIDs) == 0 {
+			sess.And("issue.repo_id = ?", repoID)
+		} else {
+			sess.In("issue.repo_id", repoIDs)
+		}
+
+		return sess
 	}
 
-	if isPull {
-		baseCond += " AND issue.is_pull=1"
-	} else {
-		baseCond += " AND issue.is_pull=0"
-	}
+	stats.AssignCount, _ = countSession(false, isPull, repoID, repoIDs).
+		And("assignee_id = ?", uid).
+		Count(&Issue{})
 
-	results, _ := x.Query(queryStr+baseCond+" AND assignee_id=?", false, uid)
-	stats.AssignCount = parseCountResult(results)
-	results, _ = x.Query(queryStr+baseCond+" AND poster_id=?", false, uid)
-	stats.CreateCount = parseCountResult(results)
+	stats.CreateCount, _ = countSession(false, isPull, repoID, repoIDs).
+		And("assignee_id = ?", uid).
+		Count(&Issue{})
+
+	openCountSession := countSession(false, isPull, repoID, repoIDs)
+	closedCountSession := countSession(true, isPull, repoID, repoIDs)
 
 	switch filterMode {
 	case FM_ASSIGN:
-		baseCond += " AND assignee_id=" + com.ToStr(uid)
-
+		openCountSession.And("assignee_id = ?", uid)
+		closedCountSession.And("assignee_id = ?", uid)
 	case FM_CREATE:
-		baseCond += " AND poster_id=" + com.ToStr(uid)
+		openCountSession.And("poster_id = ?", uid)
+		closedCountSession.And("poster_id = ?", uid)
 	}
 
-	results, _ = x.Query(queryStr+baseCond, false)
-	stats.OpenCount = parseCountResult(results)
-	results, _ = x.Query(queryStr+baseCond, true)
-	stats.ClosedCount = parseCountResult(results)
+	stats.OpenCount, _ = openCountSession.Count(&Issue{})
+	stats.ClosedCount, _ = closedCountSession.Count(&Issue{})
+
 	return stats
 }
 
 // GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
 func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen int64, numClosed int64) {
-	queryStr := "SELECT COUNT(*) FROM `issue` "
-	baseCond := " WHERE issue.repo_id=? AND issue.is_closed=?"
+	countSession := func(isClosed, isPull bool, repoID int64) *xorm.Session {
+		sess := x.Where("issue.repo_id = ?", isClosed).
+			And("issue.is_pull = ?", isPull).
+			And("issue.repo_id = ?", repoID)
 
-	if isPull {
-		baseCond += " AND issue.is_pull=1"
-	} else {
-		baseCond += " AND issue.is_pull=0"
+		return sess
 	}
+
+	openCountSession := countSession(false, isPull, repoID)
+	closedCountSession := countSession(true, isPull, repoID)
 
 	switch filterMode {
 	case FM_ASSIGN:
-		baseCond += " AND assignee_id=" + com.ToStr(uid)
-
+		openCountSession.And("assignee_id = ?", uid)
+		closedCountSession.And("assignee_id = ?", uid)
 	case FM_CREATE:
-		baseCond += " AND poster_id=" + com.ToStr(uid)
+		openCountSession.And("poster_id = ?", uid)
+		closedCountSession.And("poster_id = ?", uid)
 	}
 
-	results, _ := x.Query(queryStr+baseCond, repoID, false)
-	numOpen = parseCountResult(results)
-	results, _ = x.Query(queryStr+baseCond, repoID, true)
-	numClosed = parseCountResult(results)
-	return numOpen, numClosed
+	openResult, _ := openCountSession.Count(&Issue{})
+	closedResult, _ := closedCountSession.Count(&Issue{})
+
+	return openResult, closedResult
 }
 
 func updateIssue(e Engine, issue *Issue) error {
