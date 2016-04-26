@@ -506,28 +506,28 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	sess := x.Limit(setting.IssuePagingNum, (opts.Page-1)*setting.IssuePagingNum)
 
 	if opts.RepoID > 0 {
-		sess.Where("issue.repo_id=?", opts.RepoID).And("issue.is_closed=?", opts.IsClosed)
+		sess.Where("issue.repo_id=?", opts.RepoID).And("is_closed=?", opts.IsClosed)
 	} else if opts.RepoIDs != nil {
 		// In case repository IDs are provided but actually no repository has issue.
 		if len(opts.RepoIDs) == 0 {
 			return make([]*Issue, 0), nil
 		}
-		sess.In("repo_id", base.Int64sToStrings(opts.RepoIDs)).And("issue.is_closed=?", opts.IsClosed)
+		sess.In("repo_id", base.Int64sToStrings(opts.RepoIDs)).And("is_closed=?", opts.IsClosed)
 	} else {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
 
 	if opts.AssigneeID > 0 {
-		sess.And("issue.assignee_id=?", opts.AssigneeID)
+		sess.And("assignee_id=?", opts.AssigneeID)
 	} else if opts.PosterID > 0 {
-		sess.And("issue.poster_id=?", opts.PosterID)
+		sess.And("poster_id=?", opts.PosterID)
 	}
 
 	if opts.MilestoneID > 0 {
-		sess.And("issue.milestone_id=?", opts.MilestoneID)
+		sess.And("milestone_id=?", opts.MilestoneID)
 	}
 
-	sess.And("issue.is_pull=?", opts.IsPull)
+	sess.And("is_pull=?", opts.IsPull)
 
 	switch opts.SortType {
 	case "oldest":
@@ -546,13 +546,15 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		sess.Desc("created_unix")
 	}
 
-	labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-	if opts.Labels != "" && len(labelIDs) > 0 {
-		sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
+	if opts.Labels != "0" {
+		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
+		if opts.Labels != "" && len(labelIDs) > 0 {
+			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("label_id", labelIDs)
+		}
 	}
 
 	if opts.IsMention {
-		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id").And("issue_user.is_mentioned = ?", true)
+		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id").And("is_mentioned = ?", true)
 
 		if opts.UserID > 0 {
 			sess.And("issue_user.uid = ?", opts.UserID)
@@ -781,11 +783,13 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	stats := &IssueStats{}
 
 	countSession := func(opts *IssueStatsOptions) *xorm.Session {
-		sess := x.Where("issue.repo_id = ?", opts.RepoID).And("issue.is_pull = ?", opts.IsPull)
+		sess := x.Where("issue.repo_id = ?", opts.RepoID).And("is_pull = ?", opts.IsPull)
 
-		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-		if opts.Labels != "" && len(labelIDs) > 0 {
-			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
+		if opts.Labels != "0" {
+			labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
+			if opts.Labels != "" && len(labelIDs) > 0 {
+				sess.Join("INNER", "issue_label", "issue.id = issue_id").In("label_id", labelIDs)
+			}
 		}
 
 		if opts.MilestoneID > 0 {
@@ -802,35 +806,35 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	switch opts.FilterMode {
 	case FM_ALL, FM_ASSIGN:
 		stats.OpenCount, _ = countSession(opts).
-			And("issue.is_closed = ?", false).
+			And("is_closed = ?", false).
 			Count(&Issue{})
 
 		stats.ClosedCount, _ = countSession(opts).
-			And("issue.is_closed = ?", true).
+			And("is_closed = ?", true).
 			Count(&Issue{})
 	case FM_CREATE:
 		stats.OpenCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
-			And("issue.is_closed = ?", false).
+			And("is_closed = ?", false).
 			Count(&Issue{})
 
 		stats.ClosedCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
-			And("issue.is_closed = ?", true).
+			And("is_closed = ?", true).
 			Count(&Issue{})
 	case FM_MENTION:
 		stats.OpenCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
-			And("issue_user.uid = ?", opts.UserID).
-			And("issue_user.is_mentioned = ?", true).
-			And("issue.is_closed = ?", false).
+			And("uid = ?", opts.UserID).
+			And("is_mentioned = ?", true).
+			And("is_closed = ?", false).
 			Count(&Issue{})
 
 		stats.ClosedCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
-			And("issue_user.uid = ?", opts.UserID).
-			And("issue_user.is_mentioned = ?", true).
-			And("issue.is_closed = ?", true).
+			And("uid = ?", opts.UserID).
+			And("is_mentioned = ?", true).
+			And("is_closed = ?", true).
 			Count(&Issue{})
 	}
 	return stats
@@ -844,9 +848,9 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 		sess := x.Where("issue.is_closed = ?", isClosed).And("issue.is_pull = ?", isPull)
 
 		if repoID > 0 || len(repoIDs) == 0 {
-			sess.And("issue.repo_id = ?", repoID)
+			sess.And("repo_id = ?", repoID)
 		} else {
-			sess.In("issue.repo_id", repoIDs)
+			sess.In("repo_id", repoIDs)
 		}
 
 		return sess
@@ -882,8 +886,8 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen int64, numClosed int64) {
 	countSession := func(isClosed, isPull bool, repoID int64) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", isClosed).
-			And("issue.is_pull = ?", isPull).
-			And("issue.repo_id = ?", repoID)
+			And("is_pull = ?", isPull).
+			And("repo_id = ?", repoID)
 
 		return sess
 	}
