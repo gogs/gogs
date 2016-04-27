@@ -522,3 +522,11 @@ func IsImageFile(data []byte) (string, bool) {
 	}
 	return contentType, false
 }
+
+func IsPDFFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "application/pdf") != -1 {
+		return contentType, true
+	}
+	return contentType, false
+}
