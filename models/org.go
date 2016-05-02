@@ -443,7 +443,7 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 // that the user with the given userID has access to.
 func (org *User) GetUserRepositories(userID int64) (err error) {
 	teams := make([]*Team, 0, org.NumTeams)
-	if err = x.Sql(`SELECT team.id FROM team 
+	if err = x.Sql(`SELECT team.id FROM team
 INNER JOIN team_user ON team_user.team_id = team.id
 WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams); err != nil {
 		return fmt.Errorf("get teams: %v", err)
@@ -483,6 +483,8 @@ WHERE team_user.org_id = ? AND team_user.uid = ?`,
 		org.Id, userID).Find(&teams); err != nil {
 		return fmt.Errorf("get teams: %v", err)
 	}
+
+	org.Teams = teams
 
 	// FIXME: should I change this value inside method,
 	// or only in location of caller where it's really needed?
