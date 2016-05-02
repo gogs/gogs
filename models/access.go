@@ -55,6 +55,7 @@ type Access struct {
 	UserID int64 `xorm:"UNIQUE(s)"`
 	RepoID int64 `xorm:"UNIQUE(s)"`
 	Mode   AccessMode
+	Units  []UnitType `xorm:"json"`
 }
 
 func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {

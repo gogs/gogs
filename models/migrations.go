@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package migrations
+package models
 
 import (
 	"bytes"
@@ -30,15 +30,21 @@ const _MIN_DB_VER = 4
 type Migration interface {
 	Description() string
 	Migrate(*xorm.Engine) error
+	AfterSync() bool
 }
 
 type migration struct {
 	description string
 	migrate     func(*xorm.Engine) error
+	afterSync   bool
 }
 
-func NewMigration(desc string, fn func(*xorm.Engine) error) Migration {
-	return &migration{desc, fn}
+func NewMigration(desc string, fn func(*xorm.Engine) error, afterSyncs ...bool) Migration {
+	var afterSync bool
+	if len(afterSyncs) > 0 {
+		afterSync = afterSyncs[0]
+	}
+	return &migration{desc, fn, afterSync}
 }
 
 func (m *migration) Description() string {
@@ -47,6 +53,10 @@ func (m *migration) Description() string {
 
 func (m *migration) Migrate(x *xorm.Engine) error {
 	return m.migrate(x)
+}
+
+func (m *migration) AfterSync() bool {
+	return m.afterSync
 }
 
 // The version table. Should have only one row with id==1
@@ -59,18 +69,19 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
-	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                 // V4 -> V5:v0.6.0
-	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),       // V5 -> V6:v0.6.3
-	NewMigration("generate issue-label from issue", issueToIssueLabel),                 // V6 -> V7:v0.6.4
-	NewMigration("refactor attachment table", attachmentRefactor),                      // V7 -> V8:v0.6.4
-	NewMigration("rename pull request fields", renamePullRequestFields),                // V8 -> V9:v0.6.16
-	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                 // V9 -> V10:v0.6.20
-	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt), // V10 -> V11:v0.8.5
-	NewMigration("convert date to unix timestamp", convertDateToUnix),                  // V11 -> V12:v0.9.2
+	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                     // V4 -> V5:v0.6.0
+	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),           // V5 -> V6:v0.6.3
+	NewMigration("generate issue-label from issue", issueToIssueLabel),                     // V6 -> V7:v0.6.4
+	NewMigration("refactor attachment table", attachmentRefactor),                          // V7 -> V8:v0.6.4
+	NewMigration("rename pull request fields", renamePullRequestFields),                    // V8 -> V9:v0.6.16
+	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                     // V9 -> V10:v0.6.20
+	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt),     // V10 -> V11:v0.8.5
+	NewMigration("convert date to unix timestamp", convertDateToUnix),                      // V11 -> V12:v0.9.2
+	NewMigration("add plugins for repo, team and access tables", addPluginsToTables, true), // V12 -> V13:v0.9.23
 }
 
 // Migrate database to current version
-func Migrate(x *xorm.Engine) error {
+func Migrate(x *xorm.Engine, afterSync bool) error {
 	if err := x.Sync(new(Version)); err != nil {
 		return fmt.Errorf("sync: %v", err)
 	}
@@ -103,23 +114,18 @@ Please try to upgrade to a lower version (>= v0.6.0) first, then upgrade to curr
 		return err
 	}
 	for i, m := range migrations[v-_MIN_DB_VER:] {
-		log.Info("Migration: %s", m.Description())
-		if err = m.Migrate(x); err != nil {
-			return fmt.Errorf("do migrate: %v", err)
-		}
-		currentVersion.Version = v + int64(i) + 1
-		if _, err = x.Id(1).Update(currentVersion); err != nil {
-			return err
+		if m.AfterSync() == afterSync {
+			log.Info("Migration: %s", m.Description())
+			if err = m.Migrate(x); err != nil {
+				return fmt.Errorf("do migrate: %v", err)
+			}
+			currentVersion.Version = v + int64(i) + 1
+			if _, err = x.Id(1).Update(currentVersion); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
-}
-
-func sessionRelease(sess *xorm.Session) {
-	if !sess.IsCommitedOrRollbacked {
-		sess.Rollback()
-	}
-	sess.Close()
 }
 
 func fixLocaleFileLoadPanic(_ *xorm.Engine) error {
@@ -671,5 +677,26 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 		}
 	}
 
+	return nil
+}
+
+func addPluginsToTables(x *xorm.Engine) error {
+	if _, err := x.Update(&Access{
+		Units: unitTypes,
+	}); err != nil {
+		return err
+	}
+
+	if _, err := x.Update(&Team{
+		Units: unitTypes,
+	}); err != nil {
+		return err
+	}
+
+	if _, err := x.Update(&Repository{
+		Units: unitTypes,
+	}); err != nil {
+		return err
+	}
 	return nil
 }

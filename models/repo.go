@@ -174,6 +174,8 @@ type Repository struct {
 	ExternalMetas         map[string]string `xorm:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
 
+	Units []UnitType `xorm:"json"` // repos's units, so let's remove EnableWiki, EnableIssues, EnablePulls after all are ready
+
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-"`
@@ -182,6 +184,15 @@ type Repository struct {
 	CreatedUnix int64
 	Updated     time.Time `xorm:"-"`
 	UpdatedUnix int64
+}
+
+func (repo *Repository) UnitEnabled(unitKey string) bool {
+	for _, tp := range repo.Units {
+		if Units[tp].NameKey == unitKey {
+			return true
+		}
+	}
+	return false
 }
 
 func (repo *Repository) BeforeInsert() {
