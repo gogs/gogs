@@ -124,14 +124,29 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		ctx.Redirect(repo.RepoLink() + "/settings")
 
 	case "advanced":
+		repo.Units = []models.UnitType{
+			models.UnitCode,
+			models.UnitCommits,
+			models.UnitReleases,
+			models.UnitSettings,
+		}
 		repo.EnableWiki = form.EnableWiki
+		if form.EnableWiki {
+			repo.Units = append(repo.Units, models.UnitWiki)
+		}
 		repo.EnableExternalWiki = form.EnableExternalWiki
 		repo.ExternalWikiURL = form.ExternalWikiURL
 		repo.EnableIssues = form.EnableIssues
+		if form.EnableIssues {
+			repo.Units = append(repo.Units, models.UnitIssues)
+		}
 		repo.EnableExternalTracker = form.EnableExternalTracker
 		repo.ExternalTrackerFormat = form.TrackerURLFormat
 		repo.ExternalTrackerStyle = form.TrackerIssueStyle
 		repo.EnablePulls = form.EnablePulls
+		if form.EnablePulls {
+			repo.Units = append(repo.Units, models.UnitPRs)
+		}
 
 		if err := models.UpdateRepository(repo, false); err != nil {
 			ctx.Handle(500, "UpdateRepository", err)

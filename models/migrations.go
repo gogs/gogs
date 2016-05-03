@@ -693,10 +693,40 @@ func addUnitsToTables(x *xorm.Engine) error {
 		return err
 	}
 
-	if _, err := x.Update(&Repository{
-		Units: UnitTypes,
-	}); err != nil {
+	var repo Repository
+	rows, err := x.Where("is_wiki = ?", false).Rows(&repo)
+	if err != nil {
 		return err
 	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&repo); err != nil {
+			return err
+		}
+
+		repo.Units = []UnitType{
+			UnitCode,
+			UnitCommits,
+			UnitReleases,
+			UnitSettings,
+		}
+
+		if repo.EnableWiki {
+			repo.Units = append(repo.Units, UnitWiki)
+		}
+		if repo.EnableIssues {
+			repo.Units = append(repo.Units, UnitIssues)
+		}
+
+		if repo.EnablePulls {
+			repo.Units = append(repo.Units, UnitPRs)
+		}
+
+		if _, err := x.Id(repo.ID).Cols("units").Update(&repo); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
