@@ -1012,6 +1012,7 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 		EnableWiki:   true,
 		EnableIssues: true,
 		EnablePulls:  true,
+		Units:        UnitTypes,
 	}
 
 	sess := x.NewSession()
@@ -2058,6 +2059,7 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		IsPrivate:     oldRepo.IsPrivate,
 		IsFork:        true,
 		ForkID:        oldRepo.ID,
+		Units:         oldRepo.Units,
 	}
 
 	sess := x.NewSession()

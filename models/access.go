@@ -167,6 +167,7 @@ func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode
 			UserID: userID,
 			RepoID: repo.ID,
 			Mode:   mode,
+			Units:  UnitTypes,
 		})
 	}
 

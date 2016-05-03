@@ -73,7 +73,7 @@ var (
 		},
 	}
 
-	unitTypes = []UnitType{
+	UnitTypes = []UnitType{
 		UnitCode,
 		UnitIssues,
 		UnitPRs,

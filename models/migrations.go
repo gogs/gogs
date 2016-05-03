@@ -682,19 +682,19 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 
 func addPluginsToTables(x *xorm.Engine) error {
 	if _, err := x.Update(&Access{
-		Units: unitTypes,
+		Units: UnitTypes,
 	}); err != nil {
 		return err
 	}
 
 	if _, err := x.Update(&Team{
-		Units: unitTypes,
+		Units: UnitTypes,
 	}); err != nil {
 		return err
 	}
 
 	if _, err := x.Update(&Repository{
-		Units: unitTypes,
+		Units: UnitTypes,
 	}); err != nil {
 		return err
 	}
