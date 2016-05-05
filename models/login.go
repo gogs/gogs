@@ -264,8 +264,9 @@ func DeleteSource(source *LoginSource) error {
 func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
 	directBind := (source.Type == LOGIN_DLDAP)
-	name, fn, sn, mail, admin, logged := cfg.SearchEntry(loginName, passwd, directBind)
-	if !logged {
+	
+	sr := cfg.SearchEntry(loginName, passwd, directBind)
+	if sr == nil {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{0, loginName}
 	}
@@ -275,22 +276,22 @@ func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource,
 	}
 
 	// Fallback.
-	if len(name) == 0 {
-		name = loginName
+	if len(sr.Username) == 0 {
+		sr.Username = loginName
 	}
-	if len(mail) == 0 {
-		mail = fmt.Sprintf("%s@localhost", name)
+	if len(sr.Mail) == 0 {
+		sr.Mail = fmt.Sprintf("%s@localhost", sr.Username)
 	}
 
 	u = &User{
-		LowerName:   strings.ToLower(name),
-		Name:        name,
-		FullName:    composeFullName(fn, sn, name),
+		LowerName:   strings.ToLower(sr.Username),
+		Name:        sr.Username,
+		FullName:    composeFullName(sr.Name, sr.Surname, sr.Username),
 		LoginType:   source.Type,
 		LoginSource: source.ID,
 		LoginName:   loginName,
-		Email:       mail,
-		IsAdmin:     admin,
+		Email:       sr.Mail,
+		IsAdmin:     sr.IsAdmin,
 		IsActive:    true,
 	}
 	return u, CreateUser(u)
