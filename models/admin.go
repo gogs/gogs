@@ -52,6 +52,11 @@ func (n *Notice) TrStr() string {
 
 // CreateNotice creates new system notice.
 func CreateNotice(tp NoticeType, desc string) error {
+	// prevent panic if database connection is not available at this point
+	if x == nil {
+		return fmt.Errorf("Could not save notice due database connection not being available: %d %s", tp, desc)
+	}
+
 	n := &Notice{
 		Type:        tp,
 		Description: desc,
@@ -70,6 +75,9 @@ func CreateRepositoryNotice(desc string) error {
 func RemoveAllWithNotice(title, path string) {
 	var err error
 	if setting.IsWindows {
+		// usually Go automatically converts "/" to "\" in path on Windows
+		// but since we are running it manually, it's better to convert to prevent problems
+		path = strings.Replace(path, "/", "\\", -1)
 		err = exec.Command("cmd", "/C", "rmdir", "/S", "/Q", path).Run()
 	} else {
 		err = os.RemoveAll(path)
