@@ -546,9 +546,9 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		sess.Desc("created_unix")
 	}
 
-	if opts.Labels != "0" {
+	if len(opts.Labels) > 0 && opts.Labels != "0" {
 		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-		if opts.Labels != "" && len(labelIDs) > 0 {
+		if len(labelIDs) > 0 {
 			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("label_id", labelIDs)
 		}
 	}
@@ -785,9 +785,9 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	countSession := func(opts *IssueStatsOptions) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", opts.RepoID).And("is_pull = ?", opts.IsPull)
 
-		if opts.Labels != "0" {
+		if len(opts.Labels) > 0 && opts.Labels != "0" {
 			labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-			if opts.Labels != "" && len(labelIDs) > 0 {
+			if len(labelIDs) > 0 {
 				sess.Join("INNER", "issue_label", "issue.id = issue_id").In("label_id", labelIDs)
 			}
 		}
