@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.9.24
+##### Current version: 0.9.26
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -49,7 +49,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
-- Multi-language support ([17 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([18 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
