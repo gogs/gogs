@@ -57,6 +57,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		PosterID: ctx.User.Id,
 		Poster:   ctx.User,
 		Content:  form.Body,
+		IsClosed: form.Closed,
 	}
 
 	if ctx.Repo.IsWriter() {
