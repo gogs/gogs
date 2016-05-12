@@ -139,6 +139,10 @@ func getEngine() (*xorm.Engine, error) {
 	return xorm.NewEngine(DbCfg.Type, cnnstr)
 }
 
+func GetEngine() *xorm.Engine {
+	return x
+}
+
 func NewTestEngine(x *xorm.Engine) (err error) {
 	x, err = getEngine()
 	if err != nil {
