@@ -67,7 +67,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	}
 }
 
-func runCert(ctx *cli.Context) {
+func runCert(ctx *cli.Context) error {
 	if len(ctx.String("host")) == 0 {
 		log.Fatal("Missing required --host parameter")
 	}
@@ -158,4 +158,6 @@ func runCert(ctx *cli.Context) {
 	pem.Encode(keyOut, pemBlockForKey(priv))
 	keyOut.Close()
 	log.Println("Written key.pem")
+
+	return nil
 }

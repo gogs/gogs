@@ -129,7 +129,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	}
 }
 
-func runServ(c *cli.Context) {
+func runServ(c *cli.Context) error {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
@@ -138,7 +138,7 @@ func runServ(c *cli.Context) {
 
 	if setting.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
-		return
+		return nil
 	}
 
 	if len(c.Args()) < 1 {
@@ -149,7 +149,7 @@ func runServ(c *cli.Context) {
 	if len(cmd) == 0 {
 		println("Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
 		println("If this is unexpected, please log in with password and setup Gogs under another user.")
-		return
+		return nil
 	}
 
 	verb, args := parseCmd(cmd)
@@ -290,4 +290,6 @@ func runServ(c *cli.Context) {
 			fail("Internal error", "UpdatePublicKey: %v", err)
 		}
 	}
+
+	return nil
 }
