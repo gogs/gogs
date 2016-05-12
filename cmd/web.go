@@ -175,7 +175,7 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
-func runWeb(ctx *cli.Context) {
+func runWeb(ctx *cli.Context) error {
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
@@ -585,4 +585,6 @@ func runWeb(ctx *cli.Context) {
 	if err != nil {
 		log.Fatal(4, "Fail to start server: %v", err)
 	}
+
+	return nil
 }
