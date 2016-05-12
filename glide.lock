@@ -6,7 +6,7 @@ imports:
   subpackages:
   - memcache
 - name: github.com/codegangsta/cli
-  version: aca5b047ed14d17224157c3434ea93bf6cdaadee
+  version: 7f0ca9a34958d6702ac8f38530d19001fa5b1560
 - name: github.com/go-macaron/binding
   version: a68f34212fe257219981e43adfe4c96ab48f42cd
 - name: github.com/go-macaron/cache
