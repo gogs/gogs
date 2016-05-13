@@ -21,7 +21,7 @@ func Markdown(ctx *context.APIContext, form api.MarkdownOption) {
 	if len(form.Text) == 0 {
 		ctx.Write([]byte(""))
 		return
-	}
+		}
 
 	switch form.Mode {
 	case "gfm":

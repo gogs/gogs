@@ -522,11 +522,17 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/:sha([a-z0-9]{40})$", repo.Diff)
 			m.Get("/forks", repo.Forks)
+			m.Get("/edit/*", repo.EditFile)
+			m.Post("/edit/*", bindIgnErr(auth.EditRepoFileForm{}), repo.EditFilePost)
+			m.Get("/new/*", repo.EditNewFile)
+			m.Post("/new/*", bindIgnErr(auth.EditRepoFileForm{}), repo.EditNewFilePost)
+			m.Post("/delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
+			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
 		}, context.RepoRef())
 		m.Get("/commit/:sha([a-z0-9]{40})\\.:ext(patch|diff)", repo.RawDiff)
 
 		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
-	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
+	}, ignSignIn, context.RepoAssignment(), context.RepoRef(), context.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
 		m.Get("/watchers", repo.Watchers)

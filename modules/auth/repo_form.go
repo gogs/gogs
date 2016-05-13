@@ -267,3 +267,48 @@ type NewWikiForm struct {
 func (f *NewWikiForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
+
+
+// ___________    .___.__  __
+// \_   _____/  __| _/|__|/  |_
+//  |    __)_  / __ | |  \   __\
+//  |        \/ /_/ | |  ||  |
+// /_______  /\____ | |__||__|
+//         \/      \/
+
+type EditRepoFileForm struct {
+	TreeName string `binding:"Required;MaxSize(500)"`
+	Content  string `binding:"Required"`
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage  string
+	CommitChoice string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+}
+
+func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ________         .__          __
+// \______ \   ____ |  |   _____/  |_  ____
+// |    |  \_/ __ \|  | _/ __ \   __\/ __ \
+// |    `   \  ___/|  |_\  ___/|  | \  ___/
+// /_______  /\___  >____/\___  >__|  \___  >
+//         \/     \/          \/          \/
+
+type DeleteRepoFileForm struct {
+	CommitSummary string `binding:"MaxSize(100)`
+}
+
+func (f *DeleteRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type NewBranchForm struct {
+	OldBranchName string `binding:"Required;MaxSize(100)"`
+	BranchName string `binding:"Required;MaxSize(100)"`
+}
+
+func (f *NewBranchForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}

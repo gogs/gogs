@@ -406,7 +406,7 @@ function initRepository() {
 
         // Change status
         var $status_btn = $('#status-button');
-        $('#content').keyup(function () {
+        $('#edit-area').keyup(function () {
             if ($(this).val().length == 0) {
                 $status_btn.text($status_btn.data('status'))
             } else {
@@ -477,7 +477,6 @@ function initWiki() {
         return;
     }
 
-
     if ($('.repository.wiki.new').length > 0) {
         var $edit_area = $('#edit-area');
         var simplemde = new SimpleMDE({
@@ -515,6 +514,169 @@ function initWiki() {
                 "preview", "fullscreen"]
         })
     }
+}
+
+var editor;
+var editFilename;
+var editArea;
+
+// For IE
+String.prototype.endsWith = function(pattern) {
+    var d = this.length - pattern.length;
+    return d >= 0 && this.lastIndexOf(pattern) === d;
+};
+
+function initEditor() {
+    editArea = $('textarea#edit-area')
+    if (! editArea.length)
+        return;
+
+    if ($('#file-name').val().endsWith('.md')) {
+        var simplemde = new SimpleMDE({
+            autoDownloadFontAwesome: false,
+            element: editArea[0],
+            forceSync: true,
+            previewRender: function (plainText, preview) { // Async method
+                setTimeout(function () {
+                    // FIXME: still send render request when return back to edit mode
+                    $.post(editArea.data('url'), {
+                            "_csrf": csrf,
+                            "mode": "gfm",
+                            "context": editArea.data('context'),
+                            "text": plainText
+                        },
+                        function (data) {
+                            preview.innerHTML = '<div class="markdown">' + data + '</div>';
+                            emojify.run($('.editor-preview')[0]);
+                        }
+                    );
+                }, 0);
+
+                return "Loading...";
+            },
+            renderingConfig: {
+                singleLineBreaks: false
+            },
+            spellChecker: false,
+            tabSize: 4,
+            toolbar: ["bold", "italic", "strikethrough", "|",
+                "heading", "heading-1", "heading-2", "heading-3", "|",
+                "code", "quote", "|",
+                "unordered-list", "ordered-list", "|",
+                "link", "image", "horizontal-rule", "|",
+                "preview", "fullscreen"]
+        })
+    }
+    else {
+        editor = CodeMirror.fromTextArea(editArea[0], {
+            lineNumbers: true,
+        });
+        editor.on("change", function(cm, change){
+            editArea.val(cm.getValue());
+        });
+        editFilename = document.getElementById("file-name");
+        CodeMirror.on(editFilename, "change", function (e) {
+            editFilenameChange();
+        });
+        editFilenameChange();
+    }
+
+    (function ($, undefined) {
+        $.fn.getCursorPosition = function () {
+            var el = $(this).get(0);
+            var pos = 0;
+            if ('selectionStart' in el) {
+                pos = el.selectionStart;
+            } else if ('selection' in document) {
+                el.focus();
+                var Sel = document.selection.createRange();
+                var SelLength = document.selection.createRange().text.length;
+                Sel.moveStart('character', -el.value.length);
+                pos = Sel.text.length - SelLength;
+            }
+            return pos;
+        }
+    })(jQuery);
+
+    $('#file-name').keyup(function (e) {
+        var sections = $('.breadcrumb span.section');
+        var dividers = $('.breadcrumb div.divider');
+        if (e.keyCode == 8) {
+            if ($(this).getCursorPosition() == 0) {
+                if (sections.length > 0) {
+                    var value = sections.last().find('a').text();
+                    $(this).val(value + $(this).val());
+                    $(this)[0].setSelectionRange(value.length, value.length);
+                    sections.last().remove();
+                    dividers.last().remove();
+                }
+            }
+        }
+        if (e.keyCode == 191) {
+            var parts = $(this).val().split('/');
+            for (var i = 0; i < parts.length; ++i) {
+                var value = parts[i];
+                if (i < parts.length - 1) {
+                    if (value.length) {
+                        $('<span class="section"><a href="#">' + value + '</a></span>').insertBefore($(this));
+                        $('<div class="divider"> / </div>').insertBefore($(this));
+                    }
+                }
+                else {
+                    $(this).val(value);
+                }
+            }
+        }
+        var parts = [];
+        $('.breadcrumb span.section').each(function (i, element) {
+            element = $(element);
+            if (element.find('a').length) {
+                parts.push(element.find('a').text());
+            } else {
+                parts.push(element.text());
+            }
+        });
+        if ($(this).val())
+            parts.push($(this).val());
+        $('#tree-name').val(parts.join('/'));
+    });
+}
+
+function editFilenameChange() {
+    var val = editFilename.value, m, mode, spec, extension;
+    if (m = /.+\.([^.]+)$/.exec(val)) {
+        extension = m[1];
+        var info = CodeMirror.findModeByExtension(extension);
+        if (info) {
+            mode = info.mode;
+            spec = info.mime;
+        }
+    }
+    if (mode) {
+        editor.setOption("mode", spec);
+        CodeMirror.autoLoadMode(editor, mode);
+    }
+    if (extension == null || extension == "txt" || extension == "md") {
+        editor.setOption("lineWrapping", true);
+    }
+    else {
+        editor.setOption("lineWrapping", false);
+    }
+}
+
+function initQuickPull(){
+    $('.js-quick-pull-choice-option').change(function() {
+        quickPullChoiceChange();
+    });
+    quickPullChoiceChange();
+}
+
+function quickPullChoiceChange(){
+    var radio = $('.js-quick-pull-choice-option:checked');
+    if (radio.val() == 'commit-to-new-branch')
+        $('.quick-pull-branch-name').show();
+    else
+        $('.quick-pull-branch-name').hide();
 }
 
 function initOrganization() {
@@ -974,9 +1136,11 @@ $(document).ready(function () {
     initInstall();
     initRepository();
     initWiki();
+    initEditor();
     initOrganization();
     initWebhook();
     initAdmin();
+    initQuickPull();
 
     var routes = {
         'div.user.settings': initUserSettings,

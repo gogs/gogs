@@ -602,3 +602,23 @@ func IsErrTeamAlreadyExist(err error) bool {
 func (err ErrTeamAlreadyExist) Error() string {
 	return fmt.Sprintf("team already exists [org_id: %d, name: %s]", err.OrgID, err.Name)
 }
+
+// __________
+// \______   \ ____ ______   ____
+//  |       _// __ \\____ \ /  _ \
+//  |    |   \  ___/|  |_> >  <_> )
+//  |____|_  /\___  >   __/ \____/
+//         \/     \/|__|
+
+type ErrRepoFileAlreadyExist struct {
+	FileName string
+}
+
+func IsErrRepoFileAlreadyExist(err error) bool {
+	_, ok := err.(ErrRepoFileAlreadyExist)
+	return ok
+}
+
+func (err ErrRepoFileAlreadyExist) Error() string {
+	return fmt.Sprintf("Repo file already exists [file name: %s]", err.FileName)
+}

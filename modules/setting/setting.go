@@ -110,6 +110,7 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
+		MdFileExtensions       []string
 	}
 	RepoRootPath string
 	ScriptType   string
@@ -128,6 +129,7 @@ var (
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+		MdFileExtensions    []string
 	}
 
 	// Picture settings
