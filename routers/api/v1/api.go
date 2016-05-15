@@ -226,6 +226,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
+				m.Group("/access", func() {
+					m.Combo("").Get(repo.ListUserAccess).
+						Post(bind(auth.CreateAccessOption{}), repo.GiveUserAccess)
+					m.Delete("/:user", repo.RemoveUserAccess)
+				})
 				m.Group("/branches", func() {
 					m.Get("", repo.ListBranches)
 					m.Get("/:branchname", repo.GetBranch)
@@ -263,7 +268,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
 					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
-					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					m.Group("/orgs", func(){
+						m.Delete("/:orgname", admin.DeleteOrg)
+						m.Post("", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					})
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
 			})

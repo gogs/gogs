@@ -33,6 +33,11 @@ type CreateRepoForm struct {
 	Readme      string
 }
 
+type CreateAccessOption struct {
+	Username string `json:"username" binding:"Required"`
+}
+
+
 func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
