@@ -12,14 +12,14 @@ import (
 
 	"github.com/Unknwon/com"
 
+	api "github.com/gigforks/go-gogs-client"
 	git "github.com/gogits/git-module"
-	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/auth"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 const (
@@ -32,7 +32,7 @@ func Webhooks(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.hooks")
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["BaseLink"] = ctx.Repo.RepoLink
-	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "https://github.com/gogits/go-gogs-client/wiki/Repositories-Webhooks")
+	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "https://github.com/gigforks/go-gogs-client/wiki/Repositories-Webhooks")
 
 	ws, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {

@@ -18,7 +18,7 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 // workingPool represents a pool of working status which makes sure

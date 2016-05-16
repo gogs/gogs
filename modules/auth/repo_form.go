@@ -12,7 +12,7 @@ import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/models"
+	"github.com/gigforks/gogs/models"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -36,7 +36,6 @@ type CreateRepoForm struct {
 type CreateAccessOption struct {
 	Username string `json:"username" binding:"Required"`
 }
-
 
 func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)

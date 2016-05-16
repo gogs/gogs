@@ -10,8 +10,8 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/context"
 )
 
 func ServeData(ctx *context.Context, name string, reader io.Reader) error {

@@ -26,11 +26,11 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/modules/avatar"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/avatar"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/markdown"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 type UserType int

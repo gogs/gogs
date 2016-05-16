@@ -5,11 +5,11 @@
 package admin
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/setting"
+	"github.com/gigforks/gogs/routers"
 )
 
 const (

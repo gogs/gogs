@@ -1,7 +1,7 @@
 Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 =====================
 
-![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
+![](https://github.com/gigforks/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
 ##### Current version: 0.9.24
 
@@ -13,11 +13,11 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ### Important Notes
 
-1. **YOU MUST READ [Contributing Code](https://github.com/gogits/gogs/wiki/Contributing-Code) BEFORE STARTING TO WORK ON A PULL REQUEST**.
+1. **YOU MUST READ [Contributing Code](https://github.com/gigforks/gogs/wiki/Contributing-Code) BEFORE STARTING TO WORK ON A PULL REQUEST**.
 2. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
 3. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
 4. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
-5. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
+5. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gigforks/go-gogs-client/wiki).
 6. If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
 
 [简体中文](README_ZH.md)
@@ -70,7 +70,7 @@ There are 5 ways to install Gogs:
 - [Install from binary](http://gogs.io/docs/installation/install_from_binary.html)
 - [Install from source](http://gogs.io/docs/installation/install_from_source.html)
 - [Install from packages](http://gogs.io/docs/installation/install_from_packages.html)
-- [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
+- [Ship with Docker](https://github.com/gigforks/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
 ### Tutorials
@@ -125,9 +125,9 @@ There are 5 ways to install Gogs:
 ## Contributors
 
 - Ex-team members [@lunny](https://github.com/lunny), [@fuxiaohei](https://github.com/fuxiaohei) and [@slene](https://github.com/slene).
-- See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+- See [contributors page](https://github.com/gigforks/gogs/graphs/contributors) for full list of contributors.
 - See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
 
 ## License
 
-This project is under the MIT License. See the [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) file for the full license text.
+This project is under the MIT License. See the [LICENSE](https://github.com/gigforks/gogs/blob/master/LICENSE) file for the full license text.

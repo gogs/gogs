@@ -23,10 +23,10 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/process"
-	"github.com/gogits/gogs/modules/template/highlight"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/process"
+	"github.com/gigforks/gogs/modules/template/highlight"
 )
 
 type DiffLineType uint8
@@ -48,10 +48,10 @@ const (
 )
 
 type DiffLine struct {
-	LeftIdx       int
-	RightIdx      int
-	Type          DiffLineType
-	Content       string
+	LeftIdx  int
+	RightIdx int
+	Type     DiffLineType
+	Content  string
 }
 
 func (d *DiffLine) GetType() int {

@@ -14,13 +14,13 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/template"
-	"github.com/gogits/gogs/modules/template/highlight"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/markdown"
+	"github.com/gigforks/gogs/modules/template"
+	"github.com/gigforks/gogs/modules/template/highlight"
 )
 
 const (

@@ -24,9 +24,9 @@ import (
 	"github.com/go-xorm/xorm"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/process"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/process"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 const (

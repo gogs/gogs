@@ -27,14 +27,14 @@ import (
 	"github.com/mcuadros/go-version"
 	"gopkg.in/ini.v1"
 
+	api "github.com/gigforks/go-gogs-client"
 	git "github.com/gogits/git-module"
-	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/bindata"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/process"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/bindata"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/markdown"
+	"github.com/gigforks/gogs/modules/process"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 const (
