@@ -68,13 +68,15 @@
 						{{end}}
 					</div>
 					<span class="file">{{if $file.IsRenamed}}{{$file.OldName}} &rarr; {{end}}{{$file.Name}}</span>
-					<div class="ui right">
-						{{if $file.IsDeleted}}
-							<a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
-						{{else}}
-							<a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.SourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
-						{{end}}
-					</div>
+					{{if not $file.IsSubmodule}}
+						<div class="ui right">
+							{{if $file.IsDeleted}}
+								<a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+							{{else}}
+								<a class="ui basic tiny button" rel="nofollow" href="{{EscapePound $.SourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+							{{end}}
+						</div>
+					{{end}}
 				</h4>
 				<div class="ui attached table segment">
 					{{if not $file.IsRenamed}}
