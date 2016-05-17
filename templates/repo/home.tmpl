@@ -32,16 +32,18 @@
 				</div>
 			</div>
 			<div class="right fitted item">
-				{{if .NewFileLink}}
-					<form class="ui form inline-form" action="{{EscapePound .NewFileLink}}" method="get">
-						<button class="ui button" type="submit">
-							{{.i18n.Tr "repo.new_file"}}
-						</button>
-					</form>
-				{{end}}
 			</div>
-			{{if eq $n 0}}
-				<div class="right fitted item">
+			<div class="right fitted item">
+				<div id="file-buttons">
+					{{if .NewFileLink}}
+						<form class="ui form inline-form" action="{{EscapePound .NewFileLink}}" method="get">
+							<button class="ui button nowrap" type="submit">
+								<i class="fa fa-plus-square-o"></i> {{.i18n.Tr "repo.new_file"}}
+							</button>
+						</form>
+					{{end}}
+				</div>
+				{{if eq $n 0}}
 					<div class="ui action small input" id="clone-panel">
 						<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
 							{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
@@ -63,8 +65,8 @@
 							</div>
 						</div>
 					</div>
-				</div>
-			{{end}}
+				{{end}}
+			</div>
 		</div>
 		{{if .IsFile}}
 			{{template "repo/view_file" .}}

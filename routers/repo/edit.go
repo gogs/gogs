@@ -17,6 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/auth"
 	"path"
+	"github.com/gogits/gogs/modules/markdown"
 )
 
 const (
@@ -104,8 +105,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		treeNames = append(treeNames, "")
 	}
 
-	extension := strings.Replace(filepath.Ext(treeName), ".", "", 1)
-	if extension == "md" {
+	if markdown.IsMarkdownFile(treeName) {
 		ctx.Data["RequireSimpleMDE"] = true
 	} else {
 		ctx.Data["RequireCodeMirror"] = true

@@ -2858,3 +2858,9 @@ footer .ui.language .menu {
   margin-top: 3px;
   font-size: 12px;
 }
+.nowrap {
+  white-space: nowrap;
+}
+#file-buttons {
+  padding-right: 15px;
+}
