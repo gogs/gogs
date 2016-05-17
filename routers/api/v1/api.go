@@ -263,6 +263,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
 				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
+				m.Get("", admin.ListUsers)
 
 				m.Group("/:username", func() {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
@@ -277,6 +278,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 			})
 
 			m.Group("/orgs/:orgname", func() {
+				m.Group("/users", func() {
+					m.Post("", bind(api.AddUserOption{}), org.AddOrganizationUser)
+					m.Delete("/:user", org.RemoveOrganizationUser)
+				})
 				m.Group("/teams", func() {
 					m.Post("", OrgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
 				})
