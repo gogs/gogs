@@ -1,0 +1,37 @@
+version: '2'
+services:
+  postgres:
+    image: postgres:9.5
+    environment:
+     - "POSTGRES_USER=${POSTGRES_USER}"
+     - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+     - "POSTGRES_DB=gogs"
+    volumes:
+     - "db-data:/var/lib/postgresql/data"
+    networks:
+     - gogs
+  gogs:
+    image: gogs/gogs
+    ports:
+     - "10022:22"
+     - "3000:3000"
+    links:
+     - postgres
+    environment:
+     - "RUN_CROND=true"
+    networks:
+     - gogs
+    volumes:
+     - "gogs-data:/data"
+    depends_on:
+     - postgres
+
+networks:
+  gogs:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+  gogs-data:
+    driver: local
