@@ -64,11 +64,11 @@
 			return true;
 		});
 		$('#branch-dropdown input[name=search]').on('keyup', function(){
-			var query = $(this).val();
+			var query = $(this).val().toLowerCase();
 			if(query.length){
 				var unique = true;
 				$('#branch-dropdown #branch-list .item').each(function(i, item){
-					if($(item).text() == query){
+					if($(item).text().toLowerCase() == query){
 						unique = false;
 					}
 				});
