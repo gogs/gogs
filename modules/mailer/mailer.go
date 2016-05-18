@@ -36,11 +36,12 @@ func NewMessageFrom(to []string, from, subject, htmlbody string) *Message {
 	body, err := html2text.FromString(htmlbody)
 	if err != nil {
 		// TODO: report error ?
+		msg.SetBody("text/html", htmlbody)
+	} else {
+		msg.SetBody("text/plain", body)
+		// TODO: avoid this (use a configuration switch?)
+		msg.AddAlternative("text/html", htmlbody)
 	}
-	msg.SetBody("text/plain", body)
-
-	// TODO: avoid this (use a configuration switch?)
-	msg.AddAlternative("text/html", htmlbody)
 
 	return &Message{
 		Message: msg,
