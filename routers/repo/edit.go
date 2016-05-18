@@ -7,16 +7,14 @@ package repo
 import (
 	"io/ioutil"
 	"strings"
-	"path/filepath"
+	"path"
 
 	"github.com/gogits/git-module"
-
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/auth"
-	"path"
 	"github.com/gogits/gogs/modules/markdown"
 )
 
@@ -37,10 +35,10 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.Data["IsNewFile"] = isNewFile
 	ctx.Data["RequireHighlightJS"] = true
 
-	branchName := ctx.Repo.BranchName
-	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
+	branchName := ctx.Repo.BranchName
+	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	treeName := ctx.Repo.TreeName
 
 	if ! ctx.Repo.IsWriter() {
@@ -166,8 +164,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		treeNames = strings.Split(treeName, "/")
 	}
 
-	extension := strings.Replace(filepath.Ext(treeName), ".", "", 1)
-	if extension == "md" {
+	if markdown.IsMarkdownFile(treeName) {
 		ctx.Data["RequireSimpleMDE"] = true
 	} else {
 		ctx.Data["RequireCodeMirror"] = true
@@ -275,11 +272,12 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		return
 	}
 
-	if oldBranchName != branchName {
-		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + branchName))
-	} else {
+	// Leaving this off until forked repos that get a branch can compare with forks master and not upstream
+	//if oldBranchName != branchName {
+	//	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + branchName))
+	//} else {
 		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName))
-	}
+	//}
 }
 
 func EscapeUrl(str string) string {

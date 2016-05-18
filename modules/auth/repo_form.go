@@ -167,7 +167,7 @@ type CreateIssueForm struct {
 	MilestoneID int64
 	AssigneeID  int64
 	Content     string
-	Attachments []string
+	Files       []string
 }
 
 func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -177,7 +177,7 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 type CreateCommentForm struct {
 	Content     string
 	Status      string `binding:"OmitEmpty;In(reopen,close)"`
-	Attachments []string
+	Files       []string
 }
 
 func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -286,6 +286,35 @@ type EditRepoFileForm struct {
 }
 
 func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+//  ____ ___        .__                    .___
+// |    |   \______ |  |   _________     __| _/
+// |    |   /\____ \|  |  /  _ \__  \   / __ | 
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ | 
+// |______/  |   __/|____/\____(____  /\____ | 
+//           |__|                   \/      \/ 
+//
+
+type UploadRepoFileForm struct {
+	TreeName string `binding:MaxSize(500)"`
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage  string
+	CommitChoice string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	Files []string
+}
+
+func (f *UploadRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type UploadRemoveFileForm struct {
+	File string `binding:"Required;MaxSize(50)"`
+}
+
+func (f *UploadRemoveFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 

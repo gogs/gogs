@@ -149,6 +149,13 @@ var (
 	AttachmentMaxFiles     int
 	AttachmentEnabled      bool
 
+	// Repo Upload settings
+	UploadTempPath         string
+	UploadAllowedTypes 	string
+	UploadMaxSize      	int64
+	UploadMaxFiles     	int
+	UploadEnabled      	bool
+
 	// Time settings
 	TimeFormat string
 
@@ -388,8 +395,8 @@ func NewContext() {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
 	}
 	AttachmentAllowedTypes = strings.Replace(sec.Key("ALLOWED_TYPES").MustString("image/jpeg,image/png"), "|", ",", -1)
-	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(4)
-	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(5)
+	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(32)
+	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(10)
 	AttachmentEnabled = sec.Key("ENABLE").MustBool(true)
 
 	TimeFormat = map[string]string{
@@ -430,6 +437,16 @@ func NewContext() {
 	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
 	}
+
+	sec = Cfg.Section("upload")
+	UploadTempPath = sec.Key("UPLOAD_TEMP_PATH").MustString(path.Join(AppDataPath, "tmp/uploads"))
+	if !filepath.IsAbs(UploadTempPath) {
+		UploadTempPath = path.Join(workDir, UploadTempPath)
+	}
+	UploadAllowedTypes = strings.Replace(sec.Key("UPLOAD_ALLOWED_TYPES").MustString(""), "|", ",", -1)
+	UploadMaxSize = sec.Key("UPLOAD_FILE_MAX_SIZE").MustInt64(32)
+	UploadMaxFiles = sec.Key("UPLOAD_MAX_FILES").MustInt(10)
+	UploadEnabled = sec.Key("ENABLE_UPLOADS").MustBool(true)
 
 	// UI settings.
 	sec = Cfg.Section("ui")

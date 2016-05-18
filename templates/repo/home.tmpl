@@ -34,13 +34,16 @@
 			<div class="right fitted item">
 			</div>
 			<div class="right fitted item">
-				<div id="file-buttons">
+				<div id="file-buttons" class="ui buttons nowrap">
 					{{if .NewFileLink}}
-						<form class="ui form inline-form" action="{{EscapePound .NewFileLink}}" method="get">
-							<button class="ui button nowrap" type="submit">
-								<i class="icon fa fa-plus-square-o"></i> {{.i18n.Tr "repo.new_file"}}
-							</button>
-						</form>
+						<a href="{{EscapePound .NewFileLink}}" class="ui button nowrap">
+							<i class="icon fa fa-plus-square-o"></i> {{.i18n.Tr "repo.new_file"}}
+						</a>
+					{{end}}
+					{{if .UploadFileLink}}
+						<a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
+							<i class="icon fa fa-upload"></i> {{.i18n.Tr "repo.upload_file"}}
+						</a>
 					{{end}}
 				</div>
 				{{if eq $n 0}}

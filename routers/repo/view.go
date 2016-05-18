@@ -49,6 +49,7 @@ func Home(ctx *context.Context) {
 	editLink := ctx.Repo.RepoLink + "/edit/" + branchName
 	deleteLink := ctx.Repo.RepoLink + "/delete/" + branchName
 	newFileLink := ctx.Repo.RepoLink + "/new/" + branchName
+	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
 
 	// Get tree path
@@ -157,8 +158,11 @@ func Home(ctx *context.Context) {
 			if parentDir == "." {
 				parentDir = ""
 			}
-			if ctx.Repo.IsWriter() {
+			if ctx.Repo.IsWriter() && (! ctx.Repo.IsViewCommit) {
 				ctx.Data["NewFileLink"] = newFileLink + "/" + parentDir
+				if setting.UploadEnabled {
+					ctx.Data["UploadFileLink"] = uploadFileLink + "/" + parentDir
+				}
 			}
 		}
 	} else {
@@ -236,8 +240,11 @@ func Home(ctx *context.Context) {
 		}
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
-		if ctx.Repo.IsWriter() {
+		if ctx.Repo.IsWriter() && (! ctx.Repo.IsViewCommit) {
 			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
+			if setting.UploadEnabled {
+				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
+			}
 		}
 	}
 

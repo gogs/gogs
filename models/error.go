@@ -622,3 +622,27 @@ func IsErrRepoFileAlreadyExist(err error) bool {
 func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("Repo file already exists [file name: %s]", err.FileName)
 }
+
+//  ____ ___        .__                    .___
+// |    |   \______ |  |   _________     __| _/
+// |    |   /\____ \|  |  /  _ \__  \   / __ |
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |
+// |______/  |   __/|____/\____(____  /\____ |
+//           |__|                   \/      \/
+//
+
+type ErrUploadNotExist struct {
+	ID     int64
+	UUID   string
+	UserID int64
+	RepoID int64
+}
+
+func IsErrUploadNotExist(err error) bool {
+	_, ok := err.(ErrAttachmentNotExist)
+	return ok
+}
+
+func (err ErrUploadNotExist) Error() string {
+	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
+}

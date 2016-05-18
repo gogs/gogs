@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="repository file edit">
+<div class="repository file upload">
 	{{template "repo/header" .}}
 	<div class="ui container">
 		{{.branchName}}
@@ -8,41 +8,32 @@
 			{{.CsrfTokenHtml}}
 			<div class="ui secondary menu">
 				<div class="item fitted">
-					<div class="ui breadcrumb field{{if .Err_Filename}} error{{end}}">
+					<div class="ui breadcrumb field{{if .Err_Directory}} error{{end}}">
 						<a class="section" href="{{EscapePound $.BranchLink}}">{{.Repository.Name}}</a>
 						{{ $n := len .TreeNames}}
 						{{ $l := Subtract $n 1}}
 						{{range $i, $v := .TreeNames}}
 							<div class="divider"> / </div>
 							{{if eq $i $l}}
-								<input type="text" id="file-name" value="{{$v}}" placeholder="{{$.i18n.Tr "repo.name_your_file"}}" required> <span class="octicon octicon-info poping up" data-content="{{$.i18n.Tr "repo.filename_help"}}" data-position="bottom center" data-variation="tiny"></span>
+								<input type="text" id="file-name" value="{{$v}}" placeholder="{{$.i18n.Tr "repo.add_subdir"}}">
 							{{else}}
 								<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $v}}">{{$v}}</a></span>
 							{{end}}
 						{{end}}
-						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}" required>
+						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}">
 					</div>
 				</div>
 			</div>
-			<input type="hidden" name="is_new_file" value="{{.IsNewFile}}">
-			<div class="field">
-				<div class="ui top attached tabular menu" data-write="write" data-preview="preview">
-					<a class="active item" data-tab="write"><i class="icon octicon octicon-code"></i> {{.i18n.Tr "repo.edit_file"}}</a>
-					<a class="item" data-tab="preview" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}"><i class="icon octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
-				</div>
-				<div class="ui bottom attached active tab segment" data-tab="write">
-					<textarea id=edit-area name="content" editor="{{if .RequireSimpleMDE}}SimpleMDE{{else}}CodeMirror{{end}}" data-context="{{.RepoLink}}"  tabindex="4" autofocus>{{.FileContent}}</textarea required>
-				</div>
-				<div class="ui bottom attached tab segment markdown" data-tab="preview">
-					{{.i18n.Tr "repo.release.loading"}}
-				</div>
+			<div class="field ui upload">
+				<div class="files"></div>
+				<div class="ui basic button dropzone" id="dropzone" data-upload-url="{{.RepoLink}}/upload-file" data-remove-url="{{.RepoLink}}/upload-remove" data-csrf="{{.CsrfToken}}" data-accepts="{{.UploadAllowedTypes}}" data-max-file="{{.UploadMaxFiles}}" data-max-size="{{.UploadMaxSize}}" data-default-message="{{.i18n.Tr "dropzone.default_message"}}" data-invalid-input-type="{{.i18n.Tr "dropzone.invalid_input_type"}}" data-file-too-big="{{.i18n.Tr "dropzone.file_too_big"}}" data-remove-file="{{.i18n.Tr "dropzone.remove_file"}}"></div>
 			</div>
 			<div class="commit-form-wrapper">
 				<img width="48" height="48" class="ui rounded image commit-form-avatar" src="{{.SignedUser.AvatarLink}}">
 				<div class="commit-form">
 					<h3>{{.i18n.Tr "repo.commit_changes"}}</h3>
 					<div class="field">
-						<input name="commit_summary" placeholder="{{if .IsNewFile}}{{.i18n.Tr "repo.add"}} '{{.TreeName}}/<filename>'{{else}}{{.i18n.Tr "repo.update"}} '{{.TreeName}}'{{end}}" value="{{.CommitSummary}}">
+						<input name="commit_summary" placeholder="{{.i18n.Tr "repo.add_files_to_dir" .TreeName}}" value="{{.CommitSummary}}">
 					</div>
 					<div class="field">
 						<textarea name="commit_message" placeholder="{{.i18n.Tr "repo.default_commit_message"}}">{{.CommitMessage}}</textarea>

@@ -31,7 +31,7 @@
 			</div>
 			<div id="branch-list" class="scrolling menu" {{if .IsViewTag}}style="display: none"{{end}}>
 				{{range .Branches}}
-					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}">{{.}}</div>
+					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}{{if $.TreeName}}/{{EscapePound $.TreeName}}{{end}}">{{.}}</div>
 				{{end}}
 				{{if .IsWriter}}
 				<a href="javascript:void(0)" id="new-branch-item">
@@ -49,7 +49,7 @@
 			</div>
 			<div id="tag-list" class="scrolling menu" {{if not .IsViewTag}}style="display: none"{{end}}>
 				{{range .Tags}}
-					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}">{{.}}</div>
+					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}{{if $.TreeName}}/{{EscapePound $.TreeName}}{{end}}">{{.}}</div>
 				{{end}}
 			</div>
 		</div>
