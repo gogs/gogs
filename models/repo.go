@@ -2319,11 +2319,8 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 	// Copy uploaded files into repository.
 	for _, uuid := range uuids {
 		upload, err := getUpload(uuid, doer.Id, repo.ID)
-		log.Debug("HERE: "+uuid)
 		if err != nil {
-			log.Debug("HERE2: "+uuid)
 			if IsErrUploadNotExist(err) {
-				log.Debug("HERE3: "+uuid)
 				continue
 			}
 			return fmt.Errorf("getUpload[%s]: %v", uuid, err)

@@ -647,6 +647,7 @@ function initFilenameSelector(){
                     else {
                         $(this).val(value);
                     }
+                    $(this)[0].setSelectionRange(0, 0);
                 }
             }
             var parts = [];
