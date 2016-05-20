@@ -1060,14 +1060,14 @@ func CountPublicRepositories() int64 {
 	return countRepositories(false)
 }
 
-func Repositories(page, pageSize int) (_ []*Repository, err error) {
+func Repositories(page, pageSize int, _ bool) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
 	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
 // RepositoriesWithUsers returns number of repos in given page.
-func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
-	repos, err := Repositories(page, pageSize)
+func RepositoriesWithUsers(page, pageSize int, _ bool) (_ []*Repository, err error) {
+	repos, err := Repositories(page, pageSize, false)
 	if err != nil {
 		return nil, fmt.Errorf("Repositories: %v", err)
 	}
@@ -1490,9 +1490,9 @@ func GetRepositories(uid int64, private bool) ([]*Repository, error) {
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err error) {
+func GetRecentUpdatedRepositories(page, pageSize int, private bool) (repos []*Repository, err error) {
 	return repos, x.Limit(pageSize, (page-1)*pageSize).
-		Where("is_private=?", false).Limit(pageSize).Desc("updated_unix").Find(&repos)
+		Limit(pageSize).Desc("updated_unix").Find(&repos)
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {

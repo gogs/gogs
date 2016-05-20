@@ -46,7 +46,7 @@ func Home(ctx *context.Context) {
 
 type RepoSearchOptions struct {
 	Counter  func() int64
-	Ranger   func(int, int) ([]*models.Repository, error)
+	Ranger   func(int, int, bool) ([]*models.Repository, error)
 	Private  bool
 	PageSize int
 	OrderBy  string
@@ -67,7 +67,7 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 
 	keyword := ctx.Query("q")
 	if len(keyword) == 0 {
-		repos, err = opts.Ranger(page, opts.PageSize)
+		repos, err = opts.Ranger(page, opts.PageSize, ctx.QueryInt("private") == 1)
 		if err != nil {
 			ctx.Handle(500, "opts.Ranger", err)
 			return
@@ -77,7 +77,7 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 		repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
 			Keyword:  keyword,
 			OrderBy:  opts.OrderBy,
-			Private:  opts.Private,
+			Private:  ctx.QueryInt("private") == 1,
 			Page:     page,
 			PageSize: opts.PageSize,
 		})
