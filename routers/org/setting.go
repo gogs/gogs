@@ -83,8 +83,8 @@ func SettingsPost(ctx *context.Context, form auth.UpdateOrgSettingForm) {
 	ctx.Redirect(ctx.Org.OrgLink + "/settings")
 }
 
-func SettingsAvatar(ctx *context.Context, form auth.UploadAvatarForm) {
-	form.Enable = true
+func SettingsAvatar(ctx *context.Context, form auth.AvatarForm) {
+	form.Source = auth.AVATAR_LOCAL
 	if err := user.UpdateAvatarSetting(ctx, form, ctx.Org.Organization); err != nil {
 		ctx.Flash.Error(err.Error())
 	} else {

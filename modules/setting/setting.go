@@ -25,6 +25,8 @@ import (
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/user"
+
+	"strk.kbt.io/projects/go/libravatar"
 )
 
 type Scheme string
@@ -135,6 +137,7 @@ var (
 	AvatarUploadPath string
 	GravatarSource   string
 	DisableGravatar  bool
+	LibravatarService *libravatar.Libravatar
 
 	// Log settings
 	LogRootPath string
@@ -468,6 +471,16 @@ func NewContext() {
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
 	if OfflineMode {
 		DisableGravatar = true
+	}
+	if ( ! DisableGravatar ) {
+		LibravatarService = libravatar.New()
+		parts := strings.Split(GravatarSource, "/")
+		if len(parts) >= 3 {
+			if parts[0] == "https:" {
+				LibravatarService.SetUseHTTPS( true )
+			}
+			LibravatarService.SetFallbackHost( parts[2] )
+		}
 	}
 
 	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
