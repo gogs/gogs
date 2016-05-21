@@ -93,19 +93,25 @@ type UpdateProfileForm struct {
 	Email    string `binding:"Required;Email;MaxSize(254)"`
 	Website  string `binding:"Url;MaxSize(100)"`
 	Location string `binding:"MaxSize(50)"`
-	Gravatar string `binding:"OmitEmpty;Email;MaxSize(254)"`
 }
 
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type UploadAvatarForm struct {
-	Enable bool
+const (
+	AVATAR_LOCAL string = "local"
+	AVATAR_BYMAIL string = "bymail"
+)
+
+type AvatarForm struct {
+	Source string
 	Avatar *multipart.FileHeader
+	Gravatar string `binding:"OmitEmpty;Email;MaxSize(254)"`
+	Federavatar bool
 }
 
-func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *AvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 

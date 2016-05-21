@@ -91,10 +91,6 @@ func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 	ctx.User.Email = form.Email
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
-	if len(form.Gravatar) > 0 {
-		ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
-		ctx.User.AvatarEmail = form.Gravatar
-	}
 	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
 		return
@@ -106,8 +102,13 @@ func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 }
 
 // FIXME: limit size.
-func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUser *models.User) error {
-	ctxUser.UseCustomAvatar = form.Enable
+func UpdateAvatarSetting(ctx *context.Context, form auth.AvatarForm, ctxUser *models.User) error {
+	ctxUser.UseCustomAvatar = ( form.Source == auth.AVATAR_LOCAL )
+	ctxUser.UseFederatedAvatar = form.Federavatar
+	if len(form.Gravatar) > 0 {
+		ctxUser.Avatar = base.EncodeMD5(form.Gravatar)
+		ctxUser.AvatarEmail = form.Gravatar
+	}
 
 	if form.Avatar != nil {
 		fr, err := form.Avatar.Open()
@@ -129,7 +130,7 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 	} else {
 		// No avatar is uploaded but setting has been changed to enable,
 		// generate a random one when needed.
-		if form.Enable && !com.IsFile(ctxUser.CustomAvatarPath()) {
+		if ctxUser.UseCustomAvatar && !com.IsFile(ctxUser.CustomAvatarPath()) {
 			if err := ctxUser.GenerateRandomAvatar(); err != nil {
 				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.ID, err)
 			}
@@ -143,7 +144,7 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 	return nil
 }
 
-func SettingsAvatar(ctx *context.Context, form auth.UploadAvatarForm) {
+func SettingsAvatar(ctx *context.Context, form auth.AvatarForm) {
 	if err := UpdateAvatarSetting(ctx, form, ctx.User); err != nil {
 		ctx.Flash.Error(err.Error())
 	} else {
