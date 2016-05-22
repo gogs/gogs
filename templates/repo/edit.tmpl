@@ -6,6 +6,7 @@
 		{{template "base/alert" .}}
 		<form class="ui comment form" action="{{EscapePound $.Link}}" method="post">
 			{{.CsrfTokenHtml}}
+			<input type="hidden" name="last_commit" value="{{.LastCommit}}">
 			<div class="ui secondary menu">
 				<div class="item fitted">
 					<div class="ui breadcrumb field{{if .Err_Filename}} error{{end}}">

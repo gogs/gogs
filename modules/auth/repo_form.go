@@ -283,6 +283,7 @@ type EditRepoFileForm struct {
 	CommitMessage  string
 	CommitChoice string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	LastCommit string
 }
 
 func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
