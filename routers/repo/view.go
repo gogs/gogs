@@ -21,6 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
+	"github.com/gogits/gogs/modules/yaml"
 )
 
 const (
@@ -105,7 +106,9 @@ func Home(ctx *context.Context) {
 				readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
 				ctx.Data["ReadmeExist"] = readmeExist
 				if readmeExist {
-					ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+					yamlHtml := yaml.RenderYamlHtmlTable(buf)
+					markdownBody := markdown.Render(yaml.StripYamlFromText(buf), path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas())
+					ctx.Data["FileContent"] = string(append(yamlHtml, markdownBody...))
 				} else {
 					if err, content := template.ToUtf8WithErr(buf); err != nil {
 						if err != nil {

@@ -26,7 +26,9 @@
 	<div class="ui attached table segment">
 		<div class="file-view {{if .ReadmeExist}}markdown{{else if .IsFileText}}code-view{{end}} has-emoji">
 			{{if .ReadmeExist}}
+				<article class="markdown-body" itemprop="text">
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
+				</article>
 			{{else if not .IsFileText}}
 				<div class="view-raw ui center">
 					{{if .IsImageFile}}
