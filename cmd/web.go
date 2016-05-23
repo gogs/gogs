@@ -212,6 +212,10 @@ func runWeb(ctx *cli.Context) {
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
 		m.Get("/sign_up", user.SignUp)
 		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
+		m.Group("/oauth", func() {
+			m.Get("/authorize", user.OauthAuthorize)
+			m.Get("/redirect", user.OauthRedirect)
+		})
 		m.Get("/reset_password", user.ResetPasswd)
 		m.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)

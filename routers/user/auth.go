@@ -8,7 +8,13 @@ import (
 	"fmt"
 	"net/url"
 
+	"encoding/json"
+	"net/http"
+	"strings"
+
 	"github.com/go-macaron/captcha"
+	"golang.org/x/oauth2"
+	// "fmt"
 
 	"github.com/gigforks/gogs/models"
 	"github.com/gigforks/gogs/modules/auth"
@@ -235,6 +241,99 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterFo
 	}
 
 	ctx.Redirect(setting.AppSubUrl + "/user/login")
+}
+func OauthAuthorize(ctx *context.Context) {
+
+	ctx.Data["Title"] = ctx.Tr("oauth/authorize")
+	conf := &oauth2.Config{
+		ClientID:     setting.Cfg.Section("oauth").Key("CLIENTID").String(),
+		ClientSecret: setting.Cfg.Section("oauth").Key("CLIENTSECRET").String(),
+		RedirectURL:  setting.Cfg.Section("oauth").Key("REDIRECTURL").String(),
+		Scopes:       []string{setting.Cfg.Section("oauth").Key("SCOPE").String()},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  setting.Cfg.Section("oauth").Key("AUTHURL").String(),
+			TokenURL: setting.Cfg.Section("oauth").Key("TOKENURL").String(),
+		},
+	}
+	random := base.GetRandomString(10)
+	err := ctx.Session.Set("state", random)
+	if err != nil {
+		ctx.Handle(500, "error in session", err)
+	}
+	url := conf.AuthCodeURL(random, oauth2.AccessTypeOnline)
+	ctx.Redirect(setting.AppSubUrl + url)
+}
+
+func OauthRedirect(ctx *context.Context) {
+	//request token using code
+	code := ctx.Query("code")
+
+	v := url.Values{}
+	v.Add("code", code)
+	v.Add("client_id", setting.Cfg.Section("oauth").Key("CLIENTID").String())
+	v.Add("client_secret", setting.Cfg.Section("oauth").Key("CLIENTSECRET").String())
+	v.Add("redirect_uri", setting.Cfg.Section("oauth").Key("REDIRECTURL").String())
+	v.Add("state", ctx.Session.Get("state").(string))
+	tokenResponse, err := http.Post(setting.Cfg.Section("oauth").Key("TOKENURL").String(), "application/x-www-form-urlencoded", strings.NewReader(v.Encode()))
+
+	if err != nil {
+		ctx.Handle(500, "post to token url", err)
+	}
+
+	type responseData struct {
+		AccessToken string            `json:"access_token"`
+		TokenType   string            `json:"token_type"`
+		Scope       string            `json:"scope"`
+		Info        map[string]string `json:"info"`
+	}
+	data := responseData{}
+	decoder := json.NewDecoder(tokenResponse.Body)
+	decoder.Decode(&data)
+
+	//get info and set proper variables
+	if  data.AccessToken == "" {
+		ctx.HandleText(500, "client error")
+	}
+	username := data.Info["username"]
+	// client := http.Client{}
+	// req, err := http.NewRequest("GET", fmt.Sprintf("https://itsyou.online/users/%s/info", username), nil)
+	// req.Header.Add("Accept", "application/json")
+	// req.Header.Add("Authorize", fmt.Sprintf("token %s", accessToken))
+	// infoResponse, err := client.Do(req)
+	// infobd, _ := ioutil.ReadAll(infoResponse.Body)
+	passwd := base.GetRandomString(20)
+
+	//add to cookies and check user existence
+	u := &models.User{
+		Name:     username,
+		Email:    fmt.Sprintf("%s@itsyou.online", username),
+		Passwd:   passwd,
+		IsActive: !setting.Service.RegisterEmailConfirm,
+	}
+
+	err = models.CreateUser(u)
+
+	if err != nil && models.IsErrUserAlreadyExist(err) == false {
+		ctx.Handle(500, "create_user_oauth", err)
+	}
+
+	// Auto-set admin for the only user.
+	if models.CountUsers() == 1 {
+		u.IsAdmin = true
+		u.IsActive = true
+		if err := models.UpdateUser(u); err != nil {
+			ctx.Handle(500, "UpdateUser", err)
+			return
+		}
+	}
+
+	log.Trace("Account created: %s", u.Name)
+	usr, _ := models.GetUserByName(u.Name)
+	usr.IsActive = true
+	ctx.Session.Set("uid", usr.Id)
+	ctx.Session.Set("uname", usr.Name)
+
+	ctx.Redirect(setting.AppUrl)
 }
 
 func Activate(ctx *context.Context) {
