@@ -2714,7 +2714,6 @@ footer .ui.language .menu {
 .ui.form .breadcrumb input {
   min-height: 34px;
   padding: 7px 8px;
-  font-size: 13px;
   color: #333;
   vertical-align: middle;
   background-color: #fff;
@@ -2863,4 +2862,11 @@ footer .ui.language .menu {
 }
 #file-buttons {
   padding-right: 15px;
+}
+.ui.breadcrumb {
+  font-size: 1.5em;
+  color: #767676;
+}
+.ui.breadcrumb.field {
+  margin-bottom: 10px !important;
 }

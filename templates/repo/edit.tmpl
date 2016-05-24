@@ -21,6 +21,7 @@
 								<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $v}}">{{$v}}</a></span>
 							{{end}}
 						{{end}}
+						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreeName}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
 						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}" required>
 					</div>
 				</div>
