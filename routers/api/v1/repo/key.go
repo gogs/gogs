@@ -61,6 +61,14 @@ func GetDeployKey(ctx *context.APIContext) {
 	ctx.JSON(200, convert.ToDeployKey(apiLink, key))
 }
 
+func HandleCheckGPGKeyStringError(ctx *context.APIContext, err error) {
+	//TODO Implement
+}
+
+func HandleAddGPGKeyError(ctx *context.APIContext, err error) {
+	//TODO Implement
+}
+
 func HandleCheckKeyStringError(ctx *context.APIContext, err error) {
 	if models.IsErrKeyUnableVerify(err) {
 		ctx.Error(422, "", "Unable to verify key content")
