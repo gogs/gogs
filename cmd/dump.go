@@ -28,7 +28,8 @@ It can be used for backup and capture Gogs server image to send to maintainer`,
 	Action: runDump,
 	Flags: []cli.Flag{
 		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
-		boolFlag("verbose, v", "show process details"),
+		boolFlag("verbose, v", "Show process details"),
+		stringFlag("tempdir, t", os.TempDir(), "Temporary dir path"),
 	},
 }
 
@@ -40,7 +41,11 @@ func runDump(ctx *cli.Context) error {
 	models.LoadConfigs()
 	models.SetEngine()
 
-	TmpWorkDir, err := ioutil.TempDir(os.TempDir(), "gogs-dump-")
+	tmpDir := ctx.String("tempdir")
+	if _, err := os.Stat(tmpDir); os.IsNotExist(err) {
+		log.Fatalf("Path does not exist: %s", tmpDir)
+	}
+	TmpWorkDir, err := ioutil.TempDir(tmpDir, "gogs-dump-")
 	if err != nil {
 		log.Fatalf("Fail to create tmp work directory: %v", err)
 	}
