@@ -6,7 +6,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 func init() {

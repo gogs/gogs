@@ -7,19 +7,19 @@ package repo
 import (
 	"fmt"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gigforks/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/setting"
+	"github.com/gigforks/gogs/routers/api/v1/convert"
 )
 
 func composeDeployKeysAPILink(repoPath string) string {
 	return setting.AppUrl + "api/v1/repos/" + repoPath + "/keys/"
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
+// https://github.com/gigforks/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
 func ListDeployKeys(ctx *context.APIContext) {
 	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
 	if err != nil {
@@ -40,7 +40,7 @@ func ListDeployKeys(ctx *context.APIContext) {
 	ctx.JSON(200, &apiKeys)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
+// https://github.com/gigforks/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
 func GetDeployKey(ctx *context.APIContext) {
 	key, err := models.GetDeployKeyByID(ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -80,7 +80,7 @@ func HandleAddKeyError(ctx *context.APIContext, err error) {
 	}
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
+// https://github.com/gigforks/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
 func CreateDeployKey(ctx *context.APIContext, form api.CreateKeyOption) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
@@ -99,7 +99,7 @@ func CreateDeployKey(ctx *context.APIContext, form api.CreateKeyOption) {
 	ctx.JSON(201, convert.ToDeployKey(apiLink, key))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
+// https://github.com/gigforks/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
 func DeleteDeploykey(ctx *context.APIContext) {
 	if err := models.DeleteDeployKey(ctx.User, ctx.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {

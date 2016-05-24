@@ -7,7 +7,7 @@ package models
 import (
 	"fmt"
 
-	"github.com/gogits/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/log"
 )
 
 type AccessMode int

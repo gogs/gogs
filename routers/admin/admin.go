@@ -13,13 +13,13 @@ import (
 	"github.com/Unknwon/com"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/cron"
-	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/process"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/cron"
+	"github.com/gigforks/gogs/modules/mailer"
+	"github.com/gigforks/gogs/modules/process"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 const (

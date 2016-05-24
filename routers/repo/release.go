@@ -7,12 +7,12 @@ package repo
 import (
 	"fmt"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/auth"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/markdown"
 )
 
 const (

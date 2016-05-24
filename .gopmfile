@@ -1,5 +1,5 @@
 [target]
-path = github.com/gogits/gogs
+path = github.com/gigforks/gogs
 
 [deps]
 github.com/bradfitz/gomemcache = commit:fb1f79c
@@ -16,10 +16,10 @@ github.com/go-macaron/toolbox = commit:82b5115
 github.com/go-sql-driver/mysql = commit:66312f7
 github.com/go-xorm/core = commit:5021584
 github.com/go-xorm/xorm = commit:769f6b3
-github.com/gogits/chardet = commit:2404f77
-github.com/gogits/cron = commit:3abc0f8
+github.com/gigforks/chardet = commit:2404f77
+github.com/gigforks/cron = commit:3abc0f8
 github.com/gogits/git-module = commit:76e8cce
-github.com/gogits/go-gogs-client = commit:788ec59
+github.com/gigforks/go-gogs-client = commit:788ec59
 github.com/issue9/identicon = commit:f8c0d2c
 github.com/kardianos/minwinsvc = commit:cad6b2b
 github.com/klauspost/compress = commit:006acde

@@ -31,20 +31,20 @@ import (
 	"github.com/gogits/git-module"
 	"github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/bindata"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/template"
-	"github.com/gogits/gogs/routers"
-	"github.com/gogits/gogs/routers/admin"
-	apiv1 "github.com/gogits/gogs/routers/api/v1"
-	"github.com/gogits/gogs/routers/dev"
-	"github.com/gogits/gogs/routers/org"
-	"github.com/gogits/gogs/routers/repo"
-	"github.com/gogits/gogs/routers/user"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/auth"
+	"github.com/gigforks/gogs/modules/bindata"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/template"
+	"github.com/gigforks/gogs/routers"
+	"github.com/gigforks/gogs/routers/admin"
+	apiv1 "github.com/gigforks/gogs/routers/api/v1"
+	"github.com/gigforks/gogs/routers/dev"
+	"github.com/gigforks/gogs/routers/org"
+	"github.com/gigforks/gogs/routers/repo"
+	"github.com/gigforks/gogs/routers/user"
 )
 
 var CmdWeb = cli.Command{
@@ -88,7 +88,7 @@ func checkVersion() {
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
 		{"gopkg.in/macaron.v1", macaron.Version, "1.1.2"},
 		{"github.com/gogits/git-module", git.Version, "0.2.9"},
-		{"github.com/gogits/go-gogs-client", gogs.Version, "0.7.4"},
+		{"github.com/gigforks/go-gogs-client", gogs.Version, "0.7.4"},
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
@@ -212,6 +212,10 @@ func runWeb(ctx *cli.Context) {
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
 		m.Get("/sign_up", user.SignUp)
 		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
+		m.Group("/oauth", func() {
+			m.Get("/authorize", user.OauthAuthorize)
+			m.Get("/redirect", user.OauthRedirect)
+		})
 		m.Get("/reset_password", user.ResetPasswd)
 		m.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)

@@ -9,9 +9,9 @@ import (
 
 	"github.com/codegangsta/cli"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 var CmdUpdate = cli.Command{

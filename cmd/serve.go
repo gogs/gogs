@@ -17,11 +17,11 @@ import (
 	"github.com/codegangsta/cli"
 	gouuid "github.com/satori/go.uuid"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/httplib"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 const (

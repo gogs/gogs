@@ -28,13 +28,19 @@
 					<div class="inline field">
 						<label></label>
 						<button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
-						<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
+						<span style="margin-right: 5px;">Or</span>
+						<form action="{{AppSubUrl}}/user/oauth/authorize">
+							<button class="ui blue button">itsyou.online</button>
+						</form>
+						<div class="center" style="margin-top: 10px;">
+							<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>	
+						</div>
 					</div>
 					{{if .ShowRegistrationButton}}
-						<div class="inline field">
-							<label></label>
-							<a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
-						</div>
+					<div class="inline field">
+						<label></label>
+						<a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
+					</div>
 					{{end}}
 				</div>
 			</form>

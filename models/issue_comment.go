@@ -12,7 +12,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 
-	"github.com/gogits/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/log"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.

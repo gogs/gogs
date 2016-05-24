@@ -17,8 +17,8 @@ import (
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	"github.com/gogits/gogs/models/migrations"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/models/migrations"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 // Engine represents a xorm engine or session.

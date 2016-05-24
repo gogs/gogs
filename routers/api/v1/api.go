@@ -10,16 +10,16 @@ import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gigforks/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/admin"
-	"github.com/gogits/gogs/routers/api/v1/misc"
-	"github.com/gogits/gogs/routers/api/v1/org"
-	"github.com/gogits/gogs/routers/api/v1/repo"
-	"github.com/gogits/gogs/routers/api/v1/user"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/auth"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/routers/api/v1/admin"
+	"github.com/gigforks/gogs/routers/api/v1/misc"
+	"github.com/gigforks/gogs/routers/api/v1/org"
+	"github.com/gigforks/gogs/routers/api/v1/repo"
+	"github.com/gigforks/gogs/routers/api/v1/user"
 )
 
 func RepoAssignment() macaron.Handler {
@@ -226,6 +226,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
+				m.Group("/access", func() {
+					m.Combo("").Get(repo.ListUserAccess).
+						Post(bind(auth.CreateAccessOption{}), repo.GiveUserAccess)
+					m.Delete("/:user", repo.RemoveUserAccess)
+				})
 				m.Group("/branches", func() {
 					m.Get("", repo.ListBranches)
 					m.Get("/:branchname", repo.GetBranch)
@@ -258,17 +263,25 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
 				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
+				m.Get("", admin.ListUsers)
 
 				m.Group("/:username", func() {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
 					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
-					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					m.Group("/orgs", func() {
+						m.Delete("/:orgname", admin.DeleteOrg)
+						m.Post("", bind(api.CreateOrgOption{}), admin.CreateOrg)
+					})
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
 			})
 
 			m.Group("/orgs/:orgname", func() {
+				m.Group("/users", func() {
+					m.Post("", bind(api.AddUserOption{}), org.AddOrganizationUser)
+					m.Delete("/:user", org.RemoveOrganizationUser)
+				})
 				m.Group("/teams", func() {
 					m.Post("", OrgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
 				})

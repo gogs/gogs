@@ -9,12 +9,12 @@ import (
 
 	"github.com/Unknwon/com"
 
+	api "github.com/gigforks/go-gogs-client"
 	"github.com/gogits/git-module"
-	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 func ToUser(u *models.User) *api.User {

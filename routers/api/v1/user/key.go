@@ -5,13 +5,13 @@
 package user
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gigforks/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/api/v1/repo"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/modules/setting"
+	"github.com/gigforks/gogs/routers/api/v1/convert"
+	"github.com/gigforks/gogs/routers/api/v1/repo"
 )
 
 func GetUserByParamsName(ctx *context.APIContext, name string) *models.User {
@@ -52,12 +52,12 @@ func listPublicKeys(ctx *context.APIContext, uid int64) {
 	ctx.JSON(200, &apiKeys)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-your-public-keys
+// https://github.com/gigforks/go-gogs-client/wiki/Users-Public-Keys#list-your-public-keys
 func ListMyPublicKeys(ctx *context.APIContext) {
 	listPublicKeys(ctx, ctx.User.Id)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-public-keys-for-a-user
+// https://github.com/gigforks/go-gogs-client/wiki/Users-Public-Keys#list-public-keys-for-a-user
 func ListPublicKeys(ctx *context.APIContext) {
 	user := GetUserByParams(ctx)
 	if ctx.Written() {
@@ -66,7 +66,7 @@ func ListPublicKeys(ctx *context.APIContext) {
 	listPublicKeys(ctx, user.Id)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#get-a-single-public-key
+// https://github.com/gigforks/go-gogs-client/wiki/Users-Public-Keys#get-a-single-public-key
 func GetPublicKey(ctx *context.APIContext) {
 	key, err := models.GetPublicKeyByID(ctx.ParamsInt64(":id"))
 	if err != nil {
@@ -99,12 +99,12 @@ func CreateUserPublicKey(ctx *context.APIContext, form api.CreateKeyOption, uid 
 	ctx.JSON(201, convert.ToPublicKey(apiLink, key))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
+// https://github.com/gigforks/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
 func CreatePublicKey(ctx *context.APIContext, form api.CreateKeyOption) {
 	CreateUserPublicKey(ctx, form, ctx.User.Id)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#delete-a-public-key
+// https://github.com/gigforks/go-gogs-client/wiki/Users-Public-Keys#delete-a-public-key
 func DeletePublicKey(ctx *context.APIContext) {
 	if err := models.DeletePublicKey(ctx.User, ctx.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {

@@ -5,15 +5,15 @@
 package admin
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gigforks/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/api/v1/user"
+	"github.com/gigforks/gogs/models"
+	"github.com/gigforks/gogs/modules/context"
+	"github.com/gigforks/gogs/routers/api/v1/convert"
+	"github.com/gigforks/gogs/routers/api/v1/user"
 )
 
-// https://github.com/gogits/go-gogs-client/wiki/Administration-Organizations#create-a-new-organization
+// https://github.com/gigforks/go-gogs-client/wiki/Administration-Organizations#create-a-new-organization
 func CreateOrg(ctx *context.APIContext, form api.CreateOrgOption) {
 	u := user.GetUserByParams(ctx)
 	if ctx.Written() {
@@ -41,4 +41,19 @@ func CreateOrg(ctx *context.APIContext, form api.CreateOrgOption) {
 	}
 
 	ctx.JSON(201, convert.ToOrganization(org))
+}
+
+func DeleteOrg(ctx *context.APIContext) {
+	org := user.GetUserByParamsName(ctx, ":orgname")
+
+	if ctx.Written() {
+		return
+	}
+
+	err := models.DeleteOrganization(org)
+
+	if err != nil {
+		ctx.Error(500, "", err)
+	}
+	ctx.Status(204)
 }

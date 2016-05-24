@@ -22,9 +22,9 @@ import (
 	_ "github.com/go-macaron/session/redis"
 	"gopkg.in/ini.v1"
 
-	"github.com/gogits/gogs/modules/bindata"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/user"
+	"github.com/gigforks/gogs/modules/bindata"
+	"github.com/gigforks/gogs/modules/log"
+	"github.com/gigforks/gogs/modules/user"
 )
 
 type Scheme string

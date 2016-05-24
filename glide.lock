@@ -36,13 +36,13 @@ imports:
   version: 502158401cde814951eae62f064d9e5ff39e13ce
 - name: github.com/go-xorm/xorm
   version: 769f6b3ae663248e8f1b1d8fecbe1eb26ac77ac7
-- name: github.com/gogits/chardet
+- name: github.com/gigforks/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
-- name: github.com/gogits/cron
+- name: github.com/gigforks/cron
   version: 3abc0f88f2062336bcc41b43a4febbd847a390ce
 - name: github.com/gogits/git-module
   version: 76e8cce6c7ef3ba1cf75752261c721ebf14cd129
-- name: github.com/gogits/go-gogs-client
+- name: github.com/gigforks/go-gogs-client
   version: 1da1834d366c2c0b0b4495d34089082f4e38aed5
 - name: github.com/issue9/identicon
   version: f8c0d2ce04db79c663b1da33d3a9f62be753ee88

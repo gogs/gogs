@@ -18,12 +18,12 @@ import (
 	"github.com/russross/blackfriday"
 	"golang.org/x/net/html"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gigforks/gogs/modules/base"
+	"github.com/gigforks/gogs/modules/setting"
 )
 
 const (
-	ISSUE_NAME_STYLE_NUMERIC = "numeric"
+	ISSUE_NAME_STYLE_NUMERIC      = "numeric"
 	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
 )
 
@@ -223,7 +223,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 
 	ms := pattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		if m[0] == ' ' || m[0] == '('  {
+		if m[0] == ' ' || m[0] == '(' {
 			m = m[1:] // ignore leading space or opening parentheses
 		}
 		var link string
