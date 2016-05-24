@@ -15,7 +15,6 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -105,11 +104,8 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		treeNames = append(treeNames, "")
 	}
 
-	if markdown.IsMarkdownFile(treeName) {
-		ctx.Data["RequireSimpleMDE"] = true
-	} else {
-		ctx.Data["RequireCodeMirror"] = true
-	}
+	ctx.Data["RequireSimpleMDE"] = true
+	ctx.Data["RequireCodeMirror"] = true
 
 	ctx.Data["UserName"] = userName
 	ctx.Data["RepoName"] = repoName
@@ -168,11 +164,8 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		treeNames = strings.Split(treeName, "/")
 	}
 
-	if markdown.IsMarkdownFile(treeName) {
-		ctx.Data["RequireSimpleMDE"] = true
-	} else {
-		ctx.Data["RequireCodeMirror"] = true
-	}
+	ctx.Data["RequireSimpleMDE"] = true
+	ctx.Data["RequireCodeMirror"] = true
 
 	ctx.Data["UserName"] = userName
 	ctx.Data["RepoName"] = repoName

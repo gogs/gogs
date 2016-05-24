@@ -516,10 +516,10 @@ function initWiki() {
     }
 }
 
-var editor;
+var editorType;
 var editArea;
 var editFilename;
-
+var editor;
 
 // For IE
 String.prototype.endsWith = function(pattern) {
@@ -527,77 +527,128 @@ String.prototype.endsWith = function(pattern) {
     return d >= 0 && this.lastIndexOf(pattern) === d;
 };
 
-function initEditor() {
+function initEditor(editorType) {
     editFilename = $("#file-name");
-    editArea = $('textarea#edit-area')
-    if(! editArea.length)
+    editArea = $('textarea#edit-area');
+
+    if (!editArea.length)
         return;
 
-    if(editArea.attr('editor') == 'SimpleMDE' && typeof loadedSimpleMDE != "undefined" && loadedSimpleMDE) {
-        var simplemde = new SimpleMDE({
-            autoDownloadFontAwesome: false,
-            element: editArea[0],
-            forceSync: true,
-            previewRender: function (plainText, preview) { // Async method
-                setTimeout(function () {
-                    // FIXME: still send render request when return back to edit mode
-                    $.post(editArea.data('url'), {
-                            "_csrf": csrf,
-                            "mode": "gfm",
-                            "context": editArea.data('context'),
-                            "text": plainText
-                        },
-                        function (data) {
-                            preview.innerHTML = '<div class="markdown">' + data + '</div>';
-                            emojify.run($('.editor-preview')[0]);
-                        }
-                    );
-                }, 0);
+    setEditor(editArea.attr('editor'));
 
-                return "Loading...";
-            },
-            renderingConfig: {
-                singleLineBreaks: false
-            },
-            spellChecker: false,
-            tabSize: 4,
-            toolbar: ["bold", "italic", "strikethrough", "|",
-                "heading", "heading-1", "heading-2", "heading-3", "|",
-                "code", "quote", "|",
-                "unordered-list", "ordered-list", "|",
-                "link", "image", "horizontal-rule", "|",
-                "preview", "fullscreen"]
-        })
-    }
-    else if(editArea.attr('editor') == 'CodeMirror' && typeof loadedCodeMirror != "undefined" && loadedCodeMirror) {
-        editor = CodeMirror.fromTextArea(editArea[0], {
-            lineNumbers: true,
-        });
-        editor.on("change", function(cm, change){
-            editArea.val(cm.getValue());
-        });
-        editFilename.on("change", function (e) {
-            var val = editFilename.val(), m, mode, spec, extension;
-            if (m = /.+\.([^.]+)$/.exec(val)) {
-                extension = m[1];
+    editFilename.on("keyup", function (e) {
+        var val = editFilename.val(), m, mode, spec, extension;
+        if (m = /.+\.([^.]+)$/.exec(val)) {
+            extension = m[1];
+            if (extension == "md") {
+                if(editorType != "SimpleMDE")
+                    setSimpleMDE();
+                return;
+            }
+            else if(typeof loadedCodeMirror != "undefined" && loadedCodeMirror) {
                 var info = CodeMirror.findModeByExtension(extension);
                 if (info) {
                     mode = info.mode;
                     spec = info.mime;
                 }
             }
-            if (mode) {
-                editor.setOption("mode", spec);
-                CodeMirror.autoLoadMode(editor, mode);
-            }
-            if (extension == null || extension == "txt" || extension == "md") {
-                editor.setOption("lineWrapping", true);
-            }
-            else {
-                editor.setOption("lineWrapping", false);
-            }
-        }).trigger('change');
+        }
+        if(editorType != "CodeMirror"){
+            setCodeMirror();
+        }
+        if (mode) {
+            editor.setOption("mode", spec);
+            CodeMirror.autoLoadMode(editor, mode);
+        }
+        if (extension == null || extension == "txt" || extension == "md") {
+            editor.setOption("lineWrapping", true);
+        }
+        else {
+            editor.setOption("lineWrapping", false);
+        }
+    });
+}
+
+function setEditor(type) {
+    if (! type || type == editorType) {
+        return;
     }
+    if (type == "SimpleMDE") {
+        return setSimpleMDE();
+    } else {
+        return setCodeMirror();
+    }
+}
+
+function setSimpleMDE() {
+    if(typeof loadedSimpleMDE == "undefined" || ! loadedSimpleMDE) {
+        return false;
+    }
+
+    if(editor) {
+        editor.toTextArea();
+        editor == null;
+    }
+
+    editorType = "SimpleMDE";
+    editor = new SimpleMDE({
+        autoDownloadFontAwesome: false,
+        element: editArea[0],
+        forceSync: true,
+        previewRender: function (plainText, preview) { // Async method
+            setTimeout(function () {
+                // FIXME: still send render request when return back to edit mode
+                $.post(editArea.data('url'), {
+                        "_csrf": csrf,
+                        "mode": "gfm",
+                        "context": editArea.data('context'),
+                        "text": plainText
+                    },
+                    function (data) {
+                        preview.innerHTML = '<div class="markdown">' + data + '</div>';
+                        emojify.run($('.editor-preview')[0]);
+                    }
+                );
+            }, 0);
+
+            return "Loading...";
+        },
+        renderingConfig: {
+            singleLineBreaks: false
+        },
+        spellChecker: false,
+        tabSize: 4,
+        toolbar: ["bold", "italic", "strikethrough", "|",
+            "heading", "heading-1", "heading-2", "heading-3", "|",
+            "code", "quote", "|",
+            "unordered-list", "ordered-list", "|",
+            "link", "image", "horizontal-rule", "|",
+            "preview", "fullscreen"]
+    });
+
+    return true;
+}
+
+function setCodeMirror() {
+    if (typeof loadedCodeMirror == "undefined" || !loadedCodeMirror) {
+        return false;
+    }
+
+    editorType = "CodeMirror";
+
+    if(editor) {
+        editor.toTextArea();
+        editor == null;
+    }
+
+    editor = CodeMirror.fromTextArea(editArea[0], {
+        lineNumbers: true
+    });
+    editor.on("change", function (cm, change) {
+        editArea.val(cm.getValue());
+    });
+
+    return true;
 }
 
 function initFilenameSelector(){
@@ -1079,6 +1130,15 @@ $(document).ready(function () {
         $('#' + e.trigger.getAttribute('id')).popup('show');
         e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
     });
+
+    // Clipboard for copying filename on edit page
+    if($('.clipboard-tree-name').length) {
+        new Clipboard(document.querySelector('.clipboard-tree-name'), {
+            text: function () {
+                return $('#tree-name').val();
+            }
+        });
+    }
 
     // Helpers.
     $('.delete-button').click(function () {

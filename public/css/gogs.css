@@ -2734,6 +2734,7 @@ footer .ui.language .menu {
   border: 1px solid #ddd;
   border-radius: 3px;
   height: 600px;
+  padding: 0 !important;
 }
 .commit-form-wrapper {
   padding-left: 64px;
@@ -2869,4 +2870,7 @@ footer .ui.language .menu {
 }
 .ui.breadcrumb.field {
   margin-bottom: 10px !important;
+}
+.repo-edit-file-cancel {
+  padding-left: 10px;
 }

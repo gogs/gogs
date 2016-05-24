@@ -7,7 +7,7 @@
 		<form class="ui comment form" action="{{EscapePound $.Link}}" method="post">
 			{{.CsrfTokenHtml}}
 			<div class="ui secondary menu">
-				<div class="item fitted">
+				<div class="item fitted" style="width:100%;">
 					<div class="ui breadcrumb field{{if .Err_Directory}} error{{end}}">
 						<a class="section" href="{{EscapePound $.BranchLink}}">{{.Repository.Name}}</a>
 						{{ $n := len .TreeNames}}
@@ -20,6 +20,8 @@
 								<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $v}}">{{$v}}</a></span>
 							{{end}}
 						{{end}}
+						<button class="clipboard-tree-name icon octicon octicon-clippy poping up" type="button" data-content="{{.i18n.Tr "repo.copy_file_path_to_clipboard"}}" data-position="bottom center" data-variation="tiny inverted"></button>
+						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreeName}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
 						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}">
 					</div>
 				</div>
