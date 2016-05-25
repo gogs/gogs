@@ -119,7 +119,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.Data["NewBranchName"] = ""
 	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+branchName+"</strong>")
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
-	ctx.Data["LastCommit"] = ctx.Repo.CommitID
+	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
 
 	ctx.HTML(200, EDIT)
 }
@@ -180,7 +180,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	ctx.Data["NewBranchName"] = branchName
 	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+oldBranchName+"</strong>")
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
-	ctx.Data["LastCommit"] = ctx.Repo.CommitID
+	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
 
 	if ctx.HasError() {
 		ctx.HTML(200, EDIT)
@@ -238,16 +238,22 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 			return
 		}
 		if lastCommit != ctx.Repo.CommitID {
-			name := ctx.Repo.Commit.Author.Name
-			if u, err := models.GetUserByEmail(ctx.Repo.Commit.Author.Email); err == nil {
-				name = `<a href="`+setting.AppSubUrl+"/"+u.Name+`" target="_blank">`+u.Name+`</a>`
+			if files, err := ctx.Repo.Commit.GetFilesChangedSinceCommit(lastCommit); err == nil {
+				for _, file := range files {
+					if file == treeName {
+						name := ctx.Repo.Commit.Author.Name
+						if u, err := models.GetUserByEmail(ctx.Repo.Commit.Author.Email); err == nil {
+							name = `<a href="` + setting.AppSubUrl + "/" + u.Name + `" target="_blank">` + u.Name + `</a>`
+						}
+						message := ctx.Tr("repo.user_has_committed_since_you_started_editing", name) +
+						` <a href="` + ctx.Repo.RepoLink + "/commit/" + ctx.Repo.CommitID + `" target="_blank">` + ctx.Tr("repo.see_what_changed") + `</a>` +
+						" " + ctx.Tr("repo.pressing_commit_again_will_overwrite_those_changes", "<em>" + ctx.Tr("repo.commit_changes") + "</em>")
+						log.Error(4, "%s: %s / %s - %s", "EditFile", branchName, oldTreeName, "File updated by another user")
+						ctx.RenderWithErr(message, EDIT, &form)
+						return
+					}
+				}
 			}
-			message := ctx.Tr("repo.user_has_committed_since_you_started_editing", name)+
-				` <a href="`+ctx.Repo.RepoLink+"/commit/"+ctx.Repo.CommitID+`" target="_blank">`+ctx.Tr("repo.see_what_changed")+`</a>`+
-				" "+ctx.Tr("repo.pressing_commit_again_will_overwrite_those_changes", "<em>"+ctx.Tr("repo.commit_changes")+"</em>")
-			log.Error(4, "%s: %s / %s - %s", "EditFile", branchName, oldTreeName, "File updated by another user")
-			ctx.RenderWithErr(message, EDIT, &form)
-			return
 		}
 	}
 	if oldTreeName != treeName {
