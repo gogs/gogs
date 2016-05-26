@@ -120,6 +120,8 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+branchName+"</strong>")
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
 	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
+	ctx.Data["MdFileExtensions"] = setting.Markdown.MdFileExtensions
+	ctx.Data["LineWrapExtensions"] = setting.Repository.LineWrapExtensions
 
 	ctx.HTML(200, EDIT)
 }
@@ -181,6 +183,8 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+oldBranchName+"</strong>")
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
 	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
+	ctx.Data["MdFileExtensions"] = "[\""+strings.Join(setting.Markdown.MdFileExtensions, "\",\"")+"\"]"
+	ctx.Data["LineWrapExtensions"] = "[\""+strings.Join(setting.Repository.LineWrapExtensions, "\",\"")+"\"]"
 
 	if ctx.HasError() {
 		ctx.HTML(200, EDIT)

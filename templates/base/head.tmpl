@@ -36,6 +36,8 @@
 		<script type="text/javascript">
 			CodeMirror.modeURL = "{{AppSubUrl}}/plugins/codemirror/mode/%N/%N.js";
 			var loadedCodeMirror = true
+			{{if .MdFileExtensions}}var mdFileExtensions = {{.MdFileExtensions}};{{end}}
+			{{if .LineWrapExtensions}}var lineWrapExtensions = {{.LineWrapExtensions}};{{end}}
 		</script>
 		<link rel="stylesheet" href="{{AppSubUrl}}/plugins/codemirror/lib/codemirror.css">
 	{{end}}

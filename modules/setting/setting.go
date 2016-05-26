@@ -110,7 +110,7 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
-		MdFileExtensions       []string
+		LineWrapExtensions     []string
 	}
 	RepoRootPath string
 	ScriptType   string

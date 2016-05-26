@@ -537,30 +537,57 @@ function initEditor(editorType) {
     setEditor(editArea.attr('editor'));
 
     editFilename.on("keyup", function (e) {
-        var val = editFilename.val(), m, mode, spec, extension;
-        if (m = /.+\.([^.]+)$/.exec(val)) {
+        var val = editFilename.val(), m, mode, spec, extension, extWithDot, validMDExtensions, validLWExtensions;
+        extension = extWithDot = "";
+        if(m = /.+\.([^.]+)$/.exec(val)) {
             extension = m[1];
-            if (extension == "md") {
-                if(editorType != "SimpleMDE")
-                    setSimpleMDE();
-                return;
+            extWithDot = "."+extension;
+        }
+
+        // If SimpleMDE is loaded and is a Markdown extensions, we will load that editor and return
+
+        if(typeof loadedSimpleMDE != "undefined" && loadedSimpleMDE) {
+            if (typeof mdFileExtensions != "undefined") {
+                validMDExtensions = mdFileExtensions;
             }
-            else if(typeof loadedCodeMirror != "undefined" && loadedCodeMirror) {
-                var info = CodeMirror.findModeByExtension(extension);
-                if (info) {
-                    mode = info.mode;
-                    spec = info.mime;
+            else {
+                validMDExtensions = [".md", ".mdown", ".markdown"];
+            }
+            if (validMDExtensions.indexOf(extWithDot) >= 0) {
+                if (editorType == "SimpleMDE" || setSimpleMDE()) {
+                    return;
                 }
             }
         }
-        if(editorType != "CodeMirror"){
-            setCodeMirror();
+
+        // Else we are going to use CodeMirror, if it is loaded
+
+        if(typeof loadedCodeMirror == "undefined" || ! loadedCodeMirror) {
+            return;
         }
+
+        if(editorType != "CodeMirror" && ! setCodeMirror()){
+            return;
+        }
+
+        var info = CodeMirror.findModeByExtension(extension);
+        if (info) {
+            mode = info.mode;
+            spec = info.mime;
+        }
+
         if (mode) {
             editor.setOption("mode", spec);
             CodeMirror.autoLoadMode(editor, mode);
         }
-        if (extension == null || extension == "txt" || extension == "md") {
+
+        if (typeof lineWrapExtensions != "undefined"){
+            validLWExtensions = lineWrapExtensions;
+        }
+        else {
+            validMDExtensions = [".txt",".md",""];
+        }
+        if (validLWExtensions.indexOf(extension) >= 0) {
             editor.setOption("lineWrapping", true);
         }
         else {

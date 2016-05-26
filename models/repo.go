@@ -2168,13 +2168,15 @@ var repoWorkingPool = &workingPool{
  	localPath := repo.LocalRepoPath()
 
  	if err = discardLocalRepoChanges(localPath, oldBranchName); err != nil {
- 		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+ 		return fmt.Errorf("discardLocalRepoChanges: %s - %v", oldBranchName, err)
  	} else if err = repo.UpdateLocalRepo(oldBranchName); err != nil {
- 		return fmt.Errorf("UpdateLocalRepo: %v", err)
+ 		return fmt.Errorf("UpdateLocalRepo: %s - %v", oldBranchName, err)
  	}
 
 	 if( oldBranchName != branchName ){
-		 repo.CheckoutNewBranch(oldBranchName, branchName)
+		 if err := repo.CheckoutNewBranch(oldBranchName, branchName); err != nil {
+			 return fmt.Errorf("CheckoutNewBranch: %s - %s: %v", oldBranchName, branchName, err)
+		 }
 	 }
 
  	filePath := path.Join(localPath, treeName)
