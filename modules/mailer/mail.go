@@ -132,7 +132,7 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 			markdown.Render([]byte(issue.Content), repo.RepoLink(), repo.ComposeMetas()), gogsLink)
 		// Markdown is meant to look good even when it can't be parsed into HTML, that's why it's being
 		// written directly in the email for the text/plain body (fallback version).
-		contentPlain = fmt.Sprintf(`%s\n\n---\nView it on gogs: %s`, issue.Content, gogsLink)
+		contentPlain = fmt.Sprintf("%s\n\n---\nView it on gogs: %s", issue.Content, gogsLink)
 		msg          = NewMessage(tos, subject, content, contentPlain)
 	)
 	msg.Info = fmt.Sprintf("Subject: %s, issue notify", subject)
