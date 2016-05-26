@@ -26,13 +26,16 @@ type Message struct {
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
-func NewMessageFrom(to []string, from, subject, body string) *Message {
+func NewMessageFrom(to []string, from, subject, body, bodyPlain string) *Message {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 	msg.SetDateHeader("Date", time.Now())
-	msg.SetBody("text/plain", body)
+	if bodyPlain == "" {
+		bodyPlain = body
+	}
+	msg.SetBody("text/plain", bodyPlain)
 	msg.AddAlternative("text/html", body)
 
 	return &Message{
@@ -41,8 +44,8 @@ func NewMessageFrom(to []string, from, subject, body string) *Message {
 }
 
 // NewMessage creates new mail message object with default From header.
-func NewMessage(to []string, subject, body string) *Message {
-	return NewMessageFrom(to, setting.MailService.From, subject, body)
+func NewMessage(to []string, subject, body, bodyPlain string) *Message {
+	return NewMessageFrom(to, setting.MailService.From, subject, body, bodyPlain)
 }
 
 type loginAuth struct {
