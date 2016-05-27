@@ -587,7 +587,7 @@ function initEditor(editorType) {
         else {
             validMDExtensions = [".txt",".md",""];
         }
-        if (validLWExtensions.indexOf(extension) >= 0) {
+        if (validLWExtensions.indexOf(extWithDot) >= 0) {
             editor.setOption("lineWrapping", true);
         }
         else {
