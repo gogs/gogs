@@ -4,12 +4,8 @@
 		<div class="ui grid">
 			<div class="ui five wide column">
 				<div class="ui card">
-					{{if and (or .Owner.UseCustomAvatar DisableGravatar) (eq .SignedUserName .Owner.Name)}}
-						<a class="image poping up" href="{{AppSubUrl}}/user/settings" id="profile-avatar" data-content="{{.i18n.Tr "user.change_custom_avatar"}}" data-variation="inverted tiny" data-position="bottom center">
-							<img src="{{.Owner.AvatarLink}}?s=290" title="{{.Owner.Name}}"/>
-						</a>
-					{{else if eq .SignedUserName .Owner.Name}}
-						<a class="image poping up" href="http://gravatar.com/emails/" id="profile-avatar" data-content="{{.i18n.Tr "user.change_avatar"}}" data-variation="inverted tiny" data-position="bottom center">
+					{{if eq .SignedUserName .Owner.Name}}
+						<a class="image poping up" href="{{AppSubUrl}}/user/settings" id="profile-avatar" data-content="{{.i18n.Tr "user.change_avatar"}}" data-variation="inverted tiny" data-position="bottom center">
 							<img src="{{.Owner.AvatarLink}}?s=290" title="{{.Owner.Name}}"/>
 						</a>
 					{{else}}
