@@ -2116,13 +2116,13 @@ footer .ui.language .menu {
 .page.buttons {
   padding-top: 15px;
 }
-.ui.comments .dropzone {
+.ui.comments .dropzone, .ui.upload .dropzone {
   width: 100%;
   margin-bottom: 10px;
   border: 2px dashed #0087F7;
   box-shadow: none!important;
 }
-.ui.comments .dropzone .dz-error-message {
+.ui.comments .dropzone .dz-error-message, .ui.upload .dropzone .dz-error-message {
   top: 140px;
 }
 .settings .content {
@@ -2690,4 +2690,187 @@ footer .ui.language .menu {
 }
 .ui.user.list .item .description a:hover {
   text-decoration: underline;
+}
+.btn-octicon {
+  display: inline-block;
+  padding: 5px;
+  margin-left: 5px;
+  line-height: 1;
+  color: #767676;
+  vertical-align: middle;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.btn-octicon:hover {
+  color: #4078c0;
+}
+.btn-octicon-danger:hover {
+  color: #bd2c00;
+}
+.inline-form {
+  display: inline-block;
+}
+.ui.form .breadcrumb input {
+  min-height: 34px;
+  padding: 7px 8px;
+  color: #333;
+  vertical-align: middle;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+  width: inherit;
+}
+#file-actions {
+  padding-left: 20px;
+}
+.CodeMirror.cm-s-default {
+  margin-top: 20px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  height: 600px;
+  padding: 0 !important;
+}
+.commit-form-wrapper {
+  padding-left: 64px;
+}
+.commit-form {
+  position: relative;
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+.commit-form-wrapper .commit-form-avatar {
+  float: left;
+  margin-left: -64px;
+  border-radius: 4px;
+}
+.commit-form::before {
+  border-width: 8px;
+  border-color: transparent;
+  border-right-color: #ddd;
+  position: absolute;
+  top: 11px;
+  right: 100%;
+  left: -16px;
+  display: block;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  content: " ";
+  border-style: solid solid outset;
+}
+.form-checkbox input[type=checkbox], .form-checkbox input[type=radio] {
+  float: left;
+  margin: 2px 0 0 -20px;
+  vertical-align: middle;
+}
+[type="checkbox"], [type="radio"] {
+  box-sizing: border-box;
+  padding: 0;
+}
+.branch-name {
+  display: inline-block;
+  padding: 2px 6px;
+  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  color: rgba(0,0,0,0.5);
+  background-color: rgba(209,227,237,0.5);
+  border-radius: 3px;
+}
+.form-control, .form-select {
+  min-height: 34px;
+  padding: 7px 8px;
+  font-size: 13px;
+  color: #333;
+  vertical-align: middle;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
+}
+.input-contrast {
+  background-color: #fafafa;
+}
+.mr-2 {
+  margin-right: 6px !important;
+}
+.quick-pull-choice .new-branch-name-input input {
+  width: 240px !important;
+  padding-left: 26px !important;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+.quick-pull-choice .new-branch-name-input .quick-pull-new-branch-icon {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  color: #b0c4ce;
+}
+.text-muted, .text-gray {
+  color: #767676 !important;
+}
+.quick-pull-choice .new-branch-name-input {
+  position: relative;
+  margin-top: 5px;
+}
+.quick-pull-choice .quick-pull-branch-name {
+  display: none;
+  padding-left: 48px;
+  margin-top: 5px;
+}
+.quick-pull-choice.will-create-branch .quick-pull-branch-name {
+  display: inline-block;
+}
+#new-branch-item {
+  display:none;
+  margin: 0;
+  text-align: left;
+  padding: .71428571em 1.14285714em!important;
+  background: 0 0!important;
+  color: rgba(0,0,0,.87)!important;
+  text-transform: none!important;
+  box-shadow: none!important;
+  -webkit-transition: none!important;
+  transition: none!important;
+  border-top: none;
+  padding-right: calc(1.14285714rem + 17px)!important;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+#new-branch-item:hover {
+  background: rgba(0,0,0,.05)!important;
+  color: rgba(0,0,0,.95)!important;
+}
+#new-branch-item .icon {
+  float: left;
+  margin-left: -15px;
+}
+#new-branch-item .description {
+  margin-top: 3px;
+  font-size: 12px;
+}
+.nowrap {
+  white-space: nowrap;
+}
+#file-buttons {
+  padding-right: 15px;
+}
+.ui.breadcrumb {
+  font-size: 1.5em;
+  color: #767676;
+}
+.ui.breadcrumb.field {
+  margin-bottom: 10px !important;
+}
+.repo-edit-file-cancel {
+  padding-left: 10px;
 }

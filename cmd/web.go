@@ -208,24 +208,24 @@ func runWeb(ctx *cli.Context) error {
 
 	// ***** START: User *****
 	m.Group("/user", func() {
-		m.Get("/login", user.SignIn)
-		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
-		m.Get("/sign_up", user.SignUp)
-		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
-		m.Get("/reset_password", user.ResetPasswd)
-		m.Post("/reset_password", user.ResetPasswdPost)
+		m.Combo("/login").Get(user.SignIn).
+			Post(bindIgnErr(auth.SignInForm{}), user.SignInPost)
+		m.Combo("/sign_up").Get(user.SignUp).
+			Post(bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
+		m.Combo("/reset_password").Get(user.ResetPasswd).
+			Post(user.ResetPasswdPost)
 	}, reqSignOut)
 
 	m.Group("/user/settings", func() {
-		m.Get("", user.Settings)
-		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
+		m.Combo("").Get(user.Settings).
+			Post(bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
 		m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), user.SettingsAvatar)
 		m.Post("/avatar/delete", user.SettingsDeleteAvatar)
 		m.Combo("/email").Get(user.SettingsEmails).
 			Post(bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
 		m.Post("/email/delete", user.DeleteEmail)
-		m.Get("/password", user.SettingsPassword)
-		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
+		m.Combo("/password").Get(user.SettingsPassword).
+			Post(bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).
 			Post(bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
 		m.Post("/ssh/delete", user.DeleteSSHKey)
@@ -242,8 +242,8 @@ func runWeb(ctx *cli.Context) error {
 		m.Any("/activate", user.Activate)
 		m.Any("/activate_email", user.ActivateEmail)
 		m.Get("/email2user", user.Email2User)
-		m.Get("/forget_password", user.ForgotPasswd)
-		m.Post("/forget_password", user.ForgotPasswdPost)
+		m.Combo("/forget_password").Get(user.ForgotPasswd).
+			Post(user.ForgotPasswdPost)
 		m.Get("/logout", user.SignOut)
 	})
 	// ***** END: User *****
@@ -259,8 +259,10 @@ func runWeb(ctx *cli.Context) error {
 
 		m.Group("/users", func() {
 			m.Get("", admin.Users)
-			m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
-			m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+			m.Combo("/new").Get(admin.NewUser).
+				Post(bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
+			m.Combo("/:userid").Get(admin.EditUser).
+				Post(bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
 			m.Post("/:userid/delete", admin.DeleteUser)
 		})
 
@@ -275,7 +277,8 @@ func runWeb(ctx *cli.Context) error {
 
 		m.Group("/auths", func() {
 			m.Get("", admin.Authentications)
-			m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+			m.Combo("/new").Get(admin.NewAuthSource).
+				Post(bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
 			m.Combo("/:authid").Get(admin.EditAuthSource).
 				Post(bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
 			m.Post("/:authid/delete", admin.DeleteAuthSource)
@@ -339,15 +342,14 @@ func runWeb(ctx *cli.Context) error {
 
 	// ***** START: Organization *****
 	m.Group("/org", func() {
-		m.Get("/create", org.Create)
-		m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+		m.Combo("/create").Get(org.Create).
+			Post(bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
 
 		m.Group("/:org", func() {
 			m.Get("/dashboard", user.Dashboard)
 			m.Get("/^:type(issues|pulls)$", user.Issues)
 			m.Get("/members", org.Members)
 			m.Get("/members/action/:action", org.MembersAction)
-
 			m.Get("/teams", org.Teams)
 		}, context.OrgAssignment(true))
 
@@ -359,10 +361,10 @@ func runWeb(ctx *cli.Context) error {
 		}, context.OrgAssignment(true, false, true))
 
 		m.Group("/:org", func() {
-			m.Get("/teams/new", org.NewTeam)
-			m.Post("/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
-			m.Get("/teams/:team/edit", org.EditTeam)
-			m.Post("/teams/:team/edit", bindIgnErr(auth.CreateTeamForm{}), org.EditTeamPost)
+			m.Combo("/teams/new").Get(org.NewTeam).
+				Post(bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
+			m.Combo("/teams/:team/edit").Get(org.EditTeam).
+				Post(bindIgnErr(auth.CreateTeamForm{}), org.EditTeamPost)
 			m.Post("/teams/:team/delete", org.DeleteTeam)
 
 			m.Group("/settings", func() {
@@ -392,10 +394,10 @@ func runWeb(ctx *cli.Context) error {
 
 	// ***** START: Repository *****
 	m.Group("/repo", func() {
-		m.Get("/create", repo.Create)
-		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
-		m.Get("/migrate", repo.Migrate)
-		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
+		m.Combo("/create").Get(repo.Create).
+			Post(bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
+		m.Combo("/migrate").Get(repo.Migrate).
+			Post(bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
 		m.Combo("/fork/:repoid").Get(repo.Fork).
 			Post(bindIgnErr(auth.CreateRepoForm{}), repo.ForkPost)
 	}, reqSignIn)
@@ -405,7 +407,8 @@ func runWeb(ctx *cli.Context) error {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
 			m.Group("/collaboration", func() {
-				m.Combo("").Get(repo.Collaboration).Post(repo.CollaborationPost)
+				m.Combo("").Get(repo.Collaboration).
+					Post(repo.CollaborationPost)
 				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
 				m.Post("/delete", repo.DeleteCollaboration)
 			})
@@ -444,8 +447,8 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/issues", func() {
 			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
-
-			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
+			m.Combo("/:index/comments").
+				Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			m.Group("/:index", func() {
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
@@ -466,17 +469,17 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/milestones", func() {
 			m.Combo("/new").Get(repo.NewMilestone).
 				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
-			m.Get("/:id/edit", repo.EditMilestone)
-			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
+			m.Combo("/:id/edit").Get(repo.EditMilestone).
+				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
 		}, reqRepoWriter, context.RepoRef())
 
 		m.Group("/releases", func() {
-			m.Get("/new", repo.NewRelease)
-			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
-			m.Get("/edit/:tagname", repo.EditRelease)
-			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+			m.Combo("/new").Get(repo.NewRelease).
+				Post(bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
+			m.Combo("/edit/:tagname").Get(repo.EditRelease).
+				Post(bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoWriter, context.RepoRef())
 
@@ -485,16 +488,6 @@ func runWeb(ctx *cli.Context) error {
 	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 
 	m.Group("/:username/:reponame", func() {
-		m.Group("", func() {
-			m.Get("/releases", repo.Releases)
-			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
-			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
-			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-			m.Get("/milestones", repo.Milestones)
-		}, context.RepoRef())
-
-		// m.Get("/branches", repo.Branches)
-
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
 			m.Get("/_pages", repo.WikiPages)
@@ -516,17 +509,35 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/merge", reqRepoWriter, repo.MergePullRequest)
 		}, repo.MustAllowPulls)
 
+		m.Get("/commit/:sha([a-z0-9]{40})\\.:ext(patch|diff)", repo.RawDiff)
+		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
+
 		m.Group("", func() {
 			m.Get("/src/*", repo.Home)
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/:sha([a-z0-9]{40})$", repo.Diff)
 			m.Get("/forks", repo.Forks)
+			m.Get("/releases", repo.Releases)
+			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
+			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
+			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
+			m.Get("/milestones", repo.Milestones)
 		}, context.RepoRef())
-		m.Get("/commit/:sha([a-z0-9]{40})\\.:ext(patch|diff)", repo.RawDiff)
 
-		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
-	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
+		m.Group("", func() {
+			m.Combo("/edit/*").Get(repo.EditFile).
+				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditFilePost)
+			m.Combo("/new/*").Get(repo.EditNewFile).
+				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditNewFilePost)
+			m.Combo("/upload/*").Get(repo.UploadFile).
+				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
+			m.Post("/delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
+			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
+			m.Post("/upload-file", repo.UploadFileToServer)
+			m.Post("/upload-remove", bindIgnErr(auth.UploadRemoveFileForm{}), repo.UploadRemoveFileFromServer)
+		}, reqSignIn, reqRepoWriter)
+	}, ignSignIn, context.RepoAssignment(), context.RepoRef(), context.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
 		m.Get("/watchers", repo.Watchers)
