@@ -57,7 +57,6 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		PosterID: ctx.User.Id,
 		Poster:   ctx.User,
 		Content:  form.Body,
-		IsClosed: form.Closed,
 	}
 
 	if ctx.Repo.IsWriter() {
@@ -84,6 +83,13 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	} else if err := repo.MailWatchersAndMentions(ctx.Context, issue); err != nil {
 		ctx.Error(500, "MailWatchersAndMentions", err)
 		return
+	}
+
+	if form.Closed {
+		if err := issue.ChangeStatus(ctx.User, ctx.Repo.Repository, true); err != nil {
+			ctx.Error(500, "issue.ChangeStatus", err)
+			return
+		}
 	}
 
 	// Refetch from database to assign some automatic values

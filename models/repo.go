@@ -1830,9 +1830,26 @@ func CheckRepoStats() {
 		repoStatsCheck(checkers[i])
 	}
 
-	// FIXME: use checker when v0.9, stop supporting old fork repo format.
+	// ***** START: Repository.NumClosedIssues *****
+	desc := "repository count 'num_closed_issues'"
+	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=?)", true)
+	if err != nil {
+		log.Error(4, "Select %s: %v", desc, err)
+	} else {
+		for _, result := range results {
+			id := com.StrTo(result["id"]).MustInt64()
+			log.Trace("Updating %s: %d", desc, id)
+			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=?) WHERE id=?", id, true, id)
+			if err != nil {
+				log.Error(4, "Update %s[%d]: %v", desc, id, err)
+			}
+		}
+	}
+	// ***** END: Repository.NumClosedIssues *****
+
+	// FIXME: use checker when stop supporting old fork repo format.
 	// ***** START: Repository.NumForks *****
-	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
+	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
 	if err != nil {
 		log.Error(4, "Select repository count 'num_forks': %v", err)
 	} else {
