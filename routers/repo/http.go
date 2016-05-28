@@ -86,53 +86,67 @@ func HTTP(ctx *context.Context) {
 	)
 
 	// check access
+	// currently check basic auth
+	// TODO: support digit auth
+	// FIXME: Maybe should move all auth into one unified auth call.
+	// maybe could use that one.
 	if askAuth {
-		authHead := ctx.Req.Header.Get("Authorization")
-		if len(authHead) == 0 {
-			authRequired(ctx)
-			return
-		}
-
-		auths := strings.Fields(authHead)
-		// currently check basic auth
-		// TODO: support digit auth
-		// FIXME: middlewares/context.go did basic auth check already,
-		// maybe could use that one.
-		if len(auths) != 2 || auths[0] != "Basic" {
-			ctx.HandleText(401, "no basic auth and digit auth")
-			return
-		}
-		authUsername, authPasswd, err = base.BasicAuthDecode(auths[1])
-		if err != nil {
-			ctx.HandleText(401, "no basic auth and digit auth")
-			return
-		}
-
-		authUser, err = models.UserSignIn(authUsername, authPasswd)
-		if err != nil {
-			if !models.IsErrUserNotExist(err) {
-				ctx.Handle(500, "UserSignIn error: %v", err)
+		if setting.Service.EnableReverseProxyAuth {
+			authUsername = ctx.Req.Header.Get(setting.ReverseProxyAuthUser)
+			if len(authUsername) == 0 {
+				ctx.HandleText(401, "reverse proxy login error. authUsername empty")
 				return
-			}
-
-			// Assume username now is a token.
-			token, err := models.GetAccessTokenBySHA(authUsername)
-			if err != nil {
-				if models.IsErrAccessTokenNotExist(err) {
-					ctx.HandleText(401, "invalid token")
-				} else {
-					ctx.Handle(500, "GetAccessTokenBySha", err)
+			} else {
+				authUser, err = models.GetUserByName(authUsername)
+				if err != nil {
+					ctx.HandleText(401, "reverse proxy login error, got error while running GetUserByName")
+					return
 				}
+			}
+		} else {
+			authHead := ctx.Req.Header.Get("Authorization")
+			if len(authHead) == 0 {
+				authRequired(ctx)
 				return
 			}
-			token.Updated = time.Now()
-			if err = models.UpdateAccessToken(token); err != nil {
-				ctx.Handle(500, "UpdateAccessToken", err)
+
+			auths := strings.Fields(authHead)
+			if len(auths) != 2 || auths[0] != "Basic" {
+				ctx.HandleText(401, "no basic auth and digit auth")
+				return
 			}
-			authUser, err = models.GetUserByID(token.UID)
+			authUsername, authPasswd, err = base.BasicAuthDecode(auths[1])
 			if err != nil {
-				ctx.Handle(500, "GetUserByID", err)
+				ctx.HandleText(401, "no basic auth and digit auth")
 				return
+			}
+
+			authUser, err = models.UserSignIn(authUsername, authPasswd)
+			if err != nil {
+				if !models.IsErrUserNotExist(err) {
+					ctx.Handle(500, "UserSignIn error: %v", err)
+					return
+				}
+
+				// Assume username now is a token.
+				token, err := models.GetAccessTokenBySHA(authUsername)
+				if err != nil {
+					if models.IsErrAccessTokenNotExist(err) {
+						ctx.HandleText(401, "invalid token")
+					} else {
+						ctx.Handle(500, "GetAccessTokenBySha", err)
+					}
+					return
+				}
+				token.Updated = time.Now()
+				if err = models.UpdateAccessToken(token); err != nil {
+					ctx.Handle(500, "UpdateAccessToken", err)
+				}
+				authUser, err = models.GetUserByID(token.UID)
+				if err != nil {
+					ctx.Handle(500, "GetUserByID", err)
+					return
+				}
 			}
 		}
 
