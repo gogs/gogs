@@ -2869,6 +2869,14 @@ footer .ui.language .menu {
   color: #767676;
   max-width: 600px;
 }
+.repository .ui.container .ui.breadcrumb {
+  font-size: 1.5em;
+  color: #767676;
+  max-width: 600px;
+}
+.repository .ui.container .item:first-child .ui.breadcrumb {
+  max-width: none;
+}
 .repository .ui.container .ui.breadcrumb.field {
   margin-bottom: 10px !important;
 }

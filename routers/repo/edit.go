@@ -105,7 +105,6 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	}
 
 	ctx.Data["RequireSimpleMDE"] = true
-	ctx.Data["RequireCodeMirror"] = true
 
 	ctx.Data["UserName"] = userName
 	ctx.Data["RepoName"] = repoName
@@ -167,7 +166,6 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	}
 
 	ctx.Data["RequireSimpleMDE"] = true
-	ctx.Data["RequireCodeMirror"] = true
 
 	ctx.Data["UserName"] = userName
 	ctx.Data["RepoName"] = repoName

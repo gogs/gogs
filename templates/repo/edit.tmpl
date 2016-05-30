@@ -31,12 +31,16 @@
 				<div class="ui top attached tabular menu" data-write="write" data-preview="preview">
 					<a class="active item" data-tab="write"><i class="icon octicon octicon-code"></i> {{.i18n.Tr "repo.edit_file"}}</a>
 					<a class="item" data-tab="preview" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}"><i class="icon octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
+					<a class="item" data-tab="preview-changes" data-url="" data-context="{{.RepoLink}}"><i class="icon octicon octicon-diff"></i> {{.i18n.Tr "repo.preview_changes"}}</a>
 				</div>
 				<div class="ui bottom attached active tab segment" data-tab="write">
-					<textarea id=edit-area name="content" editor="{{if .RequireSimpleMDE}}SimpleMDE{{else}}CodeMirror{{end}}" data-context="{{.RepoLink}}"  tabindex="4" autofocus>{{.FileContent}}</textarea required>
+					<textarea id=edit-area name="content" data-context="{{.RepoLink}}"  tabindex="4" autofocus>{{.FileContent}}</textarea required>
 				</div>
 				<div class="ui bottom attached tab segment markdown" data-tab="preview">
 					{{.i18n.Tr "repo.release.loading"}}
+				</div>
+				<div class="ui bottom attached tab segment markdown" data-tab="preview-changes">
+					Diff of changes not yet implemented. Coming soon...
 				</div>
 			</div>
 			<div class="commit-form-wrapper">

@@ -479,7 +479,7 @@ function initWiki() {
 
     if ($('.repository.wiki.new').length > 0) {
         var $edit_area = $('#edit-area');
-        var simplemde = new SimpleMDE({
+        new SimpleMDE({
             autoDownloadFontAwesome: false,
             element: $edit_area[0],
             forceSync: true,
@@ -504,22 +504,27 @@ function initWiki() {
             renderingConfig: {
                 singleLineBreaks: false
             },
-            spellChecker: false,
+            spellChecker: true,
+            autosave: {
+                enabled: true,
+                unique_id: "wiki-edit",
+            },
             tabSize: 4,
             toolbar: ["bold", "italic", "strikethrough", "|",
-                "heading", "heading-1", "heading-2", "heading-3", "|",
+                "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
                 "code", "quote", "|",
                 "unordered-list", "ordered-list", "|",
-                "link", "image", "horizontal-rule", "|",
-                "preview", "fullscreen"]
+                "link", "image", "table", "horizontal-rule", "|",
+                "clean-block", "preview", "fullscreen", "side-by-side", ]
         })
     }
 }
 
-var editorType;
+
 var editArea;
 var editFilename;
-var editor;
+var smdEditor;
+var cmEditor
 
 // For IE
 String.prototype.endsWith = function(pattern) {
@@ -527,14 +532,29 @@ String.prototype.endsWith = function(pattern) {
     return d >= 0 && this.lastIndexOf(pattern) === d;
 };
 
-function initEditor(editorType) {
+function initEditor() {
     editFilename = $("#file-name");
     editArea = $('textarea#edit-area');
 
     if (!editArea.length)
         return;
 
-    setEditor(editArea.attr('editor'));
+    (function ($, undefined) {
+        $.fn.getCursorPosition = function () {
+            var el = $(this).get(0);
+            var pos = 0;
+            if ('selectionStart' in el) {
+                pos = el.selectionStart;
+            } else if ('selection' in document) {
+                el.focus();
+                var Sel = document.selection.createRange();
+                var SelLength = document.selection.createRange().text.length;
+                Sel.moveStart('character', -el.value.length);
+                pos = Sel.text.length - SelLength;
+            }
+            return pos;
+        }
+    })(jQuery);
 
     editFilename.on("keyup", function (e) {
         var val = editFilename.val(), m, mode, spec, extension, extWithDot, validMDExtensions, validLWExtensions;
@@ -546,28 +566,23 @@ function initEditor(editorType) {
 
         // If SimpleMDE is loaded and is a Markdown extensions, we will load that editor and return
 
-        if(typeof loadedSimpleMDE != "undefined" && loadedSimpleMDE) {
-            if (typeof mdFileExtensions != "undefined") {
-                validMDExtensions = mdFileExtensions;
-            }
-            else {
-                validMDExtensions = [".md", ".mdown", ".markdown"];
-            }
-            if (validMDExtensions.indexOf(extWithDot) >= 0) {
-                if (editorType == "SimpleMDE" || setSimpleMDE()) {
-                    return;
-                }
+        if (typeof mdFileExtensions != "undefined") {
+            validMDExtensions = mdFileExtensions;
+        }
+        else {
+            validMDExtensions = [".md", ".mdown", ".markdown"];
+        }
+        if (validMDExtensions.indexOf(extWithDot) >= 0) {
+            if (setSimpleMDE()) {
+                return;
             }
         }
 
         // Else we are going to use CodeMirror, if it is loaded
 
-        if(typeof loadedCodeMirror == "undefined" || ! loadedCodeMirror) {
-            return;
-        }
-
-        if(editorType != "CodeMirror" && ! setCodeMirror()){
-            return;
+        if(! cmEditor){
+            if( ! setCodeMirror())
+                return;
         }
 
         var info = CodeMirror.findModeByExtension(extension);
@@ -577,8 +592,8 @@ function initEditor(editorType) {
         }
 
         if (mode) {
-            editor.setOption("mode", spec);
-            CodeMirror.autoLoadMode(editor, mode);
+            cmEditor.setOption("mode", spec);
+            CodeMirror.autoLoadMode(cmEditor, mode);
         }
 
         if (typeof lineWrapExtensions != "undefined"){
@@ -588,160 +603,104 @@ function initEditor(editorType) {
             validMDExtensions = [".txt",".md",""];
         }
         if (validLWExtensions.indexOf(extWithDot) >= 0) {
-            editor.setOption("lineWrapping", true);
+            cmEditor.setOption("lineWrapping", true);
         }
         else {
-            editor.setOption("lineWrapping", false);
+            cmEditor.setOption("lineWrapping", false);
         }
-    });
-}
-
-function setEditor(type) {
-    if (! type || type == editorType) {
-        return;
-    }
-    if (type == "SimpleMDE") {
-        return setSimpleMDE();
-    } else {
-        return setCodeMirror();
-    }
+    })
+    .keyup(function (e) {
+        var sections = $('.breadcrumb span.section');
+        var dividers = $('.breadcrumb div.divider');
+        if (e.keyCode == 8) {
+            if ($(this).getCursorPosition() == 0) {
+                if (sections.length > 0) {
+                    var value = sections.last().find('a').text();
+                    $(this).val(value + $(this).val());
+                    $(this)[0].setSelectionRange(value.length, value.length);
+                    sections.last().remove();
+                    dividers.last().remove();
+                }
+            }
+        }
+        if (e.keyCode == 191) {
+            var parts = $(this).val().split('/');
+            for (var i = 0; i < parts.length; ++i) {
+                var value = parts[i];
+                if (i < parts.length - 1) {
+                    if (value.length) {
+                        $('<span class="section"><a href="#">' + value + '</a></span>').insertBefore($(this));
+                        $('<div class="divider"> / </div>').insertBefore($(this));
+                    }
+                }
+                else {
+                    $(this).val(value);
+                }
+                $(this)[0].setSelectionRange(0, 0);
+            }
+        }
+        var parts = [];
+        $('.breadcrumb span.section').each(function (i, element) {
+            element = $(element);
+            if (element.find('a').length) {
+                parts.push(element.find('a').text());
+            } else {
+                parts.push(element.text());
+            }
+        });
+        if ($(this).val())
+            parts.push($(this).val());
+        $('#tree-name').val(parts.join('/'));
+    }).trigger('keyup');
 }
 
 function setSimpleMDE() {
-    if(typeof loadedSimpleMDE == "undefined" || ! loadedSimpleMDE) {
-        return false;
+    if(cmEditor) {
+        cmEditor.toTextArea();
+        cmEditor = null;
     }
 
-    if(editor) {
-        editor.toTextArea();
-        editor == null;
+    if(smdEditor) {
+        return true;
     }
 
-    editorType = "SimpleMDE";
-    editor = new SimpleMDE({
+    smdEditor = new SimpleMDE({
         autoDownloadFontAwesome: false,
         element: editArea[0],
         forceSync: true,
-        previewRender: function (plainText, preview) { // Async method
-            setTimeout(function () {
-                // FIXME: still send render request when return back to edit mode
-                $.post(editArea.data('url'), {
-                        "_csrf": csrf,
-                        "mode": "gfm",
-                        "context": editArea.data('context'),
-                        "text": plainText
-                    },
-                    function (data) {
-                        preview.innerHTML = '<div class="markdown">' + data + '</div>';
-                        emojify.run($('.editor-preview')[0]);
-                    }
-                );
-            }, 0);
-
-            return "Loading...";
-        },
         renderingConfig: {
             singleLineBreaks: false
         },
-        spellChecker: false,
         tabSize: 4,
         toolbar: ["bold", "italic", "strikethrough", "|",
-            "heading", "heading-1", "heading-2", "heading-3", "|",
+            "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
             "code", "quote", "|",
             "unordered-list", "ordered-list", "|",
-            "link", "image", "horizontal-rule", "|",
-            "preview", "fullscreen"]
+            "link", "image", "table", "horizontal-rule", "|",
+            "clean-block", "preview", "fullscreen", "side-by-side", ]
     });
 
     return true;
 }
 
 function setCodeMirror() {
-    if (typeof loadedCodeMirror == "undefined" || !loadedCodeMirror) {
-        return false;
+    if(smdEditor) {
+        smdEditor.toTextArea();
+        smdEditor = null;
     }
 
-    editorType = "CodeMirror";
-
-    if(editor) {
-        editor.toTextArea();
-        editor == null;
+    if(cmEditor){
+        return true;
     }
 
-    editor = CodeMirror.fromTextArea(editArea[0], {
+    cmEditor = CodeMirror.fromTextArea(editArea[0], {
         lineNumbers: true
     });
-    editor.on("change", function (cm, change) {
+    cmEditor.on("change", function (cm, change) {
         editArea.val(cm.getValue());
     });
 
     return true;
-}
-
-function initFilenameSelector(){
-    editFilename = $("#file-name");
-    if(editFilename.length){
-        (function ($, undefined) {
-            $.fn.getCursorPosition = function () {
-                var el = $(this).get(0);
-                var pos = 0;
-                if ('selectionStart' in el) {
-                    pos = el.selectionStart;
-                } else if ('selection' in document) {
-                    el.focus();
-                    var Sel = document.selection.createRange();
-                    var SelLength = document.selection.createRange().text.length;
-                    Sel.moveStart('character', -el.value.length);
-                    pos = Sel.text.length - SelLength;
-                }
-                return pos;
-            }
-        })(jQuery);
-
-        $('#file-name').keyup(function (e) {
-            var sections = $('.breadcrumb span.section');
-            var dividers = $('.breadcrumb div.divider');
-            if (e.keyCode == 8) {
-                if ($(this).getCursorPosition() == 0) {
-                    if (sections.length > 0) {
-                        var value = sections.last().find('a').text();
-                        $(this).val(value + $(this).val());
-                        $(this)[0].setSelectionRange(value.length, value.length);
-                        sections.last().remove();
-                        dividers.last().remove();
-                    }
-                }
-            }
-            if (e.keyCode == 191) {
-                var parts = $(this).val().split('/');
-                for (var i = 0; i < parts.length; ++i) {
-                    var value = parts[i];
-                    if (i < parts.length - 1) {
-                        if (value.length) {
-                            $('<span class="section"><a href="#">' + value + '</a></span>').insertBefore($(this));
-                            $('<div class="divider"> / </div>').insertBefore($(this));
-                        }
-                    }
-                    else {
-                        $(this).val(value);
-                    }
-                    $(this)[0].setSelectionRange(0, 0);
-                }
-            }
-            var parts = [];
-            $('.breadcrumb span.section').each(function (i, element) {
-                element = $(element);
-                if (element.find('a').length) {
-                    parts.push(element.find('a').text());
-                } else {
-                    parts.push(element.text());
-                }
-            });
-            if ($(this).val())
-                parts.push($(this).val());
-            $('#tree-name').val(parts.join('/'));
-        }).trigger('keyup');
-    }
 }
 
 function initQuickPull(){
@@ -1232,7 +1191,6 @@ $(document).ready(function () {
     initRepository();
     initWiki();
     initEditor();
-    initFilenameSelector();
     initOrganization();
     initWebhook();
     initAdmin();
@@ -1356,5 +1314,5 @@ $(window).load(function () {
 });
 
 $(function() {
-	$('form').areYouSure();
+    $('form').areYouSure();
 });
