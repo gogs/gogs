@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jaytaylor/html2text"
 	"gopkg.in/gomail.v2"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/jaytaylor/html2text"
 )
 
 type Message struct {
@@ -27,20 +27,24 @@ type Message struct {
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
-func NewMessageFrom(to []string, from, subject, htmlbody string) *Message {
+func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 	msg.SetDateHeader("Date", time.Now())
-	body, err := html2text.FromString(htmlbody)
+
+	body, err := html2text.FromString(htmlBody)
 	if err != nil {
-		// TODO: report error ?
-		msg.SetBody("text/html", htmlbody)
+		log.Error(4, "html2text.FromString: %v", err)
+		msg.SetBody("text/html", htmlBody)
+		msg.AddAlternative("text/html", htmlBody)
 	} else {
 		msg.SetBody("text/plain", body)
-		// TODO: avoid this (use a configuration switch?)
-		msg.AddAlternative("text/html", htmlbody)
+	}
+
+	if setting.MailService.EnableHTMLAlternative {
+		msg.AddAlternative("text/html", htmlBody)
 	}
 
 	return &Message{
