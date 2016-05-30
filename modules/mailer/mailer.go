@@ -38,13 +38,11 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	if err != nil {
 		log.Error(4, "html2text.FromString: %v", err)
 		msg.SetBody("text/html", htmlBody)
-		msg.AddAlternative("text/html", htmlBody)
 	} else {
 		msg.SetBody("text/plain", body)
-	}
-
-	if setting.MailService.EnableHTMLAlternative {
-		msg.AddAlternative("text/html", htmlBody)
+		if setting.MailService.EnableHTMLAlternative {
+			msg.AddAlternative("text/html", htmlBody)
+		}
 	}
 
 	return &Message{
