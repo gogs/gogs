@@ -2864,11 +2864,12 @@ footer .ui.language .menu {
 #file-buttons {
   padding-right: 15px;
 }
-.ui.breadcrumb {
+.repository .ui.container .ui.breadcrumb {
   font-size: 1.5em;
   color: #767676;
+  max-width: 600px;
 }
-.ui.breadcrumb.field {
+.repository .ui.container .ui.breadcrumb.field {
   margin-bottom: 10px !important;
 }
 .repo-edit-file-cancel {
