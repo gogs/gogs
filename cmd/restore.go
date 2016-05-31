@@ -26,7 +26,7 @@ It can be used for backup and capture Gogs server image to send to maintainer`,
 	},
 }
 
-func runRestore(ctx *cli.Context) {
+func runRestore(ctx *cli.Context) error {
 	if !ctx.IsSet("file") {
 		log.Fatalf("No dump-file set...")
 	}
@@ -105,4 +105,5 @@ func runRestore(ctx *cli.Context) {
 	if err = repos.ExtractTo(repoPath, repos.List(repoDir)...); err != nil {
 		log.Fatalf("Can't extract repo-dump %s to %s: %s", reposDump, repoPath, err)
 	}
+	return nil
 }
