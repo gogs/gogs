@@ -7,6 +7,10 @@ package repo
 import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/log"
+	"strings"
+	"net/url"
 )
 
 const (
@@ -28,4 +32,29 @@ func Branches(ctx *context.Context) {
 
 	ctx.Data["Branches"] = brs
 	ctx.HTML(200, BRANCH)
+}
+
+func NewBranchPost(ctx *context.Context, form auth.NewBranchForm) {
+	oldBranchName := form.OldBranchName
+	branchName := form.BranchName
+
+	if ctx.HasError() || ! ctx.Repo.IsWriter() || branchName == oldBranchName {
+		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + oldBranchName))
+		return
+	}
+
+	branchName = url.QueryEscape(strings.Replace(strings.Trim(branchName, " "), " ", "-", -1))
+
+	if _, err := ctx.Repo.Repository.GetBranch(branchName); err == nil {
+		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName))
+		return
+	}
+
+	if err := ctx.Repo.Repository.CreateNewBranch(ctx.User, oldBranchName, branchName); err != nil {
+		ctx.Handle(404, "repo.Branches(CreateNewBranch)", err)
+		log.Error(4, "%s: %v", "EditFile", err)
+		return
+	}
+
+	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName))
 }
