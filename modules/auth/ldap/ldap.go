@@ -213,6 +213,7 @@ func ldapDial(ls *Source) (*ldap.Conn, error) {
 	if ls.UseSSL {
 		log.Debug("Using TLS for LDAP without verifying: %v", ls.SkipVerify)
 		return ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), &tls.Config{
+			ServerName:         ls.Host,
 			InsecureSkipVerify: ls.SkipVerify,
 		})
 	} else {
