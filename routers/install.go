@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"net/textproto"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
@@ -181,7 +182,10 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	ctx.Data["CurDbOption"] = form.DbType
 
 	if ctx.HasError() {
-		if ctx.HasValue("Err_SMTPEmail") {
+		if ctx.HasValue("Err_SMTPEmail") ||
+			ctx.HasValue("Err_SMTPFrom") ||
+			ctx.HasValue("Err_SMTPHost") ||
+			ctx.HasValue("Err_SMTPAuth") {
 			ctx.Data["Err_SMTP"] = true
 		}
 		if ctx.HasValue("Err_AdminName") ||
@@ -259,6 +263,60 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		return
 	}
 
+	// Check mail server
+	if len(strings.TrimSpace(form.SMTPHost)) > 0 {
+		if len(form.SMTPFrom) == 0 {
+			ctx.Data["Err_SMTPFrom"] = true
+			ctx.Data["Err_SMTPMessage"] = "From cannot be empty!"
+
+			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_settings"), INSTALL, form)
+			return
+		}
+		// implement further SMTPFrom checking
+
+		opts := setting.MailService
+		if opts == nil {
+			opts = &setting.Mailer{}
+		}
+		opts.Host = form.SMTPHost
+		opts.User = form.SMTPEmail
+		if len(form.SMTPPasswd) > 0 {
+			opts.Passwd = form.SMTPPasswd
+		}
+
+		if err := mailer.Test(opts); err != nil {
+			ctx.Data["Err_SMTPMessage"] = err
+
+			if te, ok := err.(*textproto.Error); ok {
+				switch (te.Code) {
+					// Add more codes here
+					case 450: // mailbox unavailable
+						ctx.Data["Err_SMTPEmail"] = true
+					case 530, // access denied
+					     535, // authentication unsuccessful
+					     553: // mailbox name not allowed
+						ctx.Data["Err_SMTPAuth"] = true
+						log.Error(4, "%d: %v", te.Code, err)
+				}
+			} else {
+				switch true {
+					case strings.HasPrefix(err.Error(), "Failed to convert "), strings.HasPrefix(err.Error(), "dial tcp"):
+						ctx.Data["Err_SMTPHost"] = true
+						ctx.Data["Err_SMTPMessage"] = err.Error() + ". Typical setting: hostname:25"
+					case err.Error() == "EOF":
+						ctx.Data["Err_SMTPHost"] = true
+						ctx.Data["Err_SMTPMessage"] = "No mail service running at this point"
+					// Add more errors here
+					default:
+						ctx.Data["Err_SMTPHost"] = true
+				}
+			}
+
+			ctx.RenderWithErr(ctx.Tr("install.wrong_smtp_settings"), INSTALL, form)
+			return
+		}
+	}
+
 	// Check logic loophole between disable self-registration and no admin account.
 	if form.DisableRegistration && len(form.AdminName) == 0 {
 		ctx.Data["Err_Services"] = true
@@ -320,7 +378,9 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
 		cfg.Section("mailer").Key("FROM").SetValue(form.SMTPFrom)
 		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
-		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
+		if len(form.SMTPPasswd) > 0 {
+			cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
+		}
 	} else {
 		cfg.Section("mailer").Key("ENABLED").SetValue("false")
 	}
