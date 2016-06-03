@@ -163,16 +163,25 @@ func HTTP(ctx *context.Context) {
 		}
 	}
 
-	callback := func(rpc string, input []byte) {
+	callback := func(rpc string, input io.Reader, cmdRet chan error) {
+		log.Info("I'm in ze callback...")
+		defer ioutil.ReadAll(input)
 		if rpc != "receive-pack" || isWiki {
+			log.Info("I don't care about this...")
+			<-cmdRet
+			log.Info("Is returning :D")
 			return
 		}
 
-		var lastLine int64 = 0
+		var puoArray []models.PushUpdateOptions
+
 		for {
-			head := input[lastLine : lastLine+2]
-			if head[0] == '0' && head[1] == '0' {
-				size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
+			log.Info("... reading your commitz...")
+			cache := make([]byte, 0, 2)
+			input.Read(cache)
+			if cache[0] == '0' && cache[1] == '0' {
+				input.Read(cache)
+				size, err := strconv.ParseInt(string(cache), 16, 32)
 				if err != nil {
 					log.Error(4, "%v", err)
 					return
@@ -182,8 +191,8 @@ func HTTP(ctx *context.Context) {
 					//fmt.Println(string(input[lastLine:]))
 					break
 				}
-
-				line := input[lastLine : lastLine+size]
+				line := make([]byte, size)
+				input.Read(line)
 				idx := bytes.IndexRune(line, '\000')
 				if idx > -1 {
 					line = line[:idx]
@@ -196,7 +205,7 @@ func HTTP(ctx *context.Context) {
 					refName := fields[2]
 
 					// FIXME: handle error.
-					if err = models.PushUpdate(models.PushUpdateOptions{
+					puoArray = append(puoArray, models.PushUpdateOptions{
 						RefName:      refName,
 						OldCommitID:  oldCommitId,
 						NewCommitID:  newCommitId,
@@ -204,15 +213,22 @@ func HTTP(ctx *context.Context) {
 						PusherName:   authUser.Name,
 						RepoUserName: username,
 						RepoName:     reponame,
-					}); err == nil {
-						go models.HookQueue.Add(repo.ID)
-						go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
-					}
-
+					})
 				}
-				lastLine = lastLine + size
 			} else {
 				break
+			}
+		}
+		log.Info("Waiting for cmd-ret...")
+		rpcRet := <-cmdRet
+		log.Info("cmd-ret gotten...")
+		if rpcRet != nil {
+			for _, v := range puoArray {
+				// FIXME: handle error.
+				if err = models.PushUpdate(v); err == nil {
+					go models.HookQueue.Add(repo.ID)
+					go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(v.RefName, "refs/heads/"))
+				}
 			}
 		}
 	}
@@ -229,7 +245,7 @@ func HTTP(ctx *context.Context) {
 type serviceConfig struct {
 	UploadPack  bool
 	ReceivePack bool
-	OnSucceed   func(rpc string, input []byte)
+	OnSucceed   func(rpc string, input io.Reader, cmdRet chan error)
 }
 
 type serviceHandler struct {
@@ -347,8 +363,7 @@ func serviceRPC(h serviceHandler, service string) {
 
 	var (
 		reqBody = h.r.Body
-		input   []byte
-		br      io.Reader
+		br, cr  io.Reader
 		err     error
 	)
 
@@ -363,30 +378,51 @@ func serviceRPC(h serviceHandler, service string) {
 	}
 
 	if h.cfg.OnSucceed != nil {
-		input, err = ioutil.ReadAll(reqBody)
-		if err != nil {
-			log.GitLogger.Error(2, "fail to read request body: %v", err)
-			h.w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		br = bytes.NewReader(input)
+		pr, pw := io.Pipe()
+		defer pr.Close()
+		br = io.TeeReader(reqBody, pw)
+		cr = pr
 	} else {
 		br = reqBody
 	}
 
-	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
-	cmd.Dir = h.dir
-	cmd.Stdout = h.w
-	cmd.Stdin = br
-	if err := cmd.Run(); err != nil {
-		log.GitLogger.Error(2, "fail to serve RPC(%s): %v", service, err)
-		h.w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	cmdRet := make(chan error, 1)
+	gitDone := make(chan error, 1)
+	go func() {
+		cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
+		cmd.Dir = h.dir
+
+		cmd.Stdout = h.w
+		cmd.Stderr = h.w
+		cmd.Stdin = br
+
+		log.Info("Running cmd...")
+		if err := cmd.Run(); err != nil {
+			log.Info("returning err: %s", err.Error())
+			cmdRet <- err
+			log.GitLogger.Error(2, "fail to serve RPC(%s): %v", service, err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			gitDone <- err
+			return
+		}
+		log.Info("returning nil")
+		cmdRet <- nil
+		log.Info("returning nil again")
+		gitDone <- nil
+	}()
 
 	if h.cfg.OnSucceed != nil {
-		h.cfg.OnSucceed(service, input)
+		log.Info("Running callback...")
+		h.cfg.OnSucceed(service, cr, cmdRet)
+		log.Info("Callback ran...")
+	} else {
+		log.Info("Not running callback")
+	}
+	log.Info("CB Done waiting for RPC")
+	if err := <-gitDone; err != nil {
+		log.Info("Done with err: %s", err.Error())
+	} else {
+		log.Info("Done without err")
 	}
 }
 
