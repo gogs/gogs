@@ -38,12 +38,14 @@ func (mode AccessMode) String() string {
 // ParseAccessMode returns corresponding access mode to given permission string.
 func ParseAccessMode(permission string) AccessMode {
 	switch permission {
+	case "read":
+		return ACCESS_MODE_READ
 	case "write":
 		return ACCESS_MODE_WRITE
 	case "admin":
 		return ACCESS_MODE_ADMIN
 	default:
-		return ACCESS_MODE_READ
+		return ACCESS_MODE_NONE
 	}
 }
 
@@ -72,10 +74,19 @@ func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 	}
 
 	a := &Access{UserID: u.Id, RepoID: repo.ID}
-	if has, err := e.Get(a); !has || err != nil {
+	if has, err := e.Get(a); has || err != nil {
+		return a.Mode, err
+	}
+
+	if err := repo.GetOwner(); err != nil {
 		return mode, err
 	}
-	return a.Mode, nil
+
+	if repo.Owner.IsOrgMember(u.Id) && repo.Owner.DefaultRepoPerm > mode {
+		mode = repo.Owner.DefaultRepoPerm
+	}
+
+	return mode, nil
 }
 
 // AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the

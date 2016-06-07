@@ -104,6 +104,7 @@ type User struct {
 	NumMembers  int
 	Teams       []*Team `xorm:"-"`
 	Members     []*User `xorm:"-"`
+	DefaultRepoPerm	AccessMode
 }
 
 func (u *User) BeforeInsert() {

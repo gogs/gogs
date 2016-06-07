@@ -37,6 +37,14 @@ func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs binding.Error
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type UpdateOrgDefaultRepoPerm struct {
+	Permission  string
+}
+
+func (f *UpdateOrgDefaultRepoPerm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // ___________
 // \__    ___/___ _____    _____
 //   |    |_/ __ \\__  \  /     \

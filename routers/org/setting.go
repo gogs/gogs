@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS base.TplName = "org/settings/options"
-	SETTINGS_DELETE  base.TplName = "org/settings/delete"
-	SETTINGS_HOOKS   base.TplName = "org/settings/hooks"
+	SETTINGS_OPTIONS           base.TplName = "org/settings/options"
+	SETTINGS_DELETE            base.TplName = "org/settings/delete"
+	SETTINGS_HOOKS             base.TplName = "org/settings/hooks"
+	SETTINGS_MEMBER_PRIVILEGES base.TplName = "org/settings/member_privileges"
 )
 
 func Settings(ctx *context.Context) {
@@ -174,4 +175,21 @@ func DeleteWebhook(ctx *context.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": ctx.Org.OrgLink + "/settings/hooks",
 	})
+}
+
+func SettingsMemberPrivileges(ctx *context.Context) {
+	ctx.Data["PageIsSettingsMemberPrivileges"] = true
+	ctx.Data["DefaultRepoPerm"] = ctx.Org.Organization.DefaultRepoPerm
+	ctx.HTML(200, SETTINGS_MEMBER_PRIVILEGES)
+}
+
+func SettingsUpdateDefaultRepoPerm(ctx *context.Context, form auth.UpdateOrgDefaultRepoPerm) {
+	if err := ctx.Org.Organization.UpdateDefaultRepoPerm(models.ParseAccessMode(form.Permission)); err != nil {
+		ctx.Flash.Error(err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("org.settings.update_default_repo_perm_success"))
+	}
+	ctx.Data["PageIsSettingsMemberPrivileges"] = true
+	ctx.Data["DefaultRepoPerm"] = ctx.Org.Organization.DefaultRepoPerm
+	ctx.Redirect(ctx.Org.OrgLink + "/settings/member_privileges")
 }
