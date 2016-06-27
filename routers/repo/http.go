@@ -112,7 +112,7 @@ func HTTP(ctx *context.Context) {
 			// Assume username now is a token.
 			token, err := models.GetAccessTokenBySHA(authUsername)
 			if err != nil {
-				if models.IsErrAccessTokenNotExist(err) {
+				if models.IsErrAccessTokenNotExist(err) || models.IsErrAccessTokenEmpty(err) {
 					ctx.HandleText(http.StatusUnauthorized, "invalid token")
 				} else {
 					ctx.Handle(http.StatusInternalServerError, "GetAccessTokenBySha", err)
