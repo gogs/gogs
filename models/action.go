@@ -489,7 +489,7 @@ func CommitRepoAction(
 		Content:      string(bs),
 		RepoID:       repo.ID,
 		RepoUserName: repoUserName,
-		RepoName:     repoName,
+		RepoName:     repo.Name,
 		RefName:      refName,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
