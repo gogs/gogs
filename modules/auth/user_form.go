@@ -100,14 +100,14 @@ func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) 
 }
 
 const (
-	AVATAR_LOCAL string = "local"
+	AVATAR_LOCAL  string = "local"
 	AVATAR_BYMAIL string = "bymail"
 )
 
 type AvatarForm struct {
-	Source string
-	Avatar *multipart.FileHeader
-	Gravatar string `binding:"OmitEmpty;Email;MaxSize(254)"`
+	Source      string
+	Avatar      *multipart.FileHeader
+	Gravatar    string `binding:"OmitEmpty;Email;MaxSize(254)"`
 	Federavatar bool
 }
 

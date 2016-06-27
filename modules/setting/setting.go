@@ -142,9 +142,9 @@ var (
 	}
 
 	// Picture settings
-	AvatarUploadPath string
-	GravatarSource   string
-	DisableGravatar  bool
+	AvatarUploadPath  string
+	GravatarSource    string
+	DisableGravatar   bool
 	LibravatarService *libravatar.Libravatar
 
 	// Log settings
@@ -466,14 +466,14 @@ func NewContext() {
 	if OfflineMode {
 		DisableGravatar = true
 	}
-	if ( ! DisableGravatar ) {
+	if !DisableGravatar {
 		LibravatarService = libravatar.New()
 		parts := strings.Split(GravatarSource, "/")
 		if len(parts) >= 3 {
 			if parts[0] == "https:" {
-				LibravatarService.SetUseHTTPS( true )
+				LibravatarService.SetUseHTTPS(true)
 			}
-			LibravatarService.SetFallbackHost( parts[2] )
+			LibravatarService.SetFallbackHost(parts[2])
 		}
 	}
 
