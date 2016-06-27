@@ -207,7 +207,7 @@ func HashEmail(email string) string {
 // AvatarLink returns avatar link by given email.
 func AvatarLink(email string) string {
 	if setting.DisableGravatar || setting.OfflineMode {
-		return setting.AppSubUrl + "/img/avatar_default.jpg"
+		return setting.AppSubUrl + "/img/avatar_default.png"
 	}
 
 	return setting.GravatarSource + HashEmail(email)
