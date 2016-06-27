@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.9.31.0627"
+const APP_VER = "0.9.31.0628"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
