@@ -49,7 +49,7 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 		if len(tokenSHA) > 0 {
 			t, err := models.GetAccessTokenBySHA(tokenSHA)
 			if err != nil {
-				if models.IsErrAccessTokenNotExist(err) {
+				if models.IsErrAccessTokenNotExist(err) || models.IsErrAccessTokenEmpty(err) {
 					log.Error(4, "GetAccessTokenBySHA: %v", err)
 				}
 				return 0
