@@ -22,6 +22,7 @@ import (
 
 const (
 	SETTINGS_PROFILE      base.TplName = "user/settings/profile"
+	SETTINGS_AVATAR       base.TplName = "user/settings/avatar"
 	SETTINGS_PASSWORD     base.TplName = "user/settings/password"
 	SETTINGS_EMAILS       base.TplName = "user/settings/email"
 	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
@@ -144,14 +145,20 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.AvatarForm, ctxUser *mo
 	return nil
 }
 
-func SettingsAvatar(ctx *context.Context, form auth.AvatarForm) {
+func SettingsAvatar(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsAvatar"] = true
+	ctx.HTML(200, SETTINGS_AVATAR)
+}
+
+func SettingsAvatarPost(ctx *context.Context, form auth.AvatarForm) {
 	if err := UpdateAvatarSetting(ctx, form, ctx.User); err != nil {
 		ctx.Flash.Error(err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/user/settings")
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/avatar")
 }
 
 func SettingsDeleteAvatar(ctx *context.Context) {
@@ -159,7 +166,7 @@ func SettingsDeleteAvatar(ctx *context.Context) {
 		ctx.Flash.Error(err.Error())
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/user/settings")
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/avatar")
 }
 
 func SettingsPassword(ctx *context.Context) {
