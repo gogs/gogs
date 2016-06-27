@@ -30,10 +30,11 @@
 				{{if $entry.IsSubModule}}
 					<td>
 						<span class="icon octicon octicon-file-submodule"></span>
-						{{if $commit.RefUrl AppUrl}}
-							<a href="{{$commit.RefUrl AppUrl}}">{{$entry.Name}}</a> @ <a href="{{$commit.RefUrl AppUrl}}/commit/{{$commit.RefId}}">{{ShortSha $commit.RefId}}</a>
+						{{$refURL := $commit.RefURL AppUrl $.BranchLink}}
+						{{if $refURL}}
+							<a href="{{$refURL}}">{{$entry.Name}}</a> @ <a href="{{$refURL}}/commit/{{$commit.RefID}}">{{ShortSha $commit.RefID}}</a>
 						{{else}}
-							{{$entry.Name}} @ {{ShortSha $commit.RefId}}
+							{{$entry.Name}} @ {{ShortSha $commit.RefID}}
 						{{end}}
 					</td>
 				{{else}}
