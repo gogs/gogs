@@ -161,9 +161,11 @@ var (
 
 	// Git settings
 	Git struct {
-		MaxGitDiffLines int
-		GcArgs          []string `delim:" "`
-		Timeout         struct {
+		MaxGitDiffLines          int
+		MaxGitDiffLineCharacters int
+		MaxGitDiffFiles          int
+		GcArgs                   []string `delim:" "`
+		Timeout                  struct {
 			Migrate int
 			Mirror  int
 			Clone   int

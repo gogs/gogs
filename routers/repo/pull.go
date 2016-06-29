@@ -348,7 +348,8 @@ func ViewPullFiles(ctx *context.Context) {
 	}
 
 	diff, err := models.GetDiffRange(diffRepoPath,
-		startCommitID, endCommitID, setting.Git.MaxGitDiffLines)
+		startCommitID, endCommitID, setting.Git.MaxGitDiffLines,
+		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Handle(500, "GetDiffRange", err)
 		return
@@ -545,7 +546,8 @@ func PrepareCompareDiff(
 	}
 
 	diff, err := models.GetDiffRange(models.RepoPath(headUser.Name, headRepo.Name),
-		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines)
+		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines,
+		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Handle(500, "GetDiffRange", err)
 		return false
