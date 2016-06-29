@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ISSUE_NAME_STYLE_NUMERIC = "numeric"
+	ISSUE_NAME_STYLE_NUMERIC      = "numeric"
 	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
 )
 
@@ -120,28 +120,30 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 
 	// Since this method could only possibly serve one link at a time,
 	// we do not need to find all.
-	m := CommitPattern.Find(link)
-	if m != nil {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "commit/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
+	if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
+		m := CommitPattern.Find(link)
+		if m != nil {
+			m = bytes.TrimSpace(m)
+			i := strings.Index(string(m), "commit/")
+			j := strings.Index(string(m), "#")
+			if j == -1 {
+				j = len(m)
+			}
+			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
+			return
 		}
-		out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
-		return
-	}
 
-	m = IssueFullPattern.Find(link)
-	if m != nil {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "issues/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
+		m = IssueFullPattern.Find(link)
+		if m != nil {
+			m = bytes.TrimSpace(m)
+			i := strings.Index(string(m), "issues/")
+			j := strings.Index(string(m), "#")
+			if j == -1 {
+				j = len(m)
+			}
+			out.WriteString(fmt.Sprintf(`<a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
+			return
 		}
-		out.WriteString(fmt.Sprintf(` <a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
-		return
 	}
 
 	r.Renderer.AutoLink(out, link, kind)
@@ -223,7 +225,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 
 	ms := pattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		if m[0] == ' ' || m[0] == '('  {
+		if m[0] == ' ' || m[0] == '(' {
 			m = m[1:] // ignore leading space or opening parentheses
 		}
 		var link string
