@@ -333,7 +333,7 @@ func NewContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HttpPort + "/")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
