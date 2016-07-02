@@ -88,10 +88,9 @@ type User struct {
 	ProhibitLogin    bool
 
 	// Avatar
-	Avatar             string `xorm:"VARCHAR(2048) NOT NULL"`
-	AvatarEmail        string `xorm:"NOT NULL"`
-	UseCustomAvatar    bool
-	UseFederatedAvatar bool
+	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
+	AvatarEmail     string `xorm:"NOT NULL"`
+	UseCustomAvatar bool
 
 	// Counters
 	NumFollowers int
@@ -253,7 +252,7 @@ func (u *User) RelAvatarLink() string {
 	}
 
 	var url string
-	if u.UseFederatedAvatar && setting.LibravatarService != nil {
+	if setting.FederatedAvatar && setting.LibravatarService != nil {
 		url, _ = setting.LibravatarService.FromEmail(u.AvatarEmail)
 	}
 	if url == "" {
