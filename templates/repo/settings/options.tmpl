@@ -51,6 +51,13 @@
 							</div>
 						{{end}}
 						{{if .Repository.IsMirror}}
+							<div class="inline field {{if .Err_EnablePrune}}error{{end}}">
+							        <label>{{.i18n.Tr "repo.mirror_prune"}}</label>
+								<div class="ui checkbox">
+								        <input id="enable_prune" name="enable_prune" type="checkbox" {{if .MirrorEnablePrune}}checked{{end}}>
+								        <label>{{.i18n.Tr "repo.mirror_enable_prune"}}</label>
+								</div>
+							</div>
 							<div class="inline field {{if .Err_Interval}}error{{end}}">
 								<label for="interval">{{.i18n.Tr "repo.mirror_interval"}}</label>
 								<input id="interval" name="interval" type="number" value="{{.MirrorInterval}}">

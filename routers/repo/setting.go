@@ -107,6 +107,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 
 		if repo.IsMirror {
 			if form.Interval > 0 {
+				ctx.Repo.Mirror.EnablePrune = form.EnablePrune
 				ctx.Repo.Mirror.Interval = form.Interval
 				ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
 				if err := models.UpdateMirror(ctx.Repo.Mirror); err != nil {
