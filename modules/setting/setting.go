@@ -464,10 +464,11 @@ func NewContext() {
 		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
+	FederatedAvatar = sec.Key("FEDERATED_AVATAR").MustBool()
 	if OfflineMode {
 		DisableGravatar = true
+		FederatedAvatar = false
 	}
-	FederatedAvatar = sec.Key("FEDERATED_AVATAR").MustBool()
 
 	if !DisableGravatar && FederatedAvatar {
 		LibravatarService = libravatar.New()
