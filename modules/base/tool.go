@@ -208,11 +208,15 @@ func HashEmail(email string) string {
 func AvatarLink(email string) string {
 	var url string
 
-	if ! setting.OfflineMode {
+	if !setting.OfflineMode {
 		if setting.FederatedAvatar && setting.LibravatarService != nil {
-			url, _ = setting.LibravatarService.FromEmail(email)
+			var err error
+			url, err = setting.LibravatarService.FromEmail(email)
+			if err != nil {
+				log.Error(1, "LibravatarService.FromEmail:: %v", err)
+			}
 		}
-		if url == "" && ! setting.DisableGravatar {
+		if url == "" && !setting.DisableGravatar {
 			url = setting.GravatarSource + HashEmail(email)
 		}
 	}
