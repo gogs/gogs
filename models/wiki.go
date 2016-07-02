@@ -69,10 +69,12 @@ func ToWikiPageURL(name string) string {
 	return url.QueryEscape(strings.Replace(name, " ", "-", -1))
 }
 
-// ToWikiPageName formats a URL back to corresponding wiki page name.
+// ToWikiPageName formats a URL back to corresponding wiki page name,
+// and removes leading characters './' to prevent changing files
+// that are not belong to wiki repository.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(strings.Replace(urlString, "-", " ", -1))
-	return name
+	return strings.Replace(strings.TrimLeft(name, "./"), "/", " ", -1)
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
@@ -149,7 +151,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 
-	title = ToWikiPageName(strings.Replace(title, "/", " ", -1))
+	title = ToWikiPageName(title)
 	filename := path.Join(localPath, title+".md")
 
 	// If not a new file, show perform update not create.
@@ -160,6 +162,13 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	} else {
 		os.Remove(path.Join(localPath, oldTitle+".md"))
 	}
+
+	// SECURITY: if new file is a symlink to non-exist critical file,
+	// attack content can be written to the target file (e.g. authorized_keys2)
+	// as a new page operation.
+	// So we want to make sure the symlink is removed before write anything.
+	// The new file we created will be in normal text format.
+	os.Remove(filename)
 
 	if err = ioutil.WriteFile(filename, []byte(content), 0666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
@@ -198,7 +207,7 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 
-	title = ToWikiPageName(strings.Replace(title, "/", " ", -1))
+	title = ToWikiPageName(title)
 	filename := path.Join(localPath, title+".md")
 	os.Remove(filename)
 
