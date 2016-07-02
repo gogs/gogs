@@ -206,11 +206,22 @@ func HashEmail(email string) string {
 
 // AvatarLink returns avatar link by given email.
 func AvatarLink(email string) string {
-	if setting.DisableGravatar || setting.OfflineMode {
-		return setting.AppSubUrl + "/img/avatar_default.png"
+	var url string
+
+	if ! setting.OfflineMode {
+		if setting.FederatedAvatar && setting.LibravatarService != nil {
+			url, _ = setting.LibravatarService.FromEmail(email)
+		}
+		if url == "" && ! setting.DisableGravatar {
+			url = setting.GravatarSource + HashEmail(email)
+		}
 	}
 
-	return setting.GravatarSource + HashEmail(email)
+	if url == "" {
+		url = setting.AppSubUrl + "/img/avatar_default.png"
+	}
+
+	return url
 }
 
 // Seconds-based time units

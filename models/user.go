@@ -251,15 +251,7 @@ func (u *User) RelAvatarLink() string {
 		return "/avatars/" + com.ToStr(u.Id)
 	}
 
-	var url string
-	if setting.FederatedAvatar && setting.LibravatarService != nil {
-		url, _ = setting.LibravatarService.FromEmail(u.AvatarEmail)
-	}
-	if url == "" {
-		return base.AvatarLink(u.AvatarEmail)
-	}
-	return url
-
+	return base.AvatarLink(u.AvatarEmail)
 }
 
 // AvatarLink returns user avatar link.
