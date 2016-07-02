@@ -482,8 +482,11 @@ func NewContext() {
 		if len(parts) >= 3 {
 			if parts[0] == "https:" {
 				LibravatarService.SetUseHTTPS(true)
+				LibravatarService.SetSecureFallbackHost(parts[2])
+			} else {
+				LibravatarService.SetUseHTTPS(false)
+				LibravatarService.SetFallbackHost(parts[2])
 			}
-			LibravatarService.SetFallbackHost(parts[2])
 		}
 	}
 
