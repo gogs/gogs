@@ -559,7 +559,7 @@ type Mirror struct {
 
 	address string `xorm:"-"`
 
-        EnablePrune    bool `xorm:"NOT NULL DEFAULT true"`
+	EnablePrune bool `xorm:"NOT NULL DEFAULT true"`
 }
 
 func (m *Mirror) BeforeInsert() {
@@ -659,9 +659,9 @@ func GetMirror(repoId int64) (*Mirror, error) {
 
 func updateMirror(e Engine, m *Mirror) error {
 	_, err1 := e.Id(m.ID).Update(m)
-        if err1 != nil {
-                return err1
-        }
+	if err1 != nil {
+		return err1
+	}
 	_, err2 := e.Id(m.ID).Cols("enable_prune").Update(m)
 	return err2
 }
@@ -752,10 +752,10 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	if opts.IsMirror {
 		if _, err = x.InsertOne(&Mirror{
-			RepoID:     repo.ID,
-			Interval:   24,
-                        EnablePrune: true,
-			NextUpdate: time.Now().Add(24 * time.Hour),
+			RepoID:      repo.ID,
+			Interval:    24,
+			EnablePrune: true,
+			NextUpdate:  time.Now().Add(24 * time.Hour),
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
@@ -1704,9 +1704,9 @@ func MirrorUpdate() {
 		repoPath := m.Repo.RepoPath()
 
 		var prune = ""
-                if m.EnablePrune {
+		if m.EnablePrune {
 			prune = "--prune"
-                }
+		}
 
 		if _, stderr, err := process.ExecDir(
 			time.Duration(setting.Git.Timeout.Mirror)*time.Second,

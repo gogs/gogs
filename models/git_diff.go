@@ -48,10 +48,10 @@ const (
 )
 
 type DiffLine struct {
-	LeftIdx       int
-	RightIdx      int
-	Type          DiffLineType
-	Content       string
+	LeftIdx  int
+	RightIdx int
+	Type     DiffLineType
+	Content  string
 }
 
 func (d *DiffLine) GetType() int {
