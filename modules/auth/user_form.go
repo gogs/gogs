@@ -38,6 +38,7 @@ type InstallForm struct {
 
 	OfflineMode         bool
 	DisableGravatar     bool
+	FederatedAvatar     bool
 	DisableRegistration bool
 	EnableCaptcha       bool
 	RequireSignInView   bool

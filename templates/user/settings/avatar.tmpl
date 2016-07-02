@@ -22,12 +22,6 @@
 								<label>{{.i18n.Tr "settings.lookup_avatar_by_mail"}}</label>
 							</div>
 						</div>
-						<div class="inline field">
-							<div class="ui checkbox">
-								<input name="federavatar" type="checkbox" {{if .SignedUser.UseFederatedAvatar}}checked{{end}}>
-								<label>{{.i18n.Tr "settings.federated_avatar_lookup"}}</label>
-							</div>
-						</div>
 						<div class="field {{if .Err_Gravatar}}error{{end}}">
 							<label for="gravatar">Avatar {{.i18n.Tr "email"}}</label>
 							<input id="gravatar" name="gravatar" value="{{.SignedUser.AvatarEmail}}" />

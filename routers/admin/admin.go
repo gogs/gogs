@@ -222,6 +222,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["SessionConfig"] = setting.SessionConfig
 
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
+	ctx.Data["FederatedAvatar"] = setting.FederatedAvatar
 
 	type logger struct {
 		Mode, Config string
