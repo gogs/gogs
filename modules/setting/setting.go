@@ -26,7 +26,15 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/user"
 
-	"strk.kbt.io/projects/go/libravatar"
+	// The go-libravatar dependency is being
+	// imported from an unsupported github mirror
+	// due to Unknwon not trusting the stability
+	// of its official domain. See
+	// https://github.com/gogits/gogs/pull/3115#issuecomment-222922681
+	// Official import path is left commented-out for documentation
+	// purpose
+	//"strk.kbt.io/projects/go/libravatar"
+	"github.com/strk/go-libravatar"
 )
 
 type Scheme string
