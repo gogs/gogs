@@ -658,12 +658,8 @@ func GetMirror(repoId int64) (*Mirror, error) {
 }
 
 func updateMirror(e Engine, m *Mirror) error {
-	_, err1 := e.Id(m.ID).Update(m)
-	if err1 != nil {
-		return err1
-	}
-	_, err2 := e.Id(m.ID).Cols("enable_prune").Update(m)
-	return err2
+	_, err := e.Id(m.ID).AllCols().Update(m)
+	return err
 }
 
 func UpdateMirror(m *Mirror) error {
