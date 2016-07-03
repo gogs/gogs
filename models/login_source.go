@@ -20,6 +20,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/auth/ldap"
+	//"github.com/gogits/gogs/modules/auth/openid"
 	"github.com/gogits/gogs/modules/auth/pam"
 	"github.com/gogits/gogs/modules/log"
 )
@@ -34,13 +35,15 @@ const (
 	LOGIN_SMTP             // 3
 	LOGIN_PAM              // 4
 	LOGIN_DLDAP            // 5
+	LOGIN_OPENID           // 6
 )
 
 var LoginNames = map[LoginType]string{
-	LOGIN_LDAP:  "LDAP (via BindDN)",
-	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
-	LOGIN_SMTP:  "SMTP",
-	LOGIN_PAM:   "PAM",
+	LOGIN_LDAP:   "LDAP (via BindDN)",
+	LOGIN_DLDAP:  "LDAP (simple auth)", // Via direct bind
+	LOGIN_SMTP:   "SMTP",
+	LOGIN_PAM:    "PAM",
+	LOGIN_OPENID: "OpenID",
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
@@ -54,6 +57,7 @@ var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
 	_ core.Conversion = &PAMConfig{}
+	_ core.Conversion = &OpenIDConfig{}
 )
 
 type LDAPConfig struct {
@@ -70,6 +74,18 @@ func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
 	return SecurityProtocolNames[cfg.SecurityProtocol]
+}
+
+type OpenIDConfig struct {
+	//*openid.Source
+}
+
+func (cfg *OpenIDConfig) FromDB(bs []byte) error {
+	return json.Unmarshal(bs, &cfg)
+}
+
+func (cfg *OpenIDConfig) ToDB() ([]byte, error) {
+	return json.Marshal(cfg)
 }
 
 type SMTPConfig struct {
@@ -141,6 +157,8 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 		switch LoginType(Cell2Int64(val)) {
 		case LOGIN_LDAP, LOGIN_DLDAP:
 			source.Cfg = new(LDAPConfig)
+		case LOGIN_OPENID:
+			source.Cfg = new(OpenIDConfig)
 		case LOGIN_SMTP:
 			source.Cfg = new(SMTPConfig)
 		case LOGIN_PAM:

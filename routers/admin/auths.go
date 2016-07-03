@@ -52,6 +52,7 @@ var (
 		{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
 		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
 		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
+		{models.LoginNames[models.LOGIN_OPENID], models.LOGIN_OPENID},
 	}
 	securityProtocols = []dropdownItem{
 		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
