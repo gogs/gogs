@@ -24,6 +24,7 @@ type Team struct {
 	Members     []*User       `xorm:"-"`
 	NumRepos    int
 	NumMembers  int
+	Units       []UnitType `xorm:"json"`
 }
 
 // IsOwnerTeam returns true if team is owner team.

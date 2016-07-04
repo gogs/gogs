@@ -17,7 +17,6 @@ import (
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 
-	"github.com/gogits/gogs/models/migrations"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -180,12 +179,16 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	if err = migrations.Migrate(x); err != nil {
-		return fmt.Errorf("migrate: %v", err)
+	if err = Migrate(x, false); err != nil {
+		return fmt.Errorf("migrates before sync: %v", err)
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
+	}
+
+	if err = Migrate(x, true); err != nil {
+		return fmt.Errorf("migrates after sync: %v", err)
 	}
 
 	return nil
