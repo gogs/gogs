@@ -682,6 +682,51 @@ type MigrateRepoOptions struct {
 	RemoteAddr  string
 }
 
+func isGitRepoURL(repoURL string, timeout time.Duration) bool {
+	cmd := git.NewCommand("ls-remote")
+	cmd.AddArguments("-q", "-h", repoURL, "HEAD")
+	res, err := cmd.RunTimeout(timeout)
+	if err != nil {
+		return false
+	}
+	if strings.Contains(res, "fatal") || strings.Contains(res, "not found") {
+		return false
+	}
+	return true
+}
+
+func wikiRemoteURL(remote string, timeout time.Duration) string {
+	wikiRemoteStd := remote
+	wikiRemoteBitBucket := remote
+	/*
+	GitHub, GitLab, Gogs: NAME.wiki.git
+	BitBucket: NAME.git/wiki
+	*/
+	gitSuffixed := strings.HasSuffix(remote, ".git")
+	if gitSuffixed {
+		wikiRemoteStd = wikiRemoteStd[:len(wikiRemoteStd)-4]
+		wikiRemoteBitBucket += "/wiki"
+	} else {
+		wikiRemoteBitBucket += ".git/wiki"
+	}
+	wikiRemoteStd += ".wiki.git"
+	isBB := strings.Contains(remote, "bitbucket")
+	if isBB {
+		if isGitRepoURL(wikiRemoteBitBucket, timeout) {
+			return wikiRemoteBitBucket
+		} else if isGitRepoURL(wikiRemoteStd, timeout) {
+			return wikiRemoteStd
+		}
+		return ""
+	}
+	if isGitRepoURL(wikiRemoteStd, timeout) {
+		return wikiRemoteStd
+	} else if isGitRepoURL(wikiRemoteBitBucket, timeout) {
+		return wikiRemoteBitBucket
+	}
+	return ""
+}
+
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	repo, err := CreateRepository(u, CreateRepoOptions{
@@ -711,27 +756,26 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		repo.NumWatches = 1
 	}
 
+	gitTimeout := time.Duration(setting.Git.Timeout.Migrate) * time.Second
 	os.RemoveAll(repoPath)
 	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
 		Mirror:  true,
 		Quiet:   true,
-		Timeout: time.Duration(setting.Git.Timeout.Migrate) * time.Second,
+		Timeout: gitTimeout,
 	}); err != nil {
 		return repo, fmt.Errorf("Clone: %v", err)
 	}
 
-	wikiRemotePath := opts.RemoteAddr
-	if strings.HasSuffix(opts.RemoteAddr, ".git") {
-		wikiRemotePath = wikiRemotePath[:len(wikiRemotePath)-4]
-	}
-	wikiRemotePath += ".wiki.git"
-	os.RemoveAll(wikiPath)
-	if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
-		Mirror:  true,
-		Quiet:   true,
-		Timeout: time.Duration(setting.Git.Timeout.Migrate) * time.Second,
-	}); err != nil {
-		log.Info("Clone wiki failed: %v", err)
+	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr, gitTimeout)
+	if wikiRemotePath != "" {
+		os.RemoveAll(wikiPath)
+		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
+			Mirror:  true,
+			Quiet:   true,
+			Timeout: gitTimeout,
+		}); err != nil {
+			log.Info("Clone wiki failed: %v", err)
+		}
 	}
 
 	// Check if repository is empty.
