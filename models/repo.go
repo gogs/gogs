@@ -699,8 +699,8 @@ func wikiRemoteURL(remote string, timeout time.Duration) string {
 	wikiRemoteStd := remote
 	wikiRemoteBitBucket := remote
 	/*
-	GitHub, GitLab, Gogs: NAME.wiki.git
-	BitBucket: NAME.git/wiki
+		GitHub, GitLab, Gogs: NAME.wiki.git
+		BitBucket: NAME.git/wiki
 	*/
 	gitSuffixed := strings.HasSuffix(remote, ".git")
 	if gitSuffixed {
