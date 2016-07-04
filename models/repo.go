@@ -699,6 +699,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	os.MkdirAll(tmpDir, os.ModePerm)
 
 	repoPath := RepoPath(u.Name, opts.Name)
+	wikiPath := WikiPath(u.Name, opts.Name)
 
 	if u.IsOrganization() {
 		t, err := u.GetOwnerTeam()
@@ -717,6 +718,20 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		Timeout: time.Duration(setting.Git.Timeout.Migrate) * time.Second,
 	}); err != nil {
 		return repo, fmt.Errorf("Clone: %v", err)
+	}
+
+	wikiRemotePath := opts.RemoteAddr
+	if strings.HasSuffix(opts.RemoteAddr, ".git") {
+		wikiRemotePath = wikiRemotePath[:len(wikiRemotePath)-4]
+	}
+	wikiRemotePath += ".wiki.git"
+	os.RemoveAll(wikiPath)
+	if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
+		Mirror:  true,
+		Quiet:   true,
+		Timeout: time.Duration(setting.Git.Timeout.Migrate) * time.Second,
+	}); err != nil {
+		log.Info("Clone wiki failed: %v", err)
 	}
 
 	// Check if repository is empty.
@@ -757,13 +772,21 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, UpdateRepository(repo, false)
 	}
 
-	return CleanUpMigrateInfo(repo, repoPath)
+	return CleanUpMigrateInfo(repo)
 }
 
 // Finish migrating repository with things that don't need to be done for mirrors.
-func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) {
+func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
+	repoPath := repo.RepoPath()
+	hasWiki := repo.HasWiki()
+
 	if err := createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("createUpdateHook: %v", err)
+	}
+	if hasWiki {
+		if err := createUpdateHook(repoPath); err != nil {
+			return repo, fmt.Errorf("createUpdateHook: %v", err)
+		}
 	}
 
 	// Clean up mirror info which prevents "push --all".
@@ -776,6 +799,17 @@ func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) 
 	cfg.DeleteSection("remote \"origin\"")
 	if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
 		return repo, fmt.Errorf("save config file: %v", err)
+	}
+	if hasWiki {
+		wikiConfigPath := filepath.Join(repo.WikiPath(), "config")
+		cfg, err = ini.Load(wikiConfigPath)
+		if err != nil {
+			return repo, fmt.Errorf("open wiki config file: %v", err)
+		}
+		cfg.DeleteSection("remote \"origin\"")
+		if err = cfg.SaveToIndent(wikiConfigPath, "\t"); err != nil {
+			return repo, fmt.Errorf("save wiki config file: %v", err)
+		}
 	}
 
 	return repo, UpdateRepository(repo, false)
@@ -1695,9 +1729,10 @@ func MirrorUpdate() {
 		}
 
 		repoPath := m.Repo.RepoPath()
+		wikiPath := m.Repo.WikiPath()
+		timeout := time.Duration(setting.Git.Timeout.Mirror) * time.Second
 		if _, stderr, err := process.ExecDir(
-			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
-			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
+			timeout, repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
@@ -1705,6 +1740,18 @@ func MirrorUpdate() {
 				log.Error(4, "CreateRepositoryNotice: %v", err)
 			}
 			return nil
+		}
+		if m.Repo.HasWiki() {
+			if _, stderr, err := process.ExecDir(
+				timeout, wikiPath, fmt.Sprintf("MirrorUpdate: %s", wikiPath),
+				"git", "remote", "update", "--prune"); err != nil {
+				desc := fmt.Sprintf("Fail to update mirror wiki repository(%s): %s", wikiPath, stderr)
+				log.Error(4, desc)
+				if err = CreateRepositoryNotice(desc); err != nil {
+					log.Error(4, "CreateRepositoryNotice: %v", err)
+				}
+				return nil
+			}
 		}
 
 		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
