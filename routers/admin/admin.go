@@ -122,7 +122,6 @@ const (
 	SYNC_SSH_AUTHORIZED_KEY
 	SYNC_REPOSITORY_UPDATE_HOOK
 	REINIT_MISSING_REPOSITORY
-	UPDATE_MIRRORS
 )
 
 func Dashboard(ctx *context.Context) {
@@ -158,9 +157,6 @@ func Dashboard(ctx *context.Context) {
 		case REINIT_MISSING_REPOSITORY:
 			success = ctx.Tr("admin.dashboard.reinit_missing_repos_success")
 			err = models.ReinitMissingRepositories()
-		case UPDATE_MIRRORS:
-			success = ctx.Tr("admin.dashboard.update_mirrors_success")
-			models.MirrorUpdate()
 		}
 
 		if err != nil {
