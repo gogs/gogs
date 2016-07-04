@@ -1521,9 +1521,6 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
 
-	if opts.PageSize <= 0 || opts.PageSize > setting.ExplorePagingNum {
-		opts.PageSize = setting.ExplorePagingNum
-	}
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
