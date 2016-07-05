@@ -1699,15 +1699,15 @@ func MirrorUpdate() {
 
 		repoPath := m.Repo.RepoPath()
 
-		var prune = ""
+		var gitArgs = []string{"remote", "update"}
 		if m.EnablePrune {
-			prune = "--prune"
+			gitArgs = []string{"remote", "update", "--prune"}
 		}
 
 		if _, stderr, err := process.ExecDir(
 			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update", prune); err != nil {
+			"git", gitArgs...); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
