@@ -32,8 +32,8 @@ var (
 // Issue represents an issue or pull request of repository.
 type Issue struct {
 	ID              int64 `xorm:"pk autoincr"`
-	RepoID          int64 `xorm:"INDEX"`
-	Index           int64 // Index in one repository.
+	RepoID          int64 `xorm:"INDEX UNIQUE(repo_index)"`
+	Index           int64 `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	Name            string
 	Repo            *Repository `xorm:"-"`
 	PosterID        int64

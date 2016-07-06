@@ -280,6 +280,18 @@ func (err ErrAccessTokenNotExist) Error() string {
 	return fmt.Sprintf("access token does not exist [sha: %s]", err.SHA)
 }
 
+type ErrAccessTokenEmpty struct {
+}
+
+func IsErrAccessTokenEmpty(err error) bool {
+	_, ok := err.(ErrAccessTokenEmpty)
+	return ok
+}
+
+func (err ErrAccessTokenEmpty) Error() string {
+	return fmt.Sprintf("access token is empty")
+}
+
 // ________                            .__                __  .__
 // \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
 //  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \

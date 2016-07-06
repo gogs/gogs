@@ -309,7 +309,7 @@ func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 		return
 	}
 
-	diff, err := ctx.Repo.Repository.GetPreviewDiff(models.RepoPath(userName, repoName), branchName, treeName, content, setting.Git.MaxGitDiffLines)
+	diff, err := ctx.Repo.Repository.GetPreviewDiff(models.RepoPath(userName, repoName), branchName, treeName, content, setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Error(404, err.Error())
 		log.Error(4, "%s: %v", "GetPreviewDiff", err)

@@ -1549,9 +1549,6 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
 
-	if opts.PageSize <= 0 || opts.PageSize > setting.ExplorePagingNum {
-		opts.PageSize = setting.ExplorePagingNum
-	}
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
@@ -1860,14 +1857,14 @@ func CheckRepoStats() {
 
 	// ***** START: Repository.NumClosedIssues *****
 	desc := "repository count 'num_closed_issues'"
-	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=?)", true)
+	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, false)
 	if err != nil {
 		log.Error(4, "Select %s: %v", desc, err)
 	} else {
 		for _, result := range results {
 			id := com.StrTo(result["id"]).MustInt64()
 			log.Trace("Updating %s: %d", desc, id)
-			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=?) WHERE id=?", id, true, id)
+			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
 			if err != nil {
 				log.Error(4, "Update %s[%d]: %v", desc, id, err)
 			}
@@ -2240,7 +2237,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, oldBranchName, branchName, ol
 	return nil
 }
 
-func (repo *Repository) GetPreviewDiff(repoPath, branchName, treeName, text string, maxlines int) (diff *Diff, err error) {
+func (repo *Repository) GetPreviewDiff(repoPath, branchName, treeName, text string, maxlines, maxchars, maxfiles int) (diff *Diff, err error) {
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -2278,7 +2275,7 @@ func (repo *Repository) GetPreviewDiff(repoPath, branchName, treeName, text stri
 	pid := process.Add(fmt.Sprintf("GetDiffRange (%s)", repoPath), cmd)
 	defer process.Remove(pid)
 
-	diff, err = ParsePatch(maxlines, stdout)
+	diff, err = ParsePatch(maxlines, maxchars, maxfiles, stdout)
 	if err != nil {
 		return nil, fmt.Errorf("ParsePatch: %v", err)
 	}

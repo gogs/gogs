@@ -33,7 +33,11 @@ const (
 )
 
 func Home(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Repo.Repository.Name
+	title := ctx.Repo.Repository.Owner.Name + "/" + ctx.Repo.Repository.Name
+	if len(ctx.Repo.Repository.Description) > 0 {
+		title += ": " + ctx.Repo.Repository.Description
+	}
+	ctx.Data["Title"] = title
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
 	ctx.Data["IsWriter"] = ctx.Repo.IsWriter()

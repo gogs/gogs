@@ -169,18 +169,6 @@ var (
 	SessionConfig  session.Options
 	CSRFCookieName = "_csrf"
 
-	// Git settings
-	Git struct {
-		MaxGitDiffLines int
-		GcArgs          []string `delim:" "`
-		Timeout         struct {
-			Migrate int
-			Mirror  int
-			Clone   int
-			Pull    int
-		} `ini:"git.timeout"`
-	}
-
 	// Cron tasks
 	Cron struct {
 		UpdateMirror struct {
@@ -200,6 +188,25 @@ var (
 			RunAtStart bool
 			Schedule   string
 		} `ini:"cron.check_repo_stats"`
+	}
+
+	// Git settings
+	Git struct {
+		MaxGitDiffLines          int
+		MaxGitDiffLineCharacters int
+		MaxGitDiffFiles          int
+		GcArgs                   []string `delim:" "`
+		Timeout                  struct {
+			Migrate int
+			Mirror  int
+			Clone   int
+			Pull    int
+		} `ini:"git.timeout"`
+	}
+
+	// API settings
+	API struct {
+		MaxResponseItems int
 	}
 
 	// I18n settings
@@ -341,7 +348,7 @@ func NewContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HttpPort + "/")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -483,10 +490,12 @@ func NewContext() {
 
 	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
-	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
-		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
+	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
+		log.Fatal(4, "Fail to map Git settings: %v", err)
+	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
+		log.Fatal(4, "Fail to map API settings: %v", err)
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")

@@ -1137,13 +1137,15 @@ footer .ui.language .menu {
 .repository .metas .ui.list .hide {
   display: none!important;
 }
+.repository .metas .ui.list .item {
+  padding: 0px;
+}
 .repository .metas .ui.list .label.color {
   padding: 0 8px;
   margin-right: 5px;
 }
 .repository .metas .ui.list a {
-  padding-top: 5px;
-  padding-right: 10px;
+  margin: 2px 0;
 }
 .repository .metas .ui.list a .text {
   color: #444;
