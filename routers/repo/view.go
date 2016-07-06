@@ -133,11 +133,11 @@ func Home(ctx *context.Context) {
 						ctx.Data["FileContent"] = content
 					}
 				}
-				if (! ctx.Repo.IsViewCommit) && ctx.Repo.IsWriter() {
+				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch  {
 					ctx.Data["FileEditLink"] = editLink + "/" + treename
 					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
 				} else {
-					if ctx.Repo.IsViewCommit {
+					if ! ctx.Repo.IsViewBranch {
 						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
 					} else if ! ctx.Repo.IsWriter() {
 						ctx.Data["FileEditLink"] = forkLink
@@ -147,11 +147,11 @@ func Home(ctx *context.Context) {
 			default:
 				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			}
-			if (! ctx.Repo.IsViewCommit) && ctx.Repo.IsWriter() {
+			if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 				ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
 				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
 			} else {
-				if ctx.Repo.IsViewCommit {
+				if ! ctx.Repo.IsViewBranch {
 					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
 				} else if ! ctx.Repo.IsWriter() {
 					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
@@ -161,12 +161,6 @@ func Home(ctx *context.Context) {
 			parentDir := filepath.Dir(treename)
 			if parentDir == "." {
 				parentDir = ""
-			}
-			if ctx.Repo.IsWriter() && (! ctx.Repo.IsViewCommit) {
-				ctx.Data["NewFileLink"] = newFileLink + "/" + parentDir
-				if setting.UploadEnabled {
-					ctx.Data["UploadFileLink"] = uploadFileLink + "/" + parentDir
-				}
 			}
 		}
 	} else {
@@ -244,7 +238,7 @@ func Home(ctx *context.Context) {
 		}
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
-		if ctx.Repo.IsWriter() && (! ctx.Repo.IsViewCommit) {
+		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
 			if setting.UploadEnabled {
 				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
