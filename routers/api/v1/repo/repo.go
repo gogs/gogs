@@ -7,8 +7,6 @@ package repo
 import (
 	"path"
 
-	"github.com/Unknwon/com"
-
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
@@ -23,11 +21,8 @@ import (
 func Search(ctx *context.APIContext) {
 	opts := &models.SearchRepoOptions{
 		Keyword:  path.Base(ctx.Query("q")),
-		OwnerID:  com.StrTo(ctx.Query("uid")).MustInt64(),
-		PageSize: com.StrTo(ctx.Query("limit")).MustInt(),
-	}
-	if opts.PageSize == 0 {
-		opts.PageSize = 10
+		OwnerID:  ctx.QueryInt64("uid"),
+		PageSize: convert.ToCorrectPageSize(ctx.QueryInt("limit")),
 	}
 
 	// Check visibility.
@@ -50,7 +45,7 @@ func Search(ctx *context.APIContext) {
 		}
 	}
 
-	repos, _, err := models.SearchRepositoryByName(opts)
+	repos, count, err := models.SearchRepositoryByName(opts)
 	if err != nil {
 		ctx.JSON(500, map[string]interface{}{
 			"ok":    false,
@@ -74,6 +69,7 @@ func Search(ctx *context.APIContext) {
 		}
 	}
 
+	ctx.SetLinkHeader(int(count), setting.API.MaxResponseItems)
 	ctx.JSON(200, map[string]interface{}{
 		"ok":   true,
 		"data": results,
