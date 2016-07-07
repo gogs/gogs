@@ -56,6 +56,9 @@ func NewAccessToken(t *AccessToken) error {
 
 // GetAccessTokenBySHA returns access token by given sha1.
 func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
+	if sha == "" {
+		return nil, ErrAccessTokenEmpty{}
+	}
 	t := &AccessToken{Sha1: sha}
 	has, err := x.Get(t)
 	if err != nil {

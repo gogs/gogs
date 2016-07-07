@@ -48,10 +48,10 @@ const (
 )
 
 type DiffLine struct {
-	LeftIdx       int
-	RightIdx      int
-	Type          DiffLineType
-	Content       string
+	LeftIdx  int
+	RightIdx int
+	Type     DiffLineType
+	Content  string
 }
 
 func (d *DiffLine) GetType() int {
@@ -161,6 +161,7 @@ type DiffFile struct {
 	IsBin              bool
 	IsRenamed          bool
 	Sections           []*DiffSection
+	IsIncomplete       bool
 }
 
 func (diffFile *DiffFile) GetType() int {
@@ -174,6 +175,7 @@ func (diffFile *DiffFile) GetHighlightClass() string {
 type Diff struct {
 	TotalAddition, TotalDeletion int
 	Files                        []*DiffFile
+	IsIncomplete                 bool
 }
 
 func (diff *Diff) NumFiles() int {
@@ -182,7 +184,7 @@ func (diff *Diff) NumFiles() int {
 
 const DIFF_HEAD = "diff --git "
 
-func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
+func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*Diff, error) {
 	var (
 		diff = &Diff{Files: make([]*DiffFile, 0)}
 
@@ -193,15 +195,12 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 
 		leftLine, rightLine int
 		lineCount           int
+		curFileLinesCount   int
 	)
 
 	input := bufio.NewReader(reader)
 	isEOF := false
-	for {
-		if isEOF {
-			break
-		}
-
+	for !isEOF {
 		line, err := input.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -216,20 +215,16 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 			line = line[:len(line)-1]
 		}
 
-		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") {
-			continue
-		} else if len(line) == 0 {
+		if strings.HasPrefix(line, "+++ ") || strings.HasPrefix(line, "--- ") || len(line) == 0 {
 			continue
 		}
 
+		curFileLinesCount++
 		lineCount++
 
 		// Diff data too large, we only show the first about maxlines lines
-		if lineCount >= maxlines {
-			log.Warn("Diff data too large")
-			io.Copy(ioutil.Discard, reader)
-			diff.Files = nil
-			return diff, nil
+		if curFileLinesCount >= maxLines || len(line) >= maxLineCharacteres {
+			curFile.IsIncomplete = true
 		}
 
 		switch {
@@ -304,6 +299,12 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 				Sections: make([]*DiffSection, 0, 10),
 			}
 			diff.Files = append(diff.Files, curFile)
+			if len(diff.Files) >= maxFiles {
+				diff.IsIncomplete = true
+				io.Copy(ioutil.Discard, reader)
+				break
+			}
+			curFileLinesCount = 0
 
 			// Check file diff type.
 			for {
@@ -366,7 +367,7 @@ func ParsePatch(maxlines int, reader io.Reader) (*Diff, error) {
 	return diff, nil
 }
 
-func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxlines int) (*Diff, error) {
+func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return nil, err
@@ -405,7 +406,7 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxline
 	pid := process.Add(fmt.Sprintf("GetDiffRange (%s)", repoPath), cmd)
 	defer process.Remove(pid)
 
-	diff, err := ParsePatch(maxlines, stdout)
+	diff, err := ParsePatch(maxLines, maxLineCharacteres, maxFiles, stdout)
 	if err != nil {
 		return nil, fmt.Errorf("ParsePatch: %v", err)
 	}
@@ -417,6 +418,6 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxline
 	return diff, nil
 }
 
-func GetDiffCommit(repoPath, commitId string, maxlines int) (*Diff, error) {
-	return GetDiffRange(repoPath, "", commitId, maxlines)
+func GetDiffCommit(repoPath, commitId string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
+	return GetDiffRange(repoPath, "", commitId, maxLines, maxLineCharacteres, maxFiles)
 }

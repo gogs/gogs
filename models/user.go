@@ -240,7 +240,7 @@ func (u *User) GenerateRandomAvatar() error {
 }
 
 func (u *User) RelAvatarLink() string {
-	defaultImgUrl := "/img/avatar_default.jpg"
+	defaultImgUrl := "/img/avatar_default.png"
 	if u.Id == -1 {
 		return defaultImgUrl
 	}
