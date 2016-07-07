@@ -178,6 +178,12 @@ var (
 			RunAtStart bool
 			Schedule   string
 		} `ini:"cron.check_repo_stats"`
+		SyncExternalUsers struct {
+			Enabled        bool
+			RunAtStart     bool
+			Schedule       string
+			UpdateExisting bool
+		} `ini:"cron.sync_external_users"`
 	}
 
 	// Git settings

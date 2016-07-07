@@ -40,6 +40,8 @@ const (
 	USER_TYPE_ORGANIZATION
 )
 
+const _SYNC_EXTERNAL_USERS = "sync_external_users"
+
 var (
 	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
 	ErrEmailNotExist         = errors.New("E-mail does not exist")
@@ -1226,4 +1228,121 @@ func UnfollowUser(userID, followID int64) (err error) {
 		return err
 	}
 	return sess.Commit()
+}
+
+func SyncExternalUsers() {
+	if taskStatusPool.IsRunning(_SYNC_EXTERNAL_USERS) {
+		return
+	}
+	taskStatusPool.Start(_SYNC_EXTERNAL_USERS)
+	defer taskStatusPool.Stop(_SYNC_EXTERNAL_USERS)
+
+	log.Trace("Doing: SyncExternalUsers")
+	
+	ls, err := LoginSources()
+	if err != nil {
+		log.Error(4, "SyncExternalUsers: %v", err)
+		return
+	}
+	
+	updateExisting := setting.Cron.SyncExternalUsers.UpdateExisting
+	
+	for _, s := range ls {
+		if (!s.IsActived) { continue }
+		if s.IsLDAP() {
+			log.Trace("Doing: SyncExternalUsers[%s]", s.Name)
+			
+			var existingUsers []int64
+			
+			// Find all users with this login type
+			var users []User
+			x.Where("login_type = ?", LOGIN_LDAP).
+				And("login_source = ?", s.ID).
+				Find(&users)
+
+			sr := s.LDAP().SearchEntries()
+			
+			for _, su := range sr {
+				if len(su.Username) == 0 { continue }
+
+				if len(su.Mail) == 0 {
+					su.Mail = fmt.Sprintf("%s@localhost", su.Username)
+				}
+
+				var usr *User
+				// Search for existing user
+				for _, du := range users {
+					if du.LowerName == strings.ToLower(su.Username) {
+						usr = &du
+						break
+					}
+				}
+				
+				fullName := composeFullName(su.Name, su.Surname, su.Username)
+				// If no existing user found, create one
+				if usr == nil {
+					log.Trace("SyncExternalUsers[%s]: Creating user %s", s.Name, su.Username)
+
+					usr = &User{
+						LowerName:   strings.ToLower(su.Username),
+						Name:        su.Username,
+						FullName:    fullName,
+						LoginType:   s.Type,
+						LoginSource: s.ID,
+						LoginName:   su.Username,
+						Email:       su.Mail,
+						IsAdmin:     su.IsAdmin,
+						IsActive:    true,
+					}
+
+					err = CreateUser(usr)
+					if err != nil {
+						log.Error(4, "SyncExternalUsers[%s]: Error creating user %s: %v", s.Name, su.Username, err)
+					}
+				} else if (updateExisting) {
+					existingUsers = append(existingUsers, usr.Id)
+					// Check if user data has changed
+					if (usr.IsAdmin != su.IsAdmin ||
+							strings.ToLower(usr.Email) != strings.ToLower(su.Mail) ||
+							usr.FullName != fullName ||
+							!usr.IsActive) {
+								
+						log.Trace("SyncExternalUsers[%s]: Updating user %s", s.Name, usr.Name)
+
+						usr.FullName = fullName;
+						usr.Email = su.Mail;
+						usr.IsAdmin = su.IsAdmin;
+						usr.IsActive = true;
+						
+						err = UpdateUser(usr)
+						if err != nil {
+							log.Error(4, "SyncExternalUsers[%s]: Error updating user %s: %v", s.Name, usr.Name, err)
+						}
+					}
+				}
+			}
+			
+			// Deactivate users not present in LDAP
+			if (updateExisting) {
+				for _, usr := range users {
+					found := false
+					for _, uid := range existingUsers {
+						if usr.Id == uid {
+							found = true
+							break
+						}
+					}
+					if !found {
+						log.Trace("SyncExternalUsers[%s]: Deactivating user %s", s.Name, usr.Name)
+
+						usr.IsActive = false
+						err = UpdateUser(&usr)
+						if err != nil {
+							log.Error(4, "SyncExternalUsers[%s]: Error deactivating user %s: %v", s.Name, usr.Name, err)
+						}
+					}
+				}
+			}
+		}
+	}
 }
