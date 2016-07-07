@@ -46,7 +46,7 @@ func NewMessageFrom(to []string, from, subject, bodyHTML, bodyPlain string) *Mes
 		msg.SetBody("text/html", bodyHTML)
 	} else {
 		msg.SetBody("text/plain", bodyPlain)
-		if setting.MailService.EnableHTMLALternative && bodyHTML != "" {
+		if setting.MailService.EnableHTMLAlternative && bodyHTML != "" {
 			msg.AddAlternative("text/html", bodyHTML)
 		}
 	}
@@ -57,8 +57,8 @@ func NewMessageFrom(to []string, from, subject, bodyHTML, bodyPlain string) *Mes
 }
 
 // NewMessage creates new mail message object with default From header.
-func NewMessage(to []string, subject, body, bodyPlain string) *Message {
-	return NewMessageFrom(to, setting.MailService.From, subject, body, bodyPlain)
+func NewMessage(to []string, subject, bodyHTML, bodyPlain string) *Message {
+	return NewMessageFrom(to, setting.MailService.From, subject, bodyHTML, bodyPlain)
 }
 
 type loginAuth struct {
