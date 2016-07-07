@@ -612,6 +612,13 @@ function initAdmin() {
         });
     }
 
+    function onSecurityProtocolChange() {
+        if ($('#security_protocol').val() > 0) {
+            $('.has-tls').show();
+        } else {
+            $('.has-tls').hide();
+        }
+    }
 
     // New authentication
     if ($('.admin.new.authentication').length > 0) {
@@ -620,6 +627,7 @@ function initAdmin() {
             $('.dldap').hide();
             $('.smtp').hide();
             $('.pam').hide();
+            $('.has-tls').hide();
 
             var auth_type = $(this).val();
             switch (auth_type) {
@@ -628,6 +636,7 @@ function initAdmin() {
                     break;
                 case '3':     // SMTP
                     $('.smtp').show();
+                    $('.has-tls').show();
                     break;
                 case '4':     // PAM
                     $('.pam').show();
@@ -636,7 +645,19 @@ function initAdmin() {
                     $('.dldap').show();
                     break;
             }
+
+            if (auth_type == '2' || auth_type == '5') {
+                onSecurityProtocolChange()
+            }
         });
+        $('#security_protocol').change(onSecurityProtocolChange)
+    }
+    // Edit authentication
+    if ($('.admin.edit.authentication').length > 0) {
+        var auth_type = $('#auth_type').val();
+        if (auth_type == '2' || auth_type == '5') {
+            $('#security_protocol').change(onSecurityProtocolChange);
+        }
     }
 
     // Notice
