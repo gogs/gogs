@@ -518,7 +518,7 @@ func (repo *Repository) CloneLink() (cl *CloneLink) {
 }
 
 var (
-	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
+	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
 	reservedPatterns = []string{"*.git", "*.keys", "*.wiki"}
 )
 
