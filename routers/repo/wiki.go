@@ -93,27 +93,11 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, str
 	blob, err := commit.GetBlobByPath(pageName + ".md")
 	if err != nil {
 		if git.IsErrNotExist(err) {
-			buggyPageURL := url.QueryEscape(pageURL)
-			blob, err = commit.GetBlobByPath(buggyPageURL + ".md")
-			if err != nil {
-				if git.IsErrNotExist(err) {
-					ctx.Redirect(ctx.Repo.RepoLink + "/wiki/_pages")
-				} else {
-					ctx.Handle(500, "GetBlobByPath", err)
-				}
-				return nil, ""
-			} else {
-				log.Warn(fmt.Sprintf("Wiki page name [%s] is non-conformant. Consider fixing it (mirrored wiki?).", pageURL))
-				pageName = buggyPageURL
-				ctx.Data["old_title"] = pageName
-				ctx.Data["Title"] = pageName
-				ctx.Data["title"] = pageName
-				ctx.Data["RequireHighlightJS"] = true
-			}
+			ctx.Redirect(ctx.Repo.RepoLink + "/wiki/_pages")
 		} else {
 			ctx.Handle(500, "GetBlobByPath", err)
-			return nil, ""
 		}
+		return nil, ""
 	}
 	r, err := blob.Data()
 	if err != nil {
