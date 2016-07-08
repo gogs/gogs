@@ -91,6 +91,8 @@ var (
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+
+	WikiLinkPattern = regexp.MustCompile(`(\[\[.*\]\]\w*)`)
 )
 
 // Renderer is a extended version of underlying render object.
@@ -103,7 +105,11 @@ type Renderer struct {
 func (r *Renderer) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] != '#' {
-			link = []byte(path.Join(r.urlPrefix, string(link)))
+			mLink := path.Join(r.urlPrefix, string(link))
+			if isWikiMarkdown {
+				mLink = path.Join(r.urlPrefix, "wiki", string(link))
+			}
+			link = []byte(mLink)
 		}
 	}
 
@@ -172,9 +178,15 @@ var (
 	spaceEncoded      = "%20"
 )
 
+var isWikiMarkdown = false
+
 // Image defines how images should be processed to produce corresponding HTML elements.
 func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
-	prefix := strings.Replace(r.urlPrefix, "/src/", "/raw/", 1)
+	prefix := r.urlPrefix
+	if isWikiMarkdown {
+		prefix += "/wiki/src/"
+	}
+	prefix = strings.Replace(prefix, "/src/", "/raw/", 1)
 	if len(link) > 0 {
 		if isLink(link) {
 			// External link with .svg suffix usually means CI status.
@@ -185,7 +197,9 @@ func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byt
 			}
 		} else {
 			if link[0] != '/' {
-				prefix += "/"
+				if !strings.HasSuffix(prefix, "/") {
+					prefix += "/"
+				}
 			}
 			link = bytes.Replace([]byte((prefix + string(link))), spaceBytes, spaceEncodedBytes, -1)
 			fmt.Println(333, string(link))
@@ -255,6 +269,138 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	return rawBytes
 }
 
+func FirstIndexOfByte(sl []byte, target byte) int {
+	for i := 0; i < len(sl); i++ {
+		if sl[i] == target {
+			return i
+		}
+	}
+	return -1
+}
+func LastIndexOfByte(sl []byte, target byte) int {
+	for i := len(sl) - 1; i >= 0; i-- {
+		if sl[i] == target {
+			return i
+		}
+	}
+	return -1
+}
+
+func RenderSpecialWikiLinks(rawBytes []byte, urlPrefix string, noLink bool) []byte {
+	ms := WikiLinkPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		orig := bytes.TrimSpace(m)
+		m = orig[2:]
+		tailPos := LastIndexOfByte(m, ']') + 1
+		tail := []byte{}
+		if tailPos < len(m) {
+			tail = m[tailPos:]
+			m = m[:tailPos-1]
+		}
+		m = m[:len(m)-2]
+		var name string
+		var link string
+		props := map[string]string{}
+
+		sl := bytes.Split(m, []byte("|"))
+		for _, v := range sl {
+			switch bytes.Count(v, []byte("=")) {
+			case 0:
+				{
+					if isLink(v) || bytes.Contains(v, []byte("/")) {
+						props["link"] = string(v)
+					} else {
+						if props["name"] != "" {
+							props["link"] = string(v)
+						} else {
+							props["name"] = string(v)
+						}
+					}
+				}
+			case 1:
+				{
+					sep := FirstIndexOfByte(v, '=')
+					key, val := string(v[:sep]), html.UnescapeString(string(v[sep+1:]))
+					if (val[0] == '"' || val[0] == '\'') && (val[len(val)-1] == '"' || val[len(val)-1] == '\'') {
+						val = val[1 : len(val)-1]
+					}
+					props[key] = val
+				}
+			}
+		}
+		/*
+			for k, v := range props {
+				fmt.Print(k)
+				fmt.Println(" = " + v)
+			}
+		*/
+
+		if props["link"] != "" {
+			link = props["link"]
+		} else if props["name"] != "" {
+			link = props["name"]
+		}
+		if props["title"] != "" {
+			name = props["title"]
+		} else if props["name"] != "" {
+			name = props["name"]
+		} else {
+			name = link
+		}
+
+		link = strings.Replace(link, string(spaceBytes), string(spaceEncodedBytes), -1)
+		name += string(tail)
+		image := false
+		ext := filepath.Ext(string(link))
+		if ext != "" {
+			switch ext {
+			case ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".gif", ".bmp", ".ico", ".svg":
+				{
+					image = true
+				}
+			}
+		}
+		absoluteLink := isLink([]byte(link))
+		//fmt.Println("name:", name+"; link:", link+"; image:", image)
+		if image {
+			if !absoluteLink {
+				if link[0] == '/' {
+					link = "raw" + link
+				} else {
+					link = "raw/" + link
+				}
+			}
+			if !absoluteLink {
+				link = urlPrefix + "/wiki/" + link
+			}
+			title := props["title"]
+			if title == "" {
+				title = props["alt"]
+			}
+			if title == "" {
+				title = path.Base(string(name))
+			}
+			alt := props["alt"]
+			if alt == "" {
+				alt = name
+			}
+			if alt != "" {
+				alt = `alt="` + alt + `"`
+			}
+			name = fmt.Sprintf(`<img src="%s" %s title="%s" />`, link, alt, title)
+		} else if !absoluteLink {
+			link = urlPrefix + "/wiki/" + link
+		}
+		if noLink {
+			rawBytes = bytes.Replace(rawBytes, orig, []byte(name), -1)
+		} else {
+			rawBytes = bytes.Replace(rawBytes, orig,
+				[]byte(fmt.Sprintf(`<a href="%s">%s</a>`, link, name)), -1)
+		}
+	}
+	return rawBytes
+}
+
 // RenderSpecialLink renders mentions, indexes and SHA1 strings to corresponding links.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	ms := MentionPattern.FindAll(rawBytes, -1)
@@ -264,6 +410,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 	}
 
+	rawBytes = RenderSpecialWikiLinks(rawBytes, urlPrefix, false)
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
 	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
 	return rawBytes
@@ -284,9 +431,9 @@ func RenderRaw(body []byte, urlPrefix string) []byte {
 	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
 	extensions |= blackfriday.EXTENSION_TABLES
 	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
+	//extensions |= blackfriday.EXTENSION_AUTOLINK
 	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
+	// extensions |= blackfriday.EXTENSION_SPACE_HEADERS
 	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
 	if setting.Markdown.EnableHardLineBreak {
@@ -328,10 +475,12 @@ OUTER_LOOP:
 					token = tokenizer.Token()
 
 					// Copy the token to the output verbatim
-					buf.WriteString(token.String())
+					buf.Write(RenderSpecialWikiLinks([]byte(token.String()), urlPrefix, true))
 
 					if token.Type == html.StartTagToken {
-						stackNum++
+						if !com.IsSliceContainsStr(noEndTags, token.Data) {
+							stackNum++
+						}
 					}
 
 					// If this is the close tag to the outer-most, we are done
@@ -386,4 +535,10 @@ func Render(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 // RenderString renders Markdown to HTML with special links and returns string type.
 func RenderString(raw, urlPrefix string, metas map[string]string) string {
 	return string(Render([]byte(raw), urlPrefix, metas))
+}
+
+func RenderWiki(rawBytes []byte, urlPrefix string, metas map[string]string) string {
+	defer func() { isWikiMarkdown = false }()
+	isWikiMarkdown = true
+	return string(Render(rawBytes, urlPrefix, metas))
 }
