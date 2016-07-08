@@ -174,10 +174,10 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
-// GetWebhookByID returns webhook by given ID.
-func GetWebhookByID(id int64) (*Webhook, error) {
+// GetWebhookByID returns webhook of repository by given ID.
+func GetWebhookByID(repoID, id int64) (*Webhook, error) {
 	w := new(Webhook)
-	has, err := x.Id(id).Get(w)
+	has, err := x.Id(id).And("repo_id=?", repoID).Get(w)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -548,7 +548,7 @@ func (t *HookTask) deliver() {
 		}
 
 		// Update webhook last delivery status.
-		w, err := GetWebhookByID(t.HookID)
+		w, err := GetWebhookByID(t.RepoID, t.HookID)
 		if err != nil {
 			log.Error(5, "GetWebhookByID: %v", err)
 			return
