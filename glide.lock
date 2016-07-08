@@ -6,7 +6,7 @@ imports:
   subpackages:
   - memcache
 - name: github.com/codegangsta/cli
-  version: e5bef42c62aa7d25aba4880dc02b7624f01e9e19
+  version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
 - name: github.com/go-macaron/binding
   version: bd00823a7e9aa00cb3b1738fde244573ba7cce2c
 - name: github.com/go-macaron/cache
@@ -41,7 +41,7 @@ imports:
 - name: github.com/gogits/cron
   version: 96040e4fab17baa0391ce571694e4ccb5fce5dac
 - name: github.com/gogits/git-module
-  version: 1f1117c3969f53809bb09f6da07ec2493b2aa07f
+  version: 7da4f5e717e3a0311c2f510ef58318f47e93fa63
 - name: github.com/gogits/go-gogs-client
   version: 01270dfe22e92d99ce9402fedba4530ad8810100
 - name: github.com/issue9/identicon
