@@ -23,6 +23,11 @@ import (
 	"github.com/gogits/gogs/modules/log"
 )
 
+var (
+	ErrAuthenticationAlreadyExist = errors.New("Authentication already exist")
+	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
+)
+
 type LoginType int
 
 // Note: new type must be added at the end of list to maintain compatibility.
@@ -35,16 +40,17 @@ const (
 	LOGIN_DLDAP            // 5
 )
 
-var (
-	ErrAuthenticationAlreadyExist = errors.New("Authentication already exist")
-	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
-)
-
 var LoginNames = map[LoginType]string{
 	LOGIN_LDAP:  "LDAP (via BindDN)",
 	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
 	LOGIN_SMTP:  "SMTP",
 	LOGIN_PAM:   "PAM",
+}
+
+var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
+	ldap.SECURITY_PROTOCOL_UNENCRYPTED: "Unencrypted",
+	ldap.SECURITY_PROTOCOL_LDAPS:       "LDAPS",
+	ldap.SECURITY_PROTOCOL_START_TLS:   "StartTLS",
 }
 
 // Ensure structs implemented interface.
@@ -64,6 +70,10 @@ func (cfg *LDAPConfig) FromDB(bs []byte) error {
 
 func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 	return json.Marshal(cfg)
+}
+
+func (cfg *LDAPConfig) SecurityProtocolName() string {
+	return SecurityProtocolNames[cfg.SecurityProtocol]
 }
 
 type SMTPConfig struct {
@@ -173,10 +183,16 @@ func (source *LoginSource) IsPAM() bool {
 	return source.Type == LOGIN_PAM
 }
 
+func (source *LoginSource) HasTLS() bool {
+	return ((source.IsLDAP() || source.IsDLDAP()) &&
+		source.LDAP().SecurityProtocol > ldap.SECURITY_PROTOCOL_UNENCRYPTED) ||
+		source.IsSMTP()
+}
+
 func (source *LoginSource) UseTLS() bool {
 	switch source.Type {
 	case LOGIN_LDAP, LOGIN_DLDAP:
-		return source.LDAP().UseSSL
+		return source.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
 	case LOGIN_SMTP:
 		return source.SMTP().TLS
 	}
