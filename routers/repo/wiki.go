@@ -216,7 +216,6 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, *gi
 		for i := range entries {
 			if entries[i].Type == git.OBJECT_BLOB {
 				name := entries[i].Name()
-				fmt.Println(name)
 				ext := filepath.Ext(name)
 				if markdown.IsMarkdownFile(name) || ext == ".textile" {
 					name = strings.TrimSuffix(name, ext)
@@ -230,12 +229,10 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, *gi
 				}
 			}
 		}
-		fmt.Println(pages)
 		ctx.Data["Pages"] = pages
 	}
 
 	pageURL := ctx.Params(":page")
-	fmt.Println(pageURL)
 	if len(pageURL) == 0 {
 		pageURL = "Home"
 	}
