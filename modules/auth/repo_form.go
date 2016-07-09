@@ -88,6 +88,7 @@ type RepoSettingForm struct {
 	Interval      int
 	MirrorAddress string
 	Private       bool
+	EnablePrune   bool
 
 	// Advanced settings
 	EnableWiki            bool
