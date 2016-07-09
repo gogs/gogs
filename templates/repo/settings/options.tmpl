@@ -288,9 +288,7 @@
 				{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}} <br>
 				{{.i18n.Tr "repo.settings.delete_notices_2" | Safe}}
 				{{if .Repository.NumForks}}<br>
-				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}} <br>
-				{{.i18n.Tr "repo.settings.delete_notices_fork_2" | Safe}} <br>
-				{{.i18n.Tr "repo.settings.delete_notices_fork_3" | Safe}}
+				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}}
 				{{end}}
 			</div>
 			<form class="ui form" action="{{.Link}}" method="post">
