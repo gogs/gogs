@@ -547,10 +547,11 @@ func IsUsableName(name string) error {
 
 // Mirror represents a mirror information of repository.
 type Mirror struct {
-	ID       int64 `xorm:"pk autoincr"`
-	RepoID   int64
-	Repo     *Repository `xorm:"-"`
-	Interval int         // Hour.
+	ID          int64 `xorm:"pk autoincr"`
+	RepoID      int64
+	Repo        *Repository `xorm:"-"`
+	Interval    int         // Hour.
+	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
 
 	Updated        time.Time `xorm:"-"`
 	UpdatedUnix    int64
@@ -558,8 +559,6 @@ type Mirror struct {
 	NextUpdateUnix int64
 
 	address string `xorm:"-"`
-
-	EnablePrune bool `xorm:"NOT NULL DEFAULT true"`
 }
 
 func (m *Mirror) BeforeInsert() {
@@ -1412,9 +1411,9 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	if repo.NumForks > 0 {
-			if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
-				log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
-			}
+		if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
+			log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
+		}
 	}
 
 	return nil
@@ -1684,9 +1683,9 @@ func MirrorUpdate() {
 
 		repoPath := m.Repo.RepoPath()
 
-		var gitArgs = []string{"remote", "update"}
+		gitArgs := []string{"remote", "update"}
 		if m.EnablePrune {
-			gitArgs = []string{"remote", "update", "--prune"}
+			gitArgs = append(gitArgs, "--prune")
 		}
 
 		if _, stderr, err := process.ExecDir(
