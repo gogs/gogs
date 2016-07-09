@@ -561,7 +561,7 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		RepoUserName: newOwner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-		Content:      path.Join(oldOwner.LowerName, repo.LowerName),
+		Content:      path.Join(oldOwner.Name, repo.Name),
 	}); err != nil {
 		return fmt.Errorf("notify watchers '%d/%d': %v", actUser.Id, repo.ID, err)
 	}
