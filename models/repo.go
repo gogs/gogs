@@ -1409,21 +1409,9 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	if repo.NumForks > 0 {
-		if repo.IsPrivate {
-			forkRepos, err := GetRepositoriesByForkID(repo.ID)
-			if err != nil {
-				return fmt.Errorf("getRepositoriesByForkID: %v", err)
-			}
-			for i := range forkRepos {
-				if err = DeleteRepository(forkRepos[i].OwnerID, forkRepos[i].ID); err != nil {
-					log.Error(4, "DeleteRepository [%d]: %v", forkRepos[i].ID, err)
-				}
-			}
-		} else {
 			if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
 				log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
 			}
-		}
 	}
 
 	return nil
