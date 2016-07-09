@@ -558,6 +558,8 @@ type Mirror struct {
 	NextUpdateUnix int64
 
 	address string `xorm:"-"`
+
+	EnablePrune bool `xorm:"NOT NULL DEFAULT true"`
 }
 
 func (m *Mirror) BeforeInsert() {
@@ -656,7 +658,7 @@ func GetMirror(repoId int64) (*Mirror, error) {
 }
 
 func updateMirror(e Engine, m *Mirror) error {
-	_, err := e.Id(m.ID).Update(m)
+	_, err := e.Id(m.ID).AllCols().Update(m)
 	return err
 }
 
@@ -746,9 +748,10 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	if opts.IsMirror {
 		if _, err = x.InsertOne(&Mirror{
-			RepoID:     repo.ID,
-			Interval:   24,
-			NextUpdate: time.Now().Add(24 * time.Hour),
+			RepoID:      repo.ID,
+			Interval:    24,
+			EnablePrune: true,
+			NextUpdate:  time.Now().Add(24 * time.Hour),
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
@@ -1680,10 +1683,16 @@ func MirrorUpdate() {
 		}
 
 		repoPath := m.Repo.RepoPath()
+
+		var gitArgs = []string{"remote", "update"}
+		if m.EnablePrune {
+			gitArgs = []string{"remote", "update", "--prune"}
+		}
+
 		if _, stderr, err := process.ExecDir(
 			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update", "--prune"); err != nil {
+			"git", gitArgs...); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
