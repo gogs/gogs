@@ -33,9 +33,9 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: 3654d25ec346ee8ce71a68431025458d52a38ac0
 - name: github.com/go-xorm/core
-  version: edde1c5ab80e3cda107f6b93af6df894caba41ea
+  version: bc1b7f81f0e369289078424064634a5ee7d21051
 - name: github.com/go-xorm/xorm
-  version: 8150bebe6a68d3e86a14e3aa0cbac4873c05131d
+  version: b8b1711cde4d9c68da95cd0ff8de0de0cb491df3
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
@@ -43,7 +43,7 @@ imports:
 - name: github.com/gogits/git-module
   version: 7da4f5e717e3a0311c2f510ef58318f47e93fa63
 - name: github.com/gogits/go-gogs-client
-  version: 01270dfe22e92d99ce9402fedba4530ad8810100
+  version: 872cf281aac97429da02b6cdea942c9388eb65fb
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
