@@ -78,7 +78,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.2.0304"},
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.5.0711"},
 		{"github.com/go-macaron/binding", binding.Version, "0.2.1"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
@@ -92,7 +92,10 @@ func checkVersion() {
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
-			log.Fatal(4, "Package '%s' version is too old (%s -> %s), did you forget to update?", c.ImportPath, c.Version(), c.Expected)
+			log.Fatal(4, `Dependency outdated!
+Package '%s' current version (%s) is below requirement (%s), 
+please use following command to update this package and recompile Gogs:
+go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 		}
 	}
 }
