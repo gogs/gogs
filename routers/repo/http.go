@@ -7,6 +7,7 @@ package repo
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,6 +27,8 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
+
+var ErrNoError = errors.New("no error :trollface:")
 
 func HTTP(ctx *context.Context) {
 	username := ctx.Params(":username")
@@ -222,7 +225,7 @@ func HTTP(ctx *context.Context) {
 		log.Info("Waiting for cmd-ret...")
 		rpcRet := <-cmdRet
 		log.Info("cmd-ret gotten...")
-		if rpcRet != nil {
+		if rpcRet == ErrNoError {
 			for _, v := range puoArray {
 				// FIXME: handle error.
 				if err = models.PushUpdate(v); err == nil {
@@ -380,16 +383,16 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.cfg.OnSucceed != nil {
 		pr, pw := io.Pipe()
 		defer pr.Close()
-		br = io.TeeReader(reqBody, pw)
-		cr = pr
+		cr = io.TeeReader(reqBody, pw)
+		br = pr
 	} else {
 		br = reqBody
 	}
 
-	cmdRet := make(chan error, 1)
-	gitDone := make(chan error, 1)
+	cmdRet := make(chan error, 0)
+	gitDone := make(chan error, 0)
 	go func() {
-		cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
+		cmd := exec.Command("git", service, "--stateless-rpc", "--timeout=3", h.dir)
 		cmd.Dir = h.dir
 
 		cmd.Stdout = h.w
@@ -399,16 +402,16 @@ func serviceRPC(h serviceHandler, service string) {
 		log.Info("Running cmd...")
 		if err := cmd.Run(); err != nil {
 			log.Info("returning err: %s", err.Error())
-			cmdRet <- err
 			log.GitLogger.Error(2, "fail to serve RPC(%s): %v", service, err)
 			h.w.WriteHeader(http.StatusInternalServerError)
+			cmdRet <- err
 			gitDone <- err
 			return
 		}
 		log.Info("returning nil")
-		cmdRet <- nil
+		cmdRet <- ErrNoError
 		log.Info("returning nil again")
-		gitDone <- nil
+		gitDone <- ErrNoError
 	}()
 
 	if h.cfg.OnSucceed != nil {
@@ -419,7 +422,7 @@ func serviceRPC(h serviceHandler, service string) {
 		log.Info("Not running callback")
 	}
 	log.Info("CB Done waiting for RPC")
-	if err := <-gitDone; err != nil {
+	if err := <-gitDone; err != ErrNoError {
 		log.Info("Done with err: %s", err.Error())
 	} else {
 		log.Info("Done without err")
