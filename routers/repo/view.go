@@ -106,9 +106,9 @@ func Home(ctx *context.Context) {
 				ctx.Data["IsImageFile"] = true
 			case isTextFile:
 				if blob.Size() >= setting.MaxDisplayFileSize {
-					ctx.Data["IsFileTooBig"] = true
+					ctx.Data["IsFileTooLarge"] = true
 				} else {
-					ctx.Data["IsFileTooBig"] = false
+					ctx.Data["IsFileTooLarge"] = false
 					d, _ := ioutil.ReadAll(dataRc)
 					buf = append(buf, d...)
 					readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
