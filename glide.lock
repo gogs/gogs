@@ -8,7 +8,7 @@ imports:
 - name: github.com/codegangsta/cli
   version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
 - name: github.com/go-macaron/binding
-  version: bd00823a7e9aa00cb3b1738fde244573ba7cce2c
+  version: 9440f336b443056c90d7d448a0a55ad8c7599880
 - name: github.com/go-macaron/cache
   version: 56173531277692bc2925924d51fda1cd0a6b8178
   subpackages:
@@ -43,7 +43,7 @@ imports:
 - name: github.com/gogits/git-module
   version: db93fa550116997bbe0b62baa653b8e6f4135258
 - name: github.com/gogits/go-gogs-client
-  version: 872cf281aac97429da02b6cdea942c9388eb65fb
+  version: ee68cd9eefff11615f336e9965762f6736eeecc8
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
