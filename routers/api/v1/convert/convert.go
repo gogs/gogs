@@ -55,6 +55,8 @@ func ToRepository(owner *models.User, repo *models.Repository, permission api.Pe
 		Stars:       repo.NumStars,
 		Forks:       repo.NumForks,
 		Watchers:    repo.NumWatches,
+		Created:     repo.Created,
+		Updated:     repo.Updated,
 		Permissions: permission,
 	}
 }
