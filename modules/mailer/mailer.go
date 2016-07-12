@@ -27,21 +27,27 @@ type Message struct {
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
-func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
+func NewMessageFrom(to []string, from, subject, bodyHTML, bodyPlain string) *Message {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 	msg.SetDateHeader("Date", time.Now())
 
-	body, err := html2text.FromString(htmlBody)
-	if err != nil {
-		log.Error(4, "html2text.FromString: %v", err)
-		msg.SetBody("text/html", htmlBody)
+	if bodyPlain == "" {
+		var err error
+		bodyPlain, err = html2text.FromString(bodyHTML)
+		if err != nil {
+			log.Error(4, "html2text.FromString: %v", err)
+		}
+	}
+
+	if bodyPlain == "" {
+		msg.SetBody("text/html", bodyHTML)
 	} else {
-		msg.SetBody("text/plain", body)
-		if setting.MailService.EnableHTMLAlternative {
-			msg.AddAlternative("text/html", htmlBody)
+		msg.SetBody("text/plain", bodyPlain)
+		if setting.MailService.EnableHTMLAlternative && bodyHTML != "" {
+			msg.AddAlternative("text/html", bodyHTML)
 		}
 	}
 
@@ -51,8 +57,8 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 }
 
 // NewMessage creates new mail message object with default From header.
-func NewMessage(to []string, subject, body string) *Message {
-	return NewMessageFrom(to, setting.MailService.From, subject, body)
+func NewMessage(to []string, subject, bodyHTML, bodyPlain string) *Message {
+	return NewMessageFrom(to, setting.MailService.From, subject, bodyHTML, bodyPlain)
 }
 
 type loginAuth struct {

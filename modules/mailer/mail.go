@@ -7,7 +7,6 @@ package mailer
 import (
 	"fmt"
 	"path"
-	"strings"
 
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
@@ -52,7 +51,7 @@ func SendUserMail(c *macaron.Context, u *models.User, tpl base.TplName, code, su
 		return
 	}
 
-	msg := NewMessage([]string{u.Email}, subject, body)
+	msg := NewMessage([]string{u.Email}, subject, body, "")
 	msg.Info = fmt.Sprintf("UID: %d, %s", u.Id, info)
 
 	SendAsync(msg)
@@ -75,7 +74,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u *models.User) {
 		return
 	}
 
-	msg := NewMessage([]string{u.Email}, c.Tr("mail.register_notify"), body)
+	msg := NewMessage([]string{u.Email}, c.Tr("mail.register_notify"), body, "")
 	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.Id)
 
 	SendAsync(msg)
@@ -92,7 +91,7 @@ func SendActivateEmailMail(c *macaron.Context, u *models.User, email *models.Ema
 		return
 	}
 
-	msg := NewMessage([]string{email.Email}, c.Tr("mail.activate_email"), body)
+	msg := NewMessage([]string{email.Email}, c.Tr("mail.activate_email"), body, "")
 	msg.Info = fmt.Sprintf("UID: %d, activate email", u.Id)
 
 	SendAsync(msg)
@@ -126,11 +125,16 @@ func SendIssueNotifyMail(u, owner *models.User, repo *models.Repository, issue *
 		return tos, nil
 	}
 
-	subject := fmt.Sprintf("[%s] %s (#%d)", repo.Name, issue.Name, issue.Index)
-	content := fmt.Sprintf("%s<br>-<br> <a href=\"%s%s/%s/issues/%d\">View it on Gogs</a>.",
-		markdown.RenderSpecialLink([]byte(strings.Replace(issue.Content, "\n", "<br>", -1)), owner.Name+"/"+repo.Name, repo.ComposeMetas()),
-		setting.AppUrl, owner.Name, repo.Name, issue.Index)
-	msg := NewMessage(tos, subject, content)
+	var (
+		subject  = fmt.Sprintf("[%s] %s (#%d)", repo.Name, issue.Name, issue.Index)
+		gogsLink = fmt.Sprintf("%s%s/%s/issues/%d", setting.AppUrl, owner.Name, repo.Name, issue.Index)
+		content  = fmt.Sprintf("%s<br>&mdash;<br><a href=\"%s\">View it on Gogs</a>.",
+			markdown.Render([]byte(issue.Content), repo.RepoLink(), repo.ComposeMetas()), gogsLink)
+		// Markdown is meant to look good even when it can't be parsed into HTML, that's why it's being
+		// written directly in the email for the text/plain body (fallback version).
+		contentPlain = fmt.Sprintf("%s\n\n---\nView it on gogs: %s", issue.Content, gogsLink)
+		msg          = NewMessage(tos, subject, content, contentPlain)
+	)
 	msg.Info = fmt.Sprintf("Subject: %s, issue notify", subject)
 
 	SendAsync(msg)
@@ -158,7 +162,7 @@ func SendIssueMentionMail(r macaron.Render, u, owner *models.User,
 		return fmt.Errorf("HTMLString: %v", err)
 	}
 
-	msg := NewMessage(tos, subject, body)
+	msg := NewMessage(tos, subject, body, "")
 	msg.Info = fmt.Sprintf("Subject: %s, issue mention", subject)
 
 	SendAsync(msg)
@@ -178,7 +182,7 @@ func SendCollaboratorMail(r macaron.Render, u, doer *models.User, repo *models.R
 		return fmt.Errorf("HTMLString: %v", err)
 	}
 
-	msg := NewMessage([]string{u.Email}, subject, body)
+	msg := NewMessage([]string{u.Email}, subject, body, "")
 	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.Id)
 
 	SendAsync(msg)
@@ -186,5 +190,5 @@ func SendCollaboratorMail(r macaron.Render, u, doer *models.User, repo *models.R
 }
 
 func SendTestMail(email string) error {
-	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!").Message)
+	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!", "").Message)
 }
