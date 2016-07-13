@@ -45,11 +45,18 @@ func ToRepository(owner *models.User, repo *models.Repository, permission api.Pe
 		ID:          repo.ID,
 		Owner:       ToUser(owner),
 		FullName:    owner.Name + "/" + repo.Name,
+		Description: repo.Description,
 		Private:     repo.IsPrivate,
 		Fork:        repo.IsFork,
 		HtmlUrl:     setting.AppUrl + owner.Name + "/" + repo.Name,
 		CloneUrl:    cl.HTTPS,
 		SshUrl:      cl.SSH,
+		OpenIssues:  repo.NumOpenIssues,
+		Stars:       repo.NumStars,
+		Forks:       repo.NumForks,
+		Watchers:    repo.NumWatches,
+		Created:     repo.Created,
+		Updated:     repo.Updated,
 		Permissions: permission,
 	}
 }

@@ -125,6 +125,7 @@ var (
 	AdminNoticePagingNum int
 	AdminOrgPagingNum    int
 	ThemeColorMetaTag    string
+	MaxDisplayFileSize   int64
 
 	// Markdown sttings
 	Markdown struct {
@@ -461,6 +462,7 @@ func NewContext() {
 	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
 	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
 	FeedMaxCommitNum = sec.Key("FEED_MAX_COMMIT_NUM").MustInt(5)
+	MaxDisplayFileSize = sec.Key("MAX_DISPLAY_FILE_SIZE").MustInt64(8388608)
 
 	sec = Cfg.Section("ui.admin")
 	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)

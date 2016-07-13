@@ -220,7 +220,7 @@ func checkWebhook(ctx *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	}
 	ctx.Data["BaseLink"] = orCtx.Link
 
-	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
+	w, err := models.GetWebhookByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrWebhookNotExist(err) {
 			ctx.Handle(404, "GetWebhookByID", nil)

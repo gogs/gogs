@@ -19,11 +19,11 @@ import (
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
 	"path/filepath"
 	"strconv"
-	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -115,22 +115,27 @@ func Home(ctx *context.Context) {
 				ctx.Data["IsImageFile"] = true
 				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			case isTextFile:
-				d, _ := ioutil.ReadAll(dataRc)
-				buf = append(buf, d...)
-				isReadme := markdown.IsReadmeFile(blob.Name())
-				isMarkdown := isReadme || markdown.IsMarkdownFile(blob.Name())
-				ctx.Data["ReadmeExist"] = isReadme
-				ctx.Data["IsMarkdown"] = isMarkdown
-				if isMarkdown {
-					ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+				if blob.Size() >= setting.MaxDisplayFileSize {
+					ctx.Data["IsFileTooLarge"] = true
 				} else {
-					if err, content := template.ToUtf8WithErr(buf); err != nil {
-						if err != nil {
-							log.Error(4, "Convert content encoding: %s", err)
-						}
-						ctx.Data["FileContent"] = string(buf)
+					ctx.Data["IsFileTooLarge"] = false
+					d, _ := ioutil.ReadAll(dataRc)
+					buf = append(buf, d...)
+					isReadme := markdown.IsReadmeFile(blob.Name())
+					isMarkdown := isReadme || markdown.IsMarkdownFile(blob.Name())
+					ctx.Data["ReadmeExist"] = isReadme
+					ctx.Data["IsMarkdown"] = isMarkdown
+					if isMarkdown {
+						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 					} else {
-						ctx.Data["FileContent"] = content
+						if err, content := template.ToUtf8WithErr(buf); err != nil {
+							if err != nil {
+								log.Error(4, "Convert content encoding: %s", err)
+							}
+							ctx.Data["FileContent"] = string(buf)
+						} else {
+							ctx.Data["FileContent"] = content
+						}
 					}
 				}
 				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch  {

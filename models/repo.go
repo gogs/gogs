@@ -575,10 +575,11 @@ func IsUsableName(name string) error {
 
 // Mirror represents a mirror information of repository.
 type Mirror struct {
-	ID       int64 `xorm:"pk autoincr"`
-	RepoID   int64
-	Repo     *Repository `xorm:"-"`
-	Interval int         // Hour.
+	ID          int64 `xorm:"pk autoincr"`
+	RepoID      int64
+	Repo        *Repository `xorm:"-"`
+	Interval    int         // Hour.
+	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
 
 	Updated        time.Time `xorm:"-"`
 	UpdatedUnix    int64
@@ -684,7 +685,7 @@ func GetMirror(repoId int64) (*Mirror, error) {
 }
 
 func updateMirror(e Engine, m *Mirror) error {
-	_, err := e.Id(m.ID).Update(m)
+	_, err := e.Id(m.ID).AllCols().Update(m)
 	return err
 }
 
@@ -774,9 +775,10 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	if opts.IsMirror {
 		if _, err = x.InsertOne(&Mirror{
-			RepoID:     repo.ID,
-			Interval:   24,
-			NextUpdate: time.Now().Add(24 * time.Hour),
+			RepoID:      repo.ID,
+			Interval:    24,
+			EnablePrune: true,
+			NextUpdate:  time.Now().Add(24 * time.Hour),
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
@@ -1437,20 +1439,8 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	if repo.NumForks > 0 {
-		if repo.IsPrivate {
-			forkRepos, err := GetRepositoriesByForkID(repo.ID)
-			if err != nil {
-				return fmt.Errorf("getRepositoriesByForkID: %v", err)
-			}
-			for i := range forkRepos {
-				if err = DeleteRepository(forkRepos[i].OwnerID, forkRepos[i].ID); err != nil {
-					log.Error(4, "DeleteRepository [%d]: %v", forkRepos[i].ID, err)
-				}
-			}
-		} else {
-			if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
-				log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
-			}
+		if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
+			log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
 		}
 	}
 
@@ -1720,10 +1710,16 @@ func MirrorUpdate() {
 		}
 
 		repoPath := m.Repo.RepoPath()
+
+		gitArgs := []string{"remote", "update"}
+		if m.EnablePrune {
+			gitArgs = append(gitArgs, "--prune")
+		}
+
 		if _, stderr, err := process.ExecDir(
 			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update", "--prune"); err != nil {
+			"git", gitArgs...); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {

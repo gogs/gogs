@@ -8,7 +8,7 @@ imports:
 - name: github.com/codegangsta/cli
   version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
 - name: github.com/go-macaron/binding
-  version: bd00823a7e9aa00cb3b1738fde244573ba7cce2c
+  version: 9440f336b443056c90d7d448a0a55ad8c7599880
 - name: github.com/go-macaron/cache
   version: 56173531277692bc2925924d51fda1cd0a6b8178
   subpackages:
@@ -33,17 +33,17 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: 3654d25ec346ee8ce71a68431025458d52a38ac0
 - name: github.com/go-xorm/core
-  version: edde1c5ab80e3cda107f6b93af6df894caba41ea
+  version: bc1b7f81f0e369289078424064634a5ee7d21051
 - name: github.com/go-xorm/xorm
-  version: 8150bebe6a68d3e86a14e3aa0cbac4873c05131d
+  version: b8b1711cde4d9c68da95cd0ff8de0de0cb491df3
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
   version: 96040e4fab17baa0391ce571694e4ccb5fce5dac
 - name: github.com/gogits/git-module
-  version: 7da4f5e717e3a0311c2f510ef58318f47e93fa63
+  version: db93fa550116997bbe0b62baa653b8e6f4135258
 - name: github.com/gogits/go-gogs-client
-  version: 01270dfe22e92d99ce9402fedba4530ad8810100
+  version: ee68cd9eefff11615f336e9965762f6736eeecc8
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
