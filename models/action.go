@@ -245,12 +245,12 @@ type PushCommits struct {
 	Commits    []*PushCommit
 	CompareUrl string
 
-	avatars map[string]string
+	Avatars map[string]string
 }
 
 func NewPushCommits() *PushCommits {
 	return &PushCommits{
-		avatars: make(map[string]string),
+		Avatars: make(map[string]string),
 	}
 }
 
@@ -279,20 +279,20 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 // AvatarLink tries to match user in database with e-mail
 // in order to show custom avatar, and falls back to general avatar link.
 func (push *PushCommits) AvatarLink(email string) string {
-	_, ok := push.avatars[email]
+	_, ok := push.Avatars[email]
 	if !ok {
 		u, err := GetUserByEmail(email)
 		if err != nil {
-			push.avatars[email] = base.AvatarLink(email)
+			push.Avatars[email] = base.AvatarLink(email)
 			if !IsErrUserNotExist(err) {
 				log.Error(4, "GetUserByEmail: %v", err)
 			}
 		} else {
-			push.avatars[email] = u.AvatarLink()
+			push.Avatars[email] = u.AvatarLink()
 		}
 	}
 
-	return push.avatars[email]
+	return push.Avatars[email]
 }
 
 // updateIssuesCommit checks if issues are manipulated by commit message.
@@ -526,6 +526,7 @@ func CommitRepoAction(
 			},
 			Sender: payloadSender,
 		}
+
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, p); err != nil {
 			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}
