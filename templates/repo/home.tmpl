@@ -35,12 +35,12 @@
 				<div id="file-buttons" class="ui buttons nowrap">
 					{{if .NewFileLink}}
 						<a href="{{EscapePound .NewFileLink}}" class="ui button nowrap">
-							<i class="icon fa fa-plus-square-o"></i> {{.i18n.Tr "repo.new_file"}}
+							<i class="plus square outline icon"></i> {{.i18n.Tr "repo.new_file"}}
 						</a>
 					{{end}}
 					{{if .UploadFileLink}}
 						<a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
-							<i class="icon fa fa-upload"></i> {{.i18n.Tr "repo.upload_file"}}
+							<i class="upload icon"></i> {{.i18n.Tr "repo.upload_file"}}
 						</a>
 					{{end}}
 				</div>
