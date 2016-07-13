@@ -2230,34 +2230,6 @@ func (repo *Repository) UpdateRepoFile(doer *User, oldBranchName, branchName, ol
 		return fmt.Errorf("Push: %v", err)
 	}
 
-	//p := &api.PushPayload{
-	//	Ref:        refFullName,
-	//	Before:     oldCommitID,
-	//	After:      newCommitID,
-	//	CompareUrl: setting.AppUrl + commit.CompareUrl,
-	//	Commits:    commit.ToApiPayloadCommits(repo.FullRepoLink()),
-	//	Repo:       payloadRepo,
-	//	Pusher: &api.PayloadAuthor{
-	//		Name:     pusher_name,
-	//		Email:    pusher_email,
-	//		UserName: userName,
-	//	},
-	//	Sender: payloadSender,
-	//}
-	//if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, p); err != nil {
-	//	return fmt.Errorf("PrepareWebhooks: %v", err)
-	//}
-	//
-	//if isNewBranch {
-	//	return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-	//		Ref:     refName,
-	//		RefType: "branch",
-	//		Repo:    payloadRepo,
-	//		Sender:  payloadSender,
-	//	})
-	//}
-
-
 	return nil
 }
 
