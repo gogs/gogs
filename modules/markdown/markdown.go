@@ -33,11 +33,12 @@ var Sanitizer = bluemonday.UGCPolicy()
 // This function should only be called once during entire application lifecycle.
 func BuildSanitizer() {
 	// Normal markdown-stuff
-	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code", "div", "ul", "ol", "dl")
 
 	// Checkboxes
 	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
 	Sanitizer.AllowAttrs("checked", "disabled").OnElements("input")
+	Sanitizer.AllowNoAttrs().OnElements("label")
 
 	// Custom URL-Schemes
 	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
@@ -168,14 +169,47 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 	r.Renderer.AutoLink(out, link, kind)
 }
 
+func (options *Renderer) List(out *bytes.Buffer, text func() bool, flags int) {
+	marker := out.Len()
+	if out.Len() > 0 {
+		out.WriteByte('\n')
+	}
+
+	if flags&blackfriday.LIST_TYPE_DEFINITION != 0 {
+		out.WriteString("<dl>")
+	} else if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
+		out.WriteString("<ol class='ui list'>")
+	} else {
+		out.WriteString("<ul class='ui list'>")
+	}
+	if !text() {
+		out.Truncate(marker)
+		return
+	}
+	if flags&blackfriday.LIST_TYPE_DEFINITION != 0 {
+		out.WriteString("</dl>\n")
+	} else if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
+		out.WriteString("</ol>\n")
+	} else {
+		out.WriteString("</ul>\n")
+	}
+}
+
 // ListItem defines how list items should be processed to produce corresponding HTML elements.
 func (options *Renderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	// Detect procedures to draw checkboxes.
+	prefix := ""
+	if bytes.HasPrefix(text, []byte("<p>")) {
+		prefix = "<p>"
+	}
 	switch {
-	case bytes.HasPrefix(text, []byte("[ ] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" />`), text[3:]...)
-	case bytes.HasPrefix(text, []byte("[x] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
+	case bytes.HasPrefix(text, []byte(prefix+"[ ] ")):
+		text = append([]byte(`<div class="ui fitted read-only checkbox"><input type="checkbox" /><label /></div>`), text[3+len(prefix):]...)
+	case bytes.HasPrefix(text, []byte(prefix+"[x] ")):
+		text = append([]byte(`<div class="ui checked fitted read-only checkbox"><input type="checkbox" checked="" /><label /></div>`), text[3+len(prefix):]...)
+	}
+	if prefix != "" {
+		text = bytes.Replace(text, []byte("</p>"), []byte{}, 1)
 	}
 	options.Renderer.ListItem(out, text, flags)
 }
