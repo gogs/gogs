@@ -81,11 +81,11 @@ var (
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
-	CommitPattern = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	//CommitPattern = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 
 	// IssueFullPattern matches link to an issue with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/issues/4#issue-685
-	IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	//IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	// IssueNumericPattern matches string that references to a numeric issue, e.g. #1287
 	IssueNumericPattern = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
 	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
@@ -97,6 +97,61 @@ var (
 	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 
 	WikiLinkPattern = regexp.MustCompile(`(\[\[.*\]\]\w*)`)
+
+	/*
+		https://github.com/jquery/jquery/blob/a644101ed04d0beacea864ce805e0c4f86ba1cd1/test/unit/event.js#L2703:
+			jquery
+			jquery
+			blob
+			a644101ed04d0beacea864ce805e0c4f86ba1cd1
+			test/unit/event.js
+			2703
+		https://github.com/jquery/jquery/blob/a644101ed04d0beacea864ce805e0c4f86ba1cd1/test/unit/event.js
+			jquery
+			jquery
+			blob
+			a644101ed04d0beacea864ce805e0c4f86ba1cd1
+			test/unit/event.js
+		https://github.com/jquery/jquery/commit/0705be475092aede1eddae01319ec931fb9c65fc
+			jquery
+			jquery
+			commit
+			0705be475092aede1eddae01319ec931fb9c65fc
+		https://github.com/jquery/jquery/tree/0705be475092aede1eddae01319ec931fb9c65fc/src
+			jquery
+			jquery
+			tree
+			0705be475092aede1eddae01319ec931fb9c65fc
+			src
+		https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
+			gogs
+			gogs
+			commit
+			d8a994ef243349f321568f9e36d5c3f444b99cae
+	*/
+	AnySHA1Pattern = regexp.MustCompile(`http\S+//\S+/(\S+)/(\S+)/(\S+)/([0-9a-f]{40})(?:/([^#\s]+)(?:#L(\d+))?)?`)
+
+	/*
+		https://github.com/gogits/gogs/pull/3244
+			github.com/gogits/gogs/pull/
+			3244
+		https://github.com/gogits/gogs/issues/3247#issuecomment-231517079
+			github.com/gogits/gogs/issues/
+			3247
+			231517079
+		https://try.gogs.io/gogs/gogs/issues/4#issue-685
+			try.gogs.io/gogs/gogs/issues/
+			4
+			685
+		https://youtrack.jetbrains.com/issue/JT-36485
+			youtrack.jetbrains.com/issue/
+			JT-36485
+		https://youtrack.jetbrains.com/issue/JT-36485#comment=27-1508676
+			youtrack.jetbrains.com/issue/
+			JT-36485
+			27-1508676
+	*/
+	IssueFullPattern = regexp.MustCompile(`http\S+//((?:[^\s/]+/)+)((?:\w{1,10}-)?[1-9][0-9]*)(?:#\w+.(\S+)?)?`)
 )
 
 // FindAllMentions matches mention patterns in given content
@@ -137,35 +192,35 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 		r.Renderer.AutoLink(out, link, kind)
 		return
 	}
-
-	// Since this method could only possibly serve one link at a time,
-	// we do not need to find all.
-	if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
-		m := CommitPattern.Find(link)
-		if m != nil {
-			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "commit/")
-			j := strings.Index(string(m), "#")
-			if j == -1 {
-				j = len(m)
+	/*
+		// Since this method could only possibly serve one link at a time,
+		// we do not need to find all.
+		if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
+			m := CommitPattern.Find(link)
+			if m != nil {
+				m = bytes.TrimSpace(m)
+				i := strings.Index(string(m), "commit/")
+				j := strings.Index(string(m), "#")
+				if j == -1 {
+					j = len(m)
+				}
+				out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
+				return
 			}
-			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
-			return
-		}
 
-		m = IssueFullPattern.Find(link)
-		if m != nil {
-			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "issues/")
-			j := strings.Index(string(m), "#")
-			if j == -1 {
-				j = len(m)
+			m = IssueFullPattern.Find(link)
+			if m != nil {
+				m = bytes.TrimSpace(m)
+				i := strings.Index(string(m), "issues/")
+				j := strings.Index(string(m), "#")
+				if j == -1 {
+					j = len(m)
+				}
+				out.WriteString(fmt.Sprintf(`<a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
+				return
 			}
-			out.WriteString(fmt.Sprintf(`<a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
-			return
 		}
-	}
-
+	*/
 	r.Renderer.AutoLink(out, link, kind)
 }
 
@@ -319,6 +374,76 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	}))
 }
 
+func RenderFullSha1Pattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := AnySHA1Pattern.FindAllSubmatch(rawBytes, -1)
+	for _, m := range ms {
+		all := m[0]
+		//author := m[1]
+		//repoName := m[2]
+		//itemType := m[3]
+		sha := m[4]
+		var path []byte
+		if len(m) > 5 {
+			path = m[5]
+		}
+		var line []byte
+		if len(m) > 6 {
+			line = m[6]
+		}
+		urlSuffix := "/"
+		text := base.ShortSha(string(sha))
+		if path != nil {
+			urlSuffix += string(path)
+			text = string(path)
+		}
+		if line != nil {
+			urlSuffix += "#L"
+			urlSuffix += string(line)
+			text += " ("
+			text += string(line)
+			text += ")"
+		}
+		rawBytes = bytes.Replace(rawBytes, all, []byte(fmt.Sprintf(
+			`<a href="%s/%s/%s%s">%s</a>`, urlPrefix, "src", sha, urlSuffix, text)), -1)
+	}
+	return rawBytes
+}
+
+func RenderFullIssuePattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := IssueFullPattern.FindAllSubmatch(rawBytes, -1)
+	for _, m := range ms {
+		all := m[0]
+		paths := bytes.Split(m[1], []byte("/"))
+		paths = paths[:len(paths)-1]
+		if bytes.HasPrefix(paths[0], []byte("gist.")) {
+			continue
+		}
+		var path string
+		if len(paths) > 3 {
+			// Internal one
+			path = urlPrefix + "/issues/"
+		} else {
+			path = "//" + string(m[1])
+		}
+		id := string(m[2])
+		path += id
+		var comment []byte
+		if len(m) > 3 {
+			comment = m[3]
+		}
+		urlSuffix := ""
+		text := "#" + id
+		if comment != nil {
+			urlSuffix += "#issuecomment-"
+			urlSuffix += string(comment)
+			text += "<i class='comment icon'></i>"
+		}
+		rawBytes = bytes.Replace(rawBytes, all, []byte(fmt.Sprintf(
+			`<a href="%s%s">%s</a>`, path, urlSuffix, text)), -1)
+	}
+	return rawBytes
+}
+
 func FirstIndexOfByte(sl []byte, target byte) int {
 	for i := 0; i < len(sl); i++ {
 		if sl[i] == target {
@@ -462,7 +587,9 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 
 	rawBytes = RenderSpecialWikiLinks(rawBytes, urlPrefix, false)
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	//rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	rawBytes = RenderFullSha1Pattern(rawBytes, urlPrefix)
+	rawBytes = RenderFullIssuePattern(rawBytes, urlPrefix)
 	return rawBytes
 }
 
