@@ -236,7 +236,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		Before:     pr.MergeBase,
 		After:      pr.MergedCommitID,
 		CompareUrl: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
-		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullRepoLink()),
+		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullLink()),
 		Repo:       pr.BaseRepo.ComposePayload(),
 		Pusher: &api.PayloadAuthor{
 			Name:     pr.HeadRepo.MustOwner().DisplayName(),

@@ -10,7 +10,7 @@
 						<div class="divider"> / </div>
 						<a href="{{$.RepoLink}}">{{.Name}}</a>
 						{{if .IsMirror}}<div class="fork-flag">{{$.i18n.Tr "repo.mirror_from"}} <a target="_blank" href="{{$.Mirror.Address}}">{{$.Mirror.Address}}</a></div>{{end}}
-						{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.RepoLink}}">{{SubStr .BaseRepo.RepoRelLink 1 -1}}</a></div>{{end}}
+						{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.Link}}">{{SubStr .BaseRepo.RepoRelLink 1 -1}}</a></div>{{end}}
 					</div>
 
 					<div class="ui right">
@@ -18,7 +18,7 @@
 							<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
 								<i class="icon fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
 							</a>
-							<a class="ui basic label" href="{{.RepoLink}}/watchers">
+							<a class="ui basic label" href="{{.Link}}/watchers">
 								{{.NumWatches}}
 							</a>
 						</div>
@@ -26,7 +26,7 @@
 							<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
 								<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
 							</a>
-							<a class="ui basic label" href="{{.RepoLink}}/stars">
+							<a class="ui basic label" href="{{.Link}}/stars">
 								{{.NumStars}}
 							</a>
 						</div>
@@ -35,7 +35,7 @@
 								<a class="ui button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" {{if not (eq .OwnerID $.SignedUserID)}}href="{{AppSubUrl}}/repo/fork/{{.ID}}"{{else}} data-content="{{$.i18n.Tr "repo.fork_from_self"}}" data-position="top center" data-variation="tiny"{{end}}>
 									<i class="icon octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
 								</a>
-								<a class="ui basic label" href="{{.RepoLink}}/forks">
+								<a class="ui basic label" href="{{.Link}}/forks">
 									{{.NumForks}}
 								</a>
 							</div>

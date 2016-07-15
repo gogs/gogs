@@ -346,11 +346,11 @@ func (repo *Repository) GitConfigPath() string {
 	return filepath.Join(repo.RepoPath(), "config")
 }
 
-func (repo *Repository) RepoLink() string {
+func (repo *Repository) Link() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
-func (repo *Repository) RepoRelLink() string {
+func (repo *Repository) RelLink() string {
 	return "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
@@ -358,7 +358,7 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
-func (repo *Repository) FullRepoLink() string {
+func (repo *Repository) FullLink() string {
 	return setting.AppUrl + repo.MustOwner().Name + "/" + repo.Name
 }
 
@@ -459,7 +459,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 	return &api.PayloadRepo{
 		ID:          repo.ID,
 		Name:        repo.Name,
-		URL:         repo.FullRepoLink(),
+		URL:         repo.FullLink(),
 		SSHURL:      cl.SSH,
 		CloneURL:    cl.HTTPS,
 		Description: repo.Description,
