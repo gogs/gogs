@@ -93,6 +93,16 @@ var (
 	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
 
+// FindAllMentions matches mention patterns in given content
+// and returns a list of found user names without @ prefix.
+func FindAllMentions(content string) []string {
+	mentions := MentionPattern.FindAllString(content, -1)
+	for i := range mentions {
+		mentions[i] = strings.TrimSpace(mentions[i])[1:] // Strip @ character
+	}
+	return mentions
+}
+
 // Renderer is a extended version of underlying render object.
 type Renderer struct {
 	blackfriday.Renderer
@@ -202,6 +212,9 @@ func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byt
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
 // return a clean unified string of request URL path.
 func cutoutVerbosePrefix(prefix string) string {
+	if len(prefix) == 0 || prefix[0] != '/' {
+		return prefix
+	}
 	count := 0
 	for i := 0; i < len(prefix); i++ {
 		if prefix[i] == '/' {
