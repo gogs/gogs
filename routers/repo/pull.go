@@ -531,7 +531,7 @@ func PrepareCompareDiff(
 	)
 
 	// Get diff information.
-	ctx.Data["CommitRepoLink"] = headRepo.RepoLink()
+	ctx.Data["CommitRepoLink"] = headRepo.Link()
 
 	headCommitID, err := headGitRepo.GetBranchCommitID(headBranch)
 	if err != nil {
