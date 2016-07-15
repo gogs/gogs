@@ -154,7 +154,7 @@ func Webhooks(ctx *context.Context) {
 		return
 	}
 
-	ws, err := models.GetWebhooksByOrgId(ctx.Org.Organization.Id)
+	ws, err := models.GetWebhooksByOrgID(ctx.Org.Organization.Id)
 	if err != nil {
 		ctx.Handle(500, "GetWebhooksByOrgId", err)
 		return

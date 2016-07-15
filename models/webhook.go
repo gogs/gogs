@@ -174,10 +174,22 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
-// GetWebhookByID returns webhook of repository by given ID.
-func GetWebhookByID(repoID, id int64) (*Webhook, error) {
+// GetWebhookByRepoID returns webhook of repository by given ID.
+func GetWebhookByRepoID(repoID, id int64) (*Webhook, error) {
 	w := new(Webhook)
 	has, err := x.Id(id).And("repo_id=?", repoID).Get(w)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrWebhookNotExist{id}
+	}
+	return w, nil
+}
+
+// GetWebhookByOrgID returns webhook of organization by given ID.
+func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
+	w := new(Webhook)
+	has, err := x.Id(id).And("org_id=?", orgID).Get(w)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -221,8 +233,8 @@ func DeleteWebhook(id int64) (err error) {
 	return sess.Commit()
 }
 
-// GetWebhooksByOrgId returns all webhooks for an organization.
-func GetWebhooksByOrgId(orgID int64) (ws []*Webhook, err error) {
+// GetWebhooksByOrgID returns all webhooks for an organization.
+func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 	err = x.Find(&ws, &Webhook{OrgID: orgID})
 	return ws, err
 }
@@ -548,7 +560,7 @@ func (t *HookTask) deliver() {
 		}
 
 		// Update webhook last delivery status.
-		w, err := GetWebhookByID(t.RepoID, t.HookID)
+		w, err := GetWebhookByRepoID(t.RepoID, t.HookID)
 		if err != nil {
 			log.Error(5, "GetWebhookByID: %v", err)
 			return
