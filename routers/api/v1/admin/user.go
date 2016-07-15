@@ -10,7 +10,6 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/user"
@@ -64,9 +63,9 @@ func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 	}
 	log.Trace("Account created by admin (%s): %s", ctx.User.Name, u.Name)
 
-	// Send e-mail notification.
+	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(ctx.Context.Context, u)
+		models.SendRegisterNotifyMail(ctx.Context.Context, u)
 	}
 
 	ctx.JSON(201, convert.ToUser(u))

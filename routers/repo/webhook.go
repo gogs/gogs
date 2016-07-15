@@ -220,7 +220,12 @@ func checkWebhook(ctx *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	}
 	ctx.Data["BaseLink"] = orCtx.Link
 
-	w, err := models.GetWebhookByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+	var w *models.Webhook
+	if orCtx.RepoID > 0 {
+		w, err = models.GetWebhookByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+	} else {
+		w, err = models.GetWebhookByOrgID(ctx.Org.Organization.Id, ctx.ParamsInt64(":id"))
+	}
 	if err != nil {
 		if models.IsErrWebhookNotExist(err) {
 			ctx.Handle(404, "GetWebhookByID", nil)
@@ -349,7 +354,7 @@ func TestWebhook(ctx *context.Context) {
 			{
 				ID:      ctx.Repo.CommitID,
 				Message: ctx.Repo.Commit.Message(),
-				URL:     ctx.Repo.Repository.FullRepoLink() + "/commit/" + ctx.Repo.CommitID,
+				URL:     ctx.Repo.Repository.FullLink() + "/commit/" + ctx.Repo.CommitID,
 				Author: &api.PayloadAuthor{
 					Name:  ctx.Repo.Commit.Author.Name,
 					Email: ctx.Repo.Commit.Author.Email,

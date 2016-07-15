@@ -531,7 +531,7 @@ func PrepareCompareDiff(
 	)
 
 	// Get diff information.
-	ctx.Data["CommitRepoLink"] = headRepo.RepoLink()
+	ctx.Data["CommitRepoLink"] = headRepo.Link()
 
 	headCommitID, err := headGitRepo.GetBranchCommitID(headBranch)
 	if err != nil {
@@ -680,9 +680,6 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		return
 	} else if err := pullRequest.PushToBaseRepo(); err != nil {
 		ctx.Handle(500, "PushToBaseRepo", err)
-		return
-	} else if err := MailWatchersAndMentions(ctx, pullIssue); err != nil {
-		ctx.Handle(500, "MailWatchersAndMentions", err)
 		return
 	}
 

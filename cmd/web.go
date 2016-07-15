@@ -78,7 +78,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.5.0711"},
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.5"},
 		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
@@ -86,7 +86,7 @@ func checkVersion() {
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
-		{"gopkg.in/macaron.v1", macaron.Version, "1.1.2"},
+		{"gopkg.in/macaron.v1", macaron.Version, "1.1.4"},
 		{"github.com/gogits/git-module", git.Version, "0.3.2"},
 		{"github.com/gogits/go-gogs-client", gogs.Version, "0.7.4"},
 	}
@@ -126,12 +126,16 @@ func newMacaron() *macaron.Macaron {
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
+
+	funcMap := template.NewFuncMap()
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:         path.Join(setting.StaticRootPath, "templates"),
 		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
-		Funcs:             template.NewFuncMap(),
+		Funcs:             funcMap,
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}))
+	models.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
+		path.Join(setting.CustomPath, "templates/mail"), funcMap)
 
 	localeNames, err := bindata.AssetDir("conf/locale")
 	if err != nil {
