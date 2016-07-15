@@ -681,9 +681,6 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	} else if err := pullRequest.PushToBaseRepo(); err != nil {
 		ctx.Handle(500, "PushToBaseRepo", err)
 		return
-	} else if err := MailWatchersAndMentions(ctx, pullIssue); err != nil {
-		ctx.Handle(500, "MailWatchersAndMentions", err)
-		return
 	}
 
 	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)

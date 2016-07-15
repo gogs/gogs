@@ -28,6 +28,8 @@ type Message struct {
 
 // NewMessageFrom creates new mail message object with custom From header.
 func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
+	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
+
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
@@ -196,7 +198,7 @@ func processMailQueue() {
 		case msg := <-mailQueue:
 			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
 			if err := gomail.Send(sender, msg.Message); err != nil {
-				log.Error(4, "Fail to send e-mails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+				log.Error(3, "Fail to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 			} else {
 				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
 			}

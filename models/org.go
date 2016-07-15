@@ -58,7 +58,7 @@ func (org *User) GetTeams() error {
 
 // GetMembers returns all members of organization.
 func (org *User) GetMembers() error {
-	ous, err := GetOrgUsersByOrgId(org.Id)
+	ous, err := GetOrgUsersByOrgID(org.Id)
 	if err != nil {
 		return err
 	}
@@ -306,10 +306,10 @@ func GetOrgUsersByUserID(uid int64, all bool) ([]*OrgUser, error) {
 	return ous, err
 }
 
-// GetOrgUsersByOrgId returns all organization-user relations by organization ID.
-func GetOrgUsersByOrgId(orgId int64) ([]*OrgUser, error) {
+// GetOrgUsersByOrgID returns all organization-user relations by organization ID.
+func GetOrgUsersByOrgID(orgID int64) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
-	err := x.Where("org_id=?", orgId).Find(&ous)
+	err := x.Where("org_id=?", orgID).Find(&ous)
 	return ous, err
 }
 

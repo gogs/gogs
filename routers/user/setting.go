@@ -17,7 +17,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -239,12 +238,12 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 		return
 	}
 
-	e := &models.EmailAddress{
+	email := &models.EmailAddress{
 		UID:         ctx.User.Id,
 		Email:       form.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
-	if err := models.AddEmailAddress(e); err != nil {
+	if err := models.AddEmailAddress(email); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &form)
 			return
@@ -253,19 +252,19 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 		return
 	}
 
-	// Send confirmation e-mail
+	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmailMail(ctx.Context, ctx.User, e)
+		models.SendActivateEmailMail(ctx.Context, ctx.User, email)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 		}
-		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", e.Email, setting.Service.ActiveCodeLives/60))
+		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
 	}
 
-	log.Trace("Email address added: %s", e.Email)
+	log.Trace("Email address added: %s", email.Email)
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
 }
 

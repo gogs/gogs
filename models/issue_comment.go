@@ -13,6 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
@@ -113,10 +114,34 @@ func (c *Comment) EventTag() string {
 	return "event-" + com.ToStr(c.ID)
 }
 
+// MailParticipants sends new comment emails to repository watchers
+// and mentioned people.
+func (cmt *Comment) MailParticipants(opType ActionType, issue *Issue) (err error) {
+	mentions := markdown.FindAllMentions(cmt.Content)
+	if err = UpdateIssueMentions(cmt.IssueID, mentions); err != nil {
+		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
+	}
+
+	switch opType {
+	case ACTION_COMMENT_ISSUE:
+		issue.Content = cmt.Content
+	case ACTION_CLOSE_ISSUE:
+		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
+	case ACTION_REOPEN_ISSUE:
+		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
+	}
+	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
+		log.Error(4, "mailIssueCommentToParticipants: %v", err)
+	}
+
+	return nil
+}
+
 func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
 	comment := &Comment{
 		Type:      opts.Type,
 		PosterID:  opts.Doer.Id,
+		Poster:    opts.Doer,
 		IssueID:   opts.Issue.ID,
 		CommitID:  opts.CommitID,
 		CommitSHA: opts.CommitSHA,
@@ -157,7 +182,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 				if IsErrAttachmentNotExist(err) {
 					continue
 				}
-				return nil, fmt.Errorf("getAttachmentByUUID[%s]: %v", uuid, err)
+				return nil, fmt.Errorf("getAttachmentByUUID [%s]: %v", uuid, err)
 			}
 			attachments = append(attachments, attach)
 		}
@@ -167,7 +192,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			attachments[i].CommentID = comment.ID
 			// No assign value could be 0, so ignore AllCols().
 			if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
-				return nil, fmt.Errorf("update attachment[%d]: %v", attachments[i].ID, err)
+				return nil, fmt.Errorf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
 		}
 
@@ -200,13 +225,15 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err != nil {
 			return nil, err
 		}
+
 	}
 
-	// Notify watchers for whatever action comes in, ignore if no action type
+	// Notify watchers for whatever action comes in, ignore if no action type.
 	if act.OpType > 0 {
 		if err = notifyWatchers(e, act); err != nil {
-			return nil, fmt.Errorf("notifyWatchers: %v", err)
+			log.Error(4, "notifyWatchers: %v", err)
 		}
+		comment.MailParticipants(act.OpType, opts.Issue)
 	}
 
 	return comment, nil

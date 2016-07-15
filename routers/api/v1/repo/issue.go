@@ -14,7 +14,6 @@ import (
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/repo"
 )
 
 func ListIssues(ctx *context.APIContext) {
@@ -79,9 +78,6 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 
 	if err := models.NewIssue(ctx.Repo.Repository, issue, form.Labels, nil); err != nil {
 		ctx.Error(500, "NewIssue", err)
-		return
-	} else if err := repo.MailWatchersAndMentions(ctx.Context, issue); err != nil {
-		ctx.Error(500, "MailWatchersAndMentions", err)
 		return
 	}
 

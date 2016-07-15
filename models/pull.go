@@ -342,9 +342,6 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}
-	if err = notifyWatchers(sess, act); err != nil {
-		return err
-	}
 
 	pr.Index = pull.Index
 	if err = repo.SavePatch(pr.Index, patch); err != nil {
@@ -364,7 +361,17 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return fmt.Errorf("insert pull repo: %v", err)
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
+	if err = NotifyWatchers(act); err != nil {
+		log.Error(4, "NotifyWatchers: %v", err)
+	} else if err = pull.MailParticipants(); err != nil {
+		log.Error(4, "MailParticipants: %v", err)
+	}
+
+	return nil
 }
 
 // GetUnmergedPullRequest returnss a pull request that is open and has not been merged
