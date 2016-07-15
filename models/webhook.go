@@ -584,14 +584,6 @@ func (t *HookTask) deliver() {
 		return
 	}
 	t.ResponseInfo.Body = string(p)
-
-	switch t.Type {
-	case SLACK:
-		if t.ResponseInfo.Body != "ok" {
-			log.Error(5, "slack failed with: %s", t.ResponseInfo.Body)
-			t.IsSucceed = false
-		}
-	}
 }
 
 // DeliverHooks checks and delivers undelivered hooks.
