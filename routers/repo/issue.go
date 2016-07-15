@@ -22,7 +22,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -395,46 +394,6 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	return labelIDs, milestoneID, assigneeID
 }
 
-func MailWatchersAndMentions(ctx *context.Context, issue *models.Issue) error {
-	// Update mentions
-	mentions := markdown.MentionPattern.FindAllString(issue.Content, -1)
-	if len(mentions) > 0 {
-		for i := range mentions {
-			mentions[i] = strings.TrimSpace(mentions[i])[1:]
-		}
-
-		if err := models.UpdateMentions(mentions, issue.ID); err != nil {
-			return fmt.Errorf("UpdateMentions: %v", err)
-		}
-	}
-
-	repo := ctx.Repo.Repository
-
-	// Mail watchers and mentions.
-	if setting.Service.EnableNotifyMail {
-		tos, err := mailer.SendIssueNotifyMail(ctx.User, ctx.Repo.Owner, repo, issue)
-		if err != nil {
-			return fmt.Errorf("SendIssueNotifyMail: %v", err)
-		}
-
-		tos = append(tos, ctx.User.LowerName)
-		newTos := make([]string, 0, len(mentions))
-		for _, m := range mentions {
-			if com.IsSliceContainsStr(tos, m) {
-				continue
-			}
-
-			newTos = append(newTos, m)
-		}
-		if err = mailer.SendIssueMentionMail(ctx.Render, ctx.User, ctx.Repo.Owner,
-			repo, issue, models.GetUserEmailsByNames(newTos)); err != nil {
-			return fmt.Errorf("SendIssueMentionMail: %v", err)
-		}
-	}
-
-	return nil
-}
-
 func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
@@ -470,9 +429,6 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	}
 	if err := models.NewIssue(repo, issue, labelIDs, attachments); err != nil {
 		ctx.Handle(500, "NewIssue", err)
-		return
-	} else if err := MailWatchersAndMentions(ctx, issue); err != nil {
-		ctx.Handle(500, "MailWatchersAndMentions", err)
 		return
 	}
 
@@ -933,16 +889,6 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 		return
 	}
 
-	MailWatchersAndMentions(ctx, &models.Issue{
-		ID:      issue.ID,
-		Index:   issue.Index,
-		Name:    issue.Name,
-		Content: form.Content,
-	})
-	if ctx.Written() {
-		return
-	}
-
 	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
 }
 
@@ -1024,7 +970,6 @@ func UpdateLabel(ctx *context.Context, form auth.CreateLabelForm) {
 		return
 	}
 
-	fmt.Println(form.Title, form.Color)
 	l.Name = form.Title
 	l.Color = form.Color
 	if err := models.UpdateLabel(l); err != nil {

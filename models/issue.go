@@ -73,6 +73,15 @@ func (i *Issue) BeforeUpdate() {
 	i.DeadlineUnix = i.Deadline.UTC().Unix()
 }
 
+func (issue *Issue) loadAttributes() (err error) {
+	issue.Repo, err = GetRepositoryByID(issue.RepoID)
+	if err != nil {
+		return fmt.Errorf("GetRepositoryByID: %v", err)
+	}
+
+	return nil
+}
+
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
@@ -144,6 +153,10 @@ func (i *Issue) State() string {
 		return "closed"
 	}
 	return "open"
+}
+
+func (issue *Issue) FullLink() string {
+	return fmt.Sprintf("%s/issues/%d", issue.Repo.FullLink(), issue.Index)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -390,7 +403,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 		}
 	}
 
-	return nil
+	return issue.loadAttributes()
 }
 
 // NewIssue creates new issue with labels for repository.
@@ -422,7 +435,9 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		IsPrivate:    repo.IsPrivate,
 	}
 	if err = NotifyWatchers(act); err != nil {
-		log.Error(4, "notifyWatchers: %v", err)
+		log.Error(4, "NotifyWatchers: %v", err)
+	} else if err = issue.MailParticipants(); err != nil {
+		log.Error(4, "MailParticipants: %v", err)
 	}
 
 	return nil
@@ -451,8 +466,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 		return nil, err
 	}
 
-	issue.Repo = repo
-	return issue, nil
+	return issue, issue.loadAttributes()
 }
 
 // GetIssueByIndex returns issue by given index in repository.
@@ -467,7 +481,7 @@ func GetIssueByIndex(repoID, index int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{0, repoID, index}
 	}
-	return issue, nil
+	return issue, issue.loadAttributes()
 }
 
 // GetIssueByID returns an issue by given ID.
@@ -479,7 +493,7 @@ func GetIssueByID(id int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{id, 0, 0}
 	}
-	return issue, nil
+	return issue, issue.loadAttributes()
 }
 
 type IssuesOptions struct {
@@ -700,42 +714,44 @@ func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int
 	return ius, err
 }
 
-func UpdateMentions(userNames []string, issueId int64) error {
-	for i := range userNames {
-		userNames[i] = strings.ToLower(userNames[i])
-	}
-	users := make([]*User, 0, len(userNames))
-
-	if err := x.Where("lower_name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("lower_name ASC").Find(&users); err != nil {
-		return err
+// UpdateIssueMentions extracts mentioned people from content and
+// updates issue-user relations for them.
+func UpdateIssueMentions(issueID int64, mentions []string) error {
+	if len(mentions) == 0 {
+		return nil
 	}
 
-	ids := make([]int64, 0, len(userNames))
+	for i := range mentions {
+		mentions[i] = strings.ToLower(mentions[i])
+	}
+	users := make([]*User, 0, len(mentions))
+
+	if err := x.In("lower_name", mentions).Asc("lower_name").Find(&users); err != nil {
+		return fmt.Errorf("find mentioned users: %v", err)
+	}
+
+	ids := make([]int64, 0, len(mentions))
 	for _, user := range users {
 		ids = append(ids, user.Id)
-		if !user.IsOrganization() {
+		if !user.IsOrganization() || user.NumMembers == 0 {
 			continue
 		}
 
-		if user.NumMembers == 0 {
-			continue
-		}
-
-		tempIds := make([]int64, 0, user.NumMembers)
-		orgUsers, err := GetOrgUsersByOrgId(user.Id)
+		memberIDs := make([]int64, 0, user.NumMembers)
+		orgUsers, err := GetOrgUsersByOrgID(user.Id)
 		if err != nil {
-			return err
+			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.Id, err)
 		}
 
 		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.ID)
+			memberIDs = append(memberIDs, orgUser.ID)
 		}
 
-		ids = append(ids, tempIds...)
+		ids = append(ids, memberIDs...)
 	}
 
-	if err := UpdateIssueUsersByMentions(ids, issueId); err != nil {
-		return err
+	if err := UpdateIssueUsersByMentions(issueID, ids); err != nil {
+		return fmt.Errorf("UpdateIssueUsersByMentions: %v", err)
 	}
 
 	return nil
@@ -973,9 +989,12 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 }
 
 // UpdateIssueUsersByMentions updates issue-user pairs by mentioning.
-func UpdateIssueUsersByMentions(uids []int64, iid int64) error {
+func UpdateIssueUsersByMentions(issueID int64, uids []int64) error {
 	for _, uid := range uids {
-		iu := &IssueUser{UID: uid, IssueID: iid}
+		iu := &IssueUser{
+			UID:     uid,
+			IssueID: issueID,
+		}
 		has, err := x.Get(iu)
 		if err != nil {
 			return err
