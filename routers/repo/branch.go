@@ -63,12 +63,15 @@ func NewBranchPost(ctx *context.Context, form auth.NewBranchForm) {
 	} else if commit, err := branch.GetCommit(); err != nil {
 		log.Error(4, "branch.GetCommit(): %v", err)
 	} else {
-		pc := &models.PushCommits{1, []*models.PushCommit{&models.PushCommit{
-			commit.ID.String(),
-			commit.Message(),
-			commit.Author.Email,
-			commit.Author.Name,
-		}}, "", nil}
+		pc := &models.PushCommits{
+			Len: 1,
+			Commits: []*models.PushCommit{&models.PushCommit{
+				commit.ID.String(),
+				commit.Message(),
+				commit.Author.Email,
+				commit.Author.Name,
+			}},
+		}
 		oldCommitID := "0000000000000000000000000000000000000000" // New Branch so we use all 0s
 		newCommitID := commit.ID.String()
 		if err := models.CommitRepoAction(ctx.User.Id, ctx.Repo.Owner.Id, ctx.User.LowerName, ctx.Repo.Owner.Email,

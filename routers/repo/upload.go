@@ -153,12 +153,15 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 	} else if commit, err := branch.GetCommit(); err != nil {
 		log.Error(4, "branch.GetCommit(): %v", err)
 	} else {
-		pc := &models.PushCommits{1, []*models.PushCommit{&models.PushCommit{
-			commit.ID.String(),
-			commit.Message(),
-			commit.Author.Email,
-			commit.Author.Name,
-		}}, "", nil}
+		pc := &models.PushCommits{
+			Len: 1,
+			Commits: []*models.PushCommit{&models.PushCommit{
+				commit.ID.String(),
+				commit.Message(),
+				commit.Author.Email,
+				commit.Author.Name,
+			}},
+		}
 		oldCommitID := ctx.Repo.CommitID
 		newCommitID := commit.ID.String()
 		if branchName != oldBranchName {

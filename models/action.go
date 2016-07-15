@@ -245,12 +245,12 @@ type PushCommits struct {
 	Commits    []*PushCommit
 	CompareUrl string
 
-	Avatars map[string]string
+	avatars map[string]string
 }
 
 func NewPushCommits() *PushCommits {
 	return &PushCommits{
-		Avatars: make(map[string]string),
+		avatars: make(map[string]string),
 	}
 }
 
@@ -279,20 +279,20 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 // AvatarLink tries to match user in database with e-mail
 // in order to show custom avatar, and falls back to general avatar link.
 func (push *PushCommits) AvatarLink(email string) string {
-	_, ok := push.Avatars[email]
+	_, ok := push.avatars[email]
 	if !ok {
 		u, err := GetUserByEmail(email)
 		if err != nil {
-			push.Avatars[email] = base.AvatarLink(email)
+			push.avatars[email] = base.AvatarLink(email)
 			if !IsErrUserNotExist(err) {
 				log.Error(4, "GetUserByEmail: %v", err)
 			}
 		} else {
-			push.Avatars[email] = u.AvatarLink()
+			push.avatars[email] = u.AvatarLink()
 		}
 	}
 
-	return push.Avatars[email]
+	return push.avatars[email]
 }
 
 // updateIssuesCommit checks if issues are manipulated by commit message.
