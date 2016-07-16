@@ -82,7 +82,7 @@ type User struct {
 	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1"`
 
 	// Permissions
-	IsActive         bool
+	IsActive         bool // Activate primary email
 	IsAdmin          bool
 	AllowGitHook     bool
 	AllowImportLocal bool // Allow migrate repository by local path
@@ -165,16 +165,6 @@ func (u *User) CanEditGitHook() bool {
 // CanImportLocal returns true if user can migrate repository by local path.
 func (u *User) CanImportLocal() bool {
 	return u.IsAdmin || u.AllowImportLocal
-}
-
-// EmailAdresses is the list of all email addresses of a user. Can contain the
-// primary email address, but is not obligatory
-type EmailAddress struct {
-	ID          int64  `xorm:"pk autoincr"`
-	UID         int64  `xorm:"INDEX NOT NULL"`
-	Email       string `xorm:"UNIQUE NOT NULL"`
-	IsActivated bool
-	IsPrimary   bool `xorm:"-"`
 }
 
 // DashboardLink returns the user dashboard page link.
@@ -464,19 +454,6 @@ func IsUserExist(uid int64, name string) (bool, error) {
 	return x.Where("id!=?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
-// IsEmailUsed returns true if the e-mail has been used.
-func IsEmailUsed(email string) (bool, error) {
-	if len(email) == 0 {
-		return false, nil
-	}
-
-	email = strings.ToLower(email)
-	if has, err := x.Get(&EmailAddress{Email: email}); has || err != nil {
-		return has, err
-	}
-	return x.Get(&User{Email: email})
-}
-
 // GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() string {
 	return base.GetRandomString(10)
@@ -521,16 +498,14 @@ func CreateUser(u *User) (err error) {
 	u.MaxRepoCreation = -1
 
 	sess := x.NewSession()
-	defer sess.Close()
+	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err = sess.Insert(u); err != nil {
-		sess.Rollback()
 		return err
 	} else if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
-		sess.Rollback()
 		return err
 	}
 
@@ -888,8 +863,8 @@ func GetUserEmailsByNames(names []string) []string {
 	return mails
 }
 
-// GetUserIdsByNames returns a slice of ids corresponds to names.
-func GetUserIdsByNames(names []string) []int64 {
+// GetUserIDsByNames returns a slice of ids corresponds to names.
+func GetUserIDsByNames(names []string) []int64 {
 	ids := make([]int64, 0, len(names))
 	for _, name := range names {
 		u, err := GetUserByName(name)
@@ -899,147 +874,6 @@ func GetUserIdsByNames(names []string) []int64 {
 		ids = append(ids, u.Id)
 	}
 	return ids
-}
-
-// GetEmailAddresses returns all e-mail addresses belongs to given user.
-func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
-	emails := make([]*EmailAddress, 0, 5)
-	err := x.Where("uid=?", uid).Find(&emails)
-	if err != nil {
-		return nil, err
-	}
-
-	u, err := GetUserByID(uid)
-	if err != nil {
-		return nil, err
-	}
-
-	isPrimaryFound := false
-	for _, email := range emails {
-		if email.Email == u.Email {
-			isPrimaryFound = true
-			email.IsPrimary = true
-		} else {
-			email.IsPrimary = false
-		}
-	}
-
-	// We alway want the primary email address displayed, even if it's not in
-	// the emailaddress table (yet)
-	if !isPrimaryFound {
-		emails = append(emails, &EmailAddress{
-			Email:       u.Email,
-			IsActivated: true,
-			IsPrimary:   true,
-		})
-	}
-	return emails, nil
-}
-
-func AddEmailAddress(email *EmailAddress) error {
-	email.Email = strings.ToLower(strings.TrimSpace(email.Email))
-	used, err := IsEmailUsed(email.Email)
-	if err != nil {
-		return err
-	} else if used {
-		return ErrEmailAlreadyUsed{email.Email}
-	}
-
-	_, err = x.Insert(email)
-	return err
-}
-
-func AddEmailAddresses(emails []*EmailAddress) error {
-	if len(emails) == 0 {
-		return nil
-	}
-
-	// Check if any of them has been used
-	for i := range emails {
-		emails[i].Email = strings.ToLower(strings.TrimSpace(emails[i].Email))
-		used, err := IsEmailUsed(emails[i].Email)
-		if err != nil {
-			return err
-		} else if used {
-			return ErrEmailAlreadyUsed{emails[i].Email}
-		}
-	}
-
-	if _, err := x.Insert(emails); err != nil {
-		return fmt.Errorf("Insert: %v", err)
-	}
-
-	return nil
-}
-
-func (email *EmailAddress) Activate() error {
-	email.IsActivated = true
-	if _, err := x.Id(email.ID).AllCols().Update(email); err != nil {
-		return err
-	}
-
-	if user, err := GetUserByID(email.UID); err != nil {
-		return err
-	} else {
-		user.Rands = GetUserSalt()
-		return UpdateUser(user)
-	}
-}
-
-func DeleteEmailAddress(email *EmailAddress) (err error) {
-	if email.ID > 0 {
-		_, err = x.Id(email.ID).Delete(new(EmailAddress))
-	} else {
-		_, err = x.Where("email=?", email.Email).Delete(new(EmailAddress))
-	}
-	return err
-}
-
-func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
-	for i := range emails {
-		if err = DeleteEmailAddress(emails[i]); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func MakeEmailPrimary(email *EmailAddress) error {
-	has, err := x.Get(email)
-	if err != nil {
-		return err
-	} else if !has {
-		return ErrEmailNotExist
-	}
-
-	if !email.IsActivated {
-		return ErrEmailNotActivated
-	}
-
-	user := &User{Id: email.UID}
-	has, err = x.Get(user)
-	if err != nil {
-		return err
-	} else if !has {
-		return ErrUserNotExist{email.UID, ""}
-	}
-
-	// Make sure the former primary email doesn't disappear
-	former_primary_email := &EmailAddress{Email: user.Email}
-	has, err = x.Get(former_primary_email)
-	if err != nil {
-		return err
-	} else if !has {
-		former_primary_email.UID = user.Id
-		former_primary_email.IsActivated = user.IsActive
-		x.Insert(former_primary_email)
-	}
-
-	user.Email = email.Email
-	_, err = x.Id(user.Id).AllCols().Update(user)
-
-	return err
 }
 
 // UserCommit represents a commit with validation of user.
