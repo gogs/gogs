@@ -7,12 +7,12 @@
 				<div id="org-info">
 					<div class="ui header">
 						{{.Org.FullName}}
-						{{if .IsOrganizationOwner}}<a class="text grey" href="{{.OrgLink}}/settings"><span class="icon octicon octicon-gear"></span></a>{{end}}
+						{{if .IsOrganizationOwner}}<a class="text grey" href="{{.OrgLink}}/settings"><span class="octicon octicon-gear"></span></a>{{end}}
 					</div>
 					{{if .Org.Description}}<p class="desc">{{.Org.Description}}</p>{{end}}
 					<div class="text grey meta">
-						{{if .Org.Location}}<div class="item"><span class="icon octicon octicon-location"></span> <span>{{.Org.Location}}</span></div>{{end}}
-						{{if .Org.Website}}<div class="item"><span class="icon octicon octicon-link"></span> <a target="_blank" href="{{.Org.Website}}">{{.Org.Website}}</a></div>{{end}}
+						{{if .Org.Location}}<div class="item"><span class="octicon octicon-location"></span> <span>{{.Org.Location}}</span></div>{{end}}
+						{{if .Org.Website}}<div class="item"><span class="octicon octicon-link"></span> <a target="_blank" href="{{.Org.Website}}">{{.Org.Website}}</a></div>{{end}}
 					</div>
 				</div>
 

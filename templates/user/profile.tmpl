@@ -20,23 +20,23 @@
 					<div class="extra content">
 						<ul class="text black">
 							{{if .Owner.Location}}
-								<li><i class="icon octicon octicon-location"></i> {{.Owner.Location}}</li>
+								<li><i class="octicon octicon-location"></i> {{.Owner.Location}}</li>
 							{{end}}
 							{{if and .Owner.Email .IsSigned}}
 								<li>
-									<i class="icon octicon octicon-mail"></i>
+									<i class="octicon octicon-mail"></i>
 									<a href="mailto:{{.Owner.Email}}" rel="nofollow">{{.Owner.Email}}</a>
 								</li>
 							{{end}}
 							{{if .Owner.Website}}
 								<li>
-									<i class="icon octicon octicon-link"></i>
+									<i class="octicon octicon-link"></i>
 									<a target="_blank" href="{{.Owner.Website}}">{{.Owner.Website}}</a>
 								</li>
 							{{end}}
-							<li><i class="icon octicon octicon-clock"></i> {{.i18n.Tr "user.join_on"}} {{DateFmtShort .Owner.Created}}</li>
+							<li><i class="octicon octicon-clock"></i> {{.i18n.Tr "user.join_on"}} {{DateFmtShort .Owner.Created}}</li>
 							<li>
-								<i class="icon octicon octicon-person"></i>
+								<i class="octicon octicon-person"></i>
 								<a href="{{.Owner.HomeLink}}/followers">
 									{{.Owner.NumFollowers}} {{.i18n.Tr "user.followers"}}
 								</a>
@@ -47,7 +47,7 @@
 							</li>
 							{{/*
 							<li>
-								<i class="icon octicon octicon-star"></i>
+								<i class="octicon octicon-star"></i>
 								<a href="{{.Owner.HomeLink}}/stars">
 									{{.Owner.NumStars}} {{.i18n.Tr "user.starred"}}
 								</a>
@@ -76,11 +76,11 @@
 			<div class="ui eleven wide column">
 				<div class="ui secondary pointing menu">
 					<a class="{{if ne .TabName "activity"}}active{{end}} item" href="{{.Owner.HomeLink}}">
-						<i class="icon octicon octicon-repo"></i> {{.i18n.Tr "user.repositories"}}
+						<i class="octicon octicon-repo"></i> {{.i18n.Tr "user.repositories"}}
 					</a>
 					<a class="item">
 						<a class="{{if eq .TabName "activity"}}active{{end}} item" href="{{.Owner.HomeLink}}?tab=activity">
-							<i class="icon octicon octicon-rss"></i> {{.i18n.Tr "user.activity"}}
+							<i class="octicon octicon-rss"></i> {{.i18n.Tr "user.activity"}}
 						</a>
 					</a>
 				</div>
