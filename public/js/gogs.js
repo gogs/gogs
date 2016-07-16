@@ -1022,7 +1022,7 @@ $(window).load(function () {
                     b = c;
                 }
                 var classes = [];
-                for (i = a; i <= b; i++) {
+                for (var i = a; i <= b; i++) {
                     classes.push('.L' + i);
                 }
                 $list.filter(classes.join(',')).addClass('active');
