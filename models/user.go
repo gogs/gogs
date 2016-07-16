@@ -86,6 +86,7 @@ type User struct {
 	IsAdmin          bool
 	AllowGitHook     bool
 	AllowImportLocal bool // Allow migrate repository by local path
+	ProhibitLogin    bool
 
 	// Avatar
 	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`

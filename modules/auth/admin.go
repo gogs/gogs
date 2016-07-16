@@ -36,6 +36,7 @@ type AdminEditUserForm struct {
 	Admin            bool
 	AllowGitHook     bool
 	AllowImportLocal bool
+	ProhibitLogin    bool
 }
 
 func (f *AdminEditUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
