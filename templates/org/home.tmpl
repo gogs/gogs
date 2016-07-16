@@ -39,7 +39,7 @@
 					<strong>{{.i18n.Tr "org.people"}}</strong>
 					{{if .IsOrganizationMember}}
 						<div class="ui right">
-							<a class="text grey" href="{{.OrgLink}}/members"><strong>{{.Org.NumMembers}}</strong><span class="octicon octicon-chevron-right"></span></a>
+							<a class="text grey" href="{{.OrgLink}}/members">{{.Org.NumMembers}} <span class="octicon octicon-chevron-right"></span></a>
 						</div>
 					{{end}}
 				</h4>
@@ -61,7 +61,7 @@
 					<div class="ui top attached header">
 						<strong>{{.i18n.Tr "org.teams"}}</strong>
 						<div class="ui right">
-							<a class="text grey" href="{{.OrgLink}}/teams"><strong>{{.Org.NumTeams}}</strong><span class="octicon octicon-chevron-right"></span></a>
+							<a class="text grey" href="{{.OrgLink}}/teams"><span>{{.Org.NumTeams}}</span> <span class="octicon octicon-chevron-right"></span></a>
 						</div>
 					</div>
 					<div class="ui attached table segment teams">
