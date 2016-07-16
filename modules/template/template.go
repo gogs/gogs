@@ -241,7 +241,7 @@ func ActionIcon(opType int) string {
 	case 7: // New pull request
 		return "git-pull-request"
 	case 10: // Comment issue
-		return "comment"
+		return "comment-discussion"
 	case 11: // Merge pull request
 		return "git-merge"
 	case 12, 14: // Close issue or pull request

@@ -74,7 +74,7 @@ imports:
 - name: github.com/nfnt/resize
   version: 4d93a29130b1b6aba503e2aa8b50f516213ea80e
 - name: github.com/russross/blackfriday
-  version: 1d6b8e9301e720b08a8938b8c25c018285885438
+  version: 4e6f303e8d936855981ddcdbfc092b03d2b2b68e
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sergi/go-diff

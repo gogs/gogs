@@ -82,12 +82,12 @@ pre, code {
 	.top.menu .menu {
 		z-index: 900;
 	}
+	.icon,
+	.octicon {
+		margin-right: 5px !important;
+	}
 	.head.link.item {
 		padding-right: 0 !important;
-		.dropdown.icon,
-		.menu .octicon {
-			margin-right: 5px;
-		}
 	}
 	.avatar > .ui.image {
 		margin-right: 0;
@@ -376,14 +376,6 @@ footer {
 		height: (2px * @i) !important;
 	}
 	.generate-img(@n, (@i + 1));
-}
-
-// ensure Semantic UI .icon font family and 14px size does not apply to .icon.octicon
-.octicon.icon,
-.mega-octicon.icon {
-	font-family: octicons;
-	font-size: 16px;
-	opacity: 1 !important;
 }
 
 // Accessibility
