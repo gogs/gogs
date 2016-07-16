@@ -105,6 +105,15 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		}
 
 		if repo.IsMirror {
+			if isNameChanged {
+				var err error
+				ctx.Repo.Mirror, err = models.GetMirror(repo.ID)
+				if err != nil {
+					ctx.Handle(500, "RefreshRepositoryMirror", err)
+					return
+				}
+			}
+
 			if form.Interval > 0 {
 				ctx.Repo.Mirror.EnablePrune = form.EnablePrune
 				ctx.Repo.Mirror.Interval = form.Interval
