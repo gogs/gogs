@@ -263,11 +263,11 @@ func (u *User) RelAvatarLink() string {
 	return setting.GravatarSource + u.Avatar
 }
 
-// AvatarLink returns user gravatar link.
+// AvatarLink returns user avatar link.
 func (u *User) AvatarLink() string {
 	link := u.RelAvatarLink()
 	if link[0] == '/' && link[1] != '/' {
-		return setting.AppSubUrl + link
+		return strings.TrimSuffix(setting.AppUrl, "/") + link
 	}
 	return link
 }
