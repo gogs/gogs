@@ -17,6 +17,8 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
 
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -37,17 +39,18 @@ const (
 	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
 	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
 
-	ISSUE_TEMPLATE_KEY = "IssueTemplate"
+	ISSUE_TEMPLATE_KEY  = "IssueTemplate"
+	ISSUE_TEMPLATE_FILE = "ISSUE_TEMPLATE"
 )
 
 var (
 	ErrFileTypeForbidden = errors.New("File type is not allowed")
 	ErrTooManyFiles      = errors.New("Maximum number of files to upload exceeded")
 
-	IssueTemplateCandidates = []string{
-		"ISSUE_TEMPLATE.md",
-		".gogs/ISSUE_TEMPLATE.md",
-		".github/ISSUE_TEMPLATE.md",
+	IssueFolderCandidates = []string{
+		"/",
+		".gogs/",
+		".github/",
 	}
 )
 
@@ -287,9 +290,10 @@ func RetrieveRepoMetas(ctx *context.Context, repo *models.Repository) []*models.
 	return labels
 }
 
-func getFileContentFromDefaultBranch(ctx *context.Context, filename string) (string, bool) {
+func getFileContentFromDefaultBranch(ctx *context.Context, foldername string, filename string) (string, bool) {
 	var r io.Reader
 	var bytes []byte
+	var entries git.Entries
 
 	if ctx.Repo.Commit == nil {
 		var err error
@@ -299,24 +303,32 @@ func getFileContentFromDefaultBranch(ctx *context.Context, filename string) (str
 		}
 	}
 
-	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(filename)
+	subtree, err := ctx.Repo.Commit.SubTree(foldername)
 	if err != nil {
 		return "", false
 	}
-	r, err = entry.Blob().Data()
-	if err != nil {
-		return "", false
+	filenameMd := filename + ".md"
+	entries, err = subtree.ListEntries()
+	for i := range entries {
+		entryName := entries[i].Name()
+		if strings.EqualFold(entryName, filename) || strings.EqualFold(entryName, filenameMd) {
+			r, err = entries[i].Blob().Data()
+			if err != nil {
+				return "", false
+			}
+			bytes, err = ioutil.ReadAll(r)
+			if err != nil {
+				return "", false
+			}
+			return string(bytes), true
+		}
 	}
-	bytes, err = ioutil.ReadAll(r)
-	if err != nil {
-		return "", false
-	}
-	return string(bytes), true
+	return "", false
 }
 
-func setTemplateIfExists(ctx *context.Context, ctxDataKey string, possibleFiles []string) {
-	for _, filename := range possibleFiles {
-		content, found := getFileContentFromDefaultBranch(ctx, filename)
+func setTemplateIfExists(ctx *context.Context, ctxDataKey string, possibleFolders []string, filename string) {
+	for _, folder := range possibleFolders {
+		content, found := getFileContentFromDefaultBranch(ctx, folder, filename)
 		if found {
 			ctx.Data[ctxDataKey] = content
 			return
@@ -327,7 +339,7 @@ func setTemplateIfExists(ctx *context.Context, ctxDataKey string, possibleFiles 
 func NewIssue(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
-	setTemplateIfExists(ctx, ISSUE_TEMPLATE_KEY, IssueTemplateCandidates)
+	setTemplateIfExists(ctx, ISSUE_TEMPLATE_KEY, IssueFolderCandidates, ISSUE_TEMPLATE_FILE)
 	renderAttachmentSettings(ctx)
 
 	RetrieveRepoMetas(ctx, ctx.Repo.Repository)
