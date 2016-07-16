@@ -22,6 +22,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
+	"strconv"
 )
 
 const (
@@ -47,6 +48,10 @@ func Home(ctx *context.Context) {
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
+	editLink := ctx.Repo.RepoLink + "/edit/" + branchName
+	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
+	newFileLink := ctx.Repo.RepoLink + "/new/" + branchName
+	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 
 	// Get tree path
 	treename := ctx.Repo.TreeName
@@ -102,8 +107,10 @@ func Home(ctx *context.Context) {
 			switch {
 			case isPDFFile:
 				ctx.Data["IsPDFFile"] = true
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			case isImageFile:
 				ctx.Data["IsImageFile"] = true
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			case isTextFile:
 				if blob.Size() >= setting.MaxDisplayFileSize {
 					ctx.Data["IsFileTooLarge"] = true
@@ -112,8 +119,10 @@ func Home(ctx *context.Context) {
 					d, _ := ioutil.ReadAll(dataRc)
 					buf = append(buf, d...)
 					readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
+					isMarkdown := readmeExist || markdown.IsMarkdownFile(blob.Name())
 					ctx.Data["ReadmeExist"] = readmeExist
-					if readmeExist {
+					ctx.Data["IsMarkdown"] = isMarkdown
+					if isMarkdown {
 						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 					} else {
 						if err, content := template.ToUtf8WithErr(buf); err != nil {
@@ -126,7 +135,21 @@ func Home(ctx *context.Context) {
 						}
 					}
 				}
+				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch  {
+					ctx.Data["FileEditLink"] = editLink + "/" + treename
+					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
+				} else {
+					if ! ctx.Repo.IsViewBranch {
+						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
+					} else if ! ctx.Repo.IsWriter() {
+						ctx.Data["FileEditLink"] = forkLink
+						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.fork_before_edit")
+					}
+				}
+			default:
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			}
+
 		}
 	} else {
 		// Directory and file list.
@@ -203,6 +226,12 @@ func Home(ctx *context.Context) {
 		}
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
+		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
+			if setting.UploadEnabled {
+				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
+			}
+		}
 	}
 
 	ctx.Data["Username"] = userName

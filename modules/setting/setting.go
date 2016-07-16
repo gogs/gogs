@@ -110,6 +110,8 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
+		LineWrapExtensions     []string
+		PreviewTabApis         []string
 	}
 	RepoRootPath string
 	ScriptType   string
@@ -129,6 +131,7 @@ var (
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+		MdFileExtensions    []string
 	}
 
 	// Picture settings
@@ -147,6 +150,13 @@ var (
 	AttachmentMaxSize      int64
 	AttachmentMaxFiles     int
 	AttachmentEnabled      bool
+
+	// Repo Upload settings
+	UploadTempPath         string
+	UploadAllowedTypes 	string
+	UploadMaxSize      	int64
+	UploadMaxFiles     	int
+	UploadEnabled      	bool
 
 	// Time settings
 	TimeFormat string
@@ -436,6 +446,16 @@ func NewContext() {
 	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
 	}
+
+	sec = Cfg.Section("upload")
+	UploadTempPath = sec.Key("UPLOAD_TEMP_PATH").MustString(path.Join(AppDataPath, "tmp/uploads"))
+	if !filepath.IsAbs(UploadTempPath) {
+		UploadTempPath = path.Join(workDir, UploadTempPath)
+	}
+	UploadAllowedTypes = strings.Replace(sec.Key("UPLOAD_ALLOWED_TYPES").MustString(""), "|", ",", -1)
+	UploadMaxSize = sec.Key("UPLOAD_FILE_MAX_SIZE").MustInt64(32)
+	UploadMaxFiles = sec.Key("UPLOAD_MAX_FILES").MustInt(10)
+	UploadEnabled = sec.Key("ENABLE_UPLOADS").MustBool(true)
 
 	// UI settings.
 	sec = Cfg.Section("ui")

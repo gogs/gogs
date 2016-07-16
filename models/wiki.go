@@ -115,7 +115,7 @@ func (repo *Repository) LocalWikiPath() string {
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
 func (repo *Repository) UpdateLocalWiki() error {
-	return updateLocalCopy(repo.WikiPath(), repo.LocalWikiPath())
+	return updateLocalCopy(repo.WikiPath(), repo.LocalWikiPath(), repo.DefaultBranch)
 }
 
 // discardLocalWikiChanges discards local commits make sure
