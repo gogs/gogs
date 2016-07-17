@@ -7,8 +7,6 @@ package org
 import (
 	"strings"
 
-	"github.com/Unknwon/com"
-
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
@@ -142,18 +140,6 @@ func Webhooks(ctx *context.Context) {
 	ctx.Data["BaseLink"] = ctx.Org.OrgLink
 	ctx.Data["Description"] = ctx.Tr("org.settings.hooks_desc")
 
-	// Delete web hook.
-	remove := com.StrTo(ctx.Query("remove")).MustInt64()
-	if remove > 0 {
-		if err := models.DeleteWebhook(remove); err != nil {
-			ctx.Handle(500, "DeleteWebhook", err)
-			return
-		}
-		ctx.Flash.Success(ctx.Tr("repo.settings.remove_hook_success"))
-		ctx.Redirect(ctx.Org.OrgLink + "/settings/hooks")
-		return
-	}
-
 	ws, err := models.GetWebhooksByOrgID(ctx.Org.Organization.Id)
 	if err != nil {
 		ctx.Handle(500, "GetWebhooksByOrgId", err)
@@ -165,8 +151,8 @@ func Webhooks(ctx *context.Context) {
 }
 
 func DeleteWebhook(ctx *context.Context) {
-	if err := models.DeleteWebhook(ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("DeleteWebhook: " + err.Error())
+	if err := models.DeleteWebhookByOrgID(ctx.Org.Organization.Id, ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteWebhookByOrgID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.settings.webhook_deletion_success"))
 	}
