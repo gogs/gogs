@@ -224,7 +224,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Group("/hooks", func() {
 					m.Combo("").Get(repo.ListHooks).
 						Post(bind(api.CreateHookOption{}), repo.CreateHook)
-					m.Combo("/:id:int").Patch(bind(api.EditHookOption{}), repo.EditHook).
+					m.Combo("/:id").Patch(bind(api.EditHookOption{}), repo.EditHook).
 						Delete(repo.DeleteHook)
 				})
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
