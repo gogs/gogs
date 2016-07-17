@@ -50,7 +50,7 @@ gopkg.in/bufio.v1 = commit:567b2bf
 gopkg.in/gomail.v2 = commit:81ebce5
 gopkg.in/ini.v1 = commit:72ba3e6
 gopkg.in/ldap.v2 = commit:0e7db8e
-gopkg.in/macaron.v1 = commit:94a5ef7
+gopkg.in/macaron.v1 = commit:2133042
 gopkg.in/redis.v2 = commit:e617904
 
 [res]
