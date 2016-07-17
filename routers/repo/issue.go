@@ -223,6 +223,10 @@ func Issues(ctx *context.Context) {
 		return
 	}
 
+	if viewType == "assigned" {
+		assigneeID = 0 // Reset ID to prevent unexpected selection of assignee.
+	}
+
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["SelectLabels"] = com.StrTo(selectLabels).MustInt64()
 	ctx.Data["ViewType"] = viewType
