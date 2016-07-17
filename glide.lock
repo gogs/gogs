@@ -142,7 +142,7 @@ imports:
 - name: gopkg.in/ldap.v2
   version: 0e7db8eb77695b5a952f0e5d78df9ab160050c73
 - name: gopkg.in/macaron.v1
-  version: 94a5ef7105036242f79e5e07a8eb8651d06c8533
+  version: 2133042f8d1022b8253e4e23f7940467941409ce
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
 devImports: []
