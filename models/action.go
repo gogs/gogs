@@ -526,6 +526,7 @@ func CommitRepoAction(
 			},
 			Sender: payloadSender,
 		}
+
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, p); err != nil {
 			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}

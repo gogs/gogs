@@ -59,7 +59,7 @@ func init() {
 		new(User), new(PublicKey), new(AccessToken),
 		new(Repository), new(DeployKey), new(Collaboration), new(Access),
 		new(Watch), new(Star), new(Follow), new(Action),
-		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
+		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(Upload), new(IssueUser),
 		new(Label), new(IssueLabel), new(Milestone),
 		new(Mirror), new(Release), new(LoginSource), new(Webhook),
 		new(UpdateTask), new(HookTask),
@@ -198,7 +198,7 @@ type Statistic struct {
 		Issue, Comment, Oauth, Follow,
 		Mirror, Release, LoginSource, Webhook,
 		Milestone, Label, HookTask,
-		Team, UpdateTask, Attachment int64
+		Team, UpdateTask, Attachment, Upload int64
 	}
 }
 
@@ -225,6 +225,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Team, _ = x.Count(new(Team))
 	stats.Counter.UpdateTask, _ = x.Count(new(UpdateTask))
 	stats.Counter.Attachment, _ = x.Count(new(Attachment))
+	stats.Counter.Upload, _ = x.Count(new(Upload))
 	return
 }
 

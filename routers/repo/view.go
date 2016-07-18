@@ -22,6 +22,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
+	"path/filepath"
+	"strconv"
 )
 
 const (
@@ -38,6 +40,7 @@ func Home(ctx *context.Context) {
 	ctx.Data["Title"] = title
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["IsWriter"] = ctx.Repo.IsWriter()
 
 	branchName := ctx.Repo.BranchName
 	userName := ctx.Repo.Owner.Name
@@ -47,6 +50,11 @@ func Home(ctx *context.Context) {
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
+	editLink := ctx.Repo.RepoLink + "/edit/" + branchName
+	deleteLink := ctx.Repo.RepoLink + "/delete/" + branchName
+	newFileLink := ctx.Repo.RepoLink + "/new/" + branchName
+	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
+	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
 
 	// Get tree path
 	treename := ctx.Repo.TreeName
@@ -102,8 +110,10 @@ func Home(ctx *context.Context) {
 			switch {
 			case isPDFFile:
 				ctx.Data["IsPDFFile"] = true
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			case isImageFile:
 				ctx.Data["IsImageFile"] = true
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			case isTextFile:
 				if blob.Size() >= setting.MaxDisplayFileSize {
 					ctx.Data["IsFileTooLarge"] = true
@@ -111,9 +121,11 @@ func Home(ctx *context.Context) {
 					ctx.Data["IsFileTooLarge"] = false
 					d, _ := ioutil.ReadAll(dataRc)
 					buf = append(buf, d...)
-					readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
-					ctx.Data["ReadmeExist"] = readmeExist
-					if readmeExist {
+					isReadme := markdown.IsReadmeFile(blob.Name())
+					isMarkdown := isReadme || markdown.IsMarkdownFile(blob.Name())
+					ctx.Data["ReadmeExist"] = isReadme
+					ctx.Data["IsMarkdown"] = isMarkdown
+					if isMarkdown {
 						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 					} else {
 						if err, content := template.ToUtf8WithErr(buf); err != nil {
@@ -126,6 +138,34 @@ func Home(ctx *context.Context) {
 						}
 					}
 				}
+				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch  {
+					ctx.Data["FileEditLink"] = editLink + "/" + treename
+					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
+				} else {
+					if ! ctx.Repo.IsViewBranch {
+						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
+					} else if ! ctx.Repo.IsWriter() {
+						ctx.Data["FileEditLink"] = forkLink
+						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.fork_before_edit")
+					}
+				}
+			default:
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
+			}
+			if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+				ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
+				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
+			} else {
+				if ! ctx.Repo.IsViewBranch {
+					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
+				} else if ! ctx.Repo.IsWriter() {
+					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
+				}
+			}
+
+			parentDir := filepath.Dir(treename)
+			if parentDir == "." {
+				parentDir = ""
 			}
 		}
 	} else {
@@ -160,13 +200,13 @@ func Home(ctx *context.Context) {
 		}
 
 		if readmeFile != nil {
+			ctx.Data["IsMarkdown"] = true
 			ctx.Data["ReadmeInList"] = true
 			ctx.Data["ReadmeExist"] = true
 			if dataRc, err := readmeFile.Data(); err != nil {
 				ctx.Handle(404, "repo.SinglereadmeFile.Data", err)
 				return
 			} else {
-
 				buf := make([]byte, 1024)
 				n, _ := dataRc.Read(buf)
 				if n > 0 {
@@ -203,6 +243,12 @@ func Home(ctx *context.Context) {
 		}
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
+		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
+			if setting.UploadEnabled {
+				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
+			}
+		}
 	}
 
 	ctx.Data["Username"] = userName

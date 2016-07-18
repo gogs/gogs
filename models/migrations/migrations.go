@@ -502,6 +502,13 @@ type TAttachment struct {
 
 func (t *TAttachment) TableName() string { return "attachment" }
 
+type TUpload struct {
+	ID          int64 `xorm:"pk autoincr"`
+	CreatedUnix int64
+}
+
+func (t *TUpload) TableName() string { return "upload" }
+
 type TLoginSource struct {
 	ID          int64 `xorm:"pk autoincr"`
 	CreatedUnix int64
@@ -603,6 +610,7 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 		{"issue", []string{"deadline", "created", "updated"}, new(TIssue)},
 		{"milestone", []string{"deadline", "closed_date"}, new(TMilestone)},
 		{"attachment", []string{"created"}, new(TAttachment)},
+		{"upload", []string{"created"}, new(TUpload)},
 		{"login_source", []string{"created", "updated"}, new(TLoginSource)},
 		{"pull_request", []string{"merged"}, new(TPull)},
 		{"release", []string{"created"}, new(TRelease)},

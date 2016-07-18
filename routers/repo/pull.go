@@ -645,7 +645,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	}
 
 	if setting.AttachmentEnabled {
-		attachments = form.Attachments
+		attachments = form.Files
 	}
 
 	if ctx.HasError() {
