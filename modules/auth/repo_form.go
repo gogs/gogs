@@ -168,7 +168,7 @@ type CreateIssueForm struct {
 	MilestoneID int64
 	AssigneeID  int64
 	Content     string
-	Attachments []string
+	Files       []string
 }
 
 func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -176,9 +176,9 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 }
 
 type CreateCommentForm struct {
-	Content     string
-	Status      string `binding:"OmitEmpty;In(reopen,close)"`
-	Attachments []string
+	Content string
+	Status  string `binding:"OmitEmpty;In(reopen,close)"`
+	Files   []string
 }
 
 func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

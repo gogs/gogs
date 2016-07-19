@@ -117,8 +117,8 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
 	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
 	ctx.Data["MdFileExtensions"] = strings.Join(setting.Markdown.MdFileExtensions, ",")
-	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.LineWrapExtensions, ",")
-	ctx.Data["PreviewTabApis"] = strings.Join(setting.Repository.PreviewTabApis, ",")
+	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Editor.LineWrapExtensions, ",")
+	ctx.Data["PreviewTabApis"] = strings.Join(setting.Editor.PreviewTabApis, ",")
 	ctx.Data["PreviewDiffUrl"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
 
 	ctx.HTML(200, EDIT)
@@ -177,8 +177,8 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
 	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
 	ctx.Data["MdFileExtensions"] = strings.Join(setting.Markdown.MdFileExtensions, ",")
-	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.LineWrapExtensions, ",")
-	ctx.Data["PreviewTabApis"] = strings.Join(setting.Repository.PreviewTabApis, ",")
+	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Editor.LineWrapExtensions, ",")
+	ctx.Data["PreviewTabApis"] = strings.Join(setting.Editor.PreviewTabApis, ",")
 	ctx.Data["PreviewDiffUrl"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
 
 	if ctx.HasError() {

@@ -263,6 +263,9 @@ code.wrap {
 .ui.status.buttons .octicon {
   margin-right: 4px;
 }
+.ui.menu .item .octicon {
+  margin-right: 4px;
+}
 .ui.inline.delete-button {
   padding: 8px 15px;
   font-weight: normal;
@@ -2863,4 +2866,38 @@ footer .ui.language .menu {
 }
 .repo-edit-file-cancel {
   padding-left: 10px;
+}
+#new-branch-item {
+  display:none;
+  margin: 0;
+  text-align: left;
+  padding: .71428571em 1.14285714em!important;
+  background: 0 0!important;
+  color: rgba(0,0,0,.87)!important;
+  text-transform: none!important;
+  box-shadow: none!important;
+  -webkit-transition: none!important;
+  transition: none!important;
+  border-top: none;
+  padding-right: calc(1.14285714rem + 17px)!important;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+#new-branch-item:hover {
+  background: rgba(0,0,0,.05)!important;
+  color: rgba(0,0,0,.95)!important;
+}
+#new-branch-item .icon {
+  float: left;
+  margin-left: -15px;
+}
+#new-branch-item .description {
+  margin-top: 3px;
+  font-size: 12px;
+}
+.repository .ui.container .ui.breadcrumb {
+  font-size: 1.5em;
+  color: #767676;
+  max-width: 600px;
 }

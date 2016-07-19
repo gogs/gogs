@@ -2510,3 +2510,34 @@ func DeleteUploads(uploads []*Upload, remove bool) (int, error) {
 
 	return len(uploads), nil
 }
+
+// __________                             .__
+// \______   \____________    ____   ____ |  |__
+//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
+//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
+//  |______  / |__|  (____  /___|  /\___  >___|  /
+//         \/             \/     \/     \/     \/
+//
+
+func (repo *Repository) CreateNewBranch(doer *User, oldBranchName, branchName string) (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	localPath := repo.LocalRepoPath()
+
+	if err = discardLocalRepoChanges(localPath, oldBranchName); err != nil {
+		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+	} else if err = repo.UpdateLocalRepo(oldBranchName); err != nil {
+		return fmt.Errorf("UpdateLocalRepo: %v", err)
+	}
+
+	if err = repo.CheckoutNewBranch(oldBranchName, branchName); err != nil {
+		return fmt.Errorf("CreateNewBranch: %v", err)
+	}
+
+	if err = git.Push(localPath, "origin", branchName); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
+}

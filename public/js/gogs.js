@@ -574,8 +574,6 @@ function initWikiForm() {
 
 function initIssueForm() {
     var $edit_area = $('.repository.issue textarea.edit_area');
-    console.log($edit_area);
-    console.log($edit_area.length);
     if ($edit_area.length > 0) {
         $edit_area.each(function(i, edit_area) {
             new SimpleMDE({
@@ -627,29 +625,74 @@ String.prototype.endsWith = function(pattern) {
     return d >= 0 && this.lastIndexOf(pattern) === d;
 };
 
+// Adding function to get the cursor position in a text field to jquery objects
+(function ($, undefined) {
+    $.fn.getCursorPosition = function () {
+        var el = $(this).get(0);
+        var pos = 0;
+        if ('selectionStart' in el) {
+            pos = el.selectionStart;
+        } else if ('selection' in document) {
+            el.focus();
+            var Sel = document.selection.createRange();
+            var SelLength = document.selection.createRange().text.length;
+            Sel.moveStart('character', -el.value.length);
+            pos = Sel.text.length - SelLength;
+        }
+        return pos;
+    }
+})(jQuery);
+
 function initEditor() {
     editFilename = $("#file-name");
+    editFilename.keyup(function (e) {
+        var sections = $('.breadcrumb span.section');
+        var dividers = $('.breadcrumb div.divider');
+        if (e.keyCode == 8) {
+            if ($(this).getCursorPosition() == 0) {
+                if (sections.length > 0) {
+                    var value = sections.last().find('a').text();
+                    $(this).val(value + $(this).val());
+                    $(this)[0].setSelectionRange(value.length, value.length);
+                    sections.last().remove();
+                    dividers.last().remove();
+                }
+            }
+        }
+        if (e.keyCode == 191) {
+            var parts = $(this).val().split('/');
+            for (var i = 0; i < parts.length; ++i) {
+                var value = parts[i];
+                if (i < parts.length - 1) {
+                    if (value.length) {
+                        $('<span class="section"><a href="#">' + value + '</a></span>').insertBefore($(this));
+                        $('<div class="divider"> / </div>').insertBefore($(this));
+                    }
+                }
+                else {
+                    $(this).val(value);
+                }
+                $(this)[0].setSelectionRange(0, 0);
+            }
+        }
+        var parts = [];
+        $('.breadcrumb span.section').each(function (i, element) {
+            element = $(element);
+            if (element.find('a').length) {
+                parts.push(element.find('a').text());
+            } else {
+                parts.push(element.text());
+            }
+        });
+        if ($(this).val())
+            parts.push($(this).val());
+        $('#tree-name').val(parts.join('/'));
+    }).trigger('keyup');
+        
     editArea = $('.repository.edit textarea#edit_area');
 
     if (!editArea.length)
         return;
-
-    (function ($, undefined) {
-        $.fn.getCursorPosition = function () {
-            var el = $(this).get(0);
-            var pos = 0;
-            if ('selectionStart' in el) {
-                pos = el.selectionStart;
-            } else if ('selection' in document) {
-                el.focus();
-                var Sel = document.selection.createRange();
-                var SelLength = document.selection.createRange().text.length;
-                Sel.moveStart('character', -el.value.length);
-                pos = Sel.text.length - SelLength;
-            }
-            return pos;
-        }
-    })(jQuery);
 
     CodeMirror.modeURL = editArea.data("mode-url");
     mdFileExtensions = editArea.data("md-file-extensions").split(",");
@@ -707,49 +750,6 @@ function initEditor() {
             else {
                 cmEditor.setOption("lineWrapping", false);
             }
-        })
-        .keyup(function (e) {
-            var sections = $('.breadcrumb span.section');
-            var dividers = $('.breadcrumb div.divider');
-            if (e.keyCode == 8) {
-                if ($(this).getCursorPosition() == 0) {
-                    if (sections.length > 0) {
-                        var value = sections.last().find('a').text();
-                        $(this).val(value + $(this).val());
-                        $(this)[0].setSelectionRange(value.length, value.length);
-                        sections.last().remove();
-                        dividers.last().remove();
-                    }
-                }
-            }
-            if (e.keyCode == 191) {
-                var parts = $(this).val().split('/');
-                for (var i = 0; i < parts.length; ++i) {
-                    var value = parts[i];
-                    if (i < parts.length - 1) {
-                        if (value.length) {
-                            $('<span class="section"><a href="#">' + value + '</a></span>').insertBefore($(this));
-                            $('<div class="divider"> / </div>').insertBefore($(this));
-                        }
-                    }
-                    else {
-                        $(this).val(value);
-                    }
-                    $(this)[0].setSelectionRange(0, 0);
-                }
-            }
-            var parts = [];
-            $('.breadcrumb span.section').each(function (i, element) {
-                element = $(element);
-                if (element.find('a').length) {
-                    parts.push(element.find('a').text());
-                } else {
-                    parts.push(element.text());
-                }
-            });
-            if ($(this).val())
-                parts.push($(this).val());
-            $('#tree-name').val(parts.join('/'));
         }).trigger('keyup');
 }
 

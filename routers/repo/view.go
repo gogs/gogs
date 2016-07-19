@@ -39,6 +39,7 @@ func Home(ctx *context.Context) {
 	ctx.Data["Title"] = title
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["IsWriter"] = ctx.Repo.IsWriter()
 
 	branchName := ctx.Repo.BranchName
 	userName := ctx.Repo.Owner.Name
@@ -206,6 +207,7 @@ func Home(ctx *context.Context) {
 					buf = append(buf, d...)
 					switch {
 					case markdown.IsMarkdownFile(readmeFile.Name()):
+						ctx.Data["IsMarkdown"] = true
 						buf = markdown.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
 					default:
 						buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)

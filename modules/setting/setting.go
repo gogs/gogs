@@ -110,11 +110,15 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
-		LineWrapExtensions     []string
-		PreviewTabApis         []string
 	}
 	RepoRootPath string
 	ScriptType   string
+
+	// Repo editor settings
+	Editor struct {
+		LineWrapExtensions     []string
+		PreviewTabApis         []string
+	}
 
 	// UI settings
 	ExplorePagingNum     int
@@ -498,6 +502,8 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
+	} else if err = Cfg.Section("editor").MapTo(&Editor); err != nil {
+		log.Fatal(4, "Fail to map Editor settings: %v", err)
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
@@ -508,6 +514,10 @@ func NewContext() {
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
+
+	Markdown.MdFileExtensions = Cfg.Section("markdown").Key("MD_FILE_EXTENSIONS").Strings(",")
+	Editor.LineWrapExtensions = Cfg.Section("editor").Key("LINE_WRAP_EXTENSIONS").Strings(",")
+	Editor.PreviewTabApis = Cfg.Section("editor").Key("PREVIEW_TAB_APIS").Strings(",")
 }
 
 var Service struct {
