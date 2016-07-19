@@ -51,7 +51,7 @@ func (m *migration) Migrate(x *xorm.Engine) error {
 
 // The version table. Should have only one row with id==1
 type Version struct {
-	Id      int64
+	ID      int64 `xorm:"pk autoincr"`
 	Version int64
 }
 
@@ -76,7 +76,7 @@ func Migrate(x *xorm.Engine) error {
 		return fmt.Errorf("sync: %v", err)
 	}
 
-	currentVersion := &Version{Id: 1}
+	currentVersion := &Version{ID: 1}
 	has, err := x.Get(currentVersion)
 	if err != nil {
 		return fmt.Errorf("get: %v", err)

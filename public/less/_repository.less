@@ -6,8 +6,8 @@
 
 	.head {
 		.column {
-			padding-top: 5px!important;
-			padding-bottom: 5px!important;
+			padding-top: 5px !important;
+			padding-bottom: 5px !important;
 		}
 		.ui.compact.menu {
 			margin-left: 1rem;
@@ -29,6 +29,10 @@
 			display: block;
 			font-size: 12px;
 			white-space: nowrap;
+		}
+		.octicon.octicon-repo-forked {
+			margin-top: -1px;
+			font-size: 15px;
 		}
 	}
 
@@ -78,6 +82,9 @@
 
 		.ui.tabs.divider {
 			border-bottom: none;
+		}
+		.ui.tabular .octicon {
+			margin-right: 5px;
 		}
 	}
 	.filter.menu {
@@ -170,9 +177,12 @@
 				}
 			}
 			tbody {
-				.icon {
+				.octicon {
 					margin-left: 3px;
 					margin-right: 5px;
+					&.octicon-mail-reply {
+						margin-right: 10px;
+					}
 				}
 			}
 			td {

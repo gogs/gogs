@@ -20,7 +20,7 @@
 	<tbody>
 		{{if .HasParentPath}}
 			<tr class="has-parent">
-				<td colspan="3"><i class="icon octicon octicon-mail-reply"></i><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
+				<td colspan="3"><i class="octicon octicon-mail-reply"></i><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
 			</tr>
 		{{end}}
 		{{range $item := .Files}}
@@ -29,7 +29,7 @@
 			<tr>
 				{{if $entry.IsSubModule}}
 					<td>
-						<span class="icon octicon octicon-file-submodule"></span>
+						<span class="octicon octicon-file-submodule"></span>
 						{{$refURL := $commit.RefURL AppUrl $.BranchLink}}
 						{{if $refURL}}
 							<a href="{{$refURL}}">{{$entry.Name}}</a> @ <a href="{{$refURL}}/commit/{{$commit.RefID}}">{{ShortSha $commit.RefID}}</a>
@@ -39,7 +39,7 @@
 					</td>
 				{{else}}
 					<td class="name">
-						<span class="icon octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+						<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
 						<a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreePath}}{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
 					</td>
 				{{end}}

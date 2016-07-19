@@ -174,28 +174,32 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
-// GetWebhookByRepoID returns webhook of repository by given ID.
-func GetWebhookByRepoID(repoID, id int64) (*Webhook, error) {
-	w := new(Webhook)
-	has, err := x.Id(id).And("repo_id=?", repoID).Get(w)
+// getWebhook uses argument bean as query condition,
+// ID must be specified and do not assign unnecessary fields.
+func getWebhook(bean *Webhook) (*Webhook, error) {
+	has, err := x.Get(bean)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrWebhookNotExist{id}
+		return nil, ErrWebhookNotExist{bean.ID}
 	}
-	return w, nil
+	return bean, nil
+}
+
+// GetWebhookByRepoID returns webhook of repository by given ID.
+func GetWebhookByRepoID(repoID, id int64) (*Webhook, error) {
+	return getWebhook(&Webhook{
+		ID:     id,
+		RepoID: repoID,
+	})
 }
 
 // GetWebhookByOrgID returns webhook of organization by given ID.
 func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
-	w := new(Webhook)
-	has, err := x.Id(id).And("org_id=?", orgID).Get(w)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrWebhookNotExist{id}
-	}
-	return w, nil
+	return getWebhook(&Webhook{
+		ID:    id,
+		OrgID: orgID,
+	})
 }
 
 // GetActiveWebhooksByRepoID returns all active webhooks of repository.
@@ -216,21 +220,38 @@ func UpdateWebhook(w *Webhook) error {
 	return err
 }
 
-// DeleteWebhook deletes webhook of repository.
-func DeleteWebhook(id int64) (err error) {
+// deleteWebhook uses argument bean as query condition,
+// ID must be specified and do not assign unnecessary fields.
+func deleteWebhook(bean *Webhook) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Delete(&Webhook{ID: id}); err != nil {
+	if _, err = sess.Delete(bean); err != nil {
 		return err
-	} else if _, err = sess.Delete(&HookTask{HookID: id}); err != nil {
+	} else if _, err = sess.Delete(&HookTask{HookID: bean.ID}); err != nil {
 		return err
 	}
 
 	return sess.Commit()
+}
+
+// DeleteWebhookByRepoID deletes webhook of repository by given ID.
+func DeleteWebhookByRepoID(repoID, id int64) (error) {
+	return deleteWebhook(&Webhook{
+		ID:     id,
+		RepoID: repoID,
+	})
+}
+
+// DeleteWebhookByOrgID deletes webhook of organization by given ID.
+func DeleteWebhookByOrgID(orgID, id int64) (error) {
+	return deleteWebhook(&Webhook{
+		ID:    id,
+		OrgID: orgID,
+	})
 }
 
 // GetWebhooksByOrgID returns all webhooks for an organization.

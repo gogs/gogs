@@ -94,12 +94,12 @@ code.wrap {
 .following.bar .top.menu .menu {
   z-index: 900;
 }
+.following.bar .icon,
+.following.bar .octicon {
+  margin-right: 5px !important;
+}
 .following.bar .head.link.item {
   padding-right: 0 !important;
-}
-.following.bar .head.link.item .dropdown.icon,
-.following.bar .head.link.item .menu .octicon {
-  margin-right: 5px;
 }
 .following.bar .avatar > .ui.image {
   margin-right: 0;
@@ -397,12 +397,6 @@ footer .ui.language .menu {
 .img-16 {
   width: 32px !important;
   height: 32px !important;
-}
-.octicon.icon,
-.mega-octicon.icon {
-  font-family: octicons;
-  font-size: 16px;
-  opacity: 1 !important;
 }
 .sr-only {
   position: absolute;
@@ -1109,8 +1103,8 @@ footer .ui.language .menu {
   padding-bottom: 80px;
 }
 .repository .head .column {
-  padding-top: 5px!important;
-  padding-bottom: 5px!important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
 }
 .repository .head .ui.compact.menu {
   margin-left: 1rem;
@@ -1132,6 +1126,10 @@ footer .ui.language .menu {
   display: block;
   font-size: 12px;
   white-space: nowrap;
+}
+.repository .head .octicon.octicon-repo-forked {
+  margin-top: -1px;
+  font-size: 15px;
 }
 .repository .navbar .ui.label {
   margin-top: -2px;
@@ -1171,6 +1169,9 @@ footer .ui.language .menu {
 }
 .repository .header-wrapper .ui.tabs.divider {
   border-bottom: none;
+}
+.repository .header-wrapper .ui.tabular .octicon {
+  margin-right: 5px;
 }
 .repository .filter.menu .label.color {
   border-radius: 3px;
@@ -1244,9 +1245,12 @@ footer .ui.language .menu {
 .repository.file.list #repo-files-table thead .ui.avatar {
   margin-bottom: 5px;
 }
-.repository.file.list #repo-files-table tbody .icon {
+.repository.file.list #repo-files-table tbody .octicon {
   margin-left: 3px;
   margin-right: 5px;
+}
+.repository.file.list #repo-files-table tbody .octicon.octicon-mail-reply {
+  margin-right: 10px;
 }
 .repository.file.list #repo-files-table td {
   padding-top: 8px;
@@ -2521,10 +2525,6 @@ footer .ui.language .menu {
 .dashboard.issues .ui.right .head.menu .item.active {
   color: #d9453d;
 }
-.dashboard.feeds .head.menu .octicon,
-.dashboard.issues .head.menu .octicon {
-  margin-right: 5px;
-}
 .feeds .news .ui.avatar {
   margin-top: 13px;
 }
@@ -2566,7 +2566,6 @@ footer .ui.language .menu {
 }
 .feeds .list .header .plus.icon {
   margin-top: 5px;
-  margin-right: 0;
 }
 .feeds .list ul {
   list-style: none;
@@ -2584,8 +2583,13 @@ footer .ui.language .menu {
   display: block;
 }
 .feeds .list ul li a .octicon {
-  margin-right: 6px;
   color: #888;
+}
+.feeds .list ul li a .octicon.rear {
+  font-size: 15px;
+}
+.feeds .list ul li a .star-num {
+  font-size: 12px;
 }
 .feeds .list .repo-owner-name-list .item-name {
   max-width: 70%;
@@ -2671,7 +2675,7 @@ footer .ui.language .menu {
 }
 .ui.repository.list .item .ui.header .metas {
   color: #888;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: normal;
 }
 .ui.repository.list .item .ui.header .metas span:not(:last-child) {
