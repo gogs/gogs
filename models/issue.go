@@ -403,7 +403,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 		}
 	}
 
-	return issue.loadAttributes()
+	return nil
 }
 
 // NewIssue creates new issue with labels for repository.
@@ -420,6 +420,10 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 
 	if err = sess.Commit(); err != nil {
 		return fmt.Errorf("Commit: %v", err)
+	}
+
+	if err = issue.loadAttributes(); err != nil {
+		return fmt.Errorf("loadAttributes: %v", err)
 	}
 
 	// Notify watchers.

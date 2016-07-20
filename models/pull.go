@@ -330,19 +330,6 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
-	// Notify watchers.
-	act := &Action{
-		ActUserID:    pull.Poster.Id,
-		ActUserName:  pull.Poster.Name,
-		ActEmail:     pull.Poster.Email,
-		OpType:       ACTION_CREATE_PULL_REQUEST,
-		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
-	}
-
 	pr.Index = pull.Index
 	if err = repo.SavePatch(pr.Index, patch); err != nil {
 		return fmt.Errorf("SavePatch: %v", err)
@@ -363,6 +350,23 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 	if err = sess.Commit(); err != nil {
 		return fmt.Errorf("Commit: %v", err)
+	}
+
+	if err = pull.loadAttributes(); err != nil {
+		return fmt.Errorf("loadAttributes: %v", err)
+	}
+
+	// Notify watchers.
+	act := &Action{
+		ActUserID:    pull.Poster.Id,
+		ActUserName:  pull.Poster.Name,
+		ActEmail:     pull.Poster.Email,
+		OpType:       ACTION_CREATE_PULL_REQUEST,
+		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate,
 	}
 
 	if err = NotifyWatchers(act); err != nil {
