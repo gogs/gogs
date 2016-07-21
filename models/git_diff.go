@@ -418,7 +418,7 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLine
 	return diff, nil
 }
 
-func GetRawDiff(repoPath, commitId string, diffType string) (string, error) {
+func GetRawDiff(repoPath, commitId, diffType string) (string, error) {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return "", err
@@ -430,14 +430,15 @@ func GetRawDiff(repoPath, commitId string, diffType string) (string, error) {
 	}
 
 	var cmd *exec.Cmd
-	if diffType == "diff" {
+	switch diffType {
+	case "diff":
 		if commit.ParentCount() == 0 {
 			cmd = exec.Command("git", "show", commitId)
 		} else {
 			c, _ := commit.Parent(0)
 			cmd = exec.Command("git", "diff", "-M", c.ID.String(), commitId)
 		}
-	} else {
+	case "patch":
 		if commit.ParentCount() == 0 {
 			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", "--root", commitId)
 		} else {
@@ -445,7 +446,10 @@ func GetRawDiff(repoPath, commitId string, diffType string) (string, error) {
 			query := fmt.Sprintf("%s...%s", commitId, c.ID.String())
 			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", query)
 		}
+	default:
+		return "", fmt.Errorf("Invalid diffType '%s'", diffType)
 	}
+
 	cmd.Dir = repoPath
 	cmd.Stderr = os.Stderr
 
