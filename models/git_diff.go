@@ -418,13 +418,13 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLine
 	return diff, nil
 }
 
-func GetRawDiff(repoPath, commitId, diffType string) (string, error) {
+func GetRawDiff(repoPath, commitID, diffType string) (string, error) {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return "", err
 	}
 
-	commit, err := repo.GetCommit(commitId)
+	commit, err := repo.GetCommit(commitID)
 	if err != nil {
 		return "", err
 	}
@@ -433,17 +433,17 @@ func GetRawDiff(repoPath, commitId, diffType string) (string, error) {
 	switch diffType {
 	case "diff":
 		if commit.ParentCount() == 0 {
-			cmd = exec.Command("git", "show", commitId)
+			cmd = exec.Command("git", "show", commitID)
 		} else {
 			c, _ := commit.Parent(0)
-			cmd = exec.Command("git", "diff", "-M", c.ID.String(), commitId)
+			cmd = exec.Command("git", "diff", "-M", c.ID.String(), commitID)
 		}
 	case "patch":
 		if commit.ParentCount() == 0 {
-			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", "--root", commitId)
+			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", "--root", commitID)
 		} else {
 			c, _ := commit.Parent(0)
-			query := fmt.Sprintf("%s...%s", commitId, c.ID.String())
+			query := fmt.Sprintf("%s...%s", commitID, c.ID.String())
 			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", query)
 		}
 	default:
@@ -460,6 +460,6 @@ func GetRawDiff(repoPath, commitId, diffType string) (string, error) {
 	return string(stdout), nil
 }
 
-func GetDiffCommit(repoPath, commitId string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
-	return GetDiffRange(repoPath, "", commitId, maxLines, maxLineCharacteres, maxFiles)
+func GetDiffCommit(repoPath, commitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
+	return GetDiffRange(repoPath, "", commitID, maxLines, maxLineCharacteres, maxFiles)
 }
