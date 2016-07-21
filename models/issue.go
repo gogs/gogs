@@ -73,13 +73,17 @@ func (i *Issue) BeforeUpdate() {
 	i.DeadlineUnix = i.Deadline.UTC().Unix()
 }
 
-func (issue *Issue) loadAttributes() (err error) {
-	issue.Repo, err = GetRepositoryByID(issue.RepoID)
+func (issue *Issue) loadAttributes(e Engine) (err error) {
+	issue.Repo, err = getRepositoryByID(e, issue.RepoID)
 	if err != nil {
-		return fmt.Errorf("GetRepositoryByID: %v", err)
+		return fmt.Errorf("getRepositoryByID: %v", err)
 	}
 
 	return nil
+}
+
+func (issue *Issue) LoadAttributes() (err error) {
+	return issue.loadAttributes(x)
 }
 
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
@@ -403,7 +407,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 		}
 	}
 
-	return issue.loadAttributes()
+	return issue.loadAttributes(e)
 }
 
 // NewIssue creates new issue with labels for repository.
@@ -466,7 +470,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 		return nil, err
 	}
 
-	return issue, issue.loadAttributes()
+	return issue, issue.LoadAttributes()
 }
 
 // GetIssueByIndex returns issue by given index in repository.
@@ -481,7 +485,7 @@ func GetIssueByIndex(repoID, index int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{0, repoID, index}
 	}
-	return issue, issue.loadAttributes()
+	return issue, issue.LoadAttributes()
 }
 
 // GetIssueByID returns an issue by given ID.
@@ -493,7 +497,7 @@ func GetIssueByID(id int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{id, 0, 0}
 	}
-	return issue, issue.loadAttributes()
+	return issue, issue.LoadAttributes()
 }
 
 type IssuesOptions struct {
