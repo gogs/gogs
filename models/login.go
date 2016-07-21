@@ -296,7 +296,7 @@ func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource,
 		username = loginName
 	}
 	// Validate username make sure it satisfies requirement.
-	if !binding.AlphaDashDotPattern.MatchString(username) {
+	if binding.AlphaDashDotPattern.MatchString(username) {
 		return nil, fmt.Errorf("Invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", username)
 	}
 
