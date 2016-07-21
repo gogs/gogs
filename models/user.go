@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"image/jpeg"
 	_ "image/jpeg"
 	"image/png"
 	"os"
@@ -222,7 +221,7 @@ func (u *User) GenerateRandomAvatar() error {
 	}
 	defer fw.Close()
 
-	if err = jpeg.Encode(fw, img, nil); err != nil {
+	if err = png.Encode(fw, img); err != nil {
 		return fmt.Errorf("Encode: %v", err)
 	}
 
@@ -321,7 +320,7 @@ func (u *User) UploadAvatar(data []byte) error {
 		return fmt.Errorf("Decode: %v", err)
 	}
 
-	m := resize.Resize(290, 290, img, resize.NearestNeighbor)
+	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
 	defer sessionRelease(sess)
