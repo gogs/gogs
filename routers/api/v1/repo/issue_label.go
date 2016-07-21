@@ -49,24 +49,19 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	for i := range form.Labels {
-		label, err := models.GetLabelByID(form.Labels[i])
-		if err != nil {
-			if models.IsErrLabelNotExist(err) {
-				ctx.Status(400)
-			} else {
-				ctx.Error(500, "GetLabelByID", err)
-			}
-			return
-		}
+	var labels []*models.Label
+	if labels, err = loadLabelsByID(form.Labels, issue.RepoID); err != nil {
+		ctx.Error(400, "loadLabelsByID", err)
+		return
+	}
 
-		if !models.HasIssueLabel(issue.ID, label.ID) {
-			if err := models.NewIssueLabel(issue, label); err != nil {
+	for i := range labels {
+		if !models.HasIssueLabel(issue.ID, labels[i].ID) {
+			if err := models.NewIssueLabel(issue, labels[i]); err != nil {
 				ctx.Error(500, "NewIssueLabel", err)
 				return
 			}
 		}
-
 	}
 
 	updatedIssue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
@@ -103,6 +98,12 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
+	var labels []*models.Label
+	if labels, err = loadLabelsByID(form.Labels, issue.RepoID); err != nil {
+		ctx.Error(400, "loadLabelsByID", err)
+		return
+	}
+
 	for i := range issue.Labels {
 		if err := models.DeleteIssueLabel(issue, issue.Labels[i]); err != nil {
 			ctx.Error(500, "NewIssueLabel", err)
@@ -110,24 +111,13 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		}
 	}
 
-	for i := range form.Labels {
-		label, err := models.GetLabelByID(form.Labels[i])
-		if err != nil {
-			if models.IsErrLabelNotExist(err) {
-				ctx.Status(400)
-			} else {
-				ctx.Error(500, "GetLabelByID", err)
-			}
-			return
-		}
-
-		if !models.HasIssueLabel(issue.ID, label.ID) {
-			if err := models.NewIssueLabel(issue, label); err != nil {
+	for i := range labels {
+		if !models.HasIssueLabel(issue.ID, labels[i].ID) {
+			if err := models.NewIssueLabel(issue, labels[i]); err != nil {
 				ctx.Error(500, "NewIssueLabel", err)
 				return
 			}
 		}
-
 	}
 
 	updatedIssue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
@@ -206,4 +196,30 @@ func DeleteAllIssueLabels(ctx *context.APIContext) {
 	}
 
 	ctx.Status(204)
+}
+
+func loadLabelsByID(labelIDs []int64, repoID int64) ([]*models.Label, error) {
+	labels := make([]*models.Label, 0, len(labelIDs))
+	errors := make([]error, 0, len(labelIDs))
+
+	for i := range labelIDs {
+		label, err := models.GetLabelByID(labelIDs[i])
+		if err != nil {
+			errors = append(errors, err)
+		} else if label.RepoID != repoID {
+			errors = append(errors, models.ErrLabelNotValidForRepository{label.ID, repoID})
+		} else {
+			labels = append(labels, label)
+		}
+	}
+
+	errorCount := len(errors)
+
+	if errorCount == 1 {
+		return labels, errors[0]
+	} else if errorCount > 1 {
+		return labels, models.ErrMultipleErrors{errors}
+	}
+
+	return labels, nil
 }
