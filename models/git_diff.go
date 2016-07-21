@@ -450,12 +450,14 @@ func GetRawDiff(repoPath, commitID, diffType string) (string, error) {
 		return "", fmt.Errorf("Invalid diffType '%s'", diffType)
 	}
 
+	stderr := new(bytes.Buffer)
+
 	cmd.Dir = repoPath
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = stderr
 
 	stdout, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("Stdout: %v", err)
+		return "", fmt.Errorf("Stdout: %v; Stderr: %s", err, stderr.String())
 	}
 	return string(stdout), nil
 }
