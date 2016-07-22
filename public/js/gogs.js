@@ -1458,5 +1458,6 @@ $(window).load(function () {
 });
 
 $(function() {
-    $('form').areYouSure();
+    if ($('.user.signin').length >0) return;
+	$('form').areYouSure();
 });

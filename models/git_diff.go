@@ -160,6 +160,7 @@ type DiffFile struct {
 	IsDeleted          bool
 	IsBin              bool
 	IsRenamed          bool
+	IsSubmodule        bool
 	Sections           []*DiffSection
 	IsIncomplete       bool
 }
@@ -306,7 +307,7 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 			}
 			curFileLinesCount = 0
 
-			// Check file diff type.
+			// Check file diff type and is submodule.
 			for {
 				line, err := input.ReadString('\n')
 				if err != nil {
@@ -333,6 +334,9 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 					curFile.Name = b
 				}
 				if curFile.Type > 0 {
+					if strings.HasSuffix(line, " 160000\n") {
+						curFile.IsSubmodule = true
+					}
 					break
 				}
 			}
