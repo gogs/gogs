@@ -1459,5 +1459,5 @@ $(window).load(function () {
 
 $(function() {
     if ($('.user.signin').length >0) return;
-	$('form').areYouSure();
+    $('form').areYouSure();
 });
