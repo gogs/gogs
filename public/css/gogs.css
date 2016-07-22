@@ -2728,6 +2728,10 @@ footer .ui.language .menu {
 .btn-octicon-danger:hover {
   color: #bd2c00;
 }
+.btn-octicon.disabled {
+    color: #bbb;
+    cursor: default;
+}
 .inline-form {
   display: inline-block;
 }

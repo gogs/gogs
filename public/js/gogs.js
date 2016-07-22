@@ -694,7 +694,6 @@ function initEditor() {
     if (!editArea.length)
         return;
 
-    CodeMirror.modeURL = editArea.data("mode-url");
     mdFileExtensions = editArea.data("md-file-extensions").split(",");
     lineWrapExtensions = editArea.data("line-wrap-extensions").split(",");
 

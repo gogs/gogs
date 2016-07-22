@@ -50,6 +50,7 @@ func Home(ctx *context.Context) {
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
 	editLink := ctx.Repo.RepoLink + "/edit/" + branchName
+	deleteLink := ctx.Repo.RepoLink + "/delete/" + branchName
 	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
 	newFileLink := ctx.Repo.RepoLink + "/new/" + branchName
 	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
@@ -150,7 +151,16 @@ func Home(ctx *context.Context) {
 			default:
 				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			}
-
+			if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+				ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
+				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
+			} else {
+				if ! ctx.Repo.IsViewBranch {
+					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
+				} else if ! ctx.Repo.IsWriter() {
+					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
+				}
+			}
 		}
 	} else {
 		// Directory and file list.

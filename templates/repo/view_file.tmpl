@@ -23,7 +23,7 @@
 				{{if .FileEditLink}}
 					<a href="{{EscapePound $.FileEditLink}}"><i class="poping up octicon octicon-pencil btn-octicon"  data-content="{{.FileEditLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
 				{{else}}
-					<i class="icon octicon octicon-pencil poping up disabled" data-content="{{.FileEditLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
+					<i class="octicon btn-octicon octicon-pencil poping up disabled" data-content="{{.FileEditLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 				{{end}}
 				{{if .FileDeleteLink}}
 					<form id="delete-file-form" class="ui form inline-form" action="{{EscapePound $.FileDeleteLink}}" method="post">
@@ -32,7 +32,7 @@
 						<input type="hidden" id="delete-message" name="commit_message" value="">
 					</form>
 				{{else}}
-					<i class="icon octicon octicon-trashcan poping up disabled" data-content="{{.FileDeleteLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
+					<i class="octicon btn-octicon octicon-trashcan poping up disabled" data-content="{{.FileDeleteLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 				{{end}}
 			</div>
 		{{end}}
