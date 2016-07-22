@@ -457,7 +457,7 @@ func GetRawDiff(repoPath, commitID, diffType string) (string, error) {
 
 	stdout, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("Stdout: %v; Stderr: %s", err, stderr.String())
+		return "", fmt.Errorf("%v - %s", err, stderr)
 	}
 	return string(stdout), nil
 }
