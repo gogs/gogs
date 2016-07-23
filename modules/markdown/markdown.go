@@ -75,7 +75,7 @@ func IsReadmeFile(name string) bool {
 
 var (
 	// MentionPattern matches string that mentions someone, e.g. @Unknwon
-	MentionPattern = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
+	MentionPattern = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z-_\.]+`)
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
