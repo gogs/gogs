@@ -106,7 +106,6 @@ func CreateOrganization(org, owner *User) (err error) {
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
-	org.FullName = org.Name
 	org.Rands = GetUserSalt()
 	org.Salt = GetUserSalt()
 	org.UseCustomAvatar = true
