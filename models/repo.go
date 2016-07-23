@@ -1187,6 +1187,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	// Rename remote repository to new path and delete local copy.
+	os.MkdirAll(UserPath(newOwner.Name), os.ModePerm)
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
