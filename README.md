@@ -120,7 +120,7 @@ There are 5 ways to install Gogs:
 - Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 - Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
-- Thanks [KeyCDN](https://www.keycdn.com/) for providing CDN service.
+- Thanks [KeyCDN](https://www.keycdn.com/) and [QiNiu](http://www.qiniu.com/) for providing CDN service.
 
 ## Contributors
 
