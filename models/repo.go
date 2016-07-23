@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
@@ -517,34 +516,6 @@ func (repo *Repository) CloneLink() (cl *CloneLink) {
 	return repo.cloneLink(false)
 }
 
-var (
-	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
-	reservedPatterns = []string{"*.git", "*.keys", "*.wiki"}
-)
-
-// IsUsableName checks if name is reserved or pattern of name is not allowed.
-func IsUsableName(name string) error {
-	name = strings.TrimSpace(strings.ToLower(name))
-	if utf8.RuneCountInString(name) == 0 {
-		return ErrNameEmpty
-	}
-
-	for i := range reservedNames {
-		if name == reservedNames[i] {
-			return ErrNameReserved{name}
-		}
-	}
-
-	for _, pat := range reservedPatterns {
-		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
-			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
-			return ErrNamePatternNotAllowed{pat}
-		}
-	}
-
-	return nil
-}
-
 // Mirror represents a mirror information of repository.
 type Mirror struct {
 	ID          int64 `xorm:"pk autoincr"`
@@ -940,8 +911,17 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	return nil
 }
 
+var (
+	reservedRepoNames    = []string{".", ".."}
+	reservedRepoPatterns = []string{"*.git", "*.wiki"}
+)
+
+func IsUsableRepoName(name string) error {
+	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
+}
+
 func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
-	if err = IsUsableName(repo.Name); err != nil {
+	if err = IsUsableRepoName(repo.Name); err != nil {
 		return err
 	}
 
@@ -1209,7 +1189,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
-	if err = IsUsableName(newRepoName); err != nil {
+	if err = IsUsableRepoName(newRepoName); err != nil {
 		return err
 	}
 
