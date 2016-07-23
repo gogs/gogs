@@ -92,6 +92,12 @@ func (org *User) RemoveOrgRepo(repoID int64) error {
 	return org.removeOrgRepo(x, repoID)
 }
 
+func (org *User) UpdateDefaultRepoPerm(mode AccessMode) error {
+	org.DefaultRepoPerm = mode
+	_, err := x.Id(org.Id).Cols("default_repo_perm").Update(org)
+	return err
+}
+
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (err error) {
 	if err = IsUsableName(org.Name); err != nil {
@@ -461,8 +467,11 @@ WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams);
 	repos := make([]*Repository, 0, 5)
 	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
 INNER JOIN team_repo ON team_repo.repo_id = repository.id
-WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.Id, false).Find(&repos); err != nil {
+INNER JOIN org_user ON org_user.org_id = repository.owner_id
+INNER JOIN user AS org ON org.id = repository.owner_id
+WHERE repository.owner_id = ? AND (repository.is_private = ? OR
+(org_user.uid = ? AND org.default_repo_perm > 0) OR team_repo.team_id IN (%s))
+GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.Id, false, userID).Find(&repos); err != nil {
 		return fmt.Errorf("get repositories: %v", err)
 	}
 	org.Repos = repos

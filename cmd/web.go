@@ -389,6 +389,9 @@ func runWeb(ctx *cli.Context) error {
 					m.Post("/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 				})
 
+				m.Combo("/member_privileges").Get(org.SettingsMemberPrivileges).
+					Post(bindIgnErr(auth.UpdateOrgDefaultRepoPerm{}), org.SettingsUpdateDefaultRepoPerm)
+
 				m.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 
