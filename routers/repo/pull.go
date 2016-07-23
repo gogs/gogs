@@ -372,6 +372,7 @@ func ViewPullFiles(ctx *context.Context) {
 	}
 
 	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
+	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = pull.HeadUserName
 	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.Data["IsImageFile"] = commit.IsImageFile
