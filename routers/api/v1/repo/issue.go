@@ -53,7 +53,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	issue := &models.Issue{
 		RepoID:   ctx.Repo.Repository.ID,
 		Name:     form.Title,
-		PosterID: ctx.User.Id,
+		PosterID: ctx.User.ID,
 		Poster:   ctx.User,
 		Content:  form.Body,
 	}
@@ -69,7 +69,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 				}
 				return
 			}
-			issue.AssigneeID = assignee.Id
+			issue.AssigneeID = assignee.ID
 		}
 		issue.MilestoneID = form.Milestone
 	} else {
@@ -109,7 +109,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		return
 	}
 
-	if !issue.IsPoster(ctx.User.Id) && !ctx.Repo.IsWriter() {
+	if !issue.IsPoster(ctx.User.ID) && !ctx.Repo.IsWriter() {
 		ctx.Status(403)
 		return
 	}
@@ -135,7 +135,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 				}
 				return
 			}
-			issue.AssigneeID = assignee.Id
+			issue.AssigneeID = assignee.ID
 		}
 
 		if err = models.UpdateIssueUserByAssignee(issue); err != nil {

@@ -476,7 +476,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 	has, err := e.Get(&Repository{
-		OwnerID:   u.Id,
+		OwnerID:   u.ID,
 		LowerName: strings.ToLower(repoName),
 	})
 	return has && com.IsDir(RepoPath(u.Name, repoName)), err
@@ -958,7 +958,7 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 		}
 	}
 
-	if err = watchRepo(e, u.Id, repo.ID, true); err != nil {
+	if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
 	} else if err = newRepoAction(e, u, repo); err != nil {
 		return fmt.Errorf("newRepoAction: %v", err)
@@ -974,7 +974,7 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 	}
 
 	repo := &Repository{
-		OwnerID:      u.Id,
+		OwnerID:      u.ID,
 		Owner:        u,
 		Name:         opts.Name,
 		LowerName:    strings.ToLower(opts.Name),
@@ -1093,7 +1093,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 
 	// Note: we have to set value here to make sure recalculate accesses is based on
 	//	new owner.
-	repo.OwnerID = newOwner.Id
+	repo.OwnerID = newOwner.ID
 	repo.Owner = newOwner
 
 	// Update repository.
@@ -1110,10 +1110,10 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	// Dummy object.
 	collaboration := &Collaboration{RepoID: repo.ID}
 	for _, c := range collaborators {
-		collaboration.UserID = c.Id
-		if c.Id == newOwner.Id || newOwner.IsOrgMember(c.Id) {
+		collaboration.UserID = c.ID
+		if c.ID == newOwner.ID || newOwner.IsOrgMember(c.ID) {
 			if _, err = sess.Delete(collaboration); err != nil {
-				return fmt.Errorf("remove collaborator '%d': %v", c.Id, err)
+				return fmt.Errorf("remove collaborator '%d': %v", c.ID, err)
 			}
 		}
 	}
@@ -1154,13 +1154,13 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	// Update repository count.
-	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos+1 WHERE id=?", newOwner.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos+1 WHERE id=?", newOwner.ID); err != nil {
 		return fmt.Errorf("increase new owner repository count: %v", err)
-	} else if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", owner.Id); err != nil {
+	} else if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", owner.ID); err != nil {
 		return fmt.Errorf("decrease old owner repository count: %v", err)
 	}
 
-	if err = watchRepo(sess, newOwner.Id, repo.ID, true); err != nil {
+	if err = watchRepo(sess, newOwner.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
 	} else if err = transferRepoAction(sess, u, owner, newOwner, repo); err != nil {
 		return fmt.Errorf("transferRepoAction: %v", err)
@@ -1200,7 +1200,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		return ErrRepoAlreadyExist{u.Name, newRepoName}
 	}
 
-	repo, err := GetRepositoryByName(u.Id, oldRepoName)
+	repo, err := GetRepositoryByName(u.ID, oldRepoName)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
@@ -1414,7 +1414,7 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 		return nil, err
 	}
 
-	return GetRepositoryByName(user.Id, repoName)
+	return GetRepositoryByName(user.ID, repoName)
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
@@ -1467,7 +1467,7 @@ func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err 
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {
-	return x.Count(&Repository{OwnerID: u.Id})
+	return x.Count(&Repository{OwnerID: u.ID})
 }
 
 // GetRepositoryCount returns the total number of repositories of user.
@@ -2025,7 +2025,7 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
 
 func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
 	repo := &Repository{
-		OwnerID:       u.Id,
+		OwnerID:       u.ID,
 		Owner:         u,
 		Name:          name,
 		LowerName:     strings.ToLower(name),

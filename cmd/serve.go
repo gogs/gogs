@@ -103,7 +103,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 		RefName:      task.RefName,
 		OldCommitID:  task.OldCommitID,
 		NewCommitID:  task.NewCommitID,
-		PusherID:     user.Id,
+		PusherID:     user.ID,
 		PusherName:   user.Name,
 		RepoUserName: repoUser.Name,
 		RepoName:     reponame,
@@ -175,7 +175,7 @@ func runServ(c *cli.Context) error {
 		fail("Internal error", "Failed to get repository owner (%s): %v", username, err)
 	}
 
-	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
+	repo, err := models.GetRepositoryByName(repoUser.ID, reponame)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, reponame)

@@ -15,7 +15,7 @@ import (
 
 func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
 	team := &models.Team{
-		OrgID:       ctx.Org.Organization.Id,
+		OrgID:       ctx.Org.Organization.ID,
 		Name:        form.Name,
 		Description: form.Description,
 		Authorize:   models.ParseAccessMode(form.Permission),
@@ -37,7 +37,7 @@ func AddTeamMember(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	if err := ctx.Org.Team.AddMember(u.Id); err != nil {
+	if err := ctx.Org.Team.AddMember(u.ID); err != nil {
 		ctx.Error(500, "AddMember", err)
 		return
 	}
@@ -51,7 +51,7 @@ func RemoveTeamMember(ctx *context.APIContext) {
 		return
 	}
 
-	if err := ctx.Org.Team.RemoveMember(u.Id); err != nil {
+	if err := ctx.Org.Team.RemoveMember(u.ID); err != nil {
 		ctx.Error(500, "RemoveMember", err)
 		return
 	}

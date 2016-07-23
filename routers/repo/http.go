@@ -59,7 +59,7 @@ func HTTP(ctx *context.Context) {
 		return
 	}
 
-	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
+	repo, err := models.GetRepositoryByName(repoUser.ID, reponame)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			ctx.Handle(http.StatusNotFound, "GetRepositoryByName", nil)
@@ -200,7 +200,7 @@ func HTTP(ctx *context.Context) {
 						RefName:      refName,
 						OldCommitID:  oldCommitId,
 						NewCommitID:  newCommitId,
-						PusherID:     authUser.Id,
+						PusherID:     authUser.ID,
 						PusherName:   authUser.Name,
 						RepoUserName: username,
 						RepoName:     reponame,

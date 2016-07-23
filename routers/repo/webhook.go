@@ -63,7 +63,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 
 	if len(ctx.Org.OrgLink) > 0 {
 		return &OrgRepoCtx{
-			OrgID:       ctx.Org.Organization.Id,
+			OrgID:       ctx.Org.Organization.ID,
 			Link:        ctx.Org.OrgLink,
 			NewTemplate: ORG_HOOK_NEW,
 		}, nil
@@ -224,7 +224,7 @@ func checkWebhook(ctx *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	if orCtx.RepoID > 0 {
 		w, err = models.GetWebhookByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	} else {
-		w, err = models.GetWebhookByOrgID(ctx.Org.Organization.Id, ctx.ParamsInt64(":id"))
+		w, err = models.GetWebhookByOrgID(ctx.Org.Organization.ID, ctx.ParamsInt64(":id"))
 	}
 	if err != nil {
 		if models.IsErrWebhookNotExist(err) {
@@ -369,7 +369,7 @@ func TestWebhook(ctx *context.Context) {
 		},
 		Sender: &api.PayloadUser{
 			UserName:  ctx.User.Name,
-			ID:        ctx.User.Id,
+			ID:        ctx.User.ID,
 			AvatarUrl: ctx.User.AvatarLink(),
 		},
 	}

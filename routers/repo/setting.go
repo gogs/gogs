@@ -162,7 +162,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		}
 
 		if ctx.Repo.Owner.IsOrganization() {
-			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.ID) {
 				ctx.Error(404)
 				return
 			}
@@ -196,7 +196,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		}
 
 		if ctx.Repo.Owner.IsOrganization() {
-			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.ID) {
 				ctx.Error(404)
 				return
 			}
@@ -235,13 +235,13 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		}
 
 		if ctx.Repo.Owner.IsOrganization() {
-			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.ID) {
 				ctx.Error(404)
 				return
 			}
 		}
 
-		if err := models.DeleteRepository(ctx.Repo.Owner.Id, repo.ID); err != nil {
+		if err := models.DeleteRepository(ctx.Repo.Owner.ID, repo.ID); err != nil {
 			ctx.Handle(500, "DeleteRepository", err)
 			return
 		}
@@ -261,7 +261,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		}
 
 		if ctx.Repo.Owner.IsOrganization() {
-			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.Id) {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.ID) {
 				ctx.Error(404)
 				return
 			}
@@ -321,7 +321,7 @@ func CollaborationPost(ctx *context.Context) {
 	}
 
 	// Check if user is organization member.
-	if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.Id) {
+	if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.ID) {
 		ctx.Flash.Info(ctx.Tr("repo.settings.user_is_org_member"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings/collaboration")
 		return
@@ -371,7 +371,7 @@ func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) 
 		return nil, nil
 	}
 
-	repo, err := models.GetRepositoryByName(owner.Id, ctx.Params(":reponame"))
+	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			ctx.Handle(404, "GetRepositoryByName", err)

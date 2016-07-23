@@ -21,16 +21,16 @@ var (
 
 // IsOwnedBy returns true if given user is in the owner team.
 func (org *User) IsOwnedBy(uid int64) bool {
-	return IsOrganizationOwner(org.Id, uid)
+	return IsOrganizationOwner(org.ID, uid)
 }
 
 // IsOrgMember returns true if given user is member of organization.
 func (org *User) IsOrgMember(uid int64) bool {
-	return org.IsOrganization() && IsOrganizationMember(org.Id, uid)
+	return org.IsOrganization() && IsOrganizationMember(org.ID, uid)
 }
 
 func (org *User) getTeam(e Engine, name string) (*Team, error) {
-	return getTeam(e, org.Id, name)
+	return getTeam(e, org.ID, name)
 }
 
 // GetTeam returns named team of organization.
@@ -48,7 +48,7 @@ func (org *User) GetOwnerTeam() (*Team, error) {
 }
 
 func (org *User) getTeams(e Engine) error {
-	return e.Where("org_id=?", org.Id).Find(&org.Teams)
+	return e.Where("org_id=?", org.ID).Find(&org.Teams)
 }
 
 // GetTeams returns all teams that belong to organization.
@@ -58,7 +58,7 @@ func (org *User) GetTeams() error {
 
 // GetMembers returns all members of organization.
 func (org *User) GetMembers() error {
-	ous, err := GetOrgUsersByOrgID(org.Id)
+	ous, err := GetOrgUsersByOrgID(org.ID)
 	if err != nil {
 		return err
 	}
@@ -75,16 +75,16 @@ func (org *User) GetMembers() error {
 
 // AddMember adds new member to organization.
 func (org *User) AddMember(uid int64) error {
-	return AddOrgUser(org.Id, uid)
+	return AddOrgUser(org.ID, uid)
 }
 
 // RemoveMember removes member from organization.
 func (org *User) RemoveMember(uid int64) error {
-	return RemoveOrgUser(org.Id, uid)
+	return RemoveOrgUser(org.ID, uid)
 }
 
 func (org *User) removeOrgRepo(e Engine, repoID int64) error {
-	return removeOrgRepo(e, org.Id, repoID)
+	return removeOrgRepo(e, org.ID, repoID)
 }
 
 // RemoveOrgRepo removes all team-repository relations of organization.
@@ -126,8 +126,8 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	// Add initial creator to organization and owner team.
 	if _, err = sess.Insert(&OrgUser{
-		Uid:      owner.Id,
-		OrgID:    org.Id,
+		Uid:      owner.ID,
+		OrgID:    org.ID,
 		IsOwner:  true,
 		NumTeams: 1,
 	}); err != nil {
@@ -136,7 +136,7 @@ func CreateOrganization(org, owner *User) (err error) {
 
 	// Create default owner team.
 	t := &Team{
-		OrgID:      org.Id,
+		OrgID:      org.ID,
 		LowerName:  strings.ToLower(OWNER_TEAM),
 		Name:       OWNER_TEAM,
 		Authorize:  ACCESS_MODE_OWNER,
@@ -147,8 +147,8 @@ func CreateOrganization(org, owner *User) (err error) {
 	}
 
 	if _, err = sess.Insert(&TeamUser{
-		Uid:    owner.Id,
-		OrgID:  org.Id,
+		Uid:    owner.ID,
+		OrgID:  org.ID,
 		TeamID: t.ID,
 	}); err != nil {
 		return fmt.Errorf("insert team-user relation: %v", err)
@@ -204,9 +204,9 @@ func DeleteOrganization(org *User) (err error) {
 	}
 
 	if err = deleteBeans(sess,
-		&Team{OrgID: org.Id},
-		&OrgUser{OrgID: org.Id},
-		&TeamUser{OrgID: org.Id},
+		&Team{OrgID: org.ID},
+		&OrgUser{OrgID: org.ID},
+		&TeamUser{OrgID: org.ID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %v", err)
 	}
@@ -401,23 +401,23 @@ func RemoveOrgUser(orgId, uid int64) error {
 	}
 
 	// Delete all repository accesses.
-	access := &Access{UserID: u.Id}
+	access := &Access{UserID: u.ID}
 	for _, repo := range org.Repos {
 		access.RepoID = repo.ID
 		if _, err = sess.Delete(access); err != nil {
 			return err
-		} else if err = watchRepo(sess, u.Id, repo.ID, false); err != nil {
+		} else if err = watchRepo(sess, u.ID, repo.ID, false); err != nil {
 			return err
 		}
 	}
 
 	// Delete member in his/her teams.
-	teams, err := getUserTeams(sess, org.Id, u.Id)
+	teams, err := getUserTeams(sess, org.ID, u.ID)
 	if err != nil {
 		return err
 	}
 	for _, t := range teams {
-		if err = removeTeamMember(sess, org.Id, t.ID, u.Id); err != nil {
+		if err = removeTeamMember(sess, org.ID, t.ID, u.ID); err != nil {
 			return err
 		}
 	}
@@ -444,7 +444,7 @@ func (org *User) GetUserRepositories(userID int64) (err error) {
 	teams := make([]*Team, 0, org.NumTeams)
 	if err = x.Sql(`SELECT team.id FROM team
 INNER JOIN team_user ON team_user.team_id = team.id
-WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams); err != nil {
+WHERE team_user.org_id = ? AND team_user.uid = ?`, org.ID, userID).Find(&teams); err != nil {
 		return fmt.Errorf("get teams: %v", err)
 	}
 
@@ -461,7 +461,7 @@ WHERE team_user.org_id = ? AND team_user.uid = ?`, org.Id, userID).Find(&teams);
 	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
 INNER JOIN team_repo ON team_repo.repo_id = repository.id
 WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.Id, false).Find(&repos); err != nil {
+GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.ID, false).Find(&repos); err != nil {
 		return fmt.Errorf("get repositories: %v", err)
 	}
 	org.Repos = repos
@@ -479,7 +479,7 @@ func (org *User) GetUserTeams(userID int64) error {
 	if err := x.Sql(`SELECT team.* FROM team
 INNER JOIN team_user ON team_user.team_id = team.id
 WHERE team_user.org_id = ? AND team_user.uid = ?`,
-		org.Id, userID).Find(&teams); err != nil {
+		org.ID, userID).Find(&teams); err != nil {
 		return fmt.Errorf("get teams: %v", err)
 	}
 

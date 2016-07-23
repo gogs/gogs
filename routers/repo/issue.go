@@ -125,17 +125,17 @@ func Issues(ctx *context.Context) {
 	switch viewType {
 	case "assigned":
 		filterMode = models.FM_ASSIGN
-		assigneeID = ctx.User.Id
+		assigneeID = ctx.User.ID
 	case "created_by":
 		filterMode = models.FM_CREATE
-		posterID = ctx.User.Id
+		posterID = ctx.User.ID
 	case "mentioned":
 		filterMode = models.FM_MENTION
 	}
 
 	var uid int64 = -1
 	if ctx.IsSigned {
-		uid = ctx.User.Id
+		uid = ctx.User.ID
 	}
 
 	repo := ctx.Repo.Repository
@@ -200,7 +200,7 @@ func Issues(ctx *context.Context) {
 		}
 
 		// Check read status.
-		idx := models.PairsContains(pairs, issues[i].ID, ctx.User.Id)
+		idx := models.PairsContains(pairs, issues[i].ID, ctx.User.ID)
 		if idx > -1 {
 			issues[i].IsRead = pairs[idx].IsRead
 		} else {
@@ -425,7 +425,7 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	issue := &models.Issue{
 		RepoID:      repo.ID,
 		Name:        form.Title,
-		PosterID:    ctx.User.Id,
+		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
@@ -581,7 +581,7 @@ func ViewIssue(ctx *context.Context) {
 
 	if ctx.IsSigned {
 		// Update issue-user.
-		if err = issue.ReadBy(ctx.User.Id); err != nil {
+		if err = issue.ReadBy(ctx.User.ID); err != nil {
 			ctx.Handle(500, "ReadBy", err)
 			return
 		}
@@ -627,7 +627,7 @@ func ViewIssue(ctx *context.Context) {
 					break
 				}
 			}
-			if !isAdded && !issue.IsPoster(comment.Poster.Id) {
+			if !isAdded && !issue.IsPoster(comment.Poster.ID) {
 				participants = append(participants, comment.Poster)
 			}
 		}
@@ -636,7 +636,7 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["Participants"] = participants
 	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
 
 	ctx.Data["RequireHighlightJS"] = true
@@ -663,7 +663,7 @@ func UpdateIssueTitle(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (!issue.IsPoster(ctx.User.Id) && !ctx.Repo.IsWriter()) {
+	if !ctx.IsSigned || (!issue.IsPoster(ctx.User.ID) && !ctx.Repo.IsWriter()) {
 		ctx.Error(403)
 		return
 	}
@@ -690,7 +690,7 @@ func UpdateIssueContent(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.Id != issue.PosterID && !ctx.Repo.IsWriter()) {
+	if !ctx.IsSigned || (ctx.User.ID != issue.PosterID && !ctx.Repo.IsWriter()) {
 		ctx.Error(403)
 		return
 	}
@@ -831,7 +831,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 	var comment *models.Comment
 	defer func() {
 		// Check if issue admin/poster changes the status of issue.
-		if (ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.Id))) &&
+		if (ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))) &&
 			(form.Status == "reopen" || form.Status == "close") &&
 			!(issue.IsPull && issue.HasMerged) {
 
@@ -907,7 +907,7 @@ func UpdateCommentContent(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.Id != comment.PosterID && !ctx.Repo.IsAdmin()) {
+	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
 		ctx.Error(403)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
