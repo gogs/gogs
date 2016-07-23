@@ -33,7 +33,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 	tos := make([]string, 0, len(watchers)) // List of email addresses.
 	names := make([]string, 0, len(watchers))
 	for i := range watchers {
-		if watchers[i].UserID == doer.Id {
+		if watchers[i].UserID == doer.ID {
 			continue
 		}
 

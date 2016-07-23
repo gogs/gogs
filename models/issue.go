@@ -336,7 +336,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 
 	if issue.AssigneeID > 0 {
 		// Silently drop invalid assignee
-		valid, err := hasAccess(e, &User{Id: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
+		valid, err := hasAccess(e, &User{ID: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
 		if err != nil {
 			return fmt.Errorf("hasAccess: %v", err)
 		} else if !valid {
@@ -428,7 +428,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 
 	// Notify watchers.
 	act := &Action{
-		ActUserID:    issue.Poster.Id,
+		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
 		ActEmail:     issue.Poster.Email,
 		OpType:       ACTION_CREATE_ISSUE,
@@ -632,7 +632,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	isNeedAddPoster := true
 	for _, u := range users {
 		iu.ID = 0
-		iu.UID = u.Id
+		iu.UID = u.ID
 		iu.IsPoster = iu.UID == issue.PosterID
 		if isNeedAddPoster && iu.IsPoster {
 			isNeedAddPoster = false
@@ -736,15 +736,15 @@ func UpdateIssueMentions(issueID int64, mentions []string) error {
 
 	ids := make([]int64, 0, len(mentions))
 	for _, user := range users {
-		ids = append(ids, user.Id)
+		ids = append(ids, user.ID)
 		if !user.IsOrganization() || user.NumMembers == 0 {
 			continue
 		}
 
 		memberIDs := make([]int64, 0, user.NumMembers)
-		orgUsers, err := GetOrgUsersByOrgID(user.Id)
+		orgUsers, err := GetOrgUsersByOrgID(user.ID)
 		if err != nil {
-			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.Id, err)
+			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
 		for _, orgUser := range orgUsers {

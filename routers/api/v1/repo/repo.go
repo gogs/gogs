@@ -27,7 +27,7 @@ func Search(ctx *context.APIContext) {
 
 	// Check visibility.
 	if ctx.IsSigned && opts.OwnerID > 0 {
-		if ctx.User.Id == opts.OwnerID {
+		if ctx.User.ID == opts.OwnerID {
 			opts.Private = true
 		} else {
 			u, err := models.GetUserByID(opts.OwnerID)
@@ -38,7 +38,7 @@ func Search(ctx *context.APIContext) {
 				})
 				return
 			}
-			if u.IsOrganization() && u.IsOwnedBy(ctx.User.Id) {
+			if u.IsOrganization() && u.IsOwnedBy(ctx.User.ID) {
 				opts.Private = true
 			}
 			// FIXME: how about collaborators?
@@ -78,7 +78,7 @@ func Search(ctx *context.APIContext) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
 func ListMyRepos(ctx *context.APIContext) {
-	ownRepos, err := models.GetRepositories(ctx.User.Id, true)
+	ownRepos, err := models.GetRepositories(ctx.User.ID, true)
 	if err != nil {
 		ctx.Error(500, "GetRepositories", err)
 		return
@@ -126,7 +126,7 @@ func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateR
 			ctx.Error(422, "", err)
 		} else {
 			if repo != nil {
-				if err = models.DeleteRepository(ctx.User.Id, repo.ID); err != nil {
+				if err = models.DeleteRepository(ctx.User.ID, repo.ID); err != nil {
 					log.Error(4, "DeleteRepository: %v", err)
 				}
 			}
@@ -159,7 +159,7 @@ func CreateOrgRepo(ctx *context.APIContext, opt api.CreateRepoOption) {
 		return
 	}
 
-	if !org.IsOwnedBy(ctx.User.Id) {
+	if !org.IsOwnedBy(ctx.User.ID) {
 		ctx.Error(403, "", "Given user is not owner of organization.")
 		return
 	}
@@ -171,7 +171,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
-	if form.Uid != ctxUser.Id {
+	if form.Uid != ctxUser.ID {
 		org, err := models.GetUserByID(form.Uid)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
@@ -191,7 +191,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 
 	if ctxUser.IsOrganization() && !ctx.User.IsAdmin {
 		// Check ownership of organization.
-		if !ctxUser.IsOwnedBy(ctx.User.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.ID) {
 			ctx.Error(403, "", "Given user is not owner of organization.")
 			return
 		}
@@ -226,7 +226,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	})
 	if err != nil {
 		if repo != nil {
-			if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID); errDelete != nil {
+			if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
 				log.Error(4, "DeleteRepository: %v", errDelete)
 			}
 		}
@@ -249,7 +249,7 @@ func parseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repositor
 		return nil, nil
 	}
 
-	repo, err := models.GetRepositoryByName(owner.Id, ctx.Params(":reponame"))
+	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			ctx.Status(404)
@@ -279,12 +279,12 @@ func Delete(ctx *context.APIContext) {
 		return
 	}
 
-	if owner.IsOrganization() && !owner.IsOwnedBy(ctx.User.Id) {
+	if owner.IsOrganization() && !owner.IsOwnedBy(ctx.User.ID) {
 		ctx.Error(403, "", "Given user is not owner of organization.")
 		return
 	}
 
-	if err := models.DeleteRepository(owner.Id, repo.ID); err != nil {
+	if err := models.DeleteRepository(owner.ID, repo.ID); err != nil {
 		ctx.Error(500, "DeleteRepository", err)
 		return
 	}

@@ -104,7 +104,7 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	repo, has := models.HasForkedRepo(ctxUser.Id, forkRepo.ID)
+	repo, has := models.HasForkedRepo(ctxUser.ID, forkRepo.ID)
 	if has {
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
@@ -112,7 +112,7 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 
 	// Check ownership of organization.
 	if ctxUser.IsOrganization() {
-		if !ctxUser.IsOwnedBy(ctx.User.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.ID) {
 			ctx.Error(403)
 			return
 		}
@@ -166,7 +166,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 
 	if ctx.IsSigned {
 		// Update issue-user.
-		if err = issue.ReadBy(ctx.User.Id); err != nil {
+		if err = issue.ReadBy(ctx.User.ID); err != nil {
 			ctx.Handle(500, "ReadBy", err)
 			return nil
 		}
@@ -478,7 +478,7 @@ func ParseCompareInfo(ctx *context.Context) (*models.User, *models.Repository, *
 	}
 
 	// Check if current user has fork of repository or in the same repository.
-	headRepo, has := models.HasForkedRepo(headUser.Id, baseRepo.ID)
+	headRepo, has := models.HasForkedRepo(headUser.ID, baseRepo.ID)
 	if !has && !isSameRepo {
 		log.Trace("ParseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
 		ctx.Handle(404, "ParseCompareInfo", nil)
@@ -666,7 +666,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
 		Name:        form.Title,
-		PosterID:    ctx.User.Id,
+		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,

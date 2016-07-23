@@ -176,7 +176,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 
 	rel := &models.Release{
 		RepoID:       ctx.Repo.Repository.ID,
-		PublisherID:  ctx.User.Id,
+		PublisherID:  ctx.User.ID,
 		Title:        form.Title,
 		TagName:      form.TagName,
 		Target:       form.Target,

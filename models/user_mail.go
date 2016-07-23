@@ -160,7 +160,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 		return ErrEmailNotActivated
 	}
 
-	user := &User{Id: email.UID}
+	user := &User{ID: email.UID}
 	has, err = x.Get(user)
 	if err != nil {
 		return err
@@ -182,7 +182,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	}
 
 	if !has {
-		formerPrimaryEmail.UID = user.Id
+		formerPrimaryEmail.UID = user.ID
 		formerPrimaryEmail.IsActivated = user.IsActive
 		if _, err = sess.Insert(formerPrimaryEmail); err != nil {
 			return err
@@ -190,7 +190,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	}
 
 	user.Email = email.Email
-	if _, err = sess.Id(user.Id).AllCols().Update(user); err != nil {
+	if _, err = sess.Id(user.ID).AllCols().Update(user); err != nil {
 		return err
 	}
 

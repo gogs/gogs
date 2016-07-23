@@ -33,7 +33,7 @@ func (c *Collaboration) ModeI18nKey() string {
 func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: u.Id,
+		UserID: u.ID,
 	}
 
 	has, err := x.Get(collaboration)

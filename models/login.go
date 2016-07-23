@@ -534,7 +534,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 				return u, nil
 			}
 
-			return nil, ErrUserNotExist{u.Id, u.Name}
+			return nil, ErrUserNotExist{u.ID, u.Name}
 
 		default:
 			var source LoginSource
@@ -563,5 +563,5 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		log.Warn("Failed to login '%s' via '%s': %v", uname, source.Name, err)
 	}
 
-	return nil, ErrUserNotExist{u.Id, u.Name}
+	return nil, ErrUserNotExist{u.ID, u.Name}
 }

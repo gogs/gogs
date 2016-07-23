@@ -36,7 +36,7 @@ func Search(ctx *context.APIContext) {
 	results := make([]*api.User, len(users))
 	for i := range users {
 		results[i] = &api.User{
-			ID:        users[i].Id,
+			ID:        users[i].ID,
 			UserName:  users[i].Name,
 			AvatarUrl: users[i].AvatarLink(),
 			FullName:  users[i].FullName,
@@ -68,5 +68,5 @@ func GetInfo(ctx *context.APIContext) {
 	if !ctx.IsSigned {
 		u.Email = ""
 	}
-	ctx.JSON(200, &api.User{u.Id, u.Name, u.FullName, u.Email, u.AvatarLink()})
+	ctx.JSON(200, &api.User{u.ID, u.Name, u.FullName, u.Email, u.AvatarLink()})
 }

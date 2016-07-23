@@ -131,7 +131,7 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 		// generate a random one when needed.
 		if form.Enable && !com.IsFile(ctxUser.CustomAvatarPath()) {
 			if err := ctxUser.GenerateRandomAvatar(); err != nil {
-				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.Id, err)
+				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.ID, err)
 			}
 		}
 	}
@@ -199,7 +199,7 @@ func SettingsEmails(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsEmails"] = true
 
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
 		return
@@ -226,7 +226,7 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 	}
 
 	// Add Email address.
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
 		return
@@ -239,7 +239,7 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 	}
 
 	email := &models.EmailAddress{
-		UID:         ctx.User.Id,
+		UID:         ctx.User.ID,
 		Email:       form.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
@@ -285,7 +285,7 @@ func SettingsSSHKeys(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	keys, err := models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
 		return
@@ -299,7 +299,7 @@ func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	keys, err := models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
 		return
@@ -322,7 +322,7 @@ func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	if _, err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+	if _, err = models.AddPublicKey(ctx.User.ID, form.Title, content); err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
@@ -357,7 +357,7 @@ func SettingsApplications(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
-	tokens, err := models.ListAccessTokens(ctx.User.Id)
+	tokens, err := models.ListAccessTokens(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListAccessTokens", err)
 		return
@@ -372,7 +372,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	ctx.Data["PageIsSettingsApplications"] = true
 
 	if ctx.HasError() {
-		tokens, err := models.ListAccessTokens(ctx.User.Id)
+		tokens, err := models.ListAccessTokens(ctx.User.ID)
 		if err != nil {
 			ctx.Handle(500, "ListAccessTokens", err)
 			return
@@ -383,7 +383,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	}
 
 	t := &models.AccessToken{
-		UID:  ctx.User.Id,
+		UID:  ctx.User.ID,
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {

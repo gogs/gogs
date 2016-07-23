@@ -62,7 +62,7 @@
 							{{end}}
 							{{if and .IsSigned (ne .SignedUserName .Owner.Name)}}
 							<li class="follow">
-								{{if .SignedUser.IsFollowing .Owner.Id}}
+								{{if .SignedUser.IsFollowing .Owner.ID}}
 								<a class="ui basic red button" href="{{.Link}}/action/unfollow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{.i18n.Tr "user.unfollow"}}</a>
 								{{else}}
 								<a class="ui basic green button" href="{{.Link}}/action/follow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{.i18n.Tr "user.follow"}}</a>
