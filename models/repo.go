@@ -184,12 +184,12 @@ type Repository struct {
 }
 
 func (repo *Repository) BeforeInsert() {
-	repo.CreatedUnix = time.Now().UTC().Unix()
+	repo.CreatedUnix = time.Now().Unix()
 	repo.UpdatedUnix = repo.CreatedUnix
 }
 
 func (repo *Repository) BeforeUpdate() {
-	repo.UpdatedUnix = time.Now().UTC().Unix()
+	repo.UpdatedUnix = time.Now().Unix()
 }
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
@@ -533,12 +533,12 @@ type Mirror struct {
 }
 
 func (m *Mirror) BeforeInsert() {
-	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
 func (m *Mirror) BeforeUpdate() {
-	m.UpdatedUnix = time.Now().UTC().Unix()
-	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+	m.UpdatedUnix = time.Now().Unix()
+	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
 func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
