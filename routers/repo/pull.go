@@ -235,6 +235,14 @@ func PrepareViewPullInfo(ctx *context.Context, pull *models.Issue) *git.PullRequ
 	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
 		pull.BaseBranch, pull.HeadBranch)
 	if err != nil {
+		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
+			ctx.Data["IsPullReuqestBroken"] = true
+			ctx.Data["BaseTarget"] = "deleted"
+			ctx.Data["NumCommits"] = 0
+			ctx.Data["NumFiles"] = 0
+			return nil
+		}
+
 		ctx.Handle(500, "GetPullRequestInfo", err)
 		return nil
 	}
