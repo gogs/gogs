@@ -102,12 +102,12 @@ type Webhook struct {
 }
 
 func (w *Webhook) BeforeInsert() {
-	w.CreatedUnix = time.Now().UTC().Unix()
+	w.CreatedUnix = time.Now().Unix()
 	w.UpdatedUnix = w.CreatedUnix
 }
 
 func (w *Webhook) BeforeUpdate() {
-	w.UpdatedUnix = time.Now().UTC().Unix()
+	w.UpdatedUnix = time.Now().Unix()
 }
 
 func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
@@ -239,7 +239,7 @@ func deleteWebhook(bean *Webhook) (err error) {
 }
 
 // DeleteWebhookByRepoID deletes webhook of repository by given ID.
-func DeleteWebhookByRepoID(repoID, id int64) (error) {
+func DeleteWebhookByRepoID(repoID, id int64) error {
 	return deleteWebhook(&Webhook{
 		ID:     id,
 		RepoID: repoID,
@@ -247,7 +247,7 @@ func DeleteWebhookByRepoID(repoID, id int64) (error) {
 }
 
 // DeleteWebhookByOrgID deletes webhook of organization by given ID.
-func DeleteWebhookByOrgID(orgID, id int64) (error) {
+func DeleteWebhookByOrgID(orgID, id int64) error {
 	return deleteWebhook(&Webhook{
 		ID:    id,
 		OrgID: orgID,
@@ -573,7 +573,7 @@ func (t *HookTask) deliver() {
 	}
 
 	defer func() {
-		t.Delivered = time.Now().UTC().UnixNano()
+		t.Delivered = time.Now().UnixNano()
 		if t.IsSucceed {
 			log.Trace("Hook delivered: %s", t.UUID)
 		} else {

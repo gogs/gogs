@@ -29,11 +29,11 @@ type AccessToken struct {
 }
 
 func (t *AccessToken) BeforeInsert() {
-	t.CreatedUnix = time.Now().UTC().Unix()
+	t.CreatedUnix = time.Now().Unix()
 }
 
 func (t *AccessToken) BeforeUpdate() {
-	t.UpdatedUnix = time.Now().UTC().Unix()
+	t.UpdatedUnix = time.Now().Unix()
 }
 
 func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {

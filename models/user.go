@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
@@ -107,7 +108,7 @@ type User struct {
 }
 
 func (u *User) BeforeInsert() {
-	u.CreatedUnix = time.Now().UTC().Unix()
+	u.CreatedUnix = time.Now().Unix()
 	u.UpdatedUnix = u.CreatedUnix
 }
 
@@ -115,7 +116,7 @@ func (u *User) BeforeUpdate() {
 	if u.MaxRepoCreation < -1 {
 		u.MaxRepoCreation = -1
 	}
-	u.UpdatedUnix = time.Now().UTC().Unix()
+	u.UpdatedUnix = time.Now().Unix()
 }
 
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
@@ -468,9 +469,43 @@ func NewFakeUser() *User {
 	}
 }
 
+var (
+	reversedUsernames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
+	reversedUserPatterns = []string{"*.keys"}
+)
+
+// isUsableName checks if name is reserved or pattern of name is not allowed
+// based on given reversed names and patterns.
+// Names are exact match, patterns can be prefix or suffix match with placeholder '*'.
+func isUsableName(names, patterns []string, name string) error {
+	name = strings.TrimSpace(strings.ToLower(name))
+	if utf8.RuneCountInString(name) == 0 {
+		return ErrNameEmpty
+	}
+
+	for i := range names {
+		if name == names[i] {
+			return ErrNameReserved{name}
+		}
+	}
+
+	for _, pat := range patterns {
+		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
+			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
+			return ErrNamePatternNotAllowed{pat}
+		}
+	}
+
+	return nil
+}
+
+func IsUsableUsername(name string) error {
+	return isUsableName(reversedUsernames, reversedUserPatterns, name)
+}
+
 // CreateUser creates record of a new user.
 func CreateUser(u *User) (err error) {
-	if err = IsUsableName(u.Name); err != nil {
+	if err = IsUsableUsername(u.Name); err != nil {
 		return err
 	}
 
@@ -583,7 +618,7 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 // ChangeUserName changes all corresponding setting from old user name to new one.
 func ChangeUserName(u *User, newUserName string) (err error) {
-	if err = IsUsableName(newUserName); err != nil {
+	if err = IsUsableUsername(newUserName); err != nil {
 		return err
 	}
 

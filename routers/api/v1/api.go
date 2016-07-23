@@ -103,7 +103,7 @@ func ReqBasicAuth() macaron.Handler {
 
 func ReqAdmin() macaron.Handler {
 	return func(ctx *context.Context) {
-		if !ctx.User.IsAdmin {
+		if !ctx.IsSigned || !ctx.User.IsAdmin {
 			ctx.Error(403)
 			return
 		}

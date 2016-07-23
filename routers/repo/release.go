@@ -188,10 +188,13 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 	}
 
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
-		if models.IsErrReleaseAlreadyExist(err) {
-			ctx.Data["Err_TagName"] = true
+		ctx.Data["Err_TagName"] = true
+		switch {
+		case models.IsErrReleaseAlreadyExist(err):
 			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &form)
-		} else {
+		case models.IsErrInvalidTagName(err):
+			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &form)
+		default:
 			ctx.Handle(500, "CreateRelease", err)
 		}
 		return

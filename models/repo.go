@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
@@ -185,12 +184,12 @@ type Repository struct {
 }
 
 func (repo *Repository) BeforeInsert() {
-	repo.CreatedUnix = time.Now().UTC().Unix()
+	repo.CreatedUnix = time.Now().Unix()
 	repo.UpdatedUnix = repo.CreatedUnix
 }
 
 func (repo *Repository) BeforeUpdate() {
-	repo.UpdatedUnix = time.Now().UTC().Unix()
+	repo.UpdatedUnix = time.Now().Unix()
 }
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
@@ -517,34 +516,6 @@ func (repo *Repository) CloneLink() (cl *CloneLink) {
 	return repo.cloneLink(false)
 }
 
-var (
-	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
-	reservedPatterns = []string{"*.git", "*.keys", "*.wiki"}
-)
-
-// IsUsableName checks if name is reserved or pattern of name is not allowed.
-func IsUsableName(name string) error {
-	name = strings.TrimSpace(strings.ToLower(name))
-	if utf8.RuneCountInString(name) == 0 {
-		return ErrNameEmpty
-	}
-
-	for i := range reservedNames {
-		if name == reservedNames[i] {
-			return ErrNameReserved{name}
-		}
-	}
-
-	for _, pat := range reservedPatterns {
-		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
-			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
-			return ErrNamePatternNotAllowed{pat}
-		}
-	}
-
-	return nil
-}
-
 // Mirror represents a mirror information of repository.
 type Mirror struct {
 	ID          int64 `xorm:"pk autoincr"`
@@ -562,12 +533,12 @@ type Mirror struct {
 }
 
 func (m *Mirror) BeforeInsert() {
-	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
 func (m *Mirror) BeforeUpdate() {
-	m.UpdatedUnix = time.Now().UTC().Unix()
-	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+	m.UpdatedUnix = time.Now().Unix()
+	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
 func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
@@ -940,8 +911,17 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	return nil
 }
 
+var (
+	reservedRepoNames    = []string{".", ".."}
+	reservedRepoPatterns = []string{"*.git", "*.wiki"}
+)
+
+func IsUsableRepoName(name string) error {
+	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
+}
+
 func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
-	if err = IsUsableName(repo.Name); err != nil {
+	if err = IsUsableRepoName(repo.Name); err != nil {
 		return err
 	}
 
@@ -1187,6 +1167,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	// Rename remote repository to new path and delete local copy.
+	os.MkdirAll(UserPath(newOwner.Name), os.ModePerm)
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
@@ -1208,7 +1189,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
-	if err = IsUsableName(newRepoName); err != nil {
+	if err = IsUsableRepoName(newRepoName); err != nil {
 		return err
 	}
 
@@ -1670,12 +1651,8 @@ func MirrorUpdate() {
 	log.Trace("Doing: MirrorUpdate")
 
 	mirrors := make([]*Mirror, 0, 10)
-	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
+	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
-		if m.NextUpdate.After(time.Now()) {
-			return nil
-		}
-
 		if m.Repo == nil {
 			log.Error(4, "Disconnected mirror repository found: %d", m.ID)
 			return nil
