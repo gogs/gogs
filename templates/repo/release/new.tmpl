@@ -19,7 +19,7 @@
 					{{if .PageIsEditRelease}}
 						<b>{{.tag_name}}</b><span class="at">@</span><strong>{{.tag_target}}</strong>
 					{{else}}
-						<input name="tag_name" value="{{.tag_name}}" placeholder="{{.i18n.Tr "repo.release.tag_name"}}" autofocus required>
+						<input id="tag-name" name="tag_name" value="{{.tag_name}}" placeholder="{{.i18n.Tr "repo.release.tag_name"}}" autofocus required>
 						<span class="at">@</span>
 						<div class="ui selection dropdown">
 							<input type="hidden" name="tag_target" value="{{.tag_target}}"/>

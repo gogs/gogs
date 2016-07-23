@@ -1968,6 +1968,9 @@ footer .ui.language .menu {
 .repository.new.release .target {
   min-width: 500px;
 }
+.repository.new.release .target #tag-name {
+  margin-top: -4px;
+}
 .repository.new.release .target .at {
   margin-left: -5px;
   margin-right: 5px;
