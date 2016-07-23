@@ -1651,12 +1651,8 @@ func MirrorUpdate() {
 	log.Trace("Doing: MirrorUpdate")
 
 	mirrors := make([]*Mirror, 0, 10)
-	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
+	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
-		if m.NextUpdate.After(time.Now()) {
-			return nil
-		}
-
 		if m.Repo == nil {
 			log.Error(4, "Disconnected mirror repository found: %d", m.ID)
 			return nil
