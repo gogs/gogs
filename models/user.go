@@ -108,7 +108,7 @@ type User struct {
 }
 
 func (u *User) BeforeInsert() {
-	u.CreatedUnix = time.Now().UTC().Unix()
+	u.CreatedUnix = time.Now().Unix()
 	u.UpdatedUnix = u.CreatedUnix
 }
 
@@ -116,7 +116,7 @@ func (u *User) BeforeUpdate() {
 	if u.MaxRepoCreation < -1 {
 		u.MaxRepoCreation = -1
 	}
-	u.UpdatedUnix = time.Now().UTC().Unix()
+	u.UpdatedUnix = time.Now().Unix()
 }
 
 func (u *User) AfterSet(colName string, _ xorm.Cell) {

@@ -39,7 +39,7 @@ type Release struct {
 }
 
 func (r *Release) BeforeInsert() {
-	r.CreatedUnix = time.Now().UTC().Unix()
+	r.CreatedUnix = time.Now().Unix()
 }
 
 func (r *Release) AfterSet(colName string, _ xorm.Cell) {

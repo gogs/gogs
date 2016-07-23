@@ -65,7 +65,7 @@ type PullRequest struct {
 }
 
 func (pr *PullRequest) BeforeUpdate() {
-	pr.MergedUnix = pr.Merged.UTC().Unix()
+	pr.MergedUnix = pr.Merged.Unix()
 }
 
 // Note: don't try to get Pull because will end up recursive querying.

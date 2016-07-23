@@ -646,17 +646,17 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 						if bean.Deadline.IsZero() {
 							continue
 						}
-						fieldSQL += com.ToStr(bean.Deadline.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Deadline.Unix())
 					case "created":
-						fieldSQL += com.ToStr(bean.Created.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Created.Unix())
 					case "updated":
-						fieldSQL += com.ToStr(bean.Updated.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Updated.Unix())
 					case "closed_date":
-						fieldSQL += com.ToStr(bean.ClosedDate.UTC().Unix())
+						fieldSQL += com.ToStr(bean.ClosedDate.Unix())
 					case "merged":
-						fieldSQL += com.ToStr(bean.Merged.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Merged.Unix())
 					case "next_update":
-						fieldSQL += com.ToStr(bean.NextUpdate.UTC().Unix())
+						fieldSQL += com.ToStr(bean.NextUpdate.Unix())
 					}
 
 					valSQLs = append(valSQLs, fieldSQL)

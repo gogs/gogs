@@ -64,13 +64,13 @@ type Issue struct {
 }
 
 func (i *Issue) BeforeInsert() {
-	i.CreatedUnix = time.Now().UTC().Unix()
+	i.CreatedUnix = time.Now().Unix()
 	i.UpdatedUnix = i.CreatedUnix
 }
 
 func (i *Issue) BeforeUpdate() {
-	i.UpdatedUnix = time.Now().UTC().Unix()
-	i.DeadlineUnix = i.Deadline.UTC().Unix()
+	i.UpdatedUnix = time.Now().Unix()
+	i.DeadlineUnix = i.Deadline.Unix()
 }
 
 func (issue *Issue) loadAttributes(e Engine) (err error) {
@@ -1046,7 +1046,7 @@ type Milestone struct {
 }
 
 func (m *Milestone) BeforeInsert() {
-	m.DeadlineUnix = m.Deadline.UTC().Unix()
+	m.DeadlineUnix = m.Deadline.Unix()
 }
 
 func (m *Milestone) BeforeUpdate() {
@@ -1056,8 +1056,8 @@ func (m *Milestone) BeforeUpdate() {
 		m.Completeness = 0
 	}
 
-	m.DeadlineUnix = m.Deadline.UTC().Unix()
-	m.ClosedDateUnix = m.ClosedDate.UTC().Unix()
+	m.DeadlineUnix = m.Deadline.Unix()
+	m.ClosedDateUnix = m.ClosedDate.Unix()
 }
 
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
@@ -1361,7 +1361,7 @@ type Attachment struct {
 }
 
 func (a *Attachment) BeforeInsert() {
-	a.CreatedUnix = time.Now().UTC().Unix()
+	a.CreatedUnix = time.Now().Unix()
 }
 
 func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {

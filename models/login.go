@@ -120,12 +120,12 @@ type LoginSource struct {
 }
 
 func (s *LoginSource) BeforeInsert() {
-	s.CreatedUnix = time.Now().UTC().Unix()
+	s.CreatedUnix = time.Now().Unix()
 	s.UpdatedUnix = s.CreatedUnix
 }
 
 func (s *LoginSource) BeforeUpdate() {
-	s.UpdatedUnix = time.Now().UTC().Unix()
+	s.UpdatedUnix = time.Now().Unix()
 }
 
 // Cell2Int64 converts a xorm.Cell type to int64,

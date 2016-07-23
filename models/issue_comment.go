@@ -69,7 +69,7 @@ type Comment struct {
 }
 
 func (c *Comment) BeforeInsert() {
-	c.CreatedUnix = time.Now().UTC().Unix()
+	c.CreatedUnix = time.Now().Unix()
 }
 
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
