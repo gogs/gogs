@@ -470,8 +470,8 @@ func CommitRepoAction(
 		}
 	}
 
-	if len(commit.Commits) > setting.FeedMaxCommitNum {
-		commit.Commits = commit.Commits[:setting.FeedMaxCommitNum]
+	if len(commit.Commits) > setting.UI.FeedMaxCommitNum {
+		commit.Commits = commit.Commits[:setting.UI.FeedMaxCommitNum]
 	}
 
 	bs, err := json.Marshal(commit)

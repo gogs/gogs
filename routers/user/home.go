@@ -253,7 +253,7 @@ func Issues(ctx *context.Context) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 
 	// Get issues.
 	issues, err := models.Issues(&models.IssuesOptions{

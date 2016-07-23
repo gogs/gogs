@@ -115,15 +115,23 @@ var (
 	ScriptType   string
 
 	// UI settings
-	ExplorePagingNum     int
-	IssuePagingNum       int
-	FeedMaxCommitNum     int
-	AdminUserPagingNum   int
-	AdminRepoPagingNum   int
-	AdminNoticePagingNum int
-	AdminOrgPagingNum    int
-	ThemeColorMetaTag    string
-	MaxDisplayFileSize   int64
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum int
+		} `ini:"ui.user"`
+	}
 
 	// Markdown sttings
 	Markdown struct {
@@ -437,20 +445,6 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
 	}
 
-	// UI settings.
-	sec = Cfg.Section("ui")
-	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
-	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
-	FeedMaxCommitNum = sec.Key("FEED_MAX_COMMIT_NUM").MustInt(5)
-	MaxDisplayFileSize = sec.Key("MAX_DISPLAY_FILE_SIZE").MustInt64(8388608)
-
-	sec = Cfg.Section("ui.admin")
-	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)
-	AdminRepoPagingNum = sec.Key("REPO_PAGING_NUM").MustInt(50)
-	AdminNoticePagingNum = sec.Key("NOTICE_PAGING_NUM").MustInt(50)
-	AdminOrgPagingNum = sec.Key("ORG_PAGING_NUM").MustInt(50)
-	ThemeColorMetaTag = sec.Key("THEME_COLOR_META_TAG").MustString("#ff5343")
-
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
@@ -470,7 +464,9 @@ func NewContext() {
 		DisableGravatar = true
 	}
 
-	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
+	if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+		log.Fatal(4, "Fail to map UI settings: %v", err)
+	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)

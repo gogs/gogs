@@ -105,7 +105,7 @@ func Home(ctx *context.Context) {
 			case isImageFile:
 				ctx.Data["IsImageFile"] = true
 			case isTextFile:
-				if blob.Size() >= setting.MaxDisplayFileSize {
+				if blob.Size() >= setting.UI.MaxDisplayFileSize {
 					ctx.Data["IsFileTooLarge"] = true
 				} else {
 					ctx.Data["IsFileTooLarge"] = false
