@@ -31,7 +31,7 @@ func ListIssues(ctx *context.APIContext) {
 		apiIssues[i] = convert.ToIssue(issues[i])
 	}
 
-	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.IssuePagingNum)
+	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.UI.IssuePagingNum)
 	ctx.JSON(200, &apiIssues)
 }
 

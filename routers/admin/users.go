@@ -33,7 +33,7 @@ func Users(ctx *context.Context) {
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
-		PageSize: setting.AdminUserPagingNum,
+		PageSize: setting.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
 	})

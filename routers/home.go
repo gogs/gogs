@@ -109,7 +109,7 @@ func ExploreRepos(ctx *context.Context) {
 	RenderRepoSearch(ctx, &RepoSearchOptions{
 		Counter:  models.CountPublicRepositories,
 		Ranger:   models.GetRecentUpdatedRepositories,
-		PageSize: setting.ExplorePagingNum,
+		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_REPOS,
 	})
@@ -174,7 +174,7 @@ func ExploreUsers(ctx *context.Context) {
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
-		PageSize: setting.ExplorePagingNum,
+		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
 	})
