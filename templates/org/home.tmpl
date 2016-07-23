@@ -27,7 +27,7 @@
 			<div class="ui eleven wide column">
 				{{if .IsOrganizationOwner}}
 					<div class="text right">
-						<a class="ui green button" href="{{AppSubUrl}}/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
+						<a class="ui green button" href="{{AppSubUrl}}/repo/create?org={{.Org.ID}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
 					</div>
 					<div class="ui divider"></div>
 				{{end}}
@@ -46,7 +46,7 @@
 				<div class="ui attached segment members">
 					{{$isMember := .IsOrganizationMember}}
 					{{range .Members}}
-						{{if or $isMember (.IsPublicMember $.Org.Id)}}
+						{{if or $isMember (.IsPublicMember $.Org.ID)}}
 							<a href="{{.HomeLink}}" title="{{.Name}}{{if .FullName}} ({{.FullName}}){{end}}"><img class="ui avatar" src="{{.AvatarLink}}"></a>
 						{{end}}
 					{{end}}

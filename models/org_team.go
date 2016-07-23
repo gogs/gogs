@@ -106,7 +106,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return fmt.Errorf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
-		if err = watchRepo(e, u.Id, repo.ID, true); err != nil {
+		if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
 			return fmt.Errorf("watchRepo: %v", err)
 		}
 	}
@@ -162,7 +162,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 			continue
 		}
 
-		if err = watchRepo(e, u.Id, repo.ID, false); err != nil {
+		if err = watchRepo(e, u.ID, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -341,7 +341,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Delete team-user.
-	if _, err = sess.Where("org_id=?", org.Id).Where("team_id=?", t.ID).Delete(new(TeamUser)); err != nil {
+	if _, err = sess.Where("org_id=?", org.ID).Where("team_id=?", t.ID).Delete(new(TeamUser)); err != nil {
 		return err
 	}
 
@@ -538,7 +538,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 
 	// This must exist.
 	ou := new(OrgUser)
-	_, err = e.Where("uid = ?", uid).And("org_id = ?", org.Id).Get(ou)
+	_, err = e.Where("uid = ?", uid).And("org_id = ?", org.ID).Get(ou)
 	if err != nil {
 		return err
 	}

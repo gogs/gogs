@@ -184,7 +184,7 @@ func (a *Action) GetIssueContent() string {
 
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
-		ActUserID:    u.Id,
+		ActUserID:    u.ID,
 		ActUserName:  u.Name,
 		ActEmail:     u.Email,
 		OpType:       ACTION_CREATE_REPO,
@@ -193,7 +193,7 @@ func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%d': %v", u.Id, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", u.ID, repo.ID, err)
 	}
 
 	log.Trace("action.newRepoAction: %s/%s", u.Name, repo.Name)
@@ -207,7 +207,7 @@ func NewRepoAction(u *User, repo *Repository) (err error) {
 
 func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
-		ActUserID:    actUser.Id,
+		ActUserID:    actUser.ID,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       ACTION_RENAME_REPO,
@@ -482,7 +482,7 @@ func CommitRepoAction(
 	refName := git.RefEndName(refFullName)
 
 	if err = NotifyWatchers(&Action{
-		ActUserID:    u.Id,
+		ActUserID:    u.ID,
 		ActUserName:  userName,
 		ActEmail:     actEmail,
 		OpType:       opType,
@@ -506,7 +506,7 @@ func CommitRepoAction(
 	}
 	payloadSender := &api.PayloadUser{
 		UserName:  pusher.Name,
-		ID:        pusher.Id,
+		ID:        pusher.ID,
 		AvatarUrl: pusher.AvatarLink(),
 	}
 
@@ -553,7 +553,7 @@ func CommitRepoAction(
 
 func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
-		ActUserID:    actUser.Id,
+		ActUserID:    actUser.ID,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       ACTION_TRANSFER_REPO,
@@ -563,12 +563,12 @@ func transferRepoAction(e Engine, actUser, oldOwner, newOwner *User, repo *Repos
 		IsPrivate:    repo.IsPrivate,
 		Content:      path.Join(oldOwner.Name, repo.Name),
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%d': %v", actUser.Id, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", actUser.ID, repo.ID, err)
 	}
 
 	// Remove watch for organization.
 	if repo.Owner.IsOrganization() {
-		if err = watchRepo(e, repo.Owner.Id, repo.ID, false); err != nil {
+		if err = watchRepo(e, repo.Owner.ID, repo.ID, false); err != nil {
 			return fmt.Errorf("watch repository: %v", err)
 		}
 	}
@@ -584,7 +584,7 @@ func TransferRepoAction(actUser, oldOwner, newOwner *User, repo *Repository) err
 
 func mergePullRequestAction(e Engine, actUser *User, repo *Repository, pull *Issue) error {
 	return notifyWatchers(e, &Action{
-		ActUserID:    actUser.Id,
+		ActUserID:    actUser.ID,
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       ACTION_MERGE_PULL_REQUEST,
@@ -610,7 +610,7 @@ func GetFeeds(ctxUserID, userID, offset int64, isProfile bool) ([]*Action, error
 	if isProfile {
 		sess.And("is_private=?", false).And("act_user_id=?", ctxUserID)
 	} else if ctxUserID != -1 {
-		ctxUser := &User{Id: ctxUserID}
+		ctxUser := &User{ID: ctxUserID}
 		if err := ctxUser.GetUserRepositories(userID); err != nil {
 			return nil, err
 		}

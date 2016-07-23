@@ -140,7 +140,7 @@ func (cmt *Comment) MailParticipants(opType ActionType, issue *Issue) (err error
 func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
 	comment := &Comment{
 		Type:      opts.Type,
-		PosterID:  opts.Doer.Id,
+		PosterID:  opts.Doer.ID,
 		Poster:    opts.Doer,
 		IssueID:   opts.Issue.ID,
 		CommitID:  opts.CommitID,
@@ -155,7 +155,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Compose comment action, could be plain comment, close or reopen issue/pull request.
 	// This object will be used to notify watchers in the end of function.
 	act := &Action{
-		ActUserID:    opts.Doer.Id,
+		ActUserID:    opts.Doer.ID,
 		ActUserName:  opts.Doer.Name,
 		ActEmail:     opts.Doer.Email,
 		Content:      fmt.Sprintf("%d|%s", opts.Issue.Index, strings.Split(opts.Content, "\n")[0]),

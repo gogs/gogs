@@ -163,7 +163,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 
 	pr.HasMerged = true
 	pr.Merged = time.Now()
-	pr.MergerID = doer.Id
+	pr.MergerID = doer.ID
 	if _, err = sess.Id(pr.ID).AllCols().Update(pr); err != nil {
 		return fmt.Errorf("update pull request: %v", err)
 	}
@@ -245,7 +245,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		},
 		Sender: &api.PayloadUser{
 			UserName:  doer.Name,
-			ID:        doer.Id,
+			ID:        doer.ID,
 			AvatarUrl: setting.AppUrl + doer.RelAvatarLink(),
 		},
 	}
@@ -332,7 +332,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 	// Notify watchers.
 	act := &Action{
-		ActUserID:    pull.Poster.Id,
+		ActUserID:    pull.Poster.ID,
 		ActUserName:  pull.Poster.Name,
 		ActEmail:     pull.Poster.Email,
 		OpType:       ACTION_CREATE_PULL_REQUEST,

@@ -108,7 +108,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return fmt.Errorf("GetUserByName: %v", err)
 	}
 
-	repo, err := GetRepositoryByName(repoUser.Id, opts.RepoName)
+	repo, err := GetRepositoryByName(repoUser.ID, opts.RepoName)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
@@ -133,7 +133,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		}
 
 		commit := &PushCommits{}
-		if err = CommitRepoAction(opts.PusherID, repoUser.Id, opts.PusherName, actEmail,
+		if err = CommitRepoAction(opts.PusherID, repoUser.ID, opts.PusherName, actEmail,
 			repo.ID, opts.RepoUserName, opts.RepoName, opts.RefName, commit, opts.OldCommitID, opts.NewCommitID); err != nil {
 			return fmt.Errorf("CommitRepoAction (tag): %v", err)
 		}
@@ -159,7 +159,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		}
 	}
 
-	if err = CommitRepoAction(opts.PusherID, repoUser.Id, opts.PusherName, repoUser.Email,
+	if err = CommitRepoAction(opts.PusherID, repoUser.ID, opts.PusherName, repoUser.Email,
 		repo.ID, opts.RepoUserName, opts.RepoName, opts.RefName, ListToPushCommits(l),
 		opts.OldCommitID, opts.NewCommitID); err != nil {
 		return fmt.Errorf("CommitRepoAction (branch): %v", err)

@@ -60,7 +60,7 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 	}
 
 	isSucceed = true
-	ctx.Session.Set("uid", u.Id)
+	ctx.Session.Set("uid", u.ID)
 	ctx.Session.Set("uname", u.Name)
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
 	return true, nil
@@ -114,7 +114,7 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 			setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
 	}
 
-	ctx.Session.Set("uid", u.Id)
+	ctx.Session.Set("uid", u.ID)
 	ctx.Session.Set("uname", u.Name)
 
 	// Clear whatever CSRF has right now, force to generate a new one
@@ -220,7 +220,7 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterFo
 	}
 
 	// Send confirmation email, no need for social account.
-	if setting.Service.RegisterEmailConfirm && u.Id > 1 {
+	if setting.Service.RegisterEmailConfirm && u.ID > 1 {
 		models.SendActivateAccountMail(ctx.Context, u)
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
@@ -278,7 +278,7 @@ func Activate(ctx *context.Context) {
 
 		log.Trace("User activated: %s", user.Name)
 
-		ctx.Session.Set("uid", user.Id)
+		ctx.Session.Set("uid", user.ID)
 		ctx.Session.Set("uname", user.Name)
 		ctx.Redirect(setting.AppSubUrl + "/")
 		return

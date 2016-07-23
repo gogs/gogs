@@ -54,9 +54,9 @@ func TeamsAction(ctx *context.Context) {
 			ctx.Error(404)
 			return
 		}
-		err = ctx.Org.Team.AddMember(ctx.User.Id)
+		err = ctx.Org.Team.AddMember(ctx.User.ID)
 	case "leave":
-		err = ctx.Org.Team.RemoveMember(ctx.User.Id)
+		err = ctx.Org.Team.RemoveMember(ctx.User.ID)
 	case "remove":
 		if !ctx.Org.IsOwner {
 			ctx.Error(404)
@@ -82,7 +82,7 @@ func TeamsAction(ctx *context.Context) {
 			return
 		}
 
-		err = ctx.Org.Team.AddMember(u.Id)
+		err = ctx.Org.Team.AddMember(u.ID)
 		page = "team"
 	}
 
@@ -118,7 +118,7 @@ func TeamsRepoAction(ctx *context.Context) {
 	case "add":
 		repoName := path.Base(ctx.Query("repo_name"))
 		var repo *models.Repository
-		repo, err = models.GetRepositoryByName(ctx.Org.Organization.Id, repoName)
+		repo, err = models.GetRepositoryByName(ctx.Org.Organization.ID, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("org.teams.add_nonexistent_repo"))
@@ -155,7 +155,7 @@ func NewTeamPost(ctx *context.Context, form auth.CreateTeamForm) {
 	ctx.Data["PageIsOrgTeamsNew"] = true
 
 	t := &models.Team{
-		OrgID:       ctx.Org.Organization.Id,
+		OrgID:       ctx.Org.Organization.ID,
 		Name:        form.TeamName,
 		Description: form.Description,
 		Authorize:   models.ParseAccessMode(form.Permission),

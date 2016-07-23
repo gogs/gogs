@@ -23,7 +23,7 @@ func ToUser(u *models.User) *api.User {
 	}
 
 	return &api.User{
-		ID:        u.Id,
+		ID:        u.ID,
 		UserName:  u.Name,
 		FullName:  u.FullName,
 		Email:     u.Email,
@@ -194,7 +194,7 @@ func ToIssue(issue *models.Issue) *api.Issue {
 
 func ToOrganization(org *models.User) *api.Organization {
 	return &api.Organization{
-		ID:          org.Id,
+		ID:          org.ID,
 		AvatarUrl:   org.AvatarLink(),
 		UserName:    org.Name,
 		FullName:    org.FullName,

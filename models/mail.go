@@ -71,7 +71,7 @@ func SendUserMail(c *macaron.Context, u *User, tpl base.TplName, code, subject, 
 	}
 
 	msg := mailer.NewMessage([]string{u.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, %s", u.Id, info)
+	msg.Info = fmt.Sprintf("UID: %d, %s", u.ID, info)
 
 	mailer.SendAsync(msg)
 }
@@ -99,7 +99,7 @@ func SendActivateEmailMail(c *macaron.Context, u *User, email *EmailAddress) {
 	}
 
 	msg := mailer.NewMessage([]string{email.Email}, c.Tr("mail.activate_email"), body)
-	msg.Info = fmt.Sprintf("UID: %d, activate email", u.Id)
+	msg.Info = fmt.Sprintf("UID: %d, activate email", u.ID)
 
 	mailer.SendAsync(msg)
 }
@@ -116,7 +116,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u *User) {
 	}
 
 	msg := mailer.NewMessage([]string{u.Email}, c.Tr("mail.register_notify"), body)
-	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.Id)
+	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.ID)
 
 	mailer.SendAsync(msg)
 }
@@ -138,7 +138,7 @@ func SendCollaboratorMail(u, doer *User, repo *Repository) {
 	}
 
 	msg := mailer.NewMessage([]string{u.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.Id)
+	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID)
 
 	mailer.SendAsync(msg)
 }

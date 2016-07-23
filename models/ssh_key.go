@@ -562,8 +562,8 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 	}
 
 	// Check if user has access to delete this key.
-	if !doer.IsAdmin && doer.Id != key.OwnerID {
-		return ErrKeyAccessDenied{doer.Id, key.ID, "public"}
+	if !doer.IsAdmin && doer.ID != key.OwnerID {
+		return ErrKeyAccessDenied{doer.ID, key.ID, "public"}
 	}
 
 	sess := x.NewSession()
@@ -797,7 +797,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("HasAccess: %v", err)
 		} else if !yes {
-			return ErrKeyAccessDenied{doer.Id, key.ID, "deploy"}
+			return ErrKeyAccessDenied{doer.ID, key.ID, "deploy"}
 		}
 	}
 

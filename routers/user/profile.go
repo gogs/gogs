@@ -62,7 +62,7 @@ func Profile(ctx *context.Context) {
 
 	// Show SSH keys.
 	if isShowKeys {
-		ShowSSHKeys(ctx, u.Id)
+		ShowSSHKeys(ctx, u.ID)
 		return
 	}
 
@@ -75,7 +75,7 @@ func Profile(ctx *context.Context) {
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Owner"] = u
 
-	orgs, err := models.GetOrgsByUserID(u.Id, ctx.IsSigned && (ctx.User.IsAdmin || ctx.User.Id == u.Id))
+	orgs, err := models.GetOrgsByUserID(u.ID, ctx.IsSigned && (ctx.User.IsAdmin || ctx.User.ID == u.ID))
 	if err != nil {
 		ctx.Handle(500, "GetOrgsByUserIDDesc", err)
 		return
@@ -87,13 +87,13 @@ func Profile(ctx *context.Context) {
 	ctx.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		retrieveFeeds(ctx, u.Id, -1, 0, true)
+		retrieveFeeds(ctx, u.ID, -1, 0, true)
 		if ctx.Written() {
 			return
 		}
 	default:
 		var err error
-		ctx.Data["Repos"], err = models.GetRepositories(u.Id, ctx.IsSigned && ctx.User.Id == u.Id)
+		ctx.Data["Repos"], err = models.GetRepositories(u.ID, ctx.IsSigned && ctx.User.ID == u.ID)
 		if err != nil {
 			ctx.Handle(500, "GetRepositories", err)
 			return
@@ -140,9 +140,9 @@ func Action(ctx *context.Context) {
 	var err error
 	switch ctx.Params(":action") {
 	case "follow":
-		err = models.FollowUser(ctx.User.Id, u.Id)
+		err = models.FollowUser(ctx.User.ID, u.ID)
 	case "unfollow":
-		err = models.UnfollowUser(ctx.User.Id, u.Id)
+		err = models.UnfollowUser(ctx.User.ID, u.ID)
 	}
 
 	if err != nil {
