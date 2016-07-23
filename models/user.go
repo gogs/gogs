@@ -988,7 +988,7 @@ type SearchUserOptions struct {
 	Type     UserType
 	OrderBy  string
 	Page     int
-	PageSize int // Can be smaller than or equal to setting.ExplorePagingNum
+	PageSize int // Can be smaller than or equal to setting.UI.ExplorePagingNum
 }
 
 // SearchUserByName takes keyword and part of user name to search,
@@ -999,8 +999,8 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
 
-	if opts.PageSize <= 0 || opts.PageSize > setting.ExplorePagingNum {
-		opts.PageSize = setting.ExplorePagingNum
+	if opts.PageSize <= 0 || opts.PageSize > setting.UI.ExplorePagingNum {
+		opts.PageSize = setting.UI.ExplorePagingNum
 	}
 	if opts.Page <= 0 {
 		opts.Page = 1

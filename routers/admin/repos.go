@@ -26,7 +26,7 @@ func Repos(ctx *context.Context) {
 		Counter:  models.CountRepositories,
 		Ranger:   models.Repositories,
 		Private:  true,
-		PageSize: setting.AdminRepoPagingNum,
+		PageSize: setting.UI.Admin.RepoPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  REPOS,
 	})

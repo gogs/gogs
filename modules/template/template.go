@@ -102,7 +102,7 @@ func NewFuncMap() []template.FuncMap {
 		},
 		"RenderCommitMessage": RenderCommitMessage,
 		"ThemeColorMetaTag": func() string {
-			return setting.ThemeColorMetaTag
+			return setting.UI.ThemeColorMetaTag
 		},
 	}}
 }

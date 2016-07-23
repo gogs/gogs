@@ -163,7 +163,7 @@ func Issues(ctx *context.Context) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	pager := paginater.New(total, setting.IssuePagingNum, page, 5)
+	pager := paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 	ctx.Data["Page"] = pager
 
 	// Get issues.
@@ -1017,7 +1017,7 @@ func Milestones(ctx *context.Context) {
 	} else {
 		total = int(closedCount)
 	}
-	ctx.Data["Page"] = paginater.New(total, setting.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 
 	miles, err := models.GetMilestones(ctx.Repo.Repository.ID, page, isShowClosed)
 	if err != nil {
