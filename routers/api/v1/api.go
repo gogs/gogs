@@ -244,7 +244,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 							m.Combo("").Get(repo.GetIssueLabels).
 								Post(bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
 								Put(bind(api.IssueLabelsOption{}), repo.ReplaceIssueLabels).
-								Delete(repo.DeleteAllIssueLabels)
+								Delete(repo.ClearIssueLabels)
 							m.Delete("/:id", repo.DeleteIssueLabel)
 						})
 

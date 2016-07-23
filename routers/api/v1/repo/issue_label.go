@@ -12,8 +12,6 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-// Get, Add, Replace, Clear
-
 func GetIssueLabels(ctx *context.APIContext) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
@@ -50,8 +48,8 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 	}
 
 	var labels []*models.Label
-	if labels, err = loadLabelsByID(form.Labels, issue.RepoID); err != nil {
-		ctx.Error(400, "loadLabelsByID", err)
+	if labels, err = filterLabelsByRepoID(form.Labels, issue.RepoID); err != nil {
+		ctx.Error(400, "filterLabelsByRepoID", err)
 		return
 	}
 
@@ -69,7 +67,7 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		if models.IsErrIssueNotExist(err) {
 			ctx.Status(404)
 		} else {
-			ctx.Error(500, "GetUpdatedIssueByIndex", err)
+			ctx.Error(500, "GetIssueByIndex", err)
 		}
 		return
 	}
@@ -99,16 +97,14 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 	}
 
 	var labels []*models.Label
-	if labels, err = loadLabelsByID(form.Labels, issue.RepoID); err != nil {
-		ctx.Error(400, "loadLabelsByID", err)
+	if labels, err = filterLabelsByRepoID(form.Labels, issue.RepoID); err != nil {
+		ctx.Error(400, "filterLabelsByRepoID", err)
 		return
 	}
 
-	for i := range issue.Labels {
-		if err := models.DeleteIssueLabel(issue, issue.Labels[i]); err != nil {
-			ctx.Error(500, "NewIssueLabel", err)
-			return
-		}
+	if err := issue.ClearLabels(); err != nil {
+		ctx.Error(500, "ClearLabels", err)
+		return
 	}
 
 	for i := range labels {
@@ -125,7 +121,7 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		if models.IsErrIssueNotExist(err) {
 			ctx.Status(404)
 		} else {
-			ctx.Error(500, "GetUpdatedIssueByIndex", err)
+			ctx.Error(500, "GetIssueByIndex", err)
 		}
 		return
 	}
@@ -172,7 +168,7 @@ func DeleteIssueLabel(ctx *context.APIContext) {
 	ctx.Status(204)
 }
 
-func DeleteAllIssueLabels(ctx *context.APIContext) {
+func ClearIssueLabels(ctx *context.APIContext) {
 	if !ctx.Repo.IsWriter() {
 		ctx.Status(403)
 		return
@@ -188,17 +184,15 @@ func DeleteAllIssueLabels(ctx *context.APIContext) {
 		return
 	}
 
-	for i := range issue.Labels {
-		if err := models.DeleteIssueLabel(issue, issue.Labels[i]); err != nil {
-			ctx.Error(500, "DeleteIssueLabel", err)
-			return
-		}
+	if err := issue.ClearLabels(); err != nil {
+		ctx.Error(500, "ClearLabels", err)
+		return
 	}
 
 	ctx.Status(204)
 }
 
-func loadLabelsByID(labelIDs []int64, repoID int64) ([]*models.Label, error) {
+func filterLabelsByRepoID(labelIDs []int64, repoID int64) ([]*models.Label, error) {
 	labels := make([]*models.Label, 0, len(labelIDs))
 	errors := make([]error, 0, len(labelIDs))
 

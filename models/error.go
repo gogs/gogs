@@ -47,11 +47,13 @@ func IsErrMultipleErrors(err error) bool {
 func (err ErrMultipleErrors) Error() string {
 	var message bytes.Buffer
 
-	message.WriteString("Multiple errors encountered:")
+	message.WriteString("Multiple errors encountered: ")
 
 	for i := range err.Errors {
-		message.WriteString("\n")
 		message.WriteString(err.Errors[i].Error())
+		if i < len(err.Errors)-1 {
+			message.WriteString("; ")
+		}
 	}
 
 	return message.String()
