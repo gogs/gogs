@@ -121,23 +121,17 @@ func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	return repos, nil
 }
 
-// GetAccessibleRepositories finds all repositories where a user has access but does not own.
-func (u *User) GetAccessibleRepositories() ([]*Repository, error) {
-	accesses := make([]*Access, 0, 10)
-	if err := x.Find(&accesses, &Access{UserID: u.ID}); err != nil {
-		return nil, err
+// GetAccessibleRepositories finds repositories which the user has access but does not own.
+// If limit is smaller than 1 means returns all found results.
+func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ error) {
+	sess := x.Where("owner_id !=? ", user.ID).Desc("updated_unix")
+	if limit > 0 {
+		sess.Limit(limit)
+		repos = make([]*Repository, 0, limit)
+	} else {
+		repos = make([]*Repository, 0, 10)
 	}
-
-	if len(accesses) == 0 {
-		return []*Repository{}, nil
-	}
-
-	repoIDs := make([]int64, 0, len(accesses))
-	for _, access := range accesses {
-		repoIDs = append(repoIDs, access.RepoID)
-	}
-	repos := make([]*Repository, 0, len(repoIDs))
-	return repos, x.Where("owner_id != ?", u.ID).In("id", repoIDs).Desc("updated_unix").Find(&repos)
+	return repos, sess.Join("INNER", "access", "access.user_id = ? AND access.repo_id = repository.id", user.ID).Find(&repos)
 }
 
 func maxAccessMode(modes ...AccessMode) AccessMode {

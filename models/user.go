@@ -402,10 +402,15 @@ func (u *User) GetOrganizationCount() (int64, error) {
 	return u.getOrganizationCount(x)
 }
 
-// GetRepositories returns all repositories that user owns, including private repositories.
-func (u *User) GetRepositories() (err error) {
-	u.Repos, err = GetRepositories(u.ID, true)
+// GetRepositories returns repositories that user owns, including private repositories.
+func (u *User) GetRepositories(page, pageSize int) (err error) {
+	u.Repos, err = GetUserRepositories(u.ID, true, page, pageSize)
 	return err
+}
+
+// GetRepositories returns mirror repositories that user owns, including private repositories.
+func (u *User) GetMirrorRepositories() ([]*Repository, error) {
+	return GetUserMirrorRepositories(u.ID)
 }
 
 // GetOwnedOrganizations returns all organizations that user owns.
