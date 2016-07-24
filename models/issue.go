@@ -82,7 +82,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	return nil
 }
 
-func (issue *Issue) LoadAttributes() (err error) {
+func (issue *Issue) LoadAttributes() error {
 	return issue.loadAttributes(x)
 }
 

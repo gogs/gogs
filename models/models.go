@@ -98,8 +98,8 @@ func LoadConfigs() {
 func getEngine() (*xorm.Engine, error) {
 	cnnstr := ""
 	var Param string = "?"
-	if strings.Contains(DbCfg.Name,Param) {
-		Param="&"
+	if strings.Contains(DbCfg.Name, Param) {
+		Param = "&"
 	}
 	switch DbCfg.Type {
 	case "mysql":
@@ -206,7 +206,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.User = CountUsers()
 	stats.Counter.Org = CountOrganizations()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
-	stats.Counter.Repo = CountRepositories()
+	stats.Counter.Repo = CountRepositories(true)
 	stats.Counter.Watch, _ = x.Count(new(Watch))
 	stats.Counter.Star, _ = x.Count(new(Star))
 	stats.Counter.Action, _ = x.Count(new(Action))

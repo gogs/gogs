@@ -10,8 +10,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/log"
 )
 
 var (
@@ -313,9 +315,9 @@ func GetOrgUsersByOrgID(orgID int64) ([]*OrgUser, error) {
 }
 
 // ChangeOrgUserStatus changes public or private membership status.
-func ChangeOrgUserStatus(orgId, uid int64, public bool) error {
+func ChangeOrgUserStatus(orgID, uid int64, public bool) error {
 	ou := new(OrgUser)
-	has, err := x.Where("uid=?", uid).And("org_id=?", orgId).Get(ou)
+	has, err := x.Where("uid=?", uid).And("org_id=?", orgID).Get(ou)
 	if err != nil {
 		return err
 	} else if !has {
@@ -328,8 +330,8 @@ func ChangeOrgUserStatus(orgId, uid int64, public bool) error {
 }
 
 // AddOrgUser adds new user to given organization.
-func AddOrgUser(orgId, uid int64) error {
-	if IsOrganizationMember(orgId, uid) {
+func AddOrgUser(orgID, uid int64) error {
+	if IsOrganizationMember(orgID, uid) {
 		return nil
 	}
 
@@ -341,13 +343,13 @@ func AddOrgUser(orgId, uid int64) error {
 
 	ou := &OrgUser{
 		Uid:   uid,
-		OrgID: orgId,
+		OrgID: orgID,
 	}
 
 	if _, err := sess.Insert(ou); err != nil {
 		sess.Rollback()
 		return err
-	} else if _, err = sess.Exec("UPDATE `user` SET num_members = num_members + 1 WHERE id = ?", orgId); err != nil {
+	} else if _, err = sess.Exec("UPDATE `user` SET num_members = num_members + 1 WHERE id = ?", orgID); err != nil {
 		sess.Rollback()
 		return err
 	}
@@ -356,35 +358,39 @@ func AddOrgUser(orgId, uid int64) error {
 }
 
 // RemoveOrgUser removes user from given organization.
-func RemoveOrgUser(orgId, uid int64) error {
+func RemoveOrgUser(orgID, userID int64) error {
 	ou := new(OrgUser)
 
-	has, err := x.Where("uid=?", uid).And("org_id=?", orgId).Get(ou)
+	has, err := x.Where("uid=?", userID).And("org_id=?", orgID).Get(ou)
 	if err != nil {
 		return fmt.Errorf("get org-user: %v", err)
 	} else if !has {
 		return nil
 	}
 
-	u, err := GetUserByID(uid)
+	user, err := GetUserByID(userID)
 	if err != nil {
-		return fmt.Errorf("GetUserById: %v", err)
+		return fmt.Errorf("GetUserByID [%d]: %v", userID, err)
 	}
-	org, err := GetUserByID(orgId)
+	org, err := GetUserByID(orgID)
 	if err != nil {
-		return fmt.Errorf("get organization: %v", err)
-	} else if err = org.GetRepositories(); err != nil {
-		return fmt.Errorf("GetRepositories: %v", err)
+		return fmt.Errorf("GetUserByID [%d]: %v", orgID, err)
+	}
+
+	// FIXME: only need to get IDs here, not all fields of repository.
+	repos, _, err := org.GetUserRepositories(user.ID, 1, org.NumRepos)
+	if err != nil {
+		return fmt.Errorf("GetUserRepositories [%d]: %v", user.ID, err)
 	}
 
 	// Check if the user to delete is the last member in owner team.
-	if IsOrganizationOwner(orgId, uid) {
+	if IsOrganizationOwner(orgID, userID) {
 		t, err := org.GetOwnerTeam()
 		if err != nil {
 			return err
 		}
 		if t.NumMembers == 1 {
-			return ErrLastOrgOwner{UID: uid}
+			return ErrLastOrgOwner{UID: userID}
 		}
 	}
 
@@ -396,28 +402,29 @@ func RemoveOrgUser(orgId, uid int64) error {
 
 	if _, err := sess.Id(ou.ID).Delete(ou); err != nil {
 		return err
-	} else if _, err = sess.Exec("UPDATE `user` SET num_members=num_members-1 WHERE id=?", orgId); err != nil {
+	} else if _, err = sess.Exec("UPDATE `user` SET num_members=num_members-1 WHERE id=?", orgID); err != nil {
 		return err
 	}
 
-	// Delete all repository accesses.
-	access := &Access{UserID: u.ID}
-	for _, repo := range org.Repos {
-		access.RepoID = repo.ID
-		if _, err = sess.Delete(access); err != nil {
-			return err
-		} else if err = watchRepo(sess, u.ID, repo.ID, false); err != nil {
+	// Delete all repository accesses and unwatch them.
+	repoIDs := make([]int64, len(repos))
+	for i := range repos {
+		repoIDs = append(repoIDs, repos[i].ID)
+		if err = watchRepo(sess, user.ID, repos[i].ID, false); err != nil {
 			return err
 		}
 	}
+	if _, err = sess.Where("user_id = ?", user.ID).In("repo_id", repoIDs).Delete(new(Access)); err != nil {
+		return err
+	}
 
 	// Delete member in his/her teams.
-	teams, err := getUserTeams(sess, org.ID, u.ID)
+	teams, err := getUserTeams(sess, org.ID, user.ID)
 	if err != nil {
 		return err
 	}
 	for _, t := range teams {
-		if err = removeTeamMember(sess, org.ID, t.ID, u.ID); err != nil {
+		if err = removeTeamMember(sess, org.ID, t.ID, user.ID); err != nil {
 			return err
 		}
 	}
@@ -438,38 +445,86 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 	return removeOrgRepo(x, orgID, repoID)
 }
 
-// GetUserRepositories gets all repositories of an organization,
-// that the user with the given userID has access to.
-func (org *User) GetUserRepositories(userID int64) (err error) {
+// GetUserTeamIDs returns of all team IDs of the organization that user is memeber of.
+// It returns [-1] if user is not memeber of any teams.
+func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
 	teams := make([]*Team, 0, org.NumTeams)
-	if err = x.Sql(`SELECT team.id FROM team
-INNER JOIN team_user ON team_user.team_id = team.id
-WHERE team_user.org_id = ? AND team_user.uid = ?`, org.ID, userID).Find(&teams); err != nil {
-		return fmt.Errorf("get teams: %v", err)
+	if err := x.Sql(`SELECT team.id FROM team
+	INNER JOIN team_user ON team_user.team_id = team.id
+	WHERE team_user.org_id = ? AND team_user.uid = ?`, org.ID, userID).Find(&teams); err != nil {
+		return nil, err
 	}
 
-	teamIDs := make([]string, len(teams))
+	teamIDs := make([]int64, len(teams))
 	for i := range teams {
-		teamIDs[i] = com.ToStr(teams[i].ID)
+		teamIDs[i] = teams[i].ID
 	}
 	if len(teamIDs) == 0 {
 		// user has no team but "IN ()" is invalid SQL
-		teamIDs = append(teamIDs, "-1") // there is no repo with id=-1
+		teamIDs = append(teamIDs, -1) // there is no repo with id=-1
+	}
+	return teamIDs, nil
+}
+
+// GetUserRepositories returns repositories of the organization
+// that the user with the given userID has access to.
+func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repository, int64, error) {
+	teamIDs, err := org.GetUserTeamIDs(userID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("GetUserTeamIDs: %v", err)
 	}
 
-	repos := make([]*Repository, 0, 5)
+	if page <= 0 {
+		page = 1
+	}
+	repos := make([]*Repository, 0, pageSize)
+	// FIXME: use XORM chain operations instead of raw SQL.
 	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
-INNER JOIN team_repo ON team_repo.repo_id = repository.id
-WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-GROUP BY repository.id`, strings.Join(teamIDs, ",")), org.ID, false).Find(&repos); err != nil {
-		return fmt.Errorf("get repositories: %v", err)
+	INNER JOIN team_repo 
+	ON team_repo.repo_id = repository.id
+	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
+	GROUP BY repository.id
+	ORDER BY updated_unix DESC
+	LIMIT %d OFFSET %d`,
+		strings.Join(base.Int64sToStrings(teamIDs), ","), pageSize, (page-1)*pageSize),
+		org.ID, false).Find(&repos); err != nil {
+		return nil, 0, fmt.Errorf("get repositories: %v", err)
 	}
-	org.Repos = repos
 
-	// FIXME: should I change this value inside method,
-	// or only in location of caller where it's really needed?
-	org.NumRepos = len(org.Repos)
-	return nil
+	results, err := x.Query(fmt.Sprintf(`SELECT repository.id FROM repository
+	INNER JOIN team_repo 
+	ON team_repo.repo_id = repository.id
+	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
+	GROUP BY repository.id
+	ORDER BY updated_unix DESC`,
+		strings.Join(base.Int64sToStrings(teamIDs), ",")),
+		org.ID, false)
+	if err != nil {
+		log.Error(4, "count user repositories in organization: %v", err)
+	}
+
+	return repos, int64(len(results)), nil
+}
+
+// GetUserRepositories returns mirror repositories of the organization
+// that the user with the given userID has access to.
+func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
+	teamIDs, err := org.GetUserTeamIDs(userID)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserTeamIDs: %v", err)
+	}
+
+	repos := make([]*Repository, 0, 10)
+	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
+	INNER JOIN team_repo 
+	ON team_repo.repo_id = repository.id AND repository.is_mirror = ?
+	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
+	GROUP BY repository.id`,
+		strings.Join(base.Int64sToStrings(teamIDs), ",")),
+		true, org.ID, false).Find(&repos); err != nil {
+		return nil, fmt.Errorf("get repositories: %v", err)
+	}
+	return repos, nil
 }
 
 // GetTeams returns all teams that belong to organization,
