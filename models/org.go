@@ -445,33 +445,45 @@ func RemoveOrgRepo(orgID, repoID int64) error {
 	return removeOrgRepo(x, orgID, repoID)
 }
 
-// GetUserTeamIDs returns of all team IDs of the organization that user is memeber of.
-// It returns [-1] if user is not memeber of any teams.
-func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
+func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, error) {
 	teams := make([]*Team, 0, org.NumTeams)
-	if err := x.Sql(`SELECT team.id FROM team
-	INNER JOIN team_user ON team_user.team_id = team.id
-	WHERE team_user.org_id = ? AND team_user.uid = ?`, org.ID, userID).Find(&teams); err != nil {
-		return nil, err
+	return teams, e.Where("team_user.org_id = ?", org.ID).
+		And("team_user.uid = ?", userID).
+		Join("INNER", "team_user", "team_user.team_id = team.id").
+		Cols(cols...).Find(&teams)
+}
+
+// GetUserTeamIDs returns of all team IDs of the organization that user is memeber of.
+func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
+	teams, err := org.getUserTeams(x, userID, "team.id")
+	if err != nil {
+		return nil, fmt.Errorf("getUserTeams [%d]: %v", userID, err)
 	}
 
 	teamIDs := make([]int64, len(teams))
 	for i := range teams {
 		teamIDs[i] = teams[i].ID
 	}
-	if len(teamIDs) == 0 {
-		// user has no team but "IN ()" is invalid SQL
-		teamIDs = append(teamIDs, -1) // there is no repo with id=-1
-	}
 	return teamIDs, nil
 }
 
-// GetUserRepositories returns repositories of the organization
-// that the user with the given userID has access to.
+// GetTeams returns all teams that belong to organization,
+// and that the user has joined.
+func (org *User) GetUserTeams(userID int64) ([]*Team, error) {
+	return org.getUserTeams(x, userID)
+}
+
+// GetUserRepositories returns a range of repositories in organization
+// that the user with the given userID has access to,
+// and total number of records based on given condition.
 func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repository, int64, error) {
 	teamIDs, err := org.GetUserTeamIDs(userID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("GetUserTeamIDs: %v", err)
+	}
+	if len(teamIDs) == 0 {
+		// user has no team but "IN ()" is invalid SQL
+		teamIDs = []int64{-1} // there is no repo with id=-1
 	}
 
 	if page <= 0 {
@@ -513,35 +525,20 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 	if err != nil {
 		return nil, fmt.Errorf("GetUserTeamIDs: %v", err)
 	}
+	if len(teamIDs) == 0 {
+		teamIDs = []int64{-1}
+	}
 
 	repos := make([]*Repository, 0, 10)
 	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
 	INNER JOIN team_repo 
 	ON team_repo.repo_id = repository.id AND repository.is_mirror = ?
 	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-	GROUP BY repository.id`,
+	GROUP BY repository.id
+	ORDER BY updated_unix DESC`,
 		strings.Join(base.Int64sToStrings(teamIDs), ",")),
 		true, org.ID, false).Find(&repos); err != nil {
 		return nil, fmt.Errorf("get repositories: %v", err)
 	}
 	return repos, nil
-}
-
-// GetTeams returns all teams that belong to organization,
-// and that the user has joined.
-func (org *User) GetUserTeams(userID int64) error {
-	teams := make([]*Team, 0, 5)
-	if err := x.Sql(`SELECT team.* FROM team
-INNER JOIN team_user ON team_user.team_id = team.id
-WHERE team_user.org_id = ? AND team_user.uid = ?`,
-		org.ID, userID).Find(&teams); err != nil {
-		return fmt.Errorf("get teams: %v", err)
-	}
-
-	org.Teams = teams
-
-	// FIXME: should I change this value inside method,
-	// or only in location of caller where it's really needed?
-	org.NumTeams = len(org.Teams)
-	return nil
 }

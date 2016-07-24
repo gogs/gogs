@@ -105,7 +105,8 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 				return
 			}
 		} else {
-			if err := org.GetUserTeams(ctx.User.ID); err != nil {
+			org.Teams, err = org.GetUserTeams(ctx.User.ID)
+			if err != nil {
 				ctx.Handle(500, "GetUserTeams", err)
 				return
 			}
