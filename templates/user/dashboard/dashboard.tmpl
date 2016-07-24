@@ -37,12 +37,17 @@
 									</a>
 								</li>
 							{{end}}
+							{{if gt .ContextUser.NumRepos .MaxShowRepoNum}}
+							<li>
+								<a href="{{.ContextUser.HomeLink}}">{{.i18n.Tr "home.show_more_repos"}}</a>
+							</li>
+							{{end}}
 						</ul>
 					</div>
 
 					{{if not .ContextUser.IsOrganization}}
 						<h4 class="ui top attached header">
-							{{.i18n.Tr "home.collaborative_repos"}} <span class="ui grey label">{{.CollaborateCount}}</span>
+							{{.i18n.Tr "home.collaborative_repos"}}
 						</h4>
 						<div class="ui attached table segment">
 							<ul id="collaborative-repo-list">

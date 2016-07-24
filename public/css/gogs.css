@@ -2563,9 +2563,10 @@ footer .ui.language .menu {
   border-radius: 3px;
   word-break: break-all;
 }
-.feeds .list .header {
-  padding-top: 10px;
-  padding-bottom: 5px;
+.feeds .list .header .ui.label {
+  margin-top: -4px;
+  padding: 4px 5px;
+  font-weight: normal;
 }
 .feeds .list .header .plus.icon {
   margin-top: 5px;

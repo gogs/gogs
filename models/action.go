@@ -602,21 +602,22 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 }
 
 // GetFeeds returns action list of given user in given context.
-// userID is the user who's requesting, ctxUserID is the user/org that is requested.
-// userID can be -1, if isProfile is true or in order to skip the permission check.
-func GetFeeds(ctxUserID, userID, offset int64, isProfile bool) ([]*Action, error) {
+// actorID is the user who's requesting, ctxUserID is the user/org that is requested.
+// actorID can be -1 when isProfile is true or to skip the permission check.
+func GetFeeds(ctxUser *User, actorID, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
-	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id=?", ctxUserID)
+	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id = ?", ctxUser.ID)
 	if isProfile {
-		sess.And("is_private=?", false).And("act_user_id=?", ctxUserID)
-	} else if ctxUserID != -1 {
-		ctxUser := &User{ID: ctxUserID}
-		if err := ctxUser.GetUserRepositories(userID); err != nil {
-			return nil, err
+		sess.And("is_private = ?", false).And("act_user_id = ?", ctxUser.ID)
+	} else if actorID != -1 && ctxUser.IsOrganization() {
+		// FIXME: only need to get IDs here, not all fields of repository.
+		repos, _, err := ctxUser.GetUserRepositories(actorID, 1, ctxUser.NumRepos)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserRepositories: %v", err)
 		}
 
 		var repoIDs []int64
-		for _, repo := range ctxUser.Repos {
+		for _, repo := range repos {
 			repoIDs = append(repoIDs, repo.ID)
 		}
 
