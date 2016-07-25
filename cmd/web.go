@@ -464,7 +464,10 @@ func runWeb(ctx *cli.Context) error {
 				m.Post("/content", repo.UpdateIssueContent)
 			})
 		})
-		m.Post("/comments/:id", repo.UpdateCommentContent)
+		m.Group("/comments/:id", func() {
+			m.Post("", repo.UpdateCommentContent)
+			m.Post("/delete", repo.DeleteComment)
+		})
 		m.Group("/labels", func() {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
