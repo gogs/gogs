@@ -128,13 +128,13 @@
 							<div class="field">
 								<div class="ui radio checkbox">
 									<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="numeric"  {{if eq .Repository.ExternalTrackerStyle "numeric"}}checked=""{{end}}/>
-									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.numeric" | Safe}}</label>
+									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.numeric"}} <span class="ui light grey text">(#1234)</span></label>
 								</div>
 							</div>
 							<div class="field">
 								<div class="ui radio checkbox">
 									<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="alphanumeric"  {{if eq .Repository.ExternalTrackerStyle "alphanumeric"}}checked=""{{end}}/>
-									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.alphanumeric" | Safe}}</label>
+									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.alphanumeric"}} <span class="ui light grey text">(ABC-123, DEFG-234)</span></label>
 								</div>
 							</div>
 						</div>
