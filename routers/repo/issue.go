@@ -803,11 +803,7 @@ func UpdateIssueAssignee(ctx *context.Context) {
 func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "GetIssueByIndex", err)
-		} else {
-			ctx.Handle(500, "GetIssueByIndex", err)
-		}
+		ctx.HandleError("GetIssueByIndex", models.IsErrIssueNotExist, err, 404)
 		return
 	}
 	if issue.IsPull {
@@ -899,11 +895,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 func UpdateCommentContent(ctx *context.Context) {
 	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrCommentNotExist(err) {
-			ctx.Error(404, "GetCommentByID")
-		} else {
-			ctx.Handle(500, "GetCommentByID", err)
-		}
+		ctx.HandleError("GetCommentByID", models.IsErrCommentNotExist, err, 404)
 		return
 	}
 
@@ -922,7 +914,7 @@ func UpdateCommentContent(ctx *context.Context) {
 		})
 		return
 	}
-	if err := models.UpdateComment(comment); err != nil {
+	if err = models.UpdateComment(comment); err != nil {
 		ctx.Handle(500, "UpdateComment", err)
 		return
 	}
@@ -930,6 +922,29 @@ func UpdateCommentContent(ctx *context.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"content": string(markdown.Render([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
+}
+
+func DeleteComment(ctx *context.Context) {
+	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
+	if err != nil {
+		ctx.HandleError("GetCommentByID", models.IsErrCommentNotExist, err, 404)
+		return
+	}
+
+	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
+		ctx.Error(403)
+		return
+	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+		ctx.Error(204)
+		return
+	}
+
+	if err = models.DeleteCommentByID(comment.ID); err != nil {
+		ctx.Handle(500, "DeleteCommentByID", err)
+		return
+	}
+
+	ctx.Status(200)
 }
 
 func Labels(ctx *context.Context) {
