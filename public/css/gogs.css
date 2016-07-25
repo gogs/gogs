@@ -1452,7 +1452,10 @@ footer .ui.language .menu {
 .repository.view.issue .comment-list .comment .actions .item {
   float: left;
 }
-.repository.view.issue .comment-list .comment .actions a.item {
+.repository.view.issue .comment-list .comment .actions .item.tag {
+  margin-right: 5px;
+}
+.repository.view.issue .comment-list .comment .actions .item.action {
   margin-top: 6px;
   margin-left: 10px;
 }

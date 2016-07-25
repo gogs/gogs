@@ -342,7 +342,7 @@ function initRepository() {
 
         // Edit issue or comment content
         $('.edit-content').click(function () {
-            var $segment = $(this).parent().parent().next();
+            var $segment = $(this).parent().parent().parent().next();
             var $edit_content_zone = $segment.find('.edit-content-zone');
             var $render_content = $segment.find('.render-content');
             var $raw_content = $segment.find('.raw-content');
@@ -401,6 +401,19 @@ function initRepository() {
                 $textarea.val($raw_content.text());
             }
             $textarea.focus();
+            return false;
+        });
+
+        // Delete comment
+        $('.delete-comment').click(function () {
+            var $this = $(this);
+            if (confirm($this.data('locale'))) {
+                $.post($this.data('url'), {
+                    "_csrf": csrf
+                }).success(function() {
+                    $('#' + $this.data('comment-id')).remove();
+                })
+            }
             return false;
         });
 

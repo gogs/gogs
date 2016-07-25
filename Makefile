@@ -24,6 +24,10 @@ govet:
 	go tool vet -composites=false -methods=false -structtags=false .
 
 build-dev: $(GENERATED) govet
+	go install $(BUILD_FLAGS) -tags '$(TAGS)'
+	cp '$(GOPATH)/bin/gogs' .
+
+build-dev-race: $(GENERATED) govet
 	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 

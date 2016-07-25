@@ -345,3 +345,29 @@ func UpdateComment(c *Comment) error {
 	_, err := x.Id(c.ID).AllCols().Update(c)
 	return err
 }
+
+// DeleteCommentByID deletes a comment by given ID.
+func DeleteCommentByID(id int64) error {
+	comment, err := GetCommentByID(id)
+	if err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Id(comment.ID).Delete(new(Comment)); err != nil {
+		return err
+	}
+
+	if comment.Type == COMMENT_TYPE_COMMENT {
+		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
+			return err
+		}
+	}
+
+	return sess.Commit()
+}

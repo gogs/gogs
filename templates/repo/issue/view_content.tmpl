@@ -20,7 +20,9 @@
 						<span class="text grey"><a {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
 						<div class="ui right actions">
 							{{if .IsIssueOwner}}
-								<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+								<div class="item action">
+									<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
+								</div>
 							{{end}}
 						</div>
 					</div>
@@ -52,7 +54,7 @@
 
 				<!-- 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE_REF, 4 = COMMIT_REF, 5 = COMMENT_REF, 6 = PULL_REF -->
 				{{if eq .Type 0}}
-					<div class="comment">
+					<div class="comment" id="{{.HashTag}}">
 						<a class="avatar" {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>
 							<img src="{{.Poster.AvatarLink}}">
 						</a>
@@ -72,7 +74,10 @@
 										</div>
 									{{end}}
 									{{if or $.IsRepositoryAdmin (eq .Poster.ID $.SignedUserID)}}
-										<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+										<div class="item action">
+											<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
+											<a class="delete-comment" href="#" data-comment-id={{.HashTag}} data-url="{{$.RepoLink}}/comments/{{.ID}}/delete" data-locale="{{$.i18n.Tr "repo.issues.delete_comment_confirm"}}"><i class="octicon octicon-x"></i></a>
+										</div>
 									{{end}}
 								</div>
 							</div>
