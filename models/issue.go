@@ -567,7 +567,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
 		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
 		if len(labelIDs) > 0 {
-			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue.label_id", labelIDs)
+			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 		}
 	}
 
