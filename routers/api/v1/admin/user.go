@@ -39,6 +39,7 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
+		FullName:  form.FullName,
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
