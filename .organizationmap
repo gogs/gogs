@@ -1,0 +1,87 @@
+#
+# This is a census of the contributors affiliations from February 2016 to July 2016.
+#
+# Number of contributors active in the past six months, per organization
+#
+# git log --no-merges --pretty='%aN <%aE>' --since 'February 2016' --until 'July 2016' | sort | uniq | git -c mailmap.file=.organizationmap check-mailmap --stdin | sort | uniq -c | sort -rn | nl
+#     1	     49 FLOSS Contributor <contact@floss.cc>
+#     2	      1 Unknwon <u@gogs.io>
+#
+# Number of commits in the past six months, per organization
+#
+# git log --no-merges --pretty='%aN <%aE>' --since 'February 2016' --until 'July 2016' | git -c mailmap.file=.organizationmap check-mailmap --stdin | sort | uniq -c | sort -rn | nl
+#     1	    156 Unknwon <u@gogs.io>
+#     2	    100 FLOSS Contributor <contact@floss.cc>
+#
+# This is the primary source of information for https://www.wikidata.org/wiki/Q21091728
+#
+FLOSS Contributor <contact@floss.cc> Adam Strzelecki <ono@java.pl>
+FLOSS Contributor <contact@floss.cc> Alec S <linuxbash8@gmail.com>
+FLOSS Contributor <contact@floss.cc> Alex Myasoedov <msoedov@gmail.com>
+FLOSS Contributor <contact@floss.cc> Andrey Arapov <andrey.arapov@nixaid.com>
+FLOSS Contributor <contact@floss.cc> Andrey Nering <andrey.nering@gmail.com>
+FLOSS Contributor <contact@floss.cc> Antoine Girard <sapk@sapk.fr>
+FLOSS Contributor <contact@floss.cc> Atakan Goktepe <atakangktepe@gmail.com>
+FLOSS Contributor <contact@floss.cc> Bart Louwers <bart_louwers@hotmail.com>
+FLOSS Contributor <contact@floss.cc> Bo-Yi Wu <appleboy.tw@gmail.com>
+FLOSS Contributor <contact@floss.cc> Chris Watt <info@chriswatt.org>
+FLOSS Contributor <contact@floss.cc> Cosmin Stroe <cstroe@users.sf.net>
+FLOSS Contributor <contact@floss.cc> Dan Hearnah <dan.hearnah@gmail.com>
+FLOSS Contributor <contact@floss.cc> Dan McGregor <dan.mcgregor@usask.ca>
+FLOSS Contributor <contact@floss.cc> Dennis Chen <barracks510@gmail.com>
+FLOSS Contributor <contact@floss.cc> Download-Fritz <download-fritz@outlook.com>
+FLOSS Contributor <contact@floss.cc> ExMex <great.mafia2010@gmail.com>
+FLOSS Contributor <contact@floss.cc> Florian Kaiser <florian.kaiser@fnkr.net>
+FLOSS Contributor <contact@floss.cc> Franz Schmidt <valsatize@gmail.com>
+FLOSS Contributor <contact@floss.cc> Gibheer <gibheer+git@zero-knowledge.org>
+FLOSS Contributor <contact@floss.cc> Jan Christophersen <jan@ruken.pw>
+FLOSS Contributor <contact@floss.cc> Jean-Philippe Roemer <jp@roemer.im>
+FLOSS Contributor <contact@floss.cc> John Maguire <contact@johnmaguire.me>
+FLOSS Contributor <contact@floss.cc> Josh Frye <joshfng@gmail.com>
+FLOSS Contributor <contact@floss.cc> Julien Reichardt <jul.reich43@opmbx.org>
+FLOSS Contributor <contact@floss.cc> jwdeitch <jwdeitch@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> j.yao.SUSE <everhopingandwaiting@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> Kim "BKC" Carlbäcker <kim.carlbacker@gmail.com>
+FLOSS Contributor <contact@floss.cc> Kim Carlbäcker <kim.carlbacker@gmail.com>
+FLOSS Contributor <contact@floss.cc> l2dy <l2dy@icloud.com>
+FLOSS Contributor <contact@floss.cc> Laica Lunasys <Laica-Lunasys@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> Lourens <toadron@yandex.ru>
+FLOSS Contributor <contact@floss.cc> Lubomir I. Ivanov <neolit123@gmail.com>
+FLOSS Contributor <contact@floss.cc> Lukas Dietrich <lukas@lukasdietrich.com>
+FLOSS Contributor <contact@floss.cc> Luke Stahlman <luke.stahlman@gmail.com>
+FLOSS Contributor <contact@floss.cc> Lunny Xiao <xiaolunwen@gmail.com>
+FLOSS Contributor <contact@floss.cc> Marin Jankovski <maxlazio@gmail.com>
+FLOSS Contributor <contact@floss.cc> Martin Hartkorn <github@hartkorn.net>
+FLOSS Contributor <contact@floss.cc> MATTENN <at.mattenn@gmail.com>
+FLOSS Contributor <contact@floss.cc> Matt Hamilton <m@tthamilton.com>
+FLOSS Contributor <contact@floss.cc> Matthias Niess <mniess@gmail.com>
+FLOSS Contributor <contact@floss.cc> Mike <mblacktree@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> miles@Oscar <mingpeng16@gmail.com>
+FLOSS Contributor <contact@floss.cc> Muh Muhten <muh.muhten@gmail.com>
+FLOSS Contributor <contact@floss.cc> Nikko Miu <nikko.miu@nikkomiu.com>
+FLOSS Contributor <contact@floss.cc> Odin Ugedal <odin@ugedal.com>
+FLOSS Contributor <contact@floss.cc> Pablo Saavedra <saavedra.pablo@gmail.com>
+FLOSS Contributor <contact@floss.cc> Patrik <redoz@redoz.com>
+FLOSS Contributor <contact@floss.cc> Paul Tötterman <ptman@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> Pheng Heong TAN <phtan90@gmail.com>
+FLOSS Contributor <contact@floss.cc> PsychoMario <pink.banana.fish@gmail.com>
+FLOSS Contributor <contact@floss.cc> Richard Bukovansky <richard.bukovansky@gmail.com>
+FLOSS Contributor <contact@floss.cc> Richard Mahn <richmahn@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> Robin Lambertz <robinlambertz+dev@gmail.com>
+FLOSS Contributor <contact@floss.cc> Rodrigo Saboya <saboya@gmail.com>
+FLOSS Contributor <contact@floss.cc> Romain Beaumont <romain.rom1@gmail.com>
+FLOSS Contributor <contact@floss.cc> Sandro Santilli <strk@kbt.io>
+FLOSS Contributor <contact@floss.cc> Saren Currie <saren@sarencurrie.com>
+FLOSS Contributor <contact@floss.cc> Siarhei Navatski <navatski@gmail.com>
+FLOSS Contributor <contact@floss.cc> Sjon Hortensius <SjonHortensius@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> Steven Oud <soud@protonmail.com>
+FLOSS Contributor <contact@floss.cc> Tamás Molnár <moltam@gmail.com>
+FLOSS Contributor <contact@floss.cc> techwolf12 <christiaan@droiddev.nl>
+FLOSS Contributor <contact@floss.cc> Thomas Boerger <thomas@webhippie.de>
+FLOSS Contributor <contact@floss.cc> Thomas Fanninger <thomas@fanninger.at>
+FLOSS Contributor <contact@floss.cc> Tobias Kunicke <tobias@kunicke.eu>
+FLOSS Contributor <contact@floss.cc> Tom <tom@carrio.me>
+FLOSS Contributor <contact@floss.cc> Vasily Mikhaylichenko <vaskas@lxmx.com.au>
+FLOSS Contributor <contact@floss.cc> wanglinzhizhi <wanglinzhizhi@hotmail.com>
+FLOSS Contributor <contact@floss.cc> xDShot <xDShot@users.noreply.github.com>
+FLOSS Contributor <contact@floss.cc> Zachery Hostens <zacheryph@gmail.com>
