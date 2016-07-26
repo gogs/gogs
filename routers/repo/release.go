@@ -20,7 +20,7 @@ const (
 	RELEASE_NEW base.TplName = "repo/release/new"
 )
 
-// calReleaseNumCommitsBehind calculates given release has how many commits behind default branch.
+// calReleaseNumCommitsBehind calculates given release has how many commits behind release target.
 func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *models.Release, countCache map[string]int64) error {
 	// Fast return if release target is same as default branch.
 	if repoCtx.BranchName == release.Target {
@@ -30,16 +30,21 @@ func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *models.Rel
 
 	// Get count if not exists
 	if _, ok := countCache[release.Target]; !ok {
-		commit, err := repoCtx.GitRepo.GetBranchCommit(repoCtx.BranchName)
-		if err != nil {
-			return fmt.Errorf("GetBranchCommit: %v", err)
-		}
-		countCache[repoCtx.BranchName], err = commit.CommitsCount()
-		if err != nil {
-			return fmt.Errorf("CommitsCount: %v", err)
+		if repoCtx.GitRepo.IsBranchExist(release.Target) {
+			commit, err := repoCtx.GitRepo.GetBranchCommit(release.Target)
+			if err != nil {
+				return fmt.Errorf("GetBranchCommit: %v", err)
+			}
+			countCache[release.Target], err = commit.CommitsCount()
+			if err != nil {
+				return fmt.Errorf("CommitsCount: %v", err)
+			}
+		} else {
+			// Use NumCommits of the newest release on that target
+			countCache[release.Target] = release.NumCommits
 		}
 	}
-	release.NumCommitsBehind = countCache[repoCtx.BranchName] - release.NumCommits
+	release.NumCommitsBehind = countCache[release.Target] - release.NumCommits
 	return nil
 }
 
