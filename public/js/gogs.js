@@ -412,7 +412,7 @@ function initRepository() {
                     "_csrf": csrf
                 }).success(function() {
                     $('#' + $this.data('comment-id')).remove();
-                })
+                });
             }
             return false;
         });
