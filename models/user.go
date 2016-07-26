@@ -768,10 +768,13 @@ func deleteUser(e *xorm.Session, u *User) error {
 	if err = e.Find(&keys, &PublicKey{OwnerID: u.ID}); err != nil {
 		return fmt.Errorf("get all public keys: %v", err)
 	}
-	for _, key := range keys {
-		if err = deletePublicKey(e, key.ID); err != nil {
-			return fmt.Errorf("deletePublicKey: %v", err)
-		}
+
+	keyIDs := make([]int64, len(keys))
+	for i := range keys {
+		keyIDs[i] = keys[i].ID
+	}
+	if err = deletePublicKeys(e, keyIDs...); err != nil {
+		return fmt.Errorf("deletePublicKeys: %v", err)
 	}
 	// ***** END: PublicKey *****
 
@@ -788,7 +791,6 @@ func deleteUser(e *xorm.Session, u *User) error {
 	// Note: There are something just cannot be roll back,
 	//	so just keep error logs of those operations.
 
-	RewriteAllPublicKeys()
 	os.RemoveAll(UserPath(u.Name))
 	os.Remove(u.CustomAvatarPath())
 
@@ -809,15 +811,20 @@ func DeleteUser(u *User) (err error) {
 		return err
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return err
+	}
+
+	return RewriteAllPublicKeys()
 }
 
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
 func DeleteInactivateUsers() (err error) {
 	users := make([]*User, 0, 10)
-	if err = x.Where("is_active=?", false).Find(&users); err != nil {
+	if err = x.Where("is_active = ?", false).Find(&users); err != nil {
 		return fmt.Errorf("get all inactive users: %v", err)
 	}
+	// FIXME: should only update authorized_keys file once after all deletions.
 	for _, u := range users {
 		if err = DeleteUser(u); err != nil {
 			// Ignore users that were set inactive by admin.
@@ -828,7 +835,7 @@ func DeleteInactivateUsers() (err error) {
 		}
 	}
 
-	_, err = x.Where("is_activated=?", false).Delete(new(EmailAddress))
+	_, err = x.Where("is_activated = ?", false).Delete(new(EmailAddress))
 	return err
 }
 

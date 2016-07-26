@@ -5,12 +5,10 @@
 package models
 
 import (
-	"bufio"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -24,6 +22,7 @@ import (
 	"github.com/go-xorm/xorm"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -457,96 +456,20 @@ func ListPublicKeys(uid int64) ([]*PublicKey, error) {
 	return keys, x.Where("owner_id = ?", uid).Find(&keys)
 }
 
-// rewriteAuthorizedKeys finds and deletes corresponding line in authorized_keys file.
-func rewriteAuthorizedKeys(key *PublicKey, p, tmpP string) error {
-	fr, err := os.Open(p)
-	if err != nil {
-		return err
-	}
-	defer fr.Close()
-
-	fw, err := os.OpenFile(tmpP, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
-	if err != nil {
-		return err
-	}
-	defer fw.Close()
-
-	isFound := false
-	keyword := fmt.Sprintf("key-%d", key.ID)
-	buf := bufio.NewReader(fr)
-	for {
-		line, errRead := buf.ReadString('\n')
-		line = strings.TrimSpace(line)
-
-		if errRead != nil {
-			if errRead != io.EOF {
-				return errRead
-			}
-
-			// Reached end of file, if nothing to read then break,
-			// otherwise handle the last line.
-			if len(line) == 0 {
-				break
-			}
-		}
-
-		// Found the line and copy rest of file.
-		if !isFound && strings.Contains(line, keyword) && strings.Contains(line, key.Content) {
-			isFound = true
-			continue
-		}
-		// Still finding the line, copy the line that currently read.
-		if _, err = fw.WriteString(line + "\n"); err != nil {
-			return err
-		}
-
-		if errRead == io.EOF {
-			break
-		}
-	}
-
-	if !isFound {
-		log.Warn("SSH key %d not found in authorized_keys file for deletion", key.ID)
-	}
-
-	return nil
-}
-
 // UpdatePublicKey updates given public key.
 func UpdatePublicKey(key *PublicKey) error {
 	_, err := x.Id(key.ID).AllCols().Update(key)
 	return err
 }
 
-func deletePublicKey(e *xorm.Session, keyID int64) error {
-	sshOpLocker.Lock()
-	defer sshOpLocker.Unlock()
-
-	key := &PublicKey{ID: keyID}
-	has, err := e.Get(key)
-	if err != nil {
-		return err
-	} else if !has {
+// deletePublicKeys does the actual key deletion but does not update authorized_keys file.
+func deletePublicKeys(e *xorm.Session, keyIDs ...int64) error {
+	if len(keyIDs) == 0 {
 		return nil
 	}
 
-	if _, err = e.Id(key.ID).Delete(new(PublicKey)); err != nil {
-		return err
-	}
-
-	// Don't need to rewrite this file if builtin SSH server is enabled.
-	if setting.SSH.StartBuiltinServer {
-		return nil
-	}
-
-	fpath := filepath.Join(setting.SSH.RootPath, "authorized_keys")
-	tmpPath := fpath + ".tmp"
-	if err = rewriteAuthorizedKeys(key, fpath, tmpPath); err != nil {
-		return err
-	} else if err = os.Remove(fpath); err != nil {
-		return err
-	}
-	return os.Rename(tmpPath, fpath)
+	_, err := e.In("id", strings.Join(base.Int64sToStrings(keyIDs), ",")).Delete(new(PublicKey))
+	return err
 }
 
 // DeletePublicKey deletes SSH key information both in database and authorized_keys file.
@@ -570,14 +493,20 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 		return err
 	}
 
-	if err = deletePublicKey(sess, id); err != nil {
+	if err = deletePublicKeys(sess, id); err != nil {
 		return err
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return err
+	}
+
+	return RewriteAllPublicKeys()
 }
 
 // RewriteAllPublicKeys removes any authorized key and rewrite all keys from database again.
+// Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
+// outsite any session scope independently.
 func RewriteAllPublicKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
@@ -814,7 +743,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 	if err != nil {
 		return err
 	} else if !has {
-		if err = deletePublicKey(sess, key.KeyID); err != nil {
+		if err = deletePublicKeys(sess, key.KeyID); err != nil {
 			return err
 		}
 	}
