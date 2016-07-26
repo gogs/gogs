@@ -88,6 +88,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		}
 	}
 
+	// Refetch from database to assign some automatic values
 	var err error
 	issue, err = models.GetIssueByID(issue.ID)
 	if err != nil {
@@ -157,6 +158,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		return
 	}
 
+	// Refetch from database to assign some automatic values
 	issue, err = models.GetIssueByID(issue.ID)
 	if err != nil {
 		ctx.Error(500, "GetIssueByID", err)

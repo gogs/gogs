@@ -62,7 +62,8 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		}
 	}
 
-	updatedIssue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	// Refresh issue to get the updated list of labels from the DB
+	issue, err = models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if models.IsErrIssueNotExist(err) {
 			ctx.Status(404)
@@ -72,9 +73,9 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	apiLabels := make([]*api.Label, len(updatedIssue.Labels))
-	for i := range updatedIssue.Labels {
-		apiLabels[i] = convert.ToLabel(updatedIssue.Labels[i])
+	apiLabels := make([]*api.Label, len(issue.Labels))
+	for i := range issue.Labels {
+		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
 
 	ctx.JSON(200, &apiLabels)
@@ -108,15 +109,14 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 	}
 
 	for i := range labels {
-		if !models.HasIssueLabel(issue.ID, labels[i].ID) {
-			if err := models.NewIssueLabel(issue, labels[i]); err != nil {
-				ctx.Error(500, "NewIssueLabel", err)
-				return
-			}
+		if err := models.NewIssueLabel(issue, labels[i]); err != nil {
+			ctx.Error(500, "NewIssueLabel", err)
+			return
 		}
 	}
 
-	updatedIssue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	// Refresh issue to get the updated list of labels from the DB
+	issue, err = models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if models.IsErrIssueNotExist(err) {
 			ctx.Status(404)
@@ -126,9 +126,9 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	apiLabels := make([]*api.Label, len(updatedIssue.Labels))
-	for i := range updatedIssue.Labels {
-		apiLabels[i] = convert.ToLabel(updatedIssue.Labels[i])
+	apiLabels := make([]*api.Label, len(issue.Labels))
+	for i := range issue.Labels {
+		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
 
 	ctx.JSON(200, &apiLabels)

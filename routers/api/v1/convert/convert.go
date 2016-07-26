@@ -129,7 +129,7 @@ func ToDeployKey(apiLink string, key *models.DeployKey) *api.DeployKey {
 
 func ToLabel(label *models.Label) *api.Label {
 	return &api.Label{
-		ID: label.ID,
+		ID:    label.ID,
 		Name:  label.Name,
 		Color: label.Color,
 	}

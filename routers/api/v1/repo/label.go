@@ -15,14 +15,12 @@ import (
 
 func ListLabels(ctx *context.APIContext) {
 	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
-
 	if err != nil {
 		ctx.Error(500, "Labels", err)
 		return
 	}
 
 	apiLabels := make([]*api.Label, len(labels))
-
 	for i := range labels {
 		apiLabels[i] = convert.ToLabel(labels[i])
 	}
@@ -55,13 +53,12 @@ func CreateLabel(ctx *context.APIContext, form api.LabelOption) {
 		Color:  form.Color,
 		RepoID: ctx.Repo.Repository.ID,
 	}
-
-	if err := models.NewLabel(label); err != nil {
+	err := models.NewLabel(label)
+	if err != nil {
 		ctx.Error(500, "NewLabel", err)
 		return
 	}
 
-	var err error
 	label, err = models.GetLabelByID(label.ID)
 	if err != nil {
 		ctx.Error(500, "GetLabelByID", err)
@@ -89,7 +86,6 @@ func EditLabel(ctx *context.APIContext, form api.LabelOption) {
 	if len(form.Name) > 0 {
 		label.Name = form.Name
 	}
-
 	if len(form.Color) > 0 {
 		label.Color = form.Color
 	}
