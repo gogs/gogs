@@ -74,7 +74,7 @@ func MustAllowPulls(ctx *context.Context) {
 func RetrieveLabels(ctx *context.Context) {
 	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		ctx.Handle(500, "RetrieveLabels.GetLabels: %v", err)
+		ctx.Handle(500, "RetrieveLabels.GetLabels", err)
 		return
 	}
 	for _, l := range labels {
@@ -181,14 +181,14 @@ func Issues(ctx *context.Context) {
 		SortType:    sortType,
 	})
 	if err != nil {
-		ctx.Handle(500, "Issues: %v", err)
+		ctx.Handle(500, "Issues", err)
 		return
 	}
 
 	// Get issue-user relations.
 	pairs, err := models.GetIssueUsers(repo.ID, posterID, isShowClosed)
 	if err != nil {
-		ctx.Handle(500, "GetIssueUsers: %v", err)
+		ctx.Handle(500, "GetIssueUsers", err)
 		return
 	}
 
@@ -212,14 +212,14 @@ func Issues(ctx *context.Context) {
 	// Get milestones.
 	ctx.Data["Milestones"], err = models.GetAllRepoMilestones(repo.ID)
 	if err != nil {
-		ctx.Handle(500, "GetAllRepoMilestones: %v", err)
+		ctx.Handle(500, "GetAllRepoMilestones", err)
 		return
 	}
 
 	// Get assignees.
 	ctx.Data["Assignees"], err = repo.GetAssignees()
 	if err != nil {
-		ctx.Handle(500, "GetAssignees: %v", err)
+		ctx.Handle(500, "GetAssignees", err)
 		return
 	}
 
@@ -255,18 +255,18 @@ func RetrieveRepoMilestonesAndAssignees(ctx *context.Context, repo *models.Repos
 	var err error
 	ctx.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
 	if err != nil {
-		ctx.Handle(500, "GetMilestones: %v", err)
+		ctx.Handle(500, "GetMilestones", err)
 		return
 	}
 	ctx.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
 	if err != nil {
-		ctx.Handle(500, "GetMilestones: %v", err)
+		ctx.Handle(500, "GetMilestones", err)
 		return
 	}
 
 	ctx.Data["Assignees"], err = repo.GetAssignees()
 	if err != nil {
-		ctx.Handle(500, "GetAssignees: %v", err)
+		ctx.Handle(500, "GetAssignees", err)
 		return
 	}
 }
@@ -278,7 +278,7 @@ func RetrieveRepoMetas(ctx *context.Context, repo *models.Repository) []*models.
 
 	labels, err := models.GetLabelsByRepoID(repo.ID)
 	if err != nil {
-		ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+		ctx.Handle(500, "GetLabelsByRepoID", err)
 		return nil
 	}
 	ctx.Data["Labels"] = labels
@@ -378,7 +378,7 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	if milestoneID > 0 {
 		ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
 		if err != nil {
-			ctx.Handle(500, "GetMilestoneByID: %v", err)
+			ctx.Handle(500, "GetMilestoneByID", err)
 			return nil, 0, 0
 		}
 		ctx.Data["milestone_id"] = milestoneID
@@ -389,7 +389,7 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	if assigneeID > 0 {
 		ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
 		if err != nil {
-			ctx.Handle(500, "GetAssigneeByID: %v", err)
+			ctx.Handle(500, "GetAssigneeByID", err)
 			return nil, 0, 0
 		}
 		ctx.Data["assignee_id"] = assigneeID
@@ -558,7 +558,7 @@ func ViewIssue(ctx *context.Context) {
 	}
 	labels, err := models.GetLabelsByRepoID(repo.ID)
 	if err != nil {
-		ctx.Handle(500, "GetLabelsByRepoID: %v", err)
+		ctx.Handle(500, "GetLabelsByRepoID", err)
 		return
 	}
 	hasSelected := false
@@ -791,7 +791,7 @@ func UpdateIssueAssignee(ctx *context.Context) {
 	// Not check for invalid assignee id and give responsibility to owners.
 	issue.AssigneeID = aid
 	if err := models.UpdateIssueUserByAssignee(issue); err != nil {
-		ctx.Handle(500, "UpdateIssueUserByAssignee: %v", err)
+		ctx.Handle(500, "UpdateIssueUserByAssignee", err)
 		return
 	}
 
