@@ -11,8 +11,10 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
+	"syscall"
 
 	"github.com/codegangsta/cli"
 	"github.com/go-macaron/binding"
@@ -182,12 +184,40 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
+var Certificate *tls.Certificate
+
+func getCertificate(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	return Certificate, nil
+}
+
 func runWeb(ctx *cli.Context) error {
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
 	routers.GlobalInit()
 	checkVersion()
+
+	if setting.Protocol == setting.HTTPS {
+		Cert, err := tls.LoadX509KeyPair(setting.CertFile, setting.KeyFile)
+		if err != nil {
+			log.Fatal(4, "Fail to load Cert : %v", err)
+		}
+		Certificate = &Cert
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGUSR1)
+		go func() {
+			for {
+				s := <-sigc
+				log.Info("Got Reload Signal : %v", s)
+				tryload, err := tls.LoadX509KeyPair(setting.CertFile, setting.KeyFile)
+				if err != nil {
+					log.Warn("Reload Error : %v", err)
+				} else {
+					Certificate = &tryload
+				}
+			}
+		}()
+	}
 
 	m := newMacaron()
 
@@ -584,8 +614,8 @@ func runWeb(ctx *cli.Context) error {
 	case setting.HTTP:
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.HTTPS:
-		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS10}, Handler: m}
-		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
+		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{GetCertificate: getCertificate, MinVersion: tls.VersionTLS10}, Handler: m}
+		err = server.ListenAndServeTLS("", "")
 	case setting.FCGI:
 		err = fcgi.Serve(nil, m)
 	default:
