@@ -19,6 +19,7 @@ func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
 		Name:        form.Name,
 		Description: form.Description,
 		Authorize:   models.ParseAccessMode(form.Permission),
+		Units:       models.UnitTypes,
 	}
 	if err := models.NewTeam(team); err != nil {
 		if models.IsErrTeamAlreadyExist(err) {

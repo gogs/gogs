@@ -181,12 +181,16 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	if err = migrations.Migrate(x); err != nil {
-		return fmt.Errorf("migrate: %v", err)
+	if err = migrations.Migrate(x, false); err != nil {
+		return fmt.Errorf("migrates before sync: %v", err)
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
 		return fmt.Errorf("sync database struct error: %v\n", err)
+	}
+
+	if err = migrations.Migrate(x, true); err != nil {
+		return fmt.Errorf("migrates after sync: %v", err)
 	}
 
 	return nil
