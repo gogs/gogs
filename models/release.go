@@ -81,6 +81,7 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 				return fmt.Errorf("GetTagCommit: %v", err)
 			}
 
+			rel.Sha1 = commit.ID.String()
 			rel.NumCommits, err = commit.CommitsCount()
 			if err != nil {
 				return fmt.Errorf("CommitsCount: %v", err)
