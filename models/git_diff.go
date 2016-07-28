@@ -425,3 +425,41 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLine
 func GetDiffCommit(repoPath, commitId string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
 	return GetDiffRange(repoPath, "", commitId, maxLines, maxLineCharacteres, maxFiles)
 }
+
+func GetRawDiff(repoPath, commitId string, diffType string) (string, error) {
+	repo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		return "", err
+	}
+
+	commit, err := repo.GetCommit(commitId)
+	if err != nil {
+		return "", err
+	}
+
+	var cmd *exec.Cmd
+	if diffType == "diff" {
+		if commit.ParentCount() == 0 {
+			cmd = exec.Command("git", "show", commitId)
+		} else {
+			c, _ := commit.Parent(0)
+			cmd = exec.Command("git", "diff", "-M", c.ID.String(), commitId)
+		}
+	} else {
+		if commit.ParentCount() == 0 {
+			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", "--root", commitId)
+		} else {
+			c, _ := commit.Parent(0)
+			query := fmt.Sprintf("%s...%s", commitId, c.ID.String())
+			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", query)
+		}
+	}
+	cmd.Dir = repoPath
+	cmd.Stderr = os.Stderr
+
+	stdout, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("Stdout: %v", err)
+	}
+	return string(stdout), nil
+}
