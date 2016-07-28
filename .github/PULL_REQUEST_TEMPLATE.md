@@ -6,4 +6,4 @@ https://github.com/gogits/gogs/wiki/Contributing-Code
 3. Please describe what your pull request does and which issue you're targeting
 4. ... if it is not related to any particular issues, explain why we should not reject your pull request.
 
-**You MUST delete above content including this line before posting; too lazy to take this action considered invalid report.**
+**You MUST delete above content including this line before posting; too lazy to take this action considered invalid pull request.**
