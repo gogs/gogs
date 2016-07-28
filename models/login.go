@@ -120,12 +120,12 @@ type LoginSource struct {
 }
 
 func (s *LoginSource) BeforeInsert() {
-	s.CreatedUnix = time.Now().UTC().Unix()
+	s.CreatedUnix = time.Now().Unix()
 	s.UpdatedUnix = s.CreatedUnix
 }
 
 func (s *LoginSource) BeforeUpdate() {
-	s.UpdatedUnix = time.Now().UTC().Unix()
+	s.UpdatedUnix = time.Now().Unix()
 }
 
 // Cell2Int64 converts a xorm.Cell type to int64,
@@ -534,7 +534,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 				return u, nil
 			}
 
-			return nil, ErrUserNotExist{u.Id, u.Name}
+			return nil, ErrUserNotExist{u.ID, u.Name}
 
 		default:
 			var source LoginSource
@@ -563,5 +563,5 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		log.Warn("Failed to login '%s' via '%s': %v", uname, source.Name, err)
 	}
 
-	return nil, ErrUserNotExist{u.Id, u.Name}
+	return nil, ErrUserNotExist{u.ID, u.Name}
 }

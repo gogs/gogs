@@ -72,13 +72,13 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		ctx.Org.IsTeamMember = true
 		ctx.Org.IsTeamAdmin = true
 	} else if ctx.IsSigned {
-		ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.Id)
+		ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.ID)
 		if ctx.Org.IsOwner {
 			ctx.Org.IsMember = true
 			ctx.Org.IsTeamMember = true
 			ctx.Org.IsTeamAdmin = true
 		} else {
-			if org.IsOrgMember(ctx.User.Id) {
+			if org.IsOrgMember(ctx.User.ID) {
 				ctx.Org.IsMember = true
 			}
 		}
@@ -105,7 +105,8 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 				return
 			}
 		} else {
-			if err := org.GetUserTeams(ctx.User.Id); err != nil {
+			org.Teams, err = org.GetUserTeams(ctx.User.ID)
+			if err != nil {
 				ctx.Handle(500, "GetUserTeams", err)
 				return
 			}

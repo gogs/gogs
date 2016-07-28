@@ -121,15 +121,23 @@ var (
 	}
 
 	// UI settings
-	ExplorePagingNum     int
-	IssuePagingNum       int
-	FeedMaxCommitNum     int
-	AdminUserPagingNum   int
-	AdminRepoPagingNum   int
-	AdminNoticePagingNum int
-	AdminOrgPagingNum    int
-	ThemeColorMetaTag    string
-	MaxDisplayFileSize   int64
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum int
+		} `ini:"ui.user"`
+	}
 
 	// Markdown sttings
 	Markdown struct {
@@ -494,7 +502,9 @@ func NewContext() {
 		DisableGravatar = true
 	}
 
-	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
+	if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+		log.Fatal(4, "Fail to map UI settings: %v", err)
+	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)

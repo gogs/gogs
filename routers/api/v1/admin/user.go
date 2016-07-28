@@ -39,6 +39,7 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
+		FullName:  form.FullName,
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
@@ -147,5 +148,5 @@ func CreatePublicKey(ctx *context.APIContext, form api.CreateKeyOption) {
 	if ctx.Written() {
 		return
 	}
-	user.CreateUserPublicKey(ctx, form, u.Id)
+	user.CreateUserPublicKey(ctx, form, u.ID)
 }

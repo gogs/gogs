@@ -64,13 +64,13 @@ type Issue struct {
 }
 
 func (i *Issue) BeforeInsert() {
-	i.CreatedUnix = time.Now().UTC().Unix()
+	i.CreatedUnix = time.Now().Unix()
 	i.UpdatedUnix = i.CreatedUnix
 }
 
 func (i *Issue) BeforeUpdate() {
-	i.UpdatedUnix = time.Now().UTC().Unix()
-	i.DeadlineUnix = i.Deadline.UTC().Unix()
+	i.UpdatedUnix = time.Now().Unix()
+	i.DeadlineUnix = i.Deadline.Unix()
 }
 
 func (issue *Issue) loadAttributes(e Engine) (err error) {
@@ -82,7 +82,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	return nil
 }
 
-func (issue *Issue) LoadAttributes() (err error) {
+func (issue *Issue) LoadAttributes() error {
 	return issue.loadAttributes(x)
 }
 
@@ -336,7 +336,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 
 	if issue.AssigneeID > 0 {
 		// Silently drop invalid assignee
-		valid, err := hasAccess(e, &User{Id: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
+		valid, err := hasAccess(e, &User{ID: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
 		if err != nil {
 			return fmt.Errorf("hasAccess: %v", err)
 		} else if !valid {
@@ -423,7 +423,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 
 	// Notify watchers.
 	act := &Action{
-		ActUserID:    issue.Poster.Id,
+		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
 
 		ActEmail:     issue.Poster.Email,
@@ -517,7 +517,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		opts.Page = 1
 	}
 
-	sess := x.Limit(setting.IssuePagingNum, (opts.Page-1)*setting.IssuePagingNum)
+	sess := x.Limit(setting.UI.IssuePagingNum, (opts.Page-1)*setting.UI.IssuePagingNum)
 
 	if opts.RepoID > 0 {
 		sess.Where("issue.repo_id=?", opts.RepoID).And("issue.is_closed=?", opts.IsClosed)
@@ -563,7 +563,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
 		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
 		if len(labelIDs) > 0 {
-			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue.label_id", labelIDs)
+			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 		}
 	}
 
@@ -575,7 +575,7 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		}
 	}
 
-	issues := make([]*Issue, 0, setting.IssuePagingNum)
+	issues := make([]*Issue, 0, setting.UI.IssuePagingNum)
 	return issues, sess.Find(&issues)
 }
 
@@ -628,7 +628,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	isNeedAddPoster := true
 	for _, u := range users {
 		iu.ID = 0
-		iu.UID = u.Id
+		iu.UID = u.ID
 		iu.IsPoster = iu.UID == issue.PosterID
 		if isNeedAddPoster && iu.IsPoster {
 			isNeedAddPoster = false
@@ -732,15 +732,15 @@ func UpdateIssueMentions(issueID int64, mentions []string) error {
 
 	ids := make([]int64, 0, len(mentions))
 	for _, user := range users {
-		ids = append(ids, user.Id)
+		ids = append(ids, user.ID)
 		if !user.IsOrganization() || user.NumMembers == 0 {
 			continue
 		}
 
 		memberIDs := make([]int64, 0, user.NumMembers)
-		orgUsers, err := GetOrgUsersByOrgID(user.Id)
+		orgUsers, err := GetOrgUsersByOrgID(user.ID)
 		if err != nil {
-			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.Id, err)
+			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
 		for _, orgUser := range orgUsers {
@@ -1042,7 +1042,7 @@ type Milestone struct {
 }
 
 func (m *Milestone) BeforeInsert() {
-	m.DeadlineUnix = m.Deadline.UTC().Unix()
+	m.DeadlineUnix = m.Deadline.Unix()
 }
 
 func (m *Milestone) BeforeUpdate() {
@@ -1052,8 +1052,8 @@ func (m *Milestone) BeforeUpdate() {
 		m.Completeness = 0
 	}
 
-	m.DeadlineUnix = m.Deadline.UTC().Unix()
-	m.ClosedDateUnix = m.ClosedDate.UTC().Unix()
+	m.DeadlineUnix = m.Deadline.Unix()
+	m.ClosedDateUnix = m.ClosedDate.Unix()
 }
 
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
@@ -1139,10 +1139,10 @@ func GetAllRepoMilestones(repoID int64) ([]*Milestone, error) {
 
 // GetMilestones returns a list of milestones of given repository and status.
 func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) {
-	miles := make([]*Milestone, 0, setting.IssuePagingNum)
+	miles := make([]*Milestone, 0, setting.UI.IssuePagingNum)
 	sess := x.Where("repo_id=? AND is_closed=?", repoID, isClosed)
 	if page > 0 {
-		sess = sess.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
+		sess = sess.Limit(setting.UI.IssuePagingNum, (page-1)*setting.UI.IssuePagingNum)
 	}
 	return miles, sess.Find(&miles)
 }
@@ -1357,7 +1357,7 @@ type Attachment struct {
 }
 
 func (a *Attachment) BeforeInsert() {
-	a.CreatedUnix = time.Now().UTC().Unix()
+	a.CreatedUnix = time.Now().Unix()
 }
 
 func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {

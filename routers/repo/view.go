@@ -114,7 +114,7 @@ func Home(ctx *context.Context) {
 				ctx.Data["IsImageFile"] = true
 				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			case isTextFile:
-				if blob.Size() >= setting.MaxDisplayFileSize {
+				if blob.Size() >= setting.UI.MaxDisplayFileSize {
 					ctx.Data["IsFileTooLarge"] = true
 				} else {
 					ctx.Data["IsFileTooLarge"] = false

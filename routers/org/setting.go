@@ -41,7 +41,7 @@ func SettingsPost(ctx *context.Context, form auth.UpdateOrgSettingForm) {
 
 	// Check if organization name has been changed.
 	if org.LowerName != strings.ToLower(form.Name) {
-		isExist, err := models.IsUserExist(org.Id, form.Name)
+		isExist, err := models.IsUserExist(org.ID, form.Name)
 		if err != nil {
 			ctx.Handle(500, "IsUserExist", err)
 			return
@@ -140,7 +140,7 @@ func Webhooks(ctx *context.Context) {
 	ctx.Data["BaseLink"] = ctx.Org.OrgLink
 	ctx.Data["Description"] = ctx.Tr("org.settings.hooks_desc")
 
-	ws, err := models.GetWebhooksByOrgID(ctx.Org.Organization.Id)
+	ws, err := models.GetWebhooksByOrgID(ctx.Org.Organization.ID)
 	if err != nil {
 		ctx.Handle(500, "GetWebhooksByOrgId", err)
 		return
@@ -151,7 +151,7 @@ func Webhooks(ctx *context.Context) {
 }
 
 func DeleteWebhook(ctx *context.Context) {
-	if err := models.DeleteWebhookByOrgID(ctx.Org.Organization.Id, ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteWebhookByOrgID(ctx.Org.Organization.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteWebhookByOrgID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.settings.webhook_deletion_success"))

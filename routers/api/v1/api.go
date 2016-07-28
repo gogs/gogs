@@ -49,7 +49,7 @@ func RepoAssignment() macaron.Handler {
 		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(owner.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Status(404)
@@ -103,7 +103,7 @@ func ReqBasicAuth() macaron.Handler {
 
 func ReqAdmin() macaron.Handler {
 	return func(ctx *context.Context) {
-		if !ctx.User.IsAdmin {
+		if !ctx.IsSigned || !ctx.User.IsAdmin {
 			ctx.Error(403)
 			return
 		}

@@ -33,7 +33,7 @@ func Users(ctx *context.Context) {
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
-		PageSize: setting.AdminUserPagingNum,
+		PageSize: setting.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
 	})
@@ -120,7 +120,7 @@ func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
 	}
 
 	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
-	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
+	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.ID))
 }
 
 func prepareUserInfo(ctx *context.Context) *models.User {

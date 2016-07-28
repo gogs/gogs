@@ -105,6 +105,19 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
+// HandleError use error check function to determine if server should
+// response as client input error or server internal error.
+// It responses with given status code for client error,
+// or error context description for logging purpose of server error.
+func (ctx *Context) HandleError(title string, errck func(error) bool, err error, status int) {
+	if errck(err) {
+		ctx.Error(status, err.Error())
+		return
+	}
+
+	ctx.Handle(500, title, err)
+}
+
 func (ctx *Context) HandleText(status int, title string) {
 	if (status/100 == 4) || (status/100 == 5) {
 		log.Error(4, "%s", title)
@@ -156,7 +169,7 @@ func Contexter() macaron.Handler {
 			ctx.IsSigned = true
 			ctx.Data["IsSigned"] = ctx.IsSigned
 			ctx.Data["SignedUser"] = ctx.User
-			ctx.Data["SignedUserID"] = ctx.User.Id
+			ctx.Data["SignedUserID"] = ctx.User.ID
 			ctx.Data["SignedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		} else {

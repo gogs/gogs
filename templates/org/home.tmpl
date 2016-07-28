@@ -6,7 +6,7 @@
 				<img class="ui left" id="org-avatar" src="{{.Org.AvatarLink}}?s=140"/>
 				<div id="org-info">
 					<div class="ui header">
-						{{.Org.FullName}}
+						{{.Org.DisplayName}}
 						{{if .IsOrganizationOwner}}<a class="text grey" href="{{.OrgLink}}/settings"><span class="octicon octicon-gear"></span></a>{{end}}
 					</div>
 					{{if .Org.Description}}<p class="desc">{{.Org.Description}}</p>{{end}}
@@ -27,11 +27,12 @@
 			<div class="ui eleven wide column">
 				{{if .IsOrganizationOwner}}
 					<div class="text right">
-						<a class="ui green button" href="{{AppSubUrl}}/repo/create?org={{.Org.Id}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
+						<a class="ui green button" href="{{AppSubUrl}}/repo/create?org={{.Org.ID}}"><i class="octicon octicon-repo-create"></i> {{.i18n.Tr "new_repo"}}</a>
 					</div>
 					<div class="ui divider"></div>
 				{{end}}
 				{{template "explore/repo_list" .}}
+				{{template "explore/page" .}}
 			</div>
 
 			<div class="ui five wide column">
@@ -46,7 +47,7 @@
 				<div class="ui attached segment members">
 					{{$isMember := .IsOrganizationMember}}
 					{{range .Members}}
-						{{if or $isMember (.IsPublicMember $.Org.Id)}}
+						{{if or $isMember (.IsPublicMember $.Org.ID)}}
 							<a href="{{.HomeLink}}" title="{{.Name}}{{if .FullName}} ({{.FullName}}){{end}}"><img class="ui avatar" src="{{.AvatarLink}}"></a>
 						{{end}}
 					{{end}}

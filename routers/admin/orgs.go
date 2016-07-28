@@ -25,7 +25,7 @@ func Organizations(ctx *context.Context) {
 		Type:     models.USER_TYPE_ORGANIZATION,
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,
-		PageSize: setting.AdminOrgPagingNum,
+		PageSize: setting.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  ORGS,
 	})

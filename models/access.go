@@ -67,11 +67,11 @@ func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
 		return mode, nil
 	}
 
-	if u.Id == repo.OwnerID {
+	if u.ID == repo.OwnerID {
 		return ACCESS_MODE_OWNER, nil
 	}
 
-	a := &Access{UserID: u.Id, RepoID: repo.ID}
+	a := &Access{UserID: u.ID, RepoID: repo.ID}
 	if has, err := e.Get(a); !has || err != nil {
 		return mode, err
 	}
@@ -97,7 +97,7 @@ func HasAccess(u *User, repo *Repository, testMode AccessMode) (bool, error) {
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
 func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	accesses := make([]*Access, 0, 10)
-	if err := x.Find(&accesses, &Access{UserID: u.Id}); err != nil {
+	if err := x.Find(&accesses, &Access{UserID: u.ID}); err != nil {
 		return nil, err
 	}
 
@@ -113,7 +113,7 @@ func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 		}
 		if err = repo.GetOwner(); err != nil {
 			return nil, err
-		} else if repo.OwnerID == u.Id {
+		} else if repo.OwnerID == u.ID {
 			continue
 		}
 		repos[repo] = access.Mode
@@ -121,23 +121,17 @@ func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	return repos, nil
 }
 
-// GetAccessibleRepositories finds all repositories where a user has access but does not own.
-func (u *User) GetAccessibleRepositories() ([]*Repository, error) {
-	accesses := make([]*Access, 0, 10)
-	if err := x.Find(&accesses, &Access{UserID: u.Id}); err != nil {
-		return nil, err
+// GetAccessibleRepositories finds repositories which the user has access but does not own.
+// If limit is smaller than 1 means returns all found results.
+func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ error) {
+	sess := x.Where("owner_id !=? ", user.ID).Desc("updated_unix")
+	if limit > 0 {
+		sess.Limit(limit)
+		repos = make([]*Repository, 0, limit)
+	} else {
+		repos = make([]*Repository, 0, 10)
 	}
-
-	if len(accesses) == 0 {
-		return []*Repository{}, nil
-	}
-
-	repoIDs := make([]int64, 0, len(accesses))
-	for _, access := range accesses {
-		repoIDs = append(repoIDs, access.RepoID)
-	}
-	repos := make([]*Repository, 0, len(repoIDs))
-	return repos, x.Where("owner_id != ?", u.Id).In("id", repoIDs).Desc("updated_unix").Find(&repos)
+	return repos, sess.Join("INNER", "access", "access.user_id = ? AND access.repo_id = repository.id", user.ID).Find(&repos)
 }
 
 func maxAccessMode(modes ...AccessMode) AccessMode {
@@ -227,7 +221,7 @@ func (repo *Repository) recalculateTeamAccesses(e Engine, ignTeamID int64) (err 
 			return fmt.Errorf("getMembers '%d': %v", t.ID, err)
 		}
 		for _, m := range t.Members {
-			accessMap[m.Id] = maxAccessMode(accessMap[m.Id], t.Authorize)
+			accessMap[m.ID] = maxAccessMode(accessMap[m.ID], t.Authorize)
 		}
 	}
 
