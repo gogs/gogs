@@ -118,18 +118,18 @@ func Home(ctx *context.Context) {
 						filecontent = content
 					}
 
-					output := ""
+					var output bytes.Buffer
 					lines := strings.Split(filecontent, "\n")
 					for index, line := range lines {
-						output += fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line))
+						output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line)) + "\n")
 					}
-					ctx.Data["FileContent"] = htmltemplate.HTML(output)
+					ctx.Data["FileContent"] = htmltemplate.HTML(output.String())
 
-					output = ""
+					output.Reset()
 					for i := 0; i < len(lines); i++ {
-						output += fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1)
+						output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
 					}
-					ctx.Data["LineNums"] = htmltemplate.HTML(output)
+					ctx.Data["LineNums"] = htmltemplate.HTML(output.String())
 				}
 			}
 		}
