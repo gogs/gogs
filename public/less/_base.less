@@ -1,5 +1,8 @@
 @footer-margin: 40px;
 
+.ui.header, .ui.menu, .ui.button, h1, h2, h3, h4, h5, input {
+	font-family: "Helvetica Neue", "Meiryo Ui", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+}
 body {
 	font-family: "Helvetica Neue", "Meiryo Ui", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
 	background-color: #fff;
@@ -27,6 +30,23 @@ pre, code {
 //		white-space: -o-normal;    /* Opera 7 */
 		word-break: break-word;
 	}
+}
+.dont-break-out {
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 .full.height {
 	padding: 0;
@@ -62,12 +82,12 @@ pre, code {
 	.top.menu .menu {
 		z-index: 900;
 	}
+	.icon,
+	.octicon {
+		margin-right: 5px !important;
+	}
 	.head.link.item {
 		padding-right: 0 !important;
-		.dropdown.icon,
-		.menu .octicon {
-			margin-right: 5px;
-		}
 	}
 	.avatar > .ui.image {
 		margin-right: 0;
@@ -334,6 +354,12 @@ footer {
 			}
 		}
 	}
+
+	.ui.language .menu {
+		max-height: 500px;
+		overflow-y: auto;
+		margin-bottom: 7px;
+	}
 }
 
 .hide {
@@ -350,14 +376,6 @@ footer {
 		height: (2px * @i) !important;
 	}
 	.generate-img(@n, (@i + 1));
-}
-
-// ensure Semantic UI .icon font family and 14px size does not apply to .icon.octicon
-.octicon.icon,
-.mega-octicon.icon {
-	font-family: octicons;
-	font-size: 16px;
-	opacity: 1 !important;
 }
 
 // Accessibility

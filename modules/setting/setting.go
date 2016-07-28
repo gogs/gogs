@@ -115,14 +115,23 @@ var (
 	ScriptType   string
 
 	// UI settings
-	ExplorePagingNum     int
-	IssuePagingNum       int
-	FeedMaxCommitNum     int
-	AdminUserPagingNum   int
-	AdminRepoPagingNum   int
-	AdminNoticePagingNum int
-	AdminOrgPagingNum    int
-	ThemeColorMetaTag    string
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum int
+		} `ini:"ui.user"`
+	}
 
 	// Markdown sttings
 	Markdown struct {
@@ -159,18 +168,6 @@ var (
 	SessionConfig  session.Options
 	CSRFCookieName = "_csrf"
 
-	// Git settings
-	Git struct {
-		MaxGitDiffLines int
-		GcArgs          []string `delim:" "`
-		Timeout         struct {
-			Migrate int
-			Mirror  int
-			Clone   int
-			Pull    int
-		} `ini:"git.timeout"`
-	}
-
 	// Cron tasks
 	Cron struct {
 		UpdateMirror struct {
@@ -190,6 +187,25 @@ var (
 			RunAtStart bool
 			Schedule   string
 		} `ini:"cron.check_repo_stats"`
+	}
+
+	// Git settings
+	Git struct {
+		MaxGitDiffLines          int
+		MaxGitDiffLineCharacters int
+		MaxGitDiffFiles          int
+		GcArgs                   []string `delim:" "`
+		Timeout                  struct {
+			Migrate int
+			Mirror  int
+			Clone   int
+			Pull    int
+		} `ini:"git.timeout"`
+	}
+
+	// API settings
+	API struct {
+		MaxResponseItems int
 	}
 
 	// I18n settings
@@ -331,7 +347,7 @@ func NewContext() {
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HttpPort + "/")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -429,19 +445,6 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
 	}
 
-	// UI settings.
-	sec = Cfg.Section("ui")
-	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
-	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
-	FeedMaxCommitNum = sec.Key("FEED_MAX_COMMIT_NUM").MustInt(5)
-
-	sec = Cfg.Section("ui.admin")
-	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)
-	AdminRepoPagingNum = sec.Key("REPO_PAGING_NUM").MustInt(50)
-	AdminNoticePagingNum = sec.Key("NOTICE_PAGING_NUM").MustInt(50)
-	AdminOrgPagingNum = sec.Key("ORG_PAGING_NUM").MustInt(50)
-	ThemeColorMetaTag = sec.Key("THEME_COLOR_META_TAG").MustString("#ff5343")
-
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
@@ -461,12 +464,16 @@ func NewContext() {
 		DisableGravatar = true
 	}
 
-	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
+	if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+		log.Fatal(4, "Fail to map UI settings: %v", err)
+	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
-	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
-		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
+	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
+		log.Fatal(4, "Fail to map Git settings: %v", err)
+	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
+		log.Fatal(4, "Fail to map API settings: %v", err)
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
@@ -612,16 +619,17 @@ func newSessionService() {
 
 // Mailer represents mail service.
 type Mailer struct {
-	QueueLength       int
-	Name              string
-	Host              string
-	From              string
-	User, Passwd      string
-	DisableHelo       bool
-	HeloHostname      string
-	SkipVerify        bool
-	UseCertificate    bool
-	CertFile, KeyFile string
+	QueueLength           int
+	Name                  string
+	Host                  string
+	From                  string
+	User, Passwd          string
+	DisableHelo           bool
+	HeloHostname          string
+	SkipVerify            bool
+	UseCertificate        bool
+	CertFile, KeyFile     string
+	EnableHTMLAlternative bool
 }
 
 var (
@@ -636,17 +644,18 @@ func newMailService() {
 	}
 
 	MailService = &Mailer{
-		QueueLength:    sec.Key("SEND_BUFFER_LEN").MustInt(100),
-		Name:           sec.Key("NAME").MustString(AppName),
-		Host:           sec.Key("HOST").String(),
-		User:           sec.Key("USER").String(),
-		Passwd:         sec.Key("PASSWD").String(),
-		DisableHelo:    sec.Key("DISABLE_HELO").MustBool(),
-		HeloHostname:   sec.Key("HELO_HOSTNAME").String(),
-		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
-		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
-		CertFile:       sec.Key("CERT_FILE").String(),
-		KeyFile:        sec.Key("KEY_FILE").String(),
+		QueueLength:           sec.Key("SEND_BUFFER_LEN").MustInt(100),
+		Name:                  sec.Key("NAME").MustString(AppName),
+		Host:                  sec.Key("HOST").String(),
+		User:                  sec.Key("USER").String(),
+		Passwd:                sec.Key("PASSWD").String(),
+		DisableHelo:           sec.Key("DISABLE_HELO").MustBool(),
+		HeloHostname:          sec.Key("HELO_HOSTNAME").String(),
+		SkipVerify:            sec.Key("SKIP_VERIFY").MustBool(),
+		UseCertificate:        sec.Key("USE_CERTIFICATE").MustBool(),
+		CertFile:              sec.Key("CERT_FILE").String(),
+		KeyFile:               sec.Key("KEY_FILE").String(),
+		EnableHTMLAlternative: sec.Key("ENABLE_HTML_ALTERNATIVE").MustBool(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
 	log.Info("Mail Service Enabled")

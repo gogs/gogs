@@ -13,6 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
@@ -68,7 +69,7 @@ type Comment struct {
 }
 
 func (c *Comment) BeforeInsert() {
-	c.CreatedUnix = time.Now().UTC().Unix()
+	c.CreatedUnix = time.Now().Unix()
 }
 
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
@@ -113,10 +114,34 @@ func (c *Comment) EventTag() string {
 	return "event-" + com.ToStr(c.ID)
 }
 
+// MailParticipants sends new comment emails to repository watchers
+// and mentioned people.
+func (cmt *Comment) MailParticipants(opType ActionType, issue *Issue) (err error) {
+	mentions := markdown.FindAllMentions(cmt.Content)
+	if err = UpdateIssueMentions(cmt.IssueID, mentions); err != nil {
+		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
+	}
+
+	switch opType {
+	case ACTION_COMMENT_ISSUE:
+		issue.Content = cmt.Content
+	case ACTION_CLOSE_ISSUE:
+		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
+	case ACTION_REOPEN_ISSUE:
+		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
+	}
+	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
+		log.Error(4, "mailIssueCommentToParticipants: %v", err)
+	}
+
+	return nil
+}
+
 func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
 	comment := &Comment{
 		Type:      opts.Type,
-		PosterID:  opts.Doer.Id,
+		PosterID:  opts.Doer.ID,
+		Poster:    opts.Doer,
 		IssueID:   opts.Issue.ID,
 		CommitID:  opts.CommitID,
 		CommitSHA: opts.CommitSHA,
@@ -130,7 +155,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Compose comment action, could be plain comment, close or reopen issue/pull request.
 	// This object will be used to notify watchers in the end of function.
 	act := &Action{
-		ActUserID:    opts.Doer.Id,
+		ActUserID:    opts.Doer.ID,
 		ActUserName:  opts.Doer.Name,
 		ActEmail:     opts.Doer.Email,
 		Content:      fmt.Sprintf("%d|%s", opts.Issue.Index, strings.Split(opts.Content, "\n")[0]),
@@ -157,7 +182,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 				if IsErrAttachmentNotExist(err) {
 					continue
 				}
-				return nil, fmt.Errorf("getAttachmentByUUID[%s]: %v", uuid, err)
+				return nil, fmt.Errorf("getAttachmentByUUID [%s]: %v", uuid, err)
 			}
 			attachments = append(attachments, attach)
 		}
@@ -167,7 +192,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			attachments[i].CommentID = comment.ID
 			// No assign value could be 0, so ignore AllCols().
 			if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
-				return nil, fmt.Errorf("update attachment[%d]: %v", attachments[i].ID, err)
+				return nil, fmt.Errorf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
 		}
 
@@ -200,13 +225,15 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err != nil {
 			return nil, err
 		}
+
 	}
 
-	// Notify watchers for whatever action comes in, ignore if no action type
+	// Notify watchers for whatever action comes in, ignore if no action type.
 	if act.OpType > 0 {
 		if err = notifyWatchers(e, act); err != nil {
-			return nil, fmt.Errorf("notifyWatchers: %v", err)
+			log.Error(4, "notifyWatchers: %v", err)
 		}
+		comment.MailParticipants(act.OpType, opts.Issue)
 	}
 
 	return comment, nil
@@ -317,4 +344,30 @@ func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
 func UpdateComment(c *Comment) error {
 	_, err := x.Id(c.ID).AllCols().Update(c)
 	return err
+}
+
+// DeleteCommentByID deletes a comment by given ID.
+func DeleteCommentByID(id int64) error {
+	comment, err := GetCommentByID(id)
+	if err != nil {
+		return err
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Id(comment.ID).Delete(new(Comment)); err != nil {
+		return err
+	}
+
+	if comment.Type == COMMENT_TYPE_COMMENT {
+		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
+			return err
+		}
+	}
+
+	return sess.Commit()
 }

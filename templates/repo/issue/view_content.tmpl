@@ -12,20 +12,22 @@
 	<div class="twelve wide column comment-list">
 		<ui class="ui comments">
 			<div class="comment">
-				<a class="avatar" {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
+				<a class="avatar" {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
 					<img src="{{.Issue.Poster.AvatarLink}}">
 				</a>
 				<div class="content">
 					<div class="ui top attached header">
-						<span class="text grey"><a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
+						<span class="text grey"><a {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
 						<div class="ui right actions">
 							{{if .IsIssueOwner}}
-								<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+								<div class="item action">
+									<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
+								</div>
 							{{end}}
 						</div>
 					</div>
 					<div class="ui attached segment">
-						<div class="render-content markdown emojify">
+						<div class="render-content markdown has-emoji">
 							{{if .Issue.RenderedContent}}
 								{{.Issue.RenderedContent|Str2html}}
 							{{else}}
@@ -52,13 +54,13 @@
 
 				<!-- 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE_REF, 4 = COMMIT_REF, 5 = COMMENT_REF, 6 = PULL_REF -->
 				{{if eq .Type 0}}
-					<div class="comment">
-						<a class="avatar" {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>
+					<div class="comment" id="{{.HashTag}}">
+						<a class="avatar" {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>
 							<img src="{{.Poster.AvatarLink}}">
 						</a>
 						<div class="content">
 							<div class="ui top attached header">
-								<span class="text grey"><a {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
+								<span class="text grey"><a {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
 								<div class="ui right actions">
 									{{if gt .ShowTag 0}}
 										<div class="item tag">
@@ -71,13 +73,16 @@
 											{{end}}
 										</div>
 									{{end}}
-									{{if or $.IsRepositoryAdmin (eq .Poster.Id $.SignedUserID)}}
-										<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+									{{if or $.IsRepositoryAdmin (eq .Poster.ID $.SignedUserID)}}
+										<div class="item action">
+											<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
+											<a class="delete-comment" href="#" data-comment-id={{.HashTag}} data-url="{{$.RepoLink}}/comments/{{.ID}}/delete" data-locale="{{$.i18n.Tr "repo.issues.delete_comment_confirm"}}"><i class="octicon octicon-x"></i></a>
+										</div>
 									{{end}}
 								</div>
 							</div>
 							<div class="ui attached segment">
-								<div class="render-content markdown emojify">
+								<div class="render-content markdown has-emoji">
 									{{if .RenderedContent}}
 										{{.RenderedContent|Str2html}}
 									{{else}}
@@ -304,7 +309,7 @@
 				<div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
 					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
 					{{range .Assignees}}
-						<div class="item" data-id="{{.Id}}" data-href="{{$.RepoLink}}/issues?assignee={{.Id}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
+						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
 					{{end}}
 				</div>
 			</div>
@@ -312,7 +317,7 @@
 				<span class="no-select item {{if .Issue.Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
 					{{if .Issue.Assignee}}
-						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.Id}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
+						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.ID}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -342,7 +347,7 @@
 		<div class="ui bottom attached active write tab segment">
 			<textarea tabindex="1" id="content" name="content"></textarea>
 		</div>
-		<div class="ui bottom attached tab preview segment markdown emojify">
+		<div class="ui bottom attached tab preview segment markdown">
 			{{$.i18n.Tr "repo.release.loading"}}
 		</div>
 		<div class="text right edit buttons">

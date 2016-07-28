@@ -22,6 +22,7 @@ import (
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
 )
@@ -33,7 +34,11 @@ const (
 )
 
 func Home(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Repo.Repository.Name
+	title := ctx.Repo.Repository.Owner.Name + "/" + ctx.Repo.Repository.Name
+	if len(ctx.Repo.Repository.Description) > 0 {
+		title += ": " + ctx.Repo.Repository.Description
+	}
+	ctx.Data["Title"] = title
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
 
@@ -73,7 +78,6 @@ func Home(ctx *context.Context) {
 		ctx.Handle(404, "repo.Home", nil)
 		return
 	}
-
 	if entry != nil && !entry.IsDir() {
 		blob := entry.Blob()
 
@@ -95,41 +99,48 @@ func Home(ctx *context.Context) {
 
 			_, isTextFile := base.IsTextFile(buf)
 			_, isImageFile := base.IsImageFile(buf)
+			_, isPDFFile := base.IsPDFFile(buf)
 			ctx.Data["IsFileText"] = isTextFile
 
 			switch {
+			case isPDFFile:
+				ctx.Data["IsPDFFile"] = true
 			case isImageFile:
 				ctx.Data["IsImageFile"] = true
 			case isTextFile:
-				d, _ := ioutil.ReadAll(dataRc)
-				buf = append(buf, d...)
-				readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
-				ctx.Data["ReadmeExist"] = readmeExist
-				if readmeExist {
-					ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+				if blob.Size() >= setting.UI.MaxDisplayFileSize {
+					ctx.Data["IsFileTooLarge"] = true
 				} else {
-					filecontent := ""
-					if err, content := template.ToUtf8WithErr(buf); err != nil {
-						if err != nil {
-							log.Error(4, "Convert content encoding: %s", err)
-						}
-						filecontent = string(buf)
+					ctx.Data["IsFileTooLarge"] = false
+					d, _ := ioutil.ReadAll(dataRc)
+					buf = append(buf, d...)
+					readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
+					ctx.Data["ReadmeExist"] = readmeExist
+					if readmeExist {
+						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 					} else {
-						filecontent = content
-					}
+						filecontent := ""
+						if err, content := template.ToUtf8WithErr(buf); err != nil {
+							if err != nil {
+								log.Error(4, "Convert content encoding: %s", err)
+							}
+							filecontent = string(buf)
+						} else {
+							filecontent = content
+						}
+						var output bytes.Buffer
+						lines := strings.Split(filecontent, "\n")
+						for index, line := range lines {
+							output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line)) + "\n")
+						}
+						ctx.Data["FileContent"] = htmltemplate.HTML(output.String())
 
-					var output bytes.Buffer
-					lines := strings.Split(filecontent, "\n")
-					for index, line := range lines {
-						output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line)) + "\n")
+						output.Reset()
+						for i := 0; i < len(lines); i++ {
+							output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+						}
+						ctx.Data["LineNums"] = htmltemplate.HTML(output.String())
 					}
-					ctx.Data["FileContent"] = htmltemplate.HTML(output.String())
-
-					output.Reset()
-					for i := 0; i < len(lines); i++ {
-						output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
-					}
-					ctx.Data["LineNums"] = htmltemplate.HTML(output.String())
 				}
 			}
 		}

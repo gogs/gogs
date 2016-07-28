@@ -102,12 +102,12 @@ type Webhook struct {
 }
 
 func (w *Webhook) BeforeInsert() {
-	w.CreatedUnix = time.Now().UTC().Unix()
+	w.CreatedUnix = time.Now().Unix()
 	w.UpdatedUnix = w.CreatedUnix
 }
 
 func (w *Webhook) BeforeUpdate() {
-	w.UpdatedUnix = time.Now().UTC().Unix()
+	w.UpdatedUnix = time.Now().Unix()
 }
 
 func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
@@ -174,16 +174,32 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
-// GetWebhookByID returns webhook by given ID.
-func GetWebhookByID(id int64) (*Webhook, error) {
-	w := new(Webhook)
-	has, err := x.Id(id).Get(w)
+// getWebhook uses argument bean as query condition,
+// ID must be specified and do not assign unnecessary fields.
+func getWebhook(bean *Webhook) (*Webhook, error) {
+	has, err := x.Get(bean)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrWebhookNotExist{id}
+		return nil, ErrWebhookNotExist{bean.ID}
 	}
-	return w, nil
+	return bean, nil
+}
+
+// GetWebhookByRepoID returns webhook of repository by given ID.
+func GetWebhookByRepoID(repoID, id int64) (*Webhook, error) {
+	return getWebhook(&Webhook{
+		ID:     id,
+		RepoID: repoID,
+	})
+}
+
+// GetWebhookByOrgID returns webhook of organization by given ID.
+func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
+	return getWebhook(&Webhook{
+		ID:    id,
+		OrgID: orgID,
+	})
 }
 
 // GetActiveWebhooksByRepoID returns all active webhooks of repository.
@@ -204,25 +220,42 @@ func UpdateWebhook(w *Webhook) error {
 	return err
 }
 
-// DeleteWebhook deletes webhook of repository.
-func DeleteWebhook(id int64) (err error) {
+// deleteWebhook uses argument bean as query condition,
+// ID must be specified and do not assign unnecessary fields.
+func deleteWebhook(bean *Webhook) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Delete(&Webhook{ID: id}); err != nil {
+	if _, err = sess.Delete(bean); err != nil {
 		return err
-	} else if _, err = sess.Delete(&HookTask{HookID: id}); err != nil {
+	} else if _, err = sess.Delete(&HookTask{HookID: bean.ID}); err != nil {
 		return err
 	}
 
 	return sess.Commit()
 }
 
-// GetWebhooksByOrgId returns all webhooks for an organization.
-func GetWebhooksByOrgId(orgID int64) (ws []*Webhook, err error) {
+// DeleteWebhookByRepoID deletes webhook of repository by given ID.
+func DeleteWebhookByRepoID(repoID, id int64) error {
+	return deleteWebhook(&Webhook{
+		ID:     id,
+		RepoID: repoID,
+	})
+}
+
+// DeleteWebhookByOrgID deletes webhook of organization by given ID.
+func DeleteWebhookByOrgID(orgID, id int64) error {
+	return deleteWebhook(&Webhook{
+		ID:    id,
+		OrgID: orgID,
+	})
+}
+
+// GetWebhooksByOrgID returns all webhooks for an organization.
+func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 	err = x.Find(&ws, &Webhook{OrgID: orgID})
 	return ws, err
 }
@@ -540,7 +573,7 @@ func (t *HookTask) deliver() {
 	}
 
 	defer func() {
-		t.Delivered = time.Now().UTC().UnixNano()
+		t.Delivered = time.Now().UnixNano()
 		if t.IsSucceed {
 			log.Trace("Hook delivered: %s", t.UUID)
 		} else {
@@ -548,7 +581,7 @@ func (t *HookTask) deliver() {
 		}
 
 		// Update webhook last delivery status.
-		w, err := GetWebhookByID(t.HookID)
+		w, err := GetWebhookByRepoID(t.RepoID, t.HookID)
 		if err != nil {
 			log.Error(5, "GetWebhookByID: %v", err)
 			return
@@ -584,14 +617,6 @@ func (t *HookTask) deliver() {
 		return
 	}
 	t.ResponseInfo.Body = string(p)
-
-	switch t.Type {
-	case SLACK:
-		if t.ResponseInfo.Body != "ok" {
-			log.Error(5, "slack failed with: %s", t.ResponseInfo.Body)
-			t.IsSucceed = false
-		}
-	}
 }
 
 // DeliverHooks checks and delivers undelivered hooks.

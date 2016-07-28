@@ -342,7 +342,7 @@ function initRepository() {
 
         // Edit issue or comment content
         $('.edit-content').click(function () {
-            var $segment = $(this).parent().parent().next();
+            var $segment = $(this).parent().parent().parent().next();
             var $edit_content_zone = $segment.find('.edit-content-zone');
             var $render_content = $segment.find('.render-content');
             var $raw_content = $segment.find('.raw-content');
@@ -401,6 +401,19 @@ function initRepository() {
                 $textarea.val($raw_content.text());
             }
             $textarea.focus();
+            return false;
+        });
+
+        // Delete comment
+        $('.delete-comment').click(function () {
+            var $this = $(this);
+            if (confirm($this.data('locale'))) {
+                $.post($this.data('url'), {
+                    "_csrf": csrf
+                }).success(function() {
+                    $('#' + $this.data('comment-id')).remove();
+                });
+            }
             return false;
         });
 
@@ -483,6 +496,7 @@ function initWiki() {
         var simplemde = new SimpleMDE({
             autoDownloadFontAwesome: false,
             element: $edit_area[0],
+            forceSync: true,
             previewRender: function (plainText, preview) { // Async method
                 setTimeout(function () {
                     // FIXME: still send render request when return back to edit mode
@@ -611,6 +625,13 @@ function initAdmin() {
         });
     }
 
+    function onSecurityProtocolChange() {
+        if ($('#security_protocol').val() > 0) {
+            $('.has-tls').show();
+        } else {
+            $('.has-tls').hide();
+        }
+    }
 
     // New authentication
     if ($('.admin.new.authentication').length > 0) {
@@ -619,6 +640,7 @@ function initAdmin() {
             $('.dldap').hide();
             $('.smtp').hide();
             $('.pam').hide();
+            $('.has-tls').hide();
 
             var auth_type = $(this).val();
             switch (auth_type) {
@@ -627,6 +649,7 @@ function initAdmin() {
                     break;
                 case '3':     // SMTP
                     $('.smtp').show();
+                    $('.has-tls').show();
                     break;
                 case '4':     // PAM
                     $('.pam').show();
@@ -635,7 +658,19 @@ function initAdmin() {
                     $('.dldap').show();
                     break;
             }
+
+            if (auth_type == '2' || auth_type == '5') {
+                onSecurityProtocolChange()
+            }
         });
+        $('#security_protocol').change(onSecurityProtocolChange)
+    }
+    // Edit authentication
+    if ($('.admin.edit.authentication').length > 0) {
+        var auth_type = $('#auth_type').val();
+        if (auth_type == '2' || auth_type == '5') {
+            $('#security_protocol').change(onSecurityProtocolChange);
+        }
     }
 
     // Notice
@@ -1076,4 +1111,9 @@ $(window).load(function () {
                 break;
         }
     }
+});
+
+$(function() {
+    if ($('.user.signin').length >0) return;
+	$('form').areYouSure();
 });

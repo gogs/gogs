@@ -50,6 +50,7 @@ import:
 - package: golang.org/x/text
   subpackages:
   - transform
+  - language
 - package: gopkg.in/gomail.v2
 - package: gopkg.in/ini.v1
 - package: gopkg.in/ldap.v2

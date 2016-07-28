@@ -207,7 +207,7 @@ func HashEmail(email string) string {
 // AvatarLink returns avatar link by given email.
 func AvatarLink(email string) string {
 	if setting.DisableGravatar || setting.OfflineMode {
-		return setting.AppSubUrl + "/img/avatar_default.jpg"
+		return setting.AppSubUrl + "/img/avatar_default.png"
 	}
 
 	return setting.GravatarSource + HashEmail(email)
@@ -518,6 +518,14 @@ func IsTextFile(data []byte) (string, bool) {
 func IsImageFile(data []byte) (string, bool) {
 	contentType := http.DetectContentType(data)
 	if strings.Index(contentType, "image/") != -1 {
+		return contentType, true
+	}
+	return contentType, false
+}
+
+func IsPDFFile(data []byte) (string, bool) {
+	contentType := http.DetectContentType(data)
+	if strings.Index(contentType, "application/pdf") != -1 {
 		return contentType, true
 	}
 	return contentType, false

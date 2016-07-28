@@ -104,7 +104,7 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	repo, has := models.HasForkedRepo(ctxUser.Id, forkRepo.ID)
+	repo, has := models.HasForkedRepo(ctxUser.ID, forkRepo.ID)
 	if has {
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
@@ -112,7 +112,7 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 
 	// Check ownership of organization.
 	if ctxUser.IsOrganization() {
-		if !ctxUser.IsOwnedBy(ctx.User.Id) {
+		if !ctxUser.IsOwnedBy(ctx.User.ID) {
 			ctx.Error(403)
 			return
 		}
@@ -166,7 +166,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 
 	if ctx.IsSigned {
 		// Update issue-user.
-		if err = issue.ReadBy(ctx.User.Id); err != nil {
+		if err = issue.ReadBy(ctx.User.ID); err != nil {
 			ctx.Handle(500, "ReadBy", err)
 			return nil
 		}
@@ -235,6 +235,14 @@ func PrepareViewPullInfo(ctx *context.Context, pull *models.Issue) *git.PullRequ
 	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
 		pull.BaseBranch, pull.HeadBranch)
 	if err != nil {
+		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
+			ctx.Data["IsPullReuqestBroken"] = true
+			ctx.Data["BaseTarget"] = "deleted"
+			ctx.Data["NumCommits"] = 0
+			ctx.Data["NumFiles"] = 0
+			return nil
+		}
+
 		ctx.Handle(500, "GetPullRequestInfo", err)
 		return nil
 	}
@@ -348,7 +356,8 @@ func ViewPullFiles(ctx *context.Context) {
 	}
 
 	diff, err := models.GetDiffRange(diffRepoPath,
-		startCommitID, endCommitID, setting.Git.MaxGitDiffLines)
+		startCommitID, endCommitID, setting.Git.MaxGitDiffLines,
+		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Handle(500, "GetDiffRange", err)
 		return
@@ -363,6 +372,7 @@ func ViewPullFiles(ctx *context.Context) {
 	}
 
 	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
+	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = pull.HeadUserName
 	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.Data["IsImageFile"] = commit.IsImageFile
@@ -468,7 +478,7 @@ func ParseCompareInfo(ctx *context.Context) (*models.User, *models.Repository, *
 	}
 
 	// Check if current user has fork of repository or in the same repository.
-	headRepo, has := models.HasForkedRepo(headUser.Id, baseRepo.ID)
+	headRepo, has := models.HasForkedRepo(headUser.ID, baseRepo.ID)
 	if !has && !isSameRepo {
 		log.Trace("ParseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
 		ctx.Handle(404, "ParseCompareInfo", nil)
@@ -530,7 +540,7 @@ func PrepareCompareDiff(
 	)
 
 	// Get diff information.
-	ctx.Data["CommitRepoLink"] = headRepo.RepoLink()
+	ctx.Data["CommitRepoLink"] = headRepo.Link()
 
 	headCommitID, err := headGitRepo.GetBranchCommitID(headBranch)
 	if err != nil {
@@ -545,7 +555,8 @@ func PrepareCompareDiff(
 	}
 
 	diff, err := models.GetDiffRange(models.RepoPath(headUser.Name, headRepo.Name),
-		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines)
+		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines,
+		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Handle(500, "GetDiffRange", err)
 		return false
@@ -655,7 +666,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
 		Name:        form.Title,
-		PosterID:    ctx.User.Id,
+		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
@@ -678,9 +689,6 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		return
 	} else if err := pullRequest.PushToBaseRepo(); err != nil {
 		ctx.Handle(500, "PushToBaseRepo", err)
-		return
-	} else if err := MailWatchersAndMentions(ctx, pullIssue); err != nil {
-		ctx.Handle(500, "MailWatchersAndMentions", err)
 		return
 	}
 

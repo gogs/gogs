@@ -14,7 +14,6 @@ import (
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/repo"
 )
 
 func ListIssues(ctx *context.APIContext) {
@@ -32,7 +31,7 @@ func ListIssues(ctx *context.APIContext) {
 		apiIssues[i] = convert.ToIssue(issues[i])
 	}
 
-	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.IssuePagingNum)
+	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.UI.IssuePagingNum)
 	ctx.JSON(200, &apiIssues)
 }
 
@@ -54,7 +53,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	issue := &models.Issue{
 		RepoID:   ctx.Repo.Repository.ID,
 		Name:     form.Title,
-		PosterID: ctx.User.Id,
+		PosterID: ctx.User.ID,
 		Poster:   ctx.User,
 		Content:  form.Body,
 	}
@@ -70,7 +69,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 				}
 				return
 			}
-			issue.AssigneeID = assignee.Id
+			issue.AssigneeID = assignee.ID
 		}
 		issue.MilestoneID = form.Milestone
 	} else {
@@ -80,9 +79,13 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	if err := models.NewIssue(ctx.Repo.Repository, issue, form.Labels, nil); err != nil {
 		ctx.Error(500, "NewIssue", err)
 		return
-	} else if err := repo.MailWatchersAndMentions(ctx.Context, issue); err != nil {
-		ctx.Error(500, "MailWatchersAndMentions", err)
-		return
+	}
+
+	if form.Closed {
+		if err := issue.ChangeStatus(ctx.User, ctx.Repo.Repository, true); err != nil {
+			ctx.Error(500, "issue.ChangeStatus", err)
+			return
+		}
 	}
 
 	// Refetch from database to assign some automatic values
@@ -106,7 +109,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		return
 	}
 
-	if !issue.IsPoster(ctx.User.Id) && !ctx.Repo.IsWriter() {
+	if !issue.IsPoster(ctx.User.ID) && !ctx.Repo.IsWriter() {
 		ctx.Status(403)
 		return
 	}
@@ -132,7 +135,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 				}
 				return
 			}
-			issue.AssigneeID = assignee.Id
+			issue.AssigneeID = assignee.ID
 		}
 
 		if err = models.UpdateIssueUserByAssignee(issue); err != nil {

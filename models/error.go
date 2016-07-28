@@ -280,6 +280,18 @@ func (err ErrAccessTokenNotExist) Error() string {
 	return fmt.Sprintf("access token does not exist [sha: %s]", err.SHA)
 }
 
+type ErrAccessTokenEmpty struct {
+}
+
+func IsErrAccessTokenEmpty(err error) bool {
+	_, ok := err.(ErrAccessTokenEmpty)
+	return ok
+}
+
+func (err ErrAccessTokenEmpty) Error() string {
+	return fmt.Sprintf("access token is empty")
+}
+
 // ________                            .__                __  .__
 // \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
 //  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \
@@ -375,7 +387,7 @@ func IsErrReleaseAlreadyExist(err error) bool {
 }
 
 func (err ErrReleaseAlreadyExist) Error() string {
-	return fmt.Sprintf("Release tag already exist [tag_name: %s]", err.TagName)
+	return fmt.Sprintf("release tag already exist [tag_name: %s]", err.TagName)
 }
 
 type ErrReleaseNotExist struct {
@@ -389,7 +401,20 @@ func IsErrReleaseNotExist(err error) bool {
 }
 
 func (err ErrReleaseNotExist) Error() string {
-	return fmt.Sprintf("Release tag does not exist [id: %d, tag_name: %s]", err.ID, err.TagName)
+	return fmt.Sprintf("release tag does not exist [id: %d, tag_name: %s]", err.ID, err.TagName)
+}
+
+type ErrInvalidTagName struct {
+	TagName string
+}
+
+func IsErrInvalidTagName(err error) bool {
+	_, ok := err.(ErrInvalidTagName)
+	return ok
+}
+
+func (err ErrInvalidTagName) Error() string {
+	return fmt.Sprintf("release tag name is not valid [tag_name: %s]", err.TagName)
 }
 
 // __________                             .__
@@ -409,7 +434,7 @@ func IsErrBranchNotExist(err error) bool {
 }
 
 func (err ErrBranchNotExist) Error() string {
-	return fmt.Sprintf("Branch does not exist [name: %s]", err.Name)
+	return fmt.Sprintf("branch does not exist [name: %s]", err.Name)
 }
 
 //  __      __      ___.   .__                   __

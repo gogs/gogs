@@ -4,6 +4,17 @@
   display: inline-block;
   background-size: contain;
 }
+.ui.header,
+.ui.menu,
+.ui.button,
+h1,
+h2,
+h3,
+h4,
+h5,
+input {
+  font-family: "Helvetica Neue", "Meiryo Ui", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+}
 body {
   font-family: "Helvetica Neue", "Meiryo Ui", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
   background-color: #fff;
@@ -32,6 +43,21 @@ code.wrap {
   white-space: pre-wrap;
   /* CSS 3 */
   word-break: break-word;
+}
+.dont-break-out {
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 .full.height {
   padding: 0;
@@ -68,12 +94,12 @@ code.wrap {
 .following.bar .top.menu .menu {
   z-index: 900;
 }
+.following.bar .icon,
+.following.bar .octicon {
+  margin-right: 5px !important;
+}
 .following.bar .head.link.item {
   padding-right: 0 !important;
-}
-.following.bar .head.link.item .dropdown.icon,
-.following.bar .head.link.item .menu .octicon {
-  margin-right: 5px;
 }
 .following.bar .avatar > .ui.image {
   margin-right: 0;
@@ -297,6 +323,11 @@ footer .container .links > * {
 footer .container .links > *:first-child {
   border-left: none;
 }
+footer .ui.language .menu {
+  max-height: 500px;
+  overflow-y: auto;
+  margin-bottom: 7px;
+}
 .hide {
   display: none;
 }
@@ -366,12 +397,6 @@ footer .container .links > *:first-child {
 .img-16 {
   width: 32px !important;
   height: 32px !important;
-}
-.octicon.icon,
-.mega-octicon.icon {
-  font-family: octicons;
-  font-size: 16px;
-  opacity: 1 !important;
 }
 .sr-only {
   position: absolute;
@@ -1078,8 +1103,8 @@ footer .container .links > *:first-child {
   padding-bottom: 80px;
 }
 .repository .head .column {
-  padding-top: 5px!important;
-  padding-bottom: 5px!important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
 }
 .repository .head .ui.compact.menu {
   margin-left: 1rem;
@@ -1102,6 +1127,10 @@ footer .container .links > *:first-child {
   font-size: 12px;
   white-space: nowrap;
 }
+.repository .head .octicon.octicon-repo-forked {
+  margin-top: -1px;
+  font-size: 15px;
+}
 .repository .navbar .ui.label {
   margin-top: -2px;
   margin-left: 7px;
@@ -1117,13 +1146,15 @@ footer .container .links > *:first-child {
 .repository .metas .ui.list .hide {
   display: none!important;
 }
+.repository .metas .ui.list .item {
+  padding: 0px;
+}
 .repository .metas .ui.list .label.color {
   padding: 0 8px;
   margin-right: 5px;
 }
 .repository .metas .ui.list a {
-  padding-top: 5px;
-  padding-right: 10px;
+  margin: 2px 0;
 }
 .repository .metas .ui.list a .text {
   color: #444;
@@ -1138,6 +1169,9 @@ footer .container .links > *:first-child {
 }
 .repository .header-wrapper .ui.tabs.divider {
   border-bottom: none;
+}
+.repository .header-wrapper .ui.tabular .octicon {
+  margin-right: 5px;
 }
 .repository .filter.menu .label.color {
   border-radius: 3px;
@@ -1211,9 +1245,12 @@ footer .container .links > *:first-child {
 .repository.file.list #repo-files-table thead .ui.avatar {
   margin-bottom: 5px;
 }
-.repository.file.list #repo-files-table tbody .icon {
+.repository.file.list #repo-files-table tbody .octicon {
   margin-left: 3px;
   margin-right: 5px;
+}
+.repository.file.list #repo-files-table tbody .octicon.octicon-mail-reply {
+  margin-right: 10px;
 }
 .repository.file.list #repo-files-table td {
   padding-top: 8px;
@@ -1416,7 +1453,10 @@ footer .container .links > *:first-child {
 .repository.view.issue .comment-list .comment .actions .item {
   float: left;
 }
-.repository.view.issue .comment-list .comment .actions a.item {
+.repository.view.issue .comment-list .comment .actions .item.tag {
+  margin-right: 5px;
+}
+.repository.view.issue .comment-list .comment .actions .item.action {
   margin-top: 6px;
   margin-left: 10px;
 }
@@ -1520,20 +1560,24 @@ footer .container .links > *:first-child {
 .repository.view.issue .comment-list .event .octicon {
   width: 30px;
   float: left;
-  margin-left: -36px;
   text-align: center;
 }
 .repository.view.issue .comment-list .event .octicon.octicon-circle-slash {
   margin-top: 5px;
+  margin-left: -34.5px;
   font-size: 20px;
   color: #bd2c00;
 }
 .repository.view.issue .comment-list .event .octicon.octicon-primitive-dot {
+  margin-left: -28.5px;
+  margin-right: -1px;
   font-size: 30px;
   color: #6cc644;
 }
 .repository.view.issue .comment-list .event .octicon.octicon-bookmark {
   margin-top: 3px;
+  margin-left: -31px;
+  margin-right: -1px;
   font-size: 25px;
 }
 .repository.view.issue .comment-list .event .detail {
@@ -1932,6 +1976,9 @@ footer .container .links > *:first-child {
 .repository.new.release .target {
   min-width: 500px;
 }
+.repository.new.release .target #tag-name {
+  margin-top: -4px;
+}
 .repository.new.release .target .at {
   margin-left: -5px;
   margin-right: 5px;
@@ -2144,6 +2191,21 @@ footer .container .links > *:first-child {
 .settings .hook.list .item .fa {
   width: 20px;
   text-align: center;
+}
+.settings .hook.list .item a {
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 .settings .hook.history.list .item {
   padding-left: 13px;
@@ -2474,10 +2536,6 @@ footer .container .links > *:first-child {
 .dashboard.issues .ui.right .head.menu .item.active {
   color: #d9453d;
 }
-.dashboard.feeds .head.menu .octicon,
-.dashboard.issues .head.menu .octicon {
-  margin-right: 5px;
-}
 .feeds .news .ui.avatar {
   margin-top: 13px;
 }
@@ -2513,13 +2571,13 @@ footer .container .links > *:first-child {
   border-radius: 3px;
   word-break: break-all;
 }
-.feeds .list .header {
-  padding-top: 10px;
-  padding-bottom: 5px;
+.feeds .list .header .ui.label {
+  margin-top: -4px;
+  padding: 4px 5px;
+  font-weight: normal;
 }
 .feeds .list .header .plus.icon {
   margin-top: 5px;
-  margin-right: 0;
 }
 .feeds .list ul {
   list-style: none;
@@ -2537,8 +2595,13 @@ footer .container .links > *:first-child {
   display: block;
 }
 .feeds .list ul li a .octicon {
-  margin-right: 6px;
   color: #888;
+}
+.feeds .list ul li a .octicon.rear {
+  font-size: 15px;
+}
+.feeds .list ul li a .star-num {
+  font-size: 12px;
 }
 .feeds .list .repo-owner-name-list .item-name {
   max-width: 70%;
@@ -2624,7 +2687,7 @@ footer .container .links > *:first-child {
 }
 .ui.repository.list .item .ui.header .metas {
   color: #888;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: normal;
 }
 .ui.repository.list .item .ui.header .metas span:not(:last-child) {

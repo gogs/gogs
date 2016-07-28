@@ -374,7 +374,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		}
 
 		// Auto-login for admin
-		ctx.Session.Set("uid", u.Id)
+		ctx.Session.Set("uid", u.ID)
 		ctx.Session.Set("uname", u.Name)
 	}
 

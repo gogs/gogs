@@ -49,7 +49,7 @@ func RepoAssignment() macaron.Handler {
 		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(owner.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Status(404)
@@ -103,7 +103,7 @@ func ReqBasicAuth() macaron.Handler {
 
 func ReqAdmin() macaron.Handler {
 	return func(ctx *context.Context) {
-		if !ctx.User.IsAdmin {
+		if !ctx.IsSigned || !ctx.User.IsAdmin {
 			ctx.Error(403)
 			return
 		}
@@ -221,9 +221,12 @@ func RegisterRoutes(m *macaron.Macaron) {
 				Delete(repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
-				m.Combo("/hooks").Get(repo.ListHooks).
-					Post(bind(api.CreateHookOption{}), repo.CreateHook)
-				m.Patch("/hooks/:id:int", bind(api.EditHookOption{}), repo.EditHook)
+				m.Group("/hooks", func() {
+					m.Combo("").Get(repo.ListHooks).
+						Post(bind(api.CreateHookOption{}), repo.CreateHook)
+					m.Combo("/:id").Patch(bind(api.EditHookOption{}), repo.EditHook).
+						Delete(repo.DeleteHook)
+				})
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
 				m.Group("/branches", func() {
