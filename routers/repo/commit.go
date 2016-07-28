@@ -195,7 +195,19 @@ func Diff(ctx *context.Context) {
 }
 
 func RawDiff(ctx *context.Context) {
-	panic("not implemented")
+	userName := ctx.Repo.Owner.Name
+	repoName := ctx.Repo.Repository.Name
+	commitID := ctx.Params(":sha")
+	diffType := ctx.Params(":ext")
+
+	diff, err := models.GetRawDiff(models.RepoPath(userName, repoName),
+		commitID, diffType)
+	if err != nil {
+		ctx.Handle(404, "GetRawDiff", err)
+		return
+	}
+	ctx.HandleText(200, diff)
+
 }
 
 func CompareDiff(ctx *context.Context) {
