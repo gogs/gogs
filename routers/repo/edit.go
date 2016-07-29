@@ -124,7 +124,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.HTML(200, EDIT)
 }
 
-func FilePost(ctx *context.Context, form auth.EditRepoFileForm) {
+func EditFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
 	editFilePost(ctx, form, false)
 }
 
@@ -306,7 +306,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		if branchName != oldBranchName {
 			oldCommitID = "0000000000000000000000000000000000000000" // New Branch so we use all 0s
 		}
-		if err := models.CommitRepoAction(ctx.User.Id, ctx.Repo.Owner.Id, ctx.User.LowerName, ctx.Repo.Owner.Email,
+		if err := models.CommitRepoAction(ctx.User.ID, ctx.Repo.Owner.ID, ctx.User.LowerName, ctx.Repo.Owner.Email,
 			ctx.Repo.Repository.ID, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.Name, "refs/heads/"+branchName, pc,
 			oldCommitID, newCommitID); err != nil {
 			log.Error(4, "models.CommitRepoAction(branch = %s): %v", branchName, err)

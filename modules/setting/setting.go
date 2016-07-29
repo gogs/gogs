@@ -116,8 +116,8 @@ var (
 
 	// Repo editor settings
 	Editor struct {
-		LineWrapExtensions []string
-		PreviewTabApis     []string
+		LineWrapExtensions     []string
+		PreviewTabApis         []string
 	}
 
 	// UI settings
@@ -164,11 +164,11 @@ var (
 	AttachmentEnabled      bool
 
 	// Repo Upload settings
-	UploadTempPath     string
-	UploadAllowedTypes string
-	UploadMaxSize      int64
-	UploadMaxFiles     int
-	UploadEnabled      bool
+	UploadTempPath         string
+	UploadAllowedTypes 	string
+	UploadMaxSize      	int64
+	UploadMaxFiles     	int
+	UploadEnabled      	bool
 
 	// Time settings
 	TimeFormat string
@@ -468,20 +468,6 @@ func NewContext() {
 	UploadMaxSize = sec.Key("UPLOAD_FILE_MAX_SIZE").MustInt64(32)
 	UploadMaxFiles = sec.Key("UPLOAD_MAX_FILES").MustInt(10)
 	UploadEnabled = sec.Key("ENABLE_UPLOADS").MustBool(true)
-
-	// UI settings.
-	sec = Cfg.Section("ui")
-	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
-	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
-	FeedMaxCommitNum = sec.Key("FEED_MAX_COMMIT_NUM").MustInt(5)
-	MaxDisplayFileSize = sec.Key("MAX_DISPLAY_FILE_SIZE").MustInt64(8388608)
-
-	sec = Cfg.Section("ui.admin")
-	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)
-	AdminRepoPagingNum = sec.Key("REPO_PAGING_NUM").MustInt(50)
-	AdminNoticePagingNum = sec.Key("NOTICE_PAGING_NUM").MustInt(50)
-	AdminOrgPagingNum = sec.Key("ORG_PAGING_NUM").MustInt(50)
-	ThemeColorMetaTag = sec.Key("THEME_COLOR_META_TAG").MustString("#ff5343")
 
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))

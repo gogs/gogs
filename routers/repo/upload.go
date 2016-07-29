@@ -167,7 +167,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 		if branchName != oldBranchName {
 			oldCommitID = "0000000000000000000000000000000000000000" // New Branch so we use all 0s
 		}
-		if err := models.CommitRepoAction(ctx.User.Id, ctx.Repo.Owner.Id, ctx.User.LowerName, ctx.Repo.Owner.Email,
+		if err := models.CommitRepoAction(ctx.User.ID, ctx.Repo.Owner.ID, ctx.User.LowerName, ctx.Repo.Owner.Email,
 			ctx.Repo.Repository.ID, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.Name, "refs/heads/"+branchName, pc,
 			oldCommitID, newCommitID); err != nil {
 			log.Error(4, "models.CommitRepoAction(branch = %s): %v", branchName, err)
@@ -220,7 +220,7 @@ func UploadFileToServer(ctx *context.Context) {
 		}
 	}
 
-	up, err := models.NewUpload(header.Filename, buf, file, ctx.User.Id, ctx.Repo.Repository.ID)
+	up, err := models.NewUpload(header.Filename, buf, file, ctx.User.ID, ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Error(500, fmt.Sprintf("NewUpload: %v", err))
 		return
@@ -245,7 +245,7 @@ func RemoveUploadFileFromServer(ctx *context.Context, form auth.RemoveUploadFile
 
 	uuid := form.File
 
-	if err := models.RemoveUpload(uuid, ctx.User.Id, ctx.Repo.Repository.ID); err != nil {
+	if err := models.RemoveUpload(uuid, ctx.User.ID, ctx.Repo.Repository.ID); err != nil {
 		ctx.Error(500, fmt.Sprintf("RemoveUpload: %v", err))
 		return
 	}

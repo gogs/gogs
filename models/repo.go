@@ -2223,7 +2223,7 @@ func (repo *Repository) CheckoutNewBranch(oldBranchName, newBranchName string) e
 
 func checkoutNewBranch(repoPath, localPath, oldBranch, newBranch string) error {
 	if !com.IsExist(localPath) {
-		if err := updateLocalCopy(repoPath, localPath, oldBranch); error != nil {
+		if err := updateLocalCopy(repoPath, localPath, oldBranch); err != nil {
 			return err
 		}
 	}

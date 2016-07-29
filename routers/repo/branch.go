@@ -74,7 +74,7 @@ func NewBranchPost(ctx *context.Context, form auth.NewBranchForm) {
 		}
 		oldCommitID := "0000000000000000000000000000000000000000" // New Branch so we use all 0s
 		newCommitID := commit.ID.String()
-		if err := models.CommitRepoAction(ctx.User.Id, ctx.Repo.Owner.Id, ctx.User.LowerName, ctx.Repo.Owner.Email,
+		if err := models.CommitRepoAction(ctx.User.ID, ctx.Repo.Owner.ID, ctx.User.LowerName, ctx.Repo.Owner.Email,
 			ctx.Repo.Repository.ID, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.Name, "refs/heads/"+branchName, pc,
 			oldCommitID, newCommitID); err != nil {
 			log.Error(4, "models.CommitRepoAction(branch = %s): %v", branchName, err)

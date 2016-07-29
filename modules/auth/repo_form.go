@@ -323,7 +323,7 @@ type RemoveUploadFileForm struct {
 	File string `binding:"Required;MaxSize(50)"`
 }
 
-func (f *UploadRemoveFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *RemoveUploadFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
