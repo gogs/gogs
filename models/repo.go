@@ -2404,7 +2404,6 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 	}
 
 	dirPath := path.Join(localPath, treeName)
-
 	os.MkdirAll(dirPath, os.ModePerm)
 
 	// Copy uploaded files into repository.
