@@ -7,15 +7,15 @@ package repo
 import (
 	"strings"
 
+	"fmt"
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/auth"
-	"path"
 	"github.com/gogits/gogs/modules/setting"
-	"fmt"
 	"net/http"
-	"github.com/gogits/gogs/models"
+	"path"
 )
 
 const (
@@ -104,7 +104,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 		return
 	}
 
-	if( oldBranchName != branchName ){
+	if oldBranchName != branchName {
 		if _, err := ctx.Repo.Repository.GetBranch(branchName); err == nil {
 			ctx.Data["Err_Branchname"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.branch_already_exists"), UPLOAD, &form)
@@ -122,7 +122,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 			// Means there is no item with that name, so we're good
 			break
 		}
-		if ! entry.IsDir() {
+		if !entry.IsDir() {
 			ctx.Data["Err_Filename"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.directory_is_a_file"), UPLOAD, &form)
 			log.Error(4, "%s: %s - %s", "UploadFile", treeName, "Directory given is a file")
@@ -131,16 +131,16 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 	}
 
 	message := ""
-	if form.CommitSummary!="" {
+	if form.CommitSummary != "" {
 		message = strings.Trim(form.CommitSummary, " ")
 	} else {
-		message = ctx.Tr("repo.add_files_to_dir", "'" + treeName + "'")
+		message = ctx.Tr("repo.add_files_to_dir", "'"+treeName+"'")
 	}
-	if strings.Trim(form.CommitMessage, " ")!="" {
+	if strings.Trim(form.CommitMessage, " ") != "" {
 		message += "\n\n" + strings.Trim(form.CommitMessage, " ")
 	}
 
-	if err := ctx.Repo.Repository.UploadRepoFiles(ctx.User, oldBranchName, branchName, treeName,  message, files); err != nil {
+	if err := ctx.Repo.Repository.UploadRepoFiles(ctx.User, oldBranchName, branchName, treeName, message, files); err != nil {
 		ctx.Data["Err_Directory"] = true
 		ctx.RenderWithErr(ctx.Tr("repo.unable_to_upload_files"), UPLOAD, &form)
 		log.Error(4, "%s: %v", "UploadFile", err)
@@ -179,7 +179,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 	//if oldBranchName != branchName {
 	//	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + branchName))
 	//} else {
-		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName))
+	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName))
 	//}
 }
 
@@ -232,7 +232,7 @@ func UploadFileToServer(ctx *context.Context) {
 	})
 }
 
-func UploadRemoveFileFromServer(ctx *context.Context, form auth.UploadRemoveFileForm) {
+func RemoveUploadFileFromServer(ctx *context.Context, form auth.RemoveUploadFileForm) {
 	if !setting.UploadEnabled {
 		ctx.Error(404, "upload is not enabled")
 		return

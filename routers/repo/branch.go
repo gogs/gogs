@@ -5,13 +5,13 @@
 package repo
 
 import (
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/log"
-	"strings"
 	"net/url"
-	"github.com/gogits/gogs/models"
+	"strings"
 )
 
 const (
@@ -39,7 +39,7 @@ func NewBranchPost(ctx *context.Context, form auth.NewBranchForm) {
 	oldBranchName := form.OldBranchName
 	branchName := form.BranchName
 
-	if ctx.HasError() || ! ctx.Repo.IsWriter() || branchName == oldBranchName {
+	if ctx.HasError() || !ctx.Repo.IsWriter() || branchName == oldBranchName {
 		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + oldBranchName))
 		return
 	}

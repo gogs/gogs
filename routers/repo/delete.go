@@ -5,10 +5,10 @@
 package repo
 
 import (
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
+	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/log"
 )
 
 func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
@@ -50,5 +50,5 @@ func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
 		models.HookQueue.Add(ctx.Repo.Repository.ID)
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink+"/src/"+branchName)
+	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
 }

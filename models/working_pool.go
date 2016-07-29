@@ -45,4 +45,3 @@ func (p *workingPool) CheckOut(name string) {
 		p.count[name]--
 	}
 }
-

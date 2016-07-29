@@ -116,8 +116,8 @@ var (
 
 	// Repo editor settings
 	Editor struct {
-		LineWrapExtensions     []string
-		PreviewTabApis         []string
+		LineWrapExtensions []string
+		PreviewTabApis     []string
 	}
 
 	// UI settings
@@ -164,11 +164,11 @@ var (
 	AttachmentEnabled      bool
 
 	// Repo Upload settings
-	UploadTempPath         string
-	UploadAllowedTypes 	string
-	UploadMaxSize      	int64
-	UploadMaxFiles     	int
-	UploadEnabled      	bool
+	UploadTempPath     string
+	UploadAllowedTypes string
+	UploadMaxSize      int64
+	UploadMaxFiles     int
+	UploadEnabled      bool
 
 	// Time settings
 	TimeFormat string

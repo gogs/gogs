@@ -425,7 +425,6 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 	act := &Action{
 		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
-
 		ActEmail:     issue.Poster.Email,
 		OpType:       ACTION_CREATE_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Name),

@@ -427,7 +427,7 @@ func IsErrRepoFileAlreadyExist(err error) bool {
 }
 
 func (err ErrRepoFileAlreadyExist) Error() string {
-	return fmt.Sprintf("Repo file already exists [file name: %s]", err.FileName)
+	return fmt.Sprintf("repository file already exists [file name: %s]", err.FileName)
 }
 
 // __________                             .__

@@ -494,17 +494,17 @@ func runWeb(ctx *cli.Context) error {
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
 
 		m.Group("", func() {
-			m.Combo("/edit/*").Get(repo.EditFile).
+			m.Combo("/_edit/*").Get(repo.EditFile).
 				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditFilePost)
-			m.Combo("/new/*").Get(repo.EditNewFile).
-				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditNewFilePost)
+			m.Combo("/_new/*").Get(repo.NewFile).
+				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.NewFilePost)
 			m.Post("/preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
 			m.Combo("/upload/*").Get(repo.UploadFile).
 				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
 			m.Post("/delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
 			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
 			m.Post("/upload-file", repo.UploadFileToServer)
-			m.Post("/upload-remove", bindIgnErr(auth.UploadRemoveFileForm{}), repo.UploadRemoveFileFromServer)
+			m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
 		}, context.RepoRef(), context.RepoAssignment(), reqRepoWriter)
 	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 

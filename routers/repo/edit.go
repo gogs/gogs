@@ -6,22 +6,22 @@ package repo
 
 import (
 	"io/ioutil"
-	"strings"
 	"path"
+	"strings"
 
 	"github.com/gogits/git-module"
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/template"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/template"
 )
 
 const (
-	EDIT base.TplName = "repo/edit"
-	DIFF_PREVIEW base.TplName = "repo/diff_preview"
+	EDIT             base.TplName = "repo/edit"
+	DIFF_PREVIEW     base.TplName = "repo/diff_preview"
 	DIFF_PREVIEW_NEW base.TplName = "repo/diff_preview_new"
 )
 
@@ -29,7 +29,7 @@ func EditFile(ctx *context.Context) {
 	editFile(ctx, false)
 }
 
-func EditNewFile(ctx *context.Context) {
+func NewFile(ctx *context.Context) {
 	editFile(ctx, true)
 }
 
@@ -49,10 +49,10 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		treeNames = strings.Split(treeName, "/")
 	}
 
-	if ! isNewFile {
+	if !isNewFile {
 		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treeName)
 
-		if err 	!= nil && git.IsErrNotExist(err) {
+		if err != nil && git.IsErrNotExist(err) {
 			ctx.Handle(404, "GetTreeEntryByPath", err)
 			return
 		}
@@ -81,7 +81,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 
 		_, isTextFile := base.IsTextFile(buf)
 
-		if ! isTextFile {
+		if !isTextFile {
 			ctx.Handle(404, "repo.Home", nil)
 			return
 		}
@@ -124,11 +124,11 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.HTML(200, EDIT)
 }
 
-func EditFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
+func FilePost(ctx *context.Context, form auth.EditRepoFileForm) {
 	editFilePost(ctx, form, false)
 }
 
-func EditNewFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
+func NewFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
 	editFilePost(ctx, form, true)
 }
 
@@ -193,7 +193,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		return
 	}
 
-	if( oldBranchName != branchName ){
+	if oldBranchName != branchName {
 		if _, err := ctx.Repo.Repository.GetBranch(branchName); err == nil {
 			ctx.Data["Err_Branchname"] = true
 			ctx.RenderWithErr(ctx.Tr("repo.branch_already_exists"), EDIT, &form)
@@ -204,7 +204,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	}
 
 	treepath := ""
-	for index,part := range treeNames {
+	for index, part := range treeNames {
 		treepath = path.Join(treepath, part)
 		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treepath)
 		if err != nil {
@@ -212,7 +212,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 			break
 		}
 		if index != len(treeNames)-1 {
-			if ! entry.IsDir() {
+			if !entry.IsDir() {
 				ctx.Data["Err_Filename"] = true
 				ctx.RenderWithErr(ctx.Tr("repo.directory_is_a_file"), EDIT, &form)
 				log.Error(4, "%s: %s - %s", "EditFile", treeName, "Directory given is a file")
@@ -228,7 +228,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		}
 	}
 
-	if ! isNewFile {
+	if !isNewFile {
 		_, err := ctx.Repo.Commit.GetTreeEntryByPath(oldTreeName)
 		if err != nil && git.IsErrNotExist(err) {
 			ctx.Data["Err_Filename"] = true
@@ -246,7 +246,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 						}
 						message := ctx.Tr("repo.user_has_committed_since_you_started_editing", name) +
 							` <a href="` + ctx.Repo.RepoLink + "/commit/" + ctx.Repo.CommitID + `" target="_blank">` + ctx.Tr("repo.see_what_changed") + `</a>` +
-							" " + ctx.Tr("repo.pressing_commit_again_will_overwrite_those_changes", "<em>" + ctx.Tr("repo.commit_changes") + "</em>")
+							" " + ctx.Tr("repo.pressing_commit_again_will_overwrite_those_changes", "<em>"+ctx.Tr("repo.commit_changes")+"</em>")
 						log.Error(4, "%s: %s / %s - %s", "EditFile", branchName, oldTreeName, "File updated by another user")
 						ctx.RenderWithErr(message, EDIT, &form)
 						return
@@ -267,7 +267,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	}
 
 	message := ""
-	if form.CommitSummary!="" {
+	if form.CommitSummary != "" {
 		message = strings.Trim(form.CommitSummary, " ")
 	} else {
 		if isNewFile {
@@ -276,7 +276,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 			message = ctx.Tr("repo.update") + " '" + treeName + "'"
 		}
 	}
-	if strings.Trim(form.CommitMessage, " ")!="" {
+	if strings.Trim(form.CommitMessage, " ") != "" {
 		message += "\n\n" + strings.Trim(form.CommitMessage, " ")
 	}
 
@@ -343,7 +343,7 @@ func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 		return
 	}
 
-	if(diff.NumFiles() == 0){
+	if diff.NumFiles() == 0 {
 		ctx.Error(200, ctx.Tr("repo.no_changes_to_show"))
 		return
 	}
@@ -355,5 +355,5 @@ func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 }
 
 func EscapeUrl(str string) string {
-	return strings.NewReplacer("?","%3F","%","%25","#","%23"," ","%20","^","%5E","\\","%5C","{","%7B","}","%7D","|","%7C").Replace(str)
+	return strings.NewReplacer("?", "%3F", "%", "%25", "#", "%23", " ", "%20", "^", "%5E", "\\", "%5C", "{", "%7B", "}", "%7D", "|", "%7C").Replace(str)
 }

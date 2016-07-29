@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"os"
 	"os/exec"
 	"path"
@@ -35,8 +37,6 @@ import (
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
-	"mime/multipart"
-	"io"
 )
 
 const (
@@ -412,7 +412,7 @@ func updateLocalCopy(repoPath, localPath, branch string) error {
 	if !com.IsExist(localPath) {
 		if err := git.Clone(repoPath, localPath, git.CloneRepoOptions{
 			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
-			Branch: branch,
+			Branch:  branch,
 		}); err != nil {
 			return fmt.Errorf("Clone: %v", err)
 		}
@@ -2223,14 +2223,14 @@ func (repo *Repository) CheckoutNewBranch(oldBranchName, newBranchName string) e
 
 func checkoutNewBranch(repoPath, localPath, oldBranch, newBranch string) error {
 	if !com.IsExist(localPath) {
-		if error := updateLocalCopy(repoPath, localPath, oldBranch); error != nil {
-			return error
+		if err := updateLocalCopy(repoPath, localPath, oldBranch); error != nil {
+			return err
 		}
 	}
-	if err := git.Checkout(localPath, git.CheckoutOptions {
-		Branch:  newBranch,
+	if err := git.Checkout(localPath, git.CheckoutOptions{
+		Branch:    newBranch,
 		OldBranch: oldBranch,
-		Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
+		Timeout:   time.Duration(setting.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
 		return fmt.Errorf("Checkout New Branch: %v", err)
 	}
@@ -2248,7 +2248,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, oldBranchName, branchName, ol
 		return fmt.Errorf("UpdateLocalRepo: %s - %v", oldBranchName, err)
 	}
 
-	if( oldBranchName != branchName ){
+	if oldBranchName != branchName {
 		if err := repo.CheckoutNewBranch(oldBranchName, branchName); err != nil {
 			return fmt.Errorf("CheckoutNewBranch: %s - %s: %v", oldBranchName, branchName, err)
 		}
@@ -2265,16 +2265,14 @@ func (repo *Repository) UpdateRepoFile(doer *User, oldBranchName, branchName, ol
 		}
 	}
 
-	if ! com.IsExist(filepath.Dir(filePath)) {
-		os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-	}
+	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
 
 	// If new file, make sure it doesn't exist; if old file, move if file name change
 	if isNewFile {
 		if com.IsExist(filePath) {
 			return ErrRepoFileAlreadyExist{filePath}
 		}
-	} else if oldTreeName!="" && treeName!="" && treeName != oldTreeName {
+	} else if oldTreeName != "" && treeName != "" && treeName != oldTreeName {
 		if err = git.MoveFile(localPath, oldTreeName, treeName); err != nil {
 			return fmt.Errorf("MoveFile: %v", err)
 		}
@@ -2308,9 +2306,7 @@ func (repo *Repository) GetPreviewDiff(repoPath, branchName, treeName, text stri
 	localPath := repo.LocalRepoPath()
 	filePath := path.Join(localPath, treeName)
 
-	if ! com.IsExist(filepath.Dir(filePath)) {
-		os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
-	}
+	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
 
 	if err = ioutil.WriteFile(filePath, []byte(text), 0666); err != nil {
 		return nil, fmt.Errorf("WriteFile: %v", err)
@@ -2403,19 +2399,17 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 		return fmt.Errorf("UpdateLocalRepo: %v", err)
 	}
 
-	if( oldBranchName != branchName ){
+	if oldBranchName != branchName {
 		repo.CheckoutNewBranch(oldBranchName, branchName)
 	}
 
 	dirPath := path.Join(localPath, treeName)
 
-	if ! com.IsExist(dirPath) {
-		os.MkdirAll(dirPath, os.ModePerm)
-	}
+	os.MkdirAll(dirPath, os.ModePerm)
 
 	// Copy uploaded files into repository.
 	for _, uuid := range uuids {
-		upload, err := getUpload(uuid, doer.Id, repo.ID)
+		upload, err := getUpload(uuid, doer.ID, repo.ID)
 		if err != nil {
 			if IsErrUploadNotExist(err) {
 				continue
@@ -2423,12 +2417,12 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 			return fmt.Errorf("getUpload[%s]: %v", uuid, err)
 		}
 		uuidPath := upload.LocalPath()
-		filePath := dirPath+"/"+upload.Name
+		filePath := dirPath + "/" + upload.Name
 		if err := os.Rename(uuidPath, filePath); err != nil {
-			DeleteUpload(upload, true);
+			DeleteUpload(upload, true)
 			return fmt.Errorf("Rename[%s -> %s]: %v", uuidPath, filePath, err)
 		}
-		DeleteUpload(upload, false); // false because we have moved the file
+		DeleteUpload(upload, false) // false because we have moved the file
 	}
 
 	if len(message) == 0 {
@@ -2448,11 +2442,11 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 
 // Upload represent a uploaded file to a repo to be deleted when moved
 type Upload struct {
-	ID        int64  `xorm:"pk autoincr"`
-	UUID      string `xorm:"uuid UNIQUE"`
-	UID    int64  `xorm:"INDEX"`
-	RepoID    int64  `xorm:"INDEX"`
-	Name      string
+	ID          int64  `xorm:"pk autoincr"`
+	UUID        string `xorm:"uuid UNIQUE"`
+	UID         int64  `xorm:"INDEX"`
+	RepoID      int64  `xorm:"INDEX"`
+	Name        string
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
 }
@@ -2483,7 +2477,7 @@ func NewUpload(name string, buf []byte, file multipart.File, userId, repoId int6
 	up := &Upload{
 		UUID:   gouuid.NewV4().String(),
 		Name:   name,
-		UID: userId,
+		UID:    userId,
 		RepoID: repoId,
 	}
 
@@ -2534,13 +2528,13 @@ func RemoveUpload(uuid string, userId, repoId int64) (err error) {
 	return nil
 }
 
-func getUpload(uuid string, userId, repoId int64) (*Upload, error) {
-	up := &Upload{UUID: uuid, UID: userId, RepoID: repoId}
+func getUpload(uuid string, userID, repoID int64) (*Upload, error) {
+	up := &Upload{UUID: uuid, UID: userID, RepoID: repoID}
 	has, err := x.Get(up)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUploadNotExist{0, uuid, userId, repoId}
+		return nil, ErrUploadNotExist{0, uuid, userID, repoID}
 	}
 	return up, nil
 }

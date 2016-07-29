@@ -49,10 +49,10 @@ func Home(ctx *context.Context) {
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
-	editLink := ctx.Repo.RepoLink + "/edit/" + branchName
+	editLink := ctx.Repo.RepoLink + "/_edit/" + branchName
+	newFileLink := ctx.Repo.RepoLink + "/_new/" + branchName
 	deleteLink := ctx.Repo.RepoLink + "/delete/" + branchName
 	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
-	newFileLink := ctx.Repo.RepoLink + "/new/" + branchName
 	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 
 	// Get tree path
@@ -137,13 +137,13 @@ func Home(ctx *context.Context) {
 						}
 					}
 				}
-				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch  {
+				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 					ctx.Data["FileEditLink"] = editLink + "/" + treename
 					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
 				} else {
-					if ! ctx.Repo.IsViewBranch {
+					if !ctx.Repo.IsViewBranch {
 						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
-					} else if ! ctx.Repo.IsWriter() {
+					} else if !ctx.Repo.IsWriter() {
 						ctx.Data["FileEditLink"] = forkLink
 						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.fork_before_edit")
 					}
@@ -155,9 +155,9 @@ func Home(ctx *context.Context) {
 				ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
 				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
 			} else {
-				if ! ctx.Repo.IsViewBranch {
+				if !ctx.Repo.IsViewBranch {
 					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
-				} else if ! ctx.Repo.IsWriter() {
+				} else if !ctx.Repo.IsWriter() {
 					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
 				}
 			}
