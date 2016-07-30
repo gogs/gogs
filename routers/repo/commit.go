@@ -195,16 +195,15 @@ func Diff(ctx *context.Context) {
 }
 
 func RawDiff(ctx *context.Context) {
-	diff, err := models.GetRawDiff(
+	if err := models.GetRawDiff(
 		models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name),
 		ctx.Params(":sha"),
-		ctx.Params(":ext"),
-	)
-	if err != nil {
-		ctx.Handle(404, "GetRawDiff", err)
+		models.RawDiffType(ctx.Params(":ext")),
+		ctx.Resp,
+	); err != nil {
+		ctx.Handle(500, "GetRawDiff", err)
 		return
 	}
-	ctx.HandleText(200, diff)
 }
 
 func CompareDiff(ctx *context.Context) {

@@ -185,6 +185,7 @@ func (diff *Diff) NumFiles() int {
 
 const DIFF_HEAD = "diff --git "
 
+// TODO: move this function to gogits/git-module
 func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*Diff, error) {
 	var (
 		diff = &Diff{Files: make([]*DiffFile, 0)}
@@ -371,13 +372,13 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 	return diff, nil
 }
 
-func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
-	repo, err := git.OpenRepository(repoPath)
+func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
+	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit(afterCommitID)
+	commit, err := gitRepo.GetCommit(afterCommitID)
 	if err != nil {
 		return nil, err
 	}
@@ -422,27 +423,36 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLine
 	return diff, nil
 }
 
-func GetRawDiff(repoPath, commitID, diffType string) (string, error) {
+type RawDiffType string
+
+const (
+	RAW_DIFF_NORMAL RawDiffType = "diff"
+	RAW_DIFF_PATCH  RawDiffType = "patch"
+)
+
+// GetRawDiff dumps diff results of repository in given commit ID to io.Writer.
+// TODO: move this function to gogits/git-module
+func GetRawDiff(repoPath, commitID string, diffType RawDiffType, writer io.Writer) error {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("OpenRepository: %v", err)
 	}
 
 	commit, err := repo.GetCommit(commitID)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("GetCommit: %v", err)
 	}
 
 	var cmd *exec.Cmd
 	switch diffType {
-	case "diff":
+	case RAW_DIFF_NORMAL:
 		if commit.ParentCount() == 0 {
 			cmd = exec.Command("git", "show", commitID)
 		} else {
 			c, _ := commit.Parent(0)
 			cmd = exec.Command("git", "diff", "-M", c.ID.String(), commitID)
 		}
-	case "patch":
+	case RAW_DIFF_PATCH:
 		if commit.ParentCount() == 0 {
 			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", "--root", commitID)
 		} else {
@@ -451,19 +461,19 @@ func GetRawDiff(repoPath, commitID, diffType string) (string, error) {
 			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", query)
 		}
 	default:
-		return "", fmt.Errorf("Invalid diffType '%s'", diffType)
+		return fmt.Errorf("invalid diffType: %s", diffType)
 	}
 
 	stderr := new(bytes.Buffer)
 
 	cmd.Dir = repoPath
+	cmd.Stdout = writer
 	cmd.Stderr = stderr
 
-	stdout, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("%v - %s", err, stderr)
+	if err = cmd.Run(); err != nil {
+		return fmt.Errorf("Run: %v - %s", err, stderr)
 	}
-	return string(stdout), nil
+	return nil
 }
 
 func GetDiffCommit(repoPath, commitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
