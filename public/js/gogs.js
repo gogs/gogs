@@ -250,6 +250,22 @@ function initRepository() {
                 $prompt_span.hide();
             }
         });
+
+        // Enable or select internal/external wiki system and issue tracker.
+        $('.enable-system').change(function () {
+            if (this.checked) {
+                $($(this).data('target')).removeClass('disabled');
+            } else {
+                $($(this).data('target')).addClass('disabled');
+            }
+        });
+        $('.enable-system-radio').change(function () {
+            if (this.value == 'false') {
+                $($(this).data('target')).addClass('disabled');
+            } else if (this.value == 'true') {
+                $($(this).data('target')).removeClass('disabled');
+            }
+        });
     }
 
     // Labels
@@ -410,7 +426,7 @@ function initRepository() {
             if (confirm($this.data('locale'))) {
                 $.post($this.data('url'), {
                     "_csrf": csrf
-                }).success(function() {
+                }).success(function () {
                     $('#' + $this.data('comment-id')).remove();
                 });
             }
@@ -471,11 +487,11 @@ function initRepository() {
     }
 }
 
-function initRepositoryCollaboration(){
+function initRepositoryCollaboration() {
     console.log('initRepositoryCollaboration');
 
 // Change collaborator access mode
-    $('.access-mode.menu .item').click(function(){
+    $('.access-mode.menu .item').click(function () {
         var $menu = $(this).parent();
         $.post($menu.data('url'), {
             "_csrf": csrf,
@@ -971,11 +987,11 @@ $(document).ready(function () {
     $('.show-modal.button').click(function () {
         $($(this).data('modal')).modal('show');
     });
-    $('.delete-post.button').click(function(){
+    $('.delete-post.button').click(function () {
         var $this = $(this);
-        $.post($this.data('request-url'),{
+        $.post($this.data('request-url'), {
             "_csrf": csrf
-        }).done(function(){
+        }).done(function () {
             window.location.href = $this.data('done-url');
         });
     });
@@ -1129,7 +1145,7 @@ $(window).load(function () {
     }
 });
 
-$(function() {
-    if ($('.user.signin').length >0) return;
-	$('form').areYouSure();
+$(function () {
+    if ($('.user.signin').length > 0) return;
+    $('form').areYouSure();
 });
