@@ -589,8 +589,9 @@ function initWikiForm() {
             renderingConfig: {
                 singleLineBreaks: false
             },
-            spellChecker: false,
+            indentWithTabs: false,
             tabSize: 4,
+            spellChecker: false,
             toolbar: ["bold", "italic", "strikethrough", "|",
                 "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
                 "code", "quote", "|",
@@ -630,8 +631,9 @@ function initIssueForm() {
                 renderingConfig: {
                     singleLineBreaks: false
                 },
-                spellChecker: false,
+                indentWithTabs: false,
                 tabSize: 4,
+                spellChecker: false,
                 toolbar: ["bold", "italic", "strikethrough", "|",
                     "code", "quote", "|",
                     "unordered-list", "ordered-list", "|",
@@ -798,6 +800,7 @@ function setSimpleMDE() {
         renderingConfig: {
             singleLineBreaks: false
         },
+        indentWithTabs: false,
         tabSize: 4,
         spellChecker: false,
         previewRender: function (plainText, preview) { // Async method
