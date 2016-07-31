@@ -746,8 +746,8 @@ function initEditor() {
             }
 
             if(previewLink.length && apiCall && previewTabApis && previewTabApis.length && previewTabApis.indexOf(apiCall) >= 0) {
-                dataUrl = previewLink.attr('data-url');
-                previewLink.attr('data-url', dataUrl.replace(/(.*)\/.*/i, '$1/' + mode));
+                dataUrl = previewLink.data('url');
+                previewLink.data('url', dataUrl.replace(/(.*)\/.*/i, '$1/' + mode));
                 previewLink.show();
             }
             else {
