@@ -64,13 +64,26 @@ type Issue struct {
 }
 
 func (i *Issue) BeforeInsert() {
-	i.CreatedUnix = time.Now().UTC().Unix()
+	i.CreatedUnix = time.Now().Unix()
 	i.UpdatedUnix = i.CreatedUnix
 }
 
 func (i *Issue) BeforeUpdate() {
-	i.UpdatedUnix = time.Now().UTC().Unix()
-	i.DeadlineUnix = i.Deadline.UTC().Unix()
+	i.UpdatedUnix = time.Now().Unix()
+	i.DeadlineUnix = i.Deadline.Unix()
+}
+
+func (issue *Issue) loadAttributes(e Engine) (err error) {
+	issue.Repo, err = getRepositoryByID(e, issue.RepoID)
+	if err != nil {
+		return fmt.Errorf("getRepositoryByID: %v", err)
+	}
+
+	return nil
+}
+
+func (issue *Issue) LoadAttributes() error {
+	return issue.loadAttributes(x)
 }
 
 func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
@@ -144,6 +157,10 @@ func (i *Issue) State() string {
 		return "closed"
 	}
 	return "open"
+}
+
+func (issue *Issue) FullLink() string {
+	return fmt.Sprintf("%s/issues/%d", issue.Repo.FullLink(), issue.Index)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -319,7 +336,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 
 	if issue.AssigneeID > 0 {
 		// Silently drop invalid assignee
-		valid, err := hasAccess(e, &User{Id: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
+		valid, err := hasAccess(e, &User{ID: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
 		if err != nil {
 			return fmt.Errorf("hasAccess: %v", err)
 		} else if !valid {
@@ -390,7 +407,7 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 		}
 	}
 
-	return nil
+	return issue.loadAttributes(e)
 }
 
 // NewIssue creates new issue with labels for repository.
@@ -411,7 +428,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 
 	// Notify watchers.
 	act := &Action{
-		ActUserID:    issue.Poster.Id,
+		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
 		ActEmail:     issue.Poster.Email,
 		OpType:       ACTION_CREATE_ISSUE,
@@ -422,7 +439,9 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		IsPrivate:    repo.IsPrivate,
 	}
 	if err = NotifyWatchers(act); err != nil {
-		log.Error(4, "notifyWatchers: %v", err)
+		log.Error(4, "NotifyWatchers: %v", err)
+	} else if err = issue.MailParticipants(); err != nil {
+		log.Error(4, "MailParticipants: %v", err)
 	}
 
 	return nil
@@ -451,8 +470,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 		return nil, err
 	}
 
-	issue.Repo = repo
-	return issue, nil
+	return issue, issue.LoadAttributes()
 }
 
 // GetIssueByIndex returns issue by given index in repository.
@@ -467,7 +485,7 @@ func GetIssueByIndex(repoID, index int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{0, repoID, index}
 	}
-	return issue, nil
+	return issue, issue.LoadAttributes()
 }
 
 // GetIssueByID returns an issue by given ID.
@@ -479,7 +497,7 @@ func GetIssueByID(id int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{id, 0, 0}
 	}
-	return issue, nil
+	return issue, issue.LoadAttributes()
 }
 
 type IssuesOptions struct {
@@ -503,65 +521,65 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		opts.Page = 1
 	}
 
-	sess := x.Limit(setting.IssuePagingNum, (opts.Page-1)*setting.IssuePagingNum)
+	sess := x.Limit(setting.UI.IssuePagingNum, (opts.Page-1)*setting.UI.IssuePagingNum)
 
 	if opts.RepoID > 0 {
-		sess.Where("issue.repo_id=?", opts.RepoID).And("is_closed=?", opts.IsClosed)
+		sess.Where("issue.repo_id=?", opts.RepoID).And("issue.is_closed=?", opts.IsClosed)
 	} else if opts.RepoIDs != nil {
 		// In case repository IDs are provided but actually no repository has issue.
 		if len(opts.RepoIDs) == 0 {
 			return make([]*Issue, 0), nil
 		}
-		sess.In("repo_id", base.Int64sToStrings(opts.RepoIDs)).And("is_closed=?", opts.IsClosed)
+		sess.In("issue.repo_id", base.Int64sToStrings(opts.RepoIDs)).And("issue.is_closed=?", opts.IsClosed)
 	} else {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
 
 	if opts.AssigneeID > 0 {
-		sess.And("assignee_id=?", opts.AssigneeID)
+		sess.And("issue.assignee_id=?", opts.AssigneeID)
 	} else if opts.PosterID > 0 {
-		sess.And("poster_id=?", opts.PosterID)
+		sess.And("issue.poster_id=?", opts.PosterID)
 	}
 
 	if opts.MilestoneID > 0 {
-		sess.And("milestone_id=?", opts.MilestoneID)
+		sess.And("issue.milestone_id=?", opts.MilestoneID)
 	}
 
-	sess.And("is_pull=?", opts.IsPull)
+	sess.And("issue.is_pull=?", opts.IsPull)
 
 	switch opts.SortType {
 	case "oldest":
-		sess.Asc("created_unix")
+		sess.Asc("issue.created_unix")
 	case "recentupdate":
-		sess.Desc("updated_unix")
+		sess.Desc("issue.updated_unix")
 	case "leastupdate":
-		sess.Asc("updated_unix")
+		sess.Asc("issue.updated_unix")
 	case "mostcomment":
-		sess.Desc("num_comments")
+		sess.Desc("issue.num_comments")
 	case "leastcomment":
-		sess.Asc("num_comments")
+		sess.Asc("issue.num_comments")
 	case "priority":
-		sess.Desc("priority")
+		sess.Desc("issue.priority")
 	default:
-		sess.Desc("created_unix")
+		sess.Desc("issue.created_unix")
 	}
 
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
 		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
 		if len(labelIDs) > 0 {
-			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("label_id", labelIDs)
+			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 		}
 	}
 
 	if opts.IsMention {
-		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id").And("is_mentioned = ?", true)
+		sess.Join("INNER", "issue_user", "issue.id = issue_user.issue_id").And("issue_user.is_mentioned = ?", true)
 
 		if opts.UserID > 0 {
 			sess.And("issue_user.uid = ?", opts.UserID)
 		}
 	}
 
-	issues := make([]*Issue, 0, setting.IssuePagingNum)
+	issues := make([]*Issue, 0, setting.UI.IssuePagingNum)
 	return issues, sess.Find(&issues)
 }
 
@@ -614,7 +632,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 	isNeedAddPoster := true
 	for _, u := range users {
 		iu.ID = 0
-		iu.UID = u.Id
+		iu.UID = u.ID
 		iu.IsPoster = iu.UID == issue.PosterID
 		if isNeedAddPoster && iu.IsPoster {
 			isNeedAddPoster = false
@@ -700,42 +718,44 @@ func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int
 	return ius, err
 }
 
-func UpdateMentions(userNames []string, issueId int64) error {
-	for i := range userNames {
-		userNames[i] = strings.ToLower(userNames[i])
-	}
-	users := make([]*User, 0, len(userNames))
-
-	if err := x.Where("lower_name IN (?)", strings.Join(userNames, "\",\"")).OrderBy("lower_name ASC").Find(&users); err != nil {
-		return err
+// UpdateIssueMentions extracts mentioned people from content and
+// updates issue-user relations for them.
+func UpdateIssueMentions(issueID int64, mentions []string) error {
+	if len(mentions) == 0 {
+		return nil
 	}
 
-	ids := make([]int64, 0, len(userNames))
+	for i := range mentions {
+		mentions[i] = strings.ToLower(mentions[i])
+	}
+	users := make([]*User, 0, len(mentions))
+
+	if err := x.In("lower_name", mentions).Asc("lower_name").Find(&users); err != nil {
+		return fmt.Errorf("find mentioned users: %v", err)
+	}
+
+	ids := make([]int64, 0, len(mentions))
 	for _, user := range users {
-		ids = append(ids, user.Id)
-		if !user.IsOrganization() {
+		ids = append(ids, user.ID)
+		if !user.IsOrganization() || user.NumMembers == 0 {
 			continue
 		}
 
-		if user.NumMembers == 0 {
-			continue
-		}
-
-		tempIds := make([]int64, 0, user.NumMembers)
-		orgUsers, err := GetOrgUsersByOrgId(user.Id)
+		memberIDs := make([]int64, 0, user.NumMembers)
+		orgUsers, err := GetOrgUsersByOrgID(user.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
 		for _, orgUser := range orgUsers {
-			tempIds = append(tempIds, orgUser.ID)
+			memberIDs = append(memberIDs, orgUser.ID)
 		}
 
-		ids = append(ids, tempIds...)
+		ids = append(ids, memberIDs...)
 	}
 
-	if err := UpdateIssueUsersByMentions(ids, issueId); err != nil {
-		return err
+	if err := UpdateIssueUsersByMentions(issueID, ids); err != nil {
+		return fmt.Errorf("UpdateIssueUsersByMentions: %v", err)
 	}
 
 	return nil
@@ -825,16 +845,16 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	case FM_MENTION:
 		stats.OpenCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
-			And("uid = ?", opts.UserID).
-			And("is_mentioned = ?", true).
-			And("is_closed = ?", false).
+			And("issue_user.uid = ?", opts.UserID).
+			And("issue_user.is_mentioned = ?", true).
+			And("issue.is_closed = ?", false).
 			Count(&Issue{})
 
 		stats.ClosedCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
-			And("uid = ?", opts.UserID).
-			And("is_mentioned = ?", true).
-			And("is_closed = ?", true).
+			And("issue_user.uid = ?", opts.UserID).
+			And("issue_user.is_mentioned = ?", true).
+			And("issue.is_closed = ?", true).
 			Count(&Issue{})
 	}
 	return stats
@@ -973,9 +993,12 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 }
 
 // UpdateIssueUsersByMentions updates issue-user pairs by mentioning.
-func UpdateIssueUsersByMentions(uids []int64, iid int64) error {
+func UpdateIssueUsersByMentions(issueID int64, uids []int64) error {
 	for _, uid := range uids {
-		iu := &IssueUser{UID: uid, IssueID: iid}
+		iu := &IssueUser{
+			UID:     uid,
+			IssueID: issueID,
+		}
 		has, err := x.Get(iu)
 		if err != nil {
 			return err
@@ -1023,7 +1046,7 @@ type Milestone struct {
 }
 
 func (m *Milestone) BeforeInsert() {
-	m.DeadlineUnix = m.Deadline.UTC().Unix()
+	m.DeadlineUnix = m.Deadline.Unix()
 }
 
 func (m *Milestone) BeforeUpdate() {
@@ -1033,8 +1056,8 @@ func (m *Milestone) BeforeUpdate() {
 		m.Completeness = 0
 	}
 
-	m.DeadlineUnix = m.Deadline.UTC().Unix()
-	m.ClosedDateUnix = m.ClosedDate.UTC().Unix()
+	m.DeadlineUnix = m.Deadline.Unix()
+	m.ClosedDateUnix = m.ClosedDate.Unix()
 }
 
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
@@ -1120,10 +1143,10 @@ func GetAllRepoMilestones(repoID int64) ([]*Milestone, error) {
 
 // GetMilestones returns a list of milestones of given repository and status.
 func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) {
-	miles := make([]*Milestone, 0, setting.IssuePagingNum)
+	miles := make([]*Milestone, 0, setting.UI.IssuePagingNum)
 	sess := x.Where("repo_id=? AND is_closed=?", repoID, isClosed)
 	if page > 0 {
-		sess = sess.Limit(setting.IssuePagingNum, (page-1)*setting.IssuePagingNum)
+		sess = sess.Limit(setting.UI.IssuePagingNum, (page-1)*setting.UI.IssuePagingNum)
 	}
 	return miles, sess.Find(&miles)
 }
@@ -1338,7 +1361,7 @@ type Attachment struct {
 }
 
 func (a *Attachment) BeforeInsert() {
-	a.CreatedUnix = time.Now().UTC().Unix()
+	a.CreatedUnix = time.Now().Unix()
 }
 
 func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {

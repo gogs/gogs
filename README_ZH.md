@@ -92,7 +92,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 感谢 [lavachen](http://www.lavachen.cn/) 和 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
 - 感谢 [DigitalOcean](https://www.digitalocean.com) 提供主站和体验站点的服务器赞助。
-- 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
+- 感谢 [KeyCDN](https://www.keycdn.com/) 和 [七牛云存储](http://www.qiniu.com/) 提供 CDN 服务赞助。
 
 ## 贡献成员
 

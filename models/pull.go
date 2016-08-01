@@ -65,7 +65,7 @@ type PullRequest struct {
 }
 
 func (pr *PullRequest) BeforeUpdate() {
-	pr.MergedUnix = pr.Merged.UTC().Unix()
+	pr.MergedUnix = pr.Merged.Unix()
 }
 
 // Note: don't try to get Pull because will end up recursive querying.
@@ -163,7 +163,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 
 	pr.HasMerged = true
 	pr.Merged = time.Now()
-	pr.MergerID = doer.Id
+	pr.MergerID = doer.ID
 	if _, err = sess.Id(pr.ID).AllCols().Update(pr); err != nil {
 		return fmt.Errorf("update pull request: %v", err)
 	}
@@ -236,7 +236,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		Before:     pr.MergeBase,
 		After:      pr.MergedCommitID,
 		CompareUrl: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
-		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullRepoLink()),
+		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullLink()),
 		Repo:       pr.BaseRepo.ComposePayload(),
 		Pusher: &api.PayloadAuthor{
 			Name:     pr.HeadRepo.MustOwner().DisplayName(),
@@ -245,7 +245,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		},
 		Sender: &api.PayloadUser{
 			UserName:  doer.Name,
-			ID:        doer.Id,
+			ID:        doer.ID,
 			AvatarUrl: setting.AppUrl + doer.RelAvatarLink(),
 		},
 	}
@@ -332,7 +332,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 
 	// Notify watchers.
 	act := &Action{
-		ActUserID:    pull.Poster.Id,
+		ActUserID:    pull.Poster.ID,
 		ActUserName:  pull.Poster.Name,
 		ActEmail:     pull.Poster.Email,
 		OpType:       ACTION_CREATE_PULL_REQUEST,
@@ -341,9 +341,6 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-	}
-	if err = notifyWatchers(sess, act); err != nil {
-		return err
 	}
 
 	pr.Index = pull.Index
@@ -364,7 +361,17 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return fmt.Errorf("insert pull repo: %v", err)
 	}
 
-	return sess.Commit()
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
+	if err = NotifyWatchers(act); err != nil {
+		log.Error(4, "NotifyWatchers: %v", err)
+	} else if err = pull.MailParticipants(); err != nil {
+		log.Error(4, "MailParticipants: %v", err)
+	}
+
+	return nil
 }
 
 // GetUnmergedPullRequest returnss a pull request that is open and has not been merged

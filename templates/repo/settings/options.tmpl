@@ -51,6 +51,13 @@
 							</div>
 						{{end}}
 						{{if .Repository.IsMirror}}
+							<div class="inline field {{if .Err_EnablePrune}}error{{end}}">
+							        <label>{{.i18n.Tr "repo.mirror_prune"}}</label>
+								<div class="ui checkbox">
+								        <input id="enable_prune" name="enable_prune" type="checkbox" {{if .MirrorEnablePrune}}checked{{end}}>
+								        <label>{{.i18n.Tr "repo.mirror_prune_desc"}}</label>
+								</div>
+							</div>
 							<div class="inline field {{if .Err_Interval}}error{{end}}">
 								<label for="interval">{{.i18n.Tr "repo.mirror_interval"}}</label>
 								<input id="interval" name="interval" type="number" value="{{.MirrorInterval}}">
@@ -80,20 +87,28 @@
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.wiki"}}</label>
 							<div class="ui checkbox">
-								<input name="enable_wiki" type="checkbox" {{if .Repository.EnableWiki}}checked{{end}}>
+								<input class="enable-system" name="enable_wiki" type="checkbox" data-target="#wiki_box" {{if .Repository.EnableWiki}}checked{{end}}>
 								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}</label>
 							</div>
 						</div>
-						<div class="inline field">
-							<div class="ui checkbox">
-								<input name="enable_external_wiki" type="checkbox" {{if .Repository.EnableExternalWiki}}checked{{end}}>
-								<label>{{.i18n.Tr "repo.settings.use_external_wiki"}}</label>
+						<div class="field {{if not .Repository.EnableWiki}}disabled{{end}}" id="wiki_box">
+							<div class="field">
+								<div class="ui radio checkbox">
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="false" data-target="#external_wiki_box" {{if not .Repository.EnableExternalWiki}}checked{{end}}/>
+									<label>{{.i18n.Tr "repo.settings.use_internal_wiki"}}</label>
+								</div>
 							</div>
-						</div>
-						<div class="field">
-							<label for="external_wiki_url">{{.i18n.Tr "repo.settings.external_wiki_url"}}</label>
-							<input id="external_wiki_url" name="external_wiki_url" type="url" value="{{.Repository.ExternalWikiURL}}">
-							<p class="help">{{.i18n.Tr "repo.settings.external_wiki_url_desc"}}</p>
+							<div class="field">
+								<div class="ui radio checkbox">
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-target="#external_wiki_box" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
+									<label>{{.i18n.Tr "repo.settings.use_external_wiki"}}</label>
+								</div>
+							</div>
+							<div class="field {{if not .Repository.EnableExternalWiki}}disabled{{end}}" id="external_wiki_box">
+								<label for="external_wiki_url">{{.i18n.Tr "repo.settings.external_wiki_url"}}</label>
+								<input id="external_wiki_url" name="external_wiki_url" type="url" value="{{.Repository.ExternalWikiURL}}">
+								<p class="help">{{.i18n.Tr "repo.settings.external_wiki_url_desc"}}</p>
+							</div>
 						</div>
 
 						<div class="ui divider"></div>
@@ -101,33 +116,43 @@
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.issues"}}</label>
 							<div class="ui checkbox">
-								<input name="enable_issues" type="checkbox" {{if .Repository.EnableIssues}}checked{{end}}>
+								<input class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" {{if .Repository.EnableIssues}}checked{{end}}>
 								<label>{{.i18n.Tr "repo.settings.issues_desc"}}</label>
 							</div>
 						</div>
-						<div class="inline field">
-							<div class="ui checkbox">
-								<input name="enable_external_tracker" type="checkbox" {{if .Repository.EnableExternalTracker}}checked{{end}}>
-								<label>{{.i18n.Tr "repo.settings.use_external_issue_tracker"}}</label>
-							</div>
-						</div>
-						<div class="field">
-							<label for="tracker_url_format">{{.i18n.Tr "repo.settings.tracker_url_format"}}</label>
-							<input id="tracker_url_format" name="tracker_url_format" type="url" value="{{.Repository.ExternalTrackerFormat}}" placeholder="e.g. https://github.com/{user}/{repo}/issues/{index}">
-							<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2html}}</p>
-						</div>
-						<div class="inline fields">
-							<label for="issue_style">{{.i18n.Tr "repo.settings.tracker_issue_style"}}</label>
+						<div class="field {{if not .Repository.EnableIssues}}disabled{{end}}" id="issue_box">
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="numeric"  {{if eq .Repository.ExternalTrackerStyle "numeric"}}checked=""{{end}}/>
-									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.numeric" | Safe}}</label>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="false" data-target="#external_issue_box" {{if not .Repository.EnableExternalTracker}}checked{{end}}/>
+									<label>{{.i18n.Tr "repo.settings.use_internal_issue_tracker"}}</label>
 								</div>
 							</div>
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="alphanumeric"  {{if eq .Repository.ExternalTrackerStyle "alphanumeric"}}checked=""{{end}}/>
-									<label>{{.i18n.Tr "repo.settings.tracker_issue_style.alphanumeric" | Safe}}</label>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-target="#external_issue_box" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
+									<label>{{.i18n.Tr "repo.settings.use_external_issue_tracker"}}</label>
+								</div>
+							</div>
+							<div class="field {{if not .Repository.EnableExternalTracker}}disabled{{end}}" id="external_issue_box">
+								<div class="field">
+									<label for="tracker_url_format">{{.i18n.Tr "repo.settings.tracker_url_format"}}</label>
+									<input id="tracker_url_format" name="tracker_url_format" type="url" value="{{.Repository.ExternalTrackerFormat}}" placeholder="e.g. https://github.com/{user}/{repo}/issues/{index}">
+									<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2html}}</p>
+								</div>
+								<div class="inline fields">
+									<label for="issue_style">{{.i18n.Tr "repo.settings.tracker_issue_style"}}</label>
+									<div class="field">
+										<div class="ui radio checkbox">
+											<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="numeric"  {{if eq .Repository.ExternalTrackerStyle "numeric"}}checked=""{{end}}/>
+											<label>{{.i18n.Tr "repo.settings.tracker_issue_style.numeric"}} <span class="ui light grey text">(#1234)</span></label>
+										</div>
+									</div>
+									<div class="field">
+										<div class="ui radio checkbox">
+											<input class="hidden" tabindex="0" name="tracker_issue_style" type="radio" value="alphanumeric"  {{if eq .Repository.ExternalTrackerStyle "alphanumeric"}}checked=""{{end}}/>
+											<label>{{.i18n.Tr "repo.settings.tracker_issue_style.alphanumeric"}} <span class="ui light grey text">(ABC-123, DEFG-234)</span></label>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -285,12 +310,10 @@
 		</div>
 		<div class="content">
 			<div class="ui warning message text left">
-				{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}} <br>
+				{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}}<br>
 				{{.i18n.Tr "repo.settings.delete_notices_2" | Safe}}
 				{{if .Repository.NumForks}}<br>
-				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}} <br>
-				{{.i18n.Tr "repo.settings.delete_notices_fork_2" | Safe}} <br>
-				{{.i18n.Tr "repo.settings.delete_notices_fork_3" | Safe}}
+				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}}
 				{{end}}
 			</div>
 			<form class="ui form" action="{{.Link}}" method="post">

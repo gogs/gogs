@@ -14,7 +14,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers"
 )
@@ -34,7 +33,7 @@ func Users(ctx *context.Context) {
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
-		PageSize: setting.AdminUserPagingNum,
+		PageSize: setting.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
 	})
@@ -115,13 +114,13 @@ func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
 	}
 	log.Trace("Account created by admin (%s): %s", ctx.User.Name, u.Name)
 
-	// Send e-mail notification.
+	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(ctx.Context, u)
+		models.SendRegisterNotifyMail(ctx.Context, u)
 	}
 
 	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
-	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
+	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.ID))
 }
 
 func prepareUserInfo(ctx *context.Context) *models.User {
@@ -207,6 +206,7 @@ func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
 	u.AllowImportLocal = form.AllowImportLocal
+	u.ProhibitLogin = form.ProhibitLogin
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {

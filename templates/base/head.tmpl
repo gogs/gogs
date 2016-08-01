@@ -19,7 +19,7 @@
 	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
 	<script src="{{AppSubUrl}}/js/jquery.are-you-sure.js"></script>
 	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-3.5.0/octicons.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-4.3.0/octicons.min.css">
 
 	{{if .RequireSimpleMDE}}
 		<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.css">
@@ -77,13 +77,13 @@
 											</span>
 											<div class="menu">
 												<a class="item" href="{{AppSubUrl}}/repo/create">
-													<i class="icon octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
+													<i class="octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
 												</a>
 												<a class="item" href="{{AppSubUrl}}/repo/migrate">
-													<i class="icon octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
+													<i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
 												</a>
 												<a class="item" href="{{AppSubUrl}}/org/create">
-													<i class="icon octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
+													<i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
 												</a>
 											</div><!-- end content create new menu -->
 										</div><!-- end dropdown menu create new -->
@@ -101,15 +101,15 @@
 
 												<div class="divider"></div>
 												<a class="item" href="{{AppSubUrl}}/{{.SignedUser.Name}}">
-													<i class="icon octicon octicon-person"></i>
+													<i class="octicon octicon-person"></i>
 													{{.i18n.Tr "your_profile"}}<!-- Your profile -->
 												</a>
 												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubUrl}}/user/settings">
-													<i class="icon octicon octicon-settings"></i>
+													<i class="octicon octicon-settings"></i>
 													{{.i18n.Tr "your_settings"}}<!-- Your settings -->
 												</a>
 												<a class="item" target="_blank" href="http://gogs.io/docs" rel="noreferrer">
-													<i class="icon octicon octicon-question"></i>
+													<i class="octicon octicon-question"></i>
 													{{.i18n.Tr "help"}}<!-- Help -->
 												</a>
 												{{if .IsAdmin}}
@@ -123,7 +123,7 @@
 
 												<div class="divider"></div>
 												<a class="item" href="{{AppSubUrl}}/user/logout">
-													<i class="icon octicon octicon-sign-out"></i>
+													<i class="octicon octicon-sign-out"></i>
 													{{.i18n.Tr "sign_out"}}<!-- Sign Out -->
 												</a>
 											</div><!-- end content avatar menu -->
@@ -136,11 +136,11 @@
 									<div class="right menu">
 										{{if .ShowRegistrationButton}}
 											<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubUrl}}/user/sign_up">
-												<i class="icon octicon octicon-person-add"></i> {{.i18n.Tr "register"}}
+												<i class="octicon octicon-person"></i> {{.i18n.Tr "register"}}
 											</a>
 										{{end}}
 										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubUrl}}/user/login">
-											<i class="icon octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
+											<i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
 										</a>
 									</div><!-- end anonymous right menu -->
 

@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
@@ -185,12 +184,12 @@ type Repository struct {
 }
 
 func (repo *Repository) BeforeInsert() {
-	repo.CreatedUnix = time.Now().UTC().Unix()
+	repo.CreatedUnix = time.Now().Unix()
 	repo.UpdatedUnix = repo.CreatedUnix
 }
 
 func (repo *Repository) BeforeUpdate() {
-	repo.UpdatedUnix = time.Now().UTC().Unix()
+	repo.UpdatedUnix = time.Now().Unix()
 }
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
@@ -346,11 +345,11 @@ func (repo *Repository) GitConfigPath() string {
 	return filepath.Join(repo.RepoPath(), "config")
 }
 
-func (repo *Repository) RepoLink() string {
+func (repo *Repository) Link() string {
 	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
-func (repo *Repository) RepoRelLink() string {
+func (repo *Repository) RelLink() string {
 	return "/" + repo.MustOwner().Name + "/" + repo.Name
 }
 
@@ -358,7 +357,7 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
-func (repo *Repository) FullRepoLink() string {
+func (repo *Repository) FullLink() string {
 	return setting.AppUrl + repo.MustOwner().Name + "/" + repo.Name
 }
 
@@ -459,7 +458,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 	return &api.PayloadRepo{
 		ID:          repo.ID,
 		Name:        repo.Name,
-		URL:         repo.FullRepoLink(),
+		URL:         repo.FullLink(),
 		SSHURL:      cl.SSH,
 		CloneURL:    cl.HTTPS,
 		Description: repo.Description,
@@ -477,7 +476,7 @@ func (repo *Repository) ComposePayload() *api.PayloadRepo {
 
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 	has, err := e.Get(&Repository{
-		OwnerID:   u.Id,
+		OwnerID:   u.ID,
 		LowerName: strings.ToLower(repoName),
 	})
 	return has && com.IsDir(RepoPath(u.Name, repoName)), err
@@ -517,40 +516,13 @@ func (repo *Repository) CloneLink() (cl *CloneLink) {
 	return repo.cloneLink(false)
 }
 
-var (
-	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
-	reservedPatterns = []string{"*.git", "*.keys", "*.wiki"}
-)
-
-// IsUsableName checks if name is reserved or pattern of name is not allowed.
-func IsUsableName(name string) error {
-	name = strings.TrimSpace(strings.ToLower(name))
-	if utf8.RuneCountInString(name) == 0 {
-		return ErrNameEmpty
-	}
-
-	for i := range reservedNames {
-		if name == reservedNames[i] {
-			return ErrNameReserved{name}
-		}
-	}
-
-	for _, pat := range reservedPatterns {
-		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
-			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
-			return ErrNamePatternNotAllowed{pat}
-		}
-	}
-
-	return nil
-}
-
 // Mirror represents a mirror information of repository.
 type Mirror struct {
-	ID       int64 `xorm:"pk autoincr"`
-	RepoID   int64
-	Repo     *Repository `xorm:"-"`
-	Interval int         // Hour.
+	ID          int64 `xorm:"pk autoincr"`
+	RepoID      int64
+	Repo        *Repository `xorm:"-"`
+	Interval    int         // Hour.
+	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
 
 	Updated        time.Time `xorm:"-"`
 	UpdatedUnix    int64
@@ -561,12 +533,12 @@ type Mirror struct {
 }
 
 func (m *Mirror) BeforeInsert() {
-	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
 func (m *Mirror) BeforeUpdate() {
-	m.UpdatedUnix = time.Now().UTC().Unix()
-	m.NextUpdateUnix = m.NextUpdate.UTC().Unix()
+	m.UpdatedUnix = time.Now().Unix()
+	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
 func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
@@ -656,7 +628,7 @@ func GetMirror(repoId int64) (*Mirror, error) {
 }
 
 func updateMirror(e Engine, m *Mirror) error {
-	_, err := e.Id(m.ID).Update(m)
+	_, err := e.Id(m.ID).AllCols().Update(m)
 	return err
 }
 
@@ -805,9 +777,10 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	if opts.IsMirror {
 		if _, err = x.InsertOne(&Mirror{
-			RepoID:     repo.ID,
-			Interval:   24,
-			NextUpdate: time.Now().Add(24 * time.Hour),
+			RepoID:      repo.ID,
+			Interval:    24,
+			EnablePrune: true,
+			NextUpdate:  time.Now().Add(24 * time.Hour),
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
@@ -1016,8 +989,17 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	return nil
 }
 
+var (
+	reservedRepoNames    = []string{".", ".."}
+	reservedRepoPatterns = []string{"*.git", "*.wiki"}
+)
+
+func IsUsableRepoName(name string) error {
+	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
+}
+
 func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
-	if err = IsUsableName(repo.Name); err != nil {
+	if err = IsUsableRepoName(repo.Name); err != nil {
 		return err
 	}
 
@@ -1054,7 +1036,7 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 		}
 	}
 
-	if err = watchRepo(e, u.Id, repo.ID, true); err != nil {
+	if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
 	} else if err = newRepoAction(e, u, repo); err != nil {
 		return fmt.Errorf("newRepoAction: %v", err)
@@ -1070,7 +1052,7 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 	}
 
 	repo := &Repository{
-		OwnerID:      u.Id,
+		OwnerID:      u.ID,
 		Owner:        u,
 		Name:         opts.Name,
 		LowerName:    strings.ToLower(opts.Name),
@@ -1114,11 +1096,14 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 	return repo, sess.Commit()
 }
 
-func countRepositories(showPrivate bool) int64 {
-	sess := x.NewSession()
+func countRepositories(userID int64, private bool) int64 {
+	sess := x.Where("id > 0")
 
-	if !showPrivate {
-		sess.Where("is_private=?", false)
+	if userID > 0 {
+		sess.And("owner_id = ?", userID)
+	}
+	if !private {
+		sess.And("is_private=?", false)
 	}
 
 	count, err := sess.Count(new(Repository))
@@ -1129,13 +1114,17 @@ func countRepositories(showPrivate bool) int64 {
 }
 
 // CountRepositories returns number of repositories.
-func CountRepositories() int64 {
-	return countRepositories(true)
+// Argument private only takes effect when it is false,
+// set it true to count all repositories.
+func CountRepositories(private bool) int64 {
+	return countRepositories(-1, private)
 }
 
-// CountPublicRepositories returns number of public repositories.
-func CountPublicRepositories() int64 {
-	return countRepositories(false)
+// CountUserRepositories returns number of repositories user owns.
+// Argument private only takes effect when it is false,
+// set it true to count all repositories.
+func CountUserRepositories(userID int64, private bool) int64 {
+	return countRepositories(userID, private)
 }
 
 func Repositories(page, pageSize int) (_ []*Repository, err error) {
@@ -1189,7 +1178,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 
 	// Note: we have to set value here to make sure recalculate accesses is based on
 	//	new owner.
-	repo.OwnerID = newOwner.Id
+	repo.OwnerID = newOwner.ID
 	repo.Owner = newOwner
 
 	// Update repository.
@@ -1206,10 +1195,10 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	// Dummy object.
 	collaboration := &Collaboration{RepoID: repo.ID}
 	for _, c := range collaborators {
-		collaboration.UserID = c.Id
-		if c.Id == newOwner.Id || newOwner.IsOrgMember(c.Id) {
+		collaboration.UserID = c.ID
+		if c.ID == newOwner.ID || newOwner.IsOrgMember(c.ID) {
 			if _, err = sess.Delete(collaboration); err != nil {
-				return fmt.Errorf("remove collaborator '%d': %v", c.Id, err)
+				return fmt.Errorf("remove collaborator '%d': %v", c.ID, err)
 			}
 		}
 	}
@@ -1250,19 +1239,20 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	}
 
 	// Update repository count.
-	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos+1 WHERE id=?", newOwner.Id); err != nil {
+	if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos+1 WHERE id=?", newOwner.ID); err != nil {
 		return fmt.Errorf("increase new owner repository count: %v", err)
-	} else if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", owner.Id); err != nil {
+	} else if _, err = sess.Exec("UPDATE `user` SET num_repos=num_repos-1 WHERE id=?", owner.ID); err != nil {
 		return fmt.Errorf("decrease old owner repository count: %v", err)
 	}
 
-	if err = watchRepo(sess, newOwner.Id, repo.ID, true); err != nil {
+	if err = watchRepo(sess, newOwner.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
 	} else if err = transferRepoAction(sess, u, owner, newOwner, repo); err != nil {
 		return fmt.Errorf("transferRepoAction: %v", err)
 	}
 
 	// Rename remote repository to new path and delete local copy.
+	os.MkdirAll(UserPath(newOwner.Name), os.ModePerm)
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
@@ -1284,7 +1274,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
-	if err = IsUsableName(newRepoName); err != nil {
+	if err = IsUsableRepoName(newRepoName); err != nil {
 		return err
 	}
 
@@ -1295,7 +1285,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		return ErrRepoAlreadyExist{u.Name, newRepoName}
 	}
 
-	repo, err := GetRepositoryByName(u.Id, oldRepoName)
+	repo, err := GetRepositoryByName(u.ID, oldRepoName)
 	if err != nil {
 		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
@@ -1487,20 +1477,8 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	if repo.NumForks > 0 {
-		if repo.IsPrivate {
-			forkRepos, err := GetRepositoriesByForkID(repo.ID)
-			if err != nil {
-				return fmt.Errorf("getRepositoriesByForkID: %v", err)
-			}
-			for i := range forkRepos {
-				if err = DeleteRepository(forkRepos[i].OwnerID, forkRepos[i].ID); err != nil {
-					log.Error(4, "DeleteRepository [%d]: %v", forkRepos[i].ID, err)
-				}
-			}
-		} else {
-			if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
-				log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
-			}
+		if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
+			log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
 		}
 	}
 
@@ -1521,7 +1499,7 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 		return nil, err
 	}
 
-	return GetRepositoryByName(user.Id, repoName)
+	return GetRepositoryByName(user.ID, repoName)
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
@@ -1555,16 +1533,26 @@ func GetRepositoryByID(id int64) (*Repository, error) {
 	return getRepositoryByID(x, id)
 }
 
-// GetRepositories returns a list of repositories of given user.
-func GetRepositories(uid int64, private bool) ([]*Repository, error) {
-	repos := make([]*Repository, 0, 10)
-	sess := x.Desc("updated_unix")
-
+// GetUserRepositories returns a list of repositories of given user.
+func GetUserRepositories(userID int64, private bool, page, pageSize int) ([]*Repository, error) {
+	sess := x.Where("owner_id = ?", userID).Desc("updated_unix")
 	if !private {
-		sess.Where("is_private=?", false)
+		sess.And("is_private=?", false)
 	}
 
-	return repos, sess.Find(&repos, &Repository{OwnerID: uid})
+	if page <= 0 {
+		page = 1
+	}
+	sess.Limit(pageSize, (page-1)*pageSize)
+
+	repos := make([]*Repository, 0, pageSize)
+	return repos, sess.Find(&repos)
+}
+
+// GetUserRepositories returns a list of mirror repositories of given user.
+func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
+	repos := make([]*Repository, 0, 10)
+	return repos, x.Where("owner_id = ?", userID).And("is_mirror = ?", true).Find(&repos)
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
@@ -1574,7 +1562,7 @@ func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err 
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {
-	return x.Count(&Repository{OwnerID: u.Id})
+	return x.Count(&Repository{OwnerID: u.ID})
 }
 
 // GetRepositoryCount returns the total number of repositories of user.
@@ -1758,12 +1746,8 @@ func MirrorUpdate() {
 	log.Trace("Doing: MirrorUpdate")
 
 	mirrors := make([]*Mirror, 0, 10)
-	if err := x.Iterate(new(Mirror), func(idx int, bean interface{}) error {
+	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
-		if m.NextUpdate.After(time.Now()) {
-			return nil
-		}
-
 		if m.Repo == nil {
 			log.Error(4, "Disconnected mirror repository found: %d", m.ID)
 			return nil
@@ -1772,9 +1756,15 @@ func MirrorUpdate() {
 		repoPath := m.Repo.RepoPath()
 		wikiPath := m.Repo.WikiPath()
 		timeout := time.Duration(setting.Git.Timeout.Mirror) * time.Second
+
+		gitArgs := []string{"remote", "update"}
+		if m.EnablePrune {
+			gitArgs = append(gitArgs, "--prune")
+		}
+
 		if _, stderr, err := process.ExecDir(
 			timeout, repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update", "--prune"); err != nil {
+			"git", gitArgs...); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
@@ -1967,6 +1957,74 @@ func CheckRepoStats() {
 	// ***** END: Repository.NumForks *****
 }
 
+type RepositoryList []*Repository
+
+func (repos RepositoryList) loadAttributes(e Engine) error {
+	if len(repos) == 0 {
+		return nil
+	}
+
+	// Load owners.
+	set := make(map[int64]*User)
+	for i := range repos {
+		set[repos[i].OwnerID] = nil
+	}
+	userIDs := make([]int64, 0, len(set))
+	for userID := range set {
+		userIDs = append(userIDs, userID)
+	}
+	users := make([]*User, 0, len(userIDs))
+	if err := e.Where("id > 0").In("id", userIDs).Find(&users); err != nil {
+		return fmt.Errorf("find users: %v", err)
+	}
+	for i := range users {
+		set[users[i].ID] = users[i]
+	}
+	for i := range repos {
+		repos[i].Owner = set[repos[i].OwnerID]
+	}
+	return nil
+}
+
+func (repos RepositoryList) LoadAttributes() error {
+	return repos.loadAttributes(x)
+}
+
+type MirrorRepositoryList []*Repository
+
+func (repos MirrorRepositoryList) loadAttributes(e Engine) error {
+	if len(repos) == 0 {
+		return nil
+	}
+
+	// Load mirrors.
+	repoIDs := make([]int64, 0, len(repos))
+	for i := range repos {
+		if !repos[i].IsMirror {
+			continue
+		}
+
+		repoIDs = append(repoIDs, repos[i].ID)
+	}
+	mirrors := make([]*Mirror, 0, len(repoIDs))
+	if err := e.Where("id > 0").In("repo_id", repoIDs).Find(&mirrors); err != nil {
+		return fmt.Errorf("find mirrors: %v", err)
+	}
+
+	set := make(map[int64]*Mirror)
+	for i := range mirrors {
+		set[mirrors[i].RepoID] = mirrors[i]
+	}
+	for i := range repos {
+		repos[i].Mirror = set[repos[i].ID]
+	}
+	return nil
+}
+
+func (repos MirrorRepositoryList) LoadAttributes() error {
+	return repos.loadAttributes(x)
+}
+
 //  __      __         __         .__
 // /  \    /  \_____ _/  |_  ____ |  |__
 // \   \/\/   /\__  \\   __\/ ___\|  |  \
@@ -1981,40 +2039,40 @@ type Watch struct {
 	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
 
-func isWatching(e Engine, uid, repoId int64) bool {
-	has, _ := e.Get(&Watch{0, uid, repoId})
+func isWatching(e Engine, userID, repoID int64) bool {
+	has, _ := e.Get(&Watch{0, userID, repoID})
 	return has
 }
 
 // IsWatching checks if user has watched given repository.
-func IsWatching(uid, repoId int64) bool {
-	return isWatching(x, uid, repoId)
+func IsWatching(userID, repoID int64) bool {
+	return isWatching(x, userID, repoID)
 }
 
-func watchRepo(e Engine, uid, repoId int64, watch bool) (err error) {
+func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
 	if watch {
-		if isWatching(e, uid, repoId) {
+		if isWatching(e, userID, repoID) {
 			return nil
 		}
-		if _, err = e.Insert(&Watch{RepoID: repoId, UserID: uid}); err != nil {
+		if _, err = e.Insert(&Watch{RepoID: repoID, UserID: userID}); err != nil {
 			return err
 		}
-		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoId)
+		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches + 1 WHERE id = ?", repoID)
 	} else {
-		if !isWatching(e, uid, repoId) {
+		if !isWatching(e, userID, repoID) {
 			return nil
 		}
-		if _, err = e.Delete(&Watch{0, uid, repoId}); err != nil {
+		if _, err = e.Delete(&Watch{0, userID, repoID}); err != nil {
 			return err
 		}
-		_, err = e.Exec("UPDATE `repository` SET num_watches=num_watches-1 WHERE id=?", repoId)
+		_, err = e.Exec("UPDATE `repository` SET num_watches = num_watches - 1 WHERE id = ?", repoID)
 	}
 	return err
 }
 
 // Watch or unwatch repository.
-func WatchRepo(uid, repoId int64, watch bool) (err error) {
-	return watchRepo(x, uid, repoId, watch)
+func WatchRepo(userID, repoID int64, watch bool) (err error) {
+	return watchRepo(x, userID, repoID, watch)
 }
 
 func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
@@ -2085,34 +2143,34 @@ type Star struct {
 }
 
 // Star or unstar repository.
-func StarRepo(uid, repoId int64, star bool) (err error) {
+func StarRepo(userID, repoID int64, star bool) (err error) {
 	if star {
-		if IsStaring(uid, repoId) {
+		if IsStaring(userID, repoID) {
 			return nil
 		}
-		if _, err = x.Insert(&Star{UID: uid, RepoID: repoId}); err != nil {
+		if _, err = x.Insert(&Star{UID: userID, RepoID: repoID}); err != nil {
 			return err
-		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoId); err != nil {
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoID); err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", uid)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars + 1 WHERE id = ?", userID)
 	} else {
-		if !IsStaring(uid, repoId) {
+		if !IsStaring(userID, repoID) {
 			return nil
 		}
-		if _, err = x.Delete(&Star{0, uid, repoId}); err != nil {
+		if _, err = x.Delete(&Star{0, userID, repoID}); err != nil {
 			return err
-		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoId); err != nil {
+		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars - 1 WHERE id = ?", repoID); err != nil {
 			return err
 		}
-		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars - 1 WHERE id = ?", uid)
+		_, err = x.Exec("UPDATE `user` SET num_stars = num_stars - 1 WHERE id = ?", userID)
 	}
 	return err
 }
 
 // IsStaring checks if user has starred given repository.
-func IsStaring(uid, repoId int64) bool {
-	has, _ := x.Get(&Star{0, uid, repoId})
+func IsStaring(userID, repoID int64) bool {
+	has, _ := x.Get(&Star{0, userID, repoID})
 	return has
 }
 
@@ -2143,7 +2201,7 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
 
 func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
 	repo := &Repository{
-		OwnerID:       u.Id,
+		OwnerID:       u.ID,
 		Owner:         u,
 		Name:          name,
 		LowerName:     strings.ToLower(name),

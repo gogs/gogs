@@ -210,12 +210,12 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		return "", "", "", "", false, false
 	}
 
-	username_attr := sr.Entries[0].GetAttributeValue(ls.AttributeUsername)
-	name_attr := sr.Entries[0].GetAttributeValue(ls.AttributeName)
-	sn_attr := sr.Entries[0].GetAttributeValue(ls.AttributeSurname)
-	mail_attr := sr.Entries[0].GetAttributeValue(ls.AttributeMail)
+	username := sr.Entries[0].GetAttributeValue(ls.AttributeUsername)
+	firstname := sr.Entries[0].GetAttributeValue(ls.AttributeName)
+	surname := sr.Entries[0].GetAttributeValue(ls.AttributeSurname)
+	mail := sr.Entries[0].GetAttributeValue(ls.AttributeMail)
 
-	admin_attr := false
+	isAdmin := false
 	if len(ls.AdminFilter) > 0 {
 		log.Trace("Checking admin with filter %s and base %s", ls.AdminFilter, userDN)
 		search = ldap.NewSearchRequest(
@@ -229,7 +229,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		} else if len(sr.Entries) < 1 {
 			log.Error(4, "LDAP Admin Search failed")
 		} else {
-			admin_attr = true
+			isAdmin = true
 		}
 	}
 
@@ -241,5 +241,5 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		}
 	}
 
-	return username_attr, name_attr, sn_attr, mail_attr, admin_attr, true
+	return username, firstname, surname, mail, isAdmin, true
 }

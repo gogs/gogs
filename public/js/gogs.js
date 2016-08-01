@@ -250,6 +250,22 @@ function initRepository() {
                 $prompt_span.hide();
             }
         });
+
+        // Enable or select internal/external wiki system and issue tracker.
+        $('.enable-system').change(function () {
+            if (this.checked) {
+                $($(this).data('target')).removeClass('disabled');
+            } else {
+                $($(this).data('target')).addClass('disabled');
+            }
+        });
+        $('.enable-system-radio').change(function () {
+            if (this.value == 'false') {
+                $($(this).data('target')).addClass('disabled');
+            } else if (this.value == 'true') {
+                $($(this).data('target')).removeClass('disabled');
+            }
+        });
     }
 
     // Labels
@@ -342,7 +358,7 @@ function initRepository() {
 
         // Edit issue or comment content
         $('.edit-content').click(function () {
-            var $segment = $(this).parent().parent().next();
+            var $segment = $(this).parent().parent().parent().next();
             var $edit_content_zone = $segment.find('.edit-content-zone');
             var $render_content = $segment.find('.render-content');
             var $raw_content = $segment.find('.raw-content');
@@ -404,6 +420,19 @@ function initRepository() {
             return false;
         });
 
+        // Delete comment
+        $('.delete-comment').click(function () {
+            var $this = $(this);
+            if (confirm($this.data('locale'))) {
+                $.post($this.data('url'), {
+                    "_csrf": csrf
+                }).success(function () {
+                    $('#' + $this.data('comment-id')).remove();
+                });
+            }
+            return false;
+        });
+
         // Change status
         var $status_btn = $('#status-button');
         $('#content').keyup(function () {
@@ -458,11 +487,11 @@ function initRepository() {
     }
 }
 
-function initRepositoryCollaboration(){
+function initRepositoryCollaboration() {
     console.log('initRepositoryCollaboration');
 
 // Change collaborator access mode
-    $('.access-mode.menu .item').click(function(){
+    $('.access-mode.menu .item').click(function () {
         var $menu = $(this).parent();
         $.post($menu.data('url'), {
             "_csrf": csrf,
@@ -958,11 +987,11 @@ $(document).ready(function () {
     $('.show-modal.button').click(function () {
         $($(this).data('modal')).modal('show');
     });
-    $('.delete-post.button').click(function(){
+    $('.delete-post.button').click(function () {
         var $this = $(this);
-        $.post($this.data('request-url'),{
+        $.post($this.data('request-url'), {
             "_csrf": csrf
-        }).done(function(){
+        }).done(function () {
             window.location.href = $this.data('done-url');
         });
     });
@@ -1116,6 +1145,7 @@ $(window).load(function () {
     }
 });
 
-$(function() {
-	$('form').areYouSure();
+$(function () {
+    if ($('.user.signin').length > 0) return;
+    $('form').areYouSure();
 });

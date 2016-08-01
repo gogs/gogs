@@ -122,7 +122,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Repo.Owner = owner
 
 		// Get repository.
-		repo, err := models.GetRepositoryByName(owner.Id, repoName)
+		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			if models.IsErrRepoNotExist(err) {
 				ctx.Handle(404, "GetRepositoryByName", err)
@@ -160,6 +160,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 				ctx.Handle(500, "GetMirror", err)
 				return
 			}
+			ctx.Data["MirrorEnablePrune"] = ctx.Repo.Mirror.EnablePrune
 			ctx.Data["MirrorInterval"] = ctx.Repo.Mirror.Interval
 			ctx.Data["Mirror"] = ctx.Repo.Mirror
 		}
@@ -173,7 +174,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink = repo.RepoLink()
+		ctx.Repo.RepoLink = repo.Link()
 		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
 		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 
@@ -198,8 +199,8 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
 		if ctx.IsSigned {
-			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.Id, repo.ID)
-			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.Id, repo.ID)
+			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.ID, repo.ID)
+			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.ID, repo.ID)
 		}
 
 		// repo is bare and display enable

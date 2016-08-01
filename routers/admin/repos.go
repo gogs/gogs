@@ -26,7 +26,7 @@ func Repos(ctx *context.Context) {
 		Counter:  models.CountRepositories,
 		Ranger:   models.Repositories,
 		Private:  true,
-		PageSize: setting.AdminRepoPagingNum,
+		PageSize: setting.UI.Admin.RepoPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  REPOS,
 	})
@@ -39,7 +39,7 @@ func DeleteRepo(ctx *context.Context) {
 		return
 	}
 
-	if err := models.DeleteRepository(repo.MustOwner().Id, repo.ID); err != nil {
+	if err := models.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
 		ctx.Handle(500, "DeleteRepository", err)
 		return
 	}

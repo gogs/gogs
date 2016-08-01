@@ -17,7 +17,7 @@
 								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/remove?repoid={{.ID}}">{{$.i18n.Tr "org.teams.remove_repo"}}</a>
 							{{end}}
 							<a class="member" href="{{AppSubUrl}}/{{$.Org.Name}}/{{.Name}}">
-								<i class="icon octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+								<i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
 								<strong>{{$.Org.Name}}/{{.Name}}</strong>
 							</a>
 						</div>
@@ -28,7 +28,7 @@
 						<form class="ui form" id="add-repo-form" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/repo/add" method="post">
 							{{.CsrfTokenHtml}}
 							<div class="inline field ui left">
-								<div id="search-repo-box" data-uid="{{.Org.Id}}">
+								<div id="search-repo-box" data-uid="{{.Org.ID}}">
 									<div class="ui input">
 										<input class="prompt" name="repo_name" placeholder="{{.i18n.Tr "org.teams.search_repo_placeholder"}}" autocomplete="off" required>
 									</div>

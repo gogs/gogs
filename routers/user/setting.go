@@ -17,7 +17,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -132,7 +131,7 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 		// generate a random one when needed.
 		if form.Enable && !com.IsFile(ctxUser.CustomAvatarPath()) {
 			if err := ctxUser.GenerateRandomAvatar(); err != nil {
-				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.Id, err)
+				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.ID, err)
 			}
 		}
 	}
@@ -200,7 +199,7 @@ func SettingsEmails(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsEmails"] = true
 
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
 		return
@@ -227,7 +226,7 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 	}
 
 	// Add Email address.
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
 		return
@@ -239,12 +238,12 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 		return
 	}
 
-	e := &models.EmailAddress{
-		UID:         ctx.User.Id,
+	email := &models.EmailAddress{
+		UID:         ctx.User.ID,
 		Email:       form.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
-	if err := models.AddEmailAddress(e); err != nil {
+	if err := models.AddEmailAddress(email); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &form)
 			return
@@ -253,19 +252,19 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 		return
 	}
 
-	// Send confirmation e-mail
+	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmailMail(ctx.Context, ctx.User, e)
+		models.SendActivateEmailMail(ctx.Context, ctx.User, email)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 		}
-		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", e.Email, setting.Service.ActiveCodeLives/60))
+		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
 	}
 
-	log.Trace("Email address added: %s", e.Email)
+	log.Trace("Email address added: %s", email.Email)
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
 }
 
@@ -286,7 +285,7 @@ func SettingsSSHKeys(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	keys, err := models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
 		return
@@ -300,7 +299,7 @@ func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	keys, err := models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
 		return
@@ -323,7 +322,7 @@ func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	if _, err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+	if _, err = models.AddPublicKey(ctx.User.ID, form.Title, content); err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
@@ -358,7 +357,7 @@ func SettingsApplications(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
-	tokens, err := models.ListAccessTokens(ctx.User.Id)
+	tokens, err := models.ListAccessTokens(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListAccessTokens", err)
 		return
@@ -373,7 +372,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	ctx.Data["PageIsSettingsApplications"] = true
 
 	if ctx.HasError() {
-		tokens, err := models.ListAccessTokens(ctx.User.Id)
+		tokens, err := models.ListAccessTokens(ctx.User.ID)
 		if err != nil {
 			ctx.Handle(500, "ListAccessTokens", err)
 			return
@@ -384,7 +383,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	}
 
 	t := &models.AccessToken{
-		UID:  ctx.User.Id,
+		UID:  ctx.User.ID,
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {

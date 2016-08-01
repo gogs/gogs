@@ -88,6 +88,7 @@ type RepoSettingForm struct {
 	Interval      int
 	MirrorAddress string
 	Private       bool
+	EnablePrune   bool
 
 	// Advanced settings
 	EnableWiki            bool
@@ -142,7 +143,7 @@ func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 }
 
 type NewSlackHookForm struct {
-	PayloadURL string `binding:"Required;Url`
+	PayloadURL string `binding:"Required;Url"`
 	Channel    string `binding:"Required"`
 	Username   string
 	IconURL    string

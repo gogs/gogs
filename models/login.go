@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
 
@@ -119,12 +120,12 @@ type LoginSource struct {
 }
 
 func (s *LoginSource) BeforeInsert() {
-	s.CreatedUnix = time.Now().UTC().Unix()
+	s.CreatedUnix = time.Now().Unix()
 	s.UpdatedUnix = s.CreatedUnix
 }
 
 func (s *LoginSource) BeforeUpdate() {
-	s.UpdatedUnix = time.Now().UTC().Unix()
+	s.UpdatedUnix = time.Now().Unix()
 }
 
 // Cell2Int64 converts a xorm.Cell type to int64,
@@ -280,7 +281,7 @@ func DeleteSource(source *LoginSource) error {
 func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource, autoRegister bool) (*User, error) {
 	cfg := source.Cfg.(*LDAPConfig)
 	directBind := (source.Type == LOGIN_DLDAP)
-	name, fn, sn, mail, admin, logged := cfg.SearchEntry(loginName, passwd, directBind)
+	username, fn, sn, mail, isAdmin, logged := cfg.SearchEntry(loginName, passwd, directBind)
 	if !logged {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{0, loginName}
@@ -291,37 +292,42 @@ func LoginUserLDAPSource(u *User, loginName, passwd string, source *LoginSource,
 	}
 
 	// Fallback.
-	if len(name) == 0 {
-		name = loginName
+	if len(username) == 0 {
+		username = loginName
 	}
+	// Validate username make sure it satisfies requirement.
+	if binding.AlphaDashDotPattern.MatchString(username) {
+		return nil, fmt.Errorf("Invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", username)
+	}
+
 	if len(mail) == 0 {
-		mail = fmt.Sprintf("%s@localhost", name)
+		mail = fmt.Sprintf("%s@localhost", username)
 	}
 
 	u = &User{
-		LowerName:   strings.ToLower(name),
-		Name:        name,
-		FullName:    composeFullName(fn, sn, name),
+		LowerName:   strings.ToLower(username),
+		Name:        username,
+		FullName:    composeFullName(fn, sn, username),
 		LoginType:   source.Type,
 		LoginSource: source.ID,
 		LoginName:   loginName,
 		Email:       mail,
-		IsAdmin:     admin,
+		IsAdmin:     isAdmin,
 		IsActive:    true,
 	}
 	return u, CreateUser(u)
 }
 
-func composeFullName(firstName, surename, userName string) string {
+func composeFullName(firstname, surname, username string) string {
 	switch {
-	case len(firstName) == 0 && len(surename) == 0:
-		return userName
-	case len(firstName) == 0:
-		return surename
-	case len(surename) == 0:
-		return firstName
+	case len(firstname) == 0 && len(surname) == 0:
+		return username
+	case len(firstname) == 0:
+		return surname
+	case len(surname) == 0:
+		return firstname
 	default:
-		return firstName + " " + surename
+		return firstname + " " + surname
 	}
 }
 
@@ -528,7 +534,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 				return u, nil
 			}
 
-			return nil, ErrUserNotExist{u.Id, u.Name}
+			return nil, ErrUserNotExist{u.ID, u.Name}
 
 		default:
 			var source LoginSource
@@ -557,5 +563,5 @@ func UserSignIn(uname, passwd string) (*User, error) {
 		log.Warn("Failed to login '%s' via '%s': %v", uname, source.Name, err)
 	}
 
-	return nil, ErrUserNotExist{u.Id, u.Name}
+	return nil, ErrUserNotExist{u.ID, u.Name}
 }

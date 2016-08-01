@@ -51,7 +51,7 @@ func (m *migration) Migrate(x *xorm.Engine) error {
 
 // The version table. Should have only one row with id==1
 type Version struct {
-	Id      int64
+	ID      int64 `xorm:"pk autoincr"`
 	Version int64
 }
 
@@ -76,7 +76,7 @@ func Migrate(x *xorm.Engine) error {
 		return fmt.Errorf("sync: %v", err)
 	}
 
-	currentVersion := &Version{Id: 1}
+	currentVersion := &Version{ID: 1}
 	has, err := x.Get(currentVersion)
 	if err != nil {
 		return fmt.Errorf("get: %v", err)
@@ -646,17 +646,17 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 						if bean.Deadline.IsZero() {
 							continue
 						}
-						fieldSQL += com.ToStr(bean.Deadline.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Deadline.Unix())
 					case "created":
-						fieldSQL += com.ToStr(bean.Created.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Created.Unix())
 					case "updated":
-						fieldSQL += com.ToStr(bean.Updated.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Updated.Unix())
 					case "closed_date":
-						fieldSQL += com.ToStr(bean.ClosedDate.UTC().Unix())
+						fieldSQL += com.ToStr(bean.ClosedDate.Unix())
 					case "merged":
-						fieldSQL += com.ToStr(bean.Merged.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Merged.Unix())
 					case "next_update":
-						fieldSQL += com.ToStr(bean.NextUpdate.UTC().Unix())
+						fieldSQL += com.ToStr(bean.NextUpdate.Unix())
 					}
 
 					valSQLs = append(valSQLs, fieldSQL)
