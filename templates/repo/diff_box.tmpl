@@ -90,8 +90,8 @@
 								<table>
 									<tbody>
 										{{if $.IsSplitStyle}}
-											{{range $j, $section := .Sections}}
-												{{range $k, $line := .Lines}}
+											{{range $j, $section := $file.Sections}}
+												{{range $k, $line := $section.Lines}}
 													<tr class="{{DiffLineTypeToStr .GetType}}-code nl-{{$k}} ol-{{$k}}">
 														<td class="lines-num lines-num-old">
 															<span rel="{{if $line.LeftIdx}}diff-{{Sha1 $file.Name}}L{{$line.LeftIdx}}{{end}}">{{if $line.LeftIdx}}{{$line.LeftIdx}}{{end}}</span>
@@ -109,8 +109,8 @@
 												{{end}}
 											{{end}}
 										{{else}}
-											{{range $j, $section := .Sections}}
-												{{range $k, $line := .Lines}}
+											{{range $j, $section := $file.Sections}}
+												{{range $k, $line := $section.Lines}}
 													<tr class="{{DiffLineTypeToStr .GetType}}-code nl-{{$k}} ol-{{$k}}">
 														{{if eq .GetType 4}}
 														<td colspan="2" class="lines-num">
