@@ -1248,9 +1248,14 @@ footer .ui.language .menu {
 .repository.file.list #repo-files-table tbody .octicon {
   margin-left: 3px;
   margin-right: 5px;
+  color: #777;
 }
 .repository.file.list #repo-files-table tbody .octicon.octicon-mail-reply {
   margin-right: 10px;
+}
+.repository.file.list #repo-files-table tbody .octicon.octicon-file-directory,
+.repository.file.list #repo-files-table tbody .octicon.octicon-file-submodule {
+  color: #1e70bf;
 }
 .repository.file.list #repo-files-table td {
   padding-top: 8px;
