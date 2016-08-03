@@ -241,7 +241,23 @@ func RegisterRoutes(m *macaron.Macaron) {
 				})
 				m.Group("/issues", func() {
 					m.Combo("").Get(repo.ListIssues).Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
-					m.Combo("/:index").Get(repo.GetIssue).Patch(bind(api.EditIssueOption{}), repo.EditIssue)
+					m.Group("/:index", func() {
+						m.Combo("").Get(repo.GetIssue).Patch(bind(api.EditIssueOption{}), repo.EditIssue)
+						m.Group("/labels", func() {
+							m.Combo("").Get(repo.GetIssueLabels).
+								Post(bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
+								Put(bind(api.IssueLabelsOption{}), repo.ReplaceIssueLabels).
+								Delete(repo.ClearIssueLabels)
+							m.Delete("/:id", repo.DeleteIssueLabel)
+						})
+
+					})
+				})
+				m.Group("/labels", func() {
+					m.Combo("").Get(repo.ListLabels).
+						Post(bind(api.LabelOption{}), repo.CreateLabel)
+					m.Combo("/:id").Get(repo.GetLabel).Patch(bind(api.LabelOption{}), repo.EditLabel).
+						Delete(repo.DeleteLabel)
 				})
 			}, RepoAssignment())
 		}, ReqToken())
