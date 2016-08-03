@@ -12,7 +12,7 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-func GetIssueLabels(ctx *context.APIContext) {
+func ListIssueLabels(ctx *context.APIContext) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		if models.IsErrIssueNotExist(err) {
@@ -27,7 +27,6 @@ func GetIssueLabels(ctx *context.APIContext) {
 	for i := range issue.Labels {
 		apiLabels[i] = convert.ToLabel(issue.Labels[i])
 	}
-
 	ctx.JSON(200, &apiLabels)
 }
 
@@ -47,90 +46,27 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	var labels []*models.Label
-	if labels, err = filterLabelsByRepoID(form.Labels, issue.RepoID); err != nil {
-		ctx.Error(400, "filterLabelsByRepoID", err)
+	labels, err := models.GetLabelsInRepoByIDs(ctx.Repo.Repository.ID, form.Labels)
+	if err != nil {
+		ctx.Error(500, "GetLabelsInRepoByIDs", err)
 		return
 	}
 
+	if err = issue.AddLabels(labels); err != nil {
+		ctx.Error(500, "AddLabels", err)
+		return
+	}
+
+	labels, err = models.GetLabelsByIssueID(issue.ID)
+	if err != nil {
+		ctx.Error(500, "GetLabelsByIssueID", err)
+		return
+	}
+
+	apiLabels := make([]*api.Label, len(labels))
 	for i := range labels {
-		if !models.HasIssueLabel(issue.ID, labels[i].ID) {
-			if err := models.NewIssueLabel(issue, labels[i]); err != nil {
-				ctx.Error(500, "NewIssueLabel", err)
-				return
-			}
-		}
+		apiLabels[i] = convert.ToLabel(labels[i])
 	}
-
-	// Refresh issue to get the updated list of labels from the DB
-	issue, err = models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Status(404)
-		} else {
-			ctx.Error(500, "GetIssueByIndex", err)
-		}
-		return
-	}
-
-	apiLabels := make([]*api.Label, len(issue.Labels))
-	for i := range issue.Labels {
-		apiLabels[i] = convert.ToLabel(issue.Labels[i])
-	}
-
-	ctx.JSON(200, &apiLabels)
-}
-
-func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
-	if !ctx.Repo.IsWriter() {
-		ctx.Status(403)
-		return
-	}
-
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Status(404)
-		} else {
-			ctx.Error(500, "GetIssueByIndex", err)
-		}
-		return
-	}
-
-	var labels []*models.Label
-	if labels, err = filterLabelsByRepoID(form.Labels, issue.RepoID); err != nil {
-		ctx.Error(400, "filterLabelsByRepoID", err)
-		return
-	}
-
-	if err := issue.ClearLabels(); err != nil {
-		ctx.Error(500, "ClearLabels", err)
-		return
-	}
-
-	for i := range labels {
-		if err := models.NewIssueLabel(issue, labels[i]); err != nil {
-			ctx.Error(500, "NewIssueLabel", err)
-			return
-		}
-	}
-
-	// Refresh issue to get the updated list of labels from the DB
-	issue, err = models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Status(404)
-		} else {
-			ctx.Error(500, "GetIssueByIndex", err)
-		}
-		return
-	}
-
-	apiLabels := make([]*api.Label, len(issue.Labels))
-	for i := range issue.Labels {
-		apiLabels[i] = convert.ToLabel(issue.Labels[i])
-	}
-
 	ctx.JSON(200, &apiLabels)
 }
 
@@ -150,12 +86,12 @@ func DeleteIssueLabel(ctx *context.APIContext) {
 		return
 	}
 
-	label, err := models.GetLabelByID(ctx.ParamsInt64(":id"))
+	label, err := models.GetLabelInRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
-			ctx.Status(400)
+			ctx.Error(422, "", err)
 		} else {
-			ctx.Error(500, "GetLabelByID", err)
+			ctx.Error(500, "GetLabelInRepoByID", err)
 		}
 		return
 	}
@@ -166,6 +102,46 @@ func DeleteIssueLabel(ctx *context.APIContext) {
 	}
 
 	ctx.Status(204)
+}
+
+func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
+	if !ctx.Repo.IsWriter() {
+		ctx.Status(403)
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	if err != nil {
+		if models.IsErrIssueNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "GetIssueByIndex", err)
+		}
+		return
+	}
+
+	labels, err := models.GetLabelsInRepoByIDs(ctx.Repo.Repository.ID, form.Labels)
+	if err != nil {
+		ctx.Error(500, "GetLabelsInRepoByIDs", err)
+		return
+	}
+
+	if err := issue.ReplaceLabels(labels); err != nil {
+		ctx.Error(500, "ReplaceLabels", err)
+		return
+	}
+
+	labels, err = models.GetLabelsByIssueID(issue.ID)
+	if err != nil {
+		ctx.Error(500, "GetLabelsByIssueID", err)
+		return
+	}
+
+	apiLabels := make([]*api.Label, len(labels))
+	for i := range labels {
+		apiLabels[i] = convert.ToLabel(labels[i])
+	}
+	ctx.JSON(200, &apiLabels)
 }
 
 func ClearIssueLabels(ctx *context.APIContext) {
@@ -190,30 +166,4 @@ func ClearIssueLabels(ctx *context.APIContext) {
 	}
 
 	ctx.Status(204)
-}
-
-func filterLabelsByRepoID(labelIDs []int64, repoID int64) ([]*models.Label, error) {
-	labels := make([]*models.Label, 0, len(labelIDs))
-	errors := make([]error, 0, len(labelIDs))
-
-	for i := range labelIDs {
-		label, err := models.GetLabelByID(labelIDs[i])
-		if err != nil {
-			errors = append(errors, err)
-		} else if label.RepoID != repoID {
-			errors = append(errors, models.ErrLabelNotValidForRepository{label.ID, repoID})
-		} else {
-			labels = append(labels, label)
-		}
-	}
-
-	errorCount := len(errors)
-
-	if errorCount == 1 {
-		return labels, errors[0]
-	} else if errorCount > 1 {
-		return labels, models.ErrMultipleErrors{errors}
-	}
-
-	return labels, nil
 }

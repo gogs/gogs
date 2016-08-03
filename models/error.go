@@ -5,7 +5,6 @@
 package models
 
 import (
-	"bytes"
 	"fmt"
 )
 
@@ -33,30 +32,6 @@ func IsErrNamePatternNotAllowed(err error) bool {
 
 func (err ErrNamePatternNotAllowed) Error() string {
 	return fmt.Sprintf("name pattern is not allowed [pattern: %s]", err.Pattern)
-}
-
-type ErrMultipleErrors struct {
-	Errors []error
-}
-
-func IsErrMultipleErrors(err error) bool {
-	_, ok := err.(ErrMultipleErrors)
-	return ok
-}
-
-func (err ErrMultipleErrors) Error() string {
-	var message bytes.Buffer
-
-	message.WriteString("Multiple errors encountered: ")
-
-	for i := range err.Errors {
-		message.WriteString(err.Errors[i].Error())
-		if i < len(err.Errors)-1 {
-			message.WriteString("; ")
-		}
-	}
-
-	return message.String()
 }
 
 //  ____ ___
@@ -558,7 +533,8 @@ func (err ErrCommentNotExist) Error() string {
 //         \/    \/    \/     \/
 
 type ErrLabelNotExist struct {
-	ID int64
+	LabelID int64
+	RepoID  int64
 }
 
 func IsErrLabelNotExist(err error) bool {
@@ -567,21 +543,7 @@ func IsErrLabelNotExist(err error) bool {
 }
 
 func (err ErrLabelNotExist) Error() string {
-	return fmt.Sprintf("label does not exist [id: %d]", err.ID)
-}
-
-type ErrLabelNotValidForRepository struct {
-	ID     int64
-	RepoID int64
-}
-
-func IsErrLabelNotValidForRepository(err error) bool {
-	_, ok := err.(ErrLabelNotValidForRepository)
-	return ok
-}
-
-func (err ErrLabelNotValidForRepository) Error() string {
-	return fmt.Sprintf("label is not valid for repository [label_id: %d, repo_id: %d]", err.ID, err.RepoID)
+	return fmt.Sprintf("label does not exist [label_id: %d, repo_id: %d]", err.LabelID, err.RepoID)
 }
 
 //    _____  .__.__                   __
