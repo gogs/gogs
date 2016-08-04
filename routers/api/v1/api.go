@@ -151,6 +151,13 @@ func OrgAssignment(args ...bool) macaron.Handler {
 	}
 }
 
+func MustEnableIssues(ctx *context.APIContext) {
+	if !ctx.Repo.Repository.EnableIssues || ctx.Repo.Repository.EnableExternalTracker {
+		ctx.Status(404)
+		return
+	}
+}
+
 // RegisterRoutes registers all v1 APIs routes to web application.
 // FIXME: custom form error response
 func RegisterRoutes(m *macaron.Macaron) {
@@ -252,7 +259,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 						})
 
 					})
-				})
+				}, MustEnableIssues)
 				m.Group("/labels", func() {
 					m.Combo("").Get(repo.ListLabels).
 						Post(bind(api.CreateLabelOption{}), repo.CreateLabel)

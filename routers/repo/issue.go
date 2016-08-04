@@ -52,7 +52,7 @@ var (
 )
 
 func MustEnableIssues(ctx *context.Context) {
-	if !ctx.Repo.Repository.EnableIssues {
+	if !ctx.Repo.Repository.EnableIssues || ctx.Repo.Repository.EnableExternalTracker {
 		ctx.Handle(404, "MustEnableIssues", nil)
 		return
 	}
