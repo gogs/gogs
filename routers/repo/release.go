@@ -6,7 +6,6 @@ package repo
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
@@ -168,14 +167,12 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		return
 	}
 
-	tagCreationDate := time.Now()
-	if ctx.Repo.GitRepo.IsTagExist(form.TagName) {
-                tag, err := ctx.Repo.GitRepo.GetTag(form.TagName)
+	var tagCreatedUnix int64
+	tag, err := ctx.Repo.GitRepo.GetTag(form.TagName)
+	if err == nil {
+		commit, err := tag.Commit()
 		if err == nil {
-	                commit, err := tag.Commit()
-			if err == nil {
-		                tagCreationDate = commit.Author.When
-		        }
+			tagCreatedUnix = commit.Author.When.Unix()
 		}
 	}
 
@@ -202,8 +199,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		Note:         form.Content,
 		IsDraft:      len(form.Draft) > 0,
 		IsPrerelease: form.Prerelease,
-		Created:      tagCreationDate,
-		CreatedUnix:  tagCreationDate.Unix(),
+		CreatedUnix:  tagCreatedUnix,
 	}
 
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
@@ -274,14 +270,11 @@ func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 		return
 	}
 
-	if ctx.Repo.GitRepo.IsTagExist(rel.TagName) {
-		tag, err := ctx.Repo.GitRepo.GetTag(rel.TagName)
+	tag, err := ctx.Repo.GitRepo.GetTag(rel.TagName)
+	if err == nil {
+		commit, err := tag.Commit()
 		if err == nil {
-	                commit, err := tag.Commit()
-			if err == nil {
-				rel.Created = commit.Author.When
-				rel.CreatedUnix = commit.Author.When.Unix()
-		        }
+			rel.CreatedUnix = commit.Author.When.Unix()
 		}
 	}
 
