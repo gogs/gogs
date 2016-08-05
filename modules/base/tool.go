@@ -216,12 +216,12 @@ func AvatarLink(email string) string {
 				log.Error(1, "LibravatarService.FromEmail:: %v", err)
 			}
 		}
-		if url == "" && !setting.DisableGravatar {
+		if len(url) == 0 && !setting.DisableGravatar {
 			url = setting.GravatarSource + HashEmail(email)
 		}
 	}
 
-	if url == "" {
+	if len(url) == 0 {
 		url = setting.AppSubUrl + "/img/avatar_default.png"
 	}
 
