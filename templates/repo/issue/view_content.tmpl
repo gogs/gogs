@@ -13,7 +13,7 @@
 		<ui class="ui comments">
 			<div class="comment">
 				<a class="avatar" {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
-					<img src="{{.Issue.Poster.AvatarLink}}">
+					<img src="{{.Issue.Poster.RelAvatarLink}}">
 				</a>
 				<div class="content">
 					<div class="ui top attached header">
@@ -56,7 +56,7 @@
 				{{if eq .Type 0}}
 					<div class="comment" id="{{.HashTag}}">
 						<a class="avatar" {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<div class="content">
 							<div class="ui top attached header">
@@ -107,7 +107,7 @@
 					<div class="event">
 						<span class="octicon octicon-primitive-dot"></span>
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.reopened_at" .EventTag $createdStr | Safe}}</span>
 					</div>
@@ -115,7 +115,7 @@
 					<div class="event">
 						<span class="octicon octicon-circle-slash"></span>
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
 					</div>
@@ -123,7 +123,7 @@
 					<div class="event">
 						<span class="octicon octicon-bookmark"></span>
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
 
@@ -199,7 +199,7 @@
 			{{if .IsSigned}}
 				<div class="comment form">
 					<a class="avatar" href="{{.SignedUser.HomeLink}}">
-						<img src="{{.SignedUser.AvatarLink}}">
+						<img src="{{.SignedUser.RelAvatarLink}}">
 					</a>
 					<div class="content">
 						<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
@@ -309,7 +309,7 @@
 				<div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
 					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
 					{{range .Assignees}}
-						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
+						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.RelAvatarLink}}"><img src="{{.RelAvatarLink}}"> {{.Name}}</div>
 					{{end}}
 				</div>
 			</div>
@@ -317,7 +317,7 @@
 				<span class="no-select item {{if .Issue.Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
 					{{if .Issue.Assignee}}
-						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.ID}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
+						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.ID}}"><img class="ui avatar image" src="{{.Issue.Assignee.RelAvatarLink}}"> {{.Issue.Assignee.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -329,7 +329,7 @@
 				<div>
 					{{range .Participants}}
 						<a href="{{.HomeLink}}">
-							<img class="ui avatar image poping up" src="{{.AvatarLink}}" data-content="{{.DisplayName}}" data-position="top center" data-variation="small inverted">
+							<img class="ui avatar image poping up" src="{{.RelAvatarLink}}" data-content="{{.DisplayName}}" data-position="top center" data-variation="small inverted">
 						</a>
 					{{end}}
 				</div>
