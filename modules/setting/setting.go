@@ -21,12 +21,11 @@ import (
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
 	"gopkg.in/ini.v1"
+	"github.com/strk/go-libravatar"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/user"
-
-	"github.com/strk/go-libravatar"
 )
 
 type Scheme string
