@@ -209,7 +209,7 @@ func AvatarLink(email string) string {
 	var url string
 
 	if !setting.OfflineMode {
-		if setting.FederatedAvatar && setting.LibravatarService != nil {
+		if setting.EnableFederatedAvatar && setting.LibravatarService != nil {
 			var err error
 			url, err = setting.LibravatarService.FromEmail(email)
 			if err != nil {

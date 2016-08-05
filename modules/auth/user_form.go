@@ -36,12 +36,12 @@ type InstallForm struct {
 	RegisterConfirm bool
 	MailNotify      bool
 
-	OfflineMode         bool
-	DisableGravatar     bool
-	FederatedAvatar     bool
-	DisableRegistration bool
-	EnableCaptcha       bool
-	RequireSignInView   bool
+	OfflineMode           bool
+	DisableGravatar       bool
+	EnableFederatedAvatar bool
+	DisableRegistration   bool
+	EnableCaptcha         bool
+	RequireSignInView     bool
 
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
 	AdminPasswd        string `binding:"OmitEmpty;MaxSize(255)" locale:"install.admin_password"`

@@ -145,7 +145,7 @@ var (
 	AvatarUploadPath  string
 	GravatarSource    string
 	DisableGravatar   bool
-	FederatedAvatar   bool
+	EnableFederatedAvatar   bool
 	LibravatarService *libravatar.Libravatar
 
 	// Log settings
@@ -464,13 +464,13 @@ func NewContext() {
 		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
-	FederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool()
+	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool()
 	if OfflineMode {
 		DisableGravatar = true
-		FederatedAvatar = false
+		EnableFederatedAvatar = false
 	}
 
-	if !DisableGravatar && FederatedAvatar {
+	if !DisableGravatar && EnableFederatedAvatar {
 		LibravatarService = libravatar.New()
 		parts := strings.Split(GravatarSource, "/")
 		if len(parts) >= 3 {

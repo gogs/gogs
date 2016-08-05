@@ -169,7 +169,7 @@ func Install(ctx *context.Context) {
 	// Server and other services settings
 	form.OfflineMode = setting.OfflineMode
 	form.DisableGravatar = setting.DisableGravatar
-	form.FederatedAvatar = setting.FederatedAvatar
+	form.EnableFederatedAvatar = setting.EnableFederatedAvatar
 	form.DisableRegistration = setting.Service.DisableRegistration
 	form.EnableCaptcha = setting.Service.EnableCaptcha
 	form.RequireSignInView = setting.Service.RequireSignInView
@@ -327,7 +327,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	}
 
 	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
-	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(form.FederatedAvatar))
+	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(form.EnableFederatedAvatar))
 
 	cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm))
 	cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
