@@ -5,16 +5,13 @@
 			{{template "user/settings/navbar" .}}
 			<div class="twelve wide column content">
 				{{template "base/alert" .}}
-
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "settings.avatar"}}
 				</h4>
-
 				<div class="ui attached segment">
 
 					<form class="ui form" action="{{.Link}}" method="post" enctype="multipart/form-data">
 						{{.CsrfTokenHtml}}
-
 						{{if not DisableGravatar}}
 						<div class="inline field">
 							<div class="ui radio">
