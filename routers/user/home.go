@@ -220,7 +220,8 @@ func Issues(ctx *context.Context) {
 	showRepos := make([]*models.Repository, 0, len(repos))
 	for _, repo := range repos {
 		if (isPullList && repo.NumPulls == 0) ||
-			(!isPullList && repo.NumIssues == 0) {
+			(!isPullList &&
+				(!repo.EnableIssues || repo.EnableExternalTracker || repo.NumIssues == 0)) {
 			continue
 		}
 

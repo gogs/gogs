@@ -16,18 +16,19 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
 .IGNORE: public/css/gogs.css
 
-build: $(GENERATED)
-	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
-	cp '$(GOPATH)/bin/gogs' .
-
+# FIXME: find a way to ignore /vendor/ and /data/ directories.
 govet:
 	go tool vet -composites=false -methods=false -structtags=false .
 
-build-dev: $(GENERATED) govet
+build: $(GENERATED) govet
+	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
+	cp '$(GOPATH)/bin/gogs' .
+
+build-dev: $(GENERATED) 
 	go install $(BUILD_FLAGS) -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
-build-dev-race: $(GENERATED) govet
+build-dev-race: $(GENERATED)
 	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
