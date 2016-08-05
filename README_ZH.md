@@ -9,11 +9,11 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 项目概览
 
-- 有关基本用法和变更日志，请通过 [使用手册](http://gogs.io/docs/intro/) 查看。
+- 有关基本用法和变更日志，请通过 [使用手册](https://gogs.io/docs/intro/) 查看。
 - 您可以到 [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) 跟随开发团队的脚步。
 - 想要先睹为快？直接去 [在线体验](https://try.gogs.io/gogs/gogs) 。
-- 使用过程中遇到问题？尝试从 [故障排查](http://gogs.io/docs/intro/troubleshooting.html) 页面或 [用户论坛](https://discuss.gogs.io/) 获取帮助。
-- 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](http://gogs.io/docs/features/i18n.html)！
+- 使用过程中遇到问题？尝试从 [故障排查](https://gogs.io/docs/intro/troubleshooting.html) 页面或 [用户论坛](https://discuss.gogs.io/) 获取帮助。
+- 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](https://gogs.io/docs/features/i18n.html)！
 
 ## 功能特性
 
@@ -44,13 +44,13 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 安装部署
 
-在安装 Gogs 之前，您需要先安装 [基本环境](http://gogs.io/docs/installation)。
+在安装 Gogs 之前，您需要先安装 [基本环境](https://gogs.io/docs/installation)。
 
 然后，您可以通过以下 5 种方式来安装 Gogs：
 
-- [二进制安装](http://gogs.io/docs/installation/install_from_binary.html)
-- [源码安装](http://gogs.io/docs/installation/install_from_source.html)
-- [包管理安装](http://gogs.io/docs/installation/install_from_packages.html)
+- [二进制安装](https://gogs.io/docs/installation/install_from_binary.html)
+- [源码安装](https://gogs.io/docs/installation/install_from_source.html)
+- [包管理安装](https://gogs.io/docs/installation/install_from_packages.html)
 - [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
