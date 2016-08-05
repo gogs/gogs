@@ -205,8 +205,7 @@ func HashEmail(email string) string {
 }
 
 // AvatarLink returns avatar link by given email.
-func AvatarLink(email string) string {
-	var url string
+func AvatarLink(email string) (url string) {
 
 	if !setting.OfflineMode {
 		if setting.EnableFederatedAvatar && setting.LibravatarService != nil {
