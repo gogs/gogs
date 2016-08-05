@@ -3,7 +3,7 @@
 		<tr>
 			<th class="four wide">
 				{{if .LastCommitUser}}
-					<img class="ui avatar image img-12" src="{{.LastCommitUser.AvatarLink}}" />
+					<img class="ui avatar image img-12" src="{{.LastCommitUser.RelAvatarLink}}" />
 					<a href="{{AppSubUrl}}/{{.LastCommitUser.Name}}"><strong>{{.LastCommit.Author.Name}}</strong></a>
 				{{else}}
 					<img class="ui avatar image img-12" src="{{AvatarLink .LastCommit.Author.Email}}" />

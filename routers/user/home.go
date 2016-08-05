@@ -77,7 +77,7 @@ func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID, offset in
 				ctx.Handle(500, "GetUserByName", err)
 				return
 			}
-			unameAvatars[act.ActUserName] = u.AvatarLink()
+			unameAvatars[act.ActUserName] = u.RelAvatarLink()
 		}
 
 		act.ActAvatar = unameAvatars[act.ActUserName]

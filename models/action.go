@@ -288,7 +288,7 @@ func (push *PushCommits) AvatarLink(email string) string {
 				log.Error(4, "GetUserByEmail: %v", err)
 			}
 		} else {
-			push.avatars[email] = u.AvatarLink()
+			push.avatars[email] = u.RelAvatarLink()
 		}
 	}
 

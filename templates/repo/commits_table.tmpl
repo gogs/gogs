@@ -30,7 +30,7 @@
 					<tr>
 						<td class="author">
 							{{if .User}}
-								<img class="ui avatar image" src="{{.User.AvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
+								<img class="ui avatar image" src="{{.User.RelAvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
 							{{else}}
 								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
 							{{end}}

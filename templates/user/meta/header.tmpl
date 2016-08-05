@@ -1,13 +1,12 @@
 {{with .Owner}}
 <div class="ui container">
-	<img class="ui avatar image" src="{{.AvatarLink}}">
+	<img class="ui avatar image" src="{{.RelAvatarLink}}">
 	<span class="header name">
 		<a href="{{.HomeLink}}">{{.Name}}</a>
 		{{with .FullName}}({{.}}){{end}}
 	</span>
 
 	<div class="ui right">
-		
 		{{if or $.PageIsFollowers $.PageIsFollowing}}
 			{{if and $.IsSigned (ne $.SignedUserName .Name)}}
 				<div class="follow">
