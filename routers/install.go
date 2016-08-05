@@ -327,7 +327,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	}
 
 	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
-	cfg.Section("picture").Key("FEDERATED_AVATAR").SetValue(com.ToStr(form.FederatedAvatar))
+	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(form.FederatedAvatar))
 
 	cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(form.RegisterConfirm))
 	cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(form.MailNotify))
