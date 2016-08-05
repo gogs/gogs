@@ -251,7 +251,6 @@ func (u *User) RelAvatarLink() string {
 
 		return "/avatars/" + com.ToStr(u.ID)
 	}
-
 	return base.AvatarLink(u.AvatarEmail)
 }
 
