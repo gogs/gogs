@@ -42,6 +42,12 @@
 							<label for="email">{{.i18n.Tr "email"}}</label>
 							<input id="email" name="email" type="email" value="{{.User.Email}}" autofocus required>
 						</div>
+						<div class="field">
+							<div class="ui checkbox">
+								<label for="show_email">{{.i18n.Tr "settings.show_email"}}</label>
+								<input id="show_email" name="show_email" type="checkbox" {{if .User.ShowEmail}}checked{{end}} />
+							</div>
+						</div>
 						<input class="fake" type="password">
 						<div class="local field {{if .Err_Password}}error{{end}} {{if not (eq .User.LoginSource 0)}}hide{{end}}">
 							<label for="password">{{.i18n.Tr "password"}}</label>

@@ -199,6 +199,7 @@ func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 	u.LoginName = form.LoginName
 	u.FullName = form.FullName
 	u.Email = form.Email
+	u.ShowEmail = form.ShowEmail
 	u.Website = form.Website
 	u.Location = form.Location
 	u.MaxRepoCreation = form.MaxRepoCreation

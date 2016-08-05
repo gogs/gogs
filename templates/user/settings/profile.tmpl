@@ -27,6 +27,12 @@
 							<label for="email">{{.i18n.Tr "email"}}</label>
 							<input id="email" name="email" value="{{.SignedUser.Email}}">
 						</div>
+						<div class="inline field">
+							<div class="ui checkbox">
+								<label for="show_email">{{.i18n.Tr "settings.show_email"}}</label>
+								<input id="show_email" name="show_email" type="checkbox" {{if .SignedUser.ShowEmail}}checked{{end}} />
+							</div>
+						</div>
 						<div class="field {{if .Err_Website}}error{{end}}">
 							<label for="website">{{.i18n.Tr "settings.website"}}</label>
 							<input id="website" name="website" type="url" value="{{.SignedUser.Website}}">

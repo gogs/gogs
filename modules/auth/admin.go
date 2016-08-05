@@ -28,6 +28,7 @@ type AdminEditUserForm struct {
 	LoginName        string
 	FullName         string `binding:"MaxSize(100)"`
 	Email            string `binding:"Required;Email;MaxSize(254)"`
+	ShowEmail        bool
 	Password         string `binding:"MaxSize(255)"`
 	Website          string `binding:"MaxSize(50)"`
 	Location         string `binding:"MaxSize(50)"`
