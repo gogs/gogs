@@ -22,7 +22,7 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func RepoAssignment() macaron.Handler {
+func repoAssignment() macaron.Handler {
 	return func(ctx *context.APIContext) {
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
@@ -83,7 +83,7 @@ func RepoAssignment() macaron.Handler {
 }
 
 // Contexter middleware already checks token for user sign in process.
-func ReqToken() macaron.Handler {
+func reqToken() macaron.Handler {
 	return func(ctx *context.Context) {
 		if !ctx.IsSigned {
 			ctx.Error(401)
@@ -92,7 +92,7 @@ func ReqToken() macaron.Handler {
 	}
 }
 
-func ReqBasicAuth() macaron.Handler {
+func reqBasicAuth() macaron.Handler {
 	return func(ctx *context.Context) {
 		if !ctx.IsBasicAuth {
 			ctx.Error(401)
@@ -101,7 +101,7 @@ func ReqBasicAuth() macaron.Handler {
 	}
 }
 
-func ReqAdmin() macaron.Handler {
+func reqAdmin() macaron.Handler {
 	return func(ctx *context.Context) {
 		if !ctx.IsSigned || !ctx.User.IsAdmin {
 			ctx.Error(403)
@@ -110,7 +110,7 @@ func ReqAdmin() macaron.Handler {
 	}
 }
 
-func OrgAssignment(args ...bool) macaron.Handler {
+func orgAssignment(args ...bool) macaron.Handler {
 	var (
 		assignOrg  bool
 		assignTeam bool
@@ -151,7 +151,7 @@ func OrgAssignment(args ...bool) macaron.Handler {
 	}
 }
 
-func MustEnableIssues(ctx *context.APIContext) {
+func mustEnableIssues(ctx *context.APIContext) {
 	if !ctx.Repo.Repository.EnableIssues || ctx.Repo.Repository.EnableExternalTracker {
 		ctx.Status(404)
 		return
@@ -178,7 +178,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Group("/tokens", func() {
 					m.Combo("").Get(user.ListAccessTokens).
 						Post(bind(api.CreateAccessTokenOption{}), user.CreateAccessToken)
-				}, ReqBasicAuth())
+				}, reqBasicAuth())
 			})
 		})
 
@@ -192,7 +192,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("/:target", user.CheckFollowing)
 				})
 			})
-		}, ReqToken())
+		}, reqToken())
 
 		m.Group("/user", func() {
 			m.Combo("/emails").Get(user.ListEmails).
@@ -211,12 +211,12 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Combo("/:id").Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
-		}, ReqToken())
+		}, reqToken())
 
 		// Repositories
-		m.Combo("/user/repos", ReqToken()).Get(repo.ListMyRepos).
+		m.Combo("/user/repos", reqToken()).Get(repo.ListMyRepos).
 			Post(bind(api.CreateRepoOption{}), repo.Create)
-		m.Post("/org/:org/repos", ReqToken(), bind(api.CreateRepoOption{}), repo.CreateOrgRepo)
+		m.Post("/org/:org/repos", reqToken(), bind(api.CreateRepoOption{}), repo.CreateOrgRepo)
 
 		m.Group("/repos", func() {
 			m.Get("/search", repo.Search)
@@ -259,23 +259,23 @@ func RegisterRoutes(m *macaron.Macaron) {
 						})
 
 					})
-				}, MustEnableIssues)
+				}, mustEnableIssues)
 				m.Group("/labels", func() {
 					m.Combo("").Get(repo.ListLabels).
 						Post(bind(api.CreateLabelOption{}), repo.CreateLabel)
 					m.Combo("/:id").Get(repo.GetLabel).Patch(bind(api.EditLabelOption{}), repo.EditLabel).
 						Delete(repo.DeleteLabel)
 				})
-			}, RepoAssignment())
-		}, ReqToken())
+			}, repoAssignment())
+		}, reqToken())
 
 		// Organizations
-		m.Get("/user/orgs", ReqToken(), org.ListMyOrgs)
+		m.Get("/user/orgs", reqToken(), org.ListMyOrgs)
 		m.Get("/users/:username/orgs", org.ListUserOrgs)
 		m.Group("/orgs/:orgname", func() {
 			m.Combo("").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
 			m.Combo("/teams").Get(org.ListTeams)
-		}, OrgAssignment(true))
+		}, orgAssignment(true))
 
 		m.Any("/*", func(ctx *context.Context) {
 			ctx.Error(404)
@@ -296,15 +296,15 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 			m.Group("/orgs/:orgname", func() {
 				m.Group("/teams", func() {
-					m.Post("", OrgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
+					m.Post("", orgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
 				})
 			})
 			m.Group("/teams", func() {
 				m.Group("/:teamid", func() {
 					m.Combo("/members/:username").Put(admin.AddTeamMember).Delete(admin.RemoveTeamMember)
 					m.Combo("/repos/:reponame").Put(admin.AddTeamRepository).Delete(admin.RemoveTeamRepository)
-				}, OrgAssignment(false, true))
+				}, orgAssignment(false, true))
 			})
-		}, ReqAdmin())
+		}, reqAdmin())
 	}, context.APIContexter())
 }
