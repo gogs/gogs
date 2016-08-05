@@ -270,14 +270,6 @@ func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 		return
 	}
 
-	tag, err := ctx.Repo.GitRepo.GetTag(rel.TagName)
-	if err == nil {
-		commit, err := tag.Commit()
-		if err == nil {
-			rel.CreatedUnix = commit.Author.When.Unix()
-		}
-	}
-
 	rel.Title = form.Title
 	rel.Note = form.Content
 	rel.IsDraft = len(form.Draft) > 0
