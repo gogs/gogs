@@ -246,6 +246,11 @@ func PrepareViewPullInfo(ctx *context.Context, pull *models.Issue) *git.PullRequ
 		ctx.Handle(500, "GetPullRequestInfo", err)
 		return nil
 	}
+
+	if (pull.HeadBranch != pull.HeadRepo.DefaultBranch) && ctx.User.IsWriterOfRepo(pull.HeadRepo) {
+		ctx.Data["CanDeleteSourceBranch"] = true
+	}
+
 	ctx.Data["NumCommits"] = prInfo.Commits.Len()
 	ctx.Data["NumFiles"] = prInfo.NumFiles
 	return prInfo
@@ -414,6 +419,15 @@ func MergePullRequest(ctx *context.Context) {
 	if err = pr.Merge(ctx.User, ctx.Repo.GitRepo); err != nil {
 		ctx.Handle(500, "Merge", err)
 		return
+	}
+
+	deleteSourceBranch := ctx.Req.Form.Get("delete_source_branch") == "on"
+	canDeleteBranch := (pr.HeadRepo.DefaultBranch != pr.HeadBranch) && ctx.User.IsWriterOfRepo(pr.HeadRepo)
+	if deleteSourceBranch && canDeleteBranch {
+		if err = pr.HeadRepo.DeleteBranch(pr.HeadBranch); err != nil {
+			ctx.Handle(500, "DeleteSourceBranch", err)
+			return
+		}
 	}
 
 	log.Trace("Pull request merged: %d", pr.ID)

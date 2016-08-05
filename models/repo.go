@@ -2161,3 +2161,14 @@ func (repo *Repository) GetForks() ([]*Repository, error) {
 	forks := make([]*Repository, 0, repo.NumForks)
 	return forks, x.Find(&forks, &Repository{ForkID: repo.ID})
 }
+
+// DeleteBranch deletes the specified branch from the repository
+func (repo *Repository) DeleteBranch(b string) (err error) {
+	r, err := git.OpenRepository(repo.RepoPath())
+	if err != nil {
+		return err
+	}
+
+	err = r.DeleteBranch(b, git.DeleteBranchOptions{Force: true})
+	return err
+}
