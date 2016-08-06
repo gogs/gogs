@@ -178,6 +178,10 @@
 											<button class="ui green button">
 												<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
 											</button>
+											<div class="ui checkbox {{if not .CanDeleteSourceBranch}}disabled{{end}}">
+												<input type="checkbox" name="delete_source_branch">
+												<label>{{$.i18n.Tr "repo.pulls.delete_source_branch"}}</label>
+											</div>
 										</form>
 									</div>
 								{{end}}
