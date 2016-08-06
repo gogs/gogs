@@ -167,6 +167,15 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		return
 	}
 
+	var tagCreatedUnix int64
+	tag, err := ctx.Repo.GitRepo.GetTag(form.TagName)
+	if err == nil {
+		commit, err := tag.Commit()
+		if err == nil {
+			tagCreatedUnix = commit.Author.When.Unix()
+		}
+	}
+
 	commit, err := ctx.Repo.GitRepo.GetBranchCommit(form.Target)
 	if err != nil {
 		ctx.Handle(500, "GetBranchCommit", err)
@@ -190,6 +199,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		Note:         form.Content,
 		IsDraft:      len(form.Draft) > 0,
 		IsPrerelease: form.Prerelease,
+		CreatedUnix:  tagCreatedUnix,
 	}
 
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
