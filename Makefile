@@ -11,6 +11,7 @@ BUILD_FLAGS = "-v"
 RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
+GOVET = go tool vet -composites=false -methods=false -structtags=false
 
 .PHONY: build pack release bindata clean
 
@@ -18,17 +19,18 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
 # FIXME: find a way to ignore /vendor/ and /data/ directories.
 govet:
-	go tool vet -composites=false -methods=false -structtags=false .
+	$(GOVET) gogs.go 
+	$(GOVET) models modules routers
 
-build: $(GENERATED) govet
+build: $(GENERATED)
 	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
-build-dev: $(GENERATED) 
+build-dev: $(GENERATED) govet
 	go install $(BUILD_FLAGS) -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
-build-dev-race: $(GENERATED)
+build-dev-race: $(GENERATED) govet
 	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
