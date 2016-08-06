@@ -58,6 +58,7 @@ type User struct {
 	FullName  string
 	// Email is the primary email address (to be used for communication)
 	Email       string `xorm:"NOT NULL"`
+	ShowEmail   bool
 	Passwd      string `xorm:"NOT NULL"`
 	LoginType   LoginType
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
@@ -522,6 +523,7 @@ func CreateUser(u *User) (err error) {
 	}
 
 	u.Email = strings.ToLower(u.Email)
+	u.ShowEmail = false
 	isExist, err = IsEmailUsed(u.Email)
 	if err != nil {
 		return err

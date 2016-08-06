@@ -89,6 +89,7 @@ func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 
 	ctx.User.FullName = form.FullName
 	ctx.User.Email = form.Email
+	ctx.User.ShowEmail = form.ShowEmail
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
 	if len(form.Gravatar) > 0 {
