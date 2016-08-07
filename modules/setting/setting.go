@@ -21,6 +21,7 @@ import (
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
 	"gopkg.in/ini.v1"
+	"github.com/strk/go-libravatar"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -140,9 +141,11 @@ var (
 	}
 
 	// Picture settings
-	AvatarUploadPath string
-	GravatarSource   string
-	DisableGravatar  bool
+	AvatarUploadPath  string
+	GravatarSource    string
+	DisableGravatar   bool
+	EnableFederatedAvatar   bool
+	LibravatarService *libravatar.Libravatar
 
 	// Log settings
 	LogRootPath string
@@ -462,8 +465,24 @@ func NewContext() {
 		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
+	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool()
 	if OfflineMode {
 		DisableGravatar = true
+		EnableFederatedAvatar = false
+	}
+
+	if !DisableGravatar && EnableFederatedAvatar {
+		LibravatarService = libravatar.New()
+		parts := strings.Split(GravatarSource, "/")
+		if len(parts) >= 3 {
+			if parts[0] == "https:" {
+				LibravatarService.SetUseHTTPS(true)
+				LibravatarService.SetSecureFallbackHost(parts[2])
+			} else {
+				LibravatarService.SetUseHTTPS(false)
+				LibravatarService.SetFallbackHost(parts[2])
+			}
+		}
 	}
 
 	if err = Cfg.Section("ui").MapTo(&UI); err != nil {

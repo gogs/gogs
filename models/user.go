@@ -254,7 +254,7 @@ func (u *User) RelAvatarLink() string {
 
 		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.ID)
 	}
-	return setting.GravatarSource + u.Avatar
+	return base.AvatarLink(u.AvatarEmail)
 }
 
 // AvatarLink returns user avatar absolute link.
