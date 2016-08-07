@@ -20,8 +20,8 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
-	"gopkg.in/ini.v1"
 	"github.com/strk/go-libravatar"
+	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -141,11 +141,11 @@ var (
 	}
 
 	// Picture settings
-	AvatarUploadPath  string
-	GravatarSource    string
-	DisableGravatar   bool
-	EnableFederatedAvatar   bool
-	LibravatarService *libravatar.Libravatar
+	AvatarUploadPath      string
+	GravatarSource        string
+	DisableGravatar       bool
+	EnableFederatedAvatar bool
+	LibravatarService     *libravatar.Libravatar
 
 	// Log settings
 	LogRootPath string
@@ -470,8 +470,11 @@ func NewContext() {
 		DisableGravatar = true
 		EnableFederatedAvatar = false
 	}
+	if DisableGravatar {
+		EnableFederatedAvatar = false
+	}
 
-	if !DisableGravatar && EnableFederatedAvatar {
+	if EnableFederatedAvatar {
 		LibravatarService = libravatar.New()
 		parts := strings.Split(GravatarSource, "/")
 		if len(parts) >= 3 {

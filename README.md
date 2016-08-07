@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: 0.9.65 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions)
+##### Current tip version: 0.9.66 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions)
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -45,7 +45,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Repository Git hooks/deploy keys
 - Repository issues, pull requests and wiki
 - Add/Remove repository collaborators
-- Gravatar and custom source
+- Gravatar and Federated avatar with custom source
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
@@ -87,6 +87,7 @@ There are 5 ways to install Gogs:
 
 ### Screencasts
 
+- [How to install Gogs on a Linux Server (DigitalOcean)](https://www.youtube.com/watch?v=deSfX0gqefE)
 - [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=4UkHAR1F7ZA) (Português)
 
 ### Deploy to Cloud

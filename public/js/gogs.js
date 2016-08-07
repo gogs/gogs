@@ -187,9 +187,24 @@ function initInstall() {
         }
     });
 
+    // TODO: better handling of exclusive relations.
     $('#offline-mode input').change(function () {
         if ($(this).is(':checked')) {
             $('#disable-gravatar').checkbox('check');
+            $('#federated-avatar-lookup').checkbox('uncheck');
+        }
+    });
+    $('#disable-gravatar input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#federated-avatar-lookup').checkbox('uncheck');
+        } else {
+            $('#offline-mode').checkbox('uncheck');
+        }
+    });
+    $('#federated-avatar-lookup input').change(function () {
+        if ($(this).is(':checked')) {
+            $('#disable-gravatar').checkbox('uncheck');
+            $('#offline-mode').checkbox('uncheck');
         }
     });
     $('#disable-registration input').change(function () {
