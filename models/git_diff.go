@@ -26,6 +26,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template/highlight"
 )
 
@@ -70,17 +71,18 @@ var (
 )
 
 func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(nil)
 	for i := range diffs {
-		if diffs[i].Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD {
+		switch {
+		case diffs[i].Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD:
 			buf.Write(addedCodePrefix)
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 			buf.Write(codeTagSuffix)
-		} else if diffs[i].Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL {
+		case diffs[i].Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL:
 			buf.Write(removedCodePrefix)
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 			buf.Write(codeTagSuffix)
-		} else if diffs[i].Type == diffmatchpatch.DiffEqual {
+		case diffs[i].Type == diffmatchpatch.DiffEqual:
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 		}
 	}
@@ -90,62 +92,86 @@ func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTM
 
 // get an specific line by type (add or del) and file line number
 func (diffSection *DiffSection) GetLine(lineType DiffLineType, idx int) *DiffLine {
-	difference := 0
+	var (
+		difference    = 0
+		addCount      = 0
+		delCount      = 0
+		matchDiffLine *DiffLine
+	)
 
+LOOP:
 	for _, diffLine := range diffSection.Lines {
-		if diffLine.Type == DIFF_LINE_PLAIN {
-			// get the difference of line numbers between ADD and DEL versions
+		switch diffLine.Type {
+		case DIFF_LINE_ADD:
+			addCount++
+		case DIFF_LINE_DEL:
+			delCount++
+		default:
+			if matchDiffLine != nil {
+				break LOOP
+			}
 			difference = diffLine.RightIdx - diffLine.LeftIdx
-			continue
+			addCount = 0
+			delCount = 0
 		}
 
-		if lineType == DIFF_LINE_DEL {
+		switch lineType {
+		case DIFF_LINE_DEL:
 			if diffLine.RightIdx == 0 && diffLine.LeftIdx == idx-difference {
-				return diffLine
+				matchDiffLine = diffLine
 			}
-		} else if lineType == DIFF_LINE_ADD {
+		case DIFF_LINE_ADD:
 			if diffLine.LeftIdx == 0 && diffLine.RightIdx == idx+difference {
-				return diffLine
+				matchDiffLine = diffLine
 			}
 		}
+	}
+
+	if addCount == delCount {
+		return matchDiffLine
 	}
 	return nil
 }
 
+var diffMatchPatch = diffmatchpatch.New()
+
+func init() {
+	diffMatchPatch.DiffEditCost = 100
+}
+
 // computes inline diff for the given line
 func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) template.HTML {
-	var compareDiffLine *DiffLine
-	var diff1, diff2 string
-
-	getDefaultReturn := func() template.HTML {
+	if setting.Git.DisableDiffHighlight {
 		return template.HTML(html.EscapeString(diffLine.Content[1:]))
 	}
-
-	// just compute diff for adds and removes
-	if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
-		return getDefaultReturn()
-	}
+	var (
+		compareDiffLine *DiffLine
+		diff1           string
+		diff2           string
+	)
 
 	// try to find equivalent diff line. ignore, otherwise
-	if diffLine.Type == DIFF_LINE_ADD {
+	switch diffLine.Type {
+	case DIFF_LINE_ADD:
 		compareDiffLine = diffSection.GetLine(DIFF_LINE_DEL, diffLine.RightIdx)
 		if compareDiffLine == nil {
-			return getDefaultReturn()
+			return template.HTML(html.EscapeString(diffLine.Content[1:]))
 		}
 		diff1 = compareDiffLine.Content
 		diff2 = diffLine.Content
-	} else {
+	case DIFF_LINE_DEL:
 		compareDiffLine = diffSection.GetLine(DIFF_LINE_ADD, diffLine.LeftIdx)
 		if compareDiffLine == nil {
-			return getDefaultReturn()
+			return template.HTML(html.EscapeString(diffLine.Content[1:]))
 		}
 		diff1 = diffLine.Content
 		diff2 = compareDiffLine.Content
+	default:
+		return template.HTML(html.EscapeString(diffLine.Content[1:]))
 	}
 
-	dmp := diffmatchpatch.New()
-	diffRecord := dmp.DiffMain(diff1[1:], diff2[1:], true)
-	diffRecord = dmp.DiffCleanupSemantic(diffRecord)
+	diffRecord := diffMatchPatch.DiffMain(diff1[1:], diff2[1:], true)
+	diffRecord = diffMatchPatch.DiffCleanupEfficiency(diffRecord)
 
 	return diffToHTML(diffRecord, diffLine.Type)
 }

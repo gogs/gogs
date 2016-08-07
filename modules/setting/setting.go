@@ -191,6 +191,7 @@ var (
 
 	// Git settings
 	Git struct {
+		DisableDiffHighlight     bool
 		MaxGitDiffLines          int
 		MaxGitDiffLineCharacters int
 		MaxGitDiffFiles          int
