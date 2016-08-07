@@ -334,6 +334,7 @@ func NewContext() {
 		log.Fatal(4, "Invalid ROOT_URL '%s': %s", AppUrl, err)
 	}
 	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
+	// This value is empty if site does not have sub-url.
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
 
