@@ -215,6 +215,12 @@
 						<dd><i class="fa fa{{if .DisableGravatar}}-check{{end}}-square-o"></i></dd>
 					</dl>
 				</div>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.enable_federated_avatar"}}</dt>
+						<dd><i class="fa fa{{if .EnableFederatedAvatar}}-check{{end}}-square-o"></i></dd>
+					</dl>
+				</div>
 
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.log_config"}}
