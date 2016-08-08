@@ -453,7 +453,6 @@ func runWeb(ctx *cli.Context) error {
 			m.Combo("/new").Get(context.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
-			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			m.Group("/:index", func() {
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
@@ -465,6 +464,9 @@ func runWeb(ctx *cli.Context) error {
 				m.Post("/content", repo.UpdateIssueContent)
 			})
 		}, repo.MustEnableIssues)
+		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+		// So they can apply their own enable/disable logic on routers.
+		m.Combo("/issues/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 		m.Group("/comments/:id", func() {
 			m.Post("", repo.UpdateCommentContent)
 			m.Post("/delete", repo.DeleteComment)
