@@ -5,10 +5,13 @@
 package repo
 
 import (
+	"fmt"
 	"bytes"
 	"io/ioutil"
 	"path"
 	"strings"
+
+	htmltemplate "html/template"
 
 	"github.com/Unknwon/paginater"
 
@@ -116,14 +119,27 @@ func Home(ctx *context.Context) {
 					if readmeExist {
 						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 					} else {
+						filecontent := ""
 						if err, content := template.ToUtf8WithErr(buf); err != nil {
 							if err != nil {
 								log.Error(4, "Convert content encoding: %s", err)
 							}
-							ctx.Data["FileContent"] = string(buf)
+							filecontent = string(buf)
 						} else {
-							ctx.Data["FileContent"] = content
+							filecontent = content
 						}
+						var output bytes.Buffer
+						lines := strings.Split(filecontent, "\n")
+						for index, line := range lines {
+							output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line)) + "\n")
+						}
+						ctx.Data["FileContent"] = htmltemplate.HTML(output.String())
+
+						output.Reset()
+						for i := 0; i < len(lines); i++ {
+							output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+						}
+						ctx.Data["LineNums"] = htmltemplate.HTML(output.String())
 					}
 				}
 			}
