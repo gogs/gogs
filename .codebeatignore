@@ -1,0 +1,6 @@
+conf/**
+docker/**
+public/**
+packager/**
+scripts/**
+templates/**
