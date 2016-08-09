@@ -202,7 +202,7 @@ func Issues(ctx *context.Context) {
 	var err error
 	var repos []*models.Repository
 	if ctxUser.IsOrganization() {
-		repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctx.User.NumRepos)
+		repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctxUser.NumRepos)
 		if err != nil {
 			ctx.Handle(500, "GetRepositories", err)
 			return
