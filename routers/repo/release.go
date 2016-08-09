@@ -214,7 +214,7 @@ func EditRelease(ctx *context.Context) {
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
 
-	tagName := ctx.Params("*")
+	tagName := ctx.Params(":tagname")
 	rel, err := models.GetRelease(ctx.Repo.Repository.ID, tagName)
 	if err != nil {
 		if models.IsErrReleaseNotExist(err) {
@@ -239,7 +239,7 @@ func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
 
-	tagName := ctx.Params("*")
+	tagName := ctx.Params(":tagname")
 	rel, err := models.GetRelease(ctx.Repo.Repository.ID, tagName)
 	if err != nil {
 		if models.IsErrReleaseNotExist(err) {
