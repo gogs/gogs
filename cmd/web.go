@@ -449,24 +449,24 @@ func runWeb(ctx *cli.Context) error {
 
 	m.Get("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
+		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+		// So they can apply their own enable/disable logic on routers.
 		m.Group("/issues", func() {
-			m.Combo("/new").Get(context.RepoRef(), repo.NewIssue).
+			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
 			m.Group("/:index", func() {
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
 				m.Post("/assignee", repo.UpdateIssueAssignee)
+				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			}, reqRepoWriter)
 
 			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
 				m.Post("/content", repo.UpdateIssueContent)
 			})
-		}, repo.MustEnableIssues)
-		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
-		// So they can apply their own enable/disable logic on routers.
-		m.Combo("/issues/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
+		})
 		m.Group("/comments/:id", func() {
 			m.Post("", repo.UpdateCommentContent)
 			m.Post("/delete", repo.DeleteComment)
