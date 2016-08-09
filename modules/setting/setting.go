@@ -523,6 +523,10 @@ var Service struct {
 	EnableCaptcha                  bool
 }
 
+var Mirror struct {
+	GlobalInterval int
+}
+
 func newService() {
 	sec := Cfg.Section("service")
 	Service.ActiveCodeLives = sec.Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
@@ -716,6 +720,14 @@ func newWebhookService() {
 	Webhook.PagingNum = sec.Key("PAGING_NUM").MustInt(10)
 }
 
+func newMirrorService() {
+	sec := Cfg.Section("mirror")
+	Mirror.GlobalInterval = sec.Key("GLOBAL_INTERVAL").MustInt(24)
+	if Mirror.GlobalInterval <= 0 {
+		Mirror.GlobalInterval = 1
+	}
+}
+
 func NewServices() {
 	newService()
 	newLogService()
@@ -725,4 +737,5 @@ func NewServices() {
 	newRegisterMailService()
 	newNotifyMailService()
 	newWebhookService()
+	newMirrorService()
 }
