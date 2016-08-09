@@ -44,7 +44,7 @@
 						{{if .IsFileTooLarge}}
 							<td><strong>{{.i18n.Tr "repo.file_too_large"}}</strong></td>
 						{{else}}
-							<td class="lines-num"></td>
+							<td class="lines-num">{{.LineNums}}</td>
 							<td class="lines-code"><pre><code class="{{.HighlightClass}}"><ol class="linenums">{{.FileContent}}</ol></code></pre></td>
 						{{end}}
 						</tr>

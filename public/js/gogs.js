@@ -1088,7 +1088,7 @@ $(window).load(function () {
                     b = c;
                 }
                 var classes = [];
-                for (i = a; i <= b; i++) {
+                for (var i = a; i <= b; i++) {
                     classes.push('.L' + i);
                 }
                 $list.filter(classes.join(',')).addClass('active');
@@ -1102,22 +1102,6 @@ $(window).load(function () {
 
     // Code view.
     if ($('.code-view .linenums').length > 0) {
-        var $block = $('.code-view .linenums');
-        var lines = $block.html().split("\n");
-        $block.html('');
-
-        var $num_list = $('.code-view .lines-num');
-
-        // Building blocks.
-        var $toappendblock = [];
-        var $toappendnum_list = [];
-        for (var i = 0; i < lines.length; i++) {
-            $toappendblock.push('<li class="L' + (i + 1) + '" rel="L' + (i + 1) + '">' + lines[i] + '</li>');
-            $toappendnum_list.push('<span id="L' + (i + 1) + '">' + (i + 1) + '</span>');
-        }
-        $block.append($toappendblock.join(''));
-        $num_list.append($toappendnum_list.join(''));
-
         $(document).on('click', '.lines-num span', function (e) {
             var $select = $(this);
             var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
