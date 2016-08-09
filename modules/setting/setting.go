@@ -524,7 +524,7 @@ var Service struct {
 }
 
 var Mirror struct {
-	GlobalInterval int
+	DefaultInterval int
 }
 
 func newService() {
@@ -722,9 +722,9 @@ func newWebhookService() {
 
 func newMirrorService() {
 	sec := Cfg.Section("mirror")
-	Mirror.GlobalInterval = sec.Key("GLOBAL_INTERVAL").MustInt(24)
-	if Mirror.GlobalInterval <= 0 {
-		Mirror.GlobalInterval = 1
+	Mirror.DefaultInterval = sec.Key("DEFAULT_INTERVAL").MustInt(24)
+	if Mirror.DefaultInterval <= 0 {
+		Mirror.DefaultInterval = 1
 	}
 }
 
