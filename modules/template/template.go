@@ -96,7 +96,6 @@ func NewFuncMap() []template.FuncMap {
 		"ShortSha":          base.ShortSha,
 		"MD5":               base.EncodeMD5,
 		"ActionContent2Commits": ActionContent2Commits,
-		"ToUtf8":                ToUtf8,
 		"EscapePound": func(str string) string {
 			return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20").Replace(str)
 		},
@@ -113,10 +112,6 @@ func Safe(raw string) template.HTML {
 
 func Str2html(raw string) template.HTML {
 	return template.HTML(markdown.Sanitizer.Sanitize(raw))
-}
-
-func Range(l int) []int {
-	return make([]int, l)
 }
 
 func List(l *list.List) chan interface{} {
@@ -136,7 +131,7 @@ func Sha1(str string) string {
 	return base.EncodeSha1(str)
 }
 
-func ToUtf8WithErr(content []byte) (error, string) {
+func ToUTF8WithErr(content []byte) (error, string) {
 	charsetLabel, err := base.DetectEncoding(content)
 	if err != nil {
 		return err, ""
@@ -159,8 +154,8 @@ func ToUtf8WithErr(content []byte) (error, string) {
 	return err, result
 }
 
-func ToUtf8(content string) string {
-	_, res := ToUtf8WithErr([]byte(content))
+func ToUTF8(content string) string {
+	_, res := ToUTF8WithErr([]byte(content))
 	return res
 }
 

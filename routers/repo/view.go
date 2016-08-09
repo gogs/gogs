@@ -5,13 +5,12 @@
 package repo
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
+	gotemplate "html/template"
 	"io/ioutil"
 	"path"
 	"strings"
-
-	htmltemplate "html/template"
 
 	"github.com/Unknwon/paginater"
 
@@ -119,27 +118,29 @@ func Home(ctx *context.Context) {
 					if readmeExist {
 						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 					} else {
-						filecontent := ""
-						if err, content := template.ToUtf8WithErr(buf); err != nil {
+						// Building code view blocks with line number on server side.
+						var filecontent string
+						if err, content := template.ToUTF8WithErr(buf); err != nil {
 							if err != nil {
-								log.Error(4, "Convert content encoding: %s", err)
+								log.Error(4, "ToUTF8WithErr: %s", err)
 							}
 							filecontent = string(buf)
 						} else {
 							filecontent = content
 						}
+
 						var output bytes.Buffer
 						lines := strings.Split(filecontent, "\n")
 						for index, line := range lines {
-							output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, htmltemplate.HTMLEscapeString(line)) + "\n")
+							output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, gotemplate.HTMLEscapeString(line)) + "\n")
 						}
-						ctx.Data["FileContent"] = htmltemplate.HTML(output.String())
+						ctx.Data["FileContent"] = gotemplate.HTML(output.String())
 
 						output.Reset()
 						for i := 0; i < len(lines); i++ {
 							output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
 						}
-						ctx.Data["LineNums"] = htmltemplate.HTML(output.String())
+						ctx.Data["LineNums"] = gotemplate.HTML(output.String())
 					}
 				}
 			}
@@ -225,21 +226,21 @@ func Home(ctx *context.Context) {
 	ctx.Data["Reponame"] = repoName
 
 	var treenames []string
-	Paths := make([]string, 0)
+	paths := make([]string, 0)
 
 	if len(treename) > 0 {
 		treenames = strings.Split(treename, "/")
-		for i, _ := range treenames {
-			Paths = append(Paths, strings.Join(treenames[0:i+1], "/"))
+		for i := range treenames {
+			paths = append(paths, strings.Join(treenames[0:i+1], "/"))
 		}
 
 		ctx.Data["HasParentPath"] = true
-		if len(Paths)-2 >= 0 {
-			ctx.Data["ParentPath"] = "/" + Paths[len(Paths)-2]
+		if len(paths)-2 >= 0 {
+			ctx.Data["ParentPath"] = "/" + paths[len(paths)-2]
 		}
 	}
 
-	ctx.Data["Paths"] = Paths
+	ctx.Data["Paths"] = paths
 	ctx.Data["TreeName"] = treename
 	ctx.Data["Treenames"] = treenames
 	ctx.Data["TreePath"] = treePath
