@@ -17,7 +17,6 @@ GOVET = go tool vet -composites=false -methods=false -structtags=false
 
 .IGNORE: public/css/gogs.css
 
-# FIXME: find a way to ignore /vendor/ and /data/ directories.
 govet:
 	$(GOVET) gogs.go 
 	$(GOVET) models modules routers
