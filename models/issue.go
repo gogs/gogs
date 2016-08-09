@@ -160,7 +160,13 @@ func (i *Issue) State() string {
 }
 
 func (issue *Issue) FullLink() string {
-	return fmt.Sprintf("%s/issues/%d", issue.Repo.FullLink(), issue.Index)
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		path = "issues"
+	}
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.FullLink(), path, issue.Index)
 }
 
 // IsPoster returns true if given user by ID is the poster.
