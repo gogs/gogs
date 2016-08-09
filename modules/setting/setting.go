@@ -34,6 +34,10 @@ const (
 	HTTP  Scheme = "http"
 	HTTPS Scheme = "https"
 	FCGI  Scheme = "fcgi"
+
+	RUN_MODE_PROD = "prod"
+	RUN_MODE_DEV  = "dev"
+	RUN_MODE_TEST = "test"
 )
 
 type LandingPage string
@@ -56,6 +60,8 @@ var (
 	AppSubUrlDepth int // Number of slashes
 	AppPath        string
 	AppDataPath    string
+
+	AppRunMode string
 
 	// Server settings
 	Protocol           Scheme
@@ -233,6 +239,14 @@ var (
 	HasRobotsTxt bool
 )
 
+func GogsPath() string {
+	gopath := os.Getenv("GOPATH")
+	if !strings.HasSuffix(gopath, "/") {
+		gopath += "/"
+	}
+	return gopath + "src/github.com/gogits/gogs/"
+}
+
 func DateLang(lang string) string {
 	name, ok := dateLangs[lang]
 	if ok {
@@ -301,7 +315,6 @@ func NewContext() {
 	if len(CustomPath) == 0 {
 		CustomPath = workDir + "/custom"
 	}
-
 	if len(CustomConf) == 0 {
 		CustomConf = CustomPath + "/conf/app.ini"
 	}
@@ -330,6 +343,7 @@ func NewContext() {
 	if AppUrl[len(AppUrl)-1] != '/' {
 		AppUrl += "/"
 	}
+	AppRunMode = Cfg.Section("").Key("RUN_MODE").In(RUN_MODE_PROD, []string{RUN_MODE_PROD, RUN_MODE_DEV, RUN_MODE_TEST})
 
 	// Check if has app suburl.
 	url, err := url.Parse(AppUrl)
@@ -431,8 +445,8 @@ func NewContext() {
 
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
 	curUser := user.CurrentUsername()
-	// Does not check run user when the install lock is off.
-	if InstallLock && RunUser != curUser {
+	// Does not check run user when the install lock is off or is running tests.
+	if InstallLock && AppRunMode != RUN_MODE_TEST && RunUser != curUser {
 		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
 	}
 

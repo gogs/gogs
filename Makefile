@@ -60,7 +60,7 @@ clean-mac: clean
 	find . -name ".DS_Store" -print0 | xargs -0 rm
 
 test:
-	go test -cover -race ./...
+	go test -tags 'sqlite' ./...
 
 fixme:
 	grep -rnw "FIXME" routers models modules

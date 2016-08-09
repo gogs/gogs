@@ -55,6 +55,10 @@ var (
 	EnableTidb    bool
 )
 
+func Database() *sql.DB {
+	return x.DB().DB
+}
+
 func init() {
 	tables = append(tables,
 		new(User), new(PublicKey), new(AccessToken),
@@ -129,7 +133,11 @@ func getEngine() (*xorm.Engine, error) {
 		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
 			return nil, fmt.Errorf("Fail to create directories: %v", err)
 		}
-		cnnstr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
+		relative := ""
+		if setting.AppRunMode == setting.RUN_MODE_TEST {
+			relative = setting.GogsPath()
+		}
+		cnnstr = "file:" + relative + DbCfg.Path + "?cache=shared&mode=rwc"
 	case "tidb":
 		if !EnableTidb {
 			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
