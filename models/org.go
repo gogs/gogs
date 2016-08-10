@@ -414,8 +414,11 @@ func RemoveOrgUser(orgID, userID int64) error {
 			return err
 		}
 	}
-	if _, err = sess.Where("user_id = ?", user.ID).In("repo_id", repoIDs).Delete(new(Access)); err != nil {
-		return err
+
+	if len(repoIDs) > 0 {
+		if _, err = sess.Where("user_id = ?", user.ID).In("repo_id", repoIDs).Delete(new(Access)); err != nil {
+			return err
+		}
 	}
 
 	// Delete member in his/her teams.
