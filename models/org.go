@@ -369,21 +369,25 @@ func RemoveOrgUser(orgID, userID int64) error {
 	}
 
 	user, err := GetUserByID(userID)
+
 	if err != nil {
 		return fmt.Errorf("GetUserByID [%d]: %v", userID, err)
 	}
 	org, err := GetUserByID(orgID)
+
 	if err != nil {
 		return fmt.Errorf("GetUserByID [%d]: %v", orgID, err)
 	}
 
 	// FIXME: only need to get IDs here, not all fields of repository.
 	repos, _, err := org.GetUserRepositories(user.ID, 1, org.NumRepos)
+
 	if err != nil {
 		return fmt.Errorf("GetUserRepositories [%d]: %v", user.ID, err)
 	}
 
 	// Check if the user to delete is the last member in owner team.
+
 	if IsOrganizationOwner(orgID, userID) {
 		t, err := org.GetOwnerTeam()
 		if err != nil {
@@ -408,14 +412,18 @@ func RemoveOrgUser(orgID, userID int64) error {
 
 	// Delete all repository accesses and unwatch them.
 	repoIDs := make([]int64, len(repos))
+
 	for i := range repos {
 		repoIDs = append(repoIDs, repos[i].ID)
 		if err = watchRepo(sess, user.ID, repos[i].ID, false); err != nil {
 			return err
 		}
 	}
-	if _, err = sess.Where("user_id = ?", user.ID).In("repo_id", repoIDs).Delete(new(Access)); err != nil {
-		return err
+
+	if len(repoIDs) > 0 {
+		if _, err = sess.Where("user_id = ?", user.ID).In("repo_id", repoIDs).Delete(new(Access)); err != nil {
+			return err
+		}
 	}
 
 	// Delete member in his/her teams.
@@ -423,6 +431,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	if err != nil {
 		return err
 	}
+
 	for _, t := range teams {
 		if err = removeTeamMember(sess, org.ID, t.ID, user.ID); err != nil {
 			return err
