@@ -39,7 +39,7 @@ imports:
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
-  version: 96040e4fab17baa0391ce571694e4ccb5fce5dac
+  version: 7f3990acf1833faa5ebd0e86f0a4c72a4b5eba3c
 - name: github.com/gogits/git-module
   version: 18dd87dc5eac9ee7076133c8363803f2192d5713
 - name: github.com/gogits/go-gogs-client
