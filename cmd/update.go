@@ -24,7 +24,7 @@ var CmdUpdate = cli.Command{
 	},
 }
 
-func runUpdate(c *cli.Context) {
+func runUpdate(c *cli.Context) error {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
@@ -33,7 +33,7 @@ func runUpdate(c *cli.Context) {
 
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		log.GitLogger.Trace("SSH_ORIGINAL_COMMAND is empty")
-		return
+		return nil
 	}
 
 	args := c.Args()
@@ -53,4 +53,6 @@ func runUpdate(c *cli.Context) {
 	if err := models.AddUpdateTask(&task); err != nil {
 		log.GitLogger.Fatal(2, "AddUpdateTask: %v", err)
 	}
+
+	return nil
 }

@@ -31,6 +31,7 @@ type AuthenticationForm struct {
 	SMTPHost          string
 	SMTPPort          int
 	AllowedDomains    string
+	SecurityProtocol  int `binding:"Range(0,2)"`
 	TLS               bool
 	SkipVerify        bool
 	PAMServiceName    string

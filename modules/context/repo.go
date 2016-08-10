@@ -160,6 +160,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 				ctx.Handle(500, "GetMirror", err)
 				return
 			}
+			ctx.Data["MirrorEnablePrune"] = ctx.Repo.Mirror.EnablePrune
 			ctx.Data["MirrorInterval"] = ctx.Repo.Mirror.Interval
 			ctx.Data["Mirror"] = ctx.Repo.Mirror
 		}

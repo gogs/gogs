@@ -59,14 +59,15 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
-	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                 // V4 -> V5:v0.6.0
-	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),       // V5 -> V6:v0.6.3
-	NewMigration("generate issue-label from issue", issueToIssueLabel),                 // V6 -> V7:v0.6.4
-	NewMigration("refactor attachment table", attachmentRefactor),                      // V7 -> V8:v0.6.4
-	NewMigration("rename pull request fields", renamePullRequestFields),                // V8 -> V9:v0.6.16
-	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                 // V9 -> V10:v0.6.20
-	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt), // V10 -> V11:v0.8.5
-	NewMigration("convert date to unix timestamp", convertDateToUnix),                  // V11 -> V12:v0.9.2
+	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                           // V4 -> V5:v0.6.0
+	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),                 // V5 -> V6:v0.6.3
+	NewMigration("generate issue-label from issue", issueToIssueLabel),                           // V6 -> V7:v0.6.4
+	NewMigration("refactor attachment table", attachmentRefactor),                                // V7 -> V8:v0.6.4
+	NewMigration("rename pull request fields", renamePullRequestFields),                          // V8 -> V9:v0.6.16
+	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                           // V9 -> V10:v0.6.20
+	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt),           // V10 -> V11:v0.8.5
+	NewMigration("convert date to unix timestamp", convertDateToUnix),                            // V11 -> V12:v0.9.2
+	NewMigration("convert LDAP UseSSL option to SecurityProtocol", ldapUseSSLToSecurityProtocol), // V12 -> V13:v0.9.37
 }
 
 // Migrate database to current version
@@ -580,6 +581,7 @@ type TWebhook struct {
 func (t *TWebhook) TableName() string { return "webhook" }
 
 func convertDateToUnix(x *xorm.Engine) (err error) {
+	log.Info("This migration could take up to minutes, please be patient.")
 	type Bean struct {
 		ID         int64 `xorm:"pk autoincr"`
 		Created    time.Time

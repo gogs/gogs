@@ -85,6 +85,13 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		return
 	}
 
+	if form.Closed {
+		if err := issue.ChangeStatus(ctx.User, ctx.Repo.Repository, true); err != nil {
+			ctx.Error(500, "issue.ChangeStatus", err)
+			return
+		}
+	}
+
 	// Refetch from database to assign some automatic values
 	var err error
 	issue, err = models.GetIssueByID(issue.ID)

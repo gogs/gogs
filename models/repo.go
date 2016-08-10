@@ -518,7 +518,7 @@ func (repo *Repository) CloneLink() (cl *CloneLink) {
 }
 
 var (
-	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new"}
+	reservedNames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
 	reservedPatterns = []string{"*.git", "*.keys", "*.wiki"}
 )
 
@@ -547,10 +547,11 @@ func IsUsableName(name string) error {
 
 // Mirror represents a mirror information of repository.
 type Mirror struct {
-	ID       int64 `xorm:"pk autoincr"`
-	RepoID   int64
-	Repo     *Repository `xorm:"-"`
-	Interval int         // Hour.
+	ID          int64 `xorm:"pk autoincr"`
+	RepoID      int64
+	Repo        *Repository `xorm:"-"`
+	Interval    int         // Hour.
+	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
 
 	Updated        time.Time `xorm:"-"`
 	UpdatedUnix    int64
@@ -656,7 +657,7 @@ func GetMirror(repoId int64) (*Mirror, error) {
 }
 
 func updateMirror(e Engine, m *Mirror) error {
-	_, err := e.Id(m.ID).Update(m)
+	_, err := e.Id(m.ID).AllCols().Update(m)
 	return err
 }
 
@@ -746,9 +747,10 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	if opts.IsMirror {
 		if _, err = x.InsertOne(&Mirror{
-			RepoID:     repo.ID,
-			Interval:   24,
-			NextUpdate: time.Now().Add(24 * time.Hour),
+			RepoID:      repo.ID,
+			Interval:    24,
+			EnablePrune: true,
+			NextUpdate:  time.Now().Add(24 * time.Hour),
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
@@ -1420,20 +1422,8 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	if repo.NumForks > 0 {
-		if repo.IsPrivate {
-			forkRepos, err := GetRepositoriesByForkID(repo.ID)
-			if err != nil {
-				return fmt.Errorf("getRepositoriesByForkID: %v", err)
-			}
-			for i := range forkRepos {
-				if err = DeleteRepository(forkRepos[i].OwnerID, forkRepos[i].ID); err != nil {
-					log.Error(4, "DeleteRepository [%d]: %v", forkRepos[i].ID, err)
-				}
-			}
-		} else {
-			if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
-				log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
-			}
+		if _, err = x.Exec("UPDATE `repository` SET fork_id=0,is_fork=? WHERE fork_id=?", false, repo.ID); err != nil {
+			log.Error(4, "reset 'fork_id' and 'is_fork': %v", err)
 		}
 	}
 
@@ -1532,9 +1522,6 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
 
-	if opts.PageSize <= 0 || opts.PageSize > setting.ExplorePagingNum {
-		opts.PageSize = setting.ExplorePagingNum
-	}
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
@@ -1706,10 +1693,16 @@ func MirrorUpdate() {
 		}
 
 		repoPath := m.Repo.RepoPath()
+
+		gitArgs := []string{"remote", "update"}
+		if m.EnablePrune {
+			gitArgs = append(gitArgs, "--prune")
+		}
+
 		if _, stderr, err := process.ExecDir(
 			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
 			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
-			"git", "remote", "update", "--prune"); err != nil {
+			"git", gitArgs...); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
@@ -1841,9 +1834,26 @@ func CheckRepoStats() {
 		repoStatsCheck(checkers[i])
 	}
 
-	// FIXME: use checker when v0.9, stop supporting old fork repo format.
+	// ***** START: Repository.NumClosedIssues *****
+	desc := "repository count 'num_closed_issues'"
+	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, false)
+	if err != nil {
+		log.Error(4, "Select %s: %v", desc, err)
+	} else {
+		for _, result := range results {
+			id := com.StrTo(result["id"]).MustInt64()
+			log.Trace("Updating %s: %d", desc, id)
+			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
+			if err != nil {
+				log.Error(4, "Update %s[%d]: %v", desc, id, err)
+			}
+		}
+	}
+	// ***** END: Repository.NumClosedIssues *****
+
+	// FIXME: use checker when stop supporting old fork repo format.
 	// ***** START: Repository.NumForks *****
-	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
+	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
 	if err != nil {
 		log.Error(4, "Select repository count 'num_forks': %v", err)
 	} else {

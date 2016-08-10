@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.9.23
+##### Current tip version: 0.9.42 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions)
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -49,7 +49,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
-- Multi-language support ([17 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([18 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
@@ -96,6 +96,7 @@ There are 5 ways to install Gogs:
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/mbugeia/gogs_ynh)
+- [DPlatform](https://github.com/j8r/DPlatform)
 
 ## Software and Service Support
 

@@ -67,6 +67,8 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 				return fmt.Errorf("GetBranchCommit: %v", err)
 			}
 
+			// Trim '--' prefix to prevent command line argument vulnerability
+			rel.TagName = strings.TrimPrefix(rel.TagName, "--")
 			if err = gitRepo.CreateTag(rel.TagName, commit.ID.String()); err != nil {
 				return err
 			}

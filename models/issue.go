@@ -32,8 +32,8 @@ var (
 // Issue represents an issue or pull request of repository.
 type Issue struct {
 	ID              int64 `xorm:"pk autoincr"`
-	RepoID          int64 `xorm:"INDEX"`
-	Index           int64 // Index in one repository.
+	RepoID          int64 `xorm:"INDEX UNIQUE(repo_index)"`
+	Index           int64 `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	Name            string
 	Repo            *Repository `xorm:"-"`
 	PosterID        int64
@@ -546,9 +546,9 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		sess.Desc("created_unix")
 	}
 
-	if opts.Labels != "0" {
+	if len(opts.Labels) > 0 && opts.Labels != "0" {
 		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-		if opts.Labels != "" && len(labelIDs) > 0 {
+		if len(labelIDs) > 0 {
 			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("label_id", labelIDs)
 		}
 	}
@@ -785,9 +785,9 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	countSession := func(opts *IssueStatsOptions) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", opts.RepoID).And("is_pull = ?", opts.IsPull)
 
-		if opts.Labels != "0" {
+		if len(opts.Labels) > 0 && opts.Labels != "0" {
 			labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
-			if opts.Labels != "" && len(labelIDs) > 0 {
+			if len(labelIDs) > 0 {
 				sess.Join("INNER", "issue_label", "issue.id = issue_id").In("label_id", labelIDs)
 			}
 		}
