@@ -533,9 +533,9 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/commit/:sha([a-z0-9]{7,40})$", repo.Diff)
 			m.Get("/forks", repo.Forks)
 		}, context.RepoRef())
-		m.Get("/commit/:sha([a-z0-9]{40})\\.:ext(patch|diff)", repo.RawDiff)
+		m.Get("/commit/:sha([a-z0-9]{7,40})\\.:ext(patch|diff)", repo.RawDiff)
 
-		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
+		m.Get("/compare/:before([a-z0-9]{7,40})\\.\\.\\.:after([a-z0-9]{7,40})", repo.CompareDiff)
 	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
