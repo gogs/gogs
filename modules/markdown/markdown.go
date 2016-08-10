@@ -265,7 +265,6 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
 			`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, base.ShortSha(string(m)))), -1)
 	}
-	fmt.Println(rawBytes)
 	return rawBytes
 }
 
