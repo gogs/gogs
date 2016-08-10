@@ -224,6 +224,8 @@ func Config(ctx *context.Context) {
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
 	ctx.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
 
+	ctx.Data["Git"] = setting.Git
+
 	type logger struct {
 		Mode, Config string
 	}
