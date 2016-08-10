@@ -33,9 +33,9 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
 - name: github.com/go-xorm/core
-  version: bc1b7f81f0e369289078424064634a5ee7d21051
+  version: 5bf745d7d163f4380e6c2bba8c4afa60534dd087
 - name: github.com/go-xorm/xorm
-  version: b8b1711cde4d9c68da95cd0ff8de0de0cb491df3
+  version: c6c705684057842d9854e8299dd51abb06ae29f5
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
@@ -60,7 +60,7 @@ imports:
 - name: github.com/klauspost/crc32
   version: 19b0b332c9e4516a6370a0456e6182c3b5036720
 - name: github.com/lib/pq
-  version: 4dd446efc17690bc53e154025146f73203b18309
+  version: 80f8150043c80fb52dee6bc863a709cdac7ec8f8
   subpackages:
   - oid
 - name: github.com/mattn/go-sqlite3
@@ -142,7 +142,7 @@ imports:
 - name: gopkg.in/ini.v1
   version: cf53f9204df4fbdd7ec4164b57fa6184ba168292
 - name: gopkg.in/ldap.v2
-  version: 537128fee7cca108d8ce74e4309fdfcdd9c7f496
+  version: d0a5ced67b4dc310b9158d63a2c6f9c5ec13f105
 - name: gopkg.in/macaron.v1
   version: 7564489a79f3f96b7ac8034652b35eeebb468eb4
 - name: gopkg.in/redis.v2
