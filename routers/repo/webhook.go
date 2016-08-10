@@ -359,6 +359,10 @@ func TestWebhook(ctx *context.Context) {
 					Name:  ctx.Repo.Commit.Author.Name,
 					Email: ctx.Repo.Commit.Author.Email,
 				},
+				Committer: &api.PayloadCommitter{
+					Name:  ctx.Repo.Commit.Committer.Name,
+					Email: ctx.Repo.Commit.Committer.Email,
+				},
 			},
 		},
 		Repo: ctx.Repo.Repository.ComposePayload(),
