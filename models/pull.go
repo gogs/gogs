@@ -253,6 +253,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return fmt.Errorf("PrepareWebhooks: %v", err)
 	}
 	go HookQueue.Add(pr.BaseRepo.ID)
+	go AddTestPullRequestTask(pr.BaseRepo.ID, pr.BaseBranch)
 	return nil
 }
 
