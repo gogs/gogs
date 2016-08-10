@@ -57,11 +57,13 @@ func ListToPushCommits(l *list.List) *PushCommits {
 		}
 		commits = append(commits,
 			&PushCommit{
-				Sha1:        commit.ID.String(),
-				Message:     commit.Message(),
-				AuthorEmail: commit.Author.Email,
-				AuthorName:  commit.Author.Name,
-				Timestamp:   commit.Author.When,
+				Sha1:           commit.ID.String(),
+				Message:        commit.Message(),
+				AuthorEmail:    commit.Author.Email,
+				AuthorName:     commit.Author.Name,
+				CommitterEmail: commit.Committer.Email,
+				CommitterName:  commit.Committer.Name,
+				Timestamp:      commit.Author.When,
 			})
 	}
 	return &PushCommits{l.Len(), commits, "", nil}

@@ -234,11 +234,13 @@ func issueIndexTrimRight(c rune) bool {
 }
 
 type PushCommit struct {
-	Sha1        string
-	Message     string
-	AuthorEmail string
-	AuthorName  string
-	Timestamp   time.Time
+	Sha1           string
+	Message        string
+	AuthorEmail    string
+	AuthorName     string
+	CommitterEmail string
+	CommitterName  string
+	Timestamp      time.Time
 }
 
 type PushCommits struct {
@@ -263,6 +265,12 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 		if err == nil {
 			authorUsername = author.Name
 		}
+		committerUsername := ""
+		committer, err := GetUserByEmail(commit.CommitterEmail)
+		if err == nil {
+			// TODO: check errors other than email not found.
+			committerUsername = committer.Name
+		}
 		commits[i] = &api.PayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
@@ -271,6 +279,11 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
 				UserName: authorUsername,
+			},
+			Committer: &api.PayloadCommitter{
+				Name:     commit.CommitterName,
+				Email:    commit.CommitterEmail,
+				UserName: committerUsername,
 			},
 			Timestamp: commit.Timestamp,
 		}
