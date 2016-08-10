@@ -198,12 +198,13 @@ var (
 		MaxGitDiffLines          int
 		MaxGitDiffLineCharacters int
 		MaxGitDiffFiles          int
-		GcArgs                   []string `delim:" "`
+		GCArgs                   []string `delim:" "`
 		Timeout                  struct {
 			Migrate int
 			Mirror  int
 			Clone   int
 			Pull    int
+			GC      int `ini:"GC"`
 		} `ini:"git.timeout"`
 	}
 
