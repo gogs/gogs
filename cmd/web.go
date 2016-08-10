@@ -530,7 +530,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/src/*", repo.Home)
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
-			m.Get("/commit/:sha([a-z0-9]{40})$", repo.Diff)
+			m.Get("/commit/:sha([a-z0-9]{7,40})$", repo.Diff)
 			m.Get("/forks", repo.Forks)
 		}, context.RepoRef())
 		m.Get("/commit/:sha([a-z0-9]{40})\\.:ext(patch|diff)", repo.RawDiff)
