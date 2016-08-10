@@ -1279,11 +1279,16 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 		daemonExportFile := path.Join(repo.RepoPath(), `git-daemon-export-ok`)
 		if repo.IsPrivate {
 			// NOTE: Gogs doesn't actually care about this file so we don't do any error-checking :D
-			os.Remove(daemonExportFile)
+			if err = os.Remove(daemonExportFile); err != nil {
+				log.Error(0, "Failed to remove %s: %s", daemonExportFile, err.Error())
+			}
 		} else {
 			// NOTE: Gogs doesn't actually care about this file so we don't do any error-checking :D
-			f, _ := os.Create(daemonExportFile)
-			f.Close()
+			if f, err := os.Create(daemonExportFile); err != nil {
+				log.Error(0, "Failed to create %s: %s", daemonExportFile, err.Error())
+			} else {
+				f.Close()
+			}
 		}
 
 		forkRepos, err := getRepositoriesByForkID(e, repo.ID)
