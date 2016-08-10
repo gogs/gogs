@@ -208,6 +208,10 @@ var (
 		} `ini:"git.timeout"`
 	}
 
+	Mirror struct {
+		DefaultInterval int
+	}
+
 	// API settings
 	API struct {
 		MaxResponseItems int
@@ -514,6 +518,12 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
+	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
+		log.Fatal(4, "Fail to map API settings: %v", err)
+	}
+
+	if Mirror.DefaultInterval <= 0 {
+		Mirror.DefaultInterval = 24
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
