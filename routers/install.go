@@ -252,11 +252,10 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		return
 	}
 
-	// Check run user.
-	curUser := user.CurrentUsername()
-	if form.RunUser != curUser {
+	currentUser, match := setting.IsRunUserMatchCurrentUser(form.RunUser)
+	if !match {
 		ctx.Data["Err_RunUser"] = true
-		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, currentUser), INSTALL, &form)
 		return
 	}
 
