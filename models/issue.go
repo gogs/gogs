@@ -911,7 +911,7 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 		Count(&Issue{})
 
 	stats.CreateCount, _ = countSession(false, isPull, repoID, repoIDs).
-		And("assignee_id = ?", uid).
+		And("poster_id = ?", uid).
 		Count(&Issue{})
 
 	openCountSession := countSession(false, isPull, repoID, repoIDs)
