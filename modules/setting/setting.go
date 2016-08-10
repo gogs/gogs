@@ -285,6 +285,19 @@ func forcePathSeparator(path string) {
 	}
 }
 
+// IsRunUserMatchCurrentUser returns false if configured run user does not match
+// actual user that runs the app. The first return value is the actual user name.
+// This check is ignored under Windows since SSH remote login is not the main
+// method to login on Windows.
+func IsRunUserMatchCurrentUser(runUser string) (string, bool) {
+	if IsWindows {
+		return "", true
+	}
+
+	currentUser := user.CurrentUsername()
+	return currentUser, runUser == currentUser
+}
+
 // NewContext initializes configuration context.
 // NOTE: do not print any log except error.
 func NewContext() {
@@ -431,10 +444,12 @@ func NewContext() {
 	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
-	curUser := user.CurrentUsername()
 	// Does not check run user when the install lock is off.
-	if InstallLock && RunUser != curUser {
-		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
+	if InstallLock {
+		currentUser, match := IsRunUserMatchCurrentUser(RunUser)
+		if !match {
+			log.Fatal(4, "Expect user '%s' but current user is: %s", RunUser, currentUser)
+		}
 	}
 
 	// Determine and create root git repository path.
