@@ -238,6 +238,7 @@ type PushCommit struct {
 	Message     string
 	AuthorEmail string
 	AuthorName  string
+	Timestamp   time.Time
 }
 
 type PushCommits struct {
@@ -256,21 +257,22 @@ func NewPushCommits() *PushCommits {
 
 func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit {
 	commits := make([]*api.PayloadCommit, len(pc.Commits))
-	for i, cmt := range pc.Commits {
-		author_username := ""
-		author, err := GetUserByEmail(cmt.AuthorEmail)
+	for i, commit := range pc.Commits {
+		authorUsername := ""
+		author, err := GetUserByEmail(commit.AuthorEmail)
 		if err == nil {
-			author_username = author.Name
+			authorUsername = author.Name
 		}
 		commits[i] = &api.PayloadCommit{
-			ID:      cmt.Sha1,
-			Message: cmt.Message,
-			URL:     fmt.Sprintf("%s/commit/%s", repoLink, cmt.Sha1),
+			ID:      commit.Sha1,
+			Message: commit.Message,
+			URL:     fmt.Sprintf("%s/commit/%s", repoLink, commit.Sha1),
 			Author: &api.PayloadAuthor{
-				Name:     cmt.AuthorName,
-				Email:    cmt.AuthorEmail,
-				UserName: author_username,
+				Name:     commit.AuthorName,
+				Email:    commit.AuthorEmail,
+				UserName: authorUsername,
 			},
+			Timestamp: commit.Timestamp,
 		}
 	}
 	return commits
