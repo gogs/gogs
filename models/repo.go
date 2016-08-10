@@ -1741,14 +1741,17 @@ func GitFsck() {
 }
 
 func GitGcRepos() error {
-	args := append([]string{"gc"}, setting.Git.GcArgs...)
+	args := append([]string{"gc"}, setting.Git.GCArgs...)
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
 			if err := repo.GetOwner(); err != nil {
 				return err
 			}
-			_, stderr, err := process.ExecDir(-1, RepoPath(repo.Owner.Name, repo.Name), "Repository garbage collection", "git", args...)
+			_, stderr, err := process.ExecDir(
+				time.Duration(setting.Git.Timeout.GC)*time.Second,
+				RepoPath(repo.Owner.Name, repo.Name), "Repository garbage collection",
+				"git", args...)
 			if err != nil {
 				return fmt.Errorf("%v: %v", err, stderr)
 			}
