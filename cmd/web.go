@@ -488,8 +488,8 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
 			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
-			m.Get("/edit/:tagname", repo.EditRelease)
-			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+			m.Get("/edit/*", repo.EditRelease)
+			m.Post("/edit/*", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoWriter, context.RepoRef())
 
