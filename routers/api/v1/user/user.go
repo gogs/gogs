@@ -70,3 +70,8 @@ func GetInfo(ctx *context.APIContext) {
 	}
 	ctx.JSON(200, &api.User{u.ID, u.Name, u.FullName, u.Email, u.AvatarLink()})
 }
+
+func GetSignedInUser(ctx *context.APIContext) {
+	u := ctx.User;
+	ctx.JSON(200, &api.User{u.ID, u.Name, u.FullName, u.Email, u.AvatarLink()})
+}
