@@ -227,7 +227,7 @@
 				</div>
 			{{else}}
 				<div class="ui warning message">
-					{{.i18n.Tr "repo.issues.sign_in_require_desc" .SignInLink | Safe}}
+					<a href="{{ .SignInLink }}">{{.i18n.Tr "repo.issues.sign_in_require_desc" | Safe}}</a>
 				</div>
 			{{end}}
 		</ui>
