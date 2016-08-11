@@ -1,6 +1,7 @@
 conf/**
 docker/**
-public/**
+modules/bindata/**
 packager/**
+public/**
 scripts/**
 templates/**
