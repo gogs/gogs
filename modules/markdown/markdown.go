@@ -90,7 +90,7 @@ var (
 	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\()[A-Z]{1,10}-[1-9][0-9]*\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
-	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{7,40}\b`)
 )
 
 // FindAllMentions matches mention patterns in given content

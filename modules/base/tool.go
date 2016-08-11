@@ -45,7 +45,7 @@ func EncodeSha1(str string) string {
 }
 
 func ShortSha(sha1 string) string {
-	if len(sha1) == 40 {
+	if len(sha1) > 10 {
 		return sha1[:10]
 	}
 	return sha1
