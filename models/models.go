@@ -53,7 +53,7 @@ var (
 	}
 
 	EnableSQLite3 bool
-	EnableTidb    bool
+	EnableTiDB    bool
 )
 
 func init() {

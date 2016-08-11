@@ -13,6 +13,6 @@ import (
 )
 
 func init() {
-	EnableTidb = true
+	EnableTiDB = true
 	log.SetLevelByString("error")
 }
