@@ -637,7 +637,7 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))
-	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login"
+	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login?redirect_to=" + ctx.Data["Link"].(string)
 
 	ctx.Data["RequireHighlightJS"] = true
 
