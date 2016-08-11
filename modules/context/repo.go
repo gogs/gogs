@@ -6,10 +6,12 @@ package context
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path"
 	"strings"
 
 	"github.com/Unknwon/com"
+	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/git-module"
@@ -67,6 +69,28 @@ func (r *Repository) IsWriter() bool {
 // HasAccess returns true if the current user has at least read access for this repository
 func (r *Repository) HasAccess() bool {
 	return r.AccessMode >= models.ACCESS_MODE_READ
+}
+
+// GetEditorconfig returns the .editorconfig definition if found in the
+// HEAD of the default repo branch.
+func (r *Repository) GetEditorconfig() (*editorconfig.Editorconfig, error) {
+	commit, err := r.GitRepo.GetBranchCommit(r.Repository.DefaultBranch)
+	if err != nil {
+		return nil, err
+	}
+	treeEntry, err := commit.GetTreeEntryByPath(".editorconfig")
+	if err != nil {
+		return nil, err
+	}
+	reader, err := treeEntry.Blob().Data()
+	if err != nil {
+		return nil, err
+	}
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	return editorconfig.ParseBytes(data)
 }
 
 func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
