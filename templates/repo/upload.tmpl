@@ -1,0 +1,79 @@
+{{template "base/head" .}}
+<div class="repository file upload">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		{{.branchName}}
+		{{template "base/alert" .}}
+		<form class="ui comment form" action="{{EscapePound $.Link}}" method="post">
+			{{.CsrfTokenHtml}}
+			<div class="ui secondary menu">
+				<div class="item fitted" style="width:100%;">
+					<div class="ui breadcrumb field{{if .Err_Directory}} error{{end}}">
+						<a class="section" href="{{EscapePound $.BranchLink}}">{{.Repository.Name}}</a>
+						{{ $n := len .TreeNames}}
+						{{ $l := Subtract $n 1}}
+						{{range $i, $v := .TreeNames}}
+							<div class="divider"> / </div>
+							{{if eq $i $l}}
+								<input type="text" id="file-name" value="{{$v}}" placeholder="{{$.i18n.Tr "repo.add_subdir"}}">
+							{{else}}
+								<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $v}}">{{$v}}</a></span>
+							{{end}}
+						{{end}}
+						<button class="clipboard-tree-name icon octicon octicon-clippy poping up" type="button" data-content="{{.i18n.Tr "repo.copy_file_path_to_clipboard"}}" data-position="bottom center" data-variation="tiny inverted"></button>
+						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreeName}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
+						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}">
+					</div>
+				</div>
+			</div>
+			<div class="field ui upload">
+				<div class="files"></div>
+				<div class="ui basic button dropzone" id="dropzone" data-upload-url="{{.RepoLink}}/upload-file" data-remove-url="{{.RepoLink}}/upload-remove" data-csrf="{{.CsrfToken}}" data-accepts="{{.UploadAllowedTypes}}" data-max-file="{{.UploadMaxFiles}}" data-max-size="{{.UploadMaxSize}}" data-default-message="{{.i18n.Tr "dropzone.default_message"}}" data-invalid-input-type="{{.i18n.Tr "dropzone.invalid_input_type"}}" data-file-too-big="{{.i18n.Tr "dropzone.file_too_big"}}" data-remove-file="{{.i18n.Tr "dropzone.remove_file"}}"></div>
+			</div>
+			<div class="commit-form-wrapper">
+				<img width="48" height="48" class="ui rounded image commit-form-avatar" src="{{.SignedUser.AvatarLink}}">
+				<div class="commit-form">
+					<h3>{{.i18n.Tr "repo.commit_changes"}}</h3>
+					<div class="field">
+						<input name="commit_summary" placeholder="{{.i18n.Tr "repo.add_files_to_dir" .TreeName}}" value="{{.CommitSummary}}">
+					</div>
+					<div class="field">
+						<textarea name="commit_message" placeholder="{{.i18n.Tr "repo.default_commit_message"}}">{{.CommitMessage}}</textarea>
+					</div>
+					<div class="quick-pull-choice js-quick-pull-choice ">
+						<dl class="form-group">
+							<dd>
+						 		<div class="form-checkbox">
+									<label>
+										<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="direct"{{if eq .CommitChoice "direct"}} checked="checked"{{end}}>
+										<i class="octicon octicon-git-commit" height="16" width="14"></i>
+										{{.CommitDirectlyToThisBranch | Safe}}
+									</label>
+								</div>
+								<div class="form-checkbox">
+									<label>
+										<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="commit-to-new-branch"{{if eq .CommitChoice "commit-to-new-branch"}} checked="checked"{{end}}>
+										<i class="octicon octicon-git-pull-request" height="16" width="12"></i>
+										{{.CreateNewBranch | Safe}}
+									</label>
+								</div>
+							</dd>
+						</dl>
+						<div class="quick-pull-branch-name">
+							<div class="new-branch-name-input{{if .Err_Branchname}} error{{end}}">
+								<i class="octicon octicon-git-branch quick-pull-new-branch-icon" height="16" width="10"></i>
+								<input type="text" name="new_branch_name" value="{{.NewBranchName}}" class="form-control input-contrast mr-2 js-quick-pull-new-branch-name" placeholder="New branch name…">
+								<span class="text-muted js-quick-pull-normalization-info"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<button type="submit" class="ui green button">
+					{{.i18n.Tr "repo.commit_changes"}}
+				</button>
+				<a class="ui button red" href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreeName}}">{{.i18n.Tr "repo.cancel"}}</a>
+			</div>
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

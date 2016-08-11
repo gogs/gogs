@@ -28,6 +28,61 @@ function initCommentPreviewTab($form) {
     buttonsClickOnEnter();
 }
 
+var previewTab;
+var previewTabApis;
+
+function initEditPreviewTab($form) {
+    var $tab_menu = $form.find('.tabular.menu');
+    $tab_menu.find('.item').tab();
+    previewTab = $tab_menu.find('.item[data-tab="' + $tab_menu.data('preview') + '"]');
+
+    if (previewTab.length) {
+        previewTabApis = previewTab.data('preview-apis').split(',');
+        previewTab.click(function () {
+            var $this = $(this);
+            $.post($this.data('url'), {
+                    "_csrf": csrf,
+                    "mode": "gfm",
+                    "context": $this.data('context'),
+                    "text": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
+                },
+                function (data) {
+                    var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
+                    $preview_tab.html(data);
+                    emojify.run($preview_tab[0]);
+                    $('pre code', $preview_tab[0]).each(function (i, block) {
+                        hljs.highlightBlock(block);
+                    });
+                }
+            );
+        });
+    }
+
+    buttonsClickOnEnter();
+}
+
+function initEditDiffTab($form) {
+    var $tab_menu = $form.find('.tabular.menu');
+    $tab_menu.find('.item').tab();
+    $tab_menu.find('.item[data-tab="' + $tab_menu.data('diff') + '"]').click(function () {
+        var $this = $(this);
+        $.post($this.data('url'), {
+                "_csrf": csrf,
+                "context": $this.data('context'),
+                "content": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
+            },
+            function (data) {
+                var $diff_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('diff') + '"]');
+                $diff_tab.html(data);
+                emojify.run($diff_tab[0]);
+                initCodeView()
+            }
+        );
+    });
+
+    buttonsClickOnEnter();
+}
+
 function initCommentForm() {
     if ($('.comment.form').length == 0) {
         return
@@ -143,6 +198,11 @@ function initCommentForm() {
     // Milestone and assignee
     selectItem('.select-milestone', '#milestone_id');
     selectItem('.select-assignee', '#assignee_id');
+}
+
+function initEditForm() {
+    initEditPreviewTab($('.edit.form'));
+    initEditDiffTab($('.edit.form'));
 }
 
 function initInstall() {
@@ -450,7 +510,7 @@ function initRepository() {
 
         // Change status
         var $status_btn = $('#status-button');
-        $('#content').keyup(function () {
+        $('#edit_area').keyup(function () {
             if ($(this).val().length == 0) {
                 $status_btn.text($status_btn.data('status'))
             } else {
@@ -516,15 +576,10 @@ function initRepositoryCollaboration() {
     });
 }
 
-function initWiki() {
-    if ($('.repository.wiki').length == 0) {
-        return;
-    }
-
-
-    if ($('.repository.wiki.new').length > 0) {
-        var $edit_area = $('#edit-area');
-        var simplemde = new SimpleMDE({
+function initWikiForm() {
+    var $edit_area = $('.repository.wiki textarea#edit_area');
+    if ($edit_area.length > 0) {
+        new SimpleMDE({
             autoDownloadFontAwesome: false,
             element: $edit_area[0],
             forceSync: true,
@@ -549,16 +604,282 @@ function initWiki() {
             renderingConfig: {
                 singleLineBreaks: false
             },
-            spellChecker: false,
+            indentWithTabs: false,
             tabSize: 4,
+            spellChecker: false,
             toolbar: ["bold", "italic", "strikethrough", "|",
-                "heading", "heading-1", "heading-2", "heading-3", "|",
+                "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
                 "code", "quote", "|",
                 "unordered-list", "ordered-list", "|",
-                "link", "image", "horizontal-rule", "|",
-                "preview", "fullscreen"]
+                "link", "image", "table", "horizontal-rule", "|",
+                "clean-block", "preview", "fullscreen", "side-by-side"]
         })
     }
+}
+
+function initIssueForm() {
+    var $edit_area = $('.repository.issue textarea.edit_area');
+    if ($edit_area.length > 0) {
+        $edit_area.each(function (i, edit_area) {
+            new SimpleMDE({
+                autoDownloadFontAwesome: false,
+                element: edit_area[0],
+                forceSync: true,
+                previewRender: function (plainText, preview) { // Async method
+                    setTimeout(function () {
+                        // FIXME: still send render request when return back to edit mode
+                        $.post($edit_area.data('url'), {
+                                "_csrf": csrf,
+                                "mode": "gfm",
+                                "context": $edit_area.data('context'),
+                                "text": plainText
+                            },
+                            function (data) {
+                                preview.innerHTML = '<div class="markdown">' + data + '</div>';
+                                emojify.run($('.editor-preview')[0]);
+                            }
+                        );
+                    }, 0);
+
+                    return "Loading...";
+                },
+                renderingConfig: {
+                    singleLineBreaks: false
+                },
+                indentWithTabs: false,
+                tabSize: 4,
+                spellChecker: false,
+                toolbar: ["bold", "italic", "strikethrough", "|",
+                    "code", "quote", "|",
+                    "unordered-list", "ordered-list", "|",
+                    "link", "image", "table"]
+            })
+        });
+    }
+}
+
+var editArea;
+var editFilename;
+var smdEditor;
+var cmEditor;
+var mdFileExtensions;
+var lineWrapExtensions;
+
+// For IE
+String.prototype.endsWith = function (pattern) {
+    var d = this.length - pattern.length;
+    return d >= 0 && this.lastIndexOf(pattern) === d;
+};
+
+// Adding function to get the cursor position in a text field to jquery objects
+(function ($, undefined) {
+    $.fn.getCursorPosition = function () {
+        var el = $(this).get(0);
+        var pos = 0;
+        if ('selectionStart' in el) {
+            pos = el.selectionStart;
+        } else if ('selection' in document) {
+            el.focus();
+            var Sel = document.selection.createRange();
+            var SelLength = document.selection.createRange().text.length;
+            Sel.moveStart('character', -el.value.length);
+            pos = Sel.text.length - SelLength;
+        }
+        return pos;
+    }
+})(jQuery);
+
+function initEditor() {
+    editFilename = $("#file-name");
+    editFilename.keyup(function (e) {
+        var sections = $('.breadcrumb span.section');
+        var dividers = $('.breadcrumb div.divider');
+        if (e.keyCode == 8) {
+            if ($(this).getCursorPosition() == 0) {
+                if (sections.length > 0) {
+                    var value = sections.last().find('a').text();
+                    $(this).val(value + $(this).val());
+                    $(this)[0].setSelectionRange(value.length, value.length);
+                    sections.last().remove();
+                    dividers.last().remove();
+                }
+            }
+        }
+        if (e.keyCode == 191) {
+            var parts = $(this).val().split('/');
+            for (var i = 0; i < parts.length; ++i) {
+                var value = parts[i];
+                if (i < parts.length - 1) {
+                    if (value.length) {
+                        $('<span class="section"><a href="#">' + value + '</a></span>').insertBefore($(this));
+                        $('<div class="divider"> / </div>').insertBefore($(this));
+                    }
+                }
+                else {
+                    $(this).val(value);
+                }
+                $(this)[0].setSelectionRange(0, 0);
+            }
+        }
+        var parts = [];
+        $('.breadcrumb span.section').each(function (i, element) {
+            element = $(element);
+            if (element.find('a').length) {
+                parts.push(element.find('a').text());
+            } else {
+                parts.push(element.text());
+            }
+        });
+        if ($(this).val())
+            parts.push($(this).val());
+        $('#tree-name').val(parts.join('/'));
+    }).trigger('keyup');
+
+    editArea = $('.repository.edit textarea#edit_area');
+
+    if (!editArea.length)
+        return;
+
+    mdFileExtensions = editArea.data("md-file-extensions").split(",");
+    lineWrapExtensions = editArea.data("line-wrap-extensions").split(",");
+
+    editFilename.on("keyup", function (e) {
+        var val = editFilename.val(), m, mode, spec, extension, extWithDot, previewLink, dataUrl, apiCall;
+        extension = extWithDot = "";
+        if (m = /.+\.([^.]+)$/.exec(val)) {
+            extension = m[1];
+            extWithDot = "." + extension;
+        }
+
+        var info = CodeMirror.findModeByExtension(extension);
+        previewLink = $('a[data-tab=preview]');
+        if (info) {
+            mode = info.mode;
+            spec = info.mime;
+            apiCall = mode;
+        }
+        else {
+            apiCall = extension
+        }
+
+        if (previewLink.length && apiCall && previewTabApis && previewTabApis.length && previewTabApis.indexOf(apiCall) >= 0) {
+            dataUrl = previewLink.data('url');
+            previewLink.data('url', dataUrl.replace(/(.*)\/.*/i, '$1/' + mode));
+            previewLink.show();
+        }
+        else {
+            previewLink.hide();
+        }
+
+        // If this file is a Markdown extensions, we will load that editor and return
+        if (mdFileExtensions.indexOf(extWithDot) >= 0) {
+            if (setSimpleMDE()) {
+                return;
+            }
+        }
+
+        // Else we are going to use CodeMirror
+        if (!cmEditor) {
+            if (!setCodeMirror())
+                return;
+        }
+
+        if (mode) {
+            cmEditor.setOption("mode", spec);
+            CodeMirror.autoLoadMode(cmEditor, mode);
+        }
+
+        if (lineWrapExtensions.indexOf(extWithDot) >= 0) {
+            cmEditor.setOption("lineWrapping", true);
+        }
+        else {
+            cmEditor.setOption("lineWrapping", false);
+        }
+    }).trigger('keyup');
+}
+
+function setSimpleMDE() {
+    if (cmEditor) {
+        cmEditor.toTextArea();
+        cmEditor = null;
+    }
+
+    if (smdEditor) {
+        return true;
+    }
+
+    smdEditor = new SimpleMDE({
+        autoDownloadFontAwesome: false,
+        element: editArea[0],
+        forceSync: true,
+        renderingConfig: {
+            singleLineBreaks: false
+        },
+        indentWithTabs: false,
+        tabSize: 4,
+        spellChecker: false,
+        previewRender: function (plainText, preview) { // Async method
+            setTimeout(function () {
+                // FIXME: still send render request when return back to edit mode
+                $.post(editArea.data('url'), {
+                        "_csrf": csrf,
+                        "mode": "gfm",
+                        "context": editArea.data('context'),
+                        "text": plainText
+                    },
+                    function (data) {
+                        preview.innerHTML = '<div class="markdown">' + data + '</div>';
+                        emojify.run($('.editor-preview')[0]);
+                    }
+                );
+            }, 0);
+
+            return "Loading...";
+        },
+        toolbar: ["bold", "italic", "strikethrough", "|",
+            "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
+            "code", "quote", "|",
+            "unordered-list", "ordered-list", "|",
+            "link", "image", "table", "horizontal-rule", "|",
+            "clean-block", "preview", "fullscreen", "side-by-side"]
+    });
+
+    return true;
+}
+
+function setCodeMirror() {
+    if (smdEditor) {
+        smdEditor.toTextArea();
+        smdEditor = null;
+    }
+
+    if (cmEditor) {
+        return true;
+    }
+
+    cmEditor = CodeMirror.fromTextArea(editArea[0], {
+        lineNumbers: true
+    });
+    cmEditor.on("change", function (cm, change) {
+        editArea.val(cm.getValue());
+    });
+
+    return true;
+}
+
+function initQuickPull() {
+    $('.js-quick-pull-choice-option').change(function () {
+        quickPullChoiceChange();
+    });
+    quickPullChoiceChange();
+}
+
+function quickPullChoiceChange() {
+    var radio = $('.js-quick-pull-choice-option:checked');
+    if (radio.val() == 'commit-to-new-branch')
+        $('.quick-pull-branch-name').show();
+    else
+        $('.quick-pull-branch-name').hide();
 }
 
 function initOrganization() {
@@ -867,6 +1188,37 @@ function searchRepositories() {
     hideWhenLostFocus('#search-repo-box .results', '#search-repo-box');
 }
 
+function initCodeView() {
+    if ($('.code-view .linenums').length > 0) {
+        $(document).on('click', '.lines-num span', function (e) {
+            var $select = $(this);
+            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
+            selectRange($list, $list.filter('[rel=' + $select.attr('id') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
+            deSelect();
+        });
+
+        $(window).on('hashchange', function (e) {
+            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
+            var $list = $('.code-view ol.linenums > li');
+            var $first;
+            if (m) {
+                $first = $list.filter('.' + m[1]);
+                selectRange($list, $first, $list.filter('.' + m[2]));
+                $("html, body").scrollTop($first.offset().top - 200);
+                return;
+            }
+            m = window.location.hash.match(/^#(L\d+)$/);
+            if (m) {
+                $first = $list.filter('.' + m[1]);
+                selectRange($list, $first);
+                $("html, body").scrollTop($first.offset().top - 200);
+            }
+        }).trigger('hashchange');
+    }
+}
+
+var $dropz;
+
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
@@ -916,12 +1268,12 @@ $(document).ready(function () {
     }
 
     // Dropzone
-    if ($('#dropzone').length > 0) {
+    var $dropz = $('#dropzone');
+    if ($dropz.length > 0) {
         // Disable auto discover for all elements:
         Dropzone.autoDiscover = false;
 
         var filenameDict = {};
-        var $dropz = $('#dropzone');
         $dropz.dropzone({
             url: $dropz.data('upload-url'),
             headers: {"X-Csrf-Token": csrf},
@@ -936,11 +1288,15 @@ $(document).ready(function () {
             init: function () {
                 this.on("success", function (file, data) {
                     filenameDict[file.name] = data.uuid;
-                    $('.attachments').append('<input id="' + data.uuid + '" name="attachments" type="hidden" value="' + data.uuid + '">');
+                    var input = $('<input id="' + data.uuid + '" name="files" type="hidden">').val(data.uuid);
+                    $('.files').append(input);
                 });
                 this.on("removedfile", function (file) {
                     if (file.name in filenameDict) {
                         $('#' + filenameDict[file.name]).remove();
+                    }
+                    if ($dropz.data('remove-url') && $dropz.data('csrf')) {
+                        $.post($dropz.data('remove-url'), {file: filenameDict[file.name], _csrf: $dropz.data('csrf')});
                     }
                 })
             }
@@ -974,6 +1330,15 @@ $(document).ready(function () {
         $('#' + e.trigger.getAttribute('id')).popup('show');
         e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
     });
+
+    // Clipboard for copying filename on edit page
+    if ($('.clipboard-tree-name').length) {
+        new Clipboard(document.querySelector('.clipboard-tree-name'), {
+            text: function () {
+                return $('#tree-name').val();
+            }
+        });
+    }
 
     // Helpers.
     $('.delete-button').click(function () {
@@ -1038,10 +1403,14 @@ $(document).ready(function () {
     initCommentForm();
     initInstall();
     initRepository();
-    initWiki();
+    initWikiForm();
+    initIssueForm();
+    initEditForm();
+    initEditor();
     initOrganization();
     initWebhook();
     initAdmin();
+    initQuickPull();
 
     var routes = {
         'div.user.settings': initUserSettings,
@@ -1057,76 +1426,50 @@ $(document).ready(function () {
     }
 });
 
+function changeHash(hash) {
+    if (history.pushState) {
+        history.pushState(null, null, hash);
+    }
+    else {
+        location.hash = hash;
+    }
+}
+
+function deSelect() {
+    if (window.getSelection) {
+        window.getSelection().removeAllRanges();
+    } else {
+        document.selection.empty();
+    }
+}
+
+function selectRange($list, $select, $from) {
+    $list.removeClass('active');
+    if ($from) {
+        var a = parseInt($select.attr('rel').substr(1));
+        var b = parseInt($from.attr('rel').substr(1));
+        var c;
+        if (a != b) {
+            if (a > b) {
+                c = a;
+                a = b;
+                b = c;
+            }
+            var classes = [];
+            for (var i = a; i <= b; i++) {
+                classes.push('.L' + i);
+            }
+            $list.filter(classes.join(',')).addClass('active');
+            changeHash('#L' + a + '-' + 'L' + b);
+            return
+        }
+    }
+    $select.addClass('active');
+    changeHash('#' + $select.attr('rel'));
+}
+
 $(window).load(function () {
-    function changeHash(hash) {
-        if (history.pushState) {
-            history.pushState(null, null, hash);
-        }
-        else {
-            location.hash = hash;
-        }
-    }
-
-    function deSelect() {
-        if (window.getSelection) {
-            window.getSelection().removeAllRanges();
-        } else {
-            document.selection.empty();
-        }
-    }
-
-    function selectRange($list, $select, $from) {
-        $list.removeClass('active');
-        if ($from) {
-            var a = parseInt($select.attr('rel').substr(1));
-            var b = parseInt($from.attr('rel').substr(1));
-            var c;
-            if (a != b) {
-                if (a > b) {
-                    c = a;
-                    a = b;
-                    b = c;
-                }
-                var classes = [];
-                for (var i = a; i <= b; i++) {
-                    classes.push('.L' + i);
-                }
-                $list.filter(classes.join(',')).addClass('active');
-                changeHash('#L' + a + '-' + 'L' + b);
-                return
-            }
-        }
-        $select.addClass('active');
-        changeHash('#' + $select.attr('rel'));
-    }
-
-    // Code view.
-    if ($('.code-view .linenums').length > 0) {
-        $(document).on('click', '.lines-num span', function (e) {
-            var $select = $(this);
-            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
-            selectRange($list, $list.filter('[rel=' + $select.attr('id') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
-            deSelect();
-        });
-
-        $(window).on('hashchange', function (e) {
-            var m = window.location.hash.match(/^#(L\d+)\-(L\d+)$/);
-            var $list = $('.code-view ol.linenums > li');
-            var $first;
-            if (m) {
-                $first = $list.filter('.' + m[1]);
-                selectRange($list, $first, $list.filter('.' + m[2]));
-                $("html, body").scrollTop($first.offset().top - 200);
-                return;
-            }
-            m = window.location.hash.match(/^#(L\d+)$/);
-            if (m) {
-                $first = $list.filter('.' + m[1]);
-                selectRange($list, $first);
-                $("html, body").scrollTop($first.offset().top - 200);
-            }
-        }).trigger('hashchange');
-    }
+    initCodeView();
 
     // Repo clone url.
     if ($('#repo-clone-url').length > 0) {
@@ -1135,7 +1478,6 @@ $(window).load(function () {
                 if ($('#repo-clone-ssh').click().length === 0) {
                     $('#repo-clone-https').click();
                 }
-                ;
                 break;
             default:
                 $('#repo-clone-https').click();
