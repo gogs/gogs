@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,9 +32,10 @@ import (
 type Scheme string
 
 const (
-	HTTP  Scheme = "http"
-	HTTPS Scheme = "https"
-	FCGI  Scheme = "fcgi"
+	HTTP        Scheme = "http"
+	HTTPS       Scheme = "https"
+	FCGI        Scheme = "fcgi"
+	UNIX_SOCKET Scheme = "unix"
 )
 
 type LandingPage string
@@ -58,16 +60,17 @@ var (
 	AppDataPath    string
 
 	// Server settings
-	Protocol           Scheme
-	Domain             string
-	HttpAddr, HttpPort string
-	LocalURL           string
-	OfflineMode        bool
-	DisableRouterLog   bool
-	CertFile, KeyFile  string
-	StaticRootPath     string
-	EnableGzip         bool
-	LandingPageUrl     LandingPage
+	Protocol             Scheme
+	Domain               string
+	HttpAddr, HttpPort   string
+	LocalURL             string
+	OfflineMode          bool
+	DisableRouterLog     bool
+	CertFile, KeyFile    string
+	StaticRootPath       string
+	EnableGzip           bool
+	LandingPageUrl       LandingPage
+	UnixSocketPermission uint32
 
 	SSH struct {
 		Disabled            bool           `ini:"DISABLE_SSH"`
@@ -367,11 +370,19 @@ func NewContext() {
 		KeyFile = sec.Key("KEY_FILE").String()
 	} else if sec.Key("PROTOCOL").String() == "fcgi" {
 		Protocol = FCGI
+	} else if sec.Key("PROTOCOL").String() == "unix" {
+		Protocol = UNIX_SOCKET
 	}
 	Domain = sec.Key("DOMAIN").MustString("localhost")
 	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
 	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
 	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HttpPort + "/")
+	UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
+	UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
+	if err != nil || UnixSocketPermissionParsed > 0777 {
+		log.Fatal(4, "Fail to parse unixSocketPermission: %s", UnixSocketPermissionRaw)
+	}
+	UnixSocketPermission = uint32(UnixSocketPermissionParsed)
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)

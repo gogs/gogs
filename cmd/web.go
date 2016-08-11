@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/fcgi"
 	"os"
@@ -582,6 +583,9 @@ func runWeb(ctx *cli.Context) error {
 
 	var err error
 	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)
+	if setting.Protocol == setting.UNIX_SOCKET {
+		listenAddr = fmt.Sprintf("%s", setting.HttpAddr)
+	}
 	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubUrl)
 	switch setting.Protocol {
 	case setting.HTTP:
@@ -591,6 +595,20 @@ func runWeb(ctx *cli.Context) error {
 		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
 	case setting.FCGI:
 		err = fcgi.Serve(nil, m)
+	case setting.UNIX_SOCKET:
+		os.Remove(listenAddr)
+		listener, err := net.ListenUnix("unix", &net.UnixAddr{listenAddr, "unix"})
+		if err != nil {
+			break
+		}
+		// FIXME add proper implementation of signal capture on all protocols
+		// execute this on SIGTERM or SIGINT: listener.Close()
+		err = os.Chmod(listenAddr, os.FileMode(setting.UnixSocketPermission))
+		if err != nil {
+			log.Fatal(4, "Failed to set permission of unix socket: %v", err)
+		}
+		err = http.Serve(listener, m)
+
 	default:
 		log.Fatal(4, "Invalid protocol: %s", setting.Protocol)
 	}
