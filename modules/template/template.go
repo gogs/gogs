@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"mime"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -102,6 +104,10 @@ func NewFuncMap() []template.FuncMap {
 		"RenderCommitMessage": RenderCommitMessage,
 		"ThemeColorMetaTag": func() string {
 			return setting.UI.ThemeColorMetaTag
+		},
+		"FilenameIsImage": func(filename string) bool {
+			mimeType := mime.TypeByExtension(filepath.Ext(filename))
+			return strings.HasPrefix(mimeType, "image/")
 		},
 	}}
 }
