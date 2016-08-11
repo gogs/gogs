@@ -62,7 +62,7 @@ var (
 	// Server settings
 	Protocol             Scheme
 	Domain               string
-	HttpAddr, HttpPort   string
+	HTTPAddr, HTTPPort   string
 	LocalURL             string
 	OfflineMode          bool
 	DisableRouterLog     bool
@@ -372,17 +372,17 @@ func NewContext() {
 		Protocol = FCGI
 	} else if sec.Key("PROTOCOL").String() == "unix" {
 		Protocol = UNIX_SOCKET
+		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
+		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
+		if err != nil || UnixSocketPermissionParsed > 0777 {
+			log.Fatal(4, "Fail to parse unixSocketPermission: %s", UnixSocketPermissionRaw)
+		}
+		UnixSocketPermission = uint32(UnixSocketPermissionParsed)
 	}
 	Domain = sec.Key("DOMAIN").MustString("localhost")
-	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
-	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HttpPort + "/")
-	UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
-	UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
-	if err != nil || UnixSocketPermissionParsed > 0777 {
-		log.Fatal(4, "Fail to parse unixSocketPermission: %s", UnixSocketPermissionRaw)
-	}
-	UnixSocketPermission = uint32(UnixSocketPermissionParsed)
+	HTTPAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
+	HTTPPort = sec.Key("HTTP_PORT").MustString("3000")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HTTPPort + "/")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
