@@ -659,6 +659,51 @@ type MigrateRepoOptions struct {
 	RemoteAddr  string
 }
 
+func isGitRepoURL(repoURL string, timeout time.Duration) bool {
+	cmd := git.NewCommand("ls-remote")
+	cmd.AddArguments("-q", "-h", repoURL, "HEAD")
+	res, err := cmd.RunTimeout(timeout)
+	if err != nil {
+		return false
+	}
+	if strings.Contains(res, "fatal") || strings.Contains(res, "not found") {
+		return false
+	}
+	return true
+}
+
+func wikiRemoteURL(remote string, timeout time.Duration) string {
+	wikiRemoteStd := remote
+	wikiRemoteBitBucket := remote
+	/*
+		GitHub, GitLab, Gogs: NAME.wiki.git
+		BitBucket: NAME.git/wiki
+	*/
+	gitSuffixed := strings.HasSuffix(remote, ".git")
+	if gitSuffixed {
+		wikiRemoteStd = wikiRemoteStd[:len(wikiRemoteStd)-4]
+		wikiRemoteBitBucket += "/wiki"
+	} else {
+		wikiRemoteBitBucket += ".git/wiki"
+	}
+	wikiRemoteStd += ".wiki.git"
+	isBB := strings.Contains(remote, "bitbucket")
+	if isBB {
+		if isGitRepoURL(wikiRemoteBitBucket, timeout) {
+			return wikiRemoteBitBucket
+		} else if isGitRepoURL(wikiRemoteStd, timeout) {
+			return wikiRemoteStd
+		}
+		return ""
+	}
+	if isGitRepoURL(wikiRemoteStd, timeout) {
+		return wikiRemoteStd
+	} else if isGitRepoURL(wikiRemoteBitBucket, timeout) {
+		return wikiRemoteBitBucket
+	}
+	return ""
+}
+
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	repo, err := CreateRepository(u, CreateRepoOptions{
@@ -676,6 +721,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	os.MkdirAll(tmpDir, os.ModePerm)
 
 	repoPath := RepoPath(u.Name, opts.Name)
+	wikiPath := WikiPath(u.Name, opts.Name)
 
 	if u.IsOrganization() {
 		t, err := u.GetOwnerTeam()
@@ -687,13 +733,26 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		repo.NumWatches = 1
 	}
 
+	gitTimeout := time.Duration(setting.Git.Timeout.Migrate) * time.Second
 	os.RemoveAll(repoPath)
 	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
 		Mirror:  true,
 		Quiet:   true,
-		Timeout: time.Duration(setting.Git.Timeout.Migrate) * time.Second,
+		Timeout: gitTimeout,
 	}); err != nil {
 		return repo, fmt.Errorf("Clone: %v", err)
+	}
+
+	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr, gitTimeout)
+	if wikiRemotePath != "" {
+		os.RemoveAll(wikiPath)
+		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
+			Mirror:  true,
+			Quiet:   true,
+			Timeout: gitTimeout,
+		}); err != nil {
+			log.Info("Clone wiki failed: %v", err)
+		}
 	}
 
 	// Check if repository is empty.
@@ -735,13 +794,21 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return repo, UpdateRepository(repo, false)
 	}
 
-	return CleanUpMigrateInfo(repo, repoPath)
+	return CleanUpMigrateInfo(repo)
 }
 
 // Finish migrating repository with things that don't need to be done for mirrors.
-func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) {
+func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
+	repoPath := repo.RepoPath()
+	hasWiki := repo.HasWiki()
+
 	if err := createUpdateHook(repoPath); err != nil {
 		return repo, fmt.Errorf("createUpdateHook: %v", err)
+	}
+	if hasWiki {
+		if err := createUpdateHook(repoPath); err != nil {
+			return repo, fmt.Errorf("createUpdateHook: %v", err)
+		}
 	}
 
 	// Clean up mirror info which prevents "push --all".
@@ -754,6 +821,17 @@ func CleanUpMigrateInfo(repo *Repository, repoPath string) (*Repository, error) 
 	cfg.DeleteSection("remote \"origin\"")
 	if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
 		return repo, fmt.Errorf("save config file: %v", err)
+	}
+	if hasWiki {
+		wikiConfigPath := filepath.Join(repo.WikiPath(), "config")
+		cfg, err = ini.Load(wikiConfigPath)
+		if err != nil {
+			return repo, fmt.Errorf("open wiki config file: %v", err)
+		}
+		cfg.DeleteSection("remote \"origin\"")
+		if err = cfg.SaveToIndent(wikiConfigPath, "\t"); err != nil {
+			return repo, fmt.Errorf("save wiki config file: %v", err)
+		}
 	}
 
 	return repo, UpdateRepository(repo, false)
@@ -1695,6 +1773,8 @@ func MirrorUpdate() {
 		}
 
 		repoPath := m.Repo.RepoPath()
+		wikiPath := m.Repo.WikiPath()
+		timeout := time.Duration(setting.Git.Timeout.Mirror) * time.Second
 
 		gitArgs := []string{"remote", "update"}
 		if m.EnablePrune {
@@ -1702,8 +1782,7 @@ func MirrorUpdate() {
 		}
 
 		if _, stderr, err := process.ExecDir(
-			time.Duration(setting.Git.Timeout.Mirror)*time.Second,
-			repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
+			timeout, repoPath, fmt.Sprintf("MirrorUpdate: %s", repoPath),
 			"git", gitArgs...); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror repository(%s): %s", repoPath, stderr)
 			log.Error(4, desc)
@@ -1711,6 +1790,18 @@ func MirrorUpdate() {
 				log.Error(4, "CreateRepositoryNotice: %v", err)
 			}
 			return nil
+		}
+		if m.Repo.HasWiki() {
+			if _, stderr, err := process.ExecDir(
+				timeout, wikiPath, fmt.Sprintf("MirrorUpdate: %s", wikiPath),
+				"git", "remote", "update", "--prune"); err != nil {
+				desc := fmt.Sprintf("Fail to update mirror wiki repository(%s): %s", wikiPath, stderr)
+				log.Error(4, desc)
+				if err = CreateRepositoryNotice(desc); err != nil {
+					log.Error(4, "CreateRepositoryNotice: %v", err)
+				}
+				return nil
+			}
 		}
 
 		m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)

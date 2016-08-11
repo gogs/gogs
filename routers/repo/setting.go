@@ -174,7 +174,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		}
 		repo.IsMirror = false
 
-		if _, err := models.CleanUpMigrateInfo(repo, models.RepoPath(ctx.Repo.Owner.Name, repo.Name)); err != nil {
+		if _, err := models.CleanUpMigrateInfo(repo); err != nil {
 			ctx.Handle(500, "CleanUpMigrateInfo", err)
 			return
 		} else if err = models.DeleteMirrorByRepoID(ctx.Repo.Repository.ID); err != nil {
