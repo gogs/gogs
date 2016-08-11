@@ -41,7 +41,7 @@ imports:
 - name: github.com/gogits/cron
   version: 7f3990acf1833faa5ebd0e86f0a4c72a4b5eba3c
 - name: github.com/gogits/git-module
-  version: 18dd87dc5eac9ee7076133c8363803f2192d5713
+  version: efc90b5ea1f7b7e404673dcc19674b2a6856e0d3
 - name: github.com/gogits/go-gogs-client
   version: d1020b4da5474f7533f5b11084dcfd5536cf2e71
 - name: github.com/issue9/identicon

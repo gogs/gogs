@@ -659,47 +659,21 @@ type MigrateRepoOptions struct {
 	RemoteAddr  string
 }
 
-func isGitRepoURL(repoURL string, timeout time.Duration) bool {
-	cmd := git.NewCommand("ls-remote")
-	cmd.AddArguments("-q", "-h", repoURL, "HEAD")
-	res, err := cmd.RunTimeout(timeout)
-	if err != nil {
-		return false
-	}
-	if strings.Contains(res, "fatal") || strings.Contains(res, "not found") {
-		return false
-	}
-	return true
-}
+/*
+	GitHub, GitLab, Gogs: *.wiki.git
+	BitBucket: *.git/wiki
+*/
+var commonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
 
-func wikiRemoteURL(remote string, timeout time.Duration) string {
-	wikiRemoteStd := remote
-	wikiRemoteBitBucket := remote
-	/*
-		GitHub, GitLab, Gogs: NAME.wiki.git
-		BitBucket: NAME.git/wiki
-	*/
-	gitSuffixed := strings.HasSuffix(remote, ".git")
-	if gitSuffixed {
-		wikiRemoteStd = wikiRemoteStd[:len(wikiRemoteStd)-4]
-		wikiRemoteBitBucket += "/wiki"
-	} else {
-		wikiRemoteBitBucket += ".git/wiki"
-	}
-	wikiRemoteStd += ".wiki.git"
-	isBB := strings.Contains(remote, "bitbucket")
-	if isBB {
-		if isGitRepoURL(wikiRemoteBitBucket, timeout) {
-			return wikiRemoteBitBucket
-		} else if isGitRepoURL(wikiRemoteStd, timeout) {
-			return wikiRemoteStd
+// wikiRemoteURL returns accessible repository URL for wiki if exists.
+// Otherwise, it returns an empty string.
+func wikiRemoteURL(remote string) string {
+	remote = strings.TrimSuffix(remote, ".git")
+	for _, suffix := range commonWikiURLSuffixes {
+		wikiURL := remote + suffix
+		if git.IsRepoURLAccessible(wikiURL) {
+			return wikiURL
 		}
-		return ""
-	}
-	if isGitRepoURL(wikiRemoteStd, timeout) {
-		return wikiRemoteStd
-	} else if isGitRepoURL(wikiRemoteBitBucket, timeout) {
-		return wikiRemoteBitBucket
 	}
 	return ""
 }
@@ -733,25 +707,26 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		repo.NumWatches = 1
 	}
 
-	gitTimeout := time.Duration(setting.Git.Timeout.Migrate) * time.Second
+	migrateTimeout := time.Duration(setting.Git.Timeout.Migrate) * time.Second
+
 	os.RemoveAll(repoPath)
 	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
 		Mirror:  true,
 		Quiet:   true,
-		Timeout: gitTimeout,
+		Timeout: migrateTimeout,
 	}); err != nil {
 		return repo, fmt.Errorf("Clone: %v", err)
 	}
 
-	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr, gitTimeout)
-	if wikiRemotePath != "" {
+	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
+	if len(wikiRemotePath) > 0 {
 		os.RemoveAll(wikiPath)
 		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
 			Mirror:  true,
 			Quiet:   true,
-			Timeout: gitTimeout,
+			Timeout: migrateTimeout,
 		}); err != nil {
-			log.Info("Clone wiki failed: %v", err)
+			log.Info("Clone wiki: %v", err)
 		}
 	}
 
@@ -797,40 +772,38 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 	return CleanUpMigrateInfo(repo)
 }
 
-// Finish migrating repository with things that don't need to be done for mirrors.
-func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
-	repoPath := repo.RepoPath()
-	hasWiki := repo.HasWiki()
-
-	if err := createUpdateHook(repoPath); err != nil {
-		return repo, fmt.Errorf("createUpdateHook: %v", err)
-	}
-	if hasWiki {
-		if err := createUpdateHook(repoPath); err != nil {
-			return repo, fmt.Errorf("createUpdateHook: %v", err)
-		}
-	}
-
-	// Clean up mirror info which prevents "push --all".
-	// This also removes possible user credentials.
-	configPath := repo.GitConfigPath()
+// cleanUpMigrateGitConfig removes mirror info which prevents "push --all".
+// This also removes possible user credentials.
+func cleanUpMigrateGitConfig(configPath string) error {
 	cfg, err := ini.Load(configPath)
 	if err != nil {
-		return repo, fmt.Errorf("open config file: %v", err)
+		return fmt.Errorf("open config file: %v", err)
 	}
 	cfg.DeleteSection("remote \"origin\"")
 	if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
-		return repo, fmt.Errorf("save config file: %v", err)
+		return fmt.Errorf("save config file: %v", err)
 	}
-	if hasWiki {
-		wikiConfigPath := filepath.Join(repo.WikiPath(), "config")
-		cfg, err = ini.Load(wikiConfigPath)
-		if err != nil {
-			return repo, fmt.Errorf("open wiki config file: %v", err)
+	return nil
+}
+
+// Finish migrating repository and/or wiki with things that don't need to be done for mirrors.
+func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
+	repoPath := repo.RepoPath()
+	if err := createUpdateHook(repoPath); err != nil {
+		return repo, fmt.Errorf("createUpdateHook: %v", err)
+	}
+	if repo.HasWiki() {
+		if err := createUpdateHook(repo.WikiPath()); err != nil {
+			return repo, fmt.Errorf("createUpdateHook (wiki): %v", err)
 		}
-		cfg.DeleteSection("remote \"origin\"")
-		if err = cfg.SaveToIndent(wikiConfigPath, "\t"); err != nil {
-			return repo, fmt.Errorf("save wiki config file: %v", err)
+	}
+
+	if err := cleanUpMigrateGitConfig(repo.GitConfigPath()); err != nil {
+		return repo, fmt.Errorf("cleanUpMigrateGitConfig: %v", err)
+	}
+	if repo.HasWiki() {
+		if err := cleanUpMigrateGitConfig(path.Join(repo.WikiPath(), "config")); err != nil {
+			return repo, fmt.Errorf("cleanUpMigrateGitConfig (wiki): %v", err)
 		}
 	}
 
