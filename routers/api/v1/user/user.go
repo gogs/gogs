@@ -11,9 +11,9 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-// https://github.com/gogits/go-gogs-client/wiki/Users#search-users
 func Search(ctx *context.APIContext) {
 	opts := &models.SearchUserOptions{
 		Keyword:  ctx.Query("q"),
@@ -52,7 +52,6 @@ func Search(ctx *context.APIContext) {
 	})
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users#get-a-single-user
 func GetInfo(ctx *context.APIContext) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
@@ -68,5 +67,9 @@ func GetInfo(ctx *context.APIContext) {
 	if !ctx.IsSigned {
 		u.Email = ""
 	}
-	ctx.JSON(200, &api.User{u.ID, u.Name, u.FullName, u.Email, u.AvatarLink()})
+	ctx.JSON(200, convert.ToUser(u))
+}
+
+func GetAuthenticatedUser(ctx *context.APIContext) {
+	ctx.JSON(200, convert.ToUser(ctx.User))
 }
