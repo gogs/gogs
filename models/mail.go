@@ -160,7 +160,7 @@ func composeIssueMessage(issue *Issue, doer *User, tplName base.TplName, tos []s
 	if err != nil {
 		log.Error(3, "HTMLString (%s): %v", tplName, err)
 	}
-	msg := mailer.NewMessage(tos, subject, content)
+	msg := mailer.NewMessageFrom(tos, doer.Email, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg
 }
