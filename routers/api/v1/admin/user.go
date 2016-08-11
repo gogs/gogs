@@ -107,6 +107,9 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 	if form.AllowImportLocal != nil {
 		u.AllowImportLocal = *form.AllowImportLocal
 	}
+	if form.MaxRepoCreation != nil {
+		u.MaxRepoCreation = *form.MaxRepoCreation
+	}
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
