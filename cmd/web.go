@@ -459,12 +459,12 @@ func runWeb(ctx *cli.Context) error {
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
 				m.Post("/assignee", repo.UpdateIssueAssignee)
-				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			}, reqRepoWriter)
 
 			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
 				m.Post("/content", repo.UpdateIssueContent)
+				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			})
 		})
 		m.Group("/comments/:id", func() {
