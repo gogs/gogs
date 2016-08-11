@@ -216,7 +216,7 @@ func Config(ctx *context.Context) {
 	}
 
 	ctx.Data["CacheAdapter"] = setting.CacheAdapter
-	ctx.Data["CacheInternal"] = setting.CacheInternal
+	ctx.Data["CacheInterval"] = setting.CacheInterval
 	ctx.Data["CacheConn"] = setting.CacheConn
 
 	ctx.Data["SessionConfig"] = setting.SessionConfig
