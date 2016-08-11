@@ -24,6 +24,11 @@
 	{{if .RequireSimpleMDE}}
 		<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.css">
 		<script src="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
+		<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
+		<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
+		<script>
+			CodeMirror.modeURL =  "{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
+		</script>
 	{{end}}
 
 	<!-- Stylesheet -->

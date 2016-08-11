@@ -639,23 +639,18 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 	}
 
 	// Check attachments.
-	attachments := make([]*Attachment, 0, len(uuids))
 	for _, uuid := range uuids {
-		attach, err := getAttachmentByUUID(e, uuid)
+		attachment, err := getAttachmentByUUID(e, uuid)
 		if err != nil {
 			if IsErrAttachmentNotExist(err) {
 				continue
 			}
 			return fmt.Errorf("getAttachmentByUUID[%s]: %v", uuid, err)
 		}
-		attachments = append(attachments, attach)
-	}
-
-	for i := range attachments {
-		attachments[i].IssueID = issue.ID
+		attachment.IssueID = issue.ID
 		// No assign value could be 0, so ignore AllCols().
-		if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
-			return fmt.Errorf("update attachment[%d]: %v", attachments[i].ID, err)
+		if _, err = e.Id(attachment.ID).Update(attachment); err != nil {
+			return fmt.Errorf("update attachment[%d]: %v", attachment.ID, err)
 		}
 	}
 
@@ -1728,7 +1723,7 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 			}
 		}
 
-		if _, err := x.Delete(a.ID); err != nil {
+		if _, err := x.Delete(a); err != nil {
 			return i, err
 		}
 	}

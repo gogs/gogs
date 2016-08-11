@@ -169,7 +169,7 @@ type CreateIssueForm struct {
 	MilestoneID int64
 	AssigneeID  int64
 	Content     string
-	Attachments []string
+	Files       []string
 }
 
 func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -177,9 +177,9 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 }
 
 type CreateCommentForm struct {
-	Content     string
-	Status      string `binding:"OmitEmpty;In(reopen,close)"`
-	Attachments []string
+	Content string
+	Status  string `binding:"OmitEmpty;In(reopen,close)"`
+	Files   []string
 }
 
 func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -267,5 +267,93 @@ type NewWikiForm struct {
 
 // FIXME: use code generation to generate this method.
 func (f *NewWikiForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ___________    .___.__  __
+// \_   _____/  __| _/|__|/  |_
+//  |    __)_  / __ | |  \   __\
+//  |        \/ /_/ | |  ||  |
+// /_______  /\____ | |__||__|
+//         \/      \/
+
+type EditRepoFileForm struct {
+	TreeName      string `binding:"Required;MaxSize(500)"`
+	Content       string `binding:"Required"`
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage string
+	CommitChoice  string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	LastCommit    string
+}
+
+func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type EditPreviewDiffForm struct {
+	Content string
+}
+
+func (f *EditPreviewDiffForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+//  ____ ___        .__                    .___
+// |    |   \______ |  |   _________     __| _/
+// |    |   /\____ \|  |  /  _ \__  \   / __ |
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |
+// |______/  |   __/|____/\____(____  /\____ |
+//           |__|                   \/      \/
+//
+
+type UploadRepoFileForm struct {
+	TreeName      string `binding:MaxSize(500)"`
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage string
+	CommitChoice  string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	Files         []string
+}
+
+func (f *UploadRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type RemoveUploadFileForm struct {
+	File string `binding:"Required;MaxSize(50)"`
+}
+
+func (f *RemoveUploadFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ________         .__          __
+// \______ \   ____ |  |   _____/  |_  ____
+// |    |  \_/ __ \|  | _/ __ \   __\/ __ \
+// |    `   \  ___/|  |_\  ___/|  | \  ___/
+// /_______  /\___  >____/\___  >__|  \___  >
+//         \/     \/          \/          \/
+
+type DeleteRepoFileForm struct {
+	CommitSummary string `binding:"MaxSize(100)`
+}
+
+func (f *DeleteRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// __________                             .__
+// \______   \____________    ____   ____ |  |__
+//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
+//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
+//  |______  / |__|  (____  /___|  /\___  >___|  /
+//         \/             \/     \/     \/     \/
+type NewBranchForm struct {
+	OldBranchName string `binding:"Required;MaxSize(100)"`
+	BranchName    string `binding:"Required;MaxSize(100)"`
+}
+
+func (f *NewBranchForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

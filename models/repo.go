@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"os"
 	"os/exec"
 	"path"
@@ -28,6 +30,7 @@ import (
 
 	git "github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
+	gouuid "github.com/satori/go.uuid"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -435,16 +438,25 @@ func (repo *Repository) LocalCopyPath() string {
 	return path.Join(setting.AppDataPath, "tmp/local", com.ToStr(repo.ID))
 }
 
-func updateLocalCopy(repoPath, localPath string) error {
+func updateLocalCopy(repoPath, localPath, branch string) error {
 	if !com.IsExist(localPath) {
 		if err := git.Clone(repoPath, localPath, git.CloneRepoOptions{
 			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
+			Branch:  branch,
 		}); err != nil {
 			return fmt.Errorf("Clone: %v", err)
 		}
 	} else {
+		if err := git.Checkout(localPath, git.CheckoutOptions{
+			Branch:  branch,
+			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
+		}); err != nil {
+			return fmt.Errorf("Checkout: %v", err)
+		}
 		if err := git.Pull(localPath, git.PullRemoteOptions{
-			All:     true,
+			All:     false,
+			Remote:  "origin",
+			Branch:  branch,
 			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
 		}); err != nil {
 			return fmt.Errorf("Pull: %v", err)
@@ -454,8 +466,8 @@ func updateLocalCopy(repoPath, localPath string) error {
 }
 
 // UpdateLocalCopy makes sure the local copy of repository is up-to-date.
-func (repo *Repository) UpdateLocalCopy() error {
-	return updateLocalCopy(repo.RepoPath(), repo.LocalCopyPath())
+func (repo *Repository) UpdateLocalCopy(branch string) error {
+	return updateLocalCopy(repo.RepoPath(), repo.LocalCopyPath(), branch)
 }
 
 // PatchPath returns corresponding patch file path of repository by given issue ID.
@@ -2254,4 +2266,427 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 func (repo *Repository) GetForks() ([]*Repository, error) {
 	forks := make([]*Repository, 0, repo.NumForks)
 	return forks, x.Find(&forks, &Repository{ForkID: repo.ID})
+}
+
+// ___________    .___.__  __    ___________.__.__
+// \_   _____/  __| _/|__|/  |_  \_   _____/|__|  |   ____
+//  |    __)_  / __ | |  \   __\  |    __)  |  |  | _/ __ \
+//  |        \/ /_/ | |  ||  |    |     \   |  |  |_\  ___/
+// /_______  /\____ | |__||__|    \___  /   |__|____/\___  >
+//         \/      \/                 \/                 \/
+
+var repoWorkingPool = &workingPool{
+	pool:  make(map[string]*sync.Mutex),
+	count: make(map[string]int),
+}
+
+func (repo *Repository) LocalRepoPath() string {
+	return path.Join(setting.AppDataPath, "tmp/local-repo", com.ToStr(repo.ID))
+}
+
+// UpdateLocalRepo makes sure the local copy of repository is up-to-date.
+func (repo *Repository) UpdateLocalRepo(branchName string) error {
+	return updateLocalCopy(repo.RepoPath(), repo.LocalRepoPath(), branchName)
+}
+
+// DiscardLocalRepoChanges makes sure the local copy of repository is the same as the source
+func (repo *Repository) DiscardLocalRepoChanges(branchName string) error {
+	return discardLocalRepoChanges(repo.LocalRepoPath(), branchName)
+}
+
+// discardLocalRepoChanges discards local commits make sure
+// it is even to remote branch when local copy exists.
+func discardLocalRepoChanges(localPath string, branch string) error {
+	if !com.IsExist(localPath) {
+		return nil
+	}
+	// No need to check if nothing in the repository.
+	if !git.IsBranchExist(localPath, branch) {
+		return nil
+	}
+	if err := git.ResetHEAD(localPath, true, "origin/"+branch); err != nil {
+		return fmt.Errorf("ResetHEAD: %v", err)
+	}
+	return nil
+}
+
+// CheckoutNewBranch checks out a new branch from the given branch name
+func (repo *Repository) CheckoutNewBranch(oldBranchName, newBranchName string) error {
+	return checkoutNewBranch(repo.RepoPath(), repo.LocalRepoPath(), oldBranchName, newBranchName)
+}
+
+func checkoutNewBranch(repoPath, localPath, oldBranch, newBranch string) error {
+	if !com.IsExist(localPath) {
+		if err := updateLocalCopy(repoPath, localPath, oldBranch); err != nil {
+			return err
+		}
+	}
+	if err := git.Checkout(localPath, git.CheckoutOptions{
+		Branch:    newBranch,
+		OldBranch: oldBranch,
+		Timeout:   time.Duration(setting.Git.Timeout.Pull) * time.Second,
+	}); err != nil {
+		return fmt.Errorf("Checkout New Branch: %v", err)
+	}
+	return nil
+}
+
+// updateRepoFile adds new file to repository.
+func (repo *Repository) UpdateRepoFile(doer *User, oldBranchName, branchName, oldTreeName, treeName, content, message string, isNewFile bool) (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	if err = repo.DiscardLocalRepoChanges(oldBranchName); err != nil {
+		return fmt.Errorf("discardLocalRepoChanges: %s - %v", oldBranchName, err)
+	} else if err = repo.UpdateLocalRepo(oldBranchName); err != nil {
+		return fmt.Errorf("UpdateLocalRepo: %s - %v", oldBranchName, err)
+	}
+
+	if oldBranchName != branchName {
+		if err := repo.CheckoutNewBranch(oldBranchName, branchName); err != nil {
+			return fmt.Errorf("CheckoutNewBranch: %s - %s: %v", oldBranchName, branchName, err)
+		}
+	}
+
+	localPath := repo.LocalRepoPath()
+	filePath := path.Join(localPath, treeName)
+
+	if len(message) == 0 {
+		if isNewFile {
+			message = "Add '" + treeName + "'"
+		} else {
+			message = "Update '" + treeName + "'"
+		}
+	}
+
+	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
+
+	// If new file, make sure it doesn't exist; if old file, move if file name change
+	if isNewFile {
+		if com.IsExist(filePath) {
+			return ErrRepoFileAlreadyExist{filePath}
+		}
+	} else if oldTreeName != "" && treeName != "" && treeName != oldTreeName {
+		if err = git.MoveFile(localPath, oldTreeName, treeName); err != nil {
+			return fmt.Errorf("MoveFile: %v", err)
+		}
+	}
+
+	if err = ioutil.WriteFile(filePath, []byte(content), 0666); err != nil {
+		return fmt.Errorf("WriteFile: %v", err)
+	}
+
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("AddChanges: %v", err)
+	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", branchName); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
+}
+
+func (repo *Repository) GetPreviewDiff(repoPath, branchName, treeName, text string, maxlines, maxchars, maxfiles int) (diff *Diff, err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	if err = repo.DiscardLocalRepoChanges(branchName); err != nil {
+		return nil, fmt.Errorf("discardLocalRepoChanges: %s - %v", branchName, err)
+	} else if err = repo.UpdateLocalRepo(branchName); err != nil {
+		return nil, fmt.Errorf("UpdateLocalRepo: %s - %v", branchName, err)
+	}
+
+	localPath := repo.LocalRepoPath()
+	filePath := path.Join(localPath, treeName)
+
+	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
+
+	if err = ioutil.WriteFile(filePath, []byte(text), 0666); err != nil {
+		return nil, fmt.Errorf("WriteFile: %v", err)
+	}
+
+	var cmd *exec.Cmd
+	cmd = exec.Command("git", "diff", treeName)
+	cmd.Dir = localPath
+	cmd.Stderr = os.Stderr
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("StdoutPipe: %v", err)
+	}
+
+	if err = cmd.Start(); err != nil {
+		return nil, fmt.Errorf("Start: %v", err)
+	}
+
+	pid := process.Add(fmt.Sprintf("GetDiffRange (%s)", repoPath), cmd)
+	defer process.Remove(pid)
+
+	diff, err = ParsePatch(maxlines, maxchars, maxfiles, stdout)
+	if err != nil {
+		return nil, fmt.Errorf("ParsePatch: %v", err)
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return nil, fmt.Errorf("Wait: %v", err)
+	}
+
+	return diff, nil
+}
+
+// ________         .__          __           ___________.__.__
+// \______ \   ____ |  |   _____/  |_  ____   \_   _____/|__|  |   ____
+//  |    |  \_/ __ \|  | _/ __ \   __\/ __ \   |    __)  |  |  | _/ __ \
+//  |    `   \  ___/|  |_\  ___/|  | \  ___/   |     \   |  |  |_\  ___/
+// /_______  /\___  >____/\___  >__|  \___  >  \___  /   |__|____/\___  >
+//         \/     \/          \/          \/       \/                 \/
+//
+
+func (repo *Repository) DeleteRepoFile(doer *User, branch, treeName, message string) (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	localPath := repo.LocalRepoPath()
+	if err = discardLocalRepoChanges(localPath, branch); err != nil {
+		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+	} else if err = repo.UpdateLocalRepo(branch); err != nil {
+		return fmt.Errorf("UpdateLocalRepo: %v", err)
+	}
+
+	filePath := path.Join(localPath, treeName)
+	os.Remove(filePath)
+
+	if len(message) == 0 {
+		message = "Delete file '" + treeName + "'"
+	}
+
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("AddChanges: %v", err)
+	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", branch); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
+}
+
+//  ____ ___        .__                    .___ ___________.___.__
+// |    |   \______ |  |   _________     __| _/ \_   _____/|   |  |   ____   ______
+// |    |   /\____ \|  |  /  _ \__  \   / __ |   |    __)  |   |  | _/ __ \ /  ___/
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |   |     \   |   |  |_\  ___/ \___ \
+// |______/  |   __/|____/\____(____  /\____ |   \___  /   |___|____/\___  >____  >
+//           |__|                   \/      \/       \/                  \/     \/
+//
+
+// uploadRepoFiles uploads new files to repository.
+func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, treeName, message string, uuids []string) (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	localPath := repo.LocalRepoPath()
+
+	if err = discardLocalRepoChanges(localPath, oldBranchName); err != nil {
+		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+	} else if err = repo.UpdateLocalRepo(oldBranchName); err != nil {
+		return fmt.Errorf("UpdateLocalRepo: %v", err)
+	}
+
+	if oldBranchName != branchName {
+		repo.CheckoutNewBranch(oldBranchName, branchName)
+	}
+
+	dirPath := path.Join(localPath, treeName)
+	os.MkdirAll(dirPath, os.ModePerm)
+
+	// Copy uploaded files into repository.
+	for _, uuid := range uuids {
+		upload, err := getUpload(uuid, doer.ID, repo.ID)
+		if err != nil {
+			if IsErrUploadNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("getUpload[%s]: %v", uuid, err)
+		}
+		uuidPath := upload.LocalPath()
+		filePath := dirPath + "/" + upload.Name
+		if err := os.Rename(uuidPath, filePath); err != nil {
+			DeleteUpload(upload, true)
+			return fmt.Errorf("Rename[%s -> %s]: %v", uuidPath, filePath, err)
+		}
+		DeleteUpload(upload, false) // false because we have moved the file
+	}
+
+	if len(message) == 0 {
+		message = "Add files to '" + treeName + "'"
+	}
+
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("AddChanges: %v", err)
+	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", branchName); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
+}
+
+// Upload represent a uploaded file to a repo to be deleted when moved
+type Upload struct {
+	ID          int64  `xorm:"pk autoincr"`
+	UUID        string `xorm:"uuid UNIQUE"`
+	UID         int64  `xorm:"INDEX"`
+	RepoID      int64  `xorm:"INDEX"`
+	Name        string
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+}
+
+func (u *Upload) BeforeInsert() {
+	u.CreatedUnix = time.Now().UTC().Unix()
+}
+
+func (u *Upload) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "created_unix":
+		u.Created = time.Unix(u.CreatedUnix, 0).Local()
+	}
+}
+
+// UploadLocalPath returns where uploads is stored in local file system based on given UUID.
+func UploadLocalPath(uuid string) string {
+	return path.Join(setting.UploadTempPath, uuid[0:1], uuid[1:2], uuid)
+}
+
+// LocalPath returns where uploads are temporarily stored in local file system.
+func (upload *Upload) LocalPath() string {
+	return UploadLocalPath(upload.UUID)
+}
+
+// NewUpload creates a new upload object.
+func NewUpload(name string, buf []byte, file multipart.File, userId, repoId int64) (_ *Upload, err error) {
+	up := &Upload{
+		UUID:   gouuid.NewV4().String(),
+		Name:   name,
+		UID:    userId,
+		RepoID: repoId,
+	}
+
+	if err = os.MkdirAll(path.Dir(up.LocalPath()), os.ModePerm); err != nil {
+		return nil, fmt.Errorf("MkdirAll: %v", err)
+	}
+
+	fw, err := os.Create(up.LocalPath())
+	if err != nil {
+		return nil, fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if _, err = fw.Write(buf); err != nil {
+		return nil, fmt.Errorf("Write: %v", err)
+	} else if _, err = io.Copy(fw, file); err != nil {
+		return nil, fmt.Errorf("Copy: %v", err)
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err := sess.Begin(); err != nil {
+		return nil, err
+	}
+	if _, err := sess.Insert(up); err != nil {
+		return nil, err
+	}
+
+	return up, sess.Commit()
+}
+
+// RemoveUpload removes the file by UUID
+func RemoveUpload(uuid string, userId, repoId int64) (err error) {
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err := sess.Begin(); err != nil {
+		return err
+	}
+	upload, err := getUpload(uuid, userId, repoId)
+	if err != nil {
+		return fmt.Errorf("getUpload[%s]: %v", uuid, err)
+	}
+
+	if err := DeleteUpload(upload, true); err != nil {
+		return fmt.Errorf("DeleteUpload[%s]: %v", uuid, err)
+	}
+
+	return nil
+}
+
+func getUpload(uuid string, userID, repoID int64) (*Upload, error) {
+	up := &Upload{UUID: uuid, UID: userID, RepoID: repoID}
+	has, err := x.Get(up)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUploadNotExist{0, uuid, userID, repoID}
+	}
+	return up, nil
+}
+
+// GetUpload returns Upload by given UUID.
+func GetUpload(uuid string, userId, repoId int64) (*Upload, error) {
+	return getUpload(uuid, userId, repoId)
+}
+
+// DeleteUpload deletes the given upload
+func DeleteUpload(u *Upload, remove bool) error {
+	_, err := DeleteUploads([]*Upload{u}, remove)
+	return err
+}
+
+// DeleteUploads deletes the given uploads
+func DeleteUploads(uploads []*Upload, remove bool) (int, error) {
+	for i, u := range uploads {
+		if remove {
+			if err := os.Remove(u.LocalPath()); err != nil {
+				return i, err
+			}
+		}
+
+		if _, err := x.Delete(u); err != nil {
+			return i, err
+		}
+	}
+
+	return len(uploads), nil
+}
+
+// __________                             .__
+// \______   \____________    ____   ____ |  |__
+//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
+//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
+//  |______  / |__|  (____  /___|  /\___  >___|  /
+//         \/             \/     \/     \/     \/
+//
+
+func (repo *Repository) CreateNewBranch(doer *User, oldBranchName, branchName string) (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	localPath := repo.LocalRepoPath()
+
+	if err = discardLocalRepoChanges(localPath, oldBranchName); err != nil {
+		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+	} else if err = repo.UpdateLocalRepo(oldBranchName); err != nil {
+		return fmt.Errorf("UpdateLocalRepo: %v", err)
+	}
+
+	if err = repo.CheckoutNewBranch(oldBranchName, branchName); err != nil {
+		return fmt.Errorf("CreateNewBranch: %v", err)
+	}
+
+	if err = git.Push(localPath, "origin", branchName); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	return nil
 }
