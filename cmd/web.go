@@ -577,16 +577,19 @@ func runWeb(ctx *cli.Context) error {
 
 	// Flag for port number in case first time run conflict.
 	if ctx.IsSet("port") {
-		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HttpPort, ctx.String("port"), 1)
-		setting.HttpPort = ctx.String("port")
+		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HTTPPort, ctx.String("port"), 1)
+		setting.HTTPPort = ctx.String("port")
 	}
 
-	var err error
-	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)
+	var listenAddr string
 	if setting.Protocol == setting.UNIX_SOCKET {
-		listenAddr = fmt.Sprintf("%s", setting.HttpAddr)
+		listenAddr = fmt.Sprintf("%s", setting.HTTPAddr)
+	} else {
+		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
 	}
 	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubUrl)
+
+	var err error
 	switch setting.Protocol {
 	case setting.HTTP:
 		err = http.ListenAndServe(listenAddr, m)
@@ -597,18 +600,19 @@ func runWeb(ctx *cli.Context) error {
 		err = fcgi.Serve(nil, m)
 	case setting.UNIX_SOCKET:
 		os.Remove(listenAddr)
-		listener, err := net.ListenUnix("unix", &net.UnixAddr{listenAddr, "unix"})
+
+		var listener *net.UnixListener
+		listener, err = net.ListenUnix("unix", &net.UnixAddr{listenAddr, "unix"})
 		if err != nil {
-			break
+			break // Handle error after switch
 		}
-		// FIXME add proper implementation of signal capture on all protocols
+
+		// FIXME: add proper implementation of signal capture on all protocols
 		// execute this on SIGTERM or SIGINT: listener.Close()
-		err = os.Chmod(listenAddr, os.FileMode(setting.UnixSocketPermission))
-		if err != nil {
+		if err = os.Chmod(listenAddr, os.FileMode(setting.UnixSocketPermission)); err != nil {
 			log.Fatal(4, "Failed to set permission of unix socket: %v", err)
 		}
 		err = http.Serve(listener, m)
-
 	default:
 		log.Fatal(4, "Invalid protocol: %s", setting.Protocol)
 	}
