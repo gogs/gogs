@@ -164,7 +164,7 @@ var (
 
 	// Cache settings
 	CacheAdapter  string
-	CacheInternal int
+	CacheInterval int
 	CacheConn     string
 
 	// Session settings
@@ -645,7 +645,7 @@ func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	switch CacheAdapter {
 	case "memory":
-		CacheInternal = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
+		CacheInterval = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
 	case "redis", "memcache":
 		CacheConn = strings.Trim(Cfg.Section("cache").Key("HOST").String(), "\" ")
 	default:
