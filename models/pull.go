@@ -354,7 +354,7 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
-	if err := pr.BaseRepo.UpdateLocalCopy(); err != nil {
+	if err := pr.BaseRepo.UpdateLocalCopy(pr.BaseRepo.DefaultBranch); err != nil {
 		return fmt.Errorf("UpdateLocalCopy: %v", err)
 	}
 

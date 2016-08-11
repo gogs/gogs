@@ -340,6 +340,8 @@ func NewIssue(ctx *context.Context) {
 	}
 
 	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
+	ctx.Data["RepoName"] = ctx.Repo.Repository.Name
 
 	ctx.HTML(200, ISSUE_NEW)
 }
@@ -401,6 +403,9 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["RepoName"] = ctx.Repo.Repository.Name
+	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
 	renderAttachmentSettings(ctx)
 
 	var (
@@ -414,7 +419,7 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	}
 
 	if setting.AttachmentEnabled {
-		attachments = form.Attachments
+		attachments = form.Files
 	}
 
 	if ctx.HasError() {
@@ -634,6 +639,8 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login?redirect_to=" + ctx.Data["Link"].(string)
 
 	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
+	ctx.Data["RepoName"] = ctx.Repo.Repository.Name
 
 	ctx.HTML(200, ISSUE_VIEW)
 }
@@ -801,7 +808,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 
 	var attachments []string
 	if setting.AttachmentEnabled {
-		attachments = form.Attachments
+		attachments = form.Files
 	}
 
 	if ctx.HasError() {

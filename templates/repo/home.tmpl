@@ -31,8 +31,20 @@
 					{{end}}
 				</div>
 			</div>
-			{{if eq $n 0}}
-				<div class="right fitted item">
+			<div class="right fitted item">
+				<div id="file-buttons" class="ui buttons nowrap">
+					{{if .NewFileLink}}
+						<a href="{{EscapePound .NewFileLink}}" class="ui button nowrap">
+							<i class="plus square outline icon"></i> {{.i18n.Tr "repo.new_file"}}
+						</a>
+					{{end}}
+					{{if .UploadFileLink}}
+						<a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
+							<i class="upload icon"></i> {{.i18n.Tr "repo.upload_file"}}
+						</a>
+					{{end}}
+				</div>
+				{{if eq $n 0}}
 					<div class="ui action small input" id="clone-panel">
 						<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
 							{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
@@ -54,8 +66,8 @@
 							</div>
 						</div>
 					</div>
-				</div>
-			{{end}}
+				{{end}}
+			</div>
 		</div>
 		{{if .IsFile}}
 			{{template "repo/view_file" .}}

@@ -53,10 +53,11 @@ func isLink(link []byte) bool {
 // IsMarkdownFile reports whether name looks like a Markdown file
 // based on its extension.
 func IsMarkdownFile(name string) bool {
-	name = strings.ToLower(name)
-	switch filepath.Ext(name) {
-	case ".md", ".markdown", ".mdown", ".mkd":
-		return true
+	extension := strings.ToLower(filepath.Ext(name))
+	for _, ext := range setting.Markdown.MdFileExtensions {
+		if strings.ToLower(ext) == extension {
+			return true
+		}
 	}
 	return false
 }

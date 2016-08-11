@@ -118,6 +118,12 @@ var (
 	RepoRootPath string
 	ScriptType   string
 
+	// Repo editor settings
+	Editor struct {
+		LineWrapExtensions     []string
+		PreviewTabApis         []string
+	}
+
 	// UI settings
 	UI struct {
 		ExplorePagingNum   int
@@ -141,6 +147,7 @@ var (
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+		MdFileExtensions    []string
 	}
 
 	// Picture settings
@@ -161,6 +168,13 @@ var (
 	AttachmentMaxSize      int64
 	AttachmentMaxFiles     int
 	AttachmentEnabled      bool
+
+	// Repo Upload settings
+	UploadTempPath         string
+	UploadAllowedTypes 	string
+	UploadMaxSize      	int64
+	UploadMaxFiles     	int
+	UploadEnabled      	bool
 
 	// Time settings
 	TimeFormat string
@@ -482,6 +496,16 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
 	}
 
+	sec = Cfg.Section("upload")
+	UploadTempPath = sec.Key("UPLOAD_TEMP_PATH").MustString(path.Join(AppDataPath, "tmp/uploads"))
+	if !filepath.IsAbs(UploadTempPath) {
+		UploadTempPath = path.Join(workDir, UploadTempPath)
+	}
+	UploadAllowedTypes = strings.Replace(sec.Key("UPLOAD_ALLOWED_TYPES").MustString(""), "|", ",", -1)
+	UploadMaxSize = sec.Key("UPLOAD_FILE_MAX_SIZE").MustInt64(32)
+	UploadMaxFiles = sec.Key("UPLOAD_MAX_FILES").MustInt(10)
+	UploadEnabled = sec.Key("ENABLE_UPLOADS").MustBool(true)
+
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
@@ -532,6 +556,8 @@ func NewContext() {
 		log.Fatal(4, "Fail to map API settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
+	} else if err = Cfg.Section("editor").MapTo(&Editor); err != nil {
+		log.Fatal(4, "Fail to map Editor settings: %v", err)
 	}
 
 	if Mirror.DefaultInterval <= 0 {
@@ -546,6 +572,10 @@ func NewContext() {
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
+
+	Markdown.MdFileExtensions = Cfg.Section("markdown").Key("MD_FILE_EXTENSIONS").Strings(",")
+	Editor.LineWrapExtensions = Cfg.Section("editor").Key("LINE_WRAP_EXTENSIONS").Strings(",")
+	Editor.PreviewTabApis = Cfg.Section("editor").Key("PREVIEW_TAB_APIS").Strings(",")
 }
 
 var Service struct {

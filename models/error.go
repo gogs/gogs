@@ -417,6 +417,19 @@ func (err ErrInvalidTagName) Error() string {
 	return fmt.Sprintf("release tag name is not valid [tag_name: %s]", err.TagName)
 }
 
+type ErrRepoFileAlreadyExist struct {
+	FileName string
+}
+
+func IsErrRepoFileAlreadyExist(err error) bool {
+	_, ok := err.(ErrRepoFileAlreadyExist)
+	return ok
+}
+
+func (err ErrRepoFileAlreadyExist) Error() string {
+	return fmt.Sprintf("repository file already exists [file name: %s]", err.FileName)
+}
+
 // __________                             .__
 // \______   \____________    ____   ____ |  |__
 //  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
@@ -627,4 +640,28 @@ func IsErrTeamAlreadyExist(err error) bool {
 
 func (err ErrTeamAlreadyExist) Error() string {
 	return fmt.Sprintf("team already exists [org_id: %d, name: %s]", err.OrgID, err.Name)
+}
+
+//  ____ ___        .__                    .___
+// |    |   \______ |  |   _________     __| _/
+// |    |   /\____ \|  |  /  _ \__  \   / __ |
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |
+// |______/  |   __/|____/\____(____  /\____ |
+//           |__|                   \/      \/
+//
+
+type ErrUploadNotExist struct {
+	ID     int64
+	UUID   string
+	UserID int64
+	RepoID int64
+}
+
+func IsErrUploadNotExist(err error) bool {
+	_, ok := err.(ErrAttachmentNotExist)
+	return ok
+}
+
+func (err ErrUploadNotExist) Error() string {
+	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
 }
