@@ -97,6 +97,21 @@ func LoadConfigs() {
 	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
+// parsePostgreSQLHostPort parses given input in various forms defined in
+// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
+// and returns proper host and port number.
+func parsePostgreSQLHostPort(info string) (string, string) {
+	host, port := "127.0.0.1", "5432"
+	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
+		idx := strings.LastIndex(info, ":")
+		host = info[:idx]
+		port = info[idx+1:]
+	} else if len(info) > 0 {
+		host = info
+	}
+	return host, port
+}
+
 func getEngine() (*xorm.Engine, error) {
 	connStr := ""
 	var Param string = "?"
