@@ -104,6 +104,9 @@ code.wrap {
 .following.bar .avatar > .ui.image {
   margin-right: 0;
 }
+.following.bar .avatar .octicon-triangle-down {
+  margin-top: 6.5px;
+}
 .following.bar .searchbox {
   background-color: #f4f4f4 !important;
 }
@@ -1542,6 +1545,13 @@ footer .ui.language .menu {
   width: auto;
   margin: 0;
   vertical-align: middle;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment span.ui.image {
+  font-size: 8vw;
+  color: #000000;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment span.ui.image:hover {
+  color: #000000;
 }
 .repository.view.issue .comment-list .comment .ui.form .field:first-child {
   clear: none;
