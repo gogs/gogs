@@ -1,7 +1,12 @@
+// Copyright 2016 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package models
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -37,7 +42,13 @@ func Test_SSHParsePublicKey(t *testing.T) {
 			So(lengthN, ShouldEqual, key.length)
 
 			keyTypeK, lengthK, errK := SSHKeyGenParsePublicKey(key.content)
-			So(errK, ShouldBeNil)
+			if errK != nil {
+				// Some server just does not support ecdsa format.
+				if strings.Contains(errK.Error(), "line 1 too long:") {
+					continue
+				}
+				So(errK, ShouldBeNil)
+			}
 			So(keyTypeK, ShouldEqual, key.typeName)
 			So(lengthK, ShouldEqual, key.length)
 		}
