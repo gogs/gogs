@@ -115,8 +115,9 @@ func getEngine() (*xorm.Engine, error) {
 	case "postgres":
 		host, port := "127.0.0.1", "5432"
 		if strings.Contains(DbCfg.Host, ":") && !strings.HasSuffix(DbCfg.Host, "]") {
-			host = DbCfg.Host[0:strings.LastIndex(DbCfg.Host, ":")]
-			port = DbCfg.Host[strings.LastIndex(DbCfg.Host, ":")+1:]
+			idx := strings.LastIndex(DbCfg.Host, ":")
+			host = DbCfg.Host[:idx]
+			port = DbCfg.Host[idx+1:]
 		} else if len(DbCfg.Host) > 0 {
 			host = DbCfg.Host
 		}
