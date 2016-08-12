@@ -52,6 +52,7 @@ import:
   subpackages:
   - transform
   - language
+- package: gopkg.in/editorconfig/editorconfig-core-go.v1
 - package: gopkg.in/gomail.v2
 - package: gopkg.in/ini.v1
 - package: gopkg.in/ldap.v2
