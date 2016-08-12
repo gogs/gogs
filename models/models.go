@@ -121,7 +121,7 @@ func getEngine() (*xorm.Engine, error) {
 			host = DbCfg.Host
 		}
 
-		if DbCfg.Host[0] == '/' { // looks like a unix socket
+		if host[0] == '/' { // looks like a unix socket
 			connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
 				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), port, DbCfg.Name, Param, DbCfg.SSLMode, host)
 		} else {
