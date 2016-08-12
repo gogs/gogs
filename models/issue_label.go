@@ -99,7 +99,7 @@ func GetLabelsInRepoByIDs(repoID int64, labelIDs []int64) ([]*Label, error) {
 // GetLabelsByRepoID returns all labels that belong to given repository by ID.
 func GetLabelsByRepoID(repoID int64) ([]*Label, error) {
 	labels := make([]*Label, 0, 10)
-	return labels, x.Where("repo_id = ?", repoID).Find(&labels)
+	return labels, x.Where("repo_id = ?", repoID).OrderBy("name").Find(&labels)
 }
 
 func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
