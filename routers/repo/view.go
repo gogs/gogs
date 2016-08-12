@@ -225,6 +225,12 @@ func Home(ctx *context.Context) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 
+	ec, err := ctx.Repo.GetEditorconfig()
+	if err != nil && !git.IsErrNotExist(err) {
+		ctx.Handle(500, "ErrGettingEditorconfig", err)
+		return
+	}
+	ctx.Data["Editorconfig"] = ec
 	var treenames []string
 	paths := make([]string, 0)
 

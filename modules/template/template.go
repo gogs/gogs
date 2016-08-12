@@ -17,6 +17,7 @@ import (
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
+	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -108,6 +109,15 @@ func NewFuncMap() []template.FuncMap {
 		"FilenameIsImage": func(filename string) bool {
 			mimeType := mime.TypeByExtension(filepath.Ext(filename))
 			return strings.HasPrefix(mimeType, "image/")
+		},
+		"TabSizeClass": func(ec *editorconfig.Editorconfig, filename string) string {
+			if ec != nil {
+				def := ec.GetDefinitionForFilename(filename)
+				if def.TabWidth > 0 {
+					return fmt.Sprintf("tab-size-%d", def.TabWidth)
+				}
+			}
+			return "tab-size-8"
 		},
 	}}
 }
