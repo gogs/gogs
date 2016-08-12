@@ -138,7 +138,12 @@ func SignOut(ctx *context.Context) {
 	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
 	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
-	ctx.Redirect(setting.AppSubUrl + "/")
+
+	if redirectTo, _ := url.QueryUnescape(ctx.Query("redirect_to")); len(redirectTo) > 0 {
+		ctx.Redirect(redirectTo)
+	} else {
+		ctx.Redirect(setting.AppSubUrl + "/")
+	}
 }
 
 func SignUp(ctx *context.Context) {
