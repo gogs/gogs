@@ -104,6 +104,9 @@ code.wrap {
 .following.bar .avatar > .ui.image {
   margin-right: 0;
 }
+.following.bar .avatar .octicon-triangle-down {
+  margin-top: 6.5px;
+}
 .following.bar .searchbox {
   background-color: #f4f4f4 !important;
 }
@@ -1543,6 +1546,13 @@ footer .ui.language .menu {
   margin: 0;
   vertical-align: middle;
 }
+.repository.view.issue .comment-list .comment .content > .bottom.segment span.ui.image {
+  font-size: 8vw;
+  color: #000000;
+}
+.repository.view.issue .comment-list .comment .content > .bottom.segment span.ui.image:hover {
+  color: #000000;
+}
 .repository.view.issue .comment-list .comment .ui.form .field:first-child {
   clear: none;
 }
@@ -2311,6 +2321,70 @@ footer .ui.language .menu {
 #transfer-repo-modal .ui.message,
 #delete-repo-modal .ui.message {
   width: 100%!important;
+}
+.tab-size-1 {
+  tab-size: 1 !important;
+  -moz-tab-size: 1 !important;
+}
+.tab-size-2 {
+  tab-size: 2 !important;
+  -moz-tab-size: 2 !important;
+}
+.tab-size-3 {
+  tab-size: 3 !important;
+  -moz-tab-size: 3 !important;
+}
+.tab-size-4 {
+  tab-size: 4 !important;
+  -moz-tab-size: 4 !important;
+}
+.tab-size-5 {
+  tab-size: 5 !important;
+  -moz-tab-size: 5 !important;
+}
+.tab-size-6 {
+  tab-size: 6 !important;
+  -moz-tab-size: 6 !important;
+}
+.tab-size-7 {
+  tab-size: 7 !important;
+  -moz-tab-size: 7 !important;
+}
+.tab-size-8 {
+  tab-size: 8 !important;
+  -moz-tab-size: 8 !important;
+}
+.tab-size-9 {
+  tab-size: 9 !important;
+  -moz-tab-size: 9 !important;
+}
+.tab-size-10 {
+  tab-size: 10 !important;
+  -moz-tab-size: 10 !important;
+}
+.tab-size-11 {
+  tab-size: 11 !important;
+  -moz-tab-size: 11 !important;
+}
+.tab-size-12 {
+  tab-size: 12 !important;
+  -moz-tab-size: 12 !important;
+}
+.tab-size-13 {
+  tab-size: 13 !important;
+  -moz-tab-size: 13 !important;
+}
+.tab-size-14 {
+  tab-size: 14 !important;
+  -moz-tab-size: 14 !important;
+}
+.tab-size-15 {
+  tab-size: 15 !important;
+  -moz-tab-size: 15 !important;
+}
+.tab-size-16 {
+  tab-size: 16 !important;
+  -moz-tab-size: 16 !important;
 }
 .organization {
   padding-top: 15px;

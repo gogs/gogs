@@ -137,6 +137,8 @@ imports:
   version: 4e86f4367175e39f69d9358a5f17b4dda270378d
 - name: gopkg.in/bufio.v1
   version: 567b2bfa514e796916c4747494d6ff5132a1dfce
+- name: gopkg.in/editorconfig/editorconfig-core-go.v1
+  version: 737b8e4491939fe2277d99b8e726a086266e549e
 - name: gopkg.in/gomail.v2
   version: 81ebce5c23dfd25c6c67194b37d3dd3f338c98b1
 - name: gopkg.in/ini.v1

@@ -97,6 +97,21 @@ func LoadConfigs() {
 	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
+// parsePostgreSQLHostPort parses given input in various forms defined in
+// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
+// and returns proper host and port number.
+func parsePostgreSQLHostPort(info string) (string, string) {
+	host, port := "127.0.0.1", "5432"
+	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
+		idx := strings.LastIndex(info, ":")
+		host = info[:idx]
+		port = info[idx+1:]
+	} else if len(info) > 0 {
+		host = info
+	}
+	return host, port
+}
+
 func getEngine() (*xorm.Engine, error) {
 	connStr := ""
 	var Param string = "?"
@@ -113,15 +128,7 @@ func getEngine() (*xorm.Engine, error) {
 				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
 		}
 	case "postgres":
-		host, port := "127.0.0.1", "5432"
-		fields := strings.Split(DbCfg.Host, ":")
-		if len(fields) > 0 && len(strings.TrimSpace(fields[0])) > 0 {
-			host = fields[0]
-		}
-		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
-			port = fields[1]
-		}
-
+		host, port := parsePostgreSQLHostPort(DbCfg.Host)
 		if host[0] == '/' { // looks like a unix socket
 			connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
 				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), port, DbCfg.Name, Param, DbCfg.SSLMode, host)

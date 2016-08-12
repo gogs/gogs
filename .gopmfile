@@ -48,6 +48,7 @@ golang.org/x/text = commit:2910a50
 gopkg.in/alexcesaro/quotedprintable.v3 = commit:2caba25
 gopkg.in/asn1-ber.v1 = commit:4e86f43
 gopkg.in/bufio.v1 = commit:567b2bf
+gopkg.in/editorconfig/editorconfig-core-go.v1 = commit:737b8e4
 gopkg.in/gomail.v2 = commit:81ebce5
 gopkg.in/ini.v1 = commit:cf53f92
 gopkg.in/ldap.v2 = commit:d0a5ced
