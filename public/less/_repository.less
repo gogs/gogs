@@ -1360,3 +1360,13 @@
 		width: 100%!important;
 	}
 }
+
+// generate .tab-size-{i} from 1 to 16
+.generate-tab-size(16);
+.generate-tab-size(@n, @i: 1) when (@i =< @n) {
+	.tab-size-@{i} {
+		tab-size: @i !important;
+		-moz-tab-size: @i !important;
+	}
+	.generate-tab-size(@n, (@i + 1));
+}

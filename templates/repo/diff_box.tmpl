@@ -53,7 +53,7 @@
 			</div>
 		{{else}}
 			{{$highlightClass := $file.GetHighlightClass}}
-			<div class="diff-file-box diff-box file-content" id="diff-{{.Index}}">
+			<div class="diff-file-box diff-box file-content {{TabSizeClass $.Editorconfig $file.Name}}" id="diff-{{.Index}}">
 				<h4 class="ui top attached normal header">
 					<div class="diff-counter count ui left">
 						{{if $file.IsBin}}
