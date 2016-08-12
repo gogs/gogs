@@ -89,7 +89,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		d, _ := ioutil.ReadAll(dataRc)
 		buf = append(buf, d...)
 
-		if err, content := template.ToUtf8WithErr(buf); err != nil {
+		if err, content := template.ToUTF8WithErr(buf); err != nil {
 			if err != nil {
 				log.Error(4, "Convert content encoding: %s", err)
 			}
@@ -116,10 +116,10 @@ func editFile(ctx *context.Context, isNewFile bool) {
 	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+branchName+"</strong>")
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
 	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
-	ctx.Data["MdFileExtensions"] = strings.Join(setting.Markdown.MdFileExtensions, ",")
-	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Editor.LineWrapExtensions, ",")
-	ctx.Data["PreviewTabApis"] = strings.Join(setting.Editor.PreviewTabApis, ",")
-	ctx.Data["PreviewDiffUrl"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
+	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
+	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
+	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
+	ctx.Data["PreviewDiffURL"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
 
 	ctx.HTML(200, EDIT)
 }
@@ -176,10 +176,10 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+oldBranchName+"</strong>")
 	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
 	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
-	ctx.Data["MdFileExtensions"] = strings.Join(setting.Markdown.MdFileExtensions, ",")
-	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Editor.LineWrapExtensions, ",")
-	ctx.Data["PreviewTabApis"] = strings.Join(setting.Editor.PreviewTabApis, ",")
-	ctx.Data["PreviewDiffUrl"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
+	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
+	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
+	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
+	ctx.Data["PreviewDiffURL"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
 
 	if ctx.HasError() {
 		ctx.HTML(200, EDIT)
@@ -293,13 +293,8 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		log.Error(4, "branch.GetCommit(): %v", err)
 	} else {
 		pc := &models.PushCommits{
-			Len: 1,
-			Commits: []*models.PushCommit{&models.PushCommit{
-				commit.ID.String(),
-				commit.Message(),
-				commit.Author.Email,
-				commit.Author.Name,
-			}},
+			Len:     1,
+			Commits: []*models.PushCommit{models.CommitToPushCommit(commit)},
 		}
 		oldCommitID := ctx.Repo.CommitID
 		newCommitID := commit.ID.String()

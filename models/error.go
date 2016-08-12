@@ -427,7 +427,7 @@ func IsErrRepoFileAlreadyExist(err error) bool {
 }
 
 func (err ErrRepoFileAlreadyExist) Error() string {
-	return fmt.Sprintf("repository file already exists [file name: %s]", err.FileName)
+	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
 }
 
 // __________                             .__
@@ -663,5 +663,5 @@ func IsErrUploadNotExist(err error) bool {
 }
 
 func (err ErrUploadNotExist) Error() string {
-	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
+	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s, user_id: %d, repo_id: %d]", err.ID, err.UUID, err.UserID, err.RepoID)
 }

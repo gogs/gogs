@@ -47,6 +47,19 @@ func DeleteUpdateTaskByUUID(uuid string) error {
 	return err
 }
 
+// CommitToPushCommit transforms a git.Commit to PushCommit type.
+func CommitToPushCommit(commit *git.Commit) *PushCommit {
+	return &PushCommit{
+		Sha1:           commit.ID.String(),
+		Message:        commit.Message(),
+		AuthorEmail:    commit.Author.Email,
+		AuthorName:     commit.Author.Name,
+		CommitterEmail: commit.Committer.Email,
+		CommitterName:  commit.Committer.Name,
+		Timestamp:      commit.Author.When,
+	}
+}
+
 func ListToPushCommits(l *list.List) *PushCommits {
 	commits := make([]*PushCommit, 0)
 	var actEmail string
@@ -55,16 +68,7 @@ func ListToPushCommits(l *list.List) *PushCommits {
 		if actEmail == "" {
 			actEmail = commit.Committer.Email
 		}
-		commits = append(commits,
-			&PushCommit{
-				Sha1:           commit.ID.String(),
-				Message:        commit.Message(),
-				AuthorEmail:    commit.Author.Email,
-				AuthorName:     commit.Author.Name,
-				CommitterEmail: commit.Committer.Email,
-				CommitterName:  commit.Committer.Name,
-				Timestamp:      commit.Author.When,
-			})
+		commits = append(commits, CommitToPushCommit(commit))
 	}
 	return &PushCommits{l.Len(), commits, "", nil}
 }

@@ -54,7 +54,7 @@ func isLink(link []byte) bool {
 // based on its extension.
 func IsMarkdownFile(name string) bool {
 	extension := strings.ToLower(filepath.Ext(name))
-	for _, ext := range setting.Markdown.MdFileExtensions {
+	for _, ext := range setting.Markdown.FileExtensions {
 		if strings.ToLower(ext) == extension {
 			return true
 		}

@@ -32,13 +32,8 @@ func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
 		log.Error(4, "branch.GetCommit(): %v", err)
 	} else {
 		pc := &models.PushCommits{
-			Len: 1,
-			Commits: []*models.PushCommit{&models.PushCommit{
-				commit.ID.String(),
-				commit.Message(),
-				commit.Author.Email,
-				commit.Author.Name,
-			}},
+			Len:     1,
+			Commits: []*models.PushCommit{models.CommitToPushCommit(commit)},
 		}
 		oldCommitID := ctx.Repo.CommitID
 		newCommitID := commit.ID.String()

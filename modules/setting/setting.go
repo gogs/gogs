@@ -114,15 +114,24 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
+
+		// Repository editor settings
+		Editor struct {
+			LineWrapExtensions   []string
+			PreviewableFileModes []string
+		} `ini:"-"`
+
+		// Repository upload settings
+		Upload struct {
+			Enabled      bool
+			TempPath     string
+			AllowedTypes []string `delim:"|"`
+			FileMaxSize  int64
+			MaxFiles     int
+		} `ini:"-"`
 	}
 	RepoRootPath string
 	ScriptType   string
-
-	// Repo editor settings
-	Editor struct {
-		LineWrapExtensions     []string
-		PreviewTabApis         []string
-	}
 
 	// UI settings
 	UI struct {
@@ -147,7 +156,7 @@ var (
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
-		MdFileExtensions    []string
+		FileExtensions      []string
 	}
 
 	// Picture settings
@@ -168,13 +177,6 @@ var (
 	AttachmentMaxSize      int64
 	AttachmentMaxFiles     int
 	AttachmentEnabled      bool
-
-	// Repo Upload settings
-	UploadTempPath         string
-	UploadAllowedTypes 	string
-	UploadMaxSize      	int64
-	UploadMaxFiles     	int
-	UploadEnabled      	bool
 
 	// Time settings
 	TimeFormat string
@@ -494,17 +496,15 @@ func NewContext() {
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
 	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
+	} else if err = Cfg.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
+		log.Fatal(4, "Fail to map Repository.Editor settings: %v", err)
+	} else if err = Cfg.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
+		log.Fatal(4, "Fail to map Repository.Upload settings: %v", err)
 	}
 
-	sec = Cfg.Section("upload")
-	UploadTempPath = sec.Key("UPLOAD_TEMP_PATH").MustString(path.Join(AppDataPath, "tmp/uploads"))
-	if !filepath.IsAbs(UploadTempPath) {
-		UploadTempPath = path.Join(workDir, UploadTempPath)
+	if !filepath.IsAbs(Repository.Upload.TempPath) {
+		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
 	}
-	UploadAllowedTypes = strings.Replace(sec.Key("UPLOAD_ALLOWED_TYPES").MustString(""), "|", ",", -1)
-	UploadMaxSize = sec.Key("UPLOAD_FILE_MAX_SIZE").MustInt64(32)
-	UploadMaxFiles = sec.Key("UPLOAD_MAX_FILES").MustInt(10)
-	UploadEnabled = sec.Key("ENABLE_UPLOADS").MustBool(true)
 
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
@@ -553,11 +553,9 @@ func NewContext() {
 	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
-		log.Fatal(4, "Fail to map API settings: %v", err)
+		log.Fatal(4, "Fail to map Mirror settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
-	} else if err = Cfg.Section("editor").MapTo(&Editor); err != nil {
-		log.Fatal(4, "Fail to map Editor settings: %v", err)
 	}
 
 	if Mirror.DefaultInterval <= 0 {
@@ -572,10 +570,6 @@ func NewContext() {
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
-
-	Markdown.MdFileExtensions = Cfg.Section("markdown").Key("MD_FILE_EXTENSIONS").Strings(",")
-	Editor.LineWrapExtensions = Cfg.Section("editor").Key("LINE_WRAP_EXTENSIONS").Strings(",")
-	Editor.PreviewTabApis = Cfg.Section("editor").Key("PREVIEW_TAB_APIS").Strings(",")
 }
 
 var Service struct {

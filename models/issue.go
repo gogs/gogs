@@ -645,12 +645,12 @@ func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64,
 			if IsErrAttachmentNotExist(err) {
 				continue
 			}
-			return fmt.Errorf("getAttachmentByUUID[%s]: %v", uuid, err)
+			return fmt.Errorf("getAttachmentByUUID [%s]: %v", uuid, err)
 		}
 		attachment.IssueID = issue.ID
 		// No assign value could be 0, so ignore AllCols().
 		if _, err = e.Id(attachment.ID).Update(attachment); err != nil {
-			return fmt.Errorf("update attachment[%d]: %v", attachment.ID, err)
+			return fmt.Errorf("update attachment [%d]: %v", attachment.ID, err)
 		}
 	}
 
