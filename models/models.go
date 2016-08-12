@@ -114,12 +114,12 @@ func getEngine() (*xorm.Engine, error) {
 		}
 	case "postgres":
 		host, port := "127.0.0.1", "5432"
-		fields := strings.Split(DbCfg.Host, ":")
-		if len(fields) > 0 && len(strings.TrimSpace(fields[0])) > 0 {
-			host = fields[0]
-		}
-		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
-			port = fields[1]
+		if strings.Contains(DbCfg.Host, ":") && !strings.HasSuffix(DbCfg.Host, "]") {
+			idx := strings.LastIndex(DbCfg.Host, ":")
+			host = DbCfg.Host[:idx]
+			port = DbCfg.Host[idx+1:]
+		} else if len(DbCfg.Host) > 0 {
+			host = DbCfg.Host
 		}
 
 		if host[0] == '/' { // looks like a unix socket
