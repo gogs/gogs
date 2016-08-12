@@ -2557,7 +2557,7 @@ func (u *Upload) AfterSet(colName string, _ xorm.Cell) {
 
 // UploadLocalPath returns where uploads is stored in local file system based on given UUID.
 func UploadLocalPath(uuid string) string {
-	return path.Join(setting.UploadTempPath, uuid[0:1], uuid[1:2], uuid)
+	return path.Join(setting.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
 }
 
 // LocalPath returns where uploads are temporarily stored in local file system.

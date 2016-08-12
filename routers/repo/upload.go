@@ -24,10 +24,10 @@ const (
 
 func renderUploadSettings(ctx *context.Context) {
 	ctx.Data["RequireDropzone"] = true
-	ctx.Data["IsUploadEnabled"] = setting.UploadEnabled
-	ctx.Data["UploadAllowedTypes"] = setting.UploadAllowedTypes
-	ctx.Data["UploadMaxSize"] = setting.UploadMaxSize
-	ctx.Data["UploadMaxFiles"] = setting.UploadMaxFiles
+	ctx.Data["IsUploadEnabled"] = setting.Repository.Upload.Enabled
+	ctx.Data["UploadAllowedTypes"] = strings.Join(setting.Repository.Upload.AllowedTypes, ",")
+	ctx.Data["UploadMaxSize"] = setting.Repository.Upload.FileMaxSize
+	ctx.Data["UploadMaxFiles"] = setting.Repository.Upload.MaxFiles
 }
 
 func UploadFile(ctx *context.Context) {
@@ -154,13 +154,8 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 		log.Error(4, "branch.GetCommit(): %v", err)
 	} else {
 		pc := &models.PushCommits{
-			Len: 1,
-			Commits: []*models.PushCommit{&models.PushCommit{
-				commit.ID.String(),
-				commit.Message(),
-				commit.Author.Email,
-				commit.Author.Name,
-			}},
+			Len:     1,
+			Commits: []*models.PushCommit{models.CommitToPushCommit(commit)},
 		}
 		oldCommitID := ctx.Repo.CommitID
 		newCommitID := commit.ID.String()
@@ -184,7 +179,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 }
 
 func UploadFileToServer(ctx *context.Context) {
-	if !setting.UploadEnabled {
+	if !setting.Repository.Upload.Enabled {
 		ctx.Error(404, "upload is not enabled")
 		return
 	}
@@ -203,10 +198,9 @@ func UploadFileToServer(ctx *context.Context) {
 	}
 	fileType := http.DetectContentType(buf)
 
-	if len(setting.UploadAllowedTypes) > 0 {
-		allowedTypes := strings.Split(setting.UploadAllowedTypes, ",")
+	if len(setting.Repository.Upload.AllowedTypes) > 0 {
 		allowed := false
-		for _, t := range allowedTypes {
+		for _, t := range setting.Repository.Upload.AllowedTypes {
 			t := strings.Trim(t, " ")
 			if t == "*/*" || t == fileType {
 				allowed = true
@@ -233,7 +227,7 @@ func UploadFileToServer(ctx *context.Context) {
 }
 
 func RemoveUploadFileFromServer(ctx *context.Context, form auth.RemoveUploadFileForm) {
-	if !setting.UploadEnabled {
+	if !setting.Repository.Upload.Enabled {
 		ctx.Error(404, "upload is not enabled")
 		return
 	}

@@ -257,7 +257,7 @@ func Home(ctx *context.Context) {
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
 		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
-			if setting.UploadEnabled {
+			if !setting.Repository.Upload.Enabled {
 				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
 			}
 		}

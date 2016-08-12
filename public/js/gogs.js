@@ -29,7 +29,7 @@ function initCommentPreviewTab($form) {
 }
 
 var previewTab;
-var previewTabApis;
+var previewFileModes;
 
 function initEditPreviewTab($form) {
     var $tab_menu = $form.find('.tabular.menu');
@@ -37,7 +37,7 @@ function initEditPreviewTab($form) {
     previewTab = $tab_menu.find('.item[data-tab="' + $tab_menu.data('preview') + '"]');
 
     if (previewTab.length) {
-        previewTabApis = previewTab.data('preview-apis').split(',');
+        previewFileModes = previewTab.data('preview-file-modes').split(',');
         previewTab.click(function () {
             var $this = $(this);
             $.post($this.data('url'), {
@@ -662,7 +662,7 @@ var editArea;
 var editFilename;
 var smdEditor;
 var cmEditor;
-var mdFileExtensions;
+var markdownFileExts;
 var lineWrapExtensions;
 
 // For IE
@@ -740,7 +740,7 @@ function initEditor() {
     if (!editArea.length)
         return;
 
-    mdFileExtensions = editArea.data("md-file-extensions").split(",");
+    markdownFileExts = editArea.data("markdown-file-exts").split(",");
     lineWrapExtensions = editArea.data("line-wrap-extensions").split(",");
 
     editFilename.on("keyup", function (e) {
@@ -762,7 +762,7 @@ function initEditor() {
             apiCall = extension
         }
 
-        if (previewLink.length && apiCall && previewTabApis && previewTabApis.length && previewTabApis.indexOf(apiCall) >= 0) {
+        if (previewLink.length && apiCall && previewFileModes && previewFileModes.length && previewFileModes.indexOf(apiCall) >= 0) {
             dataUrl = previewLink.data('url');
             previewLink.data('url', dataUrl.replace(/(.*)\/.*/i, '$1/' + mode));
             previewLink.show();
@@ -772,7 +772,7 @@ function initEditor() {
         }
 
         // If this file is a Markdown extensions, we will load that editor and return
-        if (mdFileExtensions.indexOf(extWithDot) >= 0) {
+        if (markdownFileExts.indexOf(extWithDot) >= 0) {
             if (setSimpleMDE()) {
                 return;
             }

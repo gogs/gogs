@@ -510,7 +510,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
 			m.Post("/upload-file", repo.UploadFileToServer)
 			m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
-		}, context.RepoRef(), context.RepoAssignment(), reqRepoWriter)
+		}, reqRepoWriter, context.RepoRef())
 	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 
 	m.Group("/:username/:reponame", func() {

@@ -30,14 +30,14 @@
 			<div class="field">
 				<div class="ui top attached tabular menu" data-write="write" data-preview="preview" data-diff="diff">
 					<a class="active item" data-tab="write"><i class="octicon octicon-code"></i> {{.i18n.Tr "repo.edit_file"}}</a>
-					<a class="item" data-tab="preview" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}" data-preview-apis="{{.PreviewTabApis}}"><i class="octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
-					<a class="item" data-tab="diff" data-url="{{.PreviewDiffUrl}}" data-context="{{.BranchLink}}"><i class="octicon octicon-diff"></i> {{.i18n.Tr "repo.preview_changes"}}</a>
+					<a class="item" data-tab="preview" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}" data-preview-file-modes="{{.PreviewableFileModes}}"><i class="octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
+					<a class="item" data-tab="diff" data-url="{{.PreviewDiffURL}}" data-context="{{.BranchLink}}"><i class="octicon octicon-diff"></i> {{.i18n.Tr "repo.preview_changes"}}</a>
 				</div>
 				<div class="ui bottom attached active tab segment" data-tab="write">
 					<textarea id="edit_area" name="content" data-id="repo-{{.Repository.Name}}-{{.TreeName}}"
 						data-url="{{AppSubUrl}}/api/v1/markdown"
 						data-context="{{.RepoLink}}"
-						data-md-file-extensions="{{.MdFileExtensions}}"
+						data-markdown-file-exts="{{.MarkdownFileExts}}"
 						data-line-wrap-extensions="{{.LineWrapExtensions}}">
 {{.FileContent}}</textarea required>
 				</div>
