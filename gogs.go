@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.9.74.0811"
+const APP_VER = "0.9.75.0813"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -35,6 +35,7 @@ func main() {
 		cmd.CmdUpdate,
 		cmd.CmdDump,
 		cmd.CmdCert,
+		cmd.CmdAdmin,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
