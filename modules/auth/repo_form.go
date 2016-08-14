@@ -215,7 +215,15 @@ type CreateLabelForm struct {
 	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
 }
 
+type InitializeLabelsForm struct {
+	TemplateName string `form:"templatename" binding:"Required"`
+}
+
 func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+func (f *InitializeLabelsForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
