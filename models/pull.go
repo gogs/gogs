@@ -308,22 +308,14 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	l.PushFront(mergeCommit)
 
 	p := &api.PushPayload{
-		Ref:        "refs/heads/" + pr.BaseBranch,
+		Ref:        git.BRANCH_PREFIX + pr.BaseBranch,
 		Before:     pr.MergeBase,
 		After:      pr.MergedCommitID,
-		CompareUrl: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
+		CompareURL: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
 		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullLink()),
-		Repo:       pr.BaseRepo.ComposePayload(),
-		Pusher: &api.PayloadAuthor{
-			Name:     pr.HeadRepo.MustOwner().DisplayName(),
-			Email:    pr.HeadRepo.MustOwner().Email,
-			UserName: pr.HeadRepo.MustOwner().Name,
-		},
-		Sender: &api.PayloadUser{
-			UserName:  doer.Name,
-			ID:        doer.ID,
-			AvatarUrl: doer.AvatarLink(),
-		},
+		Repo:       pr.BaseRepo.APIFormat(nil),
+		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
+		Sender:     doer.APIFormat(),
 	}
 	if err = PrepareWebhooks(pr.BaseRepo, HOOK_EVENT_PUSH, p); err != nil {
 		return fmt.Errorf("PrepareWebhooks: %v", err)

@@ -76,8 +76,8 @@ func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayloa
 	// created tag/branch
 	refName := git.RefEndName(p.Ref)
 
-	repoLink := SlackLinkFormatter(p.Repo.URL, p.Repo.Name)
-	refLink := SlackLinkFormatter(p.Repo.URL+"/src/"+refName, refName)
+	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
+	refLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
 
 	return &SlackPayload{
@@ -101,15 +101,15 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 	} else {
 		commitDesc = fmt.Sprintf("%d new commits", len(p.Commits))
 	}
-	if len(p.CompareUrl) > 0 {
-		commitString = SlackLinkFormatter(p.CompareUrl, commitDesc)
+	if len(p.CompareURL) > 0 {
+		commitString = SlackLinkFormatter(p.CompareURL, commitDesc)
 	} else {
 		commitString = commitDesc
 	}
 
-	repoLink := SlackLinkFormatter(p.Repo.URL, p.Repo.Name)
-	branchLink := SlackLinkFormatter(p.Repo.URL+"/src/"+branchName, branchName)
-	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.Name)
+	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
+	branchLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+branchName, branchName)
+	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.UserName)
 
 	var attachmentText string
 	// for each commit, generate attachment text
@@ -135,7 +135,7 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 
 func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
 	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
-	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/%d", setting.AppUrl+p.Repository.FullName+"/pulls", p.Index),
+	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
 	var text, title, attachmentText string
 	switch p.Action {

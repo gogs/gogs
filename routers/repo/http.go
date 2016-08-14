@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	git "github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
@@ -206,7 +208,7 @@ func HTTP(ctx *context.Context) {
 						RepoName:     reponame,
 					}); err == nil {
 						go models.HookQueue.Add(repo.ID)
-						go models.AddTestPullRequestTask(authUser, repo.ID, strings.TrimPrefix(refName, "refs/heads/"), true)
+						go models.AddTestPullRequestTask(authUser, repo.ID, strings.TrimPrefix(refName, git.BRANCH_PREFIX), true)
 					}
 
 				}

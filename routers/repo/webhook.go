@@ -347,6 +347,7 @@ func SlackHooksEditPost(ctx *context.Context, form auth.NewSlackHookForm) {
 }
 
 func TestWebhook(ctx *context.Context) {
+	apiUser := ctx.User.APIFormat()
 	p := &api.PushPayload{
 		Ref:    git.BRANCH_PREFIX + ctx.Repo.Repository.DefaultBranch,
 		Before: ctx.Repo.CommitID,
@@ -356,27 +357,19 @@ func TestWebhook(ctx *context.Context) {
 				ID:      ctx.Repo.CommitID,
 				Message: ctx.Repo.Commit.Message(),
 				URL:     ctx.Repo.Repository.FullLink() + "/commit/" + ctx.Repo.CommitID,
-				Author: &api.PayloadAuthor{
+				Author: &api.PayloadUser{
 					Name:  ctx.Repo.Commit.Author.Name,
 					Email: ctx.Repo.Commit.Author.Email,
 				},
-				Committer: &api.PayloadCommitter{
+				Committer: &api.PayloadUser{
 					Name:  ctx.Repo.Commit.Committer.Name,
 					Email: ctx.Repo.Commit.Committer.Email,
 				},
 			},
 		},
-		Repo: ctx.Repo.Repository.ComposePayload(),
-		Pusher: &api.PayloadAuthor{
-			Name:     ctx.User.Name,
-			Email:    ctx.User.Email,
-			UserName: ctx.User.Name,
-		},
-		Sender: &api.PayloadUser{
-			UserName:  ctx.User.Name,
-			ID:        ctx.User.ID,
-			AvatarUrl: ctx.User.AvatarLink(),
-		},
+		Repo:   ctx.Repo.Repository.APIFormat(nil),
+		Pusher: apiUser,
+		Sender: apiUser,
 	}
 	if err := models.PrepareWebhooks(ctx.Repo.Repository, models.HOOK_EVENT_PUSH, p); err != nil {
 		ctx.Flash.Error("PrepareWebhooks: " + err.Error())
