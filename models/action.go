@@ -246,7 +246,7 @@ type PushCommit struct {
 type PushCommits struct {
 	Len        int
 	Commits    []*PushCommit
-	CompareUrl string
+	CompareURL string
 
 	avatars map[string]string
 }
@@ -275,12 +275,12 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 			ID:      commit.Sha1,
 			Message: commit.Message,
 			URL:     fmt.Sprintf("%s/commit/%s", repoLink, commit.Sha1),
-			Author: &api.PayloadAuthor{
+			Author: &api.PayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
 				UserName: authorUsername,
 			},
-			Committer: &api.PayloadCommitter{
+			Committer: &api.PayloadUser{
 				Name:     commit.CommitterName,
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,
@@ -475,7 +475,7 @@ func CommitRepoAction(
 	} else {
 		// if not the first commit, set the compareUrl
 		if !strings.HasPrefix(oldCommitID, "0000000") {
-			commit.CompareUrl = repo.ComposeCompareURL(oldCommitID, newCommitID)
+			commit.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
 		} else {
 			isNewBranch = true
 		}
@@ -495,7 +495,6 @@ func CommitRepoAction(
 	}
 
 	refName := git.RefEndName(refFullName)
-
 	if err = NotifyWatchers(&Action{
 		ActUserID:    u.ID,
 		ActUserName:  userName,
@@ -511,35 +510,24 @@ func CommitRepoAction(
 		return fmt.Errorf("NotifyWatchers: %v", err)
 	}
 
-	payloadRepo := repo.ComposePayload()
-
-	var pusherEmail, pusherName string
 	pusher, err := GetUserByName(userName)
-	if err == nil {
-		pusherEmail = pusher.Email
-		pusherName = pusher.DisplayName()
+	if err != nil {
+		return fmt.Errorf("GetUserByName: %v", err)
 	}
-	payloadSender := &api.PayloadUser{
-		UserName:  pusher.Name,
-		ID:        pusher.ID,
-		AvatarUrl: pusher.AvatarLink(),
-	}
+	apiPusher := pusher.APIFormat()
 
+	apiRepo := repo.APIFormat(nil)
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        refFullName,
 			Before:     oldCommitID,
 			After:      newCommitID,
-			CompareUrl: setting.AppUrl + commit.CompareUrl,
+			CompareURL: setting.AppUrl + commit.CompareURL,
 			Commits:    commit.ToApiPayloadCommits(repo.FullLink()),
-			Repo:       payloadRepo,
-			Pusher: &api.PayloadAuthor{
-				Name:     pusherName,
-				Email:    pusherEmail,
-				UserName: userName,
-			},
-			Sender: payloadSender,
+			Repo:       apiRepo,
+			Pusher:     apiPusher,
+			Sender:     apiPusher,
 		}); err != nil {
 			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}
@@ -548,8 +536,8 @@ func CommitRepoAction(
 			return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 				Ref:     refName,
 				RefType: "branch",
-				Repo:    payloadRepo,
-				Sender:  payloadSender,
+				Repo:    apiRepo,
+				Sender:  apiPusher,
 			})
 		}
 
@@ -557,8 +545,8 @@ func CommitRepoAction(
 		return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 			Ref:     refName,
 			RefType: "tag",
-			Repo:    payloadRepo,
-			Sender:  payloadSender,
+			Repo:    apiRepo,
+			Sender:  apiPusher,
 		})
 	}
 

@@ -11,7 +11,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func Search(ctx *context.APIContext) {
@@ -67,9 +66,9 @@ func GetInfo(ctx *context.APIContext) {
 	if !ctx.IsSigned {
 		u.Email = ""
 	}
-	ctx.JSON(200, convert.ToUser(u))
+	ctx.JSON(200, u.APIFormat())
 }
 
 func GetAuthenticatedUser(ctx *context.APIContext) {
-	ctx.JSON(200, convert.ToUser(ctx.User))
+	ctx.JSON(200, ctx.User.APIFormat())
 }

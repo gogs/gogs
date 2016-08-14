@@ -482,28 +482,6 @@ func (repo *Repository) SavePatch(index int64, patch []byte) error {
 	return nil
 }
 
-// ComposePayload composes and returns *api.PayloadRepo corresponding to the repository.
-func (repo *Repository) ComposePayload() *api.PayloadRepo {
-	cl := repo.CloneLink()
-	return &api.PayloadRepo{
-		ID:          repo.ID,
-		Name:        repo.Name,
-		URL:         repo.FullLink(),
-		SSHURL:      cl.SSH,
-		CloneURL:    cl.HTTPS,
-		Description: repo.Description,
-		Website:     repo.Website,
-		Watchers:    repo.NumWatches,
-		Owner: &api.PayloadAuthor{
-			Name:     repo.MustOwner().DisplayName(),
-			Email:    repo.MustOwner().Email,
-			UserName: repo.MustOwner().Name,
-		},
-		Private:       repo.IsPrivate,
-		DefaultBranch: repo.DefaultBranch,
-	}
-}
-
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {
 	has, err := e.Get(&Repository{
 		OwnerID:   u.ID,

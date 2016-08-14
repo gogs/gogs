@@ -11,7 +11,6 @@ import (
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
@@ -69,7 +68,7 @@ func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 		models.SendRegisterNotifyMail(ctx.Context.Context, u)
 	}
 
-	ctx.JSON(201, convert.ToUser(u))
+	ctx.JSON(201, u.APIFormat())
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
@@ -121,7 +120,7 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 	}
 	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
 
-	ctx.JSON(200, convert.ToUser(u))
+	ctx.JSON(200, u.APIFormat())
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user

@@ -9,13 +9,12 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func responseApiUsers(ctx *context.APIContext, users []*models.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
-		apiUsers[i] = convert.ToUser(users[i])
+		apiUsers[i] = users[i].APIFormat()
 	}
 	ctx.JSON(200, &apiUsers)
 }

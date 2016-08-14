@@ -13,7 +13,6 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func ListIssues(ctx *context.APIContext) {
@@ -28,7 +27,12 @@ func ListIssues(ctx *context.APIContext) {
 
 	apiIssues := make([]*api.Issue, len(issues))
 	for i := range issues {
-		apiIssues[i] = convert.ToIssue(issues[i])
+		// FIXME: use IssueList to improve performance.
+		if err = issues[i].LoadAttributes(); err != nil {
+			ctx.Error(500, "LoadAttributes", err)
+			return
+		}
+		apiIssues[i] = issues[i].APIFormat()
 	}
 
 	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.UI.IssuePagingNum)
@@ -46,13 +50,13 @@ func GetIssue(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToIssue(issue))
+	ctx.JSON(200, issue.APIFormat())
 }
 
 func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	issue := &models.Issue{
 		RepoID:   ctx.Repo.Repository.ID,
-		Title:     form.Title,
+		Title:    form.Title,
 		PosterID: ctx.User.ID,
 		Poster:   ctx.User,
 		Content:  form.Body,
@@ -83,7 +87,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 
 	if form.Closed {
 		if err := issue.ChangeStatus(ctx.User, ctx.Repo.Repository, true); err != nil {
-			ctx.Error(500, "issue.ChangeStatus", err)
+			ctx.Error(500, "ChangeStatus", err)
 			return
 		}
 	}
@@ -95,7 +99,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		ctx.Error(500, "GetIssueByID", err)
 		return
 	}
-	ctx.JSON(201, convert.ToIssue(issue))
+	ctx.JSON(201, issue.APIFormat())
 }
 
 func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
@@ -164,5 +168,5 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		ctx.Error(500, "GetIssueByID", err)
 		return
 	}
-	ctx.JSON(201, convert.ToIssue(issue))
+	ctx.JSON(201, issue.APIFormat())
 }
