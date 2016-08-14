@@ -169,7 +169,7 @@ func (a *Action) GetIssueTitle() string {
 		log.Error(4, "GetIssueByIndex: %v", err)
 		return "500 when get issue"
 	}
-	return issue.Name
+	return issue.Title
 }
 
 func (a *Action) GetIssueContent() string {
@@ -513,11 +513,11 @@ func CommitRepoAction(
 
 	payloadRepo := repo.ComposePayload()
 
-	pusher_email, pusher_name := "", ""
+	var pusherEmail, pusherName string
 	pusher, err := GetUserByName(userName)
 	if err == nil {
-		pusher_email = pusher.Email
-		pusher_name = pusher.DisplayName()
+		pusherEmail = pusher.Email
+		pusherName = pusher.DisplayName()
 	}
 	payloadSender := &api.PayloadUser{
 		UserName:  pusher.Name,
@@ -527,7 +527,7 @@ func CommitRepoAction(
 
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
-		p := &api.PushPayload{
+		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        refFullName,
 			Before:     oldCommitID,
 			After:      newCommitID,
@@ -535,13 +535,12 @@ func CommitRepoAction(
 			Commits:    commit.ToApiPayloadCommits(repo.FullLink()),
 			Repo:       payloadRepo,
 			Pusher: &api.PayloadAuthor{
-				Name:     pusher_name,
-				Email:    pusher_email,
+				Name:     pusherName,
+				Email:    pusherEmail,
 				UserName: userName,
 			},
 			Sender: payloadSender,
-		}
-		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, p); err != nil {
+		}); err != nil {
 			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}
 
@@ -603,7 +602,7 @@ func mergePullRequestAction(e Engine, actUser *User, repo *Repository, pull *Iss
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       ACTION_MERGE_PULL_REQUEST,
-		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
+		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,

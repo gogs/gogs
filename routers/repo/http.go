@@ -206,7 +206,7 @@ func HTTP(ctx *context.Context) {
 						RepoName:     reponame,
 					}); err == nil {
 						go models.HookQueue.Add(repo.ID)
-						go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
+						go models.AddTestPullRequestTask(authUser, repo.ID, strings.TrimPrefix(refName, "refs/heads/"), true)
 					}
 
 				}

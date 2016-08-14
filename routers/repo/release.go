@@ -77,7 +77,7 @@ func Releases(ctx *context.Context) {
 				r.Publisher, err = models.GetUserByID(r.PublisherID)
 				if err != nil {
 					if models.IsErrUserNotExist(err) {
-						r.Publisher = models.NewFakeUser()
+						r.Publisher = models.NewGhostUser()
 					} else {
 						ctx.Handle(500, "GetUserByID", err)
 						return
@@ -126,7 +126,7 @@ func Releases(ctx *context.Context) {
 		r.Publisher, err = models.GetUserByID(r.PublisherID)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
-				r.Publisher = models.NewFakeUser()
+				r.Publisher = models.NewGhostUser()
 			} else {
 				ctx.Handle(500, "GetUserByID", err)
 				return

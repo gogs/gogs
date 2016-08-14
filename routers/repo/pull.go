@@ -148,7 +148,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		}
 		return nil
 	}
-	ctx.Data["Title"] = issue.Name
+	ctx.Data["Title"] = issue.Title
 	ctx.Data["Issue"] = issue
 
 	if !issue.IsPull {
@@ -156,10 +156,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		return nil
 	}
 
-	if err = issue.GetPullRequest(); err != nil {
-		ctx.Handle(500, "GetPullRequest", err)
-		return nil
-	} else if err = issue.GetHeadRepo(); err != nil {
+	if err = issue.GetHeadRepo(); err != nil {
 		ctx.Handle(500, "GetHeadRepo", err)
 		return nil
 	}
@@ -177,17 +174,10 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 
 func PrepareMergedViewPullInfo(ctx *context.Context, pull *models.Issue) {
 	ctx.Data["HasMerged"] = true
-
-	var err error
-
-	if err = pull.GetMerger(); err != nil {
-		ctx.Handle(500, "GetMerger", err)
-		return
-	}
-
 	ctx.Data["HeadTarget"] = pull.HeadUserName + "/" + pull.HeadBranch
 	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.BaseBranch
 
+	var err error
 	ctx.Data["NumCommits"], err = ctx.Repo.GitRepo.CommitsCountBetween(pull.MergeBase, pull.MergedCommitID)
 	if err != nil {
 		ctx.Handle(500, "Repo.GitRepo.CommitsCountBetween", err)
@@ -252,6 +242,7 @@ func PrepareViewPullInfo(ctx *context.Context, pull *models.Issue) *git.PullRequ
 }
 
 func ViewPullCommits(ctx *context.Context) {
+	ctx.Data["PageIsPullList"] = true
 	ctx.Data["PageIsPullCommits"] = true
 
 	pull := checkPullInfo(ctx)
@@ -302,6 +293,7 @@ func ViewPullCommits(ctx *context.Context) {
 }
 
 func ViewPullFiles(ctx *context.Context) {
+	ctx.Data["PageIsPullList"] = true
 	ctx.Data["PageIsPullFiles"] = true
 
 	pull := checkPullInfo(ctx)
@@ -679,7 +671,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	pullIssue := &models.Issue{
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
-		Name:        form.Title,
+		Title:       form.Title,
 		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
@@ -711,11 +703,12 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 }
 
 func TriggerTask(ctx *context.Context) {
+	pusherID := ctx.QueryInt64("pusher")
 	branch := ctx.Query("branch")
 	secret := ctx.Query("secret")
-	if len(branch) == 0 || len(secret) == 0 {
+	if len(branch) == 0 || len(secret) == 0 || pusherID <= 0 {
 		ctx.Error(404)
-		log.Trace("TriggerTask: branch or secret is empty")
+		log.Trace("TriggerTask: branch or secret is empty, or pusher ID is not valid")
 		return
 	}
 	owner, repo := parseOwnerAndRepo(ctx)
@@ -728,9 +721,19 @@ func TriggerTask(ctx *context.Context) {
 		return
 	}
 
-	log.Trace("TriggerTask [%d].(new request): %s", repo.ID, branch)
+	pusher, err := models.GetUserByID(pusherID)
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Error(404)
+		} else {
+			ctx.Handle(500, "GetUserByID", err)
+		}
+		return
+	}
+
+	log.Trace("TriggerTask '%s/%s' by %s", repo.Name, branch, pusher.Name)
 
 	go models.HookQueue.Add(repo.ID)
-	go models.AddTestPullRequestTask(repo.ID, branch)
+	go models.AddTestPullRequestTask(pusher, repo.ID, branch, true)
 	ctx.Status(202)
 }

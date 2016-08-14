@@ -25,6 +25,7 @@ import (
 	"github.com/nfnt/resize"
 
 	"github.com/gogits/git-module"
+	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
@@ -127,6 +128,16 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 		u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
+	}
+}
+
+func (u *User) APIFormat() *api.User {
+	return &api.User{
+		ID:        u.ID,
+		UserName:  u.Name,
+		FullName:  u.FullName,
+		Email:     u.Email,
+		AvatarUrl: u.AvatarLink(),
 	}
 }
 
@@ -468,12 +479,12 @@ func GetUserSalt() string {
 	return base.GetRandomString(10)
 }
 
-// NewFakeUser creates and returns a fake user for someone has deleted his/her account.
-func NewFakeUser() *User {
+// NewGhostUser creates and returns a fake user for someone has deleted his/her account.
+func NewGhostUser() *User {
 	return &User{
 		ID:        -1,
-		Name:      "Someone",
-		LowerName: "someone",
+		Name:      "Ghost",
+		LowerName: "ghost",
 	}
 }
 

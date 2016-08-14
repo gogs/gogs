@@ -52,7 +52,7 @@ func GetIssue(ctx *context.APIContext) {
 func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	issue := &models.Issue{
 		RepoID:   ctx.Repo.Repository.ID,
-		Name:     form.Title,
+		Title:     form.Title,
 		PosterID: ctx.User.ID,
 		Poster:   ctx.User,
 		Content:  form.Body,
@@ -115,7 +115,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 	}
 
 	if len(form.Title) > 0 {
-		issue.Name = form.Title
+		issue.Title = form.Title
 	}
 	if form.Body != nil {
 		issue.Content = *form.Body

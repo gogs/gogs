@@ -13,7 +13,6 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -48,16 +47,16 @@ func ToRepository(owner *models.User, repo *models.Repository, permission api.Pe
 		Description: repo.Description,
 		Private:     repo.IsPrivate,
 		Fork:        repo.IsFork,
-		HtmlUrl:     setting.AppUrl + owner.Name + "/" + repo.Name,
-		CloneUrl:    cl.HTTPS,
-		SshUrl:      cl.SSH,
+		HTMLURL:     setting.AppUrl + owner.Name + "/" + repo.Name,
+		CloneURL:    cl.HTTPS,
+		SSHURL:      cl.SSH,
 		OpenIssues:  repo.NumOpenIssues,
 		Stars:       repo.NumStars,
 		Forks:       repo.NumForks,
 		Watchers:    repo.NumWatches,
 		Created:     repo.Created,
 		Updated:     repo.Updated,
-		Permissions: permission,
+		Permissions: &permission,
 	}
 }
 
@@ -183,7 +182,7 @@ func ToIssue(issue *models.Issue) *api.Issue {
 		ID:        issue.ID,
 		Index:     issue.Index,
 		State:     issue.State(),
-		Title:     issue.Name,
+		Title:     issue.Title,
 		Body:      issue.Content,
 		User:      ToUser(issue.Poster),
 		Labels:    apiLabels,
@@ -194,15 +193,11 @@ func ToIssue(issue *models.Issue) *api.Issue {
 		Updated:   issue.Updated,
 	}
 	if issue.IsPull {
-		if err := issue.GetPullRequest(); err != nil {
-			log.Error(4, "GetPullRequest", err)
-		} else {
-			apiIssue.PullRequest = &api.PullRequestMeta{
-				HasMerged: issue.PullRequest.HasMerged,
-			}
-			if issue.PullRequest.HasMerged {
-				apiIssue.PullRequest.Merged = &issue.PullRequest.Merged
-			}
+		apiIssue.PullRequest = &api.PullRequestMeta{
+			HasMerged: issue.PullRequest.HasMerged,
+		}
+		if issue.PullRequest.HasMerged {
+			apiIssue.PullRequest.Merged = &issue.PullRequest.Merged
 		}
 	}
 
