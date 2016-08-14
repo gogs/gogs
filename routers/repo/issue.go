@@ -424,7 +424,7 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 
 	issue := &models.Issue{
 		RepoID:      repo.ID,
-		Name:        form.Title,
+		Title:       form.Title,
 		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
@@ -500,7 +500,7 @@ func ViewIssue(ctx *context.Context) {
 		}
 		return
 	}
-	ctx.Data["Title"] = issue.Name
+	ctx.Data["Title"] = issue.Title
 
 	// Make sure type and URL matches.
 	if ctx.Params(":type") == "issues" && issue.IsPull {
@@ -517,12 +517,6 @@ func ViewIssue(ctx *context.Context) {
 			return
 		}
 		ctx.Data["PageIsPullList"] = true
-
-		if err = issue.GetPullRequest(); err != nil {
-			ctx.Handle(500, "GetPullRequest", err)
-			return
-		}
-
 		ctx.Data["PageIsPullConversation"] = true
 	} else {
 		MustEnableIssues(ctx)
@@ -668,19 +662,19 @@ func UpdateIssueTitle(ctx *context.Context) {
 		return
 	}
 
-	issue.Name = ctx.QueryTrim("title")
-	if len(issue.Name) == 0 {
+	title := ctx.QueryTrim("title")
+	if len(title) == 0 {
 		ctx.Error(204)
 		return
 	}
 
-	if err := models.UpdateIssue(issue); err != nil {
-		ctx.Handle(500, "UpdateIssue", err)
+	if err := issue.ChangeTitle(ctx.User, title); err != nil {
+		ctx.Handle(500, "ChangeTitle", err)
 		return
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"title": issue.Name,
+		"title": issue.Title,
 	})
 }
 
@@ -695,9 +689,9 @@ func UpdateIssueContent(ctx *context.Context) {
 		return
 	}
 
-	issue.Content = ctx.Query("content")
-	if err := models.UpdateIssue(issue); err != nil {
-		ctx.Handle(500, "UpdateIssue", err)
+	content := ctx.Query("content")
+	if err := issue.ChangeContent(ctx.User, content); err != nil {
+		ctx.Handle(500, "ChangeContent", err)
 		return
 	}
 
@@ -713,7 +707,7 @@ func UpdateIssueLabel(ctx *context.Context) {
 	}
 
 	if ctx.Query("action") == "clear" {
-		if err := issue.ClearLabels(); err != nil {
+		if err := issue.ClearLabels(ctx.User); err != nil {
 			ctx.Handle(500, "ClearLabels", err)
 			return
 		}
@@ -730,12 +724,12 @@ func UpdateIssueLabel(ctx *context.Context) {
 		}
 
 		if isAttach && !issue.HasLabel(label.ID) {
-			if err = issue.AddLabel(label); err != nil {
+			if err = issue.AddLabel(ctx.User, label); err != nil {
 				ctx.Handle(500, "AddLabel", err)
 				return
 			}
 		} else if !isAttach && issue.HasLabel(label.ID) {
-			if err = issue.RemoveLabel(label); err != nil {
+			if err = issue.RemoveLabel(ctx.User, label); err != nil {
 				ctx.Handle(500, "RemoveLabel", err)
 				return
 			}
@@ -780,18 +774,16 @@ func UpdateIssueAssignee(ctx *context.Context) {
 		return
 	}
 
-	aid := ctx.QueryInt64("id")
-	if issue.AssigneeID == aid {
+	assigneeID := ctx.QueryInt64("id")
+	if issue.AssigneeID == assigneeID {
 		ctx.JSON(200, map[string]interface{}{
 			"ok": true,
 		})
 		return
 	}
 
-	// Not check for invalid assignee id and give responsibility to owners.
-	issue.AssigneeID = aid
-	if err := models.UpdateIssueUserByAssignee(issue); err != nil {
-		ctx.Handle(500, "UpdateIssueUserByAssignee", err)
+	if err := issue.ChangeAssignee(ctx.User, assigneeID); err != nil {
+		ctx.Handle(500, "ChangeAssignee", err)
 		return
 	}
 
@@ -805,12 +797,6 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 	if err != nil {
 		ctx.HandleError("GetIssueByIndex", models.IsErrIssueNotExist, err, 404)
 		return
-	}
-	if issue.IsPull {
-		if err = issue.GetPullRequest(); err != nil {
-			ctx.Handle(500, "GetPullRequest", err)
-			return
-		}
 	}
 
 	var attachments []string

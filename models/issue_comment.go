@@ -86,7 +86,7 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				c.PosterID = -1
-				c.Poster = NewFakeUser()
+				c.Poster = NewGhostUser()
 			} else {
 				log.Error(3, "GetUserByID[%d]: %v", c.ID, err)
 			}

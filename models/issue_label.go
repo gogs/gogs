@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-xorm/xorm"
 
+	api "github.com/gogits/go-gogs-client"
+
 	"github.com/gogits/gogs/modules/base"
 )
 
@@ -27,9 +29,17 @@ type Label struct {
 	IsChecked       bool `xorm:"-"`
 }
 
+func (label *Label) APIFormat() *api.Label {
+	return &api.Label{
+		ID:    label.ID,
+		Name:  label.Name,
+		Color: label.Color,
+	}
+}
+
 // CalOpenIssues calculates the open issues of label.
-func (m *Label) CalOpenIssues() {
-	m.NumOpenIssues = m.NumIssues - m.NumClosedIssues
+func (label *Label) CalOpenIssues() {
+	label.NumOpenIssues = label.NumIssues - label.NumClosedIssues
 }
 
 // ForegroundColor calculates the text color for labels based

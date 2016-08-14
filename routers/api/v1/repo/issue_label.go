@@ -52,7 +52,7 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	if err = issue.AddLabels(labels); err != nil {
+	if err = issue.AddLabels(ctx.User, labels); err != nil {
 		ctx.Error(500, "AddLabels", err)
 		return
 	}
@@ -160,7 +160,7 @@ func ClearIssueLabels(ctx *context.APIContext) {
 		return
 	}
 
-	if err := issue.ClearLabels(); err != nil {
+	if err := issue.ClearLabels(ctx.User); err != nil {
 		ctx.Error(500, "ClearLabels", err)
 		return
 	}
