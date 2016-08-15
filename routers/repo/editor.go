@@ -129,6 +129,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	content := form.Content
 	commitChoice := form.CommitChoice
 	lastCommit := form.LastCommit
+	form.LastCommit = ctx.Repo.Commit.ID.String()
 
 	if commitChoice == "commit-to-new-branch" {
 		branchName = form.NewBranchName
@@ -151,7 +152,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	ctx.Data["commit_message"] = form.CommitMessage
 	ctx.Data["commit_choice"] = commitChoice
 	ctx.Data["new_branch_name"] = branchName
-	ctx.Data["last_commit"] = ctx.Repo.Commit.ID
+	ctx.Data["last_commit"] = form.LastCommit
 	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
 	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
 	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
