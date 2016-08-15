@@ -25,9 +25,8 @@ import (
 )
 
 var (
-	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
-	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
-	ErrMissingIssueNumber  = errors.New("No issue number specified")
+	ErrWrongIssueCounter  = errors.New("Invalid number of issues for this milestone")
+	ErrMissingIssueNumber = errors.New("No issue number specified")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -832,19 +831,6 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 
 	issues := make([]*Issue, 0, setting.UI.IssuePagingNum)
 	return issues, sess.Find(&issues)
-}
-
-type IssueStatus int
-
-const (
-	IS_OPEN = iota + 1
-	IS_CLOSE
-)
-
-// GetIssueCountByPoster returns number of issues of repository by poster.
-func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
-	count, _ := x.Where("repo_id=?", rid).And("poster_id=?", uid).And("is_closed=?", isClosed).Count(new(Issue))
-	return count
 }
 
 // .___                             ____ ___

@@ -6,7 +6,6 @@ package models
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path"
 	"regexp"
@@ -43,10 +42,6 @@ const (
 	ACTION_REOPEN_ISSUE                              // 13
 	ACTION_CLOSE_PULL_REQUEST                        // 14
 	ACTION_REOPEN_PULL_REQUEST                       // 15
-)
-
-var (
-	ErrNotImplemented = errors.New("Not implemented yet")
 )
 
 var (
