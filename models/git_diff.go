@@ -434,7 +434,7 @@ func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxL
 		return nil, fmt.Errorf("Start: %v", err)
 	}
 
-	pid := process.Add(fmt.Sprintf("GetDiffRange (%s)", repoPath), cmd)
+	pid := process.Add(fmt.Sprintf("GetDiffRange [repo_path: %s]", repoPath), cmd)
 	defer process.Remove(pid)
 
 	diff, err := ParsePatch(maxLines, maxLineCharacteres, maxFiles, stdout)

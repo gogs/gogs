@@ -1224,6 +1224,14 @@ footer .ui.language .menu {
 .repository.file.list .choose.reference .header .icon {
   font-size: 1.4em;
 }
+.repository.file.list #file-buttons {
+  font-weight: normal;
+  margin-top: -3px;
+  padding-right: 20px;
+}
+.repository.file.list #file-buttons .ui.button {
+  padding: 8px 10px;
+}
 .repository.file.list #repo-files-table thead th {
   padding-top: 8px;
   padding-bottom: 5px;
@@ -1259,6 +1267,36 @@ footer .ui.language .menu {
 .repository.file.list #file-content .header .icon {
   font-size: 1em;
   margin-top: -2px;
+}
+.repository.file.list #file-content .header .file-actions {
+  padding-left: 20px;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon {
+  display: inline-block;
+  padding: 5px;
+  margin-left: 5px;
+  line-height: 1;
+  color: #767676;
+  vertical-align: middle;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon:hover {
+  color: #4078c0;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon-danger:hover {
+  color: #bd2c00;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon.disabled {
+  color: #bbb;
+  cursor: default;
+}
+.repository.file.list #file-content .header .file-actions #delete-file-form {
+  display: inline-block;
+}
+.repository.file.list #file-content .view-raw {
+  padding: 5px;
 }
 .repository.file.list #file-content .view-raw * {
   max-width: 100%;
@@ -1324,6 +1362,85 @@ footer .ui.language .menu {
 }
 .repository.file.list .sidebar .octicon {
   width: 16px;
+}
+.repository.file.editor .treepath {
+  width: 100%;
+}
+.repository.file.editor .treepath input {
+  vertical-align: middle;
+  box-shadow: rgba(0, 0, 0, 0.0745098) 0px 1px 2px inset;
+  width: inherit;
+  padding: 7px 8px;
+  margin-right: 5px;
+}
+.repository.file.editor .tabular.menu .octicon {
+  margin-right: 5px;
+}
+.repository.file.editor .CodeMirror.cm-s-default {
+  border-radius: 3px;
+  padding: 0 !important;
+}
+.repository.file.editor .commit-form-wrapper {
+  padding-left: 64px;
+}
+.repository.file.editor .commit-form-wrapper .commit-avatar {
+  float: left;
+  margin-left: -64px;
+  width: 3em;
+  height: auto;
+}
+.repository.file.editor .commit-form-wrapper .commit-form {
+  position: relative;
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:before,
+.repository.file.editor .commit-form-wrapper .commit-form:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:after {
+  border-right-color: #fff;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .branch-name {
+  display: inline-block;
+  padding: 3px 6px;
+  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  color: rgba(0, 0, 0, 0.65);
+  background-color: rgba(209, 227, 237, 0.45);
+  border-radius: 3px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .new-branch-name-input {
+  position: relative;
+  margin-left: 25px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .new-branch-name-input input {
+  width: 240px !important;
+  padding-left: 26px !important;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .octicon-git-branch {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  color: #b0c4ce;
 }
 .repository.options #interval {
   width: 100px!important;

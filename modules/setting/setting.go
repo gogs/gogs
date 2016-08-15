@@ -114,6 +114,21 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
+
+		// Repository editor settings
+		Editor struct {
+			LineWrapExtensions   []string
+			PreviewableFileModes []string
+		} `ini:"-"`
+
+		// Repository upload settings
+		Upload struct {
+			Enabled      bool
+			TempPath     string
+			AllowedTypes []string `delim:"|"`
+			FileMaxSize  int64
+			MaxFiles     int
+		} `ini:"-"`
 	}
 	RepoRootPath string
 	ScriptType   string
@@ -141,6 +156,7 @@ var (
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+		FileExtensions      []string
 	}
 
 	// Picture settings
@@ -480,6 +496,14 @@ func NewContext() {
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
 	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
+	} else if err = Cfg.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
+		log.Fatal(4, "Fail to map Repository.Editor settings: %v", err)
+	} else if err = Cfg.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
+		log.Fatal(4, "Fail to map Repository.Upload settings: %v", err)
+	}
+
+	if !filepath.IsAbs(Repository.Upload.TempPath) {
+		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
 	}
 
 	sec = Cfg.Section("picture")
@@ -529,7 +553,7 @@ func NewContext() {
 	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
-		log.Fatal(4, "Fail to map API settings: %v", err)
+		log.Fatal(4, "Fail to map Mirror settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
 	}
