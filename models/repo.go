@@ -2240,43 +2240,6 @@ func (repo *Repository) GetForks() ([]*Repository, error) {
 	return forks, x.Find(&forks, &Repository{ForkID: repo.ID})
 }
 
-// ________         .__          __           ___________.__.__
-// \______ \   ____ |  |   _____/  |_  ____   \_   _____/|__|  |   ____
-//  |    |  \_/ __ \|  | _/ __ \   __\/ __ \   |    __)  |  |  | _/ __ \
-//  |    `   \  ___/|  |_\  ___/|  | \  ___/   |     \   |  |  |_\  ___/
-// /_______  /\___  >____/\___  >__|  \___  >  \___  /   |__|____/\___  >
-//         \/     \/          \/          \/       \/                 \/
-//
-
-func (repo *Repository) DeleteRepoFile(doer *User, branch, treeName, message string) (err error) {
-	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
-	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
-
-	localPath := repo.LocalCopyPath()
-	if err = discardLocalRepoBranchChanges(localPath, branch); err != nil {
-		return fmt.Errorf("discardLocalRepoChanges: %v", err)
-	} else if err = repo.UpdateLocalCopyBranch(branch); err != nil {
-		return fmt.Errorf("UpdateLocalCopyBranch: %v", err)
-	}
-
-	filePath := path.Join(localPath, treeName)
-	os.Remove(filePath)
-
-	if len(message) == 0 {
-		message = "Delete file '" + treeName + "'"
-	}
-
-	if err = git.AddChanges(localPath, true); err != nil {
-		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
-		return fmt.Errorf("CommitChanges: %v", err)
-	} else if err = git.Push(localPath, "origin", branch); err != nil {
-		return fmt.Errorf("Push: %v", err)
-	}
-
-	return nil
-}
-
 //  ____ ___        .__                    .___ ___________.___.__
 // |    |   \______ |  |   _________     __| _/ \_   _____/|   |  |   ____   ______
 // |    |   /\____ \|  |  /  _ \__  \   / __ |   |    __)  |   |  | _/ __ \ /  ___/
