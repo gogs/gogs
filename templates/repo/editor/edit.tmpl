@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="repository file edit">
+<div class="repository file editor">
 	{{template "repo/header" .}}
 	<div class="ui container">
 		{{template "base/alert" .}}
@@ -7,30 +7,33 @@
 			{{.CsrfTokenHtml}}
 			<input type="hidden" name="last_commit" value="{{.last_commit}}">
 			<div class="ui secondary menu">
-				<div class="item fitted" style="width:100%;">
-					<div class="ui breadcrumb field{{if .Err_Filename}} error{{end}}">
+				<div class="fitted item treepath">
+					<div class="ui breadcrumb field {{if .Err_Filename}}error{{end}}">
 						<a class="section" href="{{EscapePound $.BranchLink}}">{{.Repository.Name}}</a>
 						{{ $n := len .TreeNames}}
 						{{ $l := Subtract $n 1}}
 						{{range $i, $v := .TreeNames}}
 							<div class="divider"> / </div>
 							{{if eq $i $l}}
-								<input type="text" id="file-name" value="{{$v}}" placeholder="{{$.i18n.Tr "repo.name_your_file"}}" required> <span class="octicon octicon-info poping up" data-content="{{$.i18n.Tr "repo.filename_help"}}" data-position="bottom center" data-variation="tiny"></span>
+								<input id="file-name" value="{{$v}}" placeholder="{{$.i18n.Tr "repo.name_your_file"}}" required autofocus> 
+								<span class="octicon octicon-info poping up" data-content="{{$.i18n.Tr "repo.filename_help"}}" data-position="bottom center" data-variation="tiny"></span>
 							{{else}}
 								<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $v}}">{{$v}}</a></span>
 							{{end}}
 						{{end}}
-						<button class="clipboard-tree-name octicon octicon-clippy poping up" type="button" data-content="{{.i18n.Tr "repo.copy_file_path_to_clipboard"}}" data-position="bottom center" data-variation="tiny inverted"></button>
-						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreeName}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
+						<!-- <button class="clipboard-tree-name octicon octicon-clippy poping up" type="button" data-content="{{.i18n.Tr "repo.copy_file_path_to_clipboard"}}" data-position="bottom center" data-variation="tiny inverted"></button> -->
+						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}{{if not .IsNewFile}}/{{EscapePound $.TreeName}}{{end}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
 						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}" required>
 					</div>
 				</div>
 			</div>
 			<div class="field">
 				<div class="ui top attached tabular menu" data-write="write" data-preview="preview" data-diff="diff">
-					<a class="active item" data-tab="write"><i class="octicon octicon-code"></i> {{.i18n.Tr "repo.edit_file"}}</a>
+					<a class="active item" data-tab="write"><i class="octicon octicon-code"></i> {{if .IsNewFile}}{{.i18n.Tr "repo.new_file"}}{{else}}{{.i18n.Tr "repo.edit_file"}}{{end}}</a>
+					{{if not .IsNewFile}}
 					<a class="item" data-tab="preview" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}" data-preview-file-modes="{{.PreviewableFileModes}}"><i class="octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
 					<a class="item" data-tab="diff" data-url="{{.RepoLink}}/_preview/{{.BranchName}}/{{.TreeName}}" data-context="{{.BranchLink}}"><i class="octicon octicon-diff"></i> {{.i18n.Tr "repo.preview_changes"}}</a>
+					{{end}}
 				</div>
 				<div class="ui bottom attached active tab segment" data-tab="write">
 					<textarea id="edit_area" name="content" data-id="repo-{{.Repository.Name}}-{{.TreeName}}"
@@ -48,37 +51,37 @@
 				</div>
 			</div>
 			<div class="commit-form-wrapper">
-				<img width="48" height="48" class="ui rounded image commit-form-avatar" src="{{.SignedUser.AvatarLink}}">
+				<img width="48" height="48" class="ui image commit-avatar" src="{{.SignedUser.AvatarLink}}">
 				<div class="commit-form">
 					<h3>{{.i18n.Tr "repo.commit_changes"}}</h3>
 					<div class="field">
 						<input name="commit_summary" placeholder="{{if .IsNewFile}}{{.i18n.Tr "repo.add"}} '{{.TreeName}}/<filename>'{{else}}{{.i18n.Tr "repo.update"}} '{{.TreeName}}'{{end}}" value="{{.commit_summary}}">
 					</div>
 					<div class="field">
-						<textarea name="commit_message" placeholder="{{.i18n.Tr "repo.default_commit_message"}}">{{.commit_message}}</textarea>
+						<textarea name="commit_message" placeholder="{{.i18n.Tr "repo.default_commit_message"}}" rows="5">{{.commit_message}}</textarea>
 					</div>
 					<div class="quick-pull-choice js-quick-pull-choice">
-						<dl class="form-group">
-							<dd>
-						 		<div class="form-checkbox">
-									<label>
-										<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="direct"{{if eq .commit_choice "direct"}} checked="checked"{{end}}>
-										<i class="octicon octicon-git-commit" height="16" width="14"></i>
-										{{.i18n.Tr "repo.editor.commit_directly_to_this_branch" .BranchName | Safe}}
-									</label>
-								</div>
-								<div class="form-checkbox">
-									<label>
-										<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="commit-to-new-branch"{{if eq .commit_choice "commit-to-new-branch"}} checked="checked"{{end}}>
-										<i class="octicon octicon-git-pull-request" height="16" width="12"></i>
-										{{.i18n.Tr "repo.editor.create_new_branch" | Safe}}
-									</label>
-								</div>
-							</dd>
-						</dl>
+						<div class="field">
+					 		<div class="ui radio checkbox">
+								<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="direct" {{if eq .commit_choice "direct"}}checked{{end}}>
+								<label>
+									<i class="octicon octicon-git-commit" height="16" width="14"></i>
+									{{.i18n.Tr "repo.editor.commit_directly_to_this_branch" .BranchName | Safe}}
+								</label>
+							</div>
+						</div>
+						<div class="field">
+							<div class="ui radio checkbox">
+								<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="commit-to-new-branch" {{if eq .commit_choice "commit-to-new-branch"}}checked{{end}}>
+								<label>
+									<i class="octicon octicon-git-pull-request" height="16" width="12"></i>
+									{{.i18n.Tr "repo.editor.create_new_branch" | Safe}}
+								</label>
+							</div>
+						</div>
 						<div class="quick-pull-branch-name">
 							<div class="new-branch-name-input{{if .Err_Branchname}} error{{end}}">
-								<i class="octicon octicon-git-branch quick-pull-new-branch-icon" height="16" width="10"></i>
+								<i class="octicon octicon-git-branch" height="16" width="10"></i>
 								<input type="text" name="new_branch_name" value="{{.new_branch_name}}" class="form-control input-contrast mr-2 js-quick-pull-new-branch-name" placeholder="New branch name…">
 								<span class="text-muted js-quick-pull-normalization-info"></span>
 							</div>

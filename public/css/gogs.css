@@ -255,9 +255,6 @@ code.wrap {
 .ui.status.buttons .octicon {
   margin-right: 4px;
 }
-.ui.menu .item .octicon {
-  margin-right: 4px;
-}
 .ui.inline.delete-button {
   padding: 8px 15px;
   font-weight: normal;
@@ -1227,6 +1224,14 @@ footer .ui.language .menu {
 .repository.file.list .choose.reference .header .icon {
   font-size: 1.4em;
 }
+.repository.file.list #file-buttons {
+  font-weight: normal;
+  margin-top: -3px;
+  padding-right: 20px;
+}
+.repository.file.list #file-buttons .ui.button {
+  padding: 8px 10px;
+}
 .repository.file.list #repo-files-table thead th {
   padding-top: 8px;
   padding-bottom: 5px;
@@ -1263,63 +1268,93 @@ footer .ui.language .menu {
   font-size: 1em;
   margin-top: -2px;
 }
+.repository.file.list #file-content .header .file-actions {
+  padding-left: 20px;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon {
+  display: inline-block;
+  padding: 5px;
+  margin-left: 5px;
+  line-height: 1;
+  color: #767676;
+  vertical-align: middle;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon:hover {
+  color: #4078c0;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon-danger:hover {
+  color: #bd2c00;
+}
+.repository.file.list #file-content .header .file-actions .btn-octicon.disabled {
+  color: #bbb;
+  cursor: default;
+}
+.repository.file.list #file-content .header .file-actions #delete-file-form {
+  display: inline-block;
+}
+.repository.file.list #file-content .view-raw {
+  padding: 5px;
+}
 .repository.file.list #file-content .view-raw * {
   max-width: 100%;
 }
 .repository.file.list #file-content .view-raw img {
   padding: 5px 5px 0 5px;
 }
-#file-content .code-view * {
+.repository.file.list #file-content .code-view * {
   font-size: 12px;
   font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
   line-height: 20px;
 }
-#file-content .code-view table {
+.repository.file.list #file-content .code-view table {
   width: 100%;
 }
-#file-content .code-view .lines-num {
+.repository.file.list #file-content .code-view .lines-num {
   vertical-align: top;
   text-align: right;
   color: #999;
   background: #f5f5f5;
   width: 1%;
 }
-#file-content .code-view .lines-num span {
+.repository.file.list #file-content .code-view .lines-num span {
   line-height: 20px;
   padding: 0 10px;
   cursor: pointer;
   display: block;
 }
-#file-content .code-view .lines-num,
-#file-content .code-view .lines-code {
+.repository.file.list #file-content .code-view .lines-num,
+.repository.file.list #file-content .code-view .lines-code {
   padding: 0;
 }
-#file-content .code-view .lines-num pre,
-#file-content .code-view .lines-code pre,
-#file-content .code-view .lines-num ol,
-#file-content .code-view .lines-code ol,
-#file-content .code-view .lines-num .hljs,
-#file-content .code-view .lines-code .hljs {
+.repository.file.list #file-content .code-view .lines-num pre,
+.repository.file.list #file-content .code-view .lines-code pre,
+.repository.file.list #file-content .code-view .lines-num ol,
+.repository.file.list #file-content .code-view .lines-code ol,
+.repository.file.list #file-content .code-view .lines-num .hljs,
+.repository.file.list #file-content .code-view .lines-code .hljs {
   background-color: white;
   margin: 0;
   padding: 0 !important;
 }
-#file-content .code-view .lines-num pre li,
-#file-content .code-view .lines-code pre li,
-#file-content .code-view .lines-num ol li,
-#file-content .code-view .lines-code ol li,
-#file-content .code-view .lines-num .hljs li,
-#file-content .code-view .lines-code .hljs li {
+.repository.file.list #file-content .code-view .lines-num pre li,
+.repository.file.list #file-content .code-view .lines-code pre li,
+.repository.file.list #file-content .code-view .lines-num ol li,
+.repository.file.list #file-content .code-view .lines-code ol li,
+.repository.file.list #file-content .code-view .lines-num .hljs li,
+.repository.file.list #file-content .code-view .lines-code .hljs li {
   padding-left: 5px;
   display: inline-block;
   width: 100%;
 }
-#file-content .code-view .lines-num pre li.active,
-#file-content .code-view .lines-code pre li.active,
-#file-content .code-view .lines-num ol li.active,
-#file-content .code-view .lines-code ol li.active,
-#file-content .code-view .lines-num .hljs li.active,
-#file-content .code-view .lines-code .hljs li.active {
+.repository.file.list #file-content .code-view .lines-num pre li.active,
+.repository.file.list #file-content .code-view .lines-code pre li.active,
+.repository.file.list #file-content .code-view .lines-num ol li.active,
+.repository.file.list #file-content .code-view .lines-code ol li.active,
+.repository.file.list #file-content .code-view .lines-num .hljs li.active,
+.repository.file.list #file-content .code-view .lines-code .hljs li.active {
   background: #ffffdd;
 }
 .repository.file.list .sidebar {
@@ -1327,6 +1362,85 @@ footer .ui.language .menu {
 }
 .repository.file.list .sidebar .octicon {
   width: 16px;
+}
+.repository.file.editor .treepath {
+  width: 100%;
+}
+.repository.file.editor .treepath input {
+  vertical-align: middle;
+  box-shadow: rgba(0, 0, 0, 0.0745098) 0px 1px 2px inset;
+  width: inherit;
+  padding: 7px 8px;
+  margin-right: 5px;
+}
+.repository.file.editor .tabular.menu .octicon {
+  margin-right: 5px;
+}
+.repository.file.editor .CodeMirror.cm-s-default {
+  border-radius: 3px;
+  padding: 0 !important;
+}
+.repository.file.editor .commit-form-wrapper {
+  padding-left: 64px;
+}
+.repository.file.editor .commit-form-wrapper .commit-avatar {
+  float: left;
+  margin-left: -64px;
+  width: 3em;
+  height: auto;
+}
+.repository.file.editor .commit-form-wrapper .commit-form {
+  position: relative;
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:before,
+.repository.file.editor .commit-form-wrapper .commit-form:after {
+  right: 100%;
+  top: 20px;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:before {
+  border-right-color: #D4D4D5;
+  border-width: 9px;
+  margin-top: -9px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:after {
+  border-right-color: #f7f7f7;
+  border-width: 8px;
+  margin-top: -8px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form:after {
+  border-right-color: #fff;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .branch-name {
+  display: inline-block;
+  padding: 3px 6px;
+  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  color: rgba(0, 0, 0, 0.65);
+  background-color: rgba(209, 227, 237, 0.45);
+  border-radius: 3px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .new-branch-name-input {
+  position: relative;
+  margin-left: 25px;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .new-branch-name-input input {
+  width: 240px !important;
+  padding-left: 26px !important;
+}
+.repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .octicon-git-branch {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  color: #b0c4ce;
 }
 .repository.options #interval {
   width: 100px!important;
@@ -1898,7 +2012,7 @@ footer .ui.language .menu {
   max-width: 100%;
   padding: 5px 5px 0 5px;
 }
-#file-content .code-view {
+.repository .code-view {
   overflow: auto;
   overflow-x: auto;
   overflow-y: hidden;
@@ -2160,13 +2274,13 @@ footer .ui.language .menu {
 .page.buttons {
   padding-top: 15px;
 }
-.ui.comments .dropzone, .ui.upload .dropzone {
+.ui.comments .dropzone {
   width: 100%;
   margin-bottom: 10px;
   border: 2px dashed #0087F7;
   box-shadow: none!important;
 }
-.ui.comments .dropzone .dz-error-message, .ui.upload .dropzone .dz-error-message {
+.ui.comments .dropzone .dz-error-message {
   top: 140px;
 }
 .settings .content {
@@ -2799,198 +2913,4 @@ footer .ui.language .menu {
 }
 .ui.user.list .item .description a:hover {
   text-decoration: underline;
-}
-.btn-octicon {
-  display: inline-block;
-  padding: 5px;
-  margin-left: 5px;
-  line-height: 1;
-  color: #767676;
-  vertical-align: middle;
-  background: transparent;
-  border: 0;
-  outline: none;
-}
-.btn-octicon:hover {
-  color: #4078c0;
-}
-.btn-octicon-danger:hover {
-  color: #bd2c00;
-}
-.btn-octicon.disabled {
-    color: #bbb;
-    cursor: default;
-}
-.inline-form {
-  display: inline-block;
-}
-.ui.form .breadcrumb input {
-  min-height: 34px;
-  padding: 7px 8px;
-  color: #333;
-  vertical-align: middle;
-  background-color: #fff;
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  outline: none;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
-  width: inherit;
-}
-#file-actions {
-  padding-left: 20px;
-}
-.CodeMirror.cm-s-default {
-  margin-top: 20px;
-  margin-bottom: 15px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  height: 600px;
-  padding: 0 !important;
-}
-.commit-form-wrapper {
-  padding-left: 64px;
-}
-.commit-form {
-  position: relative;
-  padding: 15px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-}
-.commit-form-wrapper .commit-form-avatar {
-  float: left;
-  margin-left: -64px;
-  border-radius: 4px;
-}
-.commit-form::before {
-  border-width: 8px;
-  border-color: transparent;
-  border-right-color: #ddd;
-  position: absolute;
-  top: 11px;
-  right: 100%;
-  left: -16px;
-  display: block;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  content: " ";
-  border-style: solid solid outset;
-}
-.form-checkbox input[type=checkbox], .form-checkbox input[type=radio] {
-  float: left;
-  margin: 2px 0 0 -20px;
-  vertical-align: middle;
-  box-sizing: border-box;
-  padding: 0;
-}
-.branch-name {
-  display: inline-block;
-  padding: 2px 6px;
-  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
-  color: rgba(0,0,0,0.5);
-  background-color: rgba(209,227,237,0.5);
-  border-radius: 3px;
-}
-.form-control, .form-select {
-  min-height: 34px;
-  padding: 7px 8px;
-  font-size: 13px;
-  color: #333;
-  vertical-align: middle;
-  background-color: #fff;
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  outline: none;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.075);
-}
-.form-control.input-contrast {
-  background-color: #fafafa;
-}
-.form-control.mr-2 {
-  margin-right: 6px !important;
-}
-.quick-pull-choice .new-branch-name-input input {
-  width: 240px !important;
-  padding-left: 26px !important;
-  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
-}
-.quick-pull-choice .new-branch-name-input .quick-pull-new-branch-icon {
-  position: absolute;
-  top: 9px;
-  left: 10px;
-  color: #b0c4ce;
-}
-.text-muted, .text-gray {
-  color: #767676 !important;
-}
-.quick-pull-choice .new-branch-name-input {
-  position: relative;
-  margin-top: 5px;
-}
-.quick-pull-choice .quick-pull-branch-name {
-  display: none;
-  padding-left: 48px;
-  margin-top: 5px;
-}
-.quick-pull-choice.will-create-branch .quick-pull-branch-name {
-  display: inline-block;
-}
-.nowrap {
-  white-space: nowrap;
-}
-#file-buttons {
-  padding-right: 15px;
-}
-.repository .ui.container .ui.breadcrumb {
-  font-size: 1.5em;
-  color: #767676;
-  max-width: 600px;
-}
-.repository .ui.container .item:first-child .ui.breadcrumb {
-  max-width: none;
-}
-.repository .ui.container .ui.breadcrumb.field {
-  margin-bottom: 10px !important;
-}
-.repo-edit-file-cancel {
-  padding-left: 10px;
-}
-#new-branch-item {
-  display:none;
-  margin: 0;
-  text-align: left;
-  padding: .71428571em 1.14285714em!important;
-  background: 0 0!important;
-  color: rgba(0,0,0,.87)!important;
-  text-transform: none!important;
-  box-shadow: none!important;
-  -webkit-transition: none!important;
-  transition: none!important;
-  border-top: none;
-  padding-right: calc(1.14285714rem + 17px)!important;
-  font-size: 14px;
-  font-weight: bold;
-  line-height: 1.1;
-}
-#new-branch-item:hover {
-  background: rgba(0,0,0,.05)!important;
-  color: rgba(0,0,0,.95)!important;
-}
-#new-branch-item .icon {
-  float: left;
-  margin-left: -15px;
-}
-#new-branch-item .description {
-  margin-top: 3px;
-  font-size: 12px;
-}
-.repository .ui.container .ui.breadcrumb {
-  font-size: 1.5em;
-  color: #767676;
-  max-width: 600px;
 }

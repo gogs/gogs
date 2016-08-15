@@ -15,7 +15,7 @@
 				</div>
 			{{end}}
 			{{template "repo/branch_dropdown" .}}
-			<div class="item fitted">
+			<div class="fitted item">
 				<div class="ui breadcrumb">
 					<a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
 					{{ $n := len .Treenames}}
@@ -32,16 +32,16 @@
 				</div>
 			</div>
 			<div class="right fitted item">
-				<div id="file-buttons" class="ui buttons nowrap">
+				<div id="file-buttons" class="ui tiny buttons">
 					{{if .NewFileLink}}
-						<a href="{{EscapePound .NewFileLink}}" class="ui button nowrap">
-							<i class="plus square outline icon"></i> {{.i18n.Tr "repo.new_file"}}
+						<a href="{{EscapePound .NewFileLink}}" class="ui button">
+							{{.i18n.Tr "repo.new_file"}}
 						</a>
 					{{end}}
 					{{if .UploadFileLink}}
-						<a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
+						<!-- <a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
 							<i class="upload icon"></i> {{.i18n.Tr "repo.upload_file"}}
-						</a>
+						</a> -->
 					{{end}}
 				</div>
 				{{if eq $n 0}}

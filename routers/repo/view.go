@@ -41,7 +41,6 @@ func Home(ctx *context.Context) {
 	ctx.Data["Title"] = title
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
-	ctx.Data["IsWriter"] = ctx.Repo.IsWriter()
 
 	branchName := ctx.Repo.BranchName
 	userName := ctx.Repo.Owner.Name
