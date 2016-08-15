@@ -347,23 +347,35 @@ func SlackHooksEditPost(ctx *context.Context, form auth.NewSlackHookForm) {
 }
 
 func TestWebhook(ctx *context.Context) {
+	// Grab latest commit or fake one if it's empty repository.
+	commit := ctx.Repo.Commit
+	if commit == nil {
+		ghost := models.NewGhostUser()
+		commit = &git.Commit{
+			ID:            git.MustIDFromString(git.EMPTY_SHA),
+			Author:        ghost.NewGitSig(),
+			Committer:     ghost.NewGitSig(),
+			CommitMessage: "This is a fake commit",
+		}
+	}
+
 	apiUser := ctx.User.APIFormat()
 	p := &api.PushPayload{
 		Ref:    git.BRANCH_PREFIX + ctx.Repo.Repository.DefaultBranch,
-		Before: ctx.Repo.CommitID,
-		After:  ctx.Repo.CommitID,
+		Before: commit.ID.String(),
+		After:  commit.ID.String(),
 		Commits: []*api.PayloadCommit{
 			{
-				ID:      ctx.Repo.CommitID,
-				Message: ctx.Repo.Commit.Message(),
-				URL:     ctx.Repo.Repository.FullLink() + "/commit/" + ctx.Repo.CommitID,
+				ID:      commit.ID.String(),
+				Message: commit.Message(),
+				URL:     ctx.Repo.Repository.FullLink() + "/commit/" + commit.ID.String(),
 				Author: &api.PayloadUser{
-					Name:  ctx.Repo.Commit.Author.Name,
-					Email: ctx.Repo.Commit.Author.Email,
+					Name:  commit.Author.Name,
+					Email: commit.Author.Email,
 				},
 				Committer: &api.PayloadUser{
-					Name:  ctx.Repo.Commit.Committer.Name,
-					Email: ctx.Repo.Commit.Committer.Email,
+					Name:  commit.Committer.Name,
+					Email: commit.Committer.Email,
 				},
 			},
 		},
