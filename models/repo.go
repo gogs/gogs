@@ -870,7 +870,10 @@ type CreateRepoOptions struct {
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
-	relPath := path.Join("conf", tp, strings.Replace(name, ".", "", -1))
+	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "/") {
+		name = strings.Replace(name, ".", "", -1)
+	}
+	relPath := path.Join("conf", tp, name)
 
 	// Use custom file when available.
 	customPath := path.Join(setting.CustomPath, relPath)
