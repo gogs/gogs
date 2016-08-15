@@ -19,7 +19,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Unknwon/cae/zip"
@@ -37,11 +36,14 @@ import (
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/sync"
 )
 
 const (
 	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
 )
+
+var repoWorkingPool = sync.NewSingleInstancePool()
 
 var (
 	ErrRepoFileNotExist  = errors.New("Repository file does not exist")
@@ -1706,40 +1708,8 @@ func RewriteRepositoryUpdateHook() error {
 		})
 }
 
-// statusPool represents a pool of status with true/false.
-type statusPool struct {
-	lock sync.RWMutex
-	pool map[string]bool
-}
-
-// Start sets value of given name to true in the pool.
-func (p *statusPool) Start(name string) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.pool[name] = true
-}
-
-// Stop sets value of given name to false in the pool.
-func (p *statusPool) Stop(name string) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.pool[name] = false
-}
-
-// IsRunning checks if value of given name is set to true in the pool.
-func (p *statusPool) IsRunning(name string) bool {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-
-	return p.pool[name]
-}
-
 // Prevent duplicate running tasks.
-var taskStatusPool = &statusPool{
-	pool: make(map[string]bool),
-}
+var taskStatusTable = sync.NewStatusTable()
 
 const (
 	_MIRROR_UPDATE = "mirror_update"
@@ -1749,11 +1719,11 @@ const (
 
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate() {
-	if taskStatusPool.IsRunning(_MIRROR_UPDATE) {
+	if taskStatusTable.IsRunning(_MIRROR_UPDATE) {
 		return
 	}
-	taskStatusPool.Start(_MIRROR_UPDATE)
-	defer taskStatusPool.Stop(_MIRROR_UPDATE)
+	taskStatusTable.Start(_MIRROR_UPDATE)
+	defer taskStatusTable.Stop(_MIRROR_UPDATE)
 
 	log.Trace("Doing: MirrorUpdate")
 
@@ -1813,11 +1783,11 @@ func MirrorUpdate() {
 
 // GitFsck calls 'git fsck' to check repository health.
 func GitFsck() {
-	if taskStatusPool.IsRunning(_GIT_FSCK) {
+	if taskStatusTable.IsRunning(_GIT_FSCK) {
 		return
 	}
-	taskStatusPool.Start(_GIT_FSCK)
-	defer taskStatusPool.Stop(_GIT_FSCK)
+	taskStatusTable.Start(_GIT_FSCK)
+	defer taskStatusTable.Stop(_GIT_FSCK)
 
 	log.Trace("Doing: GitFsck")
 
@@ -1879,11 +1849,11 @@ func repoStatsCheck(checker *repoChecker) {
 }
 
 func CheckRepoStats() {
-	if taskStatusPool.IsRunning(_CHECK_REPOs) {
+	if taskStatusTable.IsRunning(_CHECK_REPOs) {
 		return
 	}
-	taskStatusPool.Start(_CHECK_REPOs)
-	defer taskStatusPool.Stop(_CHECK_REPOs)
+	taskStatusTable.Start(_CHECK_REPOs)
+	defer taskStatusTable.Stop(_CHECK_REPOs)
 
 	log.Trace("Doing: CheckRepoStats")
 
@@ -2274,11 +2244,6 @@ func (repo *Repository) GetForks() ([]*Repository, error) {
 //  |        \/ /_/ | |  ||  |    |     \   |  |  |_\  ___/
 // /_______  /\____ | |__||__|    \___  /   |__|____/\___  >
 //         \/      \/                 \/                 \/
-
-var repoWorkingPool = &workingPool{
-	pool:  make(map[string]*sync.Mutex),
-	count: make(map[string]int),
-}
 
 func (repo *Repository) LocalRepoPath() string {
 	return path.Join(setting.AppDataPath, "tmp/local-repo", com.ToStr(repo.ID))
