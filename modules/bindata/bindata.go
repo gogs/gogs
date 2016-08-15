@@ -301,7 +301,7 @@ func confAppIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/app.ini", size: 13460, mode: os.FileMode(420), modTime: time.Unix(1471235101, 0)}
+	info := bindataFileInfo{name: "conf/app.ini", size: 13460, mode: os.FileMode(420), modTime: time.Unix(1471250630, 0)}
 	a := &asset{bytes: bytes, info:  info}
 	return a, nil
 }
@@ -4361,7 +4361,7 @@ func confLocaleLocale_enUsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_en-US.ini", size: 55343, mode: os.FileMode(420), modTime: time.Unix(1471240680, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_en-US.ini", size: 55343, mode: os.FileMode(420), modTime: time.Unix(1471250630, 0)}
 	a := &asset{bytes: bytes, info:  info}
 	return a, nil
 }
