@@ -152,7 +152,11 @@ func Diff(ctx *context.Context) {
 
 	commit, err := ctx.Repo.GitRepo.GetCommit(commitID)
 	if err != nil {
-		ctx.Handle(500, "Repo.GitRepo.GetCommit", err)
+		if git.IsErrNotExist(err) {
+			ctx.Handle(404, "Repo.GitRepo.GetCommit", err)
+		} else {
+			ctx.Handle(500, "Repo.GitRepo.GetCommit", err)
+		}
 		return
 	}
 
