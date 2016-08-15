@@ -953,7 +953,7 @@ func Labels(ctx *context.Context) {
 }
 
 func getLabelTemplateFile(name string) ([]byte, error) {
-	relPath := path.Join("conf/label", name)
+	relPath := path.Join("conf/label", strings.Replace(name, ".", "", -1))
 
 	// Use custom file when available.
 	customPath := path.Join(setting.CustomPath, relPath)
