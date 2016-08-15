@@ -41,10 +41,12 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - SMTP/LDAP/Reverse proxy authentication
 - Reverse proxy with sub-path
 - Account/Organization/Repository management
+- Add/Remove repository collaborators
 - Repository/Organization webhooks (including Slack)
 - Repository Git hooks/deploy keys
 - Repository issues, pull requests and wiki
-- Add/Remove repository collaborators
+- Migrate and mirror repository and its wiki
+- Web editor for repository files and wiki
 - Gravatar and Federated avatar with custom source
 - Mail service
 - Administration panel
@@ -120,7 +122,7 @@ There are 5 ways to install Gogs:
 
 - Router and middleware mechanism of [Macaron](https://github.com/go-macaron/macaron).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
-- Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
+- Thanks [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 - Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
 - Thanks [KeyCDN](https://www.keycdn.com/) and [QiNiu](http://www.qiniu.com/) for providing CDN service.
