@@ -53,7 +53,6 @@ func Home(ctx *context.Context) {
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
 	editLink := ctx.Repo.RepoLink + "/_edit/" + branchName
 	newFileLink := ctx.Repo.RepoLink + "/_new/" + branchName
-	deleteLink := ctx.Repo.RepoLink + "/delete/" + branchName
 	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
 	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 
@@ -171,7 +170,6 @@ func Home(ctx *context.Context) {
 		}
 
 		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
-			ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
 			ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
 		} else {
 			if !ctx.Repo.IsViewBranch {
@@ -259,7 +257,7 @@ func Home(ctx *context.Context) {
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
 		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
-			if !setting.Repository.Upload.Enabled {
+			if setting.Repository.Upload.Enabled {
 				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
 			}
 		}

@@ -209,3 +209,63 @@ func (repo *Repository) GetDiffPreview(branch, treeName, content string) (diff *
 
 	return diff, nil
 }
+
+// ________         .__          __           ___________.__.__
+// \______ \   ____ |  |   _____/  |_  ____   \_   _____/|__|  |   ____
+//  |    |  \_/ __ \|  | _/ __ \   __\/ __ \   |    __)  |  |  | _/ __ \
+//  |    `   \  ___/|  |_\  ___/|  | \  ___/   |     \   |  |  |_\  ___/
+// /_______  /\___  >____/\___  >__|  \___  >  \___  /   |__|____/\___  >
+//         \/     \/          \/          \/       \/                 \/
+//
+
+func (repo *Repository) DeleteRepoFile(doer *User, oldCommitID, branch, treeName, message string) (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	localPath := repo.LocalCopyPath()
+	if err = discardLocalRepoBranchChanges(localPath, branch); err != nil {
+		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+	} else if err = repo.UpdateLocalCopyBranch(branch); err != nil {
+		return fmt.Errorf("UpdateLocalCopyBranch: %v", err)
+	}
+
+	filePath := path.Join(localPath, treeName)
+	os.Remove(filePath)
+
+	if len(message) == 0 {
+		message = "Delete file '" + treeName + "'"
+	}
+
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("AddChanges: %v", err)
+	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", branch); err != nil {
+		return fmt.Errorf("Push: %v", err)
+	}
+
+	gitRepo, err := git.OpenRepository(repo.RepoPath())
+	if err != nil {
+		log.Error(4, "OpenRepository: %v", err)
+		return nil
+	}
+	commit, err := gitRepo.GetBranchCommit(branch)
+	if err != nil {
+		log.Error(4, "GetBranchCommit [branch: %s]: %v", branch, err)
+		return nil
+	}
+
+	pushCommits := &PushCommits{
+		Len:     1,
+		Commits: []*PushCommit{CommitToPushCommit(commit)},
+	}
+	if err := CommitRepoAction(doer.ID, repo.MustOwner().ID, doer.Name, doer.Email,
+		repo.ID, repo.MustOwner().Name, repo.Name, git.BRANCH_PREFIX+branch,
+		pushCommits, oldCommitID, commit.ID.String()); err != nil {
+		log.Error(4, "CommitRepoAction: %v", err)
+		return nil
+	}
+	go HookQueue.Add(repo.ID)
+
+	return nil
+}

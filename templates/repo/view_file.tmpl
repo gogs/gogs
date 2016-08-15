@@ -25,8 +25,8 @@
 				{{else}}
 					<i class="octicon btn-octicon octicon-pencil poping up disabled" data-content="{{.FileEditLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 				{{end}}
-				{{if .FileDeleteLink}}
-					<form id="delete-file-form" class="ui form inline-form" action="{{EscapePound $.FileDeleteLink}}" method="post">
+				{{if and .IsViewBranch .IsRepositoryWriter}}
+					<form id="delete-file-form" class="ui form inline-form" action="{{.RepoLink}}/_delete/{{EscapePound .BranchName}}/{{.TreeName}}" method="post">
 						{{.CsrfTokenHtml}}
 						<button onclick="submitDeleteForm()" class="octicon octicon-trashcan btn-octicon btn-octicon-danger poping up" type="button" data-content="{{.FileDeleteLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></button>
 						<input type="hidden" id="delete-message" name="commit_message" value="">
