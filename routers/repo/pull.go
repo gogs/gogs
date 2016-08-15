@@ -636,6 +636,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	ctx.Data["Title"] = ctx.Tr("repo.pulls.compare_changes")
 	ctx.Data["PageIsComparePull"] = true
 	ctx.Data["IsDiffCompare"] = true
+	ctx.Data["RequireHighlightJS"] = true
 	renderAttachmentSettings(ctx)
 
 	var (
@@ -645,12 +646,6 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 
 	headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch := ParseCompareInfo(ctx)
 	if ctx.Written() {
-		return
-	}
-
-	patch, err := headGitRepo.GetPatch(prInfo.MergeBase, headBranch)
-	if err != nil {
-		ctx.Handle(500, "GetPatch", err)
 		return
 	}
 
@@ -664,7 +659,22 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	}
 
 	if ctx.HasError() {
+		auth.AssignForm(form, ctx.Data)
+
+		// This stage is already stop creating new pull request, so it does not matter if it has
+		// something to compare or not.
+		PrepareCompareDiff(ctx, headUser, headRepo, headGitRepo, prInfo, baseBranch, headBranch)
+		if ctx.Written() {
+			return
+		}
+
 		ctx.HTML(200, COMPARE_PULL)
+		return
+	}
+
+	patch, err := headGitRepo.GetPatch(prInfo.MergeBase, headBranch)
+	if err != nil {
+		ctx.Handle(500, "GetPatch", err)
 		return
 	}
 
@@ -690,6 +700,8 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		MergeBase:    prInfo.MergeBase,
 		Type:         models.PULL_REQUEST_GOGS,
 	}
+	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
+	// instead of 500.
 	if err := models.NewPullRequest(repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
 		ctx.Handle(500, "NewPullRequest", err)
 		return
