@@ -40,14 +40,14 @@ func NewBranchPost(ctx *context.Context, form auth.NewBranchForm) {
 	branchName := form.BranchName
 
 	if ctx.HasError() || !ctx.Repo.IsWriter() || branchName == oldBranchName {
-		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + oldBranchName))
+		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + oldBranchName)
 		return
 	}
 
 	branchName = url.QueryEscape(strings.Replace(strings.Trim(branchName, " "), " ", "-", -1))
 
 	if _, err := ctx.Repo.Repository.GetBranch(branchName); err == nil {
-		ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName))
+		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
 		return
 	}
 
@@ -77,5 +77,5 @@ func NewBranchPost(ctx *context.Context, form auth.NewBranchForm) {
 		models.HookQueue.Add(ctx.Repo.Repository.ID)
 	}
 
-	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName))
+	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
 }

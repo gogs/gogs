@@ -20,28 +20,24 @@ import (
 )
 
 const (
-	EDIT             base.TplName = "repo/edit"
-	DIFF_PREVIEW     base.TplName = "repo/diff_preview"
-	DIFF_PREVIEW_NEW base.TplName = "repo/diff_preview_new"
+	EDIT             base.TplName = "repo/editor/edit"
+	DIFF_PREVIEW     base.TplName = "repo/editor/diff_preview"
+	DIFF_PREVIEW_NEW base.TplName = "repo/editor/diff_preview_new"
 )
 
-func EditFile(ctx *context.Context) {
-	editFile(ctx, false)
-}
-
-func NewFile(ctx *context.Context) {
-	editFile(ctx, true)
-}
-
 func editFile(ctx *context.Context, isNewFile bool) {
+	// Don't allow edit a file in a specific commit.
+	if ctx.Repo.IsViewCommit {
+		ctx.Handle(404, "", nil)
+		return
+	}
+
 	ctx.Data["PageIsEdit"] = true
 	ctx.Data["IsNewFile"] = isNewFile
 	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
 
-	userName := ctx.Repo.Owner.Name
-	repoName := ctx.Repo.Repository.Name
-	branchName := ctx.Repo.BranchName
-	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
+	branchLink := ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchName
 	treeName := ctx.Repo.TreeName
 
 	var treeNames []string
@@ -51,19 +47,22 @@ func editFile(ctx *context.Context, isNewFile bool) {
 
 	if !isNewFile {
 		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treeName)
-
-		if err != nil && git.IsErrNotExist(err) {
-			ctx.Handle(404, "GetTreeEntryByPath", err)
+		if err != nil {
+			if git.IsErrNotExist(err) {
+				ctx.Handle(404, "GetTreeEntryByPath", err)
+			} else {
+				ctx.Handle(500, "GetTreeEntryByPath", err)
+			}
 			return
 		}
 
-		if (ctx.Repo.IsViewCommit) || entry == nil || entry.IsDir() {
-			ctx.Handle(404, "repo.Home", nil)
+		// No way to edit a directory online.
+		if entry.IsDir() {
+			ctx.Handle(404, "", nil)
 			return
 		}
 
 		blob := entry.Blob()
-
 		dataRc, err := blob.Data()
 		if err != nil {
 			ctx.Handle(404, "blob.Data", err)
@@ -79,16 +78,15 @@ func editFile(ctx *context.Context, isNewFile bool) {
 			buf = buf[:n]
 		}
 
+		// Only text file are editable online.
 		_, isTextFile := base.IsTextFile(buf)
-
 		if !isTextFile {
-			ctx.Handle(404, "repo.Home", nil)
+			ctx.Handle(404, "", nil)
 			return
 		}
 
 		d, _ := ioutil.ReadAll(dataRc)
 		buf = append(buf, d...)
-
 		if err, content := template.ToUTF8WithErr(buf); err != nil {
 			if err != nil {
 				log.Error(4, "Convert content encoding: %s", err)
@@ -98,47 +96,38 @@ func editFile(ctx *context.Context, isNewFile bool) {
 			ctx.Data["FileContent"] = content
 		}
 	} else {
-		treeNames = append(treeNames, "")
+		treeNames = append(treeNames, "") // Append empty string to allow user name the new file.
 	}
 
-	ctx.Data["RequireSimpleMDE"] = true
-
-	ctx.Data["UserName"] = userName
-	ctx.Data["RepoName"] = repoName
-	ctx.Data["BranchName"] = branchName
 	ctx.Data["TreeName"] = treeName
 	ctx.Data["TreeNames"] = treeNames
 	ctx.Data["BranchLink"] = branchLink
-	ctx.Data["CommitSummary"] = ""
-	ctx.Data["CommitMessage"] = ""
-	ctx.Data["CommitChoice"] = "direct"
-	ctx.Data["NewBranchName"] = ""
-	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+branchName+"</strong>")
-	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
-	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
+	ctx.Data["commit_summary"] = ""
+	ctx.Data["commit_message"] = ""
+	ctx.Data["commit_choice"] = "direct"
+	ctx.Data["new_branch_name"] = ""
+	ctx.Data["last_commit"] = ctx.Repo.Commit.ID
 	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
 	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
 	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
-	ctx.Data["PreviewDiffURL"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
 
 	ctx.HTML(200, EDIT)
 }
 
-func EditFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
-	editFilePost(ctx, form, false)
+func EditFile(ctx *context.Context) {
+	editFile(ctx, false)
 }
 
-func NewFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
-	editFilePost(ctx, form, true)
+func NewFile(ctx *context.Context) {
+	editFile(ctx, true)
 }
 
 func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bool) {
 	ctx.Data["PageIsEdit"] = true
 	ctx.Data["IsNewFile"] = isNewFile
 	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
 
-	userName := ctx.Repo.Owner.Name
-	repoName := ctx.Repo.Repository.Name
 	oldBranchName := ctx.Repo.BranchName
 	branchName := oldBranchName
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
@@ -160,26 +149,18 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		treeNames = strings.Split(treeName, "/")
 	}
 
-	ctx.Data["RequireSimpleMDE"] = true
-
-	ctx.Data["UserName"] = userName
-	ctx.Data["RepoName"] = repoName
-	ctx.Data["BranchName"] = branchName
 	ctx.Data["TreeName"] = treeName
 	ctx.Data["TreeNames"] = treeNames
 	ctx.Data["BranchLink"] = branchLink
 	ctx.Data["FileContent"] = content
-	ctx.Data["CommitSummary"] = form.CommitSummary
-	ctx.Data["CommitMessage"] = form.CommitMessage
-	ctx.Data["CommitChoice"] = commitChoice
-	ctx.Data["NewBranchName"] = branchName
-	ctx.Data["CommitDirectlyToThisBranch"] = ctx.Tr("repo.commit_directly_to_this_branch", "<strong class=\"branch-name\">"+oldBranchName+"</strong>")
-	ctx.Data["CreateNewBranch"] = ctx.Tr("repo.create_new_branch", "<strong>"+ctx.Tr("repo.new_branch")+"</strong>")
-	ctx.Data["LastCommit"] = ctx.Repo.Commit.ID
+	ctx.Data["commit_summary"] = form.CommitSummary
+	ctx.Data["commit_message"] = form.CommitMessage
+	ctx.Data["commit_choice"] = commitChoice
+	ctx.Data["new_branch_name"] = branchName
+	ctx.Data["last_commit"] = ctx.Repo.Commit.ID
 	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
 	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
 	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
-	ctx.Data["PreviewDiffURL"] = ctx.Repo.RepoLink + "/preview/" + branchName + "/" + treeName
 
 	if ctx.HasError() {
 		ctx.HTML(200, EDIT)
@@ -188,41 +169,41 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 
 	if len(treeName) == 0 {
 		ctx.Data["Err_Filename"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.filename_cannot_be_empty"), EDIT, &form)
-		log.Error(4, "%s: %s", "EditFile", "Filename can't be empty")
+		ctx.RenderWithErr(ctx.Tr("repo.editor.filename_cannot_be_empty"), EDIT, &form)
 		return
 	}
 
 	if oldBranchName != branchName {
 		if _, err := ctx.Repo.Repository.GetBranch(branchName); err == nil {
 			ctx.Data["Err_Branchname"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.branch_already_exists"), EDIT, &form)
-			log.Error(4, "%s: %s - %s", "BranchName", branchName, "Branch already exists")
+			ctx.RenderWithErr(ctx.Tr("repo.editor.branch_already_exists", branchName), EDIT, &form)
 			return
 		}
-
 	}
 
-	treepath := ""
+	var treepath string
 	for index, part := range treeNames {
 		treepath = path.Join(treepath, part)
 		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treepath)
 		if err != nil {
-			// Means there is no item with that name, so we're good
-			break
+			if git.IsErrNotExist(err) {
+				// Means there is no item with that name, so we're good
+				break
+			}
+
+			ctx.Handle(500, "GetTreeEntryByPath", err)
+			return
 		}
 		if index != len(treeNames)-1 {
 			if !entry.IsDir() {
 				ctx.Data["Err_Filename"] = true
-				ctx.RenderWithErr(ctx.Tr("repo.directory_is_a_file"), EDIT, &form)
-				log.Error(4, "%s: %s - %s", "EditFile", treeName, "Directory given is a file")
+				ctx.RenderWithErr(ctx.Tr("repo.editor.directory_is_a_file", part), EDIT, &form)
 				return
 			}
 		} else {
 			if entry.IsDir() {
 				ctx.Data["Err_Filename"] = true
-				ctx.RenderWithErr(ctx.Tr("repo.filename_is_a_directory"), EDIT, &form)
-				log.Error(4, "%s: %s - %s", "EditFile", treeName, "Filename given is a dirctory")
+				ctx.RenderWithErr(ctx.Tr("repo.editor.filename_is_a_directory", part), EDIT, &form)
 				return
 			}
 		}
@@ -230,125 +211,119 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 
 	if !isNewFile {
 		_, err := ctx.Repo.Commit.GetTreeEntryByPath(oldTreeName)
-		if err != nil && git.IsErrNotExist(err) {
-			ctx.Data["Err_Filename"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.file_editing_no_longer_exists"), EDIT, &form)
-			log.Error(4, "%s: %s / %s - %s", "EditFile", branchName, oldTreeName, "File doesn't exist for editing")
+		if err != nil {
+			if git.IsErrNotExist(err) {
+				ctx.Data["Err_Filename"] = true
+				ctx.RenderWithErr(ctx.Tr("repo.editor.file_editing_no_longer_exists", oldTreeName), EDIT, &form)
+			} else {
+				ctx.Handle(500, "GetTreeEntryByPath", err)
+			}
 			return
 		}
 		if lastCommit != ctx.Repo.CommitID {
-			if files, err := ctx.Repo.Commit.GetFilesChangedSinceCommit(lastCommit); err == nil {
-				for _, file := range files {
-					if file == treeName {
-						name := ctx.Repo.Commit.Author.Name
-						if u, err := models.GetUserByEmail(ctx.Repo.Commit.Author.Email); err == nil {
-							name = `<a href="` + setting.AppSubUrl + "/" + u.Name + `" target="_blank">` + u.Name + `</a>`
-						}
-						message := ctx.Tr("repo.user_has_committed_since_you_started_editing", name) +
-							` <a href="` + ctx.Repo.RepoLink + "/commit/" + ctx.Repo.CommitID + `" target="_blank">` + ctx.Tr("repo.see_what_changed") + `</a>` +
-							" " + ctx.Tr("repo.pressing_commit_again_will_overwrite_those_changes", "<em>"+ctx.Tr("repo.commit_changes")+"</em>")
-						log.Error(4, "%s: %s / %s - %s", "EditFile", branchName, oldTreeName, "File updated by another user")
-						ctx.RenderWithErr(message, EDIT, &form)
-						return
-					}
+			files, err := ctx.Repo.Commit.GetFilesChangedSinceCommit(lastCommit)
+			if err != nil {
+				ctx.Handle(500, "GetFilesChangedSinceCommit", err)
+				return
+			}
+
+			for _, file := range files {
+				if file == treeName {
+					ctx.RenderWithErr(ctx.Tr("repo.editor.file_changed_while_editing", ctx.Repo.RepoLink+"/compare/"+lastCommit+"..."+ctx.Repo.CommitID), EDIT, &form)
+					return
 				}
 			}
 		}
 	}
+
 	if oldTreeName != treeName {
-		// We have a new filename (rename or completely new file) so we need to make sure it doesn't already exist, can't clobber
-		_, err := ctx.Repo.Commit.GetTreeEntryByPath(treeName)
-		if err == nil {
+		// We have a new filename (rename or completely new file) so we need to make sure it doesn't already exist, can't clobber.
+		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treeName)
+		if err != nil {
+			if !git.IsErrNotExist(err) {
+				ctx.Handle(500, "GetTreeEntryByPath", err)
+				return
+			}
+		}
+		if entry != nil {
 			ctx.Data["Err_Filename"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.file_already_exists"), EDIT, &form)
-			log.Error(4, "%s: %s - %s", "NewFile", treeName, "File already exists, can't create new")
+			ctx.RenderWithErr(ctx.Tr("repo.editor.file_already_exists", treeName), EDIT, &form)
 			return
 		}
 	}
 
-	message := ""
-	if form.CommitSummary != "" {
-		message = strings.Trim(form.CommitSummary, " ")
+	var message string
+	if len(form.CommitSummary) > 0 {
+		message = strings.TrimSpace(form.CommitSummary)
 	} else {
 		if isNewFile {
-			message = ctx.Tr("repo.add") + " '" + treeName + "'"
+			message = ctx.Tr("repo.editor.add", treeName)
 		} else {
-			message = ctx.Tr("repo.update") + " '" + treeName + "'"
+			message = ctx.Tr("repo.editor.update", treeName)
 		}
 	}
-	if strings.Trim(form.CommitMessage, " ") != "" {
-		message += "\n\n" + strings.Trim(form.CommitMessage, " ")
+
+	form.CommitMessage = strings.TrimSpace(form.CommitMessage)
+	if len(form.CommitMessage) > 0 {
+		message += "\n\n" + form.CommitMessage
 	}
 
-	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, oldBranchName, branchName, oldTreeName, treeName, content, message, isNewFile); err != nil {
+	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, &models.UpdateRepoFileOptions{
+		LastCommitID: lastCommit,
+		OldBranch:    oldBranchName,
+		NewBranch:    branchName,
+		OldTreeName:  oldTreeName,
+		NewTreeName:  treeName,
+		Message:      message,
+		Content:      content,
+		IsNewFile:    isNewFile,
+	}); err != nil {
 		ctx.Data["Err_Filename"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.unable_to_update_file"), EDIT, &form)
-		log.Error(4, "%s: %v", "EditFile", err)
+		ctx.RenderWithErr(ctx.Tr("repo.editor.failed_to_update_file", err), EDIT, &form)
 		return
 	}
 
-	if branch, err := ctx.Repo.Repository.GetBranch(branchName); err != nil {
-		log.Error(4, "repo.Repository.GetBranch(%s): %v", branchName, err)
-	} else if commit, err := branch.GetCommit(); err != nil {
-		log.Error(4, "branch.GetCommit(): %v", err)
-	} else {
-		pc := &models.PushCommits{
-			Len:     1,
-			Commits: []*models.PushCommit{models.CommitToPushCommit(commit)},
-		}
-		oldCommitID := ctx.Repo.CommitID
-		newCommitID := commit.ID.String()
-		if branchName != oldBranchName {
-			oldCommitID = "0000000000000000000000000000000000000000" // New Branch so we use all 0s
-		}
-		if err := models.CommitRepoAction(ctx.User.ID, ctx.Repo.Owner.ID, ctx.User.LowerName, ctx.Repo.Owner.Email,
-			ctx.Repo.Repository.ID, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.Name, "refs/heads/"+branchName, pc,
-			oldCommitID, newCommitID); err != nil {
-			log.Error(4, "models.CommitRepoAction(branch = %s): %v", branchName, err)
-		}
-		models.HookQueue.Add(ctx.Repo.Repository.ID)
-	}
+	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName)
+}
 
-	// Leaving this off until forked repos that get a branch can compare with forks master and not upstream
-	//if oldBranchName != branchName {
-	//	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + branchName))
-	//} else {
-	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName))
-	//}
+func EditFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
+	editFilePost(ctx, form, false)
+}
+
+func NewFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
+	editFilePost(ctx, form, true)
 }
 
 func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
-	userName := ctx.Repo.Owner.Name
-	repoName := ctx.Repo.Repository.Name
-	branchName := ctx.Repo.BranchName
 	treeName := ctx.Repo.TreeName
 	content := form.Content
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treeName)
-	if (err != nil && git.IsErrNotExist(err)) || entry.IsDir() {
-		ctx.Data["FileContent"] = content
-		ctx.HTML(200, DIFF_PREVIEW_NEW)
+	if err != nil {
+		if git.IsErrNotExist(err) {
+			ctx.Data["FileContent"] = content
+			ctx.HTML(200, DIFF_PREVIEW_NEW)
+		} else {
+			ctx.Error(500, "GetTreeEntryByPath: "+err.Error())
+		}
+		return
+	}
+	if entry.IsDir() {
+		ctx.Error(422)
 		return
 	}
 
-	diff, err := ctx.Repo.Repository.GetPreviewDiff(models.RepoPath(userName, repoName), branchName, treeName, content, setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
+	diff, err := ctx.Repo.Repository.GetDiffPreview(ctx.Repo.BranchName, treeName, content)
 	if err != nil {
-		ctx.Error(404, err.Error())
-		log.Error(4, "%s: %v", "GetPreviewDiff", err)
+		ctx.Error(500, "GetDiffPreview: "+err.Error())
 		return
 	}
 
 	if diff.NumFiles() == 0 {
-		ctx.Error(200, ctx.Tr("repo.no_changes_to_show"))
+		ctx.PlainText(200, []byte(ctx.Tr("repo.editor.no_changes_to_show")))
 		return
 	}
-
-	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["File"] = diff.Files[0]
 
 	ctx.HTML(200, DIFF_PREVIEW)
-}
-
-func EscapeUrl(str string) string {
-	return strings.NewReplacer("?", "%3F", "%", "%25", "#", "%23", " ", "%20", "^", "%5E", "\\", "%5C", "{", "%7B", "}", "%7D", "|", "%7C").Replace(str)
 }

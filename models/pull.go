@@ -334,6 +334,9 @@ var patchConflicts = []string{
 // testPatch checks if patch can be merged to base repository without conflit.
 // FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch() (err error) {
+	repoWorkingPool.CheckIn(com.ToStr(pr.BaseRepoID))
+	defer repoWorkingPool.CheckOut(com.ToStr(pr.BaseRepoID))
+
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = GetRepositoryByID(pr.BaseRepoID)
 		if err != nil {
@@ -354,20 +357,12 @@ func (pr *PullRequest) testPatch() (err error) {
 
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
-	if err := pr.BaseRepo.UpdateLocalCopy(pr.BaseRepo.DefaultBranch); err != nil {
+	if err := pr.BaseRepo.UpdateLocalCopyBranch(pr.BaseBranch); err != nil {
 		return fmt.Errorf("UpdateLocalCopy: %v", err)
 	}
 
-	// Checkout base branch.
-	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
-		fmt.Sprintf("PullRequest.Merge (git checkout): %v", pr.BaseRepo.ID),
-		"git", "checkout", pr.BaseBranch)
-	if err != nil {
-		return fmt.Errorf("git checkout: %s", stderr)
-	}
-
 	pr.Status = PULL_REQUEST_STATUS_CHECKING
-	_, stderr, err = process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
+	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
 		fmt.Sprintf("testPatch (git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {

@@ -170,12 +170,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 		models.HookQueue.Add(ctx.Repo.Repository.ID)
 	}
 
-	// Leaving this off until forked repos that get a branch can compare with forks master and not upstream
-	//if oldBranchName != branchName {
-	//	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + branchName))
-	//} else {
-	ctx.Redirect(EscapeUrl(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName))
-	//}
+	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName)
 }
 
 func UploadFileToServer(ctx *context.Context) {
