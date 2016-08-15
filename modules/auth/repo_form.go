@@ -113,10 +113,11 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //        \/       \/    \/     \/     \/            \/
 
 type WebhookForm struct {
-	Events string
-	Create bool
-	Push   bool
-	Active bool
+	Events      string
+	Create      bool
+	Push        bool
+	PullRequest bool
+	Active      bool
 }
 
 func (f WebhookForm) PushOnly() bool {

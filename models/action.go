@@ -169,7 +169,7 @@ func (a *Action) GetIssueTitle() string {
 		log.Error(4, "GetIssueByIndex: %v", err)
 		return "500 when get issue"
 	}
-	return issue.Name
+	return issue.Title
 }
 
 func (a *Action) GetIssueContent() string {
@@ -246,7 +246,7 @@ type PushCommit struct {
 type PushCommits struct {
 	Len        int
 	Commits    []*PushCommit
-	CompareUrl string
+	CompareURL string
 
 	avatars map[string]string
 }
@@ -275,12 +275,12 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 			ID:      commit.Sha1,
 			Message: commit.Message,
 			URL:     fmt.Sprintf("%s/commit/%s", repoLink, commit.Sha1),
-			Author: &api.PayloadAuthor{
+			Author: &api.PayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
 				UserName: authorUsername,
 			},
-			Committer: &api.PayloadCommitter{
+			Committer: &api.PayloadUser{
 				Name:     commit.CommitterName,
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,
@@ -475,7 +475,7 @@ func CommitRepoAction(
 	} else {
 		// if not the first commit, set the compareUrl
 		if !strings.HasPrefix(oldCommitID, "0000000") {
-			commit.CompareUrl = repo.ComposeCompareURL(oldCommitID, newCommitID)
+			commit.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
 		} else {
 			isNewBranch = true
 		}
@@ -495,7 +495,6 @@ func CommitRepoAction(
 	}
 
 	refName := git.RefEndName(refFullName)
-
 	if err = NotifyWatchers(&Action{
 		ActUserID:    u.ID,
 		ActUserName:  userName,
@@ -511,37 +510,25 @@ func CommitRepoAction(
 		return fmt.Errorf("NotifyWatchers: %v", err)
 	}
 
-	payloadRepo := repo.ComposePayload()
-
-	pusher_email, pusher_name := "", ""
 	pusher, err := GetUserByName(userName)
-	if err == nil {
-		pusher_email = pusher.Email
-		pusher_name = pusher.DisplayName()
+	if err != nil {
+		return fmt.Errorf("GetUserByName: %v", err)
 	}
-	payloadSender := &api.PayloadUser{
-		UserName:  pusher.Name,
-		ID:        pusher.ID,
-		AvatarUrl: pusher.AvatarLink(),
-	}
+	apiPusher := pusher.APIFormat()
 
+	apiRepo := repo.APIFormat(nil)
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
-		p := &api.PushPayload{
+		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        refFullName,
 			Before:     oldCommitID,
 			After:      newCommitID,
-			CompareUrl: setting.AppUrl + commit.CompareUrl,
+			CompareURL: setting.AppUrl + commit.CompareURL,
 			Commits:    commit.ToApiPayloadCommits(repo.FullLink()),
-			Repo:       payloadRepo,
-			Pusher: &api.PayloadAuthor{
-				Name:     pusher_name,
-				Email:    pusher_email,
-				UserName: userName,
-			},
-			Sender: payloadSender,
-		}
-		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, p); err != nil {
+			Repo:       apiRepo,
+			Pusher:     apiPusher,
+			Sender:     apiPusher,
+		}); err != nil {
 			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}
 
@@ -549,8 +536,8 @@ func CommitRepoAction(
 			return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 				Ref:     refName,
 				RefType: "branch",
-				Repo:    payloadRepo,
-				Sender:  payloadSender,
+				Repo:    apiRepo,
+				Sender:  apiPusher,
 			})
 		}
 
@@ -558,8 +545,8 @@ func CommitRepoAction(
 		return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 			Ref:     refName,
 			RefType: "tag",
-			Repo:    payloadRepo,
-			Sender:  payloadSender,
+			Repo:    apiRepo,
+			Sender:  apiPusher,
 		})
 	}
 
@@ -603,7 +590,7 @@ func mergePullRequestAction(e Engine, actUser *User, repo *Repository, pull *Iss
 		ActUserName:  actUser.Name,
 		ActEmail:     actUser.Email,
 		OpType:       ACTION_MERGE_PULL_REQUEST,
-		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Name),
+		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,

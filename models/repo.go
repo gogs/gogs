@@ -218,6 +218,48 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// MustOwner always returns a valid *User object to avoid
+// conceptually impossible error handling.
+// It creates a fake object that contains error deftail
+// when error occurs.
+func (repo *Repository) MustOwner() *User {
+	return repo.mustOwner(x)
+}
+
+func (repo *Repository) FullName() string {
+	return repo.MustOwner().Name + "/" + repo.Name
+}
+
+func (repo *Repository) FullLink() string {
+	return setting.AppUrl + repo.FullName()
+}
+
+// Arguments that are allowed to be nil: permission
+func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
+	cloneLink := repo.CloneLink()
+	return &api.Repository{
+		ID:            repo.ID,
+		Owner:         repo.Owner.APIFormat(),
+		Name:          repo.Name,
+		FullName:      repo.FullName(),
+		Description:   repo.Description,
+		Private:       repo.IsPrivate,
+		Fork:          repo.IsFork,
+		HTMLURL:       repo.FullLink(),
+		SSHURL:        cloneLink.SSH,
+		CloneURL:      cloneLink.HTTPS,
+		Website:       repo.Website,
+		Stars:         repo.NumStars,
+		Forks:         repo.NumForks,
+		Watchers:      repo.NumWatches,
+		OpenIssues:    repo.NumOpenIssues,
+		DefaultBranch: repo.DefaultBranch,
+		Created:       repo.Created,
+		Updated:       repo.Updated,
+		Permissions:   permission,
+	}
+}
+
 func (repo *Repository) getOwner(e Engine) (err error) {
 	if repo.Owner != nil {
 		return nil
@@ -240,14 +282,6 @@ func (repo *Repository) mustOwner(e Engine) *User {
 	}
 
 	return repo.Owner
-}
-
-// MustOwner always returns a valid *User object to avoid
-// conceptually impossible error handling.
-// It creates a fake object that contains error deftail
-// when error occurs.
-func (repo *Repository) MustOwner() *User {
-	return repo.mustOwner(x)
 }
 
 // ComposeMetas composes a map of metas for rendering external issue tracker URL.
@@ -359,10 +393,6 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
-func (repo *Repository) FullLink() string {
-	return setting.AppUrl + repo.MustOwner().Name + "/" + repo.Name
-}
-
 func (repo *Repository) HasAccess(u *User) bool {
 	has, _ := HasAccess(u, repo, ACCESS_MODE_READ)
 	return has
@@ -452,28 +482,6 @@ func (repo *Repository) SavePatch(index int64, patch []byte) error {
 	}
 
 	return nil
-}
-
-// ComposePayload composes and returns *api.PayloadRepo corresponding to the repository.
-func (repo *Repository) ComposePayload() *api.PayloadRepo {
-	cl := repo.CloneLink()
-	return &api.PayloadRepo{
-		ID:          repo.ID,
-		Name:        repo.Name,
-		URL:         repo.FullLink(),
-		SSHURL:      cl.SSH,
-		CloneURL:    cl.HTTPS,
-		Description: repo.Description,
-		Website:     repo.Website,
-		Watchers:    repo.NumWatches,
-		Owner: &api.PayloadAuthor{
-			Name:     repo.MustOwner().DisplayName(),
-			Email:    repo.MustOwner().Email,
-			UserName: repo.MustOwner().Name,
-		},
-		Private:       repo.IsPrivate,
-		DefaultBranch: repo.DefaultBranch,
-	}
 }
 
 func isRepositoryExist(e Engine, u *User, repoName string) (bool, error) {

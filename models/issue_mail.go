@@ -15,7 +15,7 @@ import (
 )
 
 func (issue *Issue) MailSubject() string {
-	return fmt.Sprintf("[%s] %s (#%d)", issue.Repo.Name, issue.Name, issue.Index)
+	return fmt.Sprintf("[%s] %s (#%d)", issue.Repo.Name, issue.Title, issue.Index)
 }
 
 // mailIssueCommentToParticipants can be used for both new issue creation and comment.

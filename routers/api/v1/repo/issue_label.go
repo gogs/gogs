@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func ListIssueLabels(ctx *context.APIContext) {
@@ -25,7 +24,7 @@ func ListIssueLabels(ctx *context.APIContext) {
 
 	apiLabels := make([]*api.Label, len(issue.Labels))
 	for i := range issue.Labels {
-		apiLabels[i] = convert.ToLabel(issue.Labels[i])
+		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
 	ctx.JSON(200, &apiLabels)
 }
@@ -52,7 +51,7 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 		return
 	}
 
-	if err = issue.AddLabels(labels); err != nil {
+	if err = issue.AddLabels(ctx.User, labels); err != nil {
 		ctx.Error(500, "AddLabels", err)
 		return
 	}
@@ -65,7 +64,7 @@ func AddIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 
 	apiLabels := make([]*api.Label, len(labels))
 	for i := range labels {
-		apiLabels[i] = convert.ToLabel(labels[i])
+		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
 	ctx.JSON(200, &apiLabels)
 }
@@ -139,7 +138,7 @@ func ReplaceIssueLabels(ctx *context.APIContext, form api.IssueLabelsOption) {
 
 	apiLabels := make([]*api.Label, len(labels))
 	for i := range labels {
-		apiLabels[i] = convert.ToLabel(labels[i])
+		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
 	ctx.JSON(200, &apiLabels)
 }
@@ -160,7 +159,7 @@ func ClearIssueLabels(ctx *context.APIContext) {
 		return
 	}
 
-	if err := issue.ClearLabels(); err != nil {
+	if err := issue.ClearLabels(ctx.User); err != nil {
 		ctx.Error(500, "ClearLabels", err)
 		return
 	}

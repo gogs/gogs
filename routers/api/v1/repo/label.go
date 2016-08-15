@@ -9,7 +9,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func ListLabels(ctx *context.APIContext) {
@@ -21,7 +20,7 @@ func ListLabels(ctx *context.APIContext) {
 
 	apiLabels := make([]*api.Label, len(labels))
 	for i := range labels {
-		apiLabels[i] = convert.ToLabel(labels[i])
+		apiLabels[i] = labels[i].APIFormat()
 	}
 	ctx.JSON(200, &apiLabels)
 }
@@ -37,7 +36,7 @@ func GetLabel(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.JSON(200, convert.ToLabel(label))
+	ctx.JSON(200, label.APIFormat())
 }
 
 func CreateLabel(ctx *context.APIContext, form api.CreateLabelOption) {
@@ -55,7 +54,7 @@ func CreateLabel(ctx *context.APIContext, form api.CreateLabelOption) {
 		ctx.Error(500, "NewLabel", err)
 		return
 	}
-	ctx.JSON(201, convert.ToLabel(label))
+	ctx.JSON(201, label.APIFormat())
 }
 
 func EditLabel(ctx *context.APIContext, form api.EditLabelOption) {
@@ -84,7 +83,7 @@ func EditLabel(ctx *context.APIContext, form api.EditLabelOption) {
 		ctx.Handle(500, "UpdateLabel", err)
 		return
 	}
-	ctx.JSON(200, convert.ToLabel(label))
+	ctx.JSON(200, label.APIFormat())
 }
 
 func DeleteLabel(ctx *context.APIContext) {
