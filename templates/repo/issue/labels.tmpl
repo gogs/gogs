@@ -39,7 +39,9 @@
 
 		{{if $.IsRepositoryWriter}}
 			{{if eq .NumLabels 0}}
-				<div class="ui attached segment" style="margin-top:30px">
+		<div class="ui centered grid">
+			<div class="twelve wide column eight wide computer column">
+				<div class="ui attached left aligned segment" style="margin-top:30px">
 					<h4 class="ui header">
 						{{.i18n.Tr "repo.issues.labeltemplates.title"}}
 						<a target="_blank"
@@ -51,18 +53,24 @@
 					<br/>
 					<form class="ui form center" action="{{.Link}}/initialize" method="post">
 						{{.CsrfTokenHtml}}
-						<div class="ui selection dropdown">
-							<input type="hidden" name="templatename" value="Default">
-							<div class="default text">{{.i18n.Tr "repo.issues.labeltemplates.helper"}}</div>
-							<div class="menu">
-								{{range .LabelTemplates}}
+
+						<div class="field">
+							<div class="ui selection dropdown">
+								<input type="hidden" name="templatename" value="Default">
+								<div class="default text">{{.i18n.Tr "repo.issues.labeltemplates.helper"}}</div>
+								<div class="menu">
+									{{range .LabelTemplates}}
 									<div class="item" data-value="{{.}}">{{.}}</div>
-								{{end}}
+									{{end}}
+								</div>
 							</div>
 						</div>
+
 						<button type="submit" class="ui blue button">{{.i18n.Tr "repo.issues.labeltemplates.use"}}</button>
 					</form>
 				</div>
+			</div>
+		</div>
 			{{end}}
 		{{end}}
 
