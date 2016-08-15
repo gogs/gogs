@@ -26,12 +26,6 @@ const (
 )
 
 func editFile(ctx *context.Context, isNewFile bool) {
-	// Don't allow edit a file in a specific commit.
-	if ctx.Repo.IsViewCommit {
-		ctx.Handle(404, "", nil)
-		return
-	}
-
 	ctx.Data["PageIsEdit"] = true
 	ctx.Data["IsNewFile"] = isNewFile
 	ctx.Data["RequireHighlightJS"] = true
@@ -326,4 +320,21 @@ func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 	ctx.Data["File"] = diff.Files[0]
 
 	ctx.HTML(200, DIFF_PREVIEW)
+}
+
+func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
+	branchName := ctx.Repo.BranchName
+	treeName := ctx.Repo.TreeName
+
+	if ctx.HasError() {
+		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName)
+		return
+	}
+
+	if err := ctx.Repo.Repository.DeleteRepoFile(ctx.User, ctx.Repo.CommitID, branchName, treeName, form.CommitSummary); err != nil {
+		ctx.Handle(500, "DeleteRepoFile", err)
+		return
+	}
+
+	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
 }

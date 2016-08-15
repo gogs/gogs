@@ -503,14 +503,19 @@ func runWeb(ctx *cli.Context) error {
 				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditFilePost)
 			m.Combo("/_new/*").Get(repo.NewFile).
 				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.NewFilePost)
-			m.Post("/preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
+			m.Post("/_preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
 			m.Combo("/upload/*").Get(repo.UploadFile).
 				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
-			m.Post("/delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
+			m.Post("/_delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
 			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
 			m.Post("/upload-file", repo.UploadFileToServer)
 			m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
-		}, reqRepoWriter, context.RepoRef())
+		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
+			if ctx.Repo.IsViewCommit {
+				ctx.Handle(404, "", nil)
+				return
+			}
+		})
 	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 
 	m.Group("/:username/:reponame", func() {
