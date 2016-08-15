@@ -1,6 +1,6 @@
 <div class="fitted item choose reference">
-	<div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
-		<div class="ui basic small button">
+	<div id="branch-dropdown" class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
+			<div class="ui basic small button">
 			<span class="text">
 				<i class="octicon octicon-git-branch"></i>
 				{{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
@@ -31,14 +31,57 @@
 			</div>
 			<div id="branch-list" class="scrolling menu" {{if .IsViewTag}}style="display: none"{{end}}>
 				{{range .Branches}}
-					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}">{{.}}</div>
+					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}{{if $.TreeName}}/{{EscapePound $.TreeName}}{{end}}">{{.}}</div>
+				{{end}}
+				{{if .IsWriter}}
+				<a href="javascript:void(0)" id="new-branch-item">
+					<i class="octicon octicon-git-branch"></i>
+					{{.i18n.Tr "repo.create_branch"}}: <span id="branch-name-text"></span>
+					<br/>
+					<span class="description">{{.i18n.Tr "repo.from"}} ‘{{.BranchName}}’</span>
+					<form accept-charset="UTF-8" action="{{.RepoLink}}/branches" method="post">
+						{{.CsrfTokenHtml}}
+						<input type="hidden" name="old_branch_name" value="{{.BranchName}}">
+						<input type="hidden" name="branch_name" id="branch-name" value="">
+					</form>
+				</a>
 				{{end}}
 			</div>
 			<div id="tag-list" class="scrolling menu" {{if not .IsViewTag}}style="display: none"{{end}}>
 				{{range .Tags}}
-					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}">{{.}}</div>
+					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}{{if $.TreeName}}/{{EscapePound $.TreeName}}{{end}}">{{.}}</div>
 				{{end}}
 			</div>
 		</div>
 	</div>
 </div>
+
+{{if .IsWriter}}
+<script type="text/javascript">
+	$(document).ready(function(){
+		$('#branch-dropdown #new-branch-item').on('click', function(){
+			$(this).find('form').submit();
+			return true;
+		});
+		$('#branch-dropdown input[name=search]').on('keyup', function(){
+			var query = $(this).val().toLowerCase();
+			if(query.length){
+				var unique = true;
+				$('#branch-dropdown #branch-list .item').each(function(i, item){
+					if($(item).text().toLowerCase() == query){
+						unique = false;
+					}
+				});
+				if(unique){
+					$('#new-branch-item #branch-name-text').text(query);
+					$('#new-branch-item #branch-name').val(query);
+					$('#new-branch-item').css('display', 'block');
+					return;
+				}
+			}
+			$('#new-branch-item').hide();
+		});
+	});
+</script>
+{{end}}
+
