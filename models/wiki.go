@@ -12,19 +12,16 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/sync"
 )
 
-var wikiWorkingPool = &workingPool{
-	pool:  make(map[string]*sync.Mutex),
-	count: make(map[string]int),
-}
+var wikiWorkingPool = sync.NewSingleInstancePool()
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
