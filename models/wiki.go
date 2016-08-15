@@ -76,24 +76,11 @@ func (repo *Repository) LocalWikiPath() string {
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
 func (repo *Repository) UpdateLocalWiki() error {
-	return updateLocalCopy(repo.WikiPath(), repo.LocalWikiPath(), "")
+	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), "master")
 }
 
-// discardLocalWikiChanges discards local commits make sure
-// it is even to remote branch when local copy exists.
 func discardLocalWikiChanges(localPath string) error {
-	if !com.IsExist(localPath) {
-		return nil
-	}
-	// No need to check if nothing in the repository.
-	if !git.IsBranchExist(localPath, "master") {
-		return nil
-	}
-
-	if err := git.ResetHEAD(localPath, true, "origin/master"); err != nil {
-		return fmt.Errorf("ResetHEAD: %v", err)
-	}
-	return nil
+	return discardLocalRepoBranchChanges(localPath, "master")
 }
 
 // updateWikiPage adds new page to repository wiki.
