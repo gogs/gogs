@@ -75,110 +75,112 @@ func Home(ctx *context.Context) {
 	}
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
-	if err != nil && git.IsErrNotExist(err) {
-		ctx.Handle(404, "GetTreeEntryByPath", err)
+	if err != nil {
+		if git.IsErrNotExist(err) {
+			ctx.Handle(404, "GetTreeEntryByPath", err)
+		} else {
+			ctx.Handle(500, "GetTreeEntryByPath", err)
+		}
 		return
 	}
 
-	if len(treename) != 0 && entry == nil {
-		ctx.Handle(404, "repo.Home", nil)
-		return
-	}
-	if entry != nil && !entry.IsDir() {
+	if !entry.IsDir() {
 		blob := entry.Blob()
-
-		if dataRc, err := blob.Data(); err != nil {
+		dataRc, err := blob.Data()
+		if err != nil {
 			ctx.Handle(404, "blob.Data", err)
 			return
-		} else {
-			ctx.Data["FileSize"] = blob.Size()
-			ctx.Data["IsFile"] = true
-			ctx.Data["FileName"] = blob.Name()
-			ctx.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
-			ctx.Data["FileLink"] = rawLink + "/" + treename
+		}
 
-			buf := make([]byte, 1024)
-			n, _ := dataRc.Read(buf)
-			if n > 0 {
-				buf = buf[:n]
-			}
+		ctx.Data["FileSize"] = blob.Size()
+		ctx.Data["IsFile"] = true
+		ctx.Data["FileName"] = blob.Name()
+		ctx.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
+		ctx.Data["FileLink"] = rawLink + "/" + treename
 
-			_, isTextFile := base.IsTextFile(buf)
-			_, isImageFile := base.IsImageFile(buf)
-			_, isPDFFile := base.IsPDFFile(buf)
-			ctx.Data["IsFileText"] = isTextFile
+		buf := make([]byte, 1024)
+		n, _ := dataRc.Read(buf)
+		if n > 0 {
+			buf = buf[:n]
+		}
 
-			switch {
-			case isPDFFile:
-				ctx.Data["IsPDFFile"] = true
-				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
-			case isImageFile:
-				ctx.Data["IsImageFile"] = true
-				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
-			case isTextFile:
-				if blob.Size() >= setting.UI.MaxDisplayFileSize {
-					ctx.Data["IsFileTooLarge"] = true
+		_, isTextFile := base.IsTextFile(buf)
+		_, isImageFile := base.IsImageFile(buf)
+		_, isPDFFile := base.IsPDFFile(buf)
+		ctx.Data["IsFileText"] = isTextFile
+
+		switch {
+		case isPDFFile:
+			ctx.Data["IsPDFFile"] = true
+			ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
+		case isImageFile:
+			ctx.Data["IsImageFile"] = true
+			ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
+		case isTextFile:
+			if blob.Size() >= setting.UI.MaxDisplayFileSize {
+				ctx.Data["IsFileTooLarge"] = true
+			} else {
+				ctx.Data["IsFileTooLarge"] = false
+				d, _ := ioutil.ReadAll(dataRc)
+				buf = append(buf, d...)
+				readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
+				isMarkdown := readmeExist || markdown.IsMarkdownFile(blob.Name())
+				ctx.Data["ReadmeExist"] = readmeExist
+				ctx.Data["IsMarkdown"] = isMarkdown
+				if isMarkdown {
+					ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 				} else {
-					ctx.Data["IsFileTooLarge"] = false
-					d, _ := ioutil.ReadAll(dataRc)
-					buf = append(buf, d...)
-					readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
-					isMarkdown := readmeExist || markdown.IsMarkdownFile(blob.Name())
-					ctx.Data["ReadmeExist"] = readmeExist
-					ctx.Data["IsMarkdown"] = isMarkdown
-					if isMarkdown {
-						ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+					// Building code view blocks with line number on server side.
+					var filecontent string
+					if err, content := template.ToUTF8WithErr(buf); err != nil {
+						if err != nil {
+							log.Error(4, "ToUTF8WithErr: %s", err)
+						}
+						filecontent = string(buf)
 					} else {
-						// Building code view blocks with line number on server side.
-						var filecontent string
-						if err, content := template.ToUTF8WithErr(buf); err != nil {
-							if err != nil {
-								log.Error(4, "ToUTF8WithErr: %s", err)
-							}
-							filecontent = string(buf)
-						} else {
-							filecontent = content
-						}
-
-						var output bytes.Buffer
-						lines := strings.Split(filecontent, "\n")
-						for index, line := range lines {
-							output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, gotemplate.HTMLEscapeString(line)) + "\n")
-						}
-						ctx.Data["FileContent"] = gotemplate.HTML(output.String())
-
-						output.Reset()
-						for i := 0; i < len(lines); i++ {
-							output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
-						}
-						ctx.Data["LineNums"] = gotemplate.HTML(output.String())
+						filecontent = content
 					}
-				}
-				if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
-					ctx.Data["FileEditLink"] = editLink + "/" + treename
-					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
-				} else {
-					if !ctx.Repo.IsViewBranch {
-						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
-					} else if !ctx.Repo.IsWriter() {
-						ctx.Data["FileEditLink"] = forkLink
-						ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.fork_before_edit")
+
+					var output bytes.Buffer
+					lines := strings.Split(filecontent, "\n")
+					for index, line := range lines {
+						output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, gotemplate.HTMLEscapeString(line)) + "\n")
 					}
+					ctx.Data["FileContent"] = gotemplate.HTML(output.String())
+
+					output.Reset()
+					for i := 0; i < len(lines); i++ {
+						output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+					}
+					ctx.Data["LineNums"] = gotemplate.HTML(output.String())
 				}
-			default:
-				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 			}
 			if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
-				ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
-				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
+				ctx.Data["FileEditLink"] = editLink + "/" + treename
+				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
 			} else {
 				if !ctx.Repo.IsViewBranch {
-					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
+					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
 				} else if !ctx.Repo.IsWriter() {
-					ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
+					ctx.Data["FileEditLink"] = forkLink
+					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.fork_before_edit")
 				}
 			}
+		default:
+			ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 		}
+
+		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+			ctx.Data["FileDeleteLink"] = deleteLink + "/" + treename
+			ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
+		} else {
+			if !ctx.Repo.IsViewBranch {
+				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
+			} else if !ctx.Repo.IsWriter() {
+				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
+			}
+		}
+
 	} else {
 		// Directory and file list.
 		tree, err := ctx.Repo.Commit.SubTree(treename)
