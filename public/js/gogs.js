@@ -735,7 +735,7 @@ function initEditor() {
         $('#tree-name').val(parts.join('/'));
     }).trigger('keyup');
 
-    editArea = $('.repository.edit textarea#edit_area');
+    editArea = $('.repository.editor textarea#edit_area');
 
     if (!editArea.length)
         return;

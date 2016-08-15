@@ -508,8 +508,8 @@ func runWeb(ctx *cli.Context) error {
 				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
 			m.Post("/_delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
 			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
-			m.Post("/upload-file", repo.UploadFileToServer)
-			m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
+			// m.Post("/upload-file", repo.UploadFileToServer)
+			// m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
 		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
 			if ctx.Repo.IsViewCommit {
 				ctx.Handle(404, "", nil)
