@@ -754,9 +754,9 @@ func UpdateIssueMilestone(ctx *context.Context) {
 		return
 	}
 
-	oldMid := issue.MilestoneID
-	mid := ctx.QueryInt64("id")
-	if oldMid == mid {
+	oldMilestoneID := issue.MilestoneID
+	milestoneID := ctx.QueryInt64("id")
+	if oldMilestoneID == milestoneID {
 		ctx.JSON(200, map[string]interface{}{
 			"ok": true,
 		})
@@ -764,8 +764,8 @@ func UpdateIssueMilestone(ctx *context.Context) {
 	}
 
 	// Not check for invalid milestone id and give responsibility to owners.
-	issue.MilestoneID = mid
-	if err := models.ChangeMilestoneAssign(oldMid, issue); err != nil {
+	issue.MilestoneID = milestoneID
+	if err := models.ChangeMilestoneAssign(issue, oldMilestoneID); err != nil {
 		ctx.Handle(500, "ChangeMilestoneAssign", err)
 		return
 	}

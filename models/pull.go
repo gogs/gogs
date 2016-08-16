@@ -388,7 +388,13 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		return err
 	}
 
-	if err = newIssue(sess, repo, pull, labelIDs, uuids, true); err != nil {
+	if err = newIssue(sess, &NewIssueOptions{
+		Repo:        repo,
+		Issue:       pull,
+		LableIDs:    labelIDs,
+		Attachments: uuids,
+		IsPull:      true,
+	}); err != nil {
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
