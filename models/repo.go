@@ -233,7 +233,7 @@ func (repo *Repository) FullName() string {
 	return repo.MustOwner().Name + "/" + repo.Name
 }
 
-func (repo *Repository) FullLink() string {
+func (repo *Repository) HTMLURL() string {
 	return setting.AppUrl + repo.FullName()
 }
 
@@ -248,7 +248,7 @@ func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 		Description:   repo.Description,
 		Private:       repo.IsPrivate,
 		Fork:          repo.IsFork,
-		HTMLURL:       repo.FullLink(),
+		HTMLURL:       repo.HTMLURL(),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
 		Website:       repo.Website,

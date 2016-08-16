@@ -538,8 +538,8 @@ func ViewIssue(ctx *context.Context) {
 
 	// Get more information if it's a pull request.
 	if issue.IsPull {
-		if issue.HasMerged {
-			ctx.Data["DisableStatusChange"] = issue.HasMerged
+		if issue.PullRequest.HasMerged {
+			ctx.Data["DisableStatusChange"] = issue.PullRequest.HasMerged
 			PrepareMergedViewPullInfo(ctx, issue)
 		} else {
 			PrepareViewPullInfo(ctx, issue)
@@ -822,7 +822,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 		// Check if issue admin/poster changes the status of issue.
 		if (ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))) &&
 			(form.Status == "reopen" || form.Status == "close") &&
-			!(issue.IsPull && issue.HasMerged) {
+			!(issue.IsPull && issue.PullRequest.HasMerged) {
 
 			// Duplication and conflict check should apply to reopen pull request.
 			var pr *models.PullRequest
@@ -839,12 +839,12 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 
 				// Regenerate patch and test conflict.
 				if pr == nil {
-					if err = issue.UpdatePatch(); err != nil {
+					if err = issue.PullRequest.UpdatePatch(); err != nil {
 						ctx.Handle(500, "UpdatePatch", err)
 						return
 					}
 
-					issue.AddToTaskQueue()
+					issue.PullRequest.AddToTaskQueue()
 				}
 			}
 
