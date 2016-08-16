@@ -100,6 +100,10 @@ func (pr *PullRequest) LoadAttributes() error {
 }
 
 func (pr *PullRequest) LoadIssue() (err error) {
+	if pr.Issue != nil {
+		return nil
+	}
+
 	pr.Issue, err = GetIssueByID(pr.IssueID)
 	return err
 }
@@ -112,14 +116,15 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 	apiPullRequest := &api.PullRequest{
 		ID:        pr.ID,
 		Index:     pr.Index,
-		State:     apiIssue.State,
+		Poster:    apiIssue.Poster,
 		Title:     apiIssue.Title,
 		Body:      apiIssue.Body,
-		User:      apiIssue.User,
 		Labels:    apiIssue.Labels,
 		Milestone: apiIssue.Milestone,
 		Assignee:  apiIssue.Assignee,
+		State:     apiIssue.State,
 		Comments:  apiIssue.Comments,
+		HTMLURL:   pr.Issue.HTMLURL(),
 		HasMerged: pr.HasMerged,
 	}
 
@@ -312,7 +317,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		Before:     pr.MergeBase,
 		After:      pr.MergedCommitID,
 		CompareURL: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
-		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.FullLink()),
+		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.HTMLURL()),
 		Repo:       pr.BaseRepo.APIFormat(nil),
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),

@@ -156,7 +156,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		return nil
 	}
 
-	if err = issue.GetHeadRepo(); err != nil {
+	if err = issue.PullRequest.GetHeadRepo(); err != nil {
 		ctx.Handle(500, "GetHeadRepo", err)
 		return nil
 	}
@@ -172,9 +172,10 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 	return issue
 }
 
-func PrepareMergedViewPullInfo(ctx *context.Context, pull *models.Issue) {
+func PrepareMergedViewPullInfo(ctx *context.Context, issue *models.Issue) {
+	pull := issue.PullRequest
 	ctx.Data["HasMerged"] = true
-	ctx.Data["HeadTarget"] = pull.HeadUserName + "/" + pull.HeadBranch
+	ctx.Data["HeadTarget"] = issue.PullRequest.HeadUserName + "/" + pull.HeadBranch
 	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.BaseBranch
 
 	var err error
@@ -190,8 +191,9 @@ func PrepareMergedViewPullInfo(ctx *context.Context, pull *models.Issue) {
 	}
 }
 
-func PrepareViewPullInfo(ctx *context.Context, pull *models.Issue) *git.PullRequestInfo {
+func PrepareViewPullInfo(ctx *context.Context, issue *models.Issue) *git.PullRequestInfo {
 	repo := ctx.Repo.Repository
+	pull := issue.PullRequest
 
 	ctx.Data["HeadTarget"] = pull.HeadUserName + "/" + pull.HeadBranch
 	ctx.Data["BaseTarget"] = ctx.Repo.Owner.Name + "/" + pull.BaseBranch
@@ -245,16 +247,17 @@ func ViewPullCommits(ctx *context.Context) {
 	ctx.Data["PageIsPullList"] = true
 	ctx.Data["PageIsPullCommits"] = true
 
-	pull := checkPullInfo(ctx)
+	issue := checkPullInfo(ctx)
 	if ctx.Written() {
 		return
 	}
+	pull := issue.PullRequest
 	ctx.Data["Username"] = pull.HeadUserName
 	ctx.Data["Reponame"] = pull.HeadRepo.Name
 
 	var commits *list.List
 	if pull.HasMerged {
-		PrepareMergedViewPullInfo(ctx, pull)
+		PrepareMergedViewPullInfo(ctx, issue)
 		if ctx.Written() {
 			return
 		}
@@ -275,7 +278,7 @@ func ViewPullCommits(ctx *context.Context) {
 		}
 
 	} else {
-		prInfo := PrepareViewPullInfo(ctx, pull)
+		prInfo := PrepareViewPullInfo(ctx, issue)
 		if ctx.Written() {
 			return
 		} else if prInfo == nil {
@@ -296,10 +299,11 @@ func ViewPullFiles(ctx *context.Context) {
 	ctx.Data["PageIsPullList"] = true
 	ctx.Data["PageIsPullFiles"] = true
 
-	pull := checkPullInfo(ctx)
+	issue := checkPullInfo(ctx)
 	if ctx.Written() {
 		return
 	}
+	pull := issue.PullRequest
 
 	var (
 		diffRepoPath  string
@@ -309,7 +313,7 @@ func ViewPullFiles(ctx *context.Context) {
 	)
 
 	if pull.HasMerged {
-		PrepareMergedViewPullInfo(ctx, pull)
+		PrepareMergedViewPullInfo(ctx, issue)
 		if ctx.Written() {
 			return
 		}
@@ -319,7 +323,7 @@ func ViewPullFiles(ctx *context.Context) {
 		endCommitID = pull.MergedCommitID
 		gitRepo = ctx.Repo.GitRepo
 	} else {
-		prInfo := PrepareViewPullInfo(ctx, pull)
+		prInfo := PrepareViewPullInfo(ctx, issue)
 		if ctx.Written() {
 			return
 		} else if prInfo == nil {

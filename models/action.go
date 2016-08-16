@@ -520,7 +520,7 @@ func CommitRepoAction(
 			Before:     oldCommitID,
 			After:      newCommitID,
 			CompareURL: setting.AppUrl + commit.CompareURL,
-			Commits:    commit.ToApiPayloadCommits(repo.FullLink()),
+			Commits:    commit.ToApiPayloadCommits(repo.HTMLURL()),
 			Repo:       apiRepo,
 			Pusher:     apiPusher,
 			Sender:     apiPusher,

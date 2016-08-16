@@ -368,7 +368,7 @@ func TestWebhook(ctx *context.Context) {
 			{
 				ID:      commit.ID.String(),
 				Message: commit.Message(),
-				URL:     ctx.Repo.Repository.FullLink() + "/commit/" + commit.ID.String(),
+				URL:     ctx.Repo.Repository.HTMLURL() + "/commit/" + commit.ID.String(),
 				Author: &api.PayloadUser{
 					Name:  commit.Author.Name,
 					Email: commit.Author.Email,

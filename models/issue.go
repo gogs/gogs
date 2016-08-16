@@ -32,23 +32,23 @@ var (
 type Issue struct {
 	ID              int64       `xorm:"pk autoincr"`
 	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
-	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
-	Title           string      `xorm:"name"`
 	Repo            *Repository `xorm:"-"`
+	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	PosterID        int64
 	Poster          *User    `xorm:"-"`
+	Title           string   `xorm:"name"`
+	Content         string   `xorm:"TEXT"`
+	RenderedContent string   `xorm:"-"`
 	Labels          []*Label `xorm:"-"`
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
+	Priority        int
 	AssigneeID      int64
 	Assignee        *User `xorm:"-"`
-	IsRead          bool  `xorm:"-"`
-	IsPull          bool  // Indicates whether is a pull request or not.
-	*PullRequest    `xorm:"-"`
 	IsClosed        bool
-	Content         string `xorm:"TEXT"`
-	RenderedContent string `xorm:"-"`
-	Priority        int
+	IsRead          bool         `xorm:"-"`
+	IsPull          bool         // Indicates whether is a pull request or not.
+	PullRequest     *PullRequest `xorm:"-"`
 	NumComments     int
 
 	Deadline     time.Time `xorm:"-"`
@@ -155,6 +155,16 @@ func (issue *Issue) LoadAttributes() error {
 	return issue.loadAttributes(x)
 }
 
+func (issue *Issue) HTMLURL() string {
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		path = "issues"
+	}
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.HTMLURL(), path, issue.Index)
+}
+
 // State returns string representation of issue status.
 func (i *Issue) State() api.StateType {
 	if i.IsClosed {
@@ -175,11 +185,11 @@ func (issue *Issue) APIFormat() *api.Issue {
 	apiIssue := &api.Issue{
 		ID:       issue.ID,
 		Index:    issue.Index,
-		State:    issue.State(),
+		Poster:   issue.Poster.APIFormat(),
 		Title:    issue.Title,
 		Body:     issue.Content,
-		User:     issue.Poster.APIFormat(),
 		Labels:   apiLabels,
+		State:    issue.State(),
 		Comments: issue.NumComments,
 		Created:  issue.Created,
 		Updated:  issue.Updated,
@@ -206,16 +216,6 @@ func (issue *Issue) APIFormat() *api.Issue {
 // HashTag returns unique hash tag for issue.
 func (i *Issue) HashTag() string {
 	return "issue-" + com.ToStr(i.ID)
-}
-
-func (issue *Issue) FullLink() string {
-	var path string
-	if issue.IsPull {
-		path = "pulls"
-	} else {
-		path = "issues"
-	}
-	return fmt.Sprintf("%s/%s/%d", issue.Repo.FullLink(), path, issue.Index)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -591,16 +591,44 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	opts.Issue.Title = strings.TrimSpace(opts.Issue.Title)
 	opts.Issue.Index = opts.Repo.NextIssueIndex()
 
-	if opts.Issue.AssigneeID > 0 {
-		// Silently drop invalid assignee.
-		valid, err := hasAccess(e, &User{ID: opts.Issue.AssigneeID}, opts.Repo, ACCESS_MODE_WRITE)
-		if err != nil {
-			return fmt.Errorf("hasAccess [user_id: %d, repo_id: %d]: %v", opts.Issue.AssigneeID, opts.Repo.ID, err)
-		} else if !valid {
-			opts.Issue.AssigneeID = 0
+	if opts.Issue.MilestoneID > 0 {
+		milestone, err := getMilestoneByID(e, opts.Issue.MilestoneID)
+		if err != nil && !IsErrMilestoneNotExist(err) {
+			return fmt.Errorf("getMilestoneByID: %v", err)
+		}
+
+		// Assume milestone is invalid and drop silently.
+		opts.Issue.MilestoneID = 0
+		if milestone != nil {
+			opts.Issue.MilestoneID = milestone.ID
+			opts.Issue.Milestone = milestone
+			if err = changeMilestoneAssign(e, opts.Issue, -1); err != nil {
+				return err
+			}
 		}
 	}
 
+	if opts.Issue.AssigneeID > 0 {
+		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
+		if err != nil && !IsErrUserNotExist(err) {
+			return fmt.Errorf("getUserByID: %v", err)
+		}
+
+		// Assume assignee is invalid and drop silently.
+		opts.Issue.AssigneeID = 0
+		if assignee != nil {
+			valid, err := hasAccess(e, assignee, opts.Repo, ACCESS_MODE_WRITE)
+			if err != nil {
+				return fmt.Errorf("hasAccess [user_id: %d, repo_id: %d]: %v", assignee.ID, opts.Repo.ID, err)
+			}
+			if valid {
+				opts.Issue.AssigneeID = assignee.ID
+				opts.Issue.Assignee = assignee
+			}
+		}
+	}
+
+	// Milestone and assignee validation should happen before insert actual object.
 	if _, err = e.Insert(opts.Issue); err != nil {
 		return err
 	}
@@ -631,12 +659,6 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 			if err = opts.Issue.addLabel(e, label); err != nil {
 				return fmt.Errorf("addLabel [id: %d]: %v", label.ID, err)
 			}
-		}
-	}
-
-	if opts.Issue.MilestoneID > 0 {
-		if err = changeMilestoneAssign(e, opts.Issue, -1); err != nil {
-			return err
 		}
 	}
 
