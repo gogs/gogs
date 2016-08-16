@@ -1,6 +1,6 @@
 [run]
 init_cmds = [
-	["make", "build-dev", "TAGS=sqlite"],
+	["make", "build-dev"],
 	["./gogs", "web"]
 ]
 watch_all = true
