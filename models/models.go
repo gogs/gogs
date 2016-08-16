@@ -29,6 +29,7 @@ type Engine interface {
 	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
 	Id(interface{}) *xorm.Session
+	In(string, ...interface{}) *xorm.Session
 	Insert(...interface{}) (int64, error)
 	InsertOne(interface{}) (int64, error)
 	Iterate(interface{}, xorm.IterFunc) error
