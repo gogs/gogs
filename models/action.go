@@ -434,6 +434,7 @@ func updateIssuesCommit(u *User, repo *Repository, repoUserName, repoName string
 }
 
 // CommitRepoAction adds new action for committing repository.
+// TODO: use CommitRepoActionOptions
 func CommitRepoAction(
 	userID, repoUserID int64,
 	userName, actEmail string,

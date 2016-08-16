@@ -587,7 +587,7 @@ type NewIssueOptions struct {
 	IsPull      bool
 }
 
-func newIssue(e *xorm.Session, opts *NewIssueOptions) (err error) {
+func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	opts.Issue.Title = strings.TrimSpace(opts.Issue.Title)
 	opts.Issue.Index = opts.Repo.NextIssueIndex()
 
@@ -669,7 +669,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		return err
 	}
 
-	if err = newIssue(sess, &NewIssueOptions{
+	if err = newIssue(sess, NewIssueOptions{
 		Repo:        repo,
 		Issue:       issue,
 		LableIDs:    labelIDs,

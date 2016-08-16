@@ -263,7 +263,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		message += "\n\n" + form.CommitMessage
 	}
 
-	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, &models.UpdateRepoFileOptions{
+	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, models.UpdateRepoFileOptions{
 		LastCommitID: lastCommit,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,

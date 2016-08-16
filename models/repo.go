@@ -461,26 +461,26 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string) error {
 			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
 			Branch:  branch,
 		}); err != nil {
-			return fmt.Errorf("Clone: %v", err)
+			return fmt.Errorf("git clone %s: %v", branch, err)
 		}
 	} else {
 		if err := git.Checkout(localPath, git.CheckoutOptions{
 			Branch: branch,
 		}); err != nil {
-			return fmt.Errorf("Checkout: %v", err)
+			return fmt.Errorf("git checkout %s: %v", branch, err)
 		}
 		if err := git.Pull(localPath, git.PullRemoteOptions{
+			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
 			Remote:  "origin",
 			Branch:  branch,
-			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
 		}); err != nil {
-			return fmt.Errorf("Pull: %v", err)
+			return fmt.Errorf("git pull origin %s: %v", branch, err)
 		}
 	}
 	return nil
 }
 
-// UpdateLocalCopy makes sure the branch of local copy of repository is up-to-date.
+// UpdateLocalCopyBranch makes sure local copy of repository in given branch is up-to-date.
 func (repo *Repository) UpdateLocalCopyBranch(branch string) error {
 	return UpdateLocalCopyBranch(repo.RepoPath(), repo.LocalCopyPath(), branch)
 }
