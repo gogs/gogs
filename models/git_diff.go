@@ -164,14 +164,14 @@ func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) tem
 	case DIFF_LINE_ADD:
 		compareDiffLine = diffSection.GetLine(DIFF_LINE_DEL, diffLine.RightIdx)
 		if compareDiffLine == nil {
-			return template.HTML(html.EscapeString(diffLine.Content[1:]))
+			return template.HTML(html.EscapeString(diffLine.Content))
 		}
 		diff1 = compareDiffLine.Content
 		diff2 = diffLine.Content
 	case DIFF_LINE_DEL:
 		compareDiffLine = diffSection.GetLine(DIFF_LINE_ADD, diffLine.LeftIdx)
 		if compareDiffLine == nil {
-			return template.HTML(html.EscapeString(diffLine.Content[1:]))
+			return template.HTML(html.EscapeString(diffLine.Content))
 		}
 		diff1 = diffLine.Content
 		diff2 = compareDiffLine.Content
