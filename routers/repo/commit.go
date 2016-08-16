@@ -145,6 +145,7 @@ func FileHistory(ctx *context.Context) {
 
 func Diff(ctx *context.Context) {
 	ctx.Data["PageIsDiff"] = true
+	ctx.Data["RequireHighlightJS"] = true
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
@@ -201,7 +202,6 @@ func Diff(ctx *context.Context) {
 		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitID)
-	ctx.Data["RequireHighlightJS"] = true
 	ctx.HTML(200, DIFF)
 }
 
