@@ -325,20 +325,19 @@ func (repo *Repository) getAssignees(e Engine) (_ []*User, err error) {
 	if err = e.Where("repo_id = ? AND mode >= ?", repo.ID, ACCESS_MODE_WRITE).Find(&accesses); err != nil {
 		return nil, err
 	}
-	if len(accesses) == 0 {
-		return []*User{}, nil
-	}
-
-	userIDs := make([]int64, len(accesses))
-	for i := 0; i < len(accesses); i++ {
-		userIDs[i] = accesses[i].UserID
-	}
 
 	// Leave a seat for owner itself to append later, but if owner is an organization
 	// and just waste 1 unit is cheaper than re-allocate memory once.
-	users := make([]*User, 0, len(userIDs)+1)
-	if err = e.In("id", userIDs).Find(&users); err != nil {
-		return nil, err
+	users := make([]*User, 0, len(accesses)+1)
+	if len(accesses) > 0 {
+		userIDs := make([]int64, len(accesses))
+		for i := 0; i < len(accesses); i++ {
+			userIDs[i] = accesses[i].UserID
+		}
+
+		if err = e.In("id", userIDs).Find(&users); err != nil {
+			return nil, err
+		}
 	}
 	if !repo.Owner.IsOrganization() {
 		users = append(users, repo.Owner)
