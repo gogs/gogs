@@ -72,6 +72,15 @@ var (
 
 func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
 	buf := bytes.NewBuffer(nil)
+
+	// Reproduce signs which are cutted for inline diff before.
+	switch lineType {
+	case DIFF_LINE_ADD:
+		buf.WriteByte('+')
+	case DIFF_LINE_DEL:
+		buf.WriteByte('-')
+	}
+
 	for i := range diffs {
 		switch {
 		case diffs[i].Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD:
@@ -167,7 +176,7 @@ func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) tem
 		diff1 = diffLine.Content
 		diff2 = compareDiffLine.Content
 	default:
-		return template.HTML(html.EscapeString(diffLine.Content[1:]))
+		return template.HTML(html.EscapeString(diffLine.Content))
 	}
 
 	diffRecord := diffMatchPatch.DiffMain(diff1[1:], diff2[1:], true)
