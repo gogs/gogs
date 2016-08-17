@@ -235,7 +235,7 @@ func (repo *Repository) FullName() string {
 	return repo.MustOwner().Name + "/" + repo.Name
 }
 
-func (repo *Repository) FullLink() string {
+func (repo *Repository) HTMLURL() string {
 	return setting.AppUrl + repo.FullName()
 }
 
@@ -250,7 +250,7 @@ func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 		Description:   repo.Description,
 		Private:       repo.IsPrivate,
 		Fork:          repo.IsFork,
-		HTMLURL:       repo.FullLink(),
+		HTMLURL:       repo.HTMLURL(),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
 		Website:       repo.Website,
@@ -318,31 +318,40 @@ func (repo *Repository) DeleteWiki() {
 	}
 }
 
-// GetAssignees returns all users that have write access of repository.
-func (repo *Repository) GetAssignees() (_ []*User, err error) {
-	if err = repo.GetOwner(); err != nil {
+func (repo *Repository) getAssignees(e Engine) (_ []*User, err error) {
+	if err = repo.getOwner(e); err != nil {
 		return nil, err
 	}
 
 	accesses := make([]*Access, 0, 10)
-	if err = x.Where("repo_id=? AND mode>=?", repo.ID, ACCESS_MODE_WRITE).Find(&accesses); err != nil {
+	if err = e.Where("repo_id = ? AND mode >= ?", repo.ID, ACCESS_MODE_WRITE).Find(&accesses); err != nil {
 		return nil, err
 	}
 
-	users := make([]*User, 0, len(accesses)+1) // Just waste 1 unit does not matter.
+	// Leave a seat for owner itself to append later, but if owner is an organization
+	// and just waste 1 unit is cheaper than re-allocate memory once.
+	users := make([]*User, 0, len(accesses)+1)
+	if len(accesses) > 0 {
+		userIDs := make([]int64, len(accesses))
+		for i := 0; i < len(accesses); i++ {
+			userIDs[i] = accesses[i].UserID
+		}
+
+		if err = e.In("id", userIDs).Find(&users); err != nil {
+			return nil, err
+		}
+	}
 	if !repo.Owner.IsOrganization() {
 		users = append(users, repo.Owner)
 	}
 
-	var u *User
-	for i := range accesses {
-		u, err = GetUserByID(accesses[i].UserID)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, u)
-	}
 	return users, nil
+}
+
+// GetAssignees returns all users that have write access and can be assigned to issues
+// of the repository,
+func (repo *Repository) GetAssignees() (_ []*User, err error) {
+	return repo.getAssignees(x)
 }
 
 // GetAssigneeByID returns the user that has write access of repository by given ID.
@@ -386,12 +395,12 @@ func (repo *Repository) GitConfigPath() string {
 	return filepath.Join(repo.RepoPath(), "config")
 }
 
-func (repo *Repository) Link() string {
-	return setting.AppSubUrl + "/" + repo.MustOwner().Name + "/" + repo.Name
+func (repo *Repository) RelLink() string {
+	return "/" + repo.FullName()
 }
 
-func (repo *Repository) RelLink() string {
-	return "/" + repo.MustOwner().Name + "/" + repo.Name
+func (repo *Repository) Link() string {
+	return setting.AppSubUrl + "/" + repo.FullName()
 }
 
 func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
@@ -422,6 +431,8 @@ func (repo *Repository) AllowsPulls() bool {
 	return repo.CanEnablePulls() && repo.EnablePulls
 }
 
+// FIXME: should have a mutex to prevent producing same index for two issues that are created
+// closely enough.
 func (repo *Repository) NextIssueIndex() int64 {
 	return int64(repo.NumIssues+repo.NumPulls) + 1
 }
@@ -452,26 +463,26 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string) error {
 			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
 			Branch:  branch,
 		}); err != nil {
-			return fmt.Errorf("Clone: %v", err)
+			return fmt.Errorf("git clone %s: %v", branch, err)
 		}
 	} else {
 		if err := git.Checkout(localPath, git.CheckoutOptions{
 			Branch: branch,
 		}); err != nil {
-			return fmt.Errorf("Checkout: %v", err)
+			return fmt.Errorf("git checkout %s: %v", branch, err)
 		}
 		if err := git.Pull(localPath, git.PullRemoteOptions{
+			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
 			Remote:  "origin",
 			Branch:  branch,
-			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
 		}); err != nil {
-			return fmt.Errorf("Pull: %v", err)
+			return fmt.Errorf("git pull origin %s: %v", branch, err)
 		}
 	}
 	return nil
 }
 
-// UpdateLocalCopy makes sure the branch of local copy of repository is up-to-date.
+// UpdateLocalCopyBranch makes sure local copy of repository in given branch is up-to-date.
 func (repo *Repository) UpdateLocalCopyBranch(branch string) error {
 	return UpdateLocalCopyBranch(repo.RepoPath(), repo.LocalCopyPath(), branch)
 }
@@ -1158,7 +1169,7 @@ func RepoPath(userName, repoName string) string {
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
-func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
+func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error {
 	newOwner, err := GetUserByName(newOwnerName)
 	if err != nil {
 		return fmt.Errorf("get new owner '%s': %v", newOwnerName, err)
@@ -1181,7 +1192,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 	owner := repo.Owner
 
 	// Note: we have to set value here to make sure recalculate accesses is based on
-	//	new owner.
+	// new owner.
 	repo.OwnerID = newOwner.ID
 	repo.Owner = newOwner
 
@@ -1251,7 +1262,7 @@ func TransferOwnership(u *User, newOwnerName string, repo *Repository) error {
 
 	if err = watchRepo(sess, newOwner.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
-	} else if err = transferRepoAction(sess, u, owner, newOwner, repo); err != nil {
+	} else if err = transferRepoAction(sess, doer, owner, repo); err != nil {
 		return fmt.Errorf("transferRepoAction: %v", err)
 	}
 
@@ -1521,16 +1532,16 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
-func GetRepositoryByName(uid int64, repoName string) (*Repository, error) {
+func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
 	repo := &Repository{
-		OwnerID:   uid,
-		LowerName: strings.ToLower(repoName),
+		OwnerID:   ownerID,
+		LowerName: strings.ToLower(name),
 	}
 	has, err := x.Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist{0, uid, repoName}
+		return nil, ErrRepoNotExist{0, ownerID, name}
 	}
 	return repo, err
 }

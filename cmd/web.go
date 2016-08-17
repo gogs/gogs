@@ -88,8 +88,8 @@ func checkVersion() {
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
 		{"gopkg.in/macaron.v1", macaron.Version, "1.1.7"},
-		{"github.com/gogits/git-module", git.Version, "0.3.5"},
-		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.0"},
+		{"github.com/gogits/git-module", git.Version, "0.3.7"},
+		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.1"},
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
@@ -505,10 +505,9 @@ func runWeb(ctx *cli.Context) error {
 			m.Combo("/_new/*").Get(repo.NewFile).
 				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.NewFilePost)
 			m.Post("/_preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
-			m.Combo("/upload/*").Get(repo.UploadFile).
+			m.Combo("/_upload/*").Get(repo.UploadFile).
 				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
 			m.Post("/_delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
-			m.Post("/branches", bindIgnErr(auth.NewBranchForm{}), repo.NewBranchPost)
 			// m.Post("/upload-file", repo.UploadFileToServer)
 			// m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
 		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {

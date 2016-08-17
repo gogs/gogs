@@ -17,7 +17,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.9.78.0815"
+const APP_VER = "0.9.83.0816"
 
 func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -27,7 +27,7 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "Gogs"
-	app.Usage = "Go Git Service"
+	app.Usage = "Go Git Service: a painless self-hosted Git service"
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
 		cmd.CmdWeb,

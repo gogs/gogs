@@ -149,9 +149,9 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 	}
 	if ctx.Repo.IsWriter() && form.Milestone != nil &&
 		issue.MilestoneID != *form.Milestone {
-		oldMid := issue.MilestoneID
+		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
-		if err = models.ChangeMilestoneAssign(oldMid, issue); err != nil {
+		if err = models.ChangeMilestoneAssign(issue, oldMilestoneID); err != nil {
 			ctx.Error(500, "ChangeMilestoneAssign", err)
 			return
 		}

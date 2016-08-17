@@ -25,32 +25,30 @@ import (
 )
 
 var (
-	ErrWrongIssueCounter   = errors.New("Invalid number of issues for this milestone")
-	ErrAttachmentNotLinked = errors.New("Attachment does not belong to this issue")
-	ErrMissingIssueNumber  = errors.New("No issue number specified")
+	ErrMissingIssueNumber = errors.New("No issue number specified")
 )
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
 	ID              int64       `xorm:"pk autoincr"`
 	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
-	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
-	Title           string      `xorm:"name"`
 	Repo            *Repository `xorm:"-"`
+	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	PosterID        int64
 	Poster          *User    `xorm:"-"`
+	Title           string   `xorm:"name"`
+	Content         string   `xorm:"TEXT"`
+	RenderedContent string   `xorm:"-"`
 	Labels          []*Label `xorm:"-"`
 	MilestoneID     int64
 	Milestone       *Milestone `xorm:"-"`
+	Priority        int
 	AssigneeID      int64
 	Assignee        *User `xorm:"-"`
-	IsRead          bool  `xorm:"-"`
-	IsPull          bool  // Indicates whether is a pull request or not.
-	*PullRequest    `xorm:"-"`
 	IsClosed        bool
-	Content         string `xorm:"TEXT"`
-	RenderedContent string `xorm:"-"`
-	Priority        int
+	IsRead          bool         `xorm:"-"`
+	IsPull          bool         // Indicates whether is a pull request or not.
+	PullRequest     *PullRequest `xorm:"-"`
 	NumComments     int
 
 	Deadline     time.Time `xorm:"-"`
@@ -157,6 +155,16 @@ func (issue *Issue) LoadAttributes() error {
 	return issue.loadAttributes(x)
 }
 
+func (issue *Issue) HTMLURL() string {
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		path = "issues"
+	}
+	return fmt.Sprintf("%s/%s/%d", issue.Repo.HTMLURL(), path, issue.Index)
+}
+
 // State returns string representation of issue status.
 func (i *Issue) State() api.StateType {
 	if i.IsClosed {
@@ -177,11 +185,11 @@ func (issue *Issue) APIFormat() *api.Issue {
 	apiIssue := &api.Issue{
 		ID:       issue.ID,
 		Index:    issue.Index,
-		State:    issue.State(),
+		Poster:   issue.Poster.APIFormat(),
 		Title:    issue.Title,
 		Body:     issue.Content,
-		User:     issue.Poster.APIFormat(),
 		Labels:   apiLabels,
+		State:    issue.State(),
 		Comments: issue.NumComments,
 		Created:  issue.Created,
 		Updated:  issue.Updated,
@@ -208,16 +216,6 @@ func (issue *Issue) APIFormat() *api.Issue {
 // HashTag returns unique hash tag for issue.
 func (i *Issue) HashTag() string {
 	return "issue-" + com.ToStr(i.ID)
-}
-
-func (issue *Issue) FullLink() string {
-	var path string
-	if issue.IsPull {
-		path = "pulls"
-	} else {
-		path = "issues"
-	}
-	return fmt.Sprintf("%s/%s/%d", issue.Repo.FullLink(), path, issue.Index)
 }
 
 // IsPoster returns true if given user by ID is the poster.
@@ -581,80 +579,108 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	return nil
 }
 
-// It's caller's responsibility to create action.
-func newIssue(e *xorm.Session, repo *Repository, issue *Issue, labelIDs []int64, uuids []string, isPull bool) (err error) {
-	issue.Title = strings.TrimSpace(issue.Title)
-	issue.Index = repo.NextIssueIndex()
+type NewIssueOptions struct {
+	Repo        *Repository
+	Issue       *Issue
+	LableIDs    []int64
+	Attachments []string // In UUID format.
+	IsPull      bool
+}
 
-	if issue.AssigneeID > 0 {
-		// Silently drop invalid assignee
-		valid, err := hasAccess(e, &User{ID: issue.AssigneeID}, repo, ACCESS_MODE_WRITE)
-		if err != nil {
-			return fmt.Errorf("hasAccess: %v", err)
-		} else if !valid {
-			issue.AssigneeID = 0
+func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
+	opts.Issue.Title = strings.TrimSpace(opts.Issue.Title)
+	opts.Issue.Index = opts.Repo.NextIssueIndex()
+
+	if opts.Issue.MilestoneID > 0 {
+		milestone, err := getMilestoneByID(e, opts.Issue.MilestoneID)
+		if err != nil && !IsErrMilestoneNotExist(err) {
+			return fmt.Errorf("getMilestoneByID: %v", err)
+		}
+
+		// Assume milestone is invalid and drop silently.
+		opts.Issue.MilestoneID = 0
+		if milestone != nil {
+			opts.Issue.MilestoneID = milestone.ID
+			opts.Issue.Milestone = milestone
+			if err = changeMilestoneAssign(e, opts.Issue, -1); err != nil {
+				return err
+			}
 		}
 	}
 
-	if _, err = e.Insert(issue); err != nil {
+	if opts.Issue.AssigneeID > 0 {
+		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
+		if err != nil && !IsErrUserNotExist(err) {
+			return fmt.Errorf("getUserByID: %v", err)
+		}
+
+		// Assume assignee is invalid and drop silently.
+		opts.Issue.AssigneeID = 0
+		if assignee != nil {
+			valid, err := hasAccess(e, assignee, opts.Repo, ACCESS_MODE_WRITE)
+			if err != nil {
+				return fmt.Errorf("hasAccess [user_id: %d, repo_id: %d]: %v", assignee.ID, opts.Repo.ID, err)
+			}
+			if valid {
+				opts.Issue.AssigneeID = assignee.ID
+				opts.Issue.Assignee = assignee
+			}
+		}
+	}
+
+	// Milestone and assignee validation should happen before insert actual object.
+	if _, err = e.Insert(opts.Issue); err != nil {
 		return err
 	}
 
-	if isPull {
-		_, err = e.Exec("UPDATE `repository` SET num_pulls=num_pulls+1 WHERE id=?", issue.RepoID)
+	if opts.IsPull {
+		_, err = e.Exec("UPDATE `repository` SET num_pulls = num_pulls + 1 WHERE id = ?", opts.Issue.RepoID)
 	} else {
-		_, err = e.Exec("UPDATE `repository` SET num_issues=num_issues+1 WHERE id=?", issue.RepoID)
+		_, err = e.Exec("UPDATE `repository` SET num_issues = num_issues + 1 WHERE id = ?", opts.Issue.RepoID)
 	}
 	if err != nil {
 		return err
 	}
 
-	if len(labelIDs) > 0 {
+	if len(opts.LableIDs) > 0 {
 		// During the session, SQLite3 dirver cannot handle retrieve objects after update something.
 		// So we have to get all needed labels first.
-		labels := make([]*Label, 0, len(labelIDs))
-		if err = e.In("id", labelIDs).Find(&labels); err != nil {
-			return fmt.Errorf("find all labels: %v", err)
+		labels := make([]*Label, 0, len(opts.LableIDs))
+		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
+			return fmt.Errorf("find all labels [label_ids: %v]: %v", opts.LableIDs, err)
 		}
 
 		for _, label := range labels {
-			if label.RepoID != repo.ID {
+			// Silently drop invalid labels.
+			if label.RepoID != opts.Repo.ID {
 				continue
 			}
 
-			if err = issue.addLabel(e, label); err != nil {
-				return fmt.Errorf("addLabel: %v", err)
+			if err = opts.Issue.addLabel(e, label); err != nil {
+				return fmt.Errorf("addLabel [id: %d]: %v", label.ID, err)
 			}
 		}
 	}
 
-	if issue.MilestoneID > 0 {
-		if err = changeMilestoneAssign(e, 0, issue); err != nil {
-			return err
-		}
-	}
-
-	if err = newIssueUsers(e, repo, issue); err != nil {
+	if err = newIssueUsers(e, opts.Repo, opts.Issue); err != nil {
 		return err
 	}
 
-	// Check attachments.
-	for _, uuid := range uuids {
-		attachment, err := getAttachmentByUUID(e, uuid)
+	if len(opts.Attachments) > 0 {
+		attachments, err := getAttachmentsByUUIDs(e, opts.Attachments)
 		if err != nil {
-			if IsErrAttachmentNotExist(err) {
-				continue
-			}
-			return fmt.Errorf("getAttachmentByUUID [%s]: %v", uuid, err)
+			return fmt.Errorf("getAttachmentsByUUIDs [uuids: %v]: %v", opts.Attachments, err)
 		}
-		attachment.IssueID = issue.ID
-		// No assign value could be 0, so ignore AllCols().
-		if _, err = e.Id(attachment.ID).Update(attachment); err != nil {
-			return fmt.Errorf("update attachment [%d]: %v", attachment.ID, err)
+
+		for i := 0; i < len(attachments); i++ {
+			attachments[i].IssueID = opts.Issue.ID
+			if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
+				return fmt.Errorf("update attachment [id: %d]: %v", attachments[i].ID, err)
+			}
 		}
 	}
 
-	return issue.loadAttributes(e)
+	return opts.Issue.loadAttributes(e)
 }
 
 // NewIssue creates new issue with labels for repository.
@@ -665,7 +691,12 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		return err
 	}
 
-	if err = newIssue(sess, repo, issue, labelIDs, uuids, false); err != nil {
+	if err = newIssue(sess, NewIssueOptions{
+		Repo:        repo,
+		Issue:       issue,
+		LableIDs:    labelIDs,
+		Attachments: uuids,
+	}); err != nil {
 		return fmt.Errorf("newIssue: %v", err)
 	}
 
@@ -673,21 +704,19 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		return fmt.Errorf("Commit: %v", err)
 	}
 
-	// Notify watchers.
-	act := &Action{
+	if err = NotifyWatchers(&Action{
 		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
-		ActEmail:     issue.Poster.Email,
 		OpType:       ACTION_CREATE_ISSUE,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-	}
-	if err = NotifyWatchers(act); err != nil {
+	}); err != nil {
 		log.Error(4, "NotifyWatchers: %v", err)
-	} else if err = issue.MailParticipants(); err != nil {
+	}
+	if err = issue.MailParticipants(); err != nil {
 		log.Error(4, "MailParticipants: %v", err)
 	}
 
@@ -834,19 +863,6 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	return issues, sess.Find(&issues)
 }
 
-type IssueStatus int
-
-const (
-	IS_OPEN = iota + 1
-	IS_CLOSE
-)
-
-// GetIssueCountByPoster returns number of issues of repository by poster.
-func GetIssueCountByPoster(uid, rid int64, isClosed bool) int64 {
-	count, _ := x.Where("repo_id=?", rid).And("poster_id=?", uid).And("is_closed=?", isClosed).Count(new(Issue))
-	return count
-}
-
 // .___                             ____ ___
 // |   | ______ ________ __   ____ |    |   \______ ___________
 // |   |/  ___//  ___/  |  \_/ __ \|    |   /  ___// __ \_  __ \
@@ -869,37 +885,41 @@ type IssueUser struct {
 }
 
 func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
-	users, err := repo.GetAssignees()
+	assignees, err := repo.getAssignees(e)
 	if err != nil {
+		return fmt.Errorf("getAssignees: %v", err)
+	}
+
+	// Poster can be anyone, append later if not one of assignees.
+	isPosterAssignee := false
+
+	// Leave a seat for poster itself to append later, but if poster is one of assignee
+	// and just waste 1 unit is cheaper than re-allocate memory once.
+	issueUsers := make([]*IssueUser, 0, len(assignees)+1)
+	for _, assignee := range assignees {
+		isPoster := assignee.ID == issue.PosterID
+		issueUsers = append(issueUsers, &IssueUser{
+			IssueID:    issue.ID,
+			RepoID:     repo.ID,
+			UID:        assignee.ID,
+			IsPoster:   isPoster,
+			IsAssigned: assignee.ID == issue.AssigneeID,
+		})
+		if !isPosterAssignee && isPoster {
+			isPosterAssignee = true
+		}
+	}
+	if !isPosterAssignee {
+		issueUsers = append(issueUsers, &IssueUser{
+			IssueID:  issue.ID,
+			RepoID:   repo.ID,
+			UID:      issue.PosterID,
+			IsPoster: true,
+		})
+	}
+
+	if _, err = e.Insert(issueUsers); err != nil {
 		return err
-	}
-
-	iu := &IssueUser{
-		IssueID: issue.ID,
-		RepoID:  repo.ID,
-	}
-
-	// Poster can be anyone.
-	isNeedAddPoster := true
-	for _, u := range users {
-		iu.ID = 0
-		iu.UID = u.ID
-		iu.IsPoster = iu.UID == issue.PosterID
-		if isNeedAddPoster && iu.IsPoster {
-			isNeedAddPoster = false
-		}
-		iu.IsAssigned = iu.UID == issue.AssigneeID
-		if _, err = e.Insert(iu); err != nil {
-			return err
-		}
-	}
-	if isNeedAddPoster {
-		iu.ID = 0
-		iu.UID = issue.PosterID
-		iu.IsPoster = true
-		if _, err = e.Insert(iu); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -1513,9 +1533,9 @@ func ChangeMilestoneIssueStats(issue *Issue) (err error) {
 	return sess.Commit()
 }
 
-func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
-	if oldMid > 0 {
-		m, err := getMilestoneByID(e, oldMid)
+func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) error {
+	if oldMilestoneID > 0 {
+		m, err := getMilestoneByID(e, oldMilestoneID)
 		if err != nil {
 			return err
 		}
@@ -1527,7 +1547,7 @@ func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
 
 		if err = updateMilestone(e, m); err != nil {
 			return err
-		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id=0 WHERE issue_id=?", issue.ID); err != nil {
+		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id = 0 WHERE issue_id = ?", issue.ID); err != nil {
 			return err
 		}
 	}
@@ -1543,13 +1563,9 @@ func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
 			m.NumClosedIssues++
 		}
 
-		if m.NumIssues == 0 {
-			return ErrWrongIssueCounter
-		}
-
 		if err = updateMilestone(e, m); err != nil {
 			return err
-		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id=? WHERE issue_id=?", m.ID, issue.ID); err != nil {
+		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?", m.ID, issue.ID); err != nil {
 			return err
 		}
 	}
@@ -1558,14 +1574,14 @@ func changeMilestoneAssign(e *xorm.Session, oldMid int64, issue *Issue) error {
 }
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
-func ChangeMilestoneAssign(oldMid int64, issue *Issue) (err error) {
+func ChangeMilestoneAssign(issue *Issue, oldMilestoneID int64) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if err = changeMilestoneAssign(sess, oldMid, issue); err != nil {
+	if err = changeMilestoneAssign(sess, issue, oldMilestoneID); err != nil {
 		return err
 	}
 	return sess.Commit()
@@ -1689,6 +1705,16 @@ func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
 		return nil, ErrAttachmentNotExist{0, uuid}
 	}
 	return attach, nil
+}
+
+func getAttachmentsByUUIDs(e Engine, uuids []string) ([]*Attachment, error) {
+	if len(uuids) == 0 {
+		return []*Attachment{}, nil
+	}
+
+	// Silently drop invalid uuids.
+	attachments := make([]*Attachment, 0, len(uuids))
+	return attachments, e.In("uuid", uuids).Find(&attachments)
 }
 
 // GetAttachmentByUUID returns attachment by given UUID.

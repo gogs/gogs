@@ -263,7 +263,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		message += "\n\n" + form.CommitMessage
 	}
 
-	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, &models.UpdateRepoFileOptions{
+	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, models.UpdateRepoFileOptions{
 		LastCommitID: lastCommit,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -332,7 +332,12 @@ func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
 		return
 	}
 
-	if err := ctx.Repo.Repository.DeleteRepoFile(ctx.User, ctx.Repo.CommitID, branchName, treeName, form.CommitSummary); err != nil {
+	if err := ctx.Repo.Repository.DeleteRepoFile(ctx.User, models.DeleteRepoFileOptions{
+		LastCommitID: ctx.Repo.CommitID,
+		Branch:       branchName,
+		TreePath:     treeName,
+		Message:      form.CommitSummary,
+	}); err != nil {
 		ctx.Handle(500, "DeleteRepoFile", err)
 		return
 	}

@@ -195,11 +195,11 @@ func HTTP(ctx *context.Context) {
 				if len(fields) >= 3 {
 					oldCommitId := fields[0][4:]
 					newCommitId := fields[1]
-					refName := fields[2]
+					refFullName := fields[2]
 
 					// FIXME: handle error.
 					if err = models.PushUpdate(models.PushUpdateOptions{
-						RefName:      refName,
+						RefFullName:  refFullName,
 						OldCommitID:  oldCommitId,
 						NewCommitID:  newCommitId,
 						PusherID:     authUser.ID,
@@ -207,8 +207,7 @@ func HTTP(ctx *context.Context) {
 						RepoUserName: username,
 						RepoName:     reponame,
 					}); err == nil {
-						go models.HookQueue.Add(repo.ID)
-						go models.AddTestPullRequestTask(authUser, repo.ID, strings.TrimPrefix(refName, git.BRANCH_PREFIX), true)
+						go models.AddTestPullRequestTask(authUser, repo.ID, strings.TrimPrefix(refFullName, git.BRANCH_PREFIX), true)
 					}
 
 				}
