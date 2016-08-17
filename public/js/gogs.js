@@ -4,21 +4,21 @@ var csrf;
 var suburl;
 
 function initCommentPreviewTab($form) {
-    var $tab_menu = $form.find('.tabular.menu');
-    $tab_menu.find('.item').tab();
-    $tab_menu.find('.item[data-tab="' + $tab_menu.data('preview') + '"]').click(function () {
+    var $tabMenu = $form.find('.tabular.menu');
+    $tabMenu.find('.item').tab();
+    $tabMenu.find('.item[data-tab="' + $tabMenu.data('preview') + '"]').click(function () {
         var $this = $(this);
         $.post($this.data('url'), {
                 "_csrf": csrf,
                 "mode": "gfm",
                 "context": $this.data('context'),
-                "text": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
+                "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
             },
             function (data) {
-                var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
-                $preview_tab.html(data);
-                emojify.run($preview_tab[0]);
-                $('pre code', $preview_tab[0]).each(function (i, block) {
+                var $previewSegment = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
+                $previewSegment.html(data);
+                emojify.run($previewSegment[0]);
+                $('pre code', $previewSegment[0]).each(function (i, block) {
                     hljs.highlightBlock(block);
                 });
             }
@@ -28,60 +28,64 @@ function initCommentPreviewTab($form) {
     buttonsClickOnEnter();
 }
 
-var previewTab;
 var previewFileModes;
 
 function initEditPreviewTab($form) {
-    var $tab_menu = $form.find('.tabular.menu');
-    $tab_menu.find('.item').tab();
-    previewTab = $tab_menu.find('.item[data-tab="' + $tab_menu.data('preview') + '"]');
-
-    if (previewTab.length) {
-        previewFileModes = previewTab.data('preview-file-modes').split(',');
-        previewTab.click(function () {
+    var $tabMenu = $form.find('.tabular.menu');
+    $tabMenu.find('.item').tab();
+    var $previewTab = $tabMenu.find('.item[data-tab="' + $tabMenu.data('preview') + '"]');
+    if ($previewTab.length) {
+        previewFileModes = $previewTab.data('preview-file-modes').split(',');
+        $previewTab.click(function () {
             var $this = $(this);
             $.post($this.data('url'), {
                     "_csrf": csrf,
                     "mode": "gfm",
                     "context": $this.data('context'),
-                    "text": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
+                    "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
                 },
                 function (data) {
-                    var $preview_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('preview') + '"]');
-                    $preview_tab.html(data);
-                    emojify.run($preview_tab[0]);
-                    $('pre code', $preview_tab[0]).each(function (i, block) {
+                    var $previewSegment = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
+                    $previewSegment.html(data);
+                    emojify.run($previewSegment[0]);
+                    $('pre code', $previewSegment[0]).each(function (i, block) {
                         hljs.highlightBlock(block);
                     });
                 }
             );
         });
     }
-
-    buttonsClickOnEnter();
 }
 
 function initEditDiffTab($form) {
-    var $tab_menu = $form.find('.tabular.menu');
-    $tab_menu.find('.item').tab();
-    $tab_menu.find('.item[data-tab="' + $tab_menu.data('diff') + '"]').click(function () {
+    var $tabMenu = $form.find('.tabular.menu');
+    $tabMenu.find('.item').tab();
+    $tabMenu.find('.item[data-tab="' + $tabMenu.data('diff') + '"]').click(function () {
         var $this = $(this);
         $.post($this.data('url'), {
                 "_csrf": csrf,
                 "context": $this.data('context'),
-                "content": $form.find('.tab.segment[data-tab="' + $tab_menu.data('write') + '"] textarea').val()
+                "content": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
             },
             function (data) {
-                var $diff_tab = $form.find('.tab.segment[data-tab="' + $tab_menu.data('diff') + '"]');
-                $diff_tab.html(data);
-                emojify.run($diff_tab[0]);
-                initCodeView()
+                var $diffPreviewSegment = $form.find('.tab.segment[data-tab="' + $tabMenu.data('diff') + '"]');
+                $diffPreviewSegment.html(data);
+                emojify.run($diffPreviewSegment[0]);
             }
         );
     });
-
-    buttonsClickOnEnter();
 }
+
+
+function initEditForm() {
+    if ($('.edit.form').length == 0) {
+        return;
+    }
+
+    initEditPreviewTab($('.edit.form'));
+    initEditDiffTab($('.edit.form'));
+}
+
 
 function initCommentForm() {
     if ($('.comment.form').length == 0) {
@@ -198,11 +202,6 @@ function initCommentForm() {
     // Milestone and assignee
     selectItem('.select-milestone', '#milestone_id');
     selectItem('.select-assignee', '#assignee_id');
-}
-
-function initEditForm() {
-    initEditPreviewTab($('.edit.form'));
-    initEditDiffTab($('.edit.form'));
 }
 
 function initInstall() {
@@ -612,7 +611,7 @@ function initWikiForm() {
                 "code", "quote", "|",
                 "unordered-list", "ordered-list", "|",
                 "link", "image", "table", "horizontal-rule", "|",
-                "clean-block", "preview", "fullscreen", "side-by-side"]
+                "clean-block", "preview", "fullscreen"]
         })
     }
 }

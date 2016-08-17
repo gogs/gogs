@@ -46,7 +46,7 @@ const (
 )
 
 var (
-	// Build information
+	// Build information should only be set by -ldflags.
 	BuildTime    string
 	BuildGitHash string
 
@@ -69,7 +69,7 @@ var (
 	CertFile, KeyFile    string
 	StaticRootPath       string
 	EnableGzip           bool
-	LandingPageUrl       LandingPage
+	LandingPageURL       LandingPage
 	UnixSocketPermission uint32
 
 	SSH struct {
@@ -258,6 +258,7 @@ var (
 	HasRobotsTxt bool
 )
 
+// DateLang transforms standard language locale name to corresponding value in datetime plugin.
 func DateLang(lang string) string {
 	name, ok := dateLangs[lang]
 	if ok {
@@ -407,9 +408,9 @@ func NewContext() {
 
 	switch sec.Key("LANDING_PAGE").MustString("home") {
 	case "explore":
-		LandingPageUrl = LANDING_PAGE_EXPLORE
+		LandingPageURL = LANDING_PAGE_EXPLORE
 	default:
-		LandingPageUrl = LANDING_PAGE_HOME
+		LandingPageURL = LANDING_PAGE_HOME
 	}
 
 	SSH.RootPath = path.Join(homeDir, ".ssh")
