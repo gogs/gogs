@@ -5,17 +5,19 @@
 package repo
 
 import (
+	"fmt"
+	"net/http"
+	"path"
 	"strings"
 
-	"fmt"
+	git "github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
-	"net/http"
-	"path"
 )
 
 const (
@@ -162,12 +164,17 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 		if branchName != oldBranchName {
 			oldCommitID = "0000000000000000000000000000000000000000" // New Branch so we use all 0s
 		}
-		if err := models.CommitRepoAction(ctx.User.ID, ctx.Repo.Owner.ID, ctx.User.LowerName, ctx.Repo.Owner.Email,
-			ctx.Repo.Repository.ID, ctx.Repo.Owner.LowerName, ctx.Repo.Repository.Name, "refs/heads/"+branchName, pc,
-			oldCommitID, newCommitID); err != nil {
+		if err := models.CommitRepoAction(models.CommitRepoActionOptions{
+			PusherName:  ctx.User.Name,
+			RepoOwnerID: ctx.Repo.Owner.ID,
+			RepoName:    ctx.Repo.Owner.Name,
+			RefFullName: git.BRANCH_PREFIX + branchName,
+			OldCommitID: oldCommitID,
+			NewCommitID: newCommitID,
+			Commits:     pc,
+		}); err != nil {
 			log.Error(4, "models.CommitRepoAction(branch = %s): %v", branchName, err)
 		}
-		models.HookQueue.Add(ctx.Repo.Repository.ID)
 	}
 
 	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + treeName)

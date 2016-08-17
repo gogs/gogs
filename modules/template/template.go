@@ -228,7 +228,6 @@ func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]stri
 type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
-	GetActEmail() string
 	GetRepoUserName() string
 	GetRepoName() string
 	GetRepoPath() string

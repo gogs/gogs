@@ -429,7 +429,6 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	if err = NotifyWatchers(&Action{
 		ActUserID:    pull.Poster.ID,
 		ActUserName:  pull.Poster.Name,
-		ActEmail:     pull.Poster.Email,
 		OpType:       ACTION_CREATE_PULL_REQUEST,
 		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
 		RepoID:       repo.ID,

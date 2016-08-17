@@ -736,7 +736,6 @@ function initEditor() {
     }).trigger('keyup');
 
     editArea = $('.repository.editor textarea#edit_area');
-
     if (!editArea.length)
         return;
 
@@ -779,9 +778,8 @@ function initEditor() {
         }
 
         // Else we are going to use CodeMirror
-        if (!cmEditor) {
-            if (!setCodeMirror())
-                return;
+        if (!cmEditor && !setCodeMirror()) {
+            return;
         }
 
         if (mode) {
