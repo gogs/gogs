@@ -24,6 +24,8 @@ type SingleInstancePool struct {
 	// count maintains the number of times an instance with same identity checks in
 	// to the pool, and should be reduced to 0 (removed from map) by checking out
 	// with same number of times.
+	// The purpose of count is to delete lock when count down to 0 and recycle memory
+	// from map object.
 	count map[string]int
 }
 
