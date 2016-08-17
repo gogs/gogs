@@ -101,7 +101,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	}
 
 	if err = models.PushUpdate(models.PushUpdateOptions{
-		RefName:      task.RefName,
+		RefFullName:  task.RefName,
 		OldCommitID:  task.OldCommitID,
 		NewCommitID:  task.NewCommitID,
 		PusherID:     user.ID,

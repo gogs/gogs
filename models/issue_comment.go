@@ -157,7 +157,6 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	act := &Action{
 		ActUserID:    opts.Doer.ID,
 		ActUserName:  opts.Doer.Name,
-		ActEmail:     opts.Doer.Email,
 		Content:      fmt.Sprintf("%d|%s", opts.Issue.Index, strings.Split(opts.Content, "\n")[0]),
 		RepoID:       opts.Repo.ID,
 		RepoUserName: opts.Repo.Owner.Name,
