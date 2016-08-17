@@ -97,7 +97,7 @@ func runDump(ctx *cli.Context) error {
 	}
 
 	if err := os.Chmod(fileName, 0600); err != nil {
-		log.Printf("Can't change file access permission to 0600: %v", err)
+		log.Printf("Can't change file access permissions mask to 0600: %v", err)
 	}
 
 	log.Printf("Removing tmp work dir: %s", TmpWorkDir)
