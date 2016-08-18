@@ -15,10 +15,10 @@ function initCommentPreviewTab($form) {
                 "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
             },
             function (data) {
-                var $previewSegment = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
-                $previewSegment.html(data);
-                emojify.run($previewSegment[0]);
-                $('pre code', $previewSegment[0]).each(function (i, block) {
+                var $previewPanel = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
+                $previewPanel.html(data);
+                emojify.run($previewPanel[0]);
+                $('pre code', $previewPanel[0]).each(function (i, block) {
                     hljs.highlightBlock(block);
                 });
             }
@@ -45,10 +45,10 @@ function initEditPreviewTab($form) {
                     "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
                 },
                 function (data) {
-                    var $previewSegment = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
-                    $previewSegment.html(data);
-                    emojify.run($previewSegment[0]);
-                    $('pre code', $previewSegment[0]).each(function (i, block) {
+                    var $previewPanel = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
+                    $previewPanel.html(data);
+                    emojify.run($previewPanel[0]);
+                    $('pre code', $previewPanel[0]).each(function (i, block) {
                         hljs.highlightBlock(block);
                     });
                 }
@@ -68,9 +68,9 @@ function initEditDiffTab($form) {
                 "content": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
             },
             function (data) {
-                var $diffPreviewSegment = $form.find('.tab.segment[data-tab="' + $tabMenu.data('diff') + '"]');
-                $diffPreviewSegment.html(data);
-                emojify.run($diffPreviewSegment[0]);
+                var $diffPreviewPanel = $form.find('.tab.segment[data-tab="' + $tabMenu.data('diff') + '"]');
+                $diffPreviewPanel.html(data);
+                emojify.run($diffPreviewPanel[0]);
             }
         );
     });
@@ -96,9 +96,9 @@ function initCommentForm() {
 
     // Labels
     var $list = $('.ui.labels.list');
-    var $no_select = $list.find('.no-select');
-    var $label_menu = $('.select-label .menu');
-    var has_label_update_action = $label_menu.data('action') == 'update';
+    var $noSelect = $list.find('.no-select');
+    var $labelMenu = $('.select-label .menu');
+    var hasLabelUpdateAction = $labelMenu.data('action') == 'update';
 
     function updateIssueMeta(url, action, id) {
         $.post(url, {
@@ -108,41 +108,41 @@ function initCommentForm() {
         });
     }
 
-    $label_menu.find('.item:not(.no-select)').click(function () {
+    $labelMenu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked');
             $(this).find('.octicon').removeClass('octicon-check');
-            if (has_label_update_action) {
-                updateIssueMeta($label_menu.data('update-url'), "detach", $(this).data('id'));
+            if (hasLabelUpdateAction) {
+                updateIssueMeta($labelMenu.data('update-url'), "detach", $(this).data('id'));
             }
         } else {
             $(this).addClass('checked');
             $(this).find('.octicon').addClass('octicon-check');
-            if (has_label_update_action) {
-                updateIssueMeta($label_menu.data('update-url'), "attach", $(this).data('id'));
+            if (hasLabelUpdateAction) {
+                updateIssueMeta($labelMenu.data('update-url'), "attach", $(this).data('id'));
             }
         }
 
-        var label_ids = "";
+        var labelIds = "";
         $(this).parent().find('.item').each(function () {
             if ($(this).hasClass('checked')) {
-                label_ids += $(this).data('id') + ",";
+                labelIds += $(this).data('id') + ",";
                 $($(this).data('id-selector')).removeClass('hide');
             } else {
                 $($(this).data('id-selector')).addClass('hide');
             }
         });
-        if (label_ids.length == 0) {
-            $no_select.removeClass('hide');
+        if (labelIds.length == 0) {
+            $noSelect.removeClass('hide');
         } else {
-            $no_select.addClass('hide');
+            $noSelect.addClass('hide');
         }
-        $($(this).parent().data('id')).val(label_ids);
+        $($(this).parent().data('id')).val(labelIds);
         return false;
     });
-    $label_menu.find('.no-select.item').click(function () {
-        if (has_label_update_action) {
-            updateIssueMeta($label_menu.data('update-url'), "clear", '');
+    $labelMenu.find('.no-select.item').click(function () {
+        if (hasLabelUpdateAction) {
+            updateIssueMeta($labelMenu.data('update-url'), "clear", '');
         }
 
         $(this).parent().find('.item').each(function () {
@@ -153,14 +153,14 @@ function initCommentForm() {
         $list.find('.item').each(function () {
             $(this).addClass('hide');
         });
-        $no_select.removeClass('hide');
+        $noSelect.removeClass('hide');
         $($(this).parent().data('id')).val('');
     });
 
     function selectItem(select_id, input_id) {
         var $menu = $(select_id + ' .menu');
         var $list = $('.ui' + select_id + '.list');
-        var has_update_action = $menu.data('action') == 'update';
+        var hasUpdateAction = $menu.data('action') == 'update';
 
         $menu.find('.item:not(.no-select)').click(function () {
             $(this).parent().find('.item').each(function () {
@@ -168,7 +168,7 @@ function initCommentForm() {
             });
 
             $(this).addClass('selected active');
-            if (has_update_action) {
+            if (hasUpdateAction) {
                 updateIssueMeta($menu.data('update-url'), '', $(this).data('id'));
             }
             switch (input_id) {
@@ -189,7 +189,7 @@ function initCommentForm() {
                 $(this).removeClass('selected active')
             });
 
-            if (has_update_action) {
+            if (hasUpdateAction) {
                 updateIssueMeta($menu.data('update-url'), '', '');
             }
 
@@ -211,37 +211,37 @@ function initInstall() {
 
     // Database type change detection.
     $("#db_type").change(function () {
-        var sqlite_default = 'data/gogs.db';
-        var tidb_default = 'data/gogs_tidb';
+        var sqliteDefault = 'data/gogs.db';
+        var tidbDefault = 'data/gogs_tidb';
 
-        var db_type = $(this).val();
-        if (db_type === "SQLite3" || db_type === "TiDB") {
+        var dbType = $(this).val();
+        if (dbType === "SQLite3" || dbType === "TiDB") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
             $('#sqlite_settings').show();
 
-            if (db_type === "SQLite3" && $('#db_path').val() == tidb_default) {
-                $('#db_path').val(sqlite_default);
-            } else if (db_type === "TiDB" && $('#db_path').val() == sqlite_default) {
-                $('#db_path').val(tidb_default);
+            if (dbType === "SQLite3" && $('#db_path').val() == tidbDefault) {
+                $('#db_path').val(sqliteDefault);
+            } else if (dbType === "TiDB" && $('#db_path').val() == sqliteDefault) {
+                $('#db_path').val(tidbDefault);
             }
             return;
         }
 
-        var mysql_default = '127.0.0.1:3306';
-        var postgres_default = '127.0.0.1:5432';
+        var mysqlDefault = '127.0.0.1:3306';
+        var postgresDefault = '127.0.0.1:5432';
 
         $('#sqlite_settings').hide();
         $('#sql_settings').show();
-        if (db_type === "PostgreSQL") {
+        if (dbType === "PostgreSQL") {
             $('#pgsql_settings').show();
-            if ($('#db_host').val() == mysql_default) {
-                $('#db_host').val(postgres_default);
+            if ($('#db_host').val() == mysqlDefault) {
+                $('#db_host').val(postgresDefault);
             }
         } else {
             $('#pgsql_settings').hide();
-            if ($('#db_host').val() == postgres_default) {
-                $('#db_host').val(mysql_default);
+            if ($('#db_host').val() == postgresDefault) {
+                $('#db_host').val(mysqlDefault);
             }
         }
     });
@@ -317,11 +317,11 @@ function initRepository() {
     // Options
     if ($('.repository.settings.options').length > 0) {
         $('#repo_name').keyup(function () {
-            var $prompt_span = $('#repo-name-change-prompt');
+            var $prompt = $('#repo-name-change-prompt');
             if ($(this).val().toString().toLowerCase() != $(this).data('repo-name').toString().toLowerCase()) {
-                $prompt_span.show();
+                $prompt.show();
             } else {
-                $prompt_span.hide();
+                $prompt.hide();
             }
         });
 
@@ -345,12 +345,12 @@ function initRepository() {
     // Labels
     if ($('.repository.labels').length > 0) {
         // Create label
-        var $new_label_panel = $('.new-label.segment');
+        var $newLabelPanel = $('.new-label.segment');
         $('.new-label.button').click(function () {
-            $new_label_panel.show();
+            $newLabelPanel.show();
         });
         $('.new-label.segment .cancel').click(function () {
-            $new_label_panel.hide();
+            $newLabelPanel.hide();
         });
 
         $('.color-picker').each(function () {
@@ -400,32 +400,32 @@ function initRepository() {
     // Issues
     if ($('.repository.view.issue').length > 0) {
         // Edit issue title
-        var $issue_title = $('#issue-title');
-        var $edit_input = $('#edit-title-input input');
+        var $issueTitle = $('#issue-title');
+        var $editInput = $('#edit-title-input input');
         var editTitleToggle = function () {
-            $issue_title.toggle();
+            $issueTitle.toggle();
             $('.not-in-edit').toggle();
             $('#edit-title-input').toggle();
             $('.in-edit').toggle();
-            $edit_input.focus();
+            $editInput.focus();
             return false;
         };
         $('#edit-title').click(editTitleToggle);
         $('#cancel-edit-title').click(editTitleToggle);
         $('#save-edit-title').click(editTitleToggle).click(function () {
-            if ($edit_input.val().length == 0 ||
-                $edit_input.val() == $issue_title.text()) {
-                $edit_input.val($issue_title.text());
+            if ($editInput.val().length == 0 ||
+                $editInput.val() == $issueTitle.text()) {
+                $editInput.val($issueTitle.text());
                 return false;
             }
 
             $.post($(this).data('update-url'), {
                     "_csrf": csrf,
-                    "title": $edit_input.val()
+                    "title": $editInput.val()
                 },
                 function (data) {
-                    $edit_input.val(data.title);
-                    $issue_title.text(data.title);
+                    $editInput.val(data.title);
+                    $issueTitle.text(data.title);
                 });
             return false;
         });
@@ -433,48 +433,48 @@ function initRepository() {
         // Edit issue or comment content
         $('.edit-content').click(function () {
             var $segment = $(this).parent().parent().parent().next();
-            var $edit_content_zone = $segment.find('.edit-content-zone');
-            var $render_content = $segment.find('.render-content');
-            var $raw_content = $segment.find('.raw-content');
+            var $editContentZone = $segment.find('.edit-content-zone');
+            var $renderContent = $segment.find('.render-content');
+            var $rawContent = $segment.find('.raw-content');
             var $textarea;
 
             // Setup new form
-            if ($edit_content_zone.html().length == 0) {
-                $edit_content_zone.html($('#edit-content-form').html());
+            if ($editContentZone.html().length == 0) {
+                $editContentZone.html($('#edit-content-form').html());
                 $textarea = $segment.find('textarea');
 
                 // Give new write/preview data-tab name to distinguish from others
-                var $edit_content_form = $edit_content_zone.find('.ui.comment.form');
-                var $tabular_menu = $edit_content_form.find('.tabular.menu');
-                $tabular_menu.attr('data-write', $edit_content_zone.data('write'));
-                $tabular_menu.attr('data-preview', $edit_content_zone.data('preview'));
-                $tabular_menu.find('.write.item').attr('data-tab', $edit_content_zone.data('write'));
-                $tabular_menu.find('.preview.item').attr('data-tab', $edit_content_zone.data('preview'));
-                $edit_content_form.find('.write.segment').attr('data-tab', $edit_content_zone.data('write'));
-                $edit_content_form.find('.preview.segment').attr('data-tab', $edit_content_zone.data('preview'));
+                var $editContentForm = $editContentZone.find('.ui.comment.form');
+                var $tabMenu = $editContentForm.find('.tabular.menu');
+                $tabMenu.attr('data-write', $editContentZone.data('write'));
+                $tabMenu.attr('data-preview', $editContentZone.data('preview'));
+                $tabMenu.find('.write.item').attr('data-tab', $editContentZone.data('write'));
+                $tabMenu.find('.preview.item').attr('data-tab', $editContentZone.data('preview'));
+                $editContentForm.find('.write.segment').attr('data-tab', $editContentZone.data('write'));
+                $editContentForm.find('.preview.segment').attr('data-tab', $editContentZone.data('preview'));
 
-                initCommentPreviewTab($edit_content_form);
+                initCommentPreviewTab($editContentForm);
 
-                $edit_content_zone.find('.cancel.button').click(function () {
-                    $render_content.show();
-                    $edit_content_zone.hide();
+                $editContentZone.find('.cancel.button').click(function () {
+                    $renderContent.show();
+                    $editContentZone.hide();
                 });
-                $edit_content_zone.find('.save.button').click(function () {
-                    $render_content.show();
-                    $edit_content_zone.hide();
+                $editContentZone.find('.save.button').click(function () {
+                    $renderContent.show();
+                    $editContentZone.hide();
 
-                    $.post($edit_content_zone.data('update-url'), {
+                    $.post($editContentZone.data('update-url'), {
                             "_csrf": csrf,
                             "content": $textarea.val(),
-                            "context": $edit_content_zone.data('context')
+                            "context": $editContentZone.data('context')
                         },
                         function (data) {
                             if (data.length == 0) {
-                                $render_content.html($('#no-content').html());
+                                $renderContent.html($('#no-content').html());
                             } else {
-                                $render_content.html(data.content);
-                                emojify.run($render_content[0]);
-                                $('pre code', $render_content[0]).each(function (i, block) {
+                                $renderContent.html(data.content);
+                                emojify.run($renderContent[0]);
+                                $('pre code', $renderContent[0]).each(function (i, block) {
                                     hljs.highlightBlock(block);
                                 });
                             }
@@ -485,10 +485,10 @@ function initRepository() {
             }
 
             // Show write/preview tab and copy raw content as needed
-            $edit_content_zone.show();
-            $render_content.hide();
+            $editContentZone.show();
+            $renderContent.hide();
             if ($textarea.val().length == 0) {
-                $textarea.val($raw_content.text());
+                $textarea.val($rawContent.text());
             }
             $textarea.focus();
             return false;
@@ -508,16 +508,16 @@ function initRepository() {
         });
 
         // Change status
-        var $status_btn = $('#status-button');
+        var $statusButton = $('#status-button');
         $('#edit_area').keyup(function () {
             if ($(this).val().length == 0) {
-                $status_btn.text($status_btn.data('status'))
+                $statusButton.text($statusButton.data('status'))
             } else {
-                $status_btn.text($status_btn.data('status-and-comment'))
+                $statusButton.text($statusButton.data('status-and-comment'))
             }
         });
-        $status_btn.click(function () {
-            $('#status').val($status_btn.data('status-val'));
+        $statusButton.click(function () {
+            $('#status').val($statusButton.data('status-val'));
             $('#comment-form').submit();
         });
     }
@@ -564,7 +564,7 @@ function initRepository() {
 function initRepositoryCollaboration() {
     console.log('initRepositoryCollaboration');
 
-// Change collaborator access mode
+    // Change collaborator access mode
     $('.access-mode.menu .item').click(function () {
         var $menu = $(this).parent();
         $.post($menu.data('url'), {
@@ -576,19 +576,19 @@ function initRepositoryCollaboration() {
 }
 
 function initWikiForm() {
-    var $edit_area = $('.repository.wiki textarea#edit_area');
-    if ($edit_area.length > 0) {
+    var $editArea = $('.repository.wiki textarea#edit_area');
+    if ($editArea.length > 0) {
         new SimpleMDE({
             autoDownloadFontAwesome: false,
-            element: $edit_area[0],
+            element: $editArea[0],
             forceSync: true,
             previewRender: function (plainText, preview) { // Async method
                 setTimeout(function () {
                     // FIXME: still send render request when return back to edit mode
-                    $.post($edit_area.data('url'), {
+                    $.post($editArea.data('url'), {
                             "_csrf": csrf,
                             "mode": "gfm",
-                            "context": $edit_area.data('context'),
+                            "context": $editArea.data('context'),
                             "text": plainText
                         },
                         function (data) {
@@ -617,31 +617,13 @@ function initWikiForm() {
 }
 
 function initIssueForm() {
-    var $edit_area = $('.repository.issue textarea.edit_area');
-    if ($edit_area.length > 0) {
-        $edit_area.each(function (i, edit_area) {
+    var $editArea = $('.repository.issue textarea.edit_area');
+    if ($editArea.length > 0) {
+        $editArea.each(function (i, edit_area) {
             new SimpleMDE({
                 autoDownloadFontAwesome: false,
                 element: edit_area[0],
                 forceSync: true,
-                previewRender: function (plainText, preview) { // Async method
-                    setTimeout(function () {
-                        // FIXME: still send render request when return back to edit mode
-                        $.post($edit_area.data('url'), {
-                                "_csrf": csrf,
-                                "mode": "gfm",
-                                "context": $edit_area.data('context'),
-                                "text": plainText
-                            },
-                            function (data) {
-                                preview.innerHTML = '<div class="markdown">' + data + '</div>';
-                                emojify.run($('.editor-preview')[0]);
-                            }
-                        );
-                    }, 0);
-
-                    return "Loading...";
-                },
                 renderingConfig: {
                     singleLineBreaks: false
                 },
@@ -657,12 +639,8 @@ function initIssueForm() {
     }
 }
 
-var editArea;
-var editFilename;
-var smdEditor;
-var cmEditor;
-var markdownFileExts;
-var lineWrapExtensions;
+var simpleMDEditor;
+var codeMirrorEditor;
 
 // For IE
 String.prototype.endsWith = function (pattern) {
@@ -670,7 +648,7 @@ String.prototype.endsWith = function (pattern) {
     return d >= 0 && this.lastIndexOf(pattern) === d;
 };
 
-// Adding function to get the cursor position in a text field to jquery objects
+// Adding function to get the cursor position in a text field to jQuery object.
 (function ($, undefined) {
     $.fn.getCursorPosition = function () {
         var el = $(this).get(0);
@@ -688,19 +666,89 @@ String.prototype.endsWith = function (pattern) {
     }
 })(jQuery);
 
+
+function setSimpleMDE($editArea) {
+    if (codeMirrorEditor) {
+        codeMirrorEditor.toTextArea();
+        codeMirrorEditor = null;
+    }
+
+    if (simpleMDEditor) {
+        return true;
+    }
+
+    simpleMDEditor = new SimpleMDE({
+        autoDownloadFontAwesome: false,
+        element: $editArea[0],
+        forceSync: true,
+        renderingConfig: {
+            singleLineBreaks: false
+        },
+        indentWithTabs: false,
+        tabSize: 4,
+        spellChecker: false,
+        previewRender: function (plainText, preview) { // Async method
+            setTimeout(function () {
+                // FIXME: still send render request when return back to edit mode
+                $.post($editArea.data('url'), {
+                        "_csrf": csrf,
+                        "mode": "gfm",
+                        "context": $editArea.data('context'),
+                        "text": plainText
+                    },
+                    function (data) {
+                        preview.innerHTML = '<div class="markdown">' + data + '</div>';
+                        emojify.run($('.editor-preview')[0]);
+                    }
+                );
+            }, 0);
+
+            return "Loading...";
+        },
+        toolbar: ["bold", "italic", "strikethrough", "|",
+            "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
+            "code", "quote", "|",
+            "unordered-list", "ordered-list", "|",
+            "link", "image", "table", "horizontal-rule", "|",
+            "clean-block", "preview", "fullscreen", "side-by-side"]
+    });
+
+    return true;
+}
+
+function setCodeMirror($editArea) {
+    if (simpleMDEditor) {
+        simpleMDEditor.toTextArea();
+        simpleMDEditor = null;
+    }
+
+    if (codeMirrorEditor) {
+        return true;
+    }
+
+    codeMirrorEditor = CodeMirror.fromTextArea($editArea[0], {
+        lineNumbers: true
+    });
+    codeMirrorEditor.on("change", function (cm, change) {
+        $editArea.val(cm.getValue());
+    });
+
+    return true;
+}
+
 function initEditor() {
-    editFilename = $("#file-name");
-    editFilename.keyup(function (e) {
-        var sections = $('.breadcrumb span.section');
-        var dividers = $('.breadcrumb div.divider');
+    var $editFilename = $("#file-name");
+    $editFilename.keyup(function (e) {
+        var $section = $('.breadcrumb span.section');
+        var $divider = $('.breadcrumb div.divider');
         if (e.keyCode == 8) {
             if ($(this).getCursorPosition() == 0) {
-                if (sections.length > 0) {
-                    var value = sections.last().find('a').text();
+                if ($section.length > 0) {
+                    var value = $section.last().find('a').text();
                     $(this).val(value + $(this).val());
                     $(this)[0].setSelectionRange(value.length, value.length);
-                    sections.last().remove();
-                    dividers.last().remove();
+                    $section.last().remove();
+                    $divider.last().remove();
                 }
             }
         }
@@ -734,15 +782,15 @@ function initEditor() {
         $('#tree-name').val(parts.join('/'));
     }).trigger('keyup');
 
-    editArea = $('.repository.editor textarea#edit_area');
-    if (!editArea.length)
+    var $editArea = $('.repository.editor textarea#edit_area');
+    if (!$editArea.length)
         return;
 
-    markdownFileExts = editArea.data("markdown-file-exts").split(",");
-    lineWrapExtensions = editArea.data("line-wrap-extensions").split(",");
+    var markdownFileExts = $editArea.data("markdown-file-exts").split(",");
+    var lineWrapExtensions = $editArea.data("line-wrap-extensions").split(",");
 
-    editFilename.on("keyup", function (e) {
-        var val = editFilename.val(), m, mode, spec, extension, extWithDot, previewLink, dataUrl, apiCall;
+    $editFilename.on("keyup", function (e) {
+        var val = $editFilename.val(), m, mode, spec, extension, extWithDot, previewLink, dataUrl, apiCall;
         extension = extWithDot = "";
         if (m = /.+\.([^.]+)$/.exec(val)) {
             extension = m[1];
@@ -771,112 +819,38 @@ function initEditor() {
 
         // If this file is a Markdown extensions, we will load that editor and return
         if (markdownFileExts.indexOf(extWithDot) >= 0) {
-            if (setSimpleMDE()) {
+            if (setSimpleMDE($editArea)) {
                 return;
             }
         }
 
         // Else we are going to use CodeMirror
-        if (!cmEditor && !setCodeMirror()) {
+        if (!codeMirrorEditor && !setCodeMirror($editArea)) {
             return;
         }
 
         if (mode) {
-            cmEditor.setOption("mode", spec);
-            CodeMirror.autoLoadMode(cmEditor, mode);
+            codeMirrorEditor.setOption("mode", spec);
+            CodeMirror.autoLoadMode(codeMirrorEditor, mode);
         }
 
         if (lineWrapExtensions.indexOf(extWithDot) >= 0) {
-            cmEditor.setOption("lineWrapping", true);
+            codeMirrorEditor.setOption("lineWrapping", true);
         }
         else {
-            cmEditor.setOption("lineWrapping", false);
+            codeMirrorEditor.setOption("lineWrapping", false);
         }
     }).trigger('keyup');
-}
 
-function setSimpleMDE() {
-    if (cmEditor) {
-        cmEditor.toTextArea();
-        cmEditor = null;
-    }
 
-    if (smdEditor) {
-        return true;
-    }
-
-    smdEditor = new SimpleMDE({
-        autoDownloadFontAwesome: false,
-        element: editArea[0],
-        forceSync: true,
-        renderingConfig: {
-            singleLineBreaks: false
-        },
-        indentWithTabs: false,
-        tabSize: 4,
-        spellChecker: false,
-        previewRender: function (plainText, preview) { // Async method
-            setTimeout(function () {
-                // FIXME: still send render request when return back to edit mode
-                $.post(editArea.data('url'), {
-                        "_csrf": csrf,
-                        "mode": "gfm",
-                        "context": editArea.data('context'),
-                        "text": plainText
-                    },
-                    function (data) {
-                        preview.innerHTML = '<div class="markdown">' + data + '</div>';
-                        emojify.run($('.editor-preview')[0]);
-                    }
-                );
-            }, 0);
-
-            return "Loading...";
-        },
-        toolbar: ["bold", "italic", "strikethrough", "|",
-            "heading-1", "heading-2", "heading-3", "heading-bigger", "heading-smaller", "|",
-            "code", "quote", "|",
-            "unordered-list", "ordered-list", "|",
-            "link", "image", "table", "horizontal-rule", "|",
-            "clean-block", "preview", "fullscreen", "side-by-side"]
-    });
-
-    return true;
-}
-
-function setCodeMirror() {
-    if (smdEditor) {
-        smdEditor.toTextArea();
-        smdEditor = null;
-    }
-
-    if (cmEditor) {
-        return true;
-    }
-
-    cmEditor = CodeMirror.fromTextArea(editArea[0], {
-        lineNumbers: true
-    });
-    cmEditor.on("change", function (cm, change) {
-        editArea.val(cm.getValue());
-    });
-
-    return true;
-}
-
-function initQuickPull() {
     $('.js-quick-pull-choice-option').change(function () {
-        quickPullChoiceChange();
+        if ($(this).val() == 'commit-to-new-branch') {
+            $('.quick-pull-branch-name').show();
+        } else {
+            $('.quick-pull-branch-name').hide();
+        }
     });
-    quickPullChoiceChange();
-}
 
-function quickPullChoiceChange() {
-    var radio = $('.js-quick-pull-choice-option:checked');
-    if (radio.val() == 'commit-to-new-branch')
-        $('.quick-pull-branch-name').show();
-    else
-        $('.quick-pull-branch-name').hide();
 }
 
 function initOrganization() {
@@ -887,11 +861,11 @@ function initOrganization() {
     // Options
     if ($('.organization.settings.options').length > 0) {
         $('#org_name').keyup(function () {
-            var $prompt_span = $('#org-name-change-prompt');
+            var $prompt = $('#org-name-change-prompt');
             if ($(this).val().toString().toLowerCase() != $(this).data('org-name').toString().toLowerCase()) {
-                $prompt_span.show();
+                $prompt.show();
             } else {
-                $prompt_span.hide();
+                $prompt.hide();
             }
         });
     }
@@ -903,11 +877,11 @@ function initUserSettings() {
     // Options
     if ($('.user.settings.profile').length > 0) {
         $('#username').keyup(function () {
-            var $prompt_span = $('#name-change-prompt');
+            var $prompt = $('#name-change-prompt');
             if ($(this).val().toString().toLowerCase() != $(this).data('name').toString().toLowerCase()) {
-                $prompt_span.show();
+                $prompt.show();
             } else {
-                $prompt_span.hide();
+                $prompt.hide();
             }
         });
     }
@@ -942,7 +916,6 @@ function initWebhook() {
         )
     });
 }
-
 
 function initAdmin() {
     if ($('.admin').length == 0) {
@@ -991,8 +964,8 @@ function initAdmin() {
             $('.pam').hide();
             $('.has-tls').hide();
 
-            var auth_type = $(this).val();
-            switch (auth_type) {
+            var authType = $(this).val();
+            switch (authType) {
                 case '2':     // LDAP
                     $('.ldap').show();
                     break;
@@ -1008,7 +981,7 @@ function initAdmin() {
                     break;
             }
 
-            if (auth_type == '2' || auth_type == '5') {
+            if (authType == '2' || authType == '5') {
                 onSecurityProtocolChange()
             }
         });
@@ -1016,20 +989,20 @@ function initAdmin() {
     }
     // Edit authentication
     if ($('.admin.edit.authentication').length > 0) {
-        var auth_type = $('#auth_type').val();
-        if (auth_type == '2' || auth_type == '5') {
+        var authType = $('#auth_type').val();
+        if (authType == '2' || authType == '5') {
             $('#security_protocol').change(onSecurityProtocolChange);
         }
     }
 
     // Notice
     if ($('.admin.notice')) {
-        var $detail_modal = $('#detail-modal');
+        var $detailModal = $('#detail-modal');
 
         // Attach view detail modals
         $('.view-detail').click(function () {
-            $detail_modal.find('.content p').text($(this).data('content'));
-            $detail_modal.modal('show');
+            $detailModal.find('.content p').text($(this).data('content'));
+            $detailModal.modal('show');
             return false;
         });
 
@@ -1077,7 +1050,6 @@ function buttonsClickOnEnter() {
 function hideWhenLostFocus(body, parent) {
     $(document).click(function (e) {
         var target = e.target;
-
         if (!$(target).is(body) && !$(target).parents().is(parent)) {
             $(body).hide();
         }
@@ -1089,13 +1061,13 @@ function searchUsers() {
         return;
     }
 
-    var $search_user_box = $('#search-user-box');
-    var $result_list = $search_user_box.find('.results');
-    $search_user_box.keyup(function () {
+    var $searchUserBox = $('#search-user-box');
+    var $results = $searchUserBox.find('.results');
+    $searchUserBox.keyup(function () {
         var $this = $(this);
         var keyword = $this.find('input').val();
         if (keyword.length < 2) {
-            $result_list.hide();
+            $results.hide();
             return;
         }
 
@@ -1107,7 +1079,7 @@ function searchUsers() {
                     return str && str.length > 0;
                 };
 
-                $result_list.html('');
+                $results.html('');
 
                 if (response.ok && response.data.length) {
                     var html = '';
@@ -1118,20 +1090,20 @@ function searchUsers() {
                         }
                         html += '</div>';
                     });
-                    $result_list.html(html);
+                    $results.html(html);
                     $this.find('.results .item').click(function () {
                         $this.find('input').val($(this).find('.username').text());
-                        $result_list.hide();
+                        $results.hide();
                     });
-                    $result_list.show();
+                    $results.show();
                 } else {
-                    $result_list.hide();
+                    $results.hide();
                 }
             }
         });
     });
-    $search_user_box.find('input').focus(function () {
-        $search_user_box.keyup();
+    $searchUserBox.find('input').focus(function () {
+        $searchUserBox.keyup();
     });
     hideWhenLostFocus('#search-user-box .results', '#search-user-box');
 }
@@ -1142,45 +1114,45 @@ function searchRepositories() {
         return;
     }
 
-    var $search_repo_box = $('#search-repo-box');
-    var $result_list = $search_repo_box.find('.results');
-    $search_repo_box.keyup(function () {
+    var $searchRepoBox = $('#search-repo-box');
+    var $results = $searchRepoBox.find('.results');
+    $searchRepoBox.keyup(function () {
         var $this = $(this);
         var keyword = $this.find('input').val();
         if (keyword.length < 2) {
-            $result_list.hide();
+            $results.hide();
             return;
         }
 
         $.ajax({
-            url: suburl + '/api/v1/repos/search?q=' + keyword + "&uid=" + $search_repo_box.data('uid'),
+            url: suburl + '/api/v1/repos/search?q=' + keyword + "&uid=" + $searchRepoBox.data('uid'),
             dataType: "json",
             success: function (response) {
                 var notEmpty = function (str) {
                     return str && str.length > 0;
                 };
 
-                $result_list.html('');
+                $results.html('');
 
                 if (response.ok && response.data.length) {
                     var html = '';
                     $.each(response.data, function (i, item) {
                         html += '<div class="item"><i class="icon octicon octicon-repo"></i> <span class="fullname">' + item.full_name + '</span></div>';
                     });
-                    $result_list.html(html);
+                    $results.html(html);
                     $this.find('.results .item').click(function () {
                         $this.find('input').val($(this).find('.fullname').text().split("/")[1]);
-                        $result_list.hide();
+                        $results.hide();
                     });
-                    $result_list.show();
+                    $results.show();
                 } else {
-                    $result_list.hide();
+                    $results.hide();
                 }
             }
         });
     });
-    $search_repo_box.find('input').focus(function () {
-        $search_repo_box.keyup();
+    $searchRepoBox.find('input').focus(function () {
+        $searchRepoBox.keyup();
     });
     hideWhenLostFocus('#search-repo-box .results', '#search-repo-box');
 }
@@ -1213,8 +1185,6 @@ function initCodeView() {
         }).trigger('hashchange');
     }
 }
-
-var $dropz;
 
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
@@ -1265,23 +1235,23 @@ $(document).ready(function () {
     }
 
     // Dropzone
-    var $dropz = $('#dropzone');
-    if ($dropz.length > 0) {
+    var $dropzone = $('#dropzone');
+    if ($dropzone.length > 0) {
         // Disable auto discover for all elements:
         Dropzone.autoDiscover = false;
 
         var filenameDict = {};
-        $dropz.dropzone({
-            url: $dropz.data('upload-url'),
+        $dropzone.dropzone({
+            url: $dropzone.data('upload-url'),
             headers: {"X-Csrf-Token": csrf},
-            maxFiles: $dropz.data('max-file'),
-            maxFilesize: $dropz.data('max-size'),
-            acceptedFiles: ($dropz.data('accepts') === '*/*') ? null : $dropz.data('accepts'),
+            maxFiles: $dropzone.data('max-file'),
+            maxFilesize: $dropzone.data('max-size'),
+            acceptedFiles: ($dropzone.data('accepts') === '*/*') ? null : $dropzone.data('accepts'),
             addRemoveLinks: true,
-            dictDefaultMessage: $dropz.data('default-message'),
-            dictInvalidFileType: $dropz.data('invalid-input-type'),
-            dictFileTooBig: $dropz.data('file-too-big'),
-            dictRemoveFile: $dropz.data('remove-file'),
+            dictDefaultMessage: $dropzone.data('default-message'),
+            dictInvalidFileType: $dropzone.data('invalid-input-type'),
+            dictFileTooBig: $dropzone.data('file-too-big'),
+            dictRemoveFile: $dropzone.data('remove-file'),
             init: function () {
                 this.on("success", function (file, data) {
                     filenameDict[file.name] = data.uuid;
@@ -1292,8 +1262,11 @@ $(document).ready(function () {
                     if (file.name in filenameDict) {
                         $('#' + filenameDict[file.name]).remove();
                     }
-                    if ($dropz.data('remove-url') && $dropz.data('csrf')) {
-                        $.post($dropz.data('remove-url'), {file: filenameDict[file.name], _csrf: $dropz.data('csrf')});
+                    if ($dropzone.data('remove-url') && $dropzone.data('csrf')) {
+                        $.post($dropzone.data('remove-url'), {
+                            file: filenameDict[file.name],
+                            _csrf: $dropzone.data('csrf')
+                        });
                     }
                 })
             }
@@ -1327,15 +1300,6 @@ $(document).ready(function () {
         $('#' + e.trigger.getAttribute('id')).popup('show');
         e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
     });
-
-    // Clipboard for copying filename on edit page
-    if ($('.clipboard-tree-name').length) {
-        new Clipboard(document.querySelector('.clipboard-tree-name'), {
-            text: function () {
-                return $('#tree-name').val();
-            }
-        });
-    }
 
     // Helpers.
     $('.delete-button').click(function () {
@@ -1407,7 +1371,21 @@ $(document).ready(function () {
     initOrganization();
     initWebhook();
     initAdmin();
-    initQuickPull();
+    initCodeView();
+
+    // Repo clone url.
+    if ($('#repo-clone-url').length > 0) {
+        switch (localStorage.getItem('repo-clone-protocol')) {
+            case 'ssh':
+                if ($('#repo-clone-ssh').click().length === 0) {
+                    $('#repo-clone-https').click();
+                }
+                break;
+            default:
+                $('#repo-clone-https').click();
+                break;
+        }
+    }
 
     var routes = {
         'div.user.settings': initUserSettings,
@@ -1464,24 +1442,6 @@ function selectRange($list, $select, $from) {
     $select.addClass('active');
     changeHash('#' + $select.attr('rel'));
 }
-
-$(window).load(function () {
-    initCodeView();
-
-    // Repo clone url.
-    if ($('#repo-clone-url').length > 0) {
-        switch (localStorage.getItem('repo-clone-protocol')) {
-            case 'ssh':
-                if ($('#repo-clone-ssh').click().length === 0) {
-                    $('#repo-clone-https').click();
-                }
-                break;
-            default:
-                $('#repo-clone-https').click();
-                break;
-        }
-    }
-});
 
 $(function () {
     if ($('.user.signin').length > 0) return;

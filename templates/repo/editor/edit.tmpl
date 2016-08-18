@@ -79,7 +79,7 @@
 								</label>
 							</div>
 						</div>
-						<div class="quick-pull-branch-name">
+						<div class="quick-pull-branch-name {{if not (eq .commit_choice "commit-to-new-branch")}}hide{{end}}">
 							<div class="new-branch-name-input{{if .Err_Branchname}} error{{end}}">
 								<i class="octicon octicon-git-branch" height="16" width="10"></i>
 								<input type="text" name="new_branch_name" value="{{.new_branch_name}}" class="form-control input-contrast mr-2 js-quick-pull-new-branch-name" placeholder="New branch name…">
