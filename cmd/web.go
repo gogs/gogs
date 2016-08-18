@@ -79,7 +79,9 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.5"},
+		{"github.com/go-xorm/xorm", func() string {
+			return xorm.Version
+		}, "0.5.5"},
 		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
@@ -99,6 +101,31 @@ please use following command to update this package and recompile Gogs:
 go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 		}
 	}
+}
+
+func createPIDFile() error {
+	if setting.PID.Enabled {
+		_, err := os.Stat(setting.PID.Path)
+		if os.IsNotExist(err) || setting.PID.Override {
+			currentPid := os.Getpid()
+			file, err := os.Create(setting.PID.Path)
+			if err != nil {
+				return fmt.Errorf("Can't create PID file: %v", err)
+			}
+			defer func() {
+				if err := file.Close(); err != nil {
+					panic(err)
+				}
+			}()
+			_, err = file.WriteString(fmt.Sprintf("%d\n", currentPid))
+			if err != nil {
+				return fmt.Errorf("Can'write PID information on %s: %v", setting.PID.Path, err)
+			}
+		} else {
+			return fmt.Errorf("%s already exists", setting.PID.Path)
+		}
+	}
+	return nil
 }
 
 // newMacaron initializes Macaron instance.
@@ -187,8 +214,13 @@ func runWeb(ctx *cli.Context) error {
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
+
 	routers.GlobalInit()
 	checkVersion()
+
+	if err := createPIDFile(); err != nil {
+		log.Fatal(4, "This application is already running: %v", err)
+	}
 
 	m := newMacaron()
 
