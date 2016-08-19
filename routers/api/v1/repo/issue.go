@@ -161,8 +161,8 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		ctx.Error(500, "UpdateIssue", err)
 		return
 	}
-	if form.Status != nil {
-		if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, strings.Compare("closed", *form.Status) == 0); err != nil {
+	if form.State != nil {
+		if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, strings.Compare("closed", *form.State) == 0); err != nil {
 			ctx.Error(500, "ChangeStatus", err)
 			return
 		}
