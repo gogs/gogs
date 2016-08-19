@@ -32,6 +32,7 @@ import (
 	"github.com/gogits/git-module"
 	"github.com/gogits/go-gogs-client"
 
+	"github.com/Unknwon/com"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
@@ -79,9 +80,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string {
-			return xorm.Version
-		}, "0.5.5"},
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.5"},
 		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
@@ -104,26 +103,23 @@ go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 }
 
 func createPIDFile() error {
-	if setting.PID.Enabled {
-		_, err := os.Stat(setting.PID.Path)
-		if os.IsNotExist(err) || setting.PID.Override {
-			currentPid := os.Getpid()
-			file, err := os.Create(setting.PID.Path)
-			if err != nil {
-				return fmt.Errorf("Can't create PID file: %v", err)
-			}
-			defer func() {
-				if err := file.Close(); err != nil {
-					panic(err)
-				}
-			}()
-			_, err = file.WriteString(fmt.Sprintf("%d\n", currentPid))
-			if err != nil {
-				return fmt.Errorf("Can'write PID information on %s: %v", setting.PID.Path, err)
-			}
-		} else {
-			return fmt.Errorf("%s already exists", setting.PID.Path)
+	if !setting.PID.Enabled {
+		return nil
+	}
+	_, err := os.Stat(setting.PID.Path)
+	if os.IsNotExist(err) || setting.PID.Override {
+		currentPid := os.Getpid()
+		file, err := os.Create(setting.PID.Path)
+		if err != nil {
+			return fmt.Errorf("Can't create PID file: %v", err)
 		}
+		defer file.Close()
+		_, err = file.WriteString(com.ToStr(currentPid))
+		if err != nil {
+			return fmt.Errorf("Can'write PID information on %s: %v", setting.PID.Path, err)
+		}
+	} else {
+		return fmt.Errorf("%s already exists", setting.PID.Path)
 	}
 	return nil
 }
