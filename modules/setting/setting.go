@@ -247,6 +247,7 @@ var (
 	ShowFooterBranding    bool
 	ShowFooterVersion     bool
 	SupportMiniWinService bool
+	PreferredLicenses     []string
 
 	// Global setting objects
 	Cfg          *ini.File
@@ -569,6 +570,7 @@ func NewContext() {
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
+	PreferredLicenses = Cfg.Section("other").Key("PREFERRED_LICENSES").Strings(",")
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
