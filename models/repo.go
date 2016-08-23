@@ -62,13 +62,22 @@ var (
 
 // FIXME: This should probably be done in-place instead of creating a new string-slice...
 func sortPreferredLicenses(licenses []string) []string {
-	output := make([]string, 0)
+	output := make([]string, 0, len(licenses))
 	preferred := setting.PreferredLicenses
-	for i, l := range licenses {
-		for _, p := range preferred {
-			if strings.HasSuffix(l, p) {
-				output = append(output, l)
-				licenses = append(licenses[:i], licenses[i+1:])
+	log.Info("%d preferred licenses, they are %#v", len(preferred), preferred)
+	for _, p := range preferred {
+		found := true
+		// run loop until we don't find anything...
+		for found {
+			found = false
+			for i, l := range licenses {
+				if strings.Contains(l, p) {
+					output = append(output, l)
+					log.Info("%s was preferred...", l)
+					licenses = append(licenses[:i], licenses[1+i:]...)
+					found = true
+					break
+				}
 			}
 		}
 	}
