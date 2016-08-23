@@ -161,6 +161,12 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		ctx.Error(500, "UpdateIssue", err)
 		return
 	}
+	if form.State != nil {
+		if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
+			ctx.Error(500, "ChangeStatus", err)
+			return
+		}
+	}
 
 	// Refetch from database to assign some automatic values
 	issue, err = models.GetIssueByID(issue.ID)
