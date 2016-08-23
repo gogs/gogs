@@ -76,9 +76,8 @@ func Search(ctx *context.APIContext) {
 	})
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
-func ListMyRepos(ctx *context.APIContext) {
-	ownRepos, err := models.GetUserRepositories(ctx.User.ID, true, 1, ctx.User.NumRepos)
+func listUserRepos(ctx *context.APIContext, u *models.User, all bool) {
+	ownRepos, err := models.GetUserRepositories(u.ID, true, 1, u.NumRepos)
 	if err != nil {
 		ctx.Error(500, "GetRepositories", err)
 		return
@@ -107,6 +106,51 @@ func ListMyRepos(ctx *context.APIContext) {
 	}
 
 	ctx.JSON(200, &repos)
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
+func ListMyRepos(ctx *context.APIContext) {
+	listUserRepos(ctx, ctx.User, true)
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-user-repositories
+func ListUserRepos(ctx *context.APIContext) {
+	u, err := models.GetUserByName(ctx.Params(":username"))
+
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "ListUserRepos", err)
+		}
+	}
+
+	if ctx.Written() {
+		return
+	}
+	listUserRepos(ctx, u, false)
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-org-repositories
+func ListOrgRepos(ctx *context.APIContext) {
+	u, err := models.GetUserByName(ctx.Params(":org"))
+
+	if !u.IsOrganization() {
+		ctx.Status(404)
+	}
+
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "ListOrgRepos", err)
+		}
+	}
+
+	if ctx.Written() {
+		return
+	}
+	listUserRepos(ctx, u, false)
 }
 
 func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateRepoOption) {
