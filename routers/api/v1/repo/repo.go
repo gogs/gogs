@@ -116,16 +116,12 @@ func ListMyRepos(ctx *context.APIContext) {
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-user-repositories
 func ListUserRepos(ctx *context.APIContext) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
-
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "ListUserRepos", err)
 		}
-	}
-
-	if ctx.Written() {
 		return
 	}
 	listUserRepos(ctx, u, false)
@@ -134,9 +130,9 @@ func ListUserRepos(ctx *context.APIContext) {
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-org-repositories
 func ListOrgRepos(ctx *context.APIContext) {
 	u, err := models.GetUserByName(ctx.Params(":org"))
-
 	if !u.IsOrganization() {
 		ctx.Status(404)
+		return
 	}
 
 	if err != nil {
@@ -145,9 +141,6 @@ func ListOrgRepos(ctx *context.APIContext) {
 		} else {
 			ctx.Error(500, "ListOrgRepos", err)
 		}
-	}
-
-	if ctx.Written() {
 		return
 	}
 	listUserRepos(ctx, u, false)
