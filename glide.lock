@@ -43,7 +43,7 @@ imports:
 - name: github.com/gogits/git-module
   version: f78bf3bf703cb3eb0e85a9475d26826939feda4f
 - name: github.com/gogits/go-gogs-client
-  version: 51c4df8c350b32f095c8eb236aae2e306025eead
+  version: 5e50f0292565471b41b3c73fcadcb886140f0082
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
