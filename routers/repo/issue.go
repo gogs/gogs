@@ -210,7 +210,7 @@ func Issues(ctx *context.Context) {
 	ctx.Data["Issues"] = issues
 
 	// Get milestones.
-	ctx.Data["Milestones"], err = models.GetAllRepoMilestones(repo.ID)
+	ctx.Data["Milestones"], err = models.GetMilestonesByRepoID(repo.ID)
 	if err != nil {
 		ctx.Handle(500, "GetAllRepoMilestones", err)
 		return
@@ -1099,12 +1099,12 @@ func EditMilestone(ctx *context.Context) {
 	ctx.Data["RequireDatetimepicker"] = true
 	ctx.Data["DateLang"] = setting.DateLang(ctx.Locale.Language())
 
-	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
+	m, err := models.GetMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByID", nil)
+			ctx.Handle(404, "", nil)
 		} else {
-			ctx.Handle(500, "GetMilestoneByID", err)
+			ctx.Handle(500, "GetMilestoneByRepoID", err)
 		}
 		return
 	}
@@ -1138,12 +1138,12 @@ func EditMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
 		return
 	}
 
-	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
+	m, err := models.GetMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByID", nil)
+			ctx.Handle(404, "", nil)
 		} else {
-			ctx.Handle(500, "GetMilestoneByID", err)
+			ctx.Handle(500, "GetMilestoneByRepoID", err)
 		}
 		return
 	}
@@ -1160,12 +1160,12 @@ func EditMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
 }
 
 func ChangeMilestonStatus(ctx *context.Context) {
-	m, err := models.GetMilestoneByID(ctx.ParamsInt64(":id"))
+	m, err := models.GetMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrMilestoneNotExist(err) {
-			ctx.Handle(404, "GetMilestoneByID", err)
+			ctx.Handle(404, "", err)
 		} else {
-			ctx.Handle(500, "GetMilestoneByID", err)
+			ctx.Handle(500, "GetMilestoneByRepoID", err)
 		}
 		return
 	}
@@ -1194,8 +1194,8 @@ func ChangeMilestonStatus(ctx *context.Context) {
 }
 
 func DeleteMilestone(ctx *context.Context) {
-	if err := models.DeleteMilestoneByID(ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("DeleteMilestoneByID: " + err.Error())
+	if err := models.DeleteMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteMilestoneByRepoID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.milestones.deletion_success"))
 	}

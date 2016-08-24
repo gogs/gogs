@@ -359,7 +359,7 @@ func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
 
 // GetMilestoneByID returns the milestone belongs to repository by given ID.
 func (repo *Repository) GetMilestoneByID(milestoneID int64) (*Milestone, error) {
-	return GetRepoMilestoneByID(repo.ID, milestoneID)
+	return GetMilestoneByRepoID(repo.ID, milestoneID)
 }
 
 // IssueStats returns number of open and closed repository issues by given filter mode.
