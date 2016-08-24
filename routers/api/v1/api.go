@@ -259,6 +259,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 								Delete(repo.ClearIssueLabels)
 							m.Delete("/:id", repo.DeleteIssueLabel)
 						})
+						m.Group("/milestone", func() {
+							m.Combo("").Get(repo.GetIssueMilestone).
+								Post(bind(api.SetIssueMilestoneOption{}), repo.SetIssueMilestone).
+								Delete(repo.DeleteIssueMilestone)
+						})
 
 					})
 				}, mustEnableIssues)
@@ -267,6 +272,13 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Post(bind(api.CreateLabelOption{}), repo.CreateLabel)
 					m.Combo("/:id").Get(repo.GetLabel).Patch(bind(api.EditLabelOption{}), repo.EditLabel).
 						Delete(repo.DeleteLabel)
+				})
+				m.Group("/milestones", func() {
+					m.Combo("").Get(repo.ListMilestones).
+						Post(bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
+					m.Combo("/:id").Get(repo.GetMilestone).Patch(bind(api.EditMilestoneOption{}), repo.EditMilestone).
+						Delete(repo.DeleteMilestone)
+					m.Post("/:id/:action", repo.ChangeMilestoneStatus)
 				})
 			}, repoAssignment())
 		}, reqToken())
