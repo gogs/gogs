@@ -62,73 +62,73 @@ type Issue struct {
 	Comments    []*Comment    `xorm:"-"`
 }
 
-func (i *Issue) BeforeInsert() {
-	i.CreatedUnix = time.Now().Unix()
-	i.UpdatedUnix = i.CreatedUnix
+func (issue *Issue) BeforeInsert() {
+	issue.CreatedUnix = time.Now().Unix()
+	issue.UpdatedUnix = issue.CreatedUnix
 }
 
-func (i *Issue) BeforeUpdate() {
-	i.UpdatedUnix = time.Now().Unix()
-	i.DeadlineUnix = i.Deadline.Unix()
+func (issue *Issue) BeforeUpdate() {
+	issue.UpdatedUnix = time.Now().Unix()
+	issue.DeadlineUnix = issue.Deadline.Unix()
 }
 
-func (i *Issue) AfterSet(colName string, _ xorm.Cell) {
+func (issue *Issue) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
 	case "id":
-		i.Attachments, err = GetAttachmentsByIssueID(i.ID)
+		issue.Attachments, err = GetAttachmentsByIssueID(issue.ID)
 		if err != nil {
-			log.Error(3, "GetAttachmentsByIssueID[%d]: %v", i.ID, err)
+			log.Error(3, "GetAttachmentsByIssueID[%d]: %v", issue.ID, err)
 		}
 
-		i.Comments, err = GetCommentsByIssueID(i.ID)
+		issue.Comments, err = GetCommentsByIssueID(issue.ID)
 		if err != nil {
-			log.Error(3, "GetCommentsByIssueID[%d]: %v", i.ID, err)
+			log.Error(3, "GetCommentsByIssueID[%d]: %v", issue.ID, err)
 		}
 
-		i.Labels, err = GetLabelsByIssueID(i.ID)
+		issue.Labels, err = GetLabelsByIssueID(issue.ID)
 		if err != nil {
-			log.Error(3, "GetLabelsByIssueID[%d]: %v", i.ID, err)
+			log.Error(3, "GetLabelsByIssueID[%d]: %v", issue.ID, err)
 		}
 
 	case "poster_id":
-		i.Poster, err = GetUserByID(i.PosterID)
+		issue.Poster, err = GetUserByID(issue.PosterID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
-				i.PosterID = -1
-				i.Poster = NewGhostUser()
+				issue.PosterID = -1
+				issue.Poster = NewGhostUser()
 			} else {
-				log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
+				log.Error(3, "GetUserByID[%d]: %v", issue.ID, err)
 			}
 			return
 		}
 
 	case "milestone_id":
-		if i.MilestoneID == 0 {
+		if issue.MilestoneID == 0 {
 			return
 		}
 
-		i.Milestone, err = GetMilestoneByID(i.MilestoneID)
+		issue.Milestone, err = GetMilestoneByRepoID(issue.RepoID, issue.MilestoneID)
 		if err != nil {
-			log.Error(3, "GetMilestoneById[%d]: %v", i.ID, err)
+			log.Error(3, "GetMilestoneById[%d]: %v", issue.ID, err)
 		}
 
 	case "assignee_id":
-		if i.AssigneeID == 0 {
+		if issue.AssigneeID == 0 {
 			return
 		}
 
-		i.Assignee, err = GetUserByID(i.AssigneeID)
+		issue.Assignee, err = GetUserByID(issue.AssigneeID)
 		if err != nil {
-			log.Error(3, "GetUserByID[%d]: %v", i.ID, err)
+			log.Error(3, "GetUserByID[%d]: %v", issue.ID, err)
 		}
 
 	case "deadline_unix":
-		i.Deadline = time.Unix(i.DeadlineUnix, 0).Local()
+		issue.Deadline = time.Unix(issue.DeadlineUnix, 0).Local()
 	case "created_unix":
-		i.Created = time.Unix(i.CreatedUnix, 0).Local()
+		issue.Created = time.Unix(issue.CreatedUnix, 0).Local()
 	case "updated_unix":
-		i.Updated = time.Unix(i.UpdatedUnix, 0).Local()
+		issue.Updated = time.Unix(issue.UpdatedUnix, 0).Local()
 	}
 }
 
@@ -600,7 +600,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	opts.Issue.Index = opts.Repo.NextIssueIndex()
 
 	if opts.Issue.MilestoneID > 0 {
-		milestone, err := getMilestoneByID(e, opts.Issue.MilestoneID)
+		milestone, err := getMilestoneByRepoID(e, opts.Issue.RepoID, opts.Issue.MilestoneID)
 		if err != nil && !IsErrMilestoneNotExist(err) {
 			return fmt.Errorf("getMilestoneByID: %v", err)
 		}
@@ -1392,50 +1392,41 @@ func NewMilestone(m *Milestone) (err error) {
 		return err
 	}
 
-	if _, err = sess.Exec("UPDATE `repository` SET num_milestones=num_milestones+1 WHERE id=?", m.RepoID); err != nil {
+	if _, err = sess.Exec("UPDATE `repository` SET num_milestones = num_milestones + 1 WHERE id = ?", m.RepoID); err != nil {
 		return err
 	}
 	return sess.Commit()
 }
 
-func getMilestoneByID(e Engine, id int64) (*Milestone, error) {
-	m := &Milestone{ID: id}
+func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
+	m := &Milestone{
+		ID:     id,
+		RepoID: repoID,
+	}
 	has, err := e.Get(m)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist{id, 0}
+		return nil, ErrMilestoneNotExist{id, repoID}
 	}
 	return m, nil
 }
 
-// GetMilestoneByID returns the milestone of given ID.
-func GetMilestoneByID(id int64) (*Milestone, error) {
-	return getMilestoneByID(x, id)
+// GetWebhookByRepoID returns milestone of repository by given ID.
+func GetMilestoneByRepoID(repoID, id int64) (*Milestone, error) {
+	return getMilestoneByRepoID(x, repoID, id)
 }
 
-// GetRepoMilestoneByID returns the milestone of given ID and repository.
-func GetRepoMilestoneByID(repoID, milestoneID int64) (*Milestone, error) {
-	m := &Milestone{ID: milestoneID, RepoID: repoID}
-	has, err := x.Get(m)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrMilestoneNotExist{milestoneID, repoID}
-	}
-	return m, nil
-}
-
-// GetAllRepoMilestones returns all milestones of given repository.
-func GetAllRepoMilestones(repoID int64) ([]*Milestone, error) {
+// GetMilestonesByRepoID returns all milestones of a repository.
+func GetMilestonesByRepoID(repoID int64) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, 10)
-	return miles, x.Where("repo_id=?", repoID).Find(&miles)
+	return miles, x.Where("repo_id = ?", repoID).Find(&miles)
 }
 
 // GetMilestones returns a list of milestones of given repository and status.
 func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) {
 	miles := make([]*Milestone, 0, setting.UI.IssuePagingNum)
-	sess := x.Where("repo_id=? AND is_closed=?", repoID, isClosed)
+	sess := x.Where("repo_id = ? AND is_closed = ?", repoID, isClosed)
 	if page > 0 {
 		sess = sess.Limit(setting.UI.IssuePagingNum, (page-1)*setting.UI.IssuePagingNum)
 	}
@@ -1509,7 +1500,7 @@ func changeMilestoneIssueStats(e *xorm.Session, issue *Issue) error {
 		return nil
 	}
 
-	m, err := getMilestoneByID(e, issue.MilestoneID)
+	m, err := getMilestoneByRepoID(e, issue.RepoID, issue.MilestoneID)
 	if err != nil {
 		return err
 	}
@@ -1543,7 +1534,7 @@ func ChangeMilestoneIssueStats(issue *Issue) (err error) {
 
 func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) error {
 	if oldMilestoneID > 0 {
-		m, err := getMilestoneByID(e, oldMilestoneID)
+		m, err := getMilestoneByRepoID(e, issue.RepoID, oldMilestoneID)
 		if err != nil {
 			return err
 		}
@@ -1561,7 +1552,7 @@ func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) 
 	}
 
 	if issue.MilestoneID > 0 {
-		m, err := getMilestoneByID(e, issue.MilestoneID)
+		m, err := getMilestoneByRepoID(e, issue.RepoID, issue.MilestoneID)
 		if err != nil {
 			return err
 		}
@@ -1595,9 +1586,9 @@ func ChangeMilestoneAssign(issue *Issue, oldMilestoneID int64) (err error) {
 	return sess.Commit()
 }
 
-// DeleteMilestoneByID deletes a milestone by given ID.
-func DeleteMilestoneByID(id int64) error {
-	m, err := GetMilestoneByID(id)
+// DeleteMilestoneByRepoID deletes a milestone from a repository.
+func DeleteMilestoneByRepoID(repoID, id int64) error {
+	m, err := GetMilestoneByRepoID(repoID, id)
 	if err != nil {
 		if IsErrMilestoneNotExist(err) {
 			return nil
@@ -1626,9 +1617,9 @@ func DeleteMilestoneByID(id int64) error {
 		return err
 	}
 
-	if _, err = sess.Exec("UPDATE `issue` SET milestone_id=0 WHERE milestone_id=?", m.ID); err != nil {
+	if _, err = sess.Exec("UPDATE `issue` SET milestone_id = 0 WHERE milestone_id = ?", m.ID); err != nil {
 		return err
-	} else if _, err = sess.Exec("UPDATE `issue_user` SET milestone_id=0 WHERE milestone_id=?", m.ID); err != nil {
+	} else if _, err = sess.Exec("UPDATE `issue_user` SET milestone_id = 0 WHERE milestone_id = ?", m.ID); err != nil {
 		return err
 	}
 	return sess.Commit()

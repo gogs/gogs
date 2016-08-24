@@ -49,7 +49,6 @@ func GetIssue(ctx *context.APIContext) {
 		}
 		return
 	}
-
 	ctx.JSON(200, issue.APIFormat())
 }
 
@@ -133,7 +132,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 			assignee, err := models.GetUserByName(*form.Assignee)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
-					ctx.Error(422, "", fmt.Sprintf("Assignee does not exist: [name: %s]", *form.Assignee))
+					ctx.Error(422, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
 				} else {
 					ctx.Error(500, "GetUserByName", err)
 				}
