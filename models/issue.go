@@ -233,17 +233,13 @@ func (i *Issue) HasLabel(labelID int64) bool {
 }
 
 func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
-	var (
-		new_issue *Issue
-		err       error
-	)
+	var err error
 	if issue.IsPull {
-		new_issue, err = GetIssueByID(issue.ID)
+		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error(4, "GetIssueByID(%d): %v", issue.ID, err)
+			log.Error(4, "LoadIssue: %v", err)
 			return
 		}
-		issue.PullRequest.Issue = new_issue
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
 			Action:      api.HOOK_ISSUE_LABEL_UPDATED,
 			Index:       issue.Index,
@@ -343,13 +339,11 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	}
 
 	if issue.IsPull {
-		var new_issue *Issue
-		new_issue, err = GetIssueByID(issue.ID)
+		err = issue.PullRequest.LoadIssue()
 		if err != nil {
 			log.Error(4, "GetIssueByID(%d): %v", issue.ID, err)
 			return
 		}
-		issue.PullRequest.Issue = new_issue
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
 			Action:      api.HOOK_ISSUE_LABEL_CLEARED,
 			Index:       issue.Index,
