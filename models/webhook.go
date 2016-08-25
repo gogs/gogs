@@ -165,12 +165,15 @@ func (w *Webhook) HasPullRequestEvent() bool {
 }
 
 func (w *Webhook) EventsArray() []string {
-	events := make([]string, 0, 2)
+	events := make([]string, 0, 3)
 	if w.HasCreateEvent() {
 		events = append(events, "create")
 	}
 	if w.HasPushEvent() {
 		events = append(events, "push")
+	}
+	if w.HasPullRequestEvent() {
+		events = append(events, "pull_request")
 	}
 	return events
 }

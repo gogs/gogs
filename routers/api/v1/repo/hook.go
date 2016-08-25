@@ -59,8 +59,9 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 		HookEvent: &models.HookEvent{
 			ChooseEvents: true,
 			HookEvents: models.HookEvents{
-				Create: com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE)),
-				Push:   com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH)),
+				Create:      com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE)),
+				Push:        com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH)),
+				PullRequest: com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST)),
 			},
 		},
 		IsActive:     form.Active,
@@ -146,6 +147,7 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 	w.ChooseEvents = true
 	w.Create = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE))
 	w.Push = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH))
+	w.PullRequest = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST))
 	if err = w.UpdateEvent(); err != nil {
 		ctx.Error(500, "UpdateEvent", err)
 		return
