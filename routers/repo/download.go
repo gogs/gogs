@@ -25,7 +25,7 @@ func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 	if !isTextFile {
 		_, isImageFile := base.IsImageFile(buf)
 		if !isImageFile {
-			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+path.Base(ctx.Repo.TreeName)+"\"")
+			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+path.Base(ctx.Repo.TreePath)+"\"")
 			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
 	} else if !ctx.QueryBool("render") {
@@ -42,11 +42,11 @@ func ServeBlob(ctx *context.Context, blob *git.Blob) error {
 		return err
 	}
 
-	return ServeData(ctx, ctx.Repo.TreeName, dataRc)
+	return ServeData(ctx, ctx.Repo.TreePath, dataRc)
 }
 
 func SingleDownload(ctx *context.Context) {
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
+	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
 			ctx.Handle(404, "GetBlobByPath", nil)

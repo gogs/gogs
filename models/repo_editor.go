@@ -173,7 +173,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (repo *Repository) GetDiffPreview(branch, treeName, content string) (diff *Diff, err error) {
+func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *Diff, err error) {
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -184,13 +184,13 @@ func (repo *Repository) GetDiffPreview(branch, treeName, content string) (diff *
 	}
 
 	localPath := repo.LocalCopyPath()
-	filePath := path.Join(localPath, treeName)
+	filePath := path.Join(localPath, treePath)
 	os.MkdirAll(filepath.Dir(filePath), os.ModePerm)
 	if err = ioutil.WriteFile(filePath, []byte(content), 0666); err != nil {
 		return nil, fmt.Errorf("WriteFile: %v", err)
 	}
 
-	cmd := exec.Command("git", "diff", treeName)
+	cmd := exec.Command("git", "diff", treePath)
 	cmd.Dir = localPath
 	cmd.Stderr = os.Stderr
 

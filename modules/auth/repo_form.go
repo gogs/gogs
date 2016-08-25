@@ -278,7 +278,7 @@ func (f *NewWikiForm) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 //         \/      \/
 
 type EditRepoFileForm struct {
-	TreeName      string `binding:"Required;MaxSize(500)"`
+	TreePath      string `binding:"Required;MaxSize(500)"`
 	Content       string `binding:"Required"`
 	CommitSummary string `binding:"MaxSize(100)`
 	CommitMessage string

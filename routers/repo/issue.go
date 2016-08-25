@@ -331,6 +331,8 @@ func setTemplateIfExists(ctx *context.Context, ctxDataKey string, possibleFiles 
 func NewIssue(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
+	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
 	setTemplateIfExists(ctx, ISSUE_TEMPLATE_KEY, IssueTemplateCandidates)
 	renderAttachmentSettings(ctx)
 
@@ -338,10 +340,6 @@ func NewIssue(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-
-	ctx.Data["RequireHighlightJS"] = true
-	ctx.Data["RequireSimpleMDE"] = true
-	ctx.Data["RepoName"] = ctx.Repo.Repository.Name
 
 	ctx.HTML(200, ISSUE_NEW)
 }
@@ -403,7 +401,6 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
-	ctx.Data["RepoName"] = ctx.Repo.Repository.Name
 	ctx.Data["RequireHighlightJS"] = true
 	ctx.Data["RequireSimpleMDE"] = true
 	renderAttachmentSettings(ctx)
@@ -493,6 +490,8 @@ func UploadIssueAttachment(ctx *context.Context) {
 }
 
 func ViewIssue(ctx *context.Context) {
+	ctx.Data["RequireHighlightJS"] = true
+	ctx.Data["RequireSimpleMDE"] = true
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
@@ -637,11 +636,6 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["Issue"] = issue
 	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))
 	ctx.Data["SignInLink"] = setting.AppSubUrl + "/user/login?redirect_to=" + ctx.Data["Link"].(string)
-
-	ctx.Data["RequireHighlightJS"] = true
-	ctx.Data["RequireSimpleMDE"] = true
-	ctx.Data["RepoName"] = ctx.Repo.Repository.Name
-
 	ctx.HTML(200, ISSUE_VIEW)
 }
 

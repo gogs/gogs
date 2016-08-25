@@ -8,7 +8,7 @@
 			<input type="hidden" name="last_commit" value="{{.last_commit}}">
 			<div class="ui secondary menu">
 				<div class="fitted item treepath">
-					<div class="ui breadcrumb field {{if .Err_Filename}}error{{end}}">
+					<div class="ui breadcrumb field {{if .Err_TreePath}}error{{end}}">
 						<a class="section" href="{{EscapePound $.BranchLink}}">{{.Repository.Name}}</a>
 						{{ $n := len .TreeNames}}
 						{{ $l := Subtract $n 1}}
@@ -22,8 +22,8 @@
 							{{end}}
 						{{end}}
 						<!-- <button class="clipboard-tree-name octicon octicon-clippy poping up" type="button" data-content="{{.i18n.Tr "repo.copy_file_path_to_clipboard"}}" data-position="bottom center" data-variation="tiny inverted"></button> -->
-						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}{{if not .IsNewFile}}/{{EscapePound $.TreeName}}{{end}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
-						<input type="hidden" id="tree-name" name="tree_name" value="{{.TreeName}}" required>
+						<span class="repo-edit-file-cancel">{{.i18n.Tr "repo.or"}} <a href="{{EscapePound $.BranchLink}}{{if not .IsNewFile}}/{{EscapePound .TreePath}}{{end}}">{{.i18n.Tr "repo.cancel_lower"}}</a></span>
+						<input type="hidden" id="tree_path" name="tree_path" value="{{.TreePath}}" required>
 					</div>
 				</div>
 			</div>
@@ -32,11 +32,11 @@
 					<a class="active item" data-tab="write"><i class="octicon octicon-code"></i> {{if .IsNewFile}}{{.i18n.Tr "repo.new_file"}}{{else}}{{.i18n.Tr "repo.edit_file"}}{{end}}</a>
 					{{if not .IsNewFile}}
 					<a class="item" data-tab="preview" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}" data-preview-file-modes="{{.PreviewableFileModes}}"><i class="octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
-					<a class="item" data-tab="diff" data-url="{{.RepoLink}}/_preview/{{.BranchName}}/{{.TreeName}}" data-context="{{.BranchLink}}"><i class="octicon octicon-diff"></i> {{.i18n.Tr "repo.preview_changes"}}</a>
+					<a class="item" data-tab="diff" data-url="{{.RepoLink}}/_preview/{{.BranchName}}/{{.TreePath}}" data-context="{{.BranchLink}}"><i class="octicon octicon-diff"></i> {{.i18n.Tr "repo.preview_changes"}}</a>
 					{{end}}
 				</div>
 				<div class="ui bottom attached active tab segment" data-tab="write">
-					<textarea id="edit_area" name="content" data-id="repo-{{.Repository.Name}}-{{.TreeName}}"
+					<textarea id="edit_area" name="content" data-id="repo-{{.Repository.Name}}-{{.TreePath}}"
 						data-url="{{AppSubUrl}}/api/v1/markdown"
 						data-context="{{.RepoLink}}"
 						data-markdown-file-exts="{{.MarkdownFileExts}}"
@@ -55,7 +55,7 @@
 				<div class="commit-form">
 					<h3>{{.i18n.Tr "repo.commit_changes"}}</h3>
 					<div class="field">
-						<input name="commit_summary" placeholder="{{if .IsNewFile}}{{.i18n.Tr "repo.add"}} '{{.TreeName}}/<filename>'{{else}}{{.i18n.Tr "repo.update"}} '{{.TreeName}}'{{end}}" value="{{.commit_summary}}">
+						<input name="commit_summary" placeholder="{{if .IsNewFile}}{{.i18n.Tr "repo.add"}} '{{.TreePath}}/<filename>'{{else}}{{.i18n.Tr "repo.update"}} '{{.TreePath}}'{{end}}" value="{{.commit_summary}}">
 					</div>
 					<div class="field">
 						<textarea name="commit_message" placeholder="{{.i18n.Tr "repo.default_commit_message"}}" rows="5">{{.commit_message}}</textarea>
@@ -80,7 +80,7 @@
 							</div>
 						</div>
 						<div class="quick-pull-branch-name {{if not (eq .commit_choice "commit-to-new-branch")}}hide{{end}}">
-							<div class="new-branch-name-input{{if .Err_Branchname}} error{{end}}">
+							<div class="new-branch-name-input{{if .Err_NewBranchName}} error{{end}}">
 								<i class="octicon octicon-git-branch" height="16" width="10"></i>
 								<input type="text" name="new_branch_name" value="{{.new_branch_name}}" class="form-control input-contrast mr-2 js-quick-pull-new-branch-name" placeholder="New branch name…">
 								<span class="text-muted js-quick-pull-normalization-info"></span>
@@ -91,7 +91,7 @@
 				<button type="submit" class="ui green button">
 					{{.i18n.Tr "repo.commit_changes"}}
 				</button>
-				<a class="ui button red" href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreeName}}">{{.i18n.Tr "repo.cancel"}}</a>
+				<a class="ui button red" href="{{EscapePound $.BranchLink}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.cancel"}}</a>
 			</div>
 		</form>
 	</div>

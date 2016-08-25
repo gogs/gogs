@@ -2,6 +2,7 @@
 <div class="repository file list">
 	{{template "repo/header" .}}
 	<div class="ui container">
+		{{template "base/alert" .}}
 		<p id="repo-desc">
 			{{if .Repository.DescriptionHtml}}<span class="description has-emoji">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
 			<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
