@@ -779,7 +779,7 @@ function initEditor() {
         });
         if ($(this).val())
             parts.push($(this).val());
-        $('#tree-name').val(parts.join('/'));
+        $('#tree_path').val(parts.join('/'));
     }).trigger('keyup');
 
     var $editArea = $('.repository.editor textarea#edit_area');

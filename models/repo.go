@@ -2260,7 +2260,7 @@ func (repo *Repository) GetForks() ([]*Repository, error) {
 //
 
 // uploadRepoFiles uploads new files to repository.
-func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, treeName, message string, uuids []string) (err error) {
+func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, treePath, message string, uuids []string) (err error) {
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -2276,7 +2276,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 		repo.CheckoutNewBranch(oldBranchName, branchName)
 	}
 
-	dirPath := path.Join(localPath, treeName)
+	dirPath := path.Join(localPath, treePath)
 	os.MkdirAll(dirPath, os.ModePerm)
 
 	// Copy uploaded files into repository.
@@ -2298,7 +2298,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 	}
 
 	if len(message) == 0 {
-		message = "Add files to '" + treeName + "'"
+		message = "Add files to '" + treePath + "'"
 	}
 
 	if err = git.AddChanges(localPath, true); err != nil {

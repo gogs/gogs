@@ -39,7 +39,7 @@ func UploadFile(ctx *context.Context) {
 	repoName := ctx.Repo.Repository.Name
 	branchName := ctx.Repo.BranchName
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
-	treeName := ctx.Repo.TreeName
+	treeName := ctx.Repo.TreePath
 
 	treeNames := []string{""}
 	if len(treeName) > 0 {
