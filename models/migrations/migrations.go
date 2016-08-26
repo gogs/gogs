@@ -68,6 +68,9 @@ var migrations = []Migration{
 	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt),           // V10 -> V11:v0.8.5
 	NewMigration("convert date to unix timestamp", convertDateToUnix),                            // V11 -> V12:v0.9.2
 	NewMigration("convert LDAP UseSSL option to SecurityProtocol", ldapUseSSLToSecurityProtocol), // V12 -> V13:v0.9.37
+
+	// v13 -> v14:v0.9.87
+	NewMigration("set comment updated with created", setCommentUpdatedWithCreated),
 }
 
 // Migrate database to current version
