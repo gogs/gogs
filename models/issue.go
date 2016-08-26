@@ -73,56 +73,7 @@ func (issue *Issue) BeforeUpdate() {
 }
 
 func (issue *Issue) AfterSet(colName string, _ xorm.Cell) {
-	var err error
 	switch colName {
-	case "id":
-		issue.Attachments, err = GetAttachmentsByIssueID(issue.ID)
-		if err != nil {
-			log.Error(3, "GetAttachmentsByIssueID[%d]: %v", issue.ID, err)
-		}
-
-		issue.Comments, err = GetCommentsByIssueID(issue.ID)
-		if err != nil {
-			log.Error(3, "GetCommentsByIssueID[%d]: %v", issue.ID, err)
-		}
-
-		issue.Labels, err = GetLabelsByIssueID(issue.ID)
-		if err != nil {
-			log.Error(3, "GetLabelsByIssueID[%d]: %v", issue.ID, err)
-		}
-
-	case "poster_id":
-		issue.Poster, err = GetUserByID(issue.PosterID)
-		if err != nil {
-			if IsErrUserNotExist(err) {
-				issue.PosterID = -1
-				issue.Poster = NewGhostUser()
-			} else {
-				log.Error(3, "GetUserByID[%d]: %v", issue.ID, err)
-			}
-			return
-		}
-
-	case "milestone_id":
-		if issue.MilestoneID == 0 {
-			return
-		}
-
-		issue.Milestone, err = GetMilestoneByRepoID(issue.RepoID, issue.MilestoneID)
-		if err != nil {
-			log.Error(3, "GetMilestoneById[%d]: %v", issue.ID, err)
-		}
-
-	case "assignee_id":
-		if issue.AssigneeID == 0 {
-			return
-		}
-
-		issue.Assignee, err = GetUserByID(issue.AssigneeID)
-		if err != nil {
-			log.Error(3, "GetUserByID[%d]: %v", issue.ID, err)
-		}
-
 	case "deadline_unix":
 		issue.Deadline = time.Unix(issue.DeadlineUnix, 0).Local()
 	case "created_unix":
@@ -140,11 +91,59 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 		}
 	}
 
+	if issue.Poster == nil {
+		issue.Poster, err = getUserByID(e, issue.PosterID)
+		if err != nil {
+			if IsErrUserNotExist(err) {
+				issue.PosterID = -1
+				issue.Poster = NewGhostUser()
+			} else {
+				return fmt.Errorf("getUserByID.(poster) [%d]: %v", issue.PosterID, err)
+			}
+			return
+		}
+	}
+
+	if issue.Labels == nil {
+		issue.Labels, err = getLabelsByIssueID(e, issue.ID)
+		if err != nil {
+			return fmt.Errorf("getLabelsByIssueID [%d]: %v", issue.ID, err)
+		}
+	}
+
+	if issue.Milestone == nil && issue.MilestoneID > 0 {
+		issue.Milestone, err = getMilestoneByRepoID(e, issue.RepoID, issue.MilestoneID)
+		if err != nil {
+			return fmt.Errorf("getMilestoneByRepoID [repo_id: %d, milestone_id: %d]: %v", issue.RepoID, issue.MilestoneID, err)
+		}
+	}
+
+	if issue.Assignee == nil && issue.AssigneeID > 0 {
+		issue.Assignee, err = getUserByID(e, issue.AssigneeID)
+		if err != nil {
+			return fmt.Errorf("getUserByID.(assignee) [%d]: %v", issue.AssigneeID, err)
+		}
+	}
+
 	if issue.IsPull && issue.PullRequest == nil {
 		// It is possible pull request is not yet created.
 		issue.PullRequest, err = getPullRequestByIssueID(e, issue.ID)
 		if err != nil && !IsErrPullRequestNotExist(err) {
 			return fmt.Errorf("getPullRequestByIssueID [%d]: %v", issue.ID, err)
+		}
+	}
+
+	if issue.Attachments == nil {
+		issue.Attachments, err = getAttachmentsByIssueID(e, issue.ID)
+		if err != nil {
+			return fmt.Errorf("getAttachmentsByIssueID [%d]: %v", issue.ID, err)
+		}
+	}
+
+	if issue.Comments == nil {
+		issue.Comments, err = getCommentsByIssueID(e, issue.ID)
+		if err != nil {
+			return fmt.Errorf("getCommentsByIssueID [%d]: %v", issue.ID, err)
 		}
 	}
 
@@ -757,8 +756,8 @@ func GetIssueByRef(ref string) (*Issue, error) {
 	return issue, issue.LoadAttributes()
 }
 
-// GetIssueByIndex returns issue by given index in repository.
-func GetIssueByIndex(repoID, index int64) (*Issue, error) {
+// GetIssueByIndex returns raw issue without loading attributes by index in a repository.
+func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	issue := &Issue{
 		RepoID: repoID,
 		Index:  index,
@@ -768,6 +767,15 @@ func GetIssueByIndex(repoID, index int64) (*Issue, error) {
 		return nil, err
 	} else if !has {
 		return nil, ErrIssueNotExist{0, repoID, index}
+	}
+	return issue, nil
+}
+
+// GetIssueByIndex returns issue by index in a repository.
+func GetIssueByIndex(repoID, index int64) (*Issue, error) {
+	issue, err := GetRawIssueByIndex(repoID, index)
+	if err != nil {
+		return nil, err
 	}
 	return issue, issue.LoadAttributes()
 }
@@ -868,7 +876,18 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 	}
 
 	issues := make([]*Issue, 0, setting.UI.IssuePagingNum)
-	return issues, sess.Find(&issues)
+	if err := sess.Find(&issues); err != nil {
+		return nil, fmt.Errorf("Find: %v", err)
+	}
+
+	// FIXME: use IssueList to improve performance.
+	for i := range issues {
+		if err := issues[i].LoadAttributes(); err != nil {
+			return nil, fmt.Errorf("LoadAttributes [%d]: %v", issues[i].ID, err)
+		}
+	}
+
+	return issues, nil
 }
 
 // .___                             ____ ___
@@ -1412,7 +1431,7 @@ func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 	return m, nil
 }
 
-// GetWebhookByRepoID returns milestone of repository by given ID.
+// GetWebhookByRepoID returns the milestone in a repository.
 func GetMilestoneByRepoID(repoID, id int64) (*Milestone, error) {
 	return getMilestoneByRepoID(x, repoID, id)
 }
@@ -1721,10 +1740,14 @@ func GetAttachmentByUUID(uuid string) (*Attachment, error) {
 	return getAttachmentByUUID(x, uuid)
 }
 
-// GetAttachmentsByIssueID returns all attachments for given issue by ID.
-func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
+func getAttachmentsByIssueID(e Engine, issueID int64) ([]*Attachment, error) {
 	attachments := make([]*Attachment, 0, 10)
-	return attachments, x.Where("issue_id=? AND comment_id=0", issueID).Find(&attachments)
+	return attachments, e.Where("issue_id = ? AND comment_id = 0", issueID).Find(&attachments)
+}
+
+// GetAttachmentsByIssueID returns all attachments of an issue.
+func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
+	return getAttachmentsByIssueID(x, issueID)
 }
 
 // GetAttachmentsByCommentID returns all attachments if comment by given ID.
