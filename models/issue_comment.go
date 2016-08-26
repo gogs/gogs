@@ -11,6 +11,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/log"
@@ -59,6 +60,8 @@ type Comment struct {
 
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
 
 	// Reference issue in commit message
 	CommitSHA string `xorm:"VARCHAR(40)"`
@@ -71,6 +74,11 @@ type Comment struct {
 
 func (c *Comment) BeforeInsert() {
 	c.CreatedUnix = time.Now().Unix()
+	c.UpdatedUnix = c.CreatedUnix
+}
+
+func (c *Comment) BeforeUpdate() {
+	c.UpdatedUnix = time.Now().Unix()
 }
 
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
@@ -94,6 +102,8 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 		}
 	case "created_unix":
 		c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	case "updated_unix":
+		c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
 	}
 }
 
@@ -105,16 +115,14 @@ func (c *Comment) AfterDelete() {
 	}
 }
 
-// APIFormat convert Comment struct to api.Comment struct
 func (c *Comment) APIFormat() *api.Comment {
-	apiComment := &api.Comment{
+	return &api.Comment{
 		ID:      c.ID,
 		Poster:  c.Poster.APIFormat(),
 		Body:    c.Content,
 		Created: c.Created,
+		Updated: c.Updated,
 	}
-
-	return apiComment
 }
 
 // HashTag returns unique hash tag for comment.
@@ -341,15 +349,32 @@ func GetCommentByID(id int64) (*Comment, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrCommentNotExist{id}
+		return nil, ErrCommentNotExist{id, 0}
 	}
 	return c, nil
 }
 
-// GetCommentsByIssueID returns all comments of issue by given ID.
-func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
+func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	return comments, x.Where("issue_id=?", issueID).Asc("created_unix").Find(&comments)
+	sess := e.Where("issue_id = ?", issueID).Asc("created_unix")
+	if since > 0 {
+		sess.And("created_unix >= ?", since)
+	}
+	return comments, sess.Find(&comments)
+}
+
+func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
+	return getCommentsByIssueIDSince(e, issueID, -1)
+}
+
+// GetCommentsByIssueID returns all comments of an issue.
+func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
+	return getCommentsByIssueID(x, issueID)
+}
+
+// GetCommentsByIssueID returns a list of comments of an issue since a given time point.
+func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
+	return getCommentsByIssueIDSince(x, issueID, since)
 }
 
 // UpdateComment updates information of comment.
@@ -358,10 +383,13 @@ func UpdateComment(c *Comment) error {
 	return err
 }
 
-// DeleteCommentByID deletes a comment by given ID.
+// DeleteCommentByID deletes the comment by given ID.
 func DeleteCommentByID(id int64) error {
 	comment, err := GetCommentByID(id)
 	if err != nil {
+		if IsErrCommentNotExist(err) {
+			return nil
+		}
 		return err
 	}
 

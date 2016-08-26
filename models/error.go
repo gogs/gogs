@@ -526,7 +526,8 @@ func (err ErrPullRequestNotExist) Error() string {
 //         \/             \/      \/     \/     \/
 
 type ErrCommentNotExist struct {
-	ID int64
+	ID      int64
+	IssueID int64
 }
 
 func IsErrCommentNotExist(err error) bool {
@@ -535,7 +536,7 @@ func IsErrCommentNotExist(err error) bool {
 }
 
 func (err ErrCommentNotExist) Error() string {
-	return fmt.Sprintf("comment does not exist [id: %d]", err.ID)
+	return fmt.Sprintf("comment does not exist [id: %d, issue_id: %d]", err.ID, err.IssueID)
 }
 
 // .____          ___.          .__

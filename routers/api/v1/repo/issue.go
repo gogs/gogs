@@ -25,9 +25,9 @@ func ListIssues(ctx *context.APIContext) {
 		return
 	}
 
+	// FIXME: use IssueList to improve performance.
 	apiIssues := make([]*api.Issue, len(issues))
 	for i := range issues {
-		// FIXME: use IssueList to improve performance.
 		if err = issues[i].LoadAttributes(); err != nil {
 			ctx.Error(500, "LoadAttributes", err)
 			return
