@@ -103,13 +103,13 @@ func GetLabelInRepoByID(repoID, labelID int64) (*Label, error) {
 // it silently ignores label IDs that are not belong to the repository.
 func GetLabelsInRepoByIDs(repoID int64, labelIDs []int64) ([]*Label, error) {
 	labels := make([]*Label, 0, len(labelIDs))
-	return labels, x.Where("repo_id = ?", repoID).In("id", base.Int64sToStrings(labelIDs)).Find(&labels)
+	return labels, x.Where("repo_id = ?", repoID).In("id", base.Int64sToStrings(labelIDs)).Asc("name").Find(&labels)
 }
 
 // GetLabelsByRepoID returns all labels that belong to given repository by ID.
 func GetLabelsByRepoID(repoID int64) ([]*Label, error) {
 	labels := make([]*Label, 0, 10)
-	return labels, x.Where("repo_id = ?", repoID).Find(&labels)
+	return labels, x.Where("repo_id = ?", repoID).Asc("name").Find(&labels)
 }
 
 func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
@@ -126,7 +126,7 @@ func getLabelsByIssueID(e Engine, issueID int64) ([]*Label, error) {
 	}
 
 	labels := make([]*Label, 0, len(labelIDs))
-	return labels, e.Where("id > 0").In("id", base.Int64sToStrings(labelIDs)).Find(&labels)
+	return labels, e.Where("id > 0").In("id", base.Int64sToStrings(labelIDs)).Asc("name").Find(&labels)
 }
 
 // GetLabelsByIssueID returns all labels that belong to given issue by ID.
