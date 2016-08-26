@@ -11,6 +11,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
@@ -102,6 +103,18 @@ func (c *Comment) AfterDelete() {
 	if err != nil {
 		log.Info("Could not delete files for comment %d on issue #%d: %s", c.ID, c.IssueID, err)
 	}
+}
+
+// APIFormat convert Comment struct to api.Comment struct
+func (c *Comment) APIFormat() *api.Comment {
+	apiComment := &api.Comment{
+		ID:      c.ID,
+		Poster:  c.Poster.APIFormat(),
+		Body:    c.Content,
+		Created: c.Created,
+	}
+
+	return apiComment
 }
 
 // HashTag returns unique hash tag for comment.
