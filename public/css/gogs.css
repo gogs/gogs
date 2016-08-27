@@ -1376,10 +1376,6 @@ footer .ui.language .menu {
 .repository.file.editor .tabular.menu .octicon {
   margin-right: 5px;
 }
-.repository.file.editor .CodeMirror.cm-s-default {
-  border-radius: 3px;
-  padding: 0 !important;
-}
 .repository.file.editor .commit-form-wrapper {
   padding-left: 64px;
 }
@@ -2499,6 +2495,16 @@ footer .ui.language .menu {
 .tab-size-16 {
   tab-size: 16 !important;
   -moz-tab-size: 16 !important;
+}
+.CodeMirror {
+  font: 14px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+.CodeMirror.cm-s-default {
+  border-radius: 3px;
+  padding: 0 !important;
+}
+.CodeMirror .cm-comment {
+  background: inherit !important;
 }
 .organization {
   padding-top: 15px;

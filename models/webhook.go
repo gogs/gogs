@@ -165,12 +165,15 @@ func (w *Webhook) HasPullRequestEvent() bool {
 }
 
 func (w *Webhook) EventsArray() []string {
-	events := make([]string, 0, 2)
+	events := make([]string, 0, 3)
 	if w.HasCreateEvent() {
 		events = append(events, "create")
 	}
 	if w.HasPushEvent() {
 		events = append(events, "push")
+	}
+	if w.HasPullRequestEvent() {
+		events = append(events, "pull_request")
 	}
 	return events
 }
@@ -210,15 +213,18 @@ func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
 }
 
 // GetActiveWebhooksByRepoID returns all active webhooks of repository.
-func GetActiveWebhooksByRepoID(repoID int64) (ws []*Webhook, err error) {
-	err = x.Where("repo_id=?", repoID).And("is_active=?", true).Find(&ws)
-	return ws, err
+func GetActiveWebhooksByRepoID(repoID int64) ([]*Webhook, error) {
+	webhooks := make([]*Webhook, 0, 5)
+	return webhooks, x.Find(&webhooks, &Webhook{
+		RepoID:   repoID,
+		IsActive: true,
+	})
 }
 
-// GetWebhooksByRepoID returns all webhooks of repository.
-func GetWebhooksByRepoID(repoID int64) (ws []*Webhook, err error) {
-	err = x.Find(&ws, &Webhook{RepoID: repoID})
-	return ws, err
+// GetWebhooksByRepoID returns all webhooks of a repository.
+func GetWebhooksByRepoID(repoID int64) ([]*Webhook, error) {
+	webhooks := make([]*Webhook, 0, 5)
+	return webhooks, x.Find(&webhooks, &Webhook{RepoID: repoID})
 }
 
 // UpdateWebhook updates information of webhook.

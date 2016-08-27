@@ -41,14 +41,14 @@ type Repository struct {
 	GitRepo      *git.Repository
 	BranchName   string
 	TagName      string
-	TreeName     string
+	TreePath     string
 	CommitID     string
 	RepoLink     string
 	CloneLink    models.CloneLink
 	CommitsCount int64
 	Mirror       *models.Mirror
 
-	PullRequest *PullRequest
+	PullRequest  *PullRequest
 }
 
 // IsOwner returns true if current user is the owner of repository.
@@ -384,7 +384,7 @@ func RepoRef() macaron.Handler {
 				if ctx.Repo.GitRepo.IsBranchExist(refName) ||
 					ctx.Repo.GitRepo.IsTagExist(refName) {
 					if i < len(parts)-1 {
-						ctx.Repo.TreeName = strings.Join(parts[i+1:], "/")
+						ctx.Repo.TreePath = strings.Join(parts[i+1:], "/")
 					}
 					hasMatched = true
 					break
@@ -392,7 +392,7 @@ func RepoRef() macaron.Handler {
 			}
 			if !hasMatched && len(parts[0]) == 40 {
 				refName = parts[0]
-				ctx.Repo.TreeName = strings.Join(parts[1:], "/")
+				ctx.Repo.TreePath = strings.Join(parts[1:], "/")
 			}
 
 			if ctx.Repo.GitRepo.IsBranchExist(refName) {

@@ -19,7 +19,7 @@ func GetRawFile(ctx *context.APIContext) {
 		return
 	}
 
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
+	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
 			ctx.Status(404)

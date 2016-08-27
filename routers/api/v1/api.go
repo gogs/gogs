@@ -110,6 +110,15 @@ func reqAdmin() macaron.Handler {
 	}
 }
 
+func reqRepoWriter() macaron.Handler {
+	return func(ctx *context.Context) {
+		if !ctx.Repo.IsWriter() {
+			ctx.Error(403)
+			return
+		}
+	}
+}
+
 func orgAssignment(args ...bool) macaron.Handler {
 	var (
 		assignOrg  bool
@@ -252,6 +261,12 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("").Get(repo.ListIssues).Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
 					m.Group("/:index", func() {
 						m.Combo("").Get(repo.GetIssue).Patch(bind(api.EditIssueOption{}), repo.EditIssue)
+
+						m.Group("/comments", func() {
+							m.Combo("").Get(repo.ListIssueComments).Post(bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
+							m.Combo("/:id").Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
+						})
+
 						m.Group("/labels", func() {
 							m.Combo("").Get(repo.ListIssueLabels).
 								Post(bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
@@ -267,6 +282,13 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Post(bind(api.CreateLabelOption{}), repo.CreateLabel)
 					m.Combo("/:id").Get(repo.GetLabel).Patch(bind(api.EditLabelOption{}), repo.EditLabel).
 						Delete(repo.DeleteLabel)
+				})
+				m.Group("/milestones", func() {
+					m.Combo("").Get(repo.ListMilestones).
+						Post(reqRepoWriter(), bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
+					m.Combo("/:id").Get(repo.GetMilestone).
+						Patch(reqRepoWriter(), bind(api.EditMilestoneOption{}), repo.EditMilestone).
+						Delete(reqRepoWriter(), repo.DeleteMilestone)
 				})
 			}, repoAssignment())
 		}, reqToken())

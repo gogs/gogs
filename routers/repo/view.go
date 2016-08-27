@@ -56,7 +56,7 @@ func Home(ctx *context.Context) {
 	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 
 	// Get tree path
-	treename := ctx.Repo.TreeName
+	treename := ctx.Repo.TreePath
 
 	if len(treename) > 0 {
 		if treename[len(treename)-1] == '/' {
