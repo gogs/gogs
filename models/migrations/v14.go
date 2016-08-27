@@ -10,8 +10,14 @@ import (
 	"github.com/go-xorm/xorm"
 )
 
-func setCommentUpdatedWithCreated(x *xorm.Engine) error {
-	if _, err := x.Exec("UPDATE comment SET updated_unix = created_unix"); err != nil {
+func setCommentUpdatedWithCreated(x *xorm.Engine) (err error) {
+	type Comment struct {
+		UpdatedUnix int64
+	}
+
+	if err = x.Sync2(new(Comment)); err != nil {
+		return fmt.Errorf("Sync2: %v", err)
+	} else if _, err = x.Exec("UPDATE comment SET updated_unix = created_unix"); err != nil {
 		return fmt.Errorf("set update_unix: %v", err)
 	}
 	return nil
