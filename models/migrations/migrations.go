@@ -245,7 +245,7 @@ func issueToIssueLabel(x *xorm.Engine) error {
 	}
 
 	if err = sess.Sync2(new(IssueLabel)); err != nil {
-		return fmt.Errorf("sync2: %v", err)
+		return fmt.Errorf("Sync2: %v", err)
 	} else if _, err = sess.Insert(issueLabels); err != nil {
 		return fmt.Errorf("insert issue-labels: %v", err)
 	}
