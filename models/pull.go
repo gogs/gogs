@@ -114,18 +114,22 @@ func (pr *PullRequest) LoadIssue() (err error) {
 func (pr *PullRequest) APIFormat() *api.PullRequest {
 	apiIssue := pr.Issue.APIFormat()
 	apiPullRequest := &api.PullRequest{
-		ID:        pr.ID,
-		Index:     pr.Index,
-		Poster:    apiIssue.Poster,
-		Title:     apiIssue.Title,
-		Body:      apiIssue.Body,
-		Labels:    apiIssue.Labels,
-		Milestone: apiIssue.Milestone,
-		Assignee:  apiIssue.Assignee,
-		State:     apiIssue.State,
-		Comments:  apiIssue.Comments,
-		HTMLURL:   pr.Issue.HTMLURL(),
-		HasMerged: pr.HasMerged,
+		ID:         pr.ID,
+		Index:      pr.Index,
+		Poster:     apiIssue.Poster,
+		Title:      apiIssue.Title,
+		Body:       apiIssue.Body,
+		Labels:     apiIssue.Labels,
+		Milestone:  apiIssue.Milestone,
+		Assignee:   apiIssue.Assignee,
+		State:      apiIssue.State,
+		Comments:   apiIssue.Comments,
+		HTMLURL:    pr.Issue.HTMLURL(),
+		HasMerged:  pr.HasMerged,
+		HeadBranch: pr.HeadBranch,
+		HeadRepo:   pr.HeadRepo.APIFormat(nil),
+		BaseBranch: pr.BaseBranch,
+		BaseRepo:   pr.BaseRepo.APIFormat(nil),
 	}
 
 	if pr.Status != PULL_REQUEST_STATUS_CHECKING {
