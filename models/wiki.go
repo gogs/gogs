@@ -129,7 +129,10 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	}
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   message,
+	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("Push: %v", err)
@@ -165,7 +168,10 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   message,
+	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("Push: %v", err)
