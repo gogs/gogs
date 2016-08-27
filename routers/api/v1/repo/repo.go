@@ -76,7 +76,7 @@ func Search(ctx *context.APIContext) {
 	})
 }
 
-func listUserRepos(ctx *context.APIContext, u *models.User, all bool) {
+func listUserRepos(ctx *context.APIContext, u *models.User) {
 	ownRepos, err := models.GetUserRepositories(u.ID, true, 1, u.NumRepos)
 	if err != nil {
 		ctx.Error(500, "GetRepositories", err)
@@ -110,7 +110,7 @@ func listUserRepos(ctx *context.APIContext, u *models.User, all bool) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
 func ListMyRepos(ctx *context.APIContext) {
-	listUserRepos(ctx, ctx.User, true)
+	listUserRepos(ctx, ctx.User)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-user-repositories
@@ -124,7 +124,7 @@ func ListUserRepos(ctx *context.APIContext) {
 		}
 		return
 	}
-	listUserRepos(ctx, u, false)
+	listUserRepos(ctx, u)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-org-repositories
@@ -143,7 +143,7 @@ func ListOrgRepos(ctx *context.APIContext) {
 		}
 		return
 	}
-	listUserRepos(ctx, u, false)
+	listUserRepos(ctx, u)
 }
 
 func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateRepoOption) {
