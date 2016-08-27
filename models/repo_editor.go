@@ -127,11 +127,11 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	}
-
-	signaure := doer.NewGitSig()
-	if err = git.CommitChanges(localPath, opts.Message, signaure); err != nil {
-		return fmt.Errorf("git commit -m %s --author='%s <%s>': %v", opts.Message, signaure.Name, signaure.Email, err)
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   opts.Message,
+	}); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", opts.NewBranch); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
@@ -254,11 +254,11 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	}
-
-	signaure := doer.NewGitSig()
-	if err = git.CommitChanges(localPath, opts.Message, signaure); err != nil {
-		return fmt.Errorf("git commit -m %s --author='%s <%s>': %v", opts.Message, signaure.Name, signaure.Email, err)
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   opts.Message,
+	}); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", opts.Branch); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.Branch, err)
 	}

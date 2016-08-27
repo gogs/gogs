@@ -2303,7 +2303,10 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   message,
+	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", branchName); err != nil {
 		return fmt.Errorf("Push: %v", err)
