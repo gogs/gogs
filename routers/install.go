@@ -57,21 +57,23 @@ func NewServices() {
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
 	setting.NewContext()
-	highlight.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
 	models.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
+		highlight.NewContext()
+		markdown.BuildSanitizer()
+
 		models.LoadRepoConfig()
 		models.NewRepoContext()
-
 		if err := models.NewEngine(); err != nil {
 			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
 		}
-
 		models.HasEngine = true
+
+		// Booting long running goroutines.
 		cron.NewContext()
 		models.InitDeliverHooks()
 		models.InitTestPullRequests()
@@ -88,13 +90,10 @@ func GlobalInit() {
 	}
 	checkRunMode()
 
-	if setting.SSH.StartBuiltinServer {
+	if setting.InstallLock && setting.SSH.StartBuiltinServer {
 		ssh.Listen(setting.SSH.ListenPort)
 		log.Info("SSH server started on :%v", setting.SSH.ListenPort)
 	}
-
-	// Build Sanitizer
-	markdown.BuildSanitizer()
 }
 
 func InstallInit(ctx *context.Context) {
