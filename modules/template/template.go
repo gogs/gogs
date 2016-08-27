@@ -73,13 +73,6 @@ func NewFuncMap() []template.FuncMap {
 			return t.Format("Jan 02, 2006")
 		},
 		"List": List,
-		"Mail2Domain": func(mail string) string {
-			if !strings.Contains(mail, "@") {
-				return "try.gogs.io"
-			}
-
-			return strings.SplitN(mail, "@", 2)[1]
-		},
 		"SubStr": func(str string, start, length int) string {
 			if len(str) == 0 {
 				return ""
