@@ -15,18 +15,18 @@
 			<div class="ui right file-actions">
 				<div class="ui buttons">
 					{{if not .IsViewCommit}}
-						<a class="ui button" href="{{.RepoLink}}/src/{{.CommitID}}/{{EscapePound .TreeName}}">{{.i18n.Tr "repo.file_permalink"}}</a>
+						<a class="ui button" href="{{.RepoLink}}/src/{{.CommitID}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.file_permalink"}}</a>
 					{{end}}
-					<a class="ui button" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{EscapePound .TreeName}}">{{.i18n.Tr "repo.file_history"}}</a>
+					<a class="ui button" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.file_history"}}</a>
 					<a class="ui button" href="{{EscapePound .FileLink}}">{{.i18n.Tr "repo.file_raw"}}</a>
 				</div>
-				{{if .FileEditLink}}
-					<a href="{{EscapePound $.FileEditLink}}"><i class="poping up octicon octicon-pencil btn-octicon"  data-content="{{.FileEditLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
+				{{if .CanEditFile}}
+					<a href="{{.RepoLink}}/_edit/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}"><i class="poping up octicon octicon-pencil btn-octicon"  data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
 				{{else}}
-					<i class="octicon btn-octicon octicon-pencil poping up disabled" data-content="{{.FileEditLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
+					<i class="octicon btn-octicon octicon-pencil poping up disabled" data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 				{{end}}
-				{{if and .IsViewBranch .IsRepositoryWriter}}
-					<form id="delete-file-form" class="ui form inline-form" action="{{.RepoLink}}/_delete/{{EscapePound .BranchName}}/{{.TreeName}}" method="post">
+				{{if .CanDeleteFile}}
+					<form id="delete-file-form" class="ui form inline-form" action="{{.RepoLink}}/_delete/{{EscapePound .BranchName}}/{{.TreePath}}" method="post">
 						{{.CsrfTokenHtml}}
 						<button onclick="submitDeleteForm()" class="octicon octicon-trashcan btn-octicon btn-octicon-danger poping up" type="button" data-content="{{.FileDeleteLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></button>
 						<input type="hidden" id="delete-message" name="commit_message" value="">

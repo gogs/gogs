@@ -24,7 +24,6 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
-	"strconv"
 )
 
 const (
@@ -46,33 +45,18 @@ func Home(ctx *context.Context) {
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
 
-	repoLink := ctx.Repo.RepoLink
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
-	editLink := ctx.Repo.RepoLink + "/_edit/" + branchName
-	newFileLink := ctx.Repo.RepoLink + "/_new/" + branchName
-	forkLink := setting.AppSubUrl + "/repo/fork/" + strconv.FormatInt(ctx.Repo.Repository.ID, 10)
-	uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
+	// newFileLink := ctx.Repo.RepoLink + "/_new/" + branchName
+	// uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 
-	// Get tree path
-	treename := ctx.Repo.TreePath
-
-	if len(treename) > 0 {
-		if treename[len(treename)-1] == '/' {
-			ctx.Redirect(repoLink + "/src/" + branchName + "/" + treename[:len(treename)-1])
-			return
-		}
-
-		treeLink += "/" + treename
+	treePath := ctx.Repo.TreePath
+	if len(treePath) > 0 {
+		treeLink += "/" + treePath
 	}
 
-	treePath := treename
-	if len(treePath) != 0 {
-		treePath = treePath + "/"
-	}
-
-	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treename)
+	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
 			ctx.Handle(404, "GetTreeEntryByPath", err)
@@ -94,7 +78,7 @@ func Home(ctx *context.Context) {
 		ctx.Data["IsFile"] = true
 		ctx.Data["FileName"] = blob.Name()
 		ctx.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
-		ctx.Data["FileLink"] = rawLink + "/" + treename
+		ctx.Data["FileLink"] = rawLink + "/" + treePath
 
 		buf := make([]byte, 1024)
 		n, _ := dataRc.Read(buf)
@@ -107,25 +91,30 @@ func Home(ctx *context.Context) {
 		_, isPDFFile := base.IsPDFFile(buf)
 		ctx.Data["IsFileText"] = isTextFile
 
+		// Assume file is not editable first.
+		if !isTextFile {
+			ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.cannot_edit_non_text_files")
+		}
+
 		switch {
 		case isPDFFile:
 			ctx.Data["IsPDFFile"] = true
-			ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 		case isImageFile:
 			ctx.Data["IsImageFile"] = true
-			ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 		case isTextFile:
 			if blob.Size() >= setting.UI.MaxDisplayFileSize {
 				ctx.Data["IsFileTooLarge"] = true
 			} else {
-				ctx.Data["IsFileTooLarge"] = false
 				d, _ := ioutil.ReadAll(dataRc)
 				buf = append(buf, d...)
-				readmeExist := markdown.IsMarkdownFile(blob.Name()) || markdown.IsReadmeFile(blob.Name())
-				isMarkdown := readmeExist || markdown.IsMarkdownFile(blob.Name())
-				ctx.Data["ReadmeExist"] = readmeExist
+
+				isMarkdown := markdown.IsMarkdownFile(blob.Name())
 				ctx.Data["IsMarkdown"] = isMarkdown
-				if isMarkdown {
+
+				readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
+				ctx.Data["ReadmeExist"] = readmeExist
+				if readmeExist {
+					// TODO: don't need to render if it's a README but not Markdown file.
 					ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 				} else {
 					// Building code view blocks with line number on server side.
@@ -153,22 +142,19 @@ func Home(ctx *context.Context) {
 					ctx.Data["LineNums"] = gotemplate.HTML(output.String())
 				}
 			}
+
 			if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
-				ctx.Data["FileEditLink"] = editLink + "/" + treename
-				ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.edit_this_file")
-			} else {
-				if !ctx.Repo.IsViewBranch {
-					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
-				} else if !ctx.Repo.IsWriter() {
-					ctx.Data["FileEditLink"] = forkLink
-					ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.fork_before_edit")
-				}
+				ctx.Data["CanEditFile"] = true
+				ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.edit_this_file")
+			} else if !ctx.Repo.IsViewBranch {
+				ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.must_be_on_a_branch")
+			} else if !ctx.Repo.IsWriter() {
+				ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.fork_before_edit")
 			}
-		default:
-			ctx.Data["FileEditLinkTooltip"] = ctx.Tr("repo.cannot_edit_binary_files")
 		}
 
 		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+			ctx.Data["CanDeleteFile"] = true
 			ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
 		} else {
 			if !ctx.Repo.IsViewBranch {
@@ -180,7 +166,7 @@ func Home(ctx *context.Context) {
 
 	} else {
 		// Directory and file list.
-		tree, err := ctx.Repo.Commit.SubTree(treename)
+		tree, err := ctx.Repo.Commit.SubTree(treePath)
 		if err != nil {
 			ctx.Handle(404, "SubTree", err)
 			return
@@ -224,7 +210,7 @@ func Home(ctx *context.Context) {
 				}
 
 				ctx.Data["FileSize"] = readmeFile.Size()
-				ctx.Data["FileLink"] = rawLink + "/" + treename
+				ctx.Data["FileLink"] = rawLink + "/" + treePath
 				_, isTextFile := base.IsTextFile(buf)
 				ctx.Data["FileIsText"] = isTextFile
 				ctx.Data["FileName"] = readmeFile.Name()
@@ -254,12 +240,12 @@ func Home(ctx *context.Context) {
 		}
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
-		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
-			ctx.Data["NewFileLink"] = newFileLink + "/" + treename
-			if setting.Repository.Upload.Enabled {
-				ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treename
-			}
-		}
+		// if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+		// 	ctx.Data["NewFileLink"] = newFileLink + "/" + treePath
+		// 	if setting.Repository.Upload.Enabled {
+		// 		ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treePath
+		// 	}
+		// }
 	}
 
 	ctx.Data["Username"] = userName
@@ -274,8 +260,8 @@ func Home(ctx *context.Context) {
 	var treenames []string
 	paths := make([]string, 0)
 
-	if len(treename) > 0 {
-		treenames = strings.Split(treename, "/")
+	if len(treePath) > 0 {
+		treenames = strings.Split(treePath, "/")
 		for i := range treenames {
 			paths = append(paths, strings.Join(treenames[0:i+1], "/"))
 		}
@@ -287,9 +273,9 @@ func Home(ctx *context.Context) {
 	}
 
 	ctx.Data["Paths"] = paths
-	ctx.Data["TreeName"] = treename
-	ctx.Data["Treenames"] = treenames
 	ctx.Data["TreePath"] = treePath
+	ctx.Data["TreeLink"] = treeLink
+	ctx.Data["Treenames"] = treenames
 	ctx.Data["BranchLink"] = branchLink
 	ctx.HTML(200, HOME)
 }
