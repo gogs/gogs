@@ -62,6 +62,7 @@ var (
 
 func LoadRepoConfig() {
 	// Load .gitignore and license files and readme templates.
+	// TODO: should we allow custom files overwrite default ones?
 	types := []string{"gitignore", "license", "readme"}
 	typeFiles := make([][]string, 3)
 	for i, t := range types {
@@ -91,6 +92,20 @@ func LoadRepoConfig() {
 	sort.Strings(Gitignores)
 	sort.Strings(Licenses)
 	sort.Strings(Readmes)
+
+	// Filter out invalid names and promote preferred licenses.
+	sortedLicenses := make([]string, 0, len(Licenses))
+	for _, name := range setting.Repository.PreferredLicenses {
+		if com.IsSliceContainsStr(Licenses, name) {
+			sortedLicenses = append(sortedLicenses, name)
+		}
+	}
+	for _, name := range Licenses {
+		if !com.IsSliceContainsStr(setting.Repository.PreferredLicenses, name) {
+			sortedLicenses = append(sortedLicenses, name)
+		}
+	}
+	Licenses = sortedLicenses
 }
 
 func NewRepoContext() {
