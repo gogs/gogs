@@ -511,7 +511,7 @@ func runWeb(ctx *cli.Context) error {
 			// m.Post("/upload-file", repo.UploadFileToServer)
 			// m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
 		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
-			if ctx.Repo.IsViewCommit {
+			if !ctx.Repo.Repository.CanEnableEditor() || ctx.Repo.IsViewCommit {
 				ctx.Handle(404, "", nil)
 				return
 			}
