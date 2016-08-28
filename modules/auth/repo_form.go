@@ -223,7 +223,7 @@ func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 // Label templates
 
 type InitializeLabelsForm struct {
-	TemplateName string `form:"templatename" binding:"Required"`
+	TemplateName string `binding:"Required"`
 }
 
 func (f *InitializeLabelsForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
