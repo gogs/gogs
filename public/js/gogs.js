@@ -737,6 +737,16 @@ function setCodeMirror($editArea) {
 }
 
 function initEditor() {
+    $('.js-quick-pull-choice-option').change(function () {
+        if ($(this).val() == 'commit-to-new-branch') {
+            $('.quick-pull-branch-name').show();
+            $('.quick-pull-branch-name input').prop('required',true);
+        } else {
+            $('.quick-pull-branch-name').hide();
+            $('.quick-pull-branch-name input').prop('required',false);
+        }
+    });
+
     var $editFilename = $("#file-name");
     $editFilename.keyup(function (e) {
         var $section = $('.breadcrumb span.section');
@@ -841,16 +851,6 @@ function initEditor() {
             codeMirrorEditor.setOption("lineWrapping", false);
         }
     }).trigger('keyup');
-
-
-    $('.js-quick-pull-choice-option').change(function () {
-        if ($(this).val() == 'commit-to-new-branch') {
-            $('.quick-pull-branch-name').show();
-        } else {
-            $('.quick-pull-branch-name').hide();
-        }
-    });
-
 }
 
 function initOrganization() {
