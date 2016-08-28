@@ -21,18 +21,14 @@
 					<a class="ui button" href="{{EscapePound .FileLink}}">{{.i18n.Tr "repo.file_raw"}}</a>
 				</div>
 				{{if .CanEditFile}}
-					<a href="{{.RepoLink}}/_edit/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}"><i class="poping up octicon octicon-pencil btn-octicon"  data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
+					<a href="{{.RepoLink}}/_edit/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}"><i class="octicon octicon-pencil btn-octicon poping up"  data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
 				{{else}}
-					<i class="octicon btn-octicon octicon-pencil poping up disabled" data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
+					<i class="octicon octicon-pencil btn-octicon poping up disabled" data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 				{{end}}
 				{{if .CanDeleteFile}}
-					<form id="delete-file-form" class="ui form inline-form" action="{{.RepoLink}}/_delete/{{EscapePound .BranchName}}/{{.TreePath}}" method="post">
-						{{.CsrfTokenHtml}}
-						<button onclick="submitDeleteForm()" class="octicon octicon-trashcan btn-octicon btn-octicon-danger poping up" type="button" data-content="{{.FileDeleteLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></button>
-						<input type="hidden" id="delete-message" name="commit_message" value="">
-					</form>
+					<a href="{{.RepoLink}}/_delete/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}"><i class="octicon octicon-trashcan btn-octicon btn-octicon-danger poping up"  data-content="{{.DeleteFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
 				{{else}}
-					<i class="octicon btn-octicon octicon-trashcan poping up disabled" data-content="{{.FileDeleteLinkTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
+					<i class="octicon octicon-trashcan btn-octicon poping up disabled" data-content="{{.DeleteFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 				{{end}}
 			</div>
 		{{end}}

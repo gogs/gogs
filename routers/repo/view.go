@@ -48,7 +48,6 @@ func Home(ctx *context.Context) {
 	branchLink := ctx.Repo.RepoLink + "/src/" + branchName
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + branchName
-	// newFileLink := ctx.Repo.RepoLink + "/_new/" + branchName
 	// uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
 
 	treePath := ctx.Repo.TreePath
@@ -155,13 +154,11 @@ func Home(ctx *context.Context) {
 
 		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 			ctx.Data["CanDeleteFile"] = true
-			ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.delete_this_file")
-		} else {
-			if !ctx.Repo.IsViewBranch {
-				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_on_branch")
-			} else if !ctx.Repo.IsWriter() {
-				ctx.Data["FileDeleteLinkTooltip"] = ctx.Tr("repo.must_be_writer")
-			}
+			ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.delete_this_file")
+		} else if !ctx.Repo.IsViewBranch {
+			ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.must_be_on_a_branch")
+		} else if !ctx.Repo.IsWriter() {
+			ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.must_have_write_access")
 		}
 
 	} else {
@@ -240,12 +237,13 @@ func Home(ctx *context.Context) {
 		}
 		ctx.Data["LastCommit"] = lastCommit
 		ctx.Data["LastCommitUser"] = models.ValidateCommitWithEmail(lastCommit)
-		// if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
-		// 	ctx.Data["NewFileLink"] = newFileLink + "/" + treePath
-		// 	if setting.Repository.Upload.Enabled {
-		// 		ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treePath
-		// 	}
-		// }
+
+		if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+			ctx.Data["CanAddFile"] = true
+			// if setting.Repository.Upload.Enabled {
+			// 	ctx.Data["UploadFileLink"] = uploadFileLink + "/" + treePath
+			// }
+		}
 	}
 
 	ctx.Data["Username"] = userName

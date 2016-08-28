@@ -506,7 +506,8 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/_preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
 			m.Combo("/_upload/*").Get(repo.UploadFile).
 				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
-			m.Post("/_delete/*", bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
+			m.Combo("/_delete/*").Get(repo.DeleteFile).
+				Post(bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
 			// m.Post("/upload-file", repo.UploadFileToServer)
 			// m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
 		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {

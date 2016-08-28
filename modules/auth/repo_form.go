@@ -337,6 +337,9 @@ func (f *RemoveUploadFileForm) Validate(ctx *macaron.Context, errs binding.Error
 
 type DeleteRepoFileForm struct {
 	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage string
+	CommitChoice  string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
 }
 
 func (f *DeleteRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

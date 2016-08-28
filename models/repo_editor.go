@@ -95,14 +95,6 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		}
 	}
 
-	if len(opts.Message) == 0 {
-		if opts.IsNewFile {
-			opts.Message = "Add '" + opts.NewTreeName + "'"
-		} else {
-			opts.Message = "Update '" + opts.NewTreeName + "'"
-		}
-	}
-
 	localPath := repo.LocalCopyPath()
 	filePath := path.Join(localPath, opts.NewTreeName)
 	os.MkdirAll(path.Dir(filePath), os.ModePerm)
@@ -228,7 +220,8 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 
 type DeleteRepoFileOptions struct {
 	LastCommitID string
-	Branch       string
+	OldBranch    string
+	NewBranch    string
 	TreePath     string
 	Message      string
 }
@@ -237,19 +230,21 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
-	localPath := repo.LocalCopyPath()
-	if err = discardLocalRepoBranchChanges(localPath, opts.Branch); err != nil {
-		return fmt.Errorf("discardLocalRepoBranchChanges [branch: %s]: %v", opts.Branch, err)
-	} else if err = repo.UpdateLocalCopyBranch(opts.Branch); err != nil {
-		return fmt.Errorf("UpdateLocalCopyBranch [branch: %s]: %v", opts.Branch, err)
+	if err = repo.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
+		return fmt.Errorf("DiscardLocalRepoBranchChanges [branch: %s]: %v", opts.OldBranch, err)
+	} else if err = repo.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
+		return fmt.Errorf("UpdateLocalCopyBranch [branch: %s]: %v", opts.OldBranch, err)
 	}
 
+	if opts.OldBranch != opts.NewBranch {
+		if err := repo.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
+			return fmt.Errorf("CheckoutNewBranch [old_branch: %s, new_branch: %s]: %v", opts.OldBranch, opts.NewBranch, err)
+		}
+	}
+
+	localPath := repo.LocalCopyPath()
 	if err = os.Remove(path.Join(localPath, opts.TreePath)); err != nil {
 		return fmt.Errorf("Remove: %v", err)
-	}
-
-	if len(opts.Message) == 0 {
-		opts.Message = "Delete file '" + opts.TreePath + "'"
 	}
 
 	if err = git.AddChanges(localPath, true); err != nil {
@@ -259,8 +254,8 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		Message:   opts.Message,
 	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
-	} else if err = git.Push(localPath, "origin", opts.Branch); err != nil {
-		return fmt.Errorf("git push origin %s: %v", opts.Branch, err)
+	} else if err = git.Push(localPath, "origin", opts.NewBranch); err != nil {
+		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 
 	gitRepo, err := git.OpenRepository(repo.RepoPath())
@@ -268,9 +263,9 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		log.Error(4, "OpenRepository: %v", err)
 		return nil
 	}
-	commit, err := gitRepo.GetBranchCommit(opts.Branch)
+	commit, err := gitRepo.GetBranchCommit(opts.NewBranch)
 	if err != nil {
-		log.Error(4, "GetBranchCommit [branch: %s]: %v", opts.Branch, err)
+		log.Error(4, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
 		return nil
 	}
 
@@ -283,7 +278,7 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		PusherName:  doer.Name,
 		RepoOwnerID: repo.MustOwner().ID,
 		RepoName:    repo.Name,
-		RefFullName: git.BRANCH_PREFIX + opts.Branch,
+		RefFullName: git.BRANCH_PREFIX + opts.NewBranch,
 		OldCommitID: opts.LastCommitID,
 		NewCommitID: commit.ID.String(),
 		Commits:     pushCommits,
