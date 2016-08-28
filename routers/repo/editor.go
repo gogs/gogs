@@ -263,7 +263,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		OldTreeName:  oldTreePath,
 		NewTreeName:  form.TreePath,
 		Message:      message,
-		Content:      form.Content,
+		Content:      strings.Replace(form.Content, "\r", "", -1),
 		IsNewFile:    isNewFile,
 	}); err != nil {
 		ctx.Data["Err_TreePath"] = true
@@ -284,7 +284,6 @@ func NewFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
 
 func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 	treePath := ctx.Repo.TreePath
-	content := form.Content
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treePath)
 	if err != nil {
@@ -295,7 +294,7 @@ func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 		return
 	}
 
-	diff, err := ctx.Repo.Repository.GetDiffPreview(ctx.Repo.BranchName, treePath, content)
+	diff, err := ctx.Repo.Repository.GetDiffPreview(ctx.Repo.BranchName, treePath, form.Content)
 	if err != nil {
 		ctx.Error(500, "GetDiffPreview: "+err.Error())
 		return
