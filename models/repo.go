@@ -444,6 +444,11 @@ func (repo *Repository) AllowsPulls() bool {
 	return repo.CanEnablePulls() && repo.EnablePulls
 }
 
+// CanEnableEditor returns true if repository meets the requirements of web editor.
+func (repo *Repository) CanEnableEditor() bool {
+	return !repo.IsMirror
+}
+
 // FIXME: should have a mutex to prevent producing same index for two issues that are created
 // closely enough.
 func (repo *Repository) NextIssueIndex() int64 {

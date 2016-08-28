@@ -33,18 +33,22 @@
 				</div>
 			</div>
 			<div class="right fitted item">
-				<div id="file-buttons" class="ui tiny buttons">
-					{{if .CanAddFile}}
-						<a href="{{.RepoLink}}/_new/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
-							{{.i18n.Tr "repo.editor.new_file"}}
-						</a>
-					{{end}}
-					{{if .UploadFileLink}}
-						<!-- <a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
-							<i class="upload icon"></i> {{.i18n.Tr "repo.upload_file"}}
-						</a> -->
-					{{end}}
-				</div>
+				{{if .Repository.CanEnableEditor}}
+					<div id="file-buttons" class="ui tiny buttons">
+						{{if .CanAddFile}}
+							<a href="{{.RepoLink}}/_new/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
+								{{.i18n.Tr "repo.editor.new_file"}}
+							</a>
+						{{end}}
+						{{if .UploadFileLink}}
+							<!-- <a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
+								<i class="upload icon"></i> {{.i18n.Tr "repo.upload_file"}}
+							</a> -->
+						{{end}}
+					</div>
+				{{end}}
+				
+				<!-- Only show colne panel in repository home page -->
 				{{if eq $n 0}}
 					<div class="ui action small input" id="clone-panel">
 						<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
