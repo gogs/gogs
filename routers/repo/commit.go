@@ -20,7 +20,7 @@ import (
 
 const (
 	COMMITS base.TplName = "repo/commits"
-	DIFF    base.TplName = "repo/diff"
+	DIFF    base.TplName = "repo/diff/page"
 )
 
 func RefCommits(ctx *context.Context) {

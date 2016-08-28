@@ -22,7 +22,6 @@ import (
 const (
 	EDIT_FILE         base.TplName = "repo/editor/edit"
 	EDIT_DIFF_PREVIEW base.TplName = "repo/editor/diff_preview"
-	NEW_DIFF_PREVIEW  base.TplName = "repo/editor/diff_preview_new"
 	DELETE_FILE       base.TplName = "repo/editor/delete"
 )
 
@@ -289,15 +288,9 @@ func DiffPreviewPost(ctx *context.Context, form auth.EditPreviewDiffForm) {
 
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(treePath)
 	if err != nil {
-		if git.IsErrNotExist(err) {
-			ctx.Data["FileContent"] = content
-			ctx.HTML(200, NEW_DIFF_PREVIEW)
-		} else {
-			ctx.Error(500, "GetTreeEntryByPath: "+err.Error())
-		}
+		ctx.Error(500, "GetTreeEntryByPath: "+err.Error())
 		return
-	}
-	if entry.IsDir() {
+	} else if entry.IsDir() {
 		ctx.Error(422)
 		return
 	}
