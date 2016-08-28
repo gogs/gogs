@@ -114,6 +114,7 @@ var (
 		ForcePrivate           bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
+		PreferredLicenses      []string
 
 		// Repository editor settings
 		Editor struct {
