@@ -60,6 +60,31 @@ var (
 	ItemsPerPage = 40
 )
 
+// FIXME: This should probably be done in-place instead of creating a new string-slice...
+func sortPreferredLicenses(licenses []string) []string {
+	output := make([]string, 0, len(licenses))
+	preferred := setting.PreferredLicenses
+	log.Info("%d preferred licenses, they are %#v", len(preferred), preferred)
+	for _, p := range preferred {
+		found := true
+		// run loop until we don't find anything...
+		for found {
+			found = false
+			for i, l := range licenses {
+				if strings.Contains(l, p) {
+					output = append(output, l)
+					log.Info("%s was preferred...", l)
+					licenses = append(licenses[:i], licenses[1+i:]...)
+					found = true
+					break
+				}
+			}
+		}
+	}
+	output = append(output, licenses...)
+	return output
+}
+
 func LoadRepoConfig() {
 	// Load .gitignore and license files and readme templates.
 	types := []string{"gitignore", "license", "readme"}
@@ -91,6 +116,7 @@ func LoadRepoConfig() {
 	sort.Strings(Gitignores)
 	sort.Strings(Licenses)
 	sort.Strings(Readmes)
+	Licenses = sortPreferredLicenses(Licenses)
 }
 
 func NewRepoContext() {
