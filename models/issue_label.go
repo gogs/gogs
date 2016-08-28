@@ -52,7 +52,7 @@ func (l *Label) ForegroundColor() template.CSS {
 			b := float32(0xFF & color)
 			luminance := (0.2126*r + 0.7152*g + 0.0722*b) / 255
 
-			if luminance < 0.5 {
+			if luminance < 0.66 {
 				return template.CSS("#fff")
 			}
 		}

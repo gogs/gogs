@@ -50,49 +50,7 @@
 					{{.i18n.Tr "repo.release.loading"}}
 				</div>
 			</div>
-			<div class="commit-form-wrapper">
-				<img width="48" height="48" class="ui image commit-avatar" src="{{.SignedUser.AvatarLink}}">
-				<div class="commit-form">
-					<h3>{{.i18n.Tr "repo.commit_changes"}}</h3>
-					<div class="field">
-						<input name="commit_summary" placeholder="{{if .IsNewFile}}{{.i18n.Tr "repo.add"}} '{{.TreePath}}/<filename>'{{else}}{{.i18n.Tr "repo.update"}} '{{.TreePath}}'{{end}}" value="{{.commit_summary}}">
-					</div>
-					<div class="field">
-						<textarea name="commit_message" placeholder="{{.i18n.Tr "repo.default_commit_message"}}" rows="5">{{.commit_message}}</textarea>
-					</div>
-					<div class="quick-pull-choice js-quick-pull-choice">
-						<div class="field">
-					 		<div class="ui radio checkbox">
-								<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="direct" {{if eq .commit_choice "direct"}}checked{{end}}>
-								<label>
-									<i class="octicon octicon-git-commit" height="16" width="14"></i>
-									{{.i18n.Tr "repo.editor.commit_directly_to_this_branch" .BranchName | Safe}}
-								</label>
-							</div>
-						</div>
-						<div class="field">
-							<div class="ui radio checkbox">
-								<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="commit-to-new-branch" {{if eq .commit_choice "commit-to-new-branch"}}checked{{end}}>
-								<label>
-									<i class="octicon octicon-git-pull-request" height="16" width="12"></i>
-									{{.i18n.Tr "repo.editor.create_new_branch" | Safe}}
-								</label>
-							</div>
-						</div>
-						<div class="quick-pull-branch-name {{if not (eq .commit_choice "commit-to-new-branch")}}hide{{end}}">
-							<div class="new-branch-name-input{{if .Err_NewBranchName}} error{{end}}">
-								<i class="octicon octicon-git-branch" height="16" width="10"></i>
-								<input type="text" name="new_branch_name" value="{{.new_branch_name}}" class="form-control input-contrast mr-2 js-quick-pull-new-branch-name" placeholder="New branch name…">
-								<span class="text-muted js-quick-pull-normalization-info"></span>
-							</div>
-						</div>
-					</div>
-				</div>
-				<button type="submit" class="ui green button">
-					{{.i18n.Tr "repo.commit_changes"}}
-				</button>
-				<a class="ui button red" href="{{EscapePound $.BranchLink}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.cancel"}}</a>
-			</div>
+			{{template "repo/editor/commit_form" .}}
 		</form>
 	</div>
 </div>

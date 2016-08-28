@@ -40,7 +40,7 @@
 				{{else}}
 					<td class="name">
 						<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
-						<a href="{{EscapePound $.BranchLink}}/{{EscapePound $.TreePath}}{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
+						<a href="{{EscapePound $.TreeLink}}/{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
 					</td>
 				{{end}}
 				<td class="message collapsing has-emoji">

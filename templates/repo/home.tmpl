@@ -34,9 +34,9 @@
 			</div>
 			<div class="right fitted item">
 				<div id="file-buttons" class="ui tiny buttons">
-					{{if .NewFileLink}}
-						<a href="{{EscapePound .NewFileLink}}" class="ui button">
-							{{.i18n.Tr "repo.new_file"}}
+					{{if .CanAddFile}}
+						<a href="{{.RepoLink}}/_new/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
+							{{.i18n.Tr "repo.editor.new_file"}}
 						</a>
 					{{end}}
 					{{if .UploadFileLink}}

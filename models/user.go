@@ -308,7 +308,7 @@ func (u *User) GetFollowing(page int) ([]*User, error) {
 // NewGitSig generates and returns the signature of given user.
 func (u *User) NewGitSig() *git.Signature {
 	return &git.Signature{
-		Name:  u.Name,
+		Name:  u.DisplayName(),
 		Email: u.Email,
 		When:  time.Now(),
 	}

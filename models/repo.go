@@ -93,6 +93,20 @@ func LoadRepoConfig() {
 	sort.Strings(Licenses)
 	sort.Strings(Readmes)
 	sort.Strings(LabelTemplates)
+
+	// Filter out invalid names and promote preferred licenses.
+	sortedLicenses := make([]string, 0, len(Licenses))
+	for _, name := range setting.Repository.PreferredLicenses {
+		if com.IsSliceContainsStr(Licenses, name) {
+			sortedLicenses = append(sortedLicenses, name)
+		}
+	}
+	for _, name := range Licenses {
+		if !com.IsSliceContainsStr(setting.Repository.PreferredLicenses, name) {
+			sortedLicenses = append(sortedLicenses, name)
+		}
+	}
+	Licenses = sortedLicenses
 }
 
 func NewRepoContext() {
@@ -549,7 +563,7 @@ func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSH.Domain, repo.Owner.Name, repoName)
 	}
-	cl.HTTPS = ComposeHTTPSCloneURL(repo.Owner.Name, repo.Name)
+	cl.HTTPS = ComposeHTTPSCloneURL(repo.Owner.Name, repoName)
 	return cl
 }
 
@@ -2305,7 +2319,10 @@ func (repo *Repository) UploadRepoFiles(doer *User, oldBranchName, branchName, t
 
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   message,
+	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", branchName); err != nil {
 		return fmt.Errorf("Push: %v", err)
