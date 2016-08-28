@@ -956,7 +956,7 @@ func getLabelTemplateFile(name string) ([]byte, error) {
 	return bindata.Asset(relPath)
 }
 
-func InitializeLabelsFromTemplate(ctx *context.Context, form auth.InitializeLabelsForm) {
+func InitializeLabels(ctx *context.Context, form auth.InitializeLabelsForm) {
 	if ctx.HasError() {
 		ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
 		ctx.Redirect(ctx.Repo.RepoLink + "/labels")
