@@ -267,7 +267,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		IsNewFile:    isNewFile,
 	}); err != nil {
 		ctx.Data["Err_TreePath"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.editor.failed_to_update_file", err), EDIT_FILE, &form)
+		ctx.RenderWithErr(ctx.Tr("repo.editor.fail_to_update_file", form.TreePath, err), EDIT_FILE, &form)
 		return
 	}
 

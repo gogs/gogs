@@ -96,6 +96,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	}
 
 	localPath := repo.LocalCopyPath()
+	oldFilePath := path.Join(localPath, opts.OldTreeName)
 	filePath := path.Join(localPath, opts.NewTreeName)
 	os.MkdirAll(path.Dir(filePath), os.ModePerm)
 
@@ -106,8 +107,9 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		}
 	}
 
-	// If update a file, move if file name change.
-	if len(opts.OldTreeName) > 0 && len(opts.NewTreeName) > 0 && opts.OldTreeName != opts.NewTreeName {
+	// Ignore move step if it's a new file under a directory.
+	// Otherwise, move the file when name changed.
+	if com.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
 		if err = git.MoveFile(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return fmt.Errorf("git mv %s %s: %v", opts.OldTreeName, opts.NewTreeName, err)
 		}
