@@ -1199,6 +1199,7 @@ footer .ui.language .menu {
 .repository #clone-panel {
   margin-top: -8px;
   width: 100%;
+  padding-left: 20px;
 }
 .repository #clone-panel input {
   border-radius: 0;
@@ -1227,7 +1228,6 @@ footer .ui.language .menu {
 .repository.file.list #file-buttons {
   font-weight: normal;
   margin-top: -3px;
-  padding-right: 20px;
 }
 .repository.file.list #file-buttons .ui.button {
   padding: 8px 10px;

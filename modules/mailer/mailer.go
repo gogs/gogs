@@ -126,8 +126,8 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		return fmt.Errorf("NewClient: %v", err)
 	}
 
-	if !setting.MailService.DisableHelo {
-		hostname := setting.MailService.HeloHostname
+	if !opts.DisableHelo {
+		hostname := opts.HeloHostname
 		if len(hostname) == 0 {
 			hostname, err = os.Hostname()
 			if err != nil {
