@@ -124,12 +124,12 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 		Assignee:   apiIssue.Assignee,
 		State:      apiIssue.State,
 		Comments:   apiIssue.Comments,
-		HTMLURL:    pr.Issue.HTMLURL(),
-		HasMerged:  pr.HasMerged,
 		HeadBranch: pr.HeadBranch,
 		HeadRepo:   pr.HeadRepo.APIFormat(nil),
 		BaseBranch: pr.BaseBranch,
 		BaseRepo:   pr.BaseRepo.APIFormat(nil),
+		HTMLURL:    pr.Issue.HTMLURL(),
+		HasMerged:  pr.HasMerged,
 	}
 
 	if pr.Status != PULL_REQUEST_STATUS_CHECKING {
