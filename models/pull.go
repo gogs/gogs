@@ -20,7 +20,10 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/sync"
 )
+
+var PullRequestQueue = sync.NewUniqueQueue(setting.Repository.PullRequestQueueLength)
 
 type PullRequestType int
 
@@ -536,8 +539,6 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 	_, err := x.Id(pr.ID).Cols(cols...).Update(pr)
 	return err
 }
-
-var PullRequestQueue = NewUniqueQueue(setting.Repository.PullRequestQueueLength)
 
 // UpdatePatch generates and saves a new patch.
 func (pr *PullRequest) UpdatePatch() (err error) {
