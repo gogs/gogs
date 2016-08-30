@@ -76,12 +76,22 @@ func Search(ctx *context.APIContext) {
 	})
 }
 
-func listUserRepos(ctx *context.APIContext, u *models.User) {
-	ownRepos, err := models.GetUserRepositories(u.ID, true, 1, u.NumRepos)
+func listUserRepos(ctx *context.APIContext, u *models.User, private bool) (repos []*models.Repository, _ error) {
+	ownRepos, err := models.GetUserRepositories(u.ID, private, 1, u.NumRepos)
 	if err != nil {
-		ctx.Error(500, "GetRepositories", err)
+		return nil, err
+	}
+	return ownRepos, err
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
+func ListMyRepos(ctx *context.APIContext) {
+	ownRepos, err := listUserRepos(ctx, ctx.User, true)
+	if err != nil {
+		ctx.Error(500, "GetUserRepositories", err)
 		return
 	}
+
 	numOwnRepos := len(ownRepos)
 
 	accessibleRepos, err := ctx.User.GetRepositoryAccesses()
@@ -108,11 +118,6 @@ func listUserRepos(ctx *context.APIContext, u *models.User) {
 	ctx.JSON(200, &repos)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
-func ListMyRepos(ctx *context.APIContext) {
-	listUserRepos(ctx, ctx.User)
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-user-repositories
 func ListUserRepos(ctx *context.APIContext) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
@@ -124,7 +129,18 @@ func ListUserRepos(ctx *context.APIContext) {
 		}
 		return
 	}
-	listUserRepos(ctx, u)
+	ownRepos, err := listUserRepos(ctx, u, false)
+	if err != nil {
+		ctx.Error(500, "GetUserRepositories", err)
+		return
+	}
+
+	repos := make([]*api.Repository, len(ownRepos))
+	for i := range ownRepos {
+		repos[i] = ownRepos[i].APIFormat(&api.Permission{false, false, true})
+	}
+
+	ctx.JSON(200, &repos)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-org-repositories
@@ -143,7 +159,18 @@ func ListOrgRepos(ctx *context.APIContext) {
 		}
 		return
 	}
-	listUserRepos(ctx, u)
+	ownRepos, err := listUserRepos(ctx, u, u.IsOwnedBy(ctx.User.ID))
+	if err != nil {
+		ctx.Error(500, "GetUserRepositories", err)
+		return
+	}
+
+	repos := make([]*api.Repository, len(ownRepos))
+	for i := range ownRepos {
+		repos[i] = ownRepos[i].APIFormat(&api.Permission{u.IsOwnedBy(ctx.User.ID), u.IsOwnedBy(ctx.User.ID), true})
+	}
+
+	ctx.JSON(200, &repos)
 }
 
 func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateRepoOption) {
