@@ -6,7 +6,7 @@ import:
 - package: github.com/Unknwon/com
 - package: github.com/Unknwon/i18n
 - package: github.com/Unknwon/paginater
-- package: github.com/codegangsta/cli
+- package: github.com/urfave/cli
 - package: github.com/go-macaron/binding
 - package: github.com/go-macaron/cache
   subpackages:
