@@ -5,7 +5,7 @@ imports:
   version: fb1f79c6b65acda83063cbc69f6bba1522558bfc
   subpackages:
   - memcache
-- name: github.com/codegangsta/cli
+- name: github.com/urfave/cli
   version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
 - name: github.com/go-macaron/binding
   version: 9440f336b443056c90d7d448a0a55ad8c7599880

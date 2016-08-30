@@ -14,7 +14,7 @@ import (
 	"io/ioutil"
 
 	"github.com/Unknwon/cae/zip"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/setting"
