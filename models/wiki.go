@@ -21,7 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/sync"
 )
 
-var wikiWorkingPool = sync.NewSingleInstancePool()
+var wikiWorkingPool = sync.NewExclusivePool()
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {

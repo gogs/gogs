@@ -40,7 +40,7 @@ const (
 	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
 )
 
-var repoWorkingPool = sync.NewSingleInstancePool()
+var repoWorkingPool = sync.NewExclusivePool()
 
 var (
 	ErrRepoFileNotExist  = errors.New("Repository file does not exist")

@@ -8,14 +8,15 @@ import (
 	"sync"
 )
 
-// SingleInstancePool is a pool of non-identical instances
+// ExclusivePool is a pool of non-identical instances
 // that only one instance with same identity is in the pool at a time.
-// In other words, only instances with different identities can exist
-// at the same time.
+// In other words, only instances with different identities can be in
+// the pool the same time. If another instance with same identity tries
+// to get into the pool, it hangs until previous instance left the pool.
 //
 // This pool is particularly useful for performing tasks on same resource
 // on the file system in different goroutines.
-type SingleInstancePool struct {
+type ExclusivePool struct {
 	lock sync.Mutex
 
 	// pool maintains locks for each instance in the pool.
@@ -29,9 +30,9 @@ type SingleInstancePool struct {
 	count map[string]int
 }
 
-// NewSingleInstancePool initializes and returns a new SingleInstancePool object.
-func NewSingleInstancePool() *SingleInstancePool {
-	return &SingleInstancePool{
+// NewExclusivePool initializes and returns a new ExclusivePool object.
+func NewExclusivePool() *ExclusivePool {
+	return &ExclusivePool{
 		pool:  make(map[string]*sync.Mutex),
 		count: make(map[string]int),
 	}
@@ -39,7 +40,7 @@ func NewSingleInstancePool() *SingleInstancePool {
 
 // CheckIn checks in an instance to the pool and hangs while instance
 // with same indentity is using the lock.
-func (p *SingleInstancePool) CheckIn(identity string) {
+func (p *ExclusivePool) CheckIn(identity string) {
 	p.lock.Lock()
 
 	lock, has := p.pool[identity]
@@ -55,7 +56,7 @@ func (p *SingleInstancePool) CheckIn(identity string) {
 
 // CheckOut checks out an instance from the pool and releases the lock
 // to let other instances with same identity to grab the lock.
-func (p *SingleInstancePool) CheckOut(identity string) {
+func (p *ExclusivePool) CheckOut(identity string) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
