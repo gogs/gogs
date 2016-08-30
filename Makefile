@@ -17,8 +17,14 @@ GOVET = go tool vet -composites=false -methods=false -structtags=false
 
 .IGNORE: public/css/gogs.css
 
+all: build
+
+check: test
+
+dist: release
+
 govet:
-	$(GOVET) gogs.go 
+	$(GOVET) gogs.go
 	$(GOVET) models modules routers
 
 build: $(GENERATED)
