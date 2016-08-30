@@ -112,6 +112,7 @@ var (
 	Repository struct {
 		AnsiCharset            string
 		ForcePrivate           bool
+		ArchiveFullPath        bool
 		MaxCreationLimit       int
 		PullRequestQueueLength int
 		PreferredLicenses      []string
@@ -131,9 +132,9 @@ var (
 			MaxFiles     int
 		} `ini:"-"`
 	}
-	RepoRootPath string
-	ScriptType   string
-
+	RepoRootPath    string
+	ScriptType      string
+	ArchiveFullPath bool
 	// UI settings
 	UI struct {
 		ExplorePagingNum   int
@@ -489,6 +490,7 @@ func NewContext() {
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
+	ArchiveFullPath = sec.Key("ARCHIVE_FULL_PATH").MustBool(true)
 	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {
 		RepoRootPath = path.Join(workDir, RepoRootPath)
