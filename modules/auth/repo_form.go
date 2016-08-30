@@ -316,7 +316,7 @@ func (f *EditPreviewDiffForm) Validate(ctx *macaron.Context, errs binding.Errors
 //
 
 type UploadRepoFileForm struct {
-	TreeName      string `binding:MaxSize(500)"`
+	TreePath      string `binding:MaxSize(500)"`
 	CommitSummary string `binding:"MaxSize(100)`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`

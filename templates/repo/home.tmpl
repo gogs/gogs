@@ -18,36 +18,36 @@
 			{{template "repo/branch_dropdown" .}}
 			<div class="fitted item">
 				<div class="ui breadcrumb">
-					<a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
+					<a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{EllipsisString .Repository.Name 25}}</a>
 					{{ $n := len .TreeNames}}
 					{{ $l := Subtract $n 1}}
 					{{range $i, $v := .TreeNames}}
 						<div class="divider"> / </div>
 						{{if eq $i $l}}
-							<span class="active section">{{$v}}</span>
+							<span class="active section">{{EllipsisString $v 15}}</span>
 						{{else}}
 							{{ $p := index $.Paths $i}}
-							<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
+							<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{EllipsisString $v 15}}</a></span>
 						{{end}}
 					{{end}}
 				</div>
 			</div>
 			<div class="right fitted item">
 				{{if .Repository.CanEnableEditor}}
-					<div id="file-buttons" class="ui tiny buttons">
+					<div id="file-buttons" class="ui tiny blue buttons">
 						{{if .CanAddFile}}
 							<a href="{{.RepoLink}}/_new/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
 								{{.i18n.Tr "repo.editor.new_file"}}
 							</a>
 						{{end}}
-						{{if .UploadFileLink}}
-							<!-- <a href="{{EscapePound .UploadFileLink}}" class="ui button nowrap">
-								<i class="upload icon"></i> {{.i18n.Tr "repo.upload_file"}}
-							</a> -->
+						{{if .CanUploadFile}}
+							<a href="{{.RepoLink}}/_upload/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
+								{{.i18n.Tr "repo.editor.upload_file"}}
+							</a>
 						{{end}}
 					</div>
 				{{end}}
-				
+
 				<!-- Only show colne panel in repository home page -->
 				{{if eq $n 0}}
 					<div class="ui action small input" id="clone-panel">

@@ -86,6 +86,7 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return str[start:end]
 		},
+		"EllipsisString":    base.EllipsisString,
 		"DiffTypeToStr":     DiffTypeToStr,
 		"DiffLineTypeToStr": DiffLineTypeToStr,
 		"Sha1":              Sha1,

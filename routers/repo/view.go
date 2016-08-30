@@ -113,10 +113,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 	// Check permission to add or upload new file.
 	if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
 		ctx.Data["CanAddFile"] = true
-		// uploadFileLink := ctx.Repo.RepoLink + "/upload/" + branchName
-		// if setting.Repository.Upload.Enabled {
-		// 	ctx.Data["UploadFileLink"] = uploadFileLink + "/" +  ctx.Repo.TreePath
-		// }
+		ctx.Data["CanUploadFile"] = setting.Repository.Upload.Enabled
 	}
 }
 
@@ -253,7 +250,7 @@ func Home(ctx *context.Context) {
 
 	ec, err := ctx.Repo.GetEditorconfig()
 	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "ErrGettingEditorconfig", err)
+		ctx.Handle(500, "Repo.GetEditorconfig", err)
 		return
 	}
 	ctx.Data["Editorconfig"] = ec

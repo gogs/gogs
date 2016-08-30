@@ -447,7 +447,6 @@ func UploadIssueAttachment(ctx *context.Context) {
 		return
 	}
 
-	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, ",")
 	file, header, err := ctx.Req.FormFile("file")
 	if err != nil {
 		ctx.Error(500, fmt.Sprintf("FormFile: %v", err))
@@ -462,6 +461,7 @@ func UploadIssueAttachment(ctx *context.Context) {
 	}
 	fileType := http.DetectContentType(buf)
 
+	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, ",")
 	allowed := false
 	for _, t := range allowedTypes {
 		t := strings.Trim(t, " ")
