@@ -216,7 +216,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		ctx.Data["HasAccess"] = true
 
 		if repo.IsMirror {
-			ctx.Repo.Mirror, err = models.GetMirror(repo.ID)
+			ctx.Repo.Mirror, err = models.GetMirrorByRepoID(repo.ID)
 			if err != nil {
 				ctx.Handle(500, "GetMirror", err)
 				return

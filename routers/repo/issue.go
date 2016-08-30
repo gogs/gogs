@@ -490,7 +490,6 @@ func UploadIssueAttachment(ctx *context.Context) {
 
 func ViewIssue(ctx *context.Context) {
 	ctx.Data["RequireHighlightJS"] = true
-	ctx.Data["RequireSimpleMDE"] = true
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 

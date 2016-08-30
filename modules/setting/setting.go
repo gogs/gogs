@@ -113,6 +113,7 @@ var (
 		AnsiCharset            string
 		ForcePrivate           bool
 		MaxCreationLimit       int
+		MirrorQueueLength      int
 		PullRequestQueueLength int
 		PreferredLicenses      []string
 

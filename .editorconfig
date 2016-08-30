@@ -8,9 +8,13 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{go,tmpl}]
+[*.go]
 indent_style = tab
 indent_size = 4
+
+[*.tmpl]
+indent_style = tab
+indent_size = 2
 
 [*.{less,yml}]
 indent_style = space

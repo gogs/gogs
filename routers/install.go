@@ -75,6 +75,7 @@ func GlobalInit() {
 
 		// Booting long running goroutines.
 		cron.NewContext()
+		models.InitSyncMirrors()
 		models.InitDeliverHooks()
 		models.InitTestPullRequests()
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))

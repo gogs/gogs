@@ -597,7 +597,7 @@ func DeliverHooks() {
 
 	// Start listening on new hook requests.
 	for repoID := range HookQueue.Queue() {
-		log.Trace("DeliverHooks [%v]: processing delivery hooks", repoID)
+		log.Trace("DeliverHooks [repo_id: %v]", repoID)
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
