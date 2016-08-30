@@ -509,7 +509,7 @@ function initRepository() {
 
         // Change status
         var $statusButton = $('#status-button');
-        $('#edit_area').keyup(function () {
+        $('#comment-form .edit_area').keyup(function () {
             if ($(this).val().length == 0) {
                 $statusButton.text($statusButton.data('status'))
             } else {
@@ -613,29 +613,6 @@ function initWikiForm() {
                 "link", "image", "table", "horizontal-rule", "|",
                 "clean-block", "preview", "fullscreen"]
         })
-    }
-}
-
-function initIssueForm() {
-    var $editArea = $('.repository.issue textarea.edit_area');
-    if ($editArea.length > 0) {
-        $editArea.each(function (i, edit_area) {
-            new SimpleMDE({
-                autoDownloadFontAwesome: false,
-                element: edit_area[0],
-                forceSync: true,
-                renderingConfig: {
-                    singleLineBreaks: false
-                },
-                indentWithTabs: false,
-                tabSize: 4,
-                spellChecker: false,
-                toolbar: ["bold", "italic", "strikethrough", "|",
-                    "code", "quote", "|",
-                    "unordered-list", "ordered-list", "|",
-                    "link", "image", "table"]
-            })
-        });
     }
 }
 
@@ -1365,7 +1342,6 @@ $(document).ready(function () {
     initInstall();
     initRepository();
     initWikiForm();
-    initIssueForm();
     initEditForm();
     initEditor();
     initOrganization();
