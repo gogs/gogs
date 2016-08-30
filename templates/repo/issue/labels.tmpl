@@ -36,15 +36,15 @@
 
 		{{template "base/alert" .}}
 		<div class="ui black label">{{.i18n.Tr "repo.issues.label_count" .NumLabels}}</div>
-		{{if $.IsRepositoryWriter}}
-			{{if eq .NumLabels 0}}
+		<div class="label list">
+			{{if and $.IsRepositoryWriter (eq .NumLabels 0)}}
 				<div class="ui centered grid">
 					<div class="twelve wide column eight wide computer column">
-						<div class="ui attached left aligned segment" style="margin-top:30px">
+						<div class="ui attached left aligned segment">
 							<h4 class="ui header">
 								{{.i18n.Tr "repo.issues.label_templates.title"}}
 								<a target="_blank"
-								   href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-label-template">
+								   href="https://discuss.gogs.io/t/how-to-use-predefined-label-templates/599">
 									<span class="octicon octicon-question"></span>
 								</a>
 							</h4>
@@ -54,7 +54,7 @@
 								{{.CsrfTokenHtml}}
 								<div class="field">
 									<div class="ui selection dropdown">
-										<input type="hidden" name="template_name" id="templatename" value="Default">
+										<input type="hidden" name="template_name" value="Default">
 										<div class="default text">{{.i18n.Tr "repo.issues.label_templates.helper"}}</div>
 										<div class="menu">
 											{{range .LabelTemplates}}
@@ -69,9 +69,7 @@
 					</div>
 				</div>
 			{{end}}
-		{{end}}
 
-		<div class="label list">
 			{{range .Labels}}
 				<li class="item">
 					<div class="ui label" style="color: {{.ForegroundColor}}; background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
