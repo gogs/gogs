@@ -88,7 +88,7 @@ func listUserRepos(ctx *context.APIContext, u *models.User, private bool) (repos
 func ListMyRepos(ctx *context.APIContext) {
 	ownRepos, err := listUserRepos(ctx, ctx.User, true)
 	if err != nil {
-		ctx.Error(500, "GetUserRepositories", err)
+		ctx.Error(500, "listUserRepos", err)
 		return
 	}
 
@@ -125,14 +125,14 @@ func ListUserRepos(ctx *context.APIContext) {
 		if models.IsErrUserNotExist(err) {
 			ctx.Status(404)
 		} else {
-			ctx.Error(500, "ListUserRepos", err)
+			ctx.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
 	ownRepos, err := listUserRepos(ctx, u, false)
 	if err != nil {
-		ctx.Error(500, "GetUserRepositories", err)
+		ctx.Error(500, "listUserRepos", err)
 		return
 	}
 
@@ -156,14 +156,14 @@ func ListOrgRepos(ctx *context.APIContext) {
 		if models.IsErrUserNotExist(err) {
 			ctx.Status(404)
 		} else {
-			ctx.Error(500, "ListOrgRepos", err)
+			ctx.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
 	ownRepos, err := listUserRepos(ctx, u, u.IsOwnedBy(ctx.User.ID))
 	if err != nil {
-		ctx.Error(500, "GetUserRepositories", err)
+		ctx.Error(500, "listUserRepos", err)
 		return
 	}
 
