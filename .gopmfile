@@ -3,7 +3,7 @@ path = github.com/gogits/gogs
 
 [deps]
 github.com/bradfitz/gomemcache = commit:fb1f79c
-github.com/codegangsta/cli = commit:1efa31f
+github.com/urfave/cli = commit:1efa31f
 github.com/go-macaron/binding = commit:9440f33
 github.com/go-macaron/cache = commit:5617353
 github.com/go-macaron/captcha = commit:8aa5919
@@ -57,4 +57,3 @@ gopkg.in/redis.v2 = commit:e617904
 
 [res]
 include = public|scripts|templates
-

@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/codegangsta/cli"
 	git "github.com/gogits/git-module"
 	gouuid "github.com/satori/go.uuid"
+	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"

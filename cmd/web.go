@@ -15,7 +15,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/codegangsta/cli"
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"
@@ -26,6 +25,7 @@ import (
 	"github.com/go-macaron/toolbox"
 	"github.com/go-xorm/xorm"
 	"github.com/mcuadros/go-version"
+	"github.com/urfave/cli"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
