@@ -72,8 +72,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		}
 
 		// Only text file are editable online.
-		_, isTextFile := base.IsTextFile(buf)
-		if !isTextFile {
+		if !base.IsTextFile(buf) {
 			ctx.Handle(404, "", nil)
 			return
 		}

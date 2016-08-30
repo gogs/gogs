@@ -21,10 +21,8 @@ func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 		buf = buf[:n]
 	}
 
-	_, isTextFile := base.IsTextFile(buf)
-	if !isTextFile {
-		_, isImageFile := base.IsImageFile(buf)
-		if !isImageFile {
+	if !base.IsTextFile(buf) {
+		if !base.IsImageFile(buf) {
 			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+path.Base(ctx.Repo.TreePath)+"\"")
 			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}

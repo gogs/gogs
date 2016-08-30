@@ -48,7 +48,7 @@ type Repository struct {
 	CommitsCount int64
 	Mirror       *models.Mirror
 
-	PullRequest  *PullRequest
+	PullRequest *PullRequest
 }
 
 // IsOwner returns true if current user is the owner of repository.
@@ -69,6 +69,11 @@ func (r *Repository) IsWriter() bool {
 // HasAccess returns true if the current user has at least read access for this repository
 func (r *Repository) HasAccess() bool {
 	return r.AccessMode >= models.ACCESS_MODE_READ
+}
+
+// CanEnableEditor returns true if repository is editable and user has proper access level.
+func (r *Repository) CanEnableEditor() bool {
+	return r.Repository.CanEnableEditor() && r.IsViewBranch && r.IsWriter()
 }
 
 // GetEditorconfig returns the .editorconfig definition if found in the
@@ -167,6 +172,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 			}
 		}
 		ctx.Repo.Owner = owner
+		ctx.Data["Username"] = ctx.Repo.Owner.Name
 
 		// Get repository.
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
@@ -221,6 +227,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		}
 
 		ctx.Repo.Repository = repo
+		ctx.Data["RepoName"] = ctx.Repo.Repository.Name
 		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare
 
 		gitRepo, err := git.OpenRepository(models.RepoPath(userName, repoName))
@@ -348,12 +355,11 @@ func RepoRef() macaron.Handler {
 		// For API calls.
 		if ctx.Repo.GitRepo == nil {
 			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
-			gitRepo, err := git.OpenRepository(repoPath)
+			ctx.Repo.GitRepo, err = git.OpenRepository(repoPath)
 			if err != nil {
 				ctx.Handle(500, "RepoRef Invalid repo "+repoPath, err)
 				return
 			}
-			ctx.Repo.GitRepo = gitRepo
 		}
 
 		// Get default branch.
@@ -431,6 +437,7 @@ func RepoRef() macaron.Handler {
 		ctx.Repo.BranchName = refName
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitID"] = ctx.Repo.CommitID
+		ctx.Data["TreePath"] = ctx.Repo.TreePath
 		ctx.Data["IsViewBranch"] = ctx.Repo.IsViewBranch
 		ctx.Data["IsViewTag"] = ctx.Repo.IsViewTag
 		ctx.Data["IsViewCommit"] = ctx.Repo.IsViewCommit
