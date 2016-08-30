@@ -1685,11 +1685,12 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 		Name: name,
 	}
 
-	if err = os.MkdirAll(path.Dir(attach.LocalPath()), os.ModePerm); err != nil {
+	localPath := attach.LocalPath()
+	if err = os.MkdirAll(path.Dir(localPath), os.ModePerm); err != nil {
 		return nil, fmt.Errorf("MkdirAll: %v", err)
 	}
 
-	fw, err := os.Create(attach.LocalPath())
+	fw, err := os.Create(localPath)
 	if err != nil {
 		return nil, fmt.Errorf("Create: %v", err)
 	}
@@ -1701,17 +1702,11 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 		return nil, fmt.Errorf("Copy: %v", err)
 	}
 
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err := sess.Begin(); err != nil {
+	if _, err := x.Insert(attach); err != nil {
 		return nil, err
 	}
 
-	if _, err := sess.Insert(attach); err != nil {
-		return nil, err
-	}
-
-	return attach, sess.Commit()
+	return attach, nil
 }
 
 func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {

@@ -6,7 +6,9 @@ package models
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"os"
 	"os/exec"
 	"path"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	gouuid "github.com/satori/go.uuid"
 
 	git "github.com/gogits/git-module"
 
@@ -290,4 +293,228 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 	}
 
 	return nil
+}
+
+//  ____ ___        .__                    .___ ___________.___.__
+// |    |   \______ |  |   _________     __| _/ \_   _____/|   |  |   ____   ______
+// |    |   /\____ \|  |  /  _ \__  \   / __ |   |    __)  |   |  | _/ __ \ /  ___/
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |   |     \   |   |  |_\  ___/ \___ \
+// |______/  |   __/|____/\____(____  /\____ |   \___  /   |___|____/\___  >____  >
+//           |__|                   \/      \/       \/                  \/     \/
+//
+
+// Upload represent a uploaded file to a repo to be deleted when moved
+type Upload struct {
+	ID   int64  `xorm:"pk autoincr"`
+	UUID string `xorm:"uuid UNIQUE"`
+	Name string
+}
+
+// UploadLocalPath returns where uploads is stored in local file system based on given UUID.
+func UploadLocalPath(uuid string) string {
+	return path.Join(setting.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
+}
+
+// LocalPath returns where uploads are temporarily stored in local file system.
+func (upload *Upload) LocalPath() string {
+	return UploadLocalPath(upload.UUID)
+}
+
+// NewUpload creates a new upload object.
+func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
+	upload := &Upload{
+		UUID: gouuid.NewV4().String(),
+		Name: name,
+	}
+
+	localPath := upload.LocalPath()
+	if err = os.MkdirAll(path.Dir(localPath), os.ModePerm); err != nil {
+		return nil, fmt.Errorf("MkdirAll: %v", err)
+	}
+
+	fw, err := os.Create(localPath)
+	if err != nil {
+		return nil, fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if _, err = fw.Write(buf); err != nil {
+		return nil, fmt.Errorf("Write: %v", err)
+	} else if _, err = io.Copy(fw, file); err != nil {
+		return nil, fmt.Errorf("Copy: %v", err)
+	}
+
+	if _, err := x.Insert(upload); err != nil {
+		return nil, err
+	}
+
+	return upload, nil
+}
+
+func GetUploadByUUID(uuid string) (*Upload, error) {
+	upload := &Upload{UUID: uuid}
+	has, err := x.Get(upload)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUploadNotExist{0, uuid}
+	}
+	return upload, nil
+}
+
+func GetUploadsByUUIDs(uuids []string) ([]*Upload, error) {
+	if len(uuids) == 0 {
+		return []*Upload{}, nil
+	}
+
+	// Silently drop invalid uuids.
+	uploads := make([]*Upload, 0, len(uuids))
+	return uploads, x.In("uuid", uuids).Find(&uploads)
+}
+
+func DeleteUploads(uploads ...*Upload) (err error) {
+	if len(uploads) == 0 {
+		return nil
+	}
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	ids := make([]int64, len(uploads))
+	for i := 0; i < len(uploads); i++ {
+		ids[i] = uploads[i].ID
+	}
+	if _, err = sess.In("id", ids).Delete(new(Upload)); err != nil {
+		return fmt.Errorf("delete uploads: %v", err)
+	}
+
+	for _, upload := range uploads {
+		localPath := upload.LocalPath()
+		if !com.IsFile(localPath) {
+			continue
+		}
+
+		if err := os.Remove(localPath); err != nil {
+			return fmt.Errorf("remove upload: %v", err)
+		}
+	}
+
+	return sess.Commit()
+}
+
+func DeleteUpload(u *Upload) error {
+	return DeleteUploads(u)
+}
+
+func DeleteUploadByUUID(uuid string) error {
+	upload, err := GetUploadByUUID(uuid)
+	if err != nil {
+		if IsErrUploadNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("GetUploadByUUID: %v", err)
+	}
+
+	if err := DeleteUpload(upload); err != nil {
+		return fmt.Errorf("DeleteUpload: %v", err)
+	}
+
+	return nil
+}
+
+type UploadRepoFileOptions struct {
+	LastCommitID string
+	OldBranch    string
+	NewBranch    string
+	TreePath     string
+	Message      string
+	Files        []string // In UUID format.
+}
+
+func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) (err error) {
+	if len(opts.Files) == 0 {
+		return nil
+	}
+
+	uploads, err := GetUploadsByUUIDs(opts.Files)
+	if err != nil {
+		return fmt.Errorf("GetUploadsByUUIDs [uuids: %v]: %v", opts.Files, err)
+	}
+
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+
+	if err = repo.DiscardLocalRepoBranchChanges(opts.OldBranch); err != nil {
+		return fmt.Errorf("DiscardLocalRepoBranchChanges [branch: %s]: %v", opts.OldBranch, err)
+	} else if err = repo.UpdateLocalCopyBranch(opts.OldBranch); err != nil {
+		return fmt.Errorf("UpdateLocalCopyBranch [branch: %s]: %v", opts.OldBranch, err)
+	}
+
+	if opts.OldBranch != opts.NewBranch {
+		if err = repo.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
+			return fmt.Errorf("CheckoutNewBranch [old_branch: %s, new_branch: %s]: %v", opts.OldBranch, opts.NewBranch, err)
+		}
+	}
+
+	localPath := repo.LocalCopyPath()
+	dirPath := path.Join(localPath, opts.TreePath)
+	os.MkdirAll(dirPath, os.ModePerm)
+
+	// Copy uploaded files into repository.
+	for _, upload := range uploads {
+		tmpPath := upload.LocalPath()
+		targetPath := path.Join(dirPath, upload.Name)
+		if !com.IsFile(tmpPath) {
+			continue
+		}
+
+		if err = com.Copy(tmpPath, targetPath); err != nil {
+			return fmt.Errorf("Copy: %v", err)
+		}
+	}
+
+	if err = git.AddChanges(localPath, true); err != nil {
+		return fmt.Errorf("git add --all: %v", err)
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   opts.Message,
+	}); err != nil {
+		return fmt.Errorf("CommitChanges: %v", err)
+	} else if err = git.Push(localPath, "origin", opts.NewBranch); err != nil {
+		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
+	}
+
+	gitRepo, err := git.OpenRepository(repo.RepoPath())
+	if err != nil {
+		log.Error(4, "OpenRepository: %v", err)
+		return nil
+	}
+	commit, err := gitRepo.GetBranchCommit(opts.NewBranch)
+	if err != nil {
+		log.Error(4, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
+		return nil
+	}
+
+	// Simulate push event.
+	pushCommits := &PushCommits{
+		Len:     1,
+		Commits: []*PushCommit{CommitToPushCommit(commit)},
+	}
+	if err := CommitRepoAction(CommitRepoActionOptions{
+		PusherName:  doer.Name,
+		RepoOwnerID: repo.MustOwner().ID,
+		RepoName:    repo.Name,
+		RefFullName: git.BRANCH_PREFIX + opts.NewBranch,
+		OldCommitID: opts.LastCommitID,
+		NewCommitID: commit.ID.String(),
+		Commits:     pushCommits,
+	}); err != nil {
+		log.Error(4, "CommitRepoAction: %v", err)
+		return nil
+	}
+
+	return DeleteUploads(uploads...)
 }

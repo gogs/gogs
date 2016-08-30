@@ -1198,8 +1198,8 @@ footer .ui.language .menu {
 }
 .repository #clone-panel {
   margin-top: -8px;
-  width: 100%;
-  padding-left: 20px;
+  margin-left: 5px;
+  width: 350px;
 }
 .repository #clone-panel input {
   border-radius: 0;
@@ -2270,13 +2270,13 @@ footer .ui.language .menu {
 .page.buttons {
   padding-top: 15px;
 }
-.ui.comments .dropzone {
+.ui.form .dropzone {
   width: 100%;
   margin-bottom: 10px;
   border: 2px dashed #0087F7;
   box-shadow: none!important;
 }
-.ui.comments .dropzone .dz-error-message {
+.ui.form .dropzone .dz-error-message {
   top: 140px;
 }
 .settings .content {

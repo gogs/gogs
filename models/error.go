@@ -652,10 +652,8 @@ func (err ErrTeamAlreadyExist) Error() string {
 //
 
 type ErrUploadNotExist struct {
-	ID     int64
-	UUID   string
-	UserID int64
-	RepoID int64
+	ID   int64
+	UUID string
 }
 
 func IsErrUploadNotExist(err error) bool {
@@ -664,5 +662,5 @@ func IsErrUploadNotExist(err error) bool {
 }
 
 func (err ErrUploadNotExist) Error() string {
-	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s, user_id: %d, repo_id: %d]", err.ID, err.UUID, err.UserID, err.RepoID)
+	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
 }

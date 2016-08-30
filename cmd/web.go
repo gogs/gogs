@@ -505,12 +505,20 @@ func runWeb(ctx *cli.Context) error {
 			m.Combo("/_new/*").Get(repo.NewFile).
 				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.NewFilePost)
 			m.Post("/_preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
-			m.Combo("/_upload/*").Get(repo.UploadFile).
-				Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
 			m.Combo("/_delete/*").Get(repo.DeleteFile).
 				Post(bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
-			// m.Post("/upload-file", repo.UploadFileToServer)
-			// m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
+
+			m.Group("", func() {
+				m.Combo("/_upload/*").Get(repo.UploadFile).
+					Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
+				m.Post("/upload-file", repo.UploadFileToServer)
+				m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
+			}, func(ctx *context.Context) {
+				if !setting.Repository.Upload.Enabled {
+					ctx.Handle(404, "", nil)
+					return
+				}
+			})
 		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
 			if !ctx.Repo.Repository.CanEnableEditor() || ctx.Repo.IsViewCommit {
 				ctx.Handle(404, "", nil)
