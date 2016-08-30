@@ -129,6 +129,7 @@ func ListUserRepos(ctx *context.APIContext) {
 		}
 		return
 	}
+
 	ownRepos, err := listUserRepos(ctx, u, false)
 	if err != nil {
 		ctx.Error(500, "GetUserRepositories", err)
@@ -159,6 +160,7 @@ func ListOrgRepos(ctx *context.APIContext) {
 		}
 		return
 	}
+
 	ownRepos, err := listUserRepos(ctx, u, u.IsOwnedBy(ctx.User.ID))
 	if err != nil {
 		ctx.Error(500, "GetUserRepositories", err)
