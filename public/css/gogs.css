@@ -1345,7 +1345,6 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view .lines-code ol li,
 .repository.file.list #file-content .code-view .lines-num .hljs li,
 .repository.file.list #file-content .code-view .lines-code .hljs li {
-  padding-left: 5px;
   display: inline-block;
   width: 100%;
 }
@@ -1356,6 +1355,14 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view .lines-num .hljs li.active,
 .repository.file.list #file-content .code-view .lines-code .hljs li.active {
   background: #ffffdd;
+}
+.repository.file.list #file-content .code-view .lines-num pre li:before,
+.repository.file.list #file-content .code-view .lines-code pre li:before,
+.repository.file.list #file-content .code-view .lines-num ol li:before,
+.repository.file.list #file-content .code-view .lines-code ol li:before,
+.repository.file.list #file-content .code-view .lines-num .hljs li:before,
+.repository.file.list #file-content .code-view .lines-code .hljs li:before {
+  content: ' ';
 }
 .repository.file.list .sidebar {
   padding-left: 0;
