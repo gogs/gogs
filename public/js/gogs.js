@@ -827,6 +827,34 @@ function initEditor() {
         else {
             codeMirrorEditor.setOption("lineWrapping", false);
         }
+
+        // get the filename without any folder
+        var value = $editFilename.val();
+        if (value.length === 0) {
+            return;
+        }
+        value = value.split('/');
+        value = value[value.length - 1];
+
+        $.getJSON($editFilename.data('ec-url-prefix')+value, function(editorconfig) {
+            if (editorconfig.indent_style === 'tab') {
+                codeMirrorEditor.setOption("indentWithTabs", true);
+                codeMirrorEditor.setOption('extraKeys', {});
+            } else {
+                codeMirrorEditor.setOption("indentWithTabs", false);
+                // required because CodeMirror doesn't seems to use spaces correctly for {"indentWithTabs": false}:
+                // - https://github.com/codemirror/CodeMirror/issues/988
+                // - https://codemirror.net/doc/manual.html#keymaps
+                codeMirrorEditor.setOption('extraKeys', {
+                    Tab: function(cm) {
+                        var spaces = Array(parseInt(cm.getOption("indentUnit")) + 1).join(" ");
+                        cm.replaceSelection(spaces);
+                    }
+                });
+            }
+            codeMirrorEditor.setOption("indentUnit", editorconfig.indent_size || 4);
+            codeMirrorEditor.setOption("tabSize", editorconfig.tab_width || 4);
+        });
     }).trigger('keyup');
 }
 
