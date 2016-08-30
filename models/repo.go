@@ -54,7 +54,7 @@ var (
 )
 
 var (
-	Gitignores, Licenses, Readmes []string
+	Gitignores, Licenses, Readmes, LabelTemplates []string
 
 	// Maximum items per page in forks, watchers and stars of a repo
 	ItemsPerPage = 40
@@ -62,9 +62,8 @@ var (
 
 func LoadRepoConfig() {
 	// Load .gitignore and license files and readme templates.
-	// TODO: should we allow custom files overwrite default ones?
-	types := []string{"gitignore", "license", "readme"}
-	typeFiles := make([][]string, 3)
+	types := []string{"gitignore", "license", "readme", "label"}
+	typeFiles := make([][]string, 4)
 	for i, t := range types {
 		files, err := bindata.AssetDir("conf/" + t)
 		if err != nil {
@@ -89,9 +88,11 @@ func LoadRepoConfig() {
 	Gitignores = typeFiles[0]
 	Licenses = typeFiles[1]
 	Readmes = typeFiles[2]
+	LabelTemplates = typeFiles[3]
 	sort.Strings(Gitignores)
 	sort.Strings(Licenses)
 	sort.Strings(Readmes)
+	sort.Strings(LabelTemplates)
 
 	// Filter out invalid names and promote preferred licenses.
 	sortedLicenses := make([]string, 0, len(Licenses))
