@@ -478,7 +478,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
 			m.Post("/initialize", bindIgnErr(auth.InitializeLabelsForm{}), repo.InitializeLabels)
-		}, repo.MustEnableIssues, reqRepoWriter, context.RepoRef())
+		}, reqRepoWriter, context.RepoRef())
 		m.Group("/milestones", func() {
 			m.Combo("/new").Get(repo.NewMilestone).
 				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
@@ -486,7 +486,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
-		}, repo.MustEnableIssues, reqRepoWriter, context.RepoRef())
+		}, reqRepoWriter, context.RepoRef())
 
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
