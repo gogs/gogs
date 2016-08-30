@@ -121,7 +121,7 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.AvatarForm, ctxUser *mo
 		if err != nil {
 			return fmt.Errorf("ioutil.ReadAll: %v", err)
 		}
-		if _, ok := base.IsImageFile(data); !ok {
+		if !base.IsImageFile(data) {
 			return errors.New(ctx.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxUser.UploadAvatar(data); err != nil {

@@ -105,13 +105,12 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
-// HandleError use error check function to determine if server should
-// response as client input error or server internal error.
-// It responses with given status code for client error,
-// or error context description for logging purpose of server error.
-func (ctx *Context) HandleError(title string, errck func(error) bool, err error, status int) {
+// NotFoundOrServerError use error check function to determine if the error
+// is about not found. It responses with 404 status code for not found error,
+// or error context description for logging purpose of 500 server error.
+func (ctx *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
 	if errck(err) {
-		ctx.Error(status, err.Error())
+		ctx.Handle(404, title, err)
 		return
 	}
 

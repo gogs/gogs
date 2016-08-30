@@ -2,19 +2,19 @@
 	<thead>
 		<tr>
 			<th class="four wide">
-				{{if .LastCommitUser}}
-					<img class="ui avatar image img-12" src="{{.LastCommitUser.RelAvatarLink}}" />
-					<a href="{{AppSubUrl}}/{{.LastCommitUser.Name}}"><strong>{{.LastCommit.Author.Name}}</strong></a>
+				{{if .LatestCommitUser}}
+					<img class="ui avatar image img-12" src="{{.LatestCommitUser.RelAvatarLink}}" />
+					<a href="{{AppSubUrl}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
 				{{else}}
-					<img class="ui avatar image img-12" src="{{AvatarLink .LastCommit.Author.Email}}" />
-					<strong>{{.LastCommit.Author.Name}}</strong>
+					<img class="ui avatar image img-12" src="{{AvatarLink .LatestCommit.Author.Email}}" />
+					<strong>{{.LatestCommit.Author.Name}}</strong>
 				{{end}}
-				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LastCommit.ID}}" rel="nofollow">{{ShortSha .LastCommit.ID.String}}</a>
-				<span class="grey has-emoji">{{RenderCommitMessage false .LastCommit.Summary .RepoLink $.Repository.ComposeMetas}}</span>
+				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LatestCommit.ID}}" rel="nofollow">{{ShortSha .LatestCommit.ID.String}}</a>
+				<span class="grey has-emoji">{{RenderCommitMessage false .LatestCommit.Summary .RepoLink $.Repository.ComposeMetas}}</span>
 			</th>
 			<th class="nine wide">
 			</th>
-			<th class="three wide text grey right age">{{TimeSince .LastCommit.Author.When $.Lang}}</th>
+			<th class="three wide text grey right age">{{TimeSince .LatestCommit.Author.When $.Lang}}</th>
 		</tr>
 	</thead>
 	<tbody>

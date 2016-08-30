@@ -19,9 +19,9 @@
 			<div class="fitted item">
 				<div class="ui breadcrumb">
 					<a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
-					{{ $n := len .Treenames}}
+					{{ $n := len .TreeNames}}
 					{{ $l := Subtract $n 1}}
-					{{range $i, $v := .Treenames}}
+					{{range $i, $v := .TreeNames}}
 						<div class="divider"> / </div>
 						{{if eq $i $l}}
 							<span class="active section">{{$v}}</span>
@@ -74,7 +74,7 @@
 				{{end}}
 			</div>
 		</div>
-		{{if .IsFile}}
+		{{if .IsViewFile}}
 			{{template "repo/view_file" .}}
 		{{else}}
 			{{template "repo/view_list" .}}

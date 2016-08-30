@@ -518,26 +518,14 @@ func IsLetter(ch rune) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
 }
 
-func IsTextFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "text/") != -1 {
-		return contentType, true
-	}
-	return contentType, false
+func IsTextFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "text/") != -1
 }
 
-func IsImageFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "image/") != -1 {
-		return contentType, true
-	}
-	return contentType, false
+func IsImageFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "image/") != -1
 }
 
-func IsPDFFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "application/pdf") != -1 {
-		return contentType, true
-	}
-	return contentType, false
+func IsPDFFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "application/pdf") != -1
 }

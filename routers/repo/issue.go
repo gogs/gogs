@@ -795,7 +795,7 @@ func UpdateIssueAssignee(ctx *context.Context) {
 func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		ctx.HandleError("GetIssueByIndex", models.IsErrIssueNotExist, err, 404)
+		ctx.NotFoundOrServerError("GetIssueByIndex", models.IsErrIssueNotExist, err)
 		return
 	}
 
@@ -881,7 +881,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 func UpdateCommentContent(ctx *context.Context) {
 	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
 	if err != nil {
-		ctx.HandleError("GetCommentByID", models.IsErrCommentNotExist, err, 404)
+		ctx.NotFoundOrServerError("GetCommentByID", models.IsErrCommentNotExist, err)
 		return
 	}
 
@@ -913,7 +913,7 @@ func UpdateCommentContent(ctx *context.Context) {
 func DeleteComment(ctx *context.Context) {
 	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
 	if err != nil {
-		ctx.HandleError("GetCommentByID", models.IsErrCommentNotExist, err, 404)
+		ctx.NotFoundOrServerError("GetCommentByID", models.IsErrCommentNotExist, err)
 		return
 	}
 
