@@ -10,10 +10,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 	gouuid "github.com/satori/go.uuid"
 
@@ -22,7 +20,10 @@ import (
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/sync"
 )
+
+var HookQueue = sync.NewUniqueQueue(setting.Webhook.QueueLength)
 
 type HookContentType int
 
@@ -499,64 +500,6 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	}
 	return nil
 }
-
-// UniqueQueue represents a queue that guarantees only one instance of same ID is in the line.
-type UniqueQueue struct {
-	lock sync.Mutex
-	ids  map[string]bool
-
-	queue chan string
-}
-
-func (q *UniqueQueue) Queue() <-chan string {
-	return q.queue
-}
-
-func NewUniqueQueue(queueLength int) *UniqueQueue {
-	if queueLength <= 0 {
-		queueLength = 100
-	}
-
-	return &UniqueQueue{
-		ids:   make(map[string]bool),
-		queue: make(chan string, queueLength),
-	}
-}
-
-func (q *UniqueQueue) Remove(id interface{}) {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-	delete(q.ids, com.ToStr(id))
-}
-
-func (q *UniqueQueue) AddFunc(id interface{}, fn func()) {
-	newid := com.ToStr(id)
-
-	if q.Exist(id) {
-		return
-	}
-
-	q.lock.Lock()
-	q.ids[newid] = true
-	if fn != nil {
-		fn()
-	}
-	q.lock.Unlock()
-	q.queue <- newid
-}
-
-func (q *UniqueQueue) Add(id interface{}) {
-	q.AddFunc(id, nil)
-}
-
-func (q *UniqueQueue) Exist(id interface{}) bool {
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
-	return q.ids[com.ToStr(id)]
-}
-
-var HookQueue = NewUniqueQueue(setting.Webhook.QueueLength)
 
 func (t *HookTask) deliver() {
 	t.IsDelivered = true
