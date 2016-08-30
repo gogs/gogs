@@ -110,6 +110,8 @@ func (pr *PullRequest) LoadIssue() (err error) {
 
 // This method assumes following fields have been assigned with valid values:
 // Required - Issue
+// Required - HeadRepo
+// Required - BaseRepo
 // Optional - Merger
 func (pr *PullRequest) APIFormat() *api.PullRequest {
 	apiIssue := pr.Issue.APIFormat()
