@@ -278,6 +278,34 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 
 		ctx.Flash.Success(ctx.Tr("repo.settings.wiki_deletion_success"))
 		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
+
+	case "mirror-update":
+		if !ctx.Repo.IsOwner() {
+			ctx.Error(404)
+			return
+		}
+		if ctx.Repo.Owner.IsOrganization() {
+			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.ID) {
+				ctx.Error(404)
+				return
+			}
+		}
+		if !ctx.Repo.Repository.IsMirror {
+			ctx.RenderWithErr(ctx.Tr("repo.settings.not_a_mirror"), SETTINGS_OPTIONS, nil)
+			return
+		}
+		if ctx.Repo.Repository.GetMirror() != nil {
+			ctx.Error(500)
+			return
+		}
+		// Now() - 1 second (just to be sure...)
+		ctx.Repo.Repository.Mirror.NextUpdate = time.Now().Add(time.Duration(-1) * time.Second)
+		models.UpdateMirror(ctx.Repo.Repository.Mirror)
+		// don't do this...
+		models.MirrorUpdate()
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.mirror_update_success"))
+		ctx.Redirect(ctx.Repo.RepoLink + "/settings")
 	}
 }
 
