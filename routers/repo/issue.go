@@ -11,6 +11,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
@@ -938,7 +941,56 @@ func Labels(ctx *context.Context) {
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["PageIsLabels"] = true
 	ctx.Data["RequireMinicolors"] = true
+	ctx.Data["LabelTemplates"] = models.LabelTemplates
 	ctx.HTML(200, LABELS)
+}
+
+func getLabelTemplateFile(name string) ([]byte, error) {
+	relPath := path.Join("conf/label", strings.TrimLeft(name, "./"))
+
+	// Use custom file when available.
+	customPath := path.Join(setting.CustomPath, relPath)
+	if com.IsFile(customPath) {
+		return ioutil.ReadFile(customPath)
+	}
+	return bindata.Asset(relPath)
+}
+
+func InitializeLabels(ctx *context.Context, form auth.InitializeLabelsForm) {
+	if ctx.HasError() {
+		ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
+		ctx.Redirect(ctx.Repo.RepoLink + "/labels")
+		return
+	}
+	data, err := getLabelTemplateFile(form.TemplateName)
+	if err != nil {
+		ctx.Redirect(ctx.Repo.RepoLink + "/labels")
+		return
+	}
+	r, _ := regexp.Compile("#([a-fA-F0-9]{6})")
+	for i, line := range strings.Split(string(data), "\n") {
+		if len(line) > 0 {
+			line_x := strings.SplitN(strings.Trim(line, " \t"), " ", 2)
+			if len(line_x) == 2 && len(line_x[1]) > 0 {
+				if r.MatchString(line_x[0]) {
+					l := &models.Label{
+						RepoID: ctx.Repo.Repository.ID,
+						Name:   line_x[1],
+						Color:  line_x[0],
+					}
+					if err := models.NewLabel(l); err != nil {
+						ctx.Handle(500, "InitializeLabelsFromTemplate", err)
+						return
+					}
+				} else {
+					log.Warn("Line %d on the label template file '%s': Bad HTML color code", i+1, form.TemplateName)
+				}
+			} else {
+				log.Warn("Line %d on the label template file '%s': Line is malformed", i+1, form.TemplateName)
+			}
+		}
+	}
+	ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 }
 
 func NewLabel(ctx *context.Context, form auth.CreateLabelForm) {

@@ -220,6 +220,16 @@ func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+// Label templates
+
+type InitializeLabelsForm struct {
+	TemplateName string `binding:"Required"`
+}
+
+func (f *InitializeLabelsForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // __________       .__
 // \______   \ ____ |  |   ____ _____    ______ ____
 //  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \
