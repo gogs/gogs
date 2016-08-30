@@ -277,8 +277,6 @@
 				.lines-num,
 				.lines-code {
 					padding: 0;
-
-
 					pre,
 					ol,
 					.hljs {
@@ -286,11 +284,13 @@
 						margin: 0;
 						padding: 0 !important;
 						li {
-							padding-left: 5px;
 							display: inline-block;
 							width: 100%;
 							&.active {
 								background: #ffffdd;
+							}
+							&:before {
+								content: ' ';
 							}
 						}
 					}
