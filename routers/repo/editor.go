@@ -64,9 +64,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 
 		buf := make([]byte, 1024)
 		n, _ := dataRc.Read(buf)
-		if n > 0 {
-			buf = buf[:n]
-		}
+		buf = buf[:n]
 
 		// Only text file are editable online.
 		if !base.IsTextFile(buf) {
