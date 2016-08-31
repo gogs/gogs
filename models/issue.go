@@ -1062,7 +1062,7 @@ func UpdateIssueMentions(issueID int64, mentions []string) error {
 // IssueStats represents issue statistic information.
 type IssueStats struct {
 	OpenCount, ClosedCount int64
-	AllCount               int64
+	YourRepositoriesCount  int64
 	AssignCount            int64
 	CreateCount            int64
 	MentionCount           int64
@@ -1070,7 +1070,7 @@ type IssueStats struct {
 
 // Filter modes.
 const (
-	FM_ALL = iota
+	FM_YOUR_REPOSITORIES = iota
 	FM_ASSIGN
 	FM_CREATE
 	FM_MENTION
@@ -1122,7 +1122,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	}
 
 	switch opts.FilterMode {
-	case FM_ALL, FM_ASSIGN:
+	case FM_YOUR_REPOSITORIES, FM_ASSIGN:
 		stats.OpenCount, _ = countSession(opts).
 			And("is_closed = ?", false).
 			Count(&Issue{})
@@ -1165,9 +1165,9 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 	countSession := func(isClosed, isPull bool, repoID int64, repoIDs []int64) *xorm.Session {
 		sess := x.Where("issue.is_closed = ?", isClosed).And("issue.is_pull = ?", isPull)
 
-		if repoID > 0 || len(repoIDs) == 0 {
+		if repoID > 0 {
 			sess.And("repo_id = ?", repoID)
-		} else {
+		} else if repoIDs != nil {
 			sess.In("repo_id", repoIDs)
 		}
 
