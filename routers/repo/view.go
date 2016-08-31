@@ -64,6 +64,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 	}
 
 	if readmeFile != nil {
+		ctx.Data["RawFileLink"] = ""
 		ctx.Data["ReadmeInList"] = true
 		ctx.Data["ReadmeExist"] = true
 
@@ -75,9 +76,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 
 		buf := make([]byte, 1024)
 		n, _ := dataRc.Read(buf)
-		if n > 0 {
-			buf = buf[:n]
-		}
+		buf = buf[:n]
 
 		isTextFile := base.IsTextFile(buf)
 		ctx.Data["FileIsText"] = isTextFile
@@ -134,9 +133,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 	buf := make([]byte, 1024)
 	n, _ := dataRc.Read(buf)
-	if n > 0 {
-		buf = buf[:n]
-	}
+	buf = buf[:n]
 
 	isTextFile := base.IsTextFile(buf)
 	ctx.Data["IsTextFile"] = isTextFile

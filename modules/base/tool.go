@@ -518,7 +518,11 @@ func IsLetter(ch rune) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
 }
 
+// IsTextFile returns true if file content format is plain text or empty.
 func IsTextFile(data []byte) bool {
+	if len(data) == 0 {
+		return true
+	}
 	return strings.Index(http.DetectContentType(data), "text/") != -1
 }
 
