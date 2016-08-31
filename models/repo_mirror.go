@@ -133,7 +133,7 @@ func (m *Mirror) runSync() bool {
 	}
 
 	if _, stderr, err := process.ExecDir(
-		timeout, repoPath, fmt.Sprintf("runSync: %s", repoPath),
+		timeout, repoPath, fmt.Sprintf("Mirror.runSync: %s", repoPath),
 		"git", gitArgs...); err != nil {
 		desc := fmt.Sprintf("Fail to update mirror repository '%s': %s", repoPath, stderr)
 		log.Error(4, desc)
@@ -144,7 +144,7 @@ func (m *Mirror) runSync() bool {
 	}
 	if m.Repo.HasWiki() {
 		if _, stderr, err := process.ExecDir(
-			timeout, wikiPath, fmt.Sprintf("runSync: %s", wikiPath),
+			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
 			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror wiki repository '%s': %s", wikiPath, stderr)
 			log.Error(4, desc)
