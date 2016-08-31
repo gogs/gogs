@@ -242,10 +242,9 @@ func DeleteAuthSource(ctx *context.Context) {
 	}
 
 	if err = models.DeleteSource(source); err != nil {
-		switch err {
-		case models.ErrAuthenticationUserUsed:
+		if models.IsErrLoginSourceInUse(err) {
 			ctx.Flash.Error(ctx.Tr("admin.auths.still_in_used"))
-		default:
+		} else {
 			ctx.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
 		ctx.JSON(200, map[string]interface{}{
