@@ -59,6 +59,7 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
+	// v0 -> v4: before 0.6.0 -> 0.7.33
 	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                           // V4 -> V5:v0.6.0
 	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),                 // V5 -> V6:v0.6.3
 	NewMigration("generate issue-label from issue", issueToIssueLabel),                           // V6 -> V7:v0.6.4

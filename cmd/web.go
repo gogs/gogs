@@ -73,8 +73,13 @@ func checkVersion() {
 	if err != nil {
 		log.Fatal(4, "Fail to read 'templates/.VERSION': %v", err)
 	}
-	if string(data) != setting.AppVer {
-		log.Fatal(4, "Binary and template file version does not match, did you forget to recompile?")
+	tplVer := string(data)
+	if tplVer != setting.AppVer {
+		if version.Compare(tplVer, setting.AppVer, ">") {
+			log.Fatal(4, "Binary version is lower than template file version, did you forget to recompile Gogs?")
+		} else {
+			log.Fatal(4, "Binary version is higher than template file version, did you forget to update template files?")
+		}
 	}
 
 	// Check dependency version.
