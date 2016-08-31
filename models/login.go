@@ -25,8 +25,7 @@ import (
 )
 
 var (
-	ErrAuthenticationAlreadyExist = errors.New("Authentication already exist")
-	ErrAuthenticationUserUsed     = errors.New("Authentication has been used by some users")
+	ErrAuthenticationUserUsed = errors.New("Authentication has been used by some users")
 )
 
 type LoginType int
@@ -230,8 +229,15 @@ func CountLoginSources() int64 {
 	return count
 }
 
-func CreateSource(source *LoginSource) error {
-	_, err := x.Insert(source)
+func CreateLoginSource(source *LoginSource) error {
+	has, err := x.Get(&LoginSource{Name: source.Name})
+	if err != nil {
+		return err
+	} else if has {
+		return ErrLoginSourceAlreadyExist{source.Name}
+	}
+
+	_, err = x.Insert(source)
 	return err
 }
 
@@ -247,7 +253,7 @@ func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrAuthenticationNotExist{id}
+		return nil, ErrLoginSourceNotExist{id}
 	}
 	return source, nil
 }
@@ -542,7 +548,7 @@ func UserSignIn(uname, passwd string) (*User, error) {
 			if err != nil {
 				return nil, err
 			} else if !hasSource {
-				return nil, ErrLoginSourceNotExist
+				return nil, ErrLoginSourceNotExist{u.LoginSource}
 			}
 
 			return ExternalUserLogin(u, u.LoginName, passwd, &source, false)

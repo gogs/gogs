@@ -602,24 +602,37 @@ func (err ErrAttachmentNotExist) Error() string {
 	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
 }
 
-//    _____          __  .__                   __  .__               __  .__
-//   /  _  \  __ ___/  |_|  |__   ____   _____/  |_|__| ____ _____ _/  |_|__| ____   ____
-//  /  /_\  \|  |  \   __\  |  \_/ __ \ /    \   __\  |/ ___\\__  \\   __\  |/  _ \ /    \
-// /    |    \  |  /|  | |   Y  \  ___/|   |  \  | |  \  \___ / __ \|  | |  (  <_> )   |  \
-// \____|__  /____/ |__| |___|  /\___  >___|  /__| |__|\___  >____  /__| |__|\____/|___|  /
-//         \/                 \/     \/     \/             \/     \/                    \/
+// .____                 .__           _________
+// |    |    ____   ____ |__| ____    /   _____/ ____  __ _________   ____  ____
+// |    |   /  _ \ / ___\|  |/    \   \_____  \ /  _ \|  |  \_  __ \_/ ___\/ __ \
+// |    |__(  <_> ) /_/  >  |   |  \  /        (  <_> )  |  /|  | \/\  \__\  ___/
+// |_______ \____/\___  /|__|___|  / /_______  /\____/|____/ |__|    \___  >___  >
+//         \/    /_____/         \/          \/                          \/    \/
 
-type ErrAuthenticationNotExist struct {
+type ErrLoginSourceNotExist struct {
 	ID int64
 }
 
-func IsErrAuthenticationNotExist(err error) bool {
-	_, ok := err.(ErrAuthenticationNotExist)
+func IsErrLoginSourceNotExist(err error) bool {
+	_, ok := err.(ErrLoginSourceNotExist)
 	return ok
 }
 
-func (err ErrAuthenticationNotExist) Error() string {
-	return fmt.Sprintf("authentication does not exist [id: %d]", err.ID)
+func (err ErrLoginSourceNotExist) Error() string {
+	return fmt.Sprintf("login source does not exist [id: %d]", err.ID)
+}
+
+type ErrLoginSourceAlreadyExist struct {
+	Name string
+}
+
+func IsErrLoginSourceAlreadyExist(err error) bool {
+	_, ok := err.(ErrLoginSourceAlreadyExist)
+	return ok
+}
+
+func (err ErrLoginSourceAlreadyExist) Error() string {
+	return fmt.Sprintf("login source already exists [name: %s]", err.Name)
 }
 
 // ___________
