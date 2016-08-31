@@ -70,6 +70,7 @@ var (
 	StaticRootPath       string
 	EnableGzip           bool
 	LandingPageURL       LandingPage
+	ShowFooterLoadTimes  bool
 	UnixSocketPermission uint32
 
 	SSH struct {
@@ -571,6 +572,7 @@ func NewContext() {
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
+	ShowFooterLoadTimes = Cfg.Section("other").Key("SHOW_FOOTER_LOAD_TIMES").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
