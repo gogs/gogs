@@ -21,7 +21,7 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 
 	source, err := models.GetLoginSourceByID(sourceID)
 	if err != nil {
-		if models.IsErrAuthenticationNotExist(err) {
+		if models.IsErrLoginSourceNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetLoginSourceByID", err)
