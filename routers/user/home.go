@@ -229,58 +229,48 @@ func Issues(ctx *context.Context) {
 		userRepoIDs = append(userRepoIDs, repo.ID)
 	}
 
-	// Get all issues from repositories from this user.
-	yourIssues, err := models.Issues(&models.IssuesOptions{
-		RepoIDs:    userRepoIDs,
-		RepoID:     repoID,
-		Page:       page,
-		IsClosed:   isShowClosed,
-		IsPull:     isPullList,
-		SortType:   sortType,
-	})
+	var issues []*models.Issue
+	switch filterMode {
+	case models.FM_YOUR_REPOSITORIES:
+		// Get all issues from repositories from this user.
+		issues, err = models.Issues(&models.IssuesOptions{
+			RepoIDs:    userRepoIDs,
+			RepoID:     repoID,
+			Page:       page,
+			IsClosed:   isShowClosed,
+			IsPull:     isPullList,
+			SortType:   sortType,
+		})
+
+	case models.FM_ASSIGN:
+		// Get all issues assigned to this user.
+		issues, err = models.Issues(&models.IssuesOptions{
+			RepoID:     repoID,
+			AssigneeID: ctxUser.ID,
+			Page:       page,
+			IsClosed:   isShowClosed,
+			IsPull:     isPullList,
+			SortType:   sortType,
+		})
+
+	case models.FM_CREATE:
+		// Get all issues created by this user.
+		issues, err = models.Issues(&models.IssuesOptions{
+			RepoID:     repoID,
+			PosterID:   ctxUser.ID,
+			Page:       page,
+			IsClosed:   isShowClosed,
+			IsPull:     isPullList,
+			SortType:   sortType,
+		})
+	}
+
 	if err != nil {
 		ctx.Handle(500, "Issues", err)
 		return
 	}
 
-	// Get all issues assigned to this user.
-	assignedIssues, err := models.Issues(&models.IssuesOptions{
-		RepoID:     repoID,
-		AssigneeID: ctxUser.ID,
-		Page:       page,
-		IsClosed:   isShowClosed,
-		IsPull:     isPullList,
-		SortType:   sortType,
-	})
-	if err != nil {
-		ctx.Handle(500, "Issues", err)
-		return
-	}
-
-	// Get all issues created by this user.
-	createdIssues, err := models.Issues(&models.IssuesOptions{
-		RepoID:     repoID,
-		PosterID:   ctxUser.ID,
-		Page:       page,
-		IsClosed:   isShowClosed,
-		IsPull:     isPullList,
-		SortType:   sortType,
-	})
-	if err != nil {
-		ctx.Handle(500, "Issues", err)
-		return
-	}
-
-	var filterIssues []*models.Issue
-	if filterMode == models.FM_ASSIGN {
-		filterIssues = assignedIssues
-	} else if filterMode == models.FM_CREATE {
-		filterIssues = createdIssues
-	} else {
-		filterIssues = yourIssues
-	}
-
-	showRepos    := make([]*models.Repository, 0, len(filterIssues))
+	showRepos    := make([]*models.Repository, 0, len(issues))
 	showReposSet := make(map[int64]bool)
 
 	if repoID > 0 {
@@ -299,8 +289,8 @@ func Issues(ctx *context.Context) {
 		showRepos            = append(showRepos, repo)
 	}
 
-	showIssues   := make([]*models.Issue, 0, len(filterIssues))
-	for _, issue := range filterIssues {
+	showIssues   := make([]*models.Issue, 0, len(issues))
+	for _, issue := range issues {
 		// Check if we want to show this issue.
 		if (issue.IsClosed != isShowClosed) ||
 		(repoID > 0 && repoID != issue.RepoID) {
@@ -333,15 +323,7 @@ func Issues(ctx *context.Context) {
 		}
 	}
 
-	var issueStats *models.IssueStats
-	if filterMode == models.FM_YOUR_REPOSITORIES {
-		issueStats = models.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
-	} else {
-		issueStats = models.GetUserIssueStats(repoID, ctxUser.ID, nil, filterMode, isPullList)
-	}
-	issueStats.YourRepositoriesCount = int64(len(yourIssues))
-	issueStats.AssignCount           = int64(len(assignedIssues))
-	issueStats.CreateCount           = int64(len(createdIssues))
+	issueStats := models.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
 
 	ctx.Data["Issues"]       = showIssues
 	ctx.Data["Repos"]        = showRepos
