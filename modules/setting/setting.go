@@ -246,9 +246,10 @@ var (
 	// Highlight settings are loaded in modules/template/hightlight.go
 
 	// Other settings
-	ShowFooterBranding    bool
-	ShowFooterVersion     bool
-	SupportMiniWinService bool
+	ShowFooterBranding         bool
+	ShowFooterVersion          bool
+	ShowFooterTemplateLoadTime bool
+	SupportMiniWinService      bool
 
 	// Global setting objects
 	Cfg          *ini.File
@@ -571,6 +572,7 @@ func NewContext() {
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
+	ShowFooterTemplateLoadTime = Cfg.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
