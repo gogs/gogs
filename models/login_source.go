@@ -540,7 +540,7 @@ func UserSignIn(username, passowrd string) (*User, error) {
 		}
 	}
 
-	sources := make([]*LoginSource, 3)
+	sources := make([]*LoginSource, 0, 3)
 	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
 		return nil, err
 	}
