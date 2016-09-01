@@ -323,9 +323,16 @@ func Issues(ctx *context.Context) {
 
 	issueStats := models.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
 
+	var total int
+	if !isShowClosed {
+		total = int(issueStats.OpenCount)
+	} else {
+		total = int(issueStats.ClosedCount)
+	}
+
 	ctx.Data["Issues"] = issues
 	ctx.Data["Repos"] = showRepos
-	ctx.Data["Page"] = paginater.New(len(issues), setting.UI.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["ViewType"] = viewType
 	ctx.Data["SortType"] = sortType
