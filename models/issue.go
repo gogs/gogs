@@ -1125,35 +1125,35 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	case FM_YOUR_REPOSITORIES, FM_ASSIGN:
 		stats.OpenCount, _ = countSession(opts).
 			And("is_closed = ?", false).
-			Count(&Issue{})
+			Count(new(Issue))
 
 		stats.ClosedCount, _ = countSession(opts).
 			And("is_closed = ?", true).
-			Count(&Issue{})
+			Count(new(Issue))
 	case FM_CREATE:
 		stats.OpenCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", false).
-			Count(&Issue{})
+			Count(new(Issue))
 
 		stats.ClosedCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", true).
-			Count(&Issue{})
+			Count(new(Issue))
 	case FM_MENTION:
 		stats.OpenCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
 			And("issue_user.uid = ?", opts.UserID).
 			And("issue_user.is_mentioned = ?", true).
 			And("issue.is_closed = ?", false).
-			Count(&Issue{})
+			Count(new(Issue))
 
 		stats.ClosedCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
 			And("issue_user.uid = ?", opts.UserID).
 			And("issue_user.is_mentioned = ?", true).
 			And("issue.is_closed = ?", true).
-			Count(&Issue{})
+			Count(new(Issue))
 	}
 	return stats
 }
@@ -1176,35 +1176,35 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 
 	stats.AssignCount, _ = countSession(false, isPull, repoID, nil).
 		And("assignee_id = ?", uid).
-		Count(&Issue{})
+		Count(new(Issue))
 
 	stats.CreateCount, _ = countSession(false, isPull, repoID, nil).
 		And("poster_id = ?", uid).
-		Count(&Issue{})
+		Count(new(Issue))
 
 	stats.YourRepositoriesCount, _ = countSession(false, isPull, repoID, repoIDs).
-		Count(&Issue{})
+		Count(new(Issue))
 
 	switch filterMode {
 	case FM_YOUR_REPOSITORIES:
-		stats.OpenCount, _   = countSession(false, isPull, repoID, repoIDs).
-		Count(&Issue{})
+		stats.OpenCount, _ = countSession(false, isPull, repoID, repoIDs).
+			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, repoIDs).
-		Count(&Issue{})
+			Count(new(Issue))
 	case FM_ASSIGN:
-		stats.OpenCount, _   = countSession(false, isPull, repoID, nil).
-		And("assignee_id = ?", uid).
-		Count(&Issue{})
+		stats.OpenCount, _ = countSession(false, isPull, repoID, nil).
+			And("assignee_id = ?", uid).
+			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, nil).
-		And("assignee_id = ?", uid).
-		Count(&Issue{})
+			And("assignee_id = ?", uid).
+			Count(new(Issue))
 	case FM_CREATE:
-		stats.OpenCount, _   = countSession(false, isPull, repoID, nil).
-		And("poster_id = ?", uid).
-		Count(&Issue{})
+		stats.OpenCount, _ = countSession(false, isPull, repoID, nil).
+			And("poster_id = ?", uid).
+			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, nil).
-		And("poster_id = ?", uid).
-		Count(&Issue{})
+			And("poster_id = ?", uid).
+			Count(new(Issue))
 	}
 
 	return stats
@@ -1232,8 +1232,8 @@ func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen 
 		closedCountSession.And("poster_id = ?", uid)
 	}
 
-	openResult, _ := openCountSession.Count(&Issue{})
-	closedResult, _ := closedCountSession.Count(&Issue{})
+	openResult, _ := openCountSession.Count(new(Issue))
+	closedResult, _ := closedCountSession.Count(new(Issue))
 
 	return openResult, closedResult
 }
