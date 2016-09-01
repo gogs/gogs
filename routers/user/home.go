@@ -285,6 +285,12 @@ func Issues(ctx *context.Context) {
 			return
 		}
 
+		// Check if user has access to given repository.
+		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(ctxUser) {
+			ctx.Handle(403, "Issues", fmt.Errorf("#%d", repoID))
+			return
+		}
+
 		showReposSet[repoID] = true
 		showRepos = append(showRepos, repo)
 	}
