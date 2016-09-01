@@ -2741,6 +2741,10 @@ footer .ui.language .menu {
 .dashboard.issues .ui.right .head.menu .item.active {
   color: #d9453d;
 }
+.feeds .news > .ui.grid {
+  margin-left: auto;
+  margin-right: auto;
+}
 .feeds .news .ui.avatar {
   margin-top: 13px;
 }
