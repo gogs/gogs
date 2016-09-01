@@ -295,14 +295,7 @@ func Issues(ctx *context.Context) {
 		showRepos = append(showRepos, repo)
 	}
 
-	showIssues := make([]*models.Issue, 0, len(issues))
 	for _, issue := range issues {
-		// Check if we want to show this issue.
-		if (issue.IsClosed != isShowClosed) ||
-			(repoID > 0 && repoID != issue.RepoID) {
-			continue
-		}
-
 		// Get Repository data.
 		issue.Repo, err = models.GetRepositoryByID(issue.RepoID)
 		if err != nil {
@@ -316,8 +309,7 @@ func Issues(ctx *context.Context) {
 			return
 		}
 
-		// Append to list of issues and repos.
-		showIssues = append(showIssues, issue)
+		// Append repo to list of shown repos
 		if filterMode == models.FM_YOUR_REPOSITORIES {
 			// Use a map to make sure we don't add the same Repository twice.
 			_, ok := showReposSet[issue.RepoID]
@@ -331,9 +323,9 @@ func Issues(ctx *context.Context) {
 
 	issueStats := models.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
 
-	ctx.Data["Issues"] = showIssues
+	ctx.Data["Issues"] = issues
 	ctx.Data["Repos"] = showRepos
-	ctx.Data["Page"] = paginater.New(len(showIssues), setting.UI.IssuePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(len(issues), setting.UI.IssuePagingNum, page, 5)
 	ctx.Data["IssueStats"] = issueStats
 	ctx.Data["ViewType"] = viewType
 	ctx.Data["SortType"] = sortType
