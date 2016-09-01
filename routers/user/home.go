@@ -221,8 +221,8 @@ func Issues(ctx *context.Context) {
 
 	for _, repo := range repos {
 		if (isPullList && repo.NumPulls == 0) ||
-		(!isPullList &&
-		(!repo.EnableIssues || repo.EnableExternalTracker || repo.NumIssues == 0)) {
+			(!isPullList &&
+				(!repo.EnableIssues || repo.EnableExternalTracker || repo.NumIssues == 0)) {
 			continue
 		}
 
@@ -234,12 +234,12 @@ func Issues(ctx *context.Context) {
 	case models.FM_YOUR_REPOSITORIES:
 		// Get all issues from repositories from this user.
 		issues, err = models.Issues(&models.IssuesOptions{
-			RepoIDs:    userRepoIDs,
-			RepoID:     repoID,
-			Page:       page,
-			IsClosed:   isShowClosed,
-			IsPull:     isPullList,
-			SortType:   sortType,
+			RepoIDs:  userRepoIDs,
+			RepoID:   repoID,
+			Page:     page,
+			IsClosed: isShowClosed,
+			IsPull:   isPullList,
+			SortType: sortType,
 		})
 
 	case models.FM_ASSIGN:
@@ -256,12 +256,12 @@ func Issues(ctx *context.Context) {
 	case models.FM_CREATE:
 		// Get all issues created by this user.
 		issues, err = models.Issues(&models.IssuesOptions{
-			RepoID:     repoID,
-			PosterID:   ctxUser.ID,
-			Page:       page,
-			IsClosed:   isShowClosed,
-			IsPull:     isPullList,
-			SortType:   sortType,
+			RepoID:   repoID,
+			PosterID: ctxUser.ID,
+			Page:     page,
+			IsClosed: isShowClosed,
+			IsPull:   isPullList,
+			SortType: sortType,
 		})
 	}
 
@@ -270,7 +270,7 @@ func Issues(ctx *context.Context) {
 		return
 	}
 
-	showRepos    := make([]*models.Repository, 0, len(issues))
+	showRepos := make([]*models.Repository, 0, len(issues))
 	showReposSet := make(map[int64]bool)
 
 	if repoID > 0 {
@@ -286,14 +286,14 @@ func Issues(ctx *context.Context) {
 		}
 
 		showReposSet[repoID] = true
-		showRepos            = append(showRepos, repo)
+		showRepos = append(showRepos, repo)
 	}
 
-	showIssues   := make([]*models.Issue, 0, len(issues))
+	showIssues := make([]*models.Issue, 0, len(issues))
 	for _, issue := range issues {
 		// Check if we want to show this issue.
 		if (issue.IsClosed != isShowClosed) ||
-		(repoID > 0 && repoID != issue.RepoID) {
+			(repoID > 0 && repoID != issue.RepoID) {
 			continue
 		}
 
@@ -311,27 +311,27 @@ func Issues(ctx *context.Context) {
 		}
 
 		// Append to list of issues and repos.
-		showIssues  = append(showIssues, issue)
+		showIssues = append(showIssues, issue)
 		if filterMode == models.FM_YOUR_REPOSITORIES {
 			// Use a map to make sure we don't add the same Repository twice.
 			_, ok := showReposSet[issue.RepoID]
 			if !ok {
 				showReposSet[issue.RepoID] = true
 				// Append to list of shown Repositories.
-				showRepos                  = append(showRepos, issue.Repo)
+				showRepos = append(showRepos, issue.Repo)
 			}
 		}
 	}
 
 	issueStats := models.GetUserIssueStats(repoID, ctxUser.ID, userRepoIDs, filterMode, isPullList)
 
-	ctx.Data["Issues"]       = showIssues
-	ctx.Data["Repos"]        = showRepos
-	ctx.Data["Page"]         = paginater.New(len(showIssues), setting.UI.IssuePagingNum, page, 5)
-	ctx.Data["IssueStats"]   = issueStats
-	ctx.Data["ViewType"]     = viewType
-	ctx.Data["SortType"]     = sortType
-	ctx.Data["RepoID"]       = repoID
+	ctx.Data["Issues"] = showIssues
+	ctx.Data["Repos"] = showRepos
+	ctx.Data["Page"] = paginater.New(len(showIssues), setting.UI.IssuePagingNum, page, 5)
+	ctx.Data["IssueStats"] = issueStats
+	ctx.Data["ViewType"] = viewType
+	ctx.Data["SortType"] = sortType
+	ctx.Data["RepoID"] = repoID
 	ctx.Data["IsShowClosed"] = isShowClosed
 
 	if isShowClosed {
