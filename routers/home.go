@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	HOME          base.TplName = "home"
-	EXPLORE_REPOS base.TplName = "explore/repos"
-	EXPLORE_USERS base.TplName = "explore/users"
+	HOME                  base.TplName = "home"
+	EXPLORE_REPOS         base.TplName = "explore/repos"
+	EXPLORE_USERS         base.TplName = "explore/users"
+	EXPLORE_ORGANIZATIONS base.TplName = "explore/organizations"
 )
 
 func Home(ctx *context.Context) {
@@ -177,6 +178,21 @@ func ExploreUsers(ctx *context.Context) {
 		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
+	})
+}
+
+func ExploreOrganizations(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("explore")
+	ctx.Data["PageIsExplore"] = true
+	ctx.Data["PageIsExploreOrganizations"] = true
+
+	RenderUserSearch(ctx, &UserSearchOptions{
+		Type:     models.USER_TYPE_ORGANIZATION,
+		Counter:  models.CountOrganizations,
+		Ranger:   models.Organizations,
+		PageSize: setting.UI.ExplorePagingNum,
+		OrderBy:  "updated_unix DESC",
+		TplName:  EXPLORE_ORGANIZATIONS,
 	})
 }
 
