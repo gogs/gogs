@@ -271,7 +271,7 @@ func (u *User) RelAvatarLink() string {
 func (u *User) AvatarLink() string {
 	link := u.RelAvatarLink()
 	if link[0] == '/' && link[1] != '/' {
-		return setting.AppUrl + link[1:]
+		return setting.AppUrl + strings.TrimPrefix(link, setting.AppSubUrl)[1:]
 	}
 	return link
 }
