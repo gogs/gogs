@@ -1231,6 +1231,7 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-buttons .ui.button {
   padding: 8px 10px;
+  font-weight: normal;
 }
 .repository.file.list #repo-files-table thead th {
   padding-top: 8px;
