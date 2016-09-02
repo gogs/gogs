@@ -1,0 +1,63 @@
+{{template "base/head" .}}
+<div class="user settings organizations">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.orgs"}}
+					<div class="ui right">
+						<div class="ui blue tiny show-panel button" data-panel="#add-org-panel">{{.i18n.Tr "new_org"}}</div>
+					</div>
+				</h4>
+				<div class="ui attached segment">
+					{{if .Orgs}}
+						{{.i18n.Tr "settings.orgs_list"}}<br><br>
+						<div class="ui mini images">
+						{{range .Orgs}}
+							<a href="{{.HomeLink}}"><img class="ui image poping up" src="{{.RelAvatarLink}}" data-content="{{.Name}}" data-position="top center" data-variation="tiny inverted"></a>
+						{{end}}
+						</div>
+					{{else}}
+						{{.i18n.Tr "settings.orgs_none"}}
+					{{end}}
+				</div>
+				<div {{if not .HasError}}class="hide"{{end}} id="add-org-panel">
+					<form class="ui form" action="{{.Link}}" method="post">
+						{{.CsrfTokenHtml}}
+						<h4 class="ui top attached header">
+							{{.i18n.Tr "new_org"}}
+						</h4>
+						<div class="ui attached segment">
+							<div class="inline required field {{if .Err_OrgName}}error{{end}}">
+								<label for="org_name">{{.i18n.Tr "org.org_name_holder"}}:</label>
+								<input id="org_name" name="org_name" value="{{.org_name}}" autofocus required>
+								<br><br>
+							</div>
+
+							<div class="inline field">
+								<label></label>
+								<button class="ui green button">
+									{{.i18n.Tr "org.create_org"}}
+								</button>
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="ui small basic organizations modal">
+	<div class="ui icon header">
+		<i class="trash icon"></i>
+		{{.i18n.Tr "settings.delete_account_title"}}
+	</div>
+	<div class="content">
+		<p>{{.i18n.Tr "settings.delete_account_desc"}}</p>
+	</div>
+	{{template "base/delete_modal_actions" .}}
+</div>
+{{template "base/footer" .}}

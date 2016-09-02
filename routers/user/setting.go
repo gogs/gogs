@@ -21,16 +21,17 @@ import (
 )
 
 const (
-	SETTINGS_PROFILE      base.TplName = "user/settings/profile"
-	SETTINGS_AVATAR       base.TplName = "user/settings/avatar"
-	SETTINGS_PASSWORD     base.TplName = "user/settings/password"
-	SETTINGS_EMAILS       base.TplName = "user/settings/email"
-	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
-	SETTINGS_SOCIAL       base.TplName = "user/settings/social"
-	SETTINGS_APPLICATIONS base.TplName = "user/settings/applications"
-	SETTINGS_DELETE       base.TplName = "user/settings/delete"
-	NOTIFICATION          base.TplName = "user/notification"
-	SECURITY              base.TplName = "user/security"
+	SETTINGS_PROFILE       base.TplName = "user/settings/profile"
+	SETTINGS_AVATAR        base.TplName = "user/settings/avatar"
+	SETTINGS_PASSWORD      base.TplName = "user/settings/password"
+	SETTINGS_EMAILS        base.TplName = "user/settings/email"
+	SETTINGS_SSH_KEYS      base.TplName = "user/settings/sshkeys"
+	SETTINGS_SOCIAL        base.TplName = "user/settings/social"
+	SETTINGS_APPLICATIONS  base.TplName = "user/settings/applications"
+	SETTINGS_ORGANIZATIONS base.TplName = "user/settings/organizations"
+	SETTINGS_DELETE        base.TplName = "user/settings/delete"
+	NOTIFICATION           base.TplName = "user/notification"
+	SECURITY               base.TplName = "user/security"
 )
 
 func Settings(ctx *context.Context) {
@@ -414,6 +415,53 @@ func SettingsDeleteApplication(ctx *context.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubUrl + "/user/settings/applications",
 	})
+}
+
+func SettingsOrganizations(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsOrganizations"] = true
+
+	orgs, err := models.GetOrgsByUserID(ctx.User.ID, ctx.IsSigned && ctx.User.IsAdmin)
+	if err != nil {
+		ctx.Handle(500, "GetOrgsByUserID", err)
+		return
+	}
+	ctx.Data["Orgs"] = orgs
+
+	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
+}
+
+func SettingsOrganizationsPost(ctx *context.Context, form auth.CreateOrgForm) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsOrganizations"] = true
+
+	if ctx.HasError() {
+		ctx.HTML(200, SETTINGS_ORGANIZATIONS)
+		return
+	}
+
+	org := &models.User{
+		Name:     form.OrgName,
+		IsActive: true,
+		Type:     models.USER_TYPE_ORGANIZATION,
+	}
+
+	if err := models.CreateOrganization(org, ctx.User); err != nil {
+		ctx.Data["Err_OrgName"] = true
+		switch {
+		case models.IsErrUserAlreadyExist(err):
+			ctx.RenderWithErr(ctx.Tr("form.org_name_been_taken"), SETTINGS_ORGANIZATIONS, &form)
+		case models.IsErrNameReserved(err):
+			ctx.RenderWithErr(ctx.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_ORGANIZATIONS, &form)
+		case models.IsErrNamePatternNotAllowed(err):
+			ctx.RenderWithErr(ctx.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_ORGANIZATIONS, &form)
+		default:
+			ctx.Handle(500, "CreateOrganization", err)
+		}
+		return
+	}
+	log.Trace("Organization created: %s", org.Name)
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/organizations")
 }
 
 func SettingsDelete(ctx *context.Context) {
