@@ -136,6 +136,10 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
+	case models.LOGIN_OPENID:
+		config = &models.OpenIDConfig{
+			//ServiceName: form.PAMServiceName,
+		}
 	default:
 		ctx.Error(400)
 		return
