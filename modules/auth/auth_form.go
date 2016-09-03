@@ -11,7 +11,7 @@ import (
 
 type AuthenticationForm struct {
 	ID                int64
-	Type              int    `binding:"Range(2,5)"`
+	Type              int    `binding:"Range(2,6)"`
 	Name              string `binding:"Required;MaxSize(30)"`
 	Host              string
 	Port              int
