@@ -65,13 +65,13 @@ func GlobalInit() {
 	if setting.InstallLock {
 		highlight.NewContext()
 		markdown.BuildSanitizer()
-
-		models.LoadRepoConfig()
-		models.NewRepoContext()
 		if err := models.NewEngine(); err != nil {
 			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
 		}
 		models.HasEngine = true
+
+		models.LoadRepoConfig()
+		models.NewRepoContext()
 
 		// Booting long running goroutines.
 		cron.NewContext()
