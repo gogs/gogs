@@ -339,6 +339,78 @@ func RepoAssignment(args ...bool) macaron.Handler {
 	}
 }
 
+func DefaultRepoRefOnDraftRelease() macaron.Handler {
+	return func(ctx *Context) {
+		release, err := models.GetRelease(ctx.Repo.Repository.ID, ctx.Params("*"))
+		if err != nil && !models.IsErrReleaseNotExist(err) {
+			ctx.Handle(500, "GetRelease", err)
+		}
+
+		if release != nil && release.IsDraft {
+			DefaultRepoRef()
+		} else {
+			RepoRef()
+		}
+	}
+}
+
+func DefaultRepoRef() macaron.Handler {
+	return func(ctx *Context) {
+
+		// Empty repository does not have reference information.
+		if ctx.Repo.Repository.IsBare {
+			return
+		}
+
+		var (
+			refName string
+			err     error
+		)
+
+		// For API calls.
+		if ctx.Repo.GitRepo == nil {
+			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+			ctx.Repo.GitRepo, err = git.OpenRepository(repoPath)
+			if err != nil {
+				ctx.Handle(500, "RepoRef Invalid repo "+repoPath, err)
+				return
+			}
+		}
+
+		refName = ctx.Repo.Repository.DefaultBranch
+		if !ctx.Repo.GitRepo.IsBranchExist(refName) {
+			brs, err := ctx.Repo.GitRepo.GetBranches()
+			if err != nil {
+				ctx.Handle(500, "GetBranches", err)
+				return
+			}
+			refName = brs[0]
+		}
+		ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName)
+		if err != nil {
+			ctx.Handle(500, "GetBranchCommit", err)
+			return
+		}
+		ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
+		ctx.Repo.IsViewBranch = true
+
+		ctx.Repo.BranchName = refName
+		ctx.Data["BranchName"] = ctx.Repo.BranchName
+		ctx.Data["CommitID"] = ctx.Repo.CommitID
+		ctx.Data["TreePath"] = ctx.Repo.TreePath
+		ctx.Data["IsViewBranch"] = ctx.Repo.IsViewBranch
+		ctx.Data["IsViewTag"] = ctx.Repo.IsViewTag
+		ctx.Data["IsViewCommit"] = ctx.Repo.IsViewCommit
+
+		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+		if err != nil {
+			ctx.Handle(500, "CommitsCount", err)
+			return
+		}
+		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
+	}
+}
+
 // RepoRef handles repository reference name including those contain `/`.
 func RepoRef() macaron.Handler {
 	return func(ctx *Context) {
