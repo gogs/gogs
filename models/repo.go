@@ -613,10 +613,6 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return nil, err
 	}
 
-	// Clone to temprory path and do the init commit.
-	tmpDir := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
-	os.MkdirAll(tmpDir, os.ModePerm)
-
 	repoPath := RepoPath(u.Name, opts.Name)
 	wikiPath := WikiPath(u.Name, opts.Name)
 

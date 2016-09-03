@@ -38,6 +38,7 @@ type Mirror struct {
 }
 
 func (m *Mirror) BeforeInsert() {
+	m.UpdatedUnix = time.Now().Unix()
 	m.NextUpdateUnix = m.NextUpdate.Unix()
 }
 
