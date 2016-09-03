@@ -11,6 +11,8 @@ import (
 	"github.com/Unknwon/paginater"
 	"gopkg.in/macaron.v1"
 
+	"github.com/gogits/git-module"
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
@@ -69,5 +71,25 @@ func APIContexter() macaron.Handler {
 			Context: c,
 		}
 		c.Map(ctx)
+	}
+}
+
+func ReferencesGitRepo() macaron.Handler {
+	return func(ctx *APIContext) {
+		// Empty repository does not have reference information.
+		if ctx.Repo.Repository.IsBare {
+			return
+		}
+
+		// For API calls.
+		if ctx.Repo.GitRepo == nil {
+			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+			gitRepo, err := git.OpenRepository(repoPath)
+			if err != nil {
+				ctx.Error(500, "RepoRef Invalid repo "+repoPath, err)
+				return
+			}
+			ctx.Repo.GitRepo = gitRepo
+		}
 	}
 }
