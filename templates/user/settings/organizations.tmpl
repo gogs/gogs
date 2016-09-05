@@ -8,42 +8,27 @@
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "settings.orgs"}}
 					<div class="ui right">
-						<div class="ui blue tiny show-panel button" data-panel="#add-org-panel">{{.i18n.Tr "new_org"}}</div>
+						<a class="ui blue tiny button" href="{{AppSubUrl}}/org/create">{{.i18n.Tr "new_org"}}</a>
 					</div>
 				</h4>
-				<div class="ui attached segment">
+				<div class="ui attached segment orgs">
 					{{if .Orgs}}
-						{{.i18n.Tr "settings.orgs_list"}}<br><br>
-						<div class="ui mini images">
-						{{range .Orgs}}
-							<a href="{{.HomeLink}}"><img class="ui image poping up" src="{{.RelAvatarLink}}" data-content="{{.Name}}" data-position="top center" data-variation="tiny inverted"></a>
-						{{end}}
+						<div class="ui middle aligned divided list">
+							{{range .Orgs}}
+							<div class="item">
+								<div class="right floated content">
+									<div class="ui button">Leave</div>
+								</div>
+								<img class="ui mini image" src="{{.RelAvatarLink}}">
+								<div class="content">
+										<a href="{{.HomeLink}}">{{.Name}}</a>
+								</div>
+							</div>
+							{{end}}
 						</div>
 					{{else}}
 						{{.i18n.Tr "settings.orgs_none"}}
 					{{end}}
-				</div>
-				<div {{if not .HasError}}class="hide"{{end}} id="add-org-panel">
-					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
-						<h4 class="ui top attached header">
-							{{.i18n.Tr "new_org"}}
-						</h4>
-						<div class="ui attached segment">
-							<div class="inline required field {{if .Err_OrgName}}error{{end}}">
-								<label for="org_name">{{.i18n.Tr "org.org_name_holder"}}:</label>
-								<input id="org_name" name="org_name" value="{{.org_name}}" autofocus required>
-								<br><br>
-							</div>
-
-							<div class="inline field">
-								<label></label>
-								<button class="ui green button">
-									{{.i18n.Tr "org.create_org"}}
-								</button>
-							</div>
-						</div>
-					</form>
 				</div>
 			</div>
 		</div>

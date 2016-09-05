@@ -246,8 +246,7 @@ func runWeb(ctx *cli.Context) error {
 		m.Combo("/applications").Get(user.SettingsApplications).
 			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
-		m.Combo("/organizations").Get(user.SettingsOrganizations).
-			Post(bindIgnErr(auth.CreateOrgForm{}), user.SettingsOrganizationsPost)
+		m.Get("/organizations", user.SettingsOrganizations)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *context.Context) {
 		ctx.Data["PageIsUserSettings"] = true

@@ -431,39 +431,6 @@ func SettingsOrganizations(ctx *context.Context) {
 	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
 }
 
-func SettingsOrganizationsPost(ctx *context.Context, form auth.CreateOrgForm) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsOrganizations"] = true
-
-	if ctx.HasError() {
-		ctx.HTML(200, SETTINGS_ORGANIZATIONS)
-		return
-	}
-
-	org := &models.User{
-		Name:     form.OrgName,
-		IsActive: true,
-		Type:     models.USER_TYPE_ORGANIZATION,
-	}
-
-	if err := models.CreateOrganization(org, ctx.User); err != nil {
-		ctx.Data["Err_OrgName"] = true
-		switch {
-		case models.IsErrUserAlreadyExist(err):
-			ctx.RenderWithErr(ctx.Tr("form.org_name_been_taken"), SETTINGS_ORGANIZATIONS, &form)
-		case models.IsErrNameReserved(err):
-			ctx.RenderWithErr(ctx.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_ORGANIZATIONS, &form)
-		case models.IsErrNamePatternNotAllowed(err):
-			ctx.RenderWithErr(ctx.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_ORGANIZATIONS, &form)
-		default:
-			ctx.Handle(500, "CreateOrganization", err)
-		}
-		return
-	}
-	log.Trace("Organization created: %s", org.Name)
-	ctx.Redirect(setting.AppSubUrl + "/user/settings/organizations")
-}
-
 func SettingsDelete(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsDelete"] = true
