@@ -9,7 +9,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -363,18 +362,7 @@ func serviceRPC(h serviceHandler, service string) {
 		}
 	}
 
-	if h.cfg.OnSucceed != nil {
-		input, err = ioutil.ReadAll(reqBody)
-		if err != nil {
-			log.GitLogger.Error(2, "fail to read request body: %v", err)
-			h.w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		br = bytes.NewReader(input)
-	} else {
-		br = reqBody
-	}
+	br = reqBody
 
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	cmd.Dir = h.dir
