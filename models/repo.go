@@ -1765,12 +1765,15 @@ func ParseSize(reader io.Reader) (*CountObject, error) {
 			repoSize.Count, err = strconv.Atoi(line[7:])
 		case strings.HasPrefix(line, STAT_SIZE):
 			repoSize.Size, err = strconv.ParseInt(line[6:], 10, 64)
+			repoSize.Size = repoSize.Size * 1024
 		case strings.HasPrefix(line, STAT_INPACK):
 			repoSize.InPack, err = strconv.ParseInt(line[9:], 10, 64)
+			repoSize.InPack = repoSize.InPack * 1024
 		case strings.HasPrefix(line, STAT_PACKS):
 			repoSize.Packs, err = strconv.Atoi(line[7:])
 		case strings.HasPrefix(line, STAT_SIZEPACK):
 			repoSize.SizePack, err = strconv.ParseInt(line[11:], 10, 64)
+			repoSize.SizePack = repoSize.SizePack * 1024
 		case strings.HasPrefix(line, STAT_PRUNEPACKAGE):
 			repoSize.PrunePack, err = strconv.Atoi(line[16:])
 		case strings.HasPrefix(line, STAT_GARBAGE):
