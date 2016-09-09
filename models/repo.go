@@ -1759,7 +1759,7 @@ func ParseSize(reader io.Reader) (*CountObject, error) {
 			// Remove line break.
 			line = line[:len(line)-1]
 		}
-		log.Info(line)
+
 		switch {
 		case strings.HasPrefix(line, STAT_COUNT):
 			repoSize.Count, err = strconv.Atoi(line[7:])
@@ -1795,7 +1795,7 @@ func UpdateRepoSize(repoUserName, repoName string) error {
 		return err
 	}
 	repoSize := repoInfoSize.Size + repoInfoSize.SizePack
-	log.Info(strconv.FormatInt(repoSize, 10))
+
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
