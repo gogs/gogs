@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: 0.9.99 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions)
+##### Current tip version: 0.9.99 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions or submit a task on [alpha stage automated binary building system](https://build.gogs.io/))
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
