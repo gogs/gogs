@@ -18,11 +18,14 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"github.com/yohcop/openid-go"
+	//"github.com/akavel/go-openid"
 
 	"github.com/gogits/gogs/modules/auth/ldap"
 	//"github.com/gogits/gogs/modules/auth/openid"
 	"github.com/gogits/gogs/modules/auth/pam"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type LoginType int
@@ -505,6 +508,53 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	return user, CreateUser(user)
 }
 
+// ________                       .___________
+// \_____  \ ______   ____   ____ |   \______ \
+//  /   |   \\____ \_/ __ \ /    \|   ||    |  \
+// /    |    \  |_> >  ___/|   |  \   ||    `   \
+// \_______  /   __/ \___  >___|  /___/_______  /
+//         \/|__|        \/     \/            \/
+
+// LoginViaOpenID authorizes against "id" (openid URL)
+// and create a local user if success when enabled.
+func LoginViaOpenID(user *User, id string, sourceID int64, cfg *OpenIDConfig, autoRegister bool) (*User, error) {
+
+    url, err := openid.RedirectURL(id, setting.AppUrl + "/user/login/openidVerify", setting.AppUrl)
+    if err != nil {
+		return nil, err
+    }
+	return nil, ErrDelegatedAuth{ OP: url }
+}
+
+func LoginViaOpenIDVerification(user *User, url string, sourceID int64, cfg *OpenIDConfig, autoRegister bool) (*User, error) {
+	return user, nil
+
+/*
+	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
+		if strings.Contains(err.Error(), "Authentication failure") {
+			return nil, ErrUserNotExist{0, login}
+		}
+		return nil, err
+	}
+
+	if !autoRegister {
+		return user, nil
+	}
+
+	user = &User{
+		LowerName:   strings.ToLower(login),
+		Name:        login,
+		Email:       login,
+		Passwd:      password,
+		LoginType:   LOGIN_PAM,
+		LoginSource: sourceID,
+		LoginName:   login,
+		IsActive:    true,
+	}
+	return user, CreateUser(user)
+*/
+}
+
 func ExternalUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
 		return nil, ErrLoginSourceNotActived
@@ -517,6 +567,8 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 		return LoginViaSMTP(user, login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
 	case LOGIN_PAM:
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	case LOGIN_OPENID:
+		return LoginViaOpenID(user, login, source.ID, source.Cfg.(*OpenIDConfig), autoRegister)
 	}
 
 	return nil, ErrUnsupportedLoginType
@@ -527,6 +579,8 @@ func UserSignIn(username, password string) (*User, error) {
 	var user *User
 	if strings.Contains(username, "@") {
 		user = &User{Email: strings.ToLower(username)}
+	} else if strings.Contains(username, "://") {
+		user = &User{Openid: strings.ToLower(username)}
 	} else {
 		user = &User{LowerName: strings.ToLower(username)}
 	}
@@ -558,7 +612,7 @@ func UserSignIn(username, password string) (*User, error) {
 		}
 	}
 
-	sources := make([]*LoginSource, 0, 3)
+	sources := make([]*LoginSource, 0, 4)
 	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
 		return nil, err
 	}

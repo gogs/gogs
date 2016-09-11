@@ -108,6 +108,8 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &form)
+		} else if models.IsErrDelegatedAuth(err) {
+			ctx.Redirect(err.Error())
 		} else {
 			ctx.Handle(500, "UserSignIn", err)
 		}
