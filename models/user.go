@@ -7,7 +7,9 @@ package models
 import (
 	"bytes"
 	"container/list"
+	"hash"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -315,7 +317,14 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePasswd encodes password to safe format.
 func (u *User) EncodePasswd() {
-	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, sha256.New)
+	var hashAlgorithm func() hash.Hash
+	switch setting.Cfg.Section("security").Key("PASSWORD_HASH_ALGORITHM").String() {
+	case "sha512":
+		hashAlgorithm = sha512.New
+	default:
+		hashAlgorithm = sha256.New
+	}
+	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, hashAlgorithm)
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
