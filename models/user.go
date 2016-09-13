@@ -109,6 +109,23 @@ type User struct {
 	Members     []*User `xorm:"-"`
 }
 
+var hashAlgorithm func() hash.Hash
+
+func updateHashAlgorithm() {
+	if(hashAlgorithm != nil) {
+		return
+	}
+	hashAlgorithmName := setting.Cfg.Section("security").Key("PASSWORD_HASH_ALGORITHM").String()
+	switch hashAlgorithmName {
+	case "sha256":
+		hashAlgorithm = sha256.New
+	case "sha512":
+		hashAlgorithm = sha512.New
+	default:
+		log.Fatal(log.FATAL, "Unknown PASSWORD_HASH_ALGORITHM: " + hashAlgorithmName)
+	}
+}
+
 func (u *User) BeforeInsert() {
 	u.CreatedUnix = time.Now().Unix()
 	u.UpdatedUnix = u.CreatedUnix
@@ -317,13 +334,7 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePasswd encodes password to safe format.
 func (u *User) EncodePasswd() {
-	var hashAlgorithm func() hash.Hash
-	switch setting.Cfg.Section("security").Key("PASSWORD_HASH_ALGORITHM").String() {
-	case "sha512":
-		hashAlgorithm = sha512.New
-	default:
-		hashAlgorithm = sha256.New
-	}
+	updateHashAlgorithm()
 	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, hashAlgorithm)
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
