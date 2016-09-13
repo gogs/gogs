@@ -1,0 +1,39 @@
+{{template "base/head" .}}
+<div class="user settings">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.repos"}}
+				</h4>
+				<div class="ui attached segment">
+
+					{{range .Repos}}
+						<div class="item">
+							<div class="ui header">
+								{{if .IsPrivate}}
+									<span class="text gold"><i class="octicon octicon-lock"></i></span>
+								{{else if .IsFork}}
+									<span><i class="octicon octicon-repo-forked"></i></span>
+								{{else if .IsMirror}}
+									<span><i class="octicon octicon-repo-clone"></i></span>
+								{{else}}
+									<span><i class="octicon octicon-repo"></i></span>
+								{{end}}
+								<a class="name" href="{{AppSubUrl}}/{{$.Owner.Name}}/{{.Name}}">{{$.Owner.Name}}/{{.Name}}</a>
+								<span>{{SizeFmt .RepoSize}}</span>
+								{{if .IsFork}}
+									{{$.i18n.Tr "repo.forked_from"}}
+									<span><a href="{{AppSubUrl}}/{{.BaseRepo.Owner.Name}}/{{.BaseRepo.Name}}">{{.BaseRepo.Owner.Name}}/{{.BaseRepo.Name}}</a></span>
+								{{end}}
+							</div>
+						</div>
+					{{end}}
+
+				</div>
+			</div>
+		</div>
+	</div>
+</div>

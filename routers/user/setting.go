@@ -28,6 +28,7 @@ const (
 	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
 	SETTINGS_SOCIAL       base.TplName = "user/settings/social"
 	SETTINGS_APPLICATIONS base.TplName = "user/settings/applications"
+	SETTINGS_REPOS        base.TplName = "user/settings/repos"
 	SETTINGS_DELETE       base.TplName = "user/settings/delete"
 	NOTIFICATION          base.TplName = "user/notification"
 	SECURITY              base.TplName = "user/security"
@@ -402,6 +403,39 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	ctx.Flash.Info(t.Sha1)
 
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/applications")
+}
+
+func SettingsRepos(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsRepos"] = true
+	ctxUser := ctx.User
+
+	var err error
+	if err = ctxUser.GetRepositories(1, setting.UI.User.RepoPagingNum); err != nil {
+		ctx.Handle(500, "GetRepositories", err)
+		return
+	}
+	repos := ctxUser.Repos
+
+	for i := range repos {
+		if repos[i].IsFork {
+			err := repos[i].GetBaseRepo()
+			if err != nil {
+				ctx.Handle(500, "GetBaseRepo", err)
+				return
+			}
+			err = repos[i].BaseRepo.GetOwner()
+			if err != nil {
+				ctx.Handle(500, "GetOwner", err)
+				return
+			}
+		}
+	}
+
+	ctx.Data["Owner"] = ctxUser
+	ctx.Data["Repos"] = repos
+
+	ctx.HTML(200, SETTINGS_REPOS)
 }
 
 func SettingsDeleteApplication(ctx *context.Context) {
