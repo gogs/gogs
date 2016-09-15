@@ -111,7 +111,7 @@ type User struct {
 
 var hashAlgorithm func() hash.Hash
 
-func updateHashAlgorithm() {
+func UpdateHashAlgorithm() {
 	if(hashAlgorithm != nil) {
 		return
 	}
@@ -334,7 +334,6 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePasswd encodes password to safe format.
 func (u *User) EncodePasswd() {
-	updateHashAlgorithm()
 	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, hashAlgorithm)
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
