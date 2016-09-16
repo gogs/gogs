@@ -92,6 +92,7 @@ var (
 	CookieUserName       string
 	CookieRememberName   string
 	ReverseProxyAuthUser string
+	PasswordHashAlgorithm string
 
 	// Database settings
 	UseSQLite3    bool
@@ -450,6 +451,7 @@ func NewContext() {
 	CookieUserName = sec.Key("COOKIE_USERNAME").String()
 	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
+	PasswordHashAlgorithm = sec.Key("PASSWORD_HASH_ALGORITHM").MustString("sha256")
 
 	sec = Cfg.Section("attachment")
 	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))

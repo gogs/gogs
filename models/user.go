@@ -115,7 +115,7 @@ func UpdateHashAlgorithm() {
 	if(hashAlgorithm != nil) {
 		return
 	}
-	hashAlgorithmName := setting.Cfg.Section("security").Key("PASSWORD_HASH_ALGORITHM").String()
+	hashAlgorithmName := setting.PasswordHashAlgorithm
 	switch hashAlgorithmName {
 	case "sha256":
 		hashAlgorithm = sha256.New
