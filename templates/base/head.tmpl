@@ -13,6 +13,13 @@
 		<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
 		<meta name="go-source" content="{{.GoGetImport}} _ {{.GoDocDirectory}} {{.GoDocFile}}">
 	{{end}}
+	
+	<!-- Open Graph Tags -->
+	<meta property="og:image" content="{{AppUrl}}img/gogs-lg.png" />
+  <meta property="og:image" content="{{AppUrl}}img/gogs-large-resize.png" />
+  <meta property="og:title" content="{{if .Title}}{{.Title}} - {{end}}{{AppName}}">
+  <meta property="og:site_name" content="{{AppName}}">
+  <meta property="og:description" content="{{if .Repository}}{{.Repository.Name}}{{if .Repository.Description}} - {{.Repository.Description}}{{end}}{{else}}Gogs (Go Git Service) is a painless self-hosted Git service written in Go{{end}}">
 
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
 
