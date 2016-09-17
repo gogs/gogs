@@ -523,7 +523,7 @@ func LoginViaOpenID(user *User, id string, sourceID int64, cfg *OpenIDConfig, au
     if err != nil {
 		return nil, err
     }
-	return nil, ErrDelegatedAuth{ OP: url }
+    return nil, ErrDelegatedAuth{ OP: url }
 }
 
 func LoginViaOpenIDVerification(user *User, url string, sourceID int64, cfg *OpenIDConfig, autoRegister bool) (*User, error) {
@@ -621,6 +621,9 @@ func UserSignIn(username, password string) (*User, error) {
 		authUser, err := ExternalUserLogin(nil, username, password, source, true)
 		if err == nil {
 			return authUser, nil
+		}
+		if IsErrDelegatedAuth(err) {
+			return nil, err
 		}
 
 		log.Warn("Failed to login '%s' via '%s': %v", username, source.Name, err)
