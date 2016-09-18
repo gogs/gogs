@@ -517,42 +517,42 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 
 // LoginViaOpenID authorizes against "id" (openid URL)
 // and create a local user if success when enabled.
-func LoginViaOpenID(user *User, id string, sourceID int64, cfg *OpenIDConfig, autoRegister bool) (*User, error) {
+func LoginViaOpenID(user *User, id string, source *LoginSource, autoRegister bool) (*User, error) {
 
-    url, err := openid.RedirectURL(id, setting.AppUrl + "/user/login/openidVerify", setting.AppUrl)
+    url, err := openid.RedirectURL(id, setting.AppUrl + "user/login/openid/verify", setting.AppUrl)
     if err != nil {
 		return nil, err
     }
     return nil, ErrDelegatedAuth{ OP: url }
 }
 
-func LoginViaOpenIDVerification(user *User, url string, sourceID int64, cfg *OpenIDConfig, autoRegister bool) (*User, error) {
-	return user, nil
+var nonceStore = openid.NewSimpleNonceStore()
+var discoveryCache = openid.NewSimpleDiscoveryCache()
+
+func LoginViaOpenIDVerification(url string, autoRegister bool) (*User, error) {
+
+	var id, err = openid.Verify(url, discoveryCache, nonceStore)
+	if err != nil {
+		log.Fatal(1, "Error verifying: %v", err)
+	}
+	log.Trace("Verified ID: " + id)
 
 /*
-	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
-		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, ErrUserNotExist{0, login}
-		}
-		return nil, err
-	}
-
-	if !autoRegister {
-		return user, nil
-	}
+	login := id
 
 	user = &User{
 		LowerName:   strings.ToLower(login),
 		Name:        login,
 		Email:       login,
-		Passwd:      password,
-		LoginType:   LOGIN_PAM,
+		Passwd:      nil,
+		LoginType:   LOGIN_OPENID,
 		LoginSource: sourceID,
 		LoginName:   login,
 		IsActive:    true,
 	}
 	return user, CreateUser(user)
 */
+	return nil, nil
 }
 
 func ExternalUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
@@ -568,7 +568,7 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 	case LOGIN_PAM:
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
 	case LOGIN_OPENID:
-		return LoginViaOpenID(user, login, source.ID, source.Cfg.(*OpenIDConfig), autoRegister)
+		return LoginViaOpenID(user, login, source, autoRegister)
 	}
 
 	return nil, ErrUnsupportedLoginType

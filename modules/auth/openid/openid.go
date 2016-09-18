@@ -20,3 +20,29 @@ import (
 // the nonceStore between them.
 var nonceStore = openid.NewSimpleNonceStore()
 var discoveryCache = openid.NewSimpleDiscoveryCache()
+
+func LoginViaOpenIDVerification(url string, autoRegister bool) (*User, error) {
+
+	var id, err = openid.Verify(url, discoveryCache, nonceStore)
+	if err != nil {
+		log.Fatal(1, "Error verifying: %v", err)
+	}
+	log.Trace("Verified ID: " + id)
+
+/*
+	login := id
+
+	user = &User{
+		LowerName:   strings.ToLower(login),
+		Name:        login,
+		Email:       login,
+		Passwd:      nil,
+		LoginType:   LOGIN_OPENID,
+		LoginSource: sourceID,
+		LoginName:   login,
+		IsActive:    true,
+	}
+	return user, CreateUser(user)
+*/
+	return nil, nil
+}

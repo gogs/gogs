@@ -96,6 +96,18 @@ func SignIn(ctx *context.Context) {
 	ctx.HTML(200, SIGNIN)
 }
 
+func OpenidVerify(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("sign_in")
+
+	log.Trace("Incoming call to: " + ctx.Req.Request.URL.String())
+
+	fullUrl := setting.AppUrl + ctx.Req.Request.URL.String()[1:]
+	log.Trace(fullUrl)
+	models.LoginViaOpenIDVerification(fullUrl, true)
+
+	ctx.HTML(200, SIGNIN)
+}
+
 func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
