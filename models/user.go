@@ -7,10 +7,6 @@ package models
 import (
 	"bytes"
 	"container/list"
-	"hash"
-	"crypto/sha256"
-	"crypto/sha512"
-	"golang.org/x/crypto/pbkdf2"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -30,6 +26,7 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/modules/password"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
@@ -108,23 +105,6 @@ type User struct {
 	NumMembers  int
 	Teams       []*Team `xorm:"-"`
 	Members     []*User `xorm:"-"`
-}
-
-var hashAlgorithm func() hash.Hash
-
-func UpdateHashAlgorithm() {
-	if(hashAlgorithm != nil) {
-		return
-	}
-	hashAlgorithmName := setting.PasswordHashAlgorithm
-	switch hashAlgorithmName {
-	case "sha256":
-		hashAlgorithm = sha256.New
-	case "sha512":
-		hashAlgorithm = sha512.New
-	default:
-		log.Fatal(log.FATAL, "Unknown PASSWORD_HASH_ALGORITHM: " + hashAlgorithmName)
-	}
 }
 
 func (u *User) BeforeInsert() {
@@ -335,15 +315,26 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePasswd encodes password to safe format.
 func (u *User) EncodePasswd() {
-	newPasswd := pbkdf2.Key([]byte(u.Passwd), []byte(u.Salt), 10000, 50, hashAlgorithm)
-	u.Passwd = fmt.Sprintf("%x", newPasswd)
+	newPasswd, err := password.Hash(u.Passwd, u.Salt, 10000, 50, "PBKDF2-HMAC-SHA256")
+	if(err != nil) {
+		panic("password encoding failed")
+	}
+	u.Passwd = newPasswd;
 }
 
 // ValidatePassword checks if given password matches the one belongs to the user.
-func (u *User) ValidatePassword(passwd string) bool {
-	newUser := &User{Passwd: passwd, Salt: u.Salt}
-	newUser.EncodePasswd()
-	return u.Passwd == newUser.Passwd
+func (u *User) ValidatePassword(clear string) bool {
+
+	verified, err := password.Verify(clear, u.Passwd)
+	if(err != nil) {
+
+		// try with backwards compatibility
+		return password.VerifyBackwardsCompatible(clear, u.Passwd, u.Salt)
+
+	}
+
+	return verified == true
+
 }
 
 // UploadAvatar saves custom avatar for user.

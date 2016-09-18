@@ -54,7 +54,6 @@ func runCreateUser(c *cli.Context) error {
 	setting.NewContext()
 	models.LoadConfigs()
 	models.SetEngine()
-	models.UpdateHashAlgorithm()
 
 	if err := models.CreateUser(&models.User{
 		Name:     c.String("name"),

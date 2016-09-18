@@ -72,7 +72,6 @@ func GlobalInit() {
 
 		models.LoadRepoConfig()
 		models.NewRepoContext()
-		models.UpdateHashAlgorithm()
 
 		// Booting long running goroutines.
 		cron.NewContext()
