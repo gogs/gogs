@@ -44,6 +44,7 @@ import:
 - package: golang.org/x/crypto
   subpackages:
   - ssh
+  - pbkdf2
 - package: golang.org/x/net
   subpackages:
   - html

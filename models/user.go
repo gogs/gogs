@@ -10,6 +10,7 @@ import (
 	"hash"
 	"crypto/sha256"
 	"crypto/sha512"
+	"golang.org/x/crypto/pbkdf2"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -334,7 +335,7 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePasswd encodes password to safe format.
 func (u *User) EncodePasswd() {
-	newPasswd := base.PBKDF2([]byte(u.Passwd), []byte(u.Salt), 10000, 50, hashAlgorithm)
+	newPasswd := pbkdf2.Key([]byte(u.Passwd), []byte(u.Salt), 10000, 50, hashAlgorithm)
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
 
