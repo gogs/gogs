@@ -264,7 +264,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + form.TreePath)
+	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(form.TreePath))
 }
 
 func EditFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
