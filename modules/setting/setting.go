@@ -116,6 +116,7 @@ var (
 		MirrorQueueLength      int
 		PullRequestQueueLength int
 		PreferredLicenses      []string
+		DisableHttpGit         bool
 
 		// Repository editor settings
 		Editor struct {
