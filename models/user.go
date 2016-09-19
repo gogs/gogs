@@ -315,7 +315,7 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePasswd encodes password to safe format.
 func (u *User) EncodePasswd() {
-	newPasswd, err := password.Hash(u.Passwd, u.Salt, 10000, 50, "PBKDF2-HMAC-SHA256")
+	newPasswd, err := password.Hash(u.Passwd)
 	if(err != nil) {
 		panic("password encoding failed")
 	}
@@ -329,7 +329,7 @@ func (u *User) ValidatePassword(clear string) bool {
 	if(err != nil) {
 
 		// try with backwards compatibility
-		return password.VerifyBackwardsCompatible(clear, u.Passwd, u.Salt)
+		return password.VerifyBackwardsCompatible(clear, u.Passwd, []byte(u.Salt))
 
 	}
 
@@ -557,7 +557,7 @@ func CreateUser(u *User) (err error) {
 	u.AvatarEmail = u.Email
 	u.Avatar = base.HashEmail(u.AvatarEmail)
 	u.Rands = GetUserSalt()
-	u.Salt = GetUserSalt()
+	u.Salt = ""
 	u.EncodePasswd()
 	u.MaxRepoCreation = -1
 
