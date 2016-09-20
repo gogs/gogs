@@ -341,8 +341,10 @@ func ForgotPasswdPost(ctx *context.Context) {
 	u, err := models.GetUserByEmail(email)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("auth.email_not_associate"), FORGOT_PASSWORD, nil)
+			ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+			ctx.Data["IsResetSent"] = true
+			ctx.HTML(200, FORGOT_PASSWORD)
+			return
 		} else {
 			ctx.Handle(500, "user.ResetPasswd(check existence)", err)
 		}
