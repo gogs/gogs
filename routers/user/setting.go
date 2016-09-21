@@ -189,7 +189,6 @@ func SettingsPasswordPost(ctx *context.Context, form auth.ChangePasswordForm) {
 		ctx.Flash.Error(ctx.Tr("form.password_not_match"))
 	} else {
 		ctx.User.Passwd = form.Password
-		ctx.User.Salt = models.GetUserSalt()
 		ctx.User.EncodePasswd()
 		if err := models.UpdateUser(ctx.User); err != nil {
 			ctx.Handle(500, "UpdateUser", err)

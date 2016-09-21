@@ -325,15 +325,32 @@ func (u *User) EncodePasswd() {
 // ValidatePassword checks if given password matches the one belongs to the user.
 func (u *User) ValidatePassword(clear string) bool {
 
+	needsPasswordUpgrade := false
+
 	verified, err := password.Verify(clear, u.Passwd)
 	if(err != nil) {
 
-		// try with backwards compatibility
-		return password.VerifyBackwardsCompatible(clear, u.Passwd, []byte(u.Salt))
+		if(verified == false) {
+			// backwards compatibility
+			verified = password.VerifyBackwardsCompatible(clear, u.Passwd, []byte(u.Salt))
+		}
+
+		needsPasswordUpgrade = true
 
 	}
 
-	return verified == true
+	if (verified == true) && (needsPasswordUpgrade == true) {
+
+		updatedPasswordHash, err := password.Hash(clear)
+		if(err == nil) {
+			u.Salt = ""
+			u.Passwd = updatedPasswordHash
+			UpdateUser(u);
+		}
+
+	}
+
+	return (verified == true)
 
 }
 

@@ -55,6 +55,10 @@ func Verify(clear string, passwd string) (bool, error) {
     verified = VerifyBCRYPT(clear, hashInfo.checksum)
   }
 
+  if(hashInfo.digest != DEFAULT_DIGEST) {
+    return (verified == true), errors.New("password hash digest is deprecated")
+  }
+
   return (verified == true), nil
 
 }
