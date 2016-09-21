@@ -1,6 +1,7 @@
 package password
 
 import (
+  "log"
   "fmt"
   "errors"
   "hash"
@@ -22,7 +23,7 @@ var SUPPORTED_HASHES = []string{
 }
 
 const (
-  DEFAULT_DIGEST string = "BCRYPT"
+  DEFAULT_ALGORITHM string = "BCRYPT"
   DEFAULT_PBKDF2_ITERATIONS int = 10000
   DEFAULT_PBKDF2_SALT_LENGTH = 64 // byte
   DEFAULT_PBKDF2_OUTPUT_LENGTH = 64
@@ -30,13 +31,28 @@ const (
 )
 
 type Password struct {
-  digest string
+  algorithm string
   checksum []byte
   // pkbdf2
   iterations int
   keyLength int
   salt []byte
   hashAlgorithm func() hash.Hash
+}
+
+var ENABLED_ALGORITHM string = DEFAULT_ALGORITHM
+
+func UseHashAlgorithm(value string) {
+  if(value == "") {
+    return
+  }
+  for _, supportedAlgorithm := range SUPPORTED_HASHES {
+    if(value == supportedAlgorithm) {
+      ENABLED_ALGORITHM = value
+      return
+    }
+  }
+  log.Fatalf("invalid password hash algorithm: %s", value)
 }
 
 func Verify(clear string, passwd string) (bool, error) {
@@ -48,15 +64,15 @@ func Verify(clear string, passwd string) (bool, error) {
 
   verified := false;
 
-  switch getDigestMethod(hashInfo.digest) {
+  switch getMethod(hashInfo.algorithm) {
   case "PBKDF2":
     verified = VerifyPBKDF2(clear, hashInfo.checksum, hashInfo.salt, hashInfo.iterations, hashInfo.keyLength, hashInfo.hashAlgorithm)
   case "BCRYPT":
     verified = VerifyBCRYPT(clear, hashInfo.checksum)
   }
 
-  if(hashInfo.digest != DEFAULT_DIGEST) {
-    return (verified == true), errors.New("password hash digest is deprecated")
+  if(hashInfo.algorithm != ENABLED_ALGORITHM) {
+    return (verified == true), errors.New("password hash algorithm is deprecated")
   }
 
   return (verified == true), nil
@@ -84,16 +100,16 @@ func Identify(passwd string) (Password, error) {
 
   var result Password
 
-  for _, digest := range SUPPORTED_HASHES {
+  for _, algorithm := range SUPPORTED_HASHES {
 
-    scheme := "{" + digest + "}";
+    scheme := "{" + algorithm + "}";
     if strings.HasPrefix(strings.ToUpper(passwd), scheme) {
 
-      result.digest = digest
+      result.algorithm = algorithm
 
-      if strings.HasPrefix(digest, "PBKDF2-") {
+      if strings.HasPrefix(algorithm, "PBKDF2-") {
 
-        hashAlgorithm, err := getHashAlgorithm(digest)
+        hashAlgorithm, err := getHashAlgorithm(algorithm)
         if err != nil {
           return result, err
         }
@@ -129,7 +145,7 @@ func Identify(passwd string) (Password, error) {
         result.keyLength = len(result.checksum)
         return result, nil
 
-      } else if (digest == "BCRYPT") {
+      } else if (algorithm == "BCRYPT") {
 
         result.checksum = []byte(passwd[8:])
         return result, nil
@@ -146,14 +162,14 @@ func Identify(passwd string) (Password, error) {
 
 func Hash(clear string) (string, error) {
 
-  switch getDigestMethod(DEFAULT_DIGEST) {
+  switch getMethod(ENABLED_ALGORITHM) {
   case "BCRYPT":
     return HashBCRYPT(clear, DEFAULT_BCRYPT_COST)
   case "PBKDF2":
-    return HashPBKDF2(clear, generateSalt(), DEFAULT_PBKDF2_ITERATIONS, DEFAULT_PBKDF2_OUTPUT_LENGTH, DEFAULT_DIGEST)
+    return HashPBKDF2(clear, generateSalt(), DEFAULT_PBKDF2_ITERATIONS, DEFAULT_PBKDF2_OUTPUT_LENGTH, ENABLED_ALGORITHM)
   }
 
-  return "", errors.New("invalid default hash digest: unknown hash method")
+  return "", errors.New("invalid default hash algorithm: unknown hash method")
 
 }
 
@@ -165,13 +181,13 @@ func HashBCRYPT(clear string, cost int) (string, error) {
   return "{BCRYPT}" + string(encrypted[:]), nil
 }
 
-func HashPBKDF2(clear string, salt []byte, iterations int, keyLength int, digest string) (string, error) {
-  hashAlgorithm, err := getHashAlgorithm(digest)
+func HashPBKDF2(clear string, salt []byte, iterations int, keyLength int, algorithm string) (string, error) {
+  hashAlgorithm, err := getHashAlgorithm(algorithm)
   if(err != nil) {
-    return "", errors.New("invalid default hash digest: unknown hash algorithm")
+    return "", errors.New("invalid default hash algorithm: unknown hash algorithm")
   }
   output := []string{
-    "{" + digest + "}",
+    "{" + algorithm + "}",
     strconv.Itoa(iterations),
     base64.StdEncoding.EncodeToString(salt),
     base64.StdEncoding.EncodeToString(encrypt(clear, salt, iterations, keyLength, hashAlgorithm)),
@@ -179,16 +195,16 @@ func HashPBKDF2(clear string, salt []byte, iterations int, keyLength int, digest
   return strings.Join(output, "$"), nil
 }
 
-func getHashAlgorithm(digest string) (func() hash.Hash, error) {
+func getHashAlgorithm(algorithm string) (func() hash.Hash, error) {
   
-  switch strings.ToUpper(digest) {
+  switch strings.ToUpper(algorithm) {
   case "PBKDF2-HMAC-SHA256":
     return sha256.New, nil
   case "PBKDF2-HMAC-SHA512":
     return sha512.New, nil
   }
 
-  return nil, errors.New("cannot getHashAlgorithm from unknown digest: " + digest)
+  return nil, errors.New("cannot getHashAlgorithm from unknown algorithm: " + algorithm)
 
 }
 
@@ -207,10 +223,10 @@ func generateSalt() []byte {
   return b
 }
 
-func getDigestMethod(digest string) string {
-  firstSeparatorIndex := strings.Index(digest, "-")
+func getMethod(algorithm string) string {
+  firstSeparatorIndex := strings.Index(algorithm, "-")
   if firstSeparatorIndex < 1 {
-    return digest
+    return algorithm
   }
-  return digest[0:firstSeparatorIndex]
+  return algorithm[0:firstSeparatorIndex]
 }

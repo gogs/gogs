@@ -11,6 +11,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/password"
 )
 
 var (
@@ -54,6 +55,7 @@ func runCreateUser(c *cli.Context) error {
 	setting.NewContext()
 	models.LoadConfigs()
 	models.SetEngine()
+	password.UseHashAlgorithm(setting.Cfg.Section("security").Key("PASSWORD_HASH_ALGORITHM").String())
 
 	if err := models.CreateUser(&models.User{
 		Name:     c.String("name"),

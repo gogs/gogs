@@ -31,6 +31,7 @@ import (
 	"github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/template/highlight"
 	"github.com/gogits/gogs/modules/user"
+	"github.com/gogits/gogs/modules/password"
 )
 
 const (
@@ -72,6 +73,8 @@ func GlobalInit() {
 
 		models.LoadRepoConfig()
 		models.NewRepoContext()
+
+		password.UseHashAlgorithm(setting.Cfg.Section("security").Key("PASSWORD_HASH_ALGORITHM").String())
 
 		// Booting long running goroutines.
 		cron.NewContext()
