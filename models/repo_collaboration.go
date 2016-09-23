@@ -6,6 +6,8 @@ package models
 
 import (
 	"fmt"
+
+	api "github.com/gogits/go-gogs-client"
 )
 
 // Collaboration represent the relation between an individual and a repository.
@@ -27,6 +29,16 @@ func (c *Collaboration) ModeI18nKey() string {
 	default:
 		return "repo.settings.collaboration.undefined"
 	}
+}
+
+//IsCollaborator returns true if the user is a collaborator
+func (repo *Repository) IsCollaborator(uid int64) (bool, error) {
+	collaboration := &Collaboration{
+		RepoID: repo.ID,
+		UserID: uid,
+	}
+
+	return x.Get(collaboration)
 }
 
 // AddCollaborator adds new collaboration to a repository with default access mode.
@@ -75,6 +87,17 @@ func (repo *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
 type Collaborator struct {
 	*User
 	Collaboration *Collaboration
+}
+
+func (c *Collaborator) APIFormat() *api.Collaborator {
+	return &api.Collaborator{
+		User: c.User.APIFormat(),
+		Permissions: api.Permission{
+			Admin: c.Collaboration.Mode >= ACCESS_MODE_ADMIN,
+			Push:  c.Collaboration.Mode >= ACCESS_MODE_WRITE,
+			Pull:  c.Collaboration.Mode >= ACCESS_MODE_READ,
+		},
+	}
 }
 
 func (repo *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
