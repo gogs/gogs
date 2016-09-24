@@ -481,7 +481,7 @@ func NewContext() {
 
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
 
-	switch mode := Cfg.Section("").Key("RUN_USER").String(); mode {
+	switch mode := Cfg.Section("").Key("RUN_MODE").String(); mode {
 	case "prod":
 		ProdMode = true
 	case "dev":
