@@ -45,7 +45,7 @@
 				<article class="markdown-body" itemprop="text">
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
 				</article>
-			{{else if not .IsFileText}}
+			{{else if not .IsTextFile}}
 				<div class="view-raw ui center">
 					{{if .IsImageFile}}
 						<img src="{{EscapePound $.RawFileLink}}">

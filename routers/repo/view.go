@@ -173,7 +173,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
 
-		readmeExist := markdown.IsReadmeFile(blob.Name())
+		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
 		ctx.Data["ReadmeExist"] = readmeExist
 		isYaml := yaml.IsYamlFile(blob.Name())
 		ctx.Data["IsYaml"] = isYaml
