@@ -155,12 +155,17 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		buf = append(buf, d...)
 
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
+		isYaml := yaml.IsYamlFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
 
 		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
 		ctx.Data["ReadmeExist"] = readmeExist
+		ctx.Data["IsYaml"] = isYaml
 		if readmeExist && isMarkdown {
+			// TODO: don't need to render if it's a README but not Markdown file.
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+		} else if isYaml {
+			ctx.Data["FileContent"] = string(yaml.RenderYaml(buf))
 		} else {
 			// Building code view blocks with line number on server side.
 			var fileContent string
