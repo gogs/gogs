@@ -22,6 +22,7 @@ import (
 	"code.gitea.io/gitea/modules/template"
 	"code.gitea.io/gitea/modules/template/highlight"
 	"github.com/Unknwon/paginater"
+	"code.gitea.io/gitea/modules/yaml"
 )
 
 const (
@@ -155,15 +156,20 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		buf = append(buf, d...)
 
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
-		isYaml := yaml.IsYamlFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
 
-		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
+		readmeExist := markdown.IsReadmeFile(blob.Name())
 		ctx.Data["ReadmeExist"] = readmeExist
+
+		isYaml := yaml.IsYamlFile(blob.Name())
 		ctx.Data["IsYaml"] = isYaml
 		if readmeExist && isMarkdown {
 			// TODO: don't need to render if it's a README but not Markdown file.
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+		} else if isMarkdown {
+			yamlHtml := yaml.RenderMarkdownYaml(buf)
+			markdownBody := markdown.Render(yaml.StripYamlFromText(buf), path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas())
+			ctx.Data["FileContent"] = string(append(yamlHtml, markdownBody...))
 		} else if isYaml {
 			ctx.Data["FileContent"] = string(yaml.RenderYaml(buf))
 		} else {

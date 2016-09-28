@@ -2932,3 +2932,28 @@ footer .ui.language .menu {
 .ui.user.list .item .description a:hover {
   text-decoration: underline;
 }
+.markdown-body table {
+  display: block;
+  width: 100%;
+  overflow: auto;
+  word-break: keep-all;
+}
+.markdown-body>*:first-child {
+  margin-top: 0 !important;
+}
+table[data-table-type="yaml-metadata"] {
+  font-size: 12px;
+  line-height: 1;
+}
+.markdown-body table tr {
+  background-color: #fff;
+  border-top: 1px solid #ccc;
+}
+.markdown-body table th, .markdown-body table td {
+  padding: 6px 13px;
+  border: 1px solid #ddd;
+}
+.markdown-body table th {
+  font-weight: bold;
+}
+
