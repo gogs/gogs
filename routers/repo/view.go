@@ -22,7 +22,22 @@ import (
 	"code.gitea.io/gitea/modules/template"
 	"code.gitea.io/gitea/modules/template/highlight"
 	"github.com/Unknwon/paginater"
+<<<<<<< HEAD
 	"code.gitea.io/gitea/modules/yaml"
+=======
+
+	"github.com/gogits/git-module"
+
+	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/template"
+	"github.com/gogits/gogs/modules/template/highlight"
+	"github.com/gogits/gogs/modules/yaml"
+>>>>>>> Adds YAML support
 )
 
 const (
@@ -156,7 +171,6 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		buf = append(buf, d...)
 
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
-		isYaml := yaml.IsYamlFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
 
 		readmeExist := markdown.IsReadmeFile(blob.Name())
