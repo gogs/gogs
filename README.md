@@ -24,7 +24,20 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ## Purpose
 
-The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, Mac OS X, Windows and ARM.
+The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across [**ALL platforms** that Go supports](https://github.com/golang/go/wiki/MinimumRequirements) ([Go Build Dashboard](https://build.golang.org/)), including operating systems like:
+
+* Linux
+* macOS
+* Windows 
+
+and architecures like:
+
+* ARM
+* ARM64
+* x86 (386)
+* x86-64 (AMD64)
+
+it even runs on tiny single-board computers like the Raspberry Pi.
 
 ## Overview
 
