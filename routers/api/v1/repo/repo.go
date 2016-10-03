@@ -251,6 +251,21 @@ func Get(ctx *context.APIContext) {
 	ctx.JSON(200, repo.APIFormat(&api.Permission{true, true, true}))
 }
 
+// GetByID returns a single Repository
+func GetByID(ctx *context.APIContext) {
+	repo, err := models.GetRepositoryByID(ctx.ParamsInt64(":id"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "GetRepositoryByID", err)
+		}
+		return
+	}
+
+	ctx.JSON(200, repo.APIFormat(&api.Permission{true, true, true}))
+}
+
 // Delete delete one repository
 // see https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
 func Delete(ctx *context.APIContext) {
