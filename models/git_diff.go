@@ -26,6 +26,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
+	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template/highlight"
 )
 
@@ -70,17 +71,27 @@ var (
 )
 
 func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
-	var buf bytes.Buffer
+	buf := bytes.NewBuffer(nil)
+
+	// Reproduce signs which are cutted for inline diff before.
+	switch lineType {
+	case DIFF_LINE_ADD:
+		buf.WriteByte('+')
+	case DIFF_LINE_DEL:
+		buf.WriteByte('-')
+	}
+
 	for i := range diffs {
-		if diffs[i].Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD {
+		switch {
+		case diffs[i].Type == diffmatchpatch.DiffInsert && lineType == DIFF_LINE_ADD:
 			buf.Write(addedCodePrefix)
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 			buf.Write(codeTagSuffix)
-		} else if diffs[i].Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL {
+		case diffs[i].Type == diffmatchpatch.DiffDelete && lineType == DIFF_LINE_DEL:
 			buf.Write(removedCodePrefix)
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 			buf.Write(codeTagSuffix)
-		} else if diffs[i].Type == diffmatchpatch.DiffEqual {
+		case diffs[i].Type == diffmatchpatch.DiffEqual:
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 		}
 	}
@@ -90,62 +101,86 @@ func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTM
 
 // get an specific line by type (add or del) and file line number
 func (diffSection *DiffSection) GetLine(lineType DiffLineType, idx int) *DiffLine {
-	difference := 0
+	var (
+		difference    = 0
+		addCount      = 0
+		delCount      = 0
+		matchDiffLine *DiffLine
+	)
 
+LOOP:
 	for _, diffLine := range diffSection.Lines {
-		if diffLine.Type == DIFF_LINE_PLAIN {
-			// get the difference of line numbers between ADD and DEL versions
+		switch diffLine.Type {
+		case DIFF_LINE_ADD:
+			addCount++
+		case DIFF_LINE_DEL:
+			delCount++
+		default:
+			if matchDiffLine != nil {
+				break LOOP
+			}
 			difference = diffLine.RightIdx - diffLine.LeftIdx
-			continue
+			addCount = 0
+			delCount = 0
 		}
 
-		if lineType == DIFF_LINE_DEL {
+		switch lineType {
+		case DIFF_LINE_DEL:
 			if diffLine.RightIdx == 0 && diffLine.LeftIdx == idx-difference {
-				return diffLine
+				matchDiffLine = diffLine
 			}
-		} else if lineType == DIFF_LINE_ADD {
+		case DIFF_LINE_ADD:
 			if diffLine.LeftIdx == 0 && diffLine.RightIdx == idx+difference {
-				return diffLine
+				matchDiffLine = diffLine
 			}
 		}
+	}
+
+	if addCount == delCount {
+		return matchDiffLine
 	}
 	return nil
 }
 
+var diffMatchPatch = diffmatchpatch.New()
+
+func init() {
+	diffMatchPatch.DiffEditCost = 100
+}
+
 // computes inline diff for the given line
 func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) template.HTML {
-	var compareDiffLine *DiffLine
-	var diff1, diff2 string
-
-	getDefaultReturn := func() template.HTML {
+	if setting.Git.DisableDiffHighlight {
 		return template.HTML(html.EscapeString(diffLine.Content[1:]))
 	}
-
-	// just compute diff for adds and removes
-	if diffLine.Type != DIFF_LINE_ADD && diffLine.Type != DIFF_LINE_DEL {
-		return getDefaultReturn()
-	}
+	var (
+		compareDiffLine *DiffLine
+		diff1           string
+		diff2           string
+	)
 
 	// try to find equivalent diff line. ignore, otherwise
-	if diffLine.Type == DIFF_LINE_ADD {
+	switch diffLine.Type {
+	case DIFF_LINE_ADD:
 		compareDiffLine = diffSection.GetLine(DIFF_LINE_DEL, diffLine.RightIdx)
 		if compareDiffLine == nil {
-			return getDefaultReturn()
+			return template.HTML(html.EscapeString(diffLine.Content))
 		}
 		diff1 = compareDiffLine.Content
 		diff2 = diffLine.Content
-	} else {
+	case DIFF_LINE_DEL:
 		compareDiffLine = diffSection.GetLine(DIFF_LINE_ADD, diffLine.LeftIdx)
 		if compareDiffLine == nil {
-			return getDefaultReturn()
+			return template.HTML(html.EscapeString(diffLine.Content))
 		}
 		diff1 = diffLine.Content
 		diff2 = compareDiffLine.Content
+	default:
+		return template.HTML(html.EscapeString(diffLine.Content))
 	}
 
-	dmp := diffmatchpatch.New()
-	diffRecord := dmp.DiffMain(diff1[1:], diff2[1:], true)
-	diffRecord = dmp.DiffCleanupSemantic(diffRecord)
+	diffRecord := diffMatchPatch.DiffMain(diff1[1:], diff2[1:], true)
+	diffRecord = diffMatchPatch.DiffCleanupEfficiency(diffRecord)
 
 	return diffToHTML(diffRecord, diffLine.Type)
 }
@@ -160,6 +195,7 @@ type DiffFile struct {
 	IsDeleted          bool
 	IsBin              bool
 	IsRenamed          bool
+	IsSubmodule        bool
 	Sections           []*DiffSection
 	IsIncomplete       bool
 }
@@ -184,6 +220,7 @@ func (diff *Diff) NumFiles() int {
 
 const DIFF_HEAD = "diff --git "
 
+// TODO: move this function to gogits/git-module
 func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*Diff, error) {
 	var (
 		diff = &Diff{Files: make([]*DiffFile, 0)}
@@ -306,7 +343,7 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 			}
 			curFileLinesCount = 0
 
-			// Check file diff type.
+			// Check file diff type and is submodule.
 			for {
 				line, err := input.ReadString('\n')
 				if err != nil {
@@ -333,6 +370,9 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 					curFile.Name = b
 				}
 				if curFile.Type > 0 {
+					if strings.HasSuffix(line, " 160000\n") {
+						curFile.IsSubmodule = true
+					}
 					break
 				}
 			}
@@ -367,13 +407,13 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 	return diff, nil
 }
 
-func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
-	repo, err := git.OpenRepository(repoPath)
+func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
+	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	commit, err := repo.GetCommit(afterCommitID)
+	commit, err := gitRepo.GetCommit(afterCommitID)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +443,7 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLine
 		return nil, fmt.Errorf("Start: %v", err)
 	}
 
-	pid := process.Add(fmt.Sprintf("GetDiffRange (%s)", repoPath), cmd)
+	pid := process.Add(fmt.Sprintf("GetDiffRange [repo_path: %s]", repoPath), cmd)
 	defer process.Remove(pid)
 
 	diff, err := ParsePatch(maxLines, maxLineCharacteres, maxFiles, stdout)
@@ -418,6 +458,59 @@ func GetDiffRange(repoPath, beforeCommitID string, afterCommitID string, maxLine
 	return diff, nil
 }
 
-func GetDiffCommit(repoPath, commitId string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
-	return GetDiffRange(repoPath, "", commitId, maxLines, maxLineCharacteres, maxFiles)
+type RawDiffType string
+
+const (
+	RAW_DIFF_NORMAL RawDiffType = "diff"
+	RAW_DIFF_PATCH  RawDiffType = "patch"
+)
+
+// GetRawDiff dumps diff results of repository in given commit ID to io.Writer.
+// TODO: move this function to gogits/git-module
+func GetRawDiff(repoPath, commitID string, diffType RawDiffType, writer io.Writer) error {
+	repo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		return fmt.Errorf("OpenRepository: %v", err)
+	}
+
+	commit, err := repo.GetCommit(commitID)
+	if err != nil {
+		return fmt.Errorf("GetCommit: %v", err)
+	}
+
+	var cmd *exec.Cmd
+	switch diffType {
+	case RAW_DIFF_NORMAL:
+		if commit.ParentCount() == 0 {
+			cmd = exec.Command("git", "show", commitID)
+		} else {
+			c, _ := commit.Parent(0)
+			cmd = exec.Command("git", "diff", "-M", c.ID.String(), commitID)
+		}
+	case RAW_DIFF_PATCH:
+		if commit.ParentCount() == 0 {
+			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", "--root", commitID)
+		} else {
+			c, _ := commit.Parent(0)
+			query := fmt.Sprintf("%s...%s", commitID, c.ID.String())
+			cmd = exec.Command("git", "format-patch", "--no-signature", "--stdout", query)
+		}
+	default:
+		return fmt.Errorf("invalid diffType: %s", diffType)
+	}
+
+	stderr := new(bytes.Buffer)
+
+	cmd.Dir = repoPath
+	cmd.Stdout = writer
+	cmd.Stderr = stderr
+
+	if err = cmd.Run(); err != nil {
+		return fmt.Errorf("Run: %v - %s", err, stderr)
+	}
+	return nil
+}
+
+func GetDiffCommit(repoPath, commitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
+	return GetDiffRange(repoPath, "", commitID, maxLines, maxLineCharacteres, maxFiles)
 }

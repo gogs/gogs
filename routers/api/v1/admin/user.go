@@ -10,9 +10,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
@@ -23,7 +21,7 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 
 	source, err := models.GetLoginSourceByID(sourceID)
 	if err != nil {
-		if models.IsErrAuthenticationNotExist(err) {
+		if models.IsErrLoginSourceNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetLoginSourceByID", err)
@@ -40,6 +38,7 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
+		FullName:  form.FullName,
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
@@ -64,12 +63,12 @@ func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 	}
 	log.Trace("Account created by admin (%s): %s", ctx.User.Name, u.Name)
 
-	// Send e-mail notification.
+	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(ctx.Context.Context, u)
+		models.SendRegisterNotifyMail(ctx.Context.Context, u)
 	}
 
-	ctx.JSON(201, convert.ToUser(u))
+	ctx.JSON(201, u.APIFormat())
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
@@ -107,6 +106,9 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 	if form.AllowImportLocal != nil {
 		u.AllowImportLocal = *form.AllowImportLocal
 	}
+	if form.MaxRepoCreation != nil {
+		u.MaxRepoCreation = *form.MaxRepoCreation
+	}
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
@@ -118,7 +120,7 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 	}
 	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
 
-	ctx.JSON(200, convert.ToUser(u))
+	ctx.JSON(200, u.APIFormat())
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user
@@ -148,5 +150,5 @@ func CreatePublicKey(ctx *context.APIContext, form api.CreateKeyOption) {
 	if ctx.Written() {
 		return
 	}
-	user.CreateUserPublicKey(ctx, form, u.Id)
+	user.CreateUserPublicKey(ctx, form, u.ID)
 }

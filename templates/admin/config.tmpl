@@ -156,7 +156,7 @@
 							<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
 							<dd>{{.Mailer.Host}}</dd>
 							<dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
-							<dd>{{.Mailer.User}}</dd><br>
+							<dd>{{if .Mailer.User}}{{.Mailer.User}}{{else}}(empty){{end}}</dd><br>
 							<form class="ui form" action="{{AppSubUrl}}/admin/config/test_mail" method="post">
 								{{.CsrfTokenHtml}}
 								<div class="inline field ui left">
@@ -178,9 +178,11 @@
 						<dt>{{.i18n.Tr "admin.config.cache_adapter"}}</dt>
 						<dd>{{.CacheAdapter}}</dd>
 						<dt>{{.i18n.Tr "admin.config.cache_interval"}}</dt>
-						<dd>{{.CacheInternal}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dd>{{.CacheInterval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						{{if .CacheConn}}
 						<dt>{{.i18n.Tr "admin.config.cache_conn"}}</dt>
-						<dd><pre>{{.CacheConn}}</pre></dd>
+						<dd><code>{{.CacheConn}}</code></dd>
+						{{end}}
 					</dl>
 				</div>
 
@@ -192,7 +194,7 @@
 						<dt>{{.i18n.Tr "admin.config.session_provider"}}</dt>
 						<dd>{{.SessionConfig.Provider}}</dd>
 						<dt>{{.i18n.Tr "admin.config.provider_config"}}</dt>
-						<dd><pre>{{.SessionConfig.ProviderConfig}}</pre></dd>
+						<dd><code>{{.SessionConfig.ProviderConfig}}</code></dd>
 						<dt>{{.i18n.Tr "admin.config.cookie_name"}}</dt>
 						<dd>{{.SessionConfig.CookieName}}</dd>
 						<dt>{{.i18n.Tr "admin.config.gc_interval_time"}}</dt>
@@ -213,6 +215,40 @@
 					<dl class="dl-horizontal admin-dl-horizontal">
 						<dt>{{.i18n.Tr "admin.config.disable_gravatar"}}</dt>
 						<dd><i class="fa fa{{if .DisableGravatar}}-check{{end}}-square-o"></i></dd>
+						<div class="ui divider"></div>
+						<dt>{{.i18n.Tr "admin.config.enable_federated_avatar"}}</dt>
+						<dd><i class="fa fa{{if .EnableFederatedAvatar}}-check{{end}}-square-o"></i></dd>
+					</dl>
+				</div>
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.git_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.git_disable_diff_highlight"}}</dt>
+						<dd><i class="fa fa{{if .Git.DisableDiffHighlight}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.git_max_diff_lines"}}</dt>
+						<dd>{{.Git.MaxGitDiffLines}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_max_diff_line_characters"}}</dt>
+						<dd>{{.Git.MaxGitDiffLineCharacters}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_max_diff_files"}}</dt>
+						<dd>{{.Git.MaxGitDiffFiles}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_gc_args"}}</dt>
+						<dd><code>{{.Git.GCArgs}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.git_max_diff_lines"}}</dt>
+						<dd>{{.Git.MaxGitDiffLines}}</dd>
+						<div class="ui divider"></div>
+						<dt>{{.i18n.Tr "admin.config.git_migrate_timeout"}}</dt>
+						<dd>{{.Git.Timeout.Migrate}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_mirror_timeout"}}</dt>
+						<dd>{{.Git.Timeout.Mirror}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_clone_timeout"}}</dt>
+						<dd>{{.Git.Timeout.Clone}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_pull_timeout"}}</dt>
+						<dd>{{.Git.Timeout.Pull}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.git_gc_timeout"}}</dt>
+						<dd>{{.Git.Timeout.GC}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 					</dl>
 				</div>
 
@@ -225,7 +261,7 @@
 							<dt>{{$.i18n.Tr "admin.config.log_mode"}}</dt>
 							<dd>{{.Mode}}</dd>
 							<dt>{{$.i18n.Tr "admin.config.log_config"}}</dt>
-							<dd><pre>{{.Config}}</pre></dd>
+							<dd><code>{{.Config}}</code></dd>
 						{{end}}
 					</dl>
 				</div>

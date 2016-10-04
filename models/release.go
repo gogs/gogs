@@ -39,7 +39,9 @@ type Release struct {
 }
 
 func (r *Release) BeforeInsert() {
-	r.CreatedUnix = time.Now().UTC().Unix()
+	if r.CreatedUnix == 0 {
+		r.CreatedUnix = time.Now().Unix()
+	}
 }
 
 func (r *Release) AfterSet(colName string, _ xorm.Cell) {
@@ -67,9 +69,12 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 				return fmt.Errorf("GetBranchCommit: %v", err)
 			}
 
-			// Trim '--' prefix to prevent command line argument vulnerability
+			// Trim '--' prefix to prevent command line argument vulnerability.
 			rel.TagName = strings.TrimPrefix(rel.TagName, "--")
 			if err = gitRepo.CreateTag(rel.TagName, commit.ID.String()); err != nil {
+				if strings.Contains(err.Error(), "is not a valid tag name") {
+					return ErrInvalidTagName{rel.TagName}
+				}
 				return err
 			}
 		} else {
@@ -78,6 +83,7 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 				return fmt.Errorf("GetTagCommit: %v", err)
 			}
 
+			rel.Sha1 = commit.ID.String()
 			rel.NumCommits, err = commit.CommitsCount()
 			if err != nil {
 				return fmt.Errorf("CommitsCount: %v", err)

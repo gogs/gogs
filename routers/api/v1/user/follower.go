@@ -9,13 +9,12 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 func responseApiUsers(ctx *context.APIContext, users []*models.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
-		apiUsers[i] = convert.ToUser(users[i])
+		apiUsers[i] = users[i].APIFormat()
 	}
 	ctx.JSON(200, &apiUsers)
 }
@@ -78,7 +77,7 @@ func CheckMyFollowing(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	checkUserFollowing(ctx, ctx.User, target.Id)
+	checkUserFollowing(ctx, ctx.User, target.ID)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#check-if-one-user-follows-another
@@ -91,7 +90,7 @@ func CheckFollowing(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	checkUserFollowing(ctx, u, target.Id)
+	checkUserFollowing(ctx, u, target.ID)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Followers#follow-a-user
@@ -100,7 +99,7 @@ func Follow(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	if err := models.FollowUser(ctx.User.Id, target.Id); err != nil {
+	if err := models.FollowUser(ctx.User.ID, target.ID); err != nil {
 		ctx.Error(500, "FollowUser", err)
 		return
 	}
@@ -113,7 +112,7 @@ func Unfollow(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	if err := models.UnfollowUser(ctx.User.Id, target.Id); err != nil {
+	if err := models.UnfollowUser(ctx.User.ID, target.ID); err != nil {
 		ctx.Error(500, "UnfollowUser", err)
 		return
 	}

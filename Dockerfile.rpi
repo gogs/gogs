@@ -7,7 +7,7 @@ RUN chmod +x /usr/sbin/gosu \
  && echo "http://dl-4.alpinelinux.org/alpine/v3.3/main/"      | tee /etc/apk/repositories    \
  && echo "http://dl-4.alpinelinux.org/alpine/v3.3/community/" | tee -a /etc/apk/repositories \
  && apk -U --no-progress upgrade && rm -f /var/cache/apk/APKINDEX.* \
- && apk --no-cache --no-progress add ca-certificates bash git linux-pam s6 curl openssh socat
+ && apk --no-cache --no-progress add ca-certificates bash git linux-pam s6 curl openssh socat tzdata
 
 ENV GOGS_CUSTOM /data/gogs
 

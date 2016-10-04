@@ -62,7 +62,7 @@
 						{{ $timeStr:= TimeSince .Created $.Lang }}
 						<li class="item">
 							<div class="ui label">{{if not $.RepoID}}{{.Repo.Name}}{{end}}#{{.Index}}</div>
-							<a class="title has-emoji" href="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Name}}</a>
+							<a class="title has-emoji" href="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Title}}</a>
 
 							{{if .NumComments}}
 								<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>
@@ -72,7 +72,7 @@
 								{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.HomeLink .Poster.Name | Safe}}
 								{{if .Assignee}}
 									<a class="ui right assignee poping up" href="{{.Assignee.HomeLink}}" data-content="{{.Assignee.Name}}" data-variation="inverted" data-position="left center">
-										<img class="ui avatar image" src="{{.Assignee.AvatarLink}}">
+										<img class="ui avatar image" src="{{.Assignee.RelAvatarLink}}">
 									</a>
 								{{end}}
 							</p>

@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 var CmdCert = cli.Command{
@@ -59,7 +59,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	case *ecdsa.PrivateKey:
 		b, err := x509.MarshalECPrivateKey(k)
 		if err != nil {
-			log.Fatal("unable to marshal ECDSA private key: %v", err)
+			log.Fatalf("Unable to marshal ECDSA private key: %v\n", err)
 		}
 		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
 	default:
@@ -153,7 +153,7 @@ func runCert(ctx *cli.Context) error {
 
 	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatal("failed to open key.pem for writing: %v", err)
+		log.Fatalf("Failed to open key.pem for writing: %v\n", err)
 	}
 	pem.Encode(keyOut, pemBlockForKey(priv))
 	keyOut.Close()

@@ -14,7 +14,7 @@ import (
 	"io/ioutil"
 
 	"github.com/Unknwon/cae/zip"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/setting"
@@ -94,6 +94,10 @@ func runDump(ctx *cli.Context) error {
 	if err = z.Close(); err != nil {
 		os.Remove(fileName)
 		log.Fatalf("Fail to save %s: %v", fileName, err)
+	}
+
+	if err := os.Chmod(fileName, 0600); err != nil {
+		log.Printf("Can't change file access permissions mask to 0600: %v", err)
 	}
 
 	log.Printf("Removing tmp work dir: %s", TmpWorkDir)

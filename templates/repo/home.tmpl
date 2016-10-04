@@ -2,6 +2,7 @@
 <div class="repository file list">
 	{{template "repo/header" .}}
 	<div class="ui container">
+		{{template "base/alert" .}}
 		<p id="repo-desc">
 			{{if .Repository.DescriptionHtml}}<span class="description has-emoji">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
 			<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
@@ -9,30 +10,46 @@
 		<div class="ui secondary menu">
 			{{if .PullRequestCtx.Allowed}}
 				<div class="fitted item">
-					<a href="{{.BaseRepo.RepoLink}}/compare/{{.BaseRepo.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">
+					<a href="{{.BaseRepo.Link}}/compare/{{.BaseRepo.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">
 						<button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
 					</a>
 				</div>
 			{{end}}
 			{{template "repo/branch_dropdown" .}}
-			<div class="item fitted">
+			<div class="fitted item">
 				<div class="ui breadcrumb">
-					<a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{.Repository.Name}}</a>
-					{{ $n := len .Treenames}}
+					<a class="section" href="{{.RepoLink}}/src/{{EscapePound .BranchName}}">{{EllipsisString .Repository.Name 25}}</a>
+					{{ $n := len .TreeNames}}
 					{{ $l := Subtract $n 1}}
-					{{range $i, $v := .Treenames}}
+					{{range $i, $v := .TreeNames}}
 						<div class="divider"> / </div>
 						{{if eq $i $l}}
-							<span class="active section">{{$v}}</span>
+							<span class="active section">{{EllipsisString $v 15}}</span>
 						{{else}}
 							{{ $p := index $.Paths $i}}
-							<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{$v}}</a></span>
+							<span class="section"><a href="{{EscapePound $.BranchLink}}/{{EscapePound $p}}">{{EllipsisString $v 15}}</a></span>
 						{{end}}
 					{{end}}
 				</div>
 			</div>
-			{{if eq $n 0}}
-				<div class="right fitted item">
+			<div class="right fitted item">
+				{{if .Repository.CanEnableEditor}}
+					<div id="file-buttons" class="ui tiny blue buttons">
+						{{if .CanAddFile}}
+							<a href="{{.RepoLink}}/_new/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
+								{{.i18n.Tr "repo.editor.new_file"}}
+							</a>
+						{{end}}
+						{{if .CanUploadFile}}
+							<a href="{{.RepoLink}}/_upload/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}" class="ui button">
+								{{.i18n.Tr "repo.editor.upload_file"}}
+							</a>
+						{{end}}
+					</div>
+				{{end}}
+
+				<!-- Only show colne panel in repository home page -->
+				{{if eq $n 0}}
 					<div class="ui action small input" id="clone-panel">
 						<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">
 							{{if UseHTTPS}}HTTPS{{else}}HTTP{{end}}
@@ -49,15 +66,15 @@
 						<div class="ui basic jump dropdown icon button">
 							<i class="download icon"></i>
 							<div class="menu">
-								<a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="icon octicon octicon-file-zip"></i> ZIP</a>
-								<a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> TAR.GZ</a>
+								<a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.zip"><i class="octicon octicon-file-zip"></i> ZIP</a>
+								<a class="item" href="{{$.RepoLink}}/archive/{{EscapePound $.BranchName}}.tar.gz"><i class="octicon octicon-file-zip"></i> TAR.GZ</a>
 							</div>
 						</div>
 					</div>
-				</div>
-			{{end}}
+				{{end}}
+			</div>
 		</div>
-		{{if .IsFile}}
+		{{if .IsViewFile}}
 			{{template "repo/view_file" .}}
 		{{else}}
 			{{template "repo/view_list" .}}

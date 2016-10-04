@@ -46,7 +46,7 @@ Please read detailed information on [Wiki](https://github.com/gogits/gogs/wiki/C
 
 ### Ask For Help
 
-Before opening an issue, please make sure your problem isn't already addressed on the [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html) and [FAQs](http://gogs.io/docs/intro/faqs.html) pages.
+Before opening an issue, please make sure your problem isn't already addressed on the [Troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) and [FAQs](https://gogs.io/docs/intro/faqs.html) pages.
 
 ## Code of conduct
 

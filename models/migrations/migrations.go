@@ -51,7 +51,7 @@ func (m *migration) Migrate(x *xorm.Engine) error {
 
 // The version table. Should have only one row with id==1
 type Version struct {
-	Id      int64
+	ID      int64 `xorm:"pk autoincr"`
 	Version int64
 }
 
@@ -59,6 +59,7 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
+	// v0 -> v4: before 0.6.0 -> 0.7.33
 	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                           // V4 -> V5:v0.6.0
 	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),                 // V5 -> V6:v0.6.3
 	NewMigration("generate issue-label from issue", issueToIssueLabel),                           // V6 -> V7:v0.6.4
@@ -68,6 +69,9 @@ var migrations = []Migration{
 	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt),           // V10 -> V11:v0.8.5
 	NewMigration("convert date to unix timestamp", convertDateToUnix),                            // V11 -> V12:v0.9.2
 	NewMigration("convert LDAP UseSSL option to SecurityProtocol", ldapUseSSLToSecurityProtocol), // V12 -> V13:v0.9.37
+
+	// v13 -> v14:v0.9.87
+	NewMigration("set comment updated with created", setCommentUpdatedWithCreated),
 }
 
 // Migrate database to current version
@@ -76,7 +80,7 @@ func Migrate(x *xorm.Engine) error {
 		return fmt.Errorf("sync: %v", err)
 	}
 
-	currentVersion := &Version{Id: 1}
+	currentVersion := &Version{ID: 1}
 	has, err := x.Get(currentVersion)
 	if err != nil {
 		return fmt.Errorf("get: %v", err)
@@ -242,7 +246,7 @@ func issueToIssueLabel(x *xorm.Engine) error {
 	}
 
 	if err = sess.Sync2(new(IssueLabel)); err != nil {
-		return fmt.Errorf("sync2: %v", err)
+		return fmt.Errorf("Sync2: %v", err)
 	} else if _, err = sess.Insert(issueLabels); err != nil {
 		return fmt.Errorf("insert issue-labels: %v", err)
 	}
@@ -646,17 +650,17 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 						if bean.Deadline.IsZero() {
 							continue
 						}
-						fieldSQL += com.ToStr(bean.Deadline.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Deadline.Unix())
 					case "created":
-						fieldSQL += com.ToStr(bean.Created.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Created.Unix())
 					case "updated":
-						fieldSQL += com.ToStr(bean.Updated.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Updated.Unix())
 					case "closed_date":
-						fieldSQL += com.ToStr(bean.ClosedDate.UTC().Unix())
+						fieldSQL += com.ToStr(bean.ClosedDate.Unix())
 					case "merged":
-						fieldSQL += com.ToStr(bean.Merged.UTC().Unix())
+						fieldSQL += com.ToStr(bean.Merged.Unix())
 					case "next_update":
-						fieldSQL += com.ToStr(bean.NextUpdate.UTC().Unix())
+						fieldSQL += com.ToStr(bean.NextUpdate.Unix())
 					}
 
 					valSQLs = append(valSQLs, fieldSQL)

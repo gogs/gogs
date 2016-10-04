@@ -17,7 +17,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/cron"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -178,7 +177,7 @@ func Dashboard(ctx *context.Context) {
 func SendTestMail(ctx *context.Context) {
 	email := ctx.Query("email")
 	// Send a test email to the user's email address and redirect back to Config
-	if err := mailer.SendTestMail(email); err != nil {
+	if err := models.SendTestMail(email); err != nil {
 		ctx.Flash.Error(ctx.Tr("admin.config.test_mail_failed", email, err))
 	} else {
 		ctx.Flash.Info(ctx.Tr("admin.config.test_mail_sent", email))
@@ -217,12 +216,15 @@ func Config(ctx *context.Context) {
 	}
 
 	ctx.Data["CacheAdapter"] = setting.CacheAdapter
-	ctx.Data["CacheInternal"] = setting.CacheInternal
+	ctx.Data["CacheInterval"] = setting.CacheInterval
 	ctx.Data["CacheConn"] = setting.CacheConn
 
 	ctx.Data["SessionConfig"] = setting.SessionConfig
 
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
+	ctx.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
+
+	ctx.Data["Git"] = setting.Git
 
 	type logger struct {
 		Mode, Config string

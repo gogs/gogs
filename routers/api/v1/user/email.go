@@ -15,7 +15,7 @@ import (
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
 func ListEmails(ctx *context.APIContext) {
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Error(500, "GetEmailAddresses", err)
 		return
@@ -37,7 +37,7 @@ func AddEmail(ctx *context.APIContext, form api.CreateEmailOption) {
 	emails := make([]*models.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &models.EmailAddress{
-			UID:         ctx.User.Id,
+			UID:         ctx.User.ID,
 			Email:       form.Emails[i],
 			IsActivated: !setting.Service.RegisterEmailConfirm,
 		}

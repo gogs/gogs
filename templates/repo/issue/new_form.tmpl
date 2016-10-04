@@ -9,7 +9,7 @@
 		<div class="ui comments">
 			<div class="comment">
 				<a class="avatar" href="{{.SignedUser.HomeLink}}">
-					<img src="{{.SignedUser.AvatarLink}}">
+					<img src="{{.SignedUser.RelAvatarLink}}">
 				</a>
 				<div class="ui segment content">
 					<div class="field">
@@ -104,7 +104,7 @@
 				<div class="menu">
 					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
 					{{range .Assignees}}
-						<div class="item" data-id="{{.Id}}" data-href="{{$.RepoLink}}/issues?assignee={{.Id}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
+						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.RelAvatarLink}}"><img src="{{.RelAvatarLink}}"> {{.Name}}</div>
 					{{end}}
 				</div>
 			</div>
@@ -112,7 +112,7 @@
 				<span class="no-select item {{if .Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
 					{{if .Assignee}}
-						<a class="item" href="{{.RepoLink}}/issues?assignee={{.Assignee.Id}}"><img class="ui avatar image" src="{{.Assignee.AvatarLink}}"> {{.Assignee.Name}}</a>
+						<a class="item" href="{{.RepoLink}}/issues?assignee={{.Assignee.ID}}"><img class="ui avatar image" src="{{.Assignee.RelAvatarLink}}"> {{.Assignee.Name}}</a>
 					{{end}}
 				</div>
 			</div>

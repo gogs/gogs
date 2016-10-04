@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	git "github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
@@ -59,7 +61,7 @@ func HTTP(ctx *context.Context) {
 		return
 	}
 
-	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
+	repo, err := models.GetRepositoryByName(repoUser.ID, reponame)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			ctx.Handle(http.StatusNotFound, "GetRepositoryByName", nil)
@@ -193,20 +195,19 @@ func HTTP(ctx *context.Context) {
 				if len(fields) >= 3 {
 					oldCommitId := fields[0][4:]
 					newCommitId := fields[1]
-					refName := fields[2]
+					refFullName := fields[2]
 
 					// FIXME: handle error.
 					if err = models.PushUpdate(models.PushUpdateOptions{
-						RefName:      refName,
+						RefFullName:  refFullName,
 						OldCommitID:  oldCommitId,
 						NewCommitID:  newCommitId,
-						PusherID:     authUser.Id,
+						PusherID:     authUser.ID,
 						PusherName:   authUser.Name,
 						RepoUserName: username,
 						RepoName:     reponame,
 					}); err == nil {
-						go models.HookQueue.Add(repo.ID)
-						go models.AddTestPullRequestTask(repo.ID, strings.TrimPrefix(refName, "refs/heads/"))
+						go models.AddTestPullRequestTask(authUser, repo.ID, strings.TrimPrefix(refFullName, git.BRANCH_PREFIX), true)
 					}
 
 				}

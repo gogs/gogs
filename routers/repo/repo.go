@@ -34,7 +34,7 @@ func MustBeNotBare(ctx *context.Context) {
 }
 
 func checkContextUser(ctx *context.Context, uid int64) *models.User {
-	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.Id, "updated_unix")
+	orgs, err := models.GetOwnedOrgsByUserIDDesc(ctx.User.ID, "updated_unix")
 	if err != nil {
 		ctx.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
 		return nil
@@ -42,7 +42,7 @@ func checkContextUser(ctx *context.Context, uid int64) *models.User {
 	ctx.Data["Orgs"] = orgs
 
 	// Not equal means current user is an organization.
-	if uid == ctx.User.Id || uid == 0 {
+	if uid == ctx.User.ID || uid == 0 {
 		return ctx.User
 	}
 
@@ -57,7 +57,7 @@ func checkContextUser(ctx *context.Context, uid int64) *models.User {
 	}
 
 	// Check ownership of organization.
-	if !org.IsOrganization() || !(ctx.User.IsAdmin || org.IsOwnedBy(ctx.User.Id)) {
+	if !org.IsOrganization() || !(ctx.User.IsAdmin || org.IsOwnedBy(ctx.User.ID)) {
 		ctx.Error(403)
 		return nil
 	}
@@ -130,13 +130,13 @@ func CreatePost(ctx *context.Context, form auth.CreateRepoForm) {
 		AutoInit:    form.AutoInit,
 	})
 	if err == nil {
-		log.Trace("Repository created[%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
+		log.Trace("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
 		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID); errDelete != nil {
+		if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -208,7 +208,7 @@ func MigratePost(ctx *context.Context, form auth.MigrateRepoForm) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.Id, repo.ID); errDelete != nil {
+		if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -231,13 +231,13 @@ func Action(ctx *context.Context) {
 	var err error
 	switch ctx.Params(":action") {
 	case "watch":
-		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.ID, true)
+		err = models.WatchRepo(ctx.User.ID, ctx.Repo.Repository.ID, true)
 	case "unwatch":
-		err = models.WatchRepo(ctx.User.Id, ctx.Repo.Repository.ID, false)
+		err = models.WatchRepo(ctx.User.ID, ctx.Repo.Repository.ID, false)
 	case "star":
-		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.ID, true)
+		err = models.StarRepo(ctx.User.ID, ctx.Repo.Repository.ID, true)
 	case "unstar":
-		err = models.StarRepo(ctx.User.Id, ctx.Repo.Repository.ID, false)
+		err = models.StarRepo(ctx.User.ID, ctx.Repo.Repository.ID, false)
 	case "desc": // FIXME: this is not used
 		if !ctx.Repo.IsOwner() {
 			ctx.Error(404)

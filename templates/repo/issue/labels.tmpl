@@ -33,10 +33,43 @@
 			</form>
 		</div>
 		<div class="ui divider"></div>
+
 		{{template "base/alert" .}}
 		<div class="ui black label">{{.i18n.Tr "repo.issues.label_count" .NumLabels}}</div>
-
 		<div class="label list">
+			{{if and $.IsRepositoryWriter (eq .NumLabels 0)}}
+				<div class="ui centered grid">
+					<div class="twelve wide column eight wide computer column">
+						<div class="ui attached left aligned segment">
+							<h4 class="ui header">
+								{{.i18n.Tr "repo.issues.label_templates.title"}}
+								<a target="_blank"
+								   href="https://discuss.gogs.io/t/how-to-use-predefined-label-templates/599">
+									<span class="octicon octicon-question"></span>
+								</a>
+							</h4>
+							<p>{{.i18n.Tr "repo.issues.label_templates.info"}}</p>
+							<br/>
+							<form class="ui form center" action="{{.Link}}/initialize" method="post">
+								{{.CsrfTokenHtml}}
+								<div class="field">
+									<div class="ui selection dropdown">
+										<input type="hidden" name="template_name" value="Default">
+										<div class="default text">{{.i18n.Tr "repo.issues.label_templates.helper"}}</div>
+										<div class="menu">
+											{{range .LabelTemplates}}
+											<div class="item" data-value="{{.}}">{{.}}</div>
+											{{end}}
+										</div>
+									</div>
+								</div>
+								<button type="submit" class="ui blue button">{{.i18n.Tr "repo.issues.label_templates.use"}}</button>
+							</form>
+						</div>
+					</div>
+				</div>
+			{{end}}
+
 			{{range .Labels}}
 				<li class="item">
 					<div class="ui label" style="color: {{.ForegroundColor}}; background-color: {{.Color}}"><i class="octicon octicon-tag"></i> {{.Name}}</div>
