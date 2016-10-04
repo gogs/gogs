@@ -479,7 +479,7 @@ func HTTPBackend(ctx *context.Context, cfg *serviceConfig) http.HandlerFunc {
 		for _, route := range routes {
 			r.URL.Path = strings.ToLower(r.URL.Path) // blue: In case some repo name has upper case name
 			if m := route.reg.FindStringSubmatch(r.URL.Path); m != nil {
-				if setting.Repository.DisableHttpGit {
+				if setting.Repository.DisableHTTPGit {
 					w.WriteHeader(http.StatusForbidden)
 					w.Write([]byte("Interacting with repositories by HTTP protocol is not allowed"))
 					return
