@@ -1,11 +1,13 @@
 package markdown_test
 
 import (
-	. "github.com/gogits/gogs/modules/markdown"
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 
+	. "github.com/gogits/gogs/modules/markdown"
+	. "github.com/smartystreets/goconvey/convey"
+
 	"bytes"
+
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/russross/blackfriday"
 )
@@ -252,7 +254,8 @@ func TestMarkdown(t *testing.T) {
 				}
 
 				for i := 0; i < len(testCases); i += 2 {
-					renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
+					//renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
+					buffer = bytes.NewBuffer(RenderSpecialLink([]byte(testCases[i]), setting.AppUrl+"user/repo", map[string]string{}))
 
 					line, _ := buffer.ReadString(0)
 					So(line, ShouldEqual, testCases[i+1])
@@ -283,21 +286,23 @@ func TestMarkdown(t *testing.T) {
 		htmlFlags := 0
 		htmlFlags |= blackfriday.HTML_SKIP_STYLE
 		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
-		renderer := &Renderer{
-			Renderer: blackfriday.HtmlRenderer(htmlFlags, "", ""),
-		}
+		/*
+			renderer := &Renderer{
+				Renderer: blackfriday.HtmlRenderer(htmlFlags, "", ""),
+			}
+		*/
 		buffer := new(bytes.Buffer)
 		Convey("To the internal issue tracker", func() {
 			Convey("It should correctly convert URLs", func() {
 				testCases := []string{
-					"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae", " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a></code>",
-					"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24</a></code>",
-					"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", "<a href=\"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2</a>",
-					"https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae", "<a href=\"https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae</a>",
+					"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae", "<a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a>",
+					"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", "<a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24 (diff-2)</a>",
+					// "https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", "<a href=\"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2</a>"
 				}
 
 				for i := 0; i < len(testCases); i += 2 {
-					renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
+					//renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
+					buffer = bytes.NewBuffer(RenderSpecialLink([]byte(testCases[i]), setting.AppUrl+"user/project", map[string]string{}))
 
 					line, _ := buffer.ReadString(0)
 					So(line, ShouldEqual, testCases[i+1])

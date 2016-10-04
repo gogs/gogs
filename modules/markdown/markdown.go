@@ -128,8 +128,9 @@ var (
 			gogs
 			commit
 			d8a994ef243349f321568f9e36d5c3f444b99cae
+			diff-2
 	*/
-	AnySHA1Pattern = regexp.MustCompile(`http\S+//\S+/(\S+)/(\S+)/(\S+)/([0-9a-f]{40})(?:/([^#\s]+)(?:#L(\d+))?)?`)
+	AnySHA1Pattern = regexp.MustCompile(`http\S+//\S+/(\S+)/(\S+)/(\S+)/([0-9a-f]{40})(?:/?([^#\s]+)?(?:#(\S+))?)?`)
 
 	/*
 		https://github.com/gogits/gogs/pull/3244
@@ -192,35 +193,6 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 		r.Renderer.AutoLink(out, link, kind)
 		return
 	}
-	/*
-		// Since this method could only possibly serve one link at a time,
-		// we do not need to find all.
-		if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
-			m := CommitPattern.Find(link)
-			if m != nil {
-				m = bytes.TrimSpace(m)
-				i := strings.Index(string(m), "commit/")
-				j := strings.Index(string(m), "#")
-				if j == -1 {
-					j = len(m)
-				}
-				out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
-				return
-			}
-
-			m = IssueFullPattern.Find(link)
-			if m != nil {
-				m = bytes.TrimSpace(m)
-				i := strings.Index(string(m), "issues/")
-				j := strings.Index(string(m), "#")
-				if j == -1 {
-					j = len(m)
-				}
-				out.WriteString(fmt.Sprintf(`<a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
-				return
-			}
-		}
-	*/
 	r.Renderer.AutoLink(out, link, kind)
 }
 
@@ -380,7 +352,11 @@ func RenderFullSha1Pattern(rawBytes []byte, urlPrefix string) []byte {
 		all := m[0]
 		//author := m[1]
 		//repoName := m[2]
-		//itemType := m[3]
+		ltype := "src"
+		itemType := m[3]
+		if string(itemType) == "commit" {
+			ltype = "commit"
+		}
 		sha := m[4]
 		var path []byte
 		if len(m) > 5 {
@@ -390,21 +366,21 @@ func RenderFullSha1Pattern(rawBytes []byte, urlPrefix string) []byte {
 		if len(m) > 6 {
 			line = m[6]
 		}
-		urlSuffix := "/"
+		urlSuffix := ""
 		text := base.ShortSha(string(sha))
-		if path != nil {
-			urlSuffix += string(path)
+		if path != nil && string(path) != "" {
+			urlSuffix = "/" + string(path)
 			text = string(path)
 		}
 		if line != nil {
-			urlSuffix += "#L"
+			urlSuffix += "#"
 			urlSuffix += string(line)
 			text += " ("
 			text += string(line)
 			text += ")"
 		}
 		rawBytes = bytes.Replace(rawBytes, all, []byte(fmt.Sprintf(
-			`<a href="%s/%s/%s%s">%s</a>`, urlPrefix, "src", sha, urlSuffix, text)), -1)
+			`<a href="%s/%s/%s%s">%s</a>`, urlPrefix, ltype, sha, urlSuffix, text)), -1)
 	}
 	return rawBytes
 }
