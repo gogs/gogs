@@ -397,7 +397,7 @@ func WikiRaw(ctx *context.Context) {
 				ctx.Handle(500, "GetBranchCommit", err)
 				return
 			}
-			if blob, err = commit.GetBlobByPath(ctx.Repo.TreeName); blob == nil || err != nil {
+			if blob, err = commit.GetBlobByPath(ctx.Repo.TreePath); blob == nil || err != nil {
 				ctx.Handle(404, "GetBlobByPath", nil)
 				return
 			}
