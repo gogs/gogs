@@ -16,13 +16,25 @@ import (
 )
 
 func ListIssues(ctx *context.APIContext) {
-	issues, err := models.Issues(&models.IssuesOptions{
-		RepoID: ctx.Repo.Repository.ID,
-		Page:   ctx.QueryInt("page"),
-	})
+	issueOpts := models.IssuesOptions{
+		RepoID:   ctx.Repo.Repository.ID,
+		Page:     ctx.QueryInt("page"),
+		IsClosed: ctx.Query("state") == "closed",
+	}
+
+	issues, err := models.Issues(&issueOpts)
 	if err != nil {
 		ctx.Error(500, "Issues", err)
 		return
+	}
+	if ctx.Query("state") == "all" {
+		issueOpts.IsClosed = !issueOpts.IsClosed
+		temp_issues, err := models.Issues(&issueOpts)
+		if err != nil {
+			ctx.Error(500, "Issues", err)
+			return
+		}
+		issues = append(issues, temp_issues...)
 	}
 
 	// FIXME: use IssueList to improve performance.
