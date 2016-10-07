@@ -67,7 +67,7 @@ func (label *Label) APIFormat() *api.Label {
 	return &api.Label{
 		ID:    label.ID,
 		Name:  label.Name,
-		Color: label.Color,
+		Color: strings.TrimLeft(label.Color, "#"),
 	}
 }
 
@@ -102,6 +102,27 @@ func NewLabels(labels ...*Label) error {
 	return err
 }
 
+// getLabelInRepoByName returns a label by Name in given repository.
+// If pass repoID as 0, then ORM will ignore limitation of repository
+// and can return arbitrary label with any valid ID.
+func getLabelInRepoByName(e Engine, repoID int64, labelName string) (*Label, error) {
+	if len(labelName) <= 0 {
+		return nil, ErrLabelNotExist{0, repoID}
+	}
+
+	l := &Label{
+		Name:   labelName,
+		RepoID: repoID,
+	}
+	has, err := x.Get(l)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrLabelNotExist{0, l.RepoID}
+	}
+	return l, nil
+}
+
 // getLabelInRepoByID returns a label by ID in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
@@ -126,6 +147,11 @@ func getLabelInRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 // GetLabelByID returns a label by given ID.
 func GetLabelByID(id int64) (*Label, error) {
 	return getLabelInRepoByID(x, 0, id)
+}
+
+// GetLabelInRepoByID returns a label by ID in given repository.
+func GetLabelInRepoByName(repoID int64, labelName string) (*Label, error) {
+	return getLabelInRepoByName(x, repoID, labelName)
 }
 
 // GetLabelInRepoByID returns a label by ID in given repository.
