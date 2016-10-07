@@ -324,20 +324,6 @@ func Get(c *context.APIContext) {
 	}))
 }
 
-func GetByID(ctx *context.APIContext) {
-	repo, err := models.GetRepositoryByID(ctx.ParamsInt64(":id"))
-	if err != nil {
-		if models.IsErrRepoNotExist(err) {
-			ctx.Status(404)
-		} else {
-			ctx.Error(500, "GetRepositoryByID", err)
-		}
-		return
-	}
-
-	ctx.JSON(200, repo.APIFormat(&api.Permission{true, true, true}))
-}
-
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
 func Delete(c *context.APIContext) {
 	owner, repo := parseOwnerAndRepo(c)
