@@ -371,6 +371,7 @@ func serviceRPC(h serviceHandler, service string) {
 			return
 		}
 		defer os.Remove(tmpfile.Name())
+		defer tmpfile.Close()
 
 		_, err = io.Copy(tmpfile, reqBody)
 		if err != nil {
