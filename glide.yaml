@@ -57,3 +57,4 @@ import:
 - package: gopkg.in/ini.v1
 - package: gopkg.in/ldap.v2
 - package: gopkg.in/macaron.v1
+- package: github.com/go-xorm/builder
