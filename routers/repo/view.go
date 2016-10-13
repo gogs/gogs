@@ -90,6 +90,9 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 				ctx.Data["IsMarkdown"] = true
 				buf = markdown.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
 			default:
+				// FIXME This is the only way to show non-markdown files
+				// instead of a broken "View Raw" link
+				ctx.Data["IsMarkdown"] = true
 				buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 			}
 			ctx.Data["FileContent"] = string(buf)
@@ -158,8 +161,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
 		ctx.Data["ReadmeExist"] = readmeExist
-		if readmeExist {
-			// TODO: don't need to render if it's a README but not Markdown file.
+		if readmeExist && isMarkdown {
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else {
 			// Building code view blocks with line number on server side.
