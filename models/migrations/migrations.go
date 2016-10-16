@@ -87,6 +87,7 @@ func Migrate(x *xorm.Engine) error {
 	} else if !has {
 		// If the version record does not exist we think
 		// it is a fresh installation and we can skip all migrations.
+		currentVersion.ID = 0
 		currentVersion.Version = int64(_MIN_DB_VER + len(migrations))
 
 		if _, err = x.InsertOne(currentVersion); err != nil {
