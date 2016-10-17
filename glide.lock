@@ -1,12 +1,14 @@
-hash: 1d5fcf2a90f7621ecbc0b1abed548e11d13bda3fea49b4326c829a523268e5cf
-updated: 2016-06-12T17:35:14.27036884+08:00
+hash: 46827752b42b9f5b6e217b7e5d4b3847bf061ba35272d84d9afce0e95dc5cf78
+updated: 2016-10-12T10:08:32.708795869-03:00
 imports:
+- name: github.com/beorn7/perks
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  subpackages:
+  - quantile
 - name: github.com/bradfitz/gomemcache
   version: fb1f79c6b65acda83063cbc69f6bba1522558bfc
   subpackages:
   - memcache
-- name: github.com/urfave/cli
-  version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
 - name: github.com/go-macaron/binding
   version: 9440f336b443056c90d7d448a0a55ad8c7599880
 - name: github.com/go-macaron/cache
@@ -32,10 +34,14 @@ imports:
   version: 82b511550b0aefc36b3a28062ad3a52e812bee38
 - name: github.com/go-sql-driver/mysql
   version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
+- name: github.com/go-xorm/builder
+  version: f502bd375c1feb5febb467d7e1b840b74adddf0f
 - name: github.com/go-xorm/core
   version: 5bf745d7d163f4380e6c2bba8c4afa60534dd087
+- name: github.com/go-xorm/tidb
+  version: 21e49190ce47a766fa741cf7edc831a30c12c6ac
 - name: github.com/go-xorm/xorm
-  version: c6c705684057842d9854e8299dd51abb06ae29f5
+  version: 539f1099dbafb88e7aff70282ebaf4105f501d12
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
@@ -44,17 +50,25 @@ imports:
   version: 5e0c1330d7853d1affbc193885d517db0f8d1ca5
 - name: github.com/gogits/go-gogs-client
   version: c52f7ee0cc58d3cd6e379025552873a8df6de322
+- name: github.com/golang/protobuf
+  version: df1d3ca07d2d07bba352d5b73c4313b4e2a6203e
+  subpackages:
+  - proto
+- name: github.com/golang/snappy
+  version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
   version: 52d9b785554a1918cb09909b89a1509a98b853fd
+- name: github.com/juju/errors
+  version: 6f54ff6318409d31ff16261533ce2c8381a4fd5d
 - name: github.com/kardianos/minwinsvc
   version: cad6b2b879b0970e4245a20ebf1a81a756e2bb70
 - name: github.com/klauspost/compress
   version: 14eb9c4951195779ecfbec34431a976de7335b0a
   subpackages:
-  - gzip
   - flate
+  - gzip
 - name: github.com/klauspost/cpuid
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/crc32
@@ -65,6 +79,10 @@ imports:
   - oid
 - name: github.com/mattn/go-sqlite3
   version: e118d4451349065b8e7ce0f0af32e033995363f8
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
 - name: github.com/mcuadros/go-version
   version: d52711f8d6bea8dc01efafdb68ad95a4e2606630
 - name: github.com/microcosm-cc/bluemonday
@@ -73,6 +91,98 @@ imports:
   version: 02ccfbfaf0cc627aa3aec8ef7ed5cfeec5b43f63
 - name: github.com/nfnt/resize
   version: 891127d8d1b52734debe1b3c3d7e747502b6c366
+- name: github.com/ngaut/log
+  version: cec23d3e10b016363780d894a0eb732a12c06e02
+- name: github.com/petar/GoLLRB
+  version: 53be0d36a84c2a886ca057d34b6aa4468df9ccb4
+  subpackages:
+  - llrb
+- name: github.com/pingcap/goleveldb
+  version: 158edde5a354460121af007d02a00b01c8d03443
+  subpackages:
+  - leveldb
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+  - leveldb/util
+- name: github.com/pingcap/tidb
+  version: 2e001349639a29e074defedb86ac82b2030c211b
+  subpackages:
+  - ast
+  - context
+  - ddl
+  - distsql
+  - distsql/xeval
+  - domain
+  - evaluator
+  - executor
+  - expression
+  - infoschema
+  - inspectkv
+  - kv
+  - meta
+  - meta/autoid
+  - model
+  - mysql
+  - parser
+  - parser/opcode
+  - perfschema
+  - plan
+  - plan/statistics
+  - privilege
+  - privilege/privileges
+  - sessionctx
+  - sessionctx/autocommit
+  - sessionctx/binloginfo
+  - sessionctx/db
+  - sessionctx/forupdate
+  - sessionctx/variable
+  - store/localstore
+  - store/localstore/engine
+  - store/localstore/goleveldb
+  - structure
+  - table
+  - table/tables
+  - tablecodec
+  - terror
+  - util
+  - util/bytes
+  - util/charset
+  - util/codec
+  - util/distinct
+  - util/hack
+  - util/segmentmap
+  - util/sqlexec
+  - util/stringutil
+  - util/types
+- name: github.com/pingcap/tipb
+  version: 38084aeaf922fb5d41284865d64b2113f3ae5f1c
+  subpackages:
+  - go-binlog
+  - go-tipb
+- name: github.com/prometheus/client_golang
+  version: 5636dc67ae776adf5590da7349e70fbb9559972d
+  subpackages:
+  - prometheus
+- name: github.com/prometheus/client_model
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: 85637ea67b04b5c3bb25e671dacded2977f8f9f6
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: abf152e5f3e97f2fafac028d2cc06c1feb87ffa5
 - name: github.com/russross/blackfriday
   version: 93622da34e54fb6529bfb7c57e710f37a8d9cbd8
 - name: github.com/satori/go.uuid
@@ -81,10 +191,12 @@ imports:
   version: ec7fdbb58eb3e300c8595ad5ac74a5aa50019cc7
   subpackages:
   - diffmatchpatch
-- name: github.com/strk/go-libravatar
-  version: 5eed7bff870ae19ef51c5773dbc8f3e9fcbd0982
 - name: github.com/shurcooL/sanitized_anchor_name
   version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
+- name: github.com/strk/go-libravatar
+  version: 5eed7bff870ae19ef51c5773dbc8f3e9fcbd0982
+- name: github.com/twinj/uuid
+  version: 7bbe408d339787c56ec15568c947c0959db1b275
 - name: github.com/Unknwon/cae
   version: 7f5e046bc8a6c3cde743c233b96ee4fd84ee6ecd
   subpackages:
@@ -95,42 +207,61 @@ imports:
   version: 39d6f2727e0698b1021ceb6a77c1801aa92e7d5d
 - name: github.com/Unknwon/paginater
   version: 7748a72e01415173a27d79866b984328e7b0c12b
+- name: github.com/urfave/cli
+  version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
 - name: golang.org/x/crypto
   version: bc89c496413265e715159bdc8478ee9a92fdc265
   subpackages:
-  - ssh
   - curve25519
   - ed25519
   - ed25519/internal/edwards25519
+  - ssh
 - name: golang.org/x/net
   version: 57bfaa875b96fb91b4766077f34470528d4b03e9
   subpackages:
+  - context
   - html
-  - html/charset
   - html/atom
+  - html/charset
+  - http2
+  - http2/hpack
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/sys
   version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
   subpackages:
-  - windows/svc
   - windows
+  - windows/svc
 - name: golang.org/x/text
   version: 2910a502d2bf9e43193af9d68ca516529614eed3
   subpackages:
-  - transform
-  - language
   - encoding
   - encoding/charmap
   - encoding/htmlindex
-  - internal/tag
-  - encoding/internal/identifier
   - encoding/internal
+  - encoding/internal/identifier
   - encoding/japanese
   - encoding/korean
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
+  - internal/tag
   - internal/utf8internal
+  - language
   - runes
+  - transform
+- name: google.golang.org/grpc
+  version: 9eaed1a74af580b44448989c8ed830bc210bddf4
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - transport
 - name: gopkg.in/alexcesaro/quotedprintable.v3
   version: 2caba252f4dc53eaf6b553000885530023f54623
 - name: gopkg.in/asn1-ber.v1
@@ -146,7 +277,24 @@ imports:
 - name: gopkg.in/ldap.v2
   version: d0a5ced67b4dc310b9158d63a2c6f9c5ec13f105
 - name: gopkg.in/macaron.v1
-  version: 7564489a79f3f96b7ac8034652b35eeebb468eb4
+  version: 4974334b10dbb6f5c0e17f4c10555ff050a16329
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
-devImports: []
+testImports:
+- name: github.com/gopherjs/gopherjs
+  version: 00f306e07eaaaab04ea5dba605cd0e1eff9c6fb7
+  subpackages:
+  - js
+- name: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- name: github.com/smartystreets/assertions
+  version: 2063fd1cc7c975db70502811a34b06ad034ccdf2
+  subpackages:
+  - internal/go-render/render
+  - internal/oglematchers
+- name: github.com/smartystreets/goconvey
+  version: 7befa7fd6e2e8ca28d2b94f2d39111929904b08d
+  subpackages:
+  - convey
+  - convey/gotest
+  - convey/reporting
