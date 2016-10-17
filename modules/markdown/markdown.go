@@ -76,7 +76,7 @@ func IsReadmeFile(name string) bool {
 
 var (
 	// MentionPattern matches string that mentions someone, e.g. @Unknwon
-	MentionPattern = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z-_\.]+`)
+	MentionPattern = regexp.MustCompile(`(\s|^|\W)@[0-9a-zA-Z-_\.]+`)
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
@@ -101,7 +101,7 @@ var (
 func FindAllMentions(content string) []string {
 	mentions := MentionPattern.FindAllString(content, -1)
 	for i := range mentions {
-		mentions[i] = strings.TrimSpace(mentions[i])[1:] // Strip @ character
+		mentions[i] = mentions[i][strings.Index(mentions[i], "@")+1:] // Strip @ character
 	}
 	return mentions
 }
@@ -275,7 +275,7 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		m = bytes.TrimSpace(m)
+		m = m[bytes.Index(m, []byte("@")):]
 		rawBytes = bytes.Replace(rawBytes, m,
 			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 	}
