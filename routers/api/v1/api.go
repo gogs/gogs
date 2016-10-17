@@ -228,7 +228,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Combo("/:id").Get(user.GetPublicGPGKey).
 					Delete(user.DeletePublicGPGKey)
 			})
-		}, ReqToken())
+		}, reqToken())
 
 		// Repositories
 		m.Combo("/user/repos", reqToken()).Get(repo.ListMyRepos).
