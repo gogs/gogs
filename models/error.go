@@ -201,6 +201,22 @@ func (err ErrKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists [owner_id: %d, name: %s]", err.OwnerID, err.Name)
 }
 
+type ErrGPGKeyAccessDenied struct {
+	UserID int64
+	KeyID  int64
+	Note   string
+}
+
+func IsErrGPGKeyAccessDenied(err error) bool {
+	_, ok := err.(ErrGPGKeyAccessDenied)
+	return ok
+}
+
+func (err ErrGPGKeyAccessDenied) Error() string {
+	return fmt.Sprintf("user does not have access to the key [user_id: %d, key_id: %d, note: %s]",
+		err.UserID, err.KeyID, err.Note)
+}
+
 type ErrKeyAccessDenied struct {
 	UserID int64
 	KeyID  int64
