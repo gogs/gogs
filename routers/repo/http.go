@@ -82,101 +82,124 @@ func HTTP(ctx *context.Context) {
 
 	// check access
 	if askAuth {
-		authHead := ctx.Req.Header.Get("Authorization")
-		if len(authHead) == 0 {
-			ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
-			ctx.Error(http.StatusUnauthorized)
-			return
-		}
-
-		auths := strings.Fields(authHead)
-		// currently check basic auth
-		// TODO: support digit auth
-		// FIXME: middlewares/context.go did basic auth check already,
-		// maybe could use that one.
-		if len(auths) != 2 || auths[0] != "Basic" {
-			ctx.HandleText(http.StatusUnauthorized, "no basic auth and digit auth")
-			return
-		}
-		authUsername, authPasswd, err = base.BasicAuthDecode(auths[1])
-		if err != nil {
-			ctx.HandleText(http.StatusUnauthorized, "no basic auth and digit auth")
-			return
-		}
-
-		authUser, err = models.UserSignIn(authUsername, authPasswd)
-		if err != nil {
-			if !models.IsErrUserNotExist(err) {
-				ctx.Handle(http.StatusInternalServerError, "UserSignIn error: %v", err)
+		if setting.Service.EnableReverseProxyAuth {
+			authUsername = ctx.Req.Header.Get(setting.ReverseProxyAuthUser)
+			if len(authUsername) == 0 {
+				ctx.HandleText(401, "reverse proxy login error. authUsername empty")
+				return
+			}
+			authUser, err = models.GetUserByName(authUsername)
+			if err != nil {
+				ctx.HandleText(401, "reverse proxy login error, got error while running GetUserByName")
+				return
+			}
+		}else{
+			authHead := ctx.Req.Header.Get("Authorization")
+			if len(authHead) == 0 {
+				ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+				ctx.Error(http.StatusUnauthorized)
 				return
 			}
 
-			// Assume username now is a token.
-			token, err := models.GetAccessTokenBySHA(authUsername)
+			auths := strings.Fields(authHead)
+			// currently check basic auth
+			// TODO: support digit auth
+			// FIXME: middlewares/context.go did basic auth check already,
+			// maybe could use that one.
+			if len(auths) != 2 || auths[0] != "Basic" {
+				ctx.HandleText(http.StatusUnauthorized, "no basic auth and digit auth")
+				return
+			}
+			authUsername, authPasswd, err = base.BasicAuthDecode(auths[1])
 			if err != nil {
-				if models.IsErrAccessTokenNotExist(err) || models.IsErrAccessTokenEmpty(err) {
-					ctx.HandleText(http.StatusUnauthorized, "invalid token")
-				} else {
-					ctx.Handle(http.StatusInternalServerError, "GetAccessTokenBySha", err)
+				ctx.HandleText(http.StatusUnauthorized, "no basic auth and digit auth")
+				return
+			}
+
+			authUser, err = models.UserSignIn(authUsername, authPasswd)
+			if err != nil {
+				if !models.IsErrUserNotExist(err) {
+					ctx.Handle(http.StatusInternalServerError, "UserSignIn error: %v", err)
+					return
 				}
-				return
-			}
-			token.Updated = time.Now()
-			if err = models.UpdateAccessToken(token); err != nil {
-				ctx.Handle(http.StatusInternalServerError, "UpdateAccessToken", err)
-			}
-			authUser, err = models.GetUserByID(token.UID)
-			if err != nil {
-				ctx.Handle(http.StatusInternalServerError, "GetUserByID", err)
-				return
-			}
-		}
 
-		if !isPublicPull {
-			var tp = models.ACCESS_MODE_WRITE
-			if isPull {
-				tp = models.ACCESS_MODE_READ
-			}
-
-			has, err := models.HasAccess(authUser, repo, tp)
-			if err != nil {
-				ctx.Handle(http.StatusInternalServerError, "HasAccess", err)
-				return
-			} else if !has {
-				if tp == models.ACCESS_MODE_READ {
-					has, err = models.HasAccess(authUser, repo, models.ACCESS_MODE_WRITE)
-					if err != nil {
-						ctx.Handle(http.StatusInternalServerError, "HasAccess2", err)
-						return
-					} else if !has {
-						ctx.HandleText(http.StatusForbidden, "User permission denied")
-						return
+				// Assume username now is a token.
+				token, err := models.GetAccessTokenBySHA(authUsername)
+				if err != nil {
+					if models.IsErrAccessTokenNotExist(err) || models.IsErrAccessTokenEmpty(err) {
+						ctx.HandleText(http.StatusUnauthorized, "invalid token")
+					} else {
+						ctx.Handle(http.StatusInternalServerError, "GetAccessTokenBySha", err)
 					}
-				} else {
-					ctx.HandleText(http.StatusForbidden, "User permission denied")
+					return
+				}
+				token.Updated = time.Now()
+				if err = models.UpdateAccessToken(token); err != nil {
+					ctx.Handle(http.StatusInternalServerError, "UpdateAccessToken", err)
+				}
+				authUser, err = models.GetUserByID(token.UID)
+				if err != nil {
+					ctx.Handle(http.StatusInternalServerError, "GetUserByID", err)
 					return
 				}
 			}
 
-			if !isPull && repo.IsMirror {
-				ctx.HandleText(http.StatusForbidden, "mirror repository is read-only")
-				return
+			if !isPublicPull {
+				var tp = models.ACCESS_MODE_WRITE
+				if isPull {
+					tp = models.ACCESS_MODE_READ
+				}
+
+				has, err := models.HasAccess(authUser, repo, tp)
+				if err != nil {
+					ctx.Handle(http.StatusInternalServerError, "HasAccess", err)
+					return
+				} else if !has {
+					if tp == models.ACCESS_MODE_READ {
+						has, err = models.HasAccess(authUser, repo, models.ACCESS_MODE_WRITE)
+						if err != nil {
+							ctx.Handle(http.StatusInternalServerError, "HasAccess2", err)
+							return
+						} else if !has {
+							ctx.HandleText(http.StatusForbidden, "User permission denied")
+							return
+						}
+					} else {
+						ctx.HandleText(http.StatusForbidden, "User permission denied")
+						return
+					}
+				}
+
+				if !isPull && repo.IsMirror {
+					ctx.HandleText(http.StatusForbidden, "mirror repository is read-only")
+					return
+				}
 			}
 		}
-	}
 
-	callback := func(rpc string, input []byte) {
+		callback := func(rpc string, input *os.File) {
 		if rpc != "receive-pack" || isWiki {
 			return
 		}
 
-		var lastLine int64 = 0
+		var (
+			head = make([]byte, 4) // 00+size
+			n    int
+			err  error
+		)
 		for {
-			head := input[lastLine : lastLine+2]
+			n, err = input.Read(head)
+			if err != nil && err != io.EOF {
+				log.Error(4, "read head: %v", err)
+				return
+			} else if n < 4 {
+				break
+			}
+
 			if head[0] == '0' && head[1] == '0' {
-				size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
+				size, err := strconv.ParseInt(string(head[2:4]), 16, 32)
 				if err != nil {
-					log.Error(4, "%v", err)
+					log.Error(4, "parse size: %v", err)
 					return
 				}
 
@@ -185,7 +208,16 @@ func HTTP(ctx *context.Context) {
 					break
 				}
 
-				line := input[lastLine : lastLine+size]
+				line := make([]byte, size)
+				n, err = input.Read(line)
+				if err != nil {
+					log.Error(4, "read line: %v", err)
+					return
+				} else if n < int(size) {
+					log.Error(4, "didn't read enough bytes: expect %d got %d", size, n)
+					break
+				}
+
 				idx := bytes.IndexRune(line, '\000')
 				if idx > -1 {
 					line = line[:idx]
@@ -193,7 +225,7 @@ func HTTP(ctx *context.Context) {
 
 				fields := strings.Fields(string(line))
 				if len(fields) >= 3 {
-					oldCommitId := fields[0][4:]
+					oldCommitId := fields[0]
 					newCommitId := fields[1]
 					refFullName := fields[2]
 
@@ -211,7 +243,6 @@ func HTTP(ctx *context.Context) {
 					}
 
 				}
-				lastLine = lastLine + size
 			} else {
 				break
 			}
@@ -230,7 +261,7 @@ func HTTP(ctx *context.Context) {
 type serviceConfig struct {
 	UploadPack  bool
 	ReceivePack bool
-	OnSucceed   func(rpc string, input []byte)
+	OnSucceed   func(rpc string, input *os.File)
 }
 
 type serviceHandler struct {
@@ -347,10 +378,10 @@ func serviceRPC(h serviceHandler, service string) {
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", service))
 
 	var (
-		reqBody = h.r.Body
-		input   []byte
-		br      io.Reader
-		err     error
+		reqBody     = h.r.Body
+		tmpFilename string
+		br          io.Reader
+		err         error
 	)
 
 	// Handle GZIP.
@@ -364,29 +395,56 @@ func serviceRPC(h serviceHandler, service string) {
 	}
 
 	if h.cfg.OnSucceed != nil {
-		input, err = ioutil.ReadAll(reqBody)
+		tmpfile, err := ioutil.TempFile("", "gogs")
 		if err != nil {
-			log.GitLogger.Error(2, "fail to read request body: %v", err)
+			log.GitLogger.Error(2, "fail to create temporary file: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer os.Remove(tmpfile.Name())
 
-		br = bytes.NewReader(input)
+		_, err = io.Copy(tmpfile, reqBody)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to save request body: %v", err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		tmpfile.Close()
+
+		tmpFilename = tmpfile.Name()
+		tmpfile, err = os.Open(tmpFilename)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to open temporary file: %v", err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer tmpfile.Close()
+
+		br = tmpfile
 	} else {
 		br = reqBody
 	}
 
+	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	cmd.Dir = h.dir
 	cmd.Stdout = h.w
+	cmd.Stderr = &stderr
 	cmd.Stdin = br
 	if err := cmd.Run(); err != nil {
-		log.GitLogger.Error(2, "fail to serve RPC(%s): %v", service, err)
+		log.GitLogger.Error(2, "fail to serve RPC(%s): %v - %s", service, err, stderr)
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if h.cfg.OnSucceed != nil {
+		input, err := os.Open(tmpFilename)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to open temporary file: %v", err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer input.Close()
 		h.cfg.OnSucceed(service, input)
 	}
 }
@@ -479,6 +537,12 @@ func HTTPBackend(ctx *context.Context, cfg *serviceConfig) http.HandlerFunc {
 		for _, route := range routes {
 			r.URL.Path = strings.ToLower(r.URL.Path) // blue: In case some repo name has upper case name
 			if m := route.reg.FindStringSubmatch(r.URL.Path); m != nil {
+				if setting.Repository.DisableHTTPGit {
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte("Interacting with repositories by HTTP protocol is not allowed"))
+					return
+				}
+
 				if route.method != r.Method {
 					if r.Proto == "HTTP/1.1" {
 						w.WriteHeader(http.StatusMethodNotAllowed)
