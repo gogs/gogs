@@ -196,11 +196,11 @@ func (t *Team) RemoveRepository(repoID int64) error {
 
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
-func NewTeam(t *Team) error {
+func NewTeam(t *Team) (err error) {
 	if err = IsUsableUsername(t.Name); err != nil {
 		return err
 	}
-	
+
 	if len(t.Name) == 0 {
 		return errors.New("empty team name")
 	}
