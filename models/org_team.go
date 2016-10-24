@@ -195,10 +195,10 @@ func (t *Team) RemoveRepository(repoID int64) error {
 }
 
 func IsUsableTeamName(name string) (err error) {
-	var names = []string{"new"}
+	var reservedTeamNames = []string{"new"}
 
-	for i := range names {
-		if name == names[i] {
+	for i := range reservedTeamNames {
+		if name == reservedTeamNames[i] {
 			return ErrNameReserved{name}
 		}
 	}
