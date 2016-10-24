@@ -54,13 +54,14 @@
 						<div class="column">
 							<div class="ui top secondary menu">
 								<a class="item brand" href="{{AppSubUrl}}/">
-									<img class="ui mini image" src="{{AppSubUrl}}/img/favicon.png">
+									<img class="ui mini image" src="{{AppSubUrl}}/img/CoLab_0.png">
 								</a>
 
 								{{if .IsSigned}}
 									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "dashboard"}}</a>
+									<!-- comentado para eliminar issues y pull request de la home
 									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubUrl}}/issues">{{.i18n.Tr "issues"}}</a>
-									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubUrl}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
+									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubUrl}}/pulls">{{.i18n.Tr "pull_requests"}}</a> -->
 								{{else}}
 									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "home"}}</a>
 								{{end}}
