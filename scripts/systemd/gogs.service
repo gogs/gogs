@@ -1,5 +1,6 @@
 [Unit]
 Description=Gogs (Go Git Service)
+Documentation=https://gogs.io/docs
 After=syslog.target
 After=network.target
 #After=mysqld.service
@@ -8,19 +9,43 @@ After=network.target
 #After=redis.service
 
 [Service]
-# Modify these two values and uncomment them if you have
-# repos with lots of files and get an HTTP error 500 because
-# of that
-###
-#LimitMEMLOCK=infinity
-#LimitNOFILE=65535
-Type=simple
+Restart=on-failure
+
+; User and group the process will run as.
 User=git
 Group=git
-WorkingDirectory=/home/git/gogs
-ExecStart=/home/git/gogs/gogs web
-Restart=always
+ 
+; Gogs directoryies.
 Environment=USER=git HOME=/home/git
+WorkingDirectory=/home/git/gogs
+ 
+ExecStart=/home/git/gogs/gogs web
+
+; Repos with lots of files and get an HTTP error 500 will need that
+;LimitMEMLOCK=infinity
+;LimitNOFILE=65535
+ 
+; Use private /tmp and /var/tmp, which are discarded after gogs stops.
+PrivateTmp=true
+ 
+; Use a minimal /dev
+PrivateDevices=true
+ 
+; Hide /home, /root, and /run/user. Nobody will steal your SSH-keys.
+ProtectHome=true
+ 
+; Make /usr, /boot, /etc and possibly some more folders read-only.
+ProtectSystem=full
+ 
+; Make our directory writable
+ReadWriteDirectories=/home/git
+ 
+; Drop all other capabilities. Important if you run gogs as privileged user (which you should not).
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ 
+;  ^   and prevent gaining any new privileges.
+NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target
+
