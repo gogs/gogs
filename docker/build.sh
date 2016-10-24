@@ -16,7 +16,10 @@ cd ${GOPATH}/src/github.com/Masterminds/glide
 make build
 go install
 
-
+#Install go-bindata
+go get github.com/jteeuwen/go-bindata
+cd ${GOPATH}/src/github.com/jteeuwen/go-bindata/go-bindata
+go install
 
 # Build Gogs
 mkdir -p ${GOPATH}/src/github.com/gogits/
