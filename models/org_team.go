@@ -194,10 +194,22 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	return sess.Commit()
 }
 
+func IsUsableTeamName(name string) (err error) {
+	var names = []string{"new"}
+
+	for i := range names {
+		if name == names[i] {
+			return ErrNameReserved{name}
+		}
+	}
+
+	return nil
+}
+
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
 func NewTeam(t *Team) (err error) {
-	if err = IsUsableUsername(t.Name); err != nil {
+	if err = IsUsableTeamName(t.Name); err != nil {
 		return err
 	}
 
