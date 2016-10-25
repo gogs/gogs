@@ -4,7 +4,7 @@
 			<th class="four wide">
 				{{if .LatestCommitUser}}
 					<img class="ui avatar image img-12" src="{{.LatestCommitUser.RelAvatarLink}}" />
-					<a href="{{AppSubUrl}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
+					<a href="{{AppSubUrl}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommitUser.Name}}</strong></a>
 				{{else}}
 					<img class="ui avatar image img-12" src="{{AvatarLink .LatestCommit.Author.Email}}" />
 					<strong>{{.LatestCommit.Author.Name}}</strong>
