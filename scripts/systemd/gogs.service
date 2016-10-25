@@ -9,13 +9,13 @@ After=network.target
 #After=redis.service
 
 [Service]
-Restart=on-failure
+Restart=always
 
 ; User and group the process will run as.
 User=git
 Group=git
  
-; Gogs directoryies.
+; Gogs directories.
 Environment=USER=git HOME=/home/git
 WorkingDirectory=/home/git/gogs
  
@@ -31,15 +31,9 @@ PrivateTmp=true
 ; Use a minimal /dev
 PrivateDevices=true
  
-; Hide /home, /root, and /run/user. Nobody will steal your SSH-keys.
-ProtectHome=true
- 
-; Make /usr, /boot, /etc and possibly some more folders read-only.
+; Mount /usr, /boot, /etc folders read-only.
 ProtectSystem=full
- 
-; Make our directory writable
-ReadWriteDirectories=/home/git
- 
+
 ; Drop all other capabilities. Important if you run gogs as privileged user (which you should not).
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
  
