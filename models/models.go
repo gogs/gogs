@@ -34,7 +34,7 @@ type Engine interface {
 	InsertOne(interface{}) (int64, error)
 	Iterate(interface{}, xorm.IterFunc) error
 	Sql(string, ...interface{}) *xorm.Session
-	Where(interface{}, ...interface{}) *xorm.Session
+	Where(string, ...interface{}) *xorm.Session
 }
 
 func sessionRelease(sess *xorm.Session) {

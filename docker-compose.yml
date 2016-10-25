@@ -1,0 +1,14 @@
+gogs:
+    image: dalareo/gogs:latest
+    ports:
+        - 3000:3000
+        - 10022:22
+    links:
+        - mysql:db
+
+mysql:
+    image: mysql:latest
+    ports:
+        - 3306:3306
+    environment:
+        MYSQL_ROOT_PASSWORD: password
