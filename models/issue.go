@@ -1286,7 +1286,6 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 
 // UpdateIssueUsersByMentions updates issue-user pairs by mentioning.
 func UpdateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
-debug.PrintStack()
 	for _, uid := range uids {
 		iu := &IssueUser{
 			UID:     uid,
