@@ -510,9 +510,6 @@ func NewContext() {
 	if !filepath.IsAbs(Repository.Upload.TempPath) {
 		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
 	}
-	fmt.Print("==========")
-	fmt.Print(Cfg.Section("repository").Keys())
-	fmt.Print("==========\n")
 
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
