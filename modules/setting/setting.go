@@ -110,12 +110,13 @@ var (
 
 	// Repository settings
 	Repository struct {
-		AnsiCharset            string
-		ForcePrivate           bool
-		MaxCreationLimit       int
-		MirrorQueueLength      int
-		PullRequestQueueLength int
-		PreferredLicenses      []string
+		AnsiCharset             string
+		ForcePrivate            bool
+		MaxCreationLimit        int
+		MirrorQueueLength       int
+		CommitsFetchConcurrency int
+		PullRequestQueueLength  int
+		PreferredLicenses       []string
 
 		// Repository editor settings
 		Editor struct {
