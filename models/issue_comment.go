@@ -115,13 +115,51 @@ func (c *Comment) AfterDelete() {
 	}
 }
 
+func (c *Comment) HTMLURL() string {
+	issue, err := GetIssueByID(c.IssueID)
+	if err != nil { // Silently dropping errors :unamused:
+		log.Error(4, "GetIssueByID(%d): %v", c.IssueID, err)
+		return ""
+	}
+	return fmt.Sprintf("%s#issuecomment-%d", issue.HTMLURL(), c.ID)
+}
+
+func (c *Comment) IssueURL() string {
+	issue, err := GetIssueByID(c.IssueID)
+	if err != nil { // Silently dropping errors :unamused:
+		log.Error(4, "GetIssueByID(%d): %v", c.IssueID, err)
+		return ""
+	}
+
+	if issue.IsPull {
+		return ""
+	}
+	return issue.HTMLURL()
+}
+
+func (c *Comment) PRURL() string {
+	issue, err := GetIssueByID(c.IssueID)
+	if err != nil { // Silently dropping errors :unamused:
+		log.Error(4, "GetIssueByID(%d): %v", c.IssueID, err)
+		return ""
+	}
+
+	if !issue.IsPull {
+		return ""
+	}
+	return issue.HTMLURL()
+}
+
 func (c *Comment) APIFormat() *api.Comment {
 	return &api.Comment{
-		ID:      c.ID,
-		Poster:  c.Poster.APIFormat(),
-		Body:    c.Content,
-		Created: c.Created,
-		Updated: c.Updated,
+		ID:       c.ID,
+		Poster:   c.Poster.APIFormat(),
+		HTMLURL:  c.HTMLURL(),
+		IssueURL: c.IssueURL(),
+		PRURL:    c.PRURL(),
+		Body:     c.Content,
+		Created:  c.Created,
+		Updated:  c.Updated,
 	}
 }
 
