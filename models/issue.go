@@ -165,23 +165,17 @@ func (issue *Issue) HTMLURL() string {
 }
 
 func (issue *Issue) DiffURL() string {
-	var path string
 	if issue.IsPull {
-		path = "pulls"
-	} else {
-		return ""
+		return fmt.Sprintf("%s/pulls/%d.diff", issue.Repo.HTMLURL(), issue.Index)
 	}
-	return fmt.Sprintf("%s/%s/%d.diff", issue.Repo.HTMLURL(), path, issue.Index)
+	return ""
 }
 
 func (issue *Issue) PatchURL() string {
-	var path string
 	if issue.IsPull {
-		path = "pulls"
-	} else {
-		return ""
+		return fmt.Sprintf("%s/pulls/%d.patch", issue.Repo.HTMLURL(), issue.Index)
 	}
-	return fmt.Sprintf("%s/%s/%d.patch", issue.Repo.HTMLURL(), path, issue.Index)
+	return ""
 }
 
 // State returns string representation of issue status.
