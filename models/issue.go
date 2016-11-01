@@ -164,6 +164,26 @@ func (issue *Issue) HTMLURL() string {
 	return fmt.Sprintf("%s/%s/%d", issue.Repo.HTMLURL(), path, issue.Index)
 }
 
+func (issue *Issue) DiffURL() string {
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%d.diff", issue.Repo.HTMLURL(), path, issue.Index)
+}
+
+func (issue *Issue) PatchURL() string {
+	var path string
+	if issue.IsPull {
+		path = "pulls"
+	} else {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%d.patch", issue.Repo.HTMLURL(), path, issue.Index)
+}
+
 // State returns string representation of issue status.
 func (i *Issue) State() api.StateType {
 	if i.IsClosed {

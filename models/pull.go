@@ -117,13 +117,21 @@ func (pr *PullRequest) LoadIssue() (err error) {
 func (pr *PullRequest) APIFormat() *api.PullRequest {
 
 	apiIssue := pr.Issue.APIFormat()
+	baseBranch, _ := pr.BaseRepo.GetBranch(pr.BaseBranch)
+	baseCommit, _ := baseBranch.GetCommit()
+	headBranch, _ := pr.HeadRepo.GetBranch(pr.HeadBranch)
+	headCommit, _ := headBranch.GetCommit()
 	apiBaseBranchInfo := &api.PRBranchInfo{
 		Name:       pr.BaseBranch,
+		Ref:        pr.BaseBranch,
+		Sha:        baseCommit.ID.String(),
 		RepoID:     pr.BaseRepoID,
 		Repository: pr.BaseRepo.APIFormat(nil),
 	}
 	apiHeadBranchInfo := &api.PRBranchInfo{
 		Name:       pr.HeadBranch,
+		Ref:        pr.HeadBranch,
+		Sha:        headCommit.ID.String(),
 		RepoID:     pr.HeadRepoID,
 		Repository: pr.HeadRepo.APIFormat(nil),
 	}
@@ -139,6 +147,8 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 		State:     apiIssue.State,
 		Comments:  apiIssue.Comments,
 		HTMLURL:   pr.Issue.HTMLURL(),
+		DiffURL:   pr.Issue.DiffURL(),
+		PatchURL:  pr.Issue.PatchURL(),
 		HasMerged: pr.HasMerged,
 		Base:      apiBaseBranchInfo,
 		Head:      apiHeadBranchInfo,
