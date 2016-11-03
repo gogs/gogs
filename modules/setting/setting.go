@@ -6,6 +6,7 @@ package setting
 
 import (
 	"fmt"
+	"net/mail"
 	"net/url"
 	"os"
 	"os/exec"
@@ -21,7 +22,7 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
-	"github.com/strk/go-libravatar"
+	"strk.kbt.io/projects/go/libravatar"
 	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/bindata"
@@ -714,6 +715,7 @@ type Mailer struct {
 	Name                  string
 	Host                  string
 	From                  string
+	FromEmail             string
 	User, Passwd          string
 	DisableHelo           bool
 	HeloHostname          string
@@ -749,6 +751,13 @@ func newMailService() {
 		EnableHTMLAlternative: sec.Key("ENABLE_HTML_ALTERNATIVE").MustBool(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
+
+	parsed, err := mail.ParseAddress(MailService.From)
+	if err != nil {
+		log.Fatal(4, "Invalid mailer.FROM (%s): %v", MailService.From, err)
+	}
+	MailService.FromEmail = parsed.Address
+
 	log.Info("Mail Service Enabled")
 }
 
