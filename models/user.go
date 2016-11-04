@@ -27,11 +27,11 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/avatar"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/go-gitea/gitea/modules/avatar"
+	"github.com/go-gitea/gitea/modules/base"
+	"github.com/go-gitea/gitea/modules/log"
+	"github.com/go-gitea/gitea/modules/markdown"
+	"github.com/go-gitea/gitea/modules/setting"
 )
 
 type UserType int
@@ -578,7 +578,7 @@ func CountUsers() int64 {
 // Users returns number of users in given page.
 func Users(page, pageSize int) ([]*User, error) {
 	users := make([]*User, 0, pageSize)
-	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("id").Find(&users)
+	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("name").Find(&users)
 }
 
 // get user by erify code
@@ -921,6 +921,13 @@ func GetUserEmailsByNames(names []string) []string {
 		mails = append(mails, u.Email)
 	}
 	return mails
+}
+
+// GetUsersByIDs returns all resolved users from a list of Ids.
+func GetUsersByIDs(ids []int64) ([]*User, error) {
+	ous := make([]*User, 0, len(ids))
+	err := x.In("id", ids).Asc("name").Find(&ous)
+	return ous, err
 }
 
 // GetUserIDsByNames returns a slice of ids corresponds to names.

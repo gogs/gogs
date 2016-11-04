@@ -9,11 +9,11 @@ import (
 
 	"github.com/Unknwon/paginater"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/user"
+	"github.com/go-gitea/gitea/models"
+	"github.com/go-gitea/gitea/modules/base"
+	"github.com/go-gitea/gitea/modules/context"
+	"github.com/go-gitea/gitea/modules/setting"
+	"github.com/go-gitea/gitea/routers/user"
 )
 
 const (
@@ -176,7 +176,7 @@ func ExploreUsers(ctx *context.Context) {
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
 		PageSize: setting.UI.ExplorePagingNum,
-		OrderBy:  "updated_unix DESC",
+		OrderBy:  "name ASC",
 		TplName:  EXPLORE_USERS,
 	})
 }
@@ -191,7 +191,7 @@ func ExploreOrganizations(ctx *context.Context) {
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,
 		PageSize: setting.UI.ExplorePagingNum,
-		OrderBy:  "updated_unix DESC",
+		OrderBy:  "name ASC",
 		TplName:  EXPLORE_ORGANIZATIONS,
 	})
 }
