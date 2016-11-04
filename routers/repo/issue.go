@@ -52,8 +52,13 @@ var (
 )
 
 func MustEnableIssues(ctx *context.Context) {
-	if !ctx.Repo.Repository.EnableIssues || ctx.Repo.Repository.EnableExternalTracker {
+	if !ctx.Repo.Repository.EnableIssues {
 		ctx.Handle(404, "MustEnableIssues", nil)
+		return
+	}
+
+	if ctx.Repo.Repository.EnableExternalTracker {
+		ctx.Redirect(ctx.Repo.Repository.ExternalTrackerURL)
 		return
 	}
 }
@@ -502,7 +507,7 @@ func ViewIssue(ctx *context.Context) {
 		}
 		return
 	}
-	ctx.Data["Title"] = issue.Title
+	ctx.Data["Title"] = fmt.Sprintf("#%d - %s", issue.Index, issue.Title)
 
 	// Make sure type and URL matches.
 	if ctx.Params(":type") == "issues" && issue.IsPull {
