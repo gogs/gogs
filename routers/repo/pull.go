@@ -366,11 +366,6 @@ func ViewPullFiles(ctx *context.Context) {
 		return
 	}
 
-	setEditorconfigIfExists(ctx)
-	if ctx.Written() {
-		return
-	}
-
 	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
 	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = pull.HeadUserName
@@ -621,11 +616,6 @@ func CompareAndPullRequest(ctx *context.Context) {
 		if ctx.Written() {
 			return
 		}
-	}
-
-	setEditorconfigIfExists(ctx)
-	if ctx.Written() {
-		return
 	}
 
 	ctx.HTML(200, COMPARE_PULL)
