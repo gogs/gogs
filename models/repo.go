@@ -30,6 +30,7 @@ import (
 	"github.com/go-xorm/xorm"
 	git "github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
+	version "github.com/mcuadros/go-version"
 	ini "gopkg.in/ini.v1"
 )
 

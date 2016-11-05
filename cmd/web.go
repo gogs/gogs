@@ -39,6 +39,8 @@ import (
 	"github.com/go-macaron/toolbox"
 	"github.com/go-xorm/xorm"
 	git "github.com/gogits/git-module"
+	gogs "github.com/gogits/go-gogs-client"
+	version "github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
 	ini "gopkg.in/ini.v1"
 	macaron "gopkg.in/macaron.v1"
