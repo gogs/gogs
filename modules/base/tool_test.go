@@ -1,6 +1,9 @@
 package base
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestEncodeMD5(t *testing.T) {
 	if checksum := EncodeMD5("foobar"); checksum != "3858f62230ac3c915f300c664312c63f" {
@@ -70,7 +73,25 @@ func TestHashEmail(t *testing.T) {
 // TODO: TimeSince()
 // TODO: logn()
 // TODO: humanateBytes()
-// TODO: FileSize()
+
+func TestFileSize(t *testing.T) {
+	var size int64
+	size = 512
+	assert.Equal(t, "512B", FileSize(size))
+	size = size * 1024
+	assert.Equal(t, "512KB", FileSize(size))
+	size = size * 1024
+	assert.Equal(t, "512MB", FileSize(size))
+	size = size * 1024
+	assert.Equal(t, "512GB", FileSize(size))
+	size = size * 1024
+	assert.Equal(t, "512TB", FileSize(size))
+	size = size * 1024
+	assert.Equal(t, "512PB", FileSize(size))
+	//size = size * 1024 TODO: Fix bug for EB
+	//assert.Equal(t, "512EB", FileSize(size))
+}
+
 // TODO: Subtract()
 // TODO: EllipsisString()
 // TODO: TruncateString()
