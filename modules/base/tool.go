@@ -23,11 +23,9 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
-
-	"github.com/gogits/chardet"
-
 	"github.com/go-gitea/gitea/modules/log"
 	"github.com/go-gitea/gitea/modules/setting"
+	"github.com/gogits/chardet"
 )
 
 // EncodeMD5 encodes string to md5 hex value.
@@ -198,10 +196,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 // HashEmail hashes email address to MD5 string.
 // https://en.gravatar.com/site/implement/hash/
 func HashEmail(email string) string {
-	email = strings.ToLower(strings.TrimSpace(email))
-	h := md5.New()
-	h.Write([]byte(email))
-	return hex.EncodeToString(h.Sum(nil))
+	return EncodeMD5(strings.ToLower(strings.TrimSpace(email)))
 }
 
 // AvatarLink returns relative avatar link to the site domain by given email,
