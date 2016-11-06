@@ -1989,17 +1989,9 @@ footer .ui.language .menu {
 .repository .diff-file-box .code-diff tbody tr.tag-code td.halfwidth {
   width: 50%;
 }
-.repository .diff-file-box .code-diff tbody tr.del-code td.add-code {
-  background-color: #eaffea !important;
-  border-color: #c1e9c1 !important;
-}
-.repository .diff-file-box .code-diff tbody tr.del-code td.add-code pre {
-  background-color: #eaffea !important;
-  border-color: #c1e9c1 !important;
-}
 .repository .diff-file-box .code-diff tbody tr.del-code td,
 .repository .diff-file-box .code-diff tbody tr.del-code pre {
-  background-color: #ffecec !important;
+  background-color: #ffe0e0 !important;
   border-color: #f1c0c0 !important;
 }
 .repository .diff-file-box .code-diff tbody tr.del-code td.halfwidth {
@@ -2007,7 +1999,7 @@ footer .ui.language .menu {
 }
 .repository .diff-file-box .code-diff tbody tr.add-code td,
 .repository .diff-file-box .code-diff tbody tr.add-code pre {
-  background-color: #eaffea !important;
+  background-color: #d6fcd6 !important;
   border-color: #c1e9c1 !important;
 }
 .repository .diff-file-box .code-diff tbody tr.add-code td.halfwidth {
