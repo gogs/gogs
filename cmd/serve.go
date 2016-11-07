@@ -213,7 +213,7 @@ func runServ(c *cli.Context) error {
 		keyID = key.ID
 
 		// Check deploy key or user key.
-		if key.Type == models.KEY_TYPE_DEPLOY {
+		if key.Type == models.KeyTypeDeploy {
 			if key.Mode < requestedMode {
 				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}

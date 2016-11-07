@@ -37,8 +37,8 @@ import (
 type UserType int
 
 const (
-	USER_TYPE_INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
-	USER_TYPE_ORGANIZATION
+	UserTypeIndividual UserType = iota // Historic reason to make it starts at 0.
+	UserTypeOrganization
 )
 
 var (
@@ -393,7 +393,7 @@ func (u *User) IsWriterOfRepo(repo *Repository) bool {
 
 // IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
-	return u.Type == USER_TYPE_ORGANIZATION
+	return u.Type == UserTypeOrganization
 }
 
 // IsUserOrgOwner returns true if user is in the owner team of given organization.

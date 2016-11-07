@@ -16,7 +16,7 @@ import (
 func Search(ctx *context.APIContext) {
 	opts := &models.SearchUserOptions{
 		Keyword:  ctx.Query("q"),
-		Type:     models.USER_TYPE_INDIVIDUAL,
+		Type:     models.UserTypeIndividual,
 		PageSize: com.StrTo(ctx.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {

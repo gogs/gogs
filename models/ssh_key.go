@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	_TPL_PUBLICK_KEY = `command="%s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
+	tplPublicKey = `command="%s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
 )
 
 var sshOpLocker sync.Mutex
@@ -37,8 +37,8 @@ var sshOpLocker sync.Mutex
 type KeyType int
 
 const (
-	KEY_TYPE_USER = iota + 1
-	KEY_TYPE_DEPLOY
+	KeyTypeUser = iota + 1
+	KeyTypeDeploy
 )
 
 // PublicKey represents a user or deploy SSH public key.
@@ -85,7 +85,7 @@ func (k *PublicKey) OmitEmail() string {
 
 // AuthorizedString returns formatted public key string for authorized_keys file.
 func (key *PublicKey) AuthorizedString() string {
-	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, key.ID, setting.CustomConf, key.Content)
+	return fmt.Sprintf(tplPublicKey, setting.AppPath, key.ID, setting.CustomConf, key.Content)
 }
 
 func extractTypeFromBase64Key(key string) (string, error) {
@@ -352,7 +352,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 func checkKeyContent(content string) error {
 	has, err := x.Get(&PublicKey{
 		Content: content,
-		Type:    KEY_TYPE_USER,
+		Type:    KeyTypeUser,
 	})
 	if err != nil {
 		return err
@@ -416,7 +416,7 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 		Name:    name,
 		Content: content,
 		Mode:    AccessModeWrite,
-		Type:    KEY_TYPE_USER,
+		Type:    KeyTypeUser,
 	}
 	if err = addKey(sess, key); err != nil {
 		return nil, fmt.Errorf("addKey: %v", err)
@@ -643,7 +643,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 	pkey := &PublicKey{
 		Content: content,
 		Mode:    AccessModeRead,
-		Type:    KEY_TYPE_DEPLOY,
+		Type:    KeyTypeDeploy,
 	}
 	has, err := x.Get(pkey)
 	if err != nil {
