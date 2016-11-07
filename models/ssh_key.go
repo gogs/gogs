@@ -415,7 +415,7 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 		OwnerID: ownerID,
 		Name:    name,
 		Content: content,
-		Mode:    ACCESS_MODE_WRITE,
+		Mode:    AccessModeWrite,
 		Type:    KEY_TYPE_USER,
 	}
 	if err = addKey(sess, key); err != nil {
@@ -642,7 +642,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 
 	pkey := &PublicKey{
 		Content: content,
-		Mode:    ACCESS_MODE_READ,
+		Mode:    AccessModeRead,
 		Type:    KEY_TYPE_DEPLOY,
 	}
 	has, err := x.Get(pkey)
@@ -720,7 +720,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		yes, err := HasAccess(doer, repo, ACCESS_MODE_ADMIN)
+		yes, err := HasAccess(doer, repo, AccessModeAdmin)
 		if err != nil {
 			return fmt.Errorf("HasAccess: %v", err)
 		} else if !yes {

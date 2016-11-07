@@ -64,9 +64,9 @@ func parseCmd(cmd string) (string, string) {
 
 var (
 	allowedCommands = map[string]models.AccessMode{
-		"git-upload-pack":    models.ACCESS_MODE_READ,
-		"git-upload-archive": models.ACCESS_MODE_READ,
-		"git-receive-pack":   models.ACCESS_MODE_WRITE,
+		"git-upload-pack":    models.AccessModeRead,
+		"git-upload-archive": models.AccessModeRead,
+		"git-receive-pack":   models.AccessModeWrite,
 	}
 )
 
@@ -191,7 +191,7 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Prohibit push to mirror repositories.
-	if requestedMode > models.ACCESS_MODE_READ && repo.IsMirror {
+	if requestedMode > models.AccessModeRead && repo.IsMirror {
 		fail("mirror repository is read-only", "")
 	}
 
@@ -200,7 +200,7 @@ func runServ(c *cli.Context) error {
 		keyID int64
 		user  *models.User
 	)
-	if requestedMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
+	if requestedMode == models.AccessModeWrite || repo.IsPrivate {
 		keys := strings.Split(c.Args()[0], "-")
 		if len(keys) != 2 {
 			fail("Key ID format error", "Invalid key argument: %s", c.Args()[0])
@@ -243,7 +243,7 @@ func runServ(c *cli.Context) error {
 				fail("Internal error", "Fail to check access: %v", err)
 			} else if mode < requestedMode {
 				clientMessage := accessDenied
-				if mode >= models.ACCESS_MODE_READ {
+				if mode >= models.AccessModeRead {
 					clientMessage = "You do not have sufficient authorization for this action"
 				}
 				fail(clientMessage,
@@ -276,7 +276,7 @@ func runServ(c *cli.Context) error {
 		fail("Internal error", "Failed to execute git command: %v", err)
 	}
 
-	if requestedMode == models.ACCESS_MODE_WRITE {
+	if requestedMode == models.AccessModeWrite {
 		handleUpdateTask(uuid, user, repoUser, reponame, isWiki)
 	}
 

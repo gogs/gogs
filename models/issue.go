@@ -624,7 +624,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 		// Assume assignee is invalid and drop silently.
 		opts.Issue.AssigneeID = 0
 		if assignee != nil {
-			valid, err := hasAccess(e, assignee, opts.Repo, ACCESS_MODE_WRITE)
+			valid, err := hasAccess(e, assignee, opts.Repo, AccessModeWrite)
 			if err != nil {
 				return fmt.Errorf("hasAccess [user_id: %d, repo_id: %d]: %v", assignee.ID, opts.Repo.ID, err)
 			}

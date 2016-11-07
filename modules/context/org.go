@@ -136,7 +136,7 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 			return
 		}
 
-		ctx.Org.IsTeamAdmin = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
+		ctx.Org.IsTeamAdmin = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.AccessModeAdmin
 		ctx.Data["IsTeamAdmin"] = ctx.Org.IsTeamAdmin
 		if requireTeamAdmin && !ctx.Org.IsTeamAdmin {
 			ctx.Handle(404, "OrgAssignment", err)
