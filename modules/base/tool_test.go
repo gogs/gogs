@@ -153,7 +153,14 @@ func TestInt64sToStrings(t *testing.T) {
 	)
 }
 
-// TODO: Int64sToMap()
+func TestInt64sToMap(t *testing.T) {
+	assert.Equal(t, map[int64]bool{}, Int64sToMap([]int64{}))
+	assert.Equal(t,
+		map[int64]bool{1: true, 4: true, 16: true},
+		Int64sToMap([]int64{1, 4, 16}),
+	)
+}
+
 // TODO: IsLetter()
 // TODO: IsTextFile()
 // TODO: IsImageFile()
