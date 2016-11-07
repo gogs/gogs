@@ -1,8 +1,11 @@
 package base
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/go-gitea/gitea/modules/setting"
+	"github.com/stretchr/testify/assert"
+	"strk.kbt.io/projects/go/libravatar"
 )
 
 func TestEncodeMD5(t *testing.T) {
@@ -44,6 +47,25 @@ func TestGetRandomString(t *testing.T) {
 func TestHashEmail(t *testing.T) {
 	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", HashEmail(""))
 	assert.Equal(t, "353cbad9b58e69c96154ad99f92bedc7", HashEmail("gitea@example.com"))
+}
+
+func TestAvatarLink(t *testing.T) {
+	setting.EnableFederatedAvatar = false
+	setting.LibravatarService = nil
+	setting.DisableGravatar = true
+
+	assert.Equal(t, "/img/avatar_default.png", AvatarLink(""))
+
+	setting.DisableGravatar = false
+	assert.Equal(t, "353cbad9b58e69c96154ad99f92bedc7", AvatarLink("gitea@example.com"))
+
+	setting.EnableFederatedAvatar = true
+	assert.Equal(t, "353cbad9b58e69c96154ad99f92bedc7", AvatarLink("gitea@example.com"))
+	setting.LibravatarService = libravatar.New()
+	assert.Equal(t,
+		"http://cdn.libravatar.org/avatar/353cbad9b58e69c96154ad99f92bedc7",
+		AvatarLink("gitea@example.com"),
+	)
 }
 
 // TODO: AvatarLink()

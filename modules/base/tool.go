@@ -202,21 +202,18 @@ func HashEmail(email string) string {
 // AvatarLink returns relative avatar link to the site domain by given email,
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
-func AvatarLink(email string) (url string) {
+func AvatarLink(email string) string {
 	if setting.EnableFederatedAvatar && setting.LibravatarService != nil {
-		var err error
-		url, err = setting.LibravatarService.FromEmail(email)
-		if err != nil {
-			log.Error(1, "LibravatarService.FromEmail: %v", err)
-		}
+		// TODO: This doesn't check any error. AvatarLink should return (string, error)
+		url, _ := setting.LibravatarService.FromEmail(email)
+		return url
 	}
-	if len(url) == 0 && !setting.DisableGravatar {
-		url = setting.GravatarSource + HashEmail(email)
+
+	if !setting.DisableGravatar {
+		return setting.GravatarSource + HashEmail(email)
 	}
-	if len(url) == 0 {
-		url = setting.AppSubUrl + "/img/avatar_default.png"
-	}
-	return url
+
+	return setting.AppSubUrl + "/img/avatar_default.png"
 }
 
 // Seconds-based time units
