@@ -68,14 +68,11 @@ func TestAvatarLink(t *testing.T) {
 	)
 }
 
-// TODO: AvatarLink()
 // TODO: computeTimeDiff()
 // TODO: TimeSincePro()
 // TODO: timeSince()
 // TODO: RawTimeSince()
 // TODO: TimeSince()
-// TODO: logn()
-// TODO: humanateBytes()
 
 func TestFileSize(t *testing.T) {
 	var size int64
@@ -96,7 +93,18 @@ func TestFileSize(t *testing.T) {
 }
 
 // TODO: Subtract()
-// TODO: EllipsisString()
+
+func TestEllipsisString(t *testing.T) {
+	assert.Equal(t, "...", EllipsisString("foobar", 0))
+	assert.Equal(t, "...", EllipsisString("foobar", 1))
+	assert.Equal(t, "...", EllipsisString("foobar", 2))
+	assert.Equal(t, "...", EllipsisString("foobar", 3))
+	assert.Equal(t, "f...", EllipsisString("foobar", 4))
+	assert.Equal(t, "fo...", EllipsisString("foobar", 5))
+	assert.Equal(t, "foobar", EllipsisString("foobar", 6))
+	assert.Equal(t, "foobar", EllipsisString("foobar", 10))
+}
+
 // TODO: TruncateString()
 // TODO: StringsToInt64s()
 // TODO: Int64sToStrings()

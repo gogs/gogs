@@ -462,7 +462,10 @@ func Subtract(left interface{}, right interface{}) interface{} {
 // EllipsisString returns a truncated short string,
 // it appends '...' in the end of the length of string is too large.
 func EllipsisString(str string, length int) string {
-	if len(str) < length {
+	if length <= 3 {
+		return "..."
+	}
+	if len(str) <= length {
 		return str
 	}
 	return str[:length-3] + "..."
