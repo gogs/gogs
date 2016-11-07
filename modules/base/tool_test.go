@@ -161,7 +161,21 @@ func TestInt64sToMap(t *testing.T) {
 	)
 }
 
-// TODO: IsLetter()
+func TestIsLetter(t *testing.T) {
+	assert.True(t, IsLetter('a'))
+	assert.True(t, IsLetter('e'))
+	assert.True(t, IsLetter('q'))
+	assert.True(t, IsLetter('z'))
+	assert.True(t, IsLetter('A'))
+	assert.True(t, IsLetter('E'))
+	assert.True(t, IsLetter('Q'))
+	assert.True(t, IsLetter('Z'))
+	assert.True(t, IsLetter('_'))
+	assert.False(t, IsLetter('-'))
+	assert.False(t, IsLetter('1'))
+	assert.False(t, IsLetter('$'))
+}
+
 // TODO: IsTextFile()
 // TODO: IsImageFile()
 // TODO: IsPDFFile()
