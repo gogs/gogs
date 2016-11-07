@@ -36,7 +36,7 @@ func (ctx *APIContext) Error(status int, title string, obj interface{}) {
 
 	ctx.JSON(status, map[string]string{
 		"message": message,
-		"url":     base.DOC_URL,
+		"url":     base.DocURL,
 	})
 }
 
