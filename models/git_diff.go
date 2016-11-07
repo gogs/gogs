@@ -34,7 +34,7 @@ const (
 	DiffLinePlain DiffLineType = iota + 1
 	DiffLineAdd
 	DiffLineDel
-	DIFF_LINE_SECTION
+	DiffLineSection
 )
 
 type DiffFileType uint8
@@ -43,7 +43,7 @@ const (
 	DiffFileAdd DiffFileType = iota + 1
 	DiffFileChange
 	DiffFileDel
-	DIFF_FILE_RENAME
+	DiffFileRename
 )
 
 type DiffLine struct {
@@ -273,7 +273,7 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 			curSection = &DiffSection{}
 			curFile.Sections = append(curFile.Sections, curSection)
 			ss := strings.Split(line, "@@")
-			diffLine := &DiffLine{Type: DIFF_LINE_SECTION, Content: line}
+			diffLine := &DiffLine{Type: DiffLineSection, Content: line}
 			curSection.Lines = append(curSection.Lines, diffLine)
 
 			// Parse line number.
@@ -362,7 +362,7 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 				case strings.HasPrefix(line, "index"):
 					curFile.Type = DiffFileChange
 				case strings.HasPrefix(line, "similarity index 100%"):
-					curFile.Type = DIFF_FILE_RENAME
+					curFile.Type = DiffFileRename
 					curFile.IsRenamed = true
 					curFile.OldName = curFile.Name
 					curFile.Name = b

@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
+	tplUpdateHook = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
@@ -706,7 +706,7 @@ func cleanUpMigrateGitConfig(configPath string) error {
 
 func createUpdateHook(repoPath string) error {
 	return git.SetUpdateHook(repoPath,
-		fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
+		fmt.Sprintf(tplUpdateHook, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
 }
 
 // Finish migrating repository and/or wiki with things that don't need to be done for mirrors.
