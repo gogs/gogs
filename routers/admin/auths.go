@@ -48,7 +48,7 @@ type dropdownItem struct {
 
 var (
 	authSources = []dropdownItem{
-		{models.LoginNames[models.LOGIN_LDAP], models.LOGIN_LDAP},
+		{models.LoginNames[models.LoginLdap], models.LoginLdap},
 		{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
 		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
 		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
@@ -65,8 +65,8 @@ func NewAuthSource(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["type"] = models.LOGIN_LDAP
-	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LOGIN_LDAP]
+	ctx.Data["type"] = models.LoginLdap
+	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LoginLdap]
 	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
 	ctx.Data["smtp_auth"] = "PLAIN"
 	ctx.Data["is_active"] = true
@@ -125,7 +125,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	hasTLS := false
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
+	case models.LoginLdap, models.LOGIN_DLDAP:
 		config = parseLDAPConfig(form)
 		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
 	case models.LOGIN_SMTP:
@@ -208,7 +208,7 @@ func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
+	case models.LoginLdap, models.LOGIN_DLDAP:
 		config = parseLDAPConfig(form)
 	case models.LOGIN_SMTP:
 		config = parseSMTPConfig(form)

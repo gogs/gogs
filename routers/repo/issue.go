@@ -599,7 +599,7 @@ func ViewIssue(ctx *context.Context) {
 	// Render comments and and fetch participants.
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
-		if comment.Type == models.COMMENT_TYPE_COMMENT {
+		if comment.Type == models.CommentTypeComment {
 			comment.RenderedContent = string(markdown.Render([]byte(comment.Content), ctx.Repo.RepoLink,
 				ctx.Repo.Repository.ComposeMetas()))
 
@@ -614,9 +614,9 @@ func ViewIssue(ctx *context.Context) {
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
 				comment.ShowTag = models.COMMENT_TAG_OWNER
 			} else if comment.Poster.IsWriterOfRepo(repo) {
-				comment.ShowTag = models.COMMENT_TAG_WRITER
+				comment.ShowTag = models.CommentTagWriter
 			} else if comment.PosterID == issue.PosterID {
-				comment.ShowTag = models.COMMENT_TAG_POSTER
+				comment.ShowTag = models.CommentTagPoster
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
@@ -892,7 +892,7 @@ func UpdateCommentContent(ctx *context.Context) {
 	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
 		ctx.Error(403)
 		return
-	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != models.CommentTypeComment {
 		ctx.Error(204)
 		return
 	}
@@ -924,7 +924,7 @@ func DeleteComment(ctx *context.Context) {
 	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
 		ctx.Error(403)
 		return
-	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != models.CommentTypeComment {
 		ctx.Error(204)
 		return
 	}

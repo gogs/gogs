@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	MAIL_AUTH_ACTIVATE        base.TplName = "auth/activate"
-	MAIL_AUTH_ACTIVATE_EMAIL  base.TplName = "auth/activate_email"
-	MAIL_AUTH_RESET_PASSWORD  base.TplName = "auth/reset_passwd"
+	MailAuthActivate        base.TplName = "auth/activate"
+	MailAuthActivateEmail  base.TplName = "auth/activate_email"
+	MailAuthResetPassword  base.TplName = "auth/reset_passwd"
 	MAIL_AUTH_REGISTER_NOTIFY base.TplName = "auth/register_notify"
 
 	MAIL_ISSUE_COMMENT base.TplName = "issue/comment"
@@ -77,11 +77,11 @@ func SendUserMail(c *macaron.Context, u *User, tpl base.TplName, code, subject, 
 }
 
 func SendActivateAccountMail(c *macaron.Context, u *User) {
-	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, u.GenerateActivateCode(), c.Tr("mail.activate_account"), "activate account")
+	SendUserMail(c, u, MailAuthActivate, u.GenerateActivateCode(), c.Tr("mail.activate_account"), "activate account")
 }
 
 func SendResetPasswordMail(c *macaron.Context, u *User) {
-	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, u.GenerateActivateCode(), c.Tr("mail.reset_password"), "reset password")
+	SendUserMail(c, u, MailAuthResetPassword, u.GenerateActivateCode(), c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
@@ -92,7 +92,7 @@ func SendActivateEmailMail(c *macaron.Context, u *User, email *EmailAddress) {
 		"Code":            u.GenerateEmailActivateCode(email.Email),
 		"Email":           email.Email,
 	}
-	body, err := mailRender.HTMLString(string(MAIL_AUTH_ACTIVATE_EMAIL), data)
+	body, err := mailRender.HTMLString(string(MailAuthActivateEmail), data)
 	if err != nil {
 		log.Error(3, "HTMLString: %v", err)
 		return

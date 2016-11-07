@@ -23,8 +23,8 @@ type CommentType int
 
 const (
 	// Plain comment, can be associated with a commit (CommitID > 0) and a line (LineNum > 0)
-	COMMENT_TYPE_COMMENT CommentType = iota
-	COMMENT_TYPE_REOPEN
+	CommentTypeComment CommentType = iota
+	CommentTypeReopen
 	COMMENT_TYPE_CLOSE
 
 	// References.
@@ -32,7 +32,7 @@ const (
 	// Reference from a commit (not part of a pull request)
 	COMMENT_TYPE_COMMIT_REF
 	// Reference from a comment
-	COMMENT_TYPE_COMMENT_REF
+	CommentTypeComment_REF
 	// Reference from a pull request
 	COMMENT_TYPE_PULL_REF
 )
@@ -40,9 +40,9 @@ const (
 type CommentTag int
 
 const (
-	COMMENT_TAG_NONE CommentTag = iota
-	COMMENT_TAG_POSTER
-	COMMENT_TAG_WRITER
+	CommentTagNone CommentTag = iota
+	CommentTagPoster
+	CommentTagWriter
 	COMMENT_TAG_OWNER
 )
 
@@ -187,7 +187,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 
 	// Check comment type.
 	switch opts.Type {
-	case COMMENT_TYPE_COMMENT:
+	case CommentTypeComment:
 		act.OpType = ActionCommentIssue
 
 		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
@@ -216,7 +216,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			}
 		}
 
-	case COMMENT_TYPE_REOPEN:
+	case CommentTypeReopen:
 		act.OpType = ActionReopenIssue
 		if opts.Issue.IsPull {
 			act.OpType = ActionReopenPullRequest
@@ -262,7 +262,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
 	cmtType := COMMENT_TYPE_CLOSE
 	if !issue.IsClosed {
-		cmtType = COMMENT_TYPE_REOPEN
+		cmtType = CommentTypeReopen
 	}
 	return createComment(e, &CreateCommentOptions{
 		Type:  cmtType,
@@ -304,7 +304,7 @@ func CreateComment(opts *CreateCommentOptions) (comment *Comment, err error) {
 // CreateIssueComment creates a plain issue comment.
 func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content string, attachments []string) (*Comment, error) {
 	return CreateComment(&CreateCommentOptions{
-		Type:        COMMENT_TYPE_COMMENT,
+		Type:        CommentTypeComment,
 		Doer:        doer,
 		Repo:        repo,
 		Issue:       issue,
@@ -403,7 +403,7 @@ func DeleteCommentByID(id int64) error {
 		return err
 	}
 
-	if comment.Type == COMMENT_TYPE_COMMENT {
+	if comment.Type == CommentTypeComment {
 		if _, err = sess.Exec("UPDATE `issue` SET num_comments = num_comments - 1 WHERE id = ?", comment.IssueID); err != nil {
 			return err
 		}

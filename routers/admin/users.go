@@ -81,7 +81,7 @@ func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
-		LoginType: models.LOGIN_PLAIN,
+		LoginType: models.LoginPlain,
 	}
 
 	if len(form.LoginType) > 0 {

@@ -140,9 +140,9 @@ func (u *User) APIFormat() *api.User {
 	}
 }
 
-// returns true if user login type is LOGIN_PLAIN.
+// returns true if user login type is LoginPlain.
 func (u *User) IsLocal() bool {
-	return u.LoginType <= LOGIN_PLAIN
+	return u.LoginType <= LoginPlain
 }
 
 // HasForkedRepo checks if user has already forked a repository with given ID.
