@@ -153,12 +153,6 @@
 			"revisionTime": "2016-08-10T03:50:02Z"
 		},
 		{
-			"checksumSHA1": "5P4i69584LOvCooguu2D/pNxU14=",
-			"path": "github.com/gogits/go-gogs-client",
-			"revision": "d8aff570fa22d4e38954c753ec8b21862239b31d",
-			"revisionTime": "2016-08-30T12:34:33Z"
-		},
-		{
 			"checksumSHA1": "MLO0PyrK2MUO6A7Z9PxWuu43C/A=",
 			"path": "github.com/issue9/identicon",
 			"revision": "d36b54562f4cf70c83653e13dc95c220c79ef521",
