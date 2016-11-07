@@ -3,7 +3,7 @@
 <plist version="1.0">
 	<dict>
 		<key>Label</key>
-		<string>io.gogs.web</string>
+		<string>io.gitea.web</string>
 		<!-- assumes Gogs is running under 'git' account -->
 		<!-- modify below to reflect your settings -->
 		<key>UserName</key>
@@ -12,23 +12,23 @@
 		<string>git</string>
 		<key>ProgramArguments</key>
 		<array>
-			<!-- assumes Gogs is installed in /Users/git/gogs -->
+			<!-- assumes Gogs is installed in /Users/git/gitea -->
 			<!-- modify below to reflect your settings -->
-			<string>/Users/git/gogs/gogs</string>
+			<string>/Users/git/gitea/gitea</string>
 			<string>web</string>
 		</array>
 		<key>RunAtLoad</key>
 		<true/>
 		<key>KeepAlive</key>
 		<true/>
-		<!-- assumes Gogs is installed in /Users/git/gogs -->
+		<!-- assumes Gogs is installed in /Users/git/gitea -->
 		<!-- modify below to reflect your settings -->
 		<key>WorkingDirectory</key>
-		<string>/Users/git/gogs/</string>
+		<string>/Users/git/gitea/</string>
 		<key>StandardOutPath</key>
-		<string>/Users/git/gogs/log/stdout.log</string>
+		<string>/Users/git/gitea/log/stdout.log</string>
 		<key>StandardErrorPath</key>
-		<string>/Users/git/gogs/log/stderr.log</string>
+		<string>/Users/git/gitea/log/stderr.log</string>
 		<!-- default 256 is too low for Gogs needs using parallel pipes -->
 		<key>SoftResourceLimits</key>
 		<dict>
