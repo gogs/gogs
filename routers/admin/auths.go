@@ -54,9 +54,9 @@ var (
 		{models.LoginNames[models.LoginPam], models.LoginPam},
 	}
 	securityProtocols = []dropdownItem{
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_LDAPS], ldap.SECURITY_PROTOCOL_LDAPS},
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_START_TLS], ldap.SECURITY_PROTOCOL_START_TLS},
+		{models.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted], ldap.SecurityProtocolUnencrypted},
+		{models.SecurityProtocolNames[ldap.SecurityProtocolLdaps], ldap.SecurityProtocolLdaps},
+		{models.SecurityProtocolNames[ldap.SecurityProtocolStartTls], ldap.SecurityProtocolStartTls},
 	}
 )
 
@@ -67,7 +67,7 @@ func NewAuthSource(ctx *context.Context) {
 
 	ctx.Data["type"] = models.LoginLdap
 	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LoginLdap]
-	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
+	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted]
 	ctx.Data["smtp_auth"] = "PLAIN"
 	ctx.Data["is_active"] = true
 	ctx.Data["AuthSources"] = authSources
@@ -127,7 +127,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	switch models.LoginType(form.Type) {
 	case models.LoginLdap, models.LoginDldap:
 		config = parseLDAPConfig(form)
-		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
+		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SecurityProtocolUnencrypted
 	case models.LoginSmtp:
 		config = parseSMTPConfig(form)
 		hasTLS = true

@@ -44,9 +44,9 @@ var LoginNames = map[LoginType]string{
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
-	ldap.SECURITY_PROTOCOL_UNENCRYPTED: "Unencrypted",
-	ldap.SECURITY_PROTOCOL_LDAPS:       "LDAPS",
-	ldap.SECURITY_PROTOCOL_START_TLS:   "StartTLS",
+	ldap.SecurityProtocolUnencrypted: "Unencrypted",
+	ldap.SecurityProtocolLdaps:       "LDAPS",
+	ldap.SecurityProtocolStartTls:   "StartTLS",
 }
 
 // Ensure structs implemented interface.
@@ -182,14 +182,14 @@ func (source *LoginSource) IsPAM() bool {
 
 func (source *LoginSource) HasTLS() bool {
 	return ((source.IsLDAP() || source.IsDLDAP()) &&
-		source.LDAP().SecurityProtocol > ldap.SECURITY_PROTOCOL_UNENCRYPTED) ||
+		source.LDAP().SecurityProtocol > ldap.SecurityProtocolUnencrypted) ||
 		source.IsSMTP()
 }
 
 func (source *LoginSource) UseTLS() bool {
 	switch source.Type {
 	case LoginLdap, LoginDldap:
-		return source.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
+		return source.LDAP().SecurityProtocol != ldap.SecurityProtocolUnencrypted
 	case LoginSmtp:
 		return source.SMTP().TLS
 	}
