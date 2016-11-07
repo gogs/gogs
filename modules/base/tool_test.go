@@ -176,6 +176,10 @@ func TestIsLetter(t *testing.T) {
 	assert.False(t, IsLetter('$'))
 }
 
-// TODO: IsTextFile()
-// TODO: IsImageFile()
-// TODO: IsPDFFile()
+func TestIsTextFile(t *testing.T) {
+	assert.True(t, IsTextFile([]byte{}))
+	assert.True(t, IsTextFile([]byte("lorem ipsum")))
+}
+
+// TODO: IsImageFile(), currently no idea how to test
+// TODO: IsPDFFile(), currently no idea how to test
