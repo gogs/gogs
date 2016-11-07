@@ -1005,9 +1005,9 @@ func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int
 	}
 
 	switch filterMode {
-	case FM_ASSIGN:
+	case FilterModeAssign:
 		sess.And("is_assigned=?", true)
-	case FM_CREATE:
+	case FilterModeCreate:
 		sess.And("is_poster=?", true)
 	default:
 		return ius, nil
@@ -1070,10 +1070,10 @@ type IssueStats struct {
 
 // Filter modes.
 const (
-	FM_ALL = iota
-	FM_ASSIGN
-	FM_CREATE
-	FM_MENTION
+	FilterModeAll = iota
+	FilterModeAssign
+	FilterModeCreate
+	FilterModeMention
 )
 
 func parseCountResult(results []map[string][]byte) int64 {
@@ -1122,7 +1122,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	}
 
 	switch opts.FilterMode {
-	case FM_ALL, FM_ASSIGN:
+	case FilterModeAll, FilterModeAssign:
 		stats.OpenCount, _ = countSession(opts).
 			And("is_closed = ?", false).
 			Count(&Issue{})
@@ -1130,7 +1130,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 		stats.ClosedCount, _ = countSession(opts).
 			And("is_closed = ?", true).
 			Count(&Issue{})
-	case FM_CREATE:
+	case FilterModeCreate:
 		stats.OpenCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", false).
@@ -1140,7 +1140,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", true).
 			Count(&Issue{})
-	case FM_MENTION:
+	case FilterModeMention:
 		stats.OpenCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
 			And("issue_user.uid = ?", opts.UserID).
@@ -1186,10 +1186,10 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 	closedCountSession := countSession(true, isPull, repoID, repoIDs)
 
 	switch filterMode {
-	case FM_ASSIGN:
+	case FilterModeAssign:
 		openCountSession.And("assignee_id = ?", uid)
 		closedCountSession.And("assignee_id = ?", uid)
-	case FM_CREATE:
+	case FilterModeCreate:
 		openCountSession.And("poster_id = ?", uid)
 		closedCountSession.And("poster_id = ?", uid)
 	}
@@ -1214,10 +1214,10 @@ func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen 
 	closedCountSession := countSession(true, isPull, repoID)
 
 	switch filterMode {
-	case FM_ASSIGN:
+	case FilterModeAssign:
 		openCountSession.And("assignee_id = ?", uid)
 		closedCountSession.And("assignee_id = ?", uid)
-	case FM_CREATE:
+	case FilterModeCreate:
 		openCountSession.And("poster_id = ?", uid)
 		closedCountSession.And("poster_id = ?", uid)
 	}
