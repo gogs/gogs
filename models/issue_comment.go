@@ -25,16 +25,16 @@ const (
 	// Plain comment, can be associated with a commit (CommitID > 0) and a line (LineNum > 0)
 	CommentTypeComment CommentType = iota
 	CommentTypeReopen
-	COMMENT_TYPE_CLOSE
+	CommentTypeClose
 
 	// References.
-	COMMENT_TYPE_ISSUE_REF
+	CommentTypeIssueRef
 	// Reference from a commit (not part of a pull request)
-	COMMENT_TYPE_COMMIT_REF
+	CommentTypeCommitRef
 	// Reference from a comment
 	CommentTypeComment_REF
 	// Reference from a pull request
-	COMMENT_TYPE_PULL_REF
+	CommentTypePullRef
 )
 
 type CommentTag int
@@ -43,7 +43,7 @@ const (
 	CommentTagNone CommentTag = iota
 	CommentTagPoster
 	CommentTagWriter
-	COMMENT_TAG_OWNER
+	CommentTagOwner
 )
 
 // Comment represents a comment in commit and issue page.
@@ -231,7 +231,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			return nil, err
 		}
 
-	case COMMENT_TYPE_CLOSE:
+	case CommentTypeClose:
 		act.OpType = ActionCloseIssue
 		if opts.Issue.IsPull {
 			act.OpType = ActionClosePullRequest
@@ -260,7 +260,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 }
 
 func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
-	cmtType := COMMENT_TYPE_CLOSE
+	cmtType := CommentTypeClose
 	if !issue.IsClosed {
 		cmtType = CommentTypeReopen
 	}
@@ -321,7 +321,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 
 	// Check if same reference from same commit has already existed.
 	has, err := x.Get(&Comment{
-		Type:      COMMENT_TYPE_COMMIT_REF,
+		Type:      CommentTypeCommitRef,
 		IssueID:   issue.ID,
 		CommitSHA: commitSHA,
 	})
@@ -332,7 +332,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 	}
 
 	_, err = CreateComment(&CreateCommentOptions{
-		Type:      COMMENT_TYPE_COMMIT_REF,
+		Type:      CommentTypeCommitRef,
 		Doer:      doer,
 		Repo:      repo,
 		Issue:     issue,

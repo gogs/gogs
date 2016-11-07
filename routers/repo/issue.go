@@ -612,7 +612,7 @@ func ViewIssue(ctx *context.Context) {
 
 			if repo.IsOwnedBy(comment.PosterID) ||
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
-				comment.ShowTag = models.COMMENT_TAG_OWNER
+				comment.ShowTag = models.CommentTagOwner
 			} else if comment.Poster.IsWriterOfRepo(repo) {
 				comment.ShowTag = models.CommentTagWriter
 			} else if comment.PosterID == issue.PosterID {
