@@ -25,7 +25,7 @@ import (
 	"github.com/nfnt/resize"
 
 	"github.com/go-gitea/git"
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/go-gitea/go-sdk/gitea"
 
 	"github.com/go-gitea/gitea/modules/avatar"
 	"github.com/go-gitea/gitea/modules/base"

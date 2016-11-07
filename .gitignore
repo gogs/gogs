@@ -24,10 +24,11 @@ _testmain.go
 *.prof
 
 coverage.out
-gitea
 
 *.db
 *.log
+
+/gitea
 
 /bin
 /dist

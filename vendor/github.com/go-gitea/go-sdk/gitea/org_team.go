@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package gogs
+package gitea
 
 type Team struct {
 	ID          int64  `json:"id"`
