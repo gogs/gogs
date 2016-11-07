@@ -105,7 +105,17 @@ func TestEllipsisString(t *testing.T) {
 	assert.Equal(t, "foobar", EllipsisString("foobar", 10))
 }
 
-// TODO: TruncateString()
+func TestTruncateString(t *testing.T) {
+	assert.Equal(t, "", TruncateString("foobar", 0))
+	assert.Equal(t, "f", TruncateString("foobar", 1))
+	assert.Equal(t, "fo", TruncateString("foobar", 2))
+	assert.Equal(t, "foo", TruncateString("foobar", 3))
+	assert.Equal(t, "foob", TruncateString("foobar", 4))
+	assert.Equal(t, "fooba", TruncateString("foobar", 5))
+	assert.Equal(t, "foobar", TruncateString("foobar", 6))
+	assert.Equal(t, "foobar", TruncateString("foobar", 7))
+}
+
 // TODO: StringsToInt64s()
 // TODO: Int64sToStrings()
 // TODO: Int64sToMap()
