@@ -24,12 +24,12 @@
 # Default values
 
 NAME=gogs
-GOGS_HOME=/home/git/gogs
-GOGS_PATH=${GOGS_HOME}/$NAME
-GOGS_USER=git
+GITEA_HOME=/home/git/gogs
+GITEA_PATH=${GITEA_HOME}/$NAME
+GITEA_USER=git
 SERVICENAME="Gogs Go Git Service"
 LOCKFILE=/var/lock/subsys/gogs
-LOGPATH=${GOGS_HOME}/log
+LOGPATH=${GITEA_HOME}/log
 LOGFILE=${LOGPATH}/gogs.log
 RETVAL=0
 
@@ -37,19 +37,19 @@ RETVAL=0
 [ -r /etc/sysconfig/$NAME ] && . /etc/sysconfig/$NAME
 
 # Don't do anything if nothing is installed
-[ -x ${GOGS_PATH} ] || exit 0
+[ -x ${GITEA_PATH} ] || exit 0
 # exit if logpath dir is not created.
 [ -x ${LOGPATH} ] || exit 0
 
 DAEMON_OPTS="--check $NAME"
 
 # Set additional options, if any
-[ ! -z "$GOGS_USER" ] && DAEMON_OPTS="$DAEMON_OPTS --user=${GOGS_USER}"
+[ ! -z "$GITEA_USER" ] && DAEMON_OPTS="$DAEMON_OPTS --user=${GITEA_USER}"
 
 start() {
-  cd ${GOGS_HOME}
+  cd ${GITEA_HOME}
   echo -n "Starting ${SERVICENAME}: "
-  daemon $DAEMON_OPTS "${GOGS_PATH} web > ${LOGFILE} 2>&1 &"
+  daemon $DAEMON_OPTS "${GITEA_PATH} web > ${LOGFILE} 2>&1 &"
   RETVAL=$?
   echo
   [ $RETVAL = 0 ] && touch ${LOCKFILE}
@@ -58,7 +58,7 @@ start() {
 }
 
 stop() {
-  cd ${GOGS_HOME}
+  cd ${GITEA_HOME}
         echo -n "Shutting down ${SERVICENAME}: "
         killproc ${NAME}
         RETVAL=$?

@@ -687,7 +687,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		HeadRepo:     headRepo,
 		BaseRepo:     repo,
 		MergeBase:    prInfo.MergeBase,
-		Type:         models.PULL_REQUEST_GOGS,
+		Type:         models.PULL_REQUEST_GITEA,
 	}
 	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
 	// instead of 500.

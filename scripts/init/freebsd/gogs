@@ -38,7 +38,7 @@ gogs_start() {
 
 gogs_stop() {
 	if [ ! -f $pidfile ]; then
-		echo "GOGS PID File not found. Maybe GOGS is not running?"
+		echo "GITEA PID File not found. Maybe GITEA is not running?"
 	else
 		kill $(cat $pidfile)
 	fi

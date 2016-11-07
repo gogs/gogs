@@ -26,7 +26,7 @@ var PullRequestQueue = sync.NewUniqueQueue(setting.Repository.PullRequestQueueLe
 type PullRequestType int
 
 const (
-	PULL_REQUEST_GOGS PullRequestType = iota
+	PULL_REQUEST_GITEA PullRequestType = iota
 	PLLL_ERQUEST_GIT
 )
 
