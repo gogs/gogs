@@ -24,8 +24,8 @@ import (
 
 const (
 	HOOKS        base.TplName = "repo/settings/hooks"
-	HOOK_NEW     base.TplName = "repo/settings/hook_new"
-	ORG_HOOK_NEW base.TplName = "org/settings/hook_new"
+	HookNew     base.TplName = "repo/settings/hook_new"
+	ORG_HookNew base.TplName = "org/settings/hook_new"
 )
 
 func Webhooks(ctx *context.Context) {
@@ -57,7 +57,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 		return &OrgRepoCtx{
 			RepoID:      ctx.Repo.Repository.ID,
 			Link:        ctx.Repo.RepoLink,
-			NewTemplate: HOOK_NEW,
+			NewTemplate: HookNew,
 		}, nil
 	}
 
@@ -65,7 +65,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 		return &OrgRepoCtx{
 			OrgID:       ctx.Org.Organization.ID,
 			Link:        ctx.Org.OrgLink,
-			NewTemplate: ORG_HOOK_NEW,
+			NewTemplate: ORG_HookNew,
 		}, nil
 	}
 

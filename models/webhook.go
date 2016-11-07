@@ -76,7 +76,7 @@ type HookEvent struct {
 type HookStatus int
 
 const (
-	HOOK_STATUS_NONE = iota
+	HookStatusNone = iota
 	HookStatusSucceed
 	HookStatusFail
 )
