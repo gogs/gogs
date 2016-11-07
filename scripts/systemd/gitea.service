@@ -17,8 +17,8 @@ After=network.target
 Type=simple
 User=git
 Group=git
-WorkingDirectory=/home/git/gogs
-ExecStart=/home/git/gogs/gogs web
+WorkingDirectory=/home/git/gitea
+ExecStart=/home/git/gitea/gitea web
 Restart=always
 Environment=USER=git HOME=/home/git
 

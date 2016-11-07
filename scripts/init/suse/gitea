@@ -1,34 +1,34 @@
 #!/bin/sh
 #
-#       /etc/init.d/gogs
+#       /etc/init.d/gitea
 #
 #       Runs the Gogs Go Git Service.
 #
 
 ### BEGIN INIT INFO
-# Provides:          gogs
+# Provides:          gitea
 # Required-Start:    $remote_fs
 # Required-Stop:     $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Start gogs at boot time.
-# Description:       Control gogs.
+# Short-Description: Start gitea at boot time.
+# Description:       Control gitea.
 ### END INIT INFO
 
 # Default values
 
-NAME=gogs
-GITEA_HOME=/home/git/gogs
+NAME=gitea
+GITEA_HOME=/home/git/gitea
 GITEA_PATH=${GITEA_HOME}/$NAME
 GITEA_USER=git
 SERVICENAME="Go Git Service"
-LOCKFILE=/var/lock/subsys/gogs
+LOCKFILE=/var/lock/subsys/gitea
 LOGPATH=${GITEA_HOME}/log
 LOGFILE=${LOGPATH}/error.log
-# gogs creates its own gogs.log from stdout
+# gitea creates its own gitea.log from stdout
 RETVAL=0
 
-# Read configuration from /etc/sysconfig/gogs to override defaults
+# Read configuration from /etc/sysconfig/gitea to override defaults
 [ -r /etc/sysconfig/$NAME ] && . /etc/sysconfig/$NAME
 
 # Don't do anything if nothing is installed

@@ -1,6 +1,6 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          gogs
+# Provides:          gitea
 # Required-Start:    $syslog $network
 # Required-Stop:     $syslog
 # Default-Start:     2 3 4 5
@@ -16,11 +16,11 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="Go Git Service"
-NAME=gogs
+NAME=gitea
 SERVICEVERBOSE=yes
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
-WORKINGDIR=/home/git/gogs
+WORKINGDIR=/home/git/gitea
 DAEMON=$WORKINGDIR/$NAME
 DAEMON_ARGS="web"
 USER=git
