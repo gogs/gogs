@@ -18,6 +18,8 @@ import (
 	gouuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 
+	"encoding/json"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/httplib"
@@ -27,6 +29,7 @@ import (
 
 const (
 	_ACCESS_DENIED_MESSAGE = "Repository does not exist or you do not have access"
+	LFSAuthenticateVerb    = "git-lfs-authenticate"
 )
 
 var CmdServ = cli.Command{
@@ -63,9 +66,10 @@ func parseCmd(cmd string) (string, string) {
 
 var (
 	allowedCommands = map[string]models.AccessMode{
-		"git-upload-pack":    models.ACCESS_MODE_READ,
-		"git-upload-archive": models.ACCESS_MODE_READ,
-		"git-receive-pack":   models.ACCESS_MODE_WRITE,
+		"git-upload-pack":      models.ACCESS_MODE_READ,
+		"git-upload-archive":   models.ACCESS_MODE_READ,
+		"git-receive-pack":     models.ACCESS_MODE_WRITE,
+		"git-lfs-authenticate": models.ACCESS_MODE_NONE,
 	}
 )
 
@@ -154,6 +158,14 @@ func runServ(c *cli.Context) error {
 	}
 
 	verb, args := parseCmd(cmd)
+
+	var lfsVerb string
+	if verb == LFSAuthenticateVerb && strings.Contains(args, " ") {
+		argsSplit := strings.SplitN(args, " ", 2)
+		args = strings.TrimSpace(argsSplit[0])
+		lfsVerb = strings.TrimSpace(argsSplit[1])
+	}
+
 	repoPath := strings.ToLower(strings.Trim(args, "'"))
 	rr := strings.SplitN(repoPath, "/", 2)
 	if len(rr) != 2 {
@@ -187,6 +199,14 @@ func runServ(c *cli.Context) error {
 	requestedMode, has := allowedCommands[verb]
 	if !has {
 		fail("Unknown git command", "Unknown git command %s", verb)
+	}
+
+	if verb == LFSAuthenticateVerb {
+		if lfsVerb == "upload" {
+			requestedMode = models.ACCESS_MODE_WRITE
+		} else {
+			requestedMode = models.ACCESS_MODE_READ
+		}
 	}
 
 	// Prohibit push to mirror repositories.
@@ -250,6 +270,40 @@ func runServ(c *cli.Context) error {
 					user.Name, requestedMode, repoPath)
 			}
 		}
+	}
+
+	//LFS token authentication
+
+	if verb == LFSAuthenticateVerb {
+
+		url := fmt.Sprintf("%s%s/%s.git/info/lfs", setting.AppUrl, repoUser.Name, repo.Name)
+
+		now := time.Now().UTC()
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"repo": repo.ID,
+			"op":   lfsVerb,
+			"exp":  now.Add(5 * time.Minute).Unix(),
+		})
+
+		// Sign and get the complete encoded token as a string using the secret
+		tokenString, err := token.SignedString(setting.LFS.JWTSecretBytes)
+		if err != nil {
+			fail("Internal error", "Failed to sign JWT token: %v", err)
+		}
+
+		tokenAuthentication := &models.LFSTokenResponse{
+			Header: make(map[string]string),
+			Href:   url,
+		}
+		tokenAuthentication.Header["Authorization"] = fmt.Sprintf("Bearer %s", tokenString)
+
+		enc := json.NewEncoder(os.Stdout)
+		err = enc.Encode(tokenAuthentication)
+		if err != nil {
+			fail("Internal error", "Failed to encode LFS json response: %v", err)
+		}
+
+		return nil
 	}
 
 	uuid := gouuid.NewV4().String()
