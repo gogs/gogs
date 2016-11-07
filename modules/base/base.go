@@ -4,7 +4,7 @@
 
 package base
 
-const DocURL = "https://godoc.org/github.com/go-gitea/go-sdk"
+const DocURL = "https://godoc.org/github.com/go-gitea/go-sdk/gitea"
 
 type (
 	TplName string
