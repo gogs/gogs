@@ -1613,18 +1613,18 @@ func RewriteRepositoryUpdateHook() error {
 var taskStatusTable = sync.NewStatusTable()
 
 const (
-	_MIRROR_UPDATE = "mirror_update"
-	_GIT_FSCK      = "git_fsck"
-	_CHECK_REPOs   = "check_repos"
+	mirrorUpdate = "mirror_update"
+	gitFsck      = "git_fsck"
+	checkRepos   = "check_repos"
 )
 
 // GitFsck calls 'git fsck' to check repository health.
 func GitFsck() {
-	if taskStatusTable.IsRunning(_GIT_FSCK) {
+	if taskStatusTable.IsRunning(gitFsck) {
 		return
 	}
-	taskStatusTable.Start(_GIT_FSCK)
-	defer taskStatusTable.Stop(_GIT_FSCK)
+	taskStatusTable.Start(gitFsck)
+	defer taskStatusTable.Stop(gitFsck)
 
 	log.Trace("Doing: GitFsck")
 
@@ -1686,11 +1686,11 @@ func repoStatsCheck(checker *repoChecker) {
 }
 
 func CheckRepoStats() {
-	if taskStatusTable.IsRunning(_CHECK_REPOs) {
+	if taskStatusTable.IsRunning(checkRepos) {
 		return
 	}
-	taskStatusTable.Start(_CHECK_REPOs)
-	defer taskStatusTable.Stop(_CHECK_REPOs)
+	taskStatusTable.Start(checkRepos)
+	defer taskStatusTable.Stop(checkRepos)
 
 	log.Trace("Doing: CheckRepoStats")
 
