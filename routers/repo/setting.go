@@ -22,7 +22,7 @@ const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
 	GITHOOKS         base.TplName = "repo/settings/githooks"
-	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
+	GithookEdit     base.TplName = "repo/settings/githook_edit"
 	DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
 )
 
@@ -425,7 +425,7 @@ func GitHooksEdit(ctx *context.Context) {
 		return
 	}
 	ctx.Data["Hook"] = hook
-	ctx.HTML(200, GITHOOK_EDIT)
+	ctx.HTML(200, GithookEdit)
 }
 
 func GitHooksEditPost(ctx *context.Context) {

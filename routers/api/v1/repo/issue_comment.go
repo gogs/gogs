@@ -68,7 +68,7 @@ func EditIssueComment(ctx *context.APIContext, form api.EditIssueCommentOption) 
 	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
 		ctx.Status(403)
 		return
-	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != models.CommentTypeComment {
 		ctx.Status(204)
 		return
 	}

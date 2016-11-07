@@ -155,7 +155,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 		return fmt.Errorf("get team members: %v", err)
 	}
 	for _, u := range t.Members {
-		has, err := hasAccess(e, u, repo, ACCESS_MODE_READ)
+		has, err := hasAccess(e, u, repo, AccessModeRead)
 		if err != nil {
 			return err
 		} else if has {

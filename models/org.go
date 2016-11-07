@@ -141,7 +141,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		OrgID:      org.ID,
 		LowerName:  strings.ToLower(OWNER_TEAM),
 		Name:       OWNER_TEAM,
-		Authorize:  ACCESS_MODE_OWNER,
+		Authorize:  AccessModeOwner,
 		NumMembers: 1,
 	}
 	if _, err = sess.Insert(t); err != nil {
@@ -170,7 +170,7 @@ func GetOrgByName(name string) (*User, error) {
 	}
 	u := &User{
 		LowerName: strings.ToLower(name),
-		Type:      USER_TYPE_ORGANIZATION,
+		Type:      UserTypeOrganization,
 	}
 	has, err := x.Get(u)
 	if err != nil {

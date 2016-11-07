@@ -99,8 +99,8 @@ func ListMyRepos(ctx *context.APIContext) {
 
 	for repo, access := range accessibleRepos {
 		repos[i] = repo.APIFormat(&api.Permission{
-			Admin: access >= models.ACCESS_MODE_ADMIN,
-			Push:  access >= models.ACCESS_MODE_WRITE,
+			Admin: access >= models.AccessModeAdmin,
+			Push:  access >= models.AccessModeWrite,
 			Pull:  true,
 		})
 		i++
