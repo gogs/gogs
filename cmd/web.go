@@ -39,7 +39,6 @@ import (
 	"github.com/go-macaron/toolbox"
 	"github.com/go-xorm/xorm"
 	"github.com/go-gitea/git"
-	gogs "github.com/gogits/go-gogs-client"
 	version "github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
 	ini "gopkg.in/ini.v1"
@@ -94,7 +93,6 @@ func checkVersion() {
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
 		{"gopkg.in/macaron.v1", macaron.Version, "1.1.7"},
 		{"github.com/go-gitea/git", git.Version, "0.4.1"},
-		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.1"},
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
