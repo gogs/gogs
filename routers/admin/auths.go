@@ -49,9 +49,9 @@ type dropdownItem struct {
 var (
 	authSources = []dropdownItem{
 		{models.LoginNames[models.LoginLdap], models.LoginLdap},
-		{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
-		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
-		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
+		{models.LoginNames[models.LoginDldap], models.LoginDldap},
+		{models.LoginNames[models.LoginSmtp], models.LoginSmtp},
+		{models.LoginNames[models.LoginPam], models.LoginPam},
 	}
 	securityProtocols = []dropdownItem{
 		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
@@ -125,13 +125,13 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	hasTLS := false
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LoginLdap, models.LOGIN_DLDAP:
+	case models.LoginLdap, models.LoginDldap:
 		config = parseLDAPConfig(form)
 		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
-	case models.LOGIN_SMTP:
+	case models.LoginSmtp:
 		config = parseSMTPConfig(form)
 		hasTLS = true
-	case models.LOGIN_PAM:
+	case models.LoginPam:
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
@@ -208,11 +208,11 @@ func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LoginLdap, models.LOGIN_DLDAP:
+	case models.LoginLdap, models.LoginDldap:
 		config = parseLDAPConfig(form)
-	case models.LOGIN_SMTP:
+	case models.LoginSmtp:
 		config = parseSMTPConfig(form)
-	case models.LOGIN_PAM:
+	case models.LoginPam:
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
