@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	HOOKS        base.TplName = "repo/settings/hooks"
-	HookNew     base.TplName = "repo/settings/hook_new"
-	ORG_HookNew base.TplName = "org/settings/hook_new"
+	tplHooks      base.TplName = "repo/settings/hooks"
+	tplHookNew    base.TplName = "repo/settings/hook_new"
+	tplOrgHookNew base.TplName = "org/settings/hook_new"
 )
 
 func Webhooks(ctx *context.Context) {
@@ -41,7 +41,7 @@ func Webhooks(ctx *context.Context) {
 	}
 	ctx.Data["Webhooks"] = ws
 
-	ctx.HTML(200, HOOKS)
+	ctx.HTML(200, tplHooks)
 }
 
 type OrgRepoCtx struct {
@@ -57,7 +57,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 		return &OrgRepoCtx{
 			RepoID:      ctx.Repo.Repository.ID,
 			Link:        ctx.Repo.RepoLink,
-			NewTemplate: HookNew,
+			NewTemplate: tplHookNew,
 		}, nil
 	}
 
@@ -65,7 +65,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 		return &OrgRepoCtx{
 			OrgID:       ctx.Org.Organization.ID,
 			Link:        ctx.Org.OrgLink,
-			NewTemplate: ORG_HookNew,
+			NewTemplate: tplOrgHookNew,
 		}, nil
 	}
 
@@ -134,7 +134,7 @@ func WebHooksNewPost(ctx *context.Context, form auth.NewWebhookForm) {
 		return
 	}
 
-	contentType := models.ContentTypeJson
+	contentType := models.ContentTypeJSON
 	if models.HookContentType(form.ContentType) == models.ContentTypeForm {
 		contentType = models.ContentTypeForm
 	}
@@ -192,7 +192,7 @@ func SlackHooksNewPost(ctx *context.Context, form auth.NewSlackHookForm) {
 	w := &models.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          form.PayloadURL,
-		ContentType:  models.ContentTypeJson,
+		ContentType:  models.ContentTypeJSON,
 		HookEvent:    ParseHookEvent(form.WebhookForm),
 		IsActive:     form.Active,
 		HookTaskType: models.SLACK,
@@ -281,7 +281,7 @@ func WebHooksEditPost(ctx *context.Context, form auth.NewWebhookForm) {
 		return
 	}
 
-	contentType := models.ContentTypeJson
+	contentType := models.ContentTypeJSON
 	if models.HookContentType(form.ContentType) == models.ContentTypeForm {
 		contentType = models.ContentTypeForm
 	}
