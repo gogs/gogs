@@ -43,7 +43,8 @@ func EncodeSha1(str string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// ShortSha is basically just truncating. It is DEPRECATED and will be removed in the future.
+// ShortSha is basically just truncating.
+// It is DEPRECATED and will be removed in the future.
 func ShortSha(sha1 string) string {
 	return TruncateString(sha1, 10)
 }
