@@ -17,7 +17,7 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"github.com/go-gitea/git"
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/go-gitea/go-sdk/gitea"
 
 	"github.com/go-gitea/gitea/modules/base"
 	"github.com/go-gitea/gitea/modules/log"

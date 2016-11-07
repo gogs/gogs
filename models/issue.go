@@ -16,7 +16,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/go-gitea/go-sdk/gitea"
 	gouuid "github.com/satori/go.uuid"
 
 	"github.com/go-gitea/gitea/modules/base"

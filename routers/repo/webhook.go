@@ -13,7 +13,7 @@ import (
 	"github.com/Unknwon/com"
 
 	"github.com/go-gitea/git"
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/go-gitea/go-sdk/gitea"
 
 	"github.com/go-gitea/gitea/models"
 	"github.com/go-gitea/gitea/modules/auth"
