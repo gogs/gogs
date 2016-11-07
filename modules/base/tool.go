@@ -16,6 +16,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -491,7 +492,7 @@ func StringsToInt64s(strs []string) []int64 {
 func Int64sToStrings(ints []int64) []string {
 	strs := make([]string, len(ints))
 	for i := range ints {
-		strs[i] = com.ToStr(ints[i])
+		strs[i] = strconv.FormatInt(ints[i], 10)
 	}
 	return strs
 }

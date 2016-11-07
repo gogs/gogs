@@ -9,11 +9,17 @@ import (
 )
 
 func TestEncodeMD5(t *testing.T) {
-	assert.Equal(t, "3858f62230ac3c915f300c664312c63f", EncodeMD5("foobar"))
+	assert.Equal(t,
+		"3858f62230ac3c915f300c664312c63f",
+		EncodeMD5("foobar"),
+	)
 }
 
 func TestEncodeSha1(t *testing.T) {
-	assert.Equal(t, "8843d7f92416211de9ebb963ff4ce28125932878", EncodeSha1("foobar"))
+	assert.Equal(t,
+		"8843d7f92416211de9ebb963ff4ce28125932878",
+		EncodeSha1("foobar"),
+	)
 }
 
 func TestShortSha(t *testing.T) {
@@ -45,8 +51,14 @@ func TestGetRandomString(t *testing.T) {
 // TODO: Test CreateTimeLimitCode()
 
 func TestHashEmail(t *testing.T) {
-	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", HashEmail(""))
-	assert.Equal(t, "353cbad9b58e69c96154ad99f92bedc7", HashEmail("gitea@example.com"))
+	assert.Equal(t,
+		"d41d8cd98f00b204e9800998ecf8427e",
+		HashEmail(""),
+	)
+	assert.Equal(t,
+		"353cbad9b58e69c96154ad99f92bedc7",
+		HashEmail("gitea@example.com"),
+	)
 }
 
 func TestAvatarLink(t *testing.T) {
@@ -57,10 +69,16 @@ func TestAvatarLink(t *testing.T) {
 	assert.Equal(t, "/img/avatar_default.png", AvatarLink(""))
 
 	setting.DisableGravatar = false
-	assert.Equal(t, "353cbad9b58e69c96154ad99f92bedc7", AvatarLink("gitea@example.com"))
+	assert.Equal(t,
+		"353cbad9b58e69c96154ad99f92bedc7",
+		AvatarLink("gitea@example.com"),
+	)
 
 	setting.EnableFederatedAvatar = true
-	assert.Equal(t, "353cbad9b58e69c96154ad99f92bedc7", AvatarLink("gitea@example.com"))
+	assert.Equal(t,
+		"353cbad9b58e69c96154ad99f92bedc7",
+		AvatarLink("gitea@example.com"),
+	)
 	setting.LibravatarService = libravatar.New()
 	assert.Equal(t,
 		"http://cdn.libravatar.org/avatar/353cbad9b58e69c96154ad99f92bedc7",
@@ -116,8 +134,25 @@ func TestTruncateString(t *testing.T) {
 	assert.Equal(t, "foobar", TruncateString("foobar", 7))
 }
 
-// TODO: StringsToInt64s()
-// TODO: Int64sToStrings()
+func TestStringsToInt64s(t *testing.T) {
+	assert.Equal(t, []int64{}, StringsToInt64s([]string{}))
+	assert.Equal(t,
+		[]int64{1, 4, 16, 64, 256},
+		StringsToInt64s([]string{"1", "4", "16", "64", "256"}),
+	)
+
+	// TODO: StringsToInt64s should return ([]int64, error)
+	assert.Equal(t, []int64{-1, 0, 0}, StringsToInt64s([]string{"-1", "a", "$"}))
+}
+
+func TestInt64sToStrings(t *testing.T) {
+	assert.Equal(t, []string{}, Int64sToStrings([]int64{}))
+	assert.Equal(t,
+		[]string{"1", "4", "16", "64", "256"},
+		Int64sToStrings([]int64{1, 4, 16, 64, 256}),
+	)
+}
+
 // TODO: Int64sToMap()
 // TODO: IsLetter()
 // TODO: IsTextFile()
