@@ -27,7 +27,7 @@ type PullRequestType int
 
 const (
 	PULL_REQUEST_GITEA PullRequestType = iota
-	PLLL_ERQUEST_GIT
+	PULL_REQUEST_GIT
 )
 
 type PullRequestStatus int
