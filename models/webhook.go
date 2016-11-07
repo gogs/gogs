@@ -77,8 +77,8 @@ type HookStatus int
 
 const (
 	HOOK_STATUS_NONE = iota
-	HOOK_STATUS_SUCCEED
-	HOOK_STATUS_FAILED
+	HookStatusSucceed
+	HookStatusFail
 )
 
 // Webhook represents a web hook object.
@@ -323,9 +323,9 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	HOOK_EVENT_CREATE       HookEventType = "create"
-	HOOK_EVENT_PUSH         HookEventType = "push"
-	HOOK_EVENT_PULL_REQUEST HookEventType = "pull_request"
+	HookEventCreate       HookEventType = "create"
+	HookEventPush         HookEventType = "push"
+	HookEventPullRequest HookEventType = "pull_request"
 )
 
 // HookRequest represents hook task request information.
@@ -459,15 +459,15 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	var payloader api.Payloader
 	for _, w := range ws {
 		switch event {
-		case HOOK_EVENT_CREATE:
+		case HookEventCreate:
 			if !w.HasCreateEvent() {
 				continue
 			}
-		case HOOK_EVENT_PUSH:
+		case HookEventPush:
 			if !w.HasPushEvent() {
 				continue
 			}
-		case HOOK_EVENT_PULL_REQUEST:
+		case HookEventPullRequest:
 			if !w.HasPullRequestEvent() {
 				continue
 			}
@@ -544,9 +544,9 @@ func (t *HookTask) deliver() {
 			return
 		}
 		if t.IsSucceed {
-			w.LastStatus = HOOK_STATUS_SUCCEED
+			w.LastStatus = HookStatusSucceed
 		} else {
-			w.LastStatus = HOOK_STATUS_FAILED
+			w.LastStatus = HookStatusFail
 		}
 		if err = UpdateWebhook(w); err != nil {
 			log.Error(5, "UpdateWebhook: %v", err)

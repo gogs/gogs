@@ -198,15 +198,15 @@ func (p *PushPayload) Branch() string {
 type HookIssueAction string
 
 const (
-	HOOK_ISSUE_OPENED        HookIssueAction = "opened"
-	HOOK_ISSUE_CLOSED        HookIssueAction = "closed"
-	HOOK_ISSUE_REOPENED      HookIssueAction = "reopened"
-	HOOK_ISSUE_EDITED        HookIssueAction = "edited"
-	HOOK_ISSUE_ASSIGNED      HookIssueAction = "assigned"
-	HOOK_ISSUE_UNASSIGNED    HookIssueAction = "unassigned"
-	HOOK_ISSUE_LABEL_UPDATED HookIssueAction = "label_updated"
-	HOOK_ISSUE_LABEL_CLEARED HookIssueAction = "label_cleared"
-	HOOK_ISSUE_SYNCHRONIZED  HookIssueAction = "synchronized"
+	HookIssueOpened        HookIssueAction = "opened"
+	HookIssueClosed        HookIssueAction = "closed"
+	HookIssueReopened      HookIssueAction = "reopened"
+	HookIssueEdited        HookIssueAction = "edited"
+	HookIssueAssigned      HookIssueAction = "assigned"
+	HookIssueUnassigned    HookIssueAction = "unassigned"
+	HookIssueLabelUpdated HookIssueAction = "label_updated"
+	HookIssueLabelCleared HookIssueAction = "label_cleared"
+	HookIssueSynchronized  HookIssueAction = "synchronized"
 )
 
 type ChangesFromPayload struct {

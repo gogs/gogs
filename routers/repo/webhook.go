@@ -383,7 +383,7 @@ func TestWebhook(ctx *context.Context) {
 		Pusher: apiUser,
 		Sender: apiUser,
 	}
-	if err := models.PrepareWebhooks(ctx.Repo.Repository, models.HOOK_EVENT_PUSH, p); err != nil {
+	if err := models.PrepareWebhooks(ctx.Repo.Repository, models.HookEventPush, p); err != nil {
 		ctx.Flash.Error("PrepareWebhooks: " + err.Error())
 		ctx.Status(500)
 	} else {

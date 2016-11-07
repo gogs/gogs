@@ -144,11 +144,11 @@ func (cmt *Comment) MailParticipants(opType ActionType, issue *Issue) (err error
 	}
 
 	switch opType {
-	case ACTION_COMMENT_ISSUE:
+	case ActionCommentIssue:
 		issue.Content = cmt.Content
-	case ACTION_CLOSE_ISSUE:
+	case ActionCloseIssue:
 		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
-	case ACTION_REOPEN_ISSUE:
+	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
 	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
@@ -188,7 +188,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Check comment type.
 	switch opts.Type {
 	case COMMENT_TYPE_COMMENT:
-		act.OpType = ACTION_COMMENT_ISSUE
+		act.OpType = ActionCommentIssue
 
 		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
 			return nil, err
@@ -217,9 +217,9 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		}
 
 	case COMMENT_TYPE_REOPEN:
-		act.OpType = ACTION_REOPEN_ISSUE
+		act.OpType = ActionReopenIssue
 		if opts.Issue.IsPull {
-			act.OpType = ACTION_REOPEN_PULL_REQUEST
+			act.OpType = ActionReopenPullRequest
 		}
 
 		if opts.Issue.IsPull {
@@ -232,9 +232,9 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		}
 
 	case COMMENT_TYPE_CLOSE:
-		act.OpType = ACTION_CLOSE_ISSUE
+		act.OpType = ActionCloseIssue
 		if opts.Issue.IsPull {
-			act.OpType = ACTION_CLOSE_PULL_REQUEST
+			act.OpType = ActionClosePullRequest
 		}
 
 		if opts.Issue.IsPull {
