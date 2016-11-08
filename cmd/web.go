@@ -36,6 +36,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/lfs"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
@@ -99,7 +100,7 @@ func checkVersion() {
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
 			log.Fatal(4, `Dependency outdated!
-Package '%s' current version (%s) is below requirement (%s), 
+Package '%s' current version (%s) is below requirement (%s),
 please use following command to update this package and recompile Gogs:
 go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 		}
@@ -604,6 +605,11 @@ func runWeb(ctx *cli.Context) error {
 		}, ignSignIn, context.RepoAssignment(true), context.RepoRef())
 
 		m.Group("/:reponame", func() {
+			m.Group("/info/lfs", func() {
+				m.Post("/objects/batch", lfs.BatchHandler)
+				m.Any("/objects/:oid", lfs.ObjectOidHandler)
+				m.Post("/objects", lfs.PostHandler)
+			}, ignSignInAndCsrf)
 			m.Any("/*", ignSignInAndCsrf, repo.HTTP)
 			m.Head("/tasks/trigger", repo.TriggerTask)
 		})

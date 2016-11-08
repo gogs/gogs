@@ -28,6 +28,7 @@ import (
 
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"io"
 )
 
 // EncodeMD5 encodes string to md5 hex value.
@@ -94,6 +95,18 @@ func GetRandomString(n int, alphabets ...byte) string {
 		}
 	}
 	return string(bytes)
+}
+
+// GetRandomBytes generates a random base64 string from n bytes
+func GetRandomBytesAsBase64(n int) string {
+	bytes := make([]byte, 32)
+	_, err := io.ReadFull(rand.Reader, bytes)
+
+	if err != nil {
+		log.Fatal(4, "Error reading random bytes: %s", err)
+	}
+
+	return base64.RawURLEncoding.EncodeToString(bytes)
 }
 
 // http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
