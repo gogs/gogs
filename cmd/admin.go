@@ -37,11 +37,13 @@ to make automatic initialization process more smoothly`,
 			},
 			cli.StringFlag{
 				Name:  "password",
-				Value: "", Usage: "User password",
+				Value: "",
+				Usage: "User password",
 			},
 			cli.StringFlag{
 				Name:  "email",
-				Value: "", Usage: "User email address",
+				Value: "",
+				Usage: "User email address",
 			},
 			cli.BoolFlag{
 				Name:  "admin",
