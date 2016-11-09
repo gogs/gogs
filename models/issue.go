@@ -94,12 +94,12 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Poster == nil {
 		issue.Poster, err = getUserByID(e, issue.PosterID)
 		if err != nil {
-			if IsErrUserNotExist(err) {
-				issue.PosterID = -1
-				issue.Poster = NewGhostUser()
-			} else {
+			issue.PosterID = -1
+			issue.Poster = NewGhostUser()
+			if !IsErrUserNotExist(err) {
 				return fmt.Errorf("getUserByID.(poster) [%d]: %v", issue.PosterID, err)
 			}
+			err = nil
 			return
 		}
 	}
