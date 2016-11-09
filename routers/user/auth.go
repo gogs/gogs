@@ -127,6 +127,13 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	// Clear whatever CSRF has right now, force to generate a new one
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
 
+	// Register last login
+	u.SetLastLogin()
+	if err := models.UpdateUser(u); err != nil {
+	    ctx.Handle(500, "UpdateUser", err)
+	    return
+	}
+
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
 		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 		ctx.Redirect(redirectTo)

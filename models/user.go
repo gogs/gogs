@@ -75,6 +75,8 @@ type User struct {
 	CreatedUnix int64
 	Updated     time.Time `xorm:"-"`
 	UpdatedUnix int64
+	LastLogin     time.Time `xorm:"-"`
+	LastLoginUnix int64
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
@@ -119,6 +121,11 @@ func (u *User) BeforeUpdate() {
 	u.UpdatedUnix = time.Now().Unix()
 }
 
+// Set time to last login
+func (u *User) SetLastLogin() {
+	u.LastLoginUnix = time.Now().Unix()
+}
+
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "full_name":
@@ -127,6 +134,8 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 		u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
+	case "last_login_unix":
+		u.LastLogin = time.Unix(u.LastLoginUnix, 0).Local()
 	}
 }
 
