@@ -15,14 +15,13 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-gitea/git"
-	gouuid "github.com/satori/go.uuid"
-	"github.com/urfave/cli"
-
 	"github.com/go-gitea/gitea/models"
 	"github.com/go-gitea/gitea/modules/base"
 	"github.com/go-gitea/gitea/modules/httplib"
 	"github.com/go-gitea/gitea/modules/log"
 	"github.com/go-gitea/gitea/modules/setting"
+	gouuid "github.com/satori/go.uuid"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -36,7 +35,11 @@ var CmdServ = cli.Command{
 	Description: `Serv provide access auth for repositories`,
 	Action:      runServ,
 	Flags: []cli.Flag{
-		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+		cli.StringFlag{
+			Name:  "config, c",
+			Value: "custom/conf/app.ini",
+			Usage: "Custom configuration file path",
+		},
 	},
 }
 
