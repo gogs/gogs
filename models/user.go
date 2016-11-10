@@ -859,7 +859,7 @@ func UserPath(userName string) string {
 
 func GetUserByKeyID(keyID int64) (*User, error) {
 	user := new(User)
-	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
+	has, err := x.SQL("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
