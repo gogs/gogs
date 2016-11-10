@@ -13,7 +13,6 @@ import (
 	"github.com/go-xorm/xorm"
 
 	"code.gitea.io/gitea/modules/base"
-	"code.gitea.io/gitea/modules/log"
 )
 
 var (
