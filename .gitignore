@@ -7,6 +7,9 @@
 _obj
 _test
 
+# IntelliJ
+.idea
+
 # Architecture specific extensions/prefixes
 *.[568vq]
 [568vq].out
