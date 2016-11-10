@@ -199,16 +199,18 @@ func MirrorUpdate() {
 
 	log.Trace("Doing: MirrorUpdate")
 
-	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean interface{}) error {
-		m := bean.(*Mirror)
-		if m.Repo == nil {
-			log.Error(4, "Disconnected mirror repository found: %d", m.ID)
-			return nil
-		}
+	if err := x.
+		Where("next_update_unix<=?", time.Now().Unix()).
+		Iterate(new(Mirror), func(idx int, bean interface{}) error {
+			m := bean.(*Mirror)
+			if m.Repo == nil {
+				log.Error(4, "Disconnected mirror repository found: %d", m.ID)
+				return nil
+			}
 
-		MirrorQueue.Add(m.RepoID)
-		return nil
-	}); err != nil {
+			MirrorQueue.Add(m.RepoID)
+			return nil
+		}); err != nil {
 		log.Error(4, "MirrorUpdate: %v", err)
 	}
 }

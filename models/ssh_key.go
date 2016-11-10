@@ -398,7 +398,9 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 	}
 
 	// Key name of same user cannot be duplicated.
-	has, err := x.Where("owner_id = ? AND name = ?", ownerID, name).Get(new(PublicKey))
+	has, err := x.
+		Where("owner_id = ? AND name = ?", ownerID, name).
+		Get(new(PublicKey))
 	if err != nil {
 		return nil, err
 	} else if has {
@@ -428,7 +430,9 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 // GetPublicKeyByID returns public key by given ID.
 func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
 	key := new(PublicKey)
-	has, err := x.Id(keyID).Get(key)
+	has, err := x.
+		Id(keyID).
+		Get(key)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -441,7 +445,9 @@ func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
 // and returns public key found.
 func SearchPublicKeyByContent(content string) (*PublicKey, error) {
 	key := new(PublicKey)
-	has, err := x.Where("content like ?", content+"%").Get(key)
+	has, err := x.
+		Where("content like ?", content+"%").
+		Get(key)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -453,7 +459,9 @@ func SearchPublicKeyByContent(content string) (*PublicKey, error) {
 // ListPublicKeys returns a list of public keys belongs to given user.
 func ListPublicKeys(uid int64) ([]*PublicKey, error) {
 	keys := make([]*PublicKey, 0, 5)
-	return keys, x.Where("owner_id = ?", uid).Find(&keys)
+	return keys, x.
+		Where("owner_id = ?", uid).
+		Find(&keys)
 }
 
 // UpdatePublicKey updates given public key.
@@ -595,14 +603,18 @@ func (k *DeployKey) GetContent() error {
 
 func checkDeployKey(e Engine, keyID, repoID int64, name string) error {
 	// Note: We want error detail, not just true or false here.
-	has, err := e.Where("key_id = ? AND repo_id = ?", keyID, repoID).Get(new(DeployKey))
+	has, err := e.
+		Where("key_id = ? AND repo_id = ?", keyID, repoID).
+		Get(new(DeployKey))
 	if err != nil {
 		return err
 	} else if has {
 		return ErrDeployKeyAlreadyExist{keyID, repoID}
 	}
 
-	has, err = e.Where("repo_id = ? AND name = ?", repoID, name).Get(new(DeployKey))
+	has, err = e.
+		Where("repo_id = ? AND name = ?", repoID, name).
+		Get(new(DeployKey))
 	if err != nil {
 		return err
 	} else if has {
@@ -630,7 +642,9 @@ func addDeployKey(e *xorm.Session, keyID, repoID int64, name, fingerprint string
 
 // HasDeployKey returns true if public key is a deploy key of given repository.
 func HasDeployKey(keyID, repoID int64) bool {
-	has, _ := x.Where("key_id = ? AND repo_id = ?", keyID, repoID).Get(new(DeployKey))
+	has, _ := x.
+		Where("key_id = ? AND repo_id = ?", keyID, repoID).
+		Get(new(DeployKey))
 	return has
 }
 
@@ -739,7 +753,9 @@ func DeleteDeployKey(doer *User, id int64) error {
 	}
 
 	// Check if this is the last reference to same key content.
-	has, err := sess.Where("key_id = ?", key.KeyID).Get(new(DeployKey))
+	has, err := sess.
+		Where("key_id = ?", key.KeyID).
+		Get(new(DeployKey))
 	if err != nil {
 		return err
 	} else if !has {
@@ -754,5 +770,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 // ListDeployKeys returns all deploy keys by given repository ID.
 func ListDeployKeys(repoID int64) ([]*DeployKey, error) {
 	keys := make([]*DeployKey, 0, 5)
-	return keys, x.Where("repo_id = ?", repoID).Find(&keys)
+	return keys, x.
+		Where("repo_id = ?", repoID).
+		Find(&keys)
 }

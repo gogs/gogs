@@ -387,7 +387,9 @@ func DeleteUploads(uploads ...*Upload) (err error) {
 	for i := 0; i < len(uploads); i++ {
 		ids[i] = uploads[i].ID
 	}
-	if _, err = sess.In("id", ids).Delete(new(Upload)); err != nil {
+	if _, err = sess.
+		In("id", ids).
+		Delete(new(Upload)); err != nil {
 		return fmt.Errorf("delete uploads: %v", err)
 	}
 

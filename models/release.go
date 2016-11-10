@@ -127,7 +127,9 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 // GetReleaseByID returns release with given ID.
 func GetReleaseByID(id int64) (*Release, error) {
 	rel := new(Release)
-	has, err := x.Id(id).Get(rel)
+	has, err := x.
+		Id(id).
+		Get(rel)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -142,7 +144,10 @@ func GetReleasesByRepoID(repoID int64, page, pageSize int) (rels []*Release, err
 	if page <= 0 {
 		page = 1
 	}
-	err = x.Desc("created_unix").Limit(pageSize, (page-1)*pageSize).Find(&rels, Release{RepoID: repoID})
+	err = x.
+		Desc("created_unix").
+		Limit(pageSize, (page-1)*pageSize).
+		Find(&rels, Release{RepoID: repoID})
 	return rels, err
 }
 

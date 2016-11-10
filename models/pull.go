@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/go-gitea/git"
 	"github.com/go-gitea/gitea/modules/log"
 	"github.com/go-gitea/gitea/modules/process"
 	"github.com/go-gitea/gitea/modules/setting"
 	"github.com/go-gitea/gitea/modules/sync"
-	"github.com/go-xorm/xorm"
-	"github.com/go-gitea/git"
 	api "github.com/go-gitea/go-sdk/gitea"
+	"github.com/go-xorm/xorm"
 )
 
 var PullRequestQueue = sync.NewUniqueQueue(setting.Repository.PullRequestQueueLength)
@@ -462,9 +462,11 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 // by given head/base and repo/branch.
 func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch string) (*PullRequest, error) {
 	pr := new(PullRequest)
-	has, err := x.Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
-		headRepoID, headBranch, baseRepoID, baseBranch, false, false).
-		Join("INNER", "issue", "issue.id=pull_request.issue_id").Get(pr)
+	has, err := x.
+		Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
+			headRepoID, headBranch, baseRepoID, baseBranch, false, false).
+		Join("INNER", "issue", "issue.id=pull_request.issue_id").
+		Get(pr)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -478,18 +480,22 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 // by given head information (repo and branch).
 func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
-	return prs, x.Where("head_repo_id = ? AND head_branch = ? AND has_merged = ? AND issue.is_closed = ?",
-		repoID, branch, false, false).
-		Join("INNER", "issue", "issue.id = pull_request.issue_id").Find(&prs)
+	return prs, x.
+		Where("head_repo_id = ? AND head_branch = ? AND has_merged = ? AND issue.is_closed = ?",
+			repoID, branch, false, false).
+		Join("INNER", "issue", "issue.id = pull_request.issue_id").
+		Find(&prs)
 }
 
 // GetUnmergedPullRequestsByBaseInfo returnss all pull requests that are open and has not been merged
 // by given base information (repo and branch).
 func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequest, error) {
 	prs := make([]*PullRequest, 0, 2)
-	return prs, x.Where("base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
-		repoID, branch, false, false).
-		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
+	return prs, x.
+		Where("base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
+			repoID, branch, false, false).
+		Join("INNER", "issue", "issue.id=pull_request.issue_id").
+		Find(&prs)
 }
 
 func getPullRequestByID(e Engine, id int64) (*PullRequest, error) {
@@ -638,7 +644,10 @@ func (prs PullRequestList) loadAttributes(e Engine) error {
 		issueIDs = append(issueIDs, prs[i].IssueID)
 	}
 	issues := make([]*Issue, 0, len(issueIDs))
-	if err := e.Where("id > 0").In("id", issueIDs).Find(&issues); err != nil {
+	if err := e.
+		Where("id > 0").
+		In("id", issueIDs).
+		Find(&issues); err != nil {
 		return fmt.Errorf("find issues: %v", err)
 	}
 
@@ -725,7 +734,10 @@ func ChangeUsernameInPullRequests(oldUserName, newUserName string) error {
 	pr := PullRequest{
 		HeadUserName: strings.ToLower(newUserName),
 	}
-	_, err := x.Cols("head_user_name").Where("head_user_name = ?", strings.ToLower(oldUserName)).Update(pr)
+	_, err := x.
+		Cols("head_user_name").
+		Where("head_user_name = ?", strings.ToLower(oldUserName)).
+		Update(pr)
 	return err
 }
 

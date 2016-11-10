@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	MailAuthActivate        base.TplName = "auth/activate"
+	MailAuthActivate       base.TplName = "auth/activate"
 	MailAuthActivateEmail  base.TplName = "auth/activate_email"
 	MailAuthResetPassword  base.TplName = "auth/reset_passwd"
 	MailAuthRegisterNotify base.TplName = "auth/register_notify"
