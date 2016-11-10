@@ -15,6 +15,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/go-gitea/git"
 	"github.com/go-gitea/gitea/models"
 	"github.com/go-gitea/gitea/modules/auth"
 	"github.com/go-gitea/gitea/modules/bindata"
@@ -38,7 +39,6 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
 	"github.com/go-xorm/xorm"
-	"github.com/go-gitea/git"
 	version "github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
 	ini "gopkg.in/ini.v1"
@@ -53,8 +53,16 @@ var CmdWeb = cli.Command{
 and it takes care of all the other things for you`,
 	Action: runWeb,
 	Flags: []cli.Flag{
-		stringFlag("port, p", "3000", "Temporary port number to prevent conflict"),
-		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+		cli.StringFlag{
+			Name:  "port, p",
+			Value: "3000",
+			Usage: "Temporary port number to prevent conflict",
+		},
+		cli.StringFlag{
+			Name:  "config, c",
+			Value: "custom/conf/app.ini",
+			Usage: "Custom configuration file path",
+		},
 	},
 }
 
