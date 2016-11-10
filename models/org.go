@@ -12,7 +12,8 @@ import (
 
 	"github.com/go-xorm/xorm"
 
-	"github.com/go-gitea/gitea/modules/base"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/log"
 )
 
 var (
