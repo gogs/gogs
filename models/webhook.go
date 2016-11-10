@@ -276,7 +276,10 @@ func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 
 // GetActiveWebhooksByOrgID returns all active webhooks for an organization.
 func GetActiveWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
-	err = x.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
+	err = x.
+		Where("org_id=?", orgID).
+		And("is_active=?", true).
+		Find(&ws)
 	return ws, err
 }
 
@@ -323,8 +326,8 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	HookEventCreate       HookEventType = "create"
-	HookEventPush         HookEventType = "push"
+	HookEventCreate      HookEventType = "create"
+	HookEventPush        HookEventType = "push"
 	HookEventPullRequest HookEventType = "pull_request"
 )
 
@@ -413,7 +416,11 @@ func (t *HookTask) SimpleMarshalJSON(v interface{}) string {
 // HookTasks returns a list of hook tasks by given conditions.
 func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 	tasks := make([]*HookTask, 0, setting.Webhook.PagingNum)
-	return tasks, x.Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
+	return tasks, x.
+		Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).
+		Where("hook_id=?", hookID).
+		Desc("id").
+		Find(&tasks)
 }
 
 // CreateHookTask creates a new hook task,
@@ -580,13 +587,15 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	x.Where("is_delivered=?", false).Iterate(new(HookTask),
-		func(idx int, bean interface{}) error {
-			t := bean.(*HookTask)
-			t.deliver()
-			tasks = append(tasks, t)
-			return nil
-		})
+	x.
+		Where("is_delivered=?", false).
+		Iterate(new(HookTask),
+			func(idx int, bean interface{}) error {
+				t := bean.(*HookTask)
+				t.deliver()
+				tasks = append(tasks, t)
+				return nil
+			})
 
 	// Update hook task status.
 	for _, t := range tasks {

@@ -27,19 +27,19 @@ import (
 type ActionType int
 
 const (
-	ActionCreateRepo         ActionType = iota + 1 // 1
-	ActionRenameRepo                               // 2
-	ActionStarRepo                                 // 3
-	ActionWatchRepo                                // 4
-	ActionCommitRepo                               // 5
-	ActionCreateIssue                              // 6
+	ActionCreateRepo        ActionType = iota + 1 // 1
+	ActionRenameRepo                              // 2
+	ActionStarRepo                                // 3
+	ActionWatchRepo                               // 4
+	ActionCommitRepo                              // 5
+	ActionCreateIssue                             // 6
 	ActionCreatePullRequest                       // 7
-	ActionTransferRepo                             // 8
-	ActionPushTag                                  // 9
-	ActionCommentIssue                             // 10
+	ActionTransferRepo                            // 8
+	ActionPushTag                                 // 9
+	ActionCommentIssue                            // 10
 	ActionMergePullRequest                        // 11
-	ActionCloseIssue                               // 12
-	ActionReopenIssue                              // 13
+	ActionCloseIssue                              // 12
+	ActionReopenIssue                             // 13
 	ActionClosePullRequest                        // 14
 	ActionReopenPullRequest                       // 15
 )
@@ -591,9 +591,14 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 // actorID can be -1 when isProfile is true or to skip the permission check.
 func GetFeeds(ctxUser *User, actorID, offset int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, 20)
-	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id = ?", ctxUser.ID)
+	sess := x.
+		Limit(20, int(offset)).
+		Desc("id").
+		Where("user_id = ?", ctxUser.ID)
 	if isProfile {
-		sess.And("is_private = ?", false).And("act_user_id = ?", ctxUser.ID)
+		sess.
+			And("is_private = ?", false).
+			And("act_user_id = ?", ctxUser.ID)
 	} else if actorID != -1 && ctxUser.IsOrganization() {
 		// FIXME: only need to get IDs here, not all fields of repository.
 		repos, _, err := ctxUser.GetUserRepositories(actorID, 1, ctxUser.NumRepos)

@@ -71,10 +71,10 @@ type User struct {
 	Rands       string `xorm:"VARCHAR(10)"`
 	Salt        string `xorm:"VARCHAR(10)"`
 
-	Created     time.Time `xorm:"-"`
-	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
-	UpdatedUnix int64
+	Created       time.Time `xorm:"-"`
+	CreatedUnix   int64
+	Updated       time.Time `xorm:"-"`
+	UpdatedUnix   int64
 	LastLogin     time.Time `xorm:"-"`
 	LastLoginUnix int64
 
@@ -288,7 +288,9 @@ func (u *User) AvatarLink() string {
 // User.GetFollwoers returns range of user's followers.
 func (u *User) GetFollowers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.follow_id=?", u.ID)
+	sess := x.
+		Limit(ItemsPerPage, (page-1)*ItemsPerPage).
+		Where("follow.follow_id=?", u.ID)
 	if setting.UsePostgreSQL {
 		sess = sess.Join("LEFT", "follow", `"user".id=follow.user_id`)
 	} else {
@@ -304,7 +306,9 @@ func (u *User) IsFollowing(followID int64) bool {
 // GetFollowing returns range of user's following.
 func (u *User) GetFollowing(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
-	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.user_id=?", u.ID)
+	sess := x.
+		Limit(ItemsPerPage, (page-1)*ItemsPerPage).
+		Where("follow.user_id=?", u.ID)
 	if setting.UsePostgreSQL {
 		sess = sess.Join("LEFT", "follow", `"user".id=follow.follow_id`)
 	} else {
@@ -416,7 +420,9 @@ func (u *User) IsPublicMember(orgId int64) bool {
 }
 
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
-	return e.Where("uid=?", u.ID).Count(new(OrgUser))
+	return e.
+		Where("uid=?", u.ID).
+		Count(new(OrgUser))
 }
 
 // GetOrganizationCount returns count of membership of organization of user.
@@ -479,7 +485,9 @@ func IsUserExist(uid int64, name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return x.Where("id!=?", uid).Get(&User{LowerName: strings.ToLower(name)})
+	return x.
+		Where("id!=?", uid).
+		Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // GetUserSalt returns a ramdom user salt token.
@@ -575,7 +583,9 @@ func CreateUser(u *User) (err error) {
 }
 
 func countUsers(e Engine) int64 {
-	count, _ := e.Where("type=0").Count(new(User))
+	count, _ := e.
+		Where("type=0").
+		Count(new(User))
 	return count
 }
 
@@ -587,7 +597,11 @@ func CountUsers() int64 {
 // Users returns number of users in given page.
 func Users(page, pageSize int) ([]*User, error) {
 	users := make([]*User, 0, pageSize)
-	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("name").Find(&users)
+	return users, x.
+		Limit(pageSize, (page-1)*pageSize).
+		Where("type=0").
+		Asc("name").
+		Find(&users)
 }
 
 // get user by erify code
@@ -661,11 +675,13 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 	}
 
 	// Delete all local copies of repository wiki that user owns.
-	if err = x.Where("owner_id=?", u.ID).Iterate(new(Repository), func(idx int, bean interface{}) error {
-		repo := bean.(*Repository)
-		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
-		return nil
-	}); err != nil {
+	if err = x.
+		Where("owner_id=?", u.ID).
+		Iterate(new(Repository), func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
+			return nil
+		}); err != nil {
 		return fmt.Errorf("Delete repository wiki local copy: %v", err)
 	}
 
@@ -676,7 +692,11 @@ func updateUser(e Engine, u *User) error {
 	// Organization does not need email
 	if !u.IsOrganization() {
 		u.Email = strings.ToLower(u.Email)
-		has, err := e.Where("id!=?", u.ID).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
+		has, err := e.
+			Where("id!=?", u.ID).
+			And("type=?", u.Type).
+			And("email=?", u.Email).
+			Get(new(User))
 		if err != nil {
 			return err
 		} else if has {
@@ -843,7 +863,9 @@ func DeleteUser(u *User) (err error) {
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
 func DeleteInactivateUsers() (err error) {
 	users := make([]*User, 0, 10)
-	if err = x.Where("is_active = ?", false).Find(&users); err != nil {
+	if err = x.
+		Where("is_active = ?", false).
+		Find(&users); err != nil {
 		return fmt.Errorf("get all inactive users: %v", err)
 	}
 	// FIXME: should only update authorized_keys file once after all deletions.
@@ -857,7 +879,9 @@ func DeleteInactivateUsers() (err error) {
 		}
 	}
 
-	_, err = x.Where("is_activated = ?", false).Delete(new(EmailAddress))
+	_, err = x.
+		Where("is_activated = ?", false).
+		Delete(new(EmailAddress))
 	return err
 }
 
@@ -868,13 +892,10 @@ func UserPath(userName string) string {
 
 func GetUserByKeyID(keyID int64) (*User, error) {
 	user := new(User)
-	has, err := x.SQL("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrUserNotKeyOwner
-	}
-	return user, nil
+	return user, x.
+		Join("INNER", "public_key", "`public_key`.owner_id = `user`.id").
+		Where("`public_key`.id=?", keyID).
+		Find(user)
 }
 
 func getUserByID(e Engine, id int64) (*User, error) {
@@ -935,7 +956,10 @@ func GetUserEmailsByNames(names []string) []string {
 // GetUsersByIDs returns all resolved users from a list of Ids.
 func GetUsersByIDs(ids []int64) ([]*User, error) {
 	ous := make([]*User, 0, len(ids))
-	err := x.In("id", ids).Asc("name").Find(&ous)
+	err := x.
+		In("id", ids).
+		Asc("name").
+		Find(&ous)
 	return ous, err
 }
 
@@ -1050,7 +1074,8 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 	searchQuery := "%" + opts.Keyword + "%"
 	users = make([]*User, 0, opts.PageSize)
 	// Append conditions
-	sess := x.Where("LOWER(lower_name) LIKE ?", searchQuery).
+	sess := x.
+		Where("LOWER(lower_name) LIKE ?", searchQuery).
 		Or("LOWER(full_name) LIKE ?", searchQuery).
 		And("type = ?", opts.Type)
 
@@ -1064,7 +1089,9 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 	if len(opts.OrderBy) > 0 {
 		sess.OrderBy(opts.OrderBy)
 	}
-	return users, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&users)
+	return users, count, sess.
+		Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).
+		Find(&users)
 }
 
 // ___________    .__  .__

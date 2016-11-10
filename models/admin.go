@@ -103,7 +103,10 @@ func CountNotices() int64 {
 // Notices returns number of notices in given page.
 func Notices(page, pageSize int) ([]*Notice, error) {
 	notices := make([]*Notice, 0, pageSize)
-	return notices, x.Limit(pageSize, (page-1)*pageSize).Desc("id").Find(&notices)
+	return notices, x.
+		Limit(pageSize, (page-1)*pageSize).
+		Desc("id").
+		Find(&notices)
 }
 
 // DeleteNotice deletes a system notice by given ID.
@@ -127,6 +130,8 @@ func DeleteNoticesByIDs(ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	_, err := x.Where("id IN (" + strings.Join(base.Int64sToStrings(ids), ",") + ")").Delete(new(Notice))
+	_, err := x.
+		Where("id IN (" + strings.Join(base.Int64sToStrings(ids), ",") + ")").
+		Delete(new(Notice))
 	return err
 }

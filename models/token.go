@@ -72,7 +72,10 @@ func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 // ListAccessTokens returns a list of access tokens belongs to given user.
 func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	tokens := make([]*AccessToken, 0, 5)
-	return tokens, x.Where("uid=?", uid).Desc("id").Find(&tokens)
+	return tokens, x.
+		Where("uid=?", uid).
+		Desc("id").
+		Find(&tokens)
 }
 
 // UpdateAccessToken updates information of access token.

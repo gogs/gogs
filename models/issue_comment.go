@@ -356,7 +356,9 @@ func GetCommentByID(id int64) (*Comment, error) {
 
 func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
 	comments := make([]*Comment, 0, 10)
-	sess := e.Where("issue_id = ?", issueID).Asc("created_unix")
+	sess := e.
+		Where("issue_id = ?", issueID).
+		Asc("created_unix")
 	if since > 0 {
 		sess.And("updated_unix >= ?", since)
 	}
