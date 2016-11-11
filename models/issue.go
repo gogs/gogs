@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	api "code.gitea.io/sdk/gitea"
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
-	api "code.gitea.io/sdk/gitea"
 	gouuid "github.com/satori/go.uuid"
 
 	"code.gitea.io/gitea/modules/base"

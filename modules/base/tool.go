@@ -22,10 +22,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Unknwon/com"
-	"github.com/Unknwon/i18n"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
+	"github.com/Unknwon/com"
+	"github.com/Unknwon/i18n"
 	"github.com/gogits/chardet"
 )
 

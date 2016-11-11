@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Unknwon/paginater"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
+	"github.com/Unknwon/paginater"
 	macaron "gopkg.in/macaron.v1"
 )
 
