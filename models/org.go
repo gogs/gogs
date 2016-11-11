@@ -10,9 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-xorm/builder"
 	"github.com/go-xorm/xorm"
-
-	"code.gitea.io/gitea/modules/base"
 )
 
 var (
@@ -540,7 +539,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 		Select("`repository`.*").
 		Join("INNER", "team_repo", "`team_repo`.repo_id=`repository`.id").
 		Where("(`repository`.owner_id=? AND `repository`.is_private=?)", org.ID, false).
-		Or("team_repo.team_id IN (?)", strings.Join(base.Int64sToStrings(teamIDs), ",")).
+		Or(builder.In("team_repo.team_id", teamIDs)).
 		GroupBy("`repository`.id").
 		OrderBy("updated_unix DESC").
 		Limit(pageSize, (page-1)*pageSize).
@@ -551,7 +550,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	repoCount, err := x.
 		Join("INNER", "team_repo", "`team_repo`.repo_id=`repository`.id").
 		Where("(`repository`.owner_id=? AND `repository`.is_private=?)", org.ID, false).
-		Or("team_repo.team_id IN (?)", strings.Join(base.Int64sToStrings(teamIDs), ",")).
+		Or(builder.In("team_repo.team_id", teamIDs)).
 		GroupBy("`repository`.id").
 		Count(&Repository{})
 	if err != nil {
@@ -577,7 +576,7 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 		Select("`repository`.*").
 		Join("INNER", "team_repo", "`team_repo`.repo_id=`repository`.id AND `repository`.is_mirror=?", true).
 		Where("(`repository`.owner_id=? AND `repository`.is_private=?)", org.ID, false).
-		Or("team_repo.team_id IN (?)", strings.Join(base.Int64sToStrings(teamIDs), ",")).
+		Or(builder.In("team_repo.team_id", teamIDs)).
 		GroupBy("`repository`.id").
 		OrderBy("updated_unix DESC").
 		Find(&repos)
