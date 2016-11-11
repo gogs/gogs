@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
+	"code.gitea.io/git"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/process"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/sync"
-	"github.com/go-xorm/xorm"
-	"code.gitea.io/git"
 	api "code.gitea.io/sdk/gitea"
+	"github.com/Unknwon/com"
+	"github.com/go-xorm/xorm"
 )
 
 var PullRequestQueue = sync.NewUniqueQueue(setting.Repository.PullRequestQueueLength)

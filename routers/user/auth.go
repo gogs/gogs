@@ -130,8 +130,8 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	// Register last login
 	u.SetLastLogin()
 	if err := models.UpdateUser(u); err != nil {
-	    ctx.Handle(500, "UpdateUser", err)
-	    return
+		ctx.Handle(500, "UpdateUser", err)
+		return
 	}
 
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {

@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Unknwon/paginater"
+	"code.gitea.io/git"
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
@@ -21,7 +21,7 @@ import (
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/template"
 	"code.gitea.io/gitea/modules/template/highlight"
-	"code.gitea.io/git"
+	"github.com/Unknwon/paginater"
 )
 
 const (

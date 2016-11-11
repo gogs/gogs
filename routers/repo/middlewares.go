@@ -3,9 +3,9 @@ package repo
 import (
 	"fmt"
 
+	"code.gitea.io/git"
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/context"
-	"code.gitea.io/git"
 )
 
 func SetEditorconfigIfExists(ctx *context.Context) {
