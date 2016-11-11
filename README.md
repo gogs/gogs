@@ -11,7 +11,7 @@
 
 ##### Status
 
-**Current version**: (see [Releases](https://github.com/go-gitea/gitea/releases)) 
+**Current version**: (see [Releases](https://github.com/go-gitea/gitea/releases))
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -64,6 +64,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 
 How to install Gitea:
 
+- go get code.gitea.io/gitea
 - [Ship with Docker](https://github.com/go-gitea/gitea/tree/master/docker)
 - [Install with Vagrant](https://github.com/go-gitea/examples/tree/master/vagrant)
 
