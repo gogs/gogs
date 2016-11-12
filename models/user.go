@@ -505,12 +505,12 @@ func NewGhostUser() *User {
 }
 
 var (
-	reversedUsernames    = []string{"debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
-	reversedUserPatterns = []string{"*.keys"}
+	reservedUsernames    = []string{"assets", "css", "img", "js", "less", "plugins", "debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
+	reservedUserPatterns = []string{"*.keys"}
 )
 
 // isUsableName checks if name is reserved or pattern of name is not allowed
-// based on given reversed names and patterns.
+// based on given reserved names and patterns.
 // Names are exact match, patterns can be prefix or suffix match with placeholder '*'.
 func isUsableName(names, patterns []string, name string) error {
 	name = strings.TrimSpace(strings.ToLower(name))
@@ -535,7 +535,7 @@ func isUsableName(names, patterns []string, name string) error {
 }
 
 func IsUsableUsername(name string) error {
-	return isUsableName(reversedUsernames, reversedUserPatterns, name)
+	return isUsableName(reservedUsernames, reservedUserPatterns, name)
 }
 
 // CreateUser creates record of a new user.
