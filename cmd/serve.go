@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
 	"code.gitea.io/git"
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/httplib"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
+	"github.com/Unknwon/com"
 	gouuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 )

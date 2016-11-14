@@ -184,7 +184,7 @@ func newMacaron() *macaron.Macaron {
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
-			&toolbox.HealthCheckFuncDesc{
+			{
 				Desc: "Database connection",
 				Func: models.Ping,
 			},
