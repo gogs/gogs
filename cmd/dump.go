@@ -12,9 +12,9 @@ import (
 	"path"
 	"time"
 
-	"github.com/Unknwon/cae/zip"
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/setting"
+	"github.com/Unknwon/cae/zip"
 	"github.com/urfave/cli"
 )
 
