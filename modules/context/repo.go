@@ -146,10 +146,6 @@ func RepoAssignment(args ...bool) macaron.Handler {
 
 		userName := ctx.Params(":username")
 		repoName := ctx.Params(":reponame")
-		refName := ctx.Params(":branchname")
-		if len(refName) == 0 {
-			refName = ctx.Params(":path")
-		}
 
 		// Check if the user is the same as the repository owner
 		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
