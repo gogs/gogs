@@ -2099,7 +2099,7 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		repoPath, fmt.Sprintf("ForkRepository(git update-server-info): %s", repoPath),
 		"git", "update-server-info")
 	if err != nil {
-		return nil, fmt.Errorf("git update-server-info: %v", err)
+		return nil, fmt.Errorf("git update-server-info: %v", stderr)
 	}
 
 	if err = createUpdateHook(repoPath); err != nil {
