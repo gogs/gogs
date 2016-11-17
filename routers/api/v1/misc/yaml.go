@@ -5,10 +5,10 @@
 package misc
 
 import (
-	api "github.com/gogits/go-gogs-client"
+        api "code.gitea.io/sdk/gitea"
 
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/yaml"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/yaml"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document

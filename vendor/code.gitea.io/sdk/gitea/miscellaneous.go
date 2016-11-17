@@ -9,3 +9,8 @@ type MarkdownOption struct {
 	Mode    string
 	Context string
 }
+
+type YamlOption struct {
+      Text    string
+}
+

@@ -12,7 +12,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/gogits/gogs/modules/log"
+	"code.gitea.io/gitea/modules/log"
 )
 
 var Sanitizer = bluemonday.UGCPolicy()
