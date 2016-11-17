@@ -59,13 +59,13 @@ ALL TESTS PASSED
 ```
 ## Vendoring
 
-We keep a cached copy of dependencies within the vendor/ directory,
+We keep a cached copy of dependencies within the `vendor/` directory,
 managing updates via [govendor](http://github.com/kardianos/govendor).
 
-Pull requests should only include vendor/ updates if they are
+Pull requests should only include `vendor/` updates if they are
 part of the same change, be it a bugfix or a feature addition.
 
-The vendor/ update needs to be justified as part of the PR description,
+The `vendor/` update needs to be justified as part of the PR description,
 and must be verified by the reviewers and/or merger to always reference
 an existing upstream commit.
 
