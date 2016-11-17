@@ -1,13 +1,13 @@
 package markdown_test
 
 import (
-	. "github.com/gogits/gogs/modules/markdown"
-	. "github.com/smartystreets/goconvey/convey"
+	"bytes"
 	"testing"
 
-	"bytes"
-	"github.com/gogits/gogs/modules/setting"
+	. "code.gitea.io/gitea/modules/markdown"
+	"code.gitea.io/gitea/modules/setting"
 	"github.com/russross/blackfriday"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestMarkdown(t *testing.T) {

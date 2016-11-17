@@ -5,12 +5,12 @@
 package org
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
 )
 
 const (
@@ -33,7 +33,7 @@ func CreatePost(ctx *context.Context, form auth.CreateOrgForm) {
 	org := &models.User{
 		Name:     form.OrgName,
 		IsActive: true,
-		Type:     models.USER_TYPE_ORGANIZATION,
+		Type:     models.UserTypeOrganization,
 	}
 
 	if err := models.CreateOrganization(org, ctx.User); err != nil {

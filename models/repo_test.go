@@ -1,11 +1,11 @@
 package models_test
 
 import (
-	. "github.com/gogits/gogs/models"
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 
-	"github.com/gogits/gogs/modules/markdown"
+	. "code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/markdown"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestRepo(t *testing.T) {

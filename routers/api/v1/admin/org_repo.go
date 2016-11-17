@@ -5,8 +5,8 @@
 package admin
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/context"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/context"
 )
 
 func GetRepositoryByParams(ctx *context.APIContext) *models.Repository {

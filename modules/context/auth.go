@@ -7,11 +7,10 @@ package context
 import (
 	"net/url"
 
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/setting"
 	"github.com/go-macaron/csrf"
-	"gopkg.in/macaron.v1"
-
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/setting"
+	macaron "gopkg.in/macaron.v1"
 )
 
 type ToggleOptions struct {

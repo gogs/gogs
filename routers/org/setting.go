@@ -7,13 +7,13 @@ package org
 import (
 	"strings"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/user"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/routers/user"
 )
 
 const (
@@ -84,7 +84,7 @@ func SettingsPost(ctx *context.Context, form auth.UpdateOrgSettingForm) {
 }
 
 func SettingsAvatar(ctx *context.Context, form auth.AvatarForm) {
-	form.Source = auth.AVATAR_LOCAL
+	form.Source = auth.AvatarLocal
 	if err := user.UpdateAvatarSetting(ctx, form, ctx.Org.Organization); err != nil {
 		ctx.Flash.Error(err.Error())
 	} else {

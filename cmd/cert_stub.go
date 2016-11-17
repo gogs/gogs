@@ -4,6 +4,7 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
+
 package cmd
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+// CmdCert represents the available cert sub-command.
 var CmdCert = cli.Command{
 	Name:        "cert",
 	Usage:       "Generate self-signed certificate",
@@ -20,7 +22,7 @@ var CmdCert = cli.Command{
 	Action:      runCert,
 }
 
-func runCert(ctx *cli.Context) error {
+func runCert(*cli.Context) error {
 	fmt.Println("Command cert not available, please use build tags 'cert' to rebuild.")
 	os.Exit(1)
 

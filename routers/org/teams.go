@@ -9,11 +9,11 @@ import (
 
 	"github.com/Unknwon/com"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
 )
 
 const (
@@ -226,11 +226,11 @@ func EditTeamPost(ctx *context.Context, form auth.CreateTeamForm) {
 		var auth models.AccessMode
 		switch form.Permission {
 		case "read":
-			auth = models.ACCESS_MODE_READ
+			auth = models.AccessModeRead
 		case "write":
-			auth = models.ACCESS_MODE_WRITE
+			auth = models.AccessModeWrite
 		case "admin":
-			auth = models.ACCESS_MODE_ADMIN
+			auth = models.AccessModeAdmin
 		default:
 			ctx.Error(401)
 			return

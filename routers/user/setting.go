@@ -12,12 +12,12 @@ import (
 
 	"github.com/Unknwon/com"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
 )
 
 const (
@@ -104,7 +104,7 @@ func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 
 // FIXME: limit size.
 func UpdateAvatarSetting(ctx *context.Context, form auth.AvatarForm, ctxUser *models.User) error {
-	ctxUser.UseCustomAvatar = form.Source == auth.AVATAR_LOCAL
+	ctxUser.UseCustomAvatar = form.Source == auth.AvatarLocal
 	if len(form.Gravatar) > 0 {
 		ctxUser.Avatar = base.EncodeMD5(form.Gravatar)
 		ctxUser.AvatarEmail = form.Gravatar

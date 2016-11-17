@@ -9,11 +9,11 @@ import (
 
 	"github.com/Unknwon/paginater"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/user"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/routers/user"
 )
 
 const (
@@ -172,11 +172,11 @@ func ExploreUsers(ctx *context.Context) {
 	ctx.Data["PageIsExploreUsers"] = true
 
 	RenderUserSearch(ctx, &UserSearchOptions{
-		Type:     models.USER_TYPE_INDIVIDUAL,
+		Type:     models.UserTypeIndividual,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
 		PageSize: setting.UI.ExplorePagingNum,
-		OrderBy:  "updated_unix DESC",
+		OrderBy:  "name ASC",
 		TplName:  EXPLORE_USERS,
 	})
 }
@@ -187,11 +187,11 @@ func ExploreOrganizations(ctx *context.Context) {
 	ctx.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(ctx, &UserSearchOptions{
-		Type:     models.USER_TYPE_ORGANIZATION,
+		Type:     models.UserTypeOrganization,
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,
 		PageSize: setting.UI.ExplorePagingNum,
-		OrderBy:  "updated_unix DESC",
+		OrderBy:  "name ASC",
 		TplName:  EXPLORE_ORGANIZATIONS,
 	})
 }

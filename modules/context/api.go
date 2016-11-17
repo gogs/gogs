@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"strings"
 
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
 	"github.com/Unknwon/paginater"
-	"gopkg.in/macaron.v1"
-
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	macaron "gopkg.in/macaron.v1"
 )
 
 type APIContext struct {
@@ -37,7 +37,7 @@ func (ctx *APIContext) Error(status int, title string, obj interface{}) {
 
 	ctx.JSON(status, map[string]string{
 		"message": message,
-		"url":     base.DOC_URL,
+		"url":     base.DocURL,
 	})
 }
 
@@ -69,5 +69,35 @@ func APIContexter() macaron.Handler {
 			Context: c,
 		}
 		c.Map(ctx)
+	}
+}
+
+// ExtractOwnerAndRepo returns a handler that populates the `Repo.Owner` and
+// `Repo.Repository` fields of an APIContext
+func ExtractOwnerAndRepo() macaron.Handler {
+	return func(ctx *APIContext) {
+		owner, err := models.GetUserByName(ctx.Params(":username"))
+		if err != nil {
+			if models.IsErrUserNotExist(err) {
+				ctx.Error(422, "", err)
+			} else {
+				ctx.Error(500, "GetUserByName", err)
+			}
+			return
+		}
+
+		repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
+		if err != nil {
+			if models.IsErrRepoNotExist(err) {
+				ctx.Status(404)
+			} else {
+				ctx.Error(500, "GetRepositoryByName", err)
+			}
+			return
+		}
+		ctx.Repo.Owner = owner
+		ctx.Data["Owner"] = owner
+		ctx.Repo.Repository = repo
+		ctx.Data["Repository"] = repo
 	}
 }

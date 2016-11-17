@@ -11,10 +11,10 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/setting"
 )
 
 const (
@@ -172,7 +172,7 @@ func Issues(ctx *context.Context) {
 	var (
 		viewType   string
 		sortType   = ctx.Query("sort")
-		filterMode = models.FM_ALL
+		filterMode = models.FilterModeAll
 		assigneeID int64
 		posterID   int64
 	)
@@ -187,10 +187,10 @@ func Issues(ctx *context.Context) {
 
 		switch viewType {
 		case "assigned":
-			filterMode = models.FM_ASSIGN
+			filterMode = models.FilterModeAssign
 			assigneeID = ctxUser.ID
 		case "created_by":
-			filterMode = models.FM_CREATE
+			filterMode = models.FilterModeCreate
 			posterID = ctxUser.ID
 		}
 	}
@@ -235,7 +235,7 @@ func Issues(ctx *context.Context) {
 			allCount += repo.NumOpenIssues
 		}
 
-		if filterMode != models.FM_ALL {
+		if filterMode != models.FilterModeAll {
 			// Calculate repository issue count with filter mode.
 			numOpen, numClosed := repo.IssueStats(ctxUser.ID, filterMode, isPullList)
 			repo.NumOpenIssues, repo.NumClosedIssues = int(numOpen), int(numClosed)

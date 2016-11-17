@@ -6,19 +6,18 @@ package repo
 
 import (
 	"container/list"
+	"fmt"
 	"path"
 	"strings"
 
+	"code.gitea.io/git"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
 	"github.com/Unknwon/com"
-
-	"github.com/gogits/git-module"
-
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -148,7 +147,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		}
 		return nil
 	}
-	ctx.Data["Title"] = issue.Title
+	ctx.Data["Title"] = fmt.Sprintf("#%d - %s", issue.Index, issue.Title)
 	ctx.Data["Issue"] = issue
 
 	if !issue.IsPull {
@@ -367,15 +366,7 @@ func ViewPullFiles(ctx *context.Context) {
 		return
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "ErrGettingEditorconfig", err)
-		return
-	}
-	ctx.Data["Editorconfig"] = ec
-
 	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
-	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = pull.HeadUserName
 	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.Data["IsImageFile"] = commit.IsImageFile
@@ -626,13 +617,6 @@ func CompareAndPullRequest(ctx *context.Context) {
 		}
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "ErrGettingEditorconfig", err)
-		return
-	}
-	ctx.Data["Editorconfig"] = ec
-
 	ctx.HTML(200, COMPARE_PULL)
 }
 
@@ -702,7 +686,7 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		HeadRepo:     headRepo,
 		BaseRepo:     repo,
 		MergeBase:    prInfo.MergeBase,
-		Type:         models.PULL_REQUEST_GOGS,
+		Type:         models.PullRequestGitea,
 	}
 	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
 	// instead of 500.

@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/gogits/gogs/modules/setting"
+	"code.gitea.io/gitea/modules/setting"
 )
 
 var (

@@ -17,20 +17,20 @@ import (
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/git-module"
+	"code.gitea.io/git"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/cron"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/ssh"
-	"github.com/gogits/gogs/modules/template/highlight"
-	"github.com/gogits/gogs/modules/user"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/cron"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/mailer"
+	"code.gitea.io/gitea/modules/markdown"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/modules/ssh"
+	"code.gitea.io/gitea/modules/template/highlight"
+	"code.gitea.io/gitea/modules/user"
 )
 
 const (
@@ -345,7 +345,12 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
 	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
 
-	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
+	err := os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
+	if err != nil {
+		ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
+		return
+	}
+
 	if err := cfg.SaveTo(setting.CustomConf); err != nil {
 		ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
 		return
@@ -375,8 +380,14 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		}
 
 		// Auto-login for admin
-		ctx.Session.Set("uid", u.ID)
-		ctx.Session.Set("uname", u.Name)
+		if err := ctx.Session.Set("uid", u.ID); err != nil {
+			ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
+			return
+		}
+		if err := ctx.Session.Set("uname", u.Name); err != nil {
+			ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &form)
+			return
+		}
 	}
 
 	log.Info("First-time run install finished!")

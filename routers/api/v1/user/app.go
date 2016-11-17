@@ -5,10 +5,10 @@
 package user
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "code.gitea.io/sdk/gitea"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/context"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/context"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#list-access-tokens-for-a-user

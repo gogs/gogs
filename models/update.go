@@ -10,9 +10,9 @@ import (
 	"os/exec"
 	"strings"
 
-	git "github.com/gogits/git-module"
+	"code.gitea.io/git"
 
-	"github.com/gogits/gogs/modules/log"
+	"code.gitea.io/gitea/modules/log"
 )
 
 type UpdateTask struct {

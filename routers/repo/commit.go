@@ -8,14 +8,12 @@ import (
 	"container/list"
 	"path"
 
+	"code.gitea.io/git"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/setting"
 	"github.com/Unknwon/paginater"
-
-	"github.com/gogits/git-module"
-
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -160,7 +158,9 @@ func Diff(ctx *context.Context) {
 		}
 		return
 	}
-
+	if len(commitID) != 40 {
+		commitID = commit.ID.String()
+	}
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
 		commitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
@@ -179,15 +179,7 @@ func Diff(ctx *context.Context) {
 		}
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "ErrGettingEditorconfig", err)
-		return
-	}
-	ctx.Data["Editorconfig"] = ec
-
 	ctx.Data["CommitID"] = commitID
-	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = commit.IsImageFile
@@ -246,7 +238,6 @@ func CompareDiff(ctx *context.Context) {
 	}
 	commits = models.ValidateCommitsWithEmails(commits)
 
-	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.Data["CommitRepoLink"] = ctx.Repo.RepoLink
 	ctx.Data["Commits"] = commits
 	ctx.Data["CommitCount"] = commits.Len()

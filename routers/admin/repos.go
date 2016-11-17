@@ -5,12 +5,12 @@
 package admin
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/routers"
 )
 
 const (
@@ -27,7 +27,7 @@ func Repos(ctx *context.Context) {
 		Ranger:   models.Repositories,
 		Private:  true,
 		PageSize: setting.UI.Admin.RepoPagingNum,
-		OrderBy:  "id ASC",
+		OrderBy:  "owner_id ASC, name ASC, id ASC",
 		TplName:  REPOS,
 	})
 }
