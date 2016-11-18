@@ -1,7 +1,7 @@
 # Gitea - Git with a cup of tea
 
-[![Build Status](https://travis-ci.org/go-gitea/gitea.svg?branch=master)](https://travis-ci.org/go-gitea/gitea)
-[![codecov](https://codecov.io/gh/go-gitea/gitea/branch/master/graph/badge.svg)](https://codecov.io/gh/go-gitea/gitea)
+[![Build Status](https://travis-ci.org/unfoldingword-dev/gogs.svg?branch=master)](https://travis-ci.org/go-gitea/gitea)
+[![codecov](https://codecov.io/gh/unfoldingword-dev/gogs/branch/master/graph/badge.svg)](https://codecov.io/gh/unfoldingword-dev/gogs)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-gitea/gitea)](https://goreportcard.com/report/github.com/go-gitea/gitea)
 [![GoDoc](https://godoc.org/github.com/go-gitea/gitea?status.svg)](https://godoc.org/github.com/go-gitea/gitea)
 [![](https://images.microbadger.com/badges/image/gitea/gitea.svg)](http://microbadger.com/images/gitea/gitea "Get your own image badge on microbadger.com")
