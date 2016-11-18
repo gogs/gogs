@@ -30,7 +30,7 @@ else
 endif
 
 .PHONY: all
-all: clean test build
+all: build
 
 .PHONY: clean
 clean:
