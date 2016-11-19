@@ -23,14 +23,16 @@ func SetEditorconfigIfExists(ctx *context.Context) {
 }
 
 func SetDiffViewStyle(ctx *context.Context) {
+	queryStyle := ctx.Query("style")
+
 	if !ctx.IsSigned {
+		ctx.Data["IsSplitStyle"] = queryStyle == "split"
 		return
 	}
 
 	var (
-		userStyle  = ctx.User.DiffViewStyle
-		queryStyle = ctx.Query("style")
-		style      string
+		userStyle = ctx.User.DiffViewStyle
+		style     string
 	)
 
 	if queryStyle == "unified" || queryStyle == "split" {
