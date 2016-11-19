@@ -23,6 +23,10 @@ func SetEditorconfigIfExists(ctx *context.Context) {
 }
 
 func SetDiffViewStyle(ctx *context.Context) {
+	if !ctx.IsSigned {
+		return
+	}
+
 	var (
 		userStyle  = ctx.User.DiffViewStyle
 		queryStyle = ctx.Query("style")
