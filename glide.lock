@@ -44,6 +44,8 @@ imports:
   version: 5e0c1330d7853d1affbc193885d517db0f8d1ca5
 - name: github.com/gogits/go-gogs-client
   version: c52f7ee0cc58d3cd6e379025552873a8df6de322
+- name: github.com/gogits/go-libravatar
+  version: cd1abbd55d09b793672732a7a1dfdaa12a40dfd0
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
@@ -81,8 +83,6 @@ imports:
   version: ec7fdbb58eb3e300c8595ad5ac74a5aa50019cc7
   subpackages:
   - diffmatchpatch
-- name: github.com/strk/go-libravatar
-  version: 5eed7bff870ae19ef51c5773dbc8f3e9fcbd0982
 - name: github.com/shurcooL/sanitized_anchor_name
   version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
 - name: github.com/Unknwon/cae
