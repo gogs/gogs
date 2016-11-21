@@ -23,6 +23,7 @@ import (
 	"code.gitea.io/gitea/modules/template/highlight"
 	"github.com/Unknwon/paginater"
 	"code.gitea.io/gitea/modules/yaml"
+	"code.gitea.io/gitea/modules/hashtag"
 )
 
 const (
@@ -88,6 +89,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 			case markdown.IsMarkdownFile(readmeFile.Name()):
 				ctx.Data["IsMarkdown"] = true
 				buf = markdown.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+				buf = hashtag.ConvertHashtagsToLinks(ctx.Repo.Repository, buf)
 			default:
 				// FIXME This is the only way to show non-markdown files
 				// instead of a broken "View Raw" link
@@ -166,6 +168,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 			// TODO: don't need to render if it's a README but not Markdown file.
 			yamlHtml := yaml.RenderMarkdownYaml(buf)
 			markdownBody := markdown.Render(yaml.StripYamlFromText(buf), path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas())
+			markdownBody = hashtag.ConvertHashtagsToLinks(ctx.Repo.Repository, markdownBody)
 			ctx.Data["FileContent"] = string(append(yamlHtml, markdownBody...))
 		} else if isYaml {
 			ctx.Data["FileContent"] = string(yaml.RenderYaml(buf))
