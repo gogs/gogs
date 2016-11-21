@@ -650,7 +650,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	}
 
 	if len(opts.LableIDs) > 0 {
-		// During the session, SQLite3 dirver cannot handle retrieve objects after update something.
+		// During the session, SQLite3 driver cannot handle retrieve objects after update something.
 		// So we have to get all needed labels first.
 		labels := make([]*Label, 0, len(opts.LableIDs))
 		if err = e.In("id", opts.LableIDs).Find(&labels); err != nil {
