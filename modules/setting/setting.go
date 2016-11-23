@@ -261,6 +261,9 @@ var (
 	RunUser      string
 	IsWindows    bool
 	HasRobotsTxt bool
+	Google struct {
+		GATrackingID   string
+	}
 )
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
@@ -592,6 +595,7 @@ please consider changing to GITEA_CUSTOM`)
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 	ShowFooterTemplateLoadTime = Cfg.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
+	Google.GATrackingID = Cfg.Section("other").Key("GA_TRACKING_ID").String()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
