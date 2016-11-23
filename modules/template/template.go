@@ -116,6 +116,9 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return "tab-size-8"
 		},
+		"GATrackingID": func() string {
+			return setting.Google.GATrackingID
+		},
 	}}
 }
 
