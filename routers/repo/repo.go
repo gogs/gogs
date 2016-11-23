@@ -311,7 +311,7 @@ func Download(ctx *context.Context) {
 			ctx.Handle(500, "GetTagCommit", err)
 			return
 		}
-	} else if len(refName) == 40 {
+	} else if len(refName) >= 4 && len(refName) <= 40 {
 		commit, err = gitRepo.GetCommit(refName)
 		if err != nil {
 			ctx.Handle(404, "GetCommit", nil)
