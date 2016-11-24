@@ -28,7 +28,7 @@ import (
 	"golang.org/x/text/transform"
 )
 
-// DiffLineType ...
+// DiffLineType represents the type of a DiffLine.
 type DiffLineType uint8
 
 // DiffLineType possible values.
@@ -39,7 +39,7 @@ const (
 	DiffLineSection
 )
 
-// DiffFileType ...
+// DiffFileType represents the type of a DiffFile.
 type DiffFileType uint8
 
 // DiffFileType possible values.
@@ -50,7 +50,7 @@ const (
 	DiffFileRename
 )
 
-// DiffLine ...
+// DiffLine represents a line difference in a DiffSection.
 type DiffLine struct {
 	LeftIdx  int
 	RightIdx int
@@ -58,12 +58,12 @@ type DiffLine struct {
 	Content  string
 }
 
-// GetType ...
+// GetType returns the type of a DiffLine.
 func (d *DiffLine) GetType() int {
 	return int(d.Type)
 }
 
-// DiffSection ...
+// DiffSection represents a section of a DiffFile.
 type DiffSection struct {
 	Name  string
 	Lines []*DiffLine
@@ -75,7 +75,6 @@ var (
 	codeTagSuffix     = []byte("</span>")
 )
 
-// diffToHTML ...
 func diffToHTML(diffs []diffmatchpatch.Diff, lineType DiffLineType) template.HTML {
 	buf := bytes.NewBuffer(nil)
 
@@ -150,7 +149,6 @@ LOOP:
 
 var diffMatchPatch = diffmatchpatch.New()
 
-// init ...
 func init() {
 	diffMatchPatch.DiffEditCost = 100
 }
@@ -192,7 +190,7 @@ func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) tem
 	return diffToHTML(diffRecord, diffLine.Type)
 }
 
-// DiffFile ...
+// DiffFile represents a file diff.
 type DiffFile struct {
 	Name               string
 	OldName            string
@@ -213,26 +211,27 @@ func (diffFile *DiffFile) GetType() int {
 	return int(diffFile.Type)
 }
 
-// GetHighlightClass ...
+// GetHighlightClass returns highlight class for a filename.
 func (diffFile *DiffFile) GetHighlightClass() string {
 	return highlight.FileNameToHighlightClass(diffFile.Name)
 }
 
-// Diff ...
+// Diff represents a difference between two git trees.
 type Diff struct {
 	TotalAddition, TotalDeletion int
 	Files                        []*DiffFile
 	IsIncomplete                 bool
 }
 
-// NumFiles ...
+// NumFiles returns number of files changes in a diff.
 func (diff *Diff) NumFiles() int {
 	return len(diff.Files)
 }
 
 const cmdDiffHead = "diff --git "
 
-// ParsePatch ...
+// ParsePatch builds a Diff object from a io.Reader and some
+// parameters.
 // TODO: move this function to gogits/git-module
 func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*Diff, error) {
 	var (
@@ -420,7 +419,9 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 	return diff, nil
 }
 
-// GetDiffRange ...
+// GetDiffRange builds a Diff between two commits of a repository.
+// passing the empty string as beforeCommitID returns a diff from the
+// parent commit.
 func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
@@ -472,7 +473,7 @@ func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxL
 	return diff, nil
 }
 
-// RawDiffType ...
+// RawDiffType type of a raw diff.
 type RawDiffType string
 
 // RawDiffType possible values.
@@ -483,7 +484,6 @@ const (
 
 // GetRawDiff dumps diff results of repository in given commit ID to io.Writer.
 // TODO: move this function to gogits/git-module
-// GetRawDiff ...
 func GetRawDiff(repoPath, commitID string, diffType RawDiffType, writer io.Writer) error {
 	repo, err := git.OpenRepository(repoPath)
 	if err != nil {
@@ -528,7 +528,7 @@ func GetRawDiff(repoPath, commitID string, diffType RawDiffType, writer io.Write
 	return nil
 }
 
-// GetDiffCommit ...
+// GetDiffCommit builds a Diff representing the given commitID.
 func GetDiffCommit(repoPath, commitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
 	return GetDiffRange(repoPath, "", commitID, maxLines, maxLineCharacteres, maxFiles)
 }
