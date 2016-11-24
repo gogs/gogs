@@ -36,7 +36,7 @@ func EncodeMD5(str string) string {
 	return hex.EncodeToString(m.Sum(nil))
 }
 
-// Encode string to sha1 hex value.
+// EncodeSha1 string to sha1 hex value.
 func EncodeSha1(str string) string {
 	h := sha1.New()
 	h.Write([]byte(str))
@@ -49,6 +49,7 @@ func ShortSha(sha1 string) string {
 	return TruncateString(sha1, 10)
 }
 
+// DetectEncoding detect the encoding of content
 func DetectEncoding(content []byte) (string, error) {
 	if utf8.Valid(content) {
 		log.Debug("Detected encoding: utf-8 (fast)")
@@ -65,6 +66,7 @@ func DetectEncoding(content []byte) (string, error) {
 	return result.Charset, err
 }
 
+// BasicAuthDecode decode basic auth string
 func BasicAuthDecode(encoded string) (string, string, error) {
 	s, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
@@ -75,6 +77,7 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 	return auth[0], auth[1], nil
 }
 
+// BasicAuthEncode encode basic auth string
 func BasicAuthEncode(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 }
@@ -94,7 +97,7 @@ func GetRandomString(n int, alphabets ...byte) string {
 	return string(bytes)
 }
 
-// http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
+// PBKDF2 http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
 // FIXME: use https://godoc.org/golang.org/x/crypto/pbkdf2?
 func PBKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
 	prf := hmac.New(h, password)
@@ -133,7 +136,7 @@ func PBKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte 
 	return dk[:keyLen]
 }
 
-// verify time limit code
+// VerifyTimeLimitCode verify time limit code
 func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	if len(code) <= 18 {
 		return false
@@ -160,9 +163,10 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	return false
 }
 
+// TimeLimitCodeLength default value for time limit code
 const TimeLimitCodeLength = 12 + 6 + 40
 
-// create a time limit code
+// CreateTimeLimitCode create a time limit code
 // code format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
 func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
 	format := "200601021504"
@@ -355,6 +359,7 @@ func timeSince(then time.Time, lang string) string {
 	}
 }
 
+// RawTimeSince retrieves i18n key of time since t
 func RawTimeSince(t time.Time, lang string) string {
 	return timeSince(t, lang)
 }
@@ -364,6 +369,7 @@ func TimeSince(t time.Time, lang string) template.HTML {
 	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(setting.TimeFormat), timeSince(t, lang)))
 }
 
+// Storage space size types
 const (
 	Byte  = 1
 	KByte = Byte * 1024
@@ -413,7 +419,7 @@ func FileSize(s int64) string {
 func Subtract(left interface{}, right interface{}) interface{} {
 	var rleft, rright int64
 	var fleft, fright float64
-	var isInt bool = true
+	var isInt = true
 	switch left.(type) {
 	case int:
 		rleft = int64(left.(int))
@@ -454,9 +460,8 @@ func Subtract(left interface{}, right interface{}) interface{} {
 
 	if isInt {
 		return rleft - rright
-	} else {
-		return fleft + float64(rleft) - (fright + float64(rright))
 	}
+	return fleft + float64(rleft) - (fright + float64(rright))
 }
 
 // EllipsisString returns a truncated short string,
@@ -521,10 +526,12 @@ func IsTextFile(data []byte) bool {
 	return strings.Index(http.DetectContentType(data), "text/") != -1
 }
 
+// IsImageFile detectes if data is an image format
 func IsImageFile(data []byte) bool {
 	return strings.Index(http.DetectContentType(data), "image/") != -1
 }
 
+// IsPDFFile detectes if data is a pdf format
 func IsPDFFile(data []byte) bool {
 	return strings.Index(http.DetectContentType(data), "application/pdf") != -1
 }
