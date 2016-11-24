@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	ErrMissingIssueNumber = errors.New("No issue number specified")
+	errMissingIssueNumber = errors.New("No issue number specified")
 )
 
 // Issue represents an issue or pull request of repository.
@@ -62,16 +62,20 @@ type Issue struct {
 	Comments    []*Comment    `xorm:"-"`
 }
 
+// BeforeInsert is invoked from XORM before inserting an object of this type.
 func (issue *Issue) BeforeInsert() {
 	issue.CreatedUnix = time.Now().Unix()
 	issue.UpdatedUnix = issue.CreatedUnix
 }
 
+// BeforeUpdate is invoked from XORM before updating this object.
 func (issue *Issue) BeforeUpdate() {
 	issue.UpdatedUnix = time.Now().Unix()
 	issue.DeadlineUnix = issue.Deadline.Unix()
 }
 
+// AfterSet is invoked from XORM after setting the value of a field of
+// this object.
 func (issue *Issue) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "deadline_unix":
@@ -150,10 +154,12 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	return nil
 }
 
+// LoadAttributes loads the attribute of this issue.
 func (issue *Issue) LoadAttributes() error {
 	return issue.loadAttributes(x)
 }
 
+// HTMLURL returns the absolute URL to this issue.
 func (issue *Issue) HTMLURL() string {
 	var path string
 	if issue.IsPull {
@@ -165,14 +171,14 @@ func (issue *Issue) HTMLURL() string {
 }
 
 // State returns string representation of issue status.
-func (i *Issue) State() api.StateType {
-	if i.IsClosed {
+func (issue *Issue) State() api.StateType {
+	if issue.IsClosed {
 		return api.STATE_CLOSED
 	}
 	return api.STATE_OPEN
 }
 
-// This method assumes some fields assigned with values:
+// APIFormat assumes some fields assigned with values:
 // Required - Poster, Labels,
 // Optional - Milestone, Assignee, PullRequest
 func (issue *Issue) APIFormat() *api.Issue {
@@ -213,22 +219,22 @@ func (issue *Issue) APIFormat() *api.Issue {
 }
 
 // HashTag returns unique hash tag for issue.
-func (i *Issue) HashTag() string {
-	return "issue-" + com.ToStr(i.ID)
+func (issue *Issue) HashTag() string {
+	return "issue-" + com.ToStr(issue.ID)
 }
 
 // IsPoster returns true if given user by ID is the poster.
-func (i *Issue) IsPoster(uid int64) bool {
-	return i.PosterID == uid
+func (issue *Issue) IsPoster(uid int64) bool {
+	return issue.PosterID == uid
 }
 
-func (i *Issue) hasLabel(e Engine, labelID int64) bool {
-	return hasIssueLabel(e, i.ID, labelID)
+func (issue *Issue) hasLabel(e Engine, labelID int64) bool {
+	return hasIssueLabel(e, issue.ID, labelID)
 }
 
 // HasLabel returns true if issue has been labeled by given ID.
-func (i *Issue) HasLabel(labelID int64) bool {
-	return i.hasLabel(x, labelID)
+func (issue *Issue) HasLabel(labelID int64) bool {
+	return issue.hasLabel(x, labelID)
 }
 
 func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
@@ -254,8 +260,8 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 	}
 }
 
-func (i *Issue) addLabel(e *xorm.Session, label *Label) error {
-	return newIssueLabel(e, i, label)
+func (issue *Issue) addLabel(e *xorm.Session, label *Label) error {
+	return newIssueLabel(e, issue, label)
 }
 
 // AddLabel adds a new label to the issue.
@@ -322,6 +328,8 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 	return nil
 }
 
+// ClearLabels removes all issue labels as the given user.
+// Triggers appropriate WebHooks, if any.
 func (issue *Issue) ClearLabels(doer *User) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
@@ -361,6 +369,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 }
 
 // ReplaceLabels removes all current labels and add new labels to the issue.
+// Triggers appropriate WebHooks, if any.
 func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)
@@ -377,12 +386,13 @@ func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 	return sess.Commit()
 }
 
-func (i *Issue) GetAssignee() (err error) {
-	if i.AssigneeID == 0 || i.Assignee != nil {
+// GetAssignee sets the Assignee attribute of this issue.
+func (issue *Issue) GetAssignee() (err error) {
+	if issue.AssigneeID == 0 || issue.Assignee != nil {
 		return nil
 	}
 
-	i.Assignee, err = GetUserByID(i.AssigneeID)
+	issue.Assignee, err = GetUserByID(issue.AssigneeID)
 	if IsErrUserNotExist(err) {
 		return nil
 	}
@@ -390,8 +400,8 @@ func (i *Issue) GetAssignee() (err error) {
 }
 
 // ReadBy sets issue to be read by given user.
-func (i *Issue) ReadBy(uid int64) error {
-	return UpdateIssueUserByRead(uid, i.ID)
+func (issue *Issue) ReadBy(uid int64) error {
+	return UpdateIssueUserByRead(uid, issue.ID)
 }
 
 func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
@@ -404,41 +414,41 @@ func UpdateIssueCols(issue *Issue, cols ...string) error {
 	return updateIssueCols(x, issue, cols...)
 }
 
-func (i *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
+func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
 	// Nothing should be performed if current status is same as target status
-	if i.IsClosed == isClosed {
+	if issue.IsClosed == isClosed {
 		return nil
 	}
-	i.IsClosed = isClosed
+	issue.IsClosed = isClosed
 
-	if err = updateIssueCols(e, i, "is_closed"); err != nil {
+	if err = updateIssueCols(e, issue, "is_closed"); err != nil {
 		return err
-	} else if err = updateIssueUsersByStatus(e, i.ID, isClosed); err != nil {
+	} else if err = updateIssueUsersByStatus(e, issue.ID, isClosed); err != nil {
 		return err
 	}
 
 	// Update issue count of labels
-	if err = i.getLabels(e); err != nil {
+	if err = issue.getLabels(e); err != nil {
 		return err
 	}
-	for idx := range i.Labels {
-		if i.IsClosed {
-			i.Labels[idx].NumClosedIssues++
+	for idx := range issue.Labels {
+		if issue.IsClosed {
+			issue.Labels[idx].NumClosedIssues++
 		} else {
-			i.Labels[idx].NumClosedIssues--
+			issue.Labels[idx].NumClosedIssues--
 		}
-		if err = updateLabel(e, i.Labels[idx]); err != nil {
+		if err = updateLabel(e, issue.Labels[idx]); err != nil {
 			return err
 		}
 	}
 
 	// Update issue count of milestone
-	if err = changeMilestoneIssueStats(e, i); err != nil {
+	if err = changeMilestoneIssueStats(e, issue); err != nil {
 		return err
 	}
 
 	// New action comment
-	if _, err = createStatusComment(e, doer, repo, i); err != nil {
+	if _, err = createStatusComment(e, doer, repo, issue); err != nil {
 		return err
 	}
 
@@ -486,6 +496,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 	return nil
 }
 
+// ChangeTitle changes the title of this issue, as the given user.
 func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 	oldTitle := issue.Title
 	issue.Title = title
@@ -517,6 +528,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 	return nil
 }
 
+// ChangeContent changes issue content, as the given user.
 func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	oldContent := issue.Content
 	issue.Content = content
@@ -548,6 +560,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	return nil
 }
 
+// ChangeAssignee changes the Asssignee field of this issue.
 func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	issue.AssigneeID = assigneeID
 	if err = UpdateIssueUserByAssignee(issue); err != nil {
@@ -586,6 +599,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	return nil
 }
 
+// NewIssueOptions represents the options of a new issue.
 type NewIssueOptions struct {
 	Repo        *Repository
 	Issue       *Issue
@@ -735,7 +749,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 func GetIssueByRef(ref string) (*Issue, error) {
 	n := strings.IndexByte(ref, byte('#'))
 	if n == -1 {
-		return nil, ErrMissingIssueNumber
+		return nil, errMissingIssueNumber
 	}
 
 	index, err := com.StrTo(ref[n+1:]).Int64()
@@ -756,7 +770,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 	return issue, issue.LoadAttributes()
 }
 
-// GetIssueByIndex returns raw issue without loading attributes by index in a repository.
+// GetRawIssueByIndex returns raw issue without loading attributes by index in a repository.
 func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	issue := &Issue{
 		RepoID: repoID,
@@ -796,6 +810,7 @@ func GetIssueByID(id int64) (*Issue, error) {
 	return getIssueByID(x, id)
 }
 
+// IssuesOptions represents options of an issue.
 type IssuesOptions struct {
 	UserID      int64
 	AssigneeID  int64
@@ -967,9 +982,9 @@ func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 }
 
 // PairsContains returns true when pairs list contains given issue.
-func PairsContains(ius []*IssueUser, issueId, uid int64) int {
+func PairsContains(ius []*IssueUser, issueID, uid int64) int {
 	for i := range ius {
-		if ius[i].IssueID == issueId &&
+		if ius[i].IssueID == issueID &&
 			ius[i].UID == uid {
 			return i
 		}
@@ -1092,6 +1107,7 @@ func parseCountResult(results []map[string][]byte) int64 {
 	return 0
 }
 
+// IssueStatsOptions contains parameters accepted by GetIssueStats.
 type IssueStatsOptions struct {
 	RepoID      int64
 	UserID      int64
@@ -1350,10 +1366,12 @@ type Milestone struct {
 	ClosedDateUnix int64
 }
 
+// BeforeInsert is invoked from XORM before inserting an object of this type.
 func (m *Milestone) BeforeInsert() {
 	m.DeadlineUnix = m.Deadline.Unix()
 }
 
+// BeforeUpdate is invoked from XORM before updating this object.
 func (m *Milestone) BeforeUpdate() {
 	if m.NumIssues > 0 {
 		m.Completeness = m.NumClosedIssues * 100 / m.NumIssues
@@ -1365,6 +1383,8 @@ func (m *Milestone) BeforeUpdate() {
 	m.ClosedDateUnix = m.ClosedDate.Unix()
 }
 
+// AfterSet is invoked from XORM after setting the value of a field of
+// this object.
 func (m *Milestone) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "num_closed_issues":
@@ -1394,6 +1414,7 @@ func (m *Milestone) State() api.StateType {
 	return api.STATE_OPEN
 }
 
+// APIFormat returns this Milestone in API format.
 func (m *Milestone) APIFormat() *api.Milestone {
 	apiMilestone := &api.Milestone{
 		ID:           m.ID,
@@ -1444,7 +1465,7 @@ func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 	return m, nil
 }
 
-// GetWebhookByRepoID returns the milestone in a repository.
+// GetMilestoneByRepoID returns the milestone in a repository.
 func GetMilestoneByRepoID(repoID, id int64) (*Milestone, error) {
 	return getMilestoneByRepoID(x, repoID, id)
 }
@@ -1676,10 +1697,13 @@ type Attachment struct {
 	CreatedUnix int64
 }
 
+// BeforeInsert is invoked from XORM before inserting an object of this type.
 func (a *Attachment) BeforeInsert() {
 	a.CreatedUnix = time.Now().Unix()
 }
 
+// AfterSet is invoked from XORM after setting the value of a field of
+// this object.
 func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "created_unix":
@@ -1687,14 +1711,15 @@ func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.
+// AttachmentLocalPath returns where attachment is stored in local file
+// system based on given UUID.
 func AttachmentLocalPath(uuid string) string {
 	return path.Join(setting.AttachmentPath, uuid[0:1], uuid[1:2], uuid)
 }
 
 // LocalPath returns where attachment is stored in local file system.
-func (attach *Attachment) LocalPath() string {
-	return AttachmentLocalPath(attach.UUID)
+func (a *Attachment) LocalPath() string {
+	return AttachmentLocalPath(a.UUID)
 }
 
 // NewAttachment creates a new attachment object.
@@ -1794,8 +1819,8 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 }
 
 // DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
-func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByIssueID(issueId)
+func DeleteAttachmentsByIssue(issueID int64, remove bool) (int, error) {
+	attachments, err := GetAttachmentsByIssueID(issueID)
 
 	if err != nil {
 		return 0, err
@@ -1805,8 +1830,8 @@ func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
 }
 
 // DeleteAttachmentsByComment deletes all attachments associated with the given comment.
-func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
-	attachments, err := GetAttachmentsByCommentID(commentId)
+func DeleteAttachmentsByComment(commentID int64, remove bool) (int, error) {
+	attachments, err := GetAttachmentsByCommentID(commentID)
 
 	if err != nil {
 		return 0, err
