@@ -32,6 +32,8 @@ imports:
   version: 82b511550b0aefc36b3a28062ad3a52e812bee38
 - name: github.com/go-sql-driver/mysql
   version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
+- name: github.com/go-xorm/builder
+  version: cd42e8337f3031e737c3f415b6354793cf30f1c9
 - name: github.com/go-xorm/core
   version: 2ec3936f8a8a3fb6397c6c10185acffa87488534
 - name: github.com/go-xorm/xorm
