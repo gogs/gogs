@@ -66,8 +66,8 @@ test:
 check: test
 
 .PHONY: install
-install: $(BIN)/$(EXECUTABLE)
-	cp $< $(GOPATH)/bin/
+install: $(wildcard *.go)
+	go install -v -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)'
 
 .PHONY: build
 build: $(BIN)/$(EXECUTABLE)
