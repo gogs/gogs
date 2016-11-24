@@ -105,6 +105,8 @@ func extractTypeFromBase64Key(key string) (string, error) {
 func parseKeyString(content string) (string, error) {
 	// Transform all legal line endings to a single "\n".
 	content = strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(content)
+	// remove trailing newline (and beginning spaces too)
+	content = strings.TrimSpace(content)
 	lines := strings.Split(content, "\n")
 
 	var keyType, keyContent, keyComment string
