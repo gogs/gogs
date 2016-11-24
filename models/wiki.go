@@ -12,67 +12,28 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/Unknwon/com"
 
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/sync"
 )
 
-// workingPool represents a pool of working status which makes sure
-// that only one instance of same task is performing at a time.
-// However, different type of tasks can performing at the same time.
-type workingPool struct {
-	lock  sync.Mutex
-	pool  map[string]*sync.Mutex
-	count map[string]int
-}
-
-// CheckIn checks in a task and waits if others are running.
-func (p *workingPool) CheckIn(name string) {
-	p.lock.Lock()
-
-	lock, has := p.pool[name]
-	if !has {
-		lock = &sync.Mutex{}
-		p.pool[name] = lock
-	}
-	p.count[name]++
-
-	p.lock.Unlock()
-	lock.Lock()
-}
-
-// CheckOut checks out a task to let other tasks run.
-func (p *workingPool) CheckOut(name string) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
-	p.pool[name].Unlock()
-	if p.count[name] == 1 {
-		delete(p.pool, name)
-		delete(p.count, name)
-	} else {
-		p.count[name]--
-	}
-}
-
-var wikiWorkingPool = &workingPool{
-	pool:  make(map[string]*sync.Mutex),
-	count: make(map[string]int),
-}
+var wikiWorkingPool = sync.NewExclusivePool()
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
 	return url.QueryEscape(strings.Replace(name, " ", "-", -1))
 }
 
-// ToWikiPageName formats a URL back to corresponding wiki page name.
+// ToWikiPageName formats a URL back to corresponding wiki page name,
+// and removes leading characters './' to prevent changing files
+// that are not belong to wiki repository.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(strings.Replace(urlString, "-", " ", -1))
-	return name
+	return strings.Replace(strings.TrimLeft(name, "./"), "/", " ", -1)
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
@@ -103,6 +64,8 @@ func (repo *Repository) InitWiki() error {
 
 	if err := git.InitRepository(repo.WikiPath(), true); err != nil {
 		return fmt.Errorf("InitRepository: %v", err)
+	} else if err = createUpdateHook(repo.WikiPath()); err != nil {
+		return fmt.Errorf("createUpdateHook: %v", err)
 	}
 	return nil
 }
@@ -113,24 +76,13 @@ func (repo *Repository) LocalWikiPath() string {
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
 func (repo *Repository) UpdateLocalWiki() error {
-	return updateLocalCopy(repo.WikiPath(), repo.LocalWikiPath())
+	// Don't pass branch name here because it fails to clone and
+	// checkout to a specific branch when wiki is an empty repository.
+	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), "")
 }
 
-// discardLocalWikiChanges discards local commits make sure
-// it is even to remote branch when local copy exists.
 func discardLocalWikiChanges(localPath string) error {
-	if !com.IsExist(localPath) {
-		return nil
-	}
-	// No need to check if nothing in the repository.
-	if !git.IsBranchExist(localPath, "master") {
-		return nil
-	}
-
-	if err := git.ResetHEAD(localPath, true, "origin/master"); err != nil {
-		return fmt.Errorf("ResetHEAD: %v", err)
-	}
-	return nil
+	return discardLocalRepoBranchChanges(localPath, "master")
 }
 
 // updateWikiPage adds new page to repository wiki.
@@ -149,7 +101,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 
-	title = ToWikiPageName(strings.Replace(title, "/", " ", -1))
+	title = ToWikiPageName(title)
 	filename := path.Join(localPath, title+".md")
 
 	// If not a new file, show perform update not create.
@@ -161,6 +113,13 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 		os.Remove(path.Join(localPath, oldTitle+".md"))
 	}
 
+	// SECURITY: if new file is a symlink to non-exist critical file,
+	// attack content can be written to the target file (e.g. authorized_keys2)
+	// as a new page operation.
+	// So we want to make sure the symlink is removed before write anything.
+	// The new file we created will be in normal text format.
+	os.Remove(filename)
+
 	if err = ioutil.WriteFile(filename, []byte(content), 0666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
@@ -170,7 +129,10 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	}
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   message,
+	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("Push: %v", err)
@@ -198,7 +160,7 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 		return fmt.Errorf("UpdateLocalWiki: %v", err)
 	}
 
-	title = ToWikiPageName(strings.Replace(title, "/", " ", -1))
+	title = ToWikiPageName(title)
 	filename := path.Join(localPath, title+".md")
 	os.Remove(filename)
 
@@ -206,7 +168,10 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	if err = git.AddChanges(localPath, true); err != nil {
 		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, message, doer.NewGitSig()); err != nil {
+	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
+		Committer: doer.NewGitSig(),
+		Message:   message,
+	}); err != nil {
 		return fmt.Errorf("CommitChanges: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("Push: %v", err)

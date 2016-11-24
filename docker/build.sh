@@ -5,19 +5,28 @@ set -e
 # Set temp environment vars
 export GOPATH=/tmp/go
 export PATH=${PATH}:${GOPATH}/bin
+export GO15VENDOREXPERIMENT=1
 
 # Install build deps
-apk --no-cache --no-progress add --virtual build-deps linux-pam-dev go gcc musl-dev
+apk --no-cache --no-progress add --virtual build-deps build-base linux-pam-dev go
 
-# Init go environment to build Gogs
+# Install glide
+git clone -b 0.10.2 https://github.com/Masterminds/glide ${GOPATH}/src/github.com/Masterminds/glide
+cd ${GOPATH}/src/github.com/Masterminds/glide
+make build
+go install
+
+
+
+# Build Gogs
 mkdir -p ${GOPATH}/src/github.com/gogits/
 ln -s /app/gogs/ ${GOPATH}/src/github.com/gogits/gogs
 cd ${GOPATH}/src/github.com/gogits/gogs
-go get -v -tags "sqlite cert pam"
-go build -tags "sqlite cert pam"
+glide install
+make build TAGS="sqlite cert pam"
 
-# Cleanup GOPATH
-rm -r $GOPATH
+# Cleanup GOPATH & vendoring dir
+rm -r $GOPATH /app/gogs/vendor
 
 # Remove build deps
 apk --no-progress del build-deps

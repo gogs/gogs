@@ -21,15 +21,13 @@ func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 		buf = buf[:n]
 	}
 
-	_, isTextFile := base.IsTextFile(buf)
-	if !isTextFile {
-		_, isImageFile := base.IsImageFile(buf)
-		if !isImageFile {
-			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+path.Base(ctx.Repo.TreeName))
+	if !base.IsTextFile(buf) {
+		if !base.IsImageFile(buf) {
+			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+path.Base(ctx.Repo.TreePath)+"\"")
 			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
-	} else {
-		ctx.Resp.Header().Set("Content-Type", "text/plain")
+	} else if !ctx.QueryBool("render") {
+		ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 	ctx.Resp.Write(buf)
 	_, err := io.Copy(ctx.Resp, reader)
@@ -42,11 +40,11 @@ func ServeBlob(ctx *context.Context, blob *git.Blob) error {
 		return err
 	}
 
-	return ServeData(ctx, ctx.Repo.TreeName, dataRc)
+	return ServeData(ctx, ctx.Repo.TreePath, dataRc)
 }
 
 func SingleDownload(ctx *context.Context) {
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
+	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
 			ctx.Handle(404, "GetBlobByPath", nil)

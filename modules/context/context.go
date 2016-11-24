@@ -105,6 +105,18 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
+// NotFoundOrServerError use error check function to determine if the error
+// is about not found. It responses with 404 status code for not found error,
+// or error context description for logging purpose of 500 server error.
+func (ctx *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
+	if errck(err) {
+		ctx.Handle(404, title, err)
+		return
+	}
+
+	ctx.Handle(500, title, err)
+}
+
 func (ctx *Context) HandleText(status int, title string) {
 	if (status/100 == 4) || (status/100 == 5) {
 		log.Error(4, "%s", title)
@@ -156,7 +168,7 @@ func Contexter() macaron.Handler {
 			ctx.IsSigned = true
 			ctx.Data["IsSigned"] = ctx.IsSigned
 			ctx.Data["SignedUser"] = ctx.User
-			ctx.Data["SignedUserID"] = ctx.User.Id
+			ctx.Data["SignedUserID"] = ctx.User.ID
 			ctx.Data["SignedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		} else {

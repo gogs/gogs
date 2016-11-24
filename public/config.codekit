@@ -20,11 +20,11 @@
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
 		},
-	"\/css\/semantic-2.1.8.min.css": {
+	"\/css\/semantic-2.2.1.min.css": {
 		"fileType": 16,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/css\/semantic-2.1.8.min.css",
+		"inputAbbreviatedPath": "\/css\/semantic-2.2.1.min.css",
 		"outputAbbreviatedPath": "No Output Path",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0
@@ -62,16 +62,16 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 1
 		},
-	"\/img\/avatar_default.jpg": {
-		"fileType": 16384,
+	"\/img\/avatar_default.png": {
+		"fileType": 32768,
 		"ignore": 0,
 		"ignoreWasSetByUser": 0,
-		"initialSize": 6238,
-		"inputAbbreviatedPath": "\/img\/avatar_default.jpg",
-		"outputAbbreviatedPath": "\/img\/avatar_default.jpg",
+		"initialSize": 4048,
+		"inputAbbreviatedPath": "\/img\/avatar_default.png",
+		"outputAbbreviatedPath": "\/img\/avatar_default.png",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
-		"processed": 1
+		"processed": 0
 		},
 	"\/img\/checkmark.png": {
 		"fileType": 32768,
@@ -150,12 +150,12 @@
 		"outputStyle": 1,
 		"syntaxCheckerStyle": 1
 		},
-	"\/js\/semantic-2.1.8.min.js": {
+	"\/js\/semantic-2.2.1.min.js": {
 		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/js\/semantic-2.1.8.min.js",
-		"outputAbbreviatedPath": "\/js\/min\/semantic-2.1.8.min-min.js",
+		"ignore": 1,
+		"ignoreWasSetByUser": 1,
+		"inputAbbreviatedPath": "\/js\/semantic-2.2.1.min.js",
+		"outputAbbreviatedPath": "\/js\/min\/semantic-2.2.1.min-min.js",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 1,
@@ -211,6 +211,26 @@
 		"ignoreWasSetByUser": 0,
 		"inputAbbreviatedPath": "\/less\/_dashboard.less",
 		"outputAbbreviatedPath": "\/css\/_dashboard.css",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"outputStyle": 0,
+		"relativeURLS": 0,
+		"shouldRunAutoprefixer": 0,
+		"shouldRunBless": 0,
+		"strictImports": 0,
+		"strictMath": 0,
+		"strictUnits": 0
+		},
+	"\/less\/_editor.less": {
+		"allowInsecureImports": 0,
+		"createSourceMap": 0,
+		"disableJavascript": 0,
+		"fileType": 1,
+		"ieCompatibility": 1,
+		"ignore": 1,
+		"ignoreWasSetByUser": 0,
+		"inputAbbreviatedPath": "\/less\/_editor.less",
+		"outputAbbreviatedPath": "\/css\/_editor.css",
 		"outputPathIsOutsideProject": 0,
 		"outputPathIsSetByUser": 0,
 		"outputStyle": 0,
@@ -420,126 +440,6 @@
 		"strictImports": 0,
 		"strictMath": 0,
 		"strictUnits": 0
-		},
-	"\/plugins\/dropzone-4.2.0\/dropzone.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/dropzone-4.2.0\/dropzone.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/plugins\/dropzone-4.2.0\/dropzone.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/dropzone-4.2.0\/dropzone.js",
-		"outputAbbreviatedPath": "\/plugins\/dropzone-4.2.0\/min\/dropzone-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/plugins\/highlight-9.2.0\/default.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/default.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/plugins\/highlight-9.2.0\/github.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/github.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/plugins\/highlight-9.2.0\/highlight.pack.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/highlight.pack.js",
-		"outputAbbreviatedPath": "\/plugins\/highlight-9.2.0\/min\/highlight.pack-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/plugins\/jquery.datetimepicker-2.4.5\/jquery.datetimepicker.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/jquery.datetimepicker-2.4.5\/jquery.datetimepicker.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/plugins\/jquery.datetimepicker-2.4.5\/jquery.datetimepicker.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/jquery.datetimepicker-2.4.5\/jquery.datetimepicker.js",
-		"outputAbbreviatedPath": "\/plugins\/jquery.datetimepicker-2.4.5\/min\/jquery.datetimepicker-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.min.js",
-		"outputAbbreviatedPath": "\/plugins\/jquery.minicolors-2.2.3\/min\/jquery.minicolors.min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
-		},
-	"\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.png": {
-		"fileType": 32768,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"initialSize": 68627,
-		"inputAbbreviatedPath": "\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.png",
-		"outputAbbreviatedPath": "\/plugins\/jquery.minicolors-2.2.3\/jquery.minicolors.png",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"processed": 0
-		},
-	"\/plugins\/simplemde-1.10.0\/simplemde.min.css": {
-		"fileType": 16,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/simplemde-1.10.0\/simplemde.min.css",
-		"outputAbbreviatedPath": "No Output Path",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0
-		},
-	"\/plugins\/simplemde-1.10.0\/simplemde.min.js": {
-		"fileType": 64,
-		"ignore": 0,
-		"ignoreWasSetByUser": 0,
-		"inputAbbreviatedPath": "\/plugins\/simplemde-1.10.0\/simplemde.min.js",
-		"outputAbbreviatedPath": "\/plugins\/simplemde-1.10.0\/min\/simplemde.min-min.js",
-		"outputPathIsOutsideProject": 0,
-		"outputPathIsSetByUser": 0,
-		"outputStyle": 1,
-		"syntaxCheckerStyle": 1
 		}
 	},
 "hooks": [
@@ -1151,7 +1051,7 @@
 	"sassUseLibsass": 0,
 	"shouldRunAutoprefixer": 0,
 	"shouldRunBless": 0,
-	"skippedItemsString": "node_modules, _logs, .hg, _cache, log, logs, cache, \/assets, \/js\/libs, .git, .svn, \/img\/emoji",
+	"skippedItemsString": "node_modules, _logs, .hg, \/plugins, _cache, log, logs, cache, \/assets, \/js\/libs, .git, .svn, \/img\/emoji",
 	"slimAutoOutputPathEnabled": 1,
 	"slimAutoOutputPathFilenamePattern": "*.html",
 	"slimAutoOutputPathRelativePath": "",

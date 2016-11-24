@@ -88,6 +88,7 @@ type RepoSettingForm struct {
 	Interval      int
 	MirrorAddress string
 	Private       bool
+	EnablePrune   bool
 
 	// Advanced settings
 	EnableWiki            bool
@@ -96,6 +97,7 @@ type RepoSettingForm struct {
 	EnableIssues          bool
 	EnableExternalTracker bool
 	TrackerURLFormat      string
+	TrackerIssueStyle     string
 	EnablePulls           bool
 }
 
@@ -111,10 +113,11 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //        \/       \/    \/     \/     \/            \/
 
 type WebhookForm struct {
-	Events string
-	Create bool
-	Push   bool
-	Active bool
+	Events      string
+	Create      bool
+	Push        bool
+	PullRequest bool
+	Active      bool
 }
 
 func (f WebhookForm) PushOnly() bool {
@@ -141,7 +144,7 @@ func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs binding.Errors) bin
 }
 
 type NewSlackHookForm struct {
-	PayloadURL string `binding:"Required;Url`
+	PayloadURL string `binding:"Required;Url"`
 	Channel    string `binding:"Required"`
 	Username   string
 	IconURL    string
@@ -166,7 +169,7 @@ type CreateIssueForm struct {
 	MilestoneID int64
 	AssigneeID  int64
 	Content     string
-	Attachments []string
+	Files       []string
 }
 
 func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -174,9 +177,9 @@ func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 }
 
 type CreateCommentForm struct {
-	Content     string
-	Status      string `binding:"OmitEmpty;In(reopen,close)"`
-	Attachments []string
+	Content string
+	Status  string `binding:"OmitEmpty;In(reopen,close)"`
+	Files   []string
 }
 
 func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -214,6 +217,14 @@ type CreateLabelForm struct {
 }
 
 func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type InitializeLabelsForm struct {
+	TemplateName string `binding:"Required"`
+}
+
+func (f *InitializeLabelsForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -264,5 +275,81 @@ type NewWikiForm struct {
 
 // FIXME: use code generation to generate this method.
 func (f *NewWikiForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ___________    .___.__  __
+// \_   _____/  __| _/|__|/  |_
+//  |    __)_  / __ | |  \   __\
+//  |        \/ /_/ | |  ||  |
+// /_______  /\____ | |__||__|
+//         \/      \/
+
+type EditRepoFileForm struct {
+	TreePath      string `binding:"Required;MaxSize(500)"`
+	Content       string `binding:"Required"`
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage string
+	CommitChoice  string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	LastCommit    string
+}
+
+func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type EditPreviewDiffForm struct {
+	Content string
+}
+
+func (f *EditPreviewDiffForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+//  ____ ___        .__                    .___
+// |    |   \______ |  |   _________     __| _/
+// |    |   /\____ \|  |  /  _ \__  \   / __ |
+// |    |  / |  |_> >  |_(  <_> ) __ \_/ /_/ |
+// |______/  |   __/|____/\____(____  /\____ |
+//           |__|                   \/      \/
+//
+
+type UploadRepoFileForm struct {
+	TreePath      string `binding:MaxSize(500)"`
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage string
+	CommitChoice  string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	Files         []string
+}
+
+func (f *UploadRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type RemoveUploadFileForm struct {
+	File string `binding:"Required;MaxSize(50)"`
+}
+
+func (f *RemoveUploadFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ________         .__          __
+// \______ \   ____ |  |   _____/  |_  ____
+// |    |  \_/ __ \|  | _/ __ \   __\/ __ \
+// |    `   \  ___/|  |_\  ___/|  | \  ___/
+// /_______  /\___  >____/\___  >__|  \___  >
+//         \/     \/          \/          \/
+
+type DeleteRepoFileForm struct {
+	CommitSummary string `binding:"MaxSize(100)`
+	CommitMessage string
+	CommitChoice  string `binding:"Required;MaxSize(50)"`
+	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+}
+
+func (f *DeleteRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

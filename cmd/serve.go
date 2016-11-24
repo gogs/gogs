@@ -14,8 +14,9 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/codegangsta/cli"
+	git "github.com/gogits/git-module"
 	gouuid "github.com/satori/go.uuid"
+	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
@@ -100,10 +101,10 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	}
 
 	if err = models.PushUpdate(models.PushUpdateOptions{
-		RefName:      task.RefName,
+		RefFullName:  task.RefName,
 		OldCommitID:  task.OldCommitID,
 		NewCommitID:  task.NewCommitID,
-		PusherID:     user.Id,
+		PusherID:     user.ID,
 		PusherName:   user.Name,
 		RepoUserName: repoUser.Name,
 		RepoName:     reponame,
@@ -113,7 +114,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 
 	// Ask for running deliver hook and test pull request tasks.
 	reqURL := setting.LocalURL + repoUser.Name + "/" + reponame + "/tasks/trigger?branch=" +
-		strings.TrimPrefix(task.RefName, "refs/heads/") + "&secret=" + base.EncodeMD5(repoUser.Salt)
+		strings.TrimPrefix(task.RefName, git.BRANCH_PREFIX) + "&secret=" + base.EncodeMD5(repoUser.Salt) + "&pusher=" + com.ToStr(user.ID)
 	log.GitLogger.Trace("Trigger task: %s", reqURL)
 
 	resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
@@ -129,7 +130,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	}
 }
 
-func runServ(c *cli.Context) {
+func runServ(c *cli.Context) error {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
@@ -138,7 +139,7 @@ func runServ(c *cli.Context) {
 
 	if setting.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
-		return
+		return nil
 	}
 
 	if len(c.Args()) < 1 {
@@ -149,7 +150,7 @@ func runServ(c *cli.Context) {
 	if len(cmd) == 0 {
 		println("Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
 		println("If this is unexpected, please log in with password and setup Gogs under another user.")
-		return
+		return nil
 	}
 
 	verb, args := parseCmd(cmd)
@@ -175,7 +176,7 @@ func runServ(c *cli.Context) {
 		fail("Internal error", "Failed to get repository owner (%s): %v", username, err)
 	}
 
-	repo, err := models.GetRepositoryByName(repoUser.Id, reponame)
+	repo, err := models.GetRepositoryByName(repoUser.ID, reponame)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, reponame)
@@ -290,4 +291,6 @@ func runServ(c *cli.Context) {
 			fail("Internal error", "UpdatePublicKey: %v", err)
 		}
 	}
+
+	return nil
 }

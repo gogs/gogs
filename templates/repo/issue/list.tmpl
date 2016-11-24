@@ -8,7 +8,7 @@
 				{{if .PageIsIssueList}}
 					<a class="ui green button" href="{{.RepoLink}}/issues/new">{{.i18n.Tr "repo.issues.new"}}</a>
 				{{else}}
-					<a class="ui green button {{if not .PullRequestCtx.Allowed}}disabled{{end}}" href="{{.RepoLink}}/compare/{{.Repository.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">{{.i18n.Tr "repo.pulls.new"}}</a>
+					<a class="ui green button {{if not .PullRequestCtx.Allowed}}disabled{{end}}" href="{{if .PullRequestCtx.Allowed}}{{.PullRequestCtx.BaseRepo.Link}}/compare/{{.Repository.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}{{end}}">{{.i18n.Tr "repo.pulls.new"}}</a>
 				{{end}}
 			</div>
 		</div>
@@ -61,7 +61,7 @@
 				<div class="menu">
 					<a class="item" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_assginee_no_select"}}</a>
 					{{range .Assignees}}
-						<a class="{{if eq $.AssigneeID .Id}}active selected{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{.Id}}"><img src="{{.AvatarLink}}"> {{.Name}}</a>
+						<a class="{{if eq $.AssigneeID .ID}}active selected{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{.ID}}"><img src="{{.RelAvatarLink}}"> {{.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -74,7 +74,7 @@
 				</span>
 				<div class="menu">
 					<a class="{{if eq .ViewType "all"}}active{{end}} item" href="{{$.Link}}?type=all&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.all_issues"}}</a>
-					<a class="{{if eq .ViewType "assigned"}}active{{end}} item" href="{{$.Link}}?type=assigned&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}</a>
+					<a class="{{if eq .ViewType "assigned"}}active{{end}} item" href="{{$.Link}}?type=assigned&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.assigned_to_you"}}</a>
 					<a class="{{if eq .ViewType "created_by"}}active{{end}} item" href="{{$.Link}}?type=created_by&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.created_by_you"}}</a>
 					<a class="{{if eq .ViewType "mentioned"}}active{{end}} item" href="{{$.Link}}?type=mentioned&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}">{{.i18n.Tr "repo.issues.filter_type.mentioning_you"}}</a>
 				</div>
@@ -102,7 +102,7 @@
 				{{ $timeStr:= TimeSince .Created $.Lang }}
 				<li class="item">
 					<div class="ui {{if .IsRead}}black{{else}}green{{end}} label">#{{.Index}}</div>
-					<a class="title has-emoji" href="{{$.Link}}/{{.Index}}">{{.Name}}</a>
+					<a class="title has-emoji" href="{{$.Link}}/{{.Index}}">{{.Title}}</a>
 
 					{{range .Labels}}
 						<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name}}</a>
@@ -121,7 +121,7 @@
 						{{end}}
 						{{if .Assignee}}
 							<a class="ui right assignee poping up" href="{{.Assignee.HomeLink}}" data-content="{{.Assignee.Name}}" data-variation="inverted" data-position="left center">
-								<img class="ui avatar image" src="{{.Assignee.AvatarLink}}">
+								<img class="ui avatar image" src="{{.Assignee.RelAvatarLink}}">
 							</a>
 						{{end}}
 					</p>
@@ -132,17 +132,17 @@
 				{{if gt .TotalPages 1}}
 					<div class="center page buttons">
 						<div class="ui borderless pagination menu">
-							<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
+							<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
 								<i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
 							</a>
 							{{range .Pages}}
 								{{if eq .Num -1}}
 									<a class="disabled item">...</a>
 								{{else}}
-									<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+									<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
 								{{end}}
 							{{end}}
-							<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
+							<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
 								{{$.i18n.Tr "repo.issues.next"}}&nbsp;<i class="icon right arrow"></i>
 							</a>
 						</div>

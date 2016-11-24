@@ -1,6 +1,6 @@
 [run]
 init_cmds = [
-	["make", "build-dev", "TAGS=sqlite"],
+	["make", "build-dev"],
 	["./gogs", "web"]
 ]
 watch_all = true
@@ -14,6 +14,6 @@ watch_exts = [".go"]
 ignore_files = [".+_test.go"]
 build_delay = 1500
 cmds = [
-	["make", "build-dev", "TAGS=sqlite"], # cert pam tidb
+	["make", "build-dev"], # TAGS=sqlite cert pam tidb
 	["./gogs", "web"]
 ]

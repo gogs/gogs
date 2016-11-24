@@ -55,7 +55,7 @@
 										<li><img class="img-8" src="{{$push.AvatarLink .AuthorEmail}}"> <a class="commit-id" href="{{$repoLink}}/commit/{{.Sha1}}">{{ShortSha .Sha1}}</a> <span class="text truncate light grey has-emoji">{{.Message}}</span></li>
 									{{end}}
 								{{end}}
-								{{if and (gt $push.Len 1) $push.CompareUrl}}<li><a href="{{AppSubUrl}}/{{$push.CompareUrl}}">{{$.i18n.Tr "action.compare_commits" $push.Len}} »</a></li>{{end}}
+								{{if and (gt $push.Len 1) $push.CompareURL}}<li><a href="{{AppSubUrl}}/{{$push.CompareURL}}">{{$.i18n.Tr "action.compare_commits" $push.Len}} »</a></li>{{end}}
 							</ul>
 						</div>
 					{{else if eq .GetOpType 6}}

@@ -42,21 +42,13 @@ func ListUserOrgs(ctx *context.APIContext) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#get-an-organization
 func Get(ctx *context.APIContext) {
-	org := user.GetUserByParamsName(ctx, ":orgname")
-	if ctx.Written() {
-		return
-	}
-	ctx.JSON(200, convert.ToOrganization(org))
+	ctx.JSON(200, convert.ToOrganization(ctx.Org.Organization))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#edit-an-organization
 func Edit(ctx *context.APIContext, form api.EditOrgOption) {
-	org := user.GetUserByParamsName(ctx, ":orgname")
-	if ctx.Written() {
-		return
-	}
-
-	if !org.IsOwnedBy(ctx.User.Id) {
+	org := ctx.Org.Organization
+	if !org.IsOwnedBy(ctx.User.ID) {
 		ctx.Status(403)
 		return
 	}

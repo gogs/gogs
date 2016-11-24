@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jaytaylor/html2text"
 	"gopkg.in/gomail.v2"
 
 	"github.com/gogits/gogs/modules/log"
@@ -26,14 +27,25 @@ type Message struct {
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
-func NewMessageFrom(to []string, from, subject, body string) *Message {
+func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
+	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
+
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
 	msg.SetHeader("Subject", subject)
 	msg.SetDateHeader("Date", time.Now())
-	msg.SetBody("text/plain", body)
-	msg.AddAlternative("text/html", body)
+
+	body, err := html2text.FromString(htmlBody)
+	if err != nil {
+		log.Error(4, "html2text.FromString: %v", err)
+		msg.SetBody("text/html", htmlBody)
+	} else {
+		msg.SetBody("text/plain", body)
+		if setting.MailService.EnableHTMLAlternative {
+			msg.AddAlternative("text/html", htmlBody)
+		}
+	}
 
 	return &Message{
 		Message: msg,
@@ -114,8 +126,8 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		return fmt.Errorf("NewClient: %v", err)
 	}
 
-	if !setting.MailService.DisableHelo {
-		hostname := setting.MailService.HeloHostname
+	if !opts.DisableHelo {
+		hostname := opts.HeloHostname
 		if len(hostname) == 0 {
 			hostname, err = os.Hostname()
 			if err != nil {
@@ -186,7 +198,7 @@ func processMailQueue() {
 		case msg := <-mailQueue:
 			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
 			if err := gomail.Send(sender, msg.Message); err != nil {
-				log.Error(4, "Fail to send e-mails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+				log.Error(3, "Fail to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 			} else {
 				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
 			}

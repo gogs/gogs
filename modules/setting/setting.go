@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 	_ "github.com/go-macaron/session/redis"
 	"gopkg.in/ini.v1"
 
+	"github.com/gogits/go-libravatar"
+
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/user"
@@ -30,9 +33,10 @@ import (
 type Scheme string
 
 const (
-	HTTP  Scheme = "http"
-	HTTPS Scheme = "https"
-	FCGI  Scheme = "fcgi"
+	HTTP        Scheme = "http"
+	HTTPS       Scheme = "https"
+	FCGI        Scheme = "fcgi"
+	UNIX_SOCKET Scheme = "unix"
 )
 
 type LandingPage string
@@ -43,7 +47,7 @@ const (
 )
 
 var (
-	// Build information
+	// Build information should only be set by -ldflags.
 	BuildTime    string
 	BuildGitHash string
 
@@ -57,16 +61,17 @@ var (
 	AppDataPath    string
 
 	// Server settings
-	Protocol           Scheme
-	Domain             string
-	HttpAddr, HttpPort string
-	LocalURL           string
-	OfflineMode        bool
-	DisableRouterLog   bool
-	CertFile, KeyFile  string
-	StaticRootPath     string
-	EnableGzip         bool
-	LandingPageUrl     LandingPage
+	Protocol             Scheme
+	Domain               string
+	HTTPAddr, HTTPPort   string
+	LocalURL             string
+	OfflineMode          bool
+	DisableRouterLog     bool
+	CertFile, KeyFile    string
+	StaticRootPath       string
+	EnableGzip           bool
+	LandingPageURL       LandingPage
+	UnixSocketPermission uint32
 
 	SSH struct {
 		Disabled            bool           `ini:"DISABLE_SSH"`
@@ -109,31 +114,60 @@ var (
 		AnsiCharset            string
 		ForcePrivate           bool
 		MaxCreationLimit       int
+		MirrorQueueLength      int
 		PullRequestQueueLength int
+		PreferredLicenses      []string
+
+		// Repository editor settings
+		Editor struct {
+			LineWrapExtensions   []string
+			PreviewableFileModes []string
+		} `ini:"-"`
+
+		// Repository upload settings
+		Upload struct {
+			Enabled      bool
+			TempPath     string
+			AllowedTypes []string `delim:"|"`
+			FileMaxSize  int64
+			MaxFiles     int
+		} `ini:"-"`
 	}
 	RepoRootPath string
 	ScriptType   string
 
 	// UI settings
-	ExplorePagingNum     int
-	IssuePagingNum       int
-	FeedMaxCommitNum     int
-	AdminUserPagingNum   int
-	AdminRepoPagingNum   int
-	AdminNoticePagingNum int
-	AdminOrgPagingNum    int
-	ThemeColorMetaTag    string
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum int
+		} `ini:"ui.user"`
+	}
 
 	// Markdown sttings
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+		FileExtensions      []string
 	}
 
 	// Picture settings
-	AvatarUploadPath string
-	GravatarSource   string
-	DisableGravatar  bool
+	AvatarUploadPath      string
+	GravatarSource        string
+	DisableGravatar       bool
+	EnableFederatedAvatar bool
+	LibravatarService     *libravatar.Libravatar
 
 	// Log settings
 	LogRootPath string
@@ -152,24 +186,12 @@ var (
 
 	// Cache settings
 	CacheAdapter  string
-	CacheInternal int
+	CacheInterval int
 	CacheConn     string
 
 	// Session settings
 	SessionConfig  session.Options
 	CSRFCookieName = "_csrf"
-
-	// Git settings
-	Git struct {
-		MaxGitDiffLines int
-		GcArgs          []string `delim:" "`
-		Timeout         struct {
-			Migrate int
-			Mirror  int
-			Clone   int
-			Pull    int
-		} `ini:"git.timeout"`
-	}
 
 	// Cron tasks
 	Cron struct {
@@ -192,6 +214,32 @@ var (
 		} `ini:"cron.check_repo_stats"`
 	}
 
+	// Git settings
+	Git struct {
+		DisableDiffHighlight     bool
+		MaxGitDiffLines          int
+		MaxGitDiffLineCharacters int
+		MaxGitDiffFiles          int
+		GCArgs                   []string `delim:" "`
+		Timeout                  struct {
+			Migrate int
+			Mirror  int
+			Clone   int
+			Pull    int
+			GC      int `ini:"GC"`
+		} `ini:"git.timeout"`
+	}
+
+	// Mirror settings
+	Mirror struct {
+		DefaultInterval int
+	}
+
+	// API settings
+	API struct {
+		MaxResponseItems int
+	}
+
 	// I18n settings
 	Langs, Names []string
 	dateLangs    map[string]string
@@ -199,9 +247,10 @@ var (
 	// Highlight settings are loaded in modules/template/hightlight.go
 
 	// Other settings
-	ShowFooterBranding    bool
-	ShowFooterVersion     bool
-	SupportMiniWinService bool
+	ShowFooterBranding         bool
+	ShowFooterVersion          bool
+	ShowFooterTemplateLoadTime bool
+	SupportMiniWinService      bool
 
 	// Global setting objects
 	Cfg          *ini.File
@@ -213,6 +262,7 @@ var (
 	HasRobotsTxt bool
 )
 
+// DateLang transforms standard language locale name to corresponding value in datetime plugin.
 func DateLang(lang string) string {
 	name, ok := dateLangs[lang]
 	if ok {
@@ -262,6 +312,19 @@ func forcePathSeparator(path string) {
 	if strings.Contains(path, "\\") {
 		log.Fatal(4, "Do not use '\\' or '\\\\' in paths, instead, please use '/' in all places")
 	}
+}
+
+// IsRunUserMatchCurrentUser returns false if configured run user does not match
+// actual user that runs the app. The first return value is the actual user name.
+// This check is ignored under Windows since SSH remote login is not the main
+// method to login on Windows.
+func IsRunUserMatchCurrentUser(runUser string) (string, bool) {
+	if IsWindows {
+		return "", true
+	}
+
+	currentUser := user.CurrentUsername()
+	return currentUser, runUser == currentUser
 }
 
 // NewContext initializes configuration context.
@@ -317,6 +380,7 @@ func NewContext() {
 		log.Fatal(4, "Invalid ROOT_URL '%s': %s", AppUrl, err)
 	}
 	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
+	// This value is empty if site does not have sub-url.
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
 
@@ -327,11 +391,19 @@ func NewContext() {
 		KeyFile = sec.Key("KEY_FILE").String()
 	} else if sec.Key("PROTOCOL").String() == "fcgi" {
 		Protocol = FCGI
+	} else if sec.Key("PROTOCOL").String() == "unix" {
+		Protocol = UNIX_SOCKET
+		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
+		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
+		if err != nil || UnixSocketPermissionParsed > 0777 {
+			log.Fatal(4, "Fail to parse unixSocketPermission: %s", UnixSocketPermissionRaw)
+		}
+		UnixSocketPermission = uint32(UnixSocketPermissionParsed)
 	}
 	Domain = sec.Key("DOMAIN").MustString("localhost")
-	HttpAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
-	HttpPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString("http://localhost:" + HttpPort + "/")
+	HTTPAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
+	HTTPPort = sec.Key("HTTP_PORT").MustString("3000")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HTTPPort + "/")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
@@ -340,9 +412,9 @@ func NewContext() {
 
 	switch sec.Key("LANDING_PAGE").MustString("home") {
 	case "explore":
-		LandingPageUrl = LANDING_PAGE_EXPLORE
+		LandingPageURL = LANDING_PAGE_EXPLORE
 	default:
-		LandingPageUrl = LANDING_PAGE_HOME
+		LandingPageURL = LANDING_PAGE_HOME
 	}
 
 	SSH.RootPath = path.Join(homeDir, ".ssh")
@@ -409,10 +481,12 @@ func NewContext() {
 	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
-	curUser := user.CurrentUsername()
 	// Does not check run user when the install lock is off.
-	if InstallLock && RunUser != curUser {
-		log.Fatal(4, "Expect user(%s) but current user is: %s", RunUser, curUser)
+	if InstallLock {
+		currentUser, match := IsRunUserMatchCurrentUser(RunUser)
+		if !match {
+			log.Fatal(4, "Expect user '%s' but current user is: %s", RunUser, currentUser)
+		}
 	}
 
 	// Determine and create root git repository path.
@@ -427,20 +501,15 @@ func NewContext() {
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
 	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
 		log.Fatal(4, "Fail to map Repository settings: %v", err)
+	} else if err = Cfg.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
+		log.Fatal(4, "Fail to map Repository.Editor settings: %v", err)
+	} else if err = Cfg.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
+		log.Fatal(4, "Fail to map Repository.Upload settings: %v", err)
 	}
 
-	// UI settings.
-	sec = Cfg.Section("ui")
-	ExplorePagingNum = sec.Key("EXPLORE_PAGING_NUM").MustInt(20)
-	IssuePagingNum = sec.Key("ISSUE_PAGING_NUM").MustInt(10)
-	FeedMaxCommitNum = sec.Key("FEED_MAX_COMMIT_NUM").MustInt(5)
-
-	sec = Cfg.Section("ui.admin")
-	AdminUserPagingNum = sec.Key("USER_PAGING_NUM").MustInt(50)
-	AdminRepoPagingNum = sec.Key("REPO_PAGING_NUM").MustInt(50)
-	AdminNoticePagingNum = sec.Key("NOTICE_PAGING_NUM").MustInt(50)
-	AdminOrgPagingNum = sec.Key("ORG_PAGING_NUM").MustInt(50)
-	ThemeColorMetaTag = sec.Key("THEME_COLOR_META_TAG").MustString("#ff5343")
+	if !filepath.IsAbs(Repository.Upload.TempPath) {
+		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
+	}
 
 	sec = Cfg.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
@@ -457,16 +526,45 @@ func NewContext() {
 		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
+	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool()
 	if OfflineMode {
 		DisableGravatar = true
+		EnableFederatedAvatar = false
+	}
+	if DisableGravatar {
+		EnableFederatedAvatar = false
 	}
 
-	if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
+	if EnableFederatedAvatar {
+		LibravatarService = libravatar.New()
+		parts := strings.Split(GravatarSource, "/")
+		if len(parts) >= 3 {
+			if parts[0] == "https:" {
+				LibravatarService.SetUseHTTPS(true)
+				LibravatarService.SetSecureFallbackHost(parts[2])
+			} else {
+				LibravatarService.SetUseHTTPS(false)
+				LibravatarService.SetFallbackHost(parts[2])
+			}
+		}
+	}
+
+	if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+		log.Fatal(4, "Fail to map UI settings: %v", err)
+	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
-	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
-		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
+	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
+		log.Fatal(4, "Fail to map Git settings: %v", err)
+	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
+		log.Fatal(4, "Fail to map Mirror settings: %v", err)
+	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
+		log.Fatal(4, "Fail to map API settings: %v", err)
+	}
+
+	if Mirror.DefaultInterval <= 0 {
+		Mirror.DefaultInterval = 24
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
@@ -475,6 +573,7 @@ func NewContext() {
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
+	ShowFooterTemplateLoadTime = Cfg.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
@@ -587,7 +686,7 @@ func newCacheService() {
 	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	switch CacheAdapter {
 	case "memory":
-		CacheInternal = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
+		CacheInterval = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
 	case "redis", "memcache":
 		CacheConn = strings.Trim(Cfg.Section("cache").Key("HOST").String(), "\" ")
 	default:
@@ -612,16 +711,17 @@ func newSessionService() {
 
 // Mailer represents mail service.
 type Mailer struct {
-	QueueLength       int
-	Name              string
-	Host              string
-	From              string
-	User, Passwd      string
-	DisableHelo       bool
-	HeloHostname      string
-	SkipVerify        bool
-	UseCertificate    bool
-	CertFile, KeyFile string
+	QueueLength           int
+	Name                  string
+	Host                  string
+	From                  string
+	User, Passwd          string
+	DisableHelo           bool
+	HeloHostname          string
+	SkipVerify            bool
+	UseCertificate        bool
+	CertFile, KeyFile     string
+	EnableHTMLAlternative bool
 }
 
 var (
@@ -636,17 +736,18 @@ func newMailService() {
 	}
 
 	MailService = &Mailer{
-		QueueLength:    sec.Key("SEND_BUFFER_LEN").MustInt(100),
-		Name:           sec.Key("NAME").MustString(AppName),
-		Host:           sec.Key("HOST").String(),
-		User:           sec.Key("USER").String(),
-		Passwd:         sec.Key("PASSWD").String(),
-		DisableHelo:    sec.Key("DISABLE_HELO").MustBool(),
-		HeloHostname:   sec.Key("HELO_HOSTNAME").String(),
-		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
-		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
-		CertFile:       sec.Key("CERT_FILE").String(),
-		KeyFile:        sec.Key("KEY_FILE").String(),
+		QueueLength:           sec.Key("SEND_BUFFER_LEN").MustInt(100),
+		Name:                  sec.Key("NAME").MustString(AppName),
+		Host:                  sec.Key("HOST").String(),
+		User:                  sec.Key("USER").String(),
+		Passwd:                sec.Key("PASSWD").String(),
+		DisableHelo:           sec.Key("DISABLE_HELO").MustBool(),
+		HeloHostname:          sec.Key("HELO_HOSTNAME").String(),
+		SkipVerify:            sec.Key("SKIP_VERIFY").MustBool(),
+		UseCertificate:        sec.Key("USE_CERTIFICATE").MustBool(),
+		CertFile:              sec.Key("CERT_FILE").String(),
+		KeyFile:               sec.Key("KEY_FILE").String(),
+		EnableHTMLAlternative: sec.Key("ENABLE_HTML_ALTERNATIVE").MustBool(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
 	log.Info("Mail Service Enabled")

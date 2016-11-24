@@ -6,8 +6,8 @@
 
 	.head {
 		.column {
-			padding-top: 5px!important;
-			padding-bottom: 5px!important;
+			padding-top: 5px !important;
+			padding-bottom: 5px !important;
 		}
 		.ui.compact.menu {
 			margin-left: 1rem;
@@ -29,6 +29,10 @@
 			display: block;
 			font-size: 12px;
 			white-space: nowrap;
+		}
+		.octicon.octicon-repo-forked {
+			margin-top: -1px;
+			font-size: 15px;
 		}
 	}
 
@@ -53,13 +57,15 @@
 			.hide {
 				display: none!important;
 			}
+			.item {
+				padding: 0px;
+			}
 			.label.color {
 				padding: 0 8px;
 				margin-right: 5px;
 			}
 			a {
-				padding-top: 5px;
-				padding-right: 10px;
+				margin: 2px 0;
 				.text {
 					color: #444;
 					&:hover {
@@ -76,6 +82,9 @@
 
 		.ui.tabs.divider {
 			border-bottom: none;
+		}
+		.ui.tabular .octicon {
+			margin-right: 5px;
 		}
 	}
 	.filter.menu {
@@ -117,7 +126,8 @@
 
 	#clone-panel {
 		margin-top: -8px;
-		width: 100%;
+		margin-left: 5px;
+		width: 350px;
 
 		input {
 			border-radius: 0;
@@ -149,6 +159,14 @@
 				font-size: 1.4em;
 			}
 		}
+		#file-buttons {
+			font-weight: normal;
+			margin-top: -3px;
+			.ui.button {
+				padding: 8px 10px;
+				font-weight: normal;
+			}
+		}
 
 		#repo-files-table {
 			thead {
@@ -168,9 +186,16 @@
 				}
 			}
 			tbody {
-				.icon {
+				.octicon {
 					margin-left: 3px;
 					margin-right: 5px;
+					color: #777;
+					&.octicon-mail-reply {
+						margin-right: 10px;
+					}
+					&.octicon-file-directory, &.octicon-file-submodule {
+						color: #1e70bf;
+					}
 				}
 			}
 			td {
@@ -188,8 +213,36 @@
 					font-size: 1em;
 					margin-top: -2px;
 				}
+				.file-actions {
+					padding-left: 20px;
+					.btn-octicon {
+					  display: inline-block;
+					  padding: 5px;
+					  margin-left: 5px;
+					  line-height: 1;
+					  color: #767676;
+					  vertical-align: middle;
+					  background: transparent;
+					  border: 0;
+					  outline: none;
+					 }
+					.btn-octicon:hover {
+					  color: #4078c0;
+					}
+					.btn-octicon-danger:hover {
+					  color: #bd2c00;
+					}
+					.btn-octicon.disabled {
+					  color: #bbb;
+					  cursor: default;
+					}
+					#delete-file-form {
+						display: inline-block;
+					}
+				}
 			}
 			.view-raw {
+				padding: 5px;
 				* {
 					max-width: 100%;
 				}
@@ -225,8 +278,6 @@
 				.lines-num,
 				.lines-code {
 					padding: 0;
-
-
 					pre,
 					ol,
 					.hljs {
@@ -234,9 +285,13 @@
 						margin: 0;
 						padding: 0 !important;
 						li {
-							padding-left: 5px;
+							display: inline-block;
+							width: 100%;
 							&.active {
 								background: #ffffdd;
+							}
+							&:before {
+								content: ' ';
 							}
 						}
 					}
@@ -249,6 +304,72 @@
 
 			.octicon {
 				width: 16px;
+			}
+		}
+	}
+
+	&.file.editor {
+		.treepath {
+			width: 100%;
+
+			input {
+				vertical-align: middle;
+				box-shadow: rgba(0, 0, 0, 0.0745098) 0px 1px 2px inset;
+				width: inherit;
+				padding: 7px 8px;
+				margin-right: 5px;
+			}
+		}
+
+		.tabular.menu {
+			.octicon {
+				margin-right: 5px;
+			}
+		}
+
+		.commit-form-wrapper {
+			padding-left: 64px;
+			.commit-avatar {
+				float: left;
+				margin-left: -64px;
+				width: 3em;
+		    height: auto;
+			}
+			.commit-form {
+			  position: relative;
+			  padding: 15px;
+			  margin-bottom: 10px;
+			  border: 1px solid #ddd;
+			  border-radius: 3px;
+			  #avatar-arrow;
+				&:after {
+					border-right-color: #fff;
+				}
+
+				.quick-pull-choice {
+					.branch-name {
+						display: inline-block;
+				    padding: 3px 6px;
+				    font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+				    color: rgba(0,0,0,0.65);
+				    background-color: rgba(209,227,237,0.45);
+				    border-radius: 3px;
+					}
+					.new-branch-name-input {
+				    position: relative;
+				    margin-left: 25px;
+				    input {
+				    	width: 240px !important;
+		    	    padding-left: 26px !important;
+				    }
+					}
+					.octicon-git-branch {
+						position: absolute;
+				    top: 9px;
+				    left: 10px;
+				    color: #b0c4ce;
+					}
+				}
 			}
 		}
 	}
@@ -381,10 +502,13 @@
 				.actions {
 					.item {
 						float: left;
-					}
-					a.item {
-						margin-top: 6px;
-						margin-left: 10px;
+						&.tag {
+							margin-right: 5px;
+						}
+						&.action {
+							margin-top: 6px;
+							margin-left: 10px;
+						}
 					}
 				}
 				.content {
@@ -442,6 +566,13 @@
 							margin: 0;
 							vertical-align: middle;
 						}
+						span.ui.image {
+							font-size: 8vw;
+							color: #000000;
+						}
+						span.ui.image:hover {
+							color: #000000;
+						}
 					}
 				}
 
@@ -471,19 +602,23 @@
 				.octicon {
 					width: 30px;
 					float: left;
-					margin-left: -36px;
 					text-align: center;
 					&.octicon-circle-slash {
 						margin-top: 5px;
+						margin-left: -34.5px;
 						font-size: 20px;
 						color: #bd2c00;
 					}
 					&.octicon-primitive-dot {
+						margin-left: -28.5px;
+						margin-right: -1px;
 						font-size: 30px;
 						color: #6cc644;
 					}
 					&.octicon-bookmark {
 						margin-top: 3px;
+						margin-left: -31px;
+						margin-right: -1px;
 						font-size: 25px;
 					}
 				}
@@ -942,6 +1077,10 @@
 		.target {
 			min-width: 500px;
 
+			#tag-name {
+				margin-top: -4px;
+			}
+
 			.at {
 				margin-left: -5px;
 				margin-right: 5px;
@@ -1054,6 +1193,19 @@
 				}
 			}
 		}
+
+		&.webhook {
+			.events {
+				.column {
+					padding-bottom: 0;
+				}
+				.help {
+					font-size: 13px;
+					margin-left: 26px;
+					padding-top: 0;
+				}
+			}
+		}
 	}
 }
 // End of .repository
@@ -1152,7 +1304,7 @@
 	padding-top: 15px;
 }
 
-.ui.comments {
+.ui.form {
 	.dropzone {
 		width: 100%;
 		margin-bottom: 10px;
@@ -1205,6 +1357,9 @@
 			.fa {
 				width: 20px;
 				text-align: center;
+			}
+			a {
+				.dont-break-out;
 			}
 		}
 	}
@@ -1322,4 +1477,12 @@
 	}
 }
 
-
+// generate .tab-size-{i} from 1 to 16
+.generate-tab-size(16);
+.generate-tab-size(@n, @i: 1) when (@i =< @n) {
+	.tab-size-@{i} {
+		tab-size: @i !important;
+		-moz-tab-size: @i !important;
+	}
+	.generate-tab-size(@n, (@i + 1));
+}

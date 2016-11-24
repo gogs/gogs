@@ -1,6 +1,6 @@
 # Docker for Gogs
 
-Visit [Docker Hub](https://hub.docker.com/r/gogs/gogs/) see all available tags.
+Visit [Docker Hub](https://hub.docker.com/r/gogs/) see all available images and tags.
 
 ## Usage
 
@@ -43,9 +43,11 @@ If you're more comfortable with mounting data to a data container, the commands 
 ```
 # Create data container
 docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
+
 # Use `docker run` for the first time.
 docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/gogs
 ```
+
 #### Using Docker 1.9 Volume command
 
 ```
@@ -69,11 +71,29 @@ Most of settings are obvious and easy to understand, but there are some settings
 - **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, and you expose it by `10080:3000`, but you still use `3000` for this value.
 - **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values (e.g. `http://192.168.99.100:10080/`).
 
-Full documentation of application settings can be found [here](http://gogs.io/docs/advanced/configuration_cheat_sheet.html).
+Full documentation of application settings can be found [here](https://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
-### Crond
+### Container options
 
-Please set environment variable `RUN_CROND` to be `true` or `1` in order to start `crond` inside the container.
+This container have some options available via environment variables, these options are opt-in features that can help the administration of this container:
+
+- **SOCAT_LINK**:
+  - <u>Possible value:</u>
+      `true`, `false`, `1`, `0`
+  - <u>Default:</u>
+      `true`
+  - <u>Action:</u>
+      Bind linked docker container to localhost socket using socat.
+      Any exported port from a linked container will be binded to the matching port on localhost.
+  - <u>Disclaimer:</u>
+      As this option rely on the environment variable created by docker when a container is linked, this option should be deactivated in managed environment such as Rancher or Kubernetes (set to `0` or `false`)
+- **RUN_CROND**:
+  - <u>Possible value:</u>
+      `true`, `false`, `1`, `0`
+  - <u>Default:</u>
+      `false`
+  - <u>Action:</u>
+      Request crond to be run inside the container. Its default configuration will periodically run all scripts from `/etc/periodic/${period}` but custom crontabs can be added to `/var/spool/cron/crontabs/`.
 
 ## Upgrade
 

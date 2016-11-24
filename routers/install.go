@@ -57,22 +57,25 @@ func NewServices() {
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
 	setting.NewContext()
-	highlight.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
 	models.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
-		models.LoadRepoConfig()
-		models.NewRepoContext()
-
+		highlight.NewContext()
+		markdown.BuildSanitizer()
 		if err := models.NewEngine(); err != nil {
 			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
 		}
-
 		models.HasEngine = true
+
+		models.LoadRepoConfig()
+		models.NewRepoContext()
+
+		// Booting long running goroutines.
 		cron.NewContext()
+		models.InitSyncMirrors()
 		models.InitDeliverHooks()
 		models.InitTestPullRequests()
 		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
@@ -80,7 +83,7 @@ func GlobalInit() {
 	if models.EnableSQLite3 {
 		log.Info("SQLite3 Supported")
 	}
-	if models.EnableTidb {
+	if models.EnableTiDB {
 		log.Info("TiDB Supported")
 	}
 	if setting.SupportMiniWinService {
@@ -88,13 +91,10 @@ func GlobalInit() {
 	}
 	checkRunMode()
 
-	if setting.SSH.StartBuiltinServer {
+	if setting.InstallLock && setting.SSH.StartBuiltinServer {
 		ssh.Listen(setting.SSH.ListenPort)
 		log.Info("SSH server started on :%v", setting.SSH.ListenPort)
 	}
-
-	// Build Sanitizer
-	markdown.BuildSanitizer()
 }
 
 func InstallInit(ctx *context.Context) {
@@ -110,7 +110,7 @@ func InstallInit(ctx *context.Context) {
 	if models.EnableSQLite3 {
 		dbOpts = append(dbOpts, "SQLite3")
 	}
-	if models.EnableTidb {
+	if models.EnableTiDB {
 		dbOpts = append(dbOpts, "TiDB")
 	}
 	ctx.Data["DbOptions"] = dbOpts
@@ -134,7 +134,7 @@ func Install(ctx *context.Context) {
 			ctx.Data["CurDbOption"] = "SQLite3"
 		}
 	case "tidb":
-		if models.EnableTidb {
+		if models.EnableTiDB {
 			ctx.Data["CurDbOption"] = "TiDB"
 		}
 	}
@@ -153,7 +153,7 @@ func Install(ctx *context.Context) {
 
 	form.Domain = setting.Domain
 	form.SSHPort = setting.SSH.Port
-	form.HTTPPort = setting.HttpPort
+	form.HTTPPort = setting.HTTPPort
 	form.AppUrl = setting.AppUrl
 	form.LogRootPath = setting.LogRootPath
 
@@ -169,6 +169,7 @@ func Install(ctx *context.Context) {
 	// Server and other services settings
 	form.OfflineMode = setting.OfflineMode
 	form.DisableGravatar = setting.DisableGravatar
+	form.EnableFederatedAvatar = setting.EnableFederatedAvatar
 	form.DisableRegistration = setting.Service.DisableRegistration
 	form.EnableCaptcha = setting.Service.EnableCaptcha
 	form.RequireSignInView = setting.Service.RequireSignInView
@@ -227,7 +228,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			ctx.Data["Err_DbType"] = true
-			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "http://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &form)
+			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &form)
 		} else {
 			ctx.Data["Err_DbSetting"] = true
 			ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), INSTALL, &form)
@@ -251,11 +252,10 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		return
 	}
 
-	// Check run user.
-	curUser := user.CurrentUsername()
-	if form.RunUser != curUser {
+	currentUser, match := setting.IsRunUserMatchCurrentUser(form.RunUser)
+	if !match {
 		ctx.Data["Err_RunUser"] = true
-		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, currentUser), INSTALL, &form)
 		return
 	}
 
@@ -329,6 +329,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(form.OfflineMode))
 	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
+	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(form.EnableFederatedAvatar))
 	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(form.DisableRegistration))
 	cfg.Section("service").Key("ENABLE_CAPTCHA").SetValue(com.ToStr(form.EnableCaptcha))
 	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(form.RequireSignInView))
@@ -374,7 +375,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		}
 
 		// Auto-login for admin
-		ctx.Session.Set("uid", u.Id)
+		ctx.Session.Set("uid", u.ID)
 		ctx.Session.Set("uname", u.Name)
 	}
 

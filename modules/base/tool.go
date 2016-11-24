@@ -45,7 +45,7 @@ func EncodeSha1(str string) string {
 }
 
 func ShortSha(sha1 string) string {
-	if len(sha1) == 40 {
+	if len(sha1) > 10 {
 		return sha1[:10]
 	}
 	return sha1
@@ -204,13 +204,24 @@ func HashEmail(email string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// AvatarLink returns avatar link by given email.
-func AvatarLink(email string) string {
-	if setting.DisableGravatar || setting.OfflineMode {
-		return setting.AppSubUrl + "/img/avatar_default.jpg"
+// AvatarLink returns relative avatar link to the site domain by given email,
+// which includes app sub-url as prefix. However, it is possible
+// to return full URL if user enables Gravatar-like service.
+func AvatarLink(email string) (url string) {
+	if setting.EnableFederatedAvatar && setting.LibravatarService != nil {
+		var err error
+		url, err = setting.LibravatarService.FromEmail(email)
+		if err != nil {
+			log.Error(1, "LibravatarService.FromEmail: %v", err)
+		}
 	}
-
-	return setting.GravatarSource + HashEmail(email)
+	if len(url) == 0 && !setting.DisableGravatar {
+		url = setting.GravatarSource + HashEmail(email)
+	}
+	if len(url) == 0 {
+		url = setting.AppSubUrl + "/img/avatar_default.png"
+	}
+	return url
 }
 
 // Seconds-based time units
@@ -507,18 +518,18 @@ func IsLetter(ch rune) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
 }
 
-func IsTextFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "text/") != -1 {
-		return contentType, true
+// IsTextFile returns true if file content format is plain text or empty.
+func IsTextFile(data []byte) bool {
+	if len(data) == 0 {
+		return true
 	}
-	return contentType, false
+	return strings.Index(http.DetectContentType(data), "text/") != -1
 }
 
-func IsImageFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "image/") != -1 {
-		return contentType, true
-	}
-	return contentType, false
+func IsImageFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "image/") != -1
+}
+
+func IsPDFFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "application/pdf") != -1
 }

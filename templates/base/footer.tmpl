@@ -7,7 +7,7 @@
 	<footer>
 		<div class="ui container">
 			<div class="ui left">
-				© 2016 Gogs {{if (or .ShowFooterVersion .PageIsAdmin)}}{{.i18n.Tr "version"}}: {{AppVer}}{{end}} {{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
+				© 2016 Gogs {{if (or .ShowFooterVersion .PageIsAdmin)}}{{.i18n.Tr "version"}}: {{AppVer}}{{end}} {{if ShowFooterTemplateLoadTime}}{{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>{{end}}
 			</div>
 			<div class="ui right links">
 				{{if .ShowFooterBranding}}
@@ -15,7 +15,7 @@
 					<a target="_blank" href="https://twitter.com/gogitservice"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
 					<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
 				{{end}}
-				<div class="ui language bottom pointing slide up dropdown link item">
+				<div class="ui language bottom floating slide up dropdown link item">
 					<i class="world icon"></i>
 					<div class="text">{{.LangName}}</div>
 					<div class="menu">
@@ -24,7 +24,7 @@
 						{{end}}
 					</div>
 				</div>
-				<a target="_blank" href="http://gogs.io">{{.i18n.Tr "website"}}</a>
+				<a target="_blank" href="https://gogs.io">{{.i18n.Tr "website"}}</a>
 				{{if (or .ShowFooterVersion .PageIsAdmin)}}<span class="version">{{GoVer}}</span>{{end}}
 			</div>
 		</div>
@@ -33,8 +33,8 @@
 
 <!-- Third-party libraries -->
 {{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight-9.2.0/github.css">
-	<script src="{{AppSubUrl}}/plugins/highlight-9.2.0/highlight.pack.js"></script>
+	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight-9.6.0/github.css">
+	<script src="{{AppSubUrl}}/plugins/highlight-9.6.0/highlight.pack.js"></script>
 {{end}}
 {{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
@@ -50,5 +50,5 @@
 {{end}}
 <script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
 <script src="{{AppSubUrl}}/js/libs/clipboard-1.5.9.min.js"></script>
-	
+
 </html>

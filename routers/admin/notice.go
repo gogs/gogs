@@ -29,9 +29,9 @@ func Notices(ctx *context.Context) {
 	if page <= 1 {
 		page = 1
 	}
-	ctx.Data["Page"] = paginater.New(int(total), setting.AdminNoticePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(int(total), setting.UI.Admin.NoticePagingNum, page, 5)
 
-	notices, err := models.Notices(page, setting.AdminNoticePagingNum)
+	notices, err := models.Notices(page, setting.UI.Admin.NoticePagingNum)
 	if err != nil {
 		ctx.Handle(500, "Notices", err)
 		return

@@ -178,6 +178,12 @@
 								</div>
 							</div>
 							<div class="inline field">
+								<div class="ui checkbox" id="federated-avatar-lookup">
+									<label class="poping up" data-content="{{.i18n.Tr "install.federated_avatar_lookup_popup"}}"><strong>{{.i18n.Tr "install.federated_avatar_lookup"}}</strong></label>
+									<input name="enable_federated_avatar" type="checkbox" {{if .enable_federated_avatar}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
 								<div class="ui checkbox" id="disable-registration">
 									<label class="poping up" data-content="{{.i18n.Tr "install.disable_registration_popup"}}"><strong>{{.i18n.Tr "install.disable_registration"}}</strong></label>
 									<input name="disable_registration" type="checkbox" {{if .disable_registration}}checked{{end}}>

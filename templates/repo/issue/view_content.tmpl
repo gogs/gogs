@@ -12,20 +12,22 @@
 	<div class="twelve wide column comment-list">
 		<ui class="ui comments">
 			<div class="comment">
-				<a class="avatar" {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
-					<img src="{{.Issue.Poster.AvatarLink}}">
+				<a class="avatar" {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>
+					<img src="{{.Issue.Poster.RelAvatarLink}}">
 				</a>
 				<div class="content">
 					<div class="ui top attached header">
-						<span class="text grey"><a {{if gt .Issue.Poster.Id 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
+						<span class="text grey"><a {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
 						<div class="ui right actions">
 							{{if .IsIssueOwner}}
-								<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+								<div class="item action">
+									<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
+								</div>
 							{{end}}
 						</div>
 					</div>
 					<div class="ui attached segment">
-						<div class="render-content markdown emojify">
+						<div class="render-content markdown has-emoji">
 							{{if .Issue.RenderedContent}}
 								{{.Issue.RenderedContent|Str2html}}
 							{{else}}
@@ -39,7 +41,13 @@
 						<div class="ui bottom attached segment">
 							<div class="ui small images">
 								{{range .Issue.Attachments}}
-									<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
+									<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}">
+										{{if FilenameIsImage .Name}}
+											<img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}" title='{{$.i18n.Tr "repo.issues.attachment.open_tab" .Name}}'>
+										{{else}}
+											<span class="ui image octicon octicon-desktop-download" title='{{$.i18n.Tr "repo.issues.attachment.download" .Name}}'></span>
+										{{end}}
+									</a>
 								{{end}}
 							</div>
 						</div>
@@ -52,13 +60,13 @@
 
 				<!-- 0 = COMMENT, 1 = REOPEN, 2 = CLOSE, 3 = ISSUE_REF, 4 = COMMIT_REF, 5 = COMMENT_REF, 6 = PULL_REF -->
 				{{if eq .Type 0}}
-					<div class="comment">
-						<a class="avatar" {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>
-							<img src="{{.Poster.AvatarLink}}">
+					<div class="comment" id="{{.HashTag}}">
+						<a class="avatar" {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<div class="content">
 							<div class="ui top attached header">
-								<span class="text grey"><a {{if gt .Poster.Id 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
+								<span class="text grey"><a {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
 								<div class="ui right actions">
 									{{if gt .ShowTag 0}}
 										<div class="item tag">
@@ -71,13 +79,16 @@
 											{{end}}
 										</div>
 									{{end}}
-									{{if or $.IsRepositoryAdmin (eq .Poster.Id $.SignedUserID)}}
-										<a class="edit-content item" href="#"><i class="octicon octicon-pencil"></i></a>
+									{{if or $.IsRepositoryAdmin (eq .Poster.ID $.SignedUserID)}}
+										<div class="item action">
+											<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
+											<a class="delete-comment" href="#" data-comment-id={{.HashTag}} data-url="{{$.RepoLink}}/comments/{{.ID}}/delete" data-locale="{{$.i18n.Tr "repo.issues.delete_comment_confirm"}}"><i class="octicon octicon-x"></i></a>
+										</div>
 									{{end}}
 								</div>
 							</div>
 							<div class="ui attached segment">
-								<div class="render-content markdown emojify">
+								<div class="render-content markdown has-emoji">
 									{{if .RenderedContent}}
 										{{.RenderedContent|Str2html}}
 									{{else}}
@@ -91,7 +102,13 @@
 								<div class="ui bottom attached segment">
 									<div class="ui small images">
 										{{range .Attachments}}
-											<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}"><img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}"></a>
+											<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}">
+												{{if FilenameIsImage .Name}}
+													<img class="ui image" src="{{AppSubUrl}}/attachments/{{.UUID}}" title='{{$.i18n.Tr "repo.issues.attachment.open_tab" .Name}}'>
+												{{else}}
+													<span class="ui image octicon octicon-desktop-download" title='{{$.i18n.Tr "repo.issues.attachment.download" .Name}}'></span>
+												{{end}}
+											</a>
 										{{end}}
 									</div>
 								</div>
@@ -102,7 +119,7 @@
 					<div class="event">
 						<span class="octicon octicon-primitive-dot"></span>
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.reopened_at" .EventTag $createdStr | Safe}}</span>
 					</div>
@@ -110,7 +127,7 @@
 					<div class="event">
 						<span class="octicon octicon-circle-slash"></span>
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.closed_at" .EventTag $createdStr | Safe}}</span>
 					</div>
@@ -118,7 +135,7 @@
 					<div class="event">
 						<span class="octicon octicon-bookmark"></span>
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
-							<img src="{{.Poster.AvatarLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
 
@@ -134,15 +151,15 @@
 			{{if .Issue.IsPull}}
 				<div class="comment merge box">
 					<a class="avatar text
-					{{if .Issue.HasMerged}}purple
+					{{if .Issue.PullRequest.HasMerged}}purple
 					{{else if .Issue.IsClosed}}grey
 					{{else if .IsPullReuqestBroken}}red
-					{{else if .Issue.IsChecking}}yellow
-					{{else if .Issue.CanAutoMerge}}green
+					{{else if .Issue.PullRequest.IsChecking}}yellow
+					{{else if .Issue.PullRequest.CanAutoMerge}}green
 					{{else}}red{{end}}"><span class="mega-octicon octicon-git-merge"></span></a>
 					<div class="content">
 						<div class="ui merge segment">
-							{{if .Issue.HasMerged}}
+							{{if .Issue.PullRequest.HasMerged}}
 								<div class="item text purple">
 									{{$.i18n.Tr "repo.pulls.has_merged"}}
 								</div>
@@ -155,12 +172,12 @@
 									<span class="octicon octicon-x"></span>
 									{{$.i18n.Tr "repo.pulls.data_broken"}}
 								</div>
-							{{else if .Issue.IsChecking}}
+							{{else if .Issue.PullRequest.IsChecking}}
 								<div class="item text yellow">
 									<span class="octicon octicon-sync"></span>
 									{{$.i18n.Tr "repo.pulls.is_checking"}}
 								</div>
-							{{else if .Issue.CanAutoMerge}}
+							{{else if .Issue.PullRequest.CanAutoMerge}}
 								<div class="item text green">
 									<span class="octicon octicon-check"></span>
 									{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
@@ -194,7 +211,7 @@
 			{{if .IsSigned}}
 				<div class="comment form">
 					<a class="avatar" href="{{.SignedUser.HomeLink}}">
-						<img src="{{.SignedUser.AvatarLink}}">
+						<img src="{{.SignedUser.RelAvatarLink}}">
 					</a>
 					<div class="content">
 						<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
@@ -222,7 +239,6 @@
 				</div>
 			{{else}}
 				<div class="ui warning message">
-					<a href="{{AppSubUrl}}/user/sign_up" class="ui green button">{{.i18n.Tr "repo.issues.sign_up_for_free"}}</a>
 					{{.i18n.Tr "repo.issues.sign_in_require_desc" .SignInLink | Safe}}
 				</div>
 			{{end}}
@@ -304,7 +320,7 @@
 				<div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
 					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
 					{{range .Assignees}}
-						<div class="item" data-id="{{.Id}}" data-href="{{$.RepoLink}}/issues?assignee={{.Id}}" data-avatar="{{.AvatarLink}}"><img src="{{.AvatarLink}}"> {{.Name}}</div>
+						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.RelAvatarLink}}"><img src="{{.RelAvatarLink}}"> {{.Name}}</div>
 					{{end}}
 				</div>
 			</div>
@@ -312,7 +328,7 @@
 				<span class="no-select item {{if .Issue.Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
 					{{if .Issue.Assignee}}
-						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.Id}}"><img class="ui avatar image" src="{{.Issue.Assignee.AvatarLink}}"> {{.Issue.Assignee.Name}}</a>
+						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.ID}}"><img class="ui avatar image" src="{{.Issue.Assignee.RelAvatarLink}}"> {{.Issue.Assignee.Name}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -324,7 +340,7 @@
 				<div>
 					{{range .Participants}}
 						<a href="{{.HomeLink}}">
-							<img class="ui avatar image poping up" src="{{.AvatarLink}}" data-content="{{.DisplayName}}" data-position="top center" data-variation="small inverted">
+							<img class="ui avatar image poping up" src="{{.RelAvatarLink}}" data-content="{{.DisplayName}}" data-position="top center" data-variation="small inverted">
 						</a>
 					{{end}}
 				</div>
@@ -342,7 +358,7 @@
 		<div class="ui bottom attached active write tab segment">
 			<textarea tabindex="1" id="content" name="content"></textarea>
 		</div>
-		<div class="ui bottom attached tab preview segment markdown emojify">
+		<div class="ui bottom attached tab preview segment markdown">
 			{{$.i18n.Tr "repo.release.loading"}}
 		</div>
 		<div class="text right edit buttons">

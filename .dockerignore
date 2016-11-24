@@ -1,7 +1,5 @@
 .git
 .git/**
-conf
-conf/**
 packager
 packager/**
 scripts
@@ -9,13 +7,13 @@ scripts/**
 .github/
 .github/**
 config.codekit
-LICENSE
-Makefile
 .dockerignore
 *.yml
 *.md
 .bra.toml
 .editorconfig
 .gitignore
-.gopmfile
 Dockerfile*
+vendor
+vendor/**
+gogs

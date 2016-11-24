@@ -6,7 +6,7 @@ import:
 - package: github.com/Unknwon/com
 - package: github.com/Unknwon/i18n
 - package: github.com/Unknwon/paginater
-- package: github.com/codegangsta/cli
+- package: github.com/urfave/cli
 - package: github.com/go-macaron/binding
 - package: github.com/go-macaron/cache
   subpackages:
@@ -40,6 +40,7 @@ import:
 - package: github.com/sergi/go-diff
   subpackages:
   - diffmatchpatch
+- package: github.com/strk/go-libravatar
 - package: golang.org/x/crypto
   subpackages:
   - ssh
@@ -50,6 +51,8 @@ import:
 - package: golang.org/x/text
   subpackages:
   - transform
+  - language
+- package: gopkg.in/editorconfig/editorconfig-core-go.v1
 - package: gopkg.in/gomail.v2
 - package: gopkg.in/ini.v1
 - package: gopkg.in/ldap.v2

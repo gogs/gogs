@@ -63,7 +63,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 
 	if len(ctx.Org.OrgLink) > 0 {
 		return &OrgRepoCtx{
-			OrgID:       ctx.Org.Organization.Id,
+			OrgID:       ctx.Org.Organization.ID,
 			Link:        ctx.Org.OrgLink,
 			NewTemplate: ORG_HOOK_NEW,
 		}, nil
@@ -108,8 +108,9 @@ func ParseHookEvent(form auth.WebhookForm) *models.HookEvent {
 		SendEverything: form.SendEverything(),
 		ChooseEvents:   form.ChooseEvents(),
 		HookEvents: models.HookEvents{
-			Create: form.Create,
-			Push:   form.Push,
+			Create:      form.Create,
+			Push:        form.Push,
+			PullRequest: form.PullRequest,
 		},
 	}
 }
@@ -220,7 +221,12 @@ func checkWebhook(ctx *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	}
 	ctx.Data["BaseLink"] = orCtx.Link
 
-	w, err := models.GetWebhookByID(ctx.ParamsInt64(":id"))
+	var w *models.Webhook
+	if orCtx.RepoID > 0 {
+		w, err = models.GetWebhookByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+	} else {
+		w, err = models.GetWebhookByOrgID(ctx.Org.Organization.ID, ctx.ParamsInt64(":id"))
+	}
 	if err != nil {
 		if models.IsErrWebhookNotExist(err) {
 			ctx.Handle(404, "GetWebhookByID", nil)
@@ -341,32 +347,41 @@ func SlackHooksEditPost(ctx *context.Context, form auth.NewSlackHookForm) {
 }
 
 func TestWebhook(ctx *context.Context) {
+	// Grab latest commit or fake one if it's empty repository.
+	commit := ctx.Repo.Commit
+	if commit == nil {
+		ghost := models.NewGhostUser()
+		commit = &git.Commit{
+			ID:            git.MustIDFromString(git.EMPTY_SHA),
+			Author:        ghost.NewGitSig(),
+			Committer:     ghost.NewGitSig(),
+			CommitMessage: "This is a fake commit",
+		}
+	}
+
+	apiUser := ctx.User.APIFormat()
 	p := &api.PushPayload{
 		Ref:    git.BRANCH_PREFIX + ctx.Repo.Repository.DefaultBranch,
-		Before: ctx.Repo.CommitID,
-		After:  ctx.Repo.CommitID,
+		Before: commit.ID.String(),
+		After:  commit.ID.String(),
 		Commits: []*api.PayloadCommit{
 			{
-				ID:      ctx.Repo.CommitID,
-				Message: ctx.Repo.Commit.Message(),
-				URL:     ctx.Repo.Repository.FullRepoLink() + "/commit/" + ctx.Repo.CommitID,
-				Author: &api.PayloadAuthor{
-					Name:  ctx.Repo.Commit.Author.Name,
-					Email: ctx.Repo.Commit.Author.Email,
+				ID:      commit.ID.String(),
+				Message: commit.Message(),
+				URL:     ctx.Repo.Repository.HTMLURL() + "/commit/" + commit.ID.String(),
+				Author: &api.PayloadUser{
+					Name:  commit.Author.Name,
+					Email: commit.Author.Email,
+				},
+				Committer: &api.PayloadUser{
+					Name:  commit.Committer.Name,
+					Email: commit.Committer.Email,
 				},
 			},
 		},
-		Repo: ctx.Repo.Repository.ComposePayload(),
-		Pusher: &api.PayloadAuthor{
-			Name:     ctx.User.Name,
-			Email:    ctx.User.Email,
-			UserName: ctx.User.Name,
-		},
-		Sender: &api.PayloadUser{
-			UserName:  ctx.User.Name,
-			ID:        ctx.User.Id,
-			AvatarUrl: ctx.User.AvatarLink(),
-		},
+		Repo:   ctx.Repo.Repository.APIFormat(nil),
+		Pusher: apiUser,
+		Sender: apiUser,
 	}
 	if err := models.PrepareWebhooks(ctx.Repo.Repository, models.HOOK_EVENT_PUSH, p); err != nil {
 		ctx.Flash.Error("PrepareWebhooks: " + err.Error())
@@ -379,8 +394,8 @@ func TestWebhook(ctx *context.Context) {
 }
 
 func DeleteWebhook(ctx *context.Context) {
-	if err := models.DeleteWebhook(ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("DeleteWebhook: " + err.Error())
+	if err := models.DeleteWebhookByRepoID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteWebhookByRepoID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.settings.webhook_deletion_success"))
 	}

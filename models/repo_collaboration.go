@@ -16,23 +16,24 @@ type Collaboration struct {
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
 }
 
-func (c *Collaboration) ModeName() string {
+func (c *Collaboration) ModeI18nKey() string {
 	switch c.Mode {
 	case ACCESS_MODE_READ:
-		return "Read"
+		return "repo.settings.collaboration.read"
 	case ACCESS_MODE_WRITE:
-		return "Write"
+		return "repo.settings.collaboration.write"
 	case ACCESS_MODE_ADMIN:
-		return "Admin"
+		return "repo.settings.collaboration.admin"
+	default:
+		return "repo.settings.collaboration.undefined"
 	}
-	return "Undefined"
 }
 
-// AddCollaborator adds new collaboration relation between an individual and a repository.
+// AddCollaborator adds new collaboration to a repository with default access mode.
 func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: u.Id,
+		UserID: u.ID,
 	}
 
 	has, err := x.Get(collaboration)
@@ -119,6 +120,9 @@ func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode
 		return nil
 	}
 
+	if collaboration.Mode == mode {
+		return nil
+	}
 	collaboration.Mode = mode
 
 	sess := x.NewSession()

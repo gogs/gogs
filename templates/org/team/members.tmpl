@@ -13,10 +13,10 @@
 					{{range .Team.Members}}
 						<div class="item">
 							{{if $.IsOrganizationOwner}}
-								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.Id}}">{{$.i18n.Tr "org.members.remove"}}</a>
+								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.ID}}">{{$.i18n.Tr "org.members.remove"}}</a>
 							{{end}}
 							<a href="{{.HomeLink}}">
-								<img class="ui avatar image" src="{{.AvatarLink}}">
+								<img class="ui avatar image" src="{{.RelAvatarLink}}">
 								{{.DisplayName}}
 							</a>
 						</div>
@@ -26,7 +26,7 @@
 					<div class="ui bottom attached segment">
 						<form class="ui form" id="add-member-form" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/add" method="post">
 							{{.CsrfTokenHtml}}
-							<input type="hidden" name="uid" value="{{.SignedUser.Id}}">
+							<input type="hidden" name="uid" value="{{.SignedUser.ID}}">
 							<div class="inline field ui left">
 								<div id="search-user-box">
 									<div class="ui input">

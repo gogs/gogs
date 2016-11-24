@@ -29,32 +29,37 @@
 							{{range .Repos}}
 								<li {{if .IsPrivate}}class="private"{{end}}>
 									<a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-										<i class="icon octicon octicon-{{if .IsFork}}repo-forked{{else if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+										<i class="octicon octicon-{{if .IsFork}}repo-forked{{else if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
 										<strong class="text truncate item-name">{{.Name}}</strong>
 										<span class="ui right text light grey">
-											<i class="octicon octicon-star"></i>{{.NumStars}}
+											{{.NumStars}} <i class="octicon octicon-star rear"></i>
 										</span>
 									</a>
 								</li>
+							{{end}}
+							{{if gt .ContextUser.NumRepos .MaxShowRepoNum}}
+							<li>
+								<a href="{{.ContextUser.HomeLink}}">{{.i18n.Tr "home.show_more_repos"}}</a>
+							</li>
 							{{end}}
 						</ul>
 					</div>
 
 					{{if not .ContextUser.IsOrganization}}
 						<h4 class="ui top attached header">
-							{{.i18n.Tr "home.collaborative_repos"}} <span class="ui grey label">{{.CollaborateCount}}</span>
+							{{.i18n.Tr "home.collaborative_repos"}}
 						</h4>
 						<div class="ui attached table segment">
 							<ul id="collaborative-repo-list">
 								{{range .CollaborativeRepos}}
 									<li {{if .IsPrivate}}class="private"{{end}}>
 										<a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">
-											<i class="icon octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
+											<i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
 											<span class="text truncate owner-and-repo">
 												<span class="text truncate owner-name">{{.Owner.Name}}</span> / <strong>{{.Name}}</strong>
 											</span>
 											<span class="ui right text light grey">
-												<i class="octicon octicon-star"></i>{{.NumStars}}
+												{{.NumStars}} <i class="octicon octicon-star rear"></i>
 											</span>
 										</a>
 									</li>
@@ -80,10 +85,10 @@
 								{{range .ContextUser.Orgs}}
 									<li>
 										<a href="{{AppSubUrl}}/{{.Name}}">
-											<i class="icon octicon octicon-organization"></i>
+											<i class="octicon octicon-organization"></i>
 											<strong class="text truncate item-name">{{.Name}}</strong>
 											<span class="ui right text light grey">
-												<i class="octicon octicon-repo"></i>{{.NumRepos}}
+												{{.NumRepos}} <i class="octicon octicon-repo rear"></i>
 											</span>
 										</a>
 									</li>
@@ -108,10 +113,10 @@
 							{{range .Mirrors}}
 								<li {{if .IsPrivate}}class="private"{{end}}>
 									<a href="{{AppSubUrl}}/{{$.ContextUser.Name}}/{{.Name}}">
-										<i class="icon octicon octicon-repo-clone"></i>
+										<i class="octicon octicon-repo-clone"></i>
 										<strong class="text truncate item-name">{{.Name}}</strong>
 										<span class="ui right text light grey">
-											<i class="octicon octicon-sync"></i>{{.Interval}}H
+											{{.Interval}}H <i class="octicon octicon-sync rear"></i>
 										</span>
 									</a>
 								</li>

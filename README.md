@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current version: 0.9.15
+##### Current tip version: 0.9.100 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions or submit a task on [alpha stage automated binary building system](https://build.gogs.io/))
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -18,7 +18,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 3. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
 4. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**. Thanks!
 5. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogits/go-gogs-client/wiki).
-6. If your team/company is using Gogs and would like to put your logo on [our website](http://gogs.io), contact us by any means.
+6. If your team/company is using Gogs and would like to put your logo on [our website](https://gogs.io), contact us by any means.
 
 [简体中文](README_ZH.md)
 
@@ -28,11 +28,11 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 
 ## Overview
 
-- Please see the [Documentation](http://gogs.io/docs/intro) for common usages and change log.
+- Please see the [Documentation](https://gogs.io/docs/intro) for common usages and change log.
 - See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
-- Having trouble? Get help with [Troubleshooting](http://gogs.io/docs/intro/troubleshooting.html) or [User Forum](https://discuss.gogs.io/).
-- Want to help with localization? Check out the [guide](http://gogs.io/docs/features/i18n.html)!
+- Having trouble? Get help with [Troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or [User Forum](https://discuss.gogs.io/).
+- Want to help with localization? Check out the [guide](https://gogs.io/docs/features/i18n.html)!
 
 ## Features
 
@@ -41,15 +41,17 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - SMTP/LDAP/Reverse proxy authentication
 - Reverse proxy with sub-path
 - Account/Organization/Repository management
+- Add/Remove repository collaborators
 - Repository/Organization webhooks (including Slack)
 - Repository Git hooks/deploy keys
 - Repository issues, pull requests and wiki
-- Add/Remove repository collaborators
-- Gravatar and custom source
+- Migrate and mirror repository and its wiki
+- Web editor for repository files and wiki
+- Gravatar and Federated avatar with custom source
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
-- Multi-language support ([15 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([20 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
@@ -63,13 +65,13 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 
 ## Installation
 
-Make sure you install the [prerequisites](http://gogs.io/docs/installation) first.
+Make sure you install the [prerequisites](https://gogs.io/docs/installation) first.
 
 There are 5 ways to install Gogs:
 
-- [Install from binary](http://gogs.io/docs/installation/install_from_binary.html)
-- [Install from source](http://gogs.io/docs/installation/install_from_source.html)
-- [Install from packages](http://gogs.io/docs/installation/install_from_packages.html)
+- [Install from binary](https://gogs.io/docs/installation/install_from_binary.html)
+- [Install from source](https://gogs.io/docs/installation/install_from_source.html)
+- [Install from packages](https://gogs.io/docs/installation/install_from_packages.html)
 - [Ship with Docker](https://github.com/gogits/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
@@ -77,6 +79,8 @@ There are 5 ways to install Gogs:
 
 - [How To Set Up Gogs on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-set-up-gogs-on-ubuntu-14-04)
 - [Run your own GitHub-like service with the help of Docker](http://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
+- [Dockerized Gogs git server and alpine postgres in 20 minutes or less](http://garthwaite.org/docker-gogs.html)
+- [Host Your Own Private GitHub with Gogs.io](https://eladnava.com/host-your-own-private-github-with-gogs-io/)
 - [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs) (Chinese)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
 - [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
@@ -85,6 +89,7 @@ There are 5 ways to install Gogs:
 
 ### Screencasts
 
+- [How to install Gogs on a Linux Server (DigitalOcean)](https://www.youtube.com/watch?v=deSfX0gqefE)
 - [Instalando Gogs no Ubuntu](https://www.youtube.com/watch?v=4UkHAR1F7ZA) (Português)
 
 ### Deploy to Cloud
@@ -96,6 +101,7 @@ There are 5 ways to install Gogs:
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/mbugeia/gogs_ynh)
+- [DPlatform](https://github.com/j8r/DPlatform)
 
 ## Software and Service Support
 
@@ -116,10 +122,10 @@ There are 5 ways to install Gogs:
 
 - Router and middleware mechanism of [Macaron](https://github.com/go-macaron/macaron).
 - System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
-- Thanks [lavachen](http://www.lavachen.cn/) and [Rocker](http://weibo.com/rocker1989) for designing Logo.
+- Thanks [Rocker](http://weibo.com/rocker1989) for designing Logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 - Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
-- Thanks [KeyCDN](https://www.keycdn.com/) for providing CDN service.
+- Thanks [KeyCDN](https://www.keycdn.com/) and [QiNiu](http://www.qiniu.com/) for providing CDN service.
 
 ## Contributors
 

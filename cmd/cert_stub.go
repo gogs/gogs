@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 var CmdCert = cli.Command{
@@ -20,7 +20,9 @@ var CmdCert = cli.Command{
 	Action:      runCert,
 }
 
-func runCert(ctx *cli.Context) {
+func runCert(ctx *cli.Context) error {
 	fmt.Println("Command cert not available, please use build tags 'cert' to rebuild.")
 	os.Exit(1)
+
+	return nil
 }

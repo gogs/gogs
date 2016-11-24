@@ -1,7 +1,7 @@
 <div class="ui container">
 	<div class="ui floating dropdown link jump">
 		<span class="text">
-			<img class="ui avatar image" src="{{.ContextUser.AvatarLink}}">
+			<img class="ui avatar image" src="{{.ContextUser.RelAvatarLink}}">
 			{{.ContextUser.ShortName 20}}
 			<i class="dropdown icon"></i>
 		</span>
@@ -10,19 +10,19 @@
 				{{.i18n.Tr "home.switch_dashboard_context"}}
 			</div>
 			<div class="items">
-				<a class="{{if eq .ContextUser.Id .SignedUser.Id}}active selected{{end}} item" href="{{AppSubUrl}}/{{if .PageIsIssues}}issues{{else if .PageIsPulls}}pulls{{end}}">
-					<img class="ui avatar image" src="{{.SignedUser.AvatarLink}}">
+				<a class="{{if eq .ContextUser.ID .SignedUser.ID}}active selected{{end}} item" href="{{AppSubUrl}}/{{if .PageIsIssues}}issues{{else if .PageIsPulls}}pulls{{end}}">
+					<img class="ui avatar image" src="{{.SignedUser.RelAvatarLink}}">
 					{{.SignedUser.Name}}
 				</a>
 				{{range .Orgs}}
-					<a class="{{if eq $.ContextUser.Id .Id}}active selected{{end}} item" href="{{AppSubUrl}}/org/{{.Name}}/{{if $.PageIsIssues}}issues{{else if $.PageIsPulls}}pulls{{else}}dashboard{{end}}">
-						<img class="ui avatar image" src="{{.AvatarLink}}">
+					<a class="{{if eq $.ContextUser.ID .ID}}active selected{{end}} item" href="{{AppSubUrl}}/org/{{.Name}}/{{if $.PageIsIssues}}issues{{else if $.PageIsPulls}}pulls{{else}}dashboard{{end}}">
+						<img class="ui avatar image" src="{{.RelAvatarLink}}">
 						{{.ShortName 20}}
 					</a>
 				{{end}}
 			</div>
 			<a class="item" href="{{AppSubUrl}}/org/create">
-				<i class="octicon octicon-repo-create"></i>&nbsp;&nbsp;&nbsp;{{.i18n.Tr "new_org"}}
+				<i class="octicon octicon-plus"></i>&nbsp;&nbsp;&nbsp;{{.i18n.Tr "new_org"}}
 			</a>
 		</div>
 	</div>
