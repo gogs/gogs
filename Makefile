@@ -19,11 +19,11 @@ PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 
 TAGS ?=
 
-ifneq ($(TRAVIS_TAG),)
-	VERSION ?= $(TRAVIS_TAG)
+ifneq ($(DRONE_TAG),)
+	VERSION ?= $(DRONE_TAG)
 else
-	ifneq ($(TRAVIS_BRANCH),)
-		VERSION ?= $(TRAVIS_BRANCH)
+	ifneq ($(DRONE_BRANCH),)
+		VERSION ?= $(DRONE_BRANCH)
 	else
 		VERSION ?= master
 	endif
@@ -61,6 +61,14 @@ lint:
 .PHONY: test
 test:
 	for PKG in $(PACKAGES); do go test -cover -coverprofile $$GOPATH/src/$$PKG/coverage.out $$PKG || exit 1; done;
+
+.PHONY: test-mysql
+test-mysql:
+	@echo "Not integrated yet!"
+
+.PHONY: test-pgsql
+test-pgsql:
+	@echo "Not integrated yet!"
 
 .PHONY: check
 check: test
