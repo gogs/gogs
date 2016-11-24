@@ -52,7 +52,7 @@ gopkg.in/editorconfig/editorconfig-core-go.v1 = commit:a872f05
 gopkg.in/gomail.v2 = commit:81ebce5
 gopkg.in/ini.v1 = commit:cf53f92
 gopkg.in/ldap.v2 = commit:d0a5ced
-gopkg.in/macaron.v1 = commit:7564489
+gopkg.in/macaron.v1 = commit:826ddf1
 gopkg.in/redis.v2 = commit:e617904
 
 [res]
