@@ -19,11 +19,11 @@ PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
 
 TAGS ?=
 
-ifneq ($(TRAVIS_TAG),)
-	VERSION ?= $(TRAVIS_TAG)
+ifneq ($(DRONE_TAG),)
+	VERSION ?= $(DRONE_TAG)
 else
-	ifneq ($(TRAVIS_BRANCH),)
-		VERSION ?= $(TRAVIS_BRANCH)
+	ifneq ($(DRONE_BRANCH),)
+		VERSION ?= $(DRONE_BRANCH)
 	else
 		VERSION ?= master
 	endif
