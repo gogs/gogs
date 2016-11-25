@@ -355,7 +355,7 @@ func (u *User) UploadAvatar(data []byte) error {
 		return fmt.Errorf("Decode: %v", err)
 	}
 
-	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
+	m := resize.Resize(avatar.AvatarSize, avatar.AvatarSize, img, resize.NearestNeighbor)
 
 	sess := x.NewSession()
 	defer sessionRelease(sess)
