@@ -224,7 +224,7 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	case "external_tracker_style":
 		if len(repo.ExternalTrackerStyle) == 0 {
-			repo.ExternalTrackerStyle = markdown.ISSUE_NAME_STYLE_NUMERIC
+			repo.ExternalTrackerStyle = markdown.IssueNameStyleNumeric
 		}
 	case "created_unix":
 		repo.Created = time.Unix(repo.CreatedUnix, 0).Local()
@@ -310,10 +310,10 @@ func (repo *Repository) ComposeMetas() map[string]string {
 			"repo":   repo.Name,
 		}
 		switch repo.ExternalTrackerStyle {
-		case markdown.ISSUE_NAME_STYLE_ALPHANUMERIC:
-			repo.ExternalMetas["style"] = markdown.ISSUE_NAME_STYLE_ALPHANUMERIC
+		case markdown.IssueNameStyleAlphanumeric:
+			repo.ExternalMetas["style"] = markdown.IssueNameStyleAlphanumeric
 		default:
-			repo.ExternalMetas["style"] = markdown.ISSUE_NAME_STYLE_NUMERIC
+			repo.ExternalMetas["style"] = markdown.IssueNameStyleNumeric
 		}
 
 	}

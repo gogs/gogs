@@ -95,7 +95,7 @@ func TestMarkdown(t *testing.T) {
 			metas["format"] = "https://someurl.com/{user}/{repo}/{index}"
 			metas["user"] = "someuser"
 			metas["repo"] = "somerepo"
-			metas["style"] = ISSUE_NAME_STYLE_NUMERIC
+			metas["style"] = IssueNameStyleNumeric
 
 			Convey("should not render anything when there are no mentions", func() {
 				testCases := []string{
@@ -167,7 +167,7 @@ func TestMarkdown(t *testing.T) {
 			metas["format"] = "https://someurl.com/{user}/{repo}/?b={index}"
 			metas["user"] = "someuser"
 			metas["repo"] = "somerepo"
-			metas["style"] = ISSUE_NAME_STYLE_ALPHANUMERIC
+			metas["style"] = IssueNameStyleAlphanumeric
 			Convey("It should not render anything when there are no mentions", func() {
 				testCases := []string{
 					"",
