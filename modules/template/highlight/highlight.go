@@ -64,6 +64,7 @@ var (
 	highlightMapping = map[string]string{}
 )
 
+// NewContext loads highlight map
 func NewContext() {
 	keys := setting.Cfg.Section("highlight.mapping").Keys()
 	for i := range keys {
