@@ -52,7 +52,7 @@ func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 }
 
 // ParseRemoteAddr checks if given remote address is valid,
-// and returns composed URL with needed username and passowrd.
+// and returns composed URL with needed username and password.
 // It also checks if given user has permission when remote address
 // is actually a local path.
 func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {

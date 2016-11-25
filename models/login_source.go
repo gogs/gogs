@@ -328,8 +328,8 @@ func composeFullName(firstname, surname, username string) string {
 
 // LoginViaLDAP queries if login/password is valid against the LDAP directory pool,
 // and create a local user if success when enabled.
-func LoginViaLDAP(user *User, login, passowrd string, source *LoginSource, autoRegister bool) (*User, error) {
-	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, passowrd, source.Type == LoginDLDAP)
+func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
+	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LoginDLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{0, login, 0}
@@ -545,7 +545,7 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 }
 
 // UserSignIn validates user name and password.
-func UserSignIn(username, passowrd string) (*User, error) {
+func UserSignIn(username, password string) (*User, error) {
 	var user *User
 	if strings.Contains(username, "@") {
 		user = &User{Email: strings.ToLower(username)}
@@ -561,7 +561,7 @@ func UserSignIn(username, passowrd string) (*User, error) {
 	if hasUser {
 		switch user.LoginType {
 		case LoginNoType, LoginPlain:
-			if user.ValidatePassword(passowrd) {
+			if user.ValidatePassword(password) {
 				return user, nil
 			}
 
@@ -576,7 +576,7 @@ func UserSignIn(username, passowrd string) (*User, error) {
 				return nil, ErrLoginSourceNotExist{user.LoginSource}
 			}
 
-			return ExternalUserLogin(user, user.LoginName, passowrd, &source, false)
+			return ExternalUserLogin(user, user.LoginName, password, &source, false)
 		}
 	}
 
@@ -586,7 +586,7 @@ func UserSignIn(username, passowrd string) (*User, error) {
 	}
 
 	for _, source := range sources {
-		authUser, err := ExternalUserLogin(nil, username, passowrd, source, true)
+		authUser, err := ExternalUserLogin(nil, username, password, source, true)
 		if err == nil {
 			return authUser, nil
 		}
