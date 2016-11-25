@@ -26,6 +26,7 @@ import (
 	"code.gitea.io/gitea/modules/setting"
 )
 
+// NewFuncMap returns functions for injecting to templates
 func NewFuncMap() []template.FuncMap {
 	return []template.FuncMap{map[string]interface{}{
 		"GoVer": func() string {
@@ -119,14 +120,17 @@ func NewFuncMap() []template.FuncMap {
 	}}
 }
 
+// Safe render raw as HTML
 func Safe(raw string) template.HTML {
 	return template.HTML(raw)
 }
 
+// Str2html render Markdown text to HTML
 func Str2html(raw string) template.HTML {
 	return template.HTML(markdown.Sanitizer.Sanitize(raw))
 }
 
+// List traversings the list
 func List(l *list.List) chan interface{} {
 	e := l.Front()
 	c := make(chan interface{})
@@ -140,21 +144,23 @@ func List(l *list.List) chan interface{} {
 	return c
 }
 
+// Sha1 returns sha1 sum of string
 func Sha1(str string) string {
 	return base.EncodeSha1(str)
 }
 
-func ToUTF8WithErr(content []byte) (error, string) {
+// ToUTF8WithErr converts content to UTF8 encoding
+func ToUTF8WithErr(content []byte) (string, error) {
 	charsetLabel, err := base.DetectEncoding(content)
 	if err != nil {
-		return err, ""
+		return "", err
 	} else if charsetLabel == "UTF-8" {
-		return nil, string(content)
+		return string(content), nil
 	}
 
 	encoding, _ := charset.Lookup(charsetLabel)
 	if encoding == nil {
-		return fmt.Errorf("Unknown encoding: %s", charsetLabel), string(content)
+		return string(content), fmt.Errorf("Unknown encoding: %s", charsetLabel)
 	}
 
 	// If there is an error, we concatenate the nicely decoded part and the
@@ -164,19 +170,20 @@ func ToUTF8WithErr(content []byte) (error, string) {
 		result = result + string(content[n:])
 	}
 
-	return err, result
+	return result, err
 }
 
+// ToUTF8 converts content to UTF8 encoding and ignore error
 func ToUTF8(content string) string {
-	_, res := ToUTF8WithErr([]byte(content))
+	res, _ := ToUTF8WithErr([]byte(content))
 	return res
 }
 
-// Replaces all prefixes 'old' in 's' with 'new'.
+// ReplaceLeft replaces all prefixes 'old' in 's' with 'new'.
 func ReplaceLeft(s, old, new string) string {
-	old_len, new_len, i, n := len(old), len(new), 0, 0
-	for ; i < len(s) && strings.HasPrefix(s[i:], old); n += 1 {
-		i += old_len
+	oldLen, newLen, i, n := len(old), len(new), 0, 0
+	for ; i < len(s) && strings.HasPrefix(s[i:], old); n++ {
+		i += oldLen
 	}
 
 	// simple optimization
@@ -185,12 +192,12 @@ func ReplaceLeft(s, old, new string) string {
 	}
 
 	// allocating space for the new string
-	newLen := n*new_len + len(s[i:])
-	replacement := make([]byte, newLen, newLen)
+	curLen := n*newLen + len(s[i:])
+	replacement := make([]byte, curLen, curLen)
 
 	j := 0
-	for ; j < n*new_len; j += new_len {
-		copy(replacement[j:j+new_len], new)
+	for ; j < n*newLen; j += newLen {
+		copy(replacement[j:j+newLen], new)
 	}
 
 	copy(replacement[j:], s[i:])
@@ -222,6 +229,7 @@ func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]stri
 	return template.HTML(fullMessage)
 }
 
+// Actioner describes an action
 type Actioner interface {
 	GetOpType() int
 	GetActUserName() string
@@ -260,6 +268,7 @@ func ActionIcon(opType int) string {
 	}
 }
 
+// ActionContent2Commits converts action content to push commits
 func ActionContent2Commits(act Actioner) *models.PushCommits {
 	push := models.NewPushCommits()
 	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
@@ -268,6 +277,7 @@ func ActionContent2Commits(act Actioner) *models.PushCommits {
 	return push
 }
 
+// DiffTypeToStr returns diff type name
 func DiffTypeToStr(diffType int) string {
 	diffTypes := map[int]string{
 		1: "add", 2: "modify", 3: "del", 4: "rename",
@@ -275,6 +285,7 @@ func DiffTypeToStr(diffType int) string {
 	return diffTypes[diffType]
 }
 
+// DiffLineTypeToStr returns diff line type name
 func DiffLineTypeToStr(diffType int) string {
 	switch diffType {
 	case 2:
