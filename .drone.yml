@@ -4,35 +4,42 @@ workspace:
 
 pipeline:
   test:
-    image: webhippie/golang:${GO_VERSION}
+    image: webhippie/golang:edge
     pull: true
     environment:
       CGO_ENABLED: 1
       TAGS: cert sqlite pam miniwinsvc
     commands:
       - apk -U add linux-pam-dev openssh-client
-
       - make clean
       - make vet
       # - make lint
       - make test
       - make build
+    when:
+      event: [ push, tag, pull_request ]
 
   test-mysql:
-    image: webhippie/golang:${GO_VERSION}
+    image: webhippie/golang:edge
     pull: true
     commands:
      - make test-mysql
     when:
-      event: push
+      event: [ push ]
 
   test-pgsql:
-    image: webhippie/golang:${GO_VERSION}
+    image: webhippie/golang:edge
     pull: true
     commands:
      - make test-pgsql
     when:
-      event: push
+      event: [ push ]
+
+  coverage:
+    image: plugins/coverage
+    server: https://coverage.gitea.io
+    when:
+      event: [ push, tag, pull_request ]
 
   updater:
     image: karalabe/xgo-latest:latest
@@ -42,78 +49,57 @@ pipeline:
     when:
       event: [ push, tag ]
       branch: [ master, refs/tags/* ]
-      matrix:
-        GO_VERSION: 1.7
-
-  coverage:
-    image: plugins/coverage
-    server: https://coverage.gitea.io
-    when:
-      matrix:
-        GO_VERSION: 1.7
 
   docker:
     image: plugins/docker
     repo: gitea/gitea
     tags: [ '${TAG}' ]
     when:
-      event: tag
-      branch: refs/tags/*
-      matrix:
-        GO_VERSION: 1.7
+      event: [ tag ]
+      branch: [ refs/tags/* ]
 
   docker:
     image: plugins/docker
     repo: gitea/gitea
     tags: [ 'latest' ]
     when:
-      event: push
-      branch: master
-      matrix:
-        GO_VERSION: 1.7
+      event: [ push ]
+      branch: [ master ]
 
   release:
     image: plugins/s3
     path_style: true
     source: dist/release/
-    target: /lgtm/master
+    target: /gitea/master
     when:
-      event: push
-      branch: master
-      matrix:
-        GO_VERSION: 1.7
+      event: [ push ]
+      branch: [ master ]
 
   release:
     image: plugins/s3
     path_style: true
     source: dist/release/
-    target: /lgtm/$$TAG
+    target: /gitea/$$TAG
     when:
-      event: tag
-      branch: refs/tags/*
-      matrix:
-        GO_VERSION: 1.7
+      event: [ tag ]
+      branch: [ refs/tags/* ]
 
   latest:
     image: plugins/s3
     path_style: true
     source: dist/latest/
-    target: /lgtm/latest
+    target: /gitea/latest
     when:
-      event: tag
-      branch: refs/tags/*
-      matrix:
-        GO_VERSION: 1.7
+      event: [ tag ]
+      branch: [ refs/tags/* ]
 
   github:
     image: plugins/github-release
     files:
       - dist/release/*
     when:
-      event: tag
-      branch: refs/tags/*
-      matrix:
-        GO_VERSION: 1.7
+      event: [ tag ]
+      branch: [ refs/tags/* ]
 
   gitter:
     image: plugins/gitter
@@ -125,16 +111,11 @@ services:
       - MYSQL_DATABASE=test
       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
     when:
-      event: push
+      event: [ push ]
 
   pgsql:
     image: postgres:9.5
     environment:
       - POSTGRES_DB=test
     when:
-      event: push
-
-matrix:
-  GO_VERSION:
-    - 1.6
-    - 1.7
+      event: [ push ]
