@@ -69,7 +69,8 @@ pipeline:
   release:
     image: plugins/s3
     path_style: true
-    source: dist/release/
+    strip_prefix: dist/release/
+    source: dist/release/*
     target: /gitea/master
     when:
       event: [ push ]
@@ -78,7 +79,8 @@ pipeline:
   release:
     image: plugins/s3
     path_style: true
-    source: dist/release/
+    strip_prefix: dist/release/
+    source: dist/release/*
     target: /gitea/$$TAG
     when:
       event: [ tag ]
@@ -87,7 +89,8 @@ pipeline:
   latest:
     image: plugins/s3
     path_style: true
-    source: dist/latest/
+    strip_prefix: dist/latest/
+    source: dist/latest/*
     target: /gitea/latest
     when:
       event: [ tag ]
