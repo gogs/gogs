@@ -15,6 +15,7 @@ import (
 	"code.gitea.io/gitea/modules/log"
 )
 
+// UpdateTask defines an UpdateTask
 type UpdateTask struct {
 	ID          int64  `xorm:"pk autoincr"`
 	UUID        string `xorm:"index"`
@@ -23,6 +24,7 @@ type UpdateTask struct {
 	NewCommitID string
 }
 
+// AddUpdateTask adds an UpdateTask
 func AddUpdateTask(task *UpdateTask) error {
 	_, err := x.Insert(task)
 	return err
@@ -42,6 +44,7 @@ func GetUpdateTaskByUUID(uuid string) (*UpdateTask, error) {
 	return task, nil
 }
 
+// DeleteUpdateTaskByUUID deletes an UpdateTask from the database
 func DeleteUpdateTaskByUUID(uuid string) error {
 	_, err := x.Delete(&UpdateTask{UUID: uuid})
 	return err
@@ -60,6 +63,7 @@ func CommitToPushCommit(commit *git.Commit) *PushCommit {
 	}
 }
 
+// ListToPushCommits transforms a list.List to PushCommits type.
 func ListToPushCommits(l *list.List) *PushCommits {
 	commits := make([]*PushCommit, 0)
 	var actEmail string
@@ -73,6 +77,7 @@ func ListToPushCommits(l *list.List) *PushCommits {
 	return &PushCommits{l.Len(), commits, "", nil}
 }
 
+// PushUpdateOptions defines the push update options
 type PushUpdateOptions struct {
 	PusherID     int64
 	PusherName   string
