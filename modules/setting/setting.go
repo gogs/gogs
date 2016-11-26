@@ -138,11 +138,12 @@ var (
 
 	// UI settings
 	UI struct {
-		ExplorePagingNum   int
-		IssuePagingNum     int
-		FeedMaxCommitNum   int
-		ThemeColorMetaTag  string
-		MaxDisplayFileSize int64
+		ExplorePagingNum       int
+		IssuePagingNum         int
+		FeedMaxCommitNum       int
+		ThemeColorMetaTag      string
+		MaxDisplayFileSize     int64
+		ShowUserEmailInExplore bool
 
 		Admin struct {
 			UserPagingNum   int
@@ -574,6 +575,8 @@ func NewContext() {
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
 	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 	ShowFooterTemplateLoadTime = Cfg.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
+
+	UI.ShowUserEmailInExplore = Cfg.Section("ui").Key("SHOW_USER_EMAIL_IN_EXPLORE").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
