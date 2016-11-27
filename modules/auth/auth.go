@@ -21,6 +21,7 @@ import (
 	"code.gitea.io/gitea/modules/setting"
 )
 
+// IsAPIPath if URL is an api path
 func IsAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
 }
@@ -110,9 +111,8 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 							// FIXME: should I create a system notice?
 							log.Error(4, "CreateUser: %v", err)
 							return nil, false
-						} else {
-							return u, false
 						}
+						return u, false
 					}
 				}
 				return u, false
@@ -148,6 +148,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 	return u, false
 }
 
+// Form form binding interface
 type Form interface {
 	binding.Validator
 }
@@ -190,18 +191,22 @@ func getRuleBody(field reflect.StructField, prefix string) string {
 	return ""
 }
 
+// GetSize get size int form tag
 func GetSize(field reflect.StructField) string {
 	return getRuleBody(field, "Size(")
 }
 
+// GetMinSize get minimal size in form tag
 func GetMinSize(field reflect.StructField) string {
 	return getRuleBody(field, "MinSize(")
 }
 
+// GetMaxSize get max size in form tag
 func GetMaxSize(field reflect.StructField) string {
 	return getRuleBody(field, "MaxSize(")
 }
 
+// GetInclude get include in form tag
 func GetInclude(field reflect.StructField) string {
 	return getRuleBody(field, "Include(")
 }

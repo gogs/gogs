@@ -112,7 +112,7 @@ func CreatePost(ctx *context.Context, form auth.CreateRepoForm) {
 	ctx.Data["Licenses"] = models.Licenses
 	ctx.Data["Readmes"] = models.Readmes
 
-	ctxUser := checkContextUser(ctx, form.Uid)
+	ctxUser := checkContextUser(ctx, form.UID)
 	if ctx.Written() {
 		return
 	}
@@ -167,7 +167,7 @@ func Migrate(ctx *context.Context) {
 func MigratePost(ctx *context.Context, form auth.MigrateRepoForm) {
 	ctx.Data["Title"] = ctx.Tr("new_migrate")
 
-	ctxUser := checkContextUser(ctx, form.Uid)
+	ctxUser := checkContextUser(ctx, form.UID)
 	if ctx.Written() {
 		return
 	}
