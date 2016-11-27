@@ -502,7 +502,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 // LoginViaPAM queries if login/password is valid against the PAM,
 // and create a local user if success when enabled.
 func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
-	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
+	if err := pam.Auth(cfg.ServiceName, login, password); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
 			return nil, ErrUserNotExist{0, login, 0}
 		}

@@ -60,7 +60,7 @@ func NewUser(ctx *context.Context) {
 }
 
 // NewUserPost response for adding a new user
-func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
+func NewUserPost(ctx *context.Context, form auth.AdminCreateUserForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.new_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
