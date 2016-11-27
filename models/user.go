@@ -80,7 +80,7 @@ type User struct {
 
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
-	// Maximum repository creation limit, -1 means use gloabl default
+	// Maximum repository creation limit, -1 means use global default
 	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1"`
 
 	// Permissions

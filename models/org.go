@@ -500,7 +500,7 @@ func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, 
 		Find(&teams)
 }
 
-// GetUserTeamIDs returns of all team IDs of the organization that user is memeber of.
+// GetUserTeamIDs returns of all team IDs of the organization that user is member of.
 func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
 	teams, err := org.getUserTeams(x, userID, "team.id")
 	if err != nil {

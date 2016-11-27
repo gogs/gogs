@@ -231,7 +231,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			}
 			return
 		}
-		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newOwner)
+		log.Trace("Repository transferred: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newOwner)
 		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_succeed"))
 		ctx.Redirect(setting.AppSubURL + "/" + newOwner + "/" + repo.Name)
 

@@ -285,7 +285,7 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 	ctx.Redirect(setting.AppSubURL + "/user/settings/email")
 }
 
-// DeleteEmail reponse for delete user's email
+// DeleteEmail response for delete user's email
 func DeleteEmail(ctx *context.Context) {
 	if err := models.DeleteEmailAddress(&models.EmailAddress{ID: ctx.QueryInt64("id")}); err != nil {
 		ctx.Handle(500, "DeleteEmail", err)
