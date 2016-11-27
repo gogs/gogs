@@ -52,11 +52,11 @@ func Add(desc string, cmd *exec.Cmd) int64 {
 	return pid
 }
 
-// ExecDir runs a command in given path and waits for its completion
+// ExecDirEnv runs a command in given path and environment variables, and waits for its completion
 // up to the given timeout (or DefaultTimeout if -1 is given).
 // Returns its complete stdout and stderr
 // outputs and an error, if any (including timeout)
-func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
+func ExecDirEnv(timeout time.Duration, dir, desc string, env []string, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
 		timeout = DefaultTimeout
 	}
@@ -66,6 +66,7 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 
 	cmd := exec.Command(cmdName, args...)
 	cmd.Dir = dir
+	cmd.Env = env
 	cmd.Stdout = bufOut
 	cmd.Stderr = bufErr
 	if err := cmd.Start(); err != nil {
@@ -91,6 +92,11 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 
 	Remove(pid)
 	return bufOut.String(), bufErr.String(), err
+}
+
+// ExecDir works exactly like ExecDirEnv except no environment variable is provided.
+func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(timeout, dir, desc, nil, cmdName, args...)
 }
 
 // ExecTimeout runs a command and waits for its completion
