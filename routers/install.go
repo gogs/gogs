@@ -89,7 +89,7 @@ func Install(ctx *context.Context) {
 	form.Domain = setting.Domain
 	form.SSHPort = setting.SSH.Port
 	form.HTTPPort = setting.HTTPPort
-	form.AppUrl = setting.AppURL
+	form.AppURL = setting.AppURL
 	form.LogRootPath = setting.LogRootPath
 
 	// E-mail service settings
@@ -217,8 +217,8 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		return
 	}
 
-	if form.AppUrl[len(form.AppUrl)-1] != '/' {
-		form.AppUrl += "/"
+	if form.AppURL[len(form.AppURL)-1] != '/' {
+		form.AppURL += "/"
 	}
 
 	// Save settings.
@@ -242,7 +242,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	cfg.Section("").Key("RUN_USER").SetValue(form.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(form.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(form.HTTPPort)
-	cfg.Section("server").Key("ROOT_URL").SetValue(form.AppUrl)
+	cfg.Section("server").Key("ROOT_URL").SetValue(form.AppURL)
 
 	if form.SSHPort == 0 {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("true")
@@ -328,5 +328,5 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 
 	log.Info("First-time run install finished!")
 	ctx.Flash.Success(ctx.Tr("install.install_success"))
-	ctx.Redirect(form.AppUrl + "user/login")
+	ctx.Redirect(form.AppURL + "user/login")
 }

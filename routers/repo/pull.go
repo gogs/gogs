@@ -94,7 +94,7 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	ctxUser := checkContextUser(ctx, form.Uid)
+	ctxUser := checkContextUser(ctx, form.UID)
 	if ctx.Written() {
 		return
 	}

@@ -177,8 +177,8 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	ctxUser := ctx.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
-	if form.Uid != ctxUser.ID {
-		org, err := models.GetUserByID(form.Uid)
+	if form.UID != ctxUser.ID {
+		org, err := models.GetUserByID(form.UID)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
 				ctx.Error(422, "", err)
