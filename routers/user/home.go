@@ -313,7 +313,7 @@ func Issues(ctx *context.Context) {
 	ctx.HTML(200, tplIssues)
 }
 
-// ShowSSHKeys ouput all the ssh keys of user by uid
+// ShowSSHKeys output all the ssh keys of user by uid
 func ShowSSHKeys(ctx *context.Context, uid int64) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {

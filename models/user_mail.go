@@ -81,12 +81,12 @@ func addEmailAddress(e Engine, email *EmailAddress) error {
 	return err
 }
 
-// AddEmailAddress adds an email adress to given user.
+// AddEmailAddress adds an email address to given user.
 func AddEmailAddress(email *EmailAddress) error {
 	return addEmailAddress(x, email)
 }
 
-// AddEmailAddresses adds an email adress to given user.
+// AddEmailAddresses adds an email address to given user.
 func AddEmailAddresses(emails []*EmailAddress) error {
 	if len(emails) == 0 {
 		return nil
@@ -110,7 +110,7 @@ func AddEmailAddresses(emails []*EmailAddress) error {
 	return nil
 }
 
-// Activate activates the email adress to given user.
+// Activate activates the email address to given user.
 func (email *EmailAddress) Activate() error {
 	user, err := GetUserByID(email.UID)
 	if err != nil {
@@ -137,7 +137,7 @@ func (email *EmailAddress) Activate() error {
 	return sess.Commit()
 }
 
-// DeleteEmailAddress deletes an email adress of given user.
+// DeleteEmailAddress deletes an email address of given user.
 func DeleteEmailAddress(email *EmailAddress) (err error) {
 	if email.ID > 0 {
 		_, err = x.Id(email.ID).Delete(new(EmailAddress))
@@ -149,7 +149,7 @@ func DeleteEmailAddress(email *EmailAddress) (err error) {
 	return err
 }
 
-// DeleteEmailAddresses deletes multiple email adresses
+// DeleteEmailAddresses deletes multiple email addresses
 func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
 	for i := range emails {
 		if err = DeleteEmailAddress(emails[i]); err != nil {
@@ -160,7 +160,7 @@ func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
 	return nil
 }
 
-// MakeEmailPrimary sets primary email adress of given user.
+// MakeEmailPrimary sets primary email address of given user.
 func MakeEmailPrimary(email *EmailAddress) error {
 	has, err := x.Get(email)
 	if err != nil {
