@@ -1,0 +1,6 @@
+#!/bin/bash
+[[ -f ./setup ]] && source ./setup
+
+pushd /root > /dev/null
+    exec gosu root /usr/sbin/sshd -E /var/log/sshd.log -D
+popd
