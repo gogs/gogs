@@ -16,6 +16,7 @@ type Collaboration struct {
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
 }
 
+// ModeI18nKey returns the collaboration mode I18n Key
 func (c *Collaboration) ModeI18nKey() string {
 	switch c.Mode {
 	case AccessModeRead:

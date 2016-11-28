@@ -50,6 +50,7 @@ func discardLocalRepoBranchChanges(localPath, branch string) error {
 	return nil
 }
 
+// DiscardLocalRepoBranchChanges discards the local repository branch changes
 func (repo *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 	return discardLocalRepoBranchChanges(repo.LocalCopyPath(), branch)
 }
@@ -66,10 +67,12 @@ func checkoutNewBranch(repoPath, localPath, oldBranch, newBranch string) error {
 	return nil
 }
 
+// CheckoutNewBranch checks out a new branch
 func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
 	return checkoutNewBranch(repo.RepoPath(), repo.LocalCopyPath(), oldBranch, newBranch)
 }
 
+// UpdateRepoFileOptions holds the repository file update options
 type UpdateRepoFileOptions struct {
 	LastCommitID string
 	OldBranch    string
@@ -223,6 +226,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 //         \/     \/          \/          \/       \/                 \/
 //
 
+// DeleteRepoFileOptions holds the repository delete file options
 type DeleteRepoFileOptions struct {
 	LastCommitID string
 	OldBranch    string
@@ -231,6 +235,7 @@ type DeleteRepoFileOptions struct {
 	Message      string
 }
 
+// DeleteRepoFile deletes a repository file
 func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (err error) {
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
@@ -351,6 +356,7 @@ func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err err
 	return upload, nil
 }
 
+// GetUploadByUUID returns the Upload by UUID
 func GetUploadByUUID(uuid string) (*Upload, error) {
 	upload := &Upload{UUID: uuid}
 	has, err := x.Get(upload)
@@ -362,6 +368,7 @@ func GetUploadByUUID(uuid string) (*Upload, error) {
 	return upload, nil
 }
 
+// GetUploadsByUUIDs returns multiple uploads by UUIDS
 func GetUploadsByUUIDs(uuids []string) ([]*Upload, error) {
 	if len(uuids) == 0 {
 		return []*Upload{}, nil
@@ -372,6 +379,7 @@ func GetUploadsByUUIDs(uuids []string) ([]*Upload, error) {
 	return uploads, x.In("uuid", uuids).Find(&uploads)
 }
 
+// DeleteUploads deletes multiple uploads
 func DeleteUploads(uploads ...*Upload) (err error) {
 	if len(uploads) == 0 {
 		return nil
@@ -407,10 +415,12 @@ func DeleteUploads(uploads ...*Upload) (err error) {
 	return sess.Commit()
 }
 
+// DeleteUpload delete a upload
 func DeleteUpload(u *Upload) error {
 	return DeleteUploads(u)
 }
 
+// DeleteUploadByUUID deletes a upload by UUID
 func DeleteUploadByUUID(uuid string) error {
 	upload, err := GetUploadByUUID(uuid)
 	if err != nil {
@@ -427,6 +437,7 @@ func DeleteUploadByUUID(uuid string) error {
 	return nil
 }
 
+// UploadRepoFileOptions contains the uploaded repository file options
 type UploadRepoFileOptions struct {
 	LastCommitID string
 	OldBranch    string
@@ -436,6 +447,7 @@ type UploadRepoFileOptions struct {
 	Files        []string // In UUID format.
 }
 
+// UploadRepoFiles uploads files to a repository
 func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) (err error) {
 	if len(opts.Files) == 0 {
 		return nil
