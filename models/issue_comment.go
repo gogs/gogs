@@ -21,6 +21,7 @@ import (
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
 type CommentType int
 
+// Enumerate all the comment types
 const (
 	// Plain comment, can be associated with a commit (CommitID > 0) and a line (LineNum > 0)
 	CommentTypeComment CommentType = iota
@@ -37,8 +38,10 @@ const (
 	CommentTypePullRef
 )
 
+// CommentTag defines comment tag type
 type CommentTag int
 
+// Enumerate all the comment tag types
 const (
 	CommentTagNone CommentTag = iota
 	CommentTagPoster
@@ -72,15 +75,19 @@ type Comment struct {
 	ShowTag CommentTag `xorm:"-"`
 }
 
+// BeforeInsert will be invoked by XORM before inserting a record
+// representing this object.
 func (c *Comment) BeforeInsert() {
 	c.CreatedUnix = time.Now().Unix()
 	c.UpdatedUnix = c.CreatedUnix
 }
 
+// BeforeUpdate is invoked from XORM before updating this object.
 func (c *Comment) BeforeUpdate() {
 	c.UpdatedUnix = time.Now().Unix()
 }
 
+// AfterSet is invoked from XORM after setting the value of a field of this object.
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
@@ -107,6 +114,7 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// AfterDelete is invoked from XORM after the object is deleted.
 func (c *Comment) AfterDelete() {
 	_, err := DeleteAttachmentsByComment(c.ID, true)
 
@@ -115,6 +123,7 @@ func (c *Comment) AfterDelete() {
 	}
 }
 
+// APIFormat converts a Comment to the api.Comment format
 func (c *Comment) APIFormat() *api.Comment {
 	return &api.Comment{
 		ID:      c.ID,
@@ -137,21 +146,21 @@ func (c *Comment) EventTag() string {
 
 // MailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (cmt *Comment) MailParticipants(opType ActionType, issue *Issue) (err error) {
-	mentions := markdown.FindAllMentions(cmt.Content)
-	if err = UpdateIssueMentions(cmt.IssueID, mentions); err != nil {
-		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
+func (c *Comment) MailParticipants(opType ActionType, issue *Issue) (err error) {
+	mentions := markdown.FindAllMentions(c.Content)
+	if err = UpdateIssueMentions(c.IssueID, mentions); err != nil {
+		return fmt.Errorf("UpdateIssueMentions [%d]: %v", c.IssueID, err)
 	}
 
 	switch opType {
 	case ActionCommentIssue:
-		issue.Content = cmt.Content
+		issue.Content = c.Content
 	case ActionCloseIssue:
 		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
 	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
-	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
+	if err = mailIssueCommentToParticipants(issue, c.Poster, mentions); err != nil {
 		log.Error(4, "mailIssueCommentToParticipants: %v", err)
 	}
 
@@ -272,6 +281,7 @@ func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *I
 	})
 }
 
+// CreateCommentOptions defines options for creating comment
 type CreateCommentOptions struct {
 	Type  CommentType
 	Doer  *User
@@ -374,7 +384,7 @@ func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
 	return getCommentsByIssueID(x, issueID)
 }
 
-// GetCommentsByIssueID returns a list of comments of an issue since a given time point.
+// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
 func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(x, issueID, since)
 }
