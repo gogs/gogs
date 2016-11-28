@@ -18,7 +18,7 @@ RUN apk update && \
   rm -rf \
     /var/cache/apk/* && \
   addgroup \
-    -g 1000 \
+    -S -g 1000 \
     git && \
   adduser \
     -S -H -D \
