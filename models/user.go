@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	// Needed for jpeg support
 	_ "image/jpeg"
 	"image/png"
 	"os"
@@ -34,20 +35,35 @@ import (
 	"code.gitea.io/gitea/modules/setting"
 )
 
+// UserType defines the user type
 type UserType int
 
 const (
+	// UserTypeIndividual defines an individual user
 	UserTypeIndividual UserType = iota // Historic reason to make it starts at 0.
+
+	// UserTypeOrganization defines an organization
 	UserTypeOrganization
 )
 
 var (
-	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
-	ErrEmailNotExist         = errors.New("E-mail does not exist")
-	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
-	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
+	// ErrUserNotKeyOwner user does not own this key error
+	ErrUserNotKeyOwner = errors.New("User does not own this public key")
+
+	// ErrEmailNotExist e-mail does not exist error
+	ErrEmailNotExist = errors.New("E-mail does not exist")
+
+	// ErrEmailNotActivated e-mail address has not been activated error
+	ErrEmailNotActivated = errors.New("E-mail address has not been activated")
+
+	// ErrUserNameIllegal user name contains illegal characters error
+	ErrUserNameIllegal = errors.New("User name contains illegal characters")
+
+	// ErrLoginSourceNotActived login source is not actived error
 	ErrLoginSourceNotActived = errors.New("Login source is not actived")
-	ErrUnsupportedLoginType  = errors.New("Login source is unknown")
+
+	// ErrUnsupportedLoginType login source is unknown error
+	ErrUnsupportedLoginType = errors.New("Login source is unknown")
 )
 
 // User represents the object of individual and member of organization.
@@ -112,11 +128,13 @@ type User struct {
 	DiffViewStyle string `xorm:"NOT NULL DEFAULT ''"`
 }
 
+// BeforeInsert is invoked from XORM before inserting an object of this type.
 func (u *User) BeforeInsert() {
 	u.CreatedUnix = time.Now().Unix()
 	u.UpdatedUnix = u.CreatedUnix
 }
 
+// BeforeUpdate is invoked from XORM before updating this object.
 func (u *User) BeforeUpdate() {
 	if u.MaxRepoCreation < -1 {
 		u.MaxRepoCreation = -1
@@ -124,16 +142,18 @@ func (u *User) BeforeUpdate() {
 	u.UpdatedUnix = time.Now().Unix()
 }
 
-// Set time to last login
+// SetLastLogin set time to last login
 func (u *User) SetLastLogin() {
 	u.LastLoginUnix = time.Now().Unix()
 }
 
+// UpdateDiffViewStyle updates the users diff view style
 func (u *User) UpdateDiffViewStyle(style string) error {
 	u.DiffViewStyle = style
 	return UpdateUser(u)
 }
 
+// AfterSet is invoked from XORM after setting the value of a field of this object.
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "full_name":
@@ -147,6 +167,7 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// APIFormat converts a User to api.User
 func (u *User) APIFormat() *api.User {
 	return &api.User{
 		ID:        u.ID,
@@ -157,7 +178,7 @@ func (u *User) APIFormat() *api.User {
 	}
 }
 
-// returns true if user login type is LoginPlain.
+// IsLocal returns true if user login type is LoginPlain.
 func (u *User) IsLocal() bool {
 	return u.LoginType <= LoginPlain
 }
@@ -168,6 +189,7 @@ func (u *User) HasForkedRepo(repoID int64) bool {
 	return has
 }
 
+// RepoCreationNum returns the number of repositories created by the user
 func (u *User) RepoCreationNum() int {
 	if u.MaxRepoCreation <= -1 {
 		return setting.Repository.MaxCreationLimit
@@ -175,6 +197,7 @@ func (u *User) RepoCreationNum() int {
 	return u.MaxRepoCreation
 }
 
+// CanCreateRepo returns if user login can create a repository
 func (u *User) CanCreateRepo() bool {
 	if u.MaxRepoCreation <= -1 {
 		if setting.Repository.MaxCreationLimit <= -1 {
@@ -261,15 +284,15 @@ func (u *User) GenerateRandomAvatar() error {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func (u *User) RelAvatarLink() string {
-	defaultImgUrl := setting.AppSubURL + "/img/avatar_default.png"
+	defaultImgURL := setting.AppSubURL + "/img/avatar_default.png"
 	if u.ID == -1 {
-		return defaultImgUrl
+		return defaultImgURL
 	}
 
 	switch {
 	case u.UseCustomAvatar:
 		if !com.IsExist(u.CustomAvatarPath()) {
-			return defaultImgUrl
+			return defaultImgURL
 		}
 		return setting.AppSubURL + "/avatars/" + com.ToStr(u.ID)
 	case setting.DisableGravatar, setting.OfflineMode:
@@ -293,7 +316,7 @@ func (u *User) AvatarLink() string {
 	return link
 }
 
-// User.GetFollwoers returns range of user's followers.
+// GetFollowers returns range of user's followers.
 func (u *User) GetFollowers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
 	sess := x.
@@ -307,6 +330,7 @@ func (u *User) GetFollowers(page int) ([]*User, error) {
 	return users, sess.Find(&users)
 }
 
+// IsFollowing returns true if user is following followID.
 func (u *User) IsFollowing(followID int64) bool {
 	return IsFollowing(u.ID, followID)
 }
@@ -418,13 +442,13 @@ func (u *User) IsOrganization() bool {
 }
 
 // IsUserOrgOwner returns true if user is in the owner team of given organization.
-func (u *User) IsUserOrgOwner(orgId int64) bool {
-	return IsOrganizationOwner(orgId, u.ID)
+func (u *User) IsUserOrgOwner(orgID int64) bool {
+	return IsOrganizationOwner(orgID, u.ID)
 }
 
 // IsPublicMember returns true if user public his/her membership in give organization.
-func (u *User) IsPublicMember(orgId int64) bool {
-	return IsPublicMembership(orgId, u.ID)
+func (u *User) IsPublicMember(orgID int64) bool {
+	return IsPublicMembership(orgID, u.ID)
 }
 
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
@@ -444,7 +468,7 @@ func (u *User) GetRepositories(page, pageSize int) (err error) {
 	return err
 }
 
-// GetRepositories returns mirror repositories that user owns, including private repositories.
+// GetMirrorRepositories returns mirror repositories that user owns, including private repositories.
 func (u *User) GetMirrorRepositories() ([]*Repository, error) {
 	return GetUserMirrorRepositories(u.ID)
 }
@@ -481,6 +505,7 @@ func (u *User) DisplayName() string {
 	return u.Name
 }
 
+// ShortName ellipses username to length
 func (u *User) ShortName(length int) string {
 	return base.EllipsisString(u.Name, length)
 }
@@ -542,6 +567,7 @@ func isUsableName(names, patterns []string, name string) error {
 	return nil
 }
 
+// IsUsableUsername returns an error when a username is reserved
 func IsUsableUsername(name string) error {
 	return isUsableName(reservedUsernames, reservedUserPatterns, name)
 }
@@ -630,7 +656,7 @@ func getVerifyUser(code string) (user *User) {
 	return nil
 }
 
-// verify active code when active account
+// VerifyUserActiveCode verifies active code when active account
 func VerifyUserActiveCode(code string) (user *User) {
 	minutes := setting.Service.ActiveCodeLives
 
@@ -646,7 +672,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 	return nil
 }
 
-// verify active code when active account
+// VerifyActiveEmailCode verifies active email code when active account
 func VerifyActiveEmailCode(code, email string) *EmailAddress {
 	minutes := setting.Service.ActiveCodeLives
 
@@ -1063,6 +1089,7 @@ func GetUserByEmail(email string) (*User, error) {
 	return nil, ErrUserNotExist{0, email, 0}
 }
 
+// SearchUserOptions contains the options for searching
 type SearchUserOptions struct {
 	Keyword  string
 	Type     UserType
@@ -1123,6 +1150,7 @@ type Follow struct {
 	FollowID int64 `xorm:"UNIQUE(follow)"`
 }
 
+// IsFollowing returns true if user is following followID.
 func IsFollowing(userID, followID int64) bool {
 	has, _ := x.Get(&Follow{UserID: userID, FollowID: followID})
 	return has
