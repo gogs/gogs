@@ -6,7 +6,6 @@ EXPOSE 22 3000
 RUN apk update && \
   apk add \
     su-exec \
-    shadow \
     ca-certificates \
     sqlite \
     bash \
@@ -18,17 +17,15 @@ RUN apk update && \
     tzdata && \
   rm -rf \
     /var/cache/apk/* && \
-  groupadd \
-    -r \
+  addgroup \
     -g 1000 \
     git && \
-  useradd \
-    -r -M \
-    -p '*' \
-    -d /data/git \
+  adduser \
+    -S -H -D \
+    -h /data/git \
     -s /bin/bash \
     -u 1000 \
-    -g git \
+    -G git \
     git
 
 ENV USER git
