@@ -1,4 +1,4 @@
-FROM alpine:edge
+FROM alpine:3.4
 MAINTAINER Thomas Boerger <thomas@webhippie.de>
 
 EXPOSE 22 3000
