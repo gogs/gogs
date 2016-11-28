@@ -41,7 +41,7 @@ func (org *User) GetTeam(name string) (*Team, error) {
 }
 
 func (org *User) getOwnerTeam(e Engine) (*Team, error) {
-	return org.getTeam(e, OWNER_TEAM)
+	return org.getTeam(e, ownerTeamName)
 }
 
 // GetOwnerTeam returns owner team of organization.
@@ -52,7 +52,7 @@ func (org *User) GetOwnerTeam() (*Team, error) {
 func (org *User) getTeams(e Engine) error {
 	return e.
 		Where("org_id=?", org.ID).
-		OrderBy("CASE WHEN name LIKE '" + OWNER_TEAM + "' THEN '' ELSE name END").
+		OrderBy("CASE WHEN name LIKE '" + ownerTeamName + "' THEN '' ELSE name END").
 		Find(&org.Teams)
 }
 
@@ -140,8 +140,8 @@ func CreateOrganization(org, owner *User) (err error) {
 	// Create default owner team.
 	t := &Team{
 		OrgID:      org.ID,
-		LowerName:  strings.ToLower(OWNER_TEAM),
-		Name:       OWNER_TEAM,
+		LowerName:  strings.ToLower(ownerTeamName),
+		Name:       ownerTeamName,
 		Authorize:  AccessModeOwner,
 		NumMembers: 1,
 	}
@@ -150,7 +150,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	}
 
 	if _, err = sess.Insert(&TeamUser{
-		Uid:    owner.ID,
+		UID:    owner.ID,
 		OrgID:  org.ID,
 		TeamID: t.ID,
 	}); err != nil {
