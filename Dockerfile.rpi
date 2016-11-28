@@ -3,9 +3,9 @@ MAINTAINER Thomas Boerger <thomas@webhippie.de>
 
 EXPOSE 22 3000
 
-RUN echo "@testing http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
-  apk -U add \
-    gosu@testing \
+RUN apk update && \
+  apk add \
+    su-exec \
     shadow \
     ca-certificates \
     sqlite \
