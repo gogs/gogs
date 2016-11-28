@@ -122,11 +122,16 @@ How to install Gitea:
 - Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
 - Thanks [KeyCDN](https://www.keycdn.com/) and [QiNiu](http://www.qiniu.com/) for providing CDN service.
 
-## Contributors
 
-- See [Maintainer](https://github.com/orgs/go-gitea/people)
-- See [Contributors](https://github.com/go-gitea/gitea/graphs/contributors) for full list of contributors.
-- See [Translators](conf/locale/TRANSLATORS) for public list of translators.
+## Contributing
+
+Fork -> Patch -> Push -> Pull Request
+
+## Authors
+
+* [Maintainers](https://github.com/orgs/go-gitea/people)
+* [Contributors](https://github.com/go-gitea/gitea/graphs/contributors)
+* [Translators](conf/locale/TRANSLATORS)
 
 ## License
 
