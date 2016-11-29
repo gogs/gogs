@@ -68,7 +68,7 @@ func (repo *Repository) AddCollaborator(u *User) error {
 }
 
 func (repo *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
-	collaborations := make([]*Collaboration, 0)
+	var collaborations []*Collaboration
 	return collaborations, e.Find(&collaborations, &Collaboration{RepoID: repo.ID})
 }
 
