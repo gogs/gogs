@@ -7,7 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/code.gitea.io/gitea)](https://goreportcard.com/report/code.gitea.io/gitea)
 [![GoDoc](https://godoc.org/code.gitea.io/gitea?status.svg)](https://godoc.org/code.gitea.io/gitea)
 
-![](https://github.com/go-gitea/gitea/blob/master/public/img/gitea-large-resize.png?raw=true)
+[![](public/img/gitea-large-resize.png)](https://github.com/go-gitea/gitea)
 
 ##### Status
 
