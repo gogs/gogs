@@ -21,6 +21,7 @@ import (
 	"code.gitea.io/gitea/modules/bindata"
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/public"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/template"
 	"code.gitea.io/gitea/routers"
@@ -125,9 +126,9 @@ func newMacaron() *macaron.Macaron {
 	if setting.Protocol == setting.FCGI {
 		m.SetURLPrefix(setting.AppSubURL)
 	}
-	m.Use(macaron.Static(
-		path.Join(setting.StaticRootPath, "public"),
-		macaron.StaticOptions{
+	m.Use(public.Static(
+		&public.Options{
+			Directory:   path.Join(setting.StaticRootPath, "public"),
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
