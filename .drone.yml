@@ -50,21 +50,21 @@ pipeline:
       event: [ push, tag ]
       branch: [ master, refs/tags/* ]
 
-  # docker:
-  #   image: plugins/docker
-  #   repo: gitea/gitea
-  #   tags: [ '${TAG}' ]
-  #   when:
-  #     event: [ tag ]
-  #     branch: [ refs/tags/* ]
+  docker:
+    image: plugins/docker
+    repo: gitea/gitea
+    tags: [ '${TAG}' ]
+    when:
+      event: [ tag ]
+      branch: [ refs/tags/* ]
 
-  # docker:
-  #   image: plugins/docker
-  #   repo: gitea/gitea
-  #   tags: [ 'latest' ]
-  #   when:
-  #     event: [ push ]
-  #     branch: [ master ]
+  docker:
+    image: plugins/docker
+    repo: gitea/gitea
+    tags: [ 'latest' ]
+    when:
+      event: [ push ]
+      branch: [ master ]
 
   release:
     image: plugins/s3
