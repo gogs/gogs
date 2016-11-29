@@ -131,6 +131,8 @@ bindata: modules/bindata/bindata.go
 modules/bindata/bindata.go: $(BINDATA)
 	go-bindata -o=$@ -ignore="\\.go|README.md|TRANSLATORS" -pkg=bindata conf/...
 	go fmt $@
+	sed -i.bak 's/confLocaleLocale_/confLocaleLocale/' $@
+	rm $@.bak
 
 .PHONY: javascripts
 javascripts: public/js/index.js
