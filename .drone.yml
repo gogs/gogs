@@ -13,7 +13,7 @@ pipeline:
       - apk -U add linux-pam-dev openssh-client
       - make clean
       - make vet
-      # - make lint
+      - make lint
       - make test
       - make build
     when:
