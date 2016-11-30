@@ -6,6 +6,7 @@ package context
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"io"
 	"net/http"
@@ -186,8 +187,10 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		ctx.Data["CsrfToken"] = x.GetToken()
-		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		ctx.Resp.Header().Set(`X-Frame-Options`, `SAMEORIGIN`)
+
+		ctx.Data["CsrfToken"] = html.EscapeString(x.GetToken())
+		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + ctx.Data["CsrfToken"].(string) + `">`)
 		log.Debug("Session ID: %s", sess.ID())
 		log.Debug("CSRF Token: %v", ctx.Data["CsrfToken"])
 
