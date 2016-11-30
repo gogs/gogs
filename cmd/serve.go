@@ -258,7 +258,11 @@ func runServ(c *cli.Context) error {
 		}
 	}
 
+	os.Setenv("GITEA_PUSHER_NAME", user.Name)
+
 	uuid := gouuid.NewV4().String()
+	os.Setenv("GITEA_UUID", uuid)
+	// Keep the old env variable name for backward compability
 	os.Setenv("uuid", uuid)
 
 	// Special handle for Windows.
