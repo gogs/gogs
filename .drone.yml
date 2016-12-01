@@ -8,7 +8,7 @@ pipeline:
     pull: true
     environment:
       CGO_ENABLED: 1
-      TAGS: cert sqlite pam miniwinsvc
+      TAGS: sqlite tidb pam
     commands:
       - apk -U add linux-pam-dev openssh-client
       - make clean
@@ -45,7 +45,7 @@ pipeline:
     image: karalabe/xgo-latest:latest
     pull: true
     commands:
-      - make publish
+      - make release
     when:
       event: [ push, tag ]
       branch: [ master, refs/tags/* ]

@@ -1,6 +1,4 @@
 DIST := dist
-BIN := bin
-
 EXECUTABLE := gitea
 IMPORT := code.gitea.io/gitea
 
@@ -35,7 +33,7 @@ all: build
 .PHONY: clean
 clean:
 	go clean -i ./...
-	rm -rf $(BIN) $(DIST)
+	rm -rf $(EXECUTABLE) $(DIST)
 
 .PHONY: fmt
 fmt:
@@ -99,31 +97,16 @@ release-build:
 	@which xgo > /dev/null; if [ $$? -ne 0 ]; then \
 		go get -u github.com/karalabe/xgo; \
 	fi
-	xgo -dest $(BIN) -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)' -targets '$(TARGETS)' -out $(EXECUTABLE)-$(VERSION) $(IMPORT)
+	xgo -dest $(DIST)/binaries -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)' -targets '$(TARGETS)' -out $(EXECUTABLE)-$(VERSION) $(IMPORT)
 
 .PHONY: release-copy
 release-copy:
 	mkdir -p $(DIST)/release
-	$(foreach file,$(wildcard $(BIN)/$(EXECUTABLE)-*),cp $(file) $(DIST)/release/$(notdir $(file));)
+	$(foreach file,$(wildcard $(DIST)/binaries/$(EXECUTABLE)-*),cp $(file) $(DIST)/release/$(notdir $(file));)
 
 .PHONY: release-check
 release-check:
 	cd $(DIST)/release; $(foreach file,$(wildcard $(DIST)/release/$(EXECUTABLE)-*),sha256sum $(notdir $(file)) > $(notdir $(file)).sha256;)
-
-.PHONY: latest
-latest: release-build latest-copy latest-check
-
-.PHONY: latest-copy
-latest-copy:
-	mkdir -p $(DIST)/latest
-	$(foreach file,$(wildcard $(BIN)/$(EXECUTABLE)-*),cp $(file) $(DIST)/latest/$(subst $(EXECUTABLE)-$(VERSION),$(EXECUTABLE)-latest,$(notdir $(file)));)
-
-.PHONY: latest-check
-latest-check:
-	cd $(DIST)/latest; $(foreach file,$(wildcard $(DIST)/latest/$(EXECUTABLE)-*),sha256sum $(notdir $(file)) > $(notdir $(file)).sha256;)
-
-.PHONY: publish
-publish: release latest
 
 .PHONY: bindata
 bindata: modules/bindata/bindata.go
