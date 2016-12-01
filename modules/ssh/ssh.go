@@ -138,7 +138,7 @@ func listen(config *ssh.ServerConfig, port int) {
 				}
 				return
 			}
-
+			os.Setenv("REMOTE_ADDR",sConn.RemoteAddr().String())
 			log.Trace("SSH: Connection from %s (%s)", sConn.RemoteAddr(), sConn.ClientVersion())
 			// The incoming Request channel must be serviced.
 			go ssh.DiscardRequests(reqs)

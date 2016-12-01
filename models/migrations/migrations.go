@@ -72,6 +72,8 @@ var migrations = []Migration{
 
 	// v13 -> v14:v0.9.87
 	NewMigration("set comment updated with created", setCommentUpdatedWithCreated),
+	// v14 -> v15:v0.9.87
+	NewMigration("set protect branches updated with created", setProtectedBranchUpdatedWithCreated),
 }
 
 // Migrate database to current version

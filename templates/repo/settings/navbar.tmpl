@@ -5,8 +5,11 @@
 			{{.i18n.Tr "repo.settings.options"}}
 		</a>
 		<a class="{{if .PageIsSettingsCollaboration}}active{{end}} item" href="{{.RepoLink}}/settings/collaboration">
-			{{.i18n.Tr "repo.settings.collaboration"}}
-		</a>
+  	  {{.i18n.Tr "repo.settings.collaboration"}}
+  	</a>
+  	<a class="{{if .PageIsSettingsProtectedBranch}}active{{end}} item" href="{{.RepoLink}}/settings/protected_branch">
+         {{.i18n.Tr "repo.settings.protected_branch"}}
+    </a>
 		<a class="{{if .PageIsSettingsHooks}}active{{end}} item" href="{{.RepoLink}}/settings/hooks">
 			{{.i18n.Tr "repo.settings.hooks"}}
 		</a>
