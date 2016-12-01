@@ -339,7 +339,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	return nil
 }
 
-// patchConflicts is a list of conflit description from Git.
+// patchConflicts is a list of conflict description from Git.
 var patchConflicts = []string{
 	"patch does not apply",
 	"already exists in working directory",
@@ -347,7 +347,7 @@ var patchConflicts = []string{
 	"error:",
 }
 
-// testPatch checks if patch can be merged to base repository without conflit.
+// testPatch checks if patch can be merged to base repository without conflict.
 // FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch() (err error) {
 	if pr.BaseRepo == nil {
@@ -384,7 +384,7 @@ func (pr *PullRequest) testPatch() (err error) {
 	if err != nil {
 		for i := range patchConflicts {
 			if strings.Contains(stderr, patchConflicts[i]) {
-				log.Trace("PullRequest[%d].testPatch (apply): has conflit", pr.ID)
+				log.Trace("PullRequest[%d].testPatch (apply): has conflict", pr.ID)
 				fmt.Println(stderr)
 				pr.Status = PullRequestStatusConflict
 				return nil
