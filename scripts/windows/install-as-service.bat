@@ -6,7 +6,7 @@
 :: https://nssm.cc/download
 :: This script itself should run in the gogs path, too.
 :: In case of startup failure, please read carefully the log file.
-:: Make sure Gitea work running manually with "gogs web" before running
+:: Make sure Gitea work running manually with "gitea web" before running
 :: this script.
 :: And, please, read carefully the installation docs first:
 :: https://gogs.io/docs/installation
