@@ -141,7 +141,7 @@ func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateR
 	ctx.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
 }
 
-// Create create one repository of mine
+// Create one repository of mine
 // see https://github.com/gogits/go-gogs-client/wiki/Repositories#create
 func Create(ctx *context.APIContext, opt api.CreateRepoOption) {
 	// Shouldn't reach this condition, but just in case.
@@ -244,14 +244,29 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	ctx.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
 }
 
-// Get get one repository
+// Get one repository
 // see https://github.com/gogits/go-gogs-client/wiki/Repositories#get
 func Get(ctx *context.APIContext) {
 	repo := ctx.Repo.Repository
 	ctx.JSON(200, repo.APIFormat(&api.Permission{true, true, true}))
 }
 
-// Delete delete one repository
+// GetByID returns a single Repository
+func GetByID(ctx *context.APIContext) {
+	repo, err := models.GetRepositoryByID(ctx.ParamsInt64(":id"))
+	if err != nil {
+		if models.IsErrRepoNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "GetRepositoryByID", err)
+		}
+		return
+	}
+
+	ctx.JSON(200, repo.APIFormat(&api.Permission{true, true, true}))
+}
+
+// Delete one repository
 // see https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
 func Delete(ctx *context.APIContext) {
 	owner := ctx.Repo.Owner
