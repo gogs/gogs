@@ -30,12 +30,12 @@ func ListIssues(ctx *context.APIContext) {
 	}
 	if ctx.Query("state") == "all" {
 		issueOpts.IsClosed = !issueOpts.IsClosed
-		temp_issues, err := models.Issues(&issueOpts)
+		tempIssues, err := models.Issues(&issueOpts)
 		if err != nil {
 			ctx.Error(500, "Issues", err)
 			return
 		}
-		issues = append(issues, temp_issues...)
+		issues = append(issues, tempIssues...)
 	}
 
 	// FIXME: use IssueList to improve performance.

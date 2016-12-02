@@ -149,7 +149,7 @@ func GetLabelByID(id int64) (*Label, error) {
 	return getLabelInRepoByID(x, 0, id)
 }
 
-// GetLabelInRepoByID returns a label by ID in given repository.
+// GetLabelInRepoByName returns a label by name in given repository.
 func GetLabelInRepoByName(repoID int64, labelName string) (*Label, error) {
 	return getLabelInRepoByName(x, repoID, labelName)
 }
