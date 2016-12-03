@@ -125,9 +125,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	// So we want to make sure the symlink is removed before write anything.
 	// The new file we created will be in normal text format.
 
-	if err := os.Remove(filename); err != nil {
-		return fmt.Errorf("Fail to remove %s: %v", filename, err)
-	}
+	_ = os.Remove(filename)
 
 	if err = ioutil.WriteFile(filename, []byte(content), 0666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)

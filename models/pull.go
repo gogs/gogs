@@ -712,9 +712,8 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 	// Remove head in case there is a conflict.
 	file := path.Join(pr.BaseRepo.RepoPath(), headFile)
 
-	if err := os.Remove(file); err != nil {
-		return fmt.Errorf("Fail to remove dir %s: %v", path.Join(pr.BaseRepo.RepoPath(), headFile), err)
-	}
+	_ = os.Remove(file)
+
 	if err = git.Push(headRepoPath, tmpRemoteName, fmt.Sprintf("%s:%s", pr.HeadBranch, headFile)); err != nil {
 		return fmt.Errorf("Push: %v", err)
 	}
