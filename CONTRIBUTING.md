@@ -24,7 +24,7 @@ This process gives everyone a chance to validate the design, helps prevent dupli
 
 ## Testing redux
 
-Before sending code out for review, run all the tests for the whole tree to make sure the changes don't break other usage and keep the compatibility on upgrade. To make sure you are running the test suite exactly like we do you should install the CLI for [Drone CI](https://github.com/drone/drone), as we are using the server for continous testing, following [these instructions](http://readme.drone.io/0.5/install/cli/). After that you can simply call `drone exec` within you working directory and it will try to run the test suite locally.
+Before sending code out for review, run all the tests for the whole tree to make sure the changes don't break other usage and keep the compatibility on upgrade. To make sure you are running the test suite exactly like we do you should install the CLI for [Drone CI](https://github.com/drone/drone), as we are using the server for continous testing, following [these instructions](http://readme.drone.io/0.5/install/cli/). After that you can simply call `drone exec` within your working directory and it will try to run the test suite locally.
 
 ## Code review
 
@@ -34,7 +34,7 @@ Please try to make your pull request easy to review for us. Please read the "[Ho
 
 * Make small pull requests. The smaller, the faster to review and the more likely it will be merged soon.
 * Don't make changes unrelated to your PR. Maybe there are typos on some comments, maybe refactoring would be welcome on a function... but if that is not related to your PR, please make *another* PR for that.
-* Split big pull requests in many small ones. An incremental change will be faster to review than a huge PR.
+* Split big pull requests in multiple small ones. An incremental change will be faster to review than a huge PR.
 
 ## Sign your work
 
