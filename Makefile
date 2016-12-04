@@ -90,7 +90,11 @@ $(EXECUTABLE): $(wildcard *.go)
 	go build -v -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)' -o $@
 
 .PHONY: release
-release: release-build release-copy release-check
+release: release-dirs release-build release-copy release-check
+
+.PHONY: release-dirs
+release-dirs:
+	mkdir -p $(DIST)/binaries $(DIST)/release
 
 .PHONY: release-build
 release-build:
@@ -98,10 +102,12 @@ release-build:
 		go get -u github.com/karalabe/xgo; \
 	fi
 	xgo -dest $(DIST)/binaries -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)' -targets '$(TARGETS)' -out $(EXECUTABLE)-$(VERSION) $(IMPORT)
+ifeq ($(CI),drone)
+	mv /build/* $(DIST)/binaries
+endif
 
 .PHONY: release-copy
 release-copy:
-	mkdir -p $(DIST)/release
 	$(foreach file,$(wildcard $(DIST)/binaries/$(EXECUTABLE)-*),cp $(file) $(DIST)/release/$(notdir $(file));)
 
 .PHONY: release-check
