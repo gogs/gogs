@@ -14,6 +14,7 @@ LDFLAGS += -X "code.gitea.io/gitea/modules/setting.BuildGitHash=$(SHA)"
 
 TARGETS ?= linux/*,darwin/*,windows/*
 PACKAGES ?= $(shell go list ./... | grep -v /vendor/)
+SOURCES ?= $(shell find . -name "*.go" -type f)
 
 TAGS ?=
 
@@ -86,8 +87,7 @@ install: $(wildcard *.go)
 .PHONY: build
 build: $(EXECUTABLE)
 
-.PHONY: $(EXECUTABLE)
-$(EXECUTABLE): $(wildcard *.go)
+$(EXECUTABLE): $(SOURCES)
 	go build -v -tags '$(TAGS)' -ldflags '-s -w $(LDFLAGS)' -o $@
 
 .PHONY: release
