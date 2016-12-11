@@ -43,12 +43,6 @@ var LoginNames = map[LoginType]string{
 	LOGIN_PAM:   "PAM",
 }
 
-var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
-	ldap.SECURITY_PROTOCOL_UNENCRYPTED: "Unencrypted",
-	ldap.SECURITY_PROTOCOL_LDAPS:       "LDAPS",
-	ldap.SECURITY_PROTOCOL_START_TLS:   "StartTLS",
-}
-
 // Ensure structs implemented interface.
 var (
 	_ core.Conversion = &LDAPConfig{}
@@ -66,10 +60,6 @@ func (cfg *LDAPConfig) FromDB(bs []byte) error {
 
 func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 	return json.Marshal(cfg)
-}
-
-func (cfg *LDAPConfig) SecurityProtocolName() string {
-	return SecurityProtocolNames[cfg.SecurityProtocol]
 }
 
 type SMTPConfig struct {
@@ -181,15 +171,18 @@ func (source *LoginSource) IsPAM() bool {
 }
 
 func (source *LoginSource) HasTLS() bool {
-	return ((source.IsLDAP() || source.IsDLDAP()) &&
-		source.LDAP().SecurityProtocol > ldap.SECURITY_PROTOCOL_UNENCRYPTED) ||
-		source.IsSMTP()
+	switch source.Type {
+	case LOGIN_LDAP, LOGIN_DLDAP:
+		return true
+	case LOGIN_SMTP:
+		return true
+	}
+
+	return false
 }
 
 func (source *LoginSource) UseTLS() bool {
 	switch source.Type {
-	case LOGIN_LDAP, LOGIN_DLDAP:
-		return source.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
 	case LOGIN_SMTP:
 		return source.SMTP().TLS
 	}
