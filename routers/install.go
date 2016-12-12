@@ -343,7 +343,12 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(form.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
+	secretKey, err := base.GetRandomString(15)
+	if err != nil {
+		ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), INSTALL, &form)
+		return
+	}
+	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
 	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
 	if err := cfg.SaveTo(setting.CustomConf); err != nil {

@@ -83,19 +83,22 @@ func BasicAuthEncode(username, password string) string {
 }
 
 // GetRandomString generate random string by specify chars.
-func GetRandomString(n int) string {
+func GetRandomString(n int) (string, error) {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 	buffer := make([]byte, n)
 	max := big.NewInt(int64(len(alphanum)))
 
-	var index int
 	for i := 0; i < n; i++ {
-		index, _ = randomInt(max)
+		index, err := randomInt(max)
+		if err != nil {
+			return "", err
+		}
+
 		buffer[i] = alphanum[index]
 	}
 
-	return string(buffer)
+	return string(buffer), nil
 }
 
 func randomInt(max *big.Int) (int, error) {
