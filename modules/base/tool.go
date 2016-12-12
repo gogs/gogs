@@ -82,16 +82,12 @@ func BasicAuthEncode(username, password string) string {
 }
 
 // GetRandomString generate random string by specify chars.
-func GetRandomString(n int, alphabets ...byte) string {
+func GetRandomString(n int) string {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	var bytes = make([]byte, n)
 	rand.Read(bytes)
 	for i, b := range bytes {
-		if len(alphabets) == 0 {
-			bytes[i] = alphanum[b%byte(len(alphanum))]
-		} else {
-			bytes[i] = alphabets[b%byte(len(alphabets))]
-		}
+		bytes[i] = alphanum[b%byte(len(alphanum))]
 	}
 	return string(bytes)
 }
