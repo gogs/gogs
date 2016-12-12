@@ -15,6 +15,7 @@ import (
 	"hash"
 	"html/template"
 	"math"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -84,12 +85,26 @@ func BasicAuthEncode(username, password string) string {
 // GetRandomString generate random string by specify chars.
 func GetRandomString(n int) string {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, n)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
+
+	buffer := make([]byte, n)
+	max := big.NewInt(int64(len(alphanum)))
+
+	var index int
+	for i := 0; i < n; i++ {
+		index, _ = randomInt(max)
+		buffer[i] = alphanum[index]
 	}
-	return string(bytes)
+
+	return string(buffer)
+}
+
+func randomInt(max *big.Int) (int, error) {
+	rand, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(rand.Int64()), nil
 }
 
 // http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
