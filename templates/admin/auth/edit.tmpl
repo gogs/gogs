@@ -27,7 +27,7 @@
 							{{ $cfg:=.Source.LDAP }}
 							<div class="required field">
 								<label for="url">{{.i18n.Tr "admin.auths.url"}}</label>
-								<input id="url" name="url" value="{{$cfg.URL}}" placeholder="e.g. ldaps://localhost" required>
+								<input id="url" name="url" value="{{$cfg.URL}}" placeholder="e.g. ldap://localhost or ldaps://example.com:4242 or ldapi://%2Frun%2Fopenldap%2Fldapi" required>
 							</div>
 							{{if .Source.IsLDAP}}
 								<div class="field">
