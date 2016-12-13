@@ -110,15 +110,43 @@ func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
 func dial(ls *Source) (*ldap.Conn, error) {
 	log.Trace("Dialing %s (skip cert verification: %v, start TLS: %v)", ls.URL, ls.SkipVerify, ls.StartTLS)
 	
-	u, err := url.Parse(ls.URL)
+	//// URL Parsing
+	ldapUrl := ls.URL
+	ldapiHost := ""
+	
+	// Fix ldapi URLs (1/2): ~ by removing and saving the host part for later.
+	if strings.HasPrefix(ldapUrl, "ldapi://") {
+		x := strings.IndexAny(ldapUrl[8:], "/?#")
+		if x >= 0 {
+			ldapiHost = ldapUrl[8:8+x]
+			ldapUrl = "ldapi://" + ldapUrl[8+x:]
+		} else {
+			ldapiHost = ldapUrl[8:]
+			ldapUrl = "ldapi://"
+		}
+	}
+	
+	// Parse the URL
+	u, err := url.Parse(ldapUrl)
 	if err != nil {
 		return nil, err
 	}
 	
-	if u.Path != "" || u.Fragment != "" || u.RawQuery != "" {
-		return nil, errors.New("Invalid URL")
+	// Fix ldapi URLs (2/2): ~ by injecting the saved and decoded host part into the parsed URL struct.
+	if ldapiHost != "" {
+		u.Host, err = url.QueryUnescape(ldapiHost)
+		if err != nil {
+			return nil, fmt.Errorf("Unescape hostpart of ldapi URL: %v", err)
+		}
 	}
 	
+	
+	if u.User != nil || u.Path != "" || u.Fragment != "" || u.RawQuery != "" || u.Opaque != "" {
+		return nil, errors.New("LDAP URLs (for now) do not support pathes, fragments, querries or opaque form")
+	}
+	
+	//// Dial
+	// ldapI
 	if u.Scheme == "ldapi" {
 		conn, err := ldap.Dial("unix", u.Host)
 		if err != nil {
@@ -128,9 +156,10 @@ func dial(ls *Source) (*ldap.Conn, error) {
 		return conn, nil
 	}
 	
+	// Common stuff dor ldap / ldapS
 	host, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed splitting adress in host and port part: %v", err)
 	}
 	
 	tlsCfg := &tls.Config{
@@ -138,6 +167,7 @@ func dial(ls *Source) (*ldap.Conn, error) {
 		InsecureSkipVerify: ls.SkipVerify,
 	}
 	
+	// ldapS
 	if u.Scheme == "ldaps" {
 		if port == "" {
 			port = "636"
@@ -150,7 +180,8 @@ func dial(ls *Source) (*ldap.Conn, error) {
 		
 		return conn, nil
 	}
-		
+	
+	// ldap
 	if u.Scheme == "ldap" {
 		if port == "" {
 			port = "389"
@@ -171,7 +202,7 @@ func dial(ls *Source) (*ldap.Conn, error) {
 		return conn, nil
 	}
 	
-	return nil, errors.New("Not a valid URL")
+	return nil, errors.New("The URL dos not has a valid LDAP scheme ('ldap://', 'ldaps://' or 'ldapi://'")
 }
 
 func bindUser(l *ldap.Conn, userDN, passwd string) error {
