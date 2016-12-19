@@ -544,6 +544,8 @@ please consider changing to GITEA_CUSTOM`)
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
 	case "gravatar":
 		GravatarSource = "https://secure.gravatar.com/avatar/"
+	case "libravatar":
+		GravatarSource = "https://seccdn.libravatar.org/avatar/"
 	default:
 		GravatarSource = source
 	}
