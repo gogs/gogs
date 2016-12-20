@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"html/template"
 	"math"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -81,18 +82,31 @@ func BasicAuthEncode(username, password string) string {
 }
 
 // GetRandomString generate random string by specify chars.
-func GetRandomString(n int, alphabets ...byte) string {
+func GetRandomString(n int) (string, error) {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, n)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		if len(alphabets) == 0 {
-			bytes[i] = alphanum[b%byte(len(alphanum))]
-		} else {
-			bytes[i] = alphabets[b%byte(len(alphabets))]
+
+	buffer := make([]byte, n)
+	max := big.NewInt(int64(len(alphanum)))
+
+	for i := 0; i < n; i++ {
+		index, err := randomInt(max)
+		if err != nil {
+			return "", err
 		}
+
+		buffer[i] = alphanum[index]
 	}
-	return string(bytes)
+
+	return string(buffer), nil
+}
+
+func randomInt(max *big.Int) (int, error) {
+	rand, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+
+	return int(rand.Int64()), nil
 }
 
 // VerifyTimeLimitCode verify time limit code
