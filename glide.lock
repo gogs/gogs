@@ -33,11 +33,11 @@ imports:
 - name: github.com/go-sql-driver/mysql
   version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
 - name: github.com/go-xorm/builder
-  version: cd42e8337f3031e737c3f415b6354793cf30f1c9
+  version: db75972580de4a7c6c20fff5b16a924c3de3fa12
 - name: github.com/go-xorm/core
-  version: 2ec3936f8a8a3fb6397c6c10185acffa87488534
+  version: 87aca223378aab7a4bf31ef53f20fde4997ad793
 - name: github.com/go-xorm/xorm
-  version: 311abf25abd146a5ddaad5dc3241eba4b4b29284
+  version: 3ad0b428ae702d7d3f880c90a7f6d89805fcd2f7
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
