@@ -369,7 +369,7 @@ type TeamUser struct {
 	ID     int64 `xorm:"pk autoincr"`
 	OrgID  int64 `xorm:"INDEX"`
 	TeamID int64 `xorm:"UNIQUE(s)"`
-	Uid    int64 `xorm:"UNIQUE(s)"`
+	UID    int64 `xorm:"UNIQUE(s)"`
 }
 
 func isTeamMember(e Engine, orgID, teamID, uid int64) bool {
@@ -390,8 +390,8 @@ func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	members := make([]*User, 0, len(teamUsers))
 	for i := range teamUsers {
 		member := new(User)
-		if _, err = e.Id(teamUsers[i].Uid).Get(member); err != nil {
-			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].Uid, err)
+		if _, err = e.Id(teamUsers[i].UID).Get(member); err != nil {
+			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].UID, err)
 		}
 		members = append(members, member)
 	}
@@ -457,7 +457,7 @@ func AddTeamMember(orgID, teamID, uid int64) error {
 	}
 
 	tu := &TeamUser{
-		Uid:    uid,
+		UID:    uid,
 		OrgID:  orgID,
 		TeamID: teamID,
 	}
@@ -519,7 +519,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	}
 
 	tu := &TeamUser{
-		Uid:    uid,
+		UID:    uid,
 		OrgID:  orgID,
 		TeamID: teamID,
 	}

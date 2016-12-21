@@ -149,7 +149,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	}
 
 	if _, err = sess.Insert(&TeamUser{
-		Uid:    owner.ID,
+		UID:    owner.ID,
 		OrgID:  org.ID,
 		TeamID: t.ID,
 	}); err != nil {
