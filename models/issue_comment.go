@@ -115,13 +115,51 @@ func (c *Comment) AfterDelete() {
 	}
 }
 
+func (c *Comment) HTMLURL() string {
+	issue, err := GetIssueByID(c.IssueID)
+	if err != nil { // Silently dropping errors :unamused:
+		log.Error(4, "GetIssueByID(%d): %v", c.IssueID, err)
+		return ""
+	}
+	return fmt.Sprintf("%s#issuecomment-%d", issue.HTMLURL(), c.ID)
+}
+
+func (c *Comment) IssueURL() string {
+	issue, err := GetIssueByID(c.IssueID)
+	if err != nil { // Silently dropping errors :unamused:
+		log.Error(4, "GetIssueByID(%d): %v", c.IssueID, err)
+		return ""
+	}
+
+	if issue.IsPull {
+		return ""
+	}
+	return issue.HTMLURL()
+}
+
+func (c *Comment) PRURL() string {
+	issue, err := GetIssueByID(c.IssueID)
+	if err != nil { // Silently dropping errors :unamused:
+		log.Error(4, "GetIssueByID(%d): %v", c.IssueID, err)
+		return ""
+	}
+
+	if !issue.IsPull {
+		return ""
+	}
+	return issue.HTMLURL()
+}
+
 func (c *Comment) APIFormat() *api.Comment {
 	return &api.Comment{
-		ID:      c.ID,
-		Poster:  c.Poster.APIFormat(),
-		Body:    c.Content,
-		Created: c.Created,
-		Updated: c.Updated,
+		ID:       c.ID,
+		Poster:   c.Poster.APIFormat(),
+		HTMLURL:  c.HTMLURL(),
+		IssueURL: c.IssueURL(),
+		PRURL:    c.PRURL(),
+		Body:     c.Content,
+		Created:  c.Created,
+		Updated:  c.Updated,
 	}
 }
 
@@ -363,6 +401,15 @@ func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, erro
 	return comments, sess.Find(&comments)
 }
 
+func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
+	comments := make([]*Comment, 0, 10)
+	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id", repoID).Asc("created_unix")
+	if since > 0 {
+		sess.And("updated_unix >= ?", since)
+	}
+	return comments, sess.Find(&comments)
+}
+
 func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(e, issueID, -1)
 }
@@ -372,9 +419,14 @@ func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
 	return getCommentsByIssueID(x, issueID)
 }
 
-// GetCommentsByIssueID returns a list of comments of an issue since a given time point.
+// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
 func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(x, issueID, since)
+}
+
+// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
+func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
+	return getCommentsByRepoIDSince(x, repoID, since)
 }
 
 // UpdateComment updates information of comment.
