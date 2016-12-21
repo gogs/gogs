@@ -160,11 +160,11 @@ func (c *Comment) EventTag() string {
 	return "event-" + com.ToStr(c.ID)
 }
 
-// MailParticipants sends new comment emails to repository watchers
+// mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (cmt *Comment) MailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
+func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
 	mentions := markdown.FindAllMentions(cmt.Content)
-	if err = UpdateIssueMentions(e, cmt.IssueID, mentions); err != nil {
+	if err = updateIssueMentions(e, cmt.IssueID, mentions); err != nil {
 		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
 	}
 
@@ -278,7 +278,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err = notifyWatchers(e, act); err != nil {
 			log.Error(4, "notifyWatchers: %v", err)
 		}
-		if err = comment.MailParticipants(e, act.OpType, opts.Issue); err != nil {
+		if err = comment.mailParticipants(e, act.OpType, opts.Issue); err != nil {
 			log.Error(4, "MailParticipants: %v", err)
 		}
 	}
