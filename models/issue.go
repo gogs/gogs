@@ -98,7 +98,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 				issue.PosterID = -1
 				issue.Poster = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(poster) [%d]: %v", issue.PosterID, err)
+				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", issue.PosterID, err)
 			}
 			return
 		}
@@ -780,7 +780,7 @@ func GetIssueByIndex(repoID, index int64) (*Issue, error) {
 	return issue, issue.LoadAttributes()
 }
 
-func getIssueByID(e Engine, id int64) (*Issue, error) {
+func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	issue := new(Issue)
 	has, err := e.Id(id).Get(issue)
 	if err != nil {
@@ -788,7 +788,15 @@ func getIssueByID(e Engine, id int64) (*Issue, error) {
 	} else if !has {
 		return nil, ErrIssueNotExist{id, 0, 0}
 	}
-	return issue, issue.LoadAttributes()
+	return issue, nil
+}
+
+func getIssueByID(e Engine, id int64) (*Issue, error) {
+	issue, err := getRawIssueByID(e, id)
+	if err != nil {
+		return nil, err
+	}
+	return issue, issue.loadAttributes(e)
 }
 
 // GetIssueByID returns an issue by given ID.
@@ -1745,10 +1753,14 @@ func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
 	return getAttachmentsByIssueID(x, issueID)
 }
 
+func getAttachmentsByCommentID(e Engine, commentID int64) ([]*Attachment, error) {
+	attachments := make([]*Attachment, 0, 10)
+	return attachments, e.Where("comment_id=?", commentID).Find(&attachments)
+}
+
 // GetAttachmentsByCommentID returns all attachments if comment by given ID.
 func GetAttachmentsByCommentID(commentID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 10)
-	return attachments, x.Where("comment_id=?", commentID).Find(&attachments)
+	return getAttachmentsByCommentID(x, commentID)
 }
 
 // DeleteAttachment deletes the given attachment and optionally the associated file.

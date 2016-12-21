@@ -45,7 +45,7 @@ imports:
 - name: github.com/gogits/git-module
   version: 71292151e50d262429f29515dd077d7f5beb8c66
 - name: github.com/gogits/go-gogs-client
-  version: c52f7ee0cc58d3cd6e379025552873a8df6de322
+  version: 3693f6a1a71302d146590845e35fc7fd530aae4e
 - name: github.com/gogits/go-libravatar
   version: cd1abbd55d09b793672732a7a1dfdaa12a40dfd0
 - name: github.com/issue9/identicon
