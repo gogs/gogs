@@ -96,10 +96,8 @@ func NewFuncMap() []template.FuncMap {
 		"ShortSha":          base.ShortSha,
 		"MD5":               base.EncodeMD5,
 		"ActionContent2Commits": ActionContent2Commits,
-		"EscapePound": func(str string) string {
-			return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(str)
-		},
-		"RenderCommitMessage": RenderCommitMessage,
+		"EscapePound":           EscapePound,
+		"RenderCommitMessage":   RenderCommitMessage,
 		"ThemeColorMetaTag": func() string {
 			return setting.UI.ThemeColorMetaTag
 		},
@@ -266,6 +264,10 @@ func ActionContent2Commits(act Actioner) *models.PushCommits {
 		log.Error(4, "json.Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push
+}
+
+func EscapePound(str string) string {
+	return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(str)
 }
 
 func DiffTypeToStr(diffType int) string {
