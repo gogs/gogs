@@ -223,7 +223,7 @@ func SyncMirrors() {
 
 		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
 		if err != nil {
-			log.Error(4, "GetMirrorByRepoID [%d]: %v", repoID, err)
+			log.Error(4, "GetMirrorByRepoID [%s]: %v", repoID, err)
 			continue
 		}
 
@@ -233,7 +233,7 @@ func SyncMirrors() {
 
 		m.ScheduleNextUpdate()
 		if err = UpdateMirror(m); err != nil {
-			log.Error(4, "UpdateMirror [%d]: %v", repoID, err)
+			log.Error(4, "UpdateMirror [%s]: %v", repoID, err)
 			continue
 		}
 	}
