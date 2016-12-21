@@ -23,6 +23,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
+	"golang.org/x/crypto/pbkdf2"
 
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
@@ -32,8 +33,6 @@ import (
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
-
-	"golang.org/x/crypto/pbkdf2"
 )
 
 type UserType int
