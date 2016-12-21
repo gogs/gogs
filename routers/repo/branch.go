@@ -5,8 +5,11 @@
 package repo
 
 import (
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/log"
 )
 
 const (
@@ -28,4 +31,40 @@ func Branches(ctx *context.Context) {
 
 	ctx.Data["Branches"] = brs
 	ctx.HTML(200, BRANCH)
+}
+
+func DeleteBranchPost(ctx *context.Context) {
+	branchName := ctx.Params(":name")
+	commitID := ctx.Query("commit")
+
+	defer func() {
+		redirectTo := ctx.Query("redirect_to")
+		if len(redirectTo) == 0 {
+			redirectTo = ctx.Repo.RepoLink
+		}
+		ctx.Redirect(redirectTo)
+	}()
+
+	if !ctx.Repo.GitRepo.IsBranchExist(branchName) {
+		return
+	}
+	if len(commitID) > 0 {
+		branchCommitID, err := ctx.Repo.GitRepo.GetBranchCommitID(branchName)
+		if err != nil {
+			log.Error(4, "GetBranchCommitID: %v", err)
+			return
+		}
+
+		if branchCommitID != commitID {
+			ctx.Flash.Error(ctx.Tr("repo.pulls.delete_branch_has_new_commits"))
+			return
+		}
+	}
+
+	if err := ctx.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
+		Force: false,
+	}); err != nil {
+		log.Error(4, "DeleteBranch: %v", err)
+		return
+	}
 }

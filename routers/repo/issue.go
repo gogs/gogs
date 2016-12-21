@@ -629,6 +629,15 @@ func ViewIssue(ctx *context.Context) {
 		}
 	}
 
+	if issue.IsPull && issue.PullRequest.HasMerged {
+		pull := issue.PullRequest
+		ctx.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
+			ctx.Repo.IsWriter() && ctx.Repo.GitRepo.IsBranchExist(pull.HeadBranch)
+
+		deleteBranchUrl := ctx.Repo.RepoLink + "/branches/" + pull.HeadBranch + "/delete"
+		ctx.Data["DeleteBranchLink"] = fmt.Sprintf("%s?commit=%s&redirect_to=%s", deleteBranchUrl, pull.MergedCommitID, ctx.Data["Link"])
+	}
+
 	ctx.Data["Participants"] = participants
 	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
