@@ -100,7 +100,7 @@ There are 5 ways to install Gogs:
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
-- [YunoHost](https://github.com/mbugeia/gogs_ynh)
+- [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
 
 ## Software and Service Support
