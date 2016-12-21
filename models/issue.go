@@ -1024,9 +1024,9 @@ func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int
 	return ius, err
 }
 
-// UpdateIssueMentions extracts mentioned people from content and
+// updateIssueMentions extracts mentioned people from content and
 // updates issue-user relations for them.
-func UpdateIssueMentions(e Engine, issueID int64, mentions []string) error {
+func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 	if len(mentions) == 0 {
 		return nil
 	}
@@ -1048,9 +1048,9 @@ func UpdateIssueMentions(e Engine, issueID int64, mentions []string) error {
 		}
 
 		memberIDs := make([]int64, 0, user.NumMembers)
-		orgUsers, err := GetOrgUsersByOrgID(user.ID)
+		orgUsers, err := getOrgUsersByOrgID(e, user.ID)
 		if err != nil {
-			return fmt.Errorf("GetOrgUsersByOrgID [%d]: %v", user.ID, err)
+			return fmt.Errorf("getOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
 		for _, orgUser := range orgUsers {
@@ -1060,7 +1060,7 @@ func UpdateIssueMentions(e Engine, issueID int64, mentions []string) error {
 		ids = append(ids, memberIDs...)
 	}
 
-	if err := UpdateIssueUsersByMentions(e, issueID, ids); err != nil {
+	if err := updateIssueUsersByMentions(e, issueID, ids); err != nil {
 		return fmt.Errorf("UpdateIssueUsersByMentions: %v", err)
 	}
 
@@ -1292,8 +1292,8 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 	return err
 }
 
-// UpdateIssueUsersByMentions updates issue-user pairs by mentioning.
-func UpdateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
+// updateIssueUsersByMentions updates issue-user pairs by mentioning.
+func updateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
 	for _, uid := range uids {
 		iu := &IssueUser{
 			UID:     uid,
