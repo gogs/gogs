@@ -84,7 +84,7 @@ func EditIssueComment(ctx *context.APIContext, form api.EditIssueCommentOption) 
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
+	if ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin() {
 		ctx.Status(403)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
@@ -111,7 +111,7 @@ func DeleteIssueComment(ctx *context.APIContext) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
+	if ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin() {
 		ctx.Status(403)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
