@@ -384,7 +384,8 @@ func IsTeamMember(orgID, teamID, uid int64) bool {
 
 func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	teamUsers := make([]*TeamUser, 0, 10)
-	if err = e.Where("team_id=?", teamID).Find(&teamUsers); err != nil {
+	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id=?", teamID).
+		Find(&teamUsers); err != nil {
 		return nil, fmt.Errorf("get team-users: %v", err)
 	}
 	members := make([]*User, 0, len(teamUsers))
