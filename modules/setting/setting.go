@@ -675,7 +675,7 @@ func newLogService() {
 				sec.Key("USER").MustString("example@example.com"),
 				sec.Key("PASSWD").MustString("******"),
 				sec.Key("HOST").MustString("127.0.0.1:25"),
-				strings.Replace(sec.Key("RECEIVERS").MustString("example@example.com"), ",", "\",\"", -1),
+				strings.Replace(sec.Key("RECEIVERS").MustString(""), ",", `","`, -1),
 				sec.Key("SUBJECT").MustString("Diagnostic message from serve"))
 		case "database":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"driver":"%s","conn":"%s"}`, level,
