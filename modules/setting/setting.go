@@ -118,7 +118,7 @@ var (
 		MirrorQueueLength      int
 		PullRequestQueueLength int
 		PreferredLicenses      []string
-		DisableHTTPGit         bool
+		DisableHTTPGit         bool `ini:"DISABLE_HTTP_GIT"`
 
 		// Repository editor settings
 		Editor struct {
@@ -495,7 +495,6 @@ func NewContext() {
 
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")
-	Repository.DisableHTTPGit = sec.Key("DISABLE_HTTP_GIT").MustBool()
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
 	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {

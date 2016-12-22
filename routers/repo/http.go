@@ -484,6 +484,7 @@ func HTTPBackend(ctx *context.Context, cfg *serviceConfig) http.HandlerFunc {
 					w.Write([]byte("Interacting with repositories by HTTP protocol is not allowed"))
 					return
 				}
+
 				if route.method != r.Method {
 					if r.Proto == "HTTP/1.1" {
 						w.WriteHeader(http.StatusMethodNotAllowed)
