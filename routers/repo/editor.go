@@ -188,8 +188,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 				ctx.Data["Err_TreePath"] = true
 				ctx.RenderWithErr(ctx.Tr("repo.editor.file_is_a_symlink", part), EDIT_FILE, &form)
 				return
-			}
-			if entry.IsDir() {
+			} else if entry.IsDir() {
 				ctx.Data["Err_TreePath"] = true
 				ctx.RenderWithErr(ctx.Tr("repo.editor.filename_is_a_directory", part), EDIT_FILE, &form)
 				return
