@@ -38,12 +38,10 @@ const (
 )
 
 func checkRunMode() {
-	switch setting.Cfg.Section("").Key("RUN_MODE").String() {
-	case "prod":
+	if setting.ProdMode {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
-		setting.ProdMode = true
-	default:
+	} else {
 		git.Debug = true
 	}
 	log.Info("Run Mode: %s", strings.Title(macaron.Env))

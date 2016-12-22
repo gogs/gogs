@@ -490,6 +490,8 @@ func NewContext() {
 		}
 	}
 
+	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
+
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
