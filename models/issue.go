@@ -100,7 +100,6 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 			} else {
 				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", issue.PosterID, err)
 			}
-			return
 		}
 	}
 
