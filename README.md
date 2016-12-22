@@ -3,7 +3,7 @@ Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?bra
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: 0.9.104 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions or submit a task on [alpha stage automated binary building system](https://build.gogs.io/))
+##### Current tip version: 0.9.104 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions ~~or submit a task on [alpha stage automated binary building system](https://build.gogs.io/)~~)
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -29,7 +29,6 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## Overview
 
 - Please see the [Documentation](https://gogs.io/docs/intro) for common usages and change log.
-- See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
 - Having trouble? Get help with [Troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or [User Forum](https://discuss.gogs.io/).
 - Want to help with localization? Check out the [guide](https://gogs.io/docs/features/i18n.html)!
