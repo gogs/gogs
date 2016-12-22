@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/user"
 	"github.com/Unknwon/com"
 	_ "github.com/go-macaron/cache/memcache" // memcache plugin for cache
 	_ "github.com/go-macaron/cache/redis"
@@ -25,10 +27,6 @@ import (
 	_ "github.com/kardianos/minwinsvc"      // import minwinsvc for windows services
 	"gopkg.in/ini.v1"
 	"strk.kbt.io/projects/go/libravatar"
-
-	"code.gitea.io/gitea/modules/bindata"
-	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/user"
 )
 
 // Scheme describes protocol types
@@ -349,9 +347,10 @@ func NewContext() {
 		log.Fatal(4, "Fail to get work directory: %v", err)
 	}
 
-	Cfg, err = ini.Load(bindata.MustAsset("conf/app.ini"))
+	Cfg = ini.Empty()
+
 	if err != nil {
-		log.Fatal(4, "Fail to parse 'conf/app.ini': %v", err)
+		log.Fatal(4, "Fail to parse 'app.ini': %v", err)
 	}
 
 	CustomPath = os.Getenv("GITEA_CUSTOM")
@@ -444,6 +443,10 @@ please consider changing to GITEA_CUSTOM`)
 	if err = Cfg.Section("server").MapTo(&SSH); err != nil {
 		log.Fatal(4, "Fail to map SSH settings: %v", err)
 	}
+
+	SSH.KeygenPath = sec.Key("SSH_KEYGEN_PATH").MustString("ssh-keygen")
+	SSH.Port = sec.Key("SSH_PORT").MustInt(22)
+
 	// When disable SSH, start builtin server value is ignored.
 	if SSH.Disabled {
 		SSH.StartBuiltinServer = false
@@ -502,7 +505,7 @@ please consider changing to GITEA_CUSTOM`)
 		"StampNano":   time.StampNano,
 	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
-	RunUser = Cfg.Section("").Key("RUN_USER").String()
+	RunUser = Cfg.Section("").Key("RUN_USER").MustString(user.CurrentUsername())
 	// Does not check run user when the install lock is off.
 	if InstallLock {
 		currentUser, match := IsRunUserMatchCurrentUser(RunUser)
@@ -593,7 +596,17 @@ please consider changing to GITEA_CUSTOM`)
 	}
 
 	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
+	if len(Langs) == 0 {
+		Langs = []string{
+			"en-US",
+		}
+	}
 	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")
+	if len(Names) == 0 {
+		Names = []string{
+			"English",
+		}
+	}
 	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
@@ -639,16 +652,18 @@ var logLevels = map[string]string{
 }
 
 func newLogService() {
-	log.Info("%s %s", AppName, AppVer)
+	log.Info("Gitea v%s", AppVer)
 
-	// Get and check log mode.
 	LogModes = strings.Split(Cfg.Section("log").Key("MODE").MustString("console"), ",")
 	LogConfigs = make([]string, len(LogModes))
+
 	for i, mode := range LogModes {
 		mode = strings.TrimSpace(mode)
+
 		sec, err := Cfg.GetSection("log." + mode)
+
 		if err != nil {
-			log.Fatal(4, "Unknown log mode: %s", mode)
+			sec, _ = Cfg.NewSection("log." + mode)
 		}
 
 		validLevels := []string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"}
