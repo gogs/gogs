@@ -721,7 +721,7 @@ func UpdateIssueLabel(ctx *context.Context) {
 		}
 	} else {
 		isAttach := ctx.Query("action") == "attach"
-		label, err := models.GetLabelByID(ctx.QueryInt64("id"))
+		label, err := models.GetLabelInRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id"))
 		if err != nil {
 			if models.IsErrLabelNotExist(err) {
 				ctx.Error(404, "GetLabelByID")
