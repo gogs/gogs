@@ -412,7 +412,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 }
 
 func SettingsDeleteApplication(ctx *context.Context) {
-	if err := models.DeleteAccessTokenByUserID(ctx.User.ID, ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteAccessTokenOfUserByID(ctx.User.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
