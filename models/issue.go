@@ -1612,8 +1612,8 @@ func ChangeMilestoneAssign(issue *Issue, oldMilestoneID int64) (err error) {
 	return sess.Commit()
 }
 
-// DeleteMilestoneByRepoID deletes a milestone from a repository.
-func DeleteMilestoneByRepoID(repoID, id int64) error {
+// DeleteMilestoneOfRepoByID deletes a milestone from a repository.
+func DeleteMilestoneOfRepoByID(repoID, id int64) error {
 	m, err := GetMilestoneByRepoID(repoID, id)
 	if err != nil {
 		if IsErrMilestoneNotExist(err) {

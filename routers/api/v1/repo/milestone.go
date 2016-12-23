@@ -89,7 +89,7 @@ func EditMilestone(ctx *context.APIContext, form api.EditMilestoneOption) {
 }
 
 func DeleteMilestone(ctx *context.APIContext) {
-	if err := models.DeleteMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id")); err != nil {
+	if err := models.DeleteMilestoneOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id")); err != nil {
 		ctx.Error(500, "DeleteMilestoneByRepoID", err)
 		return
 	}

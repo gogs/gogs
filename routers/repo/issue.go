@@ -721,7 +721,7 @@ func UpdateIssueLabel(ctx *context.Context) {
 		}
 	} else {
 		isAttach := ctx.Query("action") == "attach"
-		label, err := models.GetLabelInRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id"))
+		label, err := models.GetLabelOfRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id"))
 		if err != nil {
 			if models.IsErrLabelNotExist(err) {
 				ctx.Error(404, "GetLabelByID")
@@ -1223,7 +1223,7 @@ func ChangeMilestonStatus(ctx *context.Context) {
 }
 
 func DeleteMilestone(ctx *context.Context) {
-	if err := models.DeleteMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteMilestoneOfRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteMilestoneByRepoID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.milestones.deletion_success"))
