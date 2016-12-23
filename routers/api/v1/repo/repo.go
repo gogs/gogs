@@ -76,13 +76,22 @@ func Search(ctx *context.APIContext) {
 	})
 }
 
+func listUserRepos(ctx *context.APIContext, u *models.User, private bool) (repos []*models.Repository, _ error) {
+	ownRepos, err := models.GetUserRepositories(u.ID, private, 1, u.NumRepos)
+	if err != nil {
+		return nil, err
+	}
+	return ownRepos, err
+}
+
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
 func ListMyRepos(ctx *context.APIContext) {
-	ownRepos, err := models.GetUserRepositories(ctx.User.ID, true, 1, ctx.User.NumRepos)
+	ownRepos, err := listUserRepos(ctx, ctx.User, true)
 	if err != nil {
-		ctx.Error(500, "GetRepositories", err)
+		ctx.Error(500, "listUserRepos", err)
 		return
 	}
+
 	numOwnRepos := len(ownRepos)
 
 	accessibleRepos, err := ctx.User.GetRepositoryAccesses()
@@ -104,6 +113,63 @@ func ListMyRepos(ctx *context.APIContext) {
 			Pull:  true,
 		})
 		i++
+	}
+
+	ctx.JSON(200, &repos)
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-user-repositories
+func ListUserRepos(ctx *context.APIContext) {
+	u, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	ownRepos, err := listUserRepos(ctx, u, false)
+	if err != nil {
+		ctx.Error(500, "listUserRepos", err)
+		return
+	}
+
+	repos := make([]*api.Repository, len(ownRepos))
+	for i := range ownRepos {
+		repos[i] = ownRepos[i].APIFormat(&api.Permission{false, false, true})
+	}
+
+	ctx.JSON(200, &repos)
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-org-repositories
+func ListOrgRepos(ctx *context.APIContext) {
+	u, err := models.GetUserByName(ctx.Params(":org"))
+	if !u.IsOrganization() {
+		ctx.Status(404)
+		return
+	}
+
+	if err != nil {
+		if models.IsErrUserNotExist(err) {
+			ctx.Status(404)
+		} else {
+			ctx.Error(500, "GetUserByName", err)
+		}
+		return
+	}
+
+	ownRepos, err := listUserRepos(ctx, u, u.IsOwnedBy(ctx.User.ID))
+	if err != nil {
+		ctx.Error(500, "listUserRepos", err)
+		return
+	}
+
+	repos := make([]*api.Repository, len(ownRepos))
+	for i := range ownRepos {
+		repos[i] = ownRepos[i].APIFormat(&api.Permission{u.IsOwnedBy(ctx.User.ID), u.IsOwnedBy(ctx.User.ID), true})
 	}
 
 	ctx.JSON(200, &repos)
