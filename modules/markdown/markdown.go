@@ -33,11 +33,12 @@ var Sanitizer = bluemonday.UGCPolicy()
 // This function should only be called once during entire application lifecycle.
 func BuildSanitizer() {
 	// Normal markdown-stuff
-	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code", "div", "ul", "ol", "dl")
 
 	// Checkboxes
 	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
 	Sanitizer.AllowAttrs("checked", "disabled").OnElements("input")
+	Sanitizer.AllowNoAttrs().OnElements("label")
 
 	// Custom URL-Schemes
 	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
@@ -80,11 +81,11 @@ var (
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
-	CommitPattern = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	//CommitPattern = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 
 	// IssueFullPattern matches link to an issue with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/issues/4#issue-685
-	IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	//IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	// IssueNumericPattern matches string that references to a numeric issue, e.g. #1287
 	IssueNumericPattern = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
 	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
@@ -94,6 +95,64 @@ var (
 	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern
 	// by converting string to a number.
 	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
+
+	WikiLinkPattern = regexp.MustCompile(`(\[\[.*\]\]\w*)`)
+
+	/*
+		https://github.com/jquery/jquery/blob/a644101ed04d0beacea864ce805e0c4f86ba1cd1/test/unit/event.js#L2703:
+			jquery
+			jquery
+			blob
+			a644101ed04d0beacea864ce805e0c4f86ba1cd1
+			test/unit/event.js
+			2703
+		https://github.com/jquery/jquery/blob/a644101ed04d0beacea864ce805e0c4f86ba1cd1/test/unit/event.js
+			jquery
+			jquery
+			blob
+			a644101ed04d0beacea864ce805e0c4f86ba1cd1
+			test/unit/event.js
+		https://github.com/jquery/jquery/commit/0705be475092aede1eddae01319ec931fb9c65fc
+			jquery
+			jquery
+			commit
+			0705be475092aede1eddae01319ec931fb9c65fc
+		https://github.com/jquery/jquery/tree/0705be475092aede1eddae01319ec931fb9c65fc/src
+			jquery
+			jquery
+			tree
+			0705be475092aede1eddae01319ec931fb9c65fc
+			src
+		https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
+			gogs
+			gogs
+			commit
+			d8a994ef243349f321568f9e36d5c3f444b99cae
+			diff-2
+	*/
+	AnySHA1Pattern = regexp.MustCompile(`http\S+//\S+/(\S+)/(\S+)/(\S+)/([0-9a-f]{40})(?:/?([^#\s]+)?(?:#(\S+))?)?`)
+
+	/*
+		https://github.com/gogits/gogs/pull/3244
+			github.com/gogits/gogs/pull/
+			3244
+		https://github.com/gogits/gogs/issues/3247#issuecomment-231517079
+			github.com/gogits/gogs/issues/
+			3247
+			231517079
+		https://try.gogs.io/gogs/gogs/issues/4#issue-685
+			try.gogs.io/gogs/gogs/issues/
+			4
+			685
+		https://youtrack.jetbrains.com/issue/JT-36485
+			youtrack.jetbrains.com/issue/
+			JT-36485
+		https://youtrack.jetbrains.com/issue/JT-36485#comment=27-1508676
+			youtrack.jetbrains.com/issue/
+			JT-36485
+			27-1508676
+	*/
+	IssueFullPattern = regexp.MustCompile(`http\S+//((?:[^\s/]+/)+)((?:\w{1,10}-)?[1-9][0-9]*)(?:#\w+.(\S+)?)?`)
 )
 
 // FindAllMentions matches mention patterns in given content
@@ -116,7 +175,11 @@ type Renderer struct {
 func (r *Renderer) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] != '#' {
-			link = []byte(path.Join(r.urlPrefix, string(link)))
+			mLink := path.Join(r.urlPrefix, string(link))
+			if isWikiMarkdown {
+				mLink = path.Join(r.urlPrefix, "wiki", string(link))
+			}
+			link = []byte(mLink)
 		}
 	}
 
@@ -130,46 +193,50 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 		r.Renderer.AutoLink(out, link, kind)
 		return
 	}
+	r.Renderer.AutoLink(out, link, kind)
+}
 
-	// Since this method could only possibly serve one link at a time,
-	// we do not need to find all.
-	if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
-		m := CommitPattern.Find(link)
-		if m != nil {
-			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "commit/")
-			j := strings.Index(string(m), "#")
-			if j == -1 {
-				j = len(m)
-			}
-			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
-			return
-		}
-
-		m = IssueFullPattern.Find(link)
-		if m != nil {
-			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "issues/")
-			j := strings.Index(string(m), "#")
-			if j == -1 {
-				j = len(m)
-			}
-			out.WriteString(fmt.Sprintf(`<a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
-			return
-		}
+func (options *Renderer) List(out *bytes.Buffer, text func() bool, flags int) {
+	marker := out.Len()
+	if out.Len() > 0 {
+		out.WriteByte('\n')
 	}
 
-	r.Renderer.AutoLink(out, link, kind)
+	if flags&blackfriday.LIST_TYPE_DEFINITION != 0 {
+		out.WriteString("<dl>")
+	} else if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
+		out.WriteString("<ol class='ui list'>")
+	} else {
+		out.WriteString("<ul class='ui list'>")
+	}
+	if !text() {
+		out.Truncate(marker)
+		return
+	}
+	if flags&blackfriday.LIST_TYPE_DEFINITION != 0 {
+		out.WriteString("</dl>\n")
+	} else if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
+		out.WriteString("</ol>\n")
+	} else {
+		out.WriteString("</ul>\n")
+	}
 }
 
 // ListItem defines how list items should be processed to produce corresponding HTML elements.
 func (options *Renderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	// Detect procedures to draw checkboxes.
+	prefix := ""
+	if bytes.HasPrefix(text, []byte("<p>")) {
+		prefix = "<p>"
+	}
 	switch {
-	case bytes.HasPrefix(text, []byte("[ ] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" />`), text[3:]...)
-	case bytes.HasPrefix(text, []byte("[x] ")):
-		text = append([]byte(`<input type="checkbox" disabled="" checked="" />`), text[3:]...)
+	case bytes.HasPrefix(text, []byte(prefix+"[ ] ")):
+		text = append([]byte(`<div class="ui fitted read-only checkbox"><input type="checkbox" /><label /></div>`), text[3+len(prefix):]...)
+	case bytes.HasPrefix(text, []byte(prefix+"[x] ")):
+		text = append([]byte(`<div class="ui checked fitted read-only checkbox"><input type="checkbox" checked="" /><label /></div>`), text[3+len(prefix):]...)
+	}
+	if prefix != "" {
+		text = bytes.Replace(text, []byte("</p>"), []byte{}, 1)
 	}
 	options.Renderer.ListItem(out, text, flags)
 }
@@ -185,9 +252,15 @@ var (
 	spaceEncoded      = "%20"
 )
 
+var isWikiMarkdown = false
+
 // Image defines how images should be processed to produce corresponding HTML elements.
 func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
-	prefix := strings.Replace(r.urlPrefix, "/src/", "/raw/", 1)
+	prefix := r.urlPrefix
+	if isWikiMarkdown {
+		prefix += "/wiki/src/"
+	}
+	prefix = strings.Replace(prefix, "/src/", "/raw/", 1)
 	if len(link) > 0 {
 		if isLink(link) {
 			// External link with .svg suffix usually means CI status.
@@ -198,7 +271,9 @@ func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byt
 			}
 		} else {
 			if link[0] != '/' {
-				prefix += "/"
+				if !strings.HasSuffix(prefix, "/") {
+					prefix += "/"
+				}
 			}
 			link = bytes.Replace([]byte((prefix + string(link))), spaceBytes, spaceEncodedBytes, -1)
 			fmt.Println(333, string(link))
@@ -271,6 +346,212 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 	}))
 }
 
+func RenderFullSha1Pattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := AnySHA1Pattern.FindAllSubmatch(rawBytes, -1)
+	for _, m := range ms {
+		all := m[0]
+		//author := m[1]
+		//repoName := m[2]
+		ltype := "src"
+		itemType := m[3]
+		if string(itemType) == "commit" {
+			ltype = "commit"
+		}
+		sha := m[4]
+		var path []byte
+		if len(m) > 5 {
+			path = m[5]
+		}
+		var line []byte
+		if len(m) > 6 {
+			line = m[6]
+		}
+		urlSuffix := ""
+		text := base.ShortSha(string(sha))
+		if path != nil && string(path) != "" {
+			urlSuffix = "/" + string(path)
+			text = string(path)
+		}
+		if line != nil {
+			urlSuffix += "#"
+			urlSuffix += string(line)
+			text += " ("
+			text += string(line)
+			text += ")"
+		}
+		rawBytes = bytes.Replace(rawBytes, all, []byte(fmt.Sprintf(
+			`<a href="%s/%s/%s%s">%s</a>`, urlPrefix, ltype, sha, urlSuffix, text)), -1)
+	}
+	return rawBytes
+}
+
+func RenderFullIssuePattern(rawBytes []byte, urlPrefix string) []byte {
+	ms := IssueFullPattern.FindAllSubmatch(rawBytes, -1)
+	for _, m := range ms {
+		all := m[0]
+		paths := bytes.Split(m[1], []byte("/"))
+		paths = paths[:len(paths)-1]
+		if bytes.HasPrefix(paths[0], []byte("gist.")) {
+			continue
+		}
+		var path string
+		if len(paths) > 3 {
+			// Internal one
+			path = urlPrefix + "/issues/"
+		} else {
+			path = "//" + string(m[1])
+		}
+		id := string(m[2])
+		path += id
+		var comment []byte
+		if len(m) > 3 {
+			comment = m[3]
+		}
+		urlSuffix := ""
+		text := "#" + id
+		if comment != nil {
+			urlSuffix += "#issuecomment-"
+			urlSuffix += string(comment)
+			text += "<i class='comment icon'></i>"
+		}
+		rawBytes = bytes.Replace(rawBytes, all, []byte(fmt.Sprintf(
+			`<a href="%s%s">%s</a>`, path, urlSuffix, text)), -1)
+	}
+	return rawBytes
+}
+
+func FirstIndexOfByte(sl []byte, target byte) int {
+	for i := 0; i < len(sl); i++ {
+		if sl[i] == target {
+			return i
+		}
+	}
+	return -1
+}
+func LastIndexOfByte(sl []byte, target byte) int {
+	for i := len(sl) - 1; i >= 0; i-- {
+		if sl[i] == target {
+			return i
+		}
+	}
+	return -1
+}
+
+func RenderSpecialWikiLinks(rawBytes []byte, urlPrefix string, noLink bool) []byte {
+	ms := WikiLinkPattern.FindAll(rawBytes, -1)
+	for _, m := range ms {
+		orig := bytes.TrimSpace(m)
+		m = orig[2:]
+		tailPos := LastIndexOfByte(m, ']') + 1
+		tail := []byte{}
+		if tailPos < len(m) {
+			tail = m[tailPos:]
+			m = m[:tailPos-1]
+		}
+		m = m[:len(m)-2]
+		var name string
+		var link string
+		props := map[string]string{}
+
+		sl := bytes.Split(m, []byte("|"))
+		for _, v := range sl {
+			switch bytes.Count(v, []byte("=")) {
+			case 0:
+				{
+					if isLink(v) || bytes.Contains(v, []byte("/")) {
+						props["link"] = string(v)
+					} else {
+						if props["name"] != "" {
+							props["link"] = string(v)
+						} else {
+							props["name"] = string(v)
+						}
+					}
+				}
+			case 1:
+				{
+					sep := FirstIndexOfByte(v, '=')
+					key, val := string(v[:sep]), html.UnescapeString(string(v[sep+1:]))
+					if (val[0] == '"' || val[0] == '\'') && (val[len(val)-1] == '"' || val[len(val)-1] == '\'') {
+						val = val[1 : len(val)-1]
+					}
+					props[key] = val
+				}
+			}
+		}
+		/*
+			for k, v := range props {
+				fmt.Print(k)
+				fmt.Println(" = " + v)
+			}
+		*/
+
+		if props["link"] != "" {
+			link = props["link"]
+		} else if props["name"] != "" {
+			link = props["name"]
+		}
+		if props["title"] != "" {
+			name = props["title"]
+		} else if props["name"] != "" {
+			name = props["name"]
+		} else {
+			name = link
+		}
+
+		link = strings.Replace(link, string(spaceBytes), string(spaceEncodedBytes), -1)
+		name += string(tail)
+		image := false
+		ext := filepath.Ext(string(link))
+		if ext != "" {
+			switch ext {
+			case ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".gif", ".bmp", ".ico", ".svg":
+				{
+					image = true
+				}
+			}
+		}
+		absoluteLink := isLink([]byte(link))
+		//fmt.Println("name:", name+"; link:", link+"; image:", image)
+		if image {
+			if !absoluteLink {
+				if link[0] == '/' {
+					link = "raw" + link
+				} else {
+					link = "raw/" + link
+				}
+			}
+			if !absoluteLink {
+				link = urlPrefix + "/wiki/" + link
+			}
+			title := props["title"]
+			if title == "" {
+				title = props["alt"]
+			}
+			if title == "" {
+				title = path.Base(string(name))
+			}
+			alt := props["alt"]
+			if alt == "" {
+				alt = name
+			}
+			if alt != "" {
+				alt = `alt="` + alt + `"`
+			}
+			name = fmt.Sprintf(`<img src="%s" %s title="%s" />`, link, alt, title)
+		} else if !absoluteLink {
+			link = urlPrefix + "/wiki/" + link
+		}
+		if noLink {
+			rawBytes = bytes.Replace(rawBytes, orig, []byte(name), -1)
+		} else {
+			rawBytes = bytes.Replace(rawBytes, orig,
+				[]byte(fmt.Sprintf(`<a href="%s">%s</a>`, link, name)), -1)
+		}
+	}
+	return rawBytes
+}
+
 // RenderSpecialLink renders mentions, indexes and SHA1 strings to corresponding links.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	ms := MentionPattern.FindAll(rawBytes, -1)
@@ -280,8 +561,11 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 	}
 
+	rawBytes = RenderSpecialWikiLinks(rawBytes, urlPrefix, false)
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	//rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	rawBytes = RenderFullSha1Pattern(rawBytes, urlPrefix)
+	rawBytes = RenderFullIssuePattern(rawBytes, urlPrefix)
 	return rawBytes
 }
 
@@ -300,9 +584,9 @@ func RenderRaw(body []byte, urlPrefix string) []byte {
 	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
 	extensions |= blackfriday.EXTENSION_TABLES
 	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
+	//extensions |= blackfriday.EXTENSION_AUTOLINK
 	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
+	// extensions |= blackfriday.EXTENSION_SPACE_HEADERS
 	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
 	if setting.Markdown.EnableHardLineBreak {
@@ -344,10 +628,12 @@ OUTER_LOOP:
 					token = tokenizer.Token()
 
 					// Copy the token to the output verbatim
-					buf.WriteString(token.String())
+					buf.Write(RenderSpecialWikiLinks([]byte(token.String()), urlPrefix, true))
 
 					if token.Type == html.StartTagToken {
-						stackNum++
+						if !com.IsSliceContainsStr(noEndTags, token.Data) {
+							stackNum++
+						}
 					}
 
 					// If this is the close tag to the outer-most, we are done
@@ -402,4 +688,10 @@ func Render(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 // RenderString renders Markdown to HTML with special links and returns string type.
 func RenderString(raw, urlPrefix string, metas map[string]string) string {
 	return string(Render([]byte(raw), urlPrefix, metas))
+}
+
+func RenderWiki(rawBytes []byte, urlPrefix string, metas map[string]string) string {
+	defer func() { isWikiMarkdown = false }()
+	isWikiMarkdown = true
+	return string(Render(rawBytes, urlPrefix, metas))
 }
