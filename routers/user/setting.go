@@ -280,7 +280,10 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 }
 
 func DeleteEmail(ctx *context.Context) {
-	if err := models.DeleteEmailAddress(&models.EmailAddress{ID: ctx.QueryInt64("id")}); err != nil {
+	if err := models.DeleteEmailAddress(&models.EmailAddress{
+		ID:  ctx.QueryInt64("id"),
+		UID: ctx.User.ID,
+	}); err != nil {
 		ctx.Handle(500, "DeleteEmail", err)
 		return
 	}
@@ -409,7 +412,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 }
 
 func SettingsDeleteApplication(ctx *context.Context) {
-	if err := models.DeleteAccessTokenByID(ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteAccessTokenByUserID(ctx.User.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
