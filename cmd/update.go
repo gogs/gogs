@@ -6,12 +6,15 @@ package cmd
 
 import (
 	"os"
+	"strings"
+	"strconv"
 
 	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/git-module"
 )
 
 var CmdUpdate = cli.Command{
@@ -43,6 +46,18 @@ func runUpdate(c *cli.Context) error {
 		log.GitLogger.Fatal(2, "First argument 'refName' is empty, shouldn't use")
 	}
 
+	branchName := strings.TrimPrefix(args[0], git.BRANCH_PREFIX)
+	//UserID, _ := strconv.ParseInt(os.Getenv(models.PROTECTED_BRANCH_USER_ID), 10, 64)
+	RepoID, _ := strconv.ParseInt(os.Getenv(models.PROTECTED_BRANCH_REPO_ID), 10, 64)
+	accessMode := models.ParseAccessMode(os.Getenv(models.PROTECTED_BRANCH_ACCESS_MODE))
+	//skip admin or owner AccessMode
+	if (accessMode == models.ACCESS_MODE_WRITE) {
+		if protectBranch, err := models.GetProtectedBranchBy(RepoID, branchName); err == nil {
+			if (protectBranch != nil && !protectBranch.CanPush) {
+				log.GitLogger.Fatal(2, "Protected Branch Cann't Push")
+			}
+		}
+	}
 	task := models.UpdateTask{
 		UUID:        os.Getenv("uuid"),
 		RefName:     args[0],

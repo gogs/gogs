@@ -42,6 +42,8 @@ func ParseAccessMode(permission string) AccessMode {
 		return ACCESS_MODE_WRITE
 	case "admin":
 		return ACCESS_MODE_ADMIN
+	case "owner":
+		return ACCESS_MODE_OWNER
 	default:
 		return ACCESS_MODE_READ
 	}

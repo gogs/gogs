@@ -21,6 +21,7 @@ import (
 const (
 	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
 	COLLABORATION    base.TplName = "repo/settings/collaboration"
+	PROTECTED_BRANCH    base.TplName = "repo/settings/protected_branch"
 	GITHOOKS         base.TplName = "repo/settings/githooks"
 	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
 	DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
@@ -368,6 +369,57 @@ func DeleteCollaboration(ctx *context.Context) {
 
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": ctx.Repo.RepoLink + "/settings/collaboration",
+	})
+}
+
+func ProtectedBranch(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings")
+	ctx.Data["PageIsSettingsProtectedBranch"] = true
+
+	protectedBranches, err := ctx.Repo.Repository.GetProtectedBranches()
+	if err != nil {
+		ctx.Handle(500, "GetProtectedBranches", err)
+		return
+	}
+	ctx.Data["ProtectedBranches"] = protectedBranches
+
+	ctx.HTML(200, PROTECTED_BRANCH)
+}
+
+func ProtectedBranchPost(ctx *context.Context) {
+	branchName := strings.ToLower(ctx.Query("branchName"))
+	canPush :=ctx.QueryBool("canPush")
+	if len(branchName) == 0 || ctx.Repo.Owner.LowerName == branchName {
+		ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
+		return
+	}
+
+	if err := ctx.Repo.Repository.AddProtectedBranch(branchName,canPush); err != nil {
+		ctx.Handle(500, "AddProtectedBranch", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.settings.add_protected_branch_success"))
+	ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
+}
+
+func ChangeProtectedBranch(ctx *context.Context) {
+	if err := ctx.Repo.Repository.ChangeProtectedBranch(
+		ctx.QueryInt64("id"),
+		ctx.QueryBool("canPush")); err != nil {
+		log.Error(4, "ChangeProtectedBranch: %v", err)
+	}
+}
+
+func DeleteProtectedBranch(ctx *context.Context) {
+	if err := ctx.Repo.Repository.DeleteProtectedBranch(ctx.QueryInt64("id")); err != nil {
+		ctx.Flash.Error("DeleteProtectedBranch: " + err.Error())
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.settings.remove_protected_branch_success"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": ctx.Repo.RepoLink + "/settings/protected_branch",
 	})
 }
 

@@ -267,6 +267,9 @@ func runServ(c *cli.Context) error {
 	} else {
 		gitcmd = exec.Command(verb, repoPath)
 	}
+	os.Setenv(models.PROTECTED_BRANCH_USER_ID, fmt.Sprintf("%d",user.ID))
+	os.Setenv(models.PROTECTED_BRANCH_ACCESS_MODE, requestedMode.String())
+	os.Setenv(models.PROTECTED_BRANCH_REPO_ID, fmt.Sprintf("%d",repo.ID))
 	gitcmd.Dir = setting.RepoRootPath
 	gitcmd.Stdout = os.Stdout
 	gitcmd.Stdin = os.Stdin
@@ -274,7 +277,7 @@ func runServ(c *cli.Context) error {
 	if err = gitcmd.Run(); err != nil {
 		fail("Internal error", "Failed to execute git command: %v", err)
 	}
-
+	log.GitLogger.Trace("User:%s access:%v repository:%s reponame:%s ip:%s", user.Name, requestedMode, repoPath, reponame, os.Getenv("REMOTE_ADDR"))
 	if requestedMode == models.ACCESS_MODE_WRITE {
 		handleUpdateTask(uuid, user, repoUser, reponame, isWiki)
 	}
