@@ -91,7 +91,7 @@ var (
 	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\()[A-Z]{1,10}-[1-9][0-9]*\b`)
 	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a difference repository
 	// e.g. gogits/gogs#12345
-	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z]+/[0-9a-zA-Z]+#[0-9]+\b`)
+	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern
@@ -158,16 +158,16 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 				j = len(m)
 			}
 
-			issue := string(m[i+7 : j])
-			fullRepoUrl := setting.AppUrl + strings.TrimPrefix(r.urlPrefix, "/")
+			index := string(m[i+7 : j])
+			fullRepoURL := setting.AppUrl + strings.TrimPrefix(r.urlPrefix, "/")
 			var link string
-			if strings.HasPrefix(string(m), fullRepoUrl) {
+			if strings.HasPrefix(string(m), fullRepoURL) {
 				// Use a short issue reference if the URL refers to this repository
-				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, issue)
+				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
 			} else {
 				// Use a cross-repository issue reference if the URL refers to a different repository
 				repo := string(m[len(setting.AppUrl) : i-1])
-				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, issue)
+				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
 			}
 			out.WriteString(link)
 			return
@@ -284,10 +284,11 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, me
 			m = m[1:] // ignore leading space or opening parentheses
 		}
 
-		repo := string(bytes.Split(m, []byte("#"))[0])
-		issue := string(bytes.Split(m, []byte("#"))[1])
+		fields := bytes.Split(m, []byte("#"))[0]
+		repo := string(fields[0])
+		index := string(fields[1])
 
-		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppUrl, repo, issue, m)
+		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppUrl, repo, index, m)
 		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
 	return rawBytes
