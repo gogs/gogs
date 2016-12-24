@@ -2,13 +2,13 @@ hash: 1d5fcf2a90f7621ecbc0b1abed548e11d13bda3fea49b4326c829a523268e5cf
 updated: 2016-06-12T17:35:14.27036884+08:00
 imports:
 - name: github.com/bradfitz/gomemcache
-  version: fb1f79c6b65acda83063cbc69f6bba1522558bfc
+  version: 2fafb84a66c4911e11a8f50955b01e74fe3ab9c5
   subpackages:
   - memcache
 - name: github.com/urfave/cli
-  version: 1efa31f08b9333f1bd4882d61f9d668a70cd902e
+  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
 - name: github.com/go-macaron/binding
-  version: 9440f336b443056c90d7d448a0a55ad8c7599880
+  version: 48920167fa152d02f228cfbece7e0f1e452d200a
 - name: github.com/go-macaron/cache
   version: 56173531277692bc2925924d51fda1cd0a6b8178
   subpackages:
@@ -31,7 +31,7 @@ imports:
 - name: github.com/go-macaron/toolbox
   version: 82b511550b0aefc36b3a28062ad3a52e812bee38
 - name: github.com/go-sql-driver/mysql
-  version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
+  version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/go-xorm/builder
   version: db75972580de4a7c6c20fff5b16a924c3de3fa12
 - name: github.com/go-xorm/core
@@ -41,7 +41,7 @@ imports:
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
-  version: 7f3990acf1833faa5ebd0e86f0a4c72a4b5eba3c
+  version: 2fc07a4c4f1e3c4d2301c5ed578d5e2c31c70421
 - name: github.com/gogits/git-module
   version: df1013f8eb4dc70de90bc5597bf560a4b7da802e
 - name: github.com/gogits/go-gogs-client
@@ -51,44 +51,44 @@ imports:
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
-  version: 52d9b785554a1918cb09909b89a1509a98b853fd
+  version: 4b9124c9b0a2279e2092c4a9aaf1c83bbd2dcffc
 - name: github.com/kardianos/minwinsvc
   version: cad6b2b879b0970e4245a20ebf1a81a756e2bb70
 - name: github.com/klauspost/compress
-  version: 14eb9c4951195779ecfbec34431a976de7335b0a
+  version: e3b7981a12dd3cab49afa1d3a50e715846f23732
   subpackages:
   - gzip
   - flate
 - name: github.com/klauspost/cpuid
   version: 09cded8978dc9e80714c4d85b0322337b0a1e5e0
 - name: github.com/klauspost/crc32
-  version: 19b0b332c9e4516a6370a0456e6182c3b5036720
+  version: cb6bfca970f6908083f26f39a79009d608efd5cd
 - name: github.com/lib/pq
-  version: 80f8150043c80fb52dee6bc863a709cdac7ec8f8
+  version: 5bf161122cd640c2a5a2c1d7fa49ea9befff31dd
   subpackages:
   - oid
 - name: github.com/mattn/go-sqlite3
-  version: e118d4451349065b8e7ce0f0af32e033995363f8
+  version: 2d44decb4941c9cdf72c22297b7890faf7da9bcb
 - name: github.com/mcuadros/go-version
-  version: d52711f8d6bea8dc01efafdb68ad95a4e2606630
+  version: 257f7b9a7d87427c8d7f89469a5958d57f8abd7c
 - name: github.com/microcosm-cc/bluemonday
-  version: 9dc199233bf72cc1aad9b61f73daf2f0075b9ee4
+  version: e79763773ab6222ca1d5a7cbd9d62d83c1f77081
 - name: github.com/msteinert/pam
   version: 02ccfbfaf0cc627aa3aec8ef7ed5cfeec5b43f63
 - name: github.com/nfnt/resize
   version: 891127d8d1b52734debe1b3c3d7e747502b6c366
 - name: github.com/russross/blackfriday
-  version: 93622da34e54fb6529bfb7c57e710f37a8d9cbd8
+  version: 5f33e7b7878355cd2b7e6b8eefc48a5472c69f70
 - name: github.com/satori/go.uuid
-  version: 0aa62d5ddceb50dbcb909d790b5345affd3669b6
+  version: b061729afc07e77a8aa4fad0a2fd840958f1942a
 - name: github.com/sergi/go-diff
-  version: ec7fdbb58eb3e300c8595ad5ac74a5aa50019cc7
+  version: 83532ca1c1caa393179c677b6facf48e61f4ca5d
   subpackages:
   - diffmatchpatch
 - name: github.com/shurcooL/sanitized_anchor_name
-  version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
+  version: 1dba4b3954bc059efc3991ec364f9f9a35f597d2
 - name: github.com/Unknwon/cae
-  version: 7f5e046bc8a6c3cde743c233b96ee4fd84ee6ecd
+  version: c6aac99ea2cae2ebaf23f26f76b04fe3fcfc9f8c
   subpackages:
   - zip
 - name: github.com/Unknwon/com
@@ -96,27 +96,27 @@ imports:
 - name: github.com/Unknwon/i18n
   version: 39d6f2727e0698b1021ceb6a77c1801aa92e7d5d
 - name: github.com/Unknwon/paginater
-  version: 7748a72e01415173a27d79866b984328e7b0c12b
+  version: 701c23f468663c34d1b1768c3ae1bcc57e11c5b3
 - name: golang.org/x/crypto
-  version: bc89c496413265e715159bdc8478ee9a92fdc265
+  version: f6b343c37ca80bfa8ea539da67a0b621f84fab1d
   subpackages:
   - ssh
   - curve25519
   - ed25519
   - ed25519/internal/edwards25519
 - name: golang.org/x/net
-  version: 57bfaa875b96fb91b4766077f34470528d4b03e9
+  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
   subpackages:
   - html
   - html/charset
   - html/atom
 - name: golang.org/x/sys
-  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  version: d75a52659825e75fff6158388dddc6a5b04f9ba5
   subpackages:
   - windows/svc
   - windows
 - name: golang.org/x/text
-  version: 2910a502d2bf9e43193af9d68ca516529614eed3
+  version: a49bea13b776691cb1b49873e5d8df96ec74831a
   subpackages:
   - transform
   - language
@@ -144,11 +144,11 @@ imports:
 - name: gopkg.in/gomail.v2
   version: 81ebce5c23dfd25c6c67194b37d3dd3f338c98b1
 - name: gopkg.in/ini.v1
-  version: cf53f9204df4fbdd7ec4164b57fa6184ba168292
+  version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
 - name: gopkg.in/ldap.v2
-  version: d0a5ced67b4dc310b9158d63a2c6f9c5ec13f105
+  version: 8168ee085ee43257585e50c6441aadf54ecb2c9f
 - name: gopkg.in/macaron.v1
-  version: 826ddf13862c544525338a2deda6f57ffd1a9083
+  version: ddb19a9f3e8cedd44696b9dd5854dc8a43f3dd6c
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
 devImports: []
