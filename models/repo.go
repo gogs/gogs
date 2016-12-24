@@ -482,6 +482,11 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string) error {
 			return fmt.Errorf("git clone %s: %v", branch, err)
 		}
 	} else {
+		if err := git.Fetch(localPath, git.FetchRemoteOptions{
+			Prune: true,
+		}); err != nil {
+			return fmt.Errorf("git fetch: %v", err)
+		}
 		if err := git.Checkout(localPath, git.CheckoutOptions{
 			Branch: branch,
 		}); err != nil {
