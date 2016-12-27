@@ -78,7 +78,12 @@ func Search(ctx *context.APIContext) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-your-repositories
 func ListMyRepos(ctx *context.APIContext) {
-	ownRepos, err := models.GetUserRepositories(ctx.User.ID, true, 1, ctx.User.NumRepos)
+	ownRepos, err := models.GetUserRepositories(&models.UserRepoOptions{
+		UserID:   ctx.User.ID,
+		Private:  true,
+		Page:     1,
+		PageSize: ctx.User.NumRepos,
+	})
 	if err != nil {
 		ctx.Error(500, "GetRepositories", err)
 		return

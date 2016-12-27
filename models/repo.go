@@ -1055,6 +1055,34 @@ func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 	return repos, nil
 }
 
+// FilterRepositoryWithIssues selects repositories that are using interal issue tracker
+// and has disabled external tracker from given set.
+// It returns nil if result set is empty.
+func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
+	if len(repoIDs) == 0 {
+		return nil, nil
+	}
+
+	repos := make([]*Repository, 0, len(repoIDs))
+	if err := x.Where("enable_issues=?", true).
+		And("enable_external_tracker=?", false).
+		In("id", repoIDs).
+		Cols("id").
+		Find(&repos); err != nil {
+		return nil, fmt.Errorf("filter valid repositories %v: %v", repoIDs, err)
+	}
+
+	if len(repos) == 0 {
+		return nil, nil
+	}
+
+	repoIDs = make([]int64, len(repos))
+	for i := range repos {
+		repoIDs[i] = repos[i].ID
+	}
+	return repoIDs, nil
+}
+
 // RepoPath returns repository path by given user and repository name.
 func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
@@ -1454,19 +1482,26 @@ func GetRepositoryByID(id int64) (*Repository, error) {
 	return getRepositoryByID(x, id)
 }
 
+type UserRepoOptions struct {
+	UserID   int64
+	Private  bool
+	Page     int
+	PageSize int
+}
+
 // GetUserRepositories returns a list of repositories of given user.
-func GetUserRepositories(userID int64, private bool, page, pageSize int) ([]*Repository, error) {
-	sess := x.Where("owner_id = ?", userID).Desc("updated_unix")
-	if !private {
+func GetUserRepositories(opts *UserRepoOptions) ([]*Repository, error) {
+	sess := x.Where("owner_id=?", opts.UserID).Desc("updated_unix")
+	if !opts.Private {
 		sess.And("is_private=?", false)
 	}
 
-	if page <= 0 {
-		page = 1
+	if opts.Page <= 0 {
+		opts.Page = 1
 	}
-	sess.Limit(pageSize, (page-1)*pageSize)
+	sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize)
 
-	repos := make([]*Repository, 0, pageSize)
+	repos := make([]*Repository, 0, opts.PageSize)
 	return repos, sess.Find(&repos)
 }
 

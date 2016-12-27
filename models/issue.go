@@ -1169,7 +1169,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
 func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterMode, isPull bool) *IssueStats {
 	stats := &IssueStats{}
-
+	hasAnyRepo := repoID > 0 || repoIDs != nil
 	countSession := func(isClosed, isPull bool, repoID int64, repoIDs []int64) *xorm.Session {
 		sess := x.Where("issue.is_closed = ?", isClosed).And("issue.is_pull = ?", isPull)
 
@@ -1190,11 +1190,17 @@ func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterM
 		And("poster_id = ?", userID).
 		Count(new(Issue))
 
-	stats.YourReposCount, _ = countSession(false, isPull, repoID, repoIDs).
-		Count(new(Issue))
+	if hasAnyRepo {
+		stats.YourReposCount, _ = countSession(false, isPull, repoID, repoIDs).
+			Count(new(Issue))
+	}
 
 	switch filterMode {
 	case FILTER_MODE_YOUR_REPOS:
+		if !hasAnyRepo {
+			break
+		}
+
 		stats.OpenCount, _ = countSession(false, isPull, repoID, repoIDs).
 			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, repoIDs).

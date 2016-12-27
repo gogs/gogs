@@ -218,6 +218,12 @@ func Issues(ctx *context.Context) {
 
 	userRepoIDs = make([]int64, 0, len(repos))
 	for _, repo := range repos {
+		userRepoIDs = append(userRepoIDs, repo.ID)
+
+		if filterMode != models.FILTER_MODE_YOUR_REPOS {
+			continue
+		}
+
 		if isPullList {
 			if isShowClosed && repo.NumClosedPulls == 0 ||
 				!isShowClosed && repo.NumOpenPulls == 0 {
@@ -231,9 +237,15 @@ func Issues(ctx *context.Context) {
 			}
 		}
 
-		userRepoIDs = append(userRepoIDs, repo.ID)
-		if filterMode == models.FILTER_MODE_YOUR_REPOS {
-			showRepos = append(showRepos, repo)
+		showRepos = append(showRepos, repo)
+	}
+
+	// Filter repositories if the page shows issues.
+	if !isPullList {
+		userRepoIDs, err = models.FilterRepositoryWithIssues(userRepoIDs)
+		if err != nil {
+			ctx.Handle(500, "FilterRepositoryWithIssues", err)
+			return
 		}
 	}
 
@@ -247,7 +259,11 @@ func Issues(ctx *context.Context) {
 	switch filterMode {
 	case models.FILTER_MODE_YOUR_REPOS:
 		// Get all issues from repositories from this user.
-		issueOptions.RepoIDs = userRepoIDs
+		if userRepoIDs == nil {
+			issueOptions.RepoIDs = []int64{-1}
+		} else {
+			issueOptions.RepoIDs = userRepoIDs
+		}
 
 	case models.FILTER_MODE_ASSIGN:
 		// Get all issues assigned to this user.
@@ -361,7 +377,12 @@ func showOrgProfile(ctx *context.Context) {
 		ctx.Data["Repos"] = repos
 	} else {
 		showPrivate := ctx.IsSigned && ctx.User.IsAdmin
-		repos, err = models.GetUserRepositories(org.ID, showPrivate, page, setting.UI.User.RepoPagingNum)
+		repos, err = models.GetUserRepositories(&models.UserRepoOptions{
+			UserID:   org.ID,
+			Private:  showPrivate,
+			Page:     page,
+			PageSize: setting.UI.User.RepoPagingNum,
+		})
 		if err != nil {
 			ctx.Handle(500, "GetRepositories", err)
 			return
