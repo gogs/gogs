@@ -99,7 +99,12 @@ func Profile(ctx *context.Context) {
 			page = 1
 		}
 
-		ctx.Data["Repos"], err = models.GetUserRepositories(ctxUser.ID, ctx.IsSigned && ctx.User.ID == ctxUser.ID, page, setting.UI.User.RepoPagingNum)
+		ctx.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
+			UserID:   ctxUser.ID,
+			Private:  ctx.IsSigned && ctx.User.ID == ctxUser.ID,
+			Page:     page,
+			PageSize: setting.UI.User.RepoPagingNum,
+		})
 		if err != nil {
 			ctx.Handle(500, "GetRepositories", err)
 			return
