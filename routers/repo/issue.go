@@ -121,7 +121,7 @@ func Issues(ctx *context.Context) {
 		assigneeID = ctx.QueryInt64("assignee")
 		posterID   int64
 	)
-	filterMode := models.FM_ALL
+	filterMode := models.FM_YOUR_REPOSITORIES
 	switch viewType {
 	case "assigned":
 		filterMode = models.FM_ASSIGN
