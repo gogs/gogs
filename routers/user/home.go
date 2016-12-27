@@ -202,37 +202,37 @@ func Issues(ctx *context.Context) {
 		userRepoIDs []int64
 		showRepos   = make([]*models.Repository, 0, 10)
 	)
-	if filterMode == models.FILTER_MODE_YOUR_REPOS {
-		if ctxUser.IsOrganization() {
-			repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctxUser.NumRepos)
-			if err != nil {
-				ctx.Handle(500, "GetRepositories", err)
-				return
+	if ctxUser.IsOrganization() {
+		repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctxUser.NumRepos)
+		if err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+	} else {
+		if err := ctxUser.GetRepositories(1, ctx.User.NumRepos); err != nil {
+			ctx.Handle(500, "GetRepositories", err)
+			return
+		}
+		repos = ctxUser.Repos
+	}
+
+	userRepoIDs = make([]int64, 0, len(repos))
+	for _, repo := range repos {
+		if isPullList {
+			if isShowClosed && repo.NumClosedPulls == 0 ||
+				!isShowClosed && repo.NumOpenPulls == 0 {
+				continue
 			}
 		} else {
-			if err := ctxUser.GetRepositories(1, ctx.User.NumRepos); err != nil {
-				ctx.Handle(500, "GetRepositories", err)
-				return
+			if !repo.EnableIssues || repo.EnableExternalTracker ||
+				isShowClosed && repo.NumClosedIssues == 0 ||
+				!isShowClosed && repo.NumOpenIssues == 0 {
+				continue
 			}
-			repos = ctxUser.Repos
 		}
 
-		userRepoIDs = make([]int64, 0, len(repos))
-		for _, repo := range repos {
-			if isPullList {
-				if isShowClosed && repo.NumClosedPulls == 0 ||
-					!isShowClosed && repo.NumOpenPulls == 0 {
-					continue
-				}
-			} else {
-				if !repo.EnableIssues || repo.EnableExternalTracker ||
-					isShowClosed && repo.NumClosedIssues == 0 ||
-					!isShowClosed && repo.NumOpenIssues == 0 {
-					continue
-				}
-			}
-
-			userRepoIDs = append(userRepoIDs, repo.ID)
+		userRepoIDs = append(userRepoIDs, repo.ID)
+		if filterMode == models.FILTER_MODE_YOUR_REPOS {
 			showRepos = append(showRepos, repo)
 		}
 	}
