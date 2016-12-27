@@ -121,16 +121,16 @@ func Issues(ctx *context.Context) {
 		assigneeID = ctx.QueryInt64("assignee")
 		posterID   int64
 	)
-	filterMode := models.FM_YOUR_REPOSITORIES
+	filterMode := models.FILTER_MODE_YOUR_REPOS
 	switch viewType {
 	case "assigned":
-		filterMode = models.FM_ASSIGN
+		filterMode = models.FILTER_MODE_ASSIGN
 		assigneeID = ctx.User.ID
 	case "created_by":
-		filterMode = models.FM_CREATE
+		filterMode = models.FILTER_MODE_CREATE
 		posterID = ctx.User.ID
 	case "mentioned":
-		filterMode = models.FM_MENTION
+		filterMode = models.FILTER_MODE_MENTION
 	}
 
 	var uid int64 = -1
@@ -174,7 +174,7 @@ func Issues(ctx *context.Context) {
 		MilestoneID: milestoneID,
 		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
-		IsMention:   filterMode == models.FM_MENTION,
+		IsMention:   filterMode == models.FILTER_MODE_MENTION,
 		IsPull:      isPullList,
 		Labels:      selectLabels,
 		SortType:    sortType,

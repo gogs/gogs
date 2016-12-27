@@ -168,29 +168,23 @@ func Issues(ctx *context.Context) {
 		return
 	}
 
-	// Organization does not have view type and filter mode.
 	var (
-		viewType   string
 		sortType   = ctx.Query("sort")
-		filterMode = models.FM_YOUR_REPOSITORIES
+		filterMode = models.FILTER_MODE_YOUR_REPOS
 	)
-	if ctxUser.IsOrganization() {
-		viewType = "your_repositories"
-	} else {
-		viewType = ctx.Query("type")
-		types := []string{"your_repositories", "assigned", "created_by"}
-		if !com.IsSliceContainsStr(types, viewType) {
-			viewType = "your_repositories"
-		}
 
-		switch viewType {
-		case "your_repositories":
-			filterMode = models.FM_YOUR_REPOSITORIES
-		case "assigned":
-			filterMode = models.FM_ASSIGN
-		case "created_by":
-			filterMode = models.FM_CREATE
+	// Note: Organization does not have view type and filter mode.
+	if !ctxUser.IsOrganization() {
+		viewType := ctx.Query("type")
+		types := []string{
+			string(models.FILTER_MODE_YOUR_REPOS),
+			string(models.FILTER_MODE_ASSIGN),
+			string(models.FILTER_MODE_CREATE),
 		}
+		if !com.IsSliceContainsStr(types, viewType) {
+			viewType = string(models.FILTER_MODE_YOUR_REPOS)
+		}
+		filterMode = models.FilterMode(viewType)
 	}
 
 	page := ctx.QueryInt("page")
@@ -202,86 +196,83 @@ func Issues(ctx *context.Context) {
 	isShowClosed := ctx.Query("state") == "closed"
 
 	// Get repositories.
-	var err error
-	var repos []*models.Repository
-	userRepoIDs := make([]int64, 0, len(repos))
-	if ctxUser.IsOrganization() {
-		repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctxUser.NumRepos)
-		if err != nil {
-			ctx.Handle(500, "GetRepositories", err)
-			return
+	var (
+		err         error
+		repos       []*models.Repository
+		userRepoIDs []int64
+		showRepos   = make([]*models.Repository, 0, 10)
+	)
+	if filterMode == models.FILTER_MODE_YOUR_REPOS {
+		if ctxUser.IsOrganization() {
+			repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctxUser.NumRepos)
+			if err != nil {
+				ctx.Handle(500, "GetRepositories", err)
+				return
+			}
+		} else {
+			if err := ctxUser.GetRepositories(1, ctx.User.NumRepos); err != nil {
+				ctx.Handle(500, "GetRepositories", err)
+				return
+			}
+			repos = ctxUser.Repos
 		}
-	} else {
-		if err := ctxUser.GetRepositories(1, ctx.User.NumRepos); err != nil {
-			ctx.Handle(500, "GetRepositories", err)
-			return
+
+		userRepoIDs = make([]int64, 0, len(repos))
+		for _, repo := range repos {
+			if isPullList {
+				if isShowClosed && repo.NumClosedPulls == 0 ||
+					!isShowClosed && repo.NumOpenPulls == 0 {
+					continue
+				}
+			} else {
+				if !repo.EnableIssues || repo.EnableExternalTracker ||
+					isShowClosed && repo.NumClosedIssues == 0 ||
+					!isShowClosed && repo.NumOpenIssues == 0 {
+					continue
+				}
+			}
+
+			userRepoIDs = append(userRepoIDs, repo.ID)
+			showRepos = append(showRepos, repo)
 		}
-		repos = ctxUser.Repos
 	}
 
-	for _, repo := range repos {
-		if (isPullList && repo.NumPulls == 0) ||
-			(!isPullList &&
-				(!repo.EnableIssues || repo.EnableExternalTracker || repo.NumIssues == 0)) {
-			continue
-		}
-
-		userRepoIDs = append(userRepoIDs, repo.ID)
+	issueOptions := &models.IssuesOptions{
+		RepoID:   repoID,
+		Page:     page,
+		IsClosed: isShowClosed,
+		IsPull:   isPullList,
+		SortType: sortType,
 	}
-
-	var issues []*models.Issue
 	switch filterMode {
-	case models.FM_YOUR_REPOSITORIES:
+	case models.FILTER_MODE_YOUR_REPOS:
 		// Get all issues from repositories from this user.
-		issues, err = models.Issues(&models.IssuesOptions{
-			RepoIDs:  userRepoIDs,
-			RepoID:   repoID,
-			Page:     page,
-			IsClosed: isShowClosed,
-			IsPull:   isPullList,
-			SortType: sortType,
-		})
+		issueOptions.RepoIDs = userRepoIDs
 
-	case models.FM_ASSIGN:
+	case models.FILTER_MODE_ASSIGN:
 		// Get all issues assigned to this user.
-		issues, err = models.Issues(&models.IssuesOptions{
-			RepoID:     repoID,
-			AssigneeID: ctxUser.ID,
-			Page:       page,
-			IsClosed:   isShowClosed,
-			IsPull:     isPullList,
-			SortType:   sortType,
-		})
+		issueOptions.AssigneeID = ctxUser.ID
 
-	case models.FM_CREATE:
+	case models.FILTER_MODE_CREATE:
 		// Get all issues created by this user.
-		issues, err = models.Issues(&models.IssuesOptions{
-			RepoID:   repoID,
-			PosterID: ctxUser.ID,
-			Page:     page,
-			IsClosed: isShowClosed,
-			IsPull:   isPullList,
-			SortType: sortType,
-		})
+		issueOptions.PosterID = ctxUser.ID
 	}
 
+	issues, err := models.Issues(issueOptions)
 	if err != nil {
 		ctx.Handle(500, "Issues", err)
 		return
 	}
 
-	showRepos := make([]*models.Repository, 0, len(issues))
-	showReposSet := make(map[int64]bool)
-
 	if repoID > 0 {
 		repo, err := models.GetRepositoryByID(repoID)
 		if err != nil {
-			ctx.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d]%v", repoID, err))
+			ctx.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d] %v", repoID, err))
 			return
 		}
 
 		if err = repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d]%v", repoID, err))
+			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", repoID, err))
 			return
 		}
 
@@ -290,34 +281,12 @@ func Issues(ctx *context.Context) {
 			ctx.Handle(404, "Issues", fmt.Errorf("#%d", repoID))
 			return
 		}
-
-		showReposSet[repoID] = true
-		showRepos = append(showRepos, repo)
 	}
 
 	for _, issue := range issues {
-		// Get Repository data.
-		issue.Repo, err = models.GetRepositoryByID(issue.RepoID)
-		if err != nil {
-			ctx.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d]%v", issue.RepoID, err))
-			return
-		}
-
-		// Get Owner data.
 		if err = issue.Repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d]%v", issue.RepoID, err))
+			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", issue.RepoID, err))
 			return
-		}
-
-		// Append repo to list of shown repos
-		if filterMode == models.FM_YOUR_REPOSITORIES {
-			// Use a map to make sure we don't add the same Repository twice.
-			_, ok := showReposSet[issue.RepoID]
-			if !ok {
-				showReposSet[issue.RepoID] = true
-				// Append to list of shown Repositories.
-				showRepos = append(showRepos, issue.Repo)
-			}
 		}
 	}
 
@@ -334,7 +303,7 @@ func Issues(ctx *context.Context) {
 	ctx.Data["Repos"] = showRepos
 	ctx.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 	ctx.Data["IssueStats"] = issueStats
-	ctx.Data["ViewType"] = viewType
+	ctx.Data["ViewType"] = string(filterMode)
 	ctx.Data["SortType"] = sortType
 	ctx.Data["RepoID"] = repoID
 	ctx.Data["IsShowClosed"] = isShowClosed
