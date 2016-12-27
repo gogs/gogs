@@ -7,7 +7,7 @@
 				<div class="ui secondary vertical filter menu">
 					<a class="{{if eq .ViewType "your_repositories"}}ui basic blue button{{end}} item" href="{{.Link}}?type=your_repositories&repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
 						{{.i18n.Tr "home.issues.in_your_repos"}}
-						<strong class="ui right">{{.IssueStats.YourRepositoriesCount}}</strong>
+						<strong class="ui right">{{.IssueStats.YourReposCount}}</strong>
 					</a>
 					{{if not .ContextUser.IsOrganization}}
 						<a class="{{if eq .ViewType "assigned"}}ui basic blue button{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
@@ -83,17 +83,17 @@
 						{{if gt .TotalPages 1}}
 							<div class="center page buttons">
 								<div class="ui borderless pagination menu">
-									<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
+									<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
 										<i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
 									</a>
 									{{range .Pages}}
 										{{if eq .Num -1}}
 											<a class="disabled item">...</a>
 										{{else}}
-											<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+											<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
 										{{end}}
 									{{end}}
-									<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
+									<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
 										{{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
 									</a>
 								</div>

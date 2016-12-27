@@ -1004,17 +1004,17 @@ func GetIssueUserPairsByRepoIds(rids []int64, isClosed bool, page int) ([]*Issue
 }
 
 // GetIssueUserPairsByMode returns issue-user pairs by given repository and user.
-func GetIssueUserPairsByMode(uid, rid int64, isClosed bool, page, filterMode int) ([]*IssueUser, error) {
+func GetIssueUserPairsByMode(userID, repoID int64, filterMode FilterMode, isClosed bool, page int) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
-	sess := x.Limit(20, (page-1)*20).Where("uid=?", uid).And("is_closed=?", isClosed)
-	if rid > 0 {
-		sess.And("repo_id=?", rid)
+	sess := x.Limit(20, (page-1)*20).Where("uid=?", userID).And("is_closed=?", isClosed)
+	if repoID > 0 {
+		sess.And("repo_id=?", repoID)
 	}
 
 	switch filterMode {
-	case FM_ASSIGN:
+	case FILTER_MODE_ASSIGN:
 		sess.And("is_assigned=?", true)
-	case FM_CREATE:
+	case FILTER_MODE_CREATE:
 		sess.And("is_poster=?", true)
 	default:
 		return ius, nil
@@ -1069,18 +1069,19 @@ func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 // IssueStats represents issue statistic information.
 type IssueStats struct {
 	OpenCount, ClosedCount int64
-	YourRepositoriesCount  int64
+	YourReposCount         int64
 	AssignCount            int64
 	CreateCount            int64
 	MentionCount           int64
 }
 
-// Filter modes.
+type FilterMode string
+
 const (
-	FM_YOUR_REPOSITORIES = iota
-	FM_ASSIGN
-	FM_CREATE
-	FM_MENTION
+	FILTER_MODE_YOUR_REPOS FilterMode = "your_repositories"
+	FILTER_MODE_ASSIGN     FilterMode = "assigned"
+	FILTER_MODE_CREATE     FilterMode = "created_by"
+	FILTER_MODE_MENTION    FilterMode = "mentioned"
 )
 
 func parseCountResult(results []map[string][]byte) int64 {
@@ -1099,7 +1100,7 @@ type IssueStatsOptions struct {
 	Labels      string
 	MilestoneID int64
 	AssigneeID  int64
-	FilterMode  int
+	FilterMode  FilterMode
 	IsPull      bool
 }
 
@@ -1129,7 +1130,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 	}
 
 	switch opts.FilterMode {
-	case FM_YOUR_REPOSITORIES, FM_ASSIGN:
+	case FILTER_MODE_YOUR_REPOS, FILTER_MODE_ASSIGN:
 		stats.OpenCount, _ = countSession(opts).
 			And("is_closed = ?", false).
 			Count(new(Issue))
@@ -1137,7 +1138,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 		stats.ClosedCount, _ = countSession(opts).
 			And("is_closed = ?", true).
 			Count(new(Issue))
-	case FM_CREATE:
+	case FILTER_MODE_CREATE:
 		stats.OpenCount, _ = countSession(opts).
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", false).
@@ -1147,7 +1148,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 			And("poster_id = ?", opts.UserID).
 			And("is_closed = ?", true).
 			Count(new(Issue))
-	case FM_MENTION:
+	case FILTER_MODE_MENTION:
 		stats.OpenCount, _ = countSession(opts).
 			Join("INNER", "issue_user", "issue.id = issue_user.issue_id").
 			And("issue_user.uid = ?", opts.UserID).
@@ -1166,7 +1167,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 }
 
 // GetUserIssueStats returns issue statistic information for dashboard by given conditions.
-func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPull bool) *IssueStats {
+func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterMode, isPull bool) *IssueStats {
 	stats := &IssueStats{}
 
 	countSession := func(isClosed, isPull bool, repoID int64, repoIDs []int64) *xorm.Session {
@@ -1182,35 +1183,35 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 	}
 
 	stats.AssignCount, _ = countSession(false, isPull, repoID, nil).
-		And("assignee_id = ?", uid).
+		And("assignee_id = ?", userID).
 		Count(new(Issue))
 
 	stats.CreateCount, _ = countSession(false, isPull, repoID, nil).
-		And("poster_id = ?", uid).
+		And("poster_id = ?", userID).
 		Count(new(Issue))
 
-	stats.YourRepositoriesCount, _ = countSession(false, isPull, repoID, repoIDs).
+	stats.YourReposCount, _ = countSession(false, isPull, repoID, repoIDs).
 		Count(new(Issue))
 
 	switch filterMode {
-	case FM_YOUR_REPOSITORIES:
+	case FILTER_MODE_YOUR_REPOS:
 		stats.OpenCount, _ = countSession(false, isPull, repoID, repoIDs).
 			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, repoIDs).
 			Count(new(Issue))
-	case FM_ASSIGN:
+	case FILTER_MODE_ASSIGN:
 		stats.OpenCount, _ = countSession(false, isPull, repoID, nil).
-			And("assignee_id = ?", uid).
+			And("assignee_id = ?", userID).
 			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, nil).
-			And("assignee_id = ?", uid).
+			And("assignee_id = ?", userID).
 			Count(new(Issue))
-	case FM_CREATE:
+	case FILTER_MODE_CREATE:
 		stats.OpenCount, _ = countSession(false, isPull, repoID, nil).
-			And("poster_id = ?", uid).
+			And("poster_id = ?", userID).
 			Count(new(Issue))
 		stats.ClosedCount, _ = countSession(true, isPull, repoID, nil).
-			And("poster_id = ?", uid).
+			And("poster_id = ?", userID).
 			Count(new(Issue))
 	}
 
@@ -1218,7 +1219,7 @@ func GetUserIssueStats(repoID, uid int64, repoIDs []int64, filterMode int, isPul
 }
 
 // GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
-func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen int64, numClosed int64) {
+func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool) (numOpen int64, numClosed int64) {
 	countSession := func(isClosed, isPull bool, repoID int64) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", isClosed).
 			And("is_pull = ?", isPull).
@@ -1231,12 +1232,12 @@ func GetRepoIssueStats(repoID, uid int64, filterMode int, isPull bool) (numOpen 
 	closedCountSession := countSession(true, isPull, repoID)
 
 	switch filterMode {
-	case FM_ASSIGN:
-		openCountSession.And("assignee_id = ?", uid)
-		closedCountSession.And("assignee_id = ?", uid)
-	case FM_CREATE:
-		openCountSession.And("poster_id = ?", uid)
-		closedCountSession.And("poster_id = ?", uid)
+	case FILTER_MODE_ASSIGN:
+		openCountSession.And("assignee_id = ?", userID)
+		closedCountSession.And("assignee_id = ?", userID)
+	case FILTER_MODE_CREATE:
+		openCountSession.And("poster_id = ?", userID)
+		closedCountSession.And("poster_id = ?", userID)
 	}
 
 	openResult, _ := openCountSession.Count(new(Issue))
