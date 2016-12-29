@@ -38,12 +38,10 @@ const (
 )
 
 func checkRunMode() {
-	switch setting.Cfg.Section("").Key("RUN_MODE").String() {
-	case "prod":
+	if setting.ProdMode {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
-		setting.ProdMode = true
-	default:
+	} else {
 		git.Debug = true
 	}
 	log.Info("Run Mode: %s", strings.Title(macaron.Env))
@@ -92,8 +90,8 @@ func GlobalInit() {
 	checkRunMode()
 
 	if setting.InstallLock && setting.SSH.StartBuiltinServer {
-		ssh.Listen(setting.SSH.ListenPort)
-		log.Info("SSH server started on :%v", setting.SSH.ListenPort)
+		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort)
+		log.Info("SSH server started on %s:%v", setting.SSH.ListenHost, setting.SSH.ListenPort)
 	}
 }
 
@@ -343,7 +341,12 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(form.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
+	secretKey, err := base.GetRandomString(15)
+	if err != nil {
+		ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), INSTALL, &form)
+		return
+	}
+	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
 	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
 	if err := cfg.SaveTo(setting.CustomConf); err != nil {

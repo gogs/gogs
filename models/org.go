@@ -108,8 +108,12 @@ func CreateOrganization(org, owner *User) (err error) {
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
-	org.Rands = GetUserSalt()
-	org.Salt = GetUserSalt()
+	if org.Rands, err = GetUserSalt(); err != nil {
+		return err
+	}
+	if org.Salt, err = GetUserSalt(); err != nil {
+		return err
+	}
 	org.UseCustomAvatar = true
 	org.MaxRepoCreation = -1
 	org.NumTeams = 1
@@ -149,7 +153,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	}
 
 	if _, err = sess.Insert(&TeamUser{
-		Uid:    owner.ID,
+		UID:    owner.ID,
 		OrgID:  org.ID,
 		TeamID: t.ID,
 	}); err != nil {
@@ -307,11 +311,14 @@ func GetOrgUsersByUserID(uid int64, all bool) ([]*OrgUser, error) {
 	return ous, err
 }
 
+func getOrgUsersByOrgID(e Engine, orgID int64) ([]*OrgUser, error) {
+	orgUsers := make([]*OrgUser, 0, 10)
+	return orgUsers, e.Where("org_id=?", orgID).Find(&orgUsers)
+}
+
 // GetOrgUsersByOrgID returns all organization-user relations by organization ID.
 func GetOrgUsersByOrgID(orgID int64) ([]*OrgUser, error) {
-	ous := make([]*OrgUser, 0, 10)
-	err := x.Where("org_id=?", orgID).Find(&ous)
-	return ous, err
+	return getOrgUsersByOrgID(x, orgID)
 }
 
 // ChangeOrgUserStatus changes public or private membership status.

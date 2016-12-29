@@ -103,10 +103,10 @@ func NewLabels(labels ...*Label) error {
 	return err
 }
 
-// getLabelInRepoByID returns a label by ID in given repository.
+// getLabelOfRepoByID returns a label by ID in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
-func getLabelInRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
+func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 	if labelID <= 0 {
 		return nil, ErrLabelNotExist{labelID, repoID}
 	}
@@ -126,12 +126,12 @@ func getLabelInRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 
 // GetLabelByID returns a label by given ID.
 func GetLabelByID(id int64) (*Label, error) {
-	return getLabelInRepoByID(x, 0, id)
+	return getLabelOfRepoByID(x, 0, id)
 }
 
-// GetLabelInRepoByID returns a label by ID in given repository.
-func GetLabelInRepoByID(repoID, labelID int64) (*Label, error) {
-	return getLabelInRepoByID(x, repoID, labelID)
+// GetLabelOfRepoByID returns a label by ID in given repository.
+func GetLabelOfRepoByID(repoID, labelID int64) (*Label, error) {
+	return getLabelOfRepoByID(x, repoID, labelID)
 }
 
 // GetLabelsInRepoByIDs returns a list of labels by IDs in given repository,
@@ -181,7 +181,7 @@ func UpdateLabel(l *Label) error {
 
 // DeleteLabel delete a label of given repository.
 func DeleteLabel(repoID, labelID int64) error {
-	_, err := GetLabelInRepoByID(repoID, labelID)
+	_, err := GetLabelOfRepoByID(repoID, labelID)
 	if err != nil {
 		if IsErrLabelNotExist(err) {
 			return nil

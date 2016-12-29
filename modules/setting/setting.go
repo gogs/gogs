@@ -21,8 +21,9 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
-	"github.com/strk/go-libravatar"
 	"gopkg.in/ini.v1"
+
+	"github.com/gogits/go-libravatar"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -77,6 +78,7 @@ var (
 		StartBuiltinServer  bool           `ini:"START_SSH_SERVER"`
 		Domain              string         `ini:"SSH_DOMAIN"`
 		Port                int            `ini:"SSH_PORT"`
+		ListenHost          string         `ini:"SSH_LISTEN_HOST"`
 		ListenPort          int            `ini:"SSH_LISTEN_PORT"`
 		RootPath            string         `ini:"SSH_ROOT_PATH"`
 		KeyTestPath         string         `ini:"SSH_KEY_TEST_PATH"`
@@ -116,6 +118,7 @@ var (
 		MirrorQueueLength      int
 		PullRequestQueueLength int
 		PreferredLicenses      []string
+		DisableHTTPGit         bool `ini:"DISABLE_HTTP_GIT"`
 
 		// Repository editor settings
 		Editor struct {
@@ -488,6 +491,8 @@ func NewContext() {
 		}
 	}
 
+	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
+
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
@@ -521,6 +526,8 @@ func NewContext() {
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
 	case "gravatar":
 		GravatarSource = "https://secure.gravatar.com/avatar/"
+	case "libravatar":
+		GravatarSource = "https://seccdn.libravatar.org/avatar/"
 	default:
 		GravatarSource = source
 	}
@@ -664,11 +671,11 @@ func newLogService() {
 				sec.Key("PROTOCOL").In("tcp", []string{"tcp", "unix", "udp"}),
 				sec.Key("ADDR").MustString(":7020"))
 		case "smtp":
-			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":["%s"],"subject":"%s"}`, level,
 				sec.Key("USER").MustString("example@example.com"),
 				sec.Key("PASSWD").MustString("******"),
 				sec.Key("HOST").MustString("127.0.0.1:25"),
-				sec.Key("RECEIVERS").MustString("[]"),
+				strings.Replace(sec.Key("RECEIVERS").MustString(""), ",", `","`, -1),
 				sec.Key("SUBJECT").MustString("Diagnostic message from serve"))
 		case "database":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"driver":"%s","conn":"%s"}`, level,

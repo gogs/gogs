@@ -151,7 +151,7 @@ func Webhooks(ctx *context.Context) {
 }
 
 func DeleteWebhook(ctx *context.Context) {
-	if err := models.DeleteWebhookByOrgID(ctx.Org.Organization.ID, ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteWebhookOfOrgByID(ctx.Org.Organization.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteWebhookByOrgID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.settings.webhook_deletion_success"))

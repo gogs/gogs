@@ -178,11 +178,16 @@ func UpdateRelease(gitRepo *git.Repository, rel *Release) (err error) {
 	return err
 }
 
-// DeleteReleaseByID deletes a release and corresponding Git tag by given ID.
-func DeleteReleaseByID(id int64) error {
+// DeleteReleaseOfRepoByID deletes a release and corresponding Git tag by given ID.
+func DeleteReleaseOfRepoByID(repoID, id int64) error {
 	rel, err := GetReleaseByID(id)
 	if err != nil {
 		return fmt.Errorf("GetReleaseByID: %v", err)
+	}
+
+	// Mark sure the delete operation againsts same repository.
+	if repoID != rel.RepoID {
+		return nil
 	}
 
 	repo, err := GetRepositoryByID(rel.RepoID)

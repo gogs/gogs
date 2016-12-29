@@ -81,8 +81,11 @@ func UpdateAccessToken(t *AccessToken) error {
 	return err
 }
 
-// DeleteAccessTokenByID deletes access token by given ID.
-func DeleteAccessTokenByID(id int64) error {
-	_, err := x.Id(id).Delete(new(AccessToken))
+// DeleteAccessTokenOfUserByID deletes access token by given ID.
+func DeleteAccessTokenOfUserByID(userID, id int64) error {
+	_, err := x.Delete(&AccessToken{
+		ID:  id,
+		UID: userID,
+	})
 	return err
 }
