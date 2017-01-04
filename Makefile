@@ -6,7 +6,7 @@ LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
 GENERATED  := modules/bindata/bindata.go public/css/gogs.css
 
 TAGS = ""
-BUILD_FLAGS = "-v"
+BUILD_FLAGS = "-v -buildmode=pie"
 
 RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
