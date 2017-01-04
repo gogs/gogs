@@ -9,7 +9,6 @@ package main
 
 import (
 	"os"
-	"runtime"
 
 	"github.com/urfave/cli"
 
