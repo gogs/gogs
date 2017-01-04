@@ -20,7 +20,6 @@ import (
 const APP_VER = "0.9.115.0103"
 
 func init() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	setting.AppVer = APP_VER
 }
 
