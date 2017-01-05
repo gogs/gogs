@@ -109,6 +109,7 @@ func Issues(ctx *context.Context) {
 	if !com.IsSliceContainsStr(types, viewType) {
 		viewType = "all"
 	}
+	keyword := ctx.Query("q")
 
 	// Must sign in to see issues about you.
 	if viewType != "all" && !ctx.IsSigned {
@@ -150,6 +151,7 @@ func Issues(ctx *context.Context) {
 		AssigneeID:  assigneeID,
 		FilterMode:  filterMode,
 		IsPull:      isPullList,
+		Keyword:	 keyword,
 	})
 
 	page := ctx.QueryInt("page")
@@ -178,6 +180,7 @@ func Issues(ctx *context.Context) {
 		IsPull:      isPullList,
 		Labels:      selectLabels,
 		SortType:    sortType,
+		Keyword:     keyword,
 	})
 	if err != nil {
 		ctx.Handle(500, "Issues", err)
@@ -238,6 +241,7 @@ func Issues(ctx *context.Context) {
 	} else {
 		ctx.Data["State"] = "open"
 	}
+	ctx.Data["Keyword"] = keyword
 
 	ctx.HTML(200, ISSUES)
 }

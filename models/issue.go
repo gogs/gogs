@@ -816,6 +816,7 @@ type IssuesOptions struct {
 	IsPull      bool
 	Labels      string
 	SortType    string
+	Keyword     string
 }
 
 // Issues returns a list of issues by given conditions.
@@ -880,6 +881,10 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 		if opts.UserID > 0 {
 			sess.And("issue_user.uid = ?", opts.UserID)
 		}
+	}
+
+	if len(opts.Keyword) > 0 {
+		sess.And("(LOWER(name) LIKE LOWER(?) OR LOWER(content) LIKE LOWER(?))", "%"+opts.Keyword+"%", "%"+opts.Keyword+"%")
 	}
 
 	issues := make([]*Issue, 0, setting.UI.IssuePagingNum)
@@ -1102,6 +1107,7 @@ type IssueStatsOptions struct {
 	AssigneeID  int64
 	FilterMode  FilterMode
 	IsPull      bool
+	Keyword		string
 }
 
 // GetIssueStats returns issue statistic information by given conditions.
@@ -1124,6 +1130,10 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 
 		if opts.AssigneeID > 0 {
 			sess.And("assignee_id = ?", opts.AssigneeID)
+		}
+
+		if len(opts.Keyword) > 0 {
+			sess.And("(LOWER(name) LIKE LOWER(?) OR LOWER(content) LIKE LOWER(?))", "%"+opts.Keyword+"%", "%"+opts.Keyword+"%")
 		}
 
 		return sess

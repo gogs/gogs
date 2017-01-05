@@ -1,0 +1,14 @@
+			<form action="{{$.Link}}">
+				<div class="ui tiny search input">
+					<input type="hidden" name="type" value="{{$.ViewType}}">
+					<input type="hidden" name="sort" value="{{$.SortType}}">
+					<input type="hidden" name="state" value="{{$.State}}">
+					<input type="hidden" name="labels" value="{{.SelectLabels}}">
+					<input type="hidden" name="milestone" value="{{.MilestoneID}}">
+					<input type="hidden" name="assignee" value="{{.AssigneeID}}">
+					<input class="ays-ignore" name="q" placeholder="{{.i18n.Tr "explore.search"}}..." value="{{$.Keyword}}" autofocus>
+				</div>
+				<!-- <button class="ui black tiny button" data-panel="#add-deploy-key-panel">Finden</button> -->
+			</form>
+
+
