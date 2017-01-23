@@ -60,7 +60,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## Browser Support
 
 - Please see [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) for specific versions of supported browsers.
-- The official support minimal size  is **1024*768**, UI may still looks right in smaller size but no promises and fixes.
+- The smallest resolution officially supported is **1024*768**, however the UI may still look right in smaller resolutions, but no promises or fixes.
 
 ## Installation
 
