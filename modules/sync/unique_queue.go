@@ -50,12 +50,12 @@ func (q *UniqueQueue) AddFunc(id interface{}, fn func()) {
 	}
 
 	idStr := com.ToStr(id)
-	q.table.lock.Lock()
+	q.table.Lock()
 	q.table.pool[idStr] = true
 	if fn != nil {
 		fn()
 	}
-	q.table.lock.Unlock()
+	q.table.Unlock()
 	q.queue <- idStr
 }
 
