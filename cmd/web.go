@@ -32,6 +32,7 @@ import (
 	"github.com/gogits/git-module"
 	"github.com/gogits/go-gogs-client"
 
+	"github.com/Unknwon/com"
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
@@ -104,6 +105,28 @@ please use following command to update this package and recompile Gogs:
 go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 		}
 	}
+}
+
+func createPIDFile() error {
+	if !setting.PID.Enabled {
+		return nil
+	}
+	_, err := os.Stat(setting.PID.Path)
+	if os.IsNotExist(err) || setting.PID.Override {
+		currentPid := os.Getpid()
+		file, err := os.Create(setting.PID.Path)
+		if err != nil {
+			return fmt.Errorf("Can't create PID file: %v", err)
+		}
+		defer file.Close()
+		_, err = file.WriteString(com.ToStr(currentPid))
+		if err != nil {
+			return fmt.Errorf("Can'write PID information on %s: %v", setting.PID.Path, err)
+		}
+	} else {
+		return fmt.Errorf("%s already exists", setting.PID.Path)
+	}
+	return nil
 }
 
 // newMacaron initializes Macaron instance.
@@ -192,8 +215,13 @@ func runWeb(ctx *cli.Context) error {
 	if ctx.IsSet("config") {
 		setting.CustomConf = ctx.String("config")
 	}
+
 	routers.GlobalInit()
 	checkVersion()
+
+	if err := createPIDFile(); err != nil {
+		log.Fatal(4, "This application is already running: %v", err)
+	}
 
 	m := newMacaron()
 

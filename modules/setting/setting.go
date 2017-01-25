@@ -74,6 +74,12 @@ var (
 	LandingPageURL       LandingPage
 	UnixSocketPermission uint32
 
+	PID struct {
+		Enabled  bool
+		Path     string
+		Override bool
+	}
+
 	SSH struct {
 		Disabled            bool           `ini:"DISABLE_SSH"`
 		StartBuiltinServer  bool           `ini:"START_SSH_SERVER"`
@@ -566,8 +572,14 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Git settings: %v", err)
 	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
 		log.Fatal(4, "Fail to map Mirror settings: %v", err)
+	} else if err = Cfg.Section("pid").MapTo(&PID); err != nil {
+		log.Fatal(4, "Fail to map PID settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
+	}
+
+	if len(PID.Path) == 0 {
+		PID.Path = "RUNNING_PID"
 	}
 
 	if Mirror.DefaultInterval <= 0 {

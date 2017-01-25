@@ -18,3 +18,4 @@ gogs.sublime-project
 gogs.sublime-workspace
 /release
 vendor
+RUNNING_PID
