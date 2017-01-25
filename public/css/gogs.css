@@ -1303,7 +1303,11 @@ footer .ui.language .menu {
   max-width: 100%;
 }
 .repository.file.list #file-content .view-raw img {
-  padding: 5px 5px 0 5px;
+  margin-bottom: -5px;
+}
+.repository.file.list #file-content .plain-text {
+  font-size: 14px;
+  padding: 10px 15px;
 }
 .repository.file.list #file-content .code-view * {
   font-size: 12px;
