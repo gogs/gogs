@@ -155,6 +155,7 @@ func EditUser(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
+	ctx.Data["EnableLocalPathMigration"] = setting.Repository.EnableLocalPathMigration
 
 	prepareUserInfo(ctx)
 	if ctx.Written() {
@@ -168,6 +169,7 @@ func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
+	ctx.Data["EnableLocalPathMigration"] = setting.Repository.EnableLocalPathMigration
 
 	u := prepareUserInfo(ctx)
 	if ctx.Written() {

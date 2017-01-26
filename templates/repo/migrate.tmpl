@@ -12,7 +12,13 @@
 					<div class="inline required field {{if .Err_CloneAddr}}error{{end}}">
 						<label for="clone_addr">{{.i18n.Tr "repo.migrate.clone_address"}}</label>
 						<input id="clone_addr" name="clone_addr" value="{{.clone_addr}}" autofocus required>
-						<span class="help">{{.i18n.Tr "repo.migrate.clone_address_desc"}}</span>
+						<span class="help">
+							{{.i18n.Tr "repo.migrate.clone_address_desc"}}
+							{{if .ContextUser.CanImportLocal}}
+								<br>
+								<span class="text blue">{{.i18n.Tr "repo.migrate.clone_address_desc_import_local"}}</span>
+							{{end}}
+						</span>
 					</div>
 					<div class="ui accordion optional field">
 						<div class="title {{if .Err_Auth}}text red active{{end}}">

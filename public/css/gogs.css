@@ -908,6 +908,7 @@ footer .ui.language .menu {
   padding-top: .6em;
   padding-bottom: .6em;
   display: inline-block;
+  word-break: break-all;
 }
 .ui.attached.header {
   background: #f0f0f0;
