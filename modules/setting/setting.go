@@ -113,13 +113,14 @@ var (
 
 	// Repository settings
 	Repository struct {
-		AnsiCharset            string
-		ForcePrivate           bool
-		MaxCreationLimit       int
-		MirrorQueueLength      int
-		PullRequestQueueLength int
-		PreferredLicenses      []string
-		DisableHTTPGit         bool `ini:"DISABLE_HTTP_GIT"`
+		AnsiCharset              string
+		ForcePrivate             bool
+		MaxCreationLimit         int
+		MirrorQueueLength        int
+		PullRequestQueueLength   int
+		PreferredLicenses        []string
+		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
+		EnableLocalPathMigration bool
 
 		// Repository editor settings
 		Editor struct {
@@ -759,11 +760,11 @@ func newMailService() {
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
 
-  parsed, err := mail.ParseAddress(MailService.From)
-  if err != nil {
-    log.Fatal(4, "Invalid mailer.FROM (%s): %v", MailService.From, err)
-  }
-  MailService.FromEmail = parsed.Address
+	parsed, err := mail.ParseAddress(MailService.From)
+	if err != nil {
+		log.Fatal(4, "Invalid mailer.FROM (%s): %v", MailService.From, err)
+	}
+	MailService.FromEmail = parsed.Address
 
 	log.Info("Mail Service Enabled")
 }
