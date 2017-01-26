@@ -185,7 +185,7 @@ func AvatarLink(email string) (url string) {
 		var err error
 		url, err = setting.LibravatarService.FromEmail(email)
 		if err != nil {
-			log.Error(1, "LibravatarService.FromEmail: %v", err)
+			log.Error(4, "LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
 	if len(url) == 0 && !setting.DisableGravatar {
