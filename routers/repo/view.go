@@ -154,10 +154,9 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
+		ctx.Data["ReadmeExist"] = isMarkdown && markdown.IsReadmeFile(blob.Name())
 
-		readmeExist := isMarkdown && markdown.IsReadmeFile(blob.Name())
-		ctx.Data["ReadmeExist"] = readmeExist
-		if readmeExist {
+		if isMarkdown {
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else {
 			// Building code view blocks with line number on server side.
