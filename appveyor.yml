@@ -9,5 +9,14 @@ environment:
 build: false
 deploy: false
 
+install:
+  - go get -t -v ./...
+
 test_script:
   - go test -v -cover -race ./...
+
+notifications:
+  - provider: Email
+    to:
+      - u@gogs.io
+    on_build_success: false
