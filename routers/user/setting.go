@@ -428,7 +428,7 @@ func SettingsOrganizations(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsOrganizations"] = true
 
-	orgs, err := models.GetOrgsByUserID(ctx.User.ID, ctx.IsSigned && ctx.User.IsAdmin)
+	orgs, err := models.GetOrgsByUserID(ctx.User.ID, true)
 	if err != nil {
 		ctx.Handle(500, "GetOrgsByUserID", err)
 		return
@@ -436,6 +436,17 @@ func SettingsOrganizations(ctx *context.Context) {
 	ctx.Data["Orgs"] = orgs
 
 	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
+}
+
+func SettingsLeaveOrganization(ctx *context.Context) {
+	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
+	if models.IsErrLastOrgOwner(err) {
+		ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/organizations",
+	})
 }
 
 func SettingsDelete(ctx *context.Context) {
