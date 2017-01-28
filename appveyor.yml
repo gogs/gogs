@@ -1,6 +1,7 @@
 version: "{build}"
-
+skip_tags: true
 clone_folder: c:\gopath\src\github.com\gogits\gogs
+clone_depth: 1
 
 environment:
   GOPATH: c:\gopath
@@ -11,9 +12,6 @@ deploy: false
 
 install:
   - go get -t -v ./...
-
-test_script:
-  - go test -v -cover -race ./...
 
 notifications:
   - provider: Email
