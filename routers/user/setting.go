@@ -21,16 +21,17 @@ import (
 )
 
 const (
-	SETTINGS_PROFILE      base.TplName = "user/settings/profile"
-	SETTINGS_AVATAR       base.TplName = "user/settings/avatar"
-	SETTINGS_PASSWORD     base.TplName = "user/settings/password"
-	SETTINGS_EMAILS       base.TplName = "user/settings/email"
-	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
-	SETTINGS_SOCIAL       base.TplName = "user/settings/social"
-	SETTINGS_APPLICATIONS base.TplName = "user/settings/applications"
-	SETTINGS_DELETE       base.TplName = "user/settings/delete"
-	NOTIFICATION          base.TplName = "user/notification"
-	SECURITY              base.TplName = "user/security"
+	SETTINGS_PROFILE       base.TplName = "user/settings/profile"
+	SETTINGS_AVATAR        base.TplName = "user/settings/avatar"
+	SETTINGS_PASSWORD      base.TplName = "user/settings/password"
+	SETTINGS_EMAILS        base.TplName = "user/settings/email"
+	SETTINGS_SSH_KEYS      base.TplName = "user/settings/sshkeys"
+	SETTINGS_SOCIAL        base.TplName = "user/settings/social"
+	SETTINGS_APPLICATIONS  base.TplName = "user/settings/applications"
+	SETTINGS_ORGANIZATIONS base.TplName = "user/settings/organizations"
+	SETTINGS_DELETE        base.TplName = "user/settings/delete"
+	NOTIFICATION           base.TplName = "user/notification"
+	SECURITY               base.TplName = "user/security"
 )
 
 func Settings(ctx *context.Context) {
@@ -421,6 +422,20 @@ func SettingsDeleteApplication(ctx *context.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubUrl + "/user/settings/applications",
 	})
+}
+
+func SettingsOrganizations(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsOrganizations"] = true
+
+	orgs, err := models.GetOrgsByUserID(ctx.User.ID, ctx.IsSigned && ctx.User.IsAdmin)
+	if err != nil {
+		ctx.Handle(500, "GetOrgsByUserID", err)
+		return
+	}
+	ctx.Data["Orgs"] = orgs
+
+	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
 }
 
 func SettingsDelete(ctx *context.Context) {
