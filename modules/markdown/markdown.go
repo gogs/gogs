@@ -196,6 +196,7 @@ var (
 	svgSuffixWithMark = []byte(".svg?")
 	spaceBytes        = []byte(" ")
 	spaceEncodedBytes = []byte("%20")
+	pound             = []byte("#")
 	space             = " "
 	spaceEncoded      = "%20"
 )
@@ -284,9 +285,9 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, me
 			m = m[1:] // ignore leading space or opening parentheses
 		}
 
-		fields := bytes.Split(m, []byte("#"))[0]
-		repo := string(fields[0])
-		index := string(fields[1])
+		delimIdx := bytes.Index(m, pound)
+		repo := string(m[:delimIdx])
+		index := string(m[delimIdx+1:])
 
 		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppUrl, repo, index, m)
 		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
