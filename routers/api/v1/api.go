@@ -247,6 +247,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Put("/collaborators/:collaborator", bind(api.AddCollaboratorOption{}), repo.AddCollaborator)
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
+				m.Get("/forks", repo.ListForks)
 				m.Group("/branches", func() {
 					m.Get("", repo.ListBranches)
 					m.Get("/:branchname", repo.GetBranch)

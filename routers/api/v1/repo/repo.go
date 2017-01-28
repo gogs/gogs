@@ -297,3 +297,26 @@ func Delete(ctx *context.APIContext) {
 	log.Trace("Repository deleted: %s/%s", owner.Name, repo.Name)
 	ctx.Status(204)
 }
+
+func ListForks(ctx *context.APIContext) {
+	forks, err := ctx.Repo.Repository.GetForks()
+	if err != nil {
+		ctx.Error(500, "GetForks", err)
+		return
+	}
+
+	apiForks := make([]*api.Repository, len(forks))
+	for i := range forks {
+		if err := forks[i].GetOwner(); err != nil {
+			ctx.Error(500, "GetOwner", err)
+			return
+		}
+		apiForks[i] = forks[i].APIFormat(&api.Permission{
+			Admin: ctx.User.IsAdminOfRepo(forks[i]),
+			Push:  ctx.User.IsWriterOfRepo(forks[i]),
+			Pull:  true,
+		})
+	}
+
+	ctx.JSON(200, &apiForks)
+}
