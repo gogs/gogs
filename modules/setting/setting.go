@@ -34,10 +34,10 @@ import (
 type Scheme string
 
 const (
-	HTTP        Scheme = "http"
-	HTTPS       Scheme = "https"
-	FCGI        Scheme = "fcgi"
-	UNIX_SOCKET Scheme = "unix"
+	SCHEME_HTTP        Scheme = "http"
+	SCHEME_HTTPS       Scheme = "https"
+	SCHEME_FCGI        Scheme = "fcgi"
+	SCHEME_UNIX_SOCKET Scheme = "unix"
 )
 
 type LandingPage string
@@ -73,6 +73,10 @@ var (
 	EnableGzip           bool
 	LandingPageURL       LandingPage
 	UnixSocketPermission uint32
+
+	HTTP struct {
+		AccessControlAllowOrigin string
+	}
 
 	SSH struct {
 		Disabled            bool           `ini:"DISABLE_SSH"`
@@ -388,15 +392,15 @@ func NewContext() {
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
 
-	Protocol = HTTP
+	Protocol = SCHEME_HTTP
 	if sec.Key("PROTOCOL").String() == "https" {
-		Protocol = HTTPS
+		Protocol = SCHEME_HTTPS
 		CertFile = sec.Key("CERT_FILE").String()
 		KeyFile = sec.Key("KEY_FILE").String()
 	} else if sec.Key("PROTOCOL").String() == "fcgi" {
-		Protocol = FCGI
+		Protocol = SCHEME_FCGI
 	} else if sec.Key("PROTOCOL").String() == "unix" {
-		Protocol = UNIX_SOCKET
+		Protocol = SCHEME_UNIX_SOCKET
 		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
 		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
 		if err != nil || UnixSocketPermissionParsed > 0777 {
@@ -557,7 +561,9 @@ func NewContext() {
 		}
 	}
 
-	if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+	if err = Cfg.Section("http").MapTo(&HTTP); err != nil {
+		log.Fatal(4, "Fail to map HTTP settings: %v", err)
+	} else if err = Cfg.Section("ui").MapTo(&UI); err != nil {
 		log.Fatal(4, "Fail to map UI settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
