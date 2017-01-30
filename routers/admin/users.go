@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers"
 )
@@ -116,7 +117,7 @@ func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
 
 	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		models.SendRegisterNotifyMail(ctx.Context, u)
+		mailer.SendRegisterNotifyMail(ctx.Context, models.NewMailerUser(u))
 	}
 
 	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
