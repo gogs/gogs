@@ -79,8 +79,9 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 		buf = buf[:n]
 
 		isTextFile := base.IsTextFile(buf)
-		ctx.Data["IsTextFile"] = isTextFile
+		ctx.Data["FileIsText"] = isTextFile
 		ctx.Data["FileName"] = readmeFile.Name()
+		// FIXME: what happens when README file is an image?
 		if isTextFile {
 			d, _ := ioutil.ReadAll(dataRc)
 			buf = append(buf, d...)
@@ -154,9 +155,13 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
-		ctx.Data["ReadmeExist"] = isMarkdown && markdown.IsReadmeFile(blob.Name())
 
-		if isMarkdown {
+		ctx.Data["IsIPyNB"] = strings.HasSuffix(blob.Name(), ".ipynb")
+
+		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
+		ctx.Data["ReadmeExist"] = readmeExist
+		if readmeExist {
+			// TODO: don't need to render if it's a README but not Markdown file.
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else {
 			// Building code view blocks with line number on server side.
