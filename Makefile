@@ -9,9 +9,6 @@ OS := $(shell uname)
 
 TAGS = ""
 BUILD_FLAGS = "-v"
-ifeq ($(OS),Linux)
-	BUILD_FLAGS += "-buildmode=pie"
-endif
 
 RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
