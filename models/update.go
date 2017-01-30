@@ -56,7 +56,7 @@ func CommitToPushCommit(commit *git.Commit) *PushCommit {
 		AuthorName:     commit.Author.Name,
 		CommitterEmail: commit.Committer.Email,
 		CommitterName:  commit.Committer.Name,
-		Timestamp:      commit.Author.When,
+		Timestamp:      commit.Committer.When,
 	}
 }
 
