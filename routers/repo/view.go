@@ -156,6 +156,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
 
+		ctx.Data["IsIPyNB"] = strings.HasSuffix(blob.Name(), ".ipynb")
+
 		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
 		ctx.Data["ReadmeExist"] = readmeExist
 		if readmeExist {
