@@ -52,6 +52,6 @@
 		{{end}}
 	</tbody>
 </table>
-{{if .ReadmeExist}}
+{{if and .ReadmeExist .IsTextFile}}
 	{{template "repo/view_file" .}}
 {{end}}

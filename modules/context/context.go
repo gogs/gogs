@@ -156,6 +156,11 @@ func Contexter() macaron.Handler {
 			},
 			Org: &Organization{},
 		}
+
+		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
+			ctx.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+		}
+
 		// Compute current URL for real-time change language.
 		ctx.Data["Link"] = setting.AppSubUrl + strings.TrimSuffix(ctx.Req.URL.Path, "/")
 

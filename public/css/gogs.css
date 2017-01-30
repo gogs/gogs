@@ -908,6 +908,7 @@ footer .ui.language .menu {
   padding-top: .6em;
   padding-bottom: .6em;
   display: inline-block;
+  word-break: break-all;
 }
 .ui.attached.header {
   background: #f0f0f0;
@@ -1303,7 +1304,7 @@ footer .ui.language .menu {
   max-width: 100%;
 }
 .repository.file.list #file-content .view-raw img {
-  padding: 5px 5px 0 5px;
+  margin-bottom: -5px;
 }
 .repository.file.list #file-content #ipython-notebook {
   margin-left: 80px;
@@ -1379,6 +1380,10 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content #ipython-notebook div[style="max-height:1000px;max-width:1500px;overflow:auto;"] {
   max-height: none !important;
+}
+.repository.file.list #file-content .plain-text {
+  font-size: 14px;
+  padding: 10px 15px;
 }
 .repository.file.list #file-content .code-view * {
   font-size: 12px;
@@ -2232,15 +2237,15 @@ footer .ui.language .menu {
 .repository.wiki.view .ui.sub.header {
   text-transform: none;
 }
-.repository.wiki.view .markdown {
+.repository.wiki.view > .markdown {
   padding: 15px 30px;
 }
-.repository.wiki.view .markdown h1:first-of-type,
-.repository.wiki.view .markdown h2:first-of-type,
-.repository.wiki.view .markdown h3:first-of-type,
-.repository.wiki.view .markdown h4:first-of-type,
-.repository.wiki.view .markdown h5:first-of-type,
-.repository.wiki.view .markdown h6:first-of-type {
+.repository.wiki.view > .markdown h1:first-of-type,
+.repository.wiki.view > .markdown h2:first-of-type,
+.repository.wiki.view > .markdown h3:first-of-type,
+.repository.wiki.view > .markdown h4:first-of-type,
+.repository.wiki.view > .markdown h5:first-of-type,
+.repository.wiki.view > .markdown h6:first-of-type {
   margin-top: 0;
 }
 .repository.settings.collaboration .collaborator.list {
@@ -2727,6 +2732,16 @@ footer .ui.language .menu {
 }
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
+}
+.user.settings .orgs {
+  padding: 0;
+}
+.user.settings .orgs .item {
+  padding: 10px;
+}
+.user.settings .orgs .item .button {
+  margin-top: 5px;
+  margin-right: 8px;
 }
 .user.profile .ui.card .username {
   display: block;

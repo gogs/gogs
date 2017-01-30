@@ -84,7 +84,7 @@ func checkVersion() {
 
 	// Check dependency version.
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.5"},
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.6.0"},
 		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
@@ -99,7 +99,7 @@ func checkVersion() {
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
 			log.Fatal(4, `Dependency outdated!
-Package '%s' current version (%s) is below requirement (%s), 
+Package '%s' current version (%s) is below requirement (%s),
 please use following command to update this package and recompile Gogs:
 go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 		}
@@ -116,7 +116,7 @@ func newMacaron() *macaron.Macaron {
 	if setting.EnableGzip {
 		m.Use(gzip.Gziper())
 	}
-	if setting.Protocol == setting.FCGI {
+	if setting.Protocol == setting.SCHEME_FCGI {
 		m.SetURLPrefix(setting.AppSubUrl)
 	}
 	m.Use(macaron.Static(
@@ -247,6 +247,12 @@ func runWeb(ctx *cli.Context) error {
 		m.Combo("/applications").Get(user.SettingsApplications).
 			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
+
+		m.Group("/organizations", func() {
+			m.Get("", user.SettingsOrganizations)
+			m.Post("/leave", user.SettingsLeaveOrganization)
+		})
+
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *context.Context) {
 		ctx.Data["PageIsUserSettings"] = true
@@ -634,7 +640,7 @@ func runWeb(ctx *cli.Context) error {
 	}
 
 	var listenAddr string
-	if setting.Protocol == setting.UNIX_SOCKET {
+	if setting.Protocol == setting.SCHEME_UNIX_SOCKET {
 		listenAddr = fmt.Sprintf("%s", setting.HTTPAddr)
 	} else {
 		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
@@ -643,14 +649,14 @@ func runWeb(ctx *cli.Context) error {
 
 	var err error
 	switch setting.Protocol {
-	case setting.HTTP:
+	case setting.SCHEME_HTTP:
 		err = http.ListenAndServe(listenAddr, m)
-	case setting.HTTPS:
+	case setting.SCHEME_HTTPS:
 		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS10}, Handler: m}
 		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
-	case setting.FCGI:
+	case setting.SCHEME_FCGI:
 		err = fcgi.Serve(nil, m)
-	case setting.UNIX_SOCKET:
+	case setting.SCHEME_UNIX_SOCKET:
 		os.Remove(listenAddr)
 
 		var listener *net.UnixListener

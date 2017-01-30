@@ -1,9 +1,9 @@
-Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 =====================
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: 0.9.116 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions ~~or submit a task on [alpha stage automated binary building system](https://build.gogs.io/)~~)
+##### Current tip version: [`.VERSION`](templates/.VERSION) (see [Releases](https://github.com/gogits/gogs/releases) for binary versions ~~or submit a task on [alpha stage automated binary building system](https://build.gogs.io/)~~)
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|

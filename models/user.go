@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -176,7 +177,7 @@ func (u *User) CanEditGitHook() bool {
 
 // CanImportLocal returns true if user can migrate repository by local path.
 func (u *User) CanImportLocal() bool {
-	return u.IsAdmin || u.AllowImportLocal
+	return setting.Repository.EnableLocalPathMigration && (u.IsAdmin || u.AllowImportLocal)
 }
 
 // DashboardLink returns the user dashboard page link.
@@ -324,7 +325,7 @@ func (u *User) EncodePasswd() {
 func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
 	newUser.EncodePasswd()
-	return u.Passwd == newUser.Passwd
+	return subtle.ConstantTimeCompare([]byte(u.Passwd), []byte(newUser.Passwd)) == 1
 }
 
 // UploadAvatar saves custom avatar for user.

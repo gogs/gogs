@@ -50,7 +50,7 @@
 	<div class="ui tabs container">
 		<div class="ui tabular menu navbar">
 			<a class="{{if .PageIsViewCode}}active{{end}} item" href="{{.RepoLink}}">
-				<i class="octicon octicon-code"></i> {{.i18n.Tr "repo.code"}}
+				<i class="octicon octicon-file-text"></i> {{.i18n.Tr "repo.files"}}
 			</a>
 			{{if and .Repository.EnableIssues (not .Repository.EnableExternalTracker)}}
 				<a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
