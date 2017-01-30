@@ -37,6 +37,7 @@ import (
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/routers"
@@ -140,7 +141,7 @@ func newMacaron() *macaron.Macaron {
 		Funcs:             funcMap,
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}))
-	models.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
+	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
 		path.Join(setting.CustomPath, "templates/mail"), funcMap)
 
 	localeNames, err := bindata.AssetDir("conf/locale")

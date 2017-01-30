@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -228,7 +229,7 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterFo
 
 	// Send confirmation email, no need for social account.
 	if setting.Service.RegisterEmailConfirm && u.ID > 1 {
-		models.SendActivateAccountMail(ctx.Context, u)
+		mailer.SendActivateAccountMail(ctx.Context, models.NewMailerUser(u))
 		ctx.Data["IsSendRegisterMail"] = true
 		ctx.Data["Email"] = u.Email
 		ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
@@ -257,7 +258,7 @@ func Activate(ctx *context.Context) {
 				ctx.Data["ResendLimited"] = true
 			} else {
 				ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-				models.SendActivateAccountMail(ctx.Context, ctx.User)
+				mailer.SendActivateAccountMail(ctx.Context, models.NewMailerUser(ctx.User))
 
 				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 					log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
@@ -367,7 +368,7 @@ func ForgotPasswdPost(ctx *context.Context) {
 		return
 	}
 
-	models.SendResetPasswordMail(ctx.Context, u)
+	mailer.SendResetPasswordMail(ctx.Context, models.NewMailerUser(u))
 	if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 		log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 	}
