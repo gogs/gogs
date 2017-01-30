@@ -469,6 +469,12 @@ func (u *User) ShortName(length int) string {
 	return base.EllipsisString(u.Name, length)
 }
 
+// IsMailable checks if a user is elegible
+// to receive emails.
+func (u *User) IsMailable() bool {
+	return u.IsActive
+}
+
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 // If uid is presented, then check will rule out that one,
@@ -929,7 +935,9 @@ func GetUserEmailsByNames(names []string) []string {
 		if err != nil {
 			continue
 		}
-		mails = append(mails, u.Email)
+		if u.IsMailable() {
+			mails = append(mails, u.Email)
+		}
 	}
 	return mails
 }
