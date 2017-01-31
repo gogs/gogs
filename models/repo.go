@@ -599,7 +599,9 @@ func wikiRemoteURL(remote string) string {
 	remote = strings.TrimSuffix(remote, ".git")
 	for _, suffix := range commonWikiURLSuffixes {
 		wikiURL := remote + suffix
-		if git.IsRepoURLAccessible(wikiURL) {
+		if git.IsRepoURLAccessible(git.NetworkOptions{
+			URL: wikiURL,
+		}) {
 			return wikiURL
 		}
 	}
