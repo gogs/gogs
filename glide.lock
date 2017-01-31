@@ -6,7 +6,7 @@ imports:
   subpackages:
   - memcache
 - name: github.com/urfave/cli
-  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+  version: 347a9884a87374d000eec7e6445a34487c1f4a2b
 - name: github.com/go-macaron/binding
   version: 48920167fa152d02f228cfbece7e0f1e452d200a
 - name: github.com/go-macaron/cache
@@ -23,7 +23,7 @@ imports:
 - name: github.com/go-macaron/i18n
   version: ef57533c3b0fc2d8581deda14937e52f11a203ab
 - name: github.com/go-macaron/inject
-  version: c5ab7bf3a307593cd44cb272d1a5beea473dd072
+  version: d8a0b8677191f4380287cfebd08e462217bac7ad
 - name: github.com/go-macaron/session
   version: 66031fcb37a0fff002a1f028eb0b3a815c78306b
   subpackages:
@@ -31,13 +31,13 @@ imports:
 - name: github.com/go-macaron/toolbox
   version: 82b511550b0aefc36b3a28062ad3a52e812bee38
 - name: github.com/go-sql-driver/mysql
-  version: a0583e0143b1624142adab07e0e97fe106d99561
+  version: 2e00b5cd70399450106cec6431c2e2ce3cae5034
 - name: github.com/go-xorm/builder
-  version: db75972580de4a7c6c20fff5b16a924c3de3fa12
+  version: 867edcc549127f15667ece8876c3a60093c9634b
 - name: github.com/go-xorm/core
-  version: 87aca223378aab7a4bf31ef53f20fde4997ad793
+  version: 2fbe2c76c6781d9e1c0398fc25386426e611f975
 - name: github.com/go-xorm/xorm
-  version: d75356fc733fce7683c6d961fc2aeb16ededc8ef
+  version: 445a934d32ed0934aedf0ef99b4b7c69b22f8e58
 - name: github.com/gogits/chardet
   version: 2404f777256163ea3eadb273dada5dcb037993c0
 - name: github.com/gogits/cron
@@ -51,11 +51,11 @@ imports:
 - name: github.com/issue9/identicon
   version: d36b54562f4cf70c83653e13dc95c220c79ef521
 - name: github.com/jaytaylor/html2text
-  version: 4b9124c9b0a2279e2092c4a9aaf1c83bbd2dcffc
+  version: d16d4129aab4e6be4497f4db898965f09b93b565
 - name: github.com/kardianos/minwinsvc
   version: cad6b2b879b0970e4245a20ebf1a81a756e2bb70
 - name: github.com/klauspost/compress
-  version: e3b7981a12dd3cab49afa1d3a50e715846f23732
+  version: 461e8fd8397ae84a23f56e385801e4feda2048ce
   subpackages:
   - gzip
   - flate
@@ -64,11 +64,11 @@ imports:
 - name: github.com/klauspost/crc32
   version: cb6bfca970f6908083f26f39a79009d608efd5cd
 - name: github.com/lib/pq
-  version: 5bf161122cd640c2a5a2c1d7fa49ea9befff31dd
+  version: 67c3f2a8884c9b1aac5503c8d42ae4f73a93511c
   subpackages:
   - oid
 - name: github.com/mattn/go-sqlite3
-  version: 2d44decb4941c9cdf72c22297b7890faf7da9bcb
+  version: ce9149a3c941c30de51a01dbc5bc414ddaa52927
 - name: github.com/mcuadros/go-version
   version: 257f7b9a7d87427c8d7f89469a5958d57f8abd7c
 - name: github.com/microcosm-cc/bluemonday
@@ -82,7 +82,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: b061729afc07e77a8aa4fad0a2fd840958f1942a
 - name: github.com/sergi/go-diff
-  version: 83532ca1c1caa393179c677b6facf48e61f4ca5d
+  version: 24e2351369ec4949b2ed0dc5c477afdd4c4034e8
   subpackages:
   - diffmatchpatch
 - name: github.com/shurcooL/sanitized_anchor_name
@@ -98,14 +98,14 @@ imports:
 - name: github.com/Unknwon/paginater
   version: 701c23f468663c34d1b1768c3ae1bcc57e11c5b3
 - name: golang.org/x/crypto
-  version: f6b343c37ca80bfa8ea539da67a0b621f84fab1d
+  version: dc137beb6cce2043eb6b5f223ab8bf51c32459f4
   subpackages:
   - ssh
   - curve25519
   - ed25519
   - ed25519/internal/edwards25519
 - name: golang.org/x/net
-  version: 45e771701b814666a7eb299e6c7a57d0b1799e91
+  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
   - html
   - html/charset
@@ -116,7 +116,7 @@ imports:
   - windows/svc
   - windows
 - name: golang.org/x/text
-  version: a49bea13b776691cb1b49873e5d8df96ec74831a
+  version: ece019dcfd29abcf65d0d1dfe145e8faad097640
   subpackages:
   - transform
   - language
@@ -144,11 +144,11 @@ imports:
 - name: gopkg.in/gomail.v2
   version: 81ebce5c23dfd25c6c67194b37d3dd3f338c98b1
 - name: gopkg.in/ini.v1
-  version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
+  version: e3c2d47c61e5333f9aa2974695dd94396eb69c75
 - name: gopkg.in/ldap.v2
   version: 8168ee085ee43257585e50c6441aadf54ecb2c9f
 - name: gopkg.in/macaron.v1
-  version: ddb19a9f3e8cedd44696b9dd5854dc8a43f3dd6c
+  version: 78521e4647ad5dcbabd5734d94582ca2373cbad8
 - name: gopkg.in/redis.v2
   version: e6179049628164864e6e84e973cfb56335748dea
 devImports: []
