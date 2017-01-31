@@ -43,7 +43,7 @@ imports:
 - name: github.com/gogits/cron
   version: 2fc07a4c4f1e3c4d2301c5ed578d5e2c31c70421
 - name: github.com/gogits/git-module
-  version: df1013f8eb4dc70de90bc5597bf560a4b7da802e
+  version: 172cbc21accbf0085a58fd0832f46a9f694130e8
 - name: github.com/gogits/go-gogs-client
   version: 98046bb98061fc6baa5bb86359af0b7c300d384a
 - name: github.com/gogits/go-libravatar
