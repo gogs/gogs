@@ -806,6 +806,10 @@ func newWebhookService() {
 	Webhook.PagingNum = sec.Key("PAGING_NUM").MustInt(10)
 }
 
+func NewService() {
+	newService()
+}
+
 func NewServices() {
 	newService()
 	newLogService()
