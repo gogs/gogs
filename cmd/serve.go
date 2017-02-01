@@ -259,7 +259,8 @@ func runServ(c *cli.Context) error {
 					user.Name, requestedMode, repoPath)
 			}
 		}
-	} else  { // if public and read
+	} else  {
+                // if public and read
                 // Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
                 // A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
                 // we should give read access only in repositories where this deploy key is in use. In other case, a server
