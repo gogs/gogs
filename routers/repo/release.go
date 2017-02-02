@@ -240,6 +240,7 @@ func EditRelease(ctx *context.Context) {
 	ctx.Data["title"] = rel.Title
 	ctx.Data["content"] = rel.Note
 	ctx.Data["prerelease"] = rel.IsPrerelease
+	ctx.Data["IsDraft"] = rel.IsDraft
 
 	ctx.HTML(200, RELEASE_NEW)
 }
@@ -264,6 +265,7 @@ func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 	ctx.Data["title"] = rel.Title
 	ctx.Data["content"] = rel.Note
 	ctx.Data["prerelease"] = rel.IsPrerelease
+	ctx.Data["IsDraft"] = rel.IsDraft
 
 	if ctx.HasError() {
 		ctx.HTML(200, RELEASE_NEW)
@@ -282,7 +284,7 @@ func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 }
 
 func DeleteRelease(ctx *context.Context) {
-	if err := models.DeleteReleaseByID(ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteReleaseOfRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteReleaseByID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.release.deletion_success"))

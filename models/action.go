@@ -63,7 +63,7 @@ func init() {
 	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
 }
 
-// Action represents user operation type and other information to repository.,
+// Action represents user operation type and other information to repository,
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
 	ID           int64 `xorm:"pk autoincr"`

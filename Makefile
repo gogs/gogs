@@ -5,6 +5,8 @@ DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
 GENERATED  := modules/bindata/bindata.go public/css/gogs.css
 
+OS := $(shell uname)
+
 TAGS = ""
 BUILD_FLAGS = "-v"
 

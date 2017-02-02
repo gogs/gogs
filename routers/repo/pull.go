@@ -49,7 +49,7 @@ func getForkRepository(ctx *context.Context) *models.Repository {
 		return nil
 	}
 
-	if !forkRepo.CanBeForked() {
+	if !forkRepo.CanBeForked() || !forkRepo.HasAccess(ctx.User) {
 		ctx.Handle(404, "getForkRepository", nil)
 		return nil
 	}
@@ -156,11 +156,6 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		return nil
 	}
 
-	if err = issue.PullRequest.GetHeadRepo(); err != nil {
-		ctx.Handle(500, "GetHeadRepo", err)
-		return nil
-	}
-
 	if ctx.IsSigned {
 		// Update issue-user.
 		if err = issue.ReadBy(ctx.User.ID); err != nil {
@@ -202,11 +197,6 @@ func PrepareViewPullInfo(ctx *context.Context, issue *models.Issue) *git.PullReq
 		headGitRepo *git.Repository
 		err         error
 	)
-
-	if err = pull.GetHeadRepo(); err != nil {
-		ctx.Handle(500, "GetHeadRepo", err)
-		return nil
-	}
 
 	if pull.HeadRepo != nil {
 		headGitRepo, err = git.OpenRepository(pull.HeadRepo.RepoPath())
@@ -367,12 +357,10 @@ func ViewPullFiles(ctx *context.Context) {
 		return
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "ErrGettingEditorconfig", err)
+	setEditorconfigIfExists(ctx)
+	if ctx.Written() {
 		return
 	}
-	ctx.Data["Editorconfig"] = ec
 
 	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
 	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
@@ -626,12 +614,10 @@ func CompareAndPullRequest(ctx *context.Context) {
 		}
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "ErrGettingEditorconfig", err)
+	setEditorconfigIfExists(ctx)
+	if ctx.Written() {
 		return
 	}
-	ctx.Data["Editorconfig"] = ec
 
 	ctx.HTML(200, COMPARE_PULL)
 }

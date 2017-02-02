@@ -52,8 +52,13 @@ var (
 )
 
 func MustEnableIssues(ctx *context.Context) {
-	if !ctx.Repo.Repository.EnableIssues || ctx.Repo.Repository.EnableExternalTracker {
+	if !ctx.Repo.Repository.EnableIssues {
 		ctx.Handle(404, "MustEnableIssues", nil)
+		return
+	}
+
+	if ctx.Repo.Repository.EnableExternalTracker {
+		ctx.Redirect(ctx.Repo.Repository.ExternalTrackerURL)
 		return
 	}
 }
@@ -121,16 +126,16 @@ func Issues(ctx *context.Context) {
 		assigneeID = ctx.QueryInt64("assignee")
 		posterID   int64
 	)
-	filterMode := models.FM_ALL
+	filterMode := models.FILTER_MODE_YOUR_REPOS
 	switch viewType {
 	case "assigned":
-		filterMode = models.FM_ASSIGN
+		filterMode = models.FILTER_MODE_ASSIGN
 		assigneeID = ctx.User.ID
 	case "created_by":
-		filterMode = models.FM_CREATE
+		filterMode = models.FILTER_MODE_CREATE
 		posterID = ctx.User.ID
 	case "mentioned":
-		filterMode = models.FM_MENTION
+		filterMode = models.FILTER_MODE_MENTION
 	}
 
 	var uid int64 = -1
@@ -174,7 +179,7 @@ func Issues(ctx *context.Context) {
 		MilestoneID: milestoneID,
 		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
-		IsMention:   filterMode == models.FM_MENTION,
+		IsMention:   filterMode == models.FILTER_MODE_MENTION,
 		IsPull:      isPullList,
 		Labels:      selectLabels,
 		SortType:    sortType,
@@ -629,6 +634,15 @@ func ViewIssue(ctx *context.Context) {
 		}
 	}
 
+	if issue.IsPull && issue.PullRequest.HasMerged {
+		pull := issue.PullRequest
+		ctx.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
+			ctx.Repo.IsWriter() && ctx.Repo.GitRepo.IsBranchExist(pull.HeadBranch)
+
+		deleteBranchUrl := ctx.Repo.RepoLink + "/branches/" + pull.HeadBranch + "/delete"
+		ctx.Data["DeleteBranchLink"] = fmt.Sprintf("%s?commit=%s&redirect_to=%s", deleteBranchUrl, pull.MergedCommitID, ctx.Data["Link"])
+	}
+
 	ctx.Data["Participants"] = participants
 	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
@@ -712,7 +726,7 @@ func UpdateIssueLabel(ctx *context.Context) {
 		}
 	} else {
 		isAttach := ctx.Query("action") == "attach"
-		label, err := models.GetLabelByID(ctx.QueryInt64("id"))
+		label, err := models.GetLabelOfRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id"))
 		if err != nil {
 			if models.IsErrLabelNotExist(err) {
 				ctx.Error(404, "GetLabelByID")
@@ -1214,7 +1228,7 @@ func ChangeMilestonStatus(ctx *context.Context) {
 }
 
 func DeleteMilestone(ctx *context.Context) {
-	if err := models.DeleteMilestoneByRepoID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteMilestoneOfRepoByID(ctx.Repo.Repository.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteMilestoneByRepoID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.milestones.deletion_success"))

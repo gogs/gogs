@@ -51,8 +51,9 @@ type Comment struct {
 	ID              int64 `xorm:"pk autoincr"`
 	Type            CommentType
 	PosterID        int64
-	Poster          *User `xorm:"-"`
-	IssueID         int64 `xorm:"INDEX"`
+	Poster          *User  `xorm:"-"`
+	IssueID         int64  `xorm:"INDEX"`
+	Issue           *Issue `xorm:"-"`
 	CommitID        int64
 	Line            int64
 	Content         string `xorm:"TEXT"`
@@ -82,29 +83,46 @@ func (c *Comment) BeforeUpdate() {
 }
 
 func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
-	var err error
 	switch colName {
-	case "id":
-		c.Attachments, err = GetAttachmentsByCommentID(c.ID)
-		if err != nil {
-			log.Error(3, "GetAttachmentsByCommentID[%d]: %v", c.ID, err)
-		}
+	case "created_unix":
+		c.Created = time.Unix(c.CreatedUnix, 0).Local()
+	case "updated_unix":
+		c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
+	}
+}
 
-	case "poster_id":
+func (c *Comment) loadAttributes(e Engine) (err error) {
+	if c.Poster == nil {
 		c.Poster, err = GetUserByID(c.PosterID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				c.PosterID = -1
 				c.Poster = NewGhostUser()
 			} else {
-				log.Error(3, "GetUserByID[%d]: %v", c.ID, err)
+				return fmt.Errorf("getUserByID.(Poster) [%d]: %v", c.PosterID, err)
 			}
 		}
-	case "created_unix":
-		c.Created = time.Unix(c.CreatedUnix, 0).Local()
-	case "updated_unix":
-		c.Updated = time.Unix(c.UpdatedUnix, 0).Local()
 	}
+
+	if c.Issue == nil {
+		c.Issue, err = getRawIssueByID(e, c.IssueID)
+		if err != nil {
+			return fmt.Errorf("getIssueByID [%d]: %v", c.IssueID, err)
+		}
+	}
+
+	if c.Attachments == nil {
+		c.Attachments, err = getAttachmentsByCommentID(e, c.ID)
+		if err != nil {
+			return fmt.Errorf("getAttachmentsByCommentID [%d]: %v", c.ID, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Comment) LoadAttributes() error {
+	return c.loadAttributes(x)
 }
 
 func (c *Comment) AfterDelete() {
@@ -115,9 +133,16 @@ func (c *Comment) AfterDelete() {
 	}
 }
 
+func (c *Comment) HTMLURL() string {
+	return fmt.Sprintf("%s#issuecomment-%d", c.Issue.HTMLURL(), c.ID)
+}
+
+// This method assumes following fields have been assigned with valid values:
+// Required - Poster, Issue
 func (c *Comment) APIFormat() *api.Comment {
 	return &api.Comment{
 		ID:      c.ID,
+		HTMLURL: c.HTMLURL(),
 		Poster:  c.Poster.APIFormat(),
 		Body:    c.Content,
 		Created: c.Created,
@@ -135,11 +160,11 @@ func (c *Comment) EventTag() string {
 	return "event-" + com.ToStr(c.ID)
 }
 
-// MailParticipants sends new comment emails to repository watchers
+// mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
-func (cmt *Comment) MailParticipants(opType ActionType, issue *Issue) (err error) {
+func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
 	mentions := markdown.FindAllMentions(cmt.Content)
-	if err = UpdateIssueMentions(cmt.IssueID, mentions); err != nil {
+	if err = updateIssueMentions(e, cmt.IssueID, mentions); err != nil {
 		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
 	}
 
@@ -253,10 +278,12 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err = notifyWatchers(e, act); err != nil {
 			log.Error(4, "notifyWatchers: %v", err)
 		}
-		comment.MailParticipants(act.OpType, opts.Issue)
+		if err = comment.mailParticipants(e, act.OpType, opts.Issue); err != nil {
+			log.Error(4, "MailParticipants: %v", err)
+		}
 	}
 
-	return comment, nil
+	return comment, comment.loadAttributes(e)
 }
 
 func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
@@ -351,7 +378,18 @@ func GetCommentByID(id int64) (*Comment, error) {
 	} else if !has {
 		return nil, ErrCommentNotExist{id, 0}
 	}
-	return c, nil
+	return c, c.LoadAttributes()
+}
+
+// FIXME: use CommentList to improve performance.
+func loadCommentsAttributes(e Engine, comments []*Comment) (err error) {
+	for i := range comments {
+		if err = comments[i].loadAttributes(e); err != nil {
+			return fmt.Errorf("loadAttributes [%d]: %v", comments[i].ID, err)
+		}
+	}
+
+	return nil
 }
 
 func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, error) {
@@ -360,7 +398,23 @@ func getCommentsByIssueIDSince(e Engine, issueID, since int64) ([]*Comment, erro
 	if since > 0 {
 		sess.And("updated_unix >= ?", since)
 	}
-	return comments, sess.Find(&comments)
+
+	if err := sess.Find(&comments); err != nil {
+		return nil, err
+	}
+	return comments, loadCommentsAttributes(e, comments)
+}
+
+func getCommentsByRepoIDSince(e Engine, repoID, since int64) ([]*Comment, error) {
+	comments := make([]*Comment, 0, 10)
+	sess := e.Where("issue.repo_id = ?", repoID).Join("INNER", "issue", "issue.id = comment.issue_id", repoID).Asc("created_unix")
+	if since > 0 {
+		sess.And("updated_unix >= ?", since)
+	}
+	if err := sess.Find(&comments); err != nil {
+		return nil, err
+	}
+	return comments, loadCommentsAttributes(e, comments)
 }
 
 func getCommentsByIssueID(e Engine, issueID int64) ([]*Comment, error) {
@@ -372,9 +426,14 @@ func GetCommentsByIssueID(issueID int64) ([]*Comment, error) {
 	return getCommentsByIssueID(x, issueID)
 }
 
-// GetCommentsByIssueID returns a list of comments of an issue since a given time point.
+// GetCommentsByIssueIDSince returns a list of comments of an issue since a given time point.
 func GetCommentsByIssueIDSince(issueID, since int64) ([]*Comment, error) {
 	return getCommentsByIssueIDSince(x, issueID, since)
+}
+
+// GetCommentsByRepoIDSince returns a list of comments for all issues in a repo since a given time point.
+func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
+	return getCommentsByRepoIDSince(x, repoID, since)
 }
 
 // UpdateComment updates information of comment.

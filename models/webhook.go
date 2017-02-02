@@ -252,16 +252,16 @@ func deleteWebhook(bean *Webhook) (err error) {
 	return sess.Commit()
 }
 
-// DeleteWebhookByRepoID deletes webhook of repository by given ID.
-func DeleteWebhookByRepoID(repoID, id int64) error {
+// DeleteWebhookOfRepoByID deletes webhook of repository by given ID.
+func DeleteWebhookOfRepoByID(repoID, id int64) error {
 	return deleteWebhook(&Webhook{
 		ID:     id,
 		RepoID: repoID,
 	})
 }
 
-// DeleteWebhookByOrgID deletes webhook of organization by given ID.
-func DeleteWebhookByOrgID(orgID, id int64) error {
+// DeleteWebhookOfOrgByID deletes webhook of organization by given ID.
+func DeleteWebhookOfOrgByID(orgID, id int64) error {
 	return deleteWebhook(&Webhook{
 		ID:    id,
 		OrgID: orgID,
@@ -602,7 +602,7 @@ func DeliverHooks() {
 
 		tasks = make([]*HookTask, 0, 5)
 		if err := x.Where("repo_id=? AND is_delivered=?", repoID, false).Find(&tasks); err != nil {
-			log.Error(4, "Get repository [%d] hook tasks: %v", repoID, err)
+			log.Error(4, "Get repository [%s] hook tasks: %v", repoID, err)
 			continue
 		}
 		for _, t := range tasks {

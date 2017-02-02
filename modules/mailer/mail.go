@@ -2,19 +2,17 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package models
+package mailer
 
 import (
 	"fmt"
 	"html/template"
-	"path"
 
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -54,10 +52,34 @@ func InitMailRender(dir, appendDir string, funcMap []template.FuncMap) {
 }
 
 func SendTestMail(email string) error {
-	return gomail.Send(&mailer.Sender{}, mailer.NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!").Message)
+	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!").Message)
 }
 
-func SendUserMail(c *macaron.Context, u *User, tpl base.TplName, code, subject, info string) {
+/*
+	Setup interfaces of used methods in mail to avoid cycle import.
+*/
+
+type User interface {
+	ID() int64
+	DisplayName() string
+	Email() string
+	GenerateActivateCode() string
+	GenerateEmailActivateCode(string) string
+}
+
+type Repository interface {
+	FullName() string
+	HTMLURL() string
+	ComposeMetas() map[string]string
+}
+
+type Issue interface {
+	MailSubject() string
+	Content() string
+	HTMLURL() string
+}
+
+func SendUserMail(c *macaron.Context, u User, tpl base.TplName, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   setting.Service.ActiveCodeLives / 60,
@@ -70,27 +92,27 @@ func SendUserMail(c *macaron.Context, u *User, tpl base.TplName, code, subject, 
 		return
 	}
 
-	msg := mailer.NewMessage([]string{u.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, %s", u.ID, info)
+	msg := NewMessage([]string{u.Email()}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
-	mailer.SendAsync(msg)
+	SendAsync(msg)
 }
 
-func SendActivateAccountMail(c *macaron.Context, u *User) {
+func SendActivateAccountMail(c *macaron.Context, u User) {
 	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, u.GenerateActivateCode(), c.Tr("mail.activate_account"), "activate account")
 }
 
-func SendResetPasswordMail(c *macaron.Context, u *User) {
+func SendResetPasswordMail(c *macaron.Context, u User) {
 	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, u.GenerateActivateCode(), c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
-func SendActivateEmailMail(c *macaron.Context, u *User, email *EmailAddress) {
+func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 	data := map[string]interface{}{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": setting.Service.ActiveCodeLives / 60,
-		"Code":            u.GenerateEmailActivateCode(email.Email),
-		"Email":           email.Email,
+		"Code":            u.GenerateEmailActivateCode(email),
+		"Email":           email,
 	}
 	body, err := mailRender.HTMLString(string(MAIL_AUTH_ACTIVATE_EMAIL), data)
 	if err != nil {
@@ -98,14 +120,14 @@ func SendActivateEmailMail(c *macaron.Context, u *User, email *EmailAddress) {
 		return
 	}
 
-	msg := mailer.NewMessage([]string{email.Email}, c.Tr("mail.activate_email"), body)
-	msg.Info = fmt.Sprintf("UID: %d, activate email", u.ID)
+	msg := NewMessage([]string{email}, c.Tr("mail.activate_email"), body)
+	msg.Info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
-	mailer.SendAsync(msg)
+	SendAsync(msg)
 }
 
 // SendRegisterNotifyMail triggers a notify e-mail by admin created a account.
-func SendRegisterNotifyMail(c *macaron.Context, u *User) {
+func SendRegisterNotifyMail(c *macaron.Context, u User) {
 	data := map[string]interface{}{
 		"Username": u.DisplayName(),
 	}
@@ -115,20 +137,19 @@ func SendRegisterNotifyMail(c *macaron.Context, u *User) {
 		return
 	}
 
-	msg := mailer.NewMessage([]string{u.Email}, c.Tr("mail.register_notify"), body)
-	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.ID)
+	msg := NewMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
+	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
-	mailer.SendAsync(msg)
+	SendAsync(msg)
 }
 
 // SendCollaboratorMail sends mail notification to new collaborator.
-func SendCollaboratorMail(u, doer *User, repo *Repository) {
-	repoName := path.Join(repo.Owner.Name, repo.Name)
-	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repoName)
+func SendCollaboratorMail(u, doer User, repo Repository) {
+	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
 
 	data := map[string]interface{}{
 		"Subject":  subject,
-		"RepoName": repoName,
+		"RepoName": repo.FullName(),
 		"Link":     repo.HTMLURL(),
 	}
 	body, err := mailRender.HTMLString(string(MAIL_NOTIFY_COLLABORATOR), data)
@@ -137,10 +158,10 @@ func SendCollaboratorMail(u, doer *User, repo *Repository) {
 		return
 	}
 
-	msg := mailer.NewMessage([]string{u.Email}, subject, body)
-	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID)
+	msg := NewMessage([]string{u.Email()}, subject, body)
+	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
-	mailer.SendAsync(msg)
+	SendAsync(msg)
 }
 
 func composeTplData(subject, body, link string) map[string]interface{} {
@@ -151,33 +172,34 @@ func composeTplData(subject, body, link string) map[string]interface{} {
 	return data
 }
 
-func composeIssueMessage(issue *Issue, doer *User, tplName base.TplName, tos []string, info string) *mailer.Message {
+func composeIssueMessage(issue Issue, repo Repository, doer User, tplName base.TplName, tos []string, info string) *Message {
 	subject := issue.MailSubject()
-	body := string(markdown.RenderSpecialLink([]byte(issue.Content), issue.Repo.HTMLURL(), issue.Repo.ComposeMetas()))
+	body := string(markdown.RenderSpecialLink([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
 	data["Doer"] = doer
 	content, err := mailRender.HTMLString(string(tplName), data)
 	if err != nil {
 		log.Error(3, "HTMLString (%s): %v", tplName, err)
 	}
-	msg := mailer.NewMessageFrom(tos, fmt.Sprintf(`"%s" <%s>`, doer.DisplayName(), setting.MailService.User), subject, content)
+	from := gomail.NewMessage().FormatAddress(setting.MailService.FromEmail, doer.DisplayName())
+	msg := NewMessageFrom(tos, from, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg
 }
 
 // SendIssueCommentMail composes and sends issue comment emails to target receivers.
-func SendIssueCommentMail(issue *Issue, doer *User, tos []string) {
+func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string) {
 	if len(tos) == 0 {
 		return
 	}
 
-	mailer.SendAsync(composeIssueMessage(issue, doer, MAIL_ISSUE_COMMENT, tos, "issue comment"))
+	SendAsync(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_COMMENT, tos, "issue comment"))
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
-func SendIssueMentionMail(issue *Issue, doer *User, tos []string) {
+func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string) {
 	if len(tos) == 0 {
 		return
 	}
-	mailer.SendAsync(composeIssueMessage(issue, doer, MAIL_ISSUE_MENTION, tos, "issue mention"))
+	SendAsync(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_MENTION, tos, "issue mention"))
 }

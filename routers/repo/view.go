@@ -79,9 +79,8 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 		buf = buf[:n]
 
 		isTextFile := base.IsTextFile(buf)
-		ctx.Data["FileIsText"] = isTextFile
+		ctx.Data["IsTextFile"] = isTextFile
 		ctx.Data["FileName"] = readmeFile.Name()
-		// FIXME: what happens when README file is an image?
 		if isTextFile {
 			d, _ := ioutil.ReadAll(dataRc)
 			buf = append(buf, d...)
@@ -155,11 +154,9 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
+		ctx.Data["ReadmeExist"] = isMarkdown && markdown.IsReadmeFile(blob.Name())
 
-		readmeExist := isMarkdown || markdown.IsReadmeFile(blob.Name())
-		ctx.Data["ReadmeExist"] = readmeExist
-		if readmeExist {
-			// TODO: don't need to render if it's a README but not Markdown file.
+		if isMarkdown {
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else {
 			// Building code view blocks with line number on server side.
@@ -198,6 +195,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 	case base.IsPDFFile(buf):
 		ctx.Data["IsPDFFile"] = true
+	case base.IsVideoFile(buf):
+		ctx.Data["IsVideoFile"] = true
 	case base.IsImageFile(buf):
 		ctx.Data["IsImageFile"] = true
 	}
@@ -210,6 +209,15 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 	} else if !ctx.Repo.IsWriter() {
 		ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.must_have_write_access")
 	}
+}
+
+func setEditorconfigIfExists(ctx *context.Context) {
+	ec, err := ctx.Repo.GetEditorconfig()
+	if err != nil && !git.IsErrNotExist(err) {
+		log.Error(4, "Fail to get '.editorconfig' [%d]: %v", ctx.Repo.Repository.ID, err)
+		return
+	}
+	ctx.Data["Editorconfig"] = ec
 }
 
 func Home(ctx *context.Context) {
@@ -245,12 +253,10 @@ func Home(ctx *context.Context) {
 		return
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "Repo.GetEditorconfig", err)
+	setEditorconfigIfExists(ctx)
+	if ctx.Written() {
 		return
 	}
-	ctx.Data["Editorconfig"] = ec
 
 	var treeNames []string
 	paths := make([]string, 0, 5)

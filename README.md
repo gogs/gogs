@@ -1,9 +1,9 @@
-Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master) [![Crowdin](https://d322cqt584bo4o.cloudfront.net/gogs/localized.svg)](https://crowdin.com/project/gogs) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gogits/gogs?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 =====================
 
 ![](https://github.com/gogits/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: 0.9.99 (see [Releases](https://github.com/gogits/gogs/releases) for binary versions or submit a task on [alpha stage automated binary building system](https://build.gogs.io/))
+##### Current tip version: [`.VERSION`](templates/.VERSION) (see [Releases](https://github.com/gogits/gogs/releases) for binary versions ~~or submit a task on [alpha stage automated binary building system](https://build.gogs.io/)~~)
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
@@ -29,7 +29,6 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## Overview
 
 - Please see the [Documentation](https://gogs.io/docs/intro) for common usages and change log.
-- See the [Trello Board](https://trello.com/b/uxAoeLUl/gogs-go-git-service) to follow the develop team.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
 - Having trouble? Get help with [Troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or [User Forum](https://discuss.gogs.io/).
 - Want to help with localization? Check out the [guide](https://gogs.io/docs/features/i18n.html)!
@@ -51,7 +50,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3 and [TiDB](https://github.com/pingcap/tidb) (experimental)
-- Multi-language support ([19 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([22 languages](https://crowdin.com/project/gogs))
 
 ## System Requirements
 
@@ -61,7 +60,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 ## Browser Support
 
 - Please see [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) for specific versions of supported browsers.
-- The official support minimal size  is **1024*768**, UI may still looks right in smaller size but no promises and fixes.
+- The smallest resolution officially supported is **1024*768**, however the UI may still look right in smaller resolutions, but no promises or fixes.
 
 ## Installation
 
@@ -100,7 +99,7 @@ There are 5 ways to install Gogs:
 - [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
-- [YunoHost](https://github.com/mbugeia/gogs_ynh)
+- [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
 
 ## Software and Service Support

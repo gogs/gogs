@@ -56,7 +56,7 @@ func CommitToPushCommit(commit *git.Commit) *PushCommit {
 		AuthorName:     commit.Author.Name,
 		CommitterEmail: commit.Committer.Email,
 		CommitterName:  commit.Committer.Name,
-		Timestamp:      commit.Author.When,
+		Timestamp:      commit.Committer.When,
 	}
 }
 
@@ -101,7 +101,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	}
 
 	if isDelRef {
-		log.GitLogger.Info("Reference '%s' has been deleted from '%s/%s' by %d",
+		log.GitLogger.Info("Reference '%s' has been deleted from '%s/%s' by %s",
 			opts.RefFullName, opts.RepoUserName, opts.RepoName, opts.PusherName)
 		return nil
 	}

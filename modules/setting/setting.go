@@ -6,6 +6,7 @@ package setting
 
 import (
 	"fmt"
+	"net/mail"
 	"net/url"
 	"os"
 	"os/exec"
@@ -21,8 +22,9 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
-	"github.com/strk/go-libravatar"
 	"gopkg.in/ini.v1"
+
+	"github.com/gogits/go-libravatar"
 
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/log"
@@ -32,10 +34,10 @@ import (
 type Scheme string
 
 const (
-	HTTP        Scheme = "http"
-	HTTPS       Scheme = "https"
-	FCGI        Scheme = "fcgi"
-	UNIX_SOCKET Scheme = "unix"
+	SCHEME_HTTP        Scheme = "http"
+	SCHEME_HTTPS       Scheme = "https"
+	SCHEME_FCGI        Scheme = "fcgi"
+	SCHEME_UNIX_SOCKET Scheme = "unix"
 )
 
 type LandingPage string
@@ -72,11 +74,16 @@ var (
 	LandingPageURL       LandingPage
 	UnixSocketPermission uint32
 
+	HTTP struct {
+		AccessControlAllowOrigin string
+	}
+
 	SSH struct {
 		Disabled            bool           `ini:"DISABLE_SSH"`
 		StartBuiltinServer  bool           `ini:"START_SSH_SERVER"`
 		Domain              string         `ini:"SSH_DOMAIN"`
 		Port                int            `ini:"SSH_PORT"`
+		ListenHost          string         `ini:"SSH_LISTEN_HOST"`
 		ListenPort          int            `ini:"SSH_LISTEN_PORT"`
 		RootPath            string         `ini:"SSH_ROOT_PATH"`
 		KeyTestPath         string         `ini:"SSH_KEY_TEST_PATH"`
@@ -110,12 +117,14 @@ var (
 
 	// Repository settings
 	Repository struct {
-		AnsiCharset            string
-		ForcePrivate           bool
-		MaxCreationLimit       int
-		MirrorQueueLength      int
-		PullRequestQueueLength int
-		PreferredLicenses      []string
+		AnsiCharset              string
+		ForcePrivate             bool
+		MaxCreationLimit         int
+		MirrorQueueLength        int
+		PullRequestQueueLength   int
+		PreferredLicenses        []string
+		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
+		EnableLocalPathMigration bool
 
 		// Repository editor settings
 		Editor struct {
@@ -383,15 +392,15 @@ func NewContext() {
 	AppSubUrl = strings.TrimSuffix(url.Path, "/")
 	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
 
-	Protocol = HTTP
+	Protocol = SCHEME_HTTP
 	if sec.Key("PROTOCOL").String() == "https" {
-		Protocol = HTTPS
+		Protocol = SCHEME_HTTPS
 		CertFile = sec.Key("CERT_FILE").String()
 		KeyFile = sec.Key("KEY_FILE").String()
 	} else if sec.Key("PROTOCOL").String() == "fcgi" {
-		Protocol = FCGI
+		Protocol = SCHEME_FCGI
 	} else if sec.Key("PROTOCOL").String() == "unix" {
-		Protocol = UNIX_SOCKET
+		Protocol = SCHEME_UNIX_SOCKET
 		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
 		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
 		if err != nil || UnixSocketPermissionParsed > 0777 {
@@ -488,6 +497,8 @@ func NewContext() {
 		}
 	}
 
+	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
+
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
@@ -521,11 +532,13 @@ func NewContext() {
 		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
 	case "gravatar":
 		GravatarSource = "https://secure.gravatar.com/avatar/"
+	case "libravatar":
+		GravatarSource = "https://seccdn.libravatar.org/avatar/"
 	default:
 		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
-	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool()
+	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool(true)
 	if OfflineMode {
 		DisableGravatar = true
 		EnableFederatedAvatar = false
@@ -548,7 +561,9 @@ func NewContext() {
 		}
 	}
 
-	if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+	if err = Cfg.Section("http").MapTo(&HTTP); err != nil {
+		log.Fatal(4, "Fail to map HTTP settings: %v", err)
+	} else if err = Cfg.Section("ui").MapTo(&UI); err != nil {
 		log.Fatal(4, "Fail to map UI settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
@@ -664,11 +679,11 @@ func newLogService() {
 				sec.Key("PROTOCOL").In("tcp", []string{"tcp", "unix", "udp"}),
 				sec.Key("ADDR").MustString(":7020"))
 		case "smtp":
-			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":"%s","subject":"%s"}`, level,
+			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"username":"%s","password":"%s","host":"%s","sendTos":["%s"],"subject":"%s"}`, level,
 				sec.Key("USER").MustString("example@example.com"),
 				sec.Key("PASSWD").MustString("******"),
 				sec.Key("HOST").MustString("127.0.0.1:25"),
-				sec.Key("RECEIVERS").MustString("[]"),
+				strings.Replace(sec.Key("RECEIVERS").MustString(""), ",", `","`, -1),
 				sec.Key("SUBJECT").MustString("Diagnostic message from serve"))
 		case "database":
 			LogConfigs[i] = fmt.Sprintf(`{"level":%s,"driver":"%s","conn":"%s"}`, level,
@@ -714,6 +729,7 @@ type Mailer struct {
 	Name                  string
 	Host                  string
 	From                  string
+	FromEmail             string
 	User, Passwd          string
 	DisableHelo           bool
 	HeloHostname          string
@@ -749,6 +765,13 @@ func newMailService() {
 		EnableHTMLAlternative: sec.Key("ENABLE_HTML_ALTERNATIVE").MustBool(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
+
+	parsed, err := mail.ParseAddress(MailService.From)
+	if err != nil {
+		log.Fatal(4, "Invalid mailer.FROM (%s): %v", MailService.From, err)
+	}
+	MailService.FromEmail = parsed.Address
+
 	log.Info("Mail Service Enabled")
 }
 

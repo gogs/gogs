@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -146,6 +147,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		repo.ExternalWikiURL = form.ExternalWikiURL
 		repo.EnableIssues = form.EnableIssues
 		repo.EnableExternalTracker = form.EnableExternalTracker
+		repo.ExternalTrackerURL = form.ExternalTrackerURL
 		repo.ExternalTrackerFormat = form.TrackerURLFormat
 		repo.ExternalTrackerStyle = form.TrackerIssueStyle
 		repo.EnablePulls = form.EnablePulls
@@ -344,7 +346,7 @@ func CollaborationPost(ctx *context.Context) {
 	}
 
 	if setting.Service.EnableNotifyMail {
-		models.SendCollaboratorMail(u, ctx.User, ctx.Repo.Repository)
+		mailer.SendCollaboratorMail(models.NewMailerUser(u), models.NewMailerUser(ctx.User), models.NewMailerRepo(ctx.Repo.Repository))
 	}
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_collaborator_success"))

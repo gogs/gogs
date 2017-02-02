@@ -165,18 +165,29 @@ func HTTP(ctx *context.Context) {
 		}
 	}
 
-	callback := func(rpc string, input []byte) {
+	callback := func(rpc string, input *os.File) {
 		if rpc != "receive-pack" || isWiki {
 			return
 		}
 
-		var lastLine int64 = 0
+		var (
+			head = make([]byte, 4) // 00+size
+			n    int
+			err  error
+		)
 		for {
-			head := input[lastLine : lastLine+2]
+			n, err = input.Read(head)
+			if err != nil && err != io.EOF {
+				log.Error(4, "read head: %v", err)
+				return
+			} else if n < 4 {
+				break
+			}
+
 			if head[0] == '0' && head[1] == '0' {
-				size, err := strconv.ParseInt(string(input[lastLine+2:lastLine+4]), 16, 32)
+				size, err := strconv.ParseInt(string(head[2:4]), 16, 32)
 				if err != nil {
-					log.Error(4, "%v", err)
+					log.Error(4, "parse size: %v", err)
 					return
 				}
 
@@ -185,7 +196,16 @@ func HTTP(ctx *context.Context) {
 					break
 				}
 
-				line := input[lastLine : lastLine+size]
+				line := make([]byte, size)
+				n, err = input.Read(line)
+				if err != nil {
+					log.Error(4, "read line: %v", err)
+					return
+				} else if n < int(size) {
+					log.Error(4, "didn't read enough bytes: expect %d got %d", size, n)
+					break
+				}
+
 				idx := bytes.IndexRune(line, '\000')
 				if idx > -1 {
 					line = line[:idx]
@@ -193,7 +213,7 @@ func HTTP(ctx *context.Context) {
 
 				fields := strings.Fields(string(line))
 				if len(fields) >= 3 {
-					oldCommitId := fields[0][4:]
+					oldCommitId := fields[0]
 					newCommitId := fields[1]
 					refFullName := fields[2]
 
@@ -211,7 +231,6 @@ func HTTP(ctx *context.Context) {
 					}
 
 				}
-				lastLine = lastLine + size
 			} else {
 				break
 			}
@@ -230,7 +249,7 @@ func HTTP(ctx *context.Context) {
 type serviceConfig struct {
 	UploadPack  bool
 	ReceivePack bool
-	OnSucceed   func(rpc string, input []byte)
+	OnSucceed   func(rpc string, input *os.File)
 }
 
 type serviceHandler struct {
@@ -347,10 +366,10 @@ func serviceRPC(h serviceHandler, service string) {
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-result", service))
 
 	var (
-		reqBody = h.r.Body
-		input   []byte
-		br      io.Reader
-		err     error
+		reqBody     = h.r.Body
+		tmpFilename string
+		br          io.Reader
+		err         error
 	)
 
 	// Handle GZIP.
@@ -364,29 +383,56 @@ func serviceRPC(h serviceHandler, service string) {
 	}
 
 	if h.cfg.OnSucceed != nil {
-		input, err = ioutil.ReadAll(reqBody)
+		tmpfile, err := ioutil.TempFile("", "gogs")
 		if err != nil {
-			log.GitLogger.Error(2, "fail to read request body: %v", err)
+			log.GitLogger.Error(2, "fail to create temporary file: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer os.Remove(tmpfile.Name())
 
-		br = bytes.NewReader(input)
+		_, err = io.Copy(tmpfile, reqBody)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to save request body: %v", err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		tmpfile.Close()
+
+		tmpFilename = tmpfile.Name()
+		tmpfile, err = os.Open(tmpFilename)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to open temporary file: %v", err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer tmpfile.Close()
+
+		br = tmpfile
 	} else {
 		br = reqBody
 	}
 
+	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	cmd.Dir = h.dir
 	cmd.Stdout = h.w
+	cmd.Stderr = &stderr
 	cmd.Stdin = br
 	if err := cmd.Run(); err != nil {
-		log.GitLogger.Error(2, "fail to serve RPC(%s): %v", service, err)
+		log.GitLogger.Error(2, "fail to serve RPC(%s): %v - %s", service, err, stderr)
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if h.cfg.OnSucceed != nil {
+		input, err := os.Open(tmpFilename)
+		if err != nil {
+			log.GitLogger.Error(2, "fail to open temporary file: %v", err)
+			h.w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer input.Close()
 		h.cfg.OnSucceed(service, input)
 	}
 }
@@ -479,6 +525,12 @@ func HTTPBackend(ctx *context.Context, cfg *serviceConfig) http.HandlerFunc {
 		for _, route := range routes {
 			r.URL.Path = strings.ToLower(r.URL.Path) // blue: In case some repo name has upper case name
 			if m := route.reg.FindStringSubmatch(r.URL.Path); m != nil {
+				if setting.Repository.DisableHTTPGit {
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte("Interacting with repositories by HTTP protocol is not allowed"))
+					return
+				}
+
 				if route.method != r.Method {
 					if r.Proto == "HTTP/1.1" {
 						w.WriteHeader(http.StatusMethodNotAllowed)

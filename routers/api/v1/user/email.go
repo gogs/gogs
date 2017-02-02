@@ -69,6 +69,7 @@ func DeleteEmail(ctx *context.APIContext, form api.CreateEmailOption) {
 	emails := make([]*models.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &models.EmailAddress{
+			UID:   ctx.User.ID,
 			Email: form.Emails[i],
 		}
 	}

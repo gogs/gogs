@@ -17,20 +17,22 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
-	SETTINGS_PROFILE      base.TplName = "user/settings/profile"
-	SETTINGS_AVATAR       base.TplName = "user/settings/avatar"
-	SETTINGS_PASSWORD     base.TplName = "user/settings/password"
-	SETTINGS_EMAILS       base.TplName = "user/settings/email"
-	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
-	SETTINGS_SOCIAL       base.TplName = "user/settings/social"
-	SETTINGS_APPLICATIONS base.TplName = "user/settings/applications"
-	SETTINGS_DELETE       base.TplName = "user/settings/delete"
-	NOTIFICATION          base.TplName = "user/notification"
-	SECURITY              base.TplName = "user/security"
+	SETTINGS_PROFILE       base.TplName = "user/settings/profile"
+	SETTINGS_AVATAR        base.TplName = "user/settings/avatar"
+	SETTINGS_PASSWORD      base.TplName = "user/settings/password"
+	SETTINGS_EMAILS        base.TplName = "user/settings/email"
+	SETTINGS_SSH_KEYS      base.TplName = "user/settings/sshkeys"
+	SETTINGS_SOCIAL        base.TplName = "user/settings/social"
+	SETTINGS_APPLICATIONS  base.TplName = "user/settings/applications"
+	SETTINGS_ORGANIZATIONS base.TplName = "user/settings/organizations"
+	SETTINGS_DELETE        base.TplName = "user/settings/delete"
+	NOTIFICATION           base.TplName = "user/notification"
+	SECURITY               base.TplName = "user/security"
 )
 
 func Settings(ctx *context.Context) {
@@ -189,7 +191,11 @@ func SettingsPasswordPost(ctx *context.Context, form auth.ChangePasswordForm) {
 		ctx.Flash.Error(ctx.Tr("form.password_not_match"))
 	} else {
 		ctx.User.Passwd = form.Password
-		ctx.User.Salt = models.GetUserSalt()
+		var err error
+		if ctx.User.Salt, err = models.GetUserSalt(); err != nil {
+			ctx.Handle(500, "UpdateUser", err)
+			return
+		}
 		ctx.User.EncodePasswd()
 		if err := models.UpdateUser(ctx.User); err != nil {
 			ctx.Handle(500, "UpdateUser", err)
@@ -261,7 +267,7 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 
 	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {
-		models.SendActivateEmailMail(ctx.Context, ctx.User, email)
+		mailer.SendActivateEmailMail(ctx.Context, models.NewMailerUser(ctx.User), email.Email)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
@@ -276,7 +282,10 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 }
 
 func DeleteEmail(ctx *context.Context) {
-	if err := models.DeleteEmailAddress(&models.EmailAddress{ID: ctx.QueryInt64("id")}); err != nil {
+	if err := models.DeleteEmailAddress(&models.EmailAddress{
+		ID:  ctx.QueryInt64("id"),
+		UID: ctx.User.ID,
+	}); err != nil {
 		ctx.Handle(500, "DeleteEmail", err)
 		return
 	}
@@ -405,7 +414,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 }
 
 func SettingsDeleteApplication(ctx *context.Context) {
-	if err := models.DeleteAccessTokenByID(ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteAccessTokenOfUserByID(ctx.User.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
@@ -413,6 +422,31 @@ func SettingsDeleteApplication(ctx *context.Context) {
 
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubUrl + "/user/settings/applications",
+	})
+}
+
+func SettingsOrganizations(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsOrganizations"] = true
+
+	orgs, err := models.GetOrgsByUserID(ctx.User.ID, true)
+	if err != nil {
+		ctx.Handle(500, "GetOrgsByUserID", err)
+		return
+	}
+	ctx.Data["Orgs"] = orgs
+
+	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
+}
+
+func SettingsLeaveOrganization(ctx *context.Context) {
+	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
+	if models.IsErrLastOrgOwner(err) {
+		ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/organizations",
 	})
 }
 

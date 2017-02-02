@@ -166,7 +166,7 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 }
 
 func DeleteHook(ctx *context.APIContext) {
-	if err := models.DeleteWebhookByRepoID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id")); err != nil {
+	if err := models.DeleteWebhookOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id")); err != nil {
 		ctx.Error(500, "DeleteWebhookByRepoID", err)
 		return
 	}

@@ -5,9 +5,9 @@
 		<div class="ui grid">
 			<div class="four wide column">
 				<div class="ui secondary vertical filter menu">
-					<a class="{{if eq .ViewType "all"}}ui basic blue button{{end}} item" href="{{.Link}}?repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
+					<a class="{{if eq .ViewType "your_repositories"}}ui basic blue button{{end}} item" href="{{.Link}}?type=your_repositories&repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
 						{{.i18n.Tr "home.issues.in_your_repos"}}
-						<strong class="ui right">{{.IssueStats.AllCount}}</strong>
+						<strong class="ui right">{{.IssueStats.YourReposCount}}</strong>
 					</a>
 					{{if not .ContextUser.IsOrganization}}
 						<a class="{{if eq .ViewType "assigned"}}ui basic blue button{{end}} item" href="{{.Link}}?type=assigned&repo={{.RepoID}}&sort={{$.SortType}}&state={{.State}}">
@@ -22,8 +22,14 @@
 					<div class="ui divider"></div>
 					{{range .Repos}}
 						<a class="{{if eq $.RepoID .ID}}ui basic blue button{{end}} repo name item" href="{{$.Link}}?type={{$.ViewType}}{{if not (eq $.RepoID .ID)}}&repo={{.ID}}{{end}}&sort={{$.SortType}}&state={{$.State}}">
-							<span class="text truncate">{{$.ContextUser.Name}}/{{.Name}}</span>
-							<div class="floating ui {{if $.IsShowClosed}}red{{else}}green{{end}} label">{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}</div>
+							<span class="text truncate">{{.FullName}}</span>
+							<div class="floating ui {{if $.IsShowClosed}}red{{else}}green{{end}} label">
+							{{if $.PageIsIssues}}
+								{{if $.IsShowClosed}}{{.NumClosedIssues}}{{else}}{{.NumOpenIssues}}{{end}}
+							{{else}}
+								{{if $.IsShowClosed}}{{.NumClosedPulls}}{{else}}{{.NumOpenPulls}}{{end}}
+							{{end}}
+							</div>
 						</a>
 					{{end}}
 				</div>
@@ -61,7 +67,7 @@
 					{{range .Issues}}
 						{{ $timeStr:= TimeSince .Created $.Lang }}
 						<li class="item">
-							<div class="ui label">{{if not $.RepoID}}{{.Repo.Name}}{{end}}#{{.Index}}</div>
+							<div class="ui label">{{if not $.RepoID}}{{.Repo.FullName}}{{end}}#{{.Index}}</div>
 							<a class="title has-emoji" href="{{AppSubUrl}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Title}}</a>
 
 							{{if .NumComments}}
@@ -83,17 +89,17 @@
 						{{if gt .TotalPages 1}}
 							<div class="center page buttons">
 								<div class="ui borderless pagination menu">
-									<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
+									<a class="{{if not .HasPrevious}}disabled{{end}} item" {{if .HasPrevious}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Previous}}"{{end}}>
 										<i class="left arrow icon"></i> {{$.i18n.Tr "repo.issues.previous"}}
 									</a>
 									{{range .Pages}}
 										{{if eq .Num -1}}
 											<a class="disabled item">...</a>
 										{{else}}
-											<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
+											<a class="{{if .IsCurrent}}active{{end}} item" {{if not .IsCurrent}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Num}}"{{end}}>{{.Num}}</a>
 										{{end}}
 									{{end}}
-									<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
+									<a class="{{if not .HasNext}}disabled{{end}} item" {{if .HasNext}}href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}&page={{.Next}}"{{end}}>
 										{{$.i18n.Tr "repo.issues.next"}} <i class="icon right arrow"></i>
 									</a>
 								</div>

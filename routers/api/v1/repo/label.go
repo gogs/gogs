@@ -32,11 +32,11 @@ func GetLabel(ctx *context.APIContext) {
 		label *models.Label
 		err   error
 	)
-	strID := ctx.Params(":id")
+	strID := ctx.ParamsInt64(":id")
 	if intID, err2 := strconv.ParseInt(strID, 10, 64); err2 != nil {
-		label, err = models.GetLabelInRepoByName(ctx.Repo.Repository.ID, strID)
+		label, err = models.GetLabelOfRepoByName(ctx.Repo.Repository.ID, strID)
 	} else {
-		label, err = models.GetLabelInRepoByID(ctx.Repo.Repository.ID, intID)
+		label, err = models.GetLabelOfRepoByID(ctx.Repo.Repository.ID, intID)
 	}
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
@@ -74,7 +74,7 @@ func EditLabel(ctx *context.APIContext, form api.EditLabelOption) {
 		return
 	}
 
-	label, err := models.GetLabelInRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+	label, err := models.GetLabelOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
 			ctx.Status(404)
