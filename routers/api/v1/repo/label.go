@@ -32,7 +32,7 @@ func GetLabel(ctx *context.APIContext) {
 		label *models.Label
 		err   error
 	)
-	strID := ctx.ParamsInt64(":id")
+	strID := ctx.Params(":id")
 	if intID, err2 := strconv.ParseInt(strID, 10, 64); err2 != nil {
 		label, err = models.GetLabelOfRepoByName(ctx.Repo.Repository.ID, strID)
 	} else {
