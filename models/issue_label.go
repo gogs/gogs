@@ -151,9 +151,9 @@ func GetLabelByID(id int64) (*Label, error) {
 	return getLabelOfRepoByID(x, 0, id)
 }
 
-// GetLabelInRepoByID returns a label by ID in given repository.
-func GetLabelOnRepoByName(repoID int64, labelName string) (*Label, error) {
-	return getLabelOnRepoByName(x, repoID, labelName)
+// GetLabelOfRepoByID returns a label by ID in given repository.
+func GetLabelOfRepoByName(repoID int64, labelName string) (*Label, error) {
+	return getLabelOfRepoByName(x, repoID, labelName)
 }
 
 // GetLabelOfRepoByID returns a label by ID in given repository.
