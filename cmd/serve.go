@@ -62,19 +62,6 @@ func parseCmd(cmd string) (string, string) {
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
 }
 
-func getKey(cmdKey string) *models.PublicKey {
-	keys := strings.Split(cmdKey, "-")
-	if len(keys) != 2 {
-		fail("Key ID format error", "Invalid key argument: %s", cmdKey)
-	}
-
-	key, err := models.GetPublicKeyByID(com.StrTo(keys[1]).MustInt64())
-	if err != nil {
-		fail("Invalid key ID", "Invalid key ID[%s]: %v", cmdKey, err)
-	}
-	return key
-}
-
 func checkDeployKey(key *models.PublicKey, repo *models.Repository) {
 	// Check if this deploy key belongs to current repository.
 	if !models.HasDeployKey(key.ID, repo.ID) {
@@ -226,16 +213,17 @@ func runServ(c *cli.Context) error {
 		fail("mirror repository is read-only", "")
 	}
 
-	// Allow anonymous clone for public repositories.
-	var (
-		keyID int64
-		user  *models.User
-	)
-	key := getKey(c.Args()[0])
-	keyID = key.ID
+	// Allow anonymous (user is nil) clone for public repositories.
+	var user *models.User
+
+	key, err := models.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
+	if err != nil {
+		fail("Invalid key ID", "Invalid key ID [%s]: %v", c.Args()[0], err)
+	}
+
 	if requestedMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
 		// Check deploy key or user key.
-		if key.Type == models.KEY_TYPE_DEPLOY {
+		if key.IsDeployKey() {
 			if key.Mode < requestedMode {
 				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}
@@ -243,7 +231,7 @@ func runServ(c *cli.Context) error {
 		} else {
 			user, err = models.GetUserByKeyID(key.ID)
 			if err != nil {
-				fail("internal error", "Failed to get user by key ID(%d): %v", keyID, err)
+				fail("internal error", "Failed to get user by key ID(%d): %v", key.ID, err)
 			}
 
 			mode, err := models.AccessLevel(user, repo)
@@ -259,13 +247,12 @@ func runServ(c *cli.Context) error {
 					user.Name, requestedMode, repoPath)
 			}
 		}
-	} else  {
-		// if public and read ...
+	} else {
 		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
 		// A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
 		// we should give read access only in repositories where this deploy key is in use. In other case, a server
-		// or system  using an active deploy key can get read access to all the repositories in a Gogs service.
-		if key.Type == models.KEY_TYPE_DEPLOY && setting.Service.RequireSignInView {
+		// or system using an active deploy key can get read access to all the repositories in a Gogs service.
+		if key.IsDeployKey() && setting.Service.RequireSignInView {
 			checkDeployKey(key, repo)
 		}
 	}
@@ -298,10 +285,10 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Update user key activity.
-	if keyID > 0 {
-		key, err := models.GetPublicKeyByID(keyID)
+	if key.ID > 0 {
+		key, err := models.GetPublicKeyByID(key.ID)
 		if err != nil {
-			fail("Internal error", "GetPublicKeyById: %v", err)
+			fail("Internal error", "GetPublicKeyByID: %v", err)
 		}
 
 		key.Updated = time.Now()

@@ -88,6 +88,11 @@ func (key *PublicKey) AuthorizedString() string {
 	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, key.ID, setting.CustomConf, key.Content)
 }
 
+// IsDeployKey returns true if the public key is used as deploy key.
+func (key *PublicKey) IsDeployKey() bool {
+	return key.Type == KEY_TYPE_DEPLOY
+}
+
 func extractTypeFromBase64Key(key string) (string, error) {
 	b, err := base64.StdEncoding.DecodeString(key)
 	if err != nil || len(b) < 4 {
