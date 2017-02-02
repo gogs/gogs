@@ -260,15 +260,15 @@ func runServ(c *cli.Context) error {
 			}
 		}
 	} else  {
-                // if public and read ...
-                // Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
-                // A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
-                // we should give read access only in repositories where this deploy key is in use. In other case, a server
-                // or system  using an active deploy key can get read access to all the repositories in a Gogs service.
+		// if public and read ...
+		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
+		// A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
+		// we should give read access only in repositories where this deploy key is in use. In other case, a server
+		// or system  using an active deploy key can get read access to all the repositories in a Gogs service.
 		if key.Type == models.KEY_TYPE_DEPLOY && setting.Service.RequireSignInView {
 			checkDeployKey(key, repo)
 		}
-        }
+	}
 
 	uuid := gouuid.NewV4().String()
 	os.Setenv("uuid", uuid)
