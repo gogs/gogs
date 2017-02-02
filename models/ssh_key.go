@@ -84,13 +84,13 @@ func (k *PublicKey) OmitEmail() string {
 }
 
 // AuthorizedString returns formatted public key string for authorized_keys file.
-func (key *PublicKey) AuthorizedString() string {
-	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, key.ID, setting.CustomConf, key.Content)
+func (k *PublicKey) AuthorizedString() string {
+	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, k.ID, setting.CustomConf, k.Content)
 }
 
 // IsDeployKey returns true if the public key is used as deploy key.
-func (key *PublicKey) IsDeployKey() bool {
-	return key.Type == KEY_TYPE_DEPLOY
+func (k *PublicKey) IsDeployKey() bool {
+	return k.Type == KEY_TYPE_DEPLOY
 }
 
 func extractTypeFromBase64Key(key string) (string, error) {
