@@ -7,8 +7,9 @@ package log
 import (
 	"encoding/json"
 	"log"
-	"os"
 	"runtime"
+
+	"github.com/mattn/go-colorable"
 )
 
 type Brush func(string) string
@@ -40,7 +41,7 @@ type ConsoleWriter struct {
 // create ConsoleWriter returning as LoggerInterface.
 func NewConsole() LoggerInterface {
 	return &ConsoleWriter{
-		lg:    log.New(os.Stdout, "", log.Ldate|log.Ltime),
+		lg:    log.New(colorable.NewColorableStdout(), "", log.Ldate|log.Ltime),
 		Level: TRACE,
 	}
 }
@@ -53,11 +54,8 @@ func (cw *ConsoleWriter) WriteMsg(msg string, skip, level int) error {
 	if cw.Level > level {
 		return nil
 	}
-	if runtime.GOOS == "windows" {
-		cw.lg.Println(msg)
-	} else {
-		cw.lg.Println(colors[level](msg))
-	}
+
+	cw.lg.Println(colors[level](msg))
 	return nil
 }
 
