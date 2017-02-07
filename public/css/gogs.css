@@ -1328,6 +1328,9 @@ footer .ui.language .menu {
 .repository.file.list #file-content #ipython-notebook .nb-cell {
   position: relative;
 }
+.repository.file.list #file-content #ipython-notebook .nb-cell.nb-heading-cell {
+  margin-top: 0.5em;
+}
 .repository.file.list #file-content #ipython-notebook .nb-raw-cell {
   white-space: pre-wrap;
   background-color: #f5f2f0;
@@ -1353,6 +1356,7 @@ footer .ui.language .menu {
   padding: 5px 10px;
 }
 .repository.file.list #file-content #ipython-notebook .nb-input pre code {
+  min-height: 18px;
   line-height: 18px;
   font-size: 14px;
 }
@@ -1382,7 +1386,7 @@ footer .ui.language .menu {
   border-collapse: collapse;
 }
 .repository.file.list #file-content #ipython-notebook .nb-markdown-cell {
-  background-color: #eee;
+  margin-top: 10px;
   margin-right: 10px;
   padding: 10px;
 }
