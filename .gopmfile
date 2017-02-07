@@ -3,7 +3,7 @@ path = github.com/gogits/gogs
 
 [deps]
 github.com/bradfitz/gomemcache = commit:2fafb84
-github.com/urfave/cli = commit:47a988
+github.com/urfave/cli = commit:347a988
 github.com/go-macaron/binding = commit:4892016
 github.com/go-macaron/cache = commit:5617353
 github.com/go-macaron/captcha = commit:8aa5919
