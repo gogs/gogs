@@ -1,1 +1,0 @@
-[the `]` character](/url)
