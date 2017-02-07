@@ -156,7 +156,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		ctx.Data["IsMarkdown"] = isMarkdown
 		ctx.Data["ReadmeExist"] = isMarkdown && markdown.IsReadmeFile(blob.Name())
 
-		ctx.Data["IsIPyNB"] = strings.HasSuffix(blob.Name(), ".ipynb")
+		ctx.Data["IsIPythonNotebook"] = strings.HasSuffix(blob.Name(), ".ipynb")
 
 		if isMarkdown {
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))

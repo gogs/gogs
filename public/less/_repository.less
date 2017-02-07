@@ -252,7 +252,8 @@
 			}
 
 			#ipython-notebook {
-				margin-left: 80px;
+				margin-left: 95px;
+				padding-top: 1px;
 
 				.nb-notebook {
 					line-height: 1.5;    
@@ -272,23 +273,6 @@
 					margin-top: 0.5em;
 				}
 
-				.nb-output table {
-					border: 1px solid #000;
-					border-collapse: collapse;
-				}
-
-				.nb-output th {
-					font-weight: bold;
-				}
-
-				.nb-output th, .nb-output td {
-					border: 1px solid #000;
-					padding: 0.25em;    
-					text-align: left;
-					vertical-align: middle;
-					border-collapse: collapse;
-				}
-
 				.nb-cell {
 					position: relative;    
 				}
@@ -301,18 +285,8 @@
 					margin: .5em 0;
 				}
 
-				.nb-output {
-					min-height: 1em;    
-					width: 100%;
-					overflow-x: scroll;
-					border-right: 1px dotted #CCC;
-				}
-
-				.nb-output img {
-					max-width: 100%;    
-				}
-
-				.nb-output:before, .nb-input:before {
+				.nb-input:before, 
+				.nb-output:before {
 					position: absolute;    
 					font-family: monospace;
 					color: #999;
@@ -320,12 +294,49 @@
 					width: 7em;
 					text-align: right;
 				}
+				.nb-input {
+					&:before {
+						content: "In [" attr(data-prompt-number) "]:";
+					}
 
-				.nb-input:before {
-					content: "In [" attr(data-prompt-number) "]:";
+					pre {
+						background-color: #f7f7f7;
+						margin-right: 10px;
+						padding: 5px 10px;
+
+						code {
+							line-height: 18px;
+							font-size: 14px;
+						}
+					}
 				}
-				.nb-output:before {
-					content: "Out [" attr(data-prompt-number) "]:";
+				.nb-output{
+					&:before {
+						content: "Out [" attr(data-prompt-number) "]:";
+					}
+					
+					pre {
+						padding: 5px 10px;
+						font-size: 14px;
+					}
+					img {
+						max-width: 100%;    
+					}
+				  table {
+						border: 1px solid #000;
+						border-collapse: collapse;
+					}
+				  th {
+						font-weight: bold;
+					}
+					th,
+					td {
+						border: 1px solid #000;
+						padding: 0.25em;    
+						text-align: left;
+						vertical-align: middle;
+						border-collapse: collapse;
+					}
 				}
 
 				.nb-markdown-cell {
