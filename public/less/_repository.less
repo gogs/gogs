@@ -256,7 +256,7 @@
 				padding-top: 1px;
 
 				.nb-notebook {
-					line-height: 1.5;    
+					line-height: 1.5;
 				}
 
 				.nb-stdout, .nb-stderr {
@@ -275,6 +275,10 @@
 
 				.nb-cell {
 					position: relative;    
+
+					&.nb-heading-cell {
+						margin-top: 0.5em;
+					}
 				}
 
 				.nb-raw-cell {
@@ -305,6 +309,7 @@
 						padding: 5px 10px;
 
 						code {
+							min-height: 18px;
 							line-height: 18px;
 							font-size: 14px;
 						}
@@ -340,7 +345,7 @@
 				}
 
 				.nb-markdown-cell {
-					background-color: #eee;
+					margin-top: 10px;
 					margin-right: 10px;
 					padding: 10px;
 				}
