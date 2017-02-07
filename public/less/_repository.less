@@ -251,6 +251,95 @@
 				}
 			}
 
+			#ipython-notebook {
+				margin-left: 80px;
+
+				.nb-notebook {
+					line-height: 1.5;    
+				}
+
+				.nb-stdout, .nb-stderr {
+					white-space: pre-wrap;
+					margin: 1em 0;
+					padding: 0.1em 0.5em;
+				}
+
+				.nb-stderr {
+					background-color: #FAA;
+				}
+
+				.nb-cell + .nb-cell {
+					margin-top: 0.5em;
+				}
+
+				.nb-output table {
+					border: 1px solid #000;
+					border-collapse: collapse;
+				}
+
+				.nb-output th {
+					font-weight: bold;
+				}
+
+				.nb-output th, .nb-output td {
+					border: 1px solid #000;
+					padding: 0.25em;    
+					text-align: left;
+					vertical-align: middle;
+					border-collapse: collapse;
+				}
+
+				.nb-cell {
+					position: relative;    
+				}
+
+				.nb-raw-cell {
+					white-space: pre-wrap;
+					background-color: #f5f2f0;
+					font-family: Consolas, Monaco, 'Andale Mono', monospace;
+					padding: 1em;
+					margin: .5em 0;
+				}
+
+				.nb-output {
+					min-height: 1em;    
+					width: 100%;
+					overflow-x: scroll;
+					border-right: 1px dotted #CCC;
+				}
+
+				.nb-output img {
+					max-width: 100%;    
+				}
+
+				.nb-output:before, .nb-input:before {
+					position: absolute;    
+					font-family: monospace;
+					color: #999;
+					left: -7.5em;
+					width: 7em;
+					text-align: right;
+				}
+
+				.nb-input:before {
+					content: "In [" attr(data-prompt-number) "]:";
+				}
+				.nb-output:before {
+					content: "Out [" attr(data-prompt-number) "]:";
+				}
+
+				.nb-markdown-cell {
+					background-color: #eee;
+					margin-left: -80px;
+					padding: 11.5px 10px 19.5px 80px;
+				}
+
+				// Fix pandas dataframe formatting
+				div[style="max-height:1000px;max-width:1500px;overflow:auto;"] {
+					max-height: none !important;    
+				}
+			}
+
 			.plain-text {
 				font-size: 14px;
 				padding: 10px 15px;

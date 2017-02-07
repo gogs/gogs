@@ -21,6 +21,12 @@
 	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
 	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-4.3.0/octicons.min.css">
 
+	<!-- notebook.js for rendering ipython notebooks and marked.js for rendering markdown in notebooks -->
+	{{if .IsIPyNB }}
+		<script src="{{AppSubUrl}}/plugins/notebookjs-0.2.6/notebook.min.js"></script>
+		<script src="{{AppSubUrl}}/plugins/marked-0.3.6/marked.min.js"></script>
+	{{end}}
+
 	{{if .RequireSimpleMDE}}
 		<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.css">
 		<script src="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
