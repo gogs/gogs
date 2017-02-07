@@ -812,7 +812,7 @@ footer .ui.language .menu {
   border: solid 1px #ccc;
   border-bottom-color: #bbb;
   border-radius: 3px;
-  box-shadow: inset 0 -1px 0 #bbbbbb;
+  box-shadow: inset 0 -1px 0 #bbb;
 }
 .markdown:not(code) input[type="checkbox"] {
   vertical-align: middle !important;
@@ -883,7 +883,7 @@ footer .ui.language .menu {
 }
 .install form label {
   text-align: right;
-  width: 320px;
+  width: 320px !important;
 }
 .install form input {
   width: 35% !important;
@@ -892,7 +892,7 @@ footer .ui.language .menu {
   text-align: left;
 }
 .install form .field .help {
-  margin-left: 335px;
+  margin-left: 335px !important;
 }
 .install form .field.optional .title {
   margin-left: 38%;
@@ -928,18 +928,18 @@ footer .ui.language .menu {
   text-align: center;
 }
 #create-page-form form .header {
-  padding-left: 280px;
+  padding-left: 280px !important;
 }
 #create-page-form form .inline.field > label {
   text-align: right;
-  width: 250px;
+  width: 250px !important;
   word-wrap: break-word;
 }
 #create-page-form form .help {
-  margin-left: 265px;
+  margin-left: 265px !important;
 }
 #create-page-form form .optional .title {
-  margin-left: 250px;
+  margin-left: 250px !important;
 }
 #create-page-form form input,
 #create-page-form form textarea {
@@ -965,7 +965,7 @@ footer .ui.language .menu {
 .user.reset.password form .header,
 .user.signin form .header,
 .user.signup form .header {
-  padding-left: 280px;
+  padding-left: 280px !important;
 }
 .user.activate form .inline.field > label,
 .user.forgot.password form .inline.field > label,
@@ -973,7 +973,7 @@ footer .ui.language .menu {
 .user.signin form .inline.field > label,
 .user.signup form .inline.field > label {
   text-align: right;
-  width: 250px;
+  width: 250px !important;
   word-wrap: break-word;
 }
 .user.activate form .help,
@@ -981,14 +981,14 @@ footer .ui.language .menu {
 .user.reset.password form .help,
 .user.signin form .help,
 .user.signup form .help {
-  margin-left: 265px;
+  margin-left: 265px !important;
 }
 .user.activate form .optional .title,
 .user.forgot.password form .optional .title,
 .user.reset.password form .optional .title,
 .user.signin form .optional .title,
 .user.signup form .optional .title {
-  margin-left: 250px;
+  margin-left: 250px !important;
 }
 .user.activate form input,
 .user.forgot.password form input,
@@ -1014,14 +1014,14 @@ footer .ui.language .menu {
 .user.reset.password form .header,
 .user.signin form .header,
 .user.signup form .header {
-  padding-left: 230px;
+  padding-left: 230px !important;
 }
 .user.activate form .inline.field > label,
 .user.forgot.password form .inline.field > label,
 .user.reset.password form .inline.field > label,
 .user.signin form .inline.field > label,
 .user.signup form .inline.field > label {
-  width: 200px;
+  width: 200px !important;
 }
 .repository.new.repo form,
 .repository.new.migrate form,
@@ -1037,24 +1037,24 @@ footer .ui.language .menu {
 .repository.new.repo form .header,
 .repository.new.migrate form .header,
 .repository.new.fork form .header {
-  padding-left: 280px;
+  padding-left: 280px !important;
 }
 .repository.new.repo form .inline.field > label,
 .repository.new.migrate form .inline.field > label,
 .repository.new.fork form .inline.field > label {
   text-align: right;
-  width: 250px;
+  width: 250px !important;
   word-wrap: break-word;
 }
 .repository.new.repo form .help,
 .repository.new.migrate form .help,
 .repository.new.fork form .help {
-  margin-left: 265px;
+  margin-left: 265px !important;
 }
 .repository.new.repo form .optional .title,
 .repository.new.migrate form .optional .title,
 .repository.new.fork form .optional .title {
-  margin-left: 250px;
+  margin-left: 250px !important;
 }
 .repository.new.repo form input,
 .repository.new.migrate form input,
@@ -1083,7 +1083,7 @@ footer .ui.language .menu {
   width: 50%!important;
 }
 .repository.new.repo .ui.form #auto-init {
-  margin-left: 265px;
+  margin-left: 265px !important;
 }
 .new.webhook form .help {
   margin-left: 25px;
@@ -1307,7 +1307,8 @@ footer .ui.language .menu {
   margin-bottom: -5px;
 }
 .repository.file.list #file-content #ipython-notebook {
-  margin-left: 80px;
+  margin-left: 95px;
+  padding-top: 1px;
 }
 .repository.file.list #file-content #ipython-notebook .nb-notebook {
   line-height: 1.5;
@@ -1324,6 +1325,47 @@ footer .ui.language .menu {
 .repository.file.list #file-content #ipython-notebook .nb-cell + .nb-cell {
   margin-top: 0.5em;
 }
+.repository.file.list #file-content #ipython-notebook .nb-cell {
+  position: relative;
+}
+.repository.file.list #file-content #ipython-notebook .nb-raw-cell {
+  white-space: pre-wrap;
+  background-color: #f5f2f0;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  padding: 1em;
+  margin: .5em 0;
+}
+.repository.file.list #file-content #ipython-notebook .nb-input:before,
+.repository.file.list #file-content #ipython-notebook .nb-output:before {
+  position: absolute;
+  font-family: monospace;
+  color: #999;
+  left: -7.5em;
+  width: 7em;
+  text-align: right;
+}
+.repository.file.list #file-content #ipython-notebook .nb-input:before {
+  content: "In [" attr(data-prompt-number) "]:";
+}
+.repository.file.list #file-content #ipython-notebook .nb-input pre {
+  background-color: #f7f7f7;
+  margin-right: 10px;
+  padding: 5px 10px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-input pre code {
+  line-height: 18px;
+  font-size: 14px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output:before {
+  content: "Out [" attr(data-prompt-number) "]:";
+}
+.repository.file.list #file-content #ipython-notebook .nb-output pre {
+  padding: 5px 10px;
+  font-size: 14px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output img {
+  max-width: 100%;
+}
 .repository.file.list #file-content #ipython-notebook .nb-output table {
   border: 1px solid #000;
   border-collapse: collapse;
@@ -1338,40 +1380,6 @@ footer .ui.language .menu {
   text-align: left;
   vertical-align: middle;
   border-collapse: collapse;
-}
-.repository.file.list #file-content #ipython-notebook .nb-cell {
-  position: relative;
-}
-.repository.file.list #file-content #ipython-notebook .nb-raw-cell {
-  white-space: pre-wrap;
-  background-color: #f5f2f0;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  padding: 1em;
-  margin: .5em 0;
-}
-.repository.file.list #file-content #ipython-notebook .nb-output {
-  min-height: 1em;
-  width: 100%;
-  overflow-x: scroll;
-  border-right: 1px dotted #CCC;
-}
-.repository.file.list #file-content #ipython-notebook .nb-output img {
-  max-width: 100%;
-}
-.repository.file.list #file-content #ipython-notebook .nb-output:before,
-.repository.file.list #file-content #ipython-notebook .nb-input:before {
-  position: absolute;
-  font-family: monospace;
-  color: #999;
-  left: -7.5em;
-  width: 7em;
-  text-align: right;
-}
-.repository.file.list #file-content #ipython-notebook .nb-input:before {
-  content: "In [" attr(data-prompt-number) "]:";
-}
-.repository.file.list #file-content #ipython-notebook .nb-output:before {
-  content: "Out [" attr(data-prompt-number) "]:";
 }
 .repository.file.list #file-content #ipython-notebook .nb-markdown-cell {
   background-color: #eee;
@@ -2614,18 +2622,18 @@ footer .ui.language .menu {
   text-align: center;
 }
 .organization.new.org form .header {
-  padding-left: 280px;
+  padding-left: 280px !important;
 }
 .organization.new.org form .inline.field > label {
   text-align: right;
-  width: 250px;
+  width: 250px !important;
   word-wrap: break-word;
 }
 .organization.new.org form .help {
-  margin-left: 265px;
+  margin-left: 265px !important;
 }
 .organization.new.org form .optional .title {
-  margin-left: 250px;
+  margin-left: 250px !important;
 }
 .organization.new.org form input,
 .organization.new.org form textarea {

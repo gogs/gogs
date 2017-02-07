@@ -36,12 +36,11 @@
 		{{end}}
 	</h4>
 	<div class="ui attached table segment">
-		<div class="file-view {{if .IsMarkdown}}markdown{{else if .ReadmeInList}}plain-text{{else if .IsTextFile}}code-view{{end}} has-emoji">
+		<div id="{{if .IsIPythonNotebook}}ipython-notebook{{end}}" class="file-view {{if .IsMarkdown}}markdown{{else if .ReadmeInList}}plain-text{{else if .IsIPythonNotebook}}ipython-notebook1{{else if and .IsTextFile}}code-view{{end}} has-emoji">
 			{{if or .IsMarkdown .ReadmeInList}}
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
-			{{else if .IsIPyNB}}
+			{{else if .IsIPythonNotebook}}
 				{{if .FileContent}}
-					<div id="ipython-notebook"></div>
 					<script>
 						var rendered = null;
 						$.getJSON("{{.RawFileLink}}", null, function(notebook_json) {

@@ -22,7 +22,7 @@
 	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-4.3.0/octicons.min.css">
 
 	<!-- notebook.js for rendering ipython notebooks and marked.js for rendering markdown in notebooks -->
-	{{if .IsIPyNB }}
+	{{if .IsIPythonNotebook }}
 		<script src="{{AppSubUrl}}/plugins/notebookjs-0.2.6/notebook.min.js"></script>
 		<script src="{{AppSubUrl}}/plugins/marked-0.3.6/marked.min.js"></script>
 	{{end}}
