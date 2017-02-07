@@ -1383,8 +1383,8 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content #ipython-notebook .nb-markdown-cell {
   background-color: #eee;
-  margin-left: -80px;
-  padding: 11.5px 10px 19.5px 80px;
+  margin-right: 10px;
+  padding: 10px;
 }
 .repository.file.list #file-content #ipython-notebook div[style="max-height:1000px;max-width:1500px;overflow:auto;"] {
   max-height: none !important;
