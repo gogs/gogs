@@ -41,6 +41,7 @@ var CmdServ = cli.Command{
 
 func setup(logPath string) {
 	setting.NewContext()
+	setting.NewService()
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
 
 	models.LoadConfigs()
@@ -59,6 +60,24 @@ func parseCmd(cmd string) (string, string) {
 		return "", ""
 	}
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
+}
+
+func checkDeployKey(key *models.PublicKey, repo *models.Repository) {
+	// Check if this deploy key belongs to current repository.
+	if !models.HasDeployKey(key.ID, repo.ID) {
+		fail("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
+	}
+
+	// Update deploy key activity.
+	deployKey, err := models.GetDeployKeyByRepo(key.ID, repo.ID)
+	if err != nil {
+		fail("Internal error", "GetDeployKey: %v", err)
+	}
+
+	deployKey.Updated = time.Now()
+	if err = models.UpdateDeployKey(deployKey); err != nil {
+		fail("Internal error", "UpdateDeployKey: %v", err)
+	}
 }
 
 var (
@@ -194,47 +213,25 @@ func runServ(c *cli.Context) error {
 		fail("mirror repository is read-only", "")
 	}
 
-	// Allow anonymous clone for public repositories.
-	var (
-		keyID int64
-		user  *models.User
-	)
+	// Allow anonymous (user is nil) clone for public repositories.
+	var user *models.User
+
+	key, err := models.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
+	if err != nil {
+		fail("Invalid key ID", "Invalid key ID [%s]: %v", c.Args()[0], err)
+	}
+
 	if requestedMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
-		keys := strings.Split(c.Args()[0], "-")
-		if len(keys) != 2 {
-			fail("Key ID format error", "Invalid key argument: %s", c.Args()[0])
-		}
-
-		key, err := models.GetPublicKeyByID(com.StrTo(keys[1]).MustInt64())
-		if err != nil {
-			fail("Invalid key ID", "Invalid key ID[%s]: %v", c.Args()[0], err)
-		}
-		keyID = key.ID
-
 		// Check deploy key or user key.
-		if key.Type == models.KEY_TYPE_DEPLOY {
+		if key.IsDeployKey() {
 			if key.Mode < requestedMode {
 				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}
-			// Check if this deploy key belongs to current repository.
-			if !models.HasDeployKey(key.ID, repo.ID) {
-				fail("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
-			}
-
-			// Update deploy key activity.
-			deployKey, err := models.GetDeployKeyByRepo(key.ID, repo.ID)
-			if err != nil {
-				fail("Internal error", "GetDeployKey: %v", err)
-			}
-
-			deployKey.Updated = time.Now()
-			if err = models.UpdateDeployKey(deployKey); err != nil {
-				fail("Internal error", "UpdateDeployKey: %v", err)
-			}
+			checkDeployKey(key, repo)
 		} else {
 			user, err = models.GetUserByKeyID(key.ID)
 			if err != nil {
-				fail("internal error", "Failed to get user by key ID(%d): %v", keyID, err)
+				fail("internal error", "Failed to get user by key ID(%d): %v", key.ID, err)
 			}
 
 			mode, err := models.AccessLevel(user, repo)
@@ -249,6 +246,14 @@ func runServ(c *cli.Context) error {
 					"User %s does not have level %v access to repository %s",
 					user.Name, requestedMode, repoPath)
 			}
+		}
+	} else {
+		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
+		// A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
+		// we should give read access only in repositories where this deploy key is in use. In other case, a server
+		// or system using an active deploy key can get read access to all the repositories in a Gogs service.
+		if key.IsDeployKey() && setting.Service.RequireSignInView {
+			checkDeployKey(key, repo)
 		}
 	}
 
@@ -280,10 +285,10 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Update user key activity.
-	if keyID > 0 {
-		key, err := models.GetPublicKeyByID(keyID)
+	if key.ID > 0 {
+		key, err := models.GetPublicKeyByID(key.ID)
 		if err != nil {
-			fail("Internal error", "GetPublicKeyById: %v", err)
+			fail("Internal error", "GetPublicKeyByID: %v", err)
 		}
 
 		key.Updated = time.Now()

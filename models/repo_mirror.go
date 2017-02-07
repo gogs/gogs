@@ -13,6 +13,8 @@ import (
 	"github.com/go-xorm/xorm"
 	"gopkg.in/ini.v1"
 
+	"github.com/gogits/git-module"
+
 	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
@@ -104,6 +106,12 @@ func (m *Mirror) Address() string {
 	return HandleCloneUserCredentials(m.address, false)
 }
 
+// MosaicsAddress returns mirror address from Git repository config with credentials under mosaics.
+func (m *Mirror) MosaicsAddress() string {
+	m.readAddress()
+	return HandleCloneUserCredentials(m.address, true)
+}
+
 // FullAddress returns mirror address from Git repository config.
 func (m *Mirror) FullAddress() string {
 	m.readAddress()
@@ -128,11 +136,23 @@ func (m *Mirror) runSync() bool {
 	wikiPath := m.Repo.WikiPath()
 	timeout := time.Duration(setting.Git.Timeout.Mirror) * time.Second
 
+	// Do a fast-fail testing against on repository URL to ensure it is accessible under
+	// good condition to prevent long blocking on URL resolution without syncing anything.
+	if !git.IsRepoURLAccessible(git.NetworkOptions{
+		URL:     m.FullAddress(),
+		Timeout: 10 * time.Second,
+	}) {
+		desc := fmt.Sprintf("Mirror repository URL is not accessible: %s", m.MosaicsAddress())
+		if err := CreateRepositoryNotice(desc); err != nil {
+			log.Error(4, "CreateRepositoryNotice: %v", err)
+		}
+		return false
+	}
+
 	gitArgs := []string{"remote", "update"}
 	if m.EnablePrune {
 		gitArgs = append(gitArgs, "--prune")
 	}
-
 	if _, stderr, err := process.ExecDir(
 		timeout, repoPath, fmt.Sprintf("Mirror.runSync: %s", repoPath),
 		"git", gitArgs...); err != nil {

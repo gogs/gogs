@@ -186,6 +186,7 @@ type Repository struct {
 	ExternalWikiURL       string
 	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
 	EnableExternalTracker bool
+	ExternalTrackerURL    string
 	ExternalTrackerFormat string
 	ExternalTrackerStyle  string
 	ExternalMetas         map[string]string `xorm:"-"`
@@ -599,7 +600,9 @@ func wikiRemoteURL(remote string) string {
 	remote = strings.TrimSuffix(remote, ".git")
 	for _, suffix := range commonWikiURLSuffixes {
 		wikiURL := remote + suffix
-		if git.IsRepoURLAccessible(wikiURL) {
+		if git.IsRepoURLAccessible(git.NetworkOptions{
+			URL: wikiURL,
+		}) {
 			return wikiURL
 		}
 	}

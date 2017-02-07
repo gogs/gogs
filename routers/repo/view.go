@@ -213,6 +213,15 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 	}
 }
 
+func setEditorconfigIfExists(ctx *context.Context) {
+	ec, err := ctx.Repo.GetEditorconfig()
+	if err != nil && !git.IsErrNotExist(err) {
+		log.Error(4, "Fail to get '.editorconfig' [%d]: %v", ctx.Repo.Repository.ID, err)
+		return
+	}
+	ctx.Data["Editorconfig"] = ec
+}
+
 func Home(ctx *context.Context) {
 	title := ctx.Repo.Repository.Owner.Name + "/" + ctx.Repo.Repository.Name
 	if len(ctx.Repo.Repository.Description) > 0 {
@@ -246,12 +255,10 @@ func Home(ctx *context.Context) {
 		return
 	}
 
-	ec, err := ctx.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
-		ctx.Handle(500, "Repo.GetEditorconfig", err)
+	setEditorconfigIfExists(ctx)
+	if ctx.Written() {
 		return
 	}
-	ctx.Data["Editorconfig"] = ec
 
 	var treeNames []string
 	paths := make([]string, 0, 5)
