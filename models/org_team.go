@@ -26,6 +26,16 @@ type Team struct {
 	NumMembers  int
 }
 
+func (t *Team) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "num_repos":
+		// LEGACY [0.11]: this is backward compatibility bug fix for https://github.com/gogits/gogs/issues/3671
+		if t.NumRepos < 0 {
+			t.NumRepos = 0
+		}
+	}
+}
+
 // IsOwnerTeam returns true if team is owner team.
 func (t *Team) IsOwnerTeam() bool {
 	return t.Name == OWNER_TEAM

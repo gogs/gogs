@@ -74,3 +74,7 @@ fixme:
 
 todo:
 	grep -rnw "TODO" routers models modules
+
+# Legacy code should be remove by the time of release
+legacy:
+	grep -rnw "LEGACY" routers models modules
