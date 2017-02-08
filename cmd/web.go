@@ -525,6 +525,10 @@ func runWeb(ctx *cli.Context) error {
 			ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
 		})
 
+		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
+		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
+		// e.g. /org1/test-repo/compare/master...org1:develop
+		// which should be /org1/test-repo/compare/master...develop
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
 
