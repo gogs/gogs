@@ -55,7 +55,6 @@ var (
 	}
 
 	EnableSQLite3 bool
-	EnableTiDB    bool
 )
 
 func init() {
@@ -146,14 +145,6 @@ func getEngine() (*xorm.Engine, error) {
 			return nil, fmt.Errorf("Fail to create directories: %v", err)
 		}
 		connStr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
-	case "tidb":
-		if !EnableTiDB {
-			return nil, errors.New("This binary version does not build support for TiDB.")
-		}
-		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
-			return nil, fmt.Errorf("Fail to create directories: %v", err)
-		}
-		connStr = "goleveldb://" + DbCfg.Path
 	default:
 		return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
