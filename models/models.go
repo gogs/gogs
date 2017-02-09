@@ -178,7 +178,12 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("Fail to create xorm.log: %v", err)
 	}
-	x.SetLogger(xorm.NewSimpleLogger(f))
+
+	if setting.ProdMode {
+		x.SetLogger(xorm.NewSimpleLogger3(f, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
+	} else {
+		x.SetLogger(xorm.NewSimpleLogger(f))
+	}
 	x.ShowSQL(true)
 	return nil
 }
