@@ -621,18 +621,18 @@ func (pr *PullRequest) AddToTaskQueue() {
 
 type PullRequestList []*PullRequest
 
-func (prs PullRequestList) loadAttributes(e Engine) error {
+func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 	if len(prs) == 0 {
 		return nil
 	}
 
-	// Load issues.
+	// Load issues
 	issueIDs := make([]int64, 0, len(prs))
 	for i := range prs {
 		issueIDs = append(issueIDs, prs[i].IssueID)
 	}
 	issues := make([]*Issue, 0, len(issueIDs))
-	if err := e.Where("id > 0").In("id", issueIDs).Find(&issues); err != nil {
+	if err = e.Where("id > 0").In("id", issueIDs).Find(&issues); err != nil {
 		return fmt.Errorf("find issues: %v", err)
 	}
 
@@ -643,6 +643,14 @@ func (prs PullRequestList) loadAttributes(e Engine) error {
 	for i := range prs {
 		prs[i].Issue = set[prs[i].IssueID]
 	}
+
+	// Load attributes
+	for i := range prs {
+		if err = prs[i].loadAttributes(e); err != nil {
+			return fmt.Errorf("loadAttributes [%d]: %v", prs[i].ID, err)
+		}
+	}
+
 	return nil
 }
 
