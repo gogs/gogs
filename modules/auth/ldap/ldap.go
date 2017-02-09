@@ -8,7 +8,10 @@ package ldap
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"strings"
 
 	"gopkg.in/ldap.v2"
@@ -18,20 +21,12 @@ import (
 
 type SecurityProtocol int
 
-// Note: new type must be added at the end of list to maintain compatibility.
-const (
-	SECURITY_PROTOCOL_UNENCRYPTED SecurityProtocol = iota
-	SECURITY_PROTOCOL_LDAPS
-	SECURITY_PROTOCOL_START_TLS
-)
-
 // Basic LDAP authentication service
 type Source struct {
 	Name              string // canonical name (ie. corporate.ad)
-	Host              string // LDAP host
-	Port              int    // port number
-	SecurityProtocol  SecurityProtocol
+	URL               string // LDAP host
 	SkipVerify        bool
+	StartTLS          bool
 	BindDN            string // DN to bind with
 	BindPassword      string // Bind DN password
 	UserBase          string // Base search path for users
@@ -112,29 +107,100 @@ func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
 }
 
 func dial(ls *Source) (*ldap.Conn, error) {
-	log.Trace("Dialing LDAP with security protocol (%v) without verifying: %v", ls.SecurityProtocol, ls.SkipVerify)
+	log.Trace("Dialing %s (skip cert verification: %v, start TLS: %v)", ls.URL, ls.SkipVerify, ls.StartTLS)
 
-	tlsCfg := &tls.Config{
-		ServerName:         ls.Host,
-		InsecureSkipVerify: ls.SkipVerify,
-	}
-	if ls.SecurityProtocol == SECURITY_PROTOCOL_LDAPS {
-		return ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port), tlsCfg)
-	}
+	//// URL Parsing
+	ldapUrl := ls.URL
+	ldapiHost := ""
 
-	conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", ls.Host, ls.Port))
-	if err != nil {
-		return nil, fmt.Errorf("Dial: %v", err)
-	}
-
-	if ls.SecurityProtocol == SECURITY_PROTOCOL_START_TLS {
-		if err = conn.StartTLS(tlsCfg); err != nil {
-			conn.Close()
-			return nil, fmt.Errorf("StartTLS: %v", err)
+	// Fix ldapi URLs (1/2): ~ by removing and saving the host part for later.
+	if strings.HasPrefix(ldapUrl, "ldapi://") {
+		x := strings.IndexAny(ldapUrl[8:], "/?#")
+		if x >= 0 {
+			ldapiHost = ldapUrl[8 : 8+x]
+			ldapUrl = "ldapi://" + ldapUrl[8+x:]
+		} else {
+			ldapiHost = ldapUrl[8:]
+			ldapUrl = "ldapi://"
 		}
 	}
 
-	return conn, nil
+	// Parse the URL
+	u, err := url.Parse(ldapUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fix ldapi URLs (2/2): ~ by injecting the saved and decoded host part into the parsed URL struct.
+	if ldapiHost != "" {
+		u.Host, err = url.QueryUnescape(ldapiHost)
+		if err != nil {
+			return nil, fmt.Errorf("Unescape hostpart of ldapi URL: %v", err)
+		}
+	}
+
+	if u.User != nil || u.Path != "" || u.Fragment != "" || u.RawQuery != "" || u.Opaque != "" {
+		return nil, errors.New("LDAP URLs (for now) do not support pathes, fragments, querries or opaque form")
+	}
+
+	//// Dial
+	// ldapI
+	if u.Scheme == "ldapi" {
+		conn, err := ldap.Dial("unix", u.Host)
+		if err != nil {
+			return nil, fmt.Errorf("Dial: %v", err)
+		}
+
+		return conn, nil
+	}
+
+	// Common stuff dor ldap / ldapS
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return nil, fmt.Errorf("Failed splitting adress in host and port part: %v", err)
+	}
+
+	tlsCfg := &tls.Config{
+		ServerName:         host,
+		InsecureSkipVerify: ls.SkipVerify,
+	}
+
+	// ldapS
+	if u.Scheme == "ldaps" {
+		if port == "" {
+			port = "636"
+		}
+
+		conn, err := ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", host, port), tlsCfg)
+		if err != nil {
+			return nil, fmt.Errorf("DialTLS: %v", err)
+		}
+
+		return conn, nil
+	}
+
+	// ldap
+	if u.Scheme == "ldap" {
+		if port == "" {
+			port = "389"
+		}
+
+		conn, err := ldap.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		if err != nil {
+			return nil, fmt.Errorf("Dial: %v", err)
+		}
+
+		if ls.StartTLS == ls.StartTLS {
+			if err = conn.StartTLS(tlsCfg); err != nil {
+				conn.Close()
+				return nil, fmt.Errorf("StartTLS: %v", err)
+			}
+		}
+
+		return conn, nil
+	}
+
+	return nil, errors.New("The URL dos not has a valid LDAP scheme ('ldap://', 'ldaps://' or 'ldapi://'")
 }
 
 func bindUser(l *ldap.Conn, userDN, passwd string) error {
@@ -157,7 +223,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	}
 	l, err := dial(ls)
 	if err != nil {
-		log.Error(4, "LDAP Connect error, %s:%v", ls.Host, err)
+		log.Error(4, "LDAP Connect error, %s:%v", ls.URL, err)
 		ls.Enabled = false
 		return "", "", "", "", false, false
 	}

@@ -25,26 +25,9 @@
 						<!-- LDAP and DLDAP -->
 						{{if or .Source.IsLDAP .Source.IsDLDAP}}
 							{{ $cfg:=.Source.LDAP }}
-							<div class="inline required field {{if .Err_SecurityProtocol}}error{{end}}">
-								<label>{{.i18n.Tr "admin.auths.security_protocol"}}</label>
-								<div class="ui selection security-protocol dropdown">
-									<input type="hidden" id="security_protocol" name="security_protocol" value="{{$cfg.SecurityProtocol}}">
-									<div class="text">{{$cfg.SecurityProtocolName}}</div>
-									<i class="dropdown icon"></i>
-									<div class="menu">
-										{{range .SecurityProtocols}}
-											<div class="item" data-value="{{.Type}}">{{.Name}}</div>
-										{{end}}
-									</div>
-								</div>
-							</div>
 							<div class="required field">
-								<label for="host">{{.i18n.Tr "admin.auths.host"}}</label>
-								<input id="host" name="host" value="{{$cfg.Host}}" placeholder="e.g. mydomain.com" required>
-							</div>
-							<div class="required field">
-								<label for="port">{{.i18n.Tr "admin.auths.port"}}</label>
-								<input id="port" name="port" value="{{$cfg.Port}}"  placeholder="e.g. 636" required>
+								<label for="url">{{.i18n.Tr "admin.auths.url"}}</label>
+								<input id="url" name="url" value="{{$cfg.URL}}" placeholder="e.g. ldap://localhost or ldaps://example.com:4242 or ldapi://%2Frun%2Fopenldap%2Fldapi" required>
 							</div>
 							{{if .Source.IsLDAP}}
 								<div class="field">

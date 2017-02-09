@@ -53,11 +53,6 @@ var (
 		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
 		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
 	}
-	securityProtocols = []dropdownItem{
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_LDAPS], ldap.SECURITY_PROTOCOL_LDAPS},
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_START_TLS], ldap.SECURITY_PROTOCOL_START_TLS},
-	}
 )
 
 func NewAuthSource(ctx *context.Context) {
@@ -67,11 +62,9 @@ func NewAuthSource(ctx *context.Context) {
 
 	ctx.Data["type"] = models.LOGIN_LDAP
 	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LOGIN_LDAP]
-	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
 	ctx.Data["smtp_auth"] = "PLAIN"
 	ctx.Data["is_active"] = true
 	ctx.Data["AuthSources"] = authSources
-	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.HTML(200, AUTH_NEW)
 }
@@ -80,10 +73,9 @@ func parseLDAPConfig(form auth.AuthenticationForm) *models.LDAPConfig {
 	return &models.LDAPConfig{
 		Source: &ldap.Source{
 			Name:              form.Name,
-			Host:              form.Host,
-			Port:              form.Port,
-			SecurityProtocol:  ldap.SecurityProtocol(form.SecurityProtocol),
+			URL:               form.URL,
 			SkipVerify:        form.SkipVerify,
+			StartTLS:          form.StartTLS,
 			BindDN:            form.BindDN,
 			UserDN:            form.UserDN,
 			BindPassword:      form.BindPassword,
@@ -117,9 +109,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["PageIsAdminAuthentications"] = true
 
 	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LoginType(form.Type)]
-	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SecurityProtocol(form.SecurityProtocol)]
 	ctx.Data["AuthSources"] = authSources
-	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
 	hasTLS := false
@@ -127,7 +117,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	switch models.LoginType(form.Type) {
 	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
 		config = parseLDAPConfig(form)
-		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
+		hasTLS = true
 	case models.LOGIN_SMTP:
 		config = parseSMTPConfig(form)
 		hasTLS = true
@@ -172,7 +162,6 @@ func EditAuthSource(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 
 	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
