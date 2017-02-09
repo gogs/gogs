@@ -18,10 +18,14 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"github.com/yohcop/openid-go"
+	//"github.com/akavel/go-openid"
 
 	"github.com/gogits/gogs/modules/auth/ldap"
+	//"github.com/gogits/gogs/modules/auth/openid"
 	"github.com/gogits/gogs/modules/auth/pam"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type LoginType int
@@ -34,13 +38,15 @@ const (
 	LOGIN_SMTP             // 3
 	LOGIN_PAM              // 4
 	LOGIN_DLDAP            // 5
+	LOGIN_OPENID           // 6
 )
 
 var LoginNames = map[LoginType]string{
-	LOGIN_LDAP:  "LDAP (via BindDN)",
-	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
-	LOGIN_SMTP:  "SMTP",
-	LOGIN_PAM:   "PAM",
+	LOGIN_LDAP:   "LDAP (via BindDN)",
+	LOGIN_DLDAP:  "LDAP (simple auth)", // Via direct bind
+	LOGIN_SMTP:   "SMTP",
+	LOGIN_PAM:    "PAM",
+	LOGIN_OPENID: "OpenID",
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
@@ -54,6 +60,7 @@ var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
 	_ core.Conversion = &PAMConfig{}
+	_ core.Conversion = &OpenIDConfig{}
 )
 
 type LDAPConfig struct {
@@ -70,6 +77,18 @@ func (cfg *LDAPConfig) ToDB() ([]byte, error) {
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
 	return SecurityProtocolNames[cfg.SecurityProtocol]
+}
+
+type OpenIDConfig struct {
+	//*openid.Source
+}
+
+func (cfg *OpenIDConfig) FromDB(bs []byte) error {
+	return json.Unmarshal(bs, &cfg)
+}
+
+func (cfg *OpenIDConfig) ToDB() ([]byte, error) {
+	return json.Marshal(cfg)
 }
 
 type SMTPConfig struct {
@@ -141,6 +160,8 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 		switch LoginType(Cell2Int64(val)) {
 		case LOGIN_LDAP, LOGIN_DLDAP:
 			source.Cfg = new(LDAPConfig)
+		case LOGIN_OPENID:
+			source.Cfg = new(OpenIDConfig)
 		case LOGIN_SMTP:
 			source.Cfg = new(SMTPConfig)
 		case LOGIN_PAM:
@@ -487,6 +508,53 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	return user, CreateUser(user)
 }
 
+// ________                       .___________
+// \_____  \ ______   ____   ____ |   \______ \
+//  /   |   \\____ \_/ __ \ /    \|   ||    |  \
+// /    |    \  |_> >  ___/|   |  \   ||    `   \
+// \_______  /   __/ \___  >___|  /___/_______  /
+//         \/|__|        \/     \/            \/
+
+// LoginViaOpenID authorizes against "id" (openid URL)
+// and create a local user if success when enabled.
+func LoginViaOpenID(user *User, id string, source *LoginSource, autoRegister bool) (*User, error) {
+
+    url, err := openid.RedirectURL(id, setting.AppUrl + "user/login/openid/verify", setting.AppUrl)
+    if err != nil {
+		return nil, err
+    }
+    return nil, ErrDelegatedAuth{ OP: url }
+}
+
+var nonceStore = openid.NewSimpleNonceStore()
+var discoveryCache = openid.NewSimpleDiscoveryCache()
+
+func LoginViaOpenIDVerification(url string, autoRegister bool) (*User, error) {
+
+	var id, err = openid.Verify(url, discoveryCache, nonceStore)
+	if err != nil {
+		log.Fatal(1, "Error verifying: %v", err)
+	}
+	log.Trace("Verified ID: " + id)
+
+/*
+	login := id
+
+	user = &User{
+		LowerName:   strings.ToLower(login),
+		Name:        login,
+		Email:       login,
+		Passwd:      nil,
+		LoginType:   LOGIN_OPENID,
+		LoginSource: sourceID,
+		LoginName:   login,
+		IsActive:    true,
+	}
+	return user, CreateUser(user)
+*/
+	return nil, nil
+}
+
 func ExternalUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
 		return nil, ErrLoginSourceNotActived
@@ -499,6 +567,8 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 		return LoginViaSMTP(user, login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
 	case LOGIN_PAM:
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	case LOGIN_OPENID:
+		return LoginViaOpenID(user, login, source, autoRegister)
 	}
 
 	return nil, ErrUnsupportedLoginType
@@ -509,6 +579,8 @@ func UserSignIn(username, password string) (*User, error) {
 	var user *User
 	if strings.Contains(username, "@") {
 		user = &User{Email: strings.ToLower(username)}
+	} else if strings.Contains(username, "://") {
+		user = &User{Openid: strings.ToLower(username)}
 	} else {
 		user = &User{LowerName: strings.ToLower(username)}
 	}
@@ -540,7 +612,7 @@ func UserSignIn(username, password string) (*User, error) {
 		}
 	}
 
-	sources := make([]*LoginSource, 0, 3)
+	sources := make([]*LoginSource, 0, 4)
 	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
 		return nil, err
 	}
@@ -549,6 +621,9 @@ func UserSignIn(username, password string) (*User, error) {
 		authUser, err := ExternalUserLogin(nil, username, password, source, true)
 		if err == nil {
 			return authUser, nil
+		}
+		if IsErrDelegatedAuth(err) {
+			return nil, err
 		}
 
 		log.Warn("Failed to login '%s' via '%s': %v", username, source.Name, err)

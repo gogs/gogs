@@ -68,6 +68,19 @@ func (err ErrUserNotExist) Error() string {
 	return fmt.Sprintf("user does not exist [uid: %d, name: %s]", err.UID, err.Name)
 }
 
+type ErrDelegatedAuth struct {
+	OP string // OpenID Provider
+}
+
+func IsErrDelegatedAuth(err error) bool {
+	_, ok := err.(ErrDelegatedAuth)
+	return ok
+}
+
+func (err ErrDelegatedAuth) Error() string {
+	return err.OP
+}
+
 type ErrEmailAlreadyUsed struct {
 	Email string
 }
