@@ -34,7 +34,7 @@ func Branches(ctx *context.Context) {
 }
 
 func DeleteBranchPost(ctx *context.Context) {
-	branchName := ctx.Params(":name")
+	branchName := ctx.Params("*")
 	commitID := ctx.Query("commit")
 
 	defer func() {

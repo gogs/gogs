@@ -639,7 +639,7 @@ func ViewIssue(ctx *context.Context) {
 		ctx.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
 			ctx.Repo.IsWriter() && ctx.Repo.GitRepo.IsBranchExist(pull.HeadBranch)
 
-		deleteBranchUrl := ctx.Repo.RepoLink + "/branches/" + pull.HeadBranch + "/delete"
+		deleteBranchUrl := ctx.Repo.RepoLink + "/branches/delete/" + pull.HeadBranch
 		ctx.Data["DeleteBranchLink"] = fmt.Sprintf("%s?commit=%s&redirect_to=%s", deleteBranchUrl, pull.MergedCommitID, ctx.Data["Link"])
 	}
 
