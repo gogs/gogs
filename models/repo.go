@@ -1228,7 +1228,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
 
-	// Change repository directory name.
+	// Change repository directory name
 	if err = os.Rename(repo.RepoPath(), RepoPath(u.Name, newRepoName)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
@@ -1241,6 +1241,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 	}
 
+	RemoveAllWithNotice("Delete repository local copy", repo.LocalCopyPath())
 	return nil
 }
 
