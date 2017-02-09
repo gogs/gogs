@@ -87,9 +87,17 @@ func runDump(ctx *cli.Context) error {
 	} else {
 		log.Printf("Custom dir %s doesn't exist, skipped", setting.CustomPath)
 	}
+
 	if err := z.AddDir("log", setting.LogRootPath); err != nil {
 		log.Fatalf("Fail to include log: %v", err)
 	}
+
+	for _, dir := range []string{"attachments", "avatars"} {
+		if err := z.AddDir(path.Join("data", dir), path.Join(setting.AppDataPath, dir)); err != nil {
+			log.Fatalf("Fail to include data/%s: %v", dir, err)
+		}
+	}
+
 	// FIXME: SSH key file.
 	if err = z.Close(); err != nil {
 		os.Remove(fileName)
