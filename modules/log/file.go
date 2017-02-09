@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -113,6 +114,10 @@ func (w *FileLogWriter) StartLogger() error {
 	if err = w.initFd(); err != nil {
 		return err
 	}
+	// redirect stdout and stderr to file
+	// TODO: allow specifying in configuration ?
+	syscall.Dup2(int(fd.Fd()), 1) // stdout
+	syscall.Dup2(int(fd.Fd()), 2) // stderr
 	return nil
 }
 
