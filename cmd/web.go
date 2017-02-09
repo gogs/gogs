@@ -570,7 +570,7 @@ func runWeb(ctx *cli.Context) error {
 		}, context.RepoRef())
 
 		// m.Get("/branches", repo.Branches)
-		m.Post("/branches/:name/delete", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
+		m.Post("/branches/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
