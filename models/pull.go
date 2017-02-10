@@ -364,7 +364,7 @@ func (pr *PullRequest) testPatch() (err error) {
 	log.Trace("PullRequest[%d].testPatch (patchPath): %s", pr.ID, patchPath)
 
 	if err := pr.BaseRepo.UpdateLocalCopyBranch(pr.BaseBranch); err != nil {
-		return fmt.Errorf("UpdateLocalCopy: %v", err)
+		return fmt.Errorf("UpdateLocalCopy [%d]: %v", pr.BaseRepoID, err)
 	}
 
 	pr.Status = PULL_REQUEST_STATUS_CHECKING
