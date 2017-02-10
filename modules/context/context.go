@@ -118,9 +118,6 @@ func (ctx *Context) NotFoundOrServerError(title string, errck func(error) bool, 
 }
 
 func (ctx *Context) HandleText(status int, title string) {
-	if (status/100 == 4) || (status/100 == 5) {
-		log.Error(4, "%s", title)
-	}
 	ctx.PlainText(status, []byte(title))
 }
 
