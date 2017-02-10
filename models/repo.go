@@ -1414,6 +1414,10 @@ func DeleteRepository(uid, repoID int64) error {
 		return err
 	}
 
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
 	// Remove repository files.
 	repoPath := repo.repoPath(sess)
 	RemoveAllWithNotice("Delete repository files", repoPath)
@@ -1423,10 +1427,6 @@ func DeleteRepository(uid, repoID int64) error {
 	// Remove attachment files.
 	for i := range attachmentPaths {
 		RemoveAllWithNotice("Delete attachment", attachmentPaths[i])
-	}
-
-	if err = sess.Commit(); err != nil {
-		return fmt.Errorf("Commit: %v", err)
 	}
 
 	if repo.NumForks > 0 {
