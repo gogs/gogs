@@ -55,7 +55,7 @@ func Releases(ctx *context.Context) {
 
 	rawTags, err := ctx.Repo.GitRepo.GetTags()
 	if err != nil {
-		ctx.Handle(500, "GetTags", err)
+		ctx.Handle(500, fmt.Sprintf("GetTags '%d'", ctx.Repo.Repository.RepoPath()), err)
 		return
 	}
 
