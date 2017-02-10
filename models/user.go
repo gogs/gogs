@@ -170,6 +170,10 @@ func (u *User) CanCreateRepo() bool {
 	return u.NumRepos < u.MaxRepoCreation
 }
 
+func (u *User) CanCreateOrganization() bool {
+	return !setting.Admin.DisableRegularOrgCreation || u.IsAdmin
+}
+
 // CanEditGitHook returns true if user can edit Git hooks.
 func (u *User) CanEditGitHook() bool {
 	return u.IsAdmin || u.AllowGitHook

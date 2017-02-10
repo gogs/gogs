@@ -170,6 +170,11 @@ var (
 		FileExtensions      []string
 	}
 
+	// Admin settings
+	Admin struct {
+		DisableRegularOrgCreation bool
+	}
+
 	// Picture settings
 	AvatarUploadPath      string
 	GravatarSource        string
@@ -568,6 +573,8 @@ func NewContext() {
 		log.Fatal(4, "Fail to map UI settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
+	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {
+		log.Fatal(4, "Fail to map Admin settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal(4, "Fail to map Cron settings: %v", err)
 	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
