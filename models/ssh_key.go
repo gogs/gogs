@@ -385,9 +385,10 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
-	stdout, stderr, err := process.Exec("AddPublicKey", "ssh-keygen", "-lf", tmpPath)
+
+	stdout, stderr, err := process.Exec("AddPublicKey", setting.SSH.KeygenPath, "-lf", tmpPath)
 	if err != nil {
-		return fmt.Errorf("'ssh-keygen -lf %s' failed with error '%s': %s", tmpPath, err, stderr)
+		return fmt.Errorf("fail to parse public key: %s - %s", err, stderr)
 	} else if len(stdout) < 2 {
 		return errors.New("not enough output for calculating fingerprint: " + stdout)
 	}
