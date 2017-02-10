@@ -425,8 +425,8 @@ func NewContext() {
 		LandingPageURL = LANDING_PAGE_HOME
 	}
 
-	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
 	SSH.RootPath = path.Join(homeDir, ".ssh")
+	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
 	SSH.KeyTestPath = os.TempDir()
 	if err = Cfg.Section("server").MapTo(&SSH); err != nil {
 		log.Fatal(4, "Fail to map SSH settings: %v", err)
