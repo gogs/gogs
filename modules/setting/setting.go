@@ -620,8 +620,8 @@ func newService() {
 
 func newLogService() {
 	if len(BuildTime) > 0 {
-		log.Info("Build Time: %s", BuildTime)
-		log.Info("Build Git Hash: %s", BuildGitHash)
+		log.Trace("Build Time: %s", BuildTime)
+		log.Trace("Build Git Hash: %s", BuildGitHash)
 	}
 
 	// Because we always create a console logger as primary logger before all settings are loaded,
