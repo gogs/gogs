@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 
 	"github.com/Unknwon/cae/zip"
+	"github.com/Unknwon/com"
 	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
@@ -93,8 +94,13 @@ func runDump(ctx *cli.Context) error {
 	}
 
 	for _, dir := range []string{"attachments", "avatars"} {
-		if err := z.AddDir(path.Join("data", dir), path.Join(setting.AppDataPath, dir)); err != nil {
-			log.Fatalf("Fail to include data/%s: %v", dir, err)
+		dirPath := path.Join(setting.AppDataPath, dir)
+		if !com.IsDir(dirPath) {
+			continue
+		}
+
+		if err := z.AddDir(path.Join("data", dir), dirPath); err != nil {
+			log.Fatalf("Fail to include '%s': %v", dirPath, err)
 		}
 	}
 
