@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -32,15 +32,15 @@ func runUpdate(c *cli.Context) error {
 	setup("update.log")
 
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
-		log.GitLogger.Trace("SSH_ORIGINAL_COMMAND is empty")
+		log.Trace("SSH_ORIGINAL_COMMAND is empty")
 		return nil
 	}
 
 	args := c.Args()
 	if len(args) != 3 {
-		log.GitLogger.Fatal(2, "Arguments received are not equal to three")
+		log.Fatal(2, "Arguments received are not equal to three")
 	} else if len(args[0]) == 0 {
-		log.GitLogger.Fatal(2, "First argument 'refName' is empty, shouldn't use")
+		log.Fatal(2, "First argument 'refName' is empty, shouldn't use")
 	}
 
 	task := models.UpdateTask{
@@ -51,7 +51,7 @@ func runUpdate(c *cli.Context) error {
 	}
 
 	if err := models.AddUpdateTask(&task); err != nil {
-		log.GitLogger.Fatal(2, "AddUpdateTask: %v", err)
+		log.Fatal(2, "AddUpdateTask: %v", err)
 	}
 
 	return nil

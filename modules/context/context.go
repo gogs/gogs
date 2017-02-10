@@ -16,12 +16,12 @@ import (
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -73,7 +73,7 @@ func (ctx *Context) HasValue(name string) bool {
 
 // HTML calls Context.HTML and converts template name to string.
 func (ctx *Context) HTML(status int, name base.TplName) {
-	log.Debug("Template: %s", name)
+	log.Trace("Template: %s", name)
 	ctx.Context.HTML(status, string(name))
 }
 
@@ -191,8 +191,8 @@ func Contexter() macaron.Handler {
 
 		ctx.Data["CsrfToken"] = x.GetToken()
 		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
-		log.Debug("Session ID: %s", sess.ID())
-		log.Debug("CSRF Token: %v", ctx.Data["CsrfToken"])
+		log.Trace("Session ID: %s", sess.ID())
+		log.Trace("CSRF Token: %v", ctx.Data["CsrfToken"])
 
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding

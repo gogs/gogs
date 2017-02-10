@@ -10,9 +10,9 @@ import (
 	"os/exec"
 	"strings"
 
-	git "github.com/gogits/git-module"
+	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/log"
+	git "github.com/gogits/git-module"
 )
 
 type UpdateTask struct {
@@ -101,7 +101,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	}
 
 	if isDelRef {
-		log.GitLogger.Info("Reference '%s' has been deleted from '%s/%s' by %s",
+		log.Trace("Reference '%s' has been deleted from '%s/%s' by %s",
 			opts.RefFullName, opts.RepoUserName, opts.RepoName, opts.PusherName)
 		return nil
 	}

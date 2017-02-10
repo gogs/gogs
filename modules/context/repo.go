@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -267,7 +267,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {
-			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)
+			log.Trace("Bare repository: %s", ctx.Repo.RepoLink)
 			// NOTE: to prevent templating error
 			ctx.Data["BranchName"] = ""
 			if displayBare {

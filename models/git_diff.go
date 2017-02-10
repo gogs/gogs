@@ -20,11 +20,11 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template/highlight"

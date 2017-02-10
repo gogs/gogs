@@ -20,12 +20,13 @@ import (
 	"strings"
 	"time"
 
+	log "gopkg.in/clog.v1"
+
 	git "github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -315,7 +316,7 @@ func gitCommand(dir string, args ...string) []byte {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		log.GitLogger.Error(4, fmt.Sprintf("%v - %s", err, out))
+		log.Error(4, fmt.Sprintf("Git: %v - %s", err, out))
 	}
 	return out
 }
@@ -376,7 +377,7 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.r.Header.Get("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
-			log.GitLogger.Error(2, "fail to create gzip reader: %v", err)
+			log.Error(2, "Git: fail to create gzip reader: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -385,7 +386,7 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.cfg.OnSucceed != nil {
 		tmpfile, err := ioutil.TempFile("", "gogs")
 		if err != nil {
-			log.GitLogger.Error(2, "fail to create temporary file: %v", err)
+			log.Error(2, "Git: fail to create temporary file: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -393,7 +394,7 @@ func serviceRPC(h serviceHandler, service string) {
 
 		_, err = io.Copy(tmpfile, reqBody)
 		if err != nil {
-			log.GitLogger.Error(2, "fail to save request body: %v", err)
+			log.Error(2, "Git: fail to save request body: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -402,7 +403,7 @@ func serviceRPC(h serviceHandler, service string) {
 		tmpFilename = tmpfile.Name()
 		tmpfile, err = os.Open(tmpFilename)
 		if err != nil {
-			log.GitLogger.Error(2, "fail to open temporary file: %v", err)
+			log.Error(2, "Git: fail to open temporary file: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -420,7 +421,7 @@ func serviceRPC(h serviceHandler, service string) {
 	cmd.Stderr = &stderr
 	cmd.Stdin = br
 	if err := cmd.Run(); err != nil {
-		log.GitLogger.Error(2, "fail to serve RPC(%s): %v - %s", service, err, stderr)
+		log.Error(2, "Git: fail to serve RPC '%s': %v - %s", service, err, stderr)
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -428,7 +429,7 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.cfg.OnSucceed != nil {
 		input, err := os.Open(tmpFilename)
 		if err != nil {
-			log.GitLogger.Error(2, "fail to open temporary file: %v", err)
+			log.Error(2, "Git: fail to open temporary file: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -545,7 +546,7 @@ func HTTPBackend(ctx *context.Context, cfg *serviceConfig) http.HandlerFunc {
 				file := strings.Replace(r.URL.Path, m[1]+"/", "", 1)
 				dir, err := getGitRepoPath(m[1])
 				if err != nil {
-					log.GitLogger.Error(4, err.Error())
+					log.Error(4, "Git: getGitRepoPath: %v", err)
 					ctx.Handle(http.StatusNotFound, "HTTPBackend", err)
 					return
 				}

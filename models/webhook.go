@@ -14,11 +14,11 @@ import (
 
 	"github.com/go-xorm/xorm"
 	gouuid "github.com/satori/go.uuid"
+	log "gopkg.in/clog.v1"
 
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/sync"
 )
