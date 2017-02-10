@@ -164,7 +164,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 						earlyResponseForGoGetMeta(ctx)
 						return
 					}
-					ctx.Handle(404, "GetUserByName", err)
+					ctx.NotFound()
 				} else {
 					ctx.Handle(500, "GetUserByName", err)
 				}
@@ -182,7 +182,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 					earlyResponseForGoGetMeta(ctx)
 					return
 				}
-				ctx.Handle(404, "GetRepositoryByName", err)
+				ctx.NotFound()
 			} else {
 				ctx.Handle(500, "GetRepositoryByName", err)
 			}
@@ -210,7 +210,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 				earlyResponseForGoGetMeta(ctx)
 				return
 			}
-			ctx.Handle(404, "no access right", err)
+			ctx.NotFound()
 			return
 		}
 		ctx.Data["HasAccess"] = true
@@ -395,7 +395,7 @@ func RepoRef() macaron.Handler {
 
 				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
 				if err != nil {
-					ctx.Handle(404, "GetCommit", nil)
+					ctx.NotFound()
 					return
 				}
 			} else {
@@ -455,7 +455,7 @@ func RepoRef() macaron.Handler {
 func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned || (!ctx.Repo.IsAdmin() && !ctx.User.IsAdmin) {
-			ctx.Handle(404, ctx.Req.RequestURI, nil)
+			ctx.NotFound()
 			return
 		}
 	}
@@ -464,7 +464,7 @@ func RequireRepoAdmin() macaron.Handler {
 func RequireRepoWriter() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.IsSigned || (!ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
-			ctx.Handle(404, ctx.Req.RequestURI, nil)
+			ctx.NotFound()
 			return
 		}
 	}
@@ -474,7 +474,7 @@ func RequireRepoWriter() macaron.Handler {
 func GitHookService() macaron.Handler {
 	return func(ctx *Context) {
 		if !ctx.User.CanEditGitHook() {
-			ctx.Handle(404, "GitHookService", nil)
+			ctx.NotFound()
 			return
 		}
 	}

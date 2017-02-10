@@ -87,7 +87,8 @@ func GlobalInit() {
 
 	if setting.InstallLock && setting.SSH.StartBuiltinServer {
 		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort, setting.SSH.ServerCiphers)
-		log.Info("SSH server started on %s:%v. Cipher list (%v)", setting.SSH.ListenHost, setting.SSH.ListenPort, setting.SSH.ServerCiphers)
+		log.Info("SSH server started on %s:%v", setting.SSH.ListenHost, setting.SSH.ListenPort)
+		log.Trace("SSH server cipher list: %v", setting.SSH.ServerCiphers)
 	}
 }
 

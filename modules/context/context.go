@@ -89,20 +89,22 @@ func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form interface{}
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
-	if err != nil {
-		log.Error(4, "%s: %v", title, err)
-		if macaron.Env != macaron.PROD {
-			ctx.Data["ErrorMsg"] = err
-		}
-	}
-
 	switch status {
 	case 404:
 		ctx.Data["Title"] = "Page Not Found"
 	case 500:
 		ctx.Data["Title"] = "Internal Server Error"
+		log.Error(4, "%s: %v", title, err)
+		if !setting.ProdMode || (ctx.IsSigned && ctx.User.IsAdmin) {
+			ctx.Data["ErrorMsg"] = err
+		}
 	}
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
+}
+
+// NotFound simply renders the 404 page.
+func (ctx *Context) NotFound() {
+	ctx.Handle(404, "", nil)
 }
 
 // NotFoundOrServerError use error check function to determine if the error
