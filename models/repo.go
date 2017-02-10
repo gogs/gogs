@@ -653,7 +653,8 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 			Quiet:   true,
 			Timeout: migrateTimeout,
 		}); err != nil {
-			log.Info("Clone wiki: %v", err)
+			log.Trace("Fail to clone wiki: %v", err)
+			os.RemoveAll(wikiPath)
 		}
 	}
 
