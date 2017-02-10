@@ -14,6 +14,7 @@ apk --no-cache --no-progress add --virtual build-deps build-base linux-pam-dev g
 mkdir -p ${GOPATH}/src/github.com/gogits/
 ln -s /app/gogs/ ${GOPATH}/src/github.com/gogits/gogs
 cd ${GOPATH}/src/github.com/gogits/gogs
+go get -v -tags "sqlite cert pam" ./...
 make build TAGS="sqlite cert pam"
 
 # Cleanup GOPATH
