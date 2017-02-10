@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 )
 
 var (

@@ -18,9 +18,9 @@ import (
 	"github.com/go-xorm/xorm"
 	api "github.com/gogits/go-gogs-client"
 	gouuid "github.com/satori/go.uuid"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 

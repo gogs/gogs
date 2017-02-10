@@ -5,6 +5,7 @@
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
@@ -232,7 +233,12 @@ func Config(ctx *context.Context) {
 	}
 	loggers := make([]*logger, len(setting.LogModes))
 	for i := range setting.LogModes {
-		loggers[i] = &logger{setting.LogModes[i], setting.LogConfigs[i]}
+		loggers[i] = &logger{
+			Mode: strings.Title(setting.LogModes[i]),
+		}
+
+		result, _ := json.Marshal(setting.LogConfigs[i])
+		loggers[i].Config = string(result)
 	}
 	ctx.Data["Loggers"] = loggers
 

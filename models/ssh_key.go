@@ -21,9 +21,9 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
 	"golang.org/x/crypto/ssh"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 )

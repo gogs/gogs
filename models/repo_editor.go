@@ -17,10 +17,10 @@ import (
 
 	"github.com/Unknwon/com"
 	gouuid "github.com/satori/go.uuid"
+	log "gopkg.in/clog.v1"
 
 	git "github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 )

@@ -17,11 +17,11 @@ import (
 	git "github.com/gogits/git-module"
 	gouuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -42,7 +42,15 @@ var CmdServ = cli.Command{
 func setup(logPath string) {
 	setting.NewContext()
 	setting.NewService()
-	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
+	log.New(log.FILE, log.FileConfig{
+		Filename: filepath.Join(setting.LogRootPath, logPath),
+		FileRotationConfig: log.FileRotationConfig{
+			Rotate:  true,
+			Daily:   true,
+			MaxDays: 3,
+		},
+	})
+	log.Delete(log.CONSOLE) // Remove primary logger
 
 	models.LoadConfigs()
 
@@ -95,11 +103,10 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 		if !setting.ProdMode {
 			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
 		}
-		log.GitLogger.Fatal(3, logMessage, args...)
-		return
+		log.Fatal(3, logMessage, args...)
 	}
 
-	log.GitLogger.Close()
+	log.Shutdown()
 	os.Exit(1)
 }
 
@@ -107,12 +114,12 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	task, err := models.GetUpdateTaskByUUID(uuid)
 	if err != nil {
 		if models.IsErrUpdateTaskNotExist(err) {
-			log.GitLogger.Trace("No update task is presented: %s", uuid)
+			log.Trace("No update task is presented: %s", uuid)
 			return
 		}
-		log.GitLogger.Fatal(2, "GetUpdateTaskByUUID: %v", err)
+		log.Fatal(2, "GetUpdateTaskByUUID: %v", err)
 	} else if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
-		log.GitLogger.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
+		log.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
 	}
 
 	if isWiki {
@@ -128,13 +135,13 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 		RepoUserName: repoUser.Name,
 		RepoName:     reponame,
 	}); err != nil {
-		log.GitLogger.Error(2, "Update: %v", err)
+		log.Error(2, "Update: %v", err)
 	}
 
 	// Ask for running deliver hook and test pull request tasks.
 	reqURL := setting.LocalURL + repoUser.Name + "/" + reponame + "/tasks/trigger?branch=" +
 		strings.TrimPrefix(task.RefName, git.BRANCH_PREFIX) + "&secret=" + base.EncodeMD5(repoUser.Salt) + "&pusher=" + com.ToStr(user.ID)
-	log.GitLogger.Trace("Trigger task: %s", reqURL)
+	log.Trace("Trigger task: %s", reqURL)
 
 	resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
 		InsecureSkipVerify: true,
@@ -142,10 +149,10 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 	if err == nil {
 		resp.Body.Close()
 		if resp.StatusCode/100 != 2 {
-			log.GitLogger.Error(2, "Fail to trigger task: not 2xx response code")
+			log.Error(2, "Fail to trigger task: not 2xx response code")
 		}
 	} else {
-		log.GitLogger.Error(2, "Fail to trigger task: %v", err)
+		log.Error(2, "Fail to trigger task: %v", err)
 	}
 }
 
