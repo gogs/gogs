@@ -11,7 +11,7 @@ build: false
 deploy: false
 
 install:
-  - go get -t -v ./...
+  - go build -v
 
 notifications:
   - provider: Email
