@@ -43,7 +43,7 @@ func BuildSanitizer() {
 	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
 }
 
-var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://`)
+var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://|^mailto:`)
 
 // isLink reports whether link fits valid format.
 func isLink(link []byte) bool {
