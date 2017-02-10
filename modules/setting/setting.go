@@ -144,25 +144,6 @@ var (
 	RepoRootPath string
 	ScriptType   string
 
-	// UI settings
-	UI struct {
-		ExplorePagingNum   int
-		IssuePagingNum     int
-		FeedMaxCommitNum   int
-		ThemeColorMetaTag  string
-		MaxDisplayFileSize int64
-
-		Admin struct {
-			UserPagingNum   int
-			RepoPagingNum   int
-			NoticePagingNum int
-			OrgPagingNum    int
-		} `ini:"ui.admin"`
-		User struct {
-			RepoPagingNum int
-		} `ini:"ui.user"`
-	}
-
 	// Markdown sttings
 	Markdown struct {
 		EnableHardLineBreak bool
@@ -251,6 +232,25 @@ var (
 	// API settings
 	API struct {
 		MaxResponseItems int
+	}
+
+	// UI settings
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum int
+		} `ini:"ui.user"`
 	}
 
 	// I18n settings
@@ -569,8 +569,6 @@ func NewContext() {
 
 	if err = Cfg.Section("http").MapTo(&HTTP); err != nil {
 		log.Fatal(4, "Fail to map HTTP settings: %v", err)
-	} else if err = Cfg.Section("ui").MapTo(&UI); err != nil {
-		log.Fatal(4, "Fail to map UI settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(4, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {
@@ -583,6 +581,8 @@ func NewContext() {
 		log.Fatal(4, "Fail to map Mirror settings: %v", err)
 	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
 		log.Fatal(4, "Fail to map API settings: %v", err)
+	} else if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+		log.Fatal(4, "Fail to map UI settings: %v", err)
 	}
 
 	if Mirror.DefaultInterval <= 0 {
