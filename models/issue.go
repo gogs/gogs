@@ -1405,6 +1405,10 @@ func (m *Milestone) State() api.StateType {
 	return api.STATE_OPEN
 }
 
+func (m *Milestone) ChangeStatus(isClosed bool) error {
+	return ChangeMilestoneStatus(m, isClosed)
+}
+
 func (m *Milestone) APIFormat() *api.Milestone {
 	apiMilestone := &api.Milestone{
 		ID:           m.ID,
@@ -1513,6 +1517,8 @@ func MilestoneStats(repoID int64) (open int64, closed int64) {
 }
 
 // ChangeMilestoneStatus changes the milestone open/closed status.
+// If milestone passes with changed values, those values will be
+// updated to database as well.
 func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 	repo, err := GetRepositoryByID(m.RepoID)
 	if err != nil {
