@@ -626,9 +626,16 @@ func newLogService() {
 	// thus if user doesn't set console logger, we should remove it after other loggers are created.
 	hasConsole := false
 
-	// Get and check log mode.
+	// Get and check log modes.
 	LogModes = strings.Split(Cfg.Section("log").Key("MODE").MustString("console"), ",")
 	LogConfigs = make([]interface{}, len(LogModes))
+	levelNames := map[string]log.LEVEL{
+		"trace": log.TRACE,
+		"info":  log.INFO,
+		"warn":  log.WARN,
+		"error": log.ERROR,
+		"fatal": log.FATAL,
+	}
 	for i, mode := range LogModes {
 		mode = strings.ToLower(strings.TrimSpace(mode))
 		sec, err := Cfg.GetSection("log." + mode)
@@ -637,30 +644,25 @@ func newLogService() {
 		}
 
 		validLevels := []string{"trace", "info", "warn", "error", "fatal"}
-		levelName := Cfg.Section("log." + mode).Key("LEVEL").Validate(func(v string) string {
+		name := Cfg.Section("log." + mode).Key("LEVEL").Validate(func(v string) string {
 			v = strings.ToLower(v)
 			if com.IsSliceContainsStr(validLevels, v) {
 				return v
 			}
 			return "trace"
 		})
-		level := map[string]log.LEVEL{
-			"trace": log.TRACE,
-			"info":  log.INFO,
-			"warn":  log.WARN,
-			"error": log.ERROR,
-			"fatal": log.FATAL,
-		}[levelName]
+		level := levelNames[name]
 
 		// Generate log configuration.
-		switch mode {
-		case "console":
+		switch log.MODE(mode) {
+		case log.CONSOLE:
 			hasConsole = true
 			LogConfigs[i] = log.ConsoleConfig{
 				Level:      level,
 				BufferSize: Cfg.Section("log").Key("BUFFER_LEN").MustInt64(100),
 			}
-		case "file":
+
+		case log.FILE:
 			logPath := path.Join(LogRootPath, "gogs.log")
 			if err = os.MkdirAll(path.Dir(logPath), os.ModePerm); err != nil {
 				log.Fatal(4, "Fail to create log directory '%s': %v", path.Dir(logPath), err)
@@ -678,10 +680,17 @@ func newLogService() {
 					MaxDays:  sec.Key("MAX_DAYS").MustInt64(7),
 				},
 			}
+
+		case log.SLACK:
+			LogConfigs[i] = log.SlackConfig{
+				Level:      level,
+				BufferSize: Cfg.Section("log").Key("BUFFER_LEN").MustInt64(100),
+				URL:        sec.Key("URL").String(),
+			}
 		}
 
 		log.New(log.MODE(mode), LogConfigs[i])
-		log.Trace("Log Mode: %s (%s)", strings.Title(mode), strings.Title(levelName))
+		log.Trace("Log Mode: %s (%s)", strings.Title(mode), strings.Title(name))
 	}
 
 	// Make sure everyone gets version info printed.
