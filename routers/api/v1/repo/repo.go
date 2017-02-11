@@ -244,7 +244,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	ctx.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
 }
 
-func parseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repository) {
+func ParseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repository) {
 	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
@@ -270,7 +270,7 @@ func parseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repositor
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get
 func Get(ctx *context.APIContext) {
-	_, repo := parseOwnerAndRepo(ctx)
+	_, repo := ParseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -280,7 +280,7 @@ func Get(ctx *context.APIContext) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
 func Delete(ctx *context.APIContext) {
-	owner, repo := parseOwnerAndRepo(ctx)
+	owner, repo := ParseOwnerAndRepo(ctx)
 	if ctx.Written() {
 		return
 	}
