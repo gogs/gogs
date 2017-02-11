@@ -210,6 +210,7 @@ var (
 
 	// Git settings
 	Git struct {
+		Version                  string `ini:"-"`
 		DisableDiffHighlight     bool
 		MaxGitDiffLines          int
 		MaxGitDiffLineCharacters int
