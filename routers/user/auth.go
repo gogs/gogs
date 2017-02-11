@@ -55,8 +55,7 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if val, _ := ctx.GetSuperSecureCookie(
-		base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); val != u.Name {
+	if val, ok := ctx.GetSuperSecureCookie(base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); !ok || val != u.Name {
 		return false, nil
 	}
 
@@ -65,6 +64,13 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 	ctx.Session.Set("uname", u.Name)
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
 	return true, nil
+}
+
+// isValidRedirect returns false if the URL does not redirect to same site.
+// False: //url, http://url
+// True: /url
+func isValidRedirect(url string) bool {
+	return len(url) >= 2 && url[0] == '/' && url[1] != '/'
 }
 
 func SignIn(ctx *context.Context) {
@@ -83,10 +89,10 @@ func SignIn(ctx *context.Context) {
 	} else {
 		redirectTo, _ = url.QueryUnescape(ctx.GetCookie("redirect_to"))
 	}
+	ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 
 	if isSucceed {
-		if len(redirectTo) > 0 {
-			ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+		if isValidRedirect(redirectTo) {
 			ctx.Redirect(redirectTo)
 		} else {
 			ctx.Redirect(setting.AppSubUrl + "/")
@@ -128,8 +134,9 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	// Clear whatever CSRF has right now, force to generate a new one
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
 
-	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+	redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
+	ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+	if isValidRedirect(redirectTo) {
 		ctx.Redirect(redirectTo)
 		return
 	}
