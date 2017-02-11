@@ -242,7 +242,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
 		if err != nil {
-			ctx.Handle(500, fmt.Sprintf("GetTags '%d'", ctx.Repo.Repository.RepoPath()), err)
+			ctx.Handle(500, fmt.Sprintf("GetTags '%s'", ctx.Repo.Repository.RepoPath()), err)
 			return
 		}
 		ctx.Data["Tags"] = tags
