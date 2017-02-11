@@ -6,6 +6,7 @@ package routers
 
 import (
 	"errors"
+	"net/mail"
 	"os"
 	"os/exec"
 	"path"
@@ -244,6 +245,15 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	if !match {
 		ctx.Data["Err_RunUser"] = true
 		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, currentUser), INSTALL, &form)
+		return
+	}
+
+	// Make sure FROM field is valid
+	_, err := mail.ParseAddress(form.SMTPFrom)
+	if err != nil {
+		ctx.Data["Err_SMTP"] = true
+		ctx.Data["Err_SMTPFrom"] = true
+		ctx.RenderWithErr(ctx.Tr("install.invalid_smtp_from", err), INSTALL, &form)
 		return
 	}
 
