@@ -115,13 +115,14 @@ func NewRepoContext() {
 	}
 
 	// Check Git version.
-	gitVer, err := git.BinVersion()
+	var err error
+	setting.Git.Version, err = git.BinVersion()
 	if err != nil {
 		log.Fatal(4, "Fail to get Git version: %v", err)
 	}
 
-	log.Info("Git Version: %s", gitVer)
-	if version.Compare("1.7.1", gitVer, ">") {
+	log.Info("Git Version: %s", setting.Git.Version)
+	if version.Compare("1.7.1", setting.Git.Version, ">") {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 
