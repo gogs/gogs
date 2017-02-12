@@ -46,6 +46,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Repository issues, pull requests and wiki
 - Migrate and mirror repository and its wiki
 - Web editor for repository files and wiki
+- Jupyter Notebook
 - Gravatar and Federated avatar with custom source
 - Mail service
 - Administration panel
@@ -105,6 +106,7 @@ There are 5 ways to install Gogs:
 ## Software and Service Support
 
 - [Drone](https://github.com/drone/drone) (CI)
+- [Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/Gogs+Webhook+Plugin) (CI)
 - [Fabric8](http://fabric8.io/) (DevOps)
 - [Taiga](https://taiga.io/) (Project Management)
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs) (IT)
