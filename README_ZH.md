@@ -28,6 +28,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持迁移和镜像仓库以及它的 Wiki
 - 支持在线编辑仓库文件和 Wiki
 - 支持自定义源的 Gravatar 和 Federated Avatar
+- 支持 Jupyter Notebook
 - 支持邮件服务
 - 支持后台管理面板
 - 支持 MySQL、PostgreSQL、SQLite3 和 [TiDB](https://github.com/pingcap/tidb)（实验性支持） 数据库
@@ -74,6 +75,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 ## 软件及服务支持
 
 - [Drone](https://github.com/drone/drone)（CI）
+- [Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/Gogs+Webhook+Plugin)（CI）
 - [Fabric8](http://fabric8.io/)（DevOps）
 - [Taiga](https://taiga.io/)（项目管理）
 - [Puppet](https://forge.puppetlabs.com/Siteminds/gogs)（IT）
