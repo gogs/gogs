@@ -813,20 +813,19 @@ type IssuesOptions struct {
 	SortType    string
 }
 
-// Issues returns a list of issues by given conditions.
-func Issues(opts *IssuesOptions) ([]*Issue, error) {
+func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
+	sess := x.NewSession()
+
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
-
-	sess := x.Limit(setting.UI.IssuePagingNum, (opts.Page-1)*setting.UI.IssuePagingNum)
 
 	if opts.RepoID > 0 {
 		sess.Where("issue.repo_id=?", opts.RepoID).And("issue.is_closed=?", opts.IsClosed)
 	} else if opts.RepoIDs != nil {
 		// In case repository IDs are provided but actually no repository has issue.
 		if len(opts.RepoIDs) == 0 {
-			return make([]*Issue, 0), nil
+			return nil
 		}
 		sess.In("issue.repo_id", base.Int64sToStrings(opts.RepoIDs)).And("issue.is_closed=?", opts.IsClosed)
 	} else {
@@ -876,6 +875,28 @@ func Issues(opts *IssuesOptions) ([]*Issue, error) {
 			sess.And("issue_user.uid = ?", opts.UserID)
 		}
 	}
+
+	return sess
+}
+
+// IssuesCount returns the number of issues by given conditions.
+func IssuesCount(opts *IssuesOptions) (int64, error) {
+	sess := buildIssuesQuery(opts)
+	if sess == nil {
+		return 0, nil
+	}
+
+	return sess.Count(&Issue{})
+}
+
+// Issues returns a list of issues by given conditions.
+func Issues(opts *IssuesOptions) ([]*Issue, error) {
+	sess := buildIssuesQuery(opts)
+	if sess == nil {
+		return make([]*Issue, 0), nil
+	}
+
+	sess.Limit(setting.UI.IssuePagingNum, (opts.Page-1)*setting.UI.IssuePagingNum)
 
 	issues := make([]*Issue, 0, setting.UI.IssuePagingNum)
 	if err := sess.Find(&issues); err != nil {

@@ -221,6 +221,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Combo("/:id").Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
+
+			m.Combo("/issues", reqToken()).Get(repo.ListUserIssues)
 		}, reqToken())
 
 		// Repositories
@@ -299,6 +301,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Get("/editorconfig/:filename", context.RepoRef(), repo.GetEditorconfig)
 			}, repoAssignment())
 		}, reqToken())
+
+		m.Get("/issues", reqToken(), repo.ListUserIssues)
 
 		// Organizations
 		m.Get("/user/orgs", reqToken(), org.ListMyOrgs)
