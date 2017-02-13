@@ -249,12 +249,14 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	}
 
 	// Make sure FROM field is valid
-	_, err := mail.ParseAddress(form.SMTPFrom)
-	if err != nil {
-		ctx.Data["Err_SMTP"] = true
-		ctx.Data["Err_SMTPFrom"] = true
-		ctx.RenderWithErr(ctx.Tr("install.invalid_smtp_from", err), INSTALL, &form)
-		return
+	if len(form.SMTPFrom) > 0 {
+		_, err := mail.ParseAddress(form.SMTPFrom)
+		if err != nil {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTPFrom"] = true
+			ctx.RenderWithErr(ctx.Tr("install.invalid_smtp_from", err), INSTALL, &form)
+			return
+		}
 	}
 
 	// Check logic loophole between disable self-registration and no admin account.
