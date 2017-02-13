@@ -813,6 +813,7 @@ type IssuesOptions struct {
 	SortType    string
 }
 
+// buildIssuesQuery returns nil if it foresees there won't be any value returned.
 func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 	sess := x.NewSession()
 
