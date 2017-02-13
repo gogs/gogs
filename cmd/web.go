@@ -663,7 +663,17 @@ func runWeb(ctx *cli.Context) error {
 	case setting.SCHEME_HTTP:
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.SCHEME_HTTPS:
-		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS10}, Handler: m}
+		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{
+			MinVersion:               tls.VersionTLS10,
+			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, // Required for HTTP/2 support.
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+			},
+		}, Handler: m}
 		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
 	case setting.SCHEME_FCGI:
 		err = fcgi.Serve(nil, m)
