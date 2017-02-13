@@ -55,7 +55,7 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if val, ok := ctx.GetSuperSecureCookie(base.EncodeMD5(u.Rands+u.Passwd), setting.CookieRememberName); !ok || val != u.Name {
+	if val, ok := ctx.GetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName); !ok || val != u.Name {
 		return false, nil
 	}
 
@@ -124,8 +124,7 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	if form.Remember {
 		days := 86400 * setting.LogInRememberDays
 		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl)
-		ctx.SetSuperSecureCookie(base.EncodeMD5(u.Rands+u.Passwd),
-			setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
+		ctx.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubUrl)
 	}
 
 	ctx.Session.Set("uid", u.ID)

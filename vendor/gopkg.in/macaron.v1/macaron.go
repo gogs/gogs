@@ -32,7 +32,7 @@ import (
 	"github.com/go-macaron/inject"
 )
 
-const _VERSION = "1.2.0.0128"
+const _VERSION = "1.2.1.0213"
 
 func Version() string {
 	return _VERSION
@@ -144,7 +144,7 @@ func New() *Macaron {
 }
 
 // Classic creates a classic Macaron with some basic default middleware:
-// mocaron.Logger, mocaron.Recovery and mocaron.Static.
+// macaron.Logger, macaron.Recovery and macaron.Static.
 func Classic() *Macaron {
 	m := New()
 	m.Use(Logger())
