@@ -845,6 +845,7 @@ footer .ui.language .menu {
 }
 .home .logo {
   max-width: 220px;
+  margin-bottom: 20px;
 }
 .home .hero h1,
 .home .hero h2 {

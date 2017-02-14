@@ -1,4 +1,4 @@
-Gogs - Go Git Service [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs)
+Gogs [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master)
 =====================
 
 Gogs (Go Git Service) 是一款极易搭建的自助 Git 服务。
@@ -92,7 +92,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 - 基于 [Macaron](https://github.com/go-macaron/macaron) 的路由与中间件机制。
 - 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
-- 感谢 [Rocker](http://weibo.com/rocker1989) 设计的 Logo。
+- 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
 - 感谢 [DigitalOcean](https://www.digitalocean.com) 提供主站和体验站点的服务器赞助。
 - 感谢 [KeyCDN](https://www.keycdn.com/) 和 [七牛云存储](http://www.qiniu.com/) 提供 CDN 服务赞助。
