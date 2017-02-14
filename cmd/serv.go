@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	git "github.com/gogits/git-module"
+	"github.com/gogits/git-module"
 	gouuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
@@ -26,10 +26,12 @@ import (
 )
 
 const (
-	_ACCESS_DENIED_MESSAGE = "Repository does not exist or you do not have access"
+	_ACCESS_DENIED_MESSAGE      = "Repository does not exist or you do not have access"
+	_ENV_UPDATE_TASK_UUID       = "UPDATE_TASK_UUID"
+	_ENV_REPO_CUSTOM_HOOKS_PATH = "REPO_CUSTOM_HOOKS_PATH"
 )
 
-var CmdServ = cli.Command{
+var Serv = cli.Command{
 	Name:        "serv",
 	Usage:       "This command should only be called by SSH shell",
 	Description: `Serv provide access auth for repositories`,
@@ -39,7 +41,13 @@ var CmdServ = cli.Command{
 	},
 }
 
-func setup(logPath string) {
+func setup(c *cli.Context, logPath string) {
+	if c.IsSet("config") {
+		setting.CustomConf = c.String("config")
+	} else if c.GlobalIsSet("config") {
+		setting.CustomConf = c.GlobalString("config")
+	}
+
 	setting.NewContext()
 	setting.NewService()
 	log.New(log.FILE, log.FileConfig{
@@ -54,7 +62,7 @@ func setup(logPath string) {
 
 	models.LoadConfigs()
 
-	if setting.UseSQLite3 || setting.UseTiDB {
+	if setting.UseSQLite3 {
 		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}
@@ -62,7 +70,7 @@ func setup(logPath string) {
 	models.SetEngine()
 }
 
-func parseCmd(cmd string) (string, string) {
+func parseSSHCmd(cmd string) (string, string) {
 	ss := strings.SplitN(cmd, " ", 2)
 	if len(ss) != 2 {
 		return "", ""
@@ -157,11 +165,7 @@ func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string,
 }
 
 func runServ(c *cli.Context) error {
-	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
-	}
-
-	setup("serv.log")
+	setup(c, "serv.log")
 
 	if setting.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
@@ -172,21 +176,21 @@ func runServ(c *cli.Context) error {
 		fail("Not enough arguments", "Not enough arguments")
 	}
 
-	cmd := os.Getenv("SSH_ORIGINAL_COMMAND")
-	if len(cmd) == 0 {
+	sshCmd := os.Getenv("SSH_ORIGINAL_COMMAND")
+	if len(sshCmd) == 0 {
 		println("Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
 		println("If this is unexpected, please log in with password and setup Gogs under another user.")
 		return nil
 	}
 
-	verb, args := parseCmd(cmd)
-	repoPath := strings.ToLower(strings.Trim(args, "'"))
-	rr := strings.SplitN(repoPath, "/", 2)
-	if len(rr) != 2 {
+	verb, args := parseSSHCmd(sshCmd)
+	repoFullName := strings.ToLower(strings.Trim(args, "'"))
+	repoFields := strings.SplitN(repoFullName, "/", 2)
+	if len(repoFields) != 2 {
 		fail("Invalid repository path", "Invalid repository path: %v", args)
 	}
-	username := strings.ToLower(rr[0])
-	reponame := strings.ToLower(strings.TrimSuffix(rr[1], ".git"))
+	username := strings.ToLower(repoFields[0])
+	reponame := strings.ToLower(strings.TrimSuffix(repoFields[1], ".git"))
 
 	isWiki := false
 	if strings.HasSuffix(reponame, ".wiki") {
@@ -194,29 +198,30 @@ func runServ(c *cli.Context) error {
 		reponame = reponame[:len(reponame)-5]
 	}
 
-	repoUser, err := models.GetUserByName(username)
+	repoOwner, err := models.GetUserByName(username)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", username)
 		}
-		fail("Internal error", "Failed to get repository owner (%s): %v", username, err)
+		fail("Internal error", "Fail to get repository owner '%s': %v", username, err)
 	}
 
-	repo, err := models.GetRepositoryByName(repoUser.ID, reponame)
+	repo, err := models.GetRepositoryByName(repoOwner.ID, reponame)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
-			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoUser.Name, reponame)
+			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoOwner.Name, reponame)
 		}
-		fail("Internal error", "Failed to get repository: %v", err)
+		fail("Internal error", "Fail to get repository: %v", err)
 	}
+	repo.Owner = repoOwner
 
-	requestedMode, has := allowedCommands[verb]
-	if !has {
-		fail("Unknown git command", "Unknown git command %s", verb)
+	requestMode, ok := allowedCommands[verb]
+	if !ok {
+		fail("Unknown git command", "Unknown git command '%s'", verb)
 	}
 
 	// Prohibit push to mirror repositories.
-	if requestedMode > models.ACCESS_MODE_READ && repo.IsMirror {
+	if requestMode > models.ACCESS_MODE_READ && repo.IsMirror {
 		fail("mirror repository is read-only", "")
 	}
 
@@ -225,33 +230,35 @@ func runServ(c *cli.Context) error {
 
 	key, err := models.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
 	if err != nil {
-		fail("Invalid key ID", "Invalid key ID [%s]: %v", c.Args()[0], err)
+		fail("Invalid key ID", "Invalid key ID '%s': %v", c.Args()[0], err)
 	}
 
-	if requestedMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
+	if requestMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
 		// Check deploy key or user key.
 		if key.IsDeployKey() {
-			if key.Mode < requestedMode {
+			if key.Mode < requestMode {
 				fail("Key permission denied", "Cannot push with deployment key: %d", key.ID)
 			}
 			checkDeployKey(key, repo)
 		} else {
 			user, err = models.GetUserByKeyID(key.ID)
 			if err != nil {
-				fail("internal error", "Failed to get user by key ID(%d): %v", key.ID, err)
+				fail("Internal error", "Fail to get user by key ID '%d': %v", key.ID, err)
 			}
 
 			mode, err := models.AccessLevel(user, repo)
 			if err != nil {
 				fail("Internal error", "Fail to check access: %v", err)
-			} else if mode < requestedMode {
+			}
+
+			if mode < requestMode {
 				clientMessage := _ACCESS_DENIED_MESSAGE
 				if mode >= models.ACCESS_MODE_READ {
 					clientMessage = "You do not have sufficient authorization for this action"
 				}
 				fail(clientMessage,
-					"User %s does not have level %v access to repository %s",
-					user.Name, requestedMode, repoPath)
+					"User '%s' does not have level '%v' access to repository '%s'",
+					user.Name, requestMode, repoFullName)
 			}
 		}
 	} else {
@@ -265,30 +272,31 @@ func runServ(c *cli.Context) error {
 	}
 
 	uuid := gouuid.NewV4().String()
-	os.Setenv("uuid", uuid)
+	os.Setenv(_ENV_UPDATE_TASK_UUID, uuid)
+	os.Setenv(_ENV_REPO_CUSTOM_HOOKS_PATH, filepath.Join(repo.RepoPath(), "custom_hooks"))
 
 	// Special handle for Windows.
 	if setting.IsWindows {
 		verb = strings.Replace(verb, "-", " ", 1)
 	}
 
-	var gitcmd *exec.Cmd
+	var gitCmd *exec.Cmd
 	verbs := strings.Split(verb, " ")
 	if len(verbs) == 2 {
-		gitcmd = exec.Command(verbs[0], verbs[1], repoPath)
+		gitCmd = exec.Command(verbs[0], verbs[1], repoFullName)
 	} else {
-		gitcmd = exec.Command(verb, repoPath)
+		gitCmd = exec.Command(verb, repoFullName)
 	}
-	gitcmd.Dir = setting.RepoRootPath
-	gitcmd.Stdout = os.Stdout
-	gitcmd.Stdin = os.Stdin
-	gitcmd.Stderr = os.Stderr
-	if err = gitcmd.Run(); err != nil {
-		fail("Internal error", "Failed to execute git command: %v", err)
+	gitCmd.Dir = setting.RepoRootPath
+	gitCmd.Stdout = os.Stdout
+	gitCmd.Stdin = os.Stdin
+	gitCmd.Stderr = os.Stderr
+	if err = gitCmd.Run(); err != nil {
+		fail("Internal error", "Fail to execute git command: %v", err)
 	}
 
-	if requestedMode == models.ACCESS_MODE_WRITE {
-		handleUpdateTask(uuid, user, repoUser, reponame, isWiki)
+	if requestMode == models.ACCESS_MODE_WRITE {
+		handleUpdateTask(uuid, user, repoOwner, reponame, isWiki)
 	}
 
 	// Update user key activity.

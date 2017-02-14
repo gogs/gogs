@@ -18,7 +18,7 @@ The issue will be closed without any reasons if it does not satisfy any of follo
   - [ ] Yes (provide example URL)
   - [ ] No
   - [ ] Not relevant
-- Log gist:
+- Log gist (usually found in `log/gogs.log`):
 
 ## Description
 

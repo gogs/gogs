@@ -106,7 +106,6 @@ var (
 	UseMySQL      bool
 	UsePostgreSQL bool
 	UseMSSQL      bool
-	UseTiDB       bool
 
 	// Webhook settings
 	Webhook struct {
