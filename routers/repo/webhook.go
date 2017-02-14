@@ -347,6 +347,8 @@ func SlackHooksEditPost(ctx *context.Context, form auth.NewSlackHookForm) {
 }
 
 func TestWebhook(ctx *context.Context) {
+	var authorUsername, committerUsername string
+
 	// Grab latest commit or fake one if it's empty repository.
 	commit := ctx.Repo.Commit
 	if commit == nil {
@@ -356,6 +358,27 @@ func TestWebhook(ctx *context.Context) {
 			Author:        ghost.NewGitSig(),
 			Committer:     ghost.NewGitSig(),
 			CommitMessage: "This is a fake commit",
+		}
+		authorUsername = ghost.Name
+		committerUsername = ghost.Name
+	} else {
+		// Try to match email with a real user.
+		author, err := models.GetUserByEmail(commit.Author.Email)
+		if err == nil {
+			authorUsername = author.Name
+		} else if !models.IsErrUserNotExist(err) {
+			ctx.Flash.Error(fmt.Sprintf("GetUserByEmail.(author) [%s]: %v", commit.Author.Email, err))
+			ctx.Status(500)
+			return
+		}
+
+		committer, err := models.GetUserByEmail(commit.Committer.Email)
+		if err == nil {
+			committerUsername = committer.Name
+		} else if !models.IsErrUserNotExist(err) {
+			ctx.Flash.Error(fmt.Sprintf("GetUserByEmail.(committer) [%s]: %v", commit.Committer.Email, err))
+			ctx.Status(500)
+			return
 		}
 	}
 
@@ -370,12 +393,14 @@ func TestWebhook(ctx *context.Context) {
 				Message: commit.Message(),
 				URL:     ctx.Repo.Repository.HTMLURL() + "/commit/" + commit.ID.String(),
 				Author: &api.PayloadUser{
-					Name:  commit.Author.Name,
-					Email: commit.Author.Email,
+					Name:     commit.Author.Name,
+					Email:    commit.Author.Email,
+					UserName: authorUsername,
 				},
 				Committer: &api.PayloadUser{
-					Name:  commit.Committer.Name,
-					Email: commit.Committer.Email,
+					Name:     commit.Committer.Name,
+					Email:    commit.Committer.Email,
+					UserName: committerUsername,
 				},
 			},
 		},
