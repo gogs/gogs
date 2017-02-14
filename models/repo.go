@@ -906,6 +906,7 @@ var (
 	reservedRepoPatterns = []string{"*.git", "*.wiki"}
 )
 
+// IsUsableRepoName return an error if given name is a reserved name or pattern.
 func IsUsableRepoName(name string) error {
 	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
 }

@@ -206,11 +206,24 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	return sess.Commit()
 }
 
+var reservedTeamNames = []string{"new"}
+
+// IsUsableTeamName return an error if given name is a reserved name or pattern.
+func IsUsableTeamName(name string) error {
+	return isUsableName(reservedTeamNames, nil, name)
+}
+
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
 func NewTeam(t *Team) error {
 	if len(t.Name) == 0 {
 		return errors.New("empty team name")
+	} else if t.OrgID == 0 {
+		return errors.New("OrgID is not assigned")
+	}
+
+	if err := IsUsableTeamName(t.Name); err != nil {
+		return err
 	}
 
 	has, err := x.Id(t.OrgID).Get(new(User))
