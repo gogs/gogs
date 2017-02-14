@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/Unknwon/com"
 	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
@@ -65,6 +66,10 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 
 	customHooksPath := os.Getenv(_ENV_REPO_CUSTOM_HOOKS_PATH)
+	if !com.IsFile(customHooksPath) {
+		return nil
+	}
+
 	hookCmd := exec.Command(filepath.Join(customHooksPath, "pre-receive"))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
@@ -99,6 +104,10 @@ func runHookUpdate(c *cli.Context) error {
 	}
 
 	customHooksPath := os.Getenv(_ENV_REPO_CUSTOM_HOOKS_PATH)
+	if !com.IsFile(customHooksPath) {
+		return nil
+	}
+
 	hookCmd := exec.Command(filepath.Join(customHooksPath, "update"), args...)
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
@@ -116,6 +125,10 @@ func runHookPostReceive(c *cli.Context) error {
 	setup(c, "hooks/post-receive.log")
 
 	customHooksPath := os.Getenv(_ENV_REPO_CUSTOM_HOOKS_PATH)
+	if !com.IsFile(customHooksPath) {
+		return nil
+	}
+
 	hookCmd := exec.Command(filepath.Join(customHooksPath, "post-receive"))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
