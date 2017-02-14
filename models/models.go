@@ -88,8 +88,6 @@ func LoadConfigs() {
 		setting.UsePostgreSQL = true
 	case "mssql":
 		setting.UseMSSQL = true
-	case "tidb":
-		setting.UseTiDB = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()

@@ -84,6 +84,7 @@ func checkVersion() {
 	}
 
 	// Check dependency version.
+	// LEGACY [0.11]: no need to check version as we check in vendor into version control
 	checkers := []VerChecker{
 		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.6.0"},
 		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
@@ -94,7 +95,7 @@ func checkVersion() {
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
 		{"gopkg.in/macaron.v1", macaron.Version, "1.1.7"},
-		{"github.com/gogits/git-module", git.Version, "0.4.6"},
+		{"github.com/gogits/git-module", git.Version, "0.4.7"},
 		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.1"},
 	}
 	for _, c := range checkers {

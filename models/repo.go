@@ -36,10 +36,6 @@ import (
 	"github.com/gogits/gogs/modules/sync"
 )
 
-const (
-	_TPL_UPDATE_HOOK = "#!/usr/bin/env %s\n%s update $1 $2 $3 --config='%s'\n"
-)
-
 var repoWorkingPool = sync.NewExclusivePool()
 
 var (
@@ -125,6 +121,7 @@ func NewRepoContext() {
 	if version.Compare("1.7.1", setting.Git.Version, ">") {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
+	git.HookDir = "custom_hooks"
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
@@ -715,20 +712,33 @@ func cleanUpMigrateGitConfig(configPath string) error {
 	return nil
 }
 
-func createUpdateHook(repoPath string) error {
-	return git.SetUpdateHook(repoPath,
-		fmt.Sprintf(_TPL_UPDATE_HOOK, setting.ScriptType, "\""+setting.AppPath+"\"", setting.CustomConf))
+var hooksTpls = map[string]string{
+	"pre-receive":  "#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n",
+	"update":       "#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n",
+	"post-receive": "#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n",
+}
+
+func createDelegateHooks(repoPath string) (err error) {
+	for _, name := range git.HookNames {
+		hookPath := filepath.Join(repoPath, "hooks", name)
+		if err = ioutil.WriteFile(hookPath,
+			[]byte(fmt.Sprintf(hooksTpls[name], setting.ScriptType, setting.AppPath, setting.CustomConf)),
+			os.ModePerm); err != nil {
+			return fmt.Errorf("create delegate hook '%s': %v", hookPath, err)
+		}
+	}
+	return nil
 }
 
 // Finish migrating repository and/or wiki with things that don't need to be done for mirrors.
 func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 	repoPath := repo.RepoPath()
-	if err := createUpdateHook(repoPath); err != nil {
-		return repo, fmt.Errorf("createUpdateHook: %v", err)
+	if err := createDelegateHooks(repoPath); err != nil {
+		return repo, fmt.Errorf("createDelegateHooks: %v", err)
 	}
 	if repo.HasWiki() {
-		if err := createUpdateHook(repo.WikiPath()); err != nil {
-			return repo, fmt.Errorf("createUpdateHook (wiki): %v", err)
+		if err := createDelegateHooks(repo.WikiPath()); err != nil {
+			return repo, fmt.Errorf("createDelegateHooks.(wiki): %v", err)
 		}
 	}
 
@@ -737,7 +747,7 @@ func CleanUpMigrateInfo(repo *Repository) (*Repository, error) {
 	}
 	if repo.HasWiki() {
 		if err := cleanUpMigrateGitConfig(path.Join(repo.WikiPath(), "config")); err != nil {
-			return repo, fmt.Errorf("cleanUpMigrateGitConfig (wiki): %v", err)
+			return repo, fmt.Errorf("cleanUpMigrateGitConfig.(wiki): %v", err)
 		}
 	}
 
@@ -862,8 +872,8 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	// Init bare new repository.
 	if err = git.InitRepository(repoPath, true); err != nil {
 		return fmt.Errorf("InitRepository: %v", err)
-	} else if err = createUpdateHook(repoPath); err != nil {
-		return fmt.Errorf("createUpdateHook: %v", err)
+	} else if err = createDelegateHooks(repoPath); err != nil {
+		return fmt.Errorf("createDelegateHooks: %v", err)
 	}
 
 	tmpDir := filepath.Join(os.TempDir(), "gogs-"+repo.Name+"-"+com.ToStr(time.Now().Nanosecond()))
@@ -1648,12 +1658,12 @@ func ReinitMissingRepositories() error {
 	return nil
 }
 
-// RewriteRepositoryUpdateHook rewrites all repositories' update hook.
-func RewriteRepositoryUpdateHook() error {
+// SyncRepositoryHooks rewrites all repositories' pre-receive, update and post-receive hooks
+// to make sure the binary and custom conf path are up-to-date.
+func SyncRepositoryHooks() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
-			repo := bean.(*Repository)
-			return createUpdateHook(repo.RepoPath())
+			return createDelegateHooks(bean.(*Repository).RepoPath())
 		})
 }
 
@@ -2098,21 +2108,21 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 
 	repoPath := RepoPath(u.Name, repo.Name)
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
-		fmt.Sprintf("ForkRepository(git clone): %s/%s", u.Name, repo.Name),
+		fmt.Sprintf("ForkRepository 'git clone': %s/%s", u.Name, repo.Name),
 		"git", "clone", "--bare", oldRepo.RepoPath(), repoPath)
 	if err != nil {
 		return nil, fmt.Errorf("git clone: %v", stderr)
 	}
 
 	_, stderr, err = process.ExecDir(-1,
-		repoPath, fmt.Sprintf("ForkRepository(git update-server-info): %s", repoPath),
+		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),
 		"git", "update-server-info")
 	if err != nil {
 		return nil, fmt.Errorf("git update-server-info: %v", err)
 	}
 
-	if err = createUpdateHook(repoPath); err != nil {
-		return nil, fmt.Errorf("createUpdateHook: %v", err)
+	if err = createDelegateHooks(repoPath); err != nil {
+		return nil, fmt.Errorf("createDelegateHooks: %v", err)
 	}
 
 	return repo, sess.Commit()

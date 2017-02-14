@@ -16,7 +16,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-const APP_VER = "0.9.146.0214"
+const APP_VER = "0.9.147.0214"
 
 func init() {
 	setting.AppVer = APP_VER
@@ -29,8 +29,8 @@ func main() {
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
 		cmd.CmdWeb,
-		cmd.CmdServ,
-		cmd.CmdUpdate,
+		cmd.Serv,
+		cmd.CmdHook,
 		cmd.CmdDump,
 		cmd.CmdCert,
 		cmd.CmdAdmin,

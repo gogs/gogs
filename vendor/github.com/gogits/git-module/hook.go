@@ -10,16 +10,18 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"github.com/Unknwon/com"
 )
 
-// hookNames is a list of Git server hooks' name that are supported.
-var hookNames = []string{
-	"pre-receive",
-	// "update",
-	"post-receive",
-}
+var (
+	// Direcotry of hook file. Can be changed to "custom_hooks" for very purpose.
+	HookDir = "hooks"
+	// HookNames is a list of Git server hooks' name that are supported.
+	HookNames = []string{
+		"pre-receive",
+		"update",
+		"post-receive",
+	}
+)
 
 var (
 	ErrNotValidHook = errors.New("not a valid Git hook")
@@ -27,7 +29,7 @@ var (
 
 // IsValidHookName returns true if given name is a valid Git hook.
 func IsValidHookName(name string) bool {
-	for _, hn := range hookNames {
+	for _, hn := range HookNames {
 		if hn == name {
 			return true
 		}
@@ -51,7 +53,7 @@ func GetHook(repoPath, name string) (*Hook, error) {
 	}
 	h := &Hook{
 		name: name,
-		path: path.Join(repoPath, "hooks", name),
+		path: path.Join(repoPath, HookDir, name),
 	}
 	if isFile(h.path) {
 		data, err := ioutil.ReadFile(h.path)
@@ -74,7 +76,7 @@ func (h *Hook) Name() string {
 	return h.name
 }
 
-// Update updates hook settings.
+// Update updates content hook file.
 func (h *Hook) Update() error {
 	if len(strings.TrimSpace(h.Content)) == 0 {
 		if isExist(h.path) {
@@ -91,31 +93,12 @@ func ListHooks(repoPath string) (_ []*Hook, err error) {
 		return nil, errors.New("hooks path does not exist")
 	}
 
-	hooks := make([]*Hook, len(hookNames))
-	for i, name := range hookNames {
+	hooks := make([]*Hook, len(HookNames))
+	for i, name := range HookNames {
 		hooks[i], err = GetHook(repoPath, name)
 		if err != nil {
 			return nil, err
 		}
 	}
 	return hooks, nil
-}
-
-const (
-	HOOK_PATH_UPDATE = "hooks/update"
-)
-
-// SetUpdateHook writes given content to update hook of the reposiotry.
-func SetUpdateHook(repoPath, content string) (err error) {
-	log("Setting update hook: %s", repoPath)
-	hookPath := path.Join(repoPath, HOOK_PATH_UPDATE)
-	if com.IsExist(hookPath) {
-		err = os.Remove(hookPath)
-	} else {
-		err = os.MkdirAll(path.Dir(hookPath), os.ModePerm)
-	}
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(hookPath, []byte(content), 0777)
 }
