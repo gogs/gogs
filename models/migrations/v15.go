@@ -75,7 +75,7 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 				// Gogs didn't allow user to set custom update hook thus no migration for it.
 				// In case user runs this migration multiple times, and custom hook exists,
 				// we assume it's been migrated already.
-				if hookName != "update" && com.IsFile(oldHookPath) && !com.IsExist(newHookPath) {
+				if hookName != "update" && com.IsFile(oldHookPath) && !com.IsExist(customHookDir) {
 					os.MkdirAll(customHookDir, os.ModePerm)
 					if err = os.Rename(oldHookPath, newHookPath); err != nil {
 						return fmt.Errorf("move hook file to custom directory '%s' -> '%s': %v", oldHookPath, newHookPath, err)
