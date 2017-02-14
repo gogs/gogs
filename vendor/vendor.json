@@ -39,6 +39,12 @@
 			"revisionTime": "2016-01-17T19:21:50Z"
 		},
 		{
+			"checksumSHA1": "HG4+dlJq5h+07VI1rOlpc5KBlfg=",
+			"path": "github.com/denisenkom/go-mssqldb",
+			"revision": "9e40d9d5d325edfaa84d3374bfde6e1adce02d58",
+			"revisionTime": "2017-01-17T17:39:00Z"
+		},
+		{
 			"checksumSHA1": "XEBl9iQQvfXNlwCSzyAOCqAlYEA=",
 			"path": "github.com/fatih/color",
 			"revision": "42c364ba490082e4815b5222728711b3440603eb",
