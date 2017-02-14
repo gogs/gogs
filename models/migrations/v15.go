@@ -13,6 +13,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -36,9 +37,11 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 		}
 	)
 
-	// Cleanup old update.log files.
+	// Cleanup old update.log and http.log files.
 	filepath.Walk(setting.LogRootPath, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() && strings.HasPrefix(filepath.Base(path), "update.log") {
+		if !info.IsDir() &&
+			(strings.HasPrefix(filepath.Base(path), "update.log") ||
+				strings.HasPrefix(filepath.Base(path), "http.log")) {
 			os.Remove(path)
 		}
 		return nil
@@ -56,6 +59,8 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 			}
 
 			repoPath := filepath.Join(setting.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name)) + ".git"
+			log.Trace("[%04d]: %s", idx, repoPath)
+
 			hookDir := filepath.Join(repoPath, "hooks")
 			customHookDir := filepath.Join(repoPath, "custom_hooks")
 
