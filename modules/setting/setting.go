@@ -98,6 +98,7 @@ var (
 	LogInRememberDays    int
 	CookieUserName       string
 	CookieRememberName   string
+	CookieSecure         bool
 	ReverseProxyAuthUser string
 
 	// Database settings
@@ -466,6 +467,7 @@ func NewContext() {
 	LogInRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
 	CookieUserName = sec.Key("COOKIE_USERNAME").String()
 	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
+	CookieSecure = sec.Key("COOKIE_SECURE").MustBool(false)
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
 
 	sec = Cfg.Section("attachment")
