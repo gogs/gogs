@@ -84,6 +84,7 @@ func (h *Hook) Update() error {
 		}
 		return nil
 	}
+	os.MkdirAll(path.Dir(h.path), os.ModePerm)
 	return ioutil.WriteFile(h.path, []byte(strings.Replace(h.Content, "\r", "", -1)), os.ModePerm)
 }
 
