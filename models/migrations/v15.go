@@ -50,6 +50,10 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
+			if repo.Name == "." || repo.Name == ".." {
+				return nil
+			}
+
 			user := new(User)
 			has, err := x.Where("id = ?", repo.OwnerID).Get(user)
 			if err != nil {
