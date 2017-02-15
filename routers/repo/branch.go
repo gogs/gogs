@@ -52,7 +52,7 @@ func DeleteBranchPost(ctx *context.Context) {
 	if len(commitID) > 0 {
 		branchCommitID, err := ctx.Repo.GitRepo.GetBranchCommitID(branchName)
 		if err != nil {
-			log.Error(4, "GetBranchCommitID: %v", err)
+			log.Error(2, "GetBranchCommitID: %v", err)
 			return
 		}
 
@@ -63,9 +63,9 @@ func DeleteBranchPost(ctx *context.Context) {
 	}
 
 	if err := ctx.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
-		Force: false,
+		Force: true,
 	}); err != nil {
-		log.Error(4, "DeleteBranch: %v", err)
+		log.Error(2, "DeleteBranch '%s': %v", branchName, err)
 		return
 	}
 }
