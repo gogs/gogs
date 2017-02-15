@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"

@@ -13,13 +13,13 @@ import (
 	"strings"
 
 	"github.com/Unknwon/paginater"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
@@ -155,6 +155,8 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		isMarkdown := markdown.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
 		ctx.Data["ReadmeExist"] = isMarkdown && markdown.IsReadmeFile(blob.Name())
+
+		ctx.Data["IsIPythonNotebook"] = strings.HasSuffix(blob.Name(), ".ipynb")
 
 		if isMarkdown {
 			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))

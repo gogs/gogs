@@ -36,9 +36,28 @@
 		{{end}}
 	</h4>
 	<div class="ui attached table segment">
-		<div class="file-view {{if .IsMarkdown}}markdown{{else if .ReadmeInList}}plain-text{{else if .IsTextFile}}code-view{{end}} has-emoji">
+		<div id="{{if .IsIPythonNotebook}}ipython-notebook{{end}}" class="file-view {{if .IsMarkdown}}markdown{{else if .ReadmeInList}}plain-text{{else if .IsIPythonNotebook}}ipython-notebook1{{else if and .IsTextFile}}code-view{{end}} has-emoji">
 			{{if or .IsMarkdown .ReadmeInList}}
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
+			{{else if .IsIPythonNotebook}}
+				{{if .FileContent}}
+					<script>
+						var rendered = null;
+						$.getJSON("{{.RawFileLink}}", null, function(notebook_json) {
+							var notebook = nb.parse(notebook_json);
+							rendered = notebook.render();
+							$("#ipython-notebook").append(rendered);
+							$("#ipython-notebook code").each(function(i, block) {
+								$(block).addClass("py").addClass("python");
+								hljs.highlightBlock(block);
+							});
+
+							$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
+								$(markdown).html(marked($(markdown).html()));
+							});
+						});
+					</script>
+				{{end}}
 			{{else if not .IsTextFile}}
 				<div class="view-raw ui center">
 					{{if .IsImageFile}}

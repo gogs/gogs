@@ -13,11 +13,11 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/session"
 	gouuid "github.com/satori/go.uuid"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 

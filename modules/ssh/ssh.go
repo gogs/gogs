@@ -16,9 +16,9 @@ import (
 
 	"github.com/Unknwon/com"
 	"golang.org/x/crypto/ssh"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -148,8 +148,11 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 }
 
 // Listen starts a SSH server listens on given port.
-func Listen(host string, port int) {
+func Listen(host string, port int, ciphers []string) {
 	config := &ssh.ServerConfig{
+		Config: ssh.Config{
+			Ciphers: ciphers,
+		},
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			pkey, err := models.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {
@@ -163,7 +166,7 @@ func Listen(host string, port int) {
 	keyPath := filepath.Join(setting.AppDataPath, "ssh/gogs.rsa")
 	if !com.IsExist(keyPath) {
 		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
-		_, stderr, err := com.ExecCmd("ssh-keygen", "-f", keyPath, "-t", "rsa", "-N", "")
+		_, stderr, err := com.ExecCmd(setting.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-N", "")
 		if err != nil {
 			panic(fmt.Sprintf("Fail to generate private key: %v - %s", err, stderr))
 		}

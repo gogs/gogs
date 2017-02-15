@@ -15,14 +15,8 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-func ListIssues(ctx *context.APIContext) {
-	issueOpts := models.IssuesOptions{
-		RepoID:   ctx.Repo.Repository.ID,
-		Page:     ctx.QueryInt("page"),
-		IsClosed: ctx.Query("state") == "closed",
-	}
-
-	issues, err := models.Issues(&issueOpts)
+func listIssues(ctx *context.APIContext, opts *models.IssuesOptions) {
+	issues, err := models.Issues(opts)
 	if err != nil {
 		ctx.Error(500, "Issues", err)
 		return
@@ -37,6 +31,12 @@ func ListIssues(ctx *context.APIContext) {
 		issues = append(issues, temp_issues...)
 	}
 
+	count, err := models.IssuesCount(opts)
+	if err != nil {
+		ctx.Error(500, "IssuesCount", err)
+		return
+	}
+
 	// FIXME: use IssueList to improve performance.
 	apiIssues := make([]*api.Issue, len(issues))
 	for i := range issues {
@@ -47,8 +47,27 @@ func ListIssues(ctx *context.APIContext) {
 		apiIssues[i] = issues[i].APIFormat()
 	}
 
-	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.UI.IssuePagingNum)
+	ctx.SetLinkHeader(int(count), setting.UI.IssuePagingNum)
 	ctx.JSON(200, &apiIssues)
+}
+
+func ListUserIssues(ctx *context.APIContext) {
+	opts := models.IssuesOptions{
+		AssigneeID: ctx.User.ID,
+		Page:       ctx.QueryInt("page"),
+	}
+
+	listIssues(ctx, &opts)
+}
+
+func ListIssues(ctx *context.APIContext) {
+	opts := models.IssuesOptions{
+		RepoID: ctx.Repo.Repository.ID,
+		Page:   ctx.QueryInt("page"),
+		IsClosed: ctx.Query("state") == "closed",
+	}
+
+	listIssues(ctx, &opts)
 }
 
 func GetIssue(ctx *context.APIContext) {

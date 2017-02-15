@@ -8,12 +8,12 @@ import (
 	"path"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 )
 
 const (
@@ -172,6 +172,8 @@ func NewTeamPost(ctx *context.Context, form auth.CreateTeamForm) {
 		switch {
 		case models.IsErrTeamAlreadyExist(err):
 			ctx.RenderWithErr(ctx.Tr("form.team_name_been_taken"), TEAM_NEW, &form)
+		case models.IsErrNameReserved(err):
+			ctx.RenderWithErr(ctx.Tr("org.form.team_name_reserved", err.(models.ErrNameReserved).Name), TEAM_NEW, &form)
 		default:
 			ctx.Handle(500, "NewTeam", err)
 		}

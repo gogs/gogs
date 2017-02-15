@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/jaytaylor/html2text"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
 
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 

@@ -7,12 +7,13 @@ package repo
 import (
 	"path"
 
+	log "gopkg.in/clog.v1"
+
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )

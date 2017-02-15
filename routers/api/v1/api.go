@@ -221,6 +221,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Combo("/:id").Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
+
+			m.Combo("/issues", reqToken()).Get(repo.ListUserIssues)
 		}, reqToken())
 
 		// Repositories
@@ -246,7 +248,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("/:id").Patch(bind(api.EditHookOption{}), repo.EditHook).
 						Delete(repo.DeleteHook)
 				})
-				m.Put("/collaborators/:collaborator", bind(api.AddCollaboratorOption{}), repo.AddCollaborator)
+				m.Group("/collaborators", func() {
+					m.Get("", repo.ListCollaborators)
+					m.Combo("/:collaborator").Get(repo.IsCollaborator).Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
+						Delete(repo.DeleteCollaborator)
+				})
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
 				m.Get("/forks", repo.ListForks)
@@ -301,6 +307,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Get("/editorconfig/:filename", context.RepoRef(), repo.GetEditorconfig)
 			}, repoAssignment())
 		}, reqToken())
+
+		m.Get("/issues", reqToken(), repo.ListUserIssues)
 
 		// Organizations
 		m.Get("/user/orgs", reqToken(), org.ListMyOrgs)

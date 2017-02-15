@@ -15,12 +15,12 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -468,7 +468,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		}
 
 		if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
-			log.Error(4, "updateIssuesCommit: %v", err)
+			log.Error(4, "UpdateIssuesCommit: %v", err)
 		}
 	}
 

@@ -845,6 +845,7 @@ footer .ui.language .menu {
 }
 .home .logo {
   max-width: 220px;
+  margin-bottom: 20px;
 }
 .home .hero h1,
 .home .hero h2 {
@@ -1305,6 +1306,93 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content .view-raw img {
   margin-bottom: -5px;
+}
+.repository.file.list #file-content #ipython-notebook {
+  margin-left: 95px;
+  padding-top: 1px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-notebook {
+  line-height: 1.5;
+}
+.repository.file.list #file-content #ipython-notebook .nb-stdout,
+.repository.file.list #file-content #ipython-notebook .nb-stderr {
+  white-space: pre-wrap;
+  margin: 1em 0;
+  padding: 0.1em 0.5em;
+}
+.repository.file.list #file-content #ipython-notebook .nb-stderr {
+  background-color: #FAA;
+}
+.repository.file.list #file-content #ipython-notebook .nb-cell + .nb-cell {
+  margin-top: 0.5em;
+}
+.repository.file.list #file-content #ipython-notebook .nb-cell {
+  position: relative;
+}
+.repository.file.list #file-content #ipython-notebook .nb-cell.nb-heading-cell {
+  margin-top: 0.5em;
+}
+.repository.file.list #file-content #ipython-notebook .nb-raw-cell {
+  white-space: pre-wrap;
+  background-color: #f5f2f0;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  padding: 1em;
+  margin: .5em 0;
+}
+.repository.file.list #file-content #ipython-notebook .nb-input:before,
+.repository.file.list #file-content #ipython-notebook .nb-output:before {
+  position: absolute;
+  font-family: monospace;
+  color: #999;
+  left: -7.5em;
+  width: 7em;
+  text-align: right;
+}
+.repository.file.list #file-content #ipython-notebook .nb-input:before {
+  content: "In [" attr(data-prompt-number) "]:";
+}
+.repository.file.list #file-content #ipython-notebook .nb-input pre {
+  background-color: #f7f7f7;
+  margin-right: 10px;
+  padding: 5px 10px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-input pre code {
+  min-height: 18px;
+  line-height: 18px;
+  font-size: 14px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output:before {
+  content: "Out [" attr(data-prompt-number) "]:";
+}
+.repository.file.list #file-content #ipython-notebook .nb-output pre {
+  padding: 5px 10px;
+  font-size: 14px;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output img {
+  max-width: 100%;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output table {
+  border: 1px solid #000;
+  border-collapse: collapse;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output th {
+  font-weight: bold;
+}
+.repository.file.list #file-content #ipython-notebook .nb-output th,
+.repository.file.list #file-content #ipython-notebook .nb-output td {
+  border: 1px solid #000;
+  padding: 0.25em;
+  text-align: left;
+  vertical-align: middle;
+  border-collapse: collapse;
+}
+.repository.file.list #file-content #ipython-notebook .nb-markdown-cell {
+  margin-top: 10px;
+  margin-right: 10px;
+  padding: 10px;
+}
+.repository.file.list #file-content #ipython-notebook div[style="max-height:1000px;max-width:1500px;overflow:auto;"] {
+  max-height: none !important;
 }
 .repository.file.list #file-content .plain-text {
   font-size: 14px;

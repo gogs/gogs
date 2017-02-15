@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/gogits/gogs/modules/log"
+	log "gopkg.in/clog.v1"
 )
 
 var (

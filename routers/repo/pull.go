@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -453,6 +453,7 @@ func ParseCompareInfo(ctx *context.Context) (*models.User, *models.Repository, *
 			return nil, nil, nil, nil, "", ""
 		}
 		headBranch = headInfos[1]
+		isSameRepo = headUser.ID == baseRepo.OwnerID
 
 	} else {
 		ctx.Handle(404, "CompareAndPullRequest", nil)
@@ -468,24 +469,30 @@ func ParseCompareInfo(ctx *context.Context) (*models.User, *models.Repository, *
 		return nil, nil, nil, nil, "", ""
 	}
 
-	// Check if current user has fork of repository or in the same repository.
-	headRepo, has := models.HasForkedRepo(headUser.ID, baseRepo.ID)
-	if !has && !isSameRepo {
-		log.Trace("ParseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
-		ctx.Handle(404, "ParseCompareInfo", nil)
-		return nil, nil, nil, nil, "", ""
-	}
+	var (
+		headRepo    *models.Repository
+		headGitRepo *git.Repository
+	)
 
-	var headGitRepo *git.Repository
-	if isSameRepo {
-		headRepo = ctx.Repo.Repository
-		headGitRepo = ctx.Repo.GitRepo
-	} else {
+	// In case user included redundant head user name for comparison in same repository,
+	// no need to check the fork relation.
+	if !isSameRepo {
+		var has bool
+		headRepo, has = models.HasForkedRepo(headUser.ID, baseRepo.ID)
+		if !has {
+			log.Trace("ParseCompareInfo[%d]: does not have fork or in same repository", baseRepo.ID)
+			ctx.Handle(404, "ParseCompareInfo", nil)
+			return nil, nil, nil, nil, "", ""
+		}
+
 		headGitRepo, err = git.OpenRepository(models.RepoPath(headUser.Name, headRepo.Name))
 		if err != nil {
 			ctx.Handle(500, "OpenRepository", err)
 			return nil, nil, nil, nil, "", ""
 		}
+	} else {
+		headRepo = ctx.Repo.Repository
+		headGitRepo = ctx.Repo.GitRepo
 	}
 
 	if !ctx.User.IsWriterOfRepo(headRepo) && !ctx.User.IsAdmin {

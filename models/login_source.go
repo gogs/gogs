@@ -18,10 +18,10 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/auth/pam"
-	"github.com/gogits/gogs/modules/log"
 )
 
 type LoginType int

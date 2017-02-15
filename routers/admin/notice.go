@@ -7,11 +7,11 @@ package admin
 import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 

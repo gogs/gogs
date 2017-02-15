@@ -26,6 +26,7 @@ import (
 	"github.com/go-xorm/xorm"
 	"github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
@@ -36,7 +37,6 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
@@ -84,6 +84,7 @@ func checkVersion() {
 	}
 
 	// Check dependency version.
+	// LEGACY [0.11]: no need to check version as we check in vendor into version control
 	checkers := []VerChecker{
 		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.6.0"},
 		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
@@ -94,7 +95,7 @@ func checkVersion() {
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
 		{"gopkg.in/macaron.v1", macaron.Version, "1.1.7"},
-		{"github.com/gogits/git-module", git.Version, "0.4.6"},
+		{"github.com/gogits/git-module", git.Version, "0.4.7"},
 		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.1"},
 	}
 	for _, c := range checkers {
@@ -362,8 +363,14 @@ func runWeb(ctx *cli.Context) error {
 
 	// ***** START: Organization *****
 	m.Group("/org", func() {
-		m.Get("/create", org.Create)
-		m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+		m.Group("", func() {
+			m.Get("/create", org.Create)
+			m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+		}, func(ctx *context.Context) {
+			if !ctx.User.CanCreateOrganization() {
+				ctx.NotFound()
+			}
+		})
 
 		m.Group("/:org", func() {
 			m.Get("/dashboard", user.Dashboard)
@@ -525,6 +532,10 @@ func runWeb(ctx *cli.Context) error {
 			ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
 		})
 
+		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
+		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
+		// e.g. /org1/test-repo/compare/master...org1:develop
+		// which should be /org1/test-repo/compare/master...develop
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
 
@@ -566,7 +577,7 @@ func runWeb(ctx *cli.Context) error {
 		}, context.RepoRef())
 
 		// m.Get("/branches", repo.Branches)
-		m.Post("/branches/:name/delete", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
+		m.Post("/branches/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
@@ -598,7 +609,7 @@ func runWeb(ctx *cli.Context) error {
 		}, context.RepoRef())
 		m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.RawDiff)
 
-		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
+		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", context.RepoRef(), repo.CompareDiff)
 	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
@@ -653,7 +664,17 @@ func runWeb(ctx *cli.Context) error {
 	case setting.SCHEME_HTTP:
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.SCHEME_HTTPS:
-		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS10}, Handler: m}
+		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{
+			MinVersion:               tls.VersionTLS10,
+			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, // Required for HTTP/2 support.
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+			},
+		}, Handler: m}
 		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
 	case setting.SCHEME_FCGI:
 		err = fcgi.Serve(nil, m)

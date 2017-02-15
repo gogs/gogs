@@ -8,13 +8,14 @@ import (
 	"strings"
 	"time"
 
+	log "gopkg.in/clog.v1"
+
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -377,7 +378,7 @@ func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) 
 	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.Handle(404, "GetUserByName", err)
+			ctx.Handle(404, "GetUserByName", nil)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
 		}
@@ -387,7 +388,7 @@ func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) 
 	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
-			ctx.Handle(404, "GetRepositoryByName", err)
+			ctx.Handle(404, "GetRepositoryByName", nil)
 		} else {
 			ctx.Handle(500, "GetRepositoryByName", err)
 		}

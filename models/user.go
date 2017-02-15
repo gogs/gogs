@@ -25,13 +25,13 @@ import (
 	"github.com/go-xorm/xorm"
 	"github.com/nfnt/resize"
 	"golang.org/x/crypto/pbkdf2"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -170,6 +170,10 @@ func (u *User) CanCreateRepo() bool {
 	return u.NumRepos < u.MaxRepoCreation
 }
 
+func (u *User) CanCreateOrganization() bool {
+	return !setting.Admin.DisableRegularOrgCreation || u.IsAdmin
+}
+
 // CanEditGitHook returns true if user can edit Git hooks.
 func (u *User) CanEditGitHook() bool {
 	return u.IsAdmin || u.AllowGitHook
@@ -191,6 +195,10 @@ func (u *User) DashboardLink() string {
 // HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
 	return setting.AppSubUrl + "/" + u.Name
+}
+
+func (u *User) HTMLURL() string {
+	return setting.AppUrl + u.Name
 }
 
 // GenerateEmailActivateCode generates an activate code based on user information and given e-mail.

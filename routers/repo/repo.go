@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -311,14 +311,14 @@ func Download(ctx *context.Context) {
 			ctx.Handle(500, "GetTagCommit", err)
 			return
 		}
-	} else if len(refName) == 40 {
+	} else if len(refName) >= 7 && len(refName) <= 40 {
 		commit, err = gitRepo.GetCommit(refName)
 		if err != nil {
-			ctx.Handle(404, "GetCommit", nil)
+			ctx.NotFound()
 			return
 		}
 	} else {
-		ctx.Handle(404, "Download", nil)
+		ctx.NotFound()
 		return
 	}
 

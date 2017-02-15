@@ -5,11 +5,12 @@
 package repo
 
 import (
+	log "gopkg.in/clog.v1"
+
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 )
 
 const (
@@ -34,7 +35,7 @@ func Branches(ctx *context.Context) {
 }
 
 func DeleteBranchPost(ctx *context.Context) {
-	branchName := ctx.Params(":name")
+	branchName := ctx.Params("*")
 	commitID := ctx.Query("commit")
 
 	defer func() {

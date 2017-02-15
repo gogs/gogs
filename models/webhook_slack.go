@@ -72,13 +72,21 @@ func SlackLinkFormatter(url string, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
 
-func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayload, error) {
-	// created tag/branch
+func replaceBadCharsForDiscord(in string) string {
+	return strings.NewReplacer("[", "", "]", ":", ":", "/").Replace(in)
+}
+
+func getSlackCreatePayload(isDiscord bool, p *api.CreatePayload, slack *SlackMeta) (*SlackPayload, error) {
+	// Created tag/branch
 	refName := git.RefEndName(p.Ref)
 
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
-	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
+	format := "[%s:%s] %s created by %s"
+	if isDiscord {
+		format = replaceBadCharsForDiscord(format)
+	}
+	text := fmt.Sprintf(format, repoLink, refLink, p.RefType, p.Sender.UserName)
 
 	return &SlackPayload{
 		Channel:  slack.Channel,
@@ -88,7 +96,7 @@ func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayloa
 	}, nil
 }
 
-func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
+func getSlackPushPayload(isDiscord bool, p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
 	// n new commits
 	var (
 		branchName   = git.RefEndName(p.Ref)
@@ -109,7 +117,11 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	branchLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+branchName, branchName)
-	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.UserName)
+	format := "[%s:%s] %s pushed by %s"
+	if isDiscord {
+		format = replaceBadCharsForDiscord(format)
+	}
+	text := fmt.Sprintf(format, repoLink, branchLink, commitString, p.Pusher.UserName)
 
 	var attachmentText string
 	// for each commit, generate attachment text
@@ -133,7 +145,7 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 	}, nil
 }
 
-func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
+func getSlackPullRequestPayload(isDiscord bool, p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
 	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
@@ -181,7 +193,7 @@ func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*S
 	}, nil
 }
 
-func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (*SlackPayload, error) {
+func GetSlackPayload(isDiscord bool, p api.Payloader, event HookEventType, meta string) (*SlackPayload, error) {
 	s := new(SlackPayload)
 
 	slack := &SlackMeta{}
@@ -191,11 +203,11 @@ func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (*SlackP
 
 	switch event {
 	case HOOK_EVENT_CREATE:
-		return getSlackCreatePayload(p.(*api.CreatePayload), slack)
+		return getSlackCreatePayload(isDiscord, p.(*api.CreatePayload), slack)
 	case HOOK_EVENT_PUSH:
-		return getSlackPushPayload(p.(*api.PushPayload), slack)
+		return getSlackPushPayload(isDiscord, p.(*api.PushPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
-		return getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
+		return getSlackPullRequestPayload(isDiscord, p.(*api.PullRequestPayload), slack)
 	}
 
 	return s, nil

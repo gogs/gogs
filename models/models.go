@@ -13,6 +13,7 @@ import (
 	"path"
 	"strings"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
@@ -55,7 +56,6 @@ var (
 	}
 
 	EnableSQLite3 bool
-	EnableTiDB    bool
 )
 
 func init() {
@@ -86,8 +86,8 @@ func LoadConfigs() {
 		setting.UseMySQL = true
 	case "postgres":
 		setting.UsePostgreSQL = true
-	case "tidb":
-		setting.UseTiDB = true
+	case "mssql":
+		setting.UseMSSQL = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
@@ -108,6 +108,20 @@ func parsePostgreSQLHostPort(info string) (string, string) {
 		idx := strings.LastIndex(info, ":")
 		host = info[:idx]
 		port = info[idx+1:]
+	} else if len(info) > 0 {
+		host = info
+	}
+	return host, port
+}
+
+func parseMSSQLHostPort(info string) (string, string) {
+	host, port := "127.0.0.1", "1433"
+	if strings.Contains(info, ":") {
+		host = strings.Split(info, ":")[0]
+		port = strings.Split(info, ":")[1]
+	} else if strings.Contains(info, ",") {
+		host = strings.Split(info, ",")[0]
+		port = strings.TrimSpace(strings.Split(info, ",")[1])
 	} else if len(info) > 0 {
 		host = info
 	}
@@ -138,6 +152,9 @@ func getEngine() (*xorm.Engine, error) {
 			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
 				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), host, port, DbCfg.Name, Param, DbCfg.SSLMode)
 		}
+	case "mssql":
+		host, port := parseMSSQLHostPort(DbCfg.Host)
+		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, DbCfg.Name, DbCfg.User, DbCfg.Passwd)
 	case "sqlite3":
 		if !EnableSQLite3 {
 			return nil, errors.New("This binary version does not build support for SQLite3.")
@@ -146,14 +163,6 @@ func getEngine() (*xorm.Engine, error) {
 			return nil, fmt.Errorf("Fail to create directories: %v", err)
 		}
 		connStr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
-	case "tidb":
-		if !EnableTiDB {
-			return nil, errors.New("This binary version does not build support for TiDB.")
-		}
-		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
-			return nil, fmt.Errorf("Fail to create directories: %v", err)
-		}
-		connStr = "goleveldb://" + DbCfg.Path
 	default:
 		return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
@@ -187,7 +196,12 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("Fail to create xorm.log: %v", err)
 	}
-	x.SetLogger(xorm.NewSimpleLogger(f))
+
+	if setting.ProdMode {
+		x.SetLogger(xorm.NewSimpleLogger3(f, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
+	} else {
+		x.SetLogger(xorm.NewSimpleLogger(f))
+	}
 	x.ShowSQL(true)
 	return nil
 }

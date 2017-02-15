@@ -81,10 +81,16 @@ func EditMilestone(ctx *context.APIContext, form api.EditMilestoneOption) {
 		milestone.Deadline = *form.Deadline
 	}
 
-	if err := models.UpdateMilestone(milestone); err != nil {
+	if form.State != nil {
+		if err = milestone.ChangeStatus(api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
+			ctx.Error(500, "ChangeStatus", err)
+			return
+		}
+	} else if err = models.UpdateMilestone(milestone); err != nil {
 		ctx.Handle(500, "UpdateMilestone", err)
 		return
 	}
+
 	ctx.JSON(200, milestone.APIFormat())
 }
 

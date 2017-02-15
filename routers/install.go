@@ -6,6 +6,7 @@ package routers
 
 import (
 	"errors"
+	"net/mail"
 	"os"
 	"os/exec"
 	"path"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
@@ -24,7 +26,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/cron"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
@@ -64,7 +65,7 @@ func GlobalInit() {
 		highlight.NewContext()
 		markdown.BuildSanitizer()
 		if err := models.NewEngine(); err != nil {
-			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
+			log.Fatal(2, "Fail to initialize ORM engine: %v", err)
 		}
 		models.HasEngine = true
 
@@ -76,13 +77,9 @@ func GlobalInit() {
 		models.InitSyncMirrors()
 		models.InitDeliverHooks()
 		models.InitTestPullRequests()
-		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
 		log.Info("SQLite3 Supported")
-	}
-	if models.EnableTiDB {
-		log.Info("TiDB Supported")
 	}
 	if setting.SupportMiniWinService {
 		log.Info("Builtin Windows Service Supported")
@@ -90,8 +87,9 @@ func GlobalInit() {
 	checkRunMode()
 
 	if setting.InstallLock && setting.SSH.StartBuiltinServer {
-		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort)
+		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort, setting.SSH.ServerCiphers)
 		log.Info("SSH server started on %s:%v", setting.SSH.ListenHost, setting.SSH.ListenPort)
+		log.Trace("SSH server cipher list: %v", setting.SSH.ServerCiphers)
 	}
 }
 
@@ -104,12 +102,9 @@ func InstallInit(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
-	dbOpts := []string{"MySQL", "PostgreSQL"}
+	dbOpts := []string{"MySQL", "PostgreSQL", "MSSQL"}
 	if models.EnableSQLite3 {
 		dbOpts = append(dbOpts, "SQLite3")
-	}
-	if models.EnableTiDB {
-		dbOpts = append(dbOpts, "TiDB")
 	}
 	ctx.Data["DbOptions"] = dbOpts
 }
@@ -127,13 +122,11 @@ func Install(ctx *context.Context) {
 	switch models.DbCfg.Type {
 	case "postgres":
 		ctx.Data["CurDbOption"] = "PostgreSQL"
+	case "mssql":
+		ctx.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
 		if models.EnableSQLite3 {
 			ctx.Data["CurDbOption"] = "SQLite3"
-		}
-	case "tidb":
-		if models.EnableTiDB {
-			ctx.Data["CurDbOption"] = "TiDB"
 		}
 	}
 
@@ -159,7 +152,7 @@ func Install(ctx *context.Context) {
 	if setting.MailService != nil {
 		form.SMTPHost = setting.MailService.Host
 		form.SMTPFrom = setting.MailService.From
-		form.SMTPEmail = setting.MailService.User
+		form.SMTPUser = setting.MailService.User
 	}
 	form.RegisterConfirm = setting.Service.RegisterEmailConfirm
 	form.MailNotify = setting.Service.EnableNotifyMail
@@ -200,7 +193,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 
 	// Pass basic check, now test configuration.
 	// Test database setting.
-	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3", "TiDB": "tidb"}
+	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "MSSQL": "mssql", "SQLite3": "sqlite3", "TiDB": "tidb"}
 	models.DbCfg.Type = dbTypes[form.DbType]
 	models.DbCfg.Host = form.DbHost
 	models.DbCfg.User = form.DbUser
@@ -255,6 +248,17 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		ctx.Data["Err_RunUser"] = true
 		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, currentUser), INSTALL, &form)
 		return
+	}
+
+	// Make sure FROM field is valid
+	if len(form.SMTPFrom) > 0 {
+		_, err := mail.ParseAddress(form.SMTPFrom)
+		if err != nil {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTPFrom"] = true
+			ctx.RenderWithErr(ctx.Tr("install.invalid_smtp_from", err), INSTALL, &form)
+			return
+		}
 	}
 
 	// Check logic loophole between disable self-registration and no admin account.
@@ -317,7 +321,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		cfg.Section("mailer").Key("ENABLED").SetValue("true")
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
 		cfg.Section("mailer").Key("FROM").SetValue(form.SMTPFrom)
-		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
+		cfg.Section("mailer").Key("USER").SetValue(form.SMTPUser)
 		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
 	} else {
 		cfg.Section("mailer").Key("ENABLED").SetValue("false")

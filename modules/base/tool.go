@@ -22,10 +22,10 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/chardet"
 
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -52,17 +52,17 @@ func ShortSha(sha1 string) string {
 
 func DetectEncoding(content []byte) (string, error) {
 	if utf8.Valid(content) {
-		log.Debug("Detected encoding: utf-8 (fast)")
+		log.Trace("Detected encoding: utf-8 (fast)")
 		return "UTF-8", nil
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
 	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
-		log.Debug("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
+		log.Trace("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
 		return setting.Repository.AnsiCharset, err
 	}
 
-	log.Debug("Detected encoding: %s", result.Charset)
+	log.Trace("Detected encoding: %s", result.Charset)
 	return result.Charset, err
 }
 
@@ -181,11 +181,12 @@ func HashEmail(email string) string {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func AvatarLink(email string) (url string) {
-	if setting.EnableFederatedAvatar && setting.LibravatarService != nil {
+	if setting.EnableFederatedAvatar && setting.LibravatarService != nil &&
+		len(email) > 0 {
 		var err error
 		url, err = setting.LibravatarService.FromEmail(email)
 		if err != nil {
-			log.Error(4, "LibravatarService.FromEmail [%s]: %v", email, err)
+			log.Error(3, "LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
 	if len(url) == 0 && !setting.DisableGravatar {

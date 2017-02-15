@@ -10,23 +10,15 @@ export GO15VENDOREXPERIMENT=1
 # Install build deps
 apk --no-cache --no-progress add --virtual build-deps build-base linux-pam-dev go
 
-# Install glide
-git clone -b 0.10.2 https://github.com/Masterminds/glide ${GOPATH}/src/github.com/Masterminds/glide
-cd ${GOPATH}/src/github.com/Masterminds/glide
-make build
-go install
-
-
-
 # Build Gogs
 mkdir -p ${GOPATH}/src/github.com/gogits/
 ln -s /app/gogs/ ${GOPATH}/src/github.com/gogits/gogs
 cd ${GOPATH}/src/github.com/gogits/gogs
-glide install
+go get -v -tags "sqlite cert pam" ./...
 make build TAGS="sqlite cert pam"
 
-# Cleanup GOPATH & vendoring dir
-rm -r $GOPATH /app/gogs/vendor
+# Cleanup GOPATH
+rm -r $GOPATH
 
 # Remove build deps
 apk --no-progress del build-deps

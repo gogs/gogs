@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/go-xorm/xorm"
 )
 
 const OWNER_TEAM = "Owners"
@@ -24,6 +26,16 @@ type Team struct {
 	Members     []*User       `xorm:"-"`
 	NumRepos    int
 	NumMembers  int
+}
+
+func (t *Team) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "num_repos":
+		// LEGACY [0.11]: this is backward compatibility bug fix for https://github.com/gogits/gogs/issues/3671
+		if t.NumRepos < 0 {
+			t.NumRepos = 0
+		}
+	}
 }
 
 // IsOwnerTeam returns true if team is owner team.
@@ -194,11 +206,24 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	return sess.Commit()
 }
 
+var reservedTeamNames = []string{"new"}
+
+// IsUsableTeamName return an error if given name is a reserved name or pattern.
+func IsUsableTeamName(name string) error {
+	return isUsableName(reservedTeamNames, nil, name)
+}
+
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
 func NewTeam(t *Team) error {
 	if len(t.Name) == 0 {
 		return errors.New("empty team name")
+	} else if t.OrgID == 0 {
+		return errors.New("OrgID is not assigned")
+	}
+
+	if err := IsUsableTeamName(t.Name); err != nil {
+		return err
 	}
 
 	has, err := x.Id(t.OrgID).Get(new(User))

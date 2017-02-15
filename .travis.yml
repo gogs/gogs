@@ -1,29 +1,17 @@
 language: go
-
 go:
-  - 1.5
-  - 1.6
-  - 1.7
+  - 1.5.x
+  - 1.6.x
+  - 1.7.x
+  - master
 
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libpam-dev
-  - go get github.com/msteinert/pam 
 
-install:
-  - go get -t -v ./...
+env:
+  - GO15VENDOREXPERIMENT=1
 
 script: 
   - go build -v -tags "pam"
   - go test -v -cover -race ./...
-
-notifications:
-  email:
-    - u@gogs.io
-  slack: gophercn:o5pSanyTeNhnfYc3QnG0X7Wx
-  webhooks:
-    urls:
-      - https://webhooks.gitter.im/e/b590f8e03882f7aedc3e
-    on_success: change 
-    on_failure: always 
-    on_start: never     

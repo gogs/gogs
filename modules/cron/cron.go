@@ -7,10 +7,11 @@ package cron
 import (
 	"time"
 
+	log "gopkg.in/clog.v1"
+
 	"github.com/gogits/cron"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
