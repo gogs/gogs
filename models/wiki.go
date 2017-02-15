@@ -25,14 +25,14 @@ var wikiWorkingPool = sync.NewExclusivePool()
 
 // ToWikiPageURL formats a string to corresponding wiki URL name.
 func ToWikiPageURL(name string) string {
-	return url.QueryEscape(strings.Replace(name, " ", "-", -1))
+	return url.QueryEscape(name)
 }
 
 // ToWikiPageName formats a URL back to corresponding wiki page name,
 // and removes leading characters './' to prevent changing files
 // that are not belong to wiki repository.
 func ToWikiPageName(urlString string) string {
-	name, _ := url.QueryUnescape(strings.Replace(urlString, "-", " ", -1))
+	name, _ := url.QueryUnescape(urlString)
 	return strings.Replace(strings.TrimLeft(name, "./"), "/", " ", -1)
 }
 
