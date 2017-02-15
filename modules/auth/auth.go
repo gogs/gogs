@@ -49,14 +49,14 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 		if len(tokenSHA) > 0 {
 			t, err := models.GetAccessTokenBySHA(tokenSHA)
 			if err != nil {
-				if models.IsErrAccessTokenNotExist(err) || models.IsErrAccessTokenEmpty(err) {
-					log.Error(4, "GetAccessTokenBySHA: %v", err)
+				if !models.IsErrAccessTokenNotExist(err) && !models.IsErrAccessTokenEmpty(err) {
+					log.Error(2, "GetAccessTokenBySHA: %v", err)
 				}
 				return 0
 			}
 			t.Updated = time.Now()
 			if err = models.UpdateAccessToken(t); err != nil {
-				log.Error(4, "UpdateAccessToken: %v", err)
+				log.Error(2, "UpdateAccessToken: %v", err)
 			}
 			return t.UID
 		}
@@ -69,7 +69,7 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 	if id, ok := uid.(int64); ok {
 		if _, err := models.GetUserByID(id); err != nil {
 			if !models.IsErrUserNotExist(err) {
-				log.Error(4, "GetUserById: %v", err)
+				log.Error(2, "GetUserById: %v", err)
 			}
 			return 0
 		}
