@@ -113,6 +113,8 @@ func (tes Entries) Sort() {
 	sort.Sort(tes)
 }
 
+var defaultConcurrency = runtime.NumCPU()
+
 type commitInfo struct {
 	entryName string
 	infos     []interface{}
@@ -136,7 +138,7 @@ func (tes Entries) GetCommitsInfoWithCustomConcurrency(commit *Commit, treePath 
 	}
 
 	if maxConcurrency <= 0 {
-		maxConcurrency = runtime.NumCPU()
+		maxConcurrency = defaultConcurrency
 	}
 
 	// Length of taskChan determines how many goroutines (subprocesses) can run at the same time.
