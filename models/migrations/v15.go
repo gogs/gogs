@@ -64,11 +64,12 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 
 			repoBase := filepath.Join(setting.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name))
 			repoPath := repoBase + ".git"
+			wikiPath := repoBase + ".wiki.git"
 			log.Trace("[%04d]: %s", idx, repoPath)
 
 			hookDir := filepath.Join(repoPath, "hooks")
 			customHookDir := filepath.Join(repoPath, "custom_hooks")
-			wikiHookDir := filepath.Join(repoBase+".wiki.git", "hooks")
+			wikiHookDir := filepath.Join(wikiPath, "hooks")
 
 			for i, hookName := range hookNames {
 				oldHookPath := filepath.Join(hookDir, hookName)
@@ -88,10 +89,12 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 					return fmt.Errorf("write hook file '%s': %v", oldHookPath, err)
 				}
 
-				os.MkdirAll(wikiHookDir, os.ModePerm)
-				wikiHookPath := filepath.Join(wikiHookDir, hookName)
-				if err = ioutil.WriteFile(wikiHookPath, []byte(hookTpls[i]), os.ModePerm); err != nil {
-					return fmt.Errorf("write wiki hook file '%s': %v", wikiHookPath, err)
+				if com.IsDir(wikiPath) {
+					os.MkdirAll(wikiHookDir, os.ModePerm)
+					wikiHookPath := filepath.Join(wikiHookDir, hookName)
+					if err = ioutil.WriteFile(wikiHookPath, []byte(hookTpls[i]), os.ModePerm); err != nil {
+						return fmt.Errorf("write wiki hook file '%s': %v", wikiHookPath, err)
+					}
 				}
 			}
 			return nil
