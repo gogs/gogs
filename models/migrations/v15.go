@@ -88,6 +88,7 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 					return fmt.Errorf("write hook file '%s': %v", oldHookPath, err)
 				}
 
+				os.MkdirAll(wikiHookDir, os.ModePerm)
 				wikiHookPath := filepath.Join(wikiHookDir, hookName)
 				if err = ioutil.WriteFile(wikiHookPath, []byte(hookTpls[i]), os.ModePerm); err != nil {
 					return fmt.Errorf("write wiki hook file '%s': %v", wikiHookPath, err)
