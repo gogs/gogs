@@ -1663,7 +1663,15 @@ func ReinitMissingRepositories() error {
 func SyncRepositoryHooks() error {
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
-			return createDelegateHooks(bean.(*Repository).RepoPath())
+			repo := bean.(*Repository)
+			if err := createDelegateHooks(repo.RepoPath()); err != nil {
+				return err
+			}
+
+			if repo.HasWiki() {
+				return createDelegateHooks(repo.WikiPath())
+			}
+			return nil
 		})
 }
 
