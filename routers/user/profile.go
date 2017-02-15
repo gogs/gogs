@@ -99,9 +99,10 @@ func Profile(ctx *context.Context) {
 			page = 1
 		}
 
+		showPrivate := ctx.IsSigned && (ctxUser.ID == ctx.User.ID || ctx.User.IsAdmin)
 		ctx.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   ctxUser.ID,
-			Private:  ctx.IsSigned && ctx.User.ID == ctxUser.ID,
+			Private:  showPrivate,
 			Page:     page,
 			PageSize: setting.UI.User.RepoPagingNum,
 		})
@@ -109,7 +110,9 @@ func Profile(ctx *context.Context) {
 			ctx.Handle(500, "GetRepositories", err)
 			return
 		}
-		ctx.Data["Page"] = paginater.New(ctxUser.NumRepos, setting.UI.User.RepoPagingNum, page, 5)
+
+		count := models.CountUserRepositories(ctxUser.ID, showPrivate)
+		ctx.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
 	}
 
 	ctx.HTML(200, PROFILE)
