@@ -126,6 +126,7 @@ var (
 		PreferredLicenses        []string
 		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
 		EnableLocalPathMigration bool
+		CommitsFetchConcurrency  int
 
 		// Repository editor settings
 		Editor struct {
