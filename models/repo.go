@@ -468,35 +468,33 @@ func (repo *Repository) LocalCopyPath() string {
 	return path.Join(setting.AppDataPath, "tmp/local-repo", com.ToStr(repo.ID))
 }
 
-// UpdateLocalCopy pulls latest changes of given branch from repoPath to localPath.
+// UpdateLocalCopy fetches latest changes of given branch from repoPath to localPath.
 // It creates a new clone if local copy does not exist.
 // This function checks out target branch by default, it is safe to assume subsequent
 // operations are operating against target branch when caller has confidence for no race condition.
-func UpdateLocalCopyBranch(repoPath, localPath, branch string) error {
+func UpdateLocalCopyBranch(repoPath, localPath, branch string) (err error) {
 	if !com.IsExist(localPath) {
-		if err := git.Clone(repoPath, localPath, git.CloneRepoOptions{
+		if err = git.Clone(repoPath, localPath, git.CloneRepoOptions{
 			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
 			Branch:  branch,
 		}); err != nil {
 			return fmt.Errorf("git clone %s: %v", branch, err)
 		}
 	} else {
-		if err := git.Fetch(localPath, git.FetchRemoteOptions{
+		if err = git.Fetch(localPath, git.FetchRemoteOptions{
 			Prune: true,
 		}); err != nil {
 			return fmt.Errorf("git fetch: %v", err)
 		}
-		if err := git.Checkout(localPath, git.CheckoutOptions{
+		if err = git.Checkout(localPath, git.CheckoutOptions{
 			Branch: branch,
 		}); err != nil {
 			return fmt.Errorf("git checkout %s: %v", branch, err)
 		}
-		if err := git.Pull(localPath, git.PullRemoteOptions{
-			Timeout: time.Duration(setting.Git.Timeout.Pull) * time.Second,
-			Remote:  "origin",
-			Branch:  branch,
-		}); err != nil {
-			return fmt.Errorf("git pull origin %s: %v", branch, err)
+
+		// Reset to align with remote in case of force push.
+		if err = git.ResetHEAD(localPath, true, "origin/"+branch); err != nil {
+			return fmt.Errorf("git reset --hard origin/%s: %v", branch, err)
 		}
 	}
 	return nil
