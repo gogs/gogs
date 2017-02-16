@@ -112,7 +112,7 @@ func (ctx *Context) NotFound() {
 // or error context description for logging purpose of 500 server error.
 func (ctx *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
 	if errck(err) {
-		ctx.Handle(404, title, err)
+		ctx.NotFound()
 		return
 	}
 

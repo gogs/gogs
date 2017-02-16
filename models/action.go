@@ -468,7 +468,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		}
 
 		if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
-			log.Error(4, "UpdateIssuesCommit: %v", err)
+			log.Error(2, "UpdateIssuesCommit: %v", err)
 		}
 	}
 
