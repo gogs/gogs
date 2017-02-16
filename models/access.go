@@ -86,7 +86,7 @@ func AccessLevel(u *User, repo *Repository) (AccessMode, error) {
 
 func hasAccess(e Engine, u *User, repo *Repository, testMode AccessMode) (bool, error) {
 	mode, err := accessLevel(e, u, repo)
-	return testMode <= mode, err
+	return mode >= testMode, err
 }
 
 // HasAccess returns true if someone has the request access level. User can be nil!

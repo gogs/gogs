@@ -7,14 +7,22 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/urfave/cli"
+	log "gopkg.in/clog.v1"
+
+	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/modules/httplib"
+	"github.com/gogits/gogs/modules/setting"
+	http "github.com/gogits/gogs/routers/repo"
 )
 
 var (
@@ -56,7 +64,7 @@ func runHookPreReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/pre-receive.log")
+	setup(c, "hooks/pre-receive.log", false)
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -65,12 +73,12 @@ func runHookPreReceive(c *cli.Context) error {
 		buf.WriteByte('\n')
 	}
 
-	customHooksPath := os.Getenv(_ENV_REPO_CUSTOM_HOOKS_PATH)
+	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
 
-	hookCmd := exec.Command(filepath.Join(customHooksPath, "pre-receive"))
+	hookCmd := exec.Command(customHooksPath)
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
@@ -84,7 +92,7 @@ func runHookUpdate(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/update.log")
+	setup(c, "hooks/update.log", false)
 
 	args := c.Args()
 	if len(args) != 3 {
@@ -93,22 +101,12 @@ func runHookUpdate(c *cli.Context) error {
 		fail("First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
-	uuid := os.Getenv(_ENV_UPDATE_TASK_UUID)
-	if err := models.AddUpdateTask(&models.UpdateTask{
-		UUID:        uuid,
-		RefName:     args[0],
-		OldCommitID: args[1],
-		NewCommitID: args[2],
-	}); err != nil {
-		fail("Internal error", "Fail to add update task '%s': %v", uuid, err)
-	}
-
-	customHooksPath := os.Getenv(_ENV_REPO_CUSTOM_HOOKS_PATH)
+	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "update")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
 
-	hookCmd := exec.Command(filepath.Join(customHooksPath, "update"), args...)
+	hookCmd := exec.Command(customHooksPath, args...)
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
@@ -122,16 +120,67 @@ func runHookPostReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/post-receive.log")
+	setup(c, "hooks/post-receive.log", true)
 
-	customHooksPath := os.Getenv(_ENV_REPO_CUSTOM_HOOKS_PATH)
+	isWiki := strings.Contains(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+
+	buf := bytes.NewBuffer(nil)
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		buf.Write(scanner.Bytes())
+		buf.WriteByte('\n')
+
+		// TODO: support news feeds for wiki
+		if isWiki {
+			continue
+		}
+
+		fields := bytes.Fields(scanner.Bytes())
+		if len(fields) != 3 {
+			continue
+		}
+
+		options := models.PushUpdateOptions{
+			OldCommitID:  string(fields[0]),
+			NewCommitID:  string(fields[1]),
+			RefFullName:  string(fields[2]),
+			PusherID:     com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64(),
+			PusherName:   os.Getenv(http.ENV_AUTH_USER_NAME),
+			RepoUserName: os.Getenv(http.ENV_REPO_OWNER_NAME),
+			RepoName:     os.Getenv(http.ENV_REPO_NAME),
+		}
+		if err := models.PushUpdate(options); err != nil {
+			log.Error(2, "PushUpdate: %v", err)
+		}
+
+		// Ask for running deliver hook and test pull request tasks.
+		reqURL := setting.LocalURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
+			strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX) +
+			"&secret=" + os.Getenv(http.ENV_REPO_OWNER_SALT_MD5) +
+			"&pusher=" + os.Getenv(http.ENV_AUTH_USER_ID)
+		log.Trace("Trigger task: %s", reqURL)
+
+		resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		}).Response()
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode/100 != 2 {
+				log.Error(2, "Fail to trigger task: not 2xx response code")
+			}
+		} else {
+			log.Error(2, "Fail to trigger task: %v", err)
+		}
+	}
+
+	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "post-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
 
-	hookCmd := exec.Command(filepath.Join(customHooksPath, "post-receive"))
+	hookCmd := exec.Command(customHooksPath)
 	hookCmd.Stdout = os.Stdout
-	hookCmd.Stdin = os.Stdin
+	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
 		fail("Internal error", "Fail to execute custom post-receive hook: %v", err)

@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"crypto/tls"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,21 +13,16 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/gogits/git-module"
-	gouuid "github.com/satori/go.uuid"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/setting"
+	http "github.com/gogits/gogs/routers/repo"
 )
 
 const (
-	_ACCESS_DENIED_MESSAGE      = "Repository does not exist or you do not have access"
-	_ENV_UPDATE_TASK_UUID       = "UPDATE_TASK_UUID"
-	_ENV_REPO_CUSTOM_HOOKS_PATH = "REPO_CUSTOM_HOOKS_PATH"
+	_ACCESS_DENIED_MESSAGE = "Repository does not exist or you do not have access"
 )
 
 var Serv = cli.Command{
@@ -41,7 +35,20 @@ var Serv = cli.Command{
 	},
 }
 
-func setup(c *cli.Context, logPath string) {
+func fail(userMessage, logMessage string, args ...interface{}) {
+	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
+
+	if len(logMessage) > 0 {
+		if !setting.ProdMode {
+			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
+		}
+		log.Fatal(3, logMessage, args...)
+	}
+
+	os.Exit(1)
+}
+
+func setup(c *cli.Context, logPath string, connectDB bool) {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	} else if c.GlobalIsSet("config") {
@@ -49,8 +56,13 @@ func setup(c *cli.Context, logPath string) {
 	}
 
 	setting.NewContext()
-	setting.NewService()
+
+	level := log.TRACE
+	if setting.ProdMode {
+		level = log.ERROR
+	}
 	log.New(log.FILE, log.FileConfig{
+		Level:    level,
 		Filename: filepath.Join(setting.LogRootPath, logPath),
 		FileRotationConfig: log.FileRotationConfig{
 			Rotate:  true,
@@ -60,6 +72,10 @@ func setup(c *cli.Context, logPath string) {
 	})
 	log.Delete(log.CONSOLE) // Remove primary logger
 
+	if !connectDB {
+		return
+	}
+
 	models.LoadConfigs()
 
 	if setting.UseSQLite3 {
@@ -67,7 +83,9 @@ func setup(c *cli.Context, logPath string) {
 		os.Chdir(workDir)
 	}
 
-	models.SetEngine()
+	if err := models.SetEngine(); err != nil {
+		fail("Internal error", "SetEngine: %v", err)
+	}
 }
 
 func parseSSHCmd(cmd string) (string, string) {
@@ -104,68 +122,8 @@ var (
 	}
 )
 
-func fail(userMessage, logMessage string, args ...interface{}) {
-	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
-
-	if len(logMessage) > 0 {
-		if !setting.ProdMode {
-			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
-		}
-		log.Fatal(3, logMessage, args...)
-	}
-
-	log.Shutdown()
-	os.Exit(1)
-}
-
-func handleUpdateTask(uuid string, user, repoUser *models.User, reponame string, isWiki bool) {
-	task, err := models.GetUpdateTaskByUUID(uuid)
-	if err != nil {
-		if models.IsErrUpdateTaskNotExist(err) {
-			log.Trace("No update task is presented: %s", uuid)
-			return
-		}
-		log.Fatal(2, "GetUpdateTaskByUUID: %v", err)
-	} else if err = models.DeleteUpdateTaskByUUID(uuid); err != nil {
-		log.Fatal(2, "DeleteUpdateTaskByUUID: %v", err)
-	}
-
-	if isWiki {
-		return
-	}
-
-	if err = models.PushUpdate(models.PushUpdateOptions{
-		RefFullName:  task.RefName,
-		OldCommitID:  task.OldCommitID,
-		NewCommitID:  task.NewCommitID,
-		PusherID:     user.ID,
-		PusherName:   user.Name,
-		RepoUserName: repoUser.Name,
-		RepoName:     reponame,
-	}); err != nil {
-		log.Error(2, "Update: %v", err)
-	}
-
-	// Ask for running deliver hook and test pull request tasks.
-	reqURL := setting.LocalURL + repoUser.Name + "/" + reponame + "/tasks/trigger?branch=" +
-		strings.TrimPrefix(task.RefName, git.BRANCH_PREFIX) + "&secret=" + base.EncodeMD5(repoUser.Salt) + "&pusher=" + com.ToStr(user.ID)
-	log.Trace("Trigger task: %s", reqURL)
-
-	resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
-		InsecureSkipVerify: true,
-	}).Response()
-	if err == nil {
-		resp.Body.Close()
-		if resp.StatusCode/100 != 2 {
-			log.Error(2, "Fail to trigger task: not 2xx response code")
-		}
-	} else {
-		log.Error(2, "Fail to trigger task: %v", err)
-	}
-}
-
 func runServ(c *cli.Context) error {
-	setup(c, "serv.log")
+	setup(c, "serv.log", true)
 
 	if setting.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
@@ -189,31 +147,26 @@ func runServ(c *cli.Context) error {
 	if len(repoFields) != 2 {
 		fail("Invalid repository path", "Invalid repository path: %v", args)
 	}
-	username := strings.ToLower(repoFields[0])
-	reponame := strings.ToLower(strings.TrimSuffix(repoFields[1], ".git"))
+	ownerName := strings.ToLower(repoFields[0])
+	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
+	repoName = strings.TrimSuffix(repoName, ".wiki")
 
-	isWiki := false
-	if strings.HasSuffix(reponame, ".wiki") {
-		isWiki = true
-		reponame = reponame[:len(reponame)-5]
-	}
-
-	repoOwner, err := models.GetUserByName(username)
+	owner, err := models.GetUserByName(ownerName)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			fail("Repository owner does not exist", "Unregistered owner: %s", username)
+			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
 		}
-		fail("Internal error", "Fail to get repository owner '%s': %v", username, err)
+		fail("Internal error", "Fail to get repository owner '%s': %v", ownerName, err)
 	}
 
-	repo, err := models.GetRepositoryByName(repoOwner.ID, reponame)
+	repo, err := models.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
 		if models.IsErrRepoNotExist(err) {
-			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", repoOwner.Name, reponame)
+			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		fail("Internal error", "Fail to get repository: %v", err)
 	}
-	repo.Owner = repoOwner
+	repo.Owner = owner
 
 	requestMode, ok := allowedCommands[verb]
 	if !ok {
@@ -262,6 +215,7 @@ func runServ(c *cli.Context) error {
 			}
 		}
 	} else {
+		setting.NewService()
 		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
 		// A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
 		// we should give read access only in repositories where this deploy key is in use. In other case, a server
@@ -269,34 +223,6 @@ func runServ(c *cli.Context) error {
 		if key.IsDeployKey() && setting.Service.RequireSignInView {
 			checkDeployKey(key, repo)
 		}
-	}
-
-	uuid := gouuid.NewV4().String()
-	os.Setenv(_ENV_UPDATE_TASK_UUID, uuid)
-	os.Setenv(_ENV_REPO_CUSTOM_HOOKS_PATH, filepath.Join(repo.RepoPath(), "custom_hooks"))
-
-	// Special handle for Windows.
-	if setting.IsWindows {
-		verb = strings.Replace(verb, "-", " ", 1)
-	}
-
-	var gitCmd *exec.Cmd
-	verbs := strings.Split(verb, " ")
-	if len(verbs) == 2 {
-		gitCmd = exec.Command(verbs[0], verbs[1], repoFullName)
-	} else {
-		gitCmd = exec.Command(verb, repoFullName)
-	}
-	gitCmd.Dir = setting.RepoRootPath
-	gitCmd.Stdout = os.Stdout
-	gitCmd.Stdin = os.Stdin
-	gitCmd.Stderr = os.Stderr
-	if err = gitCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute git command: %v", err)
-	}
-
-	if requestMode == models.ACCESS_MODE_WRITE {
-		handleUpdateTask(uuid, user, repoOwner, reponame, isWiki)
 	}
 
 	// Update user key activity.
@@ -310,6 +236,29 @@ func runServ(c *cli.Context) error {
 		if err = models.UpdatePublicKey(key); err != nil {
 			fail("Internal error", "UpdatePublicKey: %v", err)
 		}
+	}
+
+	// Special handle for Windows.
+	if setting.IsWindows {
+		verb = strings.Replace(verb, "-", " ", 1)
+	}
+
+	var gitCmd *exec.Cmd
+	verbs := strings.Split(verb, " ")
+	if len(verbs) == 2 {
+		gitCmd = exec.Command(verbs[0], verbs[1], repoFullName)
+	} else {
+		gitCmd = exec.Command(verb, repoFullName)
+	}
+	if requestMode == models.ACCESS_MODE_WRITE {
+		gitCmd.Env = append(os.Environ(), http.ComposeHookEnvs(repo.RepoPath(), owner.Name, owner.Salt, repo.Name, user)...)
+	}
+	gitCmd.Dir = setting.RepoRootPath
+	gitCmd.Stdout = os.Stdout
+	gitCmd.Stdin = os.Stdin
+	gitCmd.Stderr = os.Stderr
+	if err = gitCmd.Run(); err != nil {
+		fail("Internal error", "Fail to execute git command: %v", err)
 	}
 
 	return nil
