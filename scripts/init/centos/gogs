@@ -2,7 +2,7 @@
 #
 #       /etc/rc.d/init.d/gogs
 #
-#       Runs the Gogs Go Git Service.
+#       Runs the Gogs
 #       
 #
 # chkconfig:   - 85 15 
@@ -27,7 +27,7 @@ NAME=gogs
 GOGS_HOME=/home/git/gogs
 GOGS_PATH=${GOGS_HOME}/$NAME
 GOGS_USER=git
-SERVICENAME="Gogs Go Git Service"
+SERVICENAME="Gogs"
 LOCKFILE=/var/lock/subsys/gogs
 LOGPATH=${GOGS_HOME}/log
 LOGFILE=${LOGPATH}/gogs.log

@@ -384,7 +384,7 @@ func NewContext() {
 	forcePathSeparator(LogRootPath)
 
 	sec := Cfg.Section("server")
-	AppName = Cfg.Section("").Key("APP_NAME").MustString("Gogs: Go Git Service")
+	AppName = Cfg.Section("").Key("APP_NAME").MustString("Gogs")
 	AppUrl = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
 	if AppUrl[len(AppUrl)-1] != '/' {
 		AppUrl += "/"
