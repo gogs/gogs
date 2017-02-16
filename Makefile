@@ -70,11 +70,11 @@ test:
 	go test -cover -race ./...
 
 fixme:
-	grep -rnw "FIXME" routers models modules
+	grep -rnw "FIXME" cmd routers models modules
 
 todo:
-	grep -rnw "TODO" routers models modules
+	grep -rnw "TODO" cmd routers models modules
 
 # Legacy code should be remove by the time of release
 legacy:
-	grep -rnw "LEGACY" routers models modules
+	grep -rnw "LEGACY" cmd routers models modules
