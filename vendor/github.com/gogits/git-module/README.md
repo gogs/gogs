@@ -4,7 +4,7 @@ Package git-module is a Go module for Git access through shell commands.
 
 ## Limitations
 
-- Go version must be at least **1.3**.
+- Go version must be at least **1.4**.
 - Git version must be no less than **1.7.1**, and greater than or equal to **1.8.0** is recommended.
 - For Windows users, try use as new a version as possible.
 

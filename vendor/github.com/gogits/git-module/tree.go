@@ -29,25 +29,23 @@ func NewTree(repo *Repository, id sha1) *Tree {
 	}
 }
 
-var escapeChar = []byte("\\")
+// Predefine []byte variables to avoid runtime allocations.
+var (
+	escapedSlash = []byte(`\\`)
+	regularSlash = []byte(`\`)
+	escapedTab   = []byte(`\t`)
+	regularTab   = []byte("\t")
+)
 
 // UnescapeChars reverses escaped characters.
 func UnescapeChars(in []byte) []byte {
-	if bytes.Index(in, escapeChar) == -1 {
+	// LEGACY [Go 1.7]: use more expressive bytes.ContainsAny
+	if bytes.IndexAny(in, "\\\t") == -1 {
 		return in
 	}
 
-	endIdx := len(in) - 1
-	isEscape := false
-	out := make([]byte, 0, endIdx+1)
-	for i := range in {
-		if in[i] == '\\' && !isEscape {
-			isEscape = true
-			continue
-		}
-		isEscape = false
-		out = append(out, in[i])
-	}
+	out := bytes.Replace(in, escapedSlash, regularSlash, -1)
+	out = bytes.Replace(out, escapedTab, regularTab, -1)
 	return out
 }
 
