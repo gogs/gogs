@@ -469,11 +469,17 @@ func (repo *Repository) LocalCopyPath() string {
 }
 
 // UpdateLocalCopy fetches latest changes of given branch from repoPath to localPath.
-// It creates a new clone if local copy does not exist.
-// This function checks out target branch by default, it is safe to assume subsequent
-// operations are operating against target branch when caller has confidence for no race condition.
-func UpdateLocalCopyBranch(repoPath, localPath, branch string) (err error) {
+// It creates a new clone if local copy does not exist, but does not checks out to a
+// specific branch if the local copy belongs to a wiki.
+// For existing local copy, it checks out to target branch by default, and safe to
+// assume subsequent operations are against target branch when caller has confidence
+// about no race condition.
+func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
 	if !com.IsExist(localPath) {
+		// Checkout to a specific branch fails when wiki is an empty repository.
+		if isWiki {
+			branch = ""
+		}
 		if err = git.Clone(repoPath, localPath, git.CloneRepoOptions{
 			Timeout: time.Duration(setting.Git.Timeout.Clone) * time.Second,
 			Branch:  branch,
@@ -502,7 +508,7 @@ func UpdateLocalCopyBranch(repoPath, localPath, branch string) (err error) {
 
 // UpdateLocalCopyBranch makes sure local copy of repository in given branch is up-to-date.
 func (repo *Repository) UpdateLocalCopyBranch(branch string) error {
-	return UpdateLocalCopyBranch(repo.RepoPath(), repo.LocalCopyPath(), branch)
+	return UpdateLocalCopyBranch(repo.RepoPath(), repo.LocalCopyPath(), branch, false)
 }
 
 // PatchPath returns corresponding patch file path of repository by given issue ID.

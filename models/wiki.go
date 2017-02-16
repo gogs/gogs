@@ -76,9 +76,7 @@ func (repo *Repository) LocalWikiPath() string {
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
 func (repo *Repository) UpdateLocalWiki() error {
-	// Don't pass branch name here because it fails to clone and
-	// checkout to a specific branch when wiki is an empty repository.
-	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), "")
+	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), "master", true)
 }
 
 func discardLocalWikiChanges(localPath string) error {
