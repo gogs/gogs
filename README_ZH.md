@@ -1,7 +1,7 @@
 Gogs [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master)
 =====================
 
-Gogs (Go Git Service) 是一款极易搭建的自助 Git 服务。
+Gogs 是一款极易搭建的自助 Git 服务。
 
 ## 开发目的
 

@@ -3,8 +3,8 @@
 <head data-suburl="{{AppSubUrl}}">
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-	<meta name="author" content="{{if .Repository}}{{.Owner.Name}}{{else}}Gogs - Go Git Service{{end}}" />
-	<meta name="description" content="{{if .Repository}}{{.Repository.Name}}{{if .Repository.Description}} - {{.Repository.Description}}{{end}}{{else}}Gogs (Go Git Service) is a painless self-hosted Git service{{end}}" />
+	<meta name="author" content="{{if .Repository}}{{.Owner.Name}}{{else}}Gogs{{end}}" />
+	<meta name="description" content="{{if .Repository}}{{.Repository.Name}}{{if .Repository.Description}} - {{.Repository.Description}}{{end}}{{else}}Gogs is a painless self-hosted Git service{{end}}" />
 	<meta name="keywords" content="go, git, self-hosted, gogs">
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CsrfToken}}" />
@@ -30,9 +30,9 @@
 		<meta property="og:url" content="{{AppUrl}}" />
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content="{{AppName}}">
-		<meta property="og:description" content="Gogs (Go Git Service) is a painless self-hosted Git service.">
+		<meta property="og:description" content="Gogs is a painless self-hosted Git service.">
 		<meta property="og:image" content="{{AppUrl}}img/gogs-lg.png" />
-		<meta property="og:site_name" content="Gogs - Go Git Service">
+		<meta property="og:site_name" content="Gogs">
 	{{end}}
 
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
