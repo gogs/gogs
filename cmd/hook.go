@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,13 +65,58 @@ func runHookPreReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/pre-receive.log", false)
+	setup(c, "hooks/pre-receive.log", true)
+
+	isWiki := strings.Contains(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		buf.Write(scanner.Bytes())
 		buf.WriteByte('\n')
+
+		if isWiki {
+			continue
+		}
+
+		fields := bytes.Fields(scanner.Bytes())
+		if len(fields) != 3 {
+			continue
+		}
+		oldCommitID := string(fields[0])
+		newCommitID := string(fields[1])
+		branchName := strings.TrimPrefix(string(fields[2]), git.BRANCH_PREFIX)
+
+		// Branch protection
+		repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).MustInt64()
+		protectBranch, err := models.GetProtectBranchOfRepoByName(repoID, branchName)
+		if err != nil {
+			if models.IsErrBranchNotExist(err) {
+				continue
+			}
+			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
+		}
+		if !protectBranch.Protected {
+			continue
+		}
+
+		// Check if branch allows direct push
+		if protectBranch.RequirePullRequest {
+			fail(fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
+		}
+
+		// check and deletion
+		if newCommitID == git.EMPTY_SHA {
+			fail(fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
+		}
+
+		// Check force push
+		output, err := git.NewCommand("rev-list", oldCommitID, "^"+newCommitID).Run()
+		if err != nil {
+			fail("Internal error", "Fail to detect force push: %v", err)
+		} else if len(output) > 0 {
+			fail(fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
+		}
 	}
 
 	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")

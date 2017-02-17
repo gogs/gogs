@@ -711,6 +711,22 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(pullIssue.Index))
 }
 
+func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) {
+	owner, err := models.GetUserByName(ctx.Params(":username"))
+	if err != nil {
+		ctx.NotFoundOrServerError("GetUserByName", models.IsErrUserNotExist, err)
+		return nil, nil
+	}
+
+	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
+	if err != nil {
+		ctx.NotFoundOrServerError("GetRepositoryByName", models.IsErrRepoNotExist, err)
+		return nil, nil
+	}
+
+	return owner, repo
+}
+
 func TriggerTask(ctx *context.Context) {
 	pusherID := ctx.QueryInt64("pusher")
 	branch := ctx.Query("branch")

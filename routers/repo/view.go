@@ -108,8 +108,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 	ctx.Data["LatestCommit"] = latestCommit
 	ctx.Data["LatestCommitUser"] = models.ValidateCommitWithEmail(latestCommit)
 
-	// Check permission to add or upload new file.
-	if ctx.Repo.IsWriter() && ctx.Repo.IsViewBranch {
+	if ctx.Repo.CanEnableEditor() {
 		ctx.Data["CanAddFile"] = true
 		ctx.Data["CanUploadFile"] = setting.Repository.Upload.Enabled
 	}
@@ -142,6 +141,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.cannot_edit_non_text_files")
 	}
 
+	canEnableEditor := ctx.Repo.CanEnableEditor()
 	switch {
 	case isTextFile:
 		if blob.Size() >= setting.UI.MaxDisplayFileSize {
@@ -186,7 +186,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 			ctx.Data["LineNums"] = gotemplate.HTML(output.String())
 		}
 
-		if ctx.Repo.CanEnableEditor() {
+		if canEnableEditor {
 			ctx.Data["CanEditFile"] = true
 			ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.edit_this_file")
 		} else if !ctx.Repo.IsViewBranch {
@@ -203,7 +203,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		ctx.Data["IsImageFile"] = true
 	}
 
-	if ctx.Repo.CanEnableEditor() {
+	if canEnableEditor {
 		ctx.Data["CanDeleteFile"] = true
 		ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.delete_this_file")
 	} else if !ctx.Repo.IsViewBranch {
@@ -216,7 +216,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 func setEditorconfigIfExists(ctx *context.Context) {
 	ec, err := ctx.Repo.GetEditorconfig()
 	if err != nil && !git.IsErrNotExist(err) {
-		log.Error(4, "Fail to get '.editorconfig' [%d]: %v", ctx.Repo.Repository.ID, err)
+		log.Trace("setEditorconfigIfExists.GetEditorconfig [%d]: %v", ctx.Repo.Repository.ID, err)
 		return
 	}
 	ctx.Data["Editorconfig"] = ec
@@ -228,6 +228,9 @@ func Home(ctx *context.Context) {
 		title += ": " + ctx.Repo.Repository.Description
 	}
 	ctx.Data["Title"] = title
+	if ctx.Repo.BranchName != ctx.Repo.Repository.DefaultBranch {
+		ctx.Data["Title"] = title + " @ " + ctx.Repo.BranchName
+	}
 	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
 
