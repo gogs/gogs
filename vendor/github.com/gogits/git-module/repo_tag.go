@@ -5,6 +5,7 @@
 package git
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/mcuadros/go-version"
@@ -110,7 +111,7 @@ func (repo *Repository) GetTags() ([]string, error) {
 		version.Sort(tags)
 
 		// Reverse order
-		for i := 0; i < len(tags) / 2; i++ {
+		for i := 0; i < len(tags)/2; i++ {
 			j := len(tags) - i - 1
 			tags[i], tags[j] = tags[j], tags[i]
 		}
@@ -119,13 +120,90 @@ func (repo *Repository) GetTags() ([]string, error) {
 	return tags, nil
 }
 
-// DeleteTag deletes a tag from the repository
-func (repo *Repository) DeleteTag(name string) error {
-    cmd := NewCommand("tag", "-d")
-
-    cmd.AddArguments(name)
-    _, err := cmd.RunInDir(repo.Path)
-
-    return err
+type TagsResult struct {
+	// Indicates whether results include the latest tag.
+	HasLatest bool
+	// If results do not include the latest tag, a indicator 'after' to go back.
+	PreviousAfter string
+	// Indicates whether results include the oldest tag.
+	ReachEnd bool
+	// List of returned tags.
+	Tags []string
 }
 
+// GetTagsAfter returns list of tags 'after' (exlusive) given tag.
+func (repo *Repository) GetTagsAfter(after string, limit int) (*TagsResult, error) {
+	allTags, err := repo.GetTags()
+	if err != nil {
+		return nil, fmt.Errorf("GetTags: %v", err)
+	}
+
+	if limit < 0 {
+		limit = 0
+	}
+
+	numAllTags := len(allTags)
+	if len(after) == 0 && limit == 0 {
+		return &TagsResult{
+			HasLatest: true,
+			ReachEnd:  true,
+			Tags:      allTags,
+		}, nil
+	} else if len(after) == 0 && limit > 0 {
+		endIdx := limit
+		if limit >= numAllTags {
+			endIdx = numAllTags
+		}
+		return &TagsResult{
+			HasLatest: true,
+			ReachEnd:  limit >= numAllTags,
+			Tags:      allTags[:endIdx],
+		}, nil
+	}
+
+	previousAfter := ""
+	hasMatch := false
+	tags := make([]string, 0, len(allTags))
+	for i := range allTags {
+		if hasMatch {
+			tags = allTags[i:]
+			break
+		}
+		if allTags[i] == after {
+			hasMatch = true
+			if limit > 0 && i-limit > 0 {
+				previousAfter = allTags[i-limit]
+			}
+			continue
+		}
+	}
+
+	if !hasMatch {
+		tags = allTags
+	}
+
+	// If all tags after match is equal to the limit, it reaches the oldest tag as well.
+	if limit == 0 || len(tags) <= limit {
+		return &TagsResult{
+			HasLatest:     !hasMatch,
+			PreviousAfter: previousAfter,
+			ReachEnd:      true,
+			Tags:          tags,
+		}, nil
+	}
+	return &TagsResult{
+		HasLatest:     !hasMatch,
+		PreviousAfter: previousAfter,
+		Tags:          tags[:limit],
+	}, nil
+}
+
+// DeleteTag deletes a tag from the repository
+func (repo *Repository) DeleteTag(name string) error {
+	cmd := NewCommand("tag", "-d")
+
+	cmd.AddArguments(name)
+	_, err := cmd.RunInDir(repo.Path)
+
+	return err
+}

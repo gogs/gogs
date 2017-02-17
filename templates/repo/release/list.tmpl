@@ -75,6 +75,14 @@
 				</li>
 			{{end}}
 		</ul>
+		<div class="center">
+			<a class="ui small button {{if not .HasPrevious}}disabled{{end}}" {{if .HasPrevious}}href="{{$.Link}}?after={{.PreviousAfter}}"{{end}}>
+				{{$.i18n.Tr "repo.issues.previous"}}
+			</a>
+			<a class="ui small button {{if .ReachEnd}}disabled{{end}}" {{if not .ReachEnd}}href="{{$.Link}}?after={{.NextAfter}}"{{end}}>
+				{{$.i18n.Tr "repo.issues.next"}}
+			</a>
+		</div>
 	</div>
 </div>
 {{template "base/footer" .}}

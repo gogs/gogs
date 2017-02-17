@@ -53,7 +53,7 @@ func Releases(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.releases")
 	ctx.Data["PageIsReleaseList"] = true
 
-	rawTags, err := ctx.Repo.GitRepo.GetTags()
+	tagsResult, err := ctx.Repo.GitRepo.GetTagsAfter(ctx.Query("after"), 10)
 	if err != nil {
 		ctx.Handle(500, fmt.Sprintf("GetTags '%s'", ctx.Repo.Repository.RepoPath()), err)
 		return
@@ -68,32 +68,38 @@ func Releases(ctx *context.Context) {
 	// Temproray cache commits count of used branches to speed up.
 	countCache := make(map[string]int64)
 
-	tags := make([]*models.Release, len(rawTags))
-	for i, rawTag := range rawTags {
+	drafts := make([]*models.Release, 0, 1)
+	tags := make([]*models.Release, len(tagsResult.Tags))
+	for i, rawTag := range tagsResult.Tags {
 		for j, r := range releases {
 			if r == nil || (r.IsDraft && !ctx.Repo.IsOwner()) {
 				continue
 			}
-			if r.TagName == rawTag {
-				r.Publisher, err = models.GetUserByID(r.PublisherID)
-				if err != nil {
-					if models.IsErrUserNotExist(err) {
-						r.Publisher = models.NewGhostUser()
-					} else {
-						ctx.Handle(500, "GetUserByID", err)
-						return
-					}
-				}
+			releases[j] = nil // Mark as used.
 
-				if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
-					ctx.Handle(500, "calReleaseNumCommitsBehind", err)
+			r.Publisher, err = models.GetUserByID(r.PublisherID)
+			if err != nil {
+				if models.IsErrUserNotExist(err) {
+					r.Publisher = models.NewGhostUser()
+				} else {
+					ctx.Handle(500, "GetUserByID", err)
 					return
 				}
+			}
 
-				r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+			if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
+				ctx.Handle(500, "calReleaseNumCommitsBehind", err)
+				return
+			}
+
+			r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+			if r.TagName == rawTag {
 				tags[i] = r
-				releases[j] = nil // Mark as used.
 				break
+			}
+
+			if r.IsDraft {
+				drafts = append(drafts, r)
 			}
 		}
 
@@ -119,31 +125,18 @@ func Releases(ctx *context.Context) {
 		}
 	}
 
-	for _, r := range releases {
-		if r == nil {
-			continue
-		}
-
-		r.Publisher, err = models.GetUserByID(r.PublisherID)
-		if err != nil {
-			if models.IsErrUserNotExist(err) {
-				r.Publisher = models.NewGhostUser()
-			} else {
-				ctx.Handle(500, "GetUserByID", err)
-				return
-			}
-		}
-
-		if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
-			ctx.Handle(500, "calReleaseNumCommitsBehind", err)
-			return
-		}
-
-		r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
-		tags = append(tags, r)
-	}
 	models.SortReleases(tags)
+	if len(drafts) > 0 && tagsResult.HasLatest {
+		tags = append(drafts, tags...)
+	}
+
 	ctx.Data["Releases"] = tags
+	ctx.Data["HasPrevious"] = !tagsResult.HasLatest
+	ctx.Data["ReachEnd"] = tagsResult.ReachEnd
+	ctx.Data["PreviousAfter"] = tagsResult.PreviousAfter
+	if len(tags) > 0 {
+		ctx.Data["NextAfter"] = tags[len(tags)-1].TagName
+	}
 	ctx.HTML(200, RELEASES)
 }
 
