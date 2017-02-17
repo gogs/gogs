@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	_VERSION = "1.0.0"
+	_VERSION = "1.0.2"
 )
 
 // Version returns current version of the package.
