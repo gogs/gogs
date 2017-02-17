@@ -47,16 +47,15 @@
 				color: #d9453d;
 			}
 		}
-		.head.menu {
-			.octicon {
-				margin-right: 5px;
-			}
-		}
 	}
 }
 
 &.feeds {
 	.news {
+		> .ui.grid {
+			margin-left: auto;
+			margin-right: auto;
+		}
 		.ui.avatar {
 			margin-top: 13px;
 		}
@@ -97,12 +96,14 @@
 
 	.list {
 		.header {
-			padding-top: 10px;
-			padding-bottom: 5px;
+			.ui.label {
+				margin-top: -4px;
+				padding: 4px 5px;
+				font-weight: normal;
+			}
 
 			.plus.icon {
 				margin-top: 5px;
-				margin-right: 0;
 			}
 		}
 		ul {
@@ -124,8 +125,14 @@
 					display: block;
 
 					.octicon {
-						margin-right: 6px;
 						color: #888;
+
+						&.rear {
+					    font-size: 15px;
+						}
+					}
+					.star-num {
+						font-size: 12px;
 					}
 				}
 			}

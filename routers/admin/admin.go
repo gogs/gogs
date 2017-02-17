@@ -5,6 +5,7 @@
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
@@ -120,7 +121,7 @@ const (
 	CLEAN_MISSING_REPOS
 	GIT_GC_REPOS
 	SYNC_SSH_AUTHORIZED_KEY
-	SYNC_REPOSITORY_UPDATE_HOOK
+	SYNC_REPOSITORY_HOOKS
 	REINIT_MISSING_REPOSITORY
 )
 
@@ -151,9 +152,9 @@ func Dashboard(ctx *context.Context) {
 		case SYNC_SSH_AUTHORIZED_KEY:
 			success = ctx.Tr("admin.dashboard.resync_all_sshkeys_success")
 			err = models.RewriteAllPublicKeys()
-		case SYNC_REPOSITORY_UPDATE_HOOK:
-			success = ctx.Tr("admin.dashboard.resync_all_update_hooks_success")
-			err = models.RewriteRepositoryUpdateHook()
+		case SYNC_REPOSITORY_HOOKS:
+			success = ctx.Tr("admin.dashboard.resync_all_hooks_success")
+			err = models.SyncRepositoryHooks()
 		case REINIT_MISSING_REPOSITORY:
 			success = ctx.Tr("admin.dashboard.reinit_missing_repos_success")
 			err = models.ReinitMissingRepositories()
@@ -198,6 +199,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["DisableRouterLog"] = setting.DisableRouterLog
 	ctx.Data["RunUser"] = setting.RunUser
 	ctx.Data["RunMode"] = strings.Title(macaron.Env)
+	ctx.Data["GitVersion"] = setting.Git.Version
 	ctx.Data["RepoRootPath"] = setting.RepoRootPath
 	ctx.Data["StaticRootPath"] = setting.StaticRootPath
 	ctx.Data["LogRootPath"] = setting.LogRootPath
@@ -217,19 +219,27 @@ func Config(ctx *context.Context) {
 	}
 
 	ctx.Data["CacheAdapter"] = setting.CacheAdapter
-	ctx.Data["CacheInternal"] = setting.CacheInternal
+	ctx.Data["CacheInterval"] = setting.CacheInterval
 	ctx.Data["CacheConn"] = setting.CacheConn
 
 	ctx.Data["SessionConfig"] = setting.SessionConfig
 
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
+	ctx.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
+
+	ctx.Data["Git"] = setting.Git
 
 	type logger struct {
 		Mode, Config string
 	}
 	loggers := make([]*logger, len(setting.LogModes))
 	for i := range setting.LogModes {
-		loggers[i] = &logger{setting.LogModes[i], setting.LogConfigs[i]}
+		loggers[i] = &logger{
+			Mode: strings.Title(setting.LogModes[i]),
+		}
+
+		result, _ := json.Marshal(setting.LogConfigs[i])
+		loggers[i].Config = string(result)
 	}
 	ctx.Data["Loggers"] = loggers
 

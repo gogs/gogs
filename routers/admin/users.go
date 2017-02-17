@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers"
@@ -34,7 +34,7 @@ func Users(ctx *context.Context) {
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
-		PageSize: setting.AdminUserPagingNum,
+		PageSize: setting.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
 	})
@@ -115,13 +115,13 @@ func NewUserPost(ctx *context.Context, form auth.AdminCrateUserForm) {
 	}
 	log.Trace("Account created by admin (%s): %s", ctx.User.Name, u.Name)
 
-	// Send e-mail notification.
+	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(ctx.Context, u)
+		mailer.SendRegisterNotifyMail(ctx.Context, models.NewMailerUser(u))
 	}
 
 	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
-	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.Id))
+	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.ID))
 }
 
 func prepareUserInfo(ctx *context.Context) *models.User {
@@ -156,6 +156,7 @@ func EditUser(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
+	ctx.Data["EnableLocalPathMigration"] = setting.Repository.EnableLocalPathMigration
 
 	prepareUserInfo(ctx)
 	if ctx.Written() {
@@ -169,6 +170,7 @@ func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.users.edit_account")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminUsers"] = true
+	ctx.Data["EnableLocalPathMigration"] = setting.Repository.EnableLocalPathMigration
 
 	u := prepareUserInfo(ctx)
 	if ctx.Written() {
@@ -193,7 +195,11 @@ func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 
 	if len(form.Password) > 0 {
 		u.Passwd = form.Password
-		u.Salt = models.GetUserSalt()
+		var err error
+		if u.Salt, err = models.GetUserSalt(); err != nil {
+			ctx.Handle(500, "UpdateUser", err)
+			return
+		}
 		u.EncodePasswd()
 	}
 
@@ -207,6 +213,7 @@ func EditUserPost(ctx *context.Context, form auth.AdminEditUserForm) {
 	u.IsAdmin = form.Admin
 	u.AllowGitHook = form.AllowGitHook
 	u.AllowImportLocal = form.AllowImportLocal
+	u.ProhibitLogin = form.ProhibitLogin
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {

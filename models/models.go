@@ -6,12 +6,14 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path"
 	"strings"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
@@ -27,11 +29,14 @@ type Engine interface {
 	Exec(string, ...interface{}) (sql.Result, error)
 	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
+	Id(interface{}) *xorm.Session
+	In(string, ...interface{}) *xorm.Session
 	Insert(...interface{}) (int64, error)
 	InsertOne(interface{}) (int64, error)
-	Id(interface{}) *xorm.Session
+	Iterate(interface{}, xorm.IterFunc) error
 	Sql(string, ...interface{}) *xorm.Session
-	Where(string, ...interface{}) *xorm.Session
+	Table(interface{}) *xorm.Session
+	Where(interface{}, ...interface{}) *xorm.Session
 }
 
 func sessionRelease(sess *xorm.Session) {
@@ -51,18 +56,17 @@ var (
 	}
 
 	EnableSQLite3 bool
-	EnableTidb    bool
 )
 
 func init() {
 	tables = append(tables,
 		new(User), new(PublicKey), new(AccessToken),
-		new(Repository), new(DeployKey), new(Collaboration), new(Access),
+		new(Repository), new(DeployKey), new(Collaboration), new(Access), new(Upload),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
 		new(Label), new(IssueLabel), new(Milestone),
-		new(Mirror), new(Release), new(LoginSource), new(Webhook),
-		new(UpdateTask), new(HookTask),
+		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(HookTask),
+		new(ProtectBranch),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
 
@@ -82,8 +86,8 @@ func LoadConfigs() {
 		setting.UseMySQL = true
 	case "postgres":
 		setting.UsePostgreSQL = true
-	case "tidb":
-		setting.UseTiDB = true
+	case "mssql":
+		setting.UseMSSQL = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
@@ -95,48 +99,74 @@ func LoadConfigs() {
 	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
+// parsePostgreSQLHostPort parses given input in various forms defined in
+// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
+// and returns proper host and port number.
+func parsePostgreSQLHostPort(info string) (string, string) {
+	host, port := "127.0.0.1", "5432"
+	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
+		idx := strings.LastIndex(info, ":")
+		host = info[:idx]
+		port = info[idx+1:]
+	} else if len(info) > 0 {
+		host = info
+	}
+	return host, port
+}
+
+func parseMSSQLHostPort(info string) (string, string) {
+	host, port := "127.0.0.1", "1433"
+	if strings.Contains(info, ":") {
+		host = strings.Split(info, ":")[0]
+		port = strings.Split(info, ":")[1]
+	} else if strings.Contains(info, ",") {
+		host = strings.Split(info, ",")[0]
+		port = strings.TrimSpace(strings.Split(info, ",")[1])
+	} else if len(info) > 0 {
+		host = info
+	}
+	return host, port
+}
+
 func getEngine() (*xorm.Engine, error) {
-	cnnstr := ""
+	connStr := ""
+	var Param string = "?"
+	if strings.Contains(DbCfg.Name, Param) {
+		Param = "&"
+	}
 	switch DbCfg.Type {
 	case "mysql":
 		if DbCfg.Host[0] == '/' { // looks like a unix socket
-			cnnstr = fmt.Sprintf("%s:%s@unix(%s)/%s?charset=utf8&parseTime=true",
-				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
+			connStr = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8&parseTime=true",
+				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
 		} else {
-			cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=true",
-				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name)
+			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8&parseTime=true",
+				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
 		}
 	case "postgres":
-		var host, port = "127.0.0.1", "5432"
-		fields := strings.Split(DbCfg.Host, ":")
-		if len(fields) > 0 && len(strings.TrimSpace(fields[0])) > 0 {
-			host = fields[0]
+		host, port := parsePostgreSQLHostPort(DbCfg.Host)
+		if host[0] == '/' { // looks like a unix socket
+			connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
+				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), port, DbCfg.Name, Param, DbCfg.SSLMode, host)
+		} else {
+			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
+				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), host, port, DbCfg.Name, Param, DbCfg.SSLMode)
 		}
-		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
-			port = fields[1]
-		}
-		cnnstr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-			url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), host, port, DbCfg.Name, DbCfg.SSLMode)
+	case "mssql":
+		host, port := parseMSSQLHostPort(DbCfg.Host)
+		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, DbCfg.Name, DbCfg.User, DbCfg.Passwd)
 	case "sqlite3":
 		if !EnableSQLite3 {
-			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
+			return nil, errors.New("This binary version does not build support for SQLite3.")
 		}
 		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
 			return nil, fmt.Errorf("Fail to create directories: %v", err)
 		}
-		cnnstr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
-	case "tidb":
-		if !EnableTidb {
-			return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
-		}
-		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
-			return nil, fmt.Errorf("Fail to create directories: %v", err)
-		}
-		cnnstr = "goleveldb://" + DbCfg.Path
+		connStr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
 	default:
 		return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
 	}
-	return xorm.NewEngine(DbCfg.Type, cnnstr)
+	return xorm.NewEngine(DbCfg.Type, connStr)
 }
 
 func NewTestEngine(x *xorm.Engine) (err error) {
@@ -166,7 +196,12 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("Fail to create xorm.log: %v", err)
 	}
-	x.SetLogger(xorm.NewSimpleLogger(f))
+
+	if setting.ProdMode {
+		x.SetLogger(xorm.NewSimpleLogger3(f, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
+	} else {
+		x.SetLogger(xorm.NewSimpleLogger(f))
+	}
 	x.ShowSQL(true)
 	return nil
 }
@@ -202,7 +237,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.User = CountUsers()
 	stats.Counter.Org = CountOrganizations()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
-	stats.Counter.Repo = CountRepositories()
+	stats.Counter.Repo = CountRepositories(true)
 	stats.Counter.Watch, _ = x.Count(new(Watch))
 	stats.Counter.Star, _ = x.Count(new(Star))
 	stats.Counter.Action, _ = x.Count(new(Action))
@@ -219,7 +254,6 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Label, _ = x.Count(new(Label))
 	stats.Counter.HookTask, _ = x.Count(new(HookTask))
 	stats.Counter.Team, _ = x.Count(new(Team))
-	stats.Counter.UpdateTask, _ = x.Count(new(UpdateTask))
 	stats.Counter.Attachment, _ = x.Count(new(Attachment))
 	return
 }

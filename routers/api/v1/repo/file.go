@@ -19,7 +19,12 @@ func GetRawFile(ctx *context.APIContext) {
 		return
 	}
 
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreeName)
+	if ctx.Repo.Repository.IsBare {
+		ctx.Status(404)
+		return
+	}
+
+	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
 			ctx.Status(404)
@@ -44,4 +49,24 @@ func GetArchive(ctx *context.APIContext) {
 	ctx.Repo.GitRepo = gitRepo
 
 	repo.Download(ctx.Context)
+}
+
+func GetEditorconfig(ctx *context.APIContext) {
+	ec, err := ctx.Repo.GetEditorconfig()
+	if err != nil {
+		if git.IsErrNotExist(err) {
+			ctx.Error(404, "GetEditorconfig", err)
+		} else {
+			ctx.Error(500, "GetEditorconfig", err)
+		}
+		return
+	}
+
+	fileName := ctx.Params("filename")
+	def := ec.GetDefinitionForFilename(fileName)
+	if def == nil {
+		ctx.Error(404, "GetDefinitionForFilename", err)
+		return
+	}
+	ctx.JSON(200, def)
 }

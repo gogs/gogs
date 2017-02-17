@@ -12,20 +12,20 @@
 					<div class="inline required field {{if .Err_Owner}}error{{end}}">
 						<label>{{.i18n.Tr "repo.owner"}}</label>
 						<div class="ui selection owner dropdown">
-							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.Id}}" required>
+							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.ID}}" required>
 							<span class="text">
-								<img class="ui mini image" src="{{.ContextUser.AvatarLink}}">
+								<img class="ui mini image" src="{{.ContextUser.RelAvatarLink}}">
 								{{.ContextUser.ShortName 20}}
 							</span>
 							<i class="dropdown icon"></i>
 							<div class="menu">
-								<div class="item" data-value="{{.SignedUser.Id}}">
-									<img class="ui mini image" src="{{.SignedUser.AvatarLink}}">
+								<div class="item" data-value="{{.SignedUser.ID}}">
+									<img class="ui mini image" src="{{.SignedUser.RelAvatarLink}}">
 									{{.SignedUser.ShortName 20}}
 								</div>
 								{{range .Orgs}}
-									<div class="item" data-value="{{.Id}}">
-										<img class="ui mini image" src="{{.AvatarLink}}">
+									<div class="item" data-value="{{.ID}}">
+										<img class="ui mini image" src="{{.RelAvatarLink}}">
 										{{.ShortName 20}}
 									</div>
 								{{end}}
@@ -58,10 +58,10 @@
 					<div class="ui divider"></div>
 
 					<div class="inline field">
-						<label>{{.i18n.Tr "repo.repo_lang"}}</label>
+						<label>.gitignore</label>
 						<div class="ui multiple search normal selection dropdown">
 							<input type="hidden" name="gitignores" value="{{.gitignores}}">
-							<div class="default text">{{.i18n.Tr "repo.repo_lang_helper"}}</div>
+							<div class="default text">{{.i18n.Tr "repo.repo_gitignore_helper"}}</div>
 							<div class="menu">
 								{{range .Gitignores}}
 									<div class="item" data-value="{{.}}">{{.}}</div>

@@ -5,10 +5,11 @@
 package admin
 
 import (
+	log "gopkg.in/clog.v1"
+
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers"
 )
@@ -26,7 +27,7 @@ func Repos(ctx *context.Context) {
 		Counter:  models.CountRepositories,
 		Ranger:   models.Repositories,
 		Private:  true,
-		PageSize: setting.AdminRepoPagingNum,
+		PageSize: setting.UI.Admin.RepoPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  REPOS,
 	})
@@ -39,7 +40,7 @@ func DeleteRepo(ctx *context.Context) {
 		return
 	}
 
-	if err := models.DeleteRepository(repo.MustOwner().Id, repo.ID); err != nil {
+	if err := models.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
 		ctx.Handle(500, "DeleteRepository", err)
 		return
 	}

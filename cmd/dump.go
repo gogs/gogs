@@ -14,7 +14,8 @@ import (
 	"io/ioutil"
 
 	"github.com/Unknwon/cae/zip"
-	"github.com/codegangsta/cli"
+	"github.com/Unknwon/com"
+	"github.com/urfave/cli"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/setting"
@@ -87,13 +88,30 @@ func runDump(ctx *cli.Context) error {
 	} else {
 		log.Printf("Custom dir %s doesn't exist, skipped", setting.CustomPath)
 	}
+
 	if err := z.AddDir("log", setting.LogRootPath); err != nil {
 		log.Fatalf("Fail to include log: %v", err)
 	}
+
+	for _, dir := range []string{"attachments", "avatars"} {
+		dirPath := path.Join(setting.AppDataPath, dir)
+		if !com.IsDir(dirPath) {
+			continue
+		}
+
+		if err := z.AddDir(path.Join("data", dir), dirPath); err != nil {
+			log.Fatalf("Fail to include '%s': %v", dirPath, err)
+		}
+	}
+
 	// FIXME: SSH key file.
 	if err = z.Close(); err != nil {
 		os.Remove(fileName)
 		log.Fatalf("Fail to save %s: %v", fileName, err)
+	}
+
+	if err := os.Chmod(fileName, 0600); err != nil {
+		log.Printf("Can't change file access permissions mask to 0600: %v", err)
 	}
 
 	log.Printf("Removing tmp work dir: %s", TmpWorkDir)

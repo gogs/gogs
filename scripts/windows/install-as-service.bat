@@ -9,7 +9,7 @@
 :: Make sure Gogs work running manually with "gogs web" before running
 :: this script.
 :: And, please, read carefully the installation docs first:
-:: http://gogs.io/docs/installation
+:: https://gogs.io/docs/installation
 :: To unistall the service, run "nssm remove gogs" and restart Windows.
 
 :: Set the folder where you extracted Gogs. Omit the last slash.
@@ -18,7 +18,7 @@ SET gogspath=C:\gogs
 nssm install gogs "%gogspath%\gogs.exe"
 nssm set gogs AppParameters "web"
 nssm set gogs Description "A painless self-hosted Git service."
-nssm set gogs DisplayName "Gogs - Go Git Service"
+nssm set gogs DisplayName "Gogs"
 nssm set gogs Start SERVICE_DELAYED_AUTO_START
 nssm set gogs AppStdout "%gogspath%\gogs.log"
 nssm start gogs

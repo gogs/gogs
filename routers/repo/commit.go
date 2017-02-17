@@ -20,14 +20,14 @@ import (
 
 const (
 	COMMITS base.TplName = "repo/commits"
-	DIFF    base.TplName = "repo/diff"
+	DIFF    base.TplName = "repo/diff/page"
 )
 
 func RefCommits(ctx *context.Context) {
 	switch {
-	case len(ctx.Repo.TreeName) == 0:
+	case len(ctx.Repo.TreePath) == 0:
 		Commits(ctx)
-	case ctx.Repo.TreeName == "search":
+	case ctx.Repo.TreePath == "search":
 		SearchCommits(ctx)
 	default:
 		FileHistory(ctx)
@@ -104,7 +104,7 @@ func SearchCommits(ctx *context.Context) {
 func FileHistory(ctx *context.Context) {
 	ctx.Data["IsRepoToolbarCommits"] = true
 
-	fileName := ctx.Repo.TreeName
+	fileName := ctx.Repo.TreePath
 	if len(fileName) == 0 {
 		Commits(ctx)
 		return
@@ -145,6 +145,7 @@ func FileHistory(ctx *context.Context) {
 
 func Diff(ctx *context.Context) {
 	ctx.Data["PageIsDiff"] = true
+	ctx.Data["RequireHighlightJS"] = true
 
 	userName := ctx.Repo.Owner.Name
 	repoName := ctx.Repo.Repository.Name
@@ -152,12 +153,17 @@ func Diff(ctx *context.Context) {
 
 	commit, err := ctx.Repo.GitRepo.GetCommit(commitID)
 	if err != nil {
-		ctx.Handle(500, "Repo.GitRepo.GetCommit", err)
+		if git.IsErrNotExist(err) {
+			ctx.Handle(404, "Repo.GitRepo.GetCommit", err)
+		} else {
+			ctx.Handle(500, "Repo.GitRepo.GetCommit", err)
+		}
 		return
 	}
 
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
-		commitID, setting.Git.MaxGitDiffLines)
+		commitID, setting.Git.MaxGitDiffLines,
+		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Handle(404, "GetDiffCommit", err)
 		return
@@ -171,6 +177,11 @@ func Diff(ctx *context.Context) {
 			ctx.Handle(404, "repo.Diff", err)
 			return
 		}
+	}
+
+	setEditorconfigIfExists(ctx)
+	if ctx.Written() {
+		return
 	}
 
 	ctx.Data["CommitID"] = commitID
@@ -189,12 +200,19 @@ func Diff(ctx *context.Context) {
 		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
 	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitID)
-	ctx.Data["RequireHighlightJS"] = true
 	ctx.HTML(200, DIFF)
 }
 
 func RawDiff(ctx *context.Context) {
-	panic("not implemented")
+	if err := models.GetRawDiff(
+		models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name),
+		ctx.Params(":sha"),
+		models.RawDiffType(ctx.Params(":ext")),
+		ctx.Resp,
+	); err != nil {
+		ctx.Handle(500, "GetRawDiff", err)
+		return
+	}
 }
 
 func CompareDiff(ctx *context.Context) {
@@ -212,7 +230,8 @@ func CompareDiff(ctx *context.Context) {
 	}
 
 	diff, err := models.GetDiffRange(models.RepoPath(userName, repoName), beforeCommitID,
-		afterCommitID, setting.Git.MaxGitDiffLines)
+		afterCommitID, setting.Git.MaxGitDiffLines,
+		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
 		ctx.Handle(404, "GetDiffRange", err)
 		return

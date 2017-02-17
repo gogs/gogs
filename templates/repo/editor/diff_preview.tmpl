@@ -1,0 +1,13 @@
+<div class="diff-file-box">
+	<div class="ui attached table segment">
+		<div class="file-body file-code code-view code-diff">
+			<table>
+				<tbody>
+					{{with .File}}
+						{{template "repo/diff/section_unified" .}}
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>

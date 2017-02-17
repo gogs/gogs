@@ -29,11 +29,11 @@ type AccessToken struct {
 }
 
 func (t *AccessToken) BeforeInsert() {
-	t.CreatedUnix = time.Now().UTC().Unix()
+	t.CreatedUnix = time.Now().Unix()
 }
 
 func (t *AccessToken) BeforeUpdate() {
-	t.UpdatedUnix = time.Now().UTC().Unix()
+	t.UpdatedUnix = time.Now().Unix()
 }
 
 func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
@@ -56,6 +56,9 @@ func NewAccessToken(t *AccessToken) error {
 
 // GetAccessTokenBySHA returns access token by given sha1.
 func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
+	if sha == "" {
+		return nil, ErrAccessTokenEmpty{}
+	}
 	t := &AccessToken{Sha1: sha}
 	has, err := x.Get(t)
 	if err != nil {
@@ -78,8 +81,11 @@ func UpdateAccessToken(t *AccessToken) error {
 	return err
 }
 
-// DeleteAccessTokenByID deletes access token by given ID.
-func DeleteAccessTokenByID(id int64) error {
-	_, err := x.Id(id).Delete(new(AccessToken))
+// DeleteAccessTokenOfUserByID deletes access token by given ID.
+func DeleteAccessTokenOfUserByID(userID, id int64) error {
+	_, err := x.Delete(&AccessToken{
+		ID:  id,
+		UID: userID,
+	})
 	return err
 }

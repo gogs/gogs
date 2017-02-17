@@ -6,6 +6,7 @@ package routers
 
 import (
 	"errors"
+	"net/mail"
 	"os"
 	"os/exec"
 	"path"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
@@ -24,7 +26,6 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/cron"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
@@ -38,12 +39,10 @@ const (
 )
 
 func checkRunMode() {
-	switch setting.Cfg.Section("").Key("RUN_MODE").String() {
-	case "prod":
+	if setting.ProdMode {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
-		setting.ProdMode = true
-	default:
+	} else {
 		git.Debug = true
 	}
 	log.Info("Run Mode: %s", strings.Title(macaron.Env))
@@ -57,44 +56,41 @@ func NewServices() {
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
 	setting.NewContext()
-	highlight.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
 	models.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
+		highlight.NewContext()
+		markdown.BuildSanitizer()
+		if err := models.NewEngine(); err != nil {
+			log.Fatal(2, "Fail to initialize ORM engine: %v", err)
+		}
+		models.HasEngine = true
+
 		models.LoadRepoConfig()
 		models.NewRepoContext()
 
-		if err := models.NewEngine(); err != nil {
-			log.Fatal(4, "Fail to initialize ORM engine: %v", err)
-		}
-
-		models.HasEngine = true
+		// Booting long running goroutines.
 		cron.NewContext()
+		models.InitSyncMirrors()
 		models.InitDeliverHooks()
 		models.InitTestPullRequests()
-		log.NewGitLogger(path.Join(setting.LogRootPath, "http.log"))
 	}
 	if models.EnableSQLite3 {
 		log.Info("SQLite3 Supported")
-	}
-	if models.EnableTidb {
-		log.Info("TiDB Supported")
 	}
 	if setting.SupportMiniWinService {
 		log.Info("Builtin Windows Service Supported")
 	}
 	checkRunMode()
 
-	if setting.SSH.StartBuiltinServer {
-		ssh.Listen(setting.SSH.ListenPort)
-		log.Info("SSH server started on :%v", setting.SSH.ListenPort)
+	if setting.InstallLock && setting.SSH.StartBuiltinServer {
+		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort, setting.SSH.ServerCiphers)
+		log.Info("SSH server started on %s:%v", setting.SSH.ListenHost, setting.SSH.ListenPort)
+		log.Trace("SSH server cipher list: %v", setting.SSH.ServerCiphers)
 	}
-
-	// Build Sanitizer
-	markdown.BuildSanitizer()
 }
 
 func InstallInit(ctx *context.Context) {
@@ -106,12 +102,9 @@ func InstallInit(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("install.install")
 	ctx.Data["PageIsInstall"] = true
 
-	dbOpts := []string{"MySQL", "PostgreSQL"}
+	dbOpts := []string{"MySQL", "PostgreSQL", "MSSQL"}
 	if models.EnableSQLite3 {
 		dbOpts = append(dbOpts, "SQLite3")
-	}
-	if models.EnableTidb {
-		dbOpts = append(dbOpts, "TiDB")
 	}
 	ctx.Data["DbOptions"] = dbOpts
 }
@@ -129,13 +122,11 @@ func Install(ctx *context.Context) {
 	switch models.DbCfg.Type {
 	case "postgres":
 		ctx.Data["CurDbOption"] = "PostgreSQL"
+	case "mssql":
+		ctx.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
 		if models.EnableSQLite3 {
 			ctx.Data["CurDbOption"] = "SQLite3"
-		}
-	case "tidb":
-		if models.EnableTidb {
-			ctx.Data["CurDbOption"] = "TiDB"
 		}
 	}
 
@@ -153,7 +144,7 @@ func Install(ctx *context.Context) {
 
 	form.Domain = setting.Domain
 	form.SSHPort = setting.SSH.Port
-	form.HTTPPort = setting.HttpPort
+	form.HTTPPort = setting.HTTPPort
 	form.AppUrl = setting.AppUrl
 	form.LogRootPath = setting.LogRootPath
 
@@ -161,7 +152,7 @@ func Install(ctx *context.Context) {
 	if setting.MailService != nil {
 		form.SMTPHost = setting.MailService.Host
 		form.SMTPFrom = setting.MailService.From
-		form.SMTPEmail = setting.MailService.User
+		form.SMTPUser = setting.MailService.User
 	}
 	form.RegisterConfirm = setting.Service.RegisterEmailConfirm
 	form.MailNotify = setting.Service.EnableNotifyMail
@@ -169,6 +160,7 @@ func Install(ctx *context.Context) {
 	// Server and other services settings
 	form.OfflineMode = setting.OfflineMode
 	form.DisableGravatar = setting.DisableGravatar
+	form.EnableFederatedAvatar = setting.EnableFederatedAvatar
 	form.DisableRegistration = setting.Service.DisableRegistration
 	form.EnableCaptcha = setting.Service.EnableCaptcha
 	form.RequireSignInView = setting.Service.RequireSignInView
@@ -201,7 +193,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 
 	// Pass basic check, now test configuration.
 	// Test database setting.
-	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "SQLite3": "sqlite3", "TiDB": "tidb"}
+	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "MSSQL": "mssql", "SQLite3": "sqlite3", "TiDB": "tidb"}
 	models.DbCfg.Type = dbTypes[form.DbType]
 	models.DbCfg.Host = form.DbHost
 	models.DbCfg.User = form.DbUser
@@ -227,7 +219,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			ctx.Data["Err_DbType"] = true
-			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "http://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &form)
+			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &form)
 		} else {
 			ctx.Data["Err_DbSetting"] = true
 			ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), INSTALL, &form)
@@ -251,12 +243,22 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		return
 	}
 
-	// Check run user.
-	curUser := user.CurrentUsername()
-	if form.RunUser != curUser {
+	currentUser, match := setting.IsRunUserMatchCurrentUser(form.RunUser)
+	if !match {
 		ctx.Data["Err_RunUser"] = true
-		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, curUser), INSTALL, &form)
+		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", form.RunUser, currentUser), INSTALL, &form)
 		return
+	}
+
+	// Make sure FROM field is valid
+	if len(form.SMTPFrom) > 0 {
+		_, err := mail.ParseAddress(form.SMTPFrom)
+		if err != nil {
+			ctx.Data["Err_SMTP"] = true
+			ctx.Data["Err_SMTPFrom"] = true
+			ctx.RenderWithErr(ctx.Tr("install.invalid_smtp_from", err), INSTALL, &form)
+			return
+		}
 	}
 
 	// Check logic loophole between disable self-registration and no admin account.
@@ -319,7 +321,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		cfg.Section("mailer").Key("ENABLED").SetValue("true")
 		cfg.Section("mailer").Key("HOST").SetValue(form.SMTPHost)
 		cfg.Section("mailer").Key("FROM").SetValue(form.SMTPFrom)
-		cfg.Section("mailer").Key("USER").SetValue(form.SMTPEmail)
+		cfg.Section("mailer").Key("USER").SetValue(form.SMTPUser)
 		cfg.Section("mailer").Key("PASSWD").SetValue(form.SMTPPasswd)
 	} else {
 		cfg.Section("mailer").Key("ENABLED").SetValue("false")
@@ -329,6 +331,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(form.OfflineMode))
 	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(form.DisableGravatar))
+	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(form.EnableFederatedAvatar))
 	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(form.DisableRegistration))
 	cfg.Section("service").Key("ENABLE_CAPTCHA").SetValue(com.ToStr(form.EnableCaptcha))
 	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(form.RequireSignInView))
@@ -342,7 +345,12 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(form.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	cfg.Section("security").Key("SECRET_KEY").SetValue(base.GetRandomString(15))
+	secretKey, err := base.GetRandomString(15)
+	if err != nil {
+		ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), INSTALL, &form)
+		return
+	}
+	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
 	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
 	if err := cfg.SaveTo(setting.CustomConf); err != nil {
@@ -374,7 +382,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 		}
 
 		// Auto-login for admin
-		ctx.Session.Set("uid", u.Id)
+		ctx.Session.Set("uid", u.ID)
 		ctx.Session.Set("uname", u.Name)
 	}
 

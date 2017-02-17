@@ -5,16 +5,15 @@
 package base
 
 import (
-	"crypto/hmac"
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"hash"
 	"html/template"
 	"math"
+	"math/big"
 	"net/http"
 	"strings"
 	"time"
@@ -23,10 +22,10 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/i18n"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/chardet"
 
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -45,7 +44,7 @@ func EncodeSha1(str string) string {
 }
 
 func ShortSha(sha1 string) string {
-	if len(sha1) == 40 {
+	if len(sha1) > 10 {
 		return sha1[:10]
 	}
 	return sha1
@@ -53,17 +52,17 @@ func ShortSha(sha1 string) string {
 
 func DetectEncoding(content []byte) (string, error) {
 	if utf8.Valid(content) {
-		log.Debug("Detected encoding: utf-8 (fast)")
+		log.Trace("Detected encoding: utf-8 (fast)")
 		return "UTF-8", nil
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
 	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
-		log.Debug("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
+		log.Trace("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
 		return setting.Repository.AnsiCharset, err
 	}
 
-	log.Debug("Detected encoding: %s", result.Charset)
+	log.Trace("Detected encoding: %s", result.Charset)
 	return result.Charset, err
 }
 
@@ -82,57 +81,31 @@ func BasicAuthEncode(username, password string) string {
 }
 
 // GetRandomString generate random string by specify chars.
-func GetRandomString(n int, alphabets ...byte) string {
+func GetRandomString(n int) (string, error) {
 	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, n)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		if len(alphabets) == 0 {
-			bytes[i] = alphanum[b%byte(len(alphanum))]
-		} else {
-			bytes[i] = alphabets[b%byte(len(alphabets))]
+
+	buffer := make([]byte, n)
+	max := big.NewInt(int64(len(alphanum)))
+
+	for i := 0; i < n; i++ {
+		index, err := randomInt(max)
+		if err != nil {
+			return "", err
 		}
+
+		buffer[i] = alphanum[index]
 	}
-	return string(bytes)
+
+	return string(buffer), nil
 }
 
-// http://code.google.com/p/go/source/browse/pbkdf2/pbkdf2.go?repo=crypto
-// FIXME: use https://godoc.org/golang.org/x/crypto/pbkdf2?
-func PBKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
-	prf := hmac.New(h, password)
-	hashLen := prf.Size()
-	numBlocks := (keyLen + hashLen - 1) / hashLen
-
-	var buf [4]byte
-	dk := make([]byte, 0, numBlocks*hashLen)
-	U := make([]byte, hashLen)
-	for block := 1; block <= numBlocks; block++ {
-		// N.B.: || means concatenation, ^ means XOR
-		// for each block T_i = U_1 ^ U_2 ^ ... ^ U_iter
-		// U_1 = PRF(password, salt || uint(i))
-		prf.Reset()
-		prf.Write(salt)
-		buf[0] = byte(block >> 24)
-		buf[1] = byte(block >> 16)
-		buf[2] = byte(block >> 8)
-		buf[3] = byte(block)
-		prf.Write(buf[:4])
-		dk = prf.Sum(dk)
-		T := dk[len(dk)-hashLen:]
-		copy(U, T)
-
-		// U_n = PRF(password, U_(n-1))
-		for n := 2; n <= iter; n++ {
-			prf.Reset()
-			prf.Write(U)
-			U = U[:0]
-			U = prf.Sum(U)
-			for x := range U {
-				T[x] ^= U[x]
-			}
-		}
+func randomInt(max *big.Int) (int, error) {
+	rand, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
 	}
-	return dk[:keyLen]
+
+	return int(rand.Int64()), nil
 }
 
 // verify time limit code
@@ -204,13 +177,25 @@ func HashEmail(email string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// AvatarLink returns avatar link by given email.
-func AvatarLink(email string) string {
-	if setting.DisableGravatar || setting.OfflineMode {
-		return setting.AppSubUrl + "/img/avatar_default.jpg"
+// AvatarLink returns relative avatar link to the site domain by given email,
+// which includes app sub-url as prefix. However, it is possible
+// to return full URL if user enables Gravatar-like service.
+func AvatarLink(email string) (url string) {
+	if setting.EnableFederatedAvatar && setting.LibravatarService != nil &&
+		strings.Contains(email, "@") {
+		var err error
+		url, err = setting.LibravatarService.FromEmail(email)
+		if err != nil {
+			log.Error(2, "LibravatarService.FromEmail [%s]: %v", email, err)
+		}
 	}
-
-	return setting.GravatarSource + HashEmail(email)
+	if len(url) == 0 && !setting.DisableGravatar {
+		url = setting.GravatarSource + HashEmail(email)
+	}
+	if len(url) == 0 {
+		url = setting.AppSubUrl + "/img/avatar_default.png"
+	}
+	return url
 }
 
 // Seconds-based time units
@@ -507,26 +492,22 @@ func IsLetter(ch rune) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
 }
 
-func IsTextFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "text/") != -1 {
-		return contentType, true
+// IsTextFile returns true if file content format is plain text or empty.
+func IsTextFile(data []byte) bool {
+	if len(data) == 0 {
+		return true
 	}
-	return contentType, false
+	return strings.Index(http.DetectContentType(data), "text/") != -1
 }
 
-func IsImageFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "image/") != -1 {
-		return contentType, true
-	}
-	return contentType, false
+func IsImageFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "image/") != -1
 }
 
-func IsPDFFile(data []byte) (string, bool) {
-	contentType := http.DetectContentType(data)
-	if strings.Index(contentType, "application/pdf") != -1 {
-		return contentType, true
-	}
-	return contentType, false
+func IsPDFFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "application/pdf") != -1
+}
+
+func IsVideoFile(data []byte) bool {
+	return strings.Index(http.DetectContentType(data), "video/") != -1
 }

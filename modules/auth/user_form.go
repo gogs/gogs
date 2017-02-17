@@ -31,16 +31,17 @@ type InstallForm struct {
 
 	SMTPHost        string
 	SMTPFrom        string
-	SMTPEmail       string `binding:"OmitEmpty;Email;MaxSize(254)" locale:"install.mailer_user"`
+	SMTPUser        string `binding:"OmitEmpty;MaxSize(254)" locale:"install.mailer_user"`
 	SMTPPasswd      string
 	RegisterConfirm bool
 	MailNotify      bool
 
-	OfflineMode         bool
-	DisableGravatar     bool
-	DisableRegistration bool
-	EnableCaptcha       bool
-	RequireSignInView   bool
+	OfflineMode           bool
+	DisableGravatar       bool
+	EnableFederatedAvatar bool
+	DisableRegistration   bool
+	EnableCaptcha         bool
+	RequireSignInView     bool
 
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
 	AdminPasswd        string `binding:"OmitEmpty;MaxSize(255)" locale:"install.admin_password"`
@@ -93,19 +94,25 @@ type UpdateProfileForm struct {
 	Email    string `binding:"Required;Email;MaxSize(254)"`
 	Website  string `binding:"Url;MaxSize(100)"`
 	Location string `binding:"MaxSize(50)"`
-	Gravatar string `binding:"OmitEmpty;Email;MaxSize(254)"`
 }
 
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type UploadAvatarForm struct {
-	Enable bool
-	Avatar *multipart.FileHeader
+const (
+	AVATAR_LOCAL  string = "local"
+	AVATAR_BYMAIL string = "bymail"
+)
+
+type AvatarForm struct {
+	Source      string
+	Avatar      *multipart.FileHeader
+	Gravatar    string `binding:"OmitEmpty;Email;MaxSize(254)"`
+	Federavatar bool
 }
 
-func (f *UploadAvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *AvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 

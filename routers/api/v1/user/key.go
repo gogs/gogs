@@ -54,7 +54,7 @@ func listPublicKeys(ctx *context.APIContext, uid int64) {
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-your-public-keys
 func ListMyPublicKeys(ctx *context.APIContext) {
-	listPublicKeys(ctx, ctx.User.Id)
+	listPublicKeys(ctx, ctx.User.ID)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#list-public-keys-for-a-user
@@ -63,7 +63,7 @@ func ListPublicKeys(ctx *context.APIContext) {
 	if ctx.Written() {
 		return
 	}
-	listPublicKeys(ctx, user.Id)
+	listPublicKeys(ctx, user.ID)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#get-a-single-public-key
@@ -101,7 +101,7 @@ func CreateUserPublicKey(ctx *context.APIContext, form api.CreateKeyOption, uid 
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
 func CreatePublicKey(ctx *context.APIContext, form api.CreateKeyOption) {
-	CreateUserPublicKey(ctx, form, ctx.User.Id)
+	CreateUserPublicKey(ctx, form, ctx.User.ID)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Public-Keys#delete-a-public-key

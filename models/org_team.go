@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/go-xorm/xorm"
 )
 
 const OWNER_TEAM = "Owners"
@@ -24,6 +26,16 @@ type Team struct {
 	Members     []*User       `xorm:"-"`
 	NumRepos    int
 	NumMembers  int
+}
+
+func (t *Team) AfterSet(colName string, _ xorm.Cell) {
+	switch colName {
+	case "num_repos":
+		// LEGACY [0.11]: this is backward compatibility bug fix for https://github.com/gogits/gogs/issues/3671
+		if t.NumRepos < 0 {
+			t.NumRepos = 0
+		}
+	}
 }
 
 // IsOwnerTeam returns true if team is owner team.
@@ -106,7 +118,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 		return fmt.Errorf("getMembers: %v", err)
 	}
 	for _, u := range t.Members {
-		if err = watchRepo(e, u.Id, repo.ID, true); err != nil {
+		if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
 			return fmt.Errorf("watchRepo: %v", err)
 		}
 	}
@@ -162,7 +174,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 			continue
 		}
 
-		if err = watchRepo(e, u.Id, repo.ID, false); err != nil {
+		if err = watchRepo(e, u.ID, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -194,11 +206,24 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	return sess.Commit()
 }
 
+var reservedTeamNames = []string{"new"}
+
+// IsUsableTeamName return an error if given name is a reserved name or pattern.
+func IsUsableTeamName(name string) error {
+	return isUsableName(reservedTeamNames, nil, name)
+}
+
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
 func NewTeam(t *Team) error {
 	if len(t.Name) == 0 {
 		return errors.New("empty team name")
+	} else if t.OrgID == 0 {
+		return errors.New("OrgID is not assigned")
+	}
+
+	if err := IsUsableTeamName(t.Name); err != nil {
+		return err
 	}
 
 	has, err := x.Id(t.OrgID).Get(new(User))
@@ -341,7 +366,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Delete team-user.
-	if _, err = sess.Where("org_id=?", org.Id).Where("team_id=?", t.ID).Delete(new(TeamUser)); err != nil {
+	if _, err = sess.Where("org_id=?", org.ID).Where("team_id=?", t.ID).Delete(new(TeamUser)); err != nil {
 		return err
 	}
 
@@ -369,7 +394,7 @@ type TeamUser struct {
 	ID     int64 `xorm:"pk autoincr"`
 	OrgID  int64 `xorm:"INDEX"`
 	TeamID int64 `xorm:"UNIQUE(s)"`
-	Uid    int64 `xorm:"UNIQUE(s)"`
+	UID    int64 `xorm:"UNIQUE(s)"`
 }
 
 func isTeamMember(e Engine, orgID, teamID, uid int64) bool {
@@ -384,14 +409,15 @@ func IsTeamMember(orgID, teamID, uid int64) bool {
 
 func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	teamUsers := make([]*TeamUser, 0, 10)
-	if err = e.Where("team_id=?", teamID).Find(&teamUsers); err != nil {
+	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id=?", teamID).
+		Find(&teamUsers); err != nil {
 		return nil, fmt.Errorf("get team-users: %v", err)
 	}
 	members := make([]*User, 0, len(teamUsers))
 	for i := range teamUsers {
 		member := new(User)
-		if _, err = e.Id(teamUsers[i].Uid).Get(member); err != nil {
-			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].Uid, err)
+		if _, err = e.Id(teamUsers[i].UID).Get(member); err != nil {
+			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].UID, err)
 		}
 		members = append(members, member)
 	}
@@ -457,7 +483,7 @@ func AddTeamMember(orgID, teamID, uid int64) error {
 	}
 
 	tu := &TeamUser{
-		Uid:    uid,
+		UID:    uid,
 		OrgID:  orgID,
 		TeamID: teamID,
 	}
@@ -519,7 +545,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	}
 
 	tu := &TeamUser{
-		Uid:    uid,
+		UID:    uid,
 		OrgID:  orgID,
 		TeamID: teamID,
 	}
@@ -538,7 +564,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 
 	// This must exist.
 	ou := new(OrgUser)
-	_, err = e.Where("uid = ?", uid).And("org_id = ?", org.Id).Get(ou)
+	_, err = e.Where("uid = ?", uid).And("org_id = ?", org.ID).Get(ou)
 	if err != nil {
 		return err
 	}

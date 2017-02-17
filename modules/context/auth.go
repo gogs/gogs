@@ -29,9 +29,16 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			return
 		}
 
-		// Checking non-logged users landing page.
-		if !ctx.IsSigned && ctx.Req.RequestURI == "/" && setting.LandingPageUrl != setting.LANDING_PAGE_HOME {
-			ctx.Redirect(setting.AppSubUrl + string(setting.LandingPageUrl))
+		// Check prohibit login users.
+		if ctx.IsSigned && ctx.User.ProhibitLogin {
+			ctx.Data["Title"] = ctx.Tr("auth.prohibit_login")
+			ctx.HTML(200, "user/auth/prohibit_login")
+			return
+		}
+
+		// Check non-logged users landing page.
+		if !ctx.IsSigned && ctx.Req.RequestURI == "/" && setting.LandingPageURL != setting.LANDING_PAGE_HOME {
+			ctx.Redirect(setting.AppSubUrl + string(setting.LandingPageURL))
 			return
 		}
 

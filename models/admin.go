@@ -13,9 +13,9 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -35,7 +35,7 @@ type Notice struct {
 }
 
 func (n *Notice) BeforeInsert() {
-	n.CreatedUnix = time.Now().UTC().Unix()
+	n.CreatedUnix = time.Now().Unix()
 }
 
 func (n *Notice) AfterSet(colName string, _ xorm.Cell) {
@@ -77,7 +77,8 @@ func RemoveAllWithNotice(title, path string) {
 	// workaround for Go not being able to remove read-only files/folders: https://github.com/golang/go/issues/9606
 	// this bug should be fixed on Go 1.7, so the workaround should be removed when Gogs don't support Go 1.6 anymore:
 	// https://github.com/golang/go/commit/2ffb3e5d905b5622204d199128dec06cefd57790
-	if setting.IsWindows {
+	// Note: Windows complains when delete target does not exist, therefore we can skip deletion in such cases.
+	if setting.IsWindows && com.IsExist(path) {
 		// converting "/" to "\" in path on Windows
 		path = strings.Replace(path, "/", "\\", -1)
 		err = exec.Command("cmd", "/C", "rmdir", "/S", "/Q", path).Run()

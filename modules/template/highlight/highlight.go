@@ -20,6 +20,7 @@ var (
 
 	// File names that are representing highlight classes.
 	highlightFileNames = map[string]bool{
+		"cmakelists.txt": true,
 		"dockerfile": true,
 		"makefile":   true,
 	}
@@ -61,7 +62,9 @@ var (
 	}
 
 	// Extensions that are not same as highlight classes.
-	highlightMapping = map[string]string{}
+	highlightMapping = map[string]string{
+		".txt": "nohighlight",
+	}
 )
 
 func NewContext() {

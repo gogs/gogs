@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	HOME          base.TplName = "home"
-	EXPLORE_REPOS base.TplName = "explore/repos"
-	EXPLORE_USERS base.TplName = "explore/users"
+	HOME                  base.TplName = "home"
+	EXPLORE_REPOS         base.TplName = "explore/repos"
+	EXPLORE_USERS         base.TplName = "explore/users"
+	EXPLORE_ORGANIZATIONS base.TplName = "explore/organizations"
 )
 
 func Home(ctx *context.Context) {
@@ -45,7 +46,7 @@ func Home(ctx *context.Context) {
 }
 
 type RepoSearchOptions struct {
-	Counter  func() int64
+	Counter  func(bool) int64
 	Ranger   func(int, int) ([]*models.Repository, error)
 	Private  bool
 	PageSize int
@@ -55,7 +56,7 @@ type RepoSearchOptions struct {
 
 func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 	page := ctx.QueryInt("page")
-	if page <= 1 {
+	if page <= 0 {
 		page = 1
 	}
 
@@ -72,7 +73,7 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 			ctx.Handle(500, "opts.Ranger", err)
 			return
 		}
-		count = opts.Counter()
+		count = opts.Counter(opts.Private)
 	} else {
 		repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
 			Keyword:  keyword,
@@ -107,9 +108,9 @@ func ExploreRepos(ctx *context.Context) {
 	ctx.Data["PageIsExploreRepositories"] = true
 
 	RenderRepoSearch(ctx, &RepoSearchOptions{
-		Counter:  models.CountPublicRepositories,
+		Counter:  models.CountRepositories,
 		Ranger:   models.GetRecentUpdatedRepositories,
-		PageSize: setting.ExplorePagingNum,
+		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_REPOS,
 	})
@@ -174,9 +175,24 @@ func ExploreUsers(ctx *context.Context) {
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
-		PageSize: setting.ExplorePagingNum,
+		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
+	})
+}
+
+func ExploreOrganizations(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("explore")
+	ctx.Data["PageIsExplore"] = true
+	ctx.Data["PageIsExploreOrganizations"] = true
+
+	RenderUserSearch(ctx, &UserSearchOptions{
+		Type:     models.USER_TYPE_ORGANIZATION,
+		Counter:  models.CountOrganizations,
+		Ranger:   models.Organizations,
+		PageSize: setting.UI.ExplorePagingNum,
+		OrderBy:  "updated_unix DESC",
+		TplName:  EXPLORE_ORGANIZATIONS,
 	})
 }
 

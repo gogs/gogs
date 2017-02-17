@@ -41,7 +41,7 @@
 							</h3>
 							<p class="text grey">
 								<span class="author">
-									<img class="img-10" src="{{.Publisher.AvatarLink}}">
+									<img class="img-10" src="{{.Publisher.RelAvatarLink}}">
 									<a href="{{AppSubUrl}}/{{.Publisher.Name}}">{{.Publisher.Name}}</a>
 								</span>
 								{{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
@@ -54,10 +54,10 @@
 								<h2>{{$.i18n.Tr "repo.release.downloads"}}</h2>
 								<ul class="list">
 									<li>
-										<a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="icon octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>
+										<a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>
 									</li>
 									<li>
-										<a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="icon octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (TAR.GZ)</a>
+										<a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (TAR.GZ)</a>
 									</li>
 								</ul>
 							</div>

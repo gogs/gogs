@@ -13,27 +13,51 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/repo"
 )
 
-func ListIssues(ctx *context.APIContext) {
-	issues, err := models.Issues(&models.IssuesOptions{
-		RepoID: ctx.Repo.Repository.ID,
-		Page:   ctx.QueryInt("page"),
-	})
+func listIssues(ctx *context.APIContext, opts *models.IssuesOptions) {
+	issues, err := models.Issues(opts)
 	if err != nil {
 		ctx.Error(500, "Issues", err)
 		return
 	}
 
-	apiIssues := make([]*api.Issue, len(issues))
-	for i := range issues {
-		apiIssues[i] = convert.ToIssue(issues[i])
+	count, err := models.IssuesCount(opts)
+	if err != nil {
+		ctx.Error(500, "IssuesCount", err)
+		return
 	}
 
-	ctx.SetLinkHeader(ctx.Repo.Repository.NumIssues, setting.IssuePagingNum)
+	// FIXME: use IssueList to improve performance.
+	apiIssues := make([]*api.Issue, len(issues))
+	for i := range issues {
+		if err = issues[i].LoadAttributes(); err != nil {
+			ctx.Error(500, "LoadAttributes", err)
+			return
+		}
+		apiIssues[i] = issues[i].APIFormat()
+	}
+
+	ctx.SetLinkHeader(int(count), setting.UI.IssuePagingNum)
 	ctx.JSON(200, &apiIssues)
+}
+
+func ListUserIssues(ctx *context.APIContext) {
+	opts := models.IssuesOptions{
+		AssigneeID: ctx.User.ID,
+		Page:       ctx.QueryInt("page"),
+	}
+
+	listIssues(ctx, &opts)
+}
+
+func ListIssues(ctx *context.APIContext) {
+	opts := models.IssuesOptions{
+		RepoID: ctx.Repo.Repository.ID,
+		Page:   ctx.QueryInt("page"),
+	}
+
+	listIssues(ctx, &opts)
 }
 
 func GetIssue(ctx *context.APIContext) {
@@ -46,15 +70,14 @@ func GetIssue(ctx *context.APIContext) {
 		}
 		return
 	}
-
-	ctx.JSON(200, convert.ToIssue(issue))
+	ctx.JSON(200, issue.APIFormat())
 }
 
 func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	issue := &models.Issue{
 		RepoID:   ctx.Repo.Repository.ID,
-		Name:     form.Title,
-		PosterID: ctx.User.Id,
+		Title:    form.Title,
+		PosterID: ctx.User.ID,
 		Poster:   ctx.User,
 		Content:  form.Body,
 	}
@@ -70,7 +93,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 				}
 				return
 			}
-			issue.AssigneeID = assignee.Id
+			issue.AssigneeID = assignee.ID
 		}
 		issue.MilestoneID = form.Milestone
 	} else {
@@ -80,14 +103,11 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	if err := models.NewIssue(ctx.Repo.Repository, issue, form.Labels, nil); err != nil {
 		ctx.Error(500, "NewIssue", err)
 		return
-	} else if err := repo.MailWatchersAndMentions(ctx.Context, issue); err != nil {
-		ctx.Error(500, "MailWatchersAndMentions", err)
-		return
 	}
 
 	if form.Closed {
 		if err := issue.ChangeStatus(ctx.User, ctx.Repo.Repository, true); err != nil {
-			ctx.Error(500, "issue.ChangeStatus", err)
+			ctx.Error(500, "ChangeStatus", err)
 			return
 		}
 	}
@@ -99,7 +119,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		ctx.Error(500, "GetIssueByID", err)
 		return
 	}
-	ctx.JSON(201, convert.ToIssue(issue))
+	ctx.JSON(201, issue.APIFormat())
 }
 
 func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
@@ -113,13 +133,13 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		return
 	}
 
-	if !issue.IsPoster(ctx.User.Id) && !ctx.Repo.IsWriter() {
+	if !issue.IsPoster(ctx.User.ID) && !ctx.Repo.IsWriter() {
 		ctx.Status(403)
 		return
 	}
 
 	if len(form.Title) > 0 {
-		issue.Name = form.Title
+		issue.Title = form.Title
 	}
 	if form.Body != nil {
 		issue.Content = *form.Body
@@ -133,13 +153,13 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 			assignee, err := models.GetUserByName(*form.Assignee)
 			if err != nil {
 				if models.IsErrUserNotExist(err) {
-					ctx.Error(422, "", fmt.Sprintf("Assignee does not exist: [name: %s]", *form.Assignee))
+					ctx.Error(422, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
 				} else {
 					ctx.Error(500, "GetUserByName", err)
 				}
 				return
 			}
-			issue.AssigneeID = assignee.Id
+			issue.AssigneeID = assignee.ID
 		}
 
 		if err = models.UpdateIssueUserByAssignee(issue); err != nil {
@@ -149,9 +169,9 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 	}
 	if ctx.Repo.IsWriter() && form.Milestone != nil &&
 		issue.MilestoneID != *form.Milestone {
-		oldMid := issue.MilestoneID
+		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
-		if err = models.ChangeMilestoneAssign(oldMid, issue); err != nil {
+		if err = models.ChangeMilestoneAssign(issue, oldMilestoneID); err != nil {
 			ctx.Error(500, "ChangeMilestoneAssign", err)
 			return
 		}
@@ -161,6 +181,12 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		ctx.Error(500, "UpdateIssue", err)
 		return
 	}
+	if form.State != nil {
+		if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
+			ctx.Error(500, "ChangeStatus", err)
+			return
+		}
+	}
 
 	// Refetch from database to assign some automatic values
 	issue, err = models.GetIssueByID(issue.ID)
@@ -168,5 +194,5 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		ctx.Error(500, "GetIssueByID", err)
 		return
 	}
-	ctx.JSON(201, convert.ToIssue(issue))
+	ctx.JSON(201, issue.APIFormat())
 }

@@ -8,13 +8,13 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/fcgi"
 	"os"
 	"path"
 	"strings"
 
-	"github.com/codegangsta/cli"
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"
@@ -25,6 +25,8 @@ import (
 	"github.com/go-macaron/toolbox"
 	"github.com/go-xorm/xorm"
 	"github.com/mcuadros/go-version"
+	"github.com/urfave/cli"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 
@@ -35,7 +37,7 @@ import (
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/routers"
@@ -72,27 +74,36 @@ func checkVersion() {
 	if err != nil {
 		log.Fatal(4, "Fail to read 'templates/.VERSION': %v", err)
 	}
-	if string(data) != setting.AppVer {
-		log.Fatal(4, "Binary and template file version does not match, did you forget to recompile?")
+	tplVer := string(data)
+	if tplVer != setting.AppVer {
+		if version.Compare(tplVer, setting.AppVer, ">") {
+			log.Fatal(4, "Binary version is lower than template file version, did you forget to recompile Gogs?")
+		} else {
+			log.Fatal(4, "Binary version is higher than template file version, did you forget to update template files?")
+		}
 	}
 
 	// Check dependency version.
+	// LEGACY [0.11]: no need to check version as we check in vendor into version control
 	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.5.2.0304"},
-		{"github.com/go-macaron/binding", binding.Version, "0.2.1"},
+		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.6.0"},
+		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
 		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
 		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
-		{"github.com/go-macaron/i18n", i18n.Version, "0.2.0"},
+		{"github.com/go-macaron/i18n", i18n.Version, "0.3.0"},
 		{"github.com/go-macaron/session", session.Version, "0.1.6"},
 		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.0"},
 		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
-		{"gopkg.in/macaron.v1", macaron.Version, "1.1.2"},
-		{"github.com/gogits/git-module", git.Version, "0.2.9"},
-		{"github.com/gogits/go-gogs-client", gogs.Version, "0.7.4"},
+		{"gopkg.in/macaron.v1", macaron.Version, "1.1.7"},
+		{"github.com/gogits/git-module", git.Version, "0.4.9"},
+		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.1"},
 	}
 	for _, c := range checkers {
 		if !version.Compare(c.Version(), c.Expected, ">=") {
-			log.Fatal(4, "Package '%s' version is too old (%s -> %s), did you forget to update?", c.ImportPath, c.Version(), c.Expected)
+			log.Fatal(4, `Dependency outdated!
+Package '%s' current version (%s) is below requirement (%s),
+please use following command to update this package and recompile Gogs:
+go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
 		}
 	}
 }
@@ -107,7 +118,7 @@ func newMacaron() *macaron.Macaron {
 	if setting.EnableGzip {
 		m.Use(gzip.Gziper())
 	}
-	if setting.Protocol == setting.FCGI {
+	if setting.Protocol == setting.SCHEME_FCGI {
 		m.SetURLPrefix(setting.AppSubUrl)
 	}
 	m.Use(macaron.Static(
@@ -123,12 +134,16 @@ func newMacaron() *macaron.Macaron {
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
+
+	funcMap := template.NewFuncMap()
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:         path.Join(setting.StaticRootPath, "templates"),
 		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
-		Funcs:             template.NewFuncMap(),
+		Funcs:             funcMap,
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}))
+	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
+		path.Join(setting.CustomPath, "templates/mail"), funcMap)
 
 	localeNames, err := bindata.AssetDir("conf/locale")
 	if err != nil {
@@ -150,7 +165,7 @@ func newMacaron() *macaron.Macaron {
 	m.Use(cache.Cacher(cache.Options{
 		Adapter:       setting.CacheAdapter,
 		AdapterConfig: setting.CacheConn,
-		Interval:      setting.CacheInternal,
+		Interval:      setting.CacheInterval,
 	}))
 	m.Use(captcha.Captchaer(captcha.Options{
 		SubURL: setting.AppSubUrl,
@@ -201,6 +216,7 @@ func runWeb(ctx *cli.Context) error {
 		})
 		m.Get("/repos", routers.ExploreRepos)
 		m.Get("/users", routers.ExploreUsers)
+		m.Get("/organizations", routers.ExploreOrganizations)
 	}, ignSignIn)
 	m.Combo("/install", routers.InstallInit).Get(routers.Install).
 		Post(bindIgnErr(auth.InstallForm{}), routers.InstallPost)
@@ -219,7 +235,8 @@ func runWeb(ctx *cli.Context) error {
 	m.Group("/user/settings", func() {
 		m.Get("", user.Settings)
 		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
-		m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), user.SettingsAvatar)
+		m.Combo("/avatar").Get(user.SettingsAvatar).
+			Post(binding.MultipartForm(auth.AvatarForm{}), user.SettingsAvatarPost)
 		m.Post("/avatar/delete", user.SettingsDeleteAvatar)
 		m.Combo("/email").Get(user.SettingsEmails).
 			Post(bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
@@ -232,6 +249,12 @@ func runWeb(ctx *cli.Context) error {
 		m.Combo("/applications").Get(user.SettingsApplications).
 			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
+
+		m.Group("/organizations", func() {
+			m.Get("", user.SettingsOrganizations)
+			m.Post("/leave", user.SettingsLeaveOrganization)
+		})
+
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *context.Context) {
 		ctx.Data["PageIsUserSettings"] = true
@@ -316,6 +339,7 @@ func runWeb(ctx *cli.Context) error {
 			defer fr.Close()
 
 			ctx.Header().Set("Cache-Control", "public,max-age=86400")
+			ctx.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
 			// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
 			// We must put the name in " manually.
 			if err = repo.ServeData(ctx, "\""+attach.Name+"\"", fr); err != nil {
@@ -339,8 +363,14 @@ func runWeb(ctx *cli.Context) error {
 
 	// ***** START: Organization *****
 	m.Group("/org", func() {
-		m.Get("/create", org.Create)
-		m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+		m.Group("", func() {
+			m.Get("/create", org.Create)
+			m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+		}, func(ctx *context.Context) {
+			if !ctx.User.CanCreateOrganization() {
+				ctx.NotFound()
+			}
+		})
 
 		m.Group("/:org", func() {
 			m.Get("/dashboard", user.Dashboard)
@@ -368,7 +398,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Group("/settings", func() {
 				m.Combo("").Get(org.Settings).
 					Post(bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
-				m.Post("/avatar", binding.MultipartForm(auth.UploadAvatarForm{}), org.SettingsAvatar)
+				m.Post("/avatar", binding.MultipartForm(auth.AvatarForm{}), org.SettingsAvatar)
 				m.Post("/avatar/delete", org.SettingsDeleteAvatar)
 
 				m.Group("/hooks", func() {
@@ -405,9 +435,20 @@ func runWeb(ctx *cli.Context) error {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
 			m.Group("/collaboration", func() {
-				m.Combo("").Get(repo.Collaboration).Post(repo.CollaborationPost)
+				m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
 				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
 				m.Post("/delete", repo.DeleteCollaboration)
+			})
+			m.Group("/branches", func() {
+				m.Get("", repo.SettingsBranches)
+				m.Post("/default_branch", repo.UpdateDefaultBranch)
+				m.Combo("/*").Get(repo.SettingsProtectedBranch).
+					Post(bindIgnErr(auth.ProtectBranchForm{}), repo.SettingsProtectedBranchPost)
+			}, func(ctx *context.Context) {
+				if ctx.Repo.Repository.IsMirror {
+					ctx.NotFound()
+					return
+				}
 			})
 
 			m.Group("/hooks", func() {
@@ -422,15 +463,15 @@ func runWeb(ctx *cli.Context) error {
 				m.Post("/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
 
 				m.Group("/git", func() {
-					m.Get("", repo.GitHooks)
-					m.Combo("/:name").Get(repo.GitHooksEdit).
-						Post(repo.GitHooksEditPost)
+					m.Get("", repo.SettingsGitHooks)
+					m.Combo("/:name").Get(repo.SettingsGitHooksEdit).
+						Post(repo.SettingsGitHooksEditPost)
 				}, context.GitHookService())
 			})
 
 			m.Group("/keys", func() {
-				m.Combo("").Get(repo.DeployKeys).
-					Post(bindIgnErr(auth.AddSSHKeyForm{}), repo.DeployKeysPost)
+				m.Combo("").Get(repo.SettingsDeployKeys).
+					Post(bindIgnErr(auth.AddSSHKeyForm{}), repo.SettingsDeployKeysPost)
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
@@ -441,11 +482,12 @@ func runWeb(ctx *cli.Context) error {
 
 	m.Get("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
+		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+		// So they can apply their own enable/disable logic on routers.
 		m.Group("/issues", func() {
 			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
-			m.Combo("/:index/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			m.Group("/:index", func() {
 				m.Post("/label", repo.UpdateIssueLabel)
 				m.Post("/milestone", repo.UpdateIssueMilestone)
@@ -455,13 +497,18 @@ func runWeb(ctx *cli.Context) error {
 			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
 				m.Post("/content", repo.UpdateIssueContent)
+				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			})
 		})
-		m.Post("/comments/:id", repo.UpdateCommentContent)
+		m.Group("/comments/:id", func() {
+			m.Post("", repo.UpdateCommentContent)
+			m.Post("/delete", repo.DeleteComment)
+		})
 		m.Group("/labels", func() {
 			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
 			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
+			m.Post("/initialize", bindIgnErr(auth.InitializeLabelsForm{}), repo.InitializeLabels)
 		}, reqRepoWriter, context.RepoRef())
 		m.Group("/milestones", func() {
 			m.Combo("/new").Get(repo.NewMilestone).
@@ -475,13 +522,60 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
 			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
-			m.Get("/edit/:tagname", repo.EditRelease)
-			m.Post("/edit/:tagname", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
 		}, reqRepoWriter, context.RepoRef())
 
+		m.Group("/releases", func() {
+			m.Get("/edit/*", repo.EditRelease)
+			m.Post("/edit/*", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+		}, reqRepoWriter, func(ctx *context.Context) {
+			var err error
+			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.Repository.DefaultBranch)
+			if err != nil {
+				ctx.Handle(500, "GetBranchCommit", err)
+				return
+			}
+			ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+			if err != nil {
+				ctx.Handle(500, "CommitsCount", err)
+				return
+			}
+			ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
+		})
+
+		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
+		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
+		// e.g. /org1/test-repo/compare/master...org1:develop
+		// which should be /org1/test-repo/compare/master...develop
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
 			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
+
+		m.Group("", func() {
+			m.Combo("/_edit/*").Get(repo.EditFile).
+				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditFilePost)
+			m.Combo("/_new/*").Get(repo.NewFile).
+				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.NewFilePost)
+			m.Post("/_preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
+			m.Combo("/_delete/*").Get(repo.DeleteFile).
+				Post(bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
+
+			m.Group("", func() {
+				m.Combo("/_upload/*").Get(repo.UploadFile).
+					Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
+				m.Post("/upload-file", repo.UploadFileToServer)
+				m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
+			}, func(ctx *context.Context) {
+				if !setting.Repository.Upload.Enabled {
+					ctx.NotFound()
+					return
+				}
+			})
+		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
+			if !ctx.Repo.CanEnableEditor() {
+				ctx.NotFound()
+				return
+			}
+		})
 	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 
 	m.Group("/:username/:reponame", func() {
@@ -494,6 +588,7 @@ func runWeb(ctx *cli.Context) error {
 		}, context.RepoRef())
 
 		// m.Get("/branches", repo.Branches)
+		m.Post("/branches/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
@@ -520,12 +615,12 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/src/*", repo.Home)
 			m.Get("/raw/*", repo.SingleDownload)
 			m.Get("/commits/*", repo.RefCommits)
-			m.Get("/commit/:sha([a-z0-9]{40})$", repo.Diff)
+			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.Diff)
 			m.Get("/forks", repo.Forks)
 		}, context.RepoRef())
-		m.Get("/commit/:sha([a-z0-9]{40})\\.:ext(patch|diff)", repo.RawDiff)
+		m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.RawDiff)
 
-		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.CompareDiff)
+		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", context.RepoRef(), repo.CompareDiff)
 	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
@@ -539,8 +634,8 @@ func runWeb(ctx *cli.Context) error {
 		}, ignSignIn, context.RepoAssignment(true), context.RepoRef())
 
 		m.Group("/:reponame", func() {
-			m.Any("/*", ignSignInAndCsrf, repo.HTTP)
 			m.Head("/tasks/trigger", repo.TriggerTask)
+			m.Route("\\.git/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 		})
 	})
 	// ***** END: Repository *****
@@ -563,21 +658,52 @@ func runWeb(ctx *cli.Context) error {
 
 	// Flag for port number in case first time run conflict.
 	if ctx.IsSet("port") {
-		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HttpPort, ctx.String("port"), 1)
-		setting.HttpPort = ctx.String("port")
+		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HTTPPort, ctx.String("port"), 1)
+		setting.HTTPPort = ctx.String("port")
 	}
 
-	var err error
-	listenAddr := fmt.Sprintf("%s:%s", setting.HttpAddr, setting.HttpPort)
+	var listenAddr string
+	if setting.Protocol == setting.SCHEME_UNIX_SOCKET {
+		listenAddr = fmt.Sprintf("%s", setting.HTTPAddr)
+	} else {
+		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
+	}
 	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubUrl)
+
+	var err error
 	switch setting.Protocol {
-	case setting.HTTP:
+	case setting.SCHEME_HTTP:
 		err = http.ListenAndServe(listenAddr, m)
-	case setting.HTTPS:
-		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS10}, Handler: m}
+	case setting.SCHEME_HTTPS:
+		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{
+			MinVersion:               tls.VersionTLS10,
+			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, // Required for HTTP/2 support.
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+			},
+		}, Handler: m}
 		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
-	case setting.FCGI:
+	case setting.SCHEME_FCGI:
 		err = fcgi.Serve(nil, m)
+	case setting.SCHEME_UNIX_SOCKET:
+		os.Remove(listenAddr)
+
+		var listener *net.UnixListener
+		listener, err = net.ListenUnix("unix", &net.UnixAddr{listenAddr, "unix"})
+		if err != nil {
+			break // Handle error after switch
+		}
+
+		// FIXME: add proper implementation of signal capture on all protocols
+		// execute this on SIGTERM or SIGINT: listener.Close()
+		if err = os.Chmod(listenAddr, os.FileMode(setting.UnixSocketPermission)); err != nil {
+			log.Fatal(4, "Failed to set permission of unix socket: %v", err)
+		}
+		err = http.Serve(listener, m)
 	default:
 		log.Fatal(4, "Invalid protocol: %s", setting.Protocol)
 	}

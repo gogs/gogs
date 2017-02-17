@@ -16,12 +16,12 @@ import (
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
+	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -73,7 +73,7 @@ func (ctx *Context) HasValue(name string) bool {
 
 // HTML calls Context.HTML and converts template name to string.
 func (ctx *Context) HTML(status int, name base.TplName) {
-	log.Debug("Template: %s", name)
+	log.Trace("Template: %s", name)
 	ctx.Context.HTML(status, string(name))
 }
 
@@ -89,26 +89,37 @@ func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form interface{}
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
-	if err != nil {
-		log.Error(4, "%s: %v", title, err)
-		if macaron.Env != macaron.PROD {
-			ctx.Data["ErrorMsg"] = err
-		}
-	}
-
 	switch status {
 	case 404:
 		ctx.Data["Title"] = "Page Not Found"
 	case 500:
 		ctx.Data["Title"] = "Internal Server Error"
+		log.Error(4, "%s: %v", title, err)
+		if !setting.ProdMode || (ctx.IsSigned && ctx.User.IsAdmin) {
+			ctx.Data["ErrorMsg"] = err
+		}
 	}
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
-func (ctx *Context) HandleText(status int, title string) {
-	if (status/100 == 4) || (status/100 == 5) {
-		log.Error(4, "%s", title)
+// NotFound simply renders the 404 page.
+func (ctx *Context) NotFound() {
+	ctx.Handle(404, "", nil)
+}
+
+// NotFoundOrServerError use error check function to determine if the error
+// is about not found. It responses with 404 status code for not found error,
+// or error context description for logging purpose of 500 server error.
+func (ctx *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
+	if errck(err) {
+		ctx.NotFound()
+		return
 	}
+
+	ctx.Handle(500, title, err)
+}
+
+func (ctx *Context) HandleText(status int, title string) {
 	ctx.PlainText(status, []byte(title))
 }
 
@@ -144,6 +155,11 @@ func Contexter() macaron.Handler {
 			},
 			Org: &Organization{},
 		}
+
+		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
+			ctx.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+		}
+
 		// Compute current URL for real-time change language.
 		ctx.Data["Link"] = setting.AppSubUrl + strings.TrimSuffix(ctx.Req.URL.Path, "/")
 
@@ -156,7 +172,7 @@ func Contexter() macaron.Handler {
 			ctx.IsSigned = true
 			ctx.Data["IsSigned"] = ctx.IsSigned
 			ctx.Data["SignedUser"] = ctx.User
-			ctx.Data["SignedUserID"] = ctx.User.Id
+			ctx.Data["SignedUserID"] = ctx.User.ID
 			ctx.Data["SignedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		} else {
@@ -174,8 +190,8 @@ func Contexter() macaron.Handler {
 
 		ctx.Data["CsrfToken"] = x.GetToken()
 		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
-		log.Debug("Session ID: %s", sess.ID())
-		log.Debug("CSRF Token: %v", ctx.Data["CsrfToken"])
+		log.Trace("Session ID: %s", sess.ID())
+		log.Trace("CSRF Token: %v", ctx.Data["CsrfToken"])
 
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding

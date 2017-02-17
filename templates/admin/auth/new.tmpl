@@ -16,7 +16,7 @@
 							<label>{{.i18n.Tr "admin.auths.auth_type"}}</label>
 							<div class="ui selection type dropdown">
 								<input type="hidden" id="auth_type" name="type" value="{{.type}}">
-								<div class="text">{{.CurTypeName}}</div>
+								<div class="text">{{.CurrentTypeName}}</div>
 								<i class="dropdown icon"></i>
 								<div class="menu">
 									{{range .AuthSources}}
@@ -32,6 +32,19 @@
 
 						<!-- LDAP and DLDAP -->
 						<div class="ldap dldap field {{if not (or (eq .type 2) (eq .type 5))}}hide{{end}}">
+							<div class="inline required field {{if .Err_SecurityProtocol}}error{{end}}">
+								<label>{{.i18n.Tr "admin.auths.security_protocol"}}</label>
+								<div class="ui selection security-protocol dropdown">
+									<input type="hidden" id="security_protocol" name="security_protocol" value="{{.security_protocol}}">
+									<div class="text">{{.CurrentSecurityProtocol}}</div>
+									<i class="dropdown icon"></i>
+									<div class="menu">
+										{{range .SecurityProtocols}}
+											<div class="item" data-value="{{.Type}}">{{.Name}}</div>
+										{{end}}
+									</div>
+								</div>
+							</div>
 							<div class="required field">
 								<label for="host">{{.i18n.Tr "admin.auths.host"}}</label>
 								<input id="host" name="host" value="{{.host}}" placeholder="e.g. mydomain.com">
@@ -126,13 +139,13 @@
 								<input name="attributes_in_bind" type="checkbox" {{if .attributes_in_bind}}checked{{end}}>
 							</div>
 						</div>
-						<div class="ldap dldap smtp inline field {{if not (or (or (eq .type 2) (eq .type 5)) (eq .type 3))}}hide{{end}}">
+						<div class="smtp inline field {{if not (eq .type 3)}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>
 								<input name="tls" type="checkbox" {{if .tls}}checked{{end}}>
 							</div>
 						</div>
-						<div class="ldap dldap smtp inline field {{if not (or (or (eq .type 2) (eq .type 5)) (eq .type 3))}}hide{{end}}">
+						<div class="has-tls inline field {{if not .HasTLS}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong></label>
 								<input name="skip_verify" type="checkbox" {{if .skip_verify}}checked{{end}}>
@@ -155,8 +168,8 @@
 					{{.i18n.Tr "admin.auths.tips"}}
 				</h4>
 				<div class="ui attached segment">
-					<h5>GMail Setting:</h5>
-					<p>Host: smtp.gmail.com, Post: 587, Enable TLS Encryption: true</p>
+					<h5>GMail Settings:</h5>
+					<p>Host: smtp.gmail.com, Port: 587, Enable TLS Encryption: true</p>
 				</div>
 			</div>
 		</div>

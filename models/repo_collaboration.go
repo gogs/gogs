@@ -6,6 +6,8 @@ package models
 
 import (
 	"fmt"
+
+	api "github.com/gogits/go-gogs-client"
 )
 
 // Collaboration represent the relation between an individual and a repository.
@@ -16,23 +18,34 @@ type Collaboration struct {
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
 }
 
-func (c *Collaboration) ModeName() string {
+func (c *Collaboration) ModeI18nKey() string {
 	switch c.Mode {
 	case ACCESS_MODE_READ:
-		return "Read"
+		return "repo.settings.collaboration.read"
 	case ACCESS_MODE_WRITE:
-		return "Write"
+		return "repo.settings.collaboration.write"
 	case ACCESS_MODE_ADMIN:
-		return "Admin"
+		return "repo.settings.collaboration.admin"
+	default:
+		return "repo.settings.collaboration.undefined"
 	}
-	return "Undefined"
 }
 
-// AddCollaborator adds new collaboration relation between an individual and a repository.
+//IsCollaborator returns true if the user is a collaborator
+func (repo *Repository) IsCollaborator(uid int64) (bool, error) {
+	collaboration := &Collaboration{
+		RepoID: repo.ID,
+		UserID: uid,
+	}
+
+	return x.Get(collaboration)
+}
+
+// AddCollaborator adds new collaboration to a repository with default access mode.
 func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: u.Id,
+		UserID: u.ID,
 	}
 
 	has, err := x.Get(collaboration)
@@ -74,6 +87,17 @@ func (repo *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
 type Collaborator struct {
 	*User
 	Collaboration *Collaboration
+}
+
+func (c *Collaborator) APIFormat() *api.Collaborator {
+	return &api.Collaborator{
+		User: c.User.APIFormat(),
+		Permissions: api.Permission{
+			Admin: c.Collaboration.Mode >= ACCESS_MODE_ADMIN,
+			Push:  c.Collaboration.Mode >= ACCESS_MODE_WRITE,
+			Pull:  c.Collaboration.Mode >= ACCESS_MODE_READ,
+		},
+	}
 }
 
 func (repo *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
@@ -119,6 +143,9 @@ func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode
 		return nil
 	}
 
+	if collaboration.Mode == mode {
+		return nil
+	}
 	collaboration.Mode = mode
 
 	sess := x.NewSession()

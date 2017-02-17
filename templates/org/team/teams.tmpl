@@ -16,17 +16,17 @@
 					<div class="ui top attached header">
 						<a class="text black" href="{{$.OrgLink}}/teams/{{.LowerName}}"><strong>{{.Name}}</strong></a>
 						<div class="ui right">
-							{{if .IsMember $.SignedUser.Id}}
-								<a class="ui red small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave?uid={{$.SignedUser.Id}}">{{$.i18n.Tr "org.teams.leave"}}</a>
+							{{if .IsMember $.SignedUser.ID}}
+								<a class="ui red small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave?uid={{$.SignedUser.ID}}">{{$.i18n.Tr "org.teams.leave"}}</a>
 							{{else if $.IsOrganizationOwner}}
-								<a class="ui blue small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/join?uid={{$.SignedUser.Id}}">{{$.i18n.Tr "org.teams.join"}}</a>
+								<a class="ui blue small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/join?uid={{$.SignedUser.ID}}">{{$.i18n.Tr "org.teams.join"}}</a>
 							{{end}}
 						</div>
 					</div>
 					<div class="ui attached segment members">
 						{{range .Members}}
 							<a href="{{.HomeLink}}" title="{{.Name}}">
-								<img class="ui avatar image" src="{{.AvatarLink}}">
+								<img class="ui avatar image" src="{{.RelAvatarLink}}">
 							</a>
 						{{end}}
 					</div>

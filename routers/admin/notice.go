@@ -7,11 +7,11 @@ package admin
 import (
 	"github.com/Unknwon/com"
 	"github.com/Unknwon/paginater"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -29,9 +29,9 @@ func Notices(ctx *context.Context) {
 	if page <= 1 {
 		page = 1
 	}
-	ctx.Data["Page"] = paginater.New(int(total), setting.AdminNoticePagingNum, page, 5)
+	ctx.Data["Page"] = paginater.New(int(total), setting.UI.Admin.NoticePagingNum, page, 5)
 
-	notices, err := models.Notices(page, setting.AdminNoticePagingNum)
+	notices, err := models.Notices(page, setting.UI.Admin.NoticePagingNum)
 	if err != nil {
 		ctx.Handle(500, "Notices", err)
 		return

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	ISSUE_NAME_STYLE_NUMERIC = "numeric"
+	ISSUE_NAME_STYLE_NUMERIC      = "numeric"
 	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
 )
 
@@ -43,7 +43,7 @@ func BuildSanitizer() {
 	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
 }
 
-var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://`)
+var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://|^mailto:`)
 
 // isLink reports whether link fits valid format.
 func isLink(link []byte) bool {
@@ -53,10 +53,11 @@ func isLink(link []byte) bool {
 // IsMarkdownFile reports whether name looks like a Markdown file
 // based on its extension.
 func IsMarkdownFile(name string) bool {
-	name = strings.ToLower(name)
-	switch filepath.Ext(name) {
-	case ".md", ".markdown", ".mdown", ".mkd":
-		return true
+	extension := strings.ToLower(filepath.Ext(name))
+	for _, ext := range setting.Markdown.FileExtensions {
+		if strings.ToLower(ext) == extension {
+			return true
+		}
 	}
 	return false
 }
@@ -75,7 +76,7 @@ func IsReadmeFile(name string) bool {
 
 var (
 	// MentionPattern matches string that mentions someone, e.g. @Unknwon
-	MentionPattern = regexp.MustCompile(`(\s|^)@[0-9a-zA-Z_\.]+`)
+	MentionPattern = regexp.MustCompile(`(\s|^|\W)@[0-9a-zA-Z-_\.]+`)
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
@@ -88,10 +89,25 @@ var (
 	IssueNumericPattern = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
 	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
 	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\()[A-Z]{1,10}-[1-9][0-9]*\b`)
+	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a difference repository
+	// e.g. gogits/gogs#12345
+	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
+	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern
+	// by converting string to a number.
 	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{40}\b`)
 )
+
+// FindAllMentions matches mention patterns in given content
+// and returns a list of found user names without @ prefix.
+func FindAllMentions(content string) []string {
+	mentions := MentionPattern.FindAllString(content, -1)
+	for i := range mentions {
+		mentions[i] = mentions[i][strings.Index(mentions[i], "@")+1:] // Strip @ character
+	}
+	return mentions
+}
 
 // Renderer is a extended version of underlying render object.
 type Renderer struct {
@@ -120,28 +136,42 @@ func (r *Renderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 
 	// Since this method could only possibly serve one link at a time,
 	// we do not need to find all.
-	m := CommitPattern.Find(link)
-	if m != nil {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "commit/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
+	if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
+		m := CommitPattern.Find(link)
+		if m != nil {
+			m = bytes.TrimSpace(m)
+			i := strings.Index(string(m), "commit/")
+			j := strings.Index(string(m), "#")
+			if j == -1 {
+				j = len(m)
+			}
+			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
+			return
 		}
-		out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
-		return
-	}
 
-	m = IssueFullPattern.Find(link)
-	if m != nil {
-		m = bytes.TrimSpace(m)
-		i := strings.Index(string(m), "issues/")
-		j := strings.Index(string(m), "#")
-		if j == -1 {
-			j = len(m)
+		m = IssueFullPattern.Find(link)
+		if m != nil {
+			m = bytes.TrimSpace(m)
+			i := strings.Index(string(m), "issues/")
+			j := strings.Index(string(m), "#")
+			if j == -1 {
+				j = len(m)
+			}
+
+			index := string(m[i+7 : j])
+			fullRepoURL := setting.AppUrl + strings.TrimPrefix(r.urlPrefix, "/")
+			var link string
+			if strings.HasPrefix(string(m), fullRepoURL) {
+				// Use a short issue reference if the URL refers to this repository
+				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
+			} else {
+				// Use a cross-repository issue reference if the URL refers to a different repository
+				repo := string(m[len(setting.AppUrl) : i-1])
+				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
+			}
+			out.WriteString(link)
+			return
 		}
-		out.WriteString(fmt.Sprintf(` <a href="%s">#%s</a>`, m, base.ShortSha(string(m[i+7:j]))))
-		return
 	}
 
 	r.Renderer.AutoLink(out, link, kind)
@@ -166,6 +196,7 @@ var (
 	svgSuffixWithMark = []byte(".svg?")
 	spaceBytes        = []byte(" ")
 	spaceEncodedBytes = []byte("%20")
+	pound             = []byte("#")
 	space             = " "
 	spaceEncoded      = "%20"
 )
@@ -200,6 +231,9 @@ func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byt
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
 // return a clean unified string of request URL path.
 func cutoutVerbosePrefix(prefix string) string {
+	if len(prefix) == 0 || prefix[0] != '/' {
+		return prefix
+	}
 	count := 0
 	for i := 0; i < len(prefix); i++ {
 		if prefix[i] == '/' {
@@ -223,7 +257,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 
 	ms := pattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		if m[0] == ' ' || m[0] == '('  {
+		if m[0] == ' ' || m[0] == '(' {
 			m = m[1:] // ignore leading space or opening parentheses
 		}
 		var link string
@@ -243,26 +277,45 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 	return rawBytes
 }
 
-// RenderSha1CurrentPattern renders SHA1 strings to corresponding links that assumes in the same repository.
-func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
-	ms := Sha1CurrentPattern.FindAll(rawBytes, -1)
+// RenderCrossReferenceIssueIndexPattern renders issue indexes from other repositories to corresponding links.
+func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+	ms := CrossReferenceIssueNumericPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		rawBytes = bytes.Replace(rawBytes, m, []byte(fmt.Sprintf(
-			`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, base.ShortSha(string(m)))), -1)
+		if m[0] == ' ' || m[0] == '(' {
+			m = m[1:] // ignore leading space or opening parentheses
+		}
+
+		delimIdx := bytes.Index(m, pound)
+		repo := string(m[:delimIdx])
+		index := string(m[delimIdx+1:])
+
+		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppUrl, repo, index, m)
+		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
 	return rawBytes
+}
+
+// RenderSha1CurrentPattern renders SHA1 strings to corresponding links that assumes in the same repository.
+func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
+	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes[:]), func(m string) string {
+		if com.StrTo(m).MustInt() > 0 {
+			return m
+		}
+		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, base.ShortSha(string(m)))
+	}))
 }
 
 // RenderSpecialLink renders mentions, indexes and SHA1 strings to corresponding links.
 func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		m = bytes.TrimSpace(m)
+		m = m[bytes.Index(m, []byte("@")):]
 		rawBytes = bytes.Replace(rawBytes, m,
 			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
+	rawBytes = RenderCrossReferenceIssueIndexPattern(rawBytes, urlPrefix, metas)
 	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
 	return rawBytes
 }

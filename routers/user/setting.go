@@ -11,26 +11,28 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
-	SETTINGS_PROFILE      base.TplName = "user/settings/profile"
-	SETTINGS_PASSWORD     base.TplName = "user/settings/password"
-	SETTINGS_EMAILS       base.TplName = "user/settings/email"
-	SETTINGS_SSH_KEYS     base.TplName = "user/settings/sshkeys"
-	SETTINGS_SOCIAL       base.TplName = "user/settings/social"
-	SETTINGS_APPLICATIONS base.TplName = "user/settings/applications"
-	SETTINGS_DELETE       base.TplName = "user/settings/delete"
-	NOTIFICATION          base.TplName = "user/notification"
-	SECURITY              base.TplName = "user/security"
+	SETTINGS_PROFILE       base.TplName = "user/settings/profile"
+	SETTINGS_AVATAR        base.TplName = "user/settings/avatar"
+	SETTINGS_PASSWORD      base.TplName = "user/settings/password"
+	SETTINGS_EMAILS        base.TplName = "user/settings/email"
+	SETTINGS_SSH_KEYS      base.TplName = "user/settings/sshkeys"
+	SETTINGS_SOCIAL        base.TplName = "user/settings/social"
+	SETTINGS_APPLICATIONS  base.TplName = "user/settings/applications"
+	SETTINGS_ORGANIZATIONS base.TplName = "user/settings/organizations"
+	SETTINGS_DELETE        base.TplName = "user/settings/delete"
+	NOTIFICATION           base.TplName = "user/notification"
+	SECURITY               base.TplName = "user/security"
 )
 
 func Settings(ctx *context.Context) {
@@ -92,10 +94,6 @@ func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 	ctx.User.Email = form.Email
 	ctx.User.Website = form.Website
 	ctx.User.Location = form.Location
-	if len(form.Gravatar) > 0 {
-		ctx.User.Avatar = base.EncodeMD5(form.Gravatar)
-		ctx.User.AvatarEmail = form.Gravatar
-	}
 	if err := models.UpdateUser(ctx.User); err != nil {
 		ctx.Handle(500, "UpdateUser", err)
 		return
@@ -107,8 +105,12 @@ func SettingsPost(ctx *context.Context, form auth.UpdateProfileForm) {
 }
 
 // FIXME: limit size.
-func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUser *models.User) error {
-	ctxUser.UseCustomAvatar = form.Enable
+func UpdateAvatarSetting(ctx *context.Context, form auth.AvatarForm, ctxUser *models.User) error {
+	ctxUser.UseCustomAvatar = form.Source == auth.AVATAR_LOCAL
+	if len(form.Gravatar) > 0 {
+		ctxUser.Avatar = base.EncodeMD5(form.Gravatar)
+		ctxUser.AvatarEmail = form.Gravatar
+	}
 
 	if form.Avatar != nil {
 		fr, err := form.Avatar.Open()
@@ -121,7 +123,7 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 		if err != nil {
 			return fmt.Errorf("ioutil.ReadAll: %v", err)
 		}
-		if _, ok := base.IsImageFile(data); !ok {
+		if !base.IsImageFile(data) {
 			return errors.New(ctx.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxUser.UploadAvatar(data); err != nil {
@@ -130,9 +132,9 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 	} else {
 		// No avatar is uploaded but setting has been changed to enable,
 		// generate a random one when needed.
-		if form.Enable && !com.IsFile(ctxUser.CustomAvatarPath()) {
+		if ctxUser.UseCustomAvatar && !com.IsFile(ctxUser.CustomAvatarPath()) {
 			if err := ctxUser.GenerateRandomAvatar(); err != nil {
-				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.Id, err)
+				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.ID, err)
 			}
 		}
 	}
@@ -144,14 +146,20 @@ func UpdateAvatarSetting(ctx *context.Context, form auth.UploadAvatarForm, ctxUs
 	return nil
 }
 
-func SettingsAvatar(ctx *context.Context, form auth.UploadAvatarForm) {
+func SettingsAvatar(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsAvatar"] = true
+	ctx.HTML(200, SETTINGS_AVATAR)
+}
+
+func SettingsAvatarPost(ctx *context.Context, form auth.AvatarForm) {
 	if err := UpdateAvatarSetting(ctx, form, ctx.User); err != nil {
 		ctx.Flash.Error(err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/user/settings")
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/avatar")
 }
 
 func SettingsDeleteAvatar(ctx *context.Context) {
@@ -159,7 +167,7 @@ func SettingsDeleteAvatar(ctx *context.Context) {
 		ctx.Flash.Error(err.Error())
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/user/settings")
+	ctx.Redirect(setting.AppSubUrl + "/user/settings/avatar")
 }
 
 func SettingsPassword(ctx *context.Context) {
@@ -183,7 +191,11 @@ func SettingsPasswordPost(ctx *context.Context, form auth.ChangePasswordForm) {
 		ctx.Flash.Error(ctx.Tr("form.password_not_match"))
 	} else {
 		ctx.User.Passwd = form.Password
-		ctx.User.Salt = models.GetUserSalt()
+		var err error
+		if ctx.User.Salt, err = models.GetUserSalt(); err != nil {
+			ctx.Handle(500, "UpdateUser", err)
+			return
+		}
 		ctx.User.EncodePasswd()
 		if err := models.UpdateUser(ctx.User); err != nil {
 			ctx.Handle(500, "UpdateUser", err)
@@ -200,7 +212,7 @@ func SettingsEmails(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsEmails"] = true
 
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
 		return
@@ -227,7 +239,7 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 	}
 
 	// Add Email address.
-	emails, err := models.GetEmailAddresses(ctx.User.Id)
+	emails, err := models.GetEmailAddresses(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "GetEmailAddresses", err)
 		return
@@ -239,12 +251,12 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 		return
 	}
 
-	e := &models.EmailAddress{
-		UID:         ctx.User.Id,
+	email := &models.EmailAddress{
+		UID:         ctx.User.ID,
 		Email:       form.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
-	if err := models.AddEmailAddress(e); err != nil {
+	if err := models.AddEmailAddress(email); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
 			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &form)
 			return
@@ -253,24 +265,27 @@ func SettingsEmailPost(ctx *context.Context, form auth.AddEmailForm) {
 		return
 	}
 
-	// Send confirmation e-mail
+	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmailMail(ctx.Context, ctx.User, e)
+		mailer.SendActivateEmailMail(ctx.Context, models.NewMailerUser(ctx.User), email.Email)
 
 		if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 		}
-		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", e.Email, setting.Service.ActiveCodeLives/60))
+		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
 	}
 
-	log.Trace("Email address added: %s", e.Email)
+	log.Trace("Email address added: %s", email.Email)
 	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
 }
 
 func DeleteEmail(ctx *context.Context) {
-	if err := models.DeleteEmailAddress(&models.EmailAddress{ID: ctx.QueryInt64("id")}); err != nil {
+	if err := models.DeleteEmailAddress(&models.EmailAddress{
+		ID:  ctx.QueryInt64("id"),
+		UID: ctx.User.ID,
+	}); err != nil {
 		ctx.Handle(500, "DeleteEmail", err)
 		return
 	}
@@ -286,7 +301,7 @@ func SettingsSSHKeys(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	keys, err := models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
 		return
@@ -300,7 +315,7 @@ func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsSSHKeys"] = true
 
-	keys, err := models.ListPublicKeys(ctx.User.Id)
+	keys, err := models.ListPublicKeys(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListPublicKeys", err)
 		return
@@ -323,7 +338,7 @@ func SettingsSSHKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	if _, err = models.AddPublicKey(ctx.User.Id, form.Title, content); err != nil {
+	if _, err = models.AddPublicKey(ctx.User.ID, form.Title, content); err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
@@ -358,7 +373,7 @@ func SettingsApplications(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
 
-	tokens, err := models.ListAccessTokens(ctx.User.Id)
+	tokens, err := models.ListAccessTokens(ctx.User.ID)
 	if err != nil {
 		ctx.Handle(500, "ListAccessTokens", err)
 		return
@@ -373,7 +388,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	ctx.Data["PageIsSettingsApplications"] = true
 
 	if ctx.HasError() {
-		tokens, err := models.ListAccessTokens(ctx.User.Id)
+		tokens, err := models.ListAccessTokens(ctx.User.ID)
 		if err != nil {
 			ctx.Handle(500, "ListAccessTokens", err)
 			return
@@ -384,7 +399,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 	}
 
 	t := &models.AccessToken{
-		UID:  ctx.User.Id,
+		UID:  ctx.User.ID,
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
@@ -399,7 +414,7 @@ func SettingsApplicationsPost(ctx *context.Context, form auth.NewAccessTokenForm
 }
 
 func SettingsDeleteApplication(ctx *context.Context) {
-	if err := models.DeleteAccessTokenByID(ctx.QueryInt64("id")); err != nil {
+	if err := models.DeleteAccessTokenOfUserByID(ctx.User.ID, ctx.QueryInt64("id")); err != nil {
 		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
@@ -407,6 +422,31 @@ func SettingsDeleteApplication(ctx *context.Context) {
 
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubUrl + "/user/settings/applications",
+	})
+}
+
+func SettingsOrganizations(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsOrganizations"] = true
+
+	orgs, err := models.GetOrgsByUserID(ctx.User.ID, true)
+	if err != nil {
+		ctx.Handle(500, "GetOrgsByUserID", err)
+		return
+	}
+	ctx.Data["Orgs"] = orgs
+
+	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
+}
+
+func SettingsLeaveOrganization(ctx *context.Context) {
+	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
+	if models.IsErrLastOrgOwner(err) {
+		ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/organizations",
 	})
 }
 
