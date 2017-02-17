@@ -1225,7 +1225,6 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-buttons {
   font-weight: normal;
-  margin-top: -3px;
 }
 .repository.file.list #file-buttons .ui.button {
   padding: 8px 10px;
@@ -2273,6 +2272,24 @@ footer .ui.language .menu {
 .repository.settings.collaboration #repo-collab-form .ui.button {
   margin-left: 5px;
   margin-top: -3px;
+}
+.repository.settings.branches .protected-branches .selection.dropdown {
+  width: 300px;
+}
+.repository.settings.branches .protected-branches .item {
+  border: 1px solid #eaeaea;
+  padding: 10px 15px;
+}
+.repository.settings.branches .protected-branches .item:not(:last-child) {
+  border-bottom: 0;
+}
+.repository.settings.branches .branch-protection .help {
+  margin-left: 26px;
+  padding-top: 0;
+}
+.repository.settings.branches .branch-protection .fields {
+  margin-left: 20px;
+  display: block;
 }
 .repository.settings.webhook .events .column {
   padding-bottom: 0;

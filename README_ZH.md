@@ -24,7 +24,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持添加和删除仓库协作者
 - 支持仓库和组织级别 Web 钩子（包括 Slack 集成）
 - 支持仓库 Git 钩子和部署密钥
-- 支持仓库工单（Issue）、合并请求（Pull Request）以及 Wiki
+- 支持仓库工单（Issue）、合并请求（Pull Request）、Wiki 和保护分支
 - 支持迁移和镜像仓库以及它的 Wiki
 - 支持在线编辑仓库文件和 Wiki
 - 支持自定义源的 Gravatar 和 Federated Avatar

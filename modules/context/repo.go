@@ -73,7 +73,7 @@ func (r *Repository) HasAccess() bool {
 
 // CanEnableEditor returns true if repository is editable and user has proper access level.
 func (r *Repository) CanEnableEditor() bool {
-	return r.Repository.CanEnableEditor() && r.IsViewBranch && r.IsWriter()
+	return r.Repository.CanEnableEditor() && r.IsViewBranch && r.IsWriter() && !r.Repository.IsBranchRequirePullRequest(r.BranchName)
 }
 
 // GetEditorconfig returns the .editorconfig definition if found in the

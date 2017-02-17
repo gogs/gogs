@@ -175,7 +175,7 @@ func runServ(c *cli.Context) error {
 
 	// Prohibit push to mirror repositories.
 	if requestMode > models.ACCESS_MODE_READ && repo.IsMirror {
-		fail("mirror repository is read-only", "")
+		fail("Mirror repository is read-only", "")
 	}
 
 	// Allow anonymous (user is nil) clone for public repositories.
@@ -251,7 +251,14 @@ func runServ(c *cli.Context) error {
 		gitCmd = exec.Command(verb, repoFullName)
 	}
 	if requestMode == models.ACCESS_MODE_WRITE {
-		gitCmd.Env = append(os.Environ(), http.ComposeHookEnvs(repo.RepoPath(), owner.Name, owner.Salt, repo.Name, user)...)
+		gitCmd.Env = append(os.Environ(), http.ComposeHookEnvs(http.ComposeHookEnvsOptions{
+			AuthUser:  user,
+			OwnerName: owner.Name,
+			OwnerSalt: owner.Salt,
+			RepoID:    repo.ID,
+			RepoName:  repo.Name,
+			RepoPath:  repo.RepoPath(),
+		})...)
 	}
 	gitCmd.Dir = setting.RepoRootPath
 	gitCmd.Stdout = os.Stdout

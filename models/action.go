@@ -460,6 +460,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		opType = ACTION_PUSH_TAG
 		opts.Commits = &PushCommits{}
 	} else {
+		// TODO: detect branch deletion
 		// if not the first commit, set the compare URL.
 		if opts.OldCommitID == git.EMPTY_SHA {
 			isNewBranch = true

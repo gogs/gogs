@@ -28,18 +28,20 @@ import (
 )
 
 const (
-	ENV_AUTH_USER_ID           = "AUTH_USER_ID"
-	ENV_AUTH_USER_NAME         = "AUTH_USER_NAME"
-	ENV_REPO_OWNER_NAME        = "REPO_OWNER_NAME"
-	ENV_REPO_OWNER_SALT_MD5    = "REPO_OWNER_SALT_MD5"
-	ENV_REPO_NAME              = "REPO_NAME"
-	ENV_REPO_CUSTOM_HOOKS_PATH = "REPO_CUSTOM_HOOKS_PATH"
+	ENV_AUTH_USER_ID           = "GOGS_AUTH_USER_ID"
+	ENV_AUTH_USER_NAME         = "GOGS_AUTH_USER_NAME"
+	ENV_REPO_OWNER_NAME        = "GOGS_REPO_OWNER_NAME"
+	ENV_REPO_OWNER_SALT_MD5    = "GOGS_REPO_OWNER_SALT_MD5"
+	ENV_REPO_ID                = "GOGS_REPO_ID"
+	ENV_REPO_NAME              = "GOGS_REPO_NAME"
+	ENV_REPO_CUSTOM_HOOKS_PATH = "GOGS_REPO_CUSTOM_HOOKS_PATH"
 )
 
 type HTTPContext struct {
 	*context.Context
 	OwnerName string
 	OwnerSalt string
+	RepoID    int64
 	RepoName  string
 	AuthUser  *models.User
 }
@@ -143,6 +145,7 @@ func HTTPContexter() macaron.Handler {
 			Context:   ctx,
 			OwnerName: ownerName,
 			OwnerSalt: owner.Salt,
+			RepoID:    repo.ID,
 			RepoName:  repoName,
 			AuthUser:  authUser,
 		})
@@ -158,6 +161,7 @@ type serviceHandler struct {
 	authUser  *models.User
 	ownerName string
 	ownerSalt string
+	repoID    int64
 	repoName  string
 }
 
@@ -189,15 +193,25 @@ func (h *serviceHandler) sendFile(contentType string) {
 	http.ServeFile(h.w, h.r, reqFile)
 }
 
-func ComposeHookEnvs(repoPath, ownerName, ownerSalt, repoName string, authUser *models.User) []string {
+type ComposeHookEnvsOptions struct {
+	AuthUser  *models.User
+	OwnerName string
+	OwnerSalt string
+	RepoID    int64
+	RepoName  string
+	RepoPath  string
+}
+
+func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 	envs := []string{
 		"SSH_ORIGINAL_COMMAND=1",
-		ENV_AUTH_USER_ID + "=" + com.ToStr(authUser.ID),
-		ENV_AUTH_USER_NAME + "=" + authUser.Name,
-		ENV_REPO_OWNER_NAME + "=" + ownerName,
-		ENV_REPO_OWNER_SALT_MD5 + "=" + base.EncodeMD5(ownerSalt),
-		ENV_REPO_NAME + "=" + repoName,
-		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + path.Join(repoPath, "custom_hooks"),
+		ENV_AUTH_USER_ID + "=" + com.ToStr(opts.AuthUser.ID),
+		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
+		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
+		ENV_REPO_OWNER_SALT_MD5 + "=" + base.EncodeMD5(opts.OwnerSalt),
+		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
+		ENV_REPO_NAME + "=" + opts.RepoName,
+		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + path.Join(opts.RepoPath, "custom_hooks"),
 	}
 	return envs
 }
@@ -229,7 +243,14 @@ func serviceRPC(h serviceHandler, service string) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	if service == "receive-pack" {
-		cmd.Env = append(os.Environ(), ComposeHookEnvs(h.dir, h.ownerName, h.ownerSalt, h.repoName, h.authUser)...)
+		cmd.Env = append(os.Environ(), ComposeHookEnvs(ComposeHookEnvsOptions{
+			AuthUser:  h.authUser,
+			OwnerName: h.ownerName,
+			OwnerSalt: h.ownerSalt,
+			RepoID:    h.repoID,
+			RepoName:  h.repoName,
+			RepoPath:  h.dir,
+		})...)
 	}
 	cmd.Dir = h.dir
 	cmd.Stdout = h.w
@@ -392,6 +413,7 @@ func HTTP(ctx *HTTPContext) {
 			authUser:  ctx.AuthUser,
 			ownerName: ctx.OwnerName,
 			ownerSalt: ctx.OwnerSalt,
+			repoID:    ctx.RepoID,
 			repoName:  ctx.RepoName,
 		})
 		return
