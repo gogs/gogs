@@ -94,7 +94,7 @@ func (ctx *Context) Handle(status int, title string, err error) {
 		ctx.Data["Title"] = "Page Not Found"
 	case 500:
 		ctx.Data["Title"] = "Internal Server Error"
-		log.Error(4, "%s: %v", title, err)
+		log.Error(2, "%s: %v", title, err)
 		if !setting.ProdMode || (ctx.IsSigned && ctx.User.IsAdmin) {
 			ctx.Data["ErrorMsg"] = err
 		}
