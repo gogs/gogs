@@ -26,21 +26,6 @@
 							<input id="website" name="website" type="url" value="{{.Repository.Website}}">
 						</div>
 
-						{{if not .Repository.IsBare}}
-							<div class="required inline field">
-								<label>{{.i18n.Tr "repo.default_branch"}}</label>
-								<div class="ui selection dropdown">
-									<input type="hidden" id="branch" name="branch" value="{{.Repository.DefaultBranch}}">
-									<div class="text">{{.Repository.DefaultBranch}}</div>
-									<i class="dropdown icon"></i>
-									<div class="menu">
-										{{range .Branches}}
-											<div class="item" data-value="{{.}}">{{.}}</div>
-										{{end}}
-									</div>
-								</div>
-							</div>
-						{{end}}
 						{{if not .Repository.IsFork}}
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.visibility"}}</label>

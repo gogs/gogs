@@ -341,6 +341,18 @@ function initRepository() {
         });
     }
 
+    // Branches
+    if ($('.repository.settings.branches').length > 0) {
+        initFilterSearchDropdown('.protected-branches .dropdown');
+        $('.enable-protection').change(function () {
+            if (this.checked) {
+                $($(this).data('target')).removeClass('disabled');
+            } else {
+                $($(this).data('target')).addClass('disabled');
+            }
+        });
+    }
+
     // Labels
     if ($('.repository.labels').length > 0) {
         // Create label

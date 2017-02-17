@@ -161,7 +161,7 @@
 		}
 		#file-buttons {
 			font-weight: normal;
-			margin-top: -3px;
+			
 			.ui.button {
 				padding: 8px 10px;
 				font-weight: normal;
@@ -1299,6 +1299,32 @@
 				.ui.button {
 					margin-left: 5px;
 					margin-top: -3px;
+				}
+			}
+		}
+
+		&.branches {
+			.protected-branches {
+				.selection.dropdown {
+					width: 300px;
+				}
+				.item {
+			    border: 1px solid #eaeaea;
+			    padding: 10px 15px;
+
+			    &:not(:last-child) {
+				    border-bottom: 0;
+			    }
+				}
+			}
+			.branch-protection {
+				.help {
+					margin-left: 26px;
+					padding-top: 0;
+				}
+				.fields {
+					margin-left: 20px;
+					display: block;
 				}
 			}
 		}

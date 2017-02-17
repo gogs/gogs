@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -21,11 +22,13 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS base.TplName = "repo/settings/options"
-	COLLABORATION    base.TplName = "repo/settings/collaboration"
-	GITHOOKS         base.TplName = "repo/settings/githooks"
-	GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
-	DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
+	SETTINGS_OPTIONS          base.TplName = "repo/settings/options"
+	SETTINGS_COLLABORATION    base.TplName = "repo/settings/collaboration"
+	SETTINGS_BRANCHES         base.TplName = "repo/settings/branches"
+	SETTINGS_PROTECTED_BRANCH base.TplName = "repo/settings/protected_branch"
+	SETTINGS_GITHOOKS         base.TplName = "repo/settings/githooks"
+	SETTINGS_GITHOOK_EDIT     base.TplName = "repo/settings/githook_edit"
+	SETTINGS_DEPLOY_KEYS      base.TplName = "repo/settings/deploy_keys"
 )
 
 func Settings(ctx *context.Context) {
@@ -74,16 +77,6 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		repo.Name = newRepoName
 		repo.LowerName = strings.ToLower(newRepoName)
 
-		if ctx.Repo.GitRepo.IsBranchExist(form.Branch) &&
-			repo.DefaultBranch != form.Branch {
-			repo.DefaultBranch = form.Branch
-			if err := ctx.Repo.GitRepo.SetDefaultBranch(form.Branch); err != nil {
-				if !git.IsErrUnsupportedVersion(err) {
-					ctx.Handle(500, "SetDefaultBranch", err)
-					return
-				}
-			}
-		}
 		repo.Description = form.Description
 		repo.Website = form.Website
 
@@ -295,7 +288,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 	}
 }
 
-func Collaboration(ctx *context.Context) {
+func SettingsCollaboration(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsCollaboration"] = true
 
@@ -306,10 +299,10 @@ func Collaboration(ctx *context.Context) {
 	}
 	ctx.Data["Collaborators"] = users
 
-	ctx.HTML(200, COLLABORATION)
+	ctx.HTML(200, SETTINGS_COLLABORATION)
 }
 
-func CollaborationPost(ctx *context.Context) {
+func SettingsCollaborationPost(ctx *context.Context) {
 	name := strings.ToLower(ctx.Query("collaborator"))
 	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
 		ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
@@ -374,31 +367,102 @@ func DeleteCollaboration(ctx *context.Context) {
 	})
 }
 
-func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) {
-	owner, err := models.GetUserByName(ctx.Params(":username"))
-	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.Handle(404, "GetUserByName", nil)
-		} else {
-			ctx.Handle(500, "GetUserByName", err)
-		}
-		return nil, nil
-	}
+func SettingsBranches(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("repo.settings.branches")
+	ctx.Data["PageIsSettingsBranches"] = true
 
-	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
+	protectBranches, err := models.GetProtectBranchesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
-			ctx.Handle(404, "GetRepositoryByName", nil)
-		} else {
-			ctx.Handle(500, "GetRepositoryByName", err)
-		}
-		return nil, nil
+		ctx.Handle(500, "GetProtectBranchesByRepoID", err)
+		return
 	}
+	ctx.Data["ProtectBranches"] = protectBranches
 
-	return owner, repo
+	ctx.HTML(200, SETTINGS_BRANCHES)
 }
 
-func GitHooks(ctx *context.Context) {
+func UpdateDefaultBranch(ctx *context.Context) {
+	branch := ctx.Query("branch")
+	if ctx.Repo.GitRepo.IsBranchExist(branch) &&
+		ctx.Repo.Repository.DefaultBranch != branch {
+		ctx.Repo.Repository.DefaultBranch = branch
+		if err := ctx.Repo.GitRepo.SetDefaultBranch(branch); err != nil {
+			if !git.IsErrUnsupportedVersion(err) {
+				ctx.Handle(500, "SetDefaultBranch", err)
+				return
+			}
+		}
+	}
+
+	if err := models.UpdateRepository(ctx.Repo.Repository, false); err != nil {
+		ctx.Handle(500, "UpdateRepository", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.settings.update_default_branch_success"))
+	ctx.Redirect(ctx.Repo.RepoLink + "/settings/branches")
+}
+
+func SettingsProtectedBranch(ctx *context.Context) {
+	branch := ctx.Params("*")
+	if !ctx.Repo.GitRepo.IsBranchExist(branch) {
+		ctx.NotFound()
+		return
+	}
+
+	ctx.Data["Title"] = ctx.Tr("repo.settings.protected_branches") + " - " + branch
+	ctx.Data["PageIsSettingsBranches"] = true
+	ctx.Data["IsOrgRepo"] = ctx.Repo.Owner.IsOrganization()
+
+	protectBranch, err := models.GetProtectBranchOfRepoByName(ctx.Repo.Repository.ID, branch)
+	if err != nil {
+		if !models.IsErrBranchNotExist(err) {
+			ctx.Handle(500, "GetProtectBranchOfRepoByName", err)
+			return
+		}
+
+		// No options found, create defaults.
+		protectBranch = &models.ProtectBranch{
+			Name: branch,
+		}
+	}
+
+	ctx.Data["Branch"] = protectBranch
+	ctx.HTML(200, SETTINGS_PROTECTED_BRANCH)
+}
+
+func SettingsProtectedBranchPost(ctx *context.Context, form auth.ProtectBranchForm) {
+	branch := ctx.Params("*")
+	if !ctx.Repo.GitRepo.IsBranchExist(branch) {
+		ctx.NotFound()
+		return
+	}
+
+	protectBranch, err := models.GetProtectBranchOfRepoByName(ctx.Repo.Repository.ID, branch)
+	if err != nil {
+		if !models.IsErrBranchNotExist(err) {
+			ctx.Handle(500, "GetProtectBranchOfRepoByName", err)
+			return
+		}
+
+		// No options found, create defaults.
+		protectBranch = &models.ProtectBranch{
+			RepoID: ctx.Repo.Repository.ID,
+			Name:   branch,
+		}
+	}
+
+	protectBranch.Protected = form.Protected
+	protectBranch.RequirePullRequest = form.RequirePullRequest
+	if err = models.UpdateProtectBranch(protectBranch); err != nil {
+		ctx.Handle(500, "UpdateProtectBranch", err)
+		return
+	}
+
+	ctx.Redirect(fmt.Sprintf("%s/settings/branches/%s", ctx.Repo.RepoLink, branch))
+}
+
+func SettingsGitHooks(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.githooks")
 	ctx.Data["PageIsSettingsGitHooks"] = true
 
@@ -409,10 +473,10 @@ func GitHooks(ctx *context.Context) {
 	}
 	ctx.Data["Hooks"] = hooks
 
-	ctx.HTML(200, GITHOOKS)
+	ctx.HTML(200, SETTINGS_GITHOOKS)
 }
 
-func GitHooksEdit(ctx *context.Context) {
+func SettingsGitHooksEdit(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.githooks")
 	ctx.Data["PageIsSettingsGitHooks"] = true
 
@@ -427,10 +491,10 @@ func GitHooksEdit(ctx *context.Context) {
 		return
 	}
 	ctx.Data["Hook"] = hook
-	ctx.HTML(200, GITHOOK_EDIT)
+	ctx.HTML(200, SETTINGS_GITHOOK_EDIT)
 }
 
-func GitHooksEditPost(ctx *context.Context) {
+func SettingsGitHooksEditPost(ctx *context.Context) {
 	name := ctx.Params(":name")
 	hook, err := ctx.Repo.GitRepo.GetHook(name)
 	if err != nil {
@@ -449,7 +513,7 @@ func GitHooksEditPost(ctx *context.Context) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
 }
 
-func DeployKeys(ctx *context.Context) {
+func SettingsDeployKeys(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.deploy_keys")
 	ctx.Data["PageIsSettingsKeys"] = true
 
@@ -460,10 +524,10 @@ func DeployKeys(ctx *context.Context) {
 	}
 	ctx.Data["Deploykeys"] = keys
 
-	ctx.HTML(200, DEPLOY_KEYS)
+	ctx.HTML(200, SETTINGS_DEPLOY_KEYS)
 }
 
-func DeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
+func SettingsDeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.deploy_keys")
 	ctx.Data["PageIsSettingsKeys"] = true
 
@@ -475,7 +539,7 @@ func DeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 	ctx.Data["Deploykeys"] = keys
 
 	if ctx.HasError() {
-		ctx.HTML(200, DEPLOY_KEYS)
+		ctx.HTML(200, SETTINGS_DEPLOY_KEYS)
 		return
 	}
 
@@ -498,10 +562,10 @@ func DeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
 			ctx.Data["Err_Content"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), DEPLOY_KEYS, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &form)
 		case models.IsErrKeyNameAlreadyUsed(err):
 			ctx.Data["Err_Title"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), DEPLOY_KEYS, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &form)
 		default:
 			ctx.Handle(500, "AddDeployKey", err)
 		}

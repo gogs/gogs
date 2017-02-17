@@ -1,0 +1,53 @@
+{{template "base/head" .}}
+<div class="repository settings branches">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "repo.settings.branch_protection"}}
+				</h4>
+				<div class="ui attached segment branch-protection">
+					<p>{{.i18n.Tr "repo.settings.branch_protection_desc" .Branch.Name | Str2html}}</p>
+					<form class="ui form" action="{{.Link}}" method="post">
+						{{.CsrfTokenHtml}}
+						<div class="inline field">
+							<div class="ui checkbox">
+								<input class="enable-protection" name="protected" type="checkbox" data-target="#protection_box" {{if .Branch.Protected}}checked{{end}}>
+								<label>{{.i18n.Tr "repo.settings.protect_this_branch"}}</label>
+								<p class="help">{{.i18n.Tr "repo.settings.protect_this_branch_desc"}}</p>
+							</div>
+						</div>
+						<div id="protection_box" class="fields {{if not .Branch.Protected}}disabled{{end}}">
+							<div class="field">
+								<div class="ui checkbox">
+									<input name="require_pull_request" type="checkbox" {{if .Branch.RequirePullRequest}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.protect_require_pull_request"}}</label>
+									<p class="help">{{.i18n.Tr "repo.settings.protect_require_pull_request_desc"}}</p>
+								</div>
+							</div>
+							{{if .IsOrgRepo}}
+								<div class="field">
+									<div class="ui checkbox">
+										<input name="whitelist_committers" type="checkbox" data-target="#whitelist_box">
+										<label>{{.i18n.Tr "repo.settings.protect_whitelist_committers"}}</label>
+										<p class="help">{{.i18n.Tr "repo.settings.protect_whitelist_committers_desc"}}</p>
+									</div>
+								</div>
+							{{end}}
+						</div>
+
+						<div class="ui divider"></div>
+
+						<div class="field">
+							<button class="ui green button">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
