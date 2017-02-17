@@ -95,7 +95,7 @@ func HTTPContexter() macaron.Handler {
 
 		authUser, err := models.UserSignIn(authUsername, authPassword)
 		if err != nil && !models.IsErrUserNotExist(err) {
-			ctx.Handle(http.StatusInternalServerError, "UserSignIn: %v", err)
+			ctx.Handle(http.StatusInternalServerError, "UserSignIn", err)
 			return
 		}
 
@@ -103,7 +103,11 @@ func HTTPContexter() macaron.Handler {
 		if authUser == nil {
 			token, err := models.GetAccessTokenBySHA(authUsername)
 			if err != nil {
-				ctx.NotFoundOrServerError("GetAccessTokenBySHA", models.IsErrAccessTokenNotExist, err)
+				if models.IsErrAccessTokenEmpty(err) || models.IsErrAccessTokenNotExist(err) {
+					ctx.Error(http.StatusUnauthorized)
+				} else {
+					ctx.Handle(http.StatusInternalServerError, "GetAccessTokenBySHA", err)
+				}
 				return
 			}
 			token.Updated = time.Now()
