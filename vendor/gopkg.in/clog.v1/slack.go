@@ -18,24 +18,25 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
 const (
 	SLACK             = "slack"
 	_SLACK_ATTACHMENT = `{
-    "attachments": [
-        {
-            "text": "%s",
-            "color": "%s",
-        }
-    ]
+	"attachments": [
+		{
+			"text": "%s",
+			"color": "%s"
+		}
+	]
 }`
 )
 
 var slackColors = []string{
 	"",        // Trace
-	"blue",    // Info
+	"#3aa3e3", // Info
 	"warning", // Warn
 	"danger",  // Error
 	"#ff0200", // Fatal
@@ -93,10 +94,16 @@ func (s *slack) ExchangeChans(errorChan chan<- error) chan *Message {
 
 func (s *slack) write(msg *Message) {
 	attachment := fmt.Sprintf(_SLACK_ATTACHMENT, msg.Body, slackColors[msg.Level])
-	if _, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(attachment))); err != nil {
+	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(attachment)))
+	if err != nil {
 		s.errorChan <- fmt.Errorf("slack: %v", err)
 	}
+	defer resp.Body.Close()
 
+	if resp.StatusCode/100 != 2 {
+		data, _ := ioutil.ReadAll(resp.Body)
+		s.errorChan <- fmt.Errorf("slack: %s", data)
+	}
 }
 
 func (s *slack) Start() {

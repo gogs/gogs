@@ -1,4 +1,4 @@
-# Clog [![Build Status](https://travis-ci.org/go-clog/clog.svg?branch=master)](https://travis-ci.org/go-clog/clog) [![GoDoc](https://godoc.org/gopkg.in/clog.v1?status.svg)](https://godoc.org/gopkg.in/clog.v1)
+# Clog [![Build Status](https://travis-ci.org/go-clog/clog.svg?branch=master)](https://travis-ci.org/go-clog/clog) [![GoDoc](https://godoc.org/gopkg.in/clog.v1?status.svg)](https://godoc.org/gopkg.in/clog.v1) [![Sourcegraph](https://sourcegraph.com/github.com/go-clog/clog/-/badge.svg)](https://sourcegraph.com/github.com/go-clog/clog?badge)
 
 ![](https://avatars1.githubusercontent.com/u/25576866?v=3&s=200)
 
