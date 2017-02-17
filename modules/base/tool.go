@@ -182,11 +182,11 @@ func HashEmail(email string) string {
 // to return full URL if user enables Gravatar-like service.
 func AvatarLink(email string) (url string) {
 	if setting.EnableFederatedAvatar && setting.LibravatarService != nil &&
-		len(email) > 0 {
+		strings.Contains(email, "@") {
 		var err error
 		url, err = setting.LibravatarService.FromEmail(email)
 		if err != nil {
-			log.Error(3, "LibravatarService.FromEmail [%s]: %v", email, err)
+			log.Error(2, "LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
 	if len(url) == 0 && !setting.DisableGravatar {
