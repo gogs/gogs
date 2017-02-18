@@ -126,7 +126,7 @@ func (repo *Repository) GetCollaborators() ([]*Collaborator, error) {
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
-func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode) error {
+func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
 	// Discard invalid input
 	if mode <= ACCESS_MODE_NONE || mode > ACCESS_MODE_OWNER {
 		return nil
@@ -134,7 +134,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode
 
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: uid,
+		UserID: userID,
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
@@ -156,7 +156,23 @@ func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode
 
 	if _, err = sess.Id(collaboration.ID).AllCols().Update(collaboration); err != nil {
 		return fmt.Errorf("update collaboration: %v", err)
-	} else if _, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, uid, repo.ID); err != nil {
+	}
+
+	access := Access{
+		UserID: userID,
+		RepoID: repo.ID,
+	}
+	has, err = sess.Get(access)
+	if err != nil {
+		return fmt.Errorf("get access record: %v", err)
+	}
+	if has {
+		_, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, repo.ID)
+	} else {
+		access.Mode = mode
+		_, err = sess.Insert(access)
+	}
+	if err != nil {
 		return fmt.Errorf("update access table: %v", err)
 	}
 

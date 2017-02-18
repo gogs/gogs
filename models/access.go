@@ -146,16 +146,8 @@ func maxAccessMode(modes ...AccessMode) AccessMode {
 
 // FIXME: do corss-comparison so reduce deletions and additions to the minimum?
 func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
-	minMode := ACCESS_MODE_READ
-	if !repo.IsPrivate {
-		minMode = ACCESS_MODE_WRITE
-	}
-
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
-		if mode < minMode {
-			continue
-		}
 		newAccesses = append(newAccesses, Access{
 			UserID: userID,
 			RepoID: repo.ID,

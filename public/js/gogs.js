@@ -1153,7 +1153,7 @@ function searchRepositories() {
                 if (response.ok && response.data.length) {
                     var html = '';
                     $.each(response.data, function (i, item) {
-                        html += '<div class="item"><i class="icon octicon octicon-repo"></i> <span class="fullname">' + item.full_name + '</span></div>';
+                        html += '<div class="item"><i class="octicon octicon-repo"></i> <span class="fullname">' + item.full_name + '</span></div>';
                     });
                     $results.html(html);
                     $this.find('.results .item').click(function () {

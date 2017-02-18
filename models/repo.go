@@ -328,13 +328,14 @@ func (repo *Repository) DeleteWiki() {
 	}
 }
 
+// getAssignees returns a list of users who can be assigned to issues in this repository.
 func (repo *Repository) getAssignees(e Engine) (_ []*User, err error) {
 	if err = repo.getOwner(e); err != nil {
 		return nil, err
 	}
 
 	accesses := make([]*Access, 0, 10)
-	if err = e.Where("repo_id = ? AND mode >= ?", repo.ID, ACCESS_MODE_WRITE).Find(&accesses); err != nil {
+	if err = e.Where("repo_id = ? AND mode >= ?", repo.ID, ACCESS_MODE_READ).Find(&accesses); err != nil {
 		return nil, err
 	}
 

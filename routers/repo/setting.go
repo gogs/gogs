@@ -351,8 +351,11 @@ func ChangeCollaborationAccessMode(ctx *context.Context) {
 	if err := ctx.Repo.Repository.ChangeCollaborationAccessMode(
 		ctx.QueryInt64("uid"),
 		models.AccessMode(ctx.QueryInt("mode"))); err != nil {
-		log.Error(4, "ChangeCollaborationAccessMode: %v", err)
+		log.Error(2, "ChangeCollaborationAccessMode: %v", err)
+		return
 	}
+
+	ctx.Status(204)
 }
 
 func DeleteCollaboration(ctx *context.Context) {
