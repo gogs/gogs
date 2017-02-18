@@ -2762,7 +2762,7 @@ footer .ui.language .menu {
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
 }
-.user.settings .orgs {
+.user.settings .orgs.non-empty {
   padding: 0;
 }
 .user.settings .orgs .item {
