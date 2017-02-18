@@ -11,7 +11,7 @@
 						<a class="ui blue tiny button" href="{{AppSubUrl}}/org/create">{{.i18n.Tr "new_org"}}</a>
 					</div>
 				</h4>
-				<div class="ui attached segment orgs">
+				<div class="ui attached segment orgs {{if .Orgs}}non-empty{{end}}">
 					{{if .Orgs}}
 						<div class="ui middle aligned divided list">
 							{{range .Orgs}}
