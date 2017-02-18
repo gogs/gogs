@@ -9,7 +9,6 @@ import (
 	"net/mail"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -144,6 +143,7 @@ func Install(ctx *context.Context) {
 
 	form.Domain = setting.Domain
 	form.SSHPort = setting.SSH.Port
+	form.UseBuiltinSSHServer = setting.SSH.StartBuiltinServer
 	form.HTTPPort = setting.HTTPPort
 	form.AppUrl = setting.AppUrl
 	form.LogRootPath = setting.LogRootPath
@@ -202,15 +202,9 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	models.DbCfg.SSLMode = form.SSLMode
 	models.DbCfg.Path = form.DbPath
 
-	if (models.DbCfg.Type == "sqlite3" || models.DbCfg.Type == "tidb") &&
-		len(models.DbCfg.Path) == 0 {
+	if models.DbCfg.Type == "sqlite3" && len(models.DbCfg.Path) == 0 {
 		ctx.Data["Err_DbPath"] = true
 		ctx.RenderWithErr(ctx.Tr("install.err_empty_db_path"), INSTALL, &form)
-		return
-	} else if models.DbCfg.Type == "tidb" &&
-		strings.ContainsAny(path.Base(models.DbCfg.Path), ".-") {
-		ctx.Data["Err_DbPath"] = true
-		ctx.RenderWithErr(ctx.Tr("install.err_invalid_tidb_name"), INSTALL, &form)
 		return
 	}
 
@@ -315,6 +309,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	} else {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("false")
 		cfg.Section("server").Key("SSH_PORT").SetValue(com.ToStr(form.SSHPort))
+		cfg.Section("server").Key("START_SSH_SERVER").SetValue(com.ToStr(form.UseBuiltinSSHServer))
 	}
 
 	if len(strings.TrimSpace(form.SMTPHost)) > 0 {

@@ -99,6 +99,12 @@
 						<input id="ssh_port" name="ssh_port" value="{{.ssh_port}}">
 						<span class="help">{{.i18n.Tr "install.ssh_port_helper"}}</span>
 					</div>
+					<div class="inline field" id="use-builtin-ssh-server">
+						<div class="ui checkbox">
+							<label class="poping up" data-content="{{.i18n.Tr "install.use_builtin_ssh_server_popup"}}"><strong>{{.i18n.Tr "install.use_builtin_ssh_server"}}</strong></label>
+							<input name="use_builtin_ssh_server" type="checkbox" {{if .use_builtin_ssh_server}}checked{{end}}>
+						</div>
+					</div>
 					<div class="inline required field">
 						<label for="http_port">{{.i18n.Tr "install.http_port"}}</label>
 						<input id="http_port" name="http_port" value="{{.http_port}}" required>

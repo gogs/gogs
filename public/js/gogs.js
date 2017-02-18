@@ -212,18 +212,15 @@ function initInstall() {
     // Database type change detection.
     $("#db_type").change(function () {
         var sqliteDefault = 'data/gogs.db';
-        var tidbDefault = 'data/gogs_tidb';
 
         var dbType = $(this).val();
-        if (dbType === "SQLite3" || dbType === "TiDB") {
+        if (dbType === "SQLite3") {
             $('#sql_settings').hide();
             $('#pgsql_settings').hide();
             $('#sqlite_settings').show();
 
-            if (dbType === "SQLite3" && $('#db_path').val() == tidbDefault) {
+            if (dbType === "SQLite3") {
                 $('#db_path').val(sqliteDefault);
-            } else if (dbType === "TiDB" && $('#db_path').val() == sqliteDefault) {
-                $('#db_path').val(tidbDefault);
             }
             return;
         }
