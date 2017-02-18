@@ -29,45 +29,8 @@ CMD ["/bin/s6-svscan", "/app/gogs/docker/s6/"]
 
 
 ## Build Golang & Gogs
-
-
-# https://golang.org/issue/14851
-#COPY no-pic.patch /
-
-
 COPY docker /app/gogs/docker
 
 RUN set -ex \
-	&& apk add --no-cache --virtual .build-deps \
-		bash \
-		gcc \
-		musl-dev \
-		openssl \
-		go \
-		build-base \
-		linux-pam-dev \
-	\
-	&& export GOROOT_BOOTSTRAP="$(go env GOROOT)" \
-	\
-	&& wget -q "$GOLANG_SRC_URL" -O golang.tar.gz \
-	&& echo "$GOLANG_SRC_SHA256  golang.tar.gz" | sha256sum -c - \
-	&& tar -C /usr/local -xzf golang.tar.gz \
-	&& rm golang.tar.gz \
-	&& cd /usr/local/go/src \
-	&& patch -p2 -i /app/gogs/docker/no-pic.patch \
-	&& ./make.bash \
-	\
-	&& rm /app/gogs/docker/*.patch \
-	&& git config --global http.https://gopkg.in.followRedirects true \
-	&& cd /app/gogs/docker/ \
-	&& sh /app/gogs/docker/build.sh \
-	&& rm /app/gogs/docker/build.sh \
-	&& rm /app/gogs/docker/nsswitch.conf \
-	&& rm /app/gogs/docker/README.md \
-	&& apk del .build-deps  \
-	&& mv /go/src/github.com/gogits/gogs/gogs /app/gogs/ \
-	&& mv /go/src/github.com/gogits/gogs/templates /app/gogs/ \
-	&& mv /go/src/github.com/gogits/gogs/scripts /app/gogs/ \
-	&& mv /go/src/github.com/gogits/gogs/public /app/gogs/ \
-	&& rm -rf /go \
-	&& rm -rf /usr/local/go
+	&& sh /app/gogs/docker/build-go.sh \
+	&& sh /app/gogs/docker/build.sh

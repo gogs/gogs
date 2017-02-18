@@ -16,3 +16,19 @@ make build TAGS="sqlite cert pam"
 # Create git user for Gogs
 adduser -H -D -g 'Gogs Git User' git -h /data/git -s /bin/bash && passwd -u git
 echo "export GOGS_CUSTOM=${GOGS_CUSTOM}" >> /etc/profile
+
+# Move to final place
+mv /go/src/github.com/gogits/gogs/gogs /app/gogs/
+mv /go/src/github.com/gogits/gogs/templates /app/gogs/
+mv /go/src/github.com/gogits/gogs/scripts /app/gogs/
+mv /go/src/github.com/gogits/gogs/public /app/gogs/
+
+# Final cleaning
+rm /app/gogs/docker/build.sh
+rm /app/gogs/docker/build-go.sh
+rm /app/gogs/docker/nsswitch.conf
+rm /app/gogs/docker/README.md
+rm -rf /go
+rm -rf /usr/local/go
+
+apk del .build-deps
