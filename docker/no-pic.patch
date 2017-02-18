@@ -1,0 +1,16 @@
+diff --git a/src/cmd/link/internal/ld/lib.go b/src/cmd/link/internal/ld/lib.go
+index 14f4fa9..5599307 100644
+--- a/src/cmd/link/internal/ld/lib.go
++++ b/src/cmd/link/internal/ld/lib.go
+@@ -1272,6 +1272,11 @@ func hostlink() {
+ 		argv = append(argv, peimporteddlls()...)
+ 	}
+ 
++	// The Go linker does not currently support building PIE
++	// executables when using the external linker. See:
++	// https://github.com/golang/go/issues/6940
++	argv = append(argv, "-fno-PIC")
++
+ 	if l.Debugvlog != 0 {
+ 		l.Logf("%5.2f host link:", obj.Cputime())
+ 		for _, v := range argv {

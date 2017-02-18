@@ -1,27 +1,17 @@
 #!/bin/sh
-set -x
-set -e
+export GOPATH=/go
+export PATH=$GOPATH/bin:/usr/local/go/bin:/$PATH
 
-# Set temp environment vars
-export GOPATH=/tmp/go
-export PATH=${PATH}:${GOPATH}/bin
-export GO15VENDOREXPERIMENT=1
+mkdir -p "$GOPATH/src" "$GOPATH/bin"
+chmod -R 777 "$GOPATH"
 
-# Install build deps
-apk --no-cache --no-progress add --virtual build-deps build-base linux-pam-dev go
+cd $GOPATH
 
-# Build Gogs
-mkdir -p ${GOPATH}/src/github.com/gogits/
-ln -s /app/gogs/ ${GOPATH}/src/github.com/gogits/gogs
+git config --global http.https://gopkg.in.followRedirects true
+
+git clone --single-branch --branch ${GOGS_VERSION} --depth 1 https://github.com/gogits/gogs ${GOPATH}/src/github.com/gogits/gogs
 cd ${GOPATH}/src/github.com/gogits/gogs
-go get -v -tags "sqlite cert pam" ./...
 make build TAGS="sqlite cert pam"
-
-# Cleanup GOPATH
-rm -r $GOPATH
-
-# Remove build deps
-apk --no-progress del build-deps
 
 # Create git user for Gogs
 adduser -H -D -g 'Gogs Git User' git -h /data/git -s /bin/bash && passwd -u git
