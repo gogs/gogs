@@ -200,15 +200,19 @@ func (repo *Repository) GetCommitByPath(relpath string) (*Commit, error) {
 	return commits.Front().Value.(*Commit), nil
 }
 
-var CommitsRangeSize = 50
-
-func (repo *Repository) commitsByRange(id sha1, page int) (*list.List, error) {
-	stdout, err := NewCommand("log", id.String(), "--skip="+strconv.Itoa((page-1)*CommitsRangeSize),
-		"--max-count="+strconv.Itoa(CommitsRangeSize), _PRETTY_LOG_FORMAT).RunInDirBytes(repo.Path)
+func (repo *Repository) CommitsByRangeSize(revision string, page, size int) (*list.List, error) {
+	stdout, err := NewCommand("log", revision, "--skip="+strconv.Itoa((page-1)*size),
+		"--max-count="+strconv.Itoa(size), _PRETTY_LOG_FORMAT).RunInDirBytes(repo.Path)
 	if err != nil {
 		return nil, err
 	}
 	return repo.parsePrettyFormatLogToList(stdout)
+}
+
+const DEFAULT_COMMITS_PAGE_SIZE = 50
+
+func (repo *Repository) CommitsByRange(revision string, page int) (*list.List, error) {
+	return repo.CommitsByRangeSize(revision, page, DEFAULT_COMMITS_PAGE_SIZE)
 }
 
 func (repo *Repository) searchCommits(id sha1, keyword string) (*list.List, error) {
@@ -231,13 +235,17 @@ func (repo *Repository) FileCommitsCount(revision, file string) (int64, error) {
 	return commitsCount(repo.Path, revision, file)
 }
 
-func (repo *Repository) CommitsByFileAndRange(revision, file string, page int) (*list.List, error) {
-	stdout, err := NewCommand("log", revision, "--skip="+strconv.Itoa((page-1)*50),
-		"--max-count="+strconv.Itoa(CommitsRangeSize), _PRETTY_LOG_FORMAT, "--", file).RunInDirBytes(repo.Path)
+func (repo *Repository) CommitsByFileAndRangeSize(revision, file string, page, size int) (*list.List, error) {
+	stdout, err := NewCommand("log", revision, "--skip="+strconv.Itoa((page-1)*size),
+		"--max-count="+strconv.Itoa(size), _PRETTY_LOG_FORMAT, "--", file).RunInDirBytes(repo.Path)
 	if err != nil {
 		return nil, err
 	}
 	return repo.parsePrettyFormatLogToList(stdout)
+}
+
+func (repo *Repository) CommitsByFileAndRange(revision, file string, page int) (*list.List, error) {
+	return repo.CommitsByFileAndRangeSize(revision, file, page, DEFAULT_COMMITS_PAGE_SIZE)
 }
 
 func (repo *Repository) FilesCountBetween(startCommitID, endCommitID string) (int, error) {
