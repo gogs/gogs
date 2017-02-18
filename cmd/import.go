@@ -5,6 +5,8 @@
 package cmd
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,6 +61,10 @@ func runImportLocale(c *cli.Context) error {
 
 	now := time.Now()
 
+	line := make([]byte, 0, 100)
+	badChars := []byte(`="`)
+	escapedQuotes := []byte(`\"`)
+	regularQuotes := []byte(`"`)
 	// Cut out en-US.
 	for _, lang := range setting.Langs[1:] {
 		name := fmt.Sprintf("locale_%s.ini", lang)
@@ -68,9 +74,34 @@ func runImportLocale(c *cli.Context) error {
 			continue
 		}
 
-		if err := com.Copy(source, target); err != nil {
-			return fmt.Errorf("Copy file: %v", err)
+		// Crowdin surrounds double quotes for strings contain quotes inside,
+		// this breaks INI parser, we need to fix that.
+		sr, err := os.Open(source)
+		if err != nil {
+			return fmt.Errorf("Open: %v", err)
 		}
+
+		tw, err := os.Create(target)
+		if err != nil {
+			if err != nil {
+				return fmt.Errorf("Open: %v", err)
+			}
+		}
+
+		scanner := bufio.NewScanner(sr)
+		for scanner.Scan() {
+			line = scanner.Bytes()
+			idx := bytes.Index(line, badChars)
+			if idx > -1 && line[len(line)-1] == '"' {
+				// We still want the "=" sign
+				line = append(line[:idx+1], line[idx+2:len(line)-1]...)
+				line = bytes.Replace(line, escapedQuotes, regularQuotes, -1)
+			}
+			tw.Write(line)
+			tw.WriteString("\n")
+		}
+		sr.Close()
+		tw.Close()
 
 		// Modification time of files from Crowdin often ahead of current,
 		// so we need to set back to current.
