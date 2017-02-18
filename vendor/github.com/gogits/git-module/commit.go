@@ -170,8 +170,12 @@ func (c *Commit) CommitsCount() (int64, error) {
 	return CommitsCount(c.repo.Path, c.ID.String())
 }
 
+func (c *Commit) CommitsByRangeSize(page, size int) (*list.List, error) {
+	return c.repo.CommitsByRangeSize(c.ID.String(), page, size)
+}
+
 func (c *Commit) CommitsByRange(page int) (*list.List, error) {
-	return c.repo.commitsByRange(c.ID, page)
+	return c.repo.CommitsByRange(c.ID.String(), page)
 }
 
 func (c *Commit) CommitsBefore() (*list.List, error) {
