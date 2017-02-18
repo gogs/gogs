@@ -6,7 +6,6 @@ package models
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -23,21 +22,21 @@ type SlackMeta struct {
 	Color    string `json:"color"`
 }
 
-type SlackPayload struct {
-	Channel     string            `json:"channel"`
-	Text        string            `json:"text"`
-	Username    string            `json:"username"`
-	IconURL     string            `json:"icon_url"`
-	UnfurlLinks int               `json:"unfurl_links"`
-	LinkNames   int               `json:"link_names"`
-	Attachments []SlackAttachment `json:"attachments"`
-}
-
 type SlackAttachment struct {
 	Fallback string `json:"fallback"`
 	Color    string `json:"color"`
 	Title    string `json:"title"`
 	Text     string `json:"text"`
+}
+
+type SlackPayload struct {
+	Channel     string             `json:"channel"`
+	Text        string             `json:"text"`
+	Username    string             `json:"username"`
+	IconURL     string             `json:"icon_url"`
+	UnfurlLinks int                `json:"unfurl_links"`
+	LinkNames   int                `json:"link_names"`
+	Attachments []*SlackAttachment `json:"attachments"`
 }
 
 func (p *SlackPayload) SetSecret(_ string) {}
@@ -72,21 +71,13 @@ func SlackLinkFormatter(url string, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
 
-func replaceBadCharsForDiscord(in string) string {
-	return strings.NewReplacer("[", "", "]", ":", ":", "/").Replace(in)
-}
-
-func getSlackCreatePayload(isDiscord bool, p *api.CreatePayload, slack *SlackMeta) (*SlackPayload, error) {
+func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayload, error) {
 	// Created tag/branch
 	refName := git.RefEndName(p.Ref)
 
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
-	format := "[%s:%s] %s created by %s"
-	if isDiscord {
-		format = replaceBadCharsForDiscord(format)
-	}
-	text := fmt.Sprintf(format, repoLink, refLink, p.RefType, p.Sender.UserName)
+	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
 
 	return &SlackPayload{
 		Channel:  slack.Channel,
@@ -96,7 +87,7 @@ func getSlackCreatePayload(isDiscord bool, p *api.CreatePayload, slack *SlackMet
 	}, nil
 }
 
-func getSlackPushPayload(isDiscord bool, p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
+func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
 	// n new commits
 	var (
 		branchName   = git.RefEndName(p.Ref)
@@ -117,11 +108,7 @@ func getSlackPushPayload(isDiscord bool, p *api.PushPayload, slack *SlackMeta) (
 
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	branchLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+branchName, branchName)
-	format := "[%s:%s] %s pushed by %s"
-	if isDiscord {
-		format = replaceBadCharsForDiscord(format)
-	}
-	text := fmt.Sprintf(format, repoLink, branchLink, commitString, p.Pusher.UserName)
+	text := fmt.Sprintf("[%s:%s] %s pushed by %s", repoLink, branchLink, commitString, p.Pusher.UserName)
 
 	var attachmentText string
 	// for each commit, generate attachment text
@@ -138,14 +125,14 @@ func getSlackPushPayload(isDiscord bool, p *api.PushPayload, slack *SlackMeta) (
 		Text:     text,
 		Username: slack.Username,
 		IconURL:  slack.IconURL,
-		Attachments: []SlackAttachment{{
+		Attachments: []*SlackAttachment{{
 			Color: slack.Color,
 			Text:  attachmentText,
 		}},
 	}, nil
 }
 
-func getSlackPullRequestPayload(isDiscord bool, p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
+func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
 	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
@@ -185,7 +172,7 @@ func getSlackPullRequestPayload(isDiscord bool, p *api.PullRequestPayload, slack
 		Text:     text,
 		Username: slack.Username,
 		IconURL:  slack.IconURL,
-		Attachments: []SlackAttachment{{
+		Attachments: []*SlackAttachment{{
 			Color: slack.Color,
 			Title: title,
 			Text:  attachmentText,
@@ -193,21 +180,21 @@ func getSlackPullRequestPayload(isDiscord bool, p *api.PullRequestPayload, slack
 	}, nil
 }
 
-func GetSlackPayload(isDiscord bool, p api.Payloader, event HookEventType, meta string) (*SlackPayload, error) {
+func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (*SlackPayload, error) {
 	s := new(SlackPayload)
 
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
-		return s, errors.New("GetSlackPayload meta json:" + err.Error())
+		return s, fmt.Errorf("GetSlackPayload meta json: %v", err)
 	}
 
 	switch event {
 	case HOOK_EVENT_CREATE:
-		return getSlackCreatePayload(isDiscord, p.(*api.CreatePayload), slack)
+		return getSlackCreatePayload(p.(*api.CreatePayload), slack)
 	case HOOK_EVENT_PUSH:
-		return getSlackPushPayload(isDiscord, p.(*api.PushPayload), slack)
+		return getSlackPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
-		return getSlackPullRequestPayload(isDiscord, p.(*api.PullRequestPayload), slack)
+		return getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
 	}
 
 	return s, nil

@@ -505,26 +505,30 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	apiRepo := repo.APIFormat(nil)
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
+		compareURL := setting.AppUrl + opts.Commits.CompareURL
+		if isNewBranch {
+			compareURL = ""
+			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+				Ref:     refName,
+				RefType: "branch",
+				Repo:    apiRepo,
+				Sender:  apiPusher,
+			}); err != nil {
+				return fmt.Errorf("PrepareWebhooks (new branch): %v", err)
+			}
+		}
+
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
-			CompareURL: setting.AppUrl + opts.Commits.CompareURL,
+			CompareURL: compareURL,
 			Commits:    opts.Commits.ToApiPayloadCommits(repo.HTMLURL()),
 			Repo:       apiRepo,
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
 		}); err != nil {
-			return fmt.Errorf("PrepareWebhooks: %v", err)
-		}
-
-		if isNewBranch {
-			return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-				Ref:     refName,
-				RefType: "branch",
-				Repo:    apiRepo,
-				Sender:  apiPusher,
-			})
+			return fmt.Errorf("PrepareWebhooks (new commit): %v", err)
 		}
 
 	case ACTION_PUSH_TAG: // Create

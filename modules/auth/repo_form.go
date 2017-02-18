@@ -173,6 +173,17 @@ func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs binding.Errors) b
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type NewDiscordHookForm struct {
+	PayloadURL string `binding:"Required;Url"`
+	Username   string
+	IconURL    string
+	WebhookForm
+}
+
+func (f *NewDiscordHookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // .___
 // |   | ______ ________ __   ____
 // |   |/  ___//  ___/  |  \_/ __ \

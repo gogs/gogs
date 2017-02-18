@@ -84,6 +84,17 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 1
 		},
+	"\/img\/discord.png": {
+		"fileType": 32768,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"initialSize": 1559,
+		"inputAbbreviatedPath": "\/img\/discord.png",
+		"outputAbbreviatedPath": "\/img\/discord.png",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"processed": 0
+		},
 	"\/img\/favicon.png": {
 		"fileType": 32768,
 		"ignore": 0,
