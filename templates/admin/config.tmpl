@@ -32,19 +32,10 @@
 
 						<div class="ui divider"></div>
 
-						<dt>{{.i18n.Tr "admin.config.git_version"}}</dt>
-						<dd>{{.GitVersion}}</dd>
-
-						<div class="ui divider"></div>
-
-						<dt>{{.i18n.Tr "admin.config.repo_root_path"}}</dt>
-						<dd>{{.RepoRootPath}}</dd>
 						<dt>{{.i18n.Tr "admin.config.static_file_root_path"}}</dt>
 						<dd>{{.StaticRootPath}}</dd>
 						<dt>{{.i18n.Tr "admin.config.log_file_root_path"}}</dt>
 						<dd>{{.LogRootPath}}</dd>
-						<dt>{{.i18n.Tr "admin.config.script_type"}}</dt>
-						<dd>{{.ScriptType}}</dd>
 						<dt>{{.i18n.Tr "admin.config.reverse_auth_user"}}</dt>
 						<dd>{{.ReverseProxyAuthUser}}</dd>
 					</dl>
@@ -82,6 +73,30 @@
 								{{end}}
 							{{end}}
 						{{end}}
+					</dl>
+				</div>
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.repo_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.repo_root_path"}}</dt>
+						<dd>{{.RepoRootPath}}</dd>
+						<dt>{{.i18n.Tr "admin.config.script_type"}}</dt>
+						<dd><code>{{.ScriptType}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.repo_force_private"}}</dt>
+						<dd><i class="fa fa{{if .Repository.ForcePrivate}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.max_creation_limit"}}</dt>
+						<dd><code>{{.Repository.MaxCreationLimit}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.preferred_licenses"}}</dt>
+						<dd><code>{{Join .Repository.PreferredLicenses ", "}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.disable_http_git"}}</dt>
+						<dd><i class="fa fa{{if .Repository.DisableHTTPGit}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.enable_local_path_migration"}}</dt>
+						<dd><i class="fa fa{{if .Repository.EnableLocalPathMigration}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.commits_fetch_concurrency"}}</dt>
+						<dd><code>{{.Repository.CommitsFetchConcurrency}}</code></dd>
 					</dl>
 				</div>
 
@@ -231,6 +246,8 @@
 				</h4>
 				<div class="ui attached table segment">
 					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.git_version"}}</dt>
+						<dd>{{.GitVersion}}</dd>
 						<dt>{{.i18n.Tr "admin.config.git_disable_diff_highlight"}}</dt>
 						<dd><i class="fa fa{{if .Git.DisableDiffHighlight}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.git_max_diff_lines"}}</dt>
@@ -266,7 +283,7 @@
 							<dt>{{$.i18n.Tr "admin.config.log_mode"}}</dt>
 							<dd>{{.Mode}}</dd>
 							<dt>{{$.i18n.Tr "admin.config.log_config"}}</dt>
-							<dd><code>{{.Config}}</code></dd>
+							<dd><pre><code>{{.Config}}</code></pre></dd>
 						{{end}}
 					</dl>
 				</div>
