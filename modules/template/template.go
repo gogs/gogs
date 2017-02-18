@@ -91,6 +91,7 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return str[start:end]
 		},
+		"Join":              strings.Join,
 		"EllipsisString":    base.EllipsisString,
 		"DiffTypeToStr":     DiffTypeToStr,
 		"DiffLineTypeToStr": DiffLineTypeToStr,

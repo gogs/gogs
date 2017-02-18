@@ -3,9 +3,11 @@
 <head data-suburl="{{AppSubUrl}}">
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-	<meta name="author" content="{{if .Repository}}{{.Owner.Name}}{{else}}Gogs{{end}}" />
-	<meta name="description" content="{{if .Repository}}{{.Repository.Name}}{{if .Repository.Description}} - {{.Repository.Description}}{{end}}{{else}}Gogs is a painless self-hosted Git service{{end}}" />
-	<meta name="keywords" content="go, git, self-hosted, gogs">
+	{{if not .PageIsAdmin}}
+		<meta name="author" content="{{if .Repository}}{{.Owner.Name}}{{else}}Gogs{{end}}" />
+		<meta name="description" content="{{if .Repository}}{{.Repository.Name}}{{if .Repository.Description}} - {{.Repository.Description}}{{end}}{{else}}Gogs is a painless self-hosted Git service{{end}}" />
+		<meta name="keywords" content="go, git, self-hosted, gogs">
+	{{end}}
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CsrfToken}}" />
 	<meta name="_suburl" content="{{AppSubUrl}}" />
@@ -15,7 +17,8 @@
 	{{end}}
 	
 	<!-- Open Graph Tags -->
-	{{if .PageIsUserProfile}}
+	{{if .PageIsAdmin}}
+	{{else if .PageIsUserProfile}}
 		<meta property="og:url" content="{{.Owner.HTMLURL}}" />
 		<meta property="og:type" content="profile" />
 		<meta property="og:title" content="{{.Owner.Name}}{{if .Owner.FullName}} ({{.Owner.FullName}}){{end}}">

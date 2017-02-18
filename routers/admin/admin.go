@@ -199,14 +199,15 @@ func Config(ctx *context.Context) {
 	ctx.Data["DisableRouterLog"] = setting.DisableRouterLog
 	ctx.Data["RunUser"] = setting.RunUser
 	ctx.Data["RunMode"] = strings.Title(macaron.Env)
-	ctx.Data["GitVersion"] = setting.Git.Version
-	ctx.Data["RepoRootPath"] = setting.RepoRootPath
 	ctx.Data["StaticRootPath"] = setting.StaticRootPath
 	ctx.Data["LogRootPath"] = setting.LogRootPath
-	ctx.Data["ScriptType"] = setting.ScriptType
 	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
 
 	ctx.Data["SSH"] = setting.SSH
+
+	ctx.Data["RepoRootPath"] = setting.RepoRootPath
+	ctx.Data["ScriptType"] = setting.ScriptType
+	ctx.Data["Repository"] = setting.Repository
 
 	ctx.Data["Service"] = setting.Service
 	ctx.Data["DbCfg"] = models.DbCfg
@@ -227,6 +228,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["DisableGravatar"] = setting.DisableGravatar
 	ctx.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
 
+	ctx.Data["GitVersion"] = setting.Git.Version
 	ctx.Data["Git"] = setting.Git
 
 	type logger struct {
