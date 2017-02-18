@@ -292,6 +292,7 @@ type HookTaskType int
 const (
 	GOGS HookTaskType = iota + 1
 	SLACK
+	DISCORD
 )
 
 var hookTaskTypes = map[string]HookTaskType{
@@ -458,6 +459,10 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 
 	var payloader api.Payloader
 	for _, w := range ws {
+		if !w.IsActive {
+			continue
+		}
+
 		switch event {
 		case HOOK_EVENT_CREATE:
 			if !w.HasCreateEvent() {
@@ -476,11 +481,14 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 		// Use separate objects so modifcations won't be made on payload on non-Gogs type hooks.
 		switch w.HookTaskType {
 		case SLACK:
-			// FIXME: dirty fix for buggy support of Discord for Slack-type webhook.
-			// Should remove this if we want to support Discord fully as its own.
-			payloader, err = GetSlackPayload(strings.Contains(w.URL, ".discordapp.com/"), p, event, w.Meta)
+			payloader, err = GetSlackPayload(p, event, w.Meta)
 			if err != nil {
 				return fmt.Errorf("GetSlackPayload: %v", err)
+			}
+		case DISCORD:
+			payloader, err = GetDiscordPayload(p, event, w.Meta)
+			if err != nil {
+				return fmt.Errorf("GetDiscordPayload: %v", err)
 			}
 		default:
 			p.SetSecret(w.Secret)

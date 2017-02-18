@@ -11,14 +11,15 @@
 					<div class="ui right">
 						{{if eq .HookType "gogs"}}
 							<img class="img-13" src="{{AppSubUrl}}/img/favicon.png">
-						{{else if eq .HookType "slack"}}
-							<img class="img-13" src="{{AppSubUrl}}/img/slack.png">
+						{{else}}
+							<img class="img-13" src="{{AppSubUrl}}/img/{{.HookType}}.png">
 						{{end}}
 					</div>
 				</h4>
 				<div class="ui attached segment">
 					{{template "repo/settings/hook_gogs" .}}
 					{{template "repo/settings/hook_slack" .}}
+					{{template "repo/settings/hook_discord" .}}
 				</div>
 
 				{{template "repo/settings/hook_history" .}}
