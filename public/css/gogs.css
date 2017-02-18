@@ -900,6 +900,11 @@ footer .ui.language .menu {
 .install .ui .checkbox label {
   width: auto !important;
 }
+.install #use-builtin-ssh-server {
+  margin-top: -1em;
+  margin-left: -15px !important;
+  margin-bottom: 2em;
+}
 .form .help {
   color: #999999;
   padding-top: .6em;
