@@ -209,7 +209,7 @@ func (repo *Repository) CommitsByRangeSize(revision string, page, size int) (*li
 	return repo.parsePrettyFormatLogToList(stdout)
 }
 
-const DEFAULT_COMMITS_PAGE_SIZE = 50
+const DEFAULT_COMMITS_PAGE_SIZE = 30
 
 func (repo *Repository) CommitsByRange(revision string, page int) (*list.List, error) {
 	return repo.CommitsByRangeSize(revision, page, DEFAULT_COMMITS_PAGE_SIZE)

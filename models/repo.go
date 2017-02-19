@@ -1597,8 +1597,70 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	return repos, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
 }
 
+func DeleteOldRepositoryArchives() {
+	if taskStatusTable.IsRunning(_CLEAN_OLD_ARCHIVES) {
+		return
+	}
+	taskStatusTable.Start(_CLEAN_OLD_ARCHIVES)
+	defer taskStatusTable.Stop(_CLEAN_OLD_ARCHIVES)
+
+	log.Trace("Doing: DeleteOldRepositoryArchives")
+
+	formats := []string{"zip", "targz"}
+	oldestTime := time.Now().Add(-setting.Cron.RepoArchiveCleanup.OlderThan)
+	if err := x.Where("id > 0").Iterate(new(Repository),
+		func(idx int, bean interface{}) error {
+			repo := bean.(*Repository)
+			basePath := filepath.Join(repo.RepoPath(), "archives")
+			for _, format := range formats {
+				dirPath := filepath.Join(basePath, format)
+				if !com.IsDir(dirPath) {
+					continue
+				}
+
+				dir, err := os.Open(dirPath)
+				if err != nil {
+					log.Error(3, "Fail to open directory '%s': %v", dirPath, err)
+					continue
+				}
+
+				fis, err := dir.Readdir(0)
+				dir.Close()
+				if err != nil {
+					log.Error(3, "Fail to read directory '%s': %v", dirPath, err)
+					continue
+				}
+
+				for _, fi := range fis {
+					if fi.IsDir() || fi.ModTime().After(oldestTime) {
+						continue
+					}
+
+					archivePath := filepath.Join(dirPath, fi.Name())
+					if err = os.Remove(archivePath); err != nil {
+						desc := fmt.Sprintf("Fail to health delete archive '%s': %v", archivePath, err)
+						log.Warn(desc)
+						if err = CreateRepositoryNotice(desc); err != nil {
+							log.Error(3, "CreateRepositoryNotice: %v", err)
+						}
+					}
+				}
+			}
+
+			return nil
+		}); err != nil {
+		log.Error(2, "DeleteOldRepositoryArchives: %v", err)
+	}
+}
+
 // DeleteRepositoryArchives deletes all repositories' archives.
 func DeleteRepositoryArchives() error {
+	if taskStatusTable.IsRunning(_CLEAN_OLD_ARCHIVES) {
+		return nil
+	}
+	taskStatusTable.Start(_CLEAN_OLD_ARCHIVES)
+	defer taskStatusTable.Stop(_CLEAN_OLD_ARCHIVES)
+
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
@@ -1688,9 +1750,10 @@ func SyncRepositoryHooks() error {
 var taskStatusTable = sync.NewStatusTable()
 
 const (
-	_MIRROR_UPDATE = "mirror_update"
-	_GIT_FSCK      = "git_fsck"
-	_CHECK_REPOs   = "check_repos"
+	_MIRROR_UPDATE      = "mirror_update"
+	_GIT_FSCK           = "git_fsck"
+	_CHECK_REPO_STATS   = "check_repos_stats"
+	_CLEAN_OLD_ARCHIVES = "clean_old_archives"
 )
 
 // GitFsck calls 'git fsck' to check repository health.
@@ -1708,15 +1771,15 @@ func GitFsck() {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
 			if err := git.Fsck(repoPath, setting.Cron.RepoHealthCheck.Timeout, setting.Cron.RepoHealthCheck.Args...); err != nil {
-				desc := fmt.Sprintf("Fail to health check repository (%s): %v", repoPath, err)
+				desc := fmt.Sprintf("Fail to health check repository '%s': %v", repoPath, err)
 				log.Warn(desc)
 				if err = CreateRepositoryNotice(desc); err != nil {
-					log.Error(4, "CreateRepositoryNotice: %v", err)
+					log.Error(3, "CreateRepositoryNotice: %v", err)
 				}
 			}
 			return nil
 		}); err != nil {
-		log.Error(4, "GitFsck: %v", err)
+		log.Error(2, "GitFsck: %v", err)
 	}
 }
 
@@ -1747,7 +1810,7 @@ type repoChecker struct {
 func repoStatsCheck(checker *repoChecker) {
 	results, err := x.Query(checker.querySQL)
 	if err != nil {
-		log.Error(4, "Select %s: %v", checker.desc, err)
+		log.Error(2, "Select %s: %v", checker.desc, err)
 		return
 	}
 	for _, result := range results {
@@ -1755,17 +1818,17 @@ func repoStatsCheck(checker *repoChecker) {
 		log.Trace("Updating %s: %d", checker.desc, id)
 		_, err = x.Exec(checker.correctSQL, id, id)
 		if err != nil {
-			log.Error(4, "Update %s[%d]: %v", checker.desc, id, err)
+			log.Error(2, "Update %s[%d]: %v", checker.desc, id, err)
 		}
 	}
 }
 
 func CheckRepoStats() {
-	if taskStatusTable.IsRunning(_CHECK_REPOs) {
+	if taskStatusTable.IsRunning(_CHECK_REPO_STATS) {
 		return
 	}
-	taskStatusTable.Start(_CHECK_REPOs)
-	defer taskStatusTable.Stop(_CHECK_REPOs)
+	taskStatusTable.Start(_CHECK_REPO_STATS)
+	defer taskStatusTable.Stop(_CHECK_REPO_STATS)
 
 	log.Trace("Doing: CheckRepoStats")
 
@@ -1809,14 +1872,14 @@ func CheckRepoStats() {
 	desc := "repository count 'num_closed_issues'"
 	results, err := x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_closed_issues!=(SELECT COUNT(*) FROM `issue` WHERE repo_id=repo.id AND is_closed=? AND is_pull=?)", true, false)
 	if err != nil {
-		log.Error(4, "Select %s: %v", desc, err)
+		log.Error(2, "Select %s: %v", desc, err)
 	} else {
 		for _, result := range results {
 			id := com.StrTo(result["id"]).MustInt64()
 			log.Trace("Updating %s: %d", desc, id)
 			_, err = x.Exec("UPDATE `repository` SET num_closed_issues=(SELECT COUNT(*) FROM `issue` WHERE repo_id=? AND is_closed=? AND is_pull=?) WHERE id=?", id, true, false, id)
 			if err != nil {
-				log.Error(4, "Update %s[%d]: %v", desc, id, err)
+				log.Error(2, "Update %s[%d]: %v", desc, id, err)
 			}
 		}
 	}
@@ -1826,7 +1889,7 @@ func CheckRepoStats() {
 	// ***** START: Repository.NumForks *****
 	results, err = x.Query("SELECT repo.id FROM `repository` repo WHERE repo.num_forks!=(SELECT COUNT(*) FROM `repository` WHERE fork_id=repo.id)")
 	if err != nil {
-		log.Error(4, "Select repository count 'num_forks': %v", err)
+		log.Error(2, "Select repository count 'num_forks': %v", err)
 	} else {
 		for _, result := range results {
 			id := com.StrTo(result["id"]).MustInt64()
@@ -1834,19 +1897,19 @@ func CheckRepoStats() {
 
 			repo, err := GetRepositoryByID(id)
 			if err != nil {
-				log.Error(4, "GetRepositoryByID[%d]: %v", id, err)
+				log.Error(2, "GetRepositoryByID[%d]: %v", id, err)
 				continue
 			}
 
 			rawResult, err := x.Query("SELECT COUNT(*) FROM `repository` WHERE fork_id=?", repo.ID)
 			if err != nil {
-				log.Error(4, "Select count of forks[%d]: %v", repo.ID, err)
+				log.Error(2, "Select count of forks[%d]: %v", repo.ID, err)
 				continue
 			}
 			repo.NumForks = int(parseCountResult(rawResult))
 
 			if err = UpdateRepository(repo, false); err != nil {
-				log.Error(4, "UpdateRepository[%d]: %v", id, err)
+				log.Error(2, "UpdateRepository[%d]: %v", id, err)
 				continue
 			}
 		}
