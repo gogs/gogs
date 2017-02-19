@@ -105,7 +105,7 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	branchLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+branchName, branchName)
-	content := fmt.Sprintf("Pushed %s to %s/%s:\n", commitString, repoLink, branchLink)
+	content := fmt.Sprintf("Pushed %s to %s/%s\n", commitString, repoLink, branchLink)
 
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
