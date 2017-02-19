@@ -32,7 +32,7 @@ import (
 	"github.com/go-macaron/inject"
 )
 
-const _VERSION = "1.2.1.0213"
+const _VERSION = "1.2.1.0219"
 
 func Version() string {
 	return _VERSION

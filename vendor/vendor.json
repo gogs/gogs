@@ -555,10 +555,10 @@
 			"revisionTime": "2016-08-08T14:54:09Z"
 		},
 		{
-			"checksumSHA1": "XevKi11X5xpgqjYIahVgsx/8pFk=",
+			"checksumSHA1": "qM9ubEa57g4oNa6JLFQ+e1TCMno=",
 			"path": "gopkg.in/macaron.v1",
-			"revision": "a325110f8b392bce3e5cdeb8c44bf98078ada3be",
-			"revisionTime": "2017-02-13T09:12:08Z"
+			"revision": "8be5635c28f40a85ce8e8f65c6118b4ee4e548e9",
+			"revisionTime": "2017-02-19T20:49:11Z"
 		},
 		{
 			"checksumSHA1": "6QPjE+qflEBHg+JPJd9e4iQuRAk=",
