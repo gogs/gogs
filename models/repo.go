@@ -122,6 +122,7 @@ func NewRepoContext() {
 		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
 	}
 	git.HookDir = "custom_hooks"
+	git.HookSampleDir = "hooks"
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {

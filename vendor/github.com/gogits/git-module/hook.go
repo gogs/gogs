@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	// Direcotry of hook file. Can be changed to "custom_hooks" for very purpose.
-	HookDir = "hooks"
+	// Direcotry of hook and sample files. Can be changed to "custom_hooks" for very purpose.
+	HookDir       = "hooks"
+	HookSampleDir = HookDir
 	// HookNames is a list of Git server hooks' name that are supported.
 	HookNames = []string{
 		"pre-receive",
@@ -62,8 +63,13 @@ func GetHook(repoPath, name string) (*Hook, error) {
 		}
 		h.IsActive = true
 		h.Content = string(data)
-	} else if isFile(h.path + ".sample") {
-		data, err := ioutil.ReadFile(h.path + ".sample")
+		return h, nil
+	}
+
+	// Check sample file
+	samplePath := path.Join(repoPath, HookSampleDir, h.name) + ".sample"
+	if isFile(samplePath) {
+		data, err := ioutil.ReadFile(samplePath)
 		if err != nil {
 			return nil, err
 		}

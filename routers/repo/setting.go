@@ -462,6 +462,7 @@ func SettingsProtectedBranchPost(ctx *context.Context, form auth.ProtectBranchFo
 		return
 	}
 
+	ctx.Flash.Success(ctx.Tr("repo.settings.update_protect_branch_success"))
 	ctx.Redirect(fmt.Sprintf("%s/settings/branches/%s", ctx.Repo.RepoLink, branch))
 }
 
