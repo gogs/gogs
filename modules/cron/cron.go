@@ -25,7 +25,7 @@ func NewContext() {
 	if setting.Cron.UpdateMirror.Enabled {
 		entry, err = c.AddFunc("Update mirrors", setting.Cron.UpdateMirror.Schedule, models.MirrorUpdate)
 		if err != nil {
-			log.Fatal(4, "Cron[Update mirrors]: %v", err)
+			log.Fatal(2, "Cron.(update mirrors): %v", err)
 		}
 		if setting.Cron.UpdateMirror.RunAtStart {
 			entry.Prev = time.Now()
@@ -36,7 +36,7 @@ func NewContext() {
 	if setting.Cron.RepoHealthCheck.Enabled {
 		entry, err = c.AddFunc("Repository health check", setting.Cron.RepoHealthCheck.Schedule, models.GitFsck)
 		if err != nil {
-			log.Fatal(4, "Cron[Repository health check]: %v", err)
+			log.Fatal(2, "Cron.(repository health check): %v", err)
 		}
 		if setting.Cron.RepoHealthCheck.RunAtStart {
 			entry.Prev = time.Now()
@@ -47,12 +47,23 @@ func NewContext() {
 	if setting.Cron.CheckRepoStats.Enabled {
 		entry, err = c.AddFunc("Check repository statistics", setting.Cron.CheckRepoStats.Schedule, models.CheckRepoStats)
 		if err != nil {
-			log.Fatal(4, "Cron[Check repository statistics]: %v", err)
+			log.Fatal(2, "Cron.(check repository statistics): %v", err)
 		}
 		if setting.Cron.CheckRepoStats.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
 			go models.CheckRepoStats()
+		}
+	}
+	if setting.Cron.RepoArchiveCleanup.Enabled {
+		entry, err = c.AddFunc("Repository archive cleanup", setting.Cron.RepoArchiveCleanup.Schedule, models.DeleteOldRepositoryArchives)
+		if err != nil {
+			log.Fatal(2, "Cron.(repository archive cleanup): %v", err)
+		}
+		if setting.Cron.RepoArchiveCleanup.RunAtStart {
+			entry.Prev = time.Now()
+			entry.ExecTimes++
+			go models.DeleteOldRepositoryArchives()
 		}
 	}
 	c.Start()

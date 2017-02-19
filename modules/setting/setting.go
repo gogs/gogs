@@ -208,6 +208,12 @@ var (
 			RunAtStart bool
 			Schedule   string
 		} `ini:"cron.check_repo_stats"`
+		RepoArchiveCleanup struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+			OlderThan  time.Duration
+		} `ini:"cron.repo_archive_cleanup"`
 	}
 
 	// Git settings
