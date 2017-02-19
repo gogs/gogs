@@ -643,7 +643,7 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	migrateTimeout := time.Duration(setting.Git.Timeout.Migrate) * time.Second
 
-	os.RemoveAll(repoPath)
+	RemoveAllWithNotice("Repository path erase before creation", repoPath)
 	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
 		Mirror:  true,
 		Quiet:   true,
@@ -654,14 +654,14 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
 	if len(wikiRemotePath) > 0 {
-		os.RemoveAll(wikiPath)
+		RemoveAllWithNotice("Repository wiki path erase before creation", repoPath)
 		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
 			Mirror:  true,
 			Quiet:   true,
 			Timeout: migrateTimeout,
 		}); err != nil {
 			log.Trace("Fail to clone wiki: %v", err)
-			os.RemoveAll(wikiPath)
+			RemoveAllWithNotice("Delete repository wiki for initialization failure", repoPath)
 		}
 	}
 
@@ -890,7 +890,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 	// Initialize repository according to user's choice.
 	if opts.AutoInit {
 		os.MkdirAll(tmpDir, os.ModePerm)
-		defer os.RemoveAll(tmpDir)
+		defer RemoveAllWithNotice("Delete repository for auto-initialization", tmpDir)
 
 		if err = prepareRepoCommit(repo, tmpDir, repoPath, opts); err != nil {
 			return fmt.Errorf("prepareRepoCommit: %v", err)
@@ -1009,11 +1009,7 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 	if !opts.IsMirror {
 		repoPath := RepoPath(u.Name, repo.Name)
 		if err = initRepository(sess, repoPath, u, repo, opts); err != nil {
-			if err2 := os.RemoveAll(repoPath); err2 != nil {
-				log.Error(4, "initRepository: %v", err)
-				return nil, fmt.Errorf(
-					"delete repo directory %s/%s failed(2): %v", u.Name, repo.Name, err2)
-			}
+			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, fmt.Errorf("initRepository: %v", err)
 		}
 
