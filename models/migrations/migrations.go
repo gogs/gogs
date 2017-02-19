@@ -5,27 +5,18 @@
 package migrations
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
-	gouuid "github.com/satori/go.uuid"
 	log "gopkg.in/clog.v1"
-	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/setting"
 )
 
-const _MIN_DB_VER = 4
+const _MIN_DB_VER = 10
 
 type Migration interface {
 	Description() string
@@ -59,13 +50,8 @@ type Version struct {
 // If you want to "retire" a migration, remove it from the top of the list and
 // update _MIN_VER_DB accordingly
 var migrations = []Migration{
-	// v0 -> v4: before 0.6.0 -> 0.7.33
-	NewMigration("fix locale file load panic", fixLocaleFileLoadPanic),                           // V4 -> V5:v0.6.0
-	NewMigration("trim action compare URL prefix", trimCommitActionAppUrlPrefix),                 // V5 -> V6:v0.6.3
-	NewMigration("generate issue-label from issue", issueToIssueLabel),                           // V6 -> V7:v0.6.4
-	NewMigration("refactor attachment table", attachmentRefactor),                                // V7 -> V8:v0.6.4
-	NewMigration("rename pull request fields", renamePullRequestFields),                          // V8 -> V9:v0.6.16
-	NewMigration("clean up migrate repo info", cleanUpMigrateRepoInfo),                           // V9 -> V10:v0.6.20
+	// v0 -> v4 : before 0.6.0 -> last support 0.7.33
+	// v4 -> v10: before 0.7.0 -> last support 0.9.141
 	NewMigration("generate rands and salt for organizations", generateOrgRandsAndSalt),           // V10 -> V11:v0.8.5
 	NewMigration("convert date to unix timestamp", convertDateToUnix),                            // V11 -> V12:v0.9.2
 	NewMigration("convert LDAP UseSSL option to SecurityProtocol", ldapUseSSLToSecurityProtocol), // V12 -> V13:v0.9.37
@@ -99,8 +85,28 @@ func Migrate(x *xorm.Engine) error {
 
 	v := currentVersion.Version
 	if _MIN_DB_VER > v {
-		log.Fatal(4, `Gogs no longer supports auto-migration from your previously installed version. 
-Please try to upgrade to a lower version (>= v0.6.0) first, then upgrade to current version.`)
+		log.Fatal(0, `
+Hi there, thank you for using Gogs for so long!
+However, Gogs has stopped supporting auto-migration from your previously installed version.
+But the good news is, it's very easy to fix this problem!
+You can migrate your older database using a previous release, then you can upgrade to the newest version.
+
+Please save following instructions to somewhere and start working:
+
+- If you were using below 0.6.0 (e.g. 0.5.x), download last supported archive from following link:
+	https://github.com/gogits/gogs/releases/tag/v0.7.33
+- If you were using below 0.7.0 (e.g. 0.6.x), download last supported archive from following link:
+	https://github.com/gogits/gogs/releases/tag/v0.9.141
+
+Once finished downloading,
+
+1. Extract the archive and to upgrade steps as usual.
+2. Run it once. To verify, you should see some migration traces. 
+3. Once it starts web server successfully, stop it.
+4. Now it's time to put back the release archive you originally intent to upgrade.
+5. Enjoy!
+
+In case you're stilling getting this notice, go through instructions again until it disappears.`)
 		return nil
 	}
 
@@ -128,311 +134,6 @@ func sessionRelease(sess *xorm.Session) {
 		sess.Rollback()
 	}
 	sess.Close()
-}
-
-func fixLocaleFileLoadPanic(_ *xorm.Engine) error {
-	cfg, err := ini.Load(setting.CustomConf)
-	if err != nil {
-		return fmt.Errorf("load custom config: %v", err)
-	}
-
-	cfg.DeleteSection("i18n")
-	if err = cfg.SaveTo(setting.CustomConf); err != nil {
-		return fmt.Errorf("save custom config: %v", err)
-	}
-
-	setting.Langs = strings.Split(strings.Replace(strings.Join(setting.Langs, ","), "fr-CA", "fr-FR", 1), ",")
-	return nil
-}
-
-func trimCommitActionAppUrlPrefix(x *xorm.Engine) error {
-	type PushCommit struct {
-		Sha1        string
-		Message     string
-		AuthorEmail string
-		AuthorName  string
-	}
-
-	type PushCommits struct {
-		Len        int
-		Commits    []*PushCommit
-		CompareUrl string
-	}
-
-	type Action struct {
-		ID      int64  `xorm:"pk autoincr"`
-		Content string `xorm:"TEXT"`
-	}
-
-	results, err := x.Query("SELECT `id`,`content` FROM `action` WHERE `op_type`=?", 5)
-	if err != nil {
-		return fmt.Errorf("select commit actions: %v", err)
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	var pushCommits *PushCommits
-	for _, action := range results {
-		actID := com.StrTo(string(action["id"])).MustInt64()
-		if actID == 0 {
-			continue
-		}
-
-		pushCommits = new(PushCommits)
-		if err = json.Unmarshal(action["content"], pushCommits); err != nil {
-			return fmt.Errorf("unmarshal action content[%d]: %v", actID, err)
-		}
-
-		infos := strings.Split(pushCommits.CompareUrl, "/")
-		if len(infos) <= 4 {
-			continue
-		}
-		pushCommits.CompareUrl = strings.Join(infos[len(infos)-4:], "/")
-
-		p, err := json.Marshal(pushCommits)
-		if err != nil {
-			return fmt.Errorf("marshal action content[%d]: %v", actID, err)
-		}
-
-		if _, err = sess.Id(actID).Update(&Action{
-			Content: string(p),
-		}); err != nil {
-			return fmt.Errorf("update action[%d]: %v", actID, err)
-		}
-	}
-	return sess.Commit()
-}
-
-func issueToIssueLabel(x *xorm.Engine) error {
-	type IssueLabel struct {
-		ID      int64 `xorm:"pk autoincr"`
-		IssueID int64 `xorm:"UNIQUE(s)"`
-		LabelID int64 `xorm:"UNIQUE(s)"`
-	}
-
-	issueLabels := make([]*IssueLabel, 0, 50)
-	results, err := x.Query("SELECT `id`,`label_ids` FROM `issue`")
-	if err != nil {
-		if strings.Contains(err.Error(), "no such column") ||
-			strings.Contains(err.Error(), "Unknown column") {
-			return nil
-		}
-		return fmt.Errorf("select issues: %v", err)
-	}
-	for _, issue := range results {
-		issueID := com.StrTo(issue["id"]).MustInt64()
-
-		// Just in case legacy code can have duplicated IDs for same label.
-		mark := make(map[int64]bool)
-		for _, idStr := range strings.Split(string(issue["label_ids"]), "|") {
-			labelID := com.StrTo(strings.TrimPrefix(idStr, "$")).MustInt64()
-			if labelID == 0 || mark[labelID] {
-				continue
-			}
-
-			mark[labelID] = true
-			issueLabels = append(issueLabels, &IssueLabel{
-				IssueID: issueID,
-				LabelID: labelID,
-			})
-		}
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = sess.Sync2(new(IssueLabel)); err != nil {
-		return fmt.Errorf("Sync2: %v", err)
-	} else if _, err = sess.Insert(issueLabels); err != nil {
-		return fmt.Errorf("insert issue-labels: %v", err)
-	}
-
-	return sess.Commit()
-}
-
-func attachmentRefactor(x *xorm.Engine) error {
-	type Attachment struct {
-		ID   int64  `xorm:"pk autoincr"`
-		UUID string `xorm:"uuid INDEX"`
-
-		// For rename purpose.
-		Path    string `xorm:"-"`
-		NewPath string `xorm:"-"`
-	}
-
-	results, err := x.Query("SELECT * FROM `attachment`")
-	if err != nil {
-		return fmt.Errorf("select attachments: %v", err)
-	}
-
-	attachments := make([]*Attachment, 0, len(results))
-	for _, attach := range results {
-		if !com.IsExist(string(attach["path"])) {
-			// If the attachment is already missing, there is no point to update it.
-			continue
-		}
-		attachments = append(attachments, &Attachment{
-			ID:   com.StrTo(attach["id"]).MustInt64(),
-			UUID: gouuid.NewV4().String(),
-			Path: string(attach["path"]),
-		})
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = sess.Sync2(new(Attachment)); err != nil {
-		return fmt.Errorf("Sync2: %v", err)
-	}
-
-	// Note: Roll back for rename can be a dead loop,
-	// 	so produces a backup file.
-	var buf bytes.Buffer
-	buf.WriteString("# old path -> new path\n")
-
-	// Update database first because this is where error happens the most often.
-	for _, attach := range attachments {
-		if _, err = sess.Id(attach.ID).Update(attach); err != nil {
-			return err
-		}
-
-		attach.NewPath = path.Join(setting.AttachmentPath, attach.UUID[0:1], attach.UUID[1:2], attach.UUID)
-		buf.WriteString(attach.Path)
-		buf.WriteString("\t")
-		buf.WriteString(attach.NewPath)
-		buf.WriteString("\n")
-	}
-
-	// Then rename attachments.
-	isSucceed := true
-	defer func() {
-		if isSucceed {
-			return
-		}
-
-		dumpPath := path.Join(setting.LogRootPath, "attachment_path.dump")
-		ioutil.WriteFile(dumpPath, buf.Bytes(), 0666)
-		fmt.Println("Fail to rename some attachments, old and new paths are saved into:", dumpPath)
-	}()
-	for _, attach := range attachments {
-		if err = os.MkdirAll(path.Dir(attach.NewPath), os.ModePerm); err != nil {
-			isSucceed = false
-			return err
-		}
-
-		if err = os.Rename(attach.Path, attach.NewPath); err != nil {
-			isSucceed = false
-			return err
-		}
-	}
-
-	return sess.Commit()
-}
-
-func renamePullRequestFields(x *xorm.Engine) (err error) {
-	type PullRequest struct {
-		ID         int64 `xorm:"pk autoincr"`
-		PullID     int64 `xorm:"INDEX"`
-		PullIndex  int64
-		HeadBarcnh string
-
-		IssueID    int64 `xorm:"INDEX"`
-		Index      int64
-		HeadBranch string
-	}
-
-	if err = x.Sync(new(PullRequest)); err != nil {
-		return fmt.Errorf("sync: %v", err)
-	}
-
-	results, err := x.Query("SELECT `id`,`pull_id`,`pull_index`,`head_barcnh` FROM `pull_request`")
-	if err != nil {
-		if strings.Contains(err.Error(), "no such column") {
-			return nil
-		}
-		return fmt.Errorf("select pull requests: %v", err)
-	}
-
-	sess := x.NewSession()
-	defer sessionRelease(sess)
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	var pull *PullRequest
-	for _, pr := range results {
-		pull = &PullRequest{
-			ID:         com.StrTo(pr["id"]).MustInt64(),
-			IssueID:    com.StrTo(pr["pull_id"]).MustInt64(),
-			Index:      com.StrTo(pr["pull_index"]).MustInt64(),
-			HeadBranch: string(pr["head_barcnh"]),
-		}
-		if pull.Index == 0 {
-			continue
-		}
-		if _, err = sess.Id(pull.ID).Update(pull); err != nil {
-			return err
-		}
-	}
-
-	return sess.Commit()
-}
-
-func cleanUpMigrateRepoInfo(x *xorm.Engine) (err error) {
-	type (
-		User struct {
-			ID        int64 `xorm:"pk autoincr"`
-			LowerName string
-		}
-		Repository struct {
-			ID        int64 `xorm:"pk autoincr"`
-			OwnerID   int64
-			LowerName string
-		}
-	)
-
-	repos := make([]*Repository, 0, 25)
-	if err = x.Where("is_mirror=?", false).Find(&repos); err != nil {
-		return fmt.Errorf("select all non-mirror repositories: %v", err)
-	}
-	var user *User
-	for _, repo := range repos {
-		user = &User{ID: repo.OwnerID}
-		has, err := x.Get(user)
-		if err != nil {
-			return fmt.Errorf("get owner of repository[%d - %d]: %v", repo.ID, repo.OwnerID, err)
-		} else if !has {
-			continue
-		}
-
-		configPath := filepath.Join(setting.RepoRootPath, user.LowerName, repo.LowerName+".git/config")
-
-		// In case repository file is somehow missing.
-		if !com.IsFile(configPath) {
-			continue
-		}
-
-		cfg, err := ini.Load(configPath)
-		if err != nil {
-			return fmt.Errorf("open config file: %v", err)
-		}
-		cfg.DeleteSection("remote \"origin\"")
-		if err = cfg.SaveToIndent(configPath, "\t"); err != nil {
-			return fmt.Errorf("save config file: %v", err)
-		}
-	}
-
-	return nil
 }
 
 func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {

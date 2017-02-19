@@ -53,10 +53,11 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (experimental)
 - Multi-language support ([23 languages](https://crowdin.com/project/gogs))
 
-## System Requirements
+## Hardware Requirements
 
-- A cheap Raspberry Pi is powerful enough for basic functionality.
-- 2 CPU cores and 1GB RAM would be the baseline for teamwork.
+- A Raspberry Pi or $5 Digital Ocean Droplet is more than enough to get you started. Some even use 64MB RAM Docker [CaaS](https://blog.docker.com/2016/02/containers-as-a-service-caas/).
+- 2 CPU cores and 512MB RAM would be the baseline for teamwork.
+- Increase CPU cores when your team size gets significantly larger, memory footprint remains low.
 
 ## Browser Support
 

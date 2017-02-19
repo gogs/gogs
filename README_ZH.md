@@ -34,10 +34,11 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（实验性支持） 数据库
 - 支持多语言本地化（[23 种语言]([more](https://crowdin.com/project/gogs))）
 
-## 系统要求
+## 硬件要求
 
 - 最低的系统硬件要求为一个廉价的树莓派
-- 如果用于团队项目，建议使用 2 核 CPU 及 1GB 内存
+- 如果用于团队项目管理，建议使用 2 核 CPU 及 512MB 内存
+- 当团队成员大量增加时，可以考虑添加 CPU 核数，内存占用保持不变
 
 ## 浏览器支持
 
