@@ -41,7 +41,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Reverse proxy with sub-path
 - Account/Organization/Repository management
 - Add/Remove repository collaborators
-- Repository/Organization webhooks (including Slack)
+- Repository/Organization webhooks (including Slack and Discord)
 - Repository Git hooks/deploy keys
 - Repository issues, pull requests, wiki and protected branches
 - Migrate and mirror repository and its wiki
