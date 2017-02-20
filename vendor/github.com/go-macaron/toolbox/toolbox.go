@@ -26,7 +26,7 @@ import (
 	"gopkg.in/macaron.v1"
 )
 
-const _VERSION = "0.1.2"
+const _VERSION = "0.1.3"
 
 func Version() string {
 	return _VERSION
@@ -125,7 +125,7 @@ func Toolboxer(m *macaron.Macaron, options ...Options) macaron.Handler {
 	for _, fd := range opt.HealthCheckFuncs {
 		t.AddHealthCheckFunc(fd.Desc, fd.Func)
 	}
-	m.Get(opt.HealthCheckURL, t.handleHealthCheck)
+	m.Route(opt.HealthCheckURL, "HEAD,GET", t.handleHealthCheck)
 
 	// URL map.
 	m.Get(opt.URLMapPrefix, func(rw http.ResponseWriter) {
