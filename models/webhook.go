@@ -216,10 +216,7 @@ func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
 // GetActiveWebhooksByRepoID returns all active webhooks of repository.
 func GetActiveWebhooksByRepoID(repoID int64) ([]*Webhook, error) {
 	webhooks := make([]*Webhook, 0, 5)
-	return webhooks, x.Find(&webhooks, &Webhook{
-		RepoID:   repoID,
-		IsActive: true,
-	})
+	return webhooks, x.Where("repo_id = ?", repoID).And("is_active = ?", true).Find(&webhooks)
 }
 
 // GetWebhooksByRepoID returns all webhooks of a repository.
@@ -459,10 +456,6 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 
 	var payloader api.Payloader
 	for _, w := range ws {
-		if !w.IsActive {
-			continue
-		}
-
 		switch event {
 		case HOOK_EVENT_CREATE:
 			if !w.HasCreateEvent() {
