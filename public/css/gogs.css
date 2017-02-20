@@ -2065,8 +2065,15 @@ footer .ui.language .menu {
   border-right: 1px solid #d4d4d5;
   padding: 0 5px;
 }
-.repository .diff-file-box .code-diff tbody tr.tag-code td,
-.repository .diff-file-box .code-diff tbody tr.tag-code pre {
+.repository .diff-file-box .code-diff .lines-num.lines-num-old,
+.repository .diff-file-box .code-diff .lines-num.lines-num-new {
+  cursor: pointer;
+}
+.repository .diff-file-box .code-diff .lines-num.lines-num-old:hover,
+.repository .diff-file-box .code-diff .lines-num.lines-num-new:hover {
+  color: #383636;
+}
+.repository .diff-file-box .code-diff tbody tr.tag-code td {
   background-color: #F0F0F0 !important;
   border-color: #D2CECE!important;
   padding-top: 4px;
@@ -2074,6 +2081,9 @@ footer .ui.language .menu {
 }
 .repository .diff-file-box .code-diff tbody tr.tag-code td.halfwidth {
   width: 50%;
+}
+.repository .diff-file-box .code-diff tbody tr.same-code td.active {
+  background-color: #ffffdd !important;
 }
 .repository .diff-file-box .code-diff tbody tr.del-code td.add-code {
   background-color: #eaffea !important;
@@ -2083,21 +2093,25 @@ footer .ui.language .menu {
   background-color: #eaffea !important;
   border-color: #c1e9c1 !important;
 }
-.repository .diff-file-box .code-diff tbody tr.del-code td,
-.repository .diff-file-box .code-diff tbody tr.del-code pre {
+.repository .diff-file-box .code-diff tbody tr.del-code td {
   background-color: #ffecec !important;
   border-color: #f1c0c0 !important;
+}
+.repository .diff-file-box .code-diff tbody tr.del-code td.active {
+  background-color: #ffffdd !important;
 }
 .repository .diff-file-box .code-diff tbody tr.del-code td.halfwidth {
   width: 50%;
 }
-.repository .diff-file-box .code-diff tbody tr.add-code td,
-.repository .diff-file-box .code-diff tbody tr.add-code pre {
+.repository .diff-file-box .code-diff tbody tr.add-code td {
   background-color: #eaffea !important;
   border-color: #c1e9c1 !important;
 }
 .repository .diff-file-box .code-diff tbody tr.add-code td.halfwidth {
   width: 50%;
+}
+.repository .diff-file-box .code-diff tbody tr.add-code td.active {
+  background-color: #ffffdd !important;
 }
 .repository .diff-file-box .code-diff tbody tr .removed-code {
   background-color: #ff9999;

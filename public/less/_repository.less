@@ -1005,12 +1005,19 @@
 			.lines-num {
 				border-right: 1px solid #d4d4d5;
 				padding: 0 5px;
+
+				&.lines-num-old, &.lines-num-new {
+					cursor: pointer;
+					&:hover {
+						color: #383636;
+					}
+				}
 			}
 			tbody {
 				tr {
 
 					&.tag-code {
-						td, pre {
+						td {
 							background-color: #F0F0F0 !important;
 							border-color: #D2CECE!important;
 							padding-top: 4px;
@@ -1019,15 +1026,12 @@
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
 					}
-					// &.same-code {
-					// 	td.selected-line, td.selected-line pre {
-					// 		background-color: #ffffdd !important;
-					// 	}
-					// }
+					&.same-code {
+						td.active {
+							background-color: #ffffdd !important;
+						}
+					}
 					&.del-code {
 						// Duplicate here to enforce add code color.
 						td.add-code {
@@ -1039,29 +1043,29 @@
 
 							}
 						}
-						td, pre {
+						td {
 							background-color: #ffecec !important;
 					    border-color: #f1c0c0 !important;
+						}
+						td.active {
+							background-color: #ffffdd !important;
 						}
 
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
 					}
 					&.add-code {
-						td, pre {
+						td {
 							background-color: #eaffea !important;
 							border-color: #c1e9c1 !important;
 						}
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
+						td.active {
+							background-color: #ffffdd !important;
+						}
 					}
 
 					.removed-code {
