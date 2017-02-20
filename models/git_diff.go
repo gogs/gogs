@@ -188,7 +188,7 @@ func (diffSection *DiffSection) GetComputedInlineDiffFor(diffLine *DiffLine) tem
 type DiffFile struct {
 	Name               string
 	OldName            string
-	Index              int
+	Index              string // 40-byte SHA, Changed/New: new SHA; Deleted: old SHA
 	Addition, Deletion int
 	Type               DiffFileType
 	IsCreated          bool
@@ -331,7 +331,6 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 
 			curFile = &DiffFile{
 				Name:     a,
-				Index:    len(diff.Files) + 1,
 				Type:     DIFF_FILE_CHANGE,
 				Sections: make([]*DiffSection, 0, 10),
 			}
@@ -343,7 +342,8 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 			}
 			curFileLinesCount = 0
 
-			// Check file diff type and is submodule.
+			// Check file diff type and submodule.
+		CHECK_TYPE:
 			for {
 				line, err := input.ReadString('\n')
 				if err != nil {
@@ -358,22 +358,25 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 				case strings.HasPrefix(line, "new file"):
 					curFile.Type = DIFF_FILE_ADD
 					curFile.IsCreated = true
+					curFile.IsSubmodule = strings.HasSuffix(line, " 160000\n")
 				case strings.HasPrefix(line, "deleted"):
 					curFile.Type = DIFF_FILE_DEL
 					curFile.IsDeleted = true
+					curFile.IsSubmodule = strings.HasSuffix(line, " 160000\n")
 				case strings.HasPrefix(line, "index"):
-					curFile.Type = DIFF_FILE_CHANGE
+					if curFile.IsDeleted {
+						curFile.Index = line[6:46]
+					} else {
+						curFile.Index = line[49:88]
+					}
+					break CHECK_TYPE
 				case strings.HasPrefix(line, "similarity index 100%"):
 					curFile.Type = DIFF_FILE_RENAME
 					curFile.IsRenamed = true
 					curFile.OldName = curFile.Name
 					curFile.Name = b
-				}
-				if curFile.Type > 0 {
-					if strings.HasSuffix(line, " 160000\n") {
-						curFile.IsSubmodule = true
-					}
-					break
+					curFile.Index = b
+					break CHECK_TYPE
 				}
 			}
 		}
@@ -423,13 +426,13 @@ func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxL
 	if len(beforeCommitID) == 0 {
 		// First commit of repository.
 		if commit.ParentCount() == 0 {
-			cmd = exec.Command("git", "show", afterCommitID)
+			cmd = exec.Command("git", "show", "--full-index", afterCommitID)
 		} else {
 			c, _ := commit.Parent(0)
-			cmd = exec.Command("git", "diff", "-M", c.ID.String(), afterCommitID)
+			cmd = exec.Command("git", "diff", "--full-index", "-M", c.ID.String(), afterCommitID)
 		}
 	} else {
-		cmd = exec.Command("git", "diff", "-M", beforeCommitID, afterCommitID)
+		cmd = exec.Command("git", "diff", "--full-index", "-M", beforeCommitID, afterCommitID)
 	}
 	cmd.Dir = repoPath
 	cmd.Stderr = os.Stderr

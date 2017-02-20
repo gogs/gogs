@@ -542,6 +542,20 @@ function initRepository() {
                 $item.find(".bar .add").css("width", addPercent + "%");
             });
         }
+
+        $('.diff-file-box .lines-num').click(function () {
+            if ($(this).attr('id')) {
+                window.location.href = '#' + $(this).attr('id');
+            }
+        });
+
+        $(window).on('hashchange', function (e) {
+            $('.diff-file-box .lines-code.active').removeClass('active');
+            var m = window.location.hash.match(/^#diff-.+$/);
+            if (m) {
+                $(m[0]).siblings('.lines-code').addClass('active');
+            }
+        }).trigger('hashchange');
     }
 
     // Quick start and repository home
