@@ -632,14 +632,17 @@ func runWeb(ctx *cli.Context) error {
 	}, ignSignIn, context.RepoAssignment(), context.RepoRef())
 
 	m.Group("/:username", func() {
-		m.Group("/:reponame", func() {
-			m.Get("", repo.Home)
-			m.Get("\\.git$", repo.Home)
+		m.Group("", func() {
+			m.Get("/:reponame", repo.Home)
 		}, ignSignIn, context.RepoAssignment(true), context.RepoRef())
 
 		m.Group("/:reponame", func() {
 			m.Head("/tasks/trigger", repo.TriggerTask)
-			m.Route("\\.git/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
+		})
+		// Use the regexp to match the repository name validation
+		m.Group("/:reponame([\\d\\w-_\\.]+\\.git$)", func() {
+			m.Get("", ignSignIn, context.RepoAssignment(true), context.RepoRef(), repo.Home)
+			m.Route("/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 		})
 	})
 	// ***** END: Repository *****
