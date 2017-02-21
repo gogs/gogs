@@ -197,8 +197,8 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	return bean, nil
 }
 
-// GetWebhookByRepoID returns webhook of repository by given ID.
-func GetWebhookByRepoID(repoID, id int64) (*Webhook, error) {
+// GetWebhookOfRepoByID returns webhook of repository by given ID.
+func GetWebhookOfRepoByID(repoID, id int64) (*Webhook, error) {
 	return getWebhook(&Webhook{
 		ID:     id,
 		RepoID: repoID,
@@ -433,29 +433,14 @@ func UpdateHookTask(t *HookTask) error {
 	return err
 }
 
-// PrepareWebhooks adds new webhooks to task queue for given payload.
-func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
-	ws, err := GetActiveWebhooksByRepoID(repo.ID)
-	if err != nil {
-		return fmt.Errorf("GetActiveWebhooksByRepoID: %v", err)
-	}
-
-	// check if repo belongs to org and append additional webhooks
-	if repo.MustOwner().IsOrganization() {
-		// get hooks for org
-		orgws, err := GetActiveWebhooksByOrgID(repo.OwnerID)
-		if err != nil {
-			return fmt.Errorf("GetActiveWebhooksByOrgID: %v", err)
-		}
-		ws = append(ws, orgws...)
-	}
-
-	if len(ws) == 0 {
+// prepareWebhooks adds list of webhooks to task queue.
+func prepareWebhooks(repo *Repository, event HookEventType, p api.Payloader, webhooks []*Webhook) (err error) {
+	if len(webhooks) == 0 {
 		return nil
 	}
 
 	var payloader api.Payloader
-	for _, w := range ws {
+	for _, w := range webhooks {
 		switch event {
 		case HOOK_EVENT_CREATE:
 			if !w.HasCreateEvent() {
@@ -504,6 +489,34 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	return nil
 }
 
+// PrepareWebhooks adds all active webhooks to task queue.
+func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+	webhooks, err := GetActiveWebhooksByRepoID(repo.ID)
+	if err != nil {
+		return fmt.Errorf("GetActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
+	}
+
+	// check if repo belongs to org and append additional webhooks
+	if repo.MustOwner().IsOrganization() {
+		// get hooks for org
+		orgws, err := GetActiveWebhooksByOrgID(repo.OwnerID)
+		if err != nil {
+			return fmt.Errorf("GetActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
+		}
+		webhooks = append(webhooks, orgws...)
+	}
+	return prepareWebhooks(repo, event, p, webhooks)
+}
+
+// TestWebhook adds the test webhook matches the ID to task queue.
+func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhookID int64) error {
+	webhook, err := GetWebhookOfRepoByID(repo.ID, webhookID)
+	if err != nil {
+		return fmt.Errorf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
+	}
+	return prepareWebhooks(repo, event, p, []*Webhook{webhook})
+}
+
 func (t *HookTask) deliver() {
 	t.IsDelivered = true
 
@@ -541,7 +554,7 @@ func (t *HookTask) deliver() {
 		}
 
 		// Update webhook last delivery status.
-		w, err := GetWebhookByRepoID(t.RepoID, t.HookID)
+		w, err := GetWebhookOfRepoByID(t.RepoID, t.HookID)
 		if err != nil {
 			log.Error(5, "GetWebhookByID: %v", err)
 			return
