@@ -12,6 +12,8 @@ import (
 
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
+
+	"github.com/gogits/gogs/modules/setting"
 )
 
 type DiscordEmbedFooterObject struct {
@@ -56,6 +58,10 @@ func (p *DiscordPayload) JSONPayload() ([]byte, error) {
 	return data, nil
 }
 
+func DiscordTextFormatter(s string) string {
+	return strings.Split(s, "\n")[0]
+}
+
 func DiscordLinkFormatter(url string, text string) string {
 	return fmt.Sprintf("[%s](%s)", text, url)
 }
@@ -78,6 +84,7 @@ func getDiscordCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*DiscordPa
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
+			URL:         setting.AppUrl + p.Sender.UserName,
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
@@ -113,7 +120,7 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
-		content += fmt.Sprintf("%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), SlackShortTextFormatter(commit.Message), commit.Author.Name)
+		content += fmt.Sprintf("%s %s - %s", DiscordSHALinkFormatter(commit.URL, commit.ID[:7]), DiscordTextFormatter(commit.Message), commit.Author.Name)
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
 			content += "\n"
@@ -126,6 +133,7 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
+			URL:         setting.AppUrl + p.Sender.UserName,
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
