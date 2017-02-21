@@ -135,7 +135,7 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 	lastCommit := form.LastCommit
 	form.LastCommit = ctx.Repo.Commit.ID.String()
 
-	if form.CommitChoice == "commit-to-new-branch" {
+	if form.IsNewBrnach() {
 		branchName = form.NewBranchName
 	}
 
@@ -279,7 +279,11 @@ func editFilePost(ctx *context.Context, form auth.EditRepoFileForm, isNewFile bo
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + template.EscapePound(form.TreePath))
+	if form.IsNewBrnach() {
+		ctx.Redirect(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + form.NewBranchName)
+	} else {
+		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + template.EscapePound(form.TreePath))
+	}
 }
 
 func EditFilePost(ctx *context.Context, form auth.EditRepoFileForm) {
@@ -336,7 +340,7 @@ func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
 	oldBranchName := ctx.Repo.BranchName
 	branchName := oldBranchName
 
-	if form.CommitChoice == "commit-to-new-branch" {
+	if form.IsNewBrnach() {
 		branchName = form.NewBranchName
 	}
 	ctx.Data["commit_summary"] = form.CommitSummary
@@ -378,8 +382,12 @@ func DeleteFilePost(ctx *context.Context, form auth.DeleteRepoFileForm) {
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("repo.editor.file_delete_success", ctx.Repo.TreePath))
-	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
+	if form.IsNewBrnach() {
+		ctx.Redirect(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + form.NewBranchName)
+	} else {
+		ctx.Flash.Success(ctx.Tr("repo.editor.file_delete_success", ctx.Repo.TreePath))
+		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
+	}
 }
 
 func renderUploadSettings(ctx *context.Context) {
@@ -417,7 +425,7 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 	oldBranchName := ctx.Repo.BranchName
 	branchName := oldBranchName
 
-	if form.CommitChoice == "commit-to-new-branch" {
+	if form.IsNewBrnach() {
 		branchName = form.NewBranchName
 	}
 
@@ -495,7 +503,11 @@ func UploadFilePost(ctx *context.Context, form auth.UploadRepoFileForm) {
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + form.TreePath)
+	if form.IsNewBrnach() {
+		ctx.Redirect(ctx.Repo.RepoLink + "/compare/" + oldBranchName + "..." + form.NewBranchName)
+	} else {
+		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + form.TreePath)
+	}
 }
 
 func UploadFileToServer(ctx *context.Context) {

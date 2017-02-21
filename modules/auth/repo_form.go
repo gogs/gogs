@@ -327,6 +327,10 @@ func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) b
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+func (f *EditRepoFileForm) IsNewBrnach() bool {
+	return f.CommitChoice == "commit-to-new-branch"
+}
+
 type EditPreviewDiffForm struct {
 	Content string
 }
@@ -356,6 +360,10 @@ func (f *UploadRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors)
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+func (f *UploadRepoFileForm) IsNewBrnach() bool {
+	return f.CommitChoice == "commit-to-new-branch"
+}
+
 type RemoveUploadFileForm struct {
 	File string `binding:"Required;MaxSize(50)"`
 }
@@ -380,4 +388,8 @@ type DeleteRepoFileForm struct {
 
 func (f *DeleteRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+func (f *DeleteRepoFileForm) IsNewBrnach() bool {
+	return f.CommitChoice == "commit-to-new-branch"
 }
