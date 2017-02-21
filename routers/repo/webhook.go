@@ -232,6 +232,7 @@ func DiscordHooksNewPost(ctx *context.Context, form auth.NewDiscordHookForm) {
 	meta, err := json.Marshal(&models.SlackMeta{
 		Username: form.Username,
 		IconURL:  form.IconURL,
+		Color:    form.Color,
 	})
 	if err != nil {
 		ctx.Handle(500, "Marshal", err)
@@ -418,6 +419,7 @@ func DiscordHooksEditPost(ctx *context.Context, form auth.NewDiscordHookForm) {
 	meta, err := json.Marshal(&models.SlackMeta{
 		Username: form.Username,
 		IconURL:  form.IconURL,
+		Color:    form.Color,
 	})
 	if err != nil {
 		ctx.Handle(500, "Marshal", err)

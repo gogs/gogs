@@ -177,6 +177,7 @@ type NewDiscordHookForm struct {
 	PayloadURL string `binding:"Required;Url"`
 	Username   string
 	IconURL    string
+	Color      string
 	WebhookForm
 }
 
