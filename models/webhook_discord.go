@@ -7,6 +7,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gogits/git-module"
@@ -32,6 +33,7 @@ type DiscordEmbedObject struct {
 	Title       string                     `json:"title"`
 	Description string                     `json:"description"`
 	URL         string                     `json:"url"`
+	Color       int                        `json:"color"`
 	Footer      *DiscordEmbedFooterObject  `json:"footer"`
 	Author      *DiscordEmbedAuthorObject  `json:"author"`
 	Fields      []*DiscordEmbedFieldObject `json:"fields"`
@@ -70,11 +72,13 @@ func getDiscordCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*DiscordPa
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	content := fmt.Sprintf("Created new %s: %s/%s", p.RefType, repoLink, refLink)
 
+	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
 	return &DiscordPayload{
 		Username:  slack.Username,
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
+			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -116,11 +120,13 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 		}
 	}
 
+	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
 	return &DiscordPayload{
 		Username:  slack.Username,
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
+			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -173,6 +179,7 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (
 		title = "Pull request synchronized: " + title
 	}
 
+	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
 	return &DiscordPayload{
 		Username:  slack.Username,
 		AvatarURL: slack.IconURL,
@@ -180,6 +187,7 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (
 			Title:       title,
 			Description: content,
 			URL:         url,
+			Color:       int(color),
 			Footer: &DiscordEmbedFooterObject{
 				Text: p.Repository.FullName,
 			},
