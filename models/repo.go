@@ -1438,7 +1438,7 @@ func DeleteRepository(uid, repoID int64) error {
 	}
 
 	// Remove repository files.
-	repoPath := repo.repoPath(sess)
+	repoPath := repo.RepoPath()
 	RemoveAllWithNotice("Delete repository files", repoPath)
 
 	repo.DeleteWiki()
