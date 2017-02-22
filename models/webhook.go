@@ -118,7 +118,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	case "events":
 		w.HookEvent = &HookEvent{}
 		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-			log.Error(3, "Unmarshal[%d]: %v", w.ID, err)
+			log.Error(3, "Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
 		w.Created = time.Unix(w.CreatedUnix, 0).Local()
@@ -130,7 +130,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 func (w *Webhook) GetSlackHook() *SlackMeta {
 	s := &SlackMeta{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
-		log.Error(4, "webhook.GetSlackHook(%d): %v", w.ID, err)
+		log.Error(2, "GetSlackHook [%d]: %v", w.ID, err)
 	}
 	return s
 }
@@ -293,8 +293,9 @@ const (
 )
 
 var hookTaskTypes = map[string]HookTaskType{
-	"gogs":  GOGS,
-	"slack": SLACK,
+	"gogs":    GOGS,
+	"slack":   SLACK,
+	"discord": DISCORD,
 }
 
 // ToHookTaskType returns HookTaskType by given name.
@@ -308,6 +309,8 @@ func (t HookTaskType) Name() string {
 		return "gogs"
 	case SLACK:
 		return "slack"
+	case DISCORD:
+		return "discord"
 	}
 	return ""
 }

@@ -107,15 +107,6 @@ var (
 	UsePostgreSQL bool
 	UseMSSQL      bool
 
-	// Webhook settings
-	Webhook struct {
-		QueueLength    int
-		DeliverTimeout int
-		SkipTLSVerify  bool
-		Types          []string
-		PagingNum      int
-	}
-
 	// Repository settings
 	Repository struct {
 		AnsiCharset              string
@@ -145,6 +136,15 @@ var (
 	}
 	RepoRootPath string
 	ScriptType   string
+
+	// Webhook settings
+	Webhook struct {
+		Types          []string
+		QueueLength    int
+		DeliverTimeout int
+		SkipTLSVerify  bool
+		PagingNum      int
+	}
 
 	// Markdown sttings
 	Markdown struct {
@@ -579,6 +579,8 @@ func NewContext() {
 
 	if err = Cfg.Section("http").MapTo(&HTTP); err != nil {
 		log.Fatal(2, "Fail to map HTTP settings: %v", err)
+	} else if err = Cfg.Section("webhook").MapTo(&Webhook); err != nil {
+		log.Fatal(2, "Fail to map Webhook settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(2, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {
@@ -822,15 +824,6 @@ func newNotifyMailService() {
 	log.Info("Notify Mail Service Enabled")
 }
 
-func newWebhookService() {
-	sec := Cfg.Section("webhook")
-	Webhook.QueueLength = sec.Key("QUEUE_LENGTH").MustInt(1000)
-	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
-	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
-	Webhook.Types = []string{"gogs", "slack", "discord"}
-	Webhook.PagingNum = sec.Key("PAGING_NUM").MustInt(10)
-}
-
 func NewService() {
 	newService()
 }
@@ -843,5 +836,4 @@ func NewServices() {
 	newMailService()
 	newRegisterMailService()
 	newNotifyMailService()
-	newWebhookService()
 }
