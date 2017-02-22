@@ -366,8 +366,10 @@ func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*
 				case strings.HasPrefix(line, "index"):
 					if curFile.IsDeleted {
 						curFile.Index = line[6:46]
-					} else {
+					} else if len(line) >= 88 {
 						curFile.Index = line[49:88]
+					} else {
+						curFile.Index = curFile.Name
 					}
 					break CHECK_TYPE
 				case strings.HasPrefix(line, "similarity index 100%"):
