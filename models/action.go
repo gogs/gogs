@@ -335,7 +335,12 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			}
 			refMarked[issue.ID] = true
 
-			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, c.Message)
+			msgLines := strings.Split(c.Message, "\n")
+			shortMsg := msgLines[0]
+			if len(msgLines) > 2 {
+				shortMsg += "..."
+			}
+			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, shortMsg)
 			if err = CreateRefComment(doer, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
