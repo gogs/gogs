@@ -138,7 +138,6 @@
 							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
 						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
-
 						<div class="detail">
 							<span class="octicon octicon-git-commit"></span>
 							<span class="text grey">{{.Content | Str2html}}</span>
