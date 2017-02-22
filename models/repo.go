@@ -655,14 +655,14 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 
 	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
 	if len(wikiRemotePath) > 0 {
-		RemoveAllWithNotice("Repository wiki path erase before creation", repoPath)
+		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
 		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
 			Mirror:  true,
 			Quiet:   true,
 			Timeout: migrateTimeout,
 		}); err != nil {
 			log.Trace("Fail to clone wiki: %v", err)
-			RemoveAllWithNotice("Delete repository wiki for initialization failure", repoPath)
+			RemoveAllWithNotice("Delete repository wiki for initialization failure", wikiPath)
 		}
 	}
 
