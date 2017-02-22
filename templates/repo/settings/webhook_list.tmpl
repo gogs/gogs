@@ -4,18 +4,26 @@
 		{{.i18n.Tr "repo.settings.hooks"}}
 		<div class="ui right">
 			<div class="ui types jump dropdown">
-				<div class="ui blue tiny button">{{.i18n.Tr "repo.settings.add_webhook"}}</div>
-				<div class="menu">
-					<a class="item" href="{{.BaseLink}}/settings/hooks/gogs/new">
-						<img class="img-12" src="{{AppSubUrl}}/img/favicon.png">Gogs
-					</a>
-					<a class="item" href="{{.BaseLink}}/settings/hooks/slack/new">
-						<img class="img-12" src="{{AppSubUrl}}/img/slack.png">Slack
-					</a>
-					<a class="item" href="{{.BaseLink}}/settings/hooks/discord/new">
-						<img class="img-12" src="{{AppSubUrl}}/img/discord.png">Discord
-					</a>
-				</div>
+				{{if .Types}}
+					<div class="ui blue tiny button">{{.i18n.Tr "repo.settings.add_webhook"}}</div>
+					<div class="menu">
+						{{range .Types}}
+							{{if eq . "gogs"}}
+								<a class="item" href="{{$.BaseLink}}/settings/hooks/gogs/new">
+									<img class="img-12" src="{{AppSubUrl}}/img/favicon.png">Gogs
+								</a>
+							{{else if eq . "slack"}}
+								<a class="item" href="{{$.BaseLink}}/settings/hooks/slack/new">
+									<img class="img-12" src="{{AppSubUrl}}/img/slack.png">Slack
+								</a>
+							{{else if eq . "discord"}}
+								<a class="item" href="{{$.BaseLink}}/settings/hooks/discord/new">
+									<img class="img-12" src="{{AppSubUrl}}/img/discord.png">Discord
+								</a>
+							{{end}}
+						{{end}}
+					</div>
+				{{end}}
 			</div>
 		</div>
 	</h4>
@@ -44,4 +52,4 @@
 	</div>
 </div>
 
-{{template "repo/settings/hook_delete_modal" .}}
+{{template "repo/settings/webhook_delete_modal" .}}

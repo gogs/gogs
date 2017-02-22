@@ -23,9 +23,9 @@ import (
 )
 
 const (
-	HOOKS        base.TplName = "repo/settings/hooks"
-	HOOK_NEW     base.TplName = "repo/settings/hook_new"
-	ORG_HOOK_NEW base.TplName = "org/settings/hook_new"
+	WEBHOOKS        base.TplName = "repo/settings/webhooks"
+	WEBHOOK_NEW     base.TplName = "repo/settings/webhook_new"
+	ORG_WEBHOOK_NEW base.TplName = "org/settings/webhook_new"
 )
 
 func Webhooks(ctx *context.Context) {
@@ -33,6 +33,7 @@ func Webhooks(ctx *context.Context) {
 	ctx.Data["PageIsSettingsHooks"] = true
 	ctx.Data["BaseLink"] = ctx.Repo.RepoLink
 	ctx.Data["Description"] = ctx.Tr("repo.settings.hooks_desc", "https://github.com/gogits/go-gogs-client/wiki/Repositories-Webhooks")
+	ctx.Data["Types"] = setting.Webhook.Types
 
 	ws, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
@@ -41,7 +42,7 @@ func Webhooks(ctx *context.Context) {
 	}
 	ctx.Data["Webhooks"] = ws
 
-	ctx.HTML(200, HOOKS)
+	ctx.HTML(200, WEBHOOKS)
 }
 
 type OrgRepoCtx struct {
@@ -57,7 +58,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 		return &OrgRepoCtx{
 			RepoID:      ctx.Repo.Repository.ID,
 			Link:        ctx.Repo.RepoLink,
-			NewTemplate: HOOK_NEW,
+			NewTemplate: WEBHOOK_NEW,
 		}, nil
 	}
 
@@ -65,7 +66,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 		return &OrgRepoCtx{
 			OrgID:       ctx.Org.Organization.ID,
 			Link:        ctx.Org.OrgLink,
-			NewTemplate: ORG_HOOK_NEW,
+			NewTemplate: ORG_WEBHOOK_NEW,
 		}, nil
 	}
 

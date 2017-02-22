@@ -1,9 +1,9 @@
 {{template "base/head" .}}
-<div class="organization settings new webhook">
-	{{template "org/header" .}}
+<div class="repository settings new webhook">
+	{{template "repo/header" .}}
 	<div class="ui container">
 		<div class="ui grid">
-			{{template "org/settings/navbar" .}}
+			{{template "repo/settings/navbar" .}}
 			<div class="twelve wide column content">
 				{{template "base/alert" .}}
 				<h4 class="ui top attached header">
@@ -11,18 +11,18 @@
 					<div class="ui right">
 						{{if eq .HookType "gogs"}}
 							<img class="img-13" src="{{AppSubUrl}}/img/favicon.png">
-						{{else if eq .HookType "slack"}}
-							<img class="img-13" src="{{AppSubUrl}}/img/slack.png">
+						{{else}}
+							<img class="img-13" src="{{AppSubUrl}}/img/{{.HookType}}.png">
 						{{end}}
 					</div>
 				</h4>
 				<div class="ui attached segment">
-					{{template "repo/settings/hook_gogs" .}}
-					{{template "repo/settings/hook_slack" .}}
-					{{template "repo/settings/hook_discord" .}}
+					{{template "repo/settings/webhook_gogs" .}}
+					{{template "repo/settings/webhook_slack" .}}
+					{{template "repo/settings/webhook_discord" .}}
 				</div>
 
-				{{template "repo/settings/hook_history" .}}
+				{{template "repo/settings/webhook_history" .}}
 			</div>
 		</div>
 	</div>
