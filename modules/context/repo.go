@@ -98,6 +98,16 @@ func (r *Repository) GetEditorconfig() (*editorconfig.Editorconfig, error) {
 	return editorconfig.ParseBytes(data)
 }
 
+// PullRequestURL returns URL for composing a pull request.
+// This function does not check if the repository can actually compose a pull request.
+func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
+	repoLink := r.RepoLink
+	if r.PullRequest.BaseRepo != nil {
+		repoLink = r.PullRequest.BaseRepo.Link()
+	}
+	return fmt.Sprintf("%s/compare/%s...%s:%s", repoLink, baseBranch, r.Owner.Name, headBranch)
+}
+
 func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 	// Non-fork repository will not return error in this method.
 	if err := repo.GetBaseRepo(); err != nil {
