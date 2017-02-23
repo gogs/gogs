@@ -5,7 +5,7 @@
 		{{template "base/alert" .}}
 		<h2 class="ui header">
 			{{.i18n.Tr "repo.release.releases"}}
-			{{if .IsRepositoryWriter}}
+			{{if and .IsRepositoryWriter (not .Repository.IsMirror)}}
 				<div class="ui right">
 					<a class="ui small green button" href="{{$.RepoLink}}/releases/new">
 						{{.i18n.Tr "repo.release.new_release"}}
