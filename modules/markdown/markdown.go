@@ -192,41 +192,10 @@ func (options *Renderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 // Note: this section is for purpose of increase performance and
 // reduce memory allocation at runtime since they are constant literals.
 var (
-	svgSuffix         = []byte(".svg")
-	svgSuffixWithMark = []byte(".svg?")
-	spaceBytes        = []byte(" ")
-	spaceEncodedBytes = []byte("%20")
-	pound             = []byte("#")
-	space             = " "
-	spaceEncoded      = "%20"
+	pound        = []byte("#")
+	space        = " "
+	spaceEncoded = "%20"
 )
-
-// Image defines how images should be processed to produce corresponding HTML elements.
-func (r *Renderer) Image(out *bytes.Buffer, link []byte, title []byte, alt []byte) {
-	prefix := strings.Replace(r.urlPrefix, "/src/", "/raw/", 1)
-	if len(link) > 0 {
-		if isLink(link) {
-			// External link with .svg suffix usually means CI status.
-			// TODO: define a keyword to allow non-svg images render as external link.
-			if bytes.HasSuffix(link, svgSuffix) || bytes.Contains(link, svgSuffixWithMark) {
-				r.Renderer.Image(out, link, title, alt)
-				return
-			}
-		} else {
-			if link[0] != '/' {
-				prefix += "/"
-			}
-			link = bytes.Replace([]byte((prefix + string(link))), spaceBytes, spaceEncodedBytes, -1)
-			fmt.Println(333, string(link))
-		}
-	}
-
-	out.WriteString(`<a href="`)
-	out.Write(link)
-	out.WriteString(`">`)
-	r.Renderer.Image(out, link, title, alt)
-	out.WriteString("</a>")
-}
 
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
 // return a clean unified string of request URL path.
@@ -353,14 +322,63 @@ var (
 	rightAngleBracket = []byte(">")
 )
 
-var noEndTags = []string{"img", "input", "br", "hr"}
+var noEndTags = []string{"input", "br", "hr", "img"}
+
+// wrapImgWithLink warps link to standalone <img> tags.
+func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
+	var src, alt string
+	// Extract "src" and "alt" attributes
+	for i := range token.Attr {
+		switch token.Attr[i].Key {
+		case "src":
+			src = token.Attr[i].Val
+		case "alt":
+			alt = token.Attr[i].Val
+		}
+	}
+
+	// Skip in case the "src" is empty
+	if len(src) == 0 {
+		buf.WriteString(token.String())
+		return
+	}
+
+	buf.WriteString(`<a href="`)
+	buf.WriteString(src)
+	buf.WriteString(`">`)
+
+	// Prepend repository base URL for internal links
+	if !isLink([]byte(src)) {
+		urlPrefix = strings.Replace(urlPrefix, "/src/", "/raw/", 1)
+		if src[0] != '/' {
+			urlPrefix += "/"
+		}
+		src = strings.Replace(urlPrefix+string(src), " ", "%20", -1)
+		buf.WriteString(`<img src="`)
+		buf.WriteString(src)
+		buf.WriteString(`"`)
+
+		if len(alt) > 0 {
+			buf.WriteString(` alt="`)
+			buf.WriteString(alt)
+			buf.WriteString(`"`)
+		}
+
+		buf.WriteString(`>`)
+
+	} else {
+		buf.WriteString(token.String())
+	}
+
+	buf.WriteString(`</a>`)
+}
 
 // PostProcess treats different types of HTML differently,
 // and only renders special links for plain text blocks.
-func PostProcess(rawHtml []byte, urlPrefix string, metas map[string]string) []byte {
+func PostProcess(rawHTML []byte, urlPrefix string, metas map[string]string) []byte {
 	startTags := make([]string, 0, 5)
-	var buf bytes.Buffer
-	tokenizer := html.NewTokenizer(bytes.NewReader(rawHtml))
+	buf := bytes.NewBuffer(nil)
+	tokenizer := html.NewTokenizer(bytes.NewReader(rawHTML))
 
 OUTER_LOOP:
 	for html.ErrorToken != tokenizer.Next() {
@@ -370,8 +388,14 @@ OUTER_LOOP:
 			buf.Write(RenderSpecialLink([]byte(token.String()), urlPrefix, metas))
 
 		case html.StartTagToken:
-			buf.WriteString(token.String())
 			tagName := token.Data
+
+			if tagName == "img" {
+				wrapImgWithLink(urlPrefix, buf, token)
+				continue OUTER_LOOP
+			}
+
+			buf.WriteString(token.String())
 			// If this is an excluded tag, we skip processing all output until a close tag is encountered.
 			if strings.EqualFold("a", tagName) || strings.EqualFold("code", tagName) || strings.EqualFold("pre", tagName) {
 				stackNum := 1
@@ -381,14 +405,14 @@ OUTER_LOOP:
 					// Copy the token to the output verbatim
 					buf.WriteString(token.String())
 
-					if token.Type == html.StartTagToken {
+					// Stack number doesn't increate for tags without end tags.
+					if token.Type == html.StartTagToken && !com.IsSliceContainsStr(noEndTags, token.Data) {
 						stackNum++
 					}
 
 					// If this is the close tag to the outer-most, we are done
 					if token.Type == html.EndTagToken {
 						stackNum--
-
 						if stackNum <= 0 && strings.EqualFold(tagName, token.Data) {
 							break
 						}
@@ -397,8 +421,8 @@ OUTER_LOOP:
 				continue OUTER_LOOP
 			}
 
-			if !com.IsSliceContainsStr(noEndTags, token.Data) {
-				startTags = append(startTags, token.Data)
+			if !com.IsSliceContainsStr(noEndTags, tagName) {
+				startTags = append(startTags, tagName)
 			}
 
 		case html.EndTagToken:
@@ -422,7 +446,7 @@ OUTER_LOOP:
 
 	// If we are not at the end of the input, then some other parsing error has occurred,
 	// so return the input verbatim.
-	return rawHtml
+	return rawHTML
 }
 
 // Render renders Markdown to HTML with special links.
