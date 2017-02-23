@@ -419,8 +419,8 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
 
-func (repo *Repository) HasAccess(u *User) bool {
-	has, _ := HasAccess(u, repo, ACCESS_MODE_READ)
+func (repo *Repository) HasAccess(userID int64) bool {
+	has, _ := HasAccess(userID, repo, ACCESS_MODE_READ)
 	return has
 }
 

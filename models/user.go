@@ -385,18 +385,18 @@ func (u *User) DeleteAvatar() error {
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
 func (u *User) IsAdminOfRepo(repo *Repository) bool {
-	has, err := HasAccess(u, repo, ACCESS_MODE_ADMIN)
+	has, err := HasAccess(u.ID, repo, ACCESS_MODE_ADMIN)
 	if err != nil {
-		log.Error(3, "HasAccess: %v", err)
+		log.Error(2, "HasAccess: %v", err)
 	}
 	return has
 }
 
 // IsWriterOfRepo returns true if user has write access to given repository.
 func (u *User) IsWriterOfRepo(repo *Repository) bool {
-	has, err := HasAccess(u, repo, ACCESS_MODE_WRITE)
+	has, err := HasAccess(u.ID, repo, ACCESS_MODE_WRITE)
 	if err != nil {
-		log.Error(3, "HasAccess: %v", err)
+		log.Error(2, "HasAccess: %v", err)
 	}
 	return has
 }
@@ -911,7 +911,7 @@ func GetUserByID(id int64) (*User, error) {
 
 // GetAssigneeByID returns the user with write access of repository by given ID.
 func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
-	has, err := HasAccess(&User{ID: userID}, repo, ACCESS_MODE_READ)
+	has, err := HasAccess(userID, repo, ACCESS_MODE_READ)
 	if err != nil {
 		return nil, err
 	} else if !has {

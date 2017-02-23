@@ -736,7 +736,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		yes, err := HasAccess(doer, repo, ACCESS_MODE_ADMIN)
+		yes, err := HasAccess(doer.ID, repo, ACCESS_MODE_ADMIN)
 		if err != nil {
 			return fmt.Errorf("HasAccess: %v", err)
 		} else if !yes {
