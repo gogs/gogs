@@ -12,8 +12,8 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
@@ -206,12 +206,12 @@ func CreateOrgRepo(ctx *context.APIContext, opt api.CreateRepoOption) {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#migrate
-func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
+func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 	ctxUser := ctx.User
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
-	if form.Uid != ctxUser.ID {
-		org, err := models.GetUserByID(form.Uid)
+	if f.Uid != ctxUser.ID {
+		org, err := models.GetUserByID(f.Uid)
 		if err != nil {
 			if models.IsErrUserNotExist(err) {
 				ctx.Error(422, "", err)
@@ -236,7 +236,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 		}
 	}
 
-	remoteAddr, err := form.ParseRemoteAddr(ctx.User)
+	remoteAddr, err := f.ParseRemoteAddr(ctx.User)
 	if err != nil {
 		if models.IsErrInvalidCloneAddr(err) {
 			addrErr := err.(models.ErrInvalidCloneAddr)
@@ -257,10 +257,10 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 	}
 
 	repo, err := models.MigrateRepository(ctxUser, models.MigrateRepoOptions{
-		Name:        form.RepoName,
-		Description: form.Description,
-		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
-		IsMirror:    form.Mirror,
+		Name:        f.RepoName,
+		Description: f.Description,
+		IsPrivate:   f.Private || setting.Repository.ForcePrivate,
+		IsMirror:    f.Mirror,
 		RemoteAddr:  remoteAddr,
 	})
 	if err != nil {
@@ -273,7 +273,7 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 		return
 	}
 
-	log.Trace("Repository migrated: %s/%s", ctxUser.Name, form.RepoName)
+	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
 	ctx.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
 }
 

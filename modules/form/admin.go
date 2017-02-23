@@ -2,15 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package auth
+package form
 
 import (
-	"gopkg.in/macaron.v1"
-
 	"github.com/go-macaron/binding"
+	"gopkg.in/macaron.v1"
 )
 
-type AdminCrateUserForm struct {
+type AdminCrateUser struct {
 	LoginType  string `binding:"Required"`
 	LoginName  string
 	UserName   string `binding:"Required;AlphaDashDot;MaxSize(35)"`
@@ -19,11 +18,11 @@ type AdminCrateUserForm struct {
 	SendNotify bool
 }
 
-func (f *AdminCrateUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *AdminCrateUser) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type AdminEditUserForm struct {
+type AdminEditUser struct {
 	LoginType        string `binding:"Required"`
 	LoginName        string
 	FullName         string `binding:"MaxSize(100)"`
@@ -39,6 +38,6 @@ type AdminEditUserForm struct {
 	ProhibitLogin    bool
 }
 
-func (f *AdminEditUserForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *AdminEditUser) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

@@ -10,9 +10,9 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/markdown"
 )
 
@@ -150,7 +150,7 @@ func NewRelease(ctx *context.Context) {
 	ctx.HTML(200, RELEASE_NEW)
 }
 
-func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
+func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
 	ctx.Data["PageIsReleaseList"] = true
 
@@ -159,13 +159,13 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		return
 	}
 
-	if !ctx.Repo.GitRepo.IsBranchExist(form.Target) {
-		ctx.RenderWithErr(ctx.Tr("form.target_branch_not_exist"), RELEASE_NEW, &form)
+	if !ctx.Repo.GitRepo.IsBranchExist(f.Target) {
+		ctx.RenderWithErr(ctx.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f)
 		return
 	}
 
 	var tagCreatedUnix int64
-	tag, err := ctx.Repo.GitRepo.GetTag(form.TagName)
+	tag, err := ctx.Repo.GitRepo.GetTag(f.TagName)
 	if err == nil {
 		commit, err := tag.Commit()
 		if err == nil {
@@ -173,7 +173,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		}
 	}
 
-	commit, err := ctx.Repo.GitRepo.GetBranchCommit(form.Target)
+	commit, err := ctx.Repo.GitRepo.GetBranchCommit(f.Target)
 	if err != nil {
 		ctx.Handle(500, "GetBranchCommit", err)
 		return
@@ -188,14 +188,14 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 	rel := &models.Release{
 		RepoID:       ctx.Repo.Repository.ID,
 		PublisherID:  ctx.User.ID,
-		Title:        form.Title,
-		TagName:      form.TagName,
-		Target:       form.Target,
+		Title:        f.Title,
+		TagName:      f.TagName,
+		Target:       f.Target,
 		Sha1:         commit.ID.String(),
 		NumCommits:   commitsCount,
-		Note:         form.Content,
-		IsDraft:      len(form.Draft) > 0,
-		IsPrerelease: form.Prerelease,
+		Note:         f.Content,
+		IsDraft:      len(f.Draft) > 0,
+		IsPrerelease: f.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
 
@@ -203,15 +203,15 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 		ctx.Data["Err_TagName"] = true
 		switch {
 		case models.IsErrReleaseAlreadyExist(err):
-			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &f)
 		case models.IsErrInvalidTagName(err):
-			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
 		default:
 			ctx.Handle(500, "CreateRelease", err)
 		}
 		return
 	}
-	log.Trace("Release created: %s/%s:%s", ctx.User.LowerName, ctx.Repo.Repository.Name, form.TagName)
+	log.Trace("Release created: %s/%s:%s", ctx.User.LowerName, ctx.Repo.Repository.Name, f.TagName)
 
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
 }
@@ -242,7 +242,7 @@ func EditRelease(ctx *context.Context) {
 	ctx.HTML(200, RELEASE_NEW)
 }
 
-func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
+func EditReleasePost(ctx *context.Context, f form.EditRelease) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
@@ -269,10 +269,10 @@ func EditReleasePost(ctx *context.Context, form auth.EditReleaseForm) {
 		return
 	}
 
-	rel.Title = form.Title
-	rel.Note = form.Content
-	rel.IsDraft = len(form.Draft) > 0
-	rel.IsPrerelease = form.Prerelease
+	rel.Title = f.Title
+	rel.Note = f.Content
+	rel.IsDraft = len(f.Draft) > 0
+	rel.IsPrerelease = f.Prerelease
 	if err = models.UpdateRelease(ctx.Repo.GitRepo, rel); err != nil {
 		ctx.Handle(500, "UpdateRelease", err)
 		return

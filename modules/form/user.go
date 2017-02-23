@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package auth
+package form
 
 import (
 	"mime/multipart"
@@ -11,7 +11,7 @@ import (
 	"gopkg.in/macaron.v1"
 )
 
-type InstallForm struct {
+type Install struct {
 	DbType   string `binding:"Required"`
 	DbHost   string
 	DbUser   string
@@ -50,7 +50,7 @@ type InstallForm struct {
 	AdminEmail         string `binding:"OmitEmpty;MinSize(3);MaxSize(254);Include(@)" locale:"install.admin_email"`
 }
 
-func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *Install) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -61,24 +61,24 @@ func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 // \____|__  /______/   |____|  \___|_  /
 //         \/                         \/
 
-type RegisterForm struct {
+type Register struct {
 	UserName string `binding:"Required;AlphaDashDot;MaxSize(35)"`
 	Email    string `binding:"Required;Email;MaxSize(254)"`
 	Password string `binding:"Required;MaxSize(255)"`
 	Retype   string
 }
 
-func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *Register) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type SignInForm struct {
+type SignIn struct {
 	UserName string `binding:"Required;MaxSize(254)"`
 	Password string `binding:"Required;MaxSize(255)"`
 	Remember bool
 }
 
-func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *SignIn) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -89,7 +89,7 @@ func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding
 // /_______  //_______  /  |____|     |____|   |___\____|__  /\______  /_______  /
 //         \/         \/                                   \/        \/        \/
 
-type UpdateProfileForm struct {
+type UpdateProfile struct {
 	Name     string `binding:"OmitEmpty;MaxSize(35)"`
 	FullName string `binding:"MaxSize(100)"`
 	Email    string `binding:"Required;Email;MaxSize(254)"`
@@ -97,7 +97,7 @@ type UpdateProfileForm struct {
 	Location string `binding:"MaxSize(50)"`
 }
 
-func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *UpdateProfile) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -106,48 +106,48 @@ const (
 	AVATAR_BYMAIL string = "bymail"
 )
 
-type AvatarForm struct {
+type Avatar struct {
 	Source      string
 	Avatar      *multipart.FileHeader
 	Gravatar    string `binding:"OmitEmpty;Email;MaxSize(254)"`
 	Federavatar bool
 }
 
-func (f *AvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *Avatar) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type AddEmailForm struct {
+type AddEmail struct {
 	Email string `binding:"Required;Email;MaxSize(254)"`
 }
 
-func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *AddEmail) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type ChangePasswordForm struct {
-	OldPassword string `form:"old_password" binding:"Required;MinSize(1);MaxSize(255)"`
-	Password    string `form:"password" binding:"Required;MaxSize(255)"`
-	Retype      string `form:"retype"`
+type ChangePassword struct {
+	OldPassword string `binding:"Required;MinSize(1);MaxSize(255)"`
+	Password    string `binding:"Required;MaxSize(255)"`
+	Retype      string
 }
 
-func (f *ChangePasswordForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *ChangePassword) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type AddSSHKeyForm struct {
+type AddSSHKey struct {
 	Title   string `binding:"Required;MaxSize(50)"`
 	Content string `binding:"Required"`
 }
 
-func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *AddSSHKey) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-type NewAccessTokenForm struct {
+type NewAccessToken struct {
 	Name string `binding:"Required"`
 }
 
-func (f *NewAccessTokenForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *NewAccessToken) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
