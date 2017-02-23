@@ -26,7 +26,7 @@ targets:
     <<: *el
 before:
   - mv packager/Procfile .
-  - mv packager/.godir .
 after:
-  - mv bin/main gogs
+  - mv bin/gogs gogs
 after_install: ./packager/hooks/postinst
+buildpack: https://github.com/heroku/heroku-buildpack-go.git#v62
