@@ -59,6 +59,7 @@ func Releases(ctx *context.Context) {
 		return
 	}
 
+	// FIXME: should only get releases match tags result and drafts.
 	releases, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetReleasesByRepoID", err)
@@ -72,7 +73,9 @@ func Releases(ctx *context.Context) {
 	tags := make([]*models.Release, len(tagsResult.Tags))
 	for i, rawTag := range tagsResult.Tags {
 		for j, r := range releases {
-			if r == nil || (r.IsDraft && !ctx.Repo.IsOwner()) {
+			if r == nil ||
+				(r.IsDraft && !ctx.Repo.IsOwner()) ||
+				(!r.IsDraft && r.TagName != rawTag) {
 				continue
 			}
 			releases[j] = nil // Mark as used.
