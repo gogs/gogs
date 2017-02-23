@@ -323,7 +323,7 @@ type EditRepoFile struct {
 	CommitSummary string `binding:"MaxSize(100)`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
-	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	NewBranchName string `binding:"AlphaDashDotSlash;MaxSize(100)"`
 	LastCommit    string
 }
 
