@@ -628,8 +628,8 @@ func wikiRemoteURL(remote string) string {
 }
 
 // MigrateRepository migrates a existing repository from other project hosting.
-func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
-	repo, err := CreateRepository(u, CreateRepoOptions{
+func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
+	repo, err := CreateRepository(doer, owner, CreateRepoOptions{
 		Name:        opts.Name,
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
@@ -639,11 +639,11 @@ func MigrateRepository(u *User, opts MigrateRepoOptions) (*Repository, error) {
 		return nil, err
 	}
 
-	repoPath := RepoPath(u.Name, opts.Name)
-	wikiPath := WikiPath(u.Name, opts.Name)
+	repoPath := RepoPath(owner.Name, opts.Name)
+	wikiPath := WikiPath(owner.Name, opts.Name)
 
-	if u.IsOrganization() {
-		t, err := u.GetOwnerTeam()
+	if owner.IsOrganization() {
+		t, err := owner.GetOwnerTeam()
 		if err != nil {
 			return nil, err
 		}
@@ -882,8 +882,8 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 	return nil
 }
 
-// InitRepository initializes README and .gitignore if needed.
-func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts CreateRepoOptions) (err error) {
+// initRepository performs initial commit with chosen setup files on behave of doer.
+func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptions) (err error) {
 	// Somehow the directory could exist.
 	if com.IsExist(repoPath) {
 		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
@@ -908,7 +908,7 @@ func initRepository(e Engine, repoPath string, u *User, repo *Repository, opts C
 		}
 
 		// Apply changes and commit.
-		if err = initRepoCommit(tmpDir, u.NewGitSig()); err != nil {
+		if err = initRepoCommit(tmpDir, doer.NewGitSig()); err != nil {
 			return fmt.Errorf("initRepoCommit: %v", err)
 		}
 	}
@@ -941,32 +941,32 @@ func IsUsableRepoName(name string) error {
 	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
 }
 
-func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
+func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err error) {
 	if err = IsUsableRepoName(repo.Name); err != nil {
 		return err
 	}
 
-	has, err := isRepositoryExist(e, u, repo.Name)
+	has, err := isRepositoryExist(e, owner, repo.Name)
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{u.Name, repo.Name}
+		return ErrRepoAlreadyExist{owner.Name, repo.Name}
 	}
 
 	if _, err = e.Insert(repo); err != nil {
 		return err
 	}
 
-	u.NumRepos++
+	owner.NumRepos++
 	// Remember visibility preference.
-	u.LastRepoVisibility = repo.IsPrivate
-	if err = updateUser(e, u); err != nil {
+	owner.LastRepoVisibility = repo.IsPrivate
+	if err = updateUser(e, owner); err != nil {
 		return fmt.Errorf("updateUser: %v", err)
 	}
 
 	// Give access to all members in owner team.
-	if u.IsOrganization() {
-		t, err := u.getOwnerTeam(e)
+	if owner.IsOrganization() {
+		t, err := owner.getOwnerTeam(e)
 		if err != nil {
 			return fmt.Errorf("getOwnerTeam: %v", err)
 		} else if err = t.addRepository(e, repo); err != nil {
@@ -979,9 +979,9 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 		}
 	}
 
-	if err = watchRepo(e, u.ID, repo.ID, true); err != nil {
+	if err = watchRepo(e, owner.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
-	} else if err = newRepoAction(e, u, repo); err != nil {
+	} else if err = newRepoAction(e, doer, owner, repo); err != nil {
 		return fmt.Errorf("newRepoAction: %v", err)
 	}
 
@@ -989,14 +989,14 @@ func createRepository(e *xorm.Session, u *User, repo *Repository) (err error) {
 }
 
 // CreateRepository creates a repository for given user or organization.
-func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error) {
-	if !u.CanCreateRepo() {
-		return nil, ErrReachLimitOfRepo{u.MaxRepoCreation}
+func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository, err error) {
+	if !owner.CanCreateRepo() {
+		return nil, ErrReachLimitOfRepo{owner.MaxRepoCreation}
 	}
 
 	repo := &Repository{
-		OwnerID:      u.ID,
-		Owner:        u,
+		OwnerID:      owner.ID,
+		Owner:        owner,
 		Name:         opts.Name,
 		LowerName:    strings.ToLower(opts.Name),
 		Description:  opts.Description,
@@ -1012,14 +1012,14 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 		return nil, err
 	}
 
-	if err = createRepository(sess, u, repo); err != nil {
+	if err = createRepository(sess, doer, owner, repo); err != nil {
 		return nil, err
 	}
 
 	// No need for init mirror.
 	if !opts.IsMirror {
-		repoPath := RepoPath(u.Name, repo.Name)
-		if err = initRepository(sess, repoPath, u, repo, opts); err != nil {
+		repoPath := RepoPath(owner.Name, repo.Name)
+		if err = initRepository(sess, repoPath, doer, repo, opts); err != nil {
 			RemoveAllWithNotice("Delete repository for initialization failure", repoPath)
 			return nil, fmt.Errorf("initRepository: %v", err)
 		}
@@ -2168,10 +2168,10 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
 	return repo, has
 }
 
-func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
+func ForkRepository(doer, owner *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
 	repo := &Repository{
-		OwnerID:       u.ID,
-		Owner:         u,
+		OwnerID:       owner.ID,
+		Owner:         owner,
 		Name:          name,
 		LowerName:     strings.ToLower(name),
 		Description:   desc,
@@ -2187,7 +2187,7 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		return nil, err
 	}
 
-	if err = createRepository(sess, u, repo); err != nil {
+	if err = createRepository(sess, doer, owner, repo); err != nil {
 		return nil, err
 	}
 
@@ -2195,9 +2195,9 @@ func ForkRepository(u *User, oldRepo *Repository, name, desc string) (_ *Reposit
 		return nil, err
 	}
 
-	repoPath := RepoPath(u.Name, repo.Name)
+	repoPath := RepoPath(owner.Name, repo.Name)
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
-		fmt.Sprintf("ForkRepository 'git clone': %s/%s", u.Name, repo.Name),
+		fmt.Sprintf("ForkRepository 'git clone': %s/%s", owner.Name, repo.Name),
 		"git", "clone", "--bare", oldRepo.RepoPath(), repoPath)
 	if err != nil {
 		return nil, fmt.Errorf("git clone: %v", stderr)
