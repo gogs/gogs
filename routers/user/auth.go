@@ -12,9 +12,9 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -103,7 +103,7 @@ func SignIn(ctx *context.Context) {
 	ctx.HTML(200, SIGNIN)
 }
 
-func SignInPost(ctx *context.Context, form auth.SignInForm) {
+func SignInPost(ctx *context.Context, f form.SignIn) {
 	ctx.Data["Title"] = ctx.Tr("sign_in")
 
 	if ctx.HasError() {
@@ -111,17 +111,17 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 		return
 	}
 
-	u, err := models.UserSignIn(form.UserName, form.Password)
+	u, err := models.UserSignIn(f.UserName, f.Password)
 	if err != nil {
 		if models.IsErrUserNotExist(err) {
-			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &form)
+			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &f)
 		} else {
 			ctx.Handle(500, "UserSignIn", err)
 		}
 		return
 	}
 
-	if form.Remember {
+	if f.Remember {
 		days := 86400 * setting.LogInRememberDays
 		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
 		ctx.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
@@ -169,7 +169,7 @@ func SignUp(ctx *context.Context) {
 	ctx.HTML(200, SIGNUP)
 }
 
-func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterForm) {
+func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, f form.Register) {
 	ctx.Data["Title"] = ctx.Tr("sign_up")
 
 	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
@@ -186,36 +186,36 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterFo
 
 	if setting.Service.EnableCaptcha && !cpt.VerifyReq(ctx.Req) {
 		ctx.Data["Err_Captcha"] = true
-		ctx.RenderWithErr(ctx.Tr("form.captcha_incorrect"), SIGNUP, &form)
+		ctx.RenderWithErr(ctx.Tr("form.captcha_incorrect"), SIGNUP, &f)
 		return
 	}
 
-	if form.Password != form.Retype {
+	if f.Password != f.Retype {
 		ctx.Data["Err_Password"] = true
-		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), SIGNUP, &form)
+		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), SIGNUP, &f)
 		return
 	}
 
 	u := &models.User{
-		Name:     form.UserName,
-		Email:    form.Email,
-		Passwd:   form.Password,
+		Name:     f.UserName,
+		Email:    f.Email,
+		Passwd:   f.Password,
 		IsActive: !setting.Service.RegisterEmailConfirm,
 	}
 	if err := models.CreateUser(u); err != nil {
 		switch {
 		case models.IsErrUserAlreadyExist(err):
 			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SIGNUP, &form)
+			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SIGNUP, &f)
 		case models.IsErrEmailAlreadyUsed(err):
 			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SIGNUP, &form)
+			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SIGNUP, &f)
 		case models.IsErrNameReserved(err):
 			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &form)
+			ctx.RenderWithErr(ctx.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &f)
 		case models.IsErrNamePatternNotAllowed(err):
 			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &form)
+			ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
 		default:
 			ctx.Handle(500, "CreateUser", err)
 		}

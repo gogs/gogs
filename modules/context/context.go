@@ -22,6 +22,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -78,9 +79,9 @@ func (ctx *Context) HTML(status int, name base.TplName) {
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, form interface{}) {
-	if form != nil {
-		auth.AssignForm(form, ctx.Data)
+func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, f interface{}) {
+	if f != nil {
+		form.Assign(f, ctx.Data)
 	}
 	ctx.Flash.ErrorMsg = msg
 	ctx.Data["Flash"] = ctx.Flash

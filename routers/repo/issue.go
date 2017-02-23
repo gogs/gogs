@@ -19,9 +19,9 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -348,7 +348,7 @@ func NewIssue(ctx *context.Context) {
 	ctx.HTML(200, ISSUE_NEW)
 }
 
-func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64, int64, int64) {
+func ValidateRepoMetas(ctx *context.Context, f form.CreateIssue) ([]int64, int64, int64) {
 	var (
 		repo = ctx.Repo.Repository
 		err  error
@@ -364,7 +364,7 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	}
 
 	// Check labels.
-	labelIDs := base.StringsToInt64s(strings.Split(form.LabelIDs, ","))
+	labelIDs := base.StringsToInt64s(strings.Split(f.LabelIDs, ","))
 	labelIDMark := base.Int64sToMap(labelIDs)
 	hasSelected := false
 	for i := range labels {
@@ -374,11 +374,11 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 		}
 	}
 	ctx.Data["HasSelectedLabel"] = hasSelected
-	ctx.Data["label_ids"] = form.LabelIDs
+	ctx.Data["label_ids"] = f.LabelIDs
 	ctx.Data["Labels"] = labels
 
 	// Check milestone.
-	milestoneID := form.MilestoneID
+	milestoneID := f.MilestoneID
 	if milestoneID > 0 {
 		ctx.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
 		if err != nil {
@@ -389,7 +389,7 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	}
 
 	// Check assignee.
-	assigneeID := form.AssigneeID
+	assigneeID := f.AssigneeID
 	if assigneeID > 0 {
 		ctx.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
 		if err != nil {
@@ -402,7 +402,7 @@ func ValidateRepoMetas(ctx *context.Context, form auth.CreateIssueForm) ([]int64
 	return labelIDs, milestoneID, assigneeID
 }
 
-func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
+func NewIssuePost(ctx *context.Context, f form.CreateIssue) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireHighlightJS"] = true
@@ -414,13 +414,13 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 		attachments []string
 	)
 
-	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, form)
+	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, f)
 	if ctx.Written() {
 		return
 	}
 
 	if setting.AttachmentEnabled {
-		attachments = form.Files
+		attachments = f.Files
 	}
 
 	if ctx.HasError() {
@@ -430,12 +430,12 @@ func NewIssuePost(ctx *context.Context, form auth.CreateIssueForm) {
 
 	issue := &models.Issue{
 		RepoID:      repo.ID,
-		Title:       form.Title,
+		Title:       f.Title,
 		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
-		Content:     form.Content,
+		Content:     f.Content,
 	}
 	if err := models.NewIssue(repo, issue, labelIDs, attachments); err != nil {
 		ctx.Handle(500, "NewIssue", err)
@@ -805,7 +805,7 @@ func UpdateIssueAssignee(ctx *context.Context) {
 	})
 }
 
-func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
+func NewComment(ctx *context.Context, f form.CreateComment) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		ctx.NotFoundOrServerError("GetIssueByIndex", models.IsErrIssueNotExist, err)
@@ -814,7 +814,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 
 	var attachments []string
 	if setting.AttachmentEnabled {
-		attachments = form.Files
+		attachments = f.Files
 	}
 
 	if ctx.HasError() {
@@ -827,13 +827,13 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 	defer func() {
 		// Check if issue admin/poster changes the status of issue.
 		if (ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))) &&
-			(form.Status == "reopen" || form.Status == "close") &&
+			(f.Status == "reopen" || f.Status == "close") &&
 			!(issue.IsPull && issue.PullRequest.HasMerged) {
 
 			// Duplication and conflict check should apply to reopen pull request.
 			var pr *models.PullRequest
 
-			if form.Status == "reopen" && issue.IsPull {
+			if f.Status == "reopen" && issue.IsPull {
 				pull := issue.PullRequest
 				pr, err = models.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 				if err != nil {
@@ -857,7 +857,7 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 			if pr != nil {
 				ctx.Flash.Info(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
 			} else {
-				if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, form.Status == "close"); err != nil {
+				if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, f.Status == "close"); err != nil {
 					log.Error(4, "ChangeStatus: %v", err)
 				} else {
 					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
@@ -878,11 +878,11 @@ func NewComment(ctx *context.Context, form auth.CreateCommentForm) {
 	}()
 
 	// Fix #321: Allow empty comments, as long as we have attachments.
-	if len(form.Content) == 0 && len(attachments) == 0 {
+	if len(f.Content) == 0 && len(attachments) == 0 {
 		return
 	}
 
-	comment, err = models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, form.Content, attachments)
+	comment, err = models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, f.Content, attachments)
 	if err != nil {
 		ctx.Handle(500, "CreateIssueComment", err)
 		return
@@ -955,14 +955,14 @@ func Labels(ctx *context.Context) {
 	ctx.HTML(200, LABELS)
 }
 
-func InitializeLabels(ctx *context.Context, form auth.InitializeLabelsForm) {
+func InitializeLabels(ctx *context.Context, f form.InitializeLabels) {
 	if ctx.HasError() {
 		ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 		return
 	}
-	list, err := models.GetLabelTemplateFile(form.TemplateName)
+	list, err := models.GetLabelTemplateFile(f.TemplateName)
 	if err != nil {
-		ctx.Flash.Error(ctx.Tr("repo.issues.label_templates.fail_to_load_file", form.TemplateName, err))
+		ctx.Flash.Error(ctx.Tr("repo.issues.label_templates.fail_to_load_file", f.TemplateName, err))
 		ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 		return
 	}
@@ -982,7 +982,7 @@ func InitializeLabels(ctx *context.Context, form auth.InitializeLabelsForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 }
 
-func NewLabel(ctx *context.Context, form auth.CreateLabelForm) {
+func NewLabel(ctx *context.Context, f form.CreateLabel) {
 	ctx.Data["Title"] = ctx.Tr("repo.labels")
 	ctx.Data["PageIsLabels"] = true
 
@@ -994,8 +994,8 @@ func NewLabel(ctx *context.Context, form auth.CreateLabelForm) {
 
 	l := &models.Label{
 		RepoID: ctx.Repo.Repository.ID,
-		Name:   form.Title,
-		Color:  form.Color,
+		Name:   f.Title,
+		Color:  f.Color,
 	}
 	if err := models.NewLabels(l); err != nil {
 		ctx.Handle(500, "NewLabel", err)
@@ -1004,8 +1004,8 @@ func NewLabel(ctx *context.Context, form auth.CreateLabelForm) {
 	ctx.Redirect(ctx.Repo.RepoLink + "/labels")
 }
 
-func UpdateLabel(ctx *context.Context, form auth.CreateLabelForm) {
-	l, err := models.GetLabelByID(form.ID)
+func UpdateLabel(ctx *context.Context, f form.CreateLabel) {
+	l, err := models.GetLabelByID(f.ID)
 	if err != nil {
 		switch {
 		case models.IsErrLabelNotExist(err):
@@ -1016,8 +1016,8 @@ func UpdateLabel(ctx *context.Context, form auth.CreateLabelForm) {
 		return
 	}
 
-	l.Name = form.Title
-	l.Color = form.Color
+	l.Name = f.Title
+	l.Color = f.Color
 	if err := models.UpdateLabel(l); err != nil {
 		ctx.Handle(500, "UpdateLabel", err)
 		return
@@ -1090,7 +1090,7 @@ func NewMilestone(ctx *context.Context) {
 	ctx.HTML(200, MILESTONE_NEW)
 }
 
-func NewMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
+func NewMilestonePost(ctx *context.Context, f form.CreateMilestone) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["PageIsMilestones"] = true
@@ -1102,27 +1102,27 @@ func NewMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
 		return
 	}
 
-	if len(form.Deadline) == 0 {
-		form.Deadline = "9999-12-31"
+	if len(f.Deadline) == 0 {
+		f.Deadline = "9999-12-31"
 	}
-	deadline, err := time.ParseInLocation("2006-01-02", form.Deadline, time.Local)
+	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		ctx.Data["Err_Deadline"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &form)
+		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
 		return
 	}
 
 	if err = models.NewMilestone(&models.Milestone{
 		RepoID:   ctx.Repo.Repository.ID,
-		Name:     form.Title,
-		Content:  form.Content,
+		Name:     f.Title,
+		Content:  f.Content,
 		Deadline: deadline,
 	}); err != nil {
 		ctx.Handle(500, "NewMilestone", err)
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("repo.milestones.create_success", form.Title))
+	ctx.Flash.Success(ctx.Tr("repo.milestones.create_success", f.Title))
 	ctx.Redirect(ctx.Repo.RepoLink + "/milestones")
 }
 
@@ -1150,7 +1150,7 @@ func EditMilestone(ctx *context.Context) {
 	ctx.HTML(200, MILESTONE_NEW)
 }
 
-func EditMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
+func EditMilestonePost(ctx *context.Context, f form.CreateMilestone) {
 	ctx.Data["Title"] = ctx.Tr("repo.milestones.edit")
 	ctx.Data["PageIsMilestones"] = true
 	ctx.Data["PageIsEditMilestone"] = true
@@ -1162,13 +1162,13 @@ func EditMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
 		return
 	}
 
-	if len(form.Deadline) == 0 {
-		form.Deadline = "9999-12-31"
+	if len(f.Deadline) == 0 {
+		f.Deadline = "9999-12-31"
 	}
-	deadline, err := time.ParseInLocation("2006-01-02", form.Deadline, time.Local)
+	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		ctx.Data["Err_Deadline"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &form)
+		ctx.RenderWithErr(ctx.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
 		return
 	}
 
@@ -1181,8 +1181,8 @@ func EditMilestonePost(ctx *context.Context, form auth.CreateMilestoneForm) {
 		}
 		return
 	}
-	m.Name = form.Title
-	m.Content = form.Content
+	m.Name = f.Title
+	m.Content = f.Content
 	m.Deadline = deadline
 	if err = models.UpdateMilestone(m); err != nil {
 		ctx.Handle(500, "UpdateMilestone", err)

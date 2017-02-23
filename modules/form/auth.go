@@ -2,14 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package auth
+package form
 
 import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 )
 
-type AuthenticationForm struct {
+type Authentication struct {
 	ID                int64
 	Type              int    `binding:"Range(2,5)"`
 	Name              string `binding:"Required;MaxSize(30)"`
@@ -37,6 +37,6 @@ type AuthenticationForm struct {
 	PAMServiceName    string
 }
 
-func (f *AuthenticationForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *Authentication) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

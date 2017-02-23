@@ -12,9 +12,9 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/markdown"
 )
 
@@ -198,7 +198,7 @@ func NewWiki(ctx *context.Context) {
 	ctx.HTML(200, WIKI_NEW)
 }
 
-func NewWikiPost(ctx *context.Context, form auth.NewWikiForm) {
+func NewWikiPost(ctx *context.Context, f form.NewWiki) {
 	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
 	ctx.Data["PageIsWiki"] = true
 	ctx.Data["RequireSimpleMDE"] = true
@@ -208,17 +208,17 @@ func NewWikiPost(ctx *context.Context, form auth.NewWikiForm) {
 		return
 	}
 
-	if err := ctx.Repo.Repository.AddWikiPage(ctx.User, form.Title, form.Content, form.Message); err != nil {
+	if err := ctx.Repo.Repository.AddWikiPage(ctx.User, f.Title, f.Content, f.Message); err != nil {
 		if models.IsErrWikiAlreadyExist(err) {
 			ctx.Data["Err_Title"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
 		} else {
 			ctx.Handle(500, "AddWikiPage", err)
 		}
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(form.Title)))
+	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
 }
 
 func EditWiki(ctx *context.Context) {
@@ -239,7 +239,7 @@ func EditWiki(ctx *context.Context) {
 	ctx.HTML(200, WIKI_NEW)
 }
 
-func EditWikiPost(ctx *context.Context, form auth.NewWikiForm) {
+func EditWikiPost(ctx *context.Context, f form.NewWiki) {
 	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
 	ctx.Data["PageIsWiki"] = true
 	ctx.Data["RequireSimpleMDE"] = true
@@ -249,12 +249,12 @@ func EditWikiPost(ctx *context.Context, form auth.NewWikiForm) {
 		return
 	}
 
-	if err := ctx.Repo.Repository.EditWikiPage(ctx.User, form.OldTitle, form.Title, form.Content, form.Message); err != nil {
+	if err := ctx.Repo.Repository.EditWikiPage(ctx.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
 		ctx.Handle(500, "EditWikiPage", err)
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(form.Title)))
+	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
 }
 
 func DeleteWikiPagePost(ctx *context.Context) {

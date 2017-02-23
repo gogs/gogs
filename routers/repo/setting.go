@@ -14,9 +14,9 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -37,7 +37,7 @@ func Settings(ctx *context.Context) {
 	ctx.HTML(200, SETTINGS_OPTIONS)
 }
 
-func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
+func SettingsPost(ctx *context.Context, f form.RepoSetting) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings")
 	ctx.Data["PageIsSettingsOptions"] = true
 
@@ -52,7 +52,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 
 		isNameChanged := false
 		oldRepoName := repo.Name
-		newRepoName := form.RepoName
+		newRepoName := f.RepoName
 		// Check if repository name has been changed.
 		if repo.LowerName != strings.ToLower(newRepoName) {
 			isNameChanged = true
@@ -60,11 +60,11 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 				ctx.Data["Err_RepoName"] = true
 				switch {
 				case models.IsErrRepoAlreadyExist(err):
-					ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &form)
+					ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
 				case models.IsErrNameReserved(err):
-					ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &form)
+					ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &f)
 				case models.IsErrNamePatternNotAllowed(err):
-					ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &form)
+					ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f)
 				default:
 					ctx.Handle(500, "ChangeRepositoryName", err)
 				}
@@ -77,16 +77,16 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		repo.Name = newRepoName
 		repo.LowerName = strings.ToLower(newRepoName)
 
-		repo.Description = form.Description
-		repo.Website = form.Website
+		repo.Description = f.Description
+		repo.Website = f.Website
 
 		// Visibility of forked repository is forced sync with base repository.
 		if repo.IsFork {
-			form.Private = repo.BaseRepo.IsPrivate
+			f.Private = repo.BaseRepo.IsPrivate
 		}
 
-		visibilityChanged := repo.IsPrivate != form.Private
-		repo.IsPrivate = form.Private
+		visibilityChanged := repo.IsPrivate != f.Private
+		repo.IsPrivate = f.Private
 		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
 			ctx.Handle(500, "UpdateRepository", err)
 			return
@@ -108,16 +108,16 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			return
 		}
 
-		if form.Interval > 0 {
-			ctx.Repo.Mirror.EnablePrune = form.EnablePrune
-			ctx.Repo.Mirror.Interval = form.Interval
-			ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(form.Interval) * time.Hour)
+		if f.Interval > 0 {
+			ctx.Repo.Mirror.EnablePrune = f.EnablePrune
+			ctx.Repo.Mirror.Interval = f.Interval
+			ctx.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(f.Interval) * time.Hour)
 			if err := models.UpdateMirror(ctx.Repo.Mirror); err != nil {
 				ctx.Handle(500, "UpdateMirror", err)
 				return
 			}
 		}
-		if err := ctx.Repo.Mirror.SaveAddress(form.MirrorAddress); err != nil {
+		if err := ctx.Repo.Mirror.SaveAddress(f.MirrorAddress); err != nil {
 			ctx.Handle(500, "SaveAddress", err)
 			return
 		}
@@ -136,15 +136,15 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 		ctx.Redirect(repo.Link() + "/settings")
 
 	case "advanced":
-		repo.EnableWiki = form.EnableWiki
-		repo.EnableExternalWiki = form.EnableExternalWiki
-		repo.ExternalWikiURL = form.ExternalWikiURL
-		repo.EnableIssues = form.EnableIssues
-		repo.EnableExternalTracker = form.EnableExternalTracker
-		repo.ExternalTrackerURL = form.ExternalTrackerURL
-		repo.ExternalTrackerFormat = form.TrackerURLFormat
-		repo.ExternalTrackerStyle = form.TrackerIssueStyle
-		repo.EnablePulls = form.EnablePulls
+		repo.EnableWiki = f.EnableWiki
+		repo.EnableExternalWiki = f.EnableExternalWiki
+		repo.ExternalWikiURL = f.ExternalWikiURL
+		repo.EnableIssues = f.EnableIssues
+		repo.EnableExternalTracker = f.EnableExternalTracker
+		repo.ExternalTrackerURL = f.ExternalTrackerURL
+		repo.ExternalTrackerFormat = f.TrackerURLFormat
+		repo.ExternalTrackerStyle = f.TrackerIssueStyle
+		repo.EnablePulls = f.EnablePulls
 
 		if err := models.UpdateRepository(repo, false); err != nil {
 			ctx.Handle(500, "UpdateRepository", err)
@@ -160,7 +160,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			ctx.Error(404)
 			return
 		}
-		if repo.Name != form.RepoName {
+		if repo.Name != f.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -194,7 +194,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			ctx.Error(404)
 			return
 		}
-		if repo.Name != form.RepoName {
+		if repo.Name != f.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -233,7 +233,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			ctx.Error(404)
 			return
 		}
-		if repo.Name != form.RepoName {
+		if repo.Name != f.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -259,7 +259,7 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			ctx.Error(404)
 			return
 		}
-		if repo.Name != form.RepoName {
+		if repo.Name != f.RepoName {
 			ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
@@ -444,7 +444,7 @@ func SettingsProtectedBranch(ctx *context.Context) {
 	ctx.HTML(200, SETTINGS_PROTECTED_BRANCH)
 }
 
-func SettingsProtectedBranchPost(ctx *context.Context, form auth.ProtectBranchForm) {
+func SettingsProtectedBranchPost(ctx *context.Context, f form.ProtectBranch) {
 	branch := ctx.Params("*")
 	if !ctx.Repo.GitRepo.IsBranchExist(branch) {
 		ctx.NotFound()
@@ -465,11 +465,11 @@ func SettingsProtectedBranchPost(ctx *context.Context, form auth.ProtectBranchFo
 		}
 	}
 
-	protectBranch.Protected = form.Protected
-	protectBranch.RequirePullRequest = form.RequirePullRequest
-	protectBranch.EnableWhitelist = form.EnableWhitelist
+	protectBranch.Protected = f.Protected
+	protectBranch.RequirePullRequest = f.RequirePullRequest
+	protectBranch.EnableWhitelist = f.EnableWhitelist
 	if ctx.Repo.Owner.IsOrganization() {
-		err = models.UpdateOrgProtectBranch(ctx.Repo.Repository, protectBranch, form.WhitelistUsers, form.WhitelistTeams)
+		err = models.UpdateOrgProtectBranch(ctx.Repo.Repository, protectBranch, f.WhitelistUsers, f.WhitelistTeams)
 	} else {
 		err = models.UpdateProtectBranch(protectBranch)
 	}
@@ -547,7 +547,7 @@ func SettingsDeployKeys(ctx *context.Context) {
 	ctx.HTML(200, SETTINGS_DEPLOY_KEYS)
 }
 
-func SettingsDeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
+func SettingsDeployKeysPost(ctx *context.Context, f form.AddSSHKey) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.deploy_keys")
 	ctx.Data["PageIsSettingsKeys"] = true
 
@@ -563,7 +563,7 @@ func SettingsDeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 		return
 	}
 
-	content, err := models.CheckPublicKeyString(form.Content)
+	content, err := models.CheckPublicKeyString(f.Content)
 	if err != nil {
 		if models.IsErrKeyUnableVerify(err) {
 			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
@@ -576,16 +576,16 @@ func SettingsDeployKeysPost(ctx *context.Context, form auth.AddSSHKeyForm) {
 		}
 	}
 
-	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content)
+	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, f.Title, content)
 	if err != nil {
 		ctx.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
 			ctx.Data["Err_Content"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &f)
 		case models.IsErrKeyNameAlreadyUsed(err):
 			ctx.Data["Err_Title"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &f)
 		default:
 			ctx.Handle(500, "AddDeployKey", err)
 		}

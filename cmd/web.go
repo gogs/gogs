@@ -34,9 +34,9 @@ import (
 	"github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
@@ -219,35 +219,35 @@ func runWeb(ctx *cli.Context) error {
 		m.Get("/organizations", routers.ExploreOrganizations)
 	}, ignSignIn)
 	m.Combo("/install", routers.InstallInit).Get(routers.Install).
-		Post(bindIgnErr(auth.InstallForm{}), routers.InstallPost)
+		Post(bindIgnErr(form.Install{}), routers.InstallPost)
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 	// ***** START: User *****
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
-		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
+		m.Post("/login", bindIgnErr(form.SignIn{}), user.SignInPost)
 		m.Get("/sign_up", user.SignUp)
-		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
+		m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
 		m.Get("/reset_password", user.ResetPasswd)
 		m.Post("/reset_password", user.ResetPasswdPost)
 	}, reqSignOut)
 
 	m.Group("/user/settings", func() {
 		m.Get("", user.Settings)
-		m.Post("", bindIgnErr(auth.UpdateProfileForm{}), user.SettingsPost)
+		m.Post("", bindIgnErr(form.UpdateProfile{}), user.SettingsPost)
 		m.Combo("/avatar").Get(user.SettingsAvatar).
-			Post(binding.MultipartForm(auth.AvatarForm{}), user.SettingsAvatarPost)
+			Post(binding.MultipartForm(form.Avatar{}), user.SettingsAvatarPost)
 		m.Post("/avatar/delete", user.SettingsDeleteAvatar)
 		m.Combo("/email").Get(user.SettingsEmails).
-			Post(bindIgnErr(auth.AddEmailForm{}), user.SettingsEmailPost)
+			Post(bindIgnErr(form.AddEmail{}), user.SettingsEmailPost)
 		m.Post("/email/delete", user.DeleteEmail)
 		m.Get("/password", user.SettingsPassword)
-		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
+		m.Post("/password", bindIgnErr(form.ChangePassword{}), user.SettingsPasswordPost)
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).
-			Post(bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
+			Post(bindIgnErr(form.AddSSHKey{}), user.SettingsSSHKeysPost)
 		m.Post("/ssh/delete", user.DeleteSSHKey)
 		m.Combo("/applications").Get(user.SettingsApplications).
-			Post(bindIgnErr(auth.NewAccessTokenForm{}), user.SettingsApplicationsPost)
+			Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
 
 		m.Group("/organizations", func() {
@@ -261,7 +261,7 @@ func runWeb(ctx *cli.Context) error {
 	})
 
 	m.Group("/user", func() {
-		// r.Get("/feeds", binding.Bind(auth.FeedsForm{}), user.Feeds)
+		// r.Get("/feeds", binding.Bind(form.Feeds{}), user.Feeds)
 		m.Any("/activate", user.Activate)
 		m.Any("/activate_email", user.ActivateEmail)
 		m.Get("/email2user", user.Email2User)
@@ -282,8 +282,8 @@ func runWeb(ctx *cli.Context) error {
 
 		m.Group("/users", func() {
 			m.Get("", admin.Users)
-			m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(auth.AdminCrateUserForm{}), admin.NewUserPost)
-			m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(auth.AdminEditUserForm{}), admin.EditUserPost)
+			m.Combo("/new").Get(admin.NewUser).Post(bindIgnErr(form.AdminCrateUser{}), admin.NewUserPost)
+			m.Combo("/:userid").Get(admin.EditUser).Post(bindIgnErr(form.AdminEditUser{}), admin.EditUserPost)
 			m.Post("/:userid/delete", admin.DeleteUser)
 		})
 
@@ -298,9 +298,9 @@ func runWeb(ctx *cli.Context) error {
 
 		m.Group("/auths", func() {
 			m.Get("", admin.Authentications)
-			m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(auth.AuthenticationForm{}), admin.NewAuthSourcePost)
+			m.Combo("/new").Get(admin.NewAuthSource).Post(bindIgnErr(form.Authentication{}), admin.NewAuthSourcePost)
 			m.Combo("/:authid").Get(admin.EditAuthSource).
-				Post(bindIgnErr(auth.AuthenticationForm{}), admin.EditAuthSourcePost)
+				Post(bindIgnErr(form.Authentication{}), admin.EditAuthSourcePost)
 			m.Post("/:authid/delete", admin.DeleteAuthSource)
 		})
 
@@ -365,7 +365,7 @@ func runWeb(ctx *cli.Context) error {
 	m.Group("/org", func() {
 		m.Group("", func() {
 			m.Get("/create", org.Create)
-			m.Post("/create", bindIgnErr(auth.CreateOrgForm{}), org.CreatePost)
+			m.Post("/create", bindIgnErr(form.CreateOrg{}), org.CreatePost)
 		}, func(ctx *context.Context) {
 			if !ctx.User.CanCreateOrganization() {
 				ctx.NotFound()
@@ -390,28 +390,28 @@ func runWeb(ctx *cli.Context) error {
 
 		m.Group("/:org", func() {
 			m.Get("/teams/new", org.NewTeam)
-			m.Post("/teams/new", bindIgnErr(auth.CreateTeamForm{}), org.NewTeamPost)
+			m.Post("/teams/new", bindIgnErr(form.CreateTeam{}), org.NewTeamPost)
 			m.Get("/teams/:team/edit", org.EditTeam)
-			m.Post("/teams/:team/edit", bindIgnErr(auth.CreateTeamForm{}), org.EditTeamPost)
+			m.Post("/teams/:team/edit", bindIgnErr(form.CreateTeam{}), org.EditTeamPost)
 			m.Post("/teams/:team/delete", org.DeleteTeam)
 
 			m.Group("/settings", func() {
 				m.Combo("").Get(org.Settings).
-					Post(bindIgnErr(auth.UpdateOrgSettingForm{}), org.SettingsPost)
-				m.Post("/avatar", binding.MultipartForm(auth.AvatarForm{}), org.SettingsAvatar)
+					Post(bindIgnErr(form.UpdateOrgSetting{}), org.SettingsPost)
+				m.Post("/avatar", binding.MultipartForm(form.Avatar{}), org.SettingsAvatar)
 				m.Post("/avatar/delete", org.SettingsDeleteAvatar)
 
 				m.Group("/hooks", func() {
 					m.Get("", org.Webhooks)
 					m.Post("/delete", org.DeleteWebhook)
 					m.Get("/:type/new", repo.WebhooksNew)
-					m.Post("/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
-					m.Post("/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
-					m.Post("/discord/new", bindIgnErr(auth.NewDiscordHookForm{}), repo.DiscordHooksNewPost)
+					m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebHooksNewPost)
+					m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksNewPost)
+					m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksNewPost)
 					m.Get("/:id", repo.WebHooksEdit)
-					m.Post("/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
-					m.Post("/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
-					m.Post("/discord/:id", bindIgnErr(auth.NewDiscordHookForm{}), repo.DiscordHooksEditPost)
+					m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebHooksEditPost)
+					m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksEditPost)
+					m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksEditPost)
 				})
 
 				m.Route("/delete", "GET,POST", org.SettingsDelete)
@@ -425,17 +425,17 @@ func runWeb(ctx *cli.Context) error {
 	// ***** START: Repository *****
 	m.Group("/repo", func() {
 		m.Get("/create", repo.Create)
-		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
+		m.Post("/create", bindIgnErr(form.CreateRepo{}), repo.CreatePost)
 		m.Get("/migrate", repo.Migrate)
-		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
+		m.Post("/migrate", bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
 		m.Combo("/fork/:repoid").Get(repo.Fork).
-			Post(bindIgnErr(auth.CreateRepoForm{}), repo.ForkPost)
+			Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("/settings", func() {
 			m.Combo("").Get(repo.Settings).
-				Post(bindIgnErr(auth.RepoSettingForm{}), repo.SettingsPost)
+				Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
 			m.Group("/collaboration", func() {
 				m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
 				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)
@@ -445,7 +445,7 @@ func runWeb(ctx *cli.Context) error {
 				m.Get("", repo.SettingsBranches)
 				m.Post("/default_branch", repo.UpdateDefaultBranch)
 				m.Combo("/*").Get(repo.SettingsProtectedBranch).
-					Post(bindIgnErr(auth.ProtectBranchForm{}), repo.SettingsProtectedBranchPost)
+					Post(bindIgnErr(form.ProtectBranch{}), repo.SettingsProtectedBranchPost)
 			}, func(ctx *context.Context) {
 				if ctx.Repo.Repository.IsMirror {
 					ctx.NotFound()
@@ -457,14 +457,14 @@ func runWeb(ctx *cli.Context) error {
 				m.Get("", repo.Webhooks)
 				m.Post("/delete", repo.DeleteWebhook)
 				m.Get("/:type/new", repo.WebhooksNew)
-				m.Post("/gogs/new", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksNewPost)
-				m.Post("/slack/new", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksNewPost)
-				m.Post("/discord/new", bindIgnErr(auth.NewDiscordHookForm{}), repo.DiscordHooksNewPost)
+				m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebHooksNewPost)
+				m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksNewPost)
+				m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksNewPost)
 				m.Get("/:id", repo.WebHooksEdit)
 				m.Post("/:id/test", repo.TestWebhook)
-				m.Post("/gogs/:id", bindIgnErr(auth.NewWebhookForm{}), repo.WebHooksEditPost)
-				m.Post("/slack/:id", bindIgnErr(auth.NewSlackHookForm{}), repo.SlackHooksEditPost)
-				m.Post("/discord/:id", bindIgnErr(auth.NewDiscordHookForm{}), repo.DiscordHooksEditPost)
+				m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebHooksEditPost)
+				m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksEditPost)
+				m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksEditPost)
 
 				m.Group("/git", func() {
 					m.Get("", repo.SettingsGitHooks)
@@ -475,7 +475,7 @@ func runWeb(ctx *cli.Context) error {
 
 			m.Group("/keys", func() {
 				m.Combo("").Get(repo.SettingsDeployKeys).
-					Post(bindIgnErr(auth.AddSSHKeyForm{}), repo.SettingsDeployKeysPost)
+					Post(bindIgnErr(form.AddSSHKey{}), repo.SettingsDeployKeysPost)
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
@@ -490,7 +490,7 @@ func runWeb(ctx *cli.Context) error {
 		// So they can apply their own enable/disable logic on routers.
 		m.Group("/issues", func() {
 			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
-				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
+				Post(bindIgnErr(form.CreateIssue{}), repo.NewIssuePost)
 
 			m.Group("/:index", func() {
 				m.Post("/label", repo.UpdateIssueLabel)
@@ -501,7 +501,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
 				m.Post("/content", repo.UpdateIssueContent)
-				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
+				m.Combo("/comments").Post(bindIgnErr(form.CreateComment{}), repo.NewComment)
 			})
 		})
 		m.Group("/comments/:id", func() {
@@ -509,26 +509,26 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/delete", repo.DeleteComment)
 		})
 		m.Group("/labels", func() {
-			m.Post("/new", bindIgnErr(auth.CreateLabelForm{}), repo.NewLabel)
-			m.Post("/edit", bindIgnErr(auth.CreateLabelForm{}), repo.UpdateLabel)
+			m.Post("/new", bindIgnErr(form.CreateLabel{}), repo.NewLabel)
+			m.Post("/edit", bindIgnErr(form.CreateLabel{}), repo.UpdateLabel)
 			m.Post("/delete", repo.DeleteLabel)
-			m.Post("/initialize", bindIgnErr(auth.InitializeLabelsForm{}), repo.InitializeLabels)
+			m.Post("/initialize", bindIgnErr(form.InitializeLabels{}), repo.InitializeLabels)
 		}, reqRepoWriter, context.RepoRef())
 		m.Group("/milestones", func() {
 			m.Combo("/new").Get(repo.NewMilestone).
-				Post(bindIgnErr(auth.CreateMilestoneForm{}), repo.NewMilestonePost)
+				Post(bindIgnErr(form.CreateMilestone{}), repo.NewMilestonePost)
 			m.Get("/:id/edit", repo.EditMilestone)
-			m.Post("/:id/edit", bindIgnErr(auth.CreateMilestoneForm{}), repo.EditMilestonePost)
+			m.Post("/:id/edit", bindIgnErr(form.CreateMilestone{}), repo.EditMilestonePost)
 			m.Get("/:id/:action", repo.ChangeMilestonStatus)
 			m.Post("/delete", repo.DeleteMilestone)
 		}, reqRepoWriter, context.RepoRef())
 
 		m.Group("/releases", func() {
 			m.Get("/new", repo.NewRelease)
-			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
+			m.Post("/new", bindIgnErr(form.NewRelease{}), repo.NewReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
 			m.Get("/edit/*", repo.EditRelease)
-			m.Post("/edit/*", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
+			m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
 		}, reqRepoWriter, context.RepoRef())
 
 		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
@@ -536,22 +536,22 @@ func runWeb(ctx *cli.Context) error {
 		// e.g. /org1/test-repo/compare/master...org1:develop
 		// which should be /org1/test-repo/compare/master...develop
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
-			Post(bindIgnErr(auth.CreateIssueForm{}), repo.CompareAndPullRequestPost)
+			Post(bindIgnErr(form.CreateIssue{}), repo.CompareAndPullRequestPost)
 
 		m.Group("", func() {
 			m.Combo("/_edit/*").Get(repo.EditFile).
-				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.EditFilePost)
+				Post(bindIgnErr(form.EditRepoFile{}), repo.EditFilePost)
 			m.Combo("/_new/*").Get(repo.NewFile).
-				Post(bindIgnErr(auth.EditRepoFileForm{}), repo.NewFilePost)
-			m.Post("/_preview/*", bindIgnErr(auth.EditPreviewDiffForm{}), repo.DiffPreviewPost)
+				Post(bindIgnErr(form.EditRepoFile{}), repo.NewFilePost)
+			m.Post("/_preview/*", bindIgnErr(form.EditPreviewDiff{}), repo.DiffPreviewPost)
 			m.Combo("/_delete/*").Get(repo.DeleteFile).
-				Post(bindIgnErr(auth.DeleteRepoFileForm{}), repo.DeleteFilePost)
+				Post(bindIgnErr(form.DeleteRepoFile{}), repo.DeleteFilePost)
 
 			m.Group("", func() {
 				m.Combo("/_upload/*").Get(repo.UploadFile).
-					Post(bindIgnErr(auth.UploadRepoFileForm{}), repo.UploadFilePost)
+					Post(bindIgnErr(form.UploadRepoFile{}), repo.UploadFilePost)
 				m.Post("/upload-file", repo.UploadFileToServer)
-				m.Post("/upload-remove", bindIgnErr(auth.RemoveUploadFileForm{}), repo.RemoveUploadFileFromServer)
+				m.Post("/upload-remove", bindIgnErr(form.RemoveUploadFile{}), repo.RemoveUploadFileFromServer)
 			}, func(ctx *context.Context) {
 				if !setting.Repository.Upload.Enabled {
 					ctx.NotFound()
@@ -584,9 +584,9 @@ func runWeb(ctx *cli.Context) error {
 
 			m.Group("", func() {
 				m.Combo("/_new").Get(repo.NewWiki).
-					Post(bindIgnErr(auth.NewWikiForm{}), repo.NewWikiPost)
+					Post(bindIgnErr(form.NewWiki{}), repo.NewWikiPost)
 				m.Combo("/:page/_edit").Get(repo.EditWiki).
-					Post(bindIgnErr(auth.NewWikiForm{}), repo.EditWikiPost)
+					Post(bindIgnErr(form.NewWiki{}), repo.EditWikiPost)
 				m.Post("/:page/delete", repo.DeleteWikiPagePost)
 			}, reqSignIn, reqRepoWriter)
 		}, repo.MustEnableWiki, context.RepoRef())

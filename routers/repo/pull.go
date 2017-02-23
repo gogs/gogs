@@ -15,9 +15,9 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -85,7 +85,7 @@ func Fork(ctx *context.Context) {
 	ctx.HTML(200, FORK)
 }
 
-func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
+func ForkPost(ctx *context.Context, f form.CreateRepo) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
 	forkRepo := getForkRepository(ctx)
@@ -93,7 +93,7 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	ctxUser := checkContextUser(ctx, form.Uid)
+	ctxUser := checkContextUser(ctx, f.Uid)
 	if ctx.Written() {
 		return
 	}
@@ -120,20 +120,20 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 
 	// Cannot fork to same owner
 	if ctxUser.ID == forkRepo.OwnerID {
-		ctx.RenderWithErr(ctx.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &form)
+		ctx.RenderWithErr(ctx.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f)
 		return
 	}
 
-	repo, err := models.ForkRepository(ctxUser, forkRepo, form.RepoName, form.Description)
+	repo, err := models.ForkRepository(ctxUser, forkRepo, f.RepoName, f.Description)
 	if err != nil {
 		ctx.Data["Err_RepoName"] = true
 		switch {
 		case models.IsErrRepoAlreadyExist(err):
-			ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), FORK, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
 		case models.IsErrNameReserved(err):
-			ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &f)
 		case models.IsErrNamePatternNotAllowed(err):
-			ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &f)
 		default:
 			ctx.Handle(500, "ForkPost", err)
 		}
@@ -636,7 +636,7 @@ func CompareAndPullRequest(ctx *context.Context) {
 	ctx.HTML(200, COMPARE_PULL)
 }
 
-func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) {
+func CompareAndPullRequestPost(ctx *context.Context, f form.CreateIssue) {
 	ctx.Data["Title"] = ctx.Tr("repo.pulls.compare_changes")
 	ctx.Data["PageIsComparePull"] = true
 	ctx.Data["IsDiffCompare"] = true
@@ -653,17 +653,17 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		return
 	}
 
-	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, form)
+	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, f)
 	if ctx.Written() {
 		return
 	}
 
 	if setting.AttachmentEnabled {
-		attachments = form.Files
+		attachments = f.Files
 	}
 
 	if ctx.HasError() {
-		auth.AssignForm(form, ctx.Data)
+		form.Assign(f, ctx.Data)
 
 		// This stage is already stop creating new pull request, so it does not matter if it has
 		// something to compare or not.
@@ -685,13 +685,13 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	pullIssue := &models.Issue{
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
-		Title:       form.Title,
+		Title:       f.Title,
 		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
 		IsPull:      true,
-		Content:     form.Content,
+		Content:     f.Content,
 	}
 	pullRequest := &models.PullRequest{
 		HeadRepoID:   headRepo.ID,
