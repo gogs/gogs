@@ -1401,6 +1401,8 @@ func DeleteRepository(uid, repoID int64) error {
 		&Release{RepoID: repoID},
 		&Collaboration{RepoID: repoID},
 		&PullRequest{BaseRepoID: repoID},
+		&ProtectBranch{RepoID: repoID},
+		&ProtectBranchWhitelist{RepoID: repoID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %v", err)
 	}
