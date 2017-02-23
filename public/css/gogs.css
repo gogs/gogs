@@ -2310,6 +2310,12 @@ footer .ui.language .menu {
   margin-left: 20px;
   display: block;
 }
+.repository.settings.branches .branch-protection .whitelist {
+  margin-left: 26px;
+}
+.repository.settings.branches .branch-protection .whitelist .dropdown img {
+  display: inline-block;
+}
 .repository.settings.webhooks .types .menu .item {
   padding: 10px !important;
 }
