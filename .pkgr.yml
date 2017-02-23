@@ -19,6 +19,8 @@ targets:
   centos-6: &el
     build_dependencies:
       - pam-devel
+      # required for go buildpack
+      - perl-Digest-SHA
     dependencies:
       - pam
       - git
