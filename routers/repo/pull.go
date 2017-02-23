@@ -626,6 +626,7 @@ func CompareAndPullRequest(ctx *context.Context) {
 		return
 	}
 
+	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
 	ctx.HTML(200, COMPARE_PULL)
 }
 
