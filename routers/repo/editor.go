@@ -279,8 +279,8 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 		return
 	}
 
-	if form.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
-		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, form.NewBranchName))
+	if f.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
+		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, f.NewBranchName))
 	} else {
 		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + template.EscapePound(f.TreePath))
 	}
@@ -382,8 +382,8 @@ func DeleteFilePost(ctx *context.Context, f form.DeleteRepoFile) {
 		return
 	}
 
-	if form.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
-		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, form.NewBranchName))
+	if f.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
+		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, f.NewBranchName))
 	} else {
 		ctx.Flash.Success(ctx.Tr("repo.editor.file_delete_success", ctx.Repo.TreePath))
 		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName)
@@ -503,8 +503,8 @@ func UploadFilePost(ctx *context.Context, f form.UploadRepoFile) {
 		return
 	}
 
-	if form.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
-		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, form.NewBranchName))
+	if f.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
+		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, f.NewBranchName))
 	} else {
 		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + f.TreePath)
 	}
