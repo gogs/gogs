@@ -104,7 +104,7 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 		if models.IsErrWebhookNotExist(err) {
 			ctx.Status(404)
 		} else {
-			ctx.Error(500, "GetWebhookByID", err)
+			ctx.Error(500, "GetWebhookOfRepoByID", err)
 		}
 		return
 	}

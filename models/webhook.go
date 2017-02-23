@@ -197,6 +197,15 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	return bean, nil
 }
 
+// GetWebhookByID returns webhook by given ID.
+// Use this function with caution of accessing unauthorized webhook,
+// which means should only be used in non-user interactive functions.
+func GetWebhookByID(id int64) (*Webhook, error) {
+	return getWebhook(&Webhook{
+		ID: id,
+	})
+}
+
 // GetWebhookOfRepoByID returns webhook of repository by given ID.
 func GetWebhookOfRepoByID(repoID, id int64) (*Webhook, error) {
 	return getWebhook(&Webhook{
@@ -557,9 +566,9 @@ func (t *HookTask) deliver() {
 		}
 
 		// Update webhook last delivery status.
-		w, err := GetWebhookOfRepoByID(t.RepoID, t.HookID)
+		w, err := GetWebhookByID(t.HookID)
 		if err != nil {
-			log.Error(5, "GetWebhookByID: %v", err)
+			log.Error(3, "GetWebhookByID: %v", err)
 			return
 		}
 		if t.IsSucceed {
@@ -568,7 +577,7 @@ func (t *HookTask) deliver() {
 			w.LastStatus = HOOK_STATUS_FAILED
 		}
 		if err = UpdateWebhook(w); err != nil {
-			log.Error(5, "UpdateWebhook: %v", err)
+			log.Error(3, "UpdateWebhook: %v", err)
 			return
 		}
 	}()
