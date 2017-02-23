@@ -341,7 +341,7 @@ function initRepository() {
     // Branches
     if ($('.repository.settings.branches').length > 0) {
         initFilterSearchDropdown('.protected-branches .dropdown');
-        $('.enable-protection').change(function () {
+        $('.enable-protection, .enable-whitelist').change(function () {
             if (this.checked) {
                 $($(this).data('target')).removeClass('disabled');
             } else {
@@ -1223,7 +1223,9 @@ $(document).ready(function () {
     });
 
     // Semantic UI modules.
-    $('.dropdown').dropdown();
+    $('.ui.dropdown').dropdown({
+        forceSelection: false
+    });
     $('.jump.dropdown').dropdown({
         action: 'hide',
         onShow: function () {

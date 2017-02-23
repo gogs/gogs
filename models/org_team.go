@@ -43,9 +43,14 @@ func (t *Team) IsOwnerTeam() bool {
 	return t.Name == OWNER_TEAM
 }
 
+// HasWriteAccess returns true if team has at least write level access mode.
+func (t *Team) HasWriteAccess() bool {
+	return t.Authorize >= ACCESS_MODE_WRITE
+}
+
 // IsTeamMember returns true if given user is a member of team.
-func (t *Team) IsMember(uid int64) bool {
-	return IsTeamMember(t.OrgID, t.ID, uid)
+func (t *Team) IsMember(userID int64) bool {
+	return IsTeamMember(t.OrgID, t.ID, userID)
 }
 
 func (t *Team) getRepositories(e Engine) (err error) {
@@ -260,9 +265,9 @@ func NewTeam(t *Team) error {
 	return sess.Commit()
 }
 
-func getTeam(e Engine, orgId int64, name string) (*Team, error) {
+func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 	t := &Team{
-		OrgID:     orgId,
+		OrgID:     orgID,
 		LowerName: strings.ToLower(name),
 	}
 	has, err := e.Get(t)
@@ -274,14 +279,14 @@ func getTeam(e Engine, orgId int64, name string) (*Team, error) {
 	return t, nil
 }
 
-// GetTeam returns team by given team name and organization.
-func GetTeam(orgId int64, name string) (*Team, error) {
-	return getTeam(x, orgId, name)
+// GetTeamOfOrgByName returns team by given team name and organization.
+func GetTeamOfOrgByName(orgID int64, name string) (*Team, error) {
+	return getTeamOfOrgByName(x, orgID, name)
 }
 
-func getTeamByID(e Engine, teamId int64) (*Team, error) {
+func getTeamByID(e Engine, teamID int64) (*Team, error) {
 	t := new(Team)
-	has, err := e.Id(teamId).Get(t)
+	has, err := e.Id(teamID).Get(t)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -291,8 +296,18 @@ func getTeamByID(e Engine, teamId int64) (*Team, error) {
 }
 
 // GetTeamByID returns team by given ID.
-func GetTeamByID(teamId int64) (*Team, error) {
-	return getTeamByID(x, teamId)
+func GetTeamByID(teamID int64) (*Team, error) {
+	return getTeamByID(x, teamID)
+}
+
+func getTeamsByOrgID(e Engine, orgID int64) ([]*Team, error) {
+	teams := make([]*Team, 0, 3)
+	return teams, e.Where("org_id = ?", orgID).Find(&teams)
+}
+
+// GetTeamsByOrgID returns all teams belong to given organization.
+func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
+	return getTeamsByOrgID(x, orgID)
 }
 
 // UpdateTeam updates information of team.

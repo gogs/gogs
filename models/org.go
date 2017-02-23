@@ -32,10 +32,10 @@ func (org *User) IsOrgMember(uid int64) bool {
 }
 
 func (org *User) getTeam(e Engine, name string) (*Team, error) {
-	return getTeam(e, org.ID, name)
+	return getTeamOfOrgByName(e, org.ID, name)
 }
 
-// GetTeam returns named team of organization.
+// GetTeamOfOrgByName returns named team of organization.
 func (org *User) GetTeam(name string) (*Team, error) {
 	return org.getTeam(x, name)
 }
@@ -49,8 +49,9 @@ func (org *User) GetOwnerTeam() (*Team, error) {
 	return org.getOwnerTeam(x)
 }
 
-func (org *User) getTeams(e Engine) error {
-	return e.Where("org_id=?", org.ID).Find(&org.Teams)
+func (org *User) getTeams(e Engine) (err error) {
+	org.Teams, err = getTeamsByOrgID(e, org.ID)
+	return err
 }
 
 // GetTeams returns all teams that belong to organization.
@@ -502,7 +503,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	repos := make([]*Repository, 0, pageSize)
 	// FIXME: use XORM chain operations instead of raw SQL.
 	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
-	INNER JOIN team_repo 
+	INNER JOIN team_repo
 	ON team_repo.repo_id = repository.id
 	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
 	GROUP BY repository.id
@@ -514,7 +515,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	}
 
 	results, err := x.Query(fmt.Sprintf(`SELECT repository.id FROM repository
-	INNER JOIN team_repo 
+	INNER JOIN team_repo
 	ON team_repo.repo_id = repository.id
 	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
 	GROUP BY repository.id
@@ -541,7 +542,7 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 
 	repos := make([]*Repository, 0, 10)
 	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
-	INNER JOIN team_repo 
+	INNER JOIN team_repo
 	ON team_repo.repo_id = repository.id AND repository.is_mirror = ?
 	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
 	GROUP BY repository.id

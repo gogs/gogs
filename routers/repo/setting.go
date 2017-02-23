@@ -415,7 +415,6 @@ func SettingsProtectedBranch(ctx *context.Context) {
 
 	ctx.Data["Title"] = ctx.Tr("repo.settings.protected_branches") + " - " + branch
 	ctx.Data["PageIsSettingsBranches"] = true
-	ctx.Data["IsOrgRepo"] = ctx.Repo.Owner.IsOrganization()
 
 	protectBranch, err := models.GetProtectBranchOfRepoByName(ctx.Repo.Repository.ID, branch)
 	if err != nil {
@@ -428,6 +427,23 @@ func SettingsProtectedBranch(ctx *context.Context) {
 		protectBranch = &models.ProtectBranch{
 			Name: branch,
 		}
+	}
+
+	if ctx.Repo.Owner.IsOrganization() {
+		users, err := ctx.Repo.Repository.GetWriters()
+		if err != nil {
+			ctx.Handle(500, "Repo.Repository.GetPushers", err)
+			return
+		}
+		ctx.Data["Users"] = users
+		ctx.Data["whitelist_users"] = protectBranch.WhitelistUserIDs
+
+		if err = ctx.Repo.Owner.GetTeams(); err != nil {
+			ctx.Handle(500, "Repo.Owner.GetTeams", err)
+			return
+		}
+		ctx.Data["Teams"] = ctx.Repo.Owner.Teams
+		ctx.Data["whitelist_teams"] = protectBranch.WhitelistTeamIDs
 	}
 
 	ctx.Data["Branch"] = protectBranch
@@ -457,8 +473,14 @@ func SettingsProtectedBranchPost(ctx *context.Context, form auth.ProtectBranchFo
 
 	protectBranch.Protected = form.Protected
 	protectBranch.RequirePullRequest = form.RequirePullRequest
-	if err = models.UpdateProtectBranch(protectBranch); err != nil {
-		ctx.Handle(500, "UpdateProtectBranch", err)
+	protectBranch.EnableWhitelist = form.EnableWhitelist
+	if ctx.Repo.Owner.IsOrganization() {
+		err = models.UpdateOrgProtectBranch(ctx.Repo.Repository, protectBranch, form.WhitelistUsers, form.WhitelistTeams)
+	} else {
+		err = models.UpdateProtectBranch(protectBranch)
+	}
+	if err != nil {
+		ctx.Handle(500, "UpdateOrgProtectBranch/UpdateProtectBranch", err)
 		return
 	}
 

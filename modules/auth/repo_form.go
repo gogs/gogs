@@ -116,6 +116,9 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 type ProtectBranchForm struct {
 	Protected          bool
 	RequirePullRequest bool
+	EnableWhitelist    bool
+	WhitelistUsers     string
+	WhitelistTeams     string
 }
 
 func (f *ProtectBranchForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

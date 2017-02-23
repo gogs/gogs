@@ -100,6 +100,12 @@ func runHookPreReceive(c *cli.Context) error {
 			continue
 		}
 
+		// Check if whitelist is enabled
+		userID := com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64()
+		if protectBranch.EnableWhitelist && !models.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
+			fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
+		}
+
 		// Check if branch allows direct push
 		if protectBranch.RequirePullRequest {
 			fail(fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")

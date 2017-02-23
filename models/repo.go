@@ -329,14 +329,14 @@ func (repo *Repository) DeleteWiki() {
 	}
 }
 
-// getAssignees returns a list of users who can be assigned to issues in this repository.
-func (repo *Repository) getAssignees(e Engine) (_ []*User, err error) {
+// getUsersWithAccesMode returns users that have at least given access mode to the repository.
+func (repo *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*User, err error) {
 	if err = repo.getOwner(e); err != nil {
 		return nil, err
 	}
 
 	accesses := make([]*Access, 0, 10)
-	if err = e.Where("repo_id = ? AND mode >= ?", repo.ID, ACCESS_MODE_READ).Find(&accesses); err != nil {
+	if err = e.Where("repo_id = ? AND mode >= ?", repo.ID, mode).Find(&accesses); err != nil {
 		return nil, err
 	}
 
@@ -360,7 +360,12 @@ func (repo *Repository) getAssignees(e Engine) (_ []*User, err error) {
 	return users, nil
 }
 
-// GetAssignees returns all users that have write access and can be assigned to issues
+// getAssignees returns a list of users who can be assigned to issues in this repository.
+func (repo *Repository) getAssignees(e Engine) (_ []*User, err error) {
+	return repo.getUsersWithAccesMode(e, ACCESS_MODE_READ)
+}
+
+// GetAssignees returns all users that have read access and can be assigned to issues
 // of the repository,
 func (repo *Repository) GetAssignees() (_ []*User, err error) {
 	return repo.getAssignees(x)
@@ -369,6 +374,11 @@ func (repo *Repository) GetAssignees() (_ []*User, err error) {
 // GetAssigneeByID returns the user that has write access of repository by given ID.
 func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
 	return GetAssigneeByID(repo, userID)
+}
+
+// GetWriters returns all users that have write access to the repository.
+func (repo *Repository) GetWriters() (_ []*User, err error) {
+	return repo.getUsersWithAccesMode(x, ACCESS_MODE_WRITE)
 }
 
 // GetMilestoneByID returns the milestone belongs to repository by given ID.
@@ -1015,10 +1025,10 @@ func CreateRepository(u *User, opts CreateRepoOptions) (_ *Repository, err error
 		}
 
 		_, stderr, err := process.ExecDir(-1,
-			repoPath, fmt.Sprintf("CreateRepository(git update-server-info): %s", repoPath),
+			repoPath, fmt.Sprintf("CreateRepository 'git update-server-info': %s", repoPath),
 			"git", "update-server-info")
 		if err != nil {
-			return nil, errors.New("CreateRepository(git update-server-info): " + stderr)
+			return nil, errors.New("CreateRepository 'git update-server-info': " + stderr)
 		}
 	}
 
