@@ -293,7 +293,7 @@ func Issues(ctx *context.Context) {
 		}
 
 		// Check if user has access to given repository.
-		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(ctxUser) {
+		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(ctxUser.ID) {
 			ctx.Handle(404, "Issues", fmt.Errorf("#%d", repoID))
 			return
 		}

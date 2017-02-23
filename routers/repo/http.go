@@ -127,7 +127,7 @@ func HTTPContexter() macaron.Handler {
 		if isPull {
 			mode = models.ACCESS_MODE_READ
 		}
-		has, err := models.HasAccess(authUser, repo, mode)
+		has, err := models.HasAccess(authUser.ID, repo, mode)
 		if err != nil {
 			ctx.Handle(http.StatusInternalServerError, "HasAccess", err)
 			return

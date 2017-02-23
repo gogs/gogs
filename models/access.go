@@ -57,41 +57,45 @@ type Access struct {
 	Mode   AccessMode
 }
 
-func accessLevel(e Engine, u *User, repo *Repository) (AccessMode, error) {
+func accessLevel(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 	mode := ACCESS_MODE_NONE
+	// Everyone has read access to public repository
 	if !repo.IsPrivate {
 		mode = ACCESS_MODE_READ
 	}
 
-	if u == nil {
+	if userID <= 0 {
 		return mode, nil
 	}
 
-	if u.ID == repo.OwnerID {
+	if userID == repo.OwnerID {
 		return ACCESS_MODE_OWNER, nil
 	}
 
-	a := &Access{UserID: u.ID, RepoID: repo.ID}
-	if has, err := e.Get(a); !has || err != nil {
+	access := &Access{
+		UserID: userID,
+		RepoID: repo.ID,
+	}
+	if has, err := e.Get(access); !has || err != nil {
 		return mode, err
 	}
-	return a.Mode, nil
+	return access.Mode, nil
 }
 
 // AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the
-// user does not have access. User can be nil!
-func AccessLevel(u *User, repo *Repository) (AccessMode, error) {
-	return accessLevel(x, u, repo)
+// user does not have access.
+func AccessLevel(userID int64, repo *Repository) (AccessMode, error) {
+	return accessLevel(x, userID, repo)
 }
 
-func hasAccess(e Engine, u *User, repo *Repository, testMode AccessMode) (bool, error) {
-	mode, err := accessLevel(e, u, repo)
+func hasAccess(e Engine, userID int64, repo *Repository, testMode AccessMode) (bool, error) {
+	mode, err := accessLevel(e, userID, repo)
 	return mode >= testMode, err
 }
 
 // HasAccess returns true if someone has the request access level. User can be nil!
-func HasAccess(u *User, repo *Repository, testMode AccessMode) (bool, error) {
-	return hasAccess(x, u, repo, testMode)
+func HasAccess(userID int64, repo *Repository, testMode AccessMode) (bool, error) {
+	return hasAccess(x, userID, repo, testMode)
 }
 
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.

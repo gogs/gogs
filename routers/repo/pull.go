@@ -49,7 +49,7 @@ func getForkRepository(ctx *context.Context) *models.Repository {
 		return nil
 	}
 
-	if !forkRepo.CanBeForked() || !forkRepo.HasAccess(ctx.User) {
+	if !forkRepo.CanBeForked() || !forkRepo.HasAccess(ctx.User.ID) {
 		ctx.Handle(404, "getForkRepository", nil)
 		return nil
 	}
