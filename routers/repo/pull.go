@@ -124,7 +124,7 @@ func ForkPost(ctx *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err := models.ForkRepository(ctxUser, forkRepo, f.RepoName, f.Description)
+	repo, err := models.ForkRepository(ctx.User, ctxUser, forkRepo, f.RepoName, f.Description)
 	if err != nil {
 		ctx.Data["Err_RepoName"] = true
 		switch {

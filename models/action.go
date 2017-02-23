@@ -172,26 +172,26 @@ func (a *Action) GetIssueContent() string {
 	return issue.Content
 }
 
-func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
+func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
-		ActUserID:    u.ID,
-		ActUserName:  u.Name,
+		ActUserID:    doer.ID,
+		ActUserName:  doer.Name,
 		OpType:       ACTION_CREATE_REPO,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%d': %v", u.ID, repo.ID, err)
+		return fmt.Errorf("notify watchers '%d/%d': %v", owner.ID, repo.ID, err)
 	}
 
-	log.Trace("action.newRepoAction: %s/%s", u.Name, repo.Name)
+	log.Trace("action.newRepoAction: %s/%s", owner.Name, repo.Name)
 	return err
 }
 
 // NewRepoAction adds new action for creating repository.
-func NewRepoAction(u *User, repo *Repository) (err error) {
-	return newRepoAction(x, u, repo)
+func NewRepoAction(doer, owner *User, repo *Repository) (err error) {
+	return newRepoAction(x, doer, owner, repo)
 }
 
 func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
