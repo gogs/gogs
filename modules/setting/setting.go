@@ -187,7 +187,7 @@ var (
 
 	// Session settings
 	SessionConfig  session.Options
-	CSRFCookieName = "_csrf"
+	CSRFCookieName string
 
 	// Cron tasks
 	Cron struct {
@@ -744,6 +744,7 @@ func newSessionService() {
 	SessionConfig.Secure = Cfg.Section("session").Key("COOKIE_SECURE").MustBool()
 	SessionConfig.Gclifetime = Cfg.Section("session").Key("GC_INTERVAL_TIME").MustInt64(86400)
 	SessionConfig.Maxlifetime = Cfg.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)
+	CSRFCookieName = Cfg.Section("session").Key("CSRF_COOKIE_NAME").MustString("_csrf")
 
 	log.Info("Session Service Enabled")
 }
