@@ -26,6 +26,7 @@ import (
 
 type ActionType int
 
+// To maintain backward compatibility only append to the end of list
 const (
 	ACTION_CREATE_REPO         ActionType = iota + 1 // 1
 	ACTION_RENAME_REPO                               // 2
@@ -42,6 +43,9 @@ const (
 	ACTION_REOPEN_ISSUE                              // 13
 	ACTION_CLOSE_PULL_REQUEST                        // 14
 	ACTION_REOPEN_PULL_REQUEST                       // 15
+	ACTION_CREATE_BRANCH                             // 16
+	ACTION_DELETE_BRANCH                             // 17
+	ACTION_DELETE_TAG                                // 18
 )
 
 var (
@@ -66,7 +70,7 @@ func init() {
 // Action represents user operation type and other information to repository,
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
-	ID           int64 `xorm:"pk autoincr"`
+	ID           int64
 	UserID       int64 // Receiver user id.
 	OpType       ActionType
 	ActUserID    int64  // Action user id.
@@ -485,30 +489,32 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		return fmt.Errorf("Marshal: %v", err)
 	}
 
+	defer func() {
+		// It's safe to fail when the whole function is called during hook execution
+		// because resource released after exit.
+		go HookQueue.Add(repo.ID)
+	}()
+
 	refName := git.RefEndName(opts.RefFullName)
-	if err = NotifyWatchers(&Action{
+	action := &Action{
 		ActUserID:    pusher.ID,
 		ActUserName:  pusher.Name,
-		OpType:       opType,
 		Content:      string(data),
 		RepoID:       repo.ID,
 		RepoUserName: repo.MustOwner().Name,
 		RepoName:     repo.Name,
 		RefName:      refName,
 		IsPrivate:    repo.IsPrivate,
-	}); err != nil {
-		return fmt.Errorf("NotifyWatchers: %v", err)
 	}
-
-	defer func() {
-		go HookQueue.Add(repo.ID)
-	}()
 
 	apiRepo := repo.APIFormat(nil)
 	apiPusher := pusher.APIFormat()
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
 		if isDelRef {
+			action.OpType = ACTION_DELETE_BRANCH
+			MustNotifyWatchers(action)
+
 			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
@@ -525,6 +531,9 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 
 		compareURL := setting.AppUrl + opts.Commits.CompareURL
 		if isNewRef {
+			action.OpType = ACTION_CREATE_BRANCH
+			MustNotifyWatchers(action)
+
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 				Ref:           refName,
@@ -537,6 +546,8 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			}
 		}
 
+		action.OpType = ACTION_COMMIT_REPO
+		MustNotifyWatchers(action)
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
@@ -552,6 +563,9 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 
 	case ACTION_PUSH_TAG: // Tag
 		if isDelRef {
+			action.OpType = ACTION_DELETE_TAG
+			MustNotifyWatchers(action)
+
 			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
@@ -564,6 +578,8 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return nil
 		}
 
+		action.OpType = ACTION_PUSH_TAG
+		MustNotifyWatchers(action)
 		if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 			Ref:           refName,
 			RefType:       "tag",

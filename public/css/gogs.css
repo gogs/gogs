@@ -2921,7 +2921,7 @@ footer .ui.language .menu {
   font-family: Consolas, monospace;
 }
 .feeds .news code {
-  padding: 1px;
+  padding: 3px;
   font-size: 85%;
   background-color: rgba(0, 0, 0, 0.04);
   border-radius: 3px;
