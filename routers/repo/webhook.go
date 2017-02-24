@@ -110,6 +110,7 @@ func ParseHookEvent(f form.Webhook) *models.HookEvent {
 		ChooseEvents:   f.ChooseEvents(),
 		HookEvents: models.HookEvents{
 			Create:      f.Create,
+			Delete:      f.Delete,
 			Push:        f.Push,
 			PullRequest: f.PullRequest,
 		},

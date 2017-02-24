@@ -135,6 +135,7 @@ func (f *ProtectBranch) Validate(ctx *macaron.Context, errs binding.Errors) bind
 type Webhook struct {
 	Events      string
 	Create      bool
+	Delete      bool
 	Push        bool
 	PullRequest bool
 	Active      bool

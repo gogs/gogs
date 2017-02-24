@@ -63,6 +63,7 @@ func IsValidHookContentType(name string) bool {
 
 type HookEvents struct {
 	Create      bool `json:"create"`
+	Delete      bool `json:"delete"`
 	Push        bool `json:"push"`
 	PullRequest bool `json:"pull_request"`
 }
@@ -154,6 +155,12 @@ func (w *Webhook) UpdateEvent() error {
 func (w *Webhook) HasCreateEvent() bool {
 	return w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.Create)
+}
+
+// HasDeleteEvent returns true if hook enabled delete event.
+func (w *Webhook) HasDeleteEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Delete)
 }
 
 // HasPushEvent returns true if hook enabled push event.
@@ -337,6 +344,7 @@ type HookEventType string
 
 const (
 	HOOK_EVENT_CREATE       HookEventType = "create"
+	HOOK_EVENT_DELETE       HookEventType = "delete"
 	HOOK_EVENT_PUSH         HookEventType = "push"
 	HOOK_EVENT_PULL_REQUEST HookEventType = "pull_request"
 )
@@ -460,6 +468,10 @@ func prepareWebhooks(repo *Repository, event HookEventType, p api.Payloader, web
 		switch event {
 		case HOOK_EVENT_CREATE:
 			if !w.HasCreateEvent() {
+				continue
+			}
+		case HOOK_EVENT_DELETE:
+			if !w.HasDeleteEvent() {
 				continue
 			}
 		case HOOK_EVENT_PUSH:

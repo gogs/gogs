@@ -32,6 +32,16 @@
 				</div>
 			</div>
 		</div>
+		<!-- Delete -->
+		<div class="seven wide column">
+			<div class="field">
+				<div class="ui checkbox">
+					<input class="hidden" name="delete" type="checkbox" tabindex="0" {{if .Webhook.Delete}}checked{{end}}>
+					<label>{{.i18n.Tr "repo.settings.event_delete"}}</label>
+					<span class="help">{{.i18n.Tr "repo.settings.event_delete_desc"}}</span>
+				</div>
+			</div>
+		</div>
 		<!-- Push -->
 		<div class="seven wide column">
 			<div class="field">

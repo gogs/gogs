@@ -458,18 +458,16 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		return fmt.Errorf("UpdateRepository: %v", err)
 	}
 
-	isNewBranch := false
+	isNewRef := opts.OldCommitID == git.EMPTY_SHA
+	isDelRef := opts.NewCommitID == git.EMPTY_SHA
+
 	opType := ACTION_COMMIT_REPO
-	// Check it's tag push or branch.
+	// Check if it's tag push or branch.
 	if strings.HasPrefix(opts.RefFullName, git.TAG_PREFIX) {
 		opType = ACTION_PUSH_TAG
-		opts.Commits = &PushCommits{}
 	} else {
-		// TODO: detect branch deletion
 		// if not the first commit, set the compare URL.
-		if opts.OldCommitID == git.EMPTY_SHA {
-			isNewBranch = true
-		} else {
+		if !isNewRef && !isDelRef {
 			opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
 		}
 
@@ -506,20 +504,36 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		go HookQueue.Add(repo.ID)
 	}()
 
-	apiPusher := pusher.APIFormat()
 	apiRepo := repo.APIFormat(nil)
+	apiPusher := pusher.APIFormat()
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
+		if isDelRef {
+			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
+				Ref:        refName,
+				RefType:    "branch",
+				PusherType: api.PUSHER_TYPE_USER,
+				Repo:       apiRepo,
+				Sender:     apiPusher,
+			}); err != nil {
+				return fmt.Errorf("PrepareWebhooks.(delete branch): %v", err)
+			}
+
+			// Delete branch doesn't have anything to push or compare
+			return nil
+		}
+
 		compareURL := setting.AppUrl + opts.Commits.CompareURL
-		if isNewBranch {
+		if isNewRef {
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-				Ref:     refName,
-				RefType: "branch",
-				Repo:    apiRepo,
-				Sender:  apiPusher,
+				Ref:           refName,
+				RefType:       "branch",
+				DefaultBranch: repo.DefaultBranch,
+				Repo:          apiRepo,
+				Sender:        apiPusher,
 			}); err != nil {
-				return fmt.Errorf("PrepareWebhooks (new branch): %v", err)
+				return fmt.Errorf("PrepareWebhooks.(new branch): %v", err)
 			}
 		}
 
@@ -533,16 +547,32 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
 		}); err != nil {
-			return fmt.Errorf("PrepareWebhooks (new commit): %v", err)
+			return fmt.Errorf("PrepareWebhooks.(new commit): %v", err)
 		}
 
-	case ACTION_PUSH_TAG: // Create
-		return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-			Ref:     refName,
-			RefType: "tag",
-			Repo:    apiRepo,
-			Sender:  apiPusher,
-		})
+	case ACTION_PUSH_TAG: // Tag
+		if isDelRef {
+			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
+				Ref:        refName,
+				RefType:    "tag",
+				PusherType: api.PUSHER_TYPE_USER,
+				Repo:       apiRepo,
+				Sender:     apiPusher,
+			}); err != nil {
+				return fmt.Errorf("PrepareWebhooks.(delete tag): %v", err)
+			}
+			return nil
+		}
+
+		if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+			Ref:           refName,
+			RefType:       "tag",
+			DefaultBranch: repo.DefaultBranch,
+			Repo:          apiRepo,
+			Sender:        apiPusher,
+		}); err != nil {
+			return fmt.Errorf("PrepareWebhooks.(new tag): %v", err)
+		}
 	}
 
 	return nil
