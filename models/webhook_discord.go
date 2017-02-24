@@ -68,22 +68,35 @@ func DiscordSHALinkFormatter(url string, text string) string {
 	return fmt.Sprintf("[`%s`](%s)", text, url)
 }
 
-func getDiscordCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*DiscordPayload, error) {
-	// Created tag/branch
+// getDiscordCreatePayload composes Discord payload for create new branch or tag.
+func getDiscordCreatePayload(p *api.CreatePayload) (*DiscordPayload, error) {
 	refName := git.RefEndName(p.Ref)
-
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	content := fmt.Sprintf("Created new %s: %s/%s", p.RefType, repoLink, refLink)
 
-	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
 	return &DiscordPayload{
-		Username:  slack.Username,
-		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
 			URL:         setting.AppUrl + p.Sender.UserName,
-			Color:       int(color),
+			Author: &DiscordEmbedAuthorObject{
+				Name:    p.Sender.UserName,
+				IconURL: p.Sender.AvatarUrl,
+			},
+		}},
+	}, nil
+}
+
+// getDiscordDeletePayload composes Discord payload for delete a branch or tag.
+func getDiscordDeletePayload(p *api.DeletePayload) (*DiscordPayload, error) {
+	refName := git.RefEndName(p.Ref)
+	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
+	content := fmt.Sprintf("Deleted %s: %s/%s", p.RefType, repoLink, refName)
+
+	return &DiscordPayload{
+		Embeds: []*DiscordEmbedObject{{
+			Description: content,
+			URL:         setting.AppUrl + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -206,22 +219,32 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (
 	}, nil
 }
 
-func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (*DiscordPayload, error) {
-	d := new(DiscordPayload)
-
+func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
-		return d, fmt.Errorf("GetDiscordPayload meta json: %v", err)
+		return nil, fmt.Errorf("json.Unmarshal: %v", err)
 	}
 
 	switch event {
 	case HOOK_EVENT_CREATE:
-		return getDiscordCreatePayload(p.(*api.CreatePayload), slack)
+		payload, err = getDiscordCreatePayload(p.(*api.CreatePayload))
+	case HOOK_EVENT_DELETE:
+		payload, err = getDiscordDeletePayload(p.(*api.DeletePayload))
 	case HOOK_EVENT_PUSH:
-		return getDiscordPushPayload(p.(*api.PushPayload), slack)
+		payload, err = getDiscordPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
-		return getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
+		payload, err = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("event '%s': %v", event, err)
 	}
 
-	return d, nil
+	payload.Username = slack.Username
+	payload.AvatarURL = slack.IconURL
+	if len(payload.Embeds) > 0 {
+		color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
+		payload.Embeds[0].Color = int(color)
+	}
+
+	return payload, nil
 }

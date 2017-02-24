@@ -14,7 +14,7 @@ import (
 )
 
 func Version() string {
-	return "0.12.6"
+	return "0.12.7"
 }
 
 // Client represents a Gogs API client.

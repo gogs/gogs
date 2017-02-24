@@ -69,19 +69,24 @@ func SlackLinkFormatter(url string, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
 
-func getSlackCreatePayload(p *api.CreatePayload, slack *SlackMeta) (*SlackPayload, error) {
-	// Created tag/branch
+// getSlackCreatePayload composes Slack payload for create new branch or tag.
+func getSlackCreatePayload(p *api.CreatePayload) (*SlackPayload, error) {
 	refName := git.RefEndName(p.Ref)
-
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
-
 	return &SlackPayload{
-		Channel:  slack.Channel,
-		Text:     text,
-		Username: slack.Username,
-		IconURL:  slack.IconURL,
+		Text: text,
+	}, nil
+}
+
+// getSlackDeletePayload composes Slack payload for delete a branch or tag.
+func getSlackDeletePayload(p *api.DeletePayload) (*SlackPayload, error) {
+	refName := git.RefEndName(p.Ref)
+	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
+	text := fmt.Sprintf("[%s:%s] %s deleted by %s", repoLink, refName, p.RefType, p.Sender.UserName)
+	return &SlackPayload{
+		Text: text,
 	}, nil
 }
 
@@ -178,22 +183,32 @@ func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*S
 	}, nil
 }
 
-func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (*SlackPayload, error) {
-	s := new(SlackPayload)
-
+func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
-		return s, fmt.Errorf("GetSlackPayload meta json: %v", err)
+		return nil, fmt.Errorf("json.Unmarshal: %v", err)
 	}
 
 	switch event {
 	case HOOK_EVENT_CREATE:
-		return getSlackCreatePayload(p.(*api.CreatePayload), slack)
+		payload, err = getSlackCreatePayload(p.(*api.CreatePayload))
+	case HOOK_EVENT_DELETE:
+		payload, err = getSlackDeletePayload(p.(*api.DeletePayload))
 	case HOOK_EVENT_PUSH:
-		return getSlackPushPayload(p.(*api.PushPayload), slack)
+		payload, err = getSlackPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
-		return getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
+		payload, err = getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("event '%s': %v", event, err)
 	}
 
-	return s, nil
+	payload.Channel = slack.Channel
+	payload.Username = slack.Username
+	payload.IconURL = slack.IconURL
+	if len(payload.Attachments) > 0 {
+		payload.Attachments[0].Color = slack.Color
+	}
+
+	return payload, nil
 }

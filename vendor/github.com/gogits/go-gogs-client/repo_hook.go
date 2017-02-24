@@ -91,6 +91,7 @@ type PayloadCommit struct {
 
 var (
 	_ Payloader = &CreatePayload{}
+	_ Payloader = &DeletePayload{}
 	_ Payloader = &PushPayload{}
 	_ Payloader = &PullRequestPayload{}
 )
@@ -103,10 +104,11 @@ var (
 //         \/             \/     \/          \/
 
 type CreatePayload struct {
-	Ref     string      `json:"ref"`
-	RefType string      `json:"ref_type"`
-	Repo    *Repository `json:"repository"`
-	Sender  *User       `json:"sender"`
+	Ref           string      `json:"ref"`
+	RefType       string      `json:"ref_type"`
+	DefaultBranch string      `json:"default_branch"`
+	Repo          *Repository `json:"repository"`
+	Sender        *User       `json:"sender"`
 }
 
 func (p *CreatePayload) JSONPayload() ([]byte, error) {
@@ -131,6 +133,31 @@ func ParseCreateHook(raw []byte) (*CreatePayload, error) {
 		return nil, ErrInvalidReceiveHook
 	}
 	return hook, nil
+}
+
+// ________         .__          __
+// \______ \   ____ |  |   _____/  |_  ____
+//  |    |  \_/ __ \|  | _/ __ \   __\/ __ \
+//  |    `   \  ___/|  |_\  ___/|  | \  ___/
+// /_______  /\___  >____/\___  >__|  \___  >
+//         \/     \/          \/          \/
+
+type PusherType string
+
+const (
+	PUSHER_TYPE_USER PusherType = "user"
+)
+
+type DeletePayload struct {
+	Ref        string      `json:"ref"`
+	RefType    string      `json:"ref_type"`
+	PusherType PusherType  `json:"pusher_type"`
+	Repo       *Repository `json:"repository"`
+	Sender     *User       `json:"sender"`
+}
+
+func (p *DeletePayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
 }
 
 // __________             .__
