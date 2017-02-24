@@ -72,6 +72,8 @@
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 
 	<meta name="theme-color" content="{{ThemeColorMetaTag}}">
+
+	{{template "inject/head" .}}
 </head>
 <body>
 	<div class="full height">
