@@ -930,6 +930,15 @@ function initWebhook() {
         }
     });
 
+    // Highlight payload on first click
+    $('.hook.history.list .toggle.button').click(function () {
+        $($(this).data('target') + ' .nohighlight').each(function () {
+            var $this = $(this);
+            $this.removeClass('nohighlight');
+            setTimeout(function(){ hljs.highlightBlock($this[0]) }, 500);
+        })
+    })
+
     // Test delivery
     $('#test-delivery').click(function () {
         var $this = $(this);
