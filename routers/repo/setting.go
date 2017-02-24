@@ -438,11 +438,12 @@ func SettingsProtectedBranch(ctx *context.Context) {
 		ctx.Data["Users"] = users
 		ctx.Data["whitelist_users"] = protectBranch.WhitelistUserIDs
 
-		if err = ctx.Repo.Owner.GetTeams(); err != nil {
-			ctx.Handle(500, "Repo.Owner.GetTeams", err)
+		teams, err := ctx.Repo.Owner.TeamsHaveAccessToRepo(ctx.Repo.Repository.ID, models.ACCESS_MODE_WRITE)
+		if err != nil {
+			ctx.Handle(500, "Repo.Owner.TeamsHaveAccessToRepo", err)
 			return
 		}
-		ctx.Data["Teams"] = ctx.Repo.Owner.Teams
+		ctx.Data["Teams"] = teams
 		ctx.Data["whitelist_teams"] = protectBranch.WhitelistTeamIDs
 	}
 

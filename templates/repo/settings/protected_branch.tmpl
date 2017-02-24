@@ -46,7 +46,7 @@
 												{{range .Users}}
 													<div class="item" data-value="{{.ID}}">
 														<img class="ui mini image" src="{{.RelAvatarLink}}">
-														{{.Name}}
+														{{.DisplayName}}
 													</div>
 												{{end}}
 											</div>
@@ -60,12 +60,10 @@
 											<div class="default text">{{.i18n.Tr "repo.settings.protect_whitelist_search_teams"}}</div>
 											<div class="menu">
 												{{range .Teams}}
-													{{if and (not .IsOwnerTeam) .HasWriteAccess}}
-														<div class="item" data-value="{{.ID}}">
-															<i class="octicon octicon-jersey"></i>
-															{{.Name}}
-														</div>
-													{{end}}
+													<div class="item" data-value="{{.ID}}">
+														<i class="octicon octicon-jersey"></i>
+														{{.Name}}
+													</div>
 												{{end}}
 											</div>
 										</div>

@@ -171,9 +171,9 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	if protectBranch.WhitelistTeamIDs != whitelistTeamIDs {
 		hasTeamsChanged = true
 		teamIDs := base.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
-		teams, err := GetTeamsByOrgID(repo.OwnerID)
+		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, ACCESS_MODE_WRITE)
 		if err != nil {
-			return fmt.Errorf("GetTeamsByOrgID [org_id: %d]: %v", repo.OwnerID, err)
+			return fmt.Errorf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
 		}
 		validTeamIDs = make([]int64, 0, len(teams))
 		for i := range teams {
@@ -190,7 +190,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	if hasUsersChanged || hasTeamsChanged {
 		mergedUserIDs := make(map[int64]bool)
 		for _, userID := range validUserIDs {
-			mergedUserIDs[userID] = true
+			// Empty whitelist users can cause an ID with 0
+			if userID != 0 {
+				mergedUserIDs[userID] = true
+			}
 		}
 
 		for _, teamID := range validTeamIDs {
@@ -225,7 +228,6 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		if _, err = sess.Insert(protectBranch); err != nil {
 			return fmt.Errorf("Insert: %v", err)
 		}
-		return
 	}
 
 	if _, err = sess.Id(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
