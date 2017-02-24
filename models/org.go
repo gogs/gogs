@@ -59,6 +59,11 @@ func (org *User) GetTeams() error {
 	return org.getTeams(x)
 }
 
+// TeamsHaveAccessToRepo returns all teamsthat have given access level to the repository.
+func (org *User) TeamsHaveAccessToRepo(repoID int64, mode AccessMode) ([]*Team, error) {
+	return GetTeamsHaveAccessToRepo(org.ID, repoID, mode)
+}
+
 // GetMembers returns all members of organization.
 func (org *User) GetMembers() error {
 	ous, err := GetOrgUsersByOrgID(org.ID)
