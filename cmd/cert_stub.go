@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var CmdCert = cli.Command{
+var Cert = cli.Command{
 	Name:        "cert",
 	Usage:       "Generate self-signed certificate",
 	Description: `Please use build tags "cert" to rebuild Gogs in order to have this ability`,

@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	CmdHook = cli.Command{
+	Hook = cli.Command{
 		Name:        "hook",
 		Usage:       "Delegate commands to corresponding Git hooks",
 		Description: "All sub-commands should only be called by Git",

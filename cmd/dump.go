@@ -21,7 +21,7 @@ import (
 	"github.com/gogits/gogs/modules/setting"
 )
 
-var CmdDump = cli.Command{
+var Dump = cli.Command{
 	Name:  "dump",
 	Usage: "Dump Gogs files and database",
 	Description: `Dump compresses all related files and database into zip file.
