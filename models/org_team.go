@@ -444,39 +444,34 @@ func GetTeamMembers(teamID int64) ([]*User, error) {
 	return getTeamMembers(x, teamID)
 }
 
-func getUserTeams(e Engine, orgId, uid int64) ([]*Team, error) {
-	tus := make([]*TeamUser, 0, 5)
-	if err := e.Where("uid=?", uid).And("org_id=?", orgId).Find(&tus); err != nil {
+func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
+	teamUsers := make([]*TeamUser, 0, 5)
+	if err := e.Where("uid = ?", userID).And("org_id = ?", orgID).Find(&teamUsers); err != nil {
 		return nil, err
 	}
 
-	ts := make([]*Team, len(tus))
-	for i, tu := range tus {
-		t := new(Team)
-		has, err := e.Id(tu.TeamID).Get(t)
-		if err != nil {
-			return nil, err
-		} else if !has {
-			return nil, ErrTeamNotExist
-		}
-		ts[i] = t
+	teamIDs := make([]int64, len(teamUsers))
+	for i := range teamUsers {
+		teamIDs[i] = teamUsers[i].TeamID
 	}
-	return ts, nil
+
+	teams := make([]*Team, 0, len(teamIDs))
+	return teams, e.Where("org_id = ?", orgID).In("id", teamIDs).Find(&teams)
 }
 
 // GetUserTeams returns all teams that user belongs to in given organization.
-func GetUserTeams(orgId, uid int64) ([]*Team, error) {
-	return getUserTeams(x, orgId, uid)
+func GetUserTeams(orgID, userID int64) ([]*Team, error) {
+	return getUserTeams(x, orgID, userID)
 }
 
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
-func AddTeamMember(orgID, teamID, uid int64) error {
-	if IsTeamMember(orgID, teamID, uid) {
+func AddTeamMember(orgID, teamID, userID int64) error {
+	if IsTeamMember(orgID, teamID, userID) {
 		return nil
 	}
 
-	if err := AddOrgUser(orgID, uid); err != nil {
+	if err := AddOrgUser(orgID, userID); err != nil {
 		return err
 	}
 
@@ -498,7 +493,7 @@ func AddTeamMember(orgID, teamID, uid int64) error {
 	}
 
 	tu := &TeamUser{
-		UID:    uid,
+		UID:    userID,
 		OrgID:  orgID,
 		TeamID: teamID,
 	}
@@ -517,7 +512,7 @@ func AddTeamMember(orgID, teamID, uid int64) error {
 
 	// We make sure it exists before.
 	ou := new(OrgUser)
-	if _, err = sess.Where("uid = ?", uid).And("org_id = ?", orgID).Get(ou); err != nil {
+	if _, err = sess.Where("uid = ?", userID).And("org_id = ?", orgID).Get(ou); err != nil {
 		return err
 	}
 	ou.NumTeams++

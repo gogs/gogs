@@ -62,17 +62,10 @@ func (repo *Repository) AddCollaborator(u *User) error {
 		return err
 	}
 
-	if _, err = sess.InsertOne(collaboration); err != nil {
+	if _, err = sess.Insert(collaboration); err != nil {
 		return err
-	}
-
-	if repo.Owner.IsOrganization() {
-		err = repo.recalculateTeamAccesses(sess, 0)
-	} else {
-		err = repo.recalculateAccesses(sess)
-	}
-	if err != nil {
-		return fmt.Errorf("recalculateAccesses 'team=%v': %v", repo.Owner.IsOrganization(), err)
+	} else if err = repo.recalculateAccesses(sess); err != nil {
+		return fmt.Errorf("recalculateAccesses [repo_id: %v]: %v", repo.ID, err)
 	}
 
 	return sess.Commit()
@@ -148,6 +141,19 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 	}
 	collaboration.Mode = mode
 
+	// If it's an organizational repository, merge with team access level for highest permission
+	if repo.Owner.IsOrganization() {
+		teams, err := GetUserTeams(repo.OwnerID, userID)
+		if err != nil {
+			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", repo.OwnerID, userID, err)
+		}
+		for i := range teams {
+			if mode < teams[i].Authorize {
+				mode = teams[i].Authorize
+			}
+		}
+	}
+
 	sess := x.NewSession()
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
@@ -173,7 +179,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 		_, err = sess.Insert(access)
 	}
 	if err != nil {
-		return fmt.Errorf("update access table: %v", err)
+		return fmt.Errorf("update/insert access table: %v", err)
 	}
 
 	return sess.Commit()

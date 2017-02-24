@@ -229,7 +229,7 @@ func (repo *Repository) recalculateAccesses(e Engine) error {
 		return repo.recalculateTeamAccesses(e, 0)
 	}
 
-	accessMap := make(map[int64]AccessMode, 20)
+	accessMap := make(map[int64]AccessMode, 10)
 	if err := repo.refreshCollaboratorAccesses(e, accessMap); err != nil {
 		return fmt.Errorf("refreshCollaboratorAccesses: %v", err)
 	}

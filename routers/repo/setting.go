@@ -320,17 +320,10 @@ func SettingsCollaborationPost(ctx *context.Context) {
 		return
 	}
 
-	// Organization is not allowed to be added as a collaborator.
+	// Organization is not allowed to be added as a collaborator
 	if u.IsOrganization() {
 		ctx.Flash.Error(ctx.Tr("repo.settings.org_not_allowed_to_be_collaborator"))
 		ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
-		return
-	}
-
-	// Check if user is organization member.
-	if ctx.Repo.Owner.IsOrganization() && ctx.Repo.Owner.IsOrgMember(u.ID) {
-		ctx.Flash.Info(ctx.Tr("repo.settings.user_is_org_member"))
-		ctx.Redirect(ctx.Repo.RepoLink + "/settings/collaboration")
 		return
 	}
 
