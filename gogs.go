@@ -28,13 +28,13 @@ func main() {
 	app.Usage = "A painless self-hosted Git service"
 	app.Version = APP_VER
 	app.Commands = []cli.Command{
-		cmd.CmdWeb,
+		cmd.Web,
 		cmd.Serv,
-		cmd.CmdHook,
-		cmd.CmdDump,
-		cmd.CmdCert,
-		cmd.CmdAdmin,
-		cmd.CmdImport,
+		cmd.Hook,
+		cmd.Dump,
+		cmd.Cert,
+		cmd.Admin,
+		cmd.Import,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)

@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	CmdImport = cli.Command{
+	Import = cli.Command{
 		Name:  "import",
 		Usage: "Import portable data as local Gogs data",
 		Description: `Allow user import data from other Gogs installations to local instance

@@ -49,7 +49,7 @@ import (
 	"github.com/gogits/gogs/routers/user"
 )
 
-var CmdWeb = cli.Command{
+var Web = cli.Command{
 	Name:  "web",
 	Usage: "Start Gogs web server",
 	Description: `Gogs web server is the only thing you need to run,
