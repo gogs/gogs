@@ -2075,7 +2075,7 @@ func notifyWatchers(e Engine, act *Action) error {
 
 	// Add feed for actioner.
 	act.UserID = act.ActUserID
-	if _, err = e.InsertOne(act); err != nil {
+	if _, err = e.Insert(act); err != nil {
 		return fmt.Errorf("insert new actioner: %v", err)
 	}
 
@@ -2086,7 +2086,7 @@ func notifyWatchers(e Engine, act *Action) error {
 
 		act.ID = 0
 		act.UserID = watches[i].UserID
-		if _, err = e.InsertOne(act); err != nil {
+		if _, err = e.Insert(act); err != nil {
 			return fmt.Errorf("insert new action: %v", err)
 		}
 	}
@@ -2096,6 +2096,13 @@ func notifyWatchers(e Engine, act *Action) error {
 // NotifyWatchers creates batch of actions for every watcher.
 func NotifyWatchers(act *Action) error {
 	return notifyWatchers(x, act)
+}
+
+func MustNotifyWatchers(act *Action) {
+	act.ID = 0 // Reset ID to reuse Action object
+	if err := NotifyWatchers(act); err != nil {
+		log.Error(2, "NotifyWatchers: %v", err)
+	}
 }
 
 //   _________ __
