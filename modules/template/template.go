@@ -242,12 +242,14 @@ func ActionIcon(opType int) string {
 	switch opType {
 	case 1, 8: // Create and transfer repository
 		return "repo"
-	case 5, 9: // Commit repository
+	case 5: // Commit repository
 		return "git-commit"
 	case 6: // Create issue
 		return "issue-opened"
 	case 7: // New pull request
 		return "git-pull-request"
+	case 9: // Push tag
+		return "tag"
 	case 10: // Comment issue
 		return "comment-discussion"
 	case 11: // Merge pull request
@@ -256,6 +258,10 @@ func ActionIcon(opType int) string {
 		return "issue-closed"
 	case 13, 15: // Reopen issue or pull request
 		return "issue-reopened"
+	case 16: // Create branch
+		return "git-branch"
+	case 17, 18: // Delete branch or tag
+		return "alert"
 	default:
 		return "invalid type"
 	}
