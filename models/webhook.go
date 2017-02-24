@@ -5,7 +5,10 @@
 package models
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -358,6 +361,7 @@ type HookTask struct {
 	UUID            string
 	Type            HookTaskType
 	URL             string `xorm:"TEXT"`
+	Signature       string `xorm:"TEXT"`
 	api.Payloader   `xorm:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
@@ -481,8 +485,18 @@ func prepareWebhooks(repo *Repository, event HookEventType, p api.Payloader, web
 				return fmt.Errorf("GetDiscordPayload: %v", err)
 			}
 		default:
-			p.SetSecret(w.Secret)
 			payloader = p
+		}
+
+		var signature string
+		if len(w.Secret) > 0 {
+			data, err := payloader.JSONPayload()
+			if err != nil {
+				log.Error(2, "prepareWebhooks.JSONPayload: %v", err)
+			}
+			sig := hmac.New(sha256.New, []byte(w.Secret))
+			sig.Write(data)
+			signature = hex.EncodeToString(sig.Sum(nil))
 		}
 
 		if err = CreateHookTask(&HookTask{
@@ -490,6 +504,7 @@ func prepareWebhooks(repo *Repository, event HookEventType, p api.Payloader, web
 			HookID:      w.ID,
 			Type:        w.HookTaskType,
 			URL:         w.URL,
+			Signature:   signature,
 			Payloader:   payloader,
 			ContentType: w.ContentType,
 			EventType:   event,
@@ -535,6 +550,7 @@ func (t *HookTask) deliver() {
 	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
 		Header("X-Gogs-Delivery", t.UUID).
+		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify})
 

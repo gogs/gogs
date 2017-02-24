@@ -70,7 +70,6 @@ func (c *Client) DeleteRepoHook(user, repo string, id int64) error {
 }
 
 type Payloader interface {
-	SetSecret(string)
 	JSONPayload() ([]byte, error)
 }
 
@@ -104,15 +103,10 @@ var (
 //         \/             \/     \/          \/
 
 type CreatePayload struct {
-	Secret  string      `json:"secret"`
 	Ref     string      `json:"ref"`
 	RefType string      `json:"ref_type"`
 	Repo    *Repository `json:"repository"`
 	Sender  *User       `json:"sender"`
-}
-
-func (p *CreatePayload) SetSecret(secret string) {
-	p.Secret = secret
 }
 
 func (p *CreatePayload) JSONPayload() ([]byte, error) {
@@ -148,7 +142,6 @@ func ParseCreateHook(raw []byte) (*CreatePayload, error) {
 
 // PushPayload represents a payload information of push event.
 type PushPayload struct {
-	Secret     string           `json:"secret"`
 	Ref        string           `json:"ref"`
 	Before     string           `json:"before"`
 	After      string           `json:"after"`
@@ -157,10 +150,6 @@ type PushPayload struct {
 	Repo       *Repository      `json:"repository"`
 	Pusher     *User            `json:"pusher"`
 	Sender     *User            `json:"sender"`
-}
-
-func (p *PushPayload) SetSecret(secret string) {
-	p.Secret = secret
 }
 
 func (p *PushPayload) JSONPayload() ([]byte, error) {
@@ -227,17 +216,12 @@ type ChangesPayload struct {
 
 // PullRequestPayload represents a payload information of pull request event.
 type PullRequestPayload struct {
-	Secret      string          `json:"secret"`
 	Action      HookIssueAction `json:"action"`
 	Index       int64           `json:"number"`
 	Changes     *ChangesPayload `json:"changes,omitempty"`
 	PullRequest *PullRequest    `json:"pull_request"`
 	Repository  *Repository     `json:"repository"`
 	Sender      *User           `json:"sender"`
-}
-
-func (p *PullRequestPayload) SetSecret(secret string) {
-	p.Secret = secret
 }
 
 func (p *PullRequestPayload) JSONPayload() ([]byte, error) {
