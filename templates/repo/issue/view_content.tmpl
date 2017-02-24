@@ -17,7 +17,7 @@
 				</a>
 				<div class="content">
 					<div class="ui top attached header">
-						<span class="text grey"><a {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.Name}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
+						<span class="text grey"><a {{if gt .Issue.Poster.ID 0}}href="{{.Issue.Poster.HomeLink}}"{{end}}>{{.Issue.Poster.DisplayName}}</a> {{.i18n.Tr "repo.issues.commented_at" .Issue.HashTag $createdStr | Safe}}</span>
 						<div class="ui right actions">
 							{{if .IsIssueOwner}}
 								<div class="item action">
@@ -66,7 +66,7 @@
 						</a>
 						<div class="content">
 							<div class="ui top attached header">
-								<span class="text grey"><a {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
+								<span class="text grey"><a {{if gt .Poster.ID 0}}href="{{.Poster.HomeLink}}"{{end}}>{{.Poster.DisplayName}}</a> {{$.i18n.Tr "repo.issues.commented_at" .HashTag $createdStr | Safe}}</span>
 								<div class="ui right actions">
 									{{if gt .ShowTag 0}}
 										<div class="item tag">
@@ -90,7 +90,7 @@
 							<div class="ui attached segment">
 								<div class="render-content markdown has-emoji">
 									{{if .RenderedContent}}
-										{{.RenderedContent|Str2html}}
+										{{.RenderedContent | Str2html}}
 									{{else}}
 										<span class="no-content">{{$.i18n.Tr "repo.issues.no_content"}}</span>
 									{{end}}
@@ -137,7 +137,7 @@
 						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
 							<img src="{{.Poster.RelAvatarLink}}">
 						</a>
-						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.DisplayName}}</a> {{$.i18n.Tr "repo.issues.commit_ref_at" .EventTag $createdStr | Safe}}</span>
 						<div class="detail">
 							<span class="octicon octicon-git-commit"></span>
 							<span class="text grey">{{.Content | Str2html}}</span>
@@ -328,7 +328,7 @@
 				<div class="menu" data-action="update" data-update-url="{{$.RepoLink}}/issues/{{$.Issue.Index}}/assignee">
 					<div class="no-select item">{{.i18n.Tr "repo.issues.new.clear_assignee"}}</div>
 					{{range .Assignees}}
-						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.RelAvatarLink}}"><img src="{{.RelAvatarLink}}"> {{.Name}}</div>
+						<div class="item" data-id="{{.ID}}" data-href="{{$.RepoLink}}/issues?assignee={{.ID}}" data-avatar="{{.RelAvatarLink}}"><img src="{{.RelAvatarLink}}"> {{.DisplayName}}</div>
 					{{end}}
 				</div>
 			</div>
@@ -336,7 +336,7 @@
 				<span class="no-select item {{if .Issue.Assignee}}hide{{end}}">{{.i18n.Tr "repo.issues.new.no_assignee"}}</span>
 				<div class="selected">
 					{{if .Issue.Assignee}}
-						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.ID}}"><img class="ui avatar image" src="{{.Issue.Assignee.RelAvatarLink}}"> {{.Issue.Assignee.Name}}</a>
+						<a class="item" href="{{$.RepoLink}}/issues?assignee={{.Issue.Assignee.ID}}"><img class="ui avatar image" src="{{.Issue.Assignee.RelAvatarLink}}"> {{.Issue.Assignee.DisplayName}}</a>
 					{{end}}
 				</div>
 			</div>
