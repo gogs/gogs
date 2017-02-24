@@ -48,8 +48,6 @@ type DiscordPayload struct {
 	Embeds    []*DiscordEmbedObject `json:"embeds"`
 }
 
-func (p *DiscordPayload) SetSecret(_ string) {}
-
 func (p *DiscordPayload) JSONPayload() ([]byte, error) {
 	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {

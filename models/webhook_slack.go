@@ -39,8 +39,6 @@ type SlackPayload struct {
 	Attachments []*SlackAttachment `json:"attachments"`
 }
 
-func (p *SlackPayload) SetSecret(_ string) {}
-
 func (p *SlackPayload) JSONPayload() ([]byte, error) {
 	data, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {

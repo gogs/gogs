@@ -2319,6 +2319,9 @@ footer .ui.language .menu {
 .repository.settings.webhooks .types .menu .item {
   padding: 10px !important;
 }
+.repository.settings.webhook .text.desc {
+  margin-top: 5px;
+}
 .repository.settings.webhook .events .column {
   padding-bottom: 0;
 }
