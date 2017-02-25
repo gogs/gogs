@@ -4,6 +4,8 @@ pipeline:
   build:
     image: golang
     commands:
+      - go version
+      - go env
       - make build
       - make test
 
