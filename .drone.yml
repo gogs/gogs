@@ -1,5 +1,3 @@
-workspace:
-
 pipeline:
   clone:
     image: plugins/git
@@ -11,6 +9,7 @@ pipeline:
       - go version
       - go env
       - make build
+      - rm -rf vendor
       - make test
 
   slack:
