@@ -160,6 +160,23 @@ func (p *DeletePayload) JSONPayload() ([]byte, error) {
 	return json.MarshalIndent(p, "", "  ")
 }
 
+// ___________           __
+// \_   _____/__________|  | __
+//  |    __)/  _ \_  __ \  |/ /
+//  |     \(  <_> )  | \/    <
+//  \___  / \____/|__|  |__|_ \
+//      \/                   \/
+
+type ForkPayload struct {
+	Forkee *Repository `json:"forkee"`
+	Repo   *Repository `json:"repository"`
+	Sender *User       `json:"sender"`
+}
+
+func (p *ForkPayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
+}
+
 // __________             .__
 // \______   \__ __  _____|  |__
 //  |     ___/  |  \/  ___/  |  \

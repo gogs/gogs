@@ -109,7 +109,7 @@ func CreatePost(ctx *context.Context, f form.CreateRepo) {
 	ctx.Data["Licenses"] = models.Licenses
 	ctx.Data["Readmes"] = models.Readmes
 
-	ctxUser := checkContextUser(ctx, f.Uid)
+	ctxUser := checkContextUser(ctx, f.UserID)
 	if ctx.Written() {
 		return
 	}

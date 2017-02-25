@@ -2068,24 +2068,27 @@ func (repo *Repository) GetWatchers(page int) ([]*User, error) {
 
 func notifyWatchers(e Engine, act *Action) error {
 	// Add feeds for user self and all watchers.
-	watches, err := getWatchers(e, act.RepoID)
+	watchers, err := getWatchers(e, act.RepoID)
 	if err != nil {
-		return fmt.Errorf("get watchers: %v", err)
+		return fmt.Errorf("getWatchers: %v", err)
 	}
+
+	// Reset ID to reuse Action object
+	act.ID = 0
 
 	// Add feed for actioner.
 	act.UserID = act.ActUserID
 	if _, err = e.Insert(act); err != nil {
-		return fmt.Errorf("insert new actioner: %v", err)
+		return fmt.Errorf("insert new action: %v", err)
 	}
 
-	for i := range watches {
-		if act.ActUserID == watches[i].UserID {
+	for i := range watchers {
+		if act.ActUserID == watchers[i].UserID {
 			continue
 		}
 
 		act.ID = 0
-		act.UserID = watches[i].UserID
+		act.UserID = watchers[i].UserID
 		if _, err = e.Insert(act); err != nil {
 			return fmt.Errorf("insert new action: %v", err)
 		}
@@ -2096,13 +2099,6 @@ func notifyWatchers(e Engine, act *Action) error {
 // NotifyWatchers creates batch of actions for every watcher.
 func NotifyWatchers(act *Action) error {
 	return notifyWatchers(x, act)
-}
-
-func MustNotifyWatchers(act *Action) {
-	act.ID = 0 // Reset ID to reuse Action object
-	if err := NotifyWatchers(act); err != nil {
-		log.Error(2, "NotifyWatchers: %v", err)
-	}
 }
 
 //   _________ __
@@ -2168,24 +2164,26 @@ func (repo *Repository) GetStargazers(page int) ([]*User, error) {
 //  \___  / \____/|__|  |__|_ \
 //      \/                   \/
 
-// HasForkedRepo checks if given user has already forked a repository with given ID.
+// HasForkedRepo checks if given user has already forked a repository.
+// When user has already forked, it returns true along with the repository.
 func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
 	repo := new(Repository)
-	has, _ := x.Where("owner_id=? AND fork_id=?", ownerID, repoID).Get(repo)
+	has, _ := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
 	return repo, has
 }
 
-func ForkRepository(doer, owner *User, oldRepo *Repository, name, desc string) (_ *Repository, err error) {
+// ForkRepository creates a fork of target repository under another user domain.
+func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
 	repo := &Repository{
 		OwnerID:       owner.ID,
 		Owner:         owner,
 		Name:          name,
 		LowerName:     strings.ToLower(name),
 		Description:   desc,
-		DefaultBranch: oldRepo.DefaultBranch,
-		IsPrivate:     oldRepo.IsPrivate,
+		DefaultBranch: baseRepo.DefaultBranch,
+		IsPrivate:     baseRepo.IsPrivate,
 		IsFork:        true,
-		ForkID:        oldRepo.ID,
+		ForkID:        baseRepo.ID,
 	}
 
 	sess := x.NewSession()
@@ -2196,16 +2194,14 @@ func ForkRepository(doer, owner *User, oldRepo *Repository, name, desc string) (
 
 	if err = createRepository(sess, doer, owner, repo); err != nil {
 		return nil, err
-	}
-
-	if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks+1 WHERE id=?", oldRepo.ID); err != nil {
+	} else if _, err = sess.Exec("UPDATE `repository` SET num_forks=num_forks+1 WHERE id=?", baseRepo.ID); err != nil {
 		return nil, err
 	}
 
-	repoPath := RepoPath(owner.Name, repo.Name)
+	repoPath := repo.repoPath(sess)
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("ForkRepository 'git clone': %s/%s", owner.Name, repo.Name),
-		"git", "clone", "--bare", oldRepo.RepoPath(), repoPath)
+		"git", "clone", "--bare", baseRepo.RepoPath(), repoPath)
 	if err != nil {
 		return nil, fmt.Errorf("git clone: %v", stderr)
 	}
@@ -2219,6 +2215,12 @@ func ForkRepository(doer, owner *User, oldRepo *Repository, name, desc string) (
 
 	if err = createDelegateHooks(repoPath); err != nil {
 		return nil, fmt.Errorf("createDelegateHooks: %v", err)
+	} else if err = prepareWebhooks(sess, baseRepo, HOOK_EVENT_FORK, &api.ForkPayload{
+		Forkee: repo.APIFormat(nil),
+		Repo:   baseRepo.APIFormat(nil),
+		Sender: doer.APIFormat(),
+	}); err != nil {
+		return nil, fmt.Errorf("prepareWebhooks: %v", err)
 	}
 
 	return repo, sess.Commit()

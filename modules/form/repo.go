@@ -23,7 +23,7 @@ import (
 //         \/        \/                   \/        \/                        \/       \/ \/
 
 type CreateRepo struct {
-	Uid         int64  `binding:"Required"`
+	UserID      int64  `binding:"Required"`
 	RepoName    string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private     bool
 	Description string `binding:"MaxSize(255)"`
@@ -136,6 +136,7 @@ type Webhook struct {
 	Events      string
 	Create      bool
 	Delete      bool
+	Fork        bool
 	Push        bool
 	PullRequest bool
 	Active      bool

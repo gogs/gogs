@@ -262,6 +262,8 @@ func ActionIcon(opType int) string {
 		return "git-branch"
 	case 17, 18: // Delete branch or tag
 		return "alert"
+	case 19: // Fork a repository
+		return "repo-forked"
 	default:
 		return "invalid type"
 	}

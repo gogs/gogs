@@ -42,6 +42,16 @@
 				</div>
 			</div>
 		</div>
+		<!-- Fork -->
+		<div class="seven wide column">
+			<div class="field">
+				<div class="ui checkbox">
+					<input class="hidden" name="fork" type="checkbox" tabindex="0" {{if .Webhook.Fork}}checked{{end}}>
+					<label>{{.i18n.Tr "repo.settings.event_fork"}}</label>
+					<span class="help">{{.i18n.Tr "repo.settings.event_fork_desc"}}</span>
+				</div>
+			</div>
+		</div>
 		<!-- Push -->
 		<div class="seven wide column">
 			<div class="field">

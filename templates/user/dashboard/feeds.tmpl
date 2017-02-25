@@ -51,6 +51,8 @@
 							{{$.i18n.Tr "action.delete_branch" .GetRepoLink .GetBranch .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 18}}
 							{{$.i18n.Tr "action.delete_tag" .GetRepoLink .GetBranch .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 19}}
+							{{$.i18n.Tr "action.fork_repo" .GetRepoLink .ShortRepoPath | Str2html}}
 						{{end}}
 					</p>
 					{{if eq .GetOpType 5}}

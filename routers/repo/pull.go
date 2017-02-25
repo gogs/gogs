@@ -38,31 +38,27 @@ var (
 	}
 )
 
-func getForkRepository(ctx *context.Context) *models.Repository {
-	forkRepo, err := models.GetRepositoryByID(ctx.ParamsInt64(":repoid"))
+func parseBaseRepository(ctx *context.Context) *models.Repository {
+	baseRepo, err := models.GetRepositoryByID(ctx.ParamsInt64(":repoid"))
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
-			ctx.Handle(404, "GetRepositoryByID", nil)
-		} else {
-			ctx.Handle(500, "GetRepositoryByID", err)
-		}
+		ctx.NotFoundOrServerError("GetRepositoryByID", models.IsErrRepoNotExist, err)
 		return nil
 	}
 
-	if !forkRepo.CanBeForked() || !forkRepo.HasAccess(ctx.User.ID) {
-		ctx.Handle(404, "getForkRepository", nil)
+	if !baseRepo.CanBeForked() || !baseRepo.HasAccess(ctx.User.ID) {
+		ctx.NotFound()
 		return nil
 	}
 
-	ctx.Data["repo_name"] = forkRepo.Name
-	ctx.Data["description"] = forkRepo.Description
-	ctx.Data["IsPrivate"] = forkRepo.IsPrivate
+	ctx.Data["repo_name"] = baseRepo.Name
+	ctx.Data["description"] = baseRepo.Description
+	ctx.Data["IsPrivate"] = baseRepo.IsPrivate
 
-	if err = forkRepo.GetOwner(); err != nil {
+	if err = baseRepo.GetOwner(); err != nil {
 		ctx.Handle(500, "GetOwner", err)
 		return nil
 	}
-	ctx.Data["ForkFrom"] = forkRepo.Owner.Name + "/" + forkRepo.Name
+	ctx.Data["ForkFrom"] = baseRepo.Owner.Name + "/" + baseRepo.Name
 
 	if err := ctx.User.GetOrganizations(true); err != nil {
 		ctx.Handle(500, "GetOrganizations", err)
@@ -70,13 +66,13 @@ func getForkRepository(ctx *context.Context) *models.Repository {
 	}
 	ctx.Data["Orgs"] = ctx.User.Orgs
 
-	return forkRepo
+	return baseRepo
 }
 
 func Fork(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
-	getForkRepository(ctx)
+	parseBaseRepository(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -88,12 +84,12 @@ func Fork(ctx *context.Context) {
 func ForkPost(ctx *context.Context, f form.CreateRepo) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
-	forkRepo := getForkRepository(ctx)
+	baseRepo := parseBaseRepository(ctx)
 	if ctx.Written() {
 		return
 	}
 
-	ctxUser := checkContextUser(ctx, f.Uid)
+	ctxUser := checkContextUser(ctx, f.UserID)
 	if ctx.Written() {
 		return
 	}
@@ -104,27 +100,25 @@ func ForkPost(ctx *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, has := models.HasForkedRepo(ctxUser.ID, forkRepo.ID)
+	repo, has := models.HasForkedRepo(ctxUser.ID, baseRepo.ID)
 	if has {
-		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+		ctx.Redirect(repo.Link())
 		return
 	}
 
 	// Check ownership of organization.
-	if ctxUser.IsOrganization() {
-		if !ctxUser.IsOwnedBy(ctx.User.ID) {
-			ctx.Error(403)
-			return
-		}
+	if ctxUser.IsOrganization() && !ctxUser.IsOwnedBy(ctx.User.ID) {
+		ctx.Error(403)
+		return
 	}
 
 	// Cannot fork to same owner
-	if ctxUser.ID == forkRepo.OwnerID {
+	if ctxUser.ID == baseRepo.OwnerID {
 		ctx.RenderWithErr(ctx.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f)
 		return
 	}
 
-	repo, err := models.ForkRepository(ctx.User, ctxUser, forkRepo, f.RepoName, f.Description)
+	repo, err := models.ForkRepository(ctx.User, ctxUser, baseRepo, f.RepoName, f.Description)
 	if err != nil {
 		ctx.Data["Err_RepoName"] = true
 		switch {
@@ -140,8 +134,8 @@ func ForkPost(ctx *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	log.Trace("Repository forked[%d]: %s/%s", forkRepo.ID, ctxUser.Name, repo.Name)
-	ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+	log.Trace("Repository forked from '%s' -> '%s'", baseRepo.FullName(), repo.FullName())
+	ctx.Redirect(repo.Link())
 }
 
 func checkPullInfo(ctx *context.Context) *models.Issue {

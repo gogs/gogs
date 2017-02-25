@@ -90,6 +90,16 @@ func getSlackDeletePayload(p *api.DeletePayload) (*SlackPayload, error) {
 	}, nil
 }
 
+// getSlackForkPayload composes Slack payload for forked by a repository.
+func getSlackForkPayload(p *api.ForkPayload) (*SlackPayload, error) {
+	baseLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
+	forkLink := SlackLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
+	text := fmt.Sprintf("%s is forked to %s", baseLink, forkLink)
+	return &SlackPayload{
+		Text: text,
+	}, nil
+}
+
 func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
 	// n new commits
 	var (
@@ -194,6 +204,8 @@ func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload
 		payload, err = getSlackCreatePayload(p.(*api.CreatePayload))
 	case HOOK_EVENT_DELETE:
 		payload, err = getSlackDeletePayload(p.(*api.DeletePayload))
+	case HOOK_EVENT_FORK:
+		payload, err = getSlackForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
 		payload, err = getSlackPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
