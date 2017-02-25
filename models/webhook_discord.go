@@ -74,7 +74,6 @@ func getDiscordCreatePayload(p *api.CreatePayload) (*DiscordPayload, error) {
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	content := fmt.Sprintf("Created new %s: %s/%s", p.RefType, repoLink, refLink)
-
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
@@ -92,7 +91,23 @@ func getDiscordDeletePayload(p *api.DeletePayload) (*DiscordPayload, error) {
 	refName := git.RefEndName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	content := fmt.Sprintf("Deleted %s: %s/%s", p.RefType, repoLink, refName)
+	return &DiscordPayload{
+		Embeds: []*DiscordEmbedObject{{
+			Description: content,
+			URL:         setting.AppUrl + p.Sender.UserName,
+			Author: &DiscordEmbedAuthorObject{
+				Name:    p.Sender.UserName,
+				IconURL: p.Sender.AvatarUrl,
+			},
+		}},
+	}, nil
+}
 
+// getDiscordForkPayload composes Discord payload for forked by a repository.
+func getDiscordForkPayload(p *api.ForkPayload) (*DiscordPayload, error) {
+	baseLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
+	forkLink := DiscordLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
+	content := fmt.Sprintf("%s is forked to %s", baseLink, forkLink)
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
@@ -230,6 +245,8 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 		payload, err = getDiscordCreatePayload(p.(*api.CreatePayload))
 	case HOOK_EVENT_DELETE:
 		payload, err = getDiscordDeletePayload(p.(*api.DeletePayload))
+	case HOOK_EVENT_FORK:
+		payload, err = getDiscordForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
 		payload, err = getDiscordPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:

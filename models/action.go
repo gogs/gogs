@@ -46,6 +46,7 @@ const (
 	ACTION_CREATE_BRANCH                             // 16
 	ACTION_DELETE_BRANCH                             // 17
 	ACTION_DELETE_TAG                                // 18
+	ACTION_FORK_REPO                                 // 19
 )
 
 var (
@@ -177,20 +178,20 @@ func (a *Action) GetIssueContent() string {
 }
 
 func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
-	if err = notifyWatchers(e, &Action{
+	opType := ACTION_CREATE_REPO
+	if repo.IsFork {
+		opType = ACTION_FORK_REPO
+	}
+
+	return notifyWatchers(e, &Action{
 		ActUserID:    doer.ID,
 		ActUserName:  doer.Name,
-		OpType:       ACTION_CREATE_REPO,
+		OpType:       opType,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%d': %v", owner.ID, repo.ID, err)
-	}
-
-	log.Trace("action.newRepoAction: %s/%s", owner.Name, repo.Name)
-	return err
+	})
 }
 
 // NewRepoAction adds new action for creating repository.
@@ -489,12 +490,6 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		return fmt.Errorf("Marshal: %v", err)
 	}
 
-	defer func() {
-		// It's safe to fail when the whole function is called during hook execution
-		// because resource released after exit.
-		go HookQueue.Add(repo.ID)
-	}()
-
 	refName := git.RefEndName(opts.RefFullName)
 	action := &Action{
 		ActUserID:    pusher.ID,
@@ -512,9 +507,6 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
 		if isDelRef {
-			action.OpType = ACTION_DELETE_BRANCH
-			MustNotifyWatchers(action)
-
 			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
@@ -525,15 +517,17 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 				return fmt.Errorf("PrepareWebhooks.(delete branch): %v", err)
 			}
 
+			action.OpType = ACTION_DELETE_BRANCH
+			if err = NotifyWatchers(action); err != nil {
+				return fmt.Errorf("NotifyWatchers.(delete branch): %v", err)
+			}
+
 			// Delete branch doesn't have anything to push or compare
 			return nil
 		}
 
 		compareURL := setting.AppUrl + opts.Commits.CompareURL
 		if isNewRef {
-			action.OpType = ACTION_CREATE_BRANCH
-			MustNotifyWatchers(action)
-
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 				Ref:           refName,
@@ -544,10 +538,13 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			}); err != nil {
 				return fmt.Errorf("PrepareWebhooks.(new branch): %v", err)
 			}
+
+			action.OpType = ACTION_CREATE_BRANCH
+			if err = NotifyWatchers(action); err != nil {
+				return fmt.Errorf("NotifyWatchers.(new branch): %v", err)
+			}
 		}
 
-		action.OpType = ACTION_COMMIT_REPO
-		MustNotifyWatchers(action)
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
@@ -561,11 +558,13 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return fmt.Errorf("PrepareWebhooks.(new commit): %v", err)
 		}
 
+		action.OpType = ACTION_COMMIT_REPO
+		if err = NotifyWatchers(action); err != nil {
+			return fmt.Errorf("NotifyWatchers.(new commit): %v", err)
+		}
+
 	case ACTION_PUSH_TAG: // Tag
 		if isDelRef {
-			action.OpType = ACTION_DELETE_TAG
-			MustNotifyWatchers(action)
-
 			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
@@ -575,11 +574,14 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			}); err != nil {
 				return fmt.Errorf("PrepareWebhooks.(delete tag): %v", err)
 			}
+
+			action.OpType = ACTION_DELETE_TAG
+			if err = NotifyWatchers(action); err != nil {
+				return fmt.Errorf("NotifyWatchers.(delete tag): %v", err)
+			}
 			return nil
 		}
 
-		action.OpType = ACTION_PUSH_TAG
-		MustNotifyWatchers(action)
 		if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 			Ref:           refName,
 			RefType:       "tag",
@@ -588,6 +590,11 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			Sender:        apiPusher,
 		}); err != nil {
 			return fmt.Errorf("PrepareWebhooks.(new tag): %v", err)
+		}
+
+		action.OpType = ACTION_PUSH_TAG
+		if err = NotifyWatchers(action); err != nil {
+			return fmt.Errorf("NotifyWatchers.(new tag): %v", err)
 		}
 	}
 

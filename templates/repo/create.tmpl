@@ -12,7 +12,7 @@
 					<div class="inline required field {{if .Err_Owner}}error{{end}}">
 						<label>{{.i18n.Tr "repo.owner"}}</label>
 						<div class="ui selection owner dropdown">
-							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.ID}}" required>
+							<input type="hidden" id="user_id" name="user_id" value="{{.ContextUser.ID}}" required>
 							<span class="text">
 								<img class="ui mini image" src="{{.ContextUser.RelAvatarLink}}">
 								{{.ContextUser.ShortName 20}}
