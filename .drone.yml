@@ -9,8 +9,6 @@ pipeline:
       - go version
       - go env
       - make build
-      - rm -rf vendor
-      - make test
 
   slack:
     image: plugins/slack
