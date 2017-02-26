@@ -67,7 +67,6 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [OpenShift](https://github.com/tkisme/gogs-openshift)
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
-- [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/mbugeia/gogs_ynh)
@@ -91,8 +90,6 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 特别鸣谢
 
-- 基于 [Macaron](https://github.com/go-macaron/macaron) 的路由与中间件机制。
-- 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
 - 感谢 [DigitalOcean](https://www.digitalocean.com) 提供主站和体验站点的服务器赞助。
@@ -100,8 +97,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 贡献成员
 
-- 前团队成员 [@lunny](https://github.com/lunny)、[@fuxiaohei](https://github.com/fuxiaohei) 和 [@slene](https://github.com/slene)。
-- 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+- 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取 TOP 100 的贡献者列表。
 - 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取公开的翻译人员列表。
 
 ## 授权许可
