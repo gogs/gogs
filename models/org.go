@@ -10,10 +10,8 @@ import (
 	"os"
 	"strings"
 
+	builder "github.com/go-xorm/builder"
 	"github.com/go-xorm/xorm"
-	log "gopkg.in/clog.v1"
-
-	"github.com/gogits/gogs/modules/base"
 )
 
 var (
@@ -499,42 +497,41 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	}
 	if len(teamIDs) == 0 {
 		// user has no team but "IN ()" is invalid SQL
-		teamIDs = []int64{-1} // there is no repo with id=-1
+		teamIDs = []int64{-1} // there is no team with id=-1
 	}
 
+	var teamRepoIDs []int64
+	err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get team repository ids: %v", err)
+	}
+
+	if len(teamRepoIDs) == 0 {
+		// team has no repo but "IN ()" is invalid SQL
+		teamRepoIDs = []int64{-1} // there is no repo with id=-1
+	}
 	if page <= 0 {
 		page = 1
 	}
 	repos := make([]*Repository, 0, pageSize)
-	// FIXME: use XORM chain operations instead of raw SQL.
-	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
-	INNER JOIN team_repo
-	ON team_repo.repo_id = repository.id
-	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-	GROUP BY repository.id
-	ORDER BY updated_unix DESC
-	LIMIT %d OFFSET %d`,
-		strings.Join(base.Int64sToStrings(teamIDs), ","), pageSize, (page-1)*pageSize),
-		org.ID, false).Find(&repos); err != nil {
-		return nil, 0, fmt.Errorf("get repositories: %v", err)
-	}
-
-	results, err := x.Query(fmt.Sprintf(`SELECT repository.id FROM repository
-	INNER JOIN team_repo
-	ON team_repo.repo_id = repository.id
-	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-	GROUP BY repository.id
-	ORDER BY updated_unix DESC`,
-		strings.Join(base.Int64sToStrings(teamIDs), ",")),
-		org.ID, false)
+	err = x.Where("owner_id = ?", org.ID).And("is_private = ?", false).
+		Or(builder.In("id", teamRepoIDs)).Desc("updated_unix").
+		Limit(pageSize, (page-1)*pageSize).Find(&repos)
 	if err != nil {
-		log.Error(4, "count user repositories in organization: %v", err)
+		return nil, 0, fmt.Errorf("get user repositories: %v", err)
 	}
 
-	return repos, int64(len(results)), nil
+	repo := new(Repository)
+	repoCount, err := x.Where("owner_id = ?", org.ID).And("is_private = ?", false).
+		Or(builder.In("id", teamRepoIDs)).Count(repo)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count user repositories: %v", err)
+	}
+
+	return repos, repoCount, nil
 }
 
-// GetUserRepositories returns mirror repositories of the organization
+// GetUserMirrorRepositories returns mirror repositories of the organization
 // that the user with the given userID has access to.
 func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 	teamIDs, err := org.GetUserTeamIDs(userID)
@@ -544,17 +541,22 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 	if len(teamIDs) == 0 {
 		teamIDs = []int64{-1}
 	}
+	var teamRepoIDs []int64
+	err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get team repository ids: %v", err)
+	}
 
+	if len(teamRepoIDs) == 0 {
+		// team has no repo but "IN ()" is invalid SQL
+		teamRepoIDs = []int64{-1} // there is no repo with id=-1
+	}
 	repos := make([]*Repository, 0, 10)
-	if err = x.Sql(fmt.Sprintf(`SELECT repository.* FROM repository
-	INNER JOIN team_repo
-	ON team_repo.repo_id = repository.id AND repository.is_mirror = ?
-	WHERE (repository.owner_id = ? AND repository.is_private = ?) OR team_repo.team_id IN (%s)
-	GROUP BY repository.id
-	ORDER BY updated_unix DESC`,
-		strings.Join(base.Int64sToStrings(teamIDs), ",")),
-		true, org.ID, false).Find(&repos); err != nil {
-		return nil, fmt.Errorf("get repositories: %v", err)
+	err = x.Where("owner_id = ?", org.ID).And("is_private = ?", false).
+		Or(builder.In("id", teamRepoIDs)).And("is_mirror = ?", true).
+		Desc("updated_unix").Find(&repos)
+	if err != nil {
+		return nil, fmt.Errorf("get user repositories: %v", err)
 	}
 	return repos, nil
 }
