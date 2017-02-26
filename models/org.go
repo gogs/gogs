@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	builder "github.com/go-xorm/builder"
+	"github.com/go-xorm/builder"
 	"github.com/go-xorm/xorm"
 )
 
@@ -487,8 +487,7 @@ func (org *User) GetUserTeams(userID int64) ([]*Team, error) {
 	return org.getUserTeams(x, userID)
 }
 
-// GetUserRepositories returns a range of repositories in organization
-// that the user with the given userID has access to,
+// GetUserRepositories returns a range of repositories in organization which the user has access to,
 // and total number of records based on given condition.
 func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repository, int64, error) {
 	teamIDs, err := org.GetUserTeamIDs(userID)
@@ -501,29 +500,31 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	}
 
 	var teamRepoIDs []int64
-	err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs)
-	if err != nil {
-		return nil, 0, fmt.Errorf("get team repository ids: %v", err)
+	if err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs); err != nil {
+		return nil, 0, fmt.Errorf("get team repository IDs: %v", err)
 	}
-
 	if len(teamRepoIDs) == 0 {
 		// team has no repo but "IN ()" is invalid SQL
 		teamRepoIDs = []int64{-1} // there is no repo with id=-1
 	}
+
 	if page <= 0 {
 		page = 1
 	}
 	repos := make([]*Repository, 0, pageSize)
-	err = x.Where("owner_id = ?", org.ID).And("is_private = ?", false).
-		Or(builder.In("id", teamRepoIDs)).Desc("updated_unix").
-		Limit(pageSize, (page-1)*pageSize).Find(&repos)
-	if err != nil {
+	if err = x.Where("owner_id = ?", org.ID).
+		And("is_private = ?", false).
+		Or(builder.In("id", teamRepoIDs)).
+		Desc("updated_unix").
+		Limit(pageSize, (page-1)*pageSize).
+		Find(&repos); err != nil {
 		return nil, 0, fmt.Errorf("get user repositories: %v", err)
 	}
 
-	repo := new(Repository)
-	repoCount, err := x.Where("owner_id = ?", org.ID).And("is_private = ?", false).
-		Or(builder.In("id", teamRepoIDs)).Count(repo)
+	repoCount, err := x.Where("owner_id = ?", org.ID).
+		And("is_private = ?", false).
+		Or(builder.In("id", teamRepoIDs)).
+		Count(new(Repository))
 	if err != nil {
 		return nil, 0, fmt.Errorf("count user repositories: %v", err)
 	}
@@ -531,8 +532,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	return repos, repoCount, nil
 }
 
-// GetUserMirrorRepositories returns mirror repositories of the organization
-// that the user with the given userID has access to.
+// GetUserMirrorRepositories returns mirror repositories of the organization which the user has access to.
 func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 	teamIDs, err := org.GetUserTeamIDs(userID)
 	if err != nil {
@@ -541,21 +541,24 @@ func (org *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) 
 	if len(teamIDs) == 0 {
 		teamIDs = []int64{-1}
 	}
+
 	var teamRepoIDs []int64
 	err = x.Table("team_repo").In("team_id", teamIDs).Distinct("repo_id").Find(&teamRepoIDs)
 	if err != nil {
 		return nil, fmt.Errorf("get team repository ids: %v", err)
 	}
-
 	if len(teamRepoIDs) == 0 {
 		// team has no repo but "IN ()" is invalid SQL
 		teamRepoIDs = []int64{-1} // there is no repo with id=-1
 	}
+
 	repos := make([]*Repository, 0, 10)
-	err = x.Where("owner_id = ?", org.ID).And("is_private = ?", false).
-		Or(builder.In("id", teamRepoIDs)).And("is_mirror = ?", true).
-		Desc("updated_unix").Find(&repos)
-	if err != nil {
+	if err = x.Where("owner_id = ?", org.ID).
+		And("is_private = ?", false).
+		Or(builder.In("id", teamRepoIDs)).
+		And("is_mirror = ?", true). // Don't move up because it's an independent condition
+		Desc("updated_unix").
+		Find(&repos); err != nil {
 		return nil, fmt.Errorf("get user repositories: %v", err)
 	}
 	return repos, nil
