@@ -71,13 +71,11 @@ func (org *User) GetMembers() error {
 		return err
 	}
 
-	org.Members = make([]*User, len(ous))
+	var ids = make([]int64, len(ous))
 	for i, ou := range ous {
-		org.Members[i], err = GetUserByID(ou.Uid)
-		if err != nil {
-			return err
-		}
+		ids[i] = ou.Uid
 	}
+	org.Members, _ = GetUsersByIDs(ids)
 	return nil
 }
 
@@ -200,7 +198,7 @@ func CountOrganizations() int64 {
 // Organizations returns number of organizations in given page.
 func Organizations(page, pageSize int) ([]*User, error) {
 	orgs := make([]*User, 0, pageSize)
-	return orgs, x.Limit(pageSize, (page-1)*pageSize).Where("type=1").Asc("id").Find(&orgs)
+	return orgs, x.Limit(pageSize, (page-1)*pageSize).Where("type=1").Asc("name").Find(&orgs)
 }
 
 // DeleteOrganization completely and permanently deletes everything of organization.
@@ -271,7 +269,7 @@ func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, e
 		sess.And("`org_user`.is_public=?", true)
 	}
 	return orgs, sess.And("`org_user`.uid=?", userID).
-		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
+		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Asc("name").Find(&orgs)
 }
 
 // GetOrgsByUserID returns a list of organizations that the given user ID
@@ -289,7 +287,7 @@ func GetOrgsByUserIDDesc(userID int64, desc string, showAll bool) ([]*User, erro
 func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 	orgs := make([]*User, 0, 10)
 	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
-		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
+		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Asc("name").Find(&orgs)
 }
 
 // GetOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
@@ -308,12 +306,16 @@ func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 // GetOrgUsersByUserID returns all organization-user relations by user ID.
 func GetOrgUsersByUserID(uid int64, all bool) ([]*OrgUser, error) {
 	ous := make([]*OrgUser, 0, 10)
-	sess := x.Where("uid=?", uid)
+	sess := x.
+		Join("LEFT", "user", `"org_user".org_id="user".id`).
+		Where("uid=?", uid)
 	if !all {
 		// Only show public organizations
 		sess.And("is_public=?", true)
 	}
-	err := sess.Find(&ous)
+	err := sess.
+		Asc("name").
+		Find(&ous)
 	return ous, err
 }
 
@@ -466,6 +468,8 @@ func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, 
 	return teams, e.Where("team_user.org_id = ?", org.ID).
 		And("team_user.uid = ?", userID).
 		Join("INNER", "team_user", "team_user.team_id = team.id").
+		Join("INNER", "user", `"user".id=team_user.uid`).
+		Asc("user.name").
 		Cols(cols...).Find(&teams)
 }
 
