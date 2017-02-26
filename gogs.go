@@ -31,10 +31,11 @@ func main() {
 		cmd.Web,
 		cmd.Serv,
 		cmd.Hook,
-		cmd.Dump,
 		cmd.Cert,
 		cmd.Admin,
 		cmd.Import,
+		cmd.Backup,
+		cmd.Restore,
 	}
 	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)

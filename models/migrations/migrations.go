@@ -42,7 +42,7 @@ func (m *migration) Migrate(x *xorm.Engine) error {
 
 // The version table. Should have only one row with id==1
 type Version struct {
-	ID      int64 `xorm:"pk autoincr"`
+	ID      int64
 	Version int64
 }
 
