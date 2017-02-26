@@ -5,7 +5,9 @@
 package models
 
 import (
+	"bufio"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -13,6 +15,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/Unknwon/com"
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
@@ -262,7 +265,89 @@ func Ping() error {
 	return x.Ping()
 }
 
-// DumpDatabase dumps all data from database to file system.
-func DumpDatabase(filePath string) error {
-	return x.DumpAllToFile(filePath)
+// The version table. Should have only one row with id==1
+type Version struct {
+	ID      int64
+	Version int64
+}
+
+// DumpDatabase dumps all data from database to file system in JSON format.
+func DumpDatabase(dirPath string) (err error) {
+	os.MkdirAll(dirPath, os.ModePerm)
+	// Purposely create a local variable to not modify global variable
+	tables := append(tables, new(Version))
+	for _, table := range tables {
+		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*models.")
+		tableFile := path.Join(dirPath, tableName+".json")
+		f, err := os.Create(tableFile)
+		if err != nil {
+			return fmt.Errorf("fail to create JSON file: %v", err)
+		}
+
+		if err = x.Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
+			enc := json.NewEncoder(f)
+			return enc.Encode(bean)
+		}); err != nil {
+			f.Close()
+			return fmt.Errorf("fail to dump table '%s': %v", tableName, err)
+		}
+		f.Close()
+	}
+	return nil
+}
+
+// ImportDatabase imports data from backup archive.
+func ImportDatabase(dirPath string) (err error) {
+	// Purposely create a local variable to not modify global variable
+	tables := append(tables, new(Version))
+	for _, table := range tables {
+		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*models.")
+		tableFile := path.Join(dirPath, tableName+".json")
+		if !com.IsExist(tableFile) {
+			continue
+		}
+
+		if err = x.DropTables(table); err != nil {
+			return fmt.Errorf("fail to drop table '%s': %v", tableName, err)
+		} else if err = x.Sync2(table); err != nil {
+			return fmt.Errorf("fail to sync table '%s': %v", tableName, err)
+		}
+
+		f, err := os.Open(tableFile)
+		if err != nil {
+			return fmt.Errorf("fail to open JSON file: %v", err)
+		}
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			switch bean := table.(type) {
+			case *LoginSource:
+				meta := make(map[string]interface{})
+				if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
+					return fmt.Errorf("fail to unmarshal to map: %v", err)
+				}
+
+				tp := LoginType(com.StrTo(com.ToStr(meta["Type"])).MustInt64())
+				switch tp {
+				case LOGIN_LDAP, LOGIN_DLDAP:
+					bean.Cfg = new(LDAPConfig)
+				case LOGIN_SMTP:
+					bean.Cfg = new(SMTPConfig)
+				case LOGIN_PAM:
+					bean.Cfg = new(PAMConfig)
+				default:
+					return fmt.Errorf("unrecognized login source type:: %v", tp)
+				}
+				table = bean
+			}
+
+			if err = json.Unmarshal(scanner.Bytes(), table); err != nil {
+				return fmt.Errorf("fail to unmarshal to struct: %v", err)
+			}
+
+			if _, err = x.Insert(table); err != nil {
+				return fmt.Errorf("fail to insert strcut: %v", err)
+			}
+		}
+	}
+	return nil
 }
