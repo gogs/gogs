@@ -98,7 +98,6 @@ There are 5 ways to install Gogs:
 - [OpenShift](https://github.com/tkisme/gogs-openshift)
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
-- [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
@@ -122,8 +121,6 @@ There are 5 ways to install Gogs:
 
 ## Acknowledgments
 
-- Router and middleware mechanism of [Macaron](https://github.com/go-macaron/macaron).
-- System Monitor Status is inspired by [GoBlog](https://github.com/fuxiaohei/goblog).
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
 - Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
@@ -131,8 +128,7 @@ There are 5 ways to install Gogs:
 
 ## Contributors
 
-- Ex-team members [@lunny](https://github.com/lunny), [@fuxiaohei](https://github.com/fuxiaohei) and [@slene](https://github.com/slene).
-- See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for full list of contributors.
+- See [contributors page](https://github.com/gogits/gogs/graphs/contributors) for top 100 contributors.
 - See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
 
 ## License
