@@ -305,7 +305,7 @@ func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 
 // getActiveWebhooksByOrgID returns all active webhooks for an organization.
 func getActiveWebhooksByOrgID(e Engine, orgID int64) ([]*Webhook, error) {
-	ws := make([]*Webhook, 3)
+	ws := make([]*Webhook, 0, 3)
 	return ws, e.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
 }
 
