@@ -170,7 +170,7 @@
 						<dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
 						{{if .MailerEnabled}}
 							<dt>{{.i18n.Tr "admin.config.mailer_name"}}</dt>
-							<dd>{{.Mailer.Name}}</dd>
+							<dd>{{.Mailer.Subject}}</dd>
 							<dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
 							<dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>
 							<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
@@ -275,15 +275,19 @@
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.log_config"}}
 				</h4>
-				<div class="ui attached table segment">
-					<dl class="dl-horizontal admin-dl-horizontal">
+				<div class="ui attached segment">
+					<table class="ui very basic table">
 						{{range .Loggers}}
-							<dt>{{$.i18n.Tr "admin.config.log_mode"}}</dt>
-							<dd>{{.Mode}}</dd>
-							<dt>{{$.i18n.Tr "admin.config.log_config"}}</dt>
-							<dd><pre><code>{{.Config}}</code></pre></dd>
+							<tr>
+								<td>{{$.i18n.Tr "admin.config.log_mode"}}</td>
+								<td>{{.Mode}}</td>
+							<tr>
+							</tr>
+								<td>{{$.i18n.Tr "admin.config.log_options"}}</td>
+								<td><pre><code>{{.Config}}</code></pre></td>
+							</tr>
 						{{end}}
-					</dl>
+					</table>
 				</div>
 			</div>
 		</div>

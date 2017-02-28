@@ -3019,6 +3019,13 @@ footer .ui.language .menu {
 .admin.config #test-mail-btn {
   margin-left: 5px;
 }
+.admin.config table tbody tr td:first-child {
+  font-weight: bold;
+}
+.admin.config pre {
+  background-color: #f7f7f7;
+  padding: 5px;
+}
 .explore {
   padding-top: 15px;
   padding-bottom: 80px;
