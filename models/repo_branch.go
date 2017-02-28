@@ -125,7 +125,6 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 		if _, err = sess.Insert(protectBranch); err != nil {
 			return fmt.Errorf("Insert: %v", err)
 		}
-		return
 	}
 
 	if _, err = sess.Id(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
