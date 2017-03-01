@@ -7,7 +7,7 @@
 package setting
 
 import (
-	_ "github.com/kardianos/minwinsvc"
+	_ "github.com/gogits/minwinsvc"
 )
 
 func init() {
