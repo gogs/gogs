@@ -177,6 +177,12 @@
 			"revisionTime": "2016-11-20T02:51:54Z"
 		},
 		{
+			"checksumSHA1": "cccKtXG5TiCiCT9JA85slbJokfw=",
+			"path": "github.com/gogits/minwinsvc",
+			"revision": "95be6356811a6fbd4c2981713236971a3ccbb33a",
+			"revisionTime": "2017-03-01T03:54:11Z"
+		},
+		{
 			"checksumSHA1": "MLO0PyrK2MUO6A7Z9PxWuu43C/A=",
 			"path": "github.com/issue9/identicon",
 			"revision": "d36b54562f4cf70c83653e13dc95c220c79ef521",
@@ -193,12 +199,6 @@
 			"path": "github.com/jtolds/gls",
 			"revision": "8ddce2a84170772b95dd5d576c48d517b22cac63",
 			"revisionTime": "2016-01-05T22:08:40Z"
-		},
-		{
-			"checksumSHA1": "/dBJ2h8Jo359deiC5GQ8ZYzX8M8=",
-			"path": "github.com/kardianos/minwinsvc",
-			"revision": "cad6b2b879b0970e4245a20ebf1a81a756e2bb70",
-			"revisionTime": "2015-11-22T16:33:09Z"
 		},
 		{
 			"checksumSHA1": "vfzz7zTL9TZLpFO7NC1H6/Du3+s=",

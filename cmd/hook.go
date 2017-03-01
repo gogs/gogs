@@ -117,7 +117,8 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 
 		// Check force push
-		output, err := git.NewCommand("rev-list", oldCommitID, "^"+newCommitID).Run()
+		output, err := git.NewCommand("rev-list", oldCommitID, "^"+newCommitID).
+			RunInDir(models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME)))
 		if err != nil {
 			fail("Internal error", "Fail to detect force push: %v", err)
 		} else if len(output) > 0 {
@@ -131,6 +132,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 
 	hookCmd := exec.Command(customHooksPath)
+	hookCmd.Dir = models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
@@ -159,6 +161,7 @@ func runHookUpdate(c *cli.Context) error {
 	}
 
 	hookCmd := exec.Command(customHooksPath, args...)
+	hookCmd.Dir = models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
@@ -231,6 +234,7 @@ func runHookPostReceive(c *cli.Context) error {
 	}
 
 	hookCmd := exec.Command(customHooksPath)
+	hookCmd.Dir = models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr

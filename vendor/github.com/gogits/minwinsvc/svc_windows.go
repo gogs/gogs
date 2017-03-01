@@ -23,7 +23,9 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	if interactive {
+	// While run as Windows service, it is not an interactive session,
+	// but we don't want hook execute to be treated as service, e.g. gogs.exe hook pre-receive.
+	if interactive || len(os.Getenv("SSH_ORIGINAL_COMMAND")) > 0 {
 		return
 	}
 	go func() {
