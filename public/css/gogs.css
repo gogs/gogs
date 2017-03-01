@@ -3026,6 +3026,12 @@ footer .ui.language .menu {
   background-color: #f7f7f7;
   padding: 5px;
 }
+.admin.config .log-config table tbody tr td:first-child {
+  width: 100px;
+}
+.admin.config .log-config table tbody tr td:not(first-child) {
+  max-width: 0;
+}
 .explore {
   padding-top: 15px;
   padding-bottom: 80px;
