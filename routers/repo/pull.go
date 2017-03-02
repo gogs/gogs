@@ -15,9 +15,9 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -38,31 +38,27 @@ var (
 	}
 )
 
-func getForkRepository(ctx *context.Context) *models.Repository {
-	forkRepo, err := models.GetRepositoryByID(ctx.ParamsInt64(":repoid"))
+func parseBaseRepository(ctx *context.Context) *models.Repository {
+	baseRepo, err := models.GetRepositoryByID(ctx.ParamsInt64(":repoid"))
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
-			ctx.Handle(404, "GetRepositoryByID", nil)
-		} else {
-			ctx.Handle(500, "GetRepositoryByID", err)
-		}
+		ctx.NotFoundOrServerError("GetRepositoryByID", models.IsErrRepoNotExist, err)
 		return nil
 	}
 
-	if !forkRepo.CanBeForked() || !forkRepo.HasAccess(ctx.User.ID) {
-		ctx.Handle(404, "getForkRepository", nil)
+	if !baseRepo.CanBeForked() || !baseRepo.HasAccess(ctx.User.ID) {
+		ctx.NotFound()
 		return nil
 	}
 
-	ctx.Data["repo_name"] = forkRepo.Name
-	ctx.Data["description"] = forkRepo.Description
-	ctx.Data["IsPrivate"] = forkRepo.IsPrivate
+	ctx.Data["repo_name"] = baseRepo.Name
+	ctx.Data["description"] = baseRepo.Description
+	ctx.Data["IsPrivate"] = baseRepo.IsPrivate
 
-	if err = forkRepo.GetOwner(); err != nil {
+	if err = baseRepo.GetOwner(); err != nil {
 		ctx.Handle(500, "GetOwner", err)
 		return nil
 	}
-	ctx.Data["ForkFrom"] = forkRepo.Owner.Name + "/" + forkRepo.Name
+	ctx.Data["ForkFrom"] = baseRepo.Owner.Name + "/" + baseRepo.Name
 
 	if err := ctx.User.GetOrganizations(true); err != nil {
 		ctx.Handle(500, "GetOrganizations", err)
@@ -70,13 +66,13 @@ func getForkRepository(ctx *context.Context) *models.Repository {
 	}
 	ctx.Data["Orgs"] = ctx.User.Orgs
 
-	return forkRepo
+	return baseRepo
 }
 
 func Fork(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
-	getForkRepository(ctx)
+	parseBaseRepository(ctx)
 	if ctx.Written() {
 		return
 	}
@@ -85,15 +81,15 @@ func Fork(ctx *context.Context) {
 	ctx.HTML(200, FORK)
 }
 
-func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
+func ForkPost(ctx *context.Context, f form.CreateRepo) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
-	forkRepo := getForkRepository(ctx)
+	baseRepo := parseBaseRepository(ctx)
 	if ctx.Written() {
 		return
 	}
 
-	ctxUser := checkContextUser(ctx, form.Uid)
+	ctxUser := checkContextUser(ctx, f.UserID)
 	if ctx.Written() {
 		return
 	}
@@ -104,44 +100,42 @@ func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	repo, has := models.HasForkedRepo(ctxUser.ID, forkRepo.ID)
+	repo, has := models.HasForkedRepo(ctxUser.ID, baseRepo.ID)
 	if has {
-		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+		ctx.Redirect(repo.Link())
 		return
 	}
 
 	// Check ownership of organization.
-	if ctxUser.IsOrganization() {
-		if !ctxUser.IsOwnedBy(ctx.User.ID) {
-			ctx.Error(403)
-			return
-		}
-	}
-
-	// Cannot fork to same owner
-	if ctxUser.ID == forkRepo.OwnerID {
-		ctx.RenderWithErr(ctx.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &form)
+	if ctxUser.IsOrganization() && !ctxUser.IsOwnedBy(ctx.User.ID) {
+		ctx.Error(403)
 		return
 	}
 
-	repo, err := models.ForkRepository(ctxUser, forkRepo, form.RepoName, form.Description)
+	// Cannot fork to same owner
+	if ctxUser.ID == baseRepo.OwnerID {
+		ctx.RenderWithErr(ctx.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f)
+		return
+	}
+
+	repo, err := models.ForkRepository(ctx.User, ctxUser, baseRepo, f.RepoName, f.Description)
 	if err != nil {
 		ctx.Data["Err_RepoName"] = true
 		switch {
 		case models.IsErrRepoAlreadyExist(err):
-			ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), FORK, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
 		case models.IsErrNameReserved(err):
-			ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &f)
 		case models.IsErrNamePatternNotAllowed(err):
-			ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &form)
+			ctx.RenderWithErr(ctx.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &f)
 		default:
 			ctx.Handle(500, "ForkPost", err)
 		}
 		return
 	}
 
-	log.Trace("Repository forked[%d]: %s/%s", forkRepo.ID, ctxUser.Name, repo.Name)
-	ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+	log.Trace("Repository forked from '%s' -> '%s'", baseRepo.FullName(), repo.FullName())
+	ctx.Redirect(repo.Link())
 }
 
 func checkPullInfo(ctx *context.Context) *models.Issue {
@@ -636,7 +630,7 @@ func CompareAndPullRequest(ctx *context.Context) {
 	ctx.HTML(200, COMPARE_PULL)
 }
 
-func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) {
+func CompareAndPullRequestPost(ctx *context.Context, f form.CreateIssue) {
 	ctx.Data["Title"] = ctx.Tr("repo.pulls.compare_changes")
 	ctx.Data["PageIsComparePull"] = true
 	ctx.Data["IsDiffCompare"] = true
@@ -653,17 +647,17 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 		return
 	}
 
-	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, form)
+	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, f)
 	if ctx.Written() {
 		return
 	}
 
 	if setting.AttachmentEnabled {
-		attachments = form.Files
+		attachments = f.Files
 	}
 
 	if ctx.HasError() {
-		auth.AssignForm(form, ctx.Data)
+		form.Assign(f, ctx.Data)
 
 		// This stage is already stop creating new pull request, so it does not matter if it has
 		// something to compare or not.
@@ -685,13 +679,13 @@ func CompareAndPullRequestPost(ctx *context.Context, form auth.CreateIssueForm) 
 	pullIssue := &models.Issue{
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
-		Title:       form.Title,
+		Title:       f.Title,
 		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
 		MilestoneID: milestoneID,
 		AssigneeID:  assigneeID,
 		IsPull:      true,
-		Content:     form.Content,
+		Content:     f.Content,
 	}
 	pullRequest := &models.PullRequest{
 		HeadRepoID:   headRepo.ID,

@@ -165,16 +165,22 @@
 			"revisionTime": "2017-02-19T18:16:29Z"
 		},
 		{
-			"checksumSHA1": "exKX51W/Hieq7OOmYK2gYn+Huuw=",
+			"checksumSHA1": "sAGNvN2IXzD+rra6Y9sxJBpR4L8=",
 			"path": "github.com/gogits/go-gogs-client",
-			"revision": "f12fbacb5495120dc62dae7cfdf140d39bf6f715",
-			"revisionTime": "2017-02-24T06:16:35Z"
+			"revision": "264a3d5bc98e108f17cc055338dbf4b94faf0d21",
+			"revisionTime": "2017-02-25T08:33:02Z"
 		},
 		{
 			"checksumSHA1": "p4yoFWgDiTfpu1JYgh26t6+VDTk=",
 			"path": "github.com/gogits/go-libravatar",
 			"revision": "cd1abbd55d09b793672732a7a1dfdaa12a40dfd0",
 			"revisionTime": "2016-11-20T02:51:54Z"
+		},
+		{
+			"checksumSHA1": "cccKtXG5TiCiCT9JA85slbJokfw=",
+			"path": "github.com/gogits/minwinsvc",
+			"revision": "95be6356811a6fbd4c2981713236971a3ccbb33a",
+			"revisionTime": "2017-03-01T03:54:11Z"
 		},
 		{
 			"checksumSHA1": "MLO0PyrK2MUO6A7Z9PxWuu43C/A=",
@@ -193,12 +199,6 @@
 			"path": "github.com/jtolds/gls",
 			"revision": "8ddce2a84170772b95dd5d576c48d517b22cac63",
 			"revisionTime": "2016-01-05T22:08:40Z"
-		},
-		{
-			"checksumSHA1": "/dBJ2h8Jo359deiC5GQ8ZYzX8M8=",
-			"path": "github.com/kardianos/minwinsvc",
-			"revision": "cad6b2b879b0970e4245a20ebf1a81a756e2bb70",
-			"revisionTime": "2015-11-22T16:33:09Z"
 		},
 		{
 			"checksumSHA1": "vfzz7zTL9TZLpFO7NC1H6/Du3+s=",
@@ -375,10 +375,10 @@
 			"revisionTime": "2016-12-13T22:25:08Z"
 		},
 		{
-			"checksumSHA1": "RnJfaFwKpC0h06J2MZ8UZX2eohc=",
+			"checksumSHA1": "fsrFs762jlaILyqqQImS1GfvIvw=",
 			"path": "golang.org/x/crypto/ssh",
-			"revision": "d8e61c69ab46ca38328da2f4995abaf93b252290",
-			"revisionTime": "2016-12-13T22:25:08Z"
+			"revision": "453249f01cfeb54c3d549ddb75ff152ca243f9d8",
+			"revisionTime": "2017-02-08T20:51:15Z"
 		},
 		{
 			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",

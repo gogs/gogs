@@ -240,7 +240,7 @@ func Config(ctx *context.Context) {
 			Mode: strings.Title(setting.LogModes[i]),
 		}
 
-		result, _ := json.Marshal(setting.LogConfigs[i])
+		result, _ := json.MarshalIndent(setting.LogConfigs[i], "", "  ")
 		loggers[i].Config = string(result)
 	}
 	ctx.Data["Loggers"] = loggers

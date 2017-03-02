@@ -13,6 +13,7 @@ The issue will be closed without any reasons if it does not satisfy any of follo
 - Database (use `[x]`):
   - [ ] PostgreSQL
   - [ ] MySQL
+  - [ ] MSSQL
   - [ ] SQLite
 - Can you reproduce the bug at https://try.gogs.io:
   - [ ] Yes (provide example URL)

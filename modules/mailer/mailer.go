@@ -36,16 +36,18 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	msg.SetHeader("Subject", subject)
 	msg.SetDateHeader("Date", time.Now())
 
-	body, err := html2text.FromString(htmlBody)
-	if err != nil {
-		log.Error(4, "html2text.FromString: %v", err)
-		msg.SetBody("text/html", htmlBody)
-	} else {
-		msg.SetBody("text/plain", body)
-		if setting.MailService.EnableHTMLAlternative {
-			msg.AddAlternative("text/html", htmlBody)
+	contentType := "text/html"
+	body := htmlBody
+	if setting.MailService.UsePlainText {
+		plainBody, err := html2text.FromString(htmlBody)
+		if err != nil {
+			log.Error(2, "html2text.FromString: %v", err)
+		} else {
+			contentType = "text/plain"
+			body = plainBody
 		}
 	}
+	msg.SetBody(contentType, body)
 
 	return &Message{
 		Message: msg,

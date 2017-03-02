@@ -18,7 +18,7 @@
 					<h4 class="ui top attached header">
 						{{.i18n.Tr "home.my_repos"}} <span class="ui grey label">{{.ContextUser.NumRepos}}</span>
 						<div class="ui right">
-							<a class="poping up" href="{{AppSubUrl}}/repo/create" data-content="{{.i18n.Tr "new_repo"}}" data-variation="tiny inverted" data-position="left center">
+							<a class="poping up" href="{{AppSubUrl}}/repo/create{{if .ContextUser.IsOrganization}}?org={{.ContextUser.ID}}{{end}}" data-content="{{.i18n.Tr "new_repo"}}" data-variation="tiny inverted" data-position="left center">
 								<i class="plus icon"></i>
 								<span class="sr-only">{{.i18n.Tr "new_repo"}}</span>
 							</a>

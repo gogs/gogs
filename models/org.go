@@ -20,8 +20,8 @@ var (
 )
 
 // IsOwnedBy returns true if given user is in the owner team.
-func (org *User) IsOwnedBy(uid int64) bool {
-	return IsOrganizationOwner(org.ID, uid)
+func (org *User) IsOwnedBy(userID int64) bool {
+	return IsOrganizationOwner(org.ID, userID)
 }
 
 // IsOrgMember returns true if given user is member of organization.
@@ -246,8 +246,8 @@ type OrgUser struct {
 }
 
 // IsOrganizationOwner returns true if given user is in the owner team.
-func IsOrganizationOwner(orgId, uid int64) bool {
-	has, _ := x.Where("is_owner=?", true).And("uid=?", uid).And("org_id=?", orgId).Get(new(OrgUser))
+func IsOrganizationOwner(orgID, userID int64) bool {
+	has, _ := x.Where("is_owner = ?", true).And("uid = ?", userID).And("org_id = ?", orgID).Get(new(OrgUser))
 	return has
 }
 

@@ -8,7 +8,8 @@
 				<div class="{{if eq .GetOpType 5}}push news{{end}}">
 					<p>
 						<a href="{{AppSubUrl}}/{{.GetActUserName}}">{{.ShortActUserName}}</a>
-						{{if eq .GetOpType 1}}
+						<!-- Reference types to models/action.go -->
+						{{if eq .GetOpType 1}} 
 							{{$.i18n.Tr "action.create_repo" .GetRepoLink .ShortRepoPath | Str2html}}
 						{{else if eq .GetOpType 2}}
 							{{$.i18n.Tr "action.rename_repo" .GetContent .GetRepoLink .ShortRepoPath | Str2html}}
@@ -43,6 +44,15 @@
 						{{else if eq .GetOpType 15}}
 							{{ $index := index .GetIssueInfos 0}}
 							{{$.i18n.Tr "action.reopen_pull_request" .GetRepoLink $index .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 16}}
+							{{ $branchLink := .GetBranch | EscapePound}}
+							{{$.i18n.Tr "action.create_branch" .GetRepoLink $branchLink .GetBranch .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 17}}
+							{{$.i18n.Tr "action.delete_branch" .GetRepoLink .GetBranch .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 18}}
+							{{$.i18n.Tr "action.delete_tag" .GetRepoLink .GetBranch .ShortRepoPath | Str2html}}
+						{{else if eq .GetOpType 19}}
+							{{$.i18n.Tr "action.fork_repo" .GetRepoLink .ShortRepoPath | Str2html}}
 						{{end}}
 					</p>
 					{{if eq .GetOpType 5}}
