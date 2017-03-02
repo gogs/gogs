@@ -3,6 +3,7 @@ Description=Gogs
 After=syslog.target
 After=network.target
 #After=mysqld.service
+#After=mariadb.service
 #After=postgresql.service
 #After=memcached.service
 #After=redis.service
