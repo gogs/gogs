@@ -142,7 +142,7 @@ var (
 		Types          []string
 		QueueLength    int
 		DeliverTimeout int
-		SkipTLSVerify  bool
+		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
 		PagingNum      int
 	}
 
