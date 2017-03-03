@@ -448,18 +448,15 @@ func (u *User) GetOwnedOrganizations() (err error) {
 }
 
 // GetOrganizations returns all organizations that user belongs to.
-func (u *User) GetOrganizations(all bool) error {
-	ous, err := GetOrgUsersByUserID(u.ID, all)
+func (u *User) GetOrganizations(showPrivate bool) error {
+	orgIDs, err := GetOrgIDsByUserID(u.ID, showPrivate)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetOrgIDsByUserID: %v", err)
 	}
 
-	u.Orgs = make([]*User, len(ous))
-	for i, ou := range ous {
-		u.Orgs[i], err = GetUserByID(ou.OrgID)
-		if err != nil {
-			return err
-		}
+	u.Orgs = make([]*User, 0, len(orgIDs))
+	if err = x.In("id", orgIDs).Find(&u.Orgs); err != nil {
+		return err
 	}
 	return nil
 }
