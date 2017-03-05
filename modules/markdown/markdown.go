@@ -343,16 +343,25 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 		return
 	}
 
-	buf.WriteString(`<a href="`)
-	buf.WriteString(src)
-	buf.WriteString(`">`)
-
 	// Prepend repository base URL for internal links
-	if !isLink([]byte(src)) {
+	needPrepend := !isLink([]byte(src))
+	if needPrepend {
 		urlPrefix = strings.Replace(urlPrefix, "/src/", "/raw/", 1)
 		if src[0] != '/' {
 			urlPrefix += "/"
 		}
+	}
+
+	buf.WriteString(`<a href="`)
+	if needPrepend {
+		buf.WriteString(urlPrefix)
+		buf.WriteString(src)
+	} else {
+		buf.WriteString(src)
+	}
+	buf.WriteString(`">`)
+
+	if needPrepend {
 		src = strings.Replace(urlPrefix+string(src), " ", "%20", -1)
 		buf.WriteString(`<img src="`)
 		buf.WriteString(src)
