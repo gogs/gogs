@@ -623,11 +623,14 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/:reponame", func() {
 			m.Head("/tasks/trigger", repo.TriggerTask)
 		})
-		// Use the regexp to match the repository name validation
+		// Use the regexp to match the repository name
+		// Duplicated routes to enable different ways of accessing same set of URLs,
+		// e.g. with or without ".git" suffix.
 		m.Group("/:reponame([\\d\\w-_\\.]+\\.git$)", func() {
 			m.Get("", ignSignIn, context.RepoAssignment(true), context.RepoRef(), repo.Home)
 			m.Route("/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 		})
+		m.Route("/:reponame/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 	})
 	// ***** END: Repository *****
 
