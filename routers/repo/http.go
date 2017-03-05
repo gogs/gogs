@@ -76,6 +76,16 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
+		// In case user requested a wrong URL and not intended to access Git objects.
+		action := ctx.Params("*")
+		if !strings.Contains(action, "git-") &&
+			!strings.Contains(action, "info/") &&
+			!strings.Contains(action, "HEAD") &&
+			!strings.Contains(action, "objects/") {
+			ctx.NotFound()
+			return
+		}
+
 		// Handle HTTP Basic Authentication
 		authHead := ctx.Req.Header.Get("Authorization")
 		if len(authHead) == 0 {
