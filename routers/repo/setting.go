@@ -264,7 +264,7 @@ func SettingsPost(ctx *context.Context, f form.RepoSetting) {
 			return
 		}
 
-		if ctx.Repo.Owner.IsOrganization() {
+		if ctx.Repo.Owner.IsOrganization() && !ctx.User.IsAdmin {
 			if !ctx.Repo.Owner.IsOwnedBy(ctx.User.ID) {
 				ctx.Error(404)
 				return
