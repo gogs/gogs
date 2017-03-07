@@ -30,6 +30,7 @@ import (
 const (
 	ENV_AUTH_USER_ID           = "GOGS_AUTH_USER_ID"
 	ENV_AUTH_USER_NAME         = "GOGS_AUTH_USER_NAME"
+	ENV_AUTH_USER_EMAIL        = "GOGS_AUTH_USER_EMAIL"
 	ENV_REPO_OWNER_NAME        = "GOGS_REPO_OWNER_NAME"
 	ENV_REPO_OWNER_SALT_MD5    = "GOGS_REPO_OWNER_SALT_MD5"
 	ENV_REPO_ID                = "GOGS_REPO_ID"
@@ -217,6 +218,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 		"SSH_ORIGINAL_COMMAND=1",
 		ENV_AUTH_USER_ID + "=" + com.ToStr(opts.AuthUser.ID),
 		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
+		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
 		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
 		ENV_REPO_OWNER_SALT_MD5 + "=" + base.EncodeMD5(opts.OwnerSalt),
 		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
