@@ -25,7 +25,7 @@
 						</div>
 						<div class="required field {{if .Err_Email}}error{{end}}">
 							<label for="email">{{.i18n.Tr "email"}}</label>
-							<input id="email" name="email" value="{{.SignedUser.Email}}">
+							<input id="email" name="email" value="{{.SignedUser.Email}}" required>
 						</div>
 						<div class="field {{if .Err_Website}}error{{end}}">
 							<label for="website">{{.i18n.Tr "settings.website"}}</label>
