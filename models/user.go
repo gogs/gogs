@@ -682,7 +682,13 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return fmt.Errorf("Delete repository wiki local copy: %v", err)
 	}
 
-	return os.Rename(UserPath(u.Name), UserPath(newUserName))
+	// Rename or create user base directory
+	baseDir := UserPath(u.Name)
+	newBaseDir := UserPath(newUserName)
+	if com.IsExist(baseDir) {
+		return os.Rename(baseDir, newBaseDir)
+	}
+	return os.MkdirAll(newBaseDir, os.ModePerm)
 }
 
 func updateUser(e Engine, u *User) error {
