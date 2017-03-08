@@ -100,14 +100,21 @@ func runHookPreReceive(c *cli.Context) error {
 			continue
 		}
 
-		// Check if whitelist is enabled
+		// Whitelist users can bypass require pull request check
+		bypassRequirePullReuqest := false
+
+		// Check if user is in whitelist when enabled
 		userID := com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64()
-		if protectBranch.EnableWhitelist && !models.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
-			fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
+		if protectBranch.EnableWhitelist {
+			if !models.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
+				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
+			}
+
+			bypassRequirePullReuqest = true
 		}
 
 		// Check if branch allows direct push
-		if protectBranch.RequirePullRequest {
+		if !bypassRequirePullReuqest && protectBranch.RequirePullRequest {
 			fail(fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
 		}
 
