@@ -139,7 +139,7 @@ func (r *Request) Debug(isdebug bool) *Request {
 	return r
 }
 
-// SetTimeout sets connect time out and read-write time out for BeegoRequest.
+// SetTimeout sets connect time out and read-write time out for Request.
 func (r *Request) SetTimeout(connectTimeout, readWriteTimeout time.Duration) *Request {
 	r.setting.ConnectTimeout = connectTimeout
 	r.setting.ReadWriteTimeout = readWriteTimeout

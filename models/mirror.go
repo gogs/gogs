@@ -55,7 +55,7 @@ func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
 	case "repo_id":
 		m.Repo, err = GetRepositoryByID(m.RepoID)
 		if err != nil {
-			log.Error(3, "GetRepositoryByID[%d]: %v", m.ID, err)
+			log.Error(3, "GetRepositoryByID [%d]: %v", m.ID, err)
 		}
 	case "updated_unix":
 		m.Updated = time.Unix(m.UpdatedUnix, 0).Local()
@@ -76,7 +76,7 @@ func (m *Mirror) readAddress() {
 
 	cfg, err := ini.Load(m.Repo.GitConfigPath())
 	if err != nil {
-		log.Error(4, "Load: %v", err)
+		log.Error(2, "Load: %v", err)
 		return
 	}
 	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
@@ -142,9 +142,9 @@ func (m *Mirror) runSync() bool {
 		URL:     m.FullAddress(),
 		Timeout: 10 * time.Second,
 	}) {
-		desc := fmt.Sprintf("Mirror repository URL is not accessible: %s", m.MosaicsAddress())
+		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
 		if err := CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err)
+			log.Error(2, "CreateRepositoryNotice: %v", err)
 		}
 		return false
 	}
@@ -157,9 +157,9 @@ func (m *Mirror) runSync() bool {
 		timeout, repoPath, fmt.Sprintf("Mirror.runSync: %s", repoPath),
 		"git", gitArgs...); err != nil {
 		desc := fmt.Sprintf("Fail to update mirror repository '%s': %s", repoPath, stderr)
-		log.Error(4, desc)
+		log.Error(2, desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err)
+			log.Error(2, "CreateRepositoryNotice: %v", err)
 		}
 		return false
 	}
@@ -168,9 +168,9 @@ func (m *Mirror) runSync() bool {
 			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
 			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Fail to update mirror wiki repository '%s': %s", wikiPath, stderr)
-			log.Error(4, desc)
+			log.Error(2, desc)
 			if err = CreateRepositoryNotice(desc); err != nil {
-				log.Error(4, "CreateRepositoryNotice: %v", err)
+				log.Error(2, "CreateRepositoryNotice: %v", err)
 			}
 			return false
 		}
@@ -222,14 +222,14 @@ func MirrorUpdate() {
 	if err := x.Where("next_update_unix<=?", time.Now().Unix()).Iterate(new(Mirror), func(idx int, bean interface{}) error {
 		m := bean.(*Mirror)
 		if m.Repo == nil {
-			log.Error(4, "Disconnected mirror repository found: %d", m.ID)
+			log.Error(2, "Disconnected mirror repository found: %d", m.ID)
 			return nil
 		}
 
 		MirrorQueue.Add(m.RepoID)
 		return nil
 	}); err != nil {
-		log.Error(4, "MirrorUpdate: %v", err)
+		log.Error(2, "MirrorUpdate: %v", err)
 	}
 }
 
@@ -243,7 +243,7 @@ func SyncMirrors() {
 
 		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
 		if err != nil {
-			log.Error(4, "GetMirrorByRepoID [%s]: %v", repoID, err)
+			log.Error(2, "GetMirrorByRepoID [%s]: %v", m.RepoID, err)
 			continue
 		}
 
@@ -253,8 +253,13 @@ func SyncMirrors() {
 
 		m.ScheduleNextUpdate()
 		if err = UpdateMirror(m); err != nil {
-			log.Error(4, "UpdateMirror [%s]: %v", repoID, err)
+			log.Error(2, "UpdateMirror [%s]: %v", m.RepoID, err)
 			continue
+		}
+
+		// Update repository last updated time
+		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", time.Now().Unix(), m.RepoID); err != nil {
+			log.Error(2, "Update repository 'updated_unix' [%s]: %v", m.RepoID, err)
 		}
 	}
 }
