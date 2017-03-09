@@ -241,6 +241,45 @@ func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*DiscordPa
 	}, nil
 }
 
+func getDiscordIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) (*DiscordPayload, error) {
+	title := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
+	url := fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID))
+	content := ""
+	fields := make([]*DiscordEmbedFieldObject, 0, 1)
+	switch p.Action {
+	case api.HOOK_ISSUE_COMMENT_CREATED:
+		title = "New comment: " + title
+		content = p.Comment.Body
+	case api.HOOK_ISSUE_COMMENT_EDITED:
+		title = "Comment edited: " + title
+		content = p.Comment.Body
+	case api.HOOK_ISSUE_COMMENT_DELETED:
+		title = "Comment deleted: " + title
+		url = fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
+		content = p.Comment.Body
+	}
+
+	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
+	return &DiscordPayload{
+		Username:  slack.Username,
+		AvatarURL: slack.IconURL,
+		Embeds: []*DiscordEmbedObject{{
+			Title:       title,
+			Description: content,
+			URL:         url,
+			Color:       int(color),
+			Footer: &DiscordEmbedFooterObject{
+				Text: p.Repository.FullName,
+			},
+			Author: &DiscordEmbedAuthorObject{
+				Name:    p.Sender.UserName,
+				IconURL: p.Sender.AvatarUrl,
+			},
+			Fields: fields,
+		}},
+	}, nil
+}
+
 func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*DiscordPayload, error) {
 	title := fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	url := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
@@ -331,6 +370,8 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 		payload, err = getDiscordPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_ISSUES:
 		payload, err = getDiscordIssuesPayload(p.(*api.IssuesPayload), slack)
+	case HOOK_EVENT_ISSUE_COMMENT:
+		payload, err = getDiscordIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
 	}
