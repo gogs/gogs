@@ -453,6 +453,9 @@ func (u *User) GetOrganizations(showPrivate bool) error {
 	if err != nil {
 		return fmt.Errorf("GetOrgIDsByUserID: %v", err)
 	}
+	if len(orgIDs) == 0 {
+		return nil
+	}
 
 	u.Orgs = make([]*User, 0, len(orgIDs))
 	if err = x.In("id", orgIDs).Find(&u.Orgs); err != nil {
