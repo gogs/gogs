@@ -771,7 +771,7 @@ func UpdateIssueMilestone(ctx *context.Context) {
 
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneID = milestoneID
-	if err := models.ChangeMilestoneAssign(issue, oldMilestoneID); err != nil {
+	if err := models.ChangeMilestoneAssign(ctx.User, issue, oldMilestoneID); err != nil {
 		ctx.Handle(500, "ChangeMilestoneAssign", err)
 		return
 	}

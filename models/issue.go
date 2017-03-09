@@ -230,7 +230,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error(4, "LoadIssue: %v", err)
+			log.Error(2, "LoadIssue: %v", err)
 			return
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -240,9 +240,17 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 			Repository:  issue.Repo.APIFormat(nil),
 			Sender:      doer.APIFormat(),
 		})
+	} else {
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+			Action:     api.HOOK_ISSUE_LABEL_UPDATED,
+			Index:      issue.Index,
+			Issue:      issue.APIFormat(),
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		})
 	}
 	if err != nil {
-		log.Error(4, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	} else {
 		go HookQueue.Add(issue.RepoID)
 	}
@@ -334,7 +342,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error(4, "LoadIssue: %v", err)
+			log.Error(2, "LoadIssue: %v", err)
 			return
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -344,9 +352,17 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 			Repository:  issue.Repo.APIFormat(nil),
 			Sender:      doer.APIFormat(),
 		})
+	} else {
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+			Action:     api.HOOK_ISSUE_LABEL_CLEARED,
+			Index:      issue.Index,
+			Issue:      issue.APIFormat(),
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		})
 	}
 	if err != nil {
-		log.Error(4, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	} else {
 		go HookQueue.Add(issue.RepoID)
 	}
@@ -470,9 +486,22 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 			apiPullRequest.Action = api.HOOK_ISSUE_REOPENED
 		}
 		err = PrepareWebhooks(repo, HOOK_EVENT_PULL_REQUEST, apiPullRequest)
+	} else {
+		apiIssues := &api.IssuesPayload{
+			Index:      issue.Index,
+			Issue:      issue.APIFormat(),
+			Repository: repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		}
+		if isClosed {
+			apiIssues.Action = api.HOOK_ISSUE_CLOSED
+		} else {
+			apiIssues.Action = api.HOOK_ISSUE_REOPENED
+		}
+		err = PrepareWebhooks(repo, HOOK_EVENT_ISSUES, apiIssues)
 	}
 	if err != nil {
-		log.Error(4, "PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
+		log.Error(2, "PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
 	} else {
 		go HookQueue.Add(repo.ID)
 	}
@@ -490,20 +519,33 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
-			Action: api.HOOK_ISSUE_EDITED,
-			Index:  issue.Index,
+			Action:      api.HOOK_ISSUE_EDITED,
+			Index:       issue.Index,
+			PullRequest: issue.PullRequest.APIFormat(),
 			Changes: &api.ChangesPayload{
 				Title: &api.ChangesFromPayload{
 					From: oldTitle,
 				},
 			},
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormat(nil),
-			Sender:      doer.APIFormat(),
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		})
+	} else {
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+			Action: api.HOOK_ISSUE_EDITED,
+			Index:  issue.Index,
+			Issue:  issue.APIFormat(),
+			Changes: &api.ChangesPayload{
+				Title: &api.ChangesFromPayload{
+					From: oldTitle,
+				},
+			},
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		log.Error(4, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	} else {
 		go HookQueue.Add(issue.RepoID)
 	}
@@ -521,20 +563,33 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	if issue.IsPull {
 		issue.PullRequest.Issue = issue
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
-			Action: api.HOOK_ISSUE_EDITED,
-			Index:  issue.Index,
+			Action:      api.HOOK_ISSUE_EDITED,
+			Index:       issue.Index,
+			PullRequest: issue.PullRequest.APIFormat(),
 			Changes: &api.ChangesPayload{
 				Body: &api.ChangesFromPayload{
 					From: oldContent,
 				},
 			},
-			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormat(nil),
-			Sender:      doer.APIFormat(),
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		})
+	} else {
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+			Action: api.HOOK_ISSUE_EDITED,
+			Index:  issue.Index,
+			Issue:  issue.APIFormat(),
+			Changes: &api.ChangesPayload{
+				Body: &api.ChangesFromPayload{
+					From: oldContent,
+				},
+			},
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
 		})
 	}
 	if err != nil {
-		log.Error(4, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	} else {
 		go HookQueue.Add(issue.RepoID)
 	}
@@ -570,6 +625,19 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 			apiPullRequest.Action = api.HOOK_ISSUE_ASSIGNED
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, apiPullRequest)
+	} else {
+		apiIssues := &api.IssuesPayload{
+			Index:      issue.Index,
+			Issue:      issue.APIFormat(),
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		}
+		if isRemoveAssignee {
+			apiIssues.Action = api.HOOK_ISSUE_UNASSIGNED
+		} else {
+			apiIssues.Action = api.HOOK_ISSUE_ASSIGNED
+		}
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, apiIssues)
 	}
 	if err != nil {
 		log.Error(4, "PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
@@ -715,10 +783,20 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		log.Error(4, "NotifyWatchers: %v", err)
+		log.Error(2, "NotifyWatchers: %v", err)
 	}
 	if err = issue.MailParticipants(); err != nil {
-		log.Error(4, "MailParticipants: %v", err)
+		log.Error(2, "MailParticipants: %v", err)
+	}
+
+	if err = PrepareWebhooks(repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+		Action:     api.HOOK_ISSUE_OPENED,
+		Index:      issue.Index,
+		Issue:      issue.APIFormat(),
+		Repository: repo.APIFormat(nil),
+		Sender:     issue.Poster.APIFormat(),
+	}); err != nil {
+		log.Error(2, "PrepareWebhooks: %v", err)
 	}
 
 	return nil

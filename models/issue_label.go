@@ -240,7 +240,13 @@ func newIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 	if issue.IsClosed {
 		label.NumClosedIssues++
 	}
-	return updateLabel(e, label)
+
+	if err = updateLabel(e, label); err != nil {
+		return fmt.Errorf("updateLabel: %v", err)
+	}
+
+	issue.Labels = append(issue.Labels, label)
+	return nil
 }
 
 // NewIssueLabel creates a new issue-label relation.
@@ -313,7 +319,17 @@ func deleteIssueLabel(e *xorm.Session, issue *Issue, label *Label) (err error) {
 	if issue.IsClosed {
 		label.NumClosedIssues--
 	}
-	return updateLabel(e, label)
+	if err = updateLabel(e, label); err != nil {
+		return fmt.Errorf("updateLabel: %v", err)
+	}
+
+	for i := range issue.Labels {
+		if issue.Labels[i].ID == label.ID {
+			issue.Labels = append(issue.Labels[:i], issue.Labels[i+1:]...)
+			break
+		}
+	}
+	return nil
 }
 
 // DeleteIssueLabel deletes issue-label relation.

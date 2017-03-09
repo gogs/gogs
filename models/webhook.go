@@ -66,6 +66,7 @@ type HookEvents struct {
 	Delete      bool `json:"delete"`
 	Fork        bool `json:"fork"`
 	Push        bool `json:"push"`
+	Issues      bool `json:"issues"`
 	PullRequest bool `json:"pull_request"`
 }
 
@@ -174,6 +175,12 @@ func (w *Webhook) HasForkEvent() bool {
 func (w *Webhook) HasPushEvent() bool {
 	return w.PushOnly || w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.Push)
+}
+
+// HasIssuesEvent returns true if hook enabled issues event.
+func (w *Webhook) HasIssuesEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Issues)
 }
 
 // HasPullRequestEvent returns true if hook enabled pull request event.
@@ -360,6 +367,7 @@ const (
 	HOOK_EVENT_DELETE       HookEventType = "delete"
 	HOOK_EVENT_FORK         HookEventType = "fork"
 	HOOK_EVENT_PUSH         HookEventType = "push"
+	HOOK_EVENT_ISSUES       HookEventType = "issues"
 	HOOK_EVENT_PULL_REQUEST HookEventType = "pull_request"
 )
 
@@ -490,6 +498,10 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			}
 		case HOOK_EVENT_PUSH:
 			if !w.HasPushEvent() {
+				continue
+			}
+		case HOOK_EVENT_ISSUES:
+			if !w.HasIssuesEvent() {
 				continue
 			}
 		case HOOK_EVENT_PULL_REQUEST:

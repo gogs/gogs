@@ -145,6 +145,52 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 	}, nil
 }
 
+func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*SlackPayload, error) {
+	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
+	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index),
+		fmt.Sprintf("#%d %s", p.Index, p.Issue.Title))
+	var text, title, attachmentText string
+	switch p.Action {
+	case api.HOOK_ISSUE_OPENED:
+		text = fmt.Sprintf("[%s] New issue created by %s", p.Repository.FullName, senderLink)
+		title = titleLink
+		attachmentText = SlackTextFormatter(p.Issue.Body)
+	case api.HOOK_ISSUE_CLOSED:
+		text = fmt.Sprintf("[%s] Issue closed: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_REOPENED:
+		text = fmt.Sprintf("[%s] Issue re-opened: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_EDITED:
+		text = fmt.Sprintf("[%s] Issue edited: %s by %s", p.Repository.FullName, titleLink, senderLink)
+		attachmentText = SlackTextFormatter(p.Issue.Body)
+	case api.HOOK_ISSUE_ASSIGNED:
+		text = fmt.Sprintf("[%s] Issue assigned to %s: %s by %s", p.Repository.FullName,
+			SlackLinkFormatter(setting.AppUrl+p.Issue.Assignee.UserName, p.Issue.Assignee.UserName),
+			titleLink, senderLink)
+	case api.HOOK_ISSUE_UNASSIGNED:
+		text = fmt.Sprintf("[%s] Issue unassigned: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_LABEL_UPDATED:
+		text = fmt.Sprintf("[%s] Issue labels updated: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_LABEL_CLEARED:
+		text = fmt.Sprintf("[%s] Issue labels cleared: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_MILESTONED:
+		text = fmt.Sprintf("[%s] Issue milestoned: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_DEMILESTONED:
+		text = fmt.Sprintf("[%s] Issue demilestoned: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	}
+
+	return &SlackPayload{
+		Channel:  slack.Channel,
+		Text:     text,
+		Username: slack.Username,
+		IconURL:  slack.IconURL,
+		Attachments: []*SlackAttachment{{
+			Color: slack.Color,
+			Title: title,
+			Text:  attachmentText,
+		}},
+	}, nil
+}
+
 func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
 	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
@@ -178,6 +224,10 @@ func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*S
 		text = fmt.Sprintf("[%s] Pull request labels cleared: %s by %s", p.Repository.FullName, titleLink, senderLink)
 	case api.HOOK_ISSUE_SYNCHRONIZED:
 		text = fmt.Sprintf("[%s] Pull request synchronized: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_MILESTONED:
+		text = fmt.Sprintf("[%s] Pull request milestoned: %s by %s", p.Repository.FullName, titleLink, senderLink)
+	case api.HOOK_ISSUE_DEMILESTONED:
+		text = fmt.Sprintf("[%s] Pull request demilestoned: %s by %s", p.Repository.FullName, titleLink, senderLink)
 	}
 
 	return &SlackPayload{
@@ -208,6 +258,8 @@ func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload
 		payload, err = getSlackForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
 		payload, err = getSlackPushPayload(p.(*api.PushPayload), slack)
+	case HOOK_EVENT_ISSUES:
+		payload, err = getSlackIssuesPayload(p.(*api.IssuesPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
 	}
