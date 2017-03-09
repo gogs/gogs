@@ -331,9 +331,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 
 // patchConflicts is a list of conflit description from Git.
 var patchConflicts = []string{
-	"patch does not apply",
-	"already exists in working directory",
-	"unrecognized input",
+	"fatal:",
 	"error:",
 }
 
@@ -374,8 +372,7 @@ func (pr *PullRequest) testPatch() (err error) {
 	if err != nil {
 		for i := range patchConflicts {
 			if strings.Contains(stderr, patchConflicts[i]) {
-				log.Trace("PullRequest[%d].testPatch (apply): has conflit", pr.ID)
-				fmt.Println(stderr)
+				log.Trace("PullRequest[%d].testPatch (apply): has conflit\n%s", pr.ID, stderr)
 				pr.Status = PULL_REQUEST_STATUS_CONFLICT
 				return nil
 			}
