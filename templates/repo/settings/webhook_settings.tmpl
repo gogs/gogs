@@ -62,6 +62,16 @@
 				</div>
 			</div>
 		</div>
+		<!-- Issues -->
+		<div class="seven wide column">
+			<div class="field">
+				<div class="ui checkbox">
+					<input class="hidden" name="issues" type="checkbox" tabindex="0" {{if .Webhook.Issues}}checked{{end}}>
+					<label>{{.i18n.Tr "repo.settings.event_issue"}}</label>
+					<span class="help">{{.i18n.Tr "repo.settings.event_issue_desc"}}</span>
+				</div>
+			</div>
+		</div>
 		<!-- Pull Request -->
 		<div class="seven wide column">
 			<div class="field">

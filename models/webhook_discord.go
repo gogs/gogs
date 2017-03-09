@@ -169,6 +169,78 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 	}, nil
 }
 
+func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*DiscordPayload, error) {
+	title := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
+	url := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
+	content := ""
+	fields := make([]*DiscordEmbedFieldObject, 0, 1)
+	switch p.Action {
+	case api.HOOK_ISSUE_OPENED:
+		title = "New issue: " + title
+		content = p.Issue.Body
+	case api.HOOK_ISSUE_CLOSED:
+		title = "Issue closed: " + title
+	case api.HOOK_ISSUE_REOPENED:
+		title = "Issue re-opened: " + title
+	case api.HOOK_ISSUE_EDITED:
+		title = "Issue edited: " + title
+		content = p.Issue.Body
+	case api.HOOK_ISSUE_ASSIGNED:
+		title = "Issue assigned: " + title
+		fields = []*DiscordEmbedFieldObject{{
+			Name:  "New Assignee",
+			Value: p.Issue.Assignee.UserName,
+		}}
+	case api.HOOK_ISSUE_UNASSIGNED:
+		title = "Issue unassigned: " + title
+	case api.HOOK_ISSUE_LABEL_UPDATED:
+		title = "Issue labels updated: " + title
+		labels := make([]string, len(p.Issue.Labels))
+		for i := range p.Issue.Labels {
+			labels[i] = p.Issue.Labels[i].Name
+		}
+		if len(labels) == 0 {
+			labels = []string{"<empty>"}
+		}
+		fields = []*DiscordEmbedFieldObject{{
+			Name:  "Labels",
+			Value: strings.Join(labels, ", "),
+		}}
+	case api.HOOK_ISSUE_LABEL_CLEARED:
+		title = "Issue labels cleared: " + title
+	case api.HOOK_ISSUE_SYNCHRONIZED:
+		title = "Issue synchronized: " + title
+	case api.HOOK_ISSUE_MILESTONED:
+		title = "Issue milestoned: " + title
+		fields = []*DiscordEmbedFieldObject{{
+			Name:  "New Milestone",
+			Value: p.Issue.Milestone.Title,
+		}}
+	case api.HOOK_ISSUE_DEMILESTONED:
+		title = "Issue demilestoned: " + title
+	}
+
+	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
+	return &DiscordPayload{
+		Username:  slack.Username,
+		AvatarURL: slack.IconURL,
+		Embeds: []*DiscordEmbedObject{{
+			Title:       title,
+			Description: content,
+			URL:         url,
+			Color:       int(color),
+			Footer: &DiscordEmbedFooterObject{
+				Text: p.Repository.FullName,
+			},
+			Author: &DiscordEmbedAuthorObject{
+				Name:    p.Sender.UserName,
+				IconURL: p.Sender.AvatarUrl,
+			},
+			Fields: fields,
+		}},
+	}, nil
+}
+
 func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*DiscordPayload, error) {
 	title := fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	url := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
@@ -211,6 +283,14 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (
 		title = "Pull request labels cleared: " + title
 	case api.HOOK_ISSUE_SYNCHRONIZED:
 		title = "Pull request synchronized: " + title
+	case api.HOOK_ISSUE_MILESTONED:
+		title = "Pull request milestoned: " + title
+		fields = []*DiscordEmbedFieldObject{{
+			Name:  "New Milestone",
+			Value: p.PullRequest.Milestone.Title,
+		}}
+	case api.HOOK_ISSUE_DEMILESTONED:
+		title = "Pull request demilestoned: " + title
 	}
 
 	color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
@@ -249,6 +329,8 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 		payload, err = getDiscordForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
 		payload, err = getDiscordPushPayload(p.(*api.PushPayload), slack)
+	case HOOK_EVENT_ISSUES:
+		payload, err = getDiscordIssuesPayload(p.(*api.IssuesPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
 	}

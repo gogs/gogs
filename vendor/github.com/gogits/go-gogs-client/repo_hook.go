@@ -239,6 +239,8 @@ const (
 	HOOK_ISSUE_UNASSIGNED    HookIssueAction = "unassigned"
 	HOOK_ISSUE_LABEL_UPDATED HookIssueAction = "label_updated"
 	HOOK_ISSUE_LABEL_CLEARED HookIssueAction = "label_cleared"
+	HOOK_ISSUE_MILESTONED    HookIssueAction = "milestoned"
+	HOOK_ISSUE_DEMILESTONED  HookIssueAction = "demilestoned"
 	HOOK_ISSUE_SYNCHRONIZED  HookIssueAction = "synchronized"
 )
 
@@ -249,6 +251,19 @@ type ChangesFromPayload struct {
 type ChangesPayload struct {
 	Title *ChangesFromPayload `json:"title,omitempty"`
 	Body  *ChangesFromPayload `json:"body,omitempty"`
+}
+
+type IssuesPayload struct {
+	Action     HookIssueAction `json:"action"`
+	Index      int64           `json:"number"`
+	Issue      *Issue          `json:"issue"`
+	Changes    *ChangesPayload `json:"changes,omitempty"`
+	Repository *Repository     `json:"repository"`
+	Sender     *User           `json:"sender"`
+}
+
+func (p *IssuesPayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
 }
 
 // __________      .__  .__    __________                                     __
@@ -262,8 +277,8 @@ type ChangesPayload struct {
 type PullRequestPayload struct {
 	Action      HookIssueAction `json:"action"`
 	Index       int64           `json:"number"`
-	Changes     *ChangesPayload `json:"changes,omitempty"`
 	PullRequest *PullRequest    `json:"pull_request"`
+	Changes     *ChangesPayload `json:"changes,omitempty"`
 	Repository  *Repository     `json:"repository"`
 	Sender      *User           `json:"sender"`
 }

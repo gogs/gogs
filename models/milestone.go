@@ -5,9 +5,11 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	api "github.com/gogits/go-gogs-client"
 
@@ -272,6 +274,8 @@ func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) 
 		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id = 0 WHERE issue_id = ?", issue.ID); err != nil {
 			return err
 		}
+
+		issue.Milestone = nil
 	}
 
 	if issue.MilestoneID > 0 {
@@ -290,13 +294,15 @@ func changeMilestoneAssign(e *xorm.Session, issue *Issue, oldMilestoneID int64) 
 		} else if _, err = e.Exec("UPDATE `issue_user` SET milestone_id = ? WHERE issue_id = ?", m.ID, issue.ID); err != nil {
 			return err
 		}
+
+		issue.Milestone = m
 	}
 
 	return updateIssue(e, issue)
 }
 
 // ChangeMilestoneAssign changes assignment of milestone for issue.
-func ChangeMilestoneAssign(issue *Issue, oldMilestoneID int64) (err error) {
+func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
@@ -306,7 +312,47 @@ func ChangeMilestoneAssign(issue *Issue, oldMilestoneID int64) (err error) {
 	if err = changeMilestoneAssign(sess, issue, oldMilestoneID); err != nil {
 		return err
 	}
-	return sess.Commit()
+
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
+	}
+
+	var hookAction api.HookIssueAction
+	if issue.MilestoneID > 0 {
+		hookAction = api.HOOK_ISSUE_MILESTONED
+	} else {
+		hookAction = api.HOOK_ISSUE_DEMILESTONED
+	}
+
+	if issue.IsPull {
+		err = issue.PullRequest.LoadIssue()
+		if err != nil {
+			log.Error(2, "LoadIssue: %v", err)
+			return
+		}
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
+			Action:      hookAction,
+			Index:       issue.Index,
+			PullRequest: issue.PullRequest.APIFormat(),
+			Repository:  issue.Repo.APIFormat(nil),
+			Sender:      doer.APIFormat(),
+		})
+	} else {
+		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
+			Action:     hookAction,
+			Index:      issue.Index,
+			Issue:      issue.APIFormat(),
+			Repository: issue.Repo.APIFormat(nil),
+			Sender:     doer.APIFormat(),
+		})
+	}
+	if err != nil {
+		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+	} else {
+		go HookQueue.Add(issue.RepoID)
+	}
+
+	return nil
 }
 
 // DeleteMilestoneOfRepoByID deletes a milestone from a repository.

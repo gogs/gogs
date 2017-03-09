@@ -437,9 +437,10 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		log.Error(4, "NotifyWatchers: %v", err)
-	} else if err = pull.MailParticipants(); err != nil {
-		log.Error(4, "MailParticipants: %v", err)
+		log.Error(2, "NotifyWatchers: %v", err)
+	}
+	if err = pull.MailParticipants(); err != nil {
+		log.Error(2, "MailParticipants: %v", err)
 	}
 
 	pr.Issue = pull
@@ -451,7 +452,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		Repository:  repo.APIFormat(nil),
 		Sender:      pull.Poster.APIFormat(),
 	}); err != nil {
-		log.Error(4, "PrepareWebhooks: %v", err)
+		log.Error(2, "PrepareWebhooks: %v", err)
 	}
 	go HookQueue.Add(repo.ID)
 

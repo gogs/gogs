@@ -138,6 +138,7 @@ type Webhook struct {
 	Delete      bool
 	Fork        bool
 	Push        bool
+	Issues      bool
 	PullRequest bool
 	Active      bool
 }

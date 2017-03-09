@@ -18,12 +18,13 @@ type User struct {
 	AvatarUrl string `json:"avatar_url"`
 }
 
-// MarshalJSON implements the json.Marshaler interface for User, adding field(s) for backward compatibility
+// MarshalJSON implements the json.Marshaler interface for User
 func (u User) MarshalJSON() ([]byte, error) {
 	// Re-declaring User to avoid recursion
 	type shadow User
 	return json.Marshal(struct {
 		shadow
+		// LEGACY [Gogs 1.0]: remove field(s) for backward compatibility
 		CompatUserName string `json:"username"`
 	}{shadow(u), u.UserName})
 }
