@@ -191,6 +191,40 @@ func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*SlackPayloa
 	}, nil
 }
 
+func getSlackIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) (*SlackPayload, error) {
+	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
+	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID)),
+		fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title))
+	var text, title, attachmentText string
+	switch p.Action {
+	case api.HOOK_ISSUE_COMMENT_CREATED:
+		text = fmt.Sprintf("[%s] New comment created by %s", p.Repository.FullName, senderLink)
+		title = titleLink
+		attachmentText = SlackTextFormatter(p.Comment.Body)
+	case api.HOOK_ISSUE_COMMENT_EDITED:
+		text = fmt.Sprintf("[%s] Comment edited by %s", p.Repository.FullName, senderLink)
+		title = titleLink
+		attachmentText = SlackTextFormatter(p.Comment.Body)
+	case api.HOOK_ISSUE_COMMENT_DELETED:
+		text = fmt.Sprintf("[%s] Comment deleted by %s", p.Repository.FullName, senderLink)
+		title = SlackLinkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index),
+			fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title))
+		attachmentText = SlackTextFormatter(p.Comment.Body)
+	}
+
+	return &SlackPayload{
+		Channel:  slack.Channel,
+		Text:     text,
+		Username: slack.Username,
+		IconURL:  slack.IconURL,
+		Attachments: []*SlackAttachment{{
+			Color: slack.Color,
+			Title: title,
+			Text:  attachmentText,
+		}},
+	}, nil
+}
+
 func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
 	senderLink := SlackLinkFormatter(setting.AppUrl+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
@@ -260,6 +294,8 @@ func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload
 		payload, err = getSlackPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_ISSUES:
 		payload, err = getSlackIssuesPayload(p.(*api.IssuesPayload), slack)
+	case HOOK_EVENT_ISSUE_COMMENT:
+		payload, err = getSlackIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
 	}

@@ -251,8 +251,6 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 	}
 	if err != nil {
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
-	} else {
-		go HookQueue.Add(issue.RepoID)
 	}
 }
 
@@ -363,8 +361,6 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	}
 	if err != nil {
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
-	} else {
-		go HookQueue.Add(issue.RepoID)
 	}
 
 	return nil
@@ -502,8 +498,6 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 	}
 	if err != nil {
 		log.Error(2, "PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
-	} else {
-		go HookQueue.Add(repo.ID)
 	}
 
 	return nil
@@ -546,8 +540,6 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 	}
 	if err != nil {
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
-	} else {
-		go HookQueue.Add(issue.RepoID)
 	}
 
 	return nil
@@ -590,8 +582,6 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	}
 	if err != nil {
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
-	} else {
-		go HookQueue.Add(issue.RepoID)
 	}
 
 	return nil
@@ -641,8 +631,6 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	}
 	if err != nil {
 		log.Error(4, "PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
-	} else {
-		go HookQueue.Add(issue.RepoID)
 	}
 
 	return nil

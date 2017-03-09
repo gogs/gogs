@@ -62,12 +62,13 @@ func IsValidHookContentType(name string) bool {
 }
 
 type HookEvents struct {
-	Create      bool `json:"create"`
-	Delete      bool `json:"delete"`
-	Fork        bool `json:"fork"`
-	Push        bool `json:"push"`
-	Issues      bool `json:"issues"`
-	PullRequest bool `json:"pull_request"`
+	Create       bool `json:"create"`
+	Delete       bool `json:"delete"`
+	Fork         bool `json:"fork"`
+	Push         bool `json:"push"`
+	Issues       bool `json:"issues"`
+	IssueComment bool `json:"issue_comment"`
+	PullRequest  bool `json:"pull_request"`
 }
 
 // HookEvent represents events that will delivery hook.
@@ -183,28 +184,38 @@ func (w *Webhook) HasIssuesEvent() bool {
 		(w.ChooseEvents && w.HookEvents.Issues)
 }
 
+// HasIssueCommentEvent returns true if hook enabled issue comment event.
+func (w *Webhook) HasIssueCommentEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.IssueComment)
+}
+
 // HasPullRequestEvent returns true if hook enabled pull request event.
 func (w *Webhook) HasPullRequestEvent() bool {
 	return w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.PullRequest)
 }
 
+type eventChecker struct {
+	checker func() bool
+	typ     HookEventType
+}
+
 func (w *Webhook) EventsArray() []string {
-	events := make([]string, 0, 5)
-	if w.HasCreateEvent() {
-		events = append(events, string(HOOK_EVENT_CREATE))
+	events := make([]string, 0, 7)
+	eventCheckers := []eventChecker{
+		{w.HasCreateEvent, HOOK_EVENT_CREATE},
+		{w.HasDeleteEvent, HOOK_EVENT_DELETE},
+		{w.HasForkEvent, HOOK_EVENT_FORK},
+		{w.HasPushEvent, HOOK_EVENT_PUSH},
+		{w.HasIssuesEvent, HOOK_EVENT_ISSUES},
+		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
+		{w.HasPullRequestEvent, HOOK_EVENT_PULL_REQUEST},
 	}
-	if w.HasDeleteEvent() {
-		events = append(events, string(HOOK_EVENT_DELETE))
-	}
-	if w.HasForkEvent() {
-		events = append(events, string(HOOK_EVENT_FORK))
-	}
-	if w.HasPushEvent() {
-		events = append(events, string(HOOK_EVENT_PUSH))
-	}
-	if w.HasPullRequestEvent() {
-		events = append(events, string(HOOK_EVENT_PULL_REQUEST))
+	for _, c := range eventCheckers {
+		if c.checker() {
+			events = append(events, string(c.typ))
+		}
 	}
 	return events
 }
@@ -363,12 +374,13 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	HOOK_EVENT_CREATE       HookEventType = "create"
-	HOOK_EVENT_DELETE       HookEventType = "delete"
-	HOOK_EVENT_FORK         HookEventType = "fork"
-	HOOK_EVENT_PUSH         HookEventType = "push"
-	HOOK_EVENT_ISSUES       HookEventType = "issues"
-	HOOK_EVENT_PULL_REQUEST HookEventType = "pull_request"
+	HOOK_EVENT_CREATE        HookEventType = "create"
+	HOOK_EVENT_DELETE        HookEventType = "delete"
+	HOOK_EVENT_FORK          HookEventType = "fork"
+	HOOK_EVENT_PUSH          HookEventType = "push"
+	HOOK_EVENT_ISSUES        HookEventType = "issues"
+	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
+	HOOK_EVENT_PULL_REQUEST  HookEventType = "pull_request"
 )
 
 // HookRequest represents hook task request information.
@@ -496,12 +508,20 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			if !w.HasDeleteEvent() {
 				continue
 			}
+		case HOOK_EVENT_FORK:
+			if !w.HasForkEvent() {
+				continue
+			}
 		case HOOK_EVENT_PUSH:
 			if !w.HasPushEvent() {
 				continue
 			}
 		case HOOK_EVENT_ISSUES:
 			if !w.HasIssuesEvent() {
+				continue
+			}
+		case HOOK_EVENT_ISSUE_COMMENT:
+			if !w.HasIssueCommentEvent() {
 				continue
 			}
 		case HOOK_EVENT_PULL_REQUEST:
@@ -554,6 +574,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 
 	// It's safe to fail when the whole function is called during hook execution
 	// because resource released after exit.
+	// FIXME: need a more safe way to not call this function if it's during hook execution.
 	go HookQueue.Add(repo.ID)
 	return nil
 }

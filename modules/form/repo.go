@@ -133,14 +133,15 @@ func (f *ProtectBranch) Validate(ctx *macaron.Context, errs binding.Errors) bind
 //        \/       \/    \/     \/     \/            \/
 
 type Webhook struct {
-	Events      string
-	Create      bool
-	Delete      bool
-	Fork        bool
-	Push        bool
-	Issues      bool
-	PullRequest bool
-	Active      bool
+	Events       string
+	Create       bool
+	Delete       bool
+	Fork         bool
+	Push         bool
+	Issues       bool
+	IssueComment bool
+	PullRequest  bool
+	Active       bool
 }
 
 func (f Webhook) PushOnly() bool {

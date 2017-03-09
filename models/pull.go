@@ -454,7 +454,6 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	}); err != nil {
 		log.Error(2, "PrepareWebhooks: %v", err)
 	}
-	go HookQueue.Add(repo.ID)
 
 	return nil
 }

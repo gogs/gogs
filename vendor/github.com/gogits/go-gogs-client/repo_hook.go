@@ -92,7 +92,10 @@ type PayloadCommit struct {
 var (
 	_ Payloader = &CreatePayload{}
 	_ Payloader = &DeletePayload{}
+	_ Payloader = &ForkPayload{}
 	_ Payloader = &PushPayload{}
+	_ Payloader = &IssuesPayload{}
+	_ Payloader = &IssueCommentPayload{}
 	_ Payloader = &PullRequestPayload{}
 )
 
@@ -263,6 +266,27 @@ type IssuesPayload struct {
 }
 
 func (p *IssuesPayload) JSONPayload() ([]byte, error) {
+	return json.MarshalIndent(p, "", "  ")
+}
+
+type HookIssueCommentAction string
+
+const (
+	HOOK_ISSUE_COMMENT_CREATED HookIssueCommentAction = "created"
+	HOOK_ISSUE_COMMENT_EDITED  HookIssueCommentAction = "edited"
+	HOOK_ISSUE_COMMENT_DELETED HookIssueCommentAction = "deleted"
+)
+
+type IssueCommentPayload struct {
+	Action     HookIssueCommentAction `json:"action"`
+	Issue      *Issue                 `json:"issue"`
+	Comment    *Comment               `json:"comment"`
+	Changes    *ChangesPayload        `json:"changes,omitempty"`
+	Repository *Repository            `json:"repository"`
+	Sender     *User                  `json:"sender"`
+}
+
+func (p *IssueCommentPayload) JSONPayload() ([]byte, error) {
 	return json.MarshalIndent(p, "", "  ")
 }
 
