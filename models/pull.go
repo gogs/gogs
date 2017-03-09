@@ -329,12 +329,6 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	return nil
 }
 
-// patchConflicts is a list of conflit description from Git.
-var patchConflicts = []string{
-	"fatal:",
-	"error:",
-}
-
 // testPatch checks if patch can be merged to base repository without conflit.
 // FIXME: make a mechanism to clean up stable local copies.
 func (pr *PullRequest) testPatch() (err error) {
@@ -370,15 +364,9 @@ func (pr *PullRequest) testPatch() (err error) {
 		fmt.Sprintf("testPatch (git apply --check): %d", pr.BaseRepo.ID),
 		"git", "apply", "--check", patchPath)
 	if err != nil {
-		for i := range patchConflicts {
-			if strings.Contains(stderr, patchConflicts[i]) {
-				log.Trace("PullRequest[%d].testPatch (apply): has conflit\n%s", pr.ID, stderr)
-				pr.Status = PULL_REQUEST_STATUS_CONFLICT
-				return nil
-			}
-		}
-
-		return fmt.Errorf("git apply --check: %v - %s", err, stderr)
+		log.Trace("PullRequest[%d].testPatch (apply): has conflit\n%s", pr.ID, stderr)
+		pr.Status = PULL_REQUEST_STATUS_CONFLICT
+		return nil
 	}
 	return nil
 }
