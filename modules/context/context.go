@@ -159,6 +159,9 @@ func Contexter() macaron.Handler {
 
 		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
 			ctx.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+			ctx.Header().Set("'Access-Control-Allow-Credentials' ", "true")
+			ctx.Header().Set("Access-Control-Max-Age", "3600")
+			ctx.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 		}
 
 		// Compute current URL for real-time change language.

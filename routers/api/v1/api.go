@@ -173,6 +173,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 	bind := binding.Bind
 
 	m.Group("/v1", func() {
+		// handle preflight OPTIONS request
+		m.Options("/*", func() { return })
+
 		// Miscellaneous
 		m.Post("/markdown", bind(api.MarkdownOption{}), misc.Markdown)
 		m.Post("/markdown/raw", misc.MarkdownRaw)
