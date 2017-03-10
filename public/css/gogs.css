@@ -125,6 +125,11 @@ code.wrap {
 .ui.form .ui.button {
   font-weight: normal;
 }
+.ui.menu,
+.ui.vertical.menu,
+.ui.segment {
+  box-shadow: none;
+}
 .ui .text.red {
   color: #d95c5c !important;
 }
@@ -1234,6 +1239,20 @@ footer .ui.language .menu {
 .repository.file.list #file-buttons .ui.button {
   padding: 8px 10px;
   font-weight: normal;
+}
+.repository.file.list #git-stats {
+  padding: 5px 10px;
+  line-height: 0;
+}
+.repository.file.list #git-stats .list {
+  width: 100%;
+}
+.repository.file.list #git-stats .list .item {
+  margin-left: 0;
+  width: 50%;
+}
+.repository.file.list #git-stats .list .item .text b {
+  font-size: 15px;
 }
 .repository.file.list #repo-files-table thead th {
   padding-top: 8px;
@@ -2426,10 +2445,6 @@ footer .ui.language .menu {
 }
 .settings .content {
   margin-top: 2px;
-}
-.settings .content > .header,
-.settings .content .segment {
-  box-shadow: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
 }
 .settings .key.list .item:not(:first-child) {
   border-top: 1px solid #eaeaea;

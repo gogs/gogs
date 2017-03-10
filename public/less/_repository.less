@@ -167,6 +167,20 @@
 				font-weight: normal;
 			}
 		}
+		#git-stats {
+			padding: 5px 10px;
+			line-height: 0;
+			.list {
+				width: 100%;
+				.item {
+					margin-left: 0;
+					width: 50%;
+					.text b {
+						font-size: 15px;
+					}
+				}
+			}
+		}
 
 		#repo-files-table {
 			thead {
@@ -1476,10 +1490,6 @@
 .settings {
 	.content {
 		margin-top: 2px;
-		>.header,
-		.segment {
-			box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
-		}
 	}
 	.key.list {
 		.item:not(:first-child) {
