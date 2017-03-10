@@ -458,7 +458,7 @@ func (u *User) GetOrganizations(showPrivate bool) error {
 	}
 
 	u.Orgs = make([]*User, 0, len(orgIDs))
-	if err = x.In("id", orgIDs).Find(&u.Orgs); err != nil {
+	if err = x.Where("type = ?", USER_TYPE_ORGANIZATION).In("id", orgIDs).Find(&u.Orgs); err != nil {
 		return err
 	}
 	return nil
