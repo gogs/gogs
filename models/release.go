@@ -51,6 +51,26 @@ func (r *Release) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+func (r *Release) loadAttributes(e Engine) (err error) {
+	if r.Publisher == nil {
+		r.Publisher, err = getUserByID(e, r.PublisherID)
+		if err != nil {
+			if IsErrUserNotExist(err) {
+				r.PublisherID = -1
+				r.Publisher = NewGhostUser()
+			} else {
+				return fmt.Errorf("getUserByID.(Publisher) [%d]: %v", r.PublisherID, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *Release) LoadAttributes() error {
+	return r.loadAttributes(x)
+}
+
 // IsReleaseExist returns true if release with given tag name already exists.
 func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 	if len(tagName) == 0 {
@@ -60,31 +80,31 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 	return x.Get(&Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)})
 }
 
-func createTag(gitRepo *git.Repository, rel *Release) error {
+func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
-	if !rel.IsDraft {
-		if !gitRepo.IsTagExist(rel.TagName) {
-			commit, err := gitRepo.GetBranchCommit(rel.Target)
+	if !r.IsDraft {
+		if !gitRepo.IsTagExist(r.TagName) {
+			commit, err := gitRepo.GetBranchCommit(r.Target)
 			if err != nil {
 				return fmt.Errorf("GetBranchCommit: %v", err)
 			}
 
 			// Trim '--' prefix to prevent command line argument vulnerability.
-			rel.TagName = strings.TrimPrefix(rel.TagName, "--")
-			if err = gitRepo.CreateTag(rel.TagName, commit.ID.String()); err != nil {
+			r.TagName = strings.TrimPrefix(r.TagName, "--")
+			if err = gitRepo.CreateTag(r.TagName, commit.ID.String()); err != nil {
 				if strings.Contains(err.Error(), "is not a valid tag name") {
-					return ErrInvalidTagName{rel.TagName}
+					return ErrInvalidTagName{r.TagName}
 				}
 				return err
 			}
 		} else {
-			commit, err := gitRepo.GetTagCommit(rel.TagName)
+			commit, err := gitRepo.GetTagCommit(r.TagName)
 			if err != nil {
 				return fmt.Errorf("GetTagCommit: %v", err)
 			}
 
-			rel.Sha1 = commit.ID.String()
-			rel.NumCommits, err = commit.CommitsCount()
+			r.Sha1 = commit.ID.String()
+			r.NumCommits, err = commit.CommitsCount()
 			if err != nil {
 				return fmt.Errorf("CommitsCount: %v", err)
 			}
@@ -94,19 +114,19 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 }
 
 // CreateRelease creates a new release of repository.
-func CreateRelease(gitRepo *git.Repository, rel *Release) error {
-	isExist, err := IsReleaseExist(rel.RepoID, rel.TagName)
+func CreateRelease(gitRepo *git.Repository, r *Release) error {
+	isExist, err := IsReleaseExist(r.RepoID, r.TagName)
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrReleaseAlreadyExist{rel.TagName}
+		return ErrReleaseAlreadyExist{r.TagName}
 	}
 
-	if err = createTag(gitRepo, rel); err != nil {
+	if err = createTag(gitRepo, r); err != nil {
 		return err
 	}
-	rel.LowerTagName = strings.ToLower(rel.TagName)
-	_, err = x.InsertOne(rel)
+	r.LowerTagName = strings.ToLower(r.TagName)
+	_, err = x.InsertOne(r)
 	return err
 }
 
@@ -119,53 +139,68 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 		return nil, ErrReleaseNotExist{0, tagName}
 	}
 
-	rel := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
-	_, err = x.Get(rel)
-	return rel, err
+	r := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
+	if _, err = x.Get(r); err != nil {
+		return nil, fmt.Errorf("Get: %v", err)
+	}
+
+	return r, r.LoadAttributes()
 }
 
 // GetReleaseByID returns release with given ID.
 func GetReleaseByID(id int64) (*Release, error) {
-	rel := new(Release)
-	has, err := x.Id(id).Get(rel)
+	r := new(Release)
+	has, err := x.Id(id).Get(r)
 	if err != nil {
 		return nil, err
 	} else if !has {
 		return nil, ErrReleaseNotExist{id, ""}
 	}
 
-	return rel, nil
+	return r, r.LoadAttributes()
 }
 
-// GetReleasesByRepoID returns a list of releases of repository.
-func GetReleasesByRepoID(repoID int64) (rels []*Release, err error) {
-	err = x.Desc("created_unix").Find(&rels, Release{RepoID: repoID})
-	return rels, err
+// GetPublishedReleasesByRepoID returns a list of published releases of repository.
+// If matches is not empty, only published releases in matches will be returned.
+// In any case, drafts won't be returned by this function.
+func GetPublishedReleasesByRepoID(repoID int64, matches ...string) ([]*Release, error) {
+	sess := x.Where("repo_id = ?", repoID).And("is_draft = ?", false).Desc("created_unix")
+	if len(matches) > 0 {
+		sess.In("tag_name", matches)
+	}
+	releases := make([]*Release, 0, 5)
+	return releases, sess.Find(&releases, new(Release))
+}
+
+// GetDraftReleasesByRepoID returns all draft releases of repository.
+func GetDraftReleasesByRepoID(repoID int64) ([]*Release, error) {
+	releases := make([]*Release, 0)
+	return releases, x.Where("repo_id = ?", repoID).And("is_draft = ?", true).Find(&releases)
 }
 
 type ReleaseSorter struct {
-	rels []*Release
+	releases []*Release
 }
 
 func (rs *ReleaseSorter) Len() int {
-	return len(rs.rels)
+	return len(rs.releases)
 }
 
 func (rs *ReleaseSorter) Less(i, j int) bool {
-	diffNum := rs.rels[i].NumCommits - rs.rels[j].NumCommits
+	diffNum := rs.releases[i].NumCommits - rs.releases[j].NumCommits
 	if diffNum != 0 {
 		return diffNum > 0
 	}
-	return rs.rels[i].Created.After(rs.rels[j].Created)
+	return rs.releases[i].Created.After(rs.releases[j].Created)
 }
 
 func (rs *ReleaseSorter) Swap(i, j int) {
-	rs.rels[i], rs.rels[j] = rs.rels[j], rs.rels[i]
+	rs.releases[i], rs.releases[j] = rs.releases[j], rs.releases[i]
 }
 
 // SortReleases sorts releases by number of commits and created time.
 func SortReleases(rels []*Release) {
-	sorter := &ReleaseSorter{rels: rels}
+	sorter := &ReleaseSorter{releases: rels}
 	sort.Sort(sorter)
 }
 

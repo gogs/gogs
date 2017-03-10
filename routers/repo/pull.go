@@ -280,7 +280,7 @@ func ViewPullCommits(ctx *context.Context) {
 
 	commits = models.ValidateCommitsWithEmails(commits)
 	ctx.Data["Commits"] = commits
-	ctx.Data["CommitCount"] = commits.Len()
+	ctx.Data["CommitsCount"] = commits.Len()
 
 	ctx.HTML(200, PULL_COMMITS)
 }

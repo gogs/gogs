@@ -456,13 +456,6 @@ func RepoRef() macaron.Handler {
 			}
 		}
 		ctx.Data["PullRequestCtx"] = ctx.Repo.PullRequest
-
-		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
-		if err != nil {
-			ctx.Handle(500, "CommitsCount", err)
-			return
-		}
-		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
 	}
 }
 

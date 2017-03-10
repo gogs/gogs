@@ -171,7 +171,7 @@ func (repo *Repository) GetTagsAfter(after string, limit int) (*TagsResult, erro
 		}
 		if allTags[i] == after {
 			hasMatch = true
-			if limit > 0 && i-limit > 0 {
+			if limit > 0 && i-limit >= 0 {
 				previousAfter = allTags[i-limit]
 			}
 			continue
