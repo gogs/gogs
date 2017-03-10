@@ -15,7 +15,7 @@
 
 					<div class="ui right">
 						<div class="ui labeled button" tabindex="0">
-							<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
+							<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
 								<i class="icon fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
 							</a>
 							<a class="ui basic label" href="{{.Link}}/watchers">
@@ -23,7 +23,7 @@
 							</a>
 						</div>
 						<div class="ui labeled button" tabindex="0">
-							<a class="ui button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
+							<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
 								<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
 							</a>
 							<a class="ui basic label" href="{{.Link}}/stars">
@@ -32,7 +32,7 @@
 						</div>
 						{{if .CanBeForked}}
 							<div class="ui labeled button" tabindex="0">
-								<a class="ui button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" href="{{AppSubUrl}}/repo/fork/{{.ID}}">
+								<a class="ui basic button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" href="{{AppSubUrl}}/repo/fork/{{.ID}}">
 									<i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
 								</a>
 								<a class="ui basic label" href="{{.Link}}/forks">

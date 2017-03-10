@@ -19,11 +19,9 @@
 					<div class="ui four wide column meta">
 						{{if .PublisherID}}
 							{{if .IsDraft}}
-								<span class="ui yellow label">{{$.i18n.Tr "repo.release.draft"}}</span>
+								<span class="ui yellow basic label">{{$.i18n.Tr "repo.release.draft"}}</span>
 							{{else if .IsPrerelease}}
-								<span class="ui orange label">{{$.i18n.Tr "repo.release.prerelease"}}</span>
-							{{else}}
-								<span class="ui green label">{{$.i18n.Tr "repo.release.stable"}}</span>
+								<span class="ui orange basic label">{{$.i18n.Tr "repo.release.prerelease"}}</span>
 							{{end}}
 							<span class="tag text blue">
 								<a href="{{$.RepoLink}}/src/{{.TagName}}" rel="nofollow"><i class="tag icon"></i> {{.TagName}}</a>
