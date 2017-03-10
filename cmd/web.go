@@ -529,7 +529,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/delete", repo.DeleteRelease)
 			m.Get("/edit/*", repo.EditRelease)
 			m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-		}, reqRepoWriter, context.RepoRef())
+		}, reqRepoWriter)
 
 		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
 		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
