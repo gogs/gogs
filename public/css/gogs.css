@@ -2183,11 +2183,11 @@ footer .ui.language .menu {
 }
 .repository.release #release-list > li .meta .tag:not(.icon) {
   display: block;
-  margin-top: 15px;
+  margin-top: 6px;
 }
 .repository.release #release-list > li .meta .commit {
   display: block;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 .repository.release #release-list > li .detail {
   border-left: 1px solid #DDD;
