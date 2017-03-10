@@ -238,9 +238,22 @@ func Home(ctx *context.Context) {
 	treeLink := branchLink
 	rawLink := ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchName
 
+	isRootDir := false
 	if len(ctx.Repo.TreePath) > 0 {
 		treeLink += "/" + ctx.Repo.TreePath
+	} else {
+		isRootDir = true
+
+		// Only show Git stats panel when view root directory
+		var err error
+		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+		if err != nil {
+			ctx.Handle(500, "CommitsCount", err)
+			return
+		}
+		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
 	}
+	ctx.Data["PageIsRepoHome"] = isRootDir
 
 	// Get current entry user currently looking at.
 	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(ctx.Repo.TreePath)
