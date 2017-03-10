@@ -59,35 +59,26 @@ func Releases(ctx *context.Context) {
 		return
 	}
 
-	// FIXME: should only get releases match tags result and drafts.
-	releases, err := models.GetReleasesByRepoID(ctx.Repo.Repository.ID)
+	releases, err := models.GetPublishedReleasesByRepoID(ctx.Repo.Repository.ID, tagsResult.Tags...)
 	if err != nil {
-		ctx.Handle(500, "GetReleasesByRepoID", err)
+		ctx.Handle(500, "GetPublishedReleasesByRepoID", err)
 		return
 	}
 
 	// Temproray cache commits count of used branches to speed up.
 	countCache := make(map[string]int64)
 
-	drafts := make([]*models.Release, 0, 1)
-	tags := make([]*models.Release, len(tagsResult.Tags))
+	results := make([]*models.Release, len(tagsResult.Tags))
 	for i, rawTag := range tagsResult.Tags {
 		for j, r := range releases {
-			if r == nil ||
-				(r.IsDraft && !ctx.Repo.IsOwner()) ||
-				(!r.IsDraft && r.TagName != rawTag) {
+			if r == nil || r.TagName != rawTag {
 				continue
 			}
 			releases[j] = nil // Mark as used.
 
-			r.Publisher, err = models.GetUserByID(r.PublisherID)
-			if err != nil {
-				if models.IsErrUserNotExist(err) {
-					r.Publisher = models.NewGhostUser()
-				} else {
-					ctx.Handle(500, "GetUserByID", err)
-					return
-				}
+			if err = r.LoadAttributes(); err != nil {
+				ctx.Handle(500, "LoadAttributes", err)
+				return
 			}
 
 			if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
@@ -96,49 +87,68 @@ func Releases(ctx *context.Context) {
 			}
 
 			r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
-			if r.TagName == rawTag {
-				tags[i] = r
-				break
-			}
-
-			if r.IsDraft {
-				drafts = append(drafts, r)
-			}
+			results[i] = r
+			break
 		}
 
-		if tags[i] == nil {
+		// No published release matches this tag
+		if results[i] == nil {
 			commit, err := ctx.Repo.GitRepo.GetTagCommit(rawTag)
 			if err != nil {
 				ctx.Handle(500, "GetTagCommit", err)
 				return
 			}
 
-			tags[i] = &models.Release{
+			results[i] = &models.Release{
 				Title:   rawTag,
 				TagName: rawTag,
 				Sha1:    commit.ID.String(),
 			}
 
-			tags[i].NumCommits, err = commit.CommitsCount()
+			results[i].NumCommits, err = commit.CommitsCount()
 			if err != nil {
 				ctx.Handle(500, "CommitsCount", err)
 				return
 			}
-			tags[i].NumCommitsBehind = ctx.Repo.CommitsCount - tags[i].NumCommits
+			results[i].NumCommitsBehind = ctx.Repo.CommitsCount - results[i].NumCommits
+		}
+	}
+	models.SortReleases(results)
+
+	// Only show drafts if user is viewing the latest page
+	var drafts []*models.Release
+	if tagsResult.HasLatest {
+		drafts, err = models.GetDraftReleasesByRepoID(ctx.Repo.Repository.ID)
+		if err != nil {
+			ctx.Handle(500, "GetDraftReleasesByRepoID", err)
+			return
+		}
+
+		for _, r := range drafts {
+			if err = r.LoadAttributes(); err != nil {
+				ctx.Handle(500, "LoadAttributes", err)
+				return
+			}
+
+			if err := calReleaseNumCommitsBehind(ctx.Repo, r, countCache); err != nil {
+				ctx.Handle(500, "calReleaseNumCommitsBehind", err)
+				return
+			}
+
+			r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+		}
+
+		if len(drafts) > 0 {
+			results = append(drafts, results...)
 		}
 	}
 
-	models.SortReleases(tags)
-	if len(drafts) > 0 && tagsResult.HasLatest {
-		tags = append(drafts, tags...)
-	}
-
-	ctx.Data["Releases"] = tags
+	ctx.Data["Releases"] = results
 	ctx.Data["HasPrevious"] = !tagsResult.HasLatest
 	ctx.Data["ReachEnd"] = tagsResult.ReachEnd
 	ctx.Data["PreviousAfter"] = tagsResult.PreviousAfter
-	if len(tags) > 0 {
-		ctx.Data["NextAfter"] = tags[len(tags)-1].TagName
+	if len(results) > 0 {
+		ctx.Data["NextAfter"] = results[len(results)-1].TagName
 	}
 	ctx.HTML(200, RELEASES)
 }
