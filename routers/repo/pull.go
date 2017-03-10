@@ -242,8 +242,11 @@ func ViewPullCommits(ctx *context.Context) {
 		return
 	}
 	pull := issue.PullRequest
-	ctx.Data["Username"] = pull.HeadUserName
-	ctx.Data["Reponame"] = pull.HeadRepo.Name
+
+	if pull.HeadRepo != nil {
+		ctx.Data["Username"] = pull.HeadUserName
+		ctx.Data["Reponame"] = pull.HeadRepo.Name
+	}
 
 	var commits *list.List
 	if pull.HasMerged {
@@ -362,16 +365,21 @@ func ViewPullFiles(ctx *context.Context) {
 		return
 	}
 
-	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
 	ctx.Data["IsSplitStyle"] = ctx.Query("style") == "split"
-	ctx.Data["Username"] = pull.HeadUserName
-	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.Data["IsImageFile"] = commit.IsImageFile
-	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", endCommitID)
-	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", startCommitID)
-	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", endCommitID)
-	ctx.Data["RequireHighlightJS"] = true
 
+	// It is possible head repo has been deleted for merged pull requests
+	if pull.HeadRepo != nil {
+		ctx.Data["Username"] = pull.HeadUserName
+		ctx.Data["Reponame"] = pull.HeadRepo.Name
+
+		headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
+		ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", endCommitID)
+		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", startCommitID)
+		ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", endCommitID)
+	}
+
+	ctx.Data["RequireHighlightJS"] = true
 	ctx.HTML(200, PULL_FILES)
 }
 
@@ -387,11 +395,7 @@ func MergePullRequest(ctx *context.Context) {
 
 	pr, err := models.GetPullRequestByIssueID(issue.ID)
 	if err != nil {
-		if models.IsErrPullRequestNotExist(err) {
-			ctx.Handle(404, "GetPullRequestByIssueID", nil)
-		} else {
-			ctx.Handle(500, "GetPullRequestByIssueID", err)
-		}
+		ctx.NotFoundOrServerError("GetPullRequestByIssueID", models.IsErrPullRequestNotExist, err)
 		return
 	}
 

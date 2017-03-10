@@ -41,7 +41,12 @@
 						</td>
 
 						<td class="message collapsing has-emoji">
-							<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
+							{{/* Username or Reponame doesn't present we assume the source repository no longer exists */}}
+							{{if not (and $.Username $.Reponame)}}
+								<span class="ui sha label">{{ShortSha .ID.String}}</span>
+							{{else}}
+								<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
+							{{end}}
 							<span {{if gt .ParentCount 1}}class="grey text"{{end}}>{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}</span>
 						</td>
 						<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
