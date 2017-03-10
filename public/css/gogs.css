@@ -1241,7 +1241,7 @@ footer .ui.language .menu {
   font-weight: normal;
 }
 .repository.file.list #git-stats {
-  padding: 5px 10px;
+  padding: 10px;
   line-height: 0;
 }
 .repository.file.list #git-stats .list {
