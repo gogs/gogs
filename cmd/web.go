@@ -616,9 +616,7 @@ func runWeb(ctx *cli.Context) error {
 	}, ignSignIn, context.RepoAssignment(), context.RepoRef())
 
 	m.Group("/:username", func() {
-		m.Group("", func() {
-			m.Get("/:reponame", repo.Home)
-		}, ignSignIn, context.RepoAssignment(true), context.RepoRef())
+		m.Get("/:reponame", ignSignIn, context.RepoAssignment(true), context.RepoRef(), repo.Home)
 
 		m.Group("/:reponame", func() {
 			m.Head("/tasks/trigger", repo.TriggerTask)
