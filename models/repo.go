@@ -1588,11 +1588,9 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	// Attempt to find repositories that opts.UserId has access to
 	// This does not include other people's private repositories even if opts.UserId is an admin
 	if !opts.Private && opts.UserID > 0 {
-		sess.Join("LEFT", []string{"team_repo", "tr"}, "tr.repo_id=repo.id")
-		sess.Join("LEFT", []string{"team_user", "tu"}, "tu.team_id=tr.team_id")
-		sess.Join("LEFT", []string{"user", "u"}, "u.id=tu.uid and u.id=?", opts.UserID)
-		sess.Where("repo.lower_name LIKE ?", "%"+opts.Keyword+"%")
-		sess.And("(u.id is not null or repo.is_private=? or repo.owner_id=?)", false, opts.UserID)
+		sess.Join("LEFT", []string{"access", "acc"}, "acc.repo_id = repo.id")
+		sess.Where("repo.lower_name like ? and (repo.owner_id=? or acc.user_id=? or repo.is_private=?)",
+			"%"+opts.Keyword+"%", opts.UserID, opts.UserID, false)
 	} else {
 		sess.Where("repo.lower_name LIKE ?", "%"+opts.Keyword+"%")
 		// only return public repositories if opts.Private is not set
