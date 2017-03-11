@@ -203,7 +203,6 @@ func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 		IsPrerelease: f.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-
 	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
 		ctx.Data["Err_TagName"] = true
 		switch {
@@ -274,11 +273,12 @@ func EditReleasePost(ctx *context.Context, f form.EditRelease) {
 		return
 	}
 
+	isPublish := rel.IsDraft && len(f.Draft) == 0
 	rel.Title = f.Title
 	rel.Note = f.Content
 	rel.IsDraft = len(f.Draft) > 0
 	rel.IsPrerelease = f.Prerelease
-	if err = models.UpdateRelease(ctx.Repo.GitRepo, rel); err != nil {
+	if err = models.UpdateRelease(ctx.User, ctx.Repo.GitRepo, rel, isPublish); err != nil {
 		ctx.Handle(500, "UpdateRelease", err)
 		return
 	}

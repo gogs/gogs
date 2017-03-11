@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"github.com/go-xorm/xorm"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/git-module"
+	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/process"
 )
@@ -21,6 +23,7 @@ import (
 type Release struct {
 	ID               int64 `xorm:"pk autoincr"`
 	RepoID           int64
+	Repo             *Repository `xorm:"-"`
 	PublisherID      int64
 	Publisher        *User `xorm:"-"`
 	TagName          string
@@ -52,6 +55,13 @@ func (r *Release) AfterSet(colName string, _ xorm.Cell) {
 }
 
 func (r *Release) loadAttributes(e Engine) (err error) {
+	if r.Repo == nil {
+		r.Repo, err = getRepositoryByID(e, r.RepoID)
+		if err != nil {
+			return fmt.Errorf("getRepositoryByID [repo_id: %d]: %v", r.RepoID, err)
+		}
+	}
+
 	if r.Publisher == nil {
 		r.Publisher, err = getUserByID(e, r.PublisherID)
 		if err != nil {
@@ -59,7 +69,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 				r.PublisherID = -1
 				r.Publisher = NewGhostUser()
 			} else {
-				return fmt.Errorf("getUserByID.(Publisher) [%d]: %v", r.PublisherID, err)
+				return fmt.Errorf("getUserByID.(Publisher) [publisher_id: %d]: %v", r.PublisherID, err)
 			}
 		}
 	}
@@ -69,6 +79,22 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 
 func (r *Release) LoadAttributes() error {
 	return r.loadAttributes(x)
+}
+
+// This method assumes some fields assigned with values:
+// Required - Publisher
+func (r *Release) APIFormat() *api.Release {
+	return &api.Release{
+		ID:              r.ID,
+		TagName:         r.TagName,
+		TargetCommitish: r.Target,
+		Name:            r.Title,
+		Body:            r.Note,
+		Draft:           r.IsDraft,
+		Prerelease:      r.IsPrerelease,
+		Author:          r.Publisher.APIFormat(),
+		Created:         r.Created,
+	}
 }
 
 // IsReleaseExist returns true if release with given tag name already exists.
@@ -113,6 +139,17 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 	return nil
 }
 
+func (r *Release) preparePublishWebhooks() {
+	if err := PrepareWebhooks(r.Repo, HOOK_EVENT_RELEASE, &api.ReleasePayload{
+		Action:     api.HOOK_RELEASE_PUBLISHED,
+		Release:    r.APIFormat(),
+		Repository: r.Repo.APIFormat(nil),
+		Sender:     r.Publisher.APIFormat(),
+	}); err != nil {
+		log.Error(2, "PrepareWebhooks: %v", err)
+	}
+}
+
 // CreateRelease creates a new release of repository.
 func CreateRelease(gitRepo *git.Repository, r *Release) error {
 	isExist, err := IsReleaseExist(r.RepoID, r.TagName)
@@ -126,8 +163,20 @@ func CreateRelease(gitRepo *git.Repository, r *Release) error {
 		return err
 	}
 	r.LowerTagName = strings.ToLower(r.TagName)
-	_, err = x.InsertOne(r)
-	return err
+	if _, err = x.Insert(r); err != nil {
+		return fmt.Errorf("Insert: %v", err)
+	}
+
+	// Only send webhook when actually published, skip drafts
+	if r.IsDraft {
+		return nil
+	}
+	r, err = GetReleaseByID(r.ID)
+	if err != nil {
+		return fmt.Errorf("GetReleaseByID: %v", err)
+	}
+	r.preparePublishWebhooks()
+	return nil
 }
 
 // GetRelease returns release by given ID.
@@ -205,12 +254,22 @@ func SortReleases(rels []*Release) {
 }
 
 // UpdateRelease updates information of a release.
-func UpdateRelease(gitRepo *git.Repository, rel *Release) (err error) {
-	if err = createTag(gitRepo, rel); err != nil {
+func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bool) (err error) {
+	if err = createTag(gitRepo, r); err != nil {
+		return fmt.Errorf("createTag: %v", err)
+	}
+
+	r.PublisherID = doer.ID
+	if _, err = x.Id(r.ID).AllCols().Update(r); err != nil {
 		return err
 	}
-	_, err = x.Id(rel.ID).AllCols().Update(rel)
-	return err
+
+	if !isPublish {
+		return nil
+	}
+	r.Publisher = doer
+	r.preparePublishWebhooks()
+	return nil
 }
 
 // DeleteReleaseOfRepoByID deletes a release and corresponding Git tag by given ID.

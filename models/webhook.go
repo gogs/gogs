@@ -69,6 +69,7 @@ type HookEvents struct {
 	Issues       bool `json:"issues"`
 	IssueComment bool `json:"issue_comment"`
 	PullRequest  bool `json:"pull_request"`
+	Release      bool `json:"release"`
 }
 
 // HookEvent represents events that will delivery hook.
@@ -196,6 +197,12 @@ func (w *Webhook) HasPullRequestEvent() bool {
 		(w.ChooseEvents && w.HookEvents.PullRequest)
 }
 
+// HasReleaseEvent returns true if hook enabled release event.
+func (w *Webhook) HasReleaseEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Release)
+}
+
 type eventChecker struct {
 	checker func() bool
 	typ     HookEventType
@@ -211,6 +218,7 @@ func (w *Webhook) EventsArray() []string {
 		{w.HasIssuesEvent, HOOK_EVENT_ISSUES},
 		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
 		{w.HasPullRequestEvent, HOOK_EVENT_PULL_REQUEST},
+		{w.HasReleaseEvent, HOOK_EVENT_RELEASE},
 	}
 	for _, c := range eventCheckers {
 		if c.checker() {
@@ -381,6 +389,7 @@ const (
 	HOOK_EVENT_ISSUES        HookEventType = "issues"
 	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
 	HOOK_EVENT_PULL_REQUEST  HookEventType = "pull_request"
+	HOOK_EVENT_RELEASE       HookEventType = "release"
 )
 
 // HookRequest represents hook task request information.
