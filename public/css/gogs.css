@@ -1877,24 +1877,24 @@ footer .ui.language .menu {
   list-style: none;
   padding-top: 15px;
 }
-.repository .label.list .item {
+.repository .label.list > .item {
   padding-top: 10px;
   padding-bottom: 10px;
   border-bottom: 1px dashed #AAA;
 }
-.repository .label.list .item a {
+.repository .label.list > .item a {
   font-size: 15px;
   padding-top: 5px;
   padding-right: 10px;
   color: #666;
 }
-.repository .label.list .item a:hover {
+.repository .label.list > .item a:hover {
   color: #000;
 }
-.repository .label.list .item a.open-issues {
+.repository .label.list > .item a.open-issues {
   margin-right: 30px;
 }
-.repository .label.list .item .ui.label {
+.repository .label.list > .item .ui.label {
   font-size: 1em;
 }
 .repository .milestone.list {
