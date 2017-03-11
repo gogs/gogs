@@ -575,8 +575,11 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/milestones", repo.Milestones)
 		}, context.RepoRef())
 
-		// m.Get("/branches", repo.Branches)
-		m.Post("/branches/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
+		m.Group("/branches", func() {
+			m.Get("", repo.Branches)
+			m.Get("/all", repo.AllBranches)
+			m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
+		})
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
