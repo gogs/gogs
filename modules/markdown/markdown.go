@@ -294,6 +294,23 @@ func RenderRaw(body []byte, urlPrefix string) []byte {
 	htmlFlags := 0
 	htmlFlags |= blackfriday.HTML_SKIP_STYLE
 	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
+
+	if setting.Smartypants.Enabled {
+		htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
+		if setting.Smartypants.Fractions {
+			htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
+		}
+		if setting.Smartypants.Dashes {
+			htmlFlags |= blackfriday.HTML_SMARTYPANTS_DASHES
+		}
+		if setting.Smartypants.LatexDashes {
+			htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+		}
+		if setting.Smartypants.AngledQuotes {
+			htmlFlags |= blackfriday.HTML_SMARTYPANTS_ANGLED_QUOTES
+		}
+	}
+
 	renderer := &Renderer{
 		Renderer:  blackfriday.HtmlRenderer(htmlFlags, "", ""),
 		urlPrefix: urlPrefix,
