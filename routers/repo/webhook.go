@@ -116,6 +116,7 @@ func ParseHookEvent(f form.Webhook) *models.HookEvent {
 			Issues:       f.Issues,
 			IssueComment: f.IssueComment,
 			PullRequest:  f.PullRequest,
+			Release:      f.Release,
 		},
 	}
 }

@@ -92,6 +92,16 @@
 				</div>
 			</div>
 		</div>
+		<!-- Release -->
+		<div class="seven wide column">
+			<div class="field">
+				<div class="ui checkbox">
+					<input class="hidden" name="release" type="checkbox" tabindex="0" {{if .Webhook.Release}}checked{{end}}>
+					<label>{{.i18n.Tr "repo.settings.event_release"}}</label>
+					<span class="help">{{.i18n.Tr "repo.settings.event_release_desc"}}</span>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 

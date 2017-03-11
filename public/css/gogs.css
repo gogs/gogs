@@ -1227,30 +1227,30 @@ footer .ui.language .menu {
   right: 0!important;
   left: auto!important;
 }
-.repository.branches .ui.list {
+.repository.branches:not(.settings) .ui.list {
   padding: 0;
 }
-.repository.branches .ui.list > .item {
+.repository.branches:not(.settings) .ui.list > .item {
   margin: 0;
   line-height: 31px;
 }
-.repository.branches .ui.list > .item:not(:last-child) {
+.repository.branches:not(.settings) .ui.list > .item:not(:last-child) {
   border-bottom: 1px solid #DDD;
 }
-.repository.branches .ui.list > .item .column {
+.repository.branches:not(.settings) .ui.list > .item .column {
   padding: 5px 15px;
 }
-.repository.branches .ui.list > .item .column .octicon {
+.repository.branches:not(.settings) .ui.list > .item .column .octicon {
   vertical-align: text-bottom;
 }
-.repository.branches .ui.list > .item .column code {
+.repository.branches:not(.settings) .ui.list > .item .column code {
   padding: 4px 0;
   font-size: 12px;
 }
-.repository.branches .ui.list > .item .column .ui.text:not(i) {
+.repository.branches:not(.settings) .ui.list > .item .column .ui.text:not(i) {
   font-size: 12px;
 }
-.repository.branches .ui.list > .item .column .ui.button {
+.repository.branches:not(.settings) .ui.list > .item .column .ui.button {
   font-size: 12px;
   padding: 8px 10px;
 }
@@ -2338,28 +2338,28 @@ footer .ui.language .menu {
   margin-left: 5px;
   margin-top: -3px;
 }
-.repository.settings.branches .protected-branches .selection.dropdown {
+.repository.settings.settings.branches .protected-branches .selection.dropdown {
   width: 300px;
 }
-.repository.settings.branches .protected-branches .item {
+.repository.settings.settings.branches .protected-branches .item {
   border: 1px solid #eaeaea;
   padding: 10px 15px;
 }
-.repository.settings.branches .protected-branches .item:not(:last-child) {
+.repository.settings.settings.branches .protected-branches .item:not(:last-child) {
   border-bottom: 0;
 }
-.repository.settings.branches .branch-protection .help {
+.repository.settings.settings.branches .branch-protection .help {
   margin-left: 26px;
   padding-top: 0;
 }
-.repository.settings.branches .branch-protection .fields {
+.repository.settings.settings.branches .branch-protection .fields {
   margin-left: 20px;
   display: block;
 }
-.repository.settings.branches .branch-protection .whitelist {
+.repository.settings.settings.branches .branch-protection .whitelist {
   margin-left: 26px;
 }
-.repository.settings.branches .branch-protection .whitelist .dropdown img {
+.repository.settings.settings.branches .branch-protection .whitelist .dropdown img {
   display: inline-block;
 }
 .repository.settings.webhooks .types .menu .item {
@@ -3034,10 +3034,6 @@ footer .ui.language .menu {
 .admin .table.segment:not(.select) th:first-of-type,
 .admin .table.segment:not(.select) td:first-of-type {
   padding-left: 15px !important;
-}
-.admin .ui.header,
-.admin .ui.segment {
-  box-shadow: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
 }
 .admin.user .email {
   max-width: 200px;

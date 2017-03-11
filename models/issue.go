@@ -12,8 +12,9 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
-	api "github.com/gogits/go-gogs-client"
 	log "gopkg.in/clog.v1"
+
+	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/setting"

@@ -353,6 +353,22 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (
 	}, nil
 }
 
+func getDiscordReleasePayload(p *api.ReleasePayload) (*DiscordPayload, error) {
+	repoLink := DiscordLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
+	refLink := DiscordLinkFormatter(p.Repository.HTMLURL+"/src/"+p.Release.TagName, p.Release.TagName)
+	content := fmt.Sprintf("Published new release %s of %s", refLink, repoLink)
+	return &DiscordPayload{
+		Embeds: []*DiscordEmbedObject{{
+			Description: content,
+			URL:         setting.AppUrl + p.Sender.UserName,
+			Author: &DiscordEmbedAuthorObject{
+				Name:    p.Sender.UserName,
+				IconURL: p.Sender.AvatarUrl,
+			},
+		}},
+	}, nil
+}
+
 func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
@@ -374,6 +390,8 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 		payload, err = getDiscordIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
+	case HOOK_EVENT_RELEASE:
+		payload, err = getDiscordReleasePayload(p.(*api.ReleasePayload))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("event '%s': %v", event, err)

@@ -165,10 +165,10 @@
 			"revisionTime": "2017-03-10T19:06:55Z"
 		},
 		{
-			"checksumSHA1": "Rvj0LCHGhFQyIM7MzBPt1iRP89c=",
+			"checksumSHA1": "1p1/OSDPORWbSBCD791BbGh2vVc=",
 			"path": "github.com/gogits/go-gogs-client",
-			"revision": "8e438478f71b840fcd0b3e810684ea4f6bf476bb",
-			"revisionTime": "2017-03-09T09:10:09Z"
+			"revision": "08824b5ad7408bc38f2b9287c94be2f059c9966a",
+			"revisionTime": "2017-03-11T23:40:19Z"
 		},
 		{
 			"checksumSHA1": "p4yoFWgDiTfpu1JYgh26t6+VDTk=",

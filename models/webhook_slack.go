@@ -277,6 +277,15 @@ func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*S
 	}, nil
 }
 
+func getSlackReleasePayload(p *api.ReleasePayload) (*SlackPayload, error) {
+	repoLink := SlackLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
+	refLink := SlackLinkFormatter(p.Repository.HTMLURL+"/src/"+p.Release.TagName, p.Release.TagName)
+	text := fmt.Sprintf("[%s] new release %s published by %s", repoLink, refLink, p.Sender.UserName)
+	return &SlackPayload{
+		Text: text,
+	}, nil
+}
+
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
 	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
@@ -298,6 +307,8 @@ func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload
 		payload, err = getSlackIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getSlackPullRequestPayload(p.(*api.PullRequestPayload), slack)
+	case HOOK_EVENT_RELEASE:
+		payload, err = getSlackReleasePayload(p.(*api.ReleasePayload))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("event '%s': %v", event, err)
