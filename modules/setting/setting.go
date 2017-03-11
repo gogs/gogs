@@ -153,6 +153,15 @@ var (
 		FileExtensions      []string
 	}
 
+	// Smartypants settings
+	Smartypants struct {
+		Enabled      bool
+		Fractions    bool
+		Dashes       bool
+		LatexDashes  bool
+		AngledQuotes bool
+	}
+
 	// Admin settings
 	Admin struct {
 		DisableRegularOrgCreation bool
@@ -583,6 +592,8 @@ func NewContext() {
 		log.Fatal(2, "Fail to map Webhook settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(2, "Fail to map Markdown settings: %v", err)
+	} else if err = Cfg.Section("smartypants").MapTo(&Smartypants); err != nil {
+		log.Fatal(2, "Fail to map Smartypants settings: %v", err)
 	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {
 		log.Fatal(2, "Fail to map Admin settings: %v", err)
 	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
