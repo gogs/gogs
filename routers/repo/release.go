@@ -45,6 +45,7 @@ func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *models.Rel
 
 func Releases(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.releases")
+	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["PageIsReleaseList"] = true
 
 	tagsResult, err := ctx.Repo.GitRepo.GetTagsAfter(ctx.Query("after"), 10)

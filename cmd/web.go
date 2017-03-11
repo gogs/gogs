@@ -529,7 +529,9 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/delete", repo.DeleteRelease)
 			m.Get("/edit/*", repo.EditRelease)
 			m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-		}, reqRepoWriter)
+		}, reqRepoWriter, func(ctx *context.Context) {
+			ctx.Data["PageIsViewCode"] = true
+		})
 
 		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
 		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
@@ -579,6 +581,8 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("", repo.Branches)
 			m.Get("/all", repo.AllBranches)
 			m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
+		}, func(ctx *context.Context) {
+			ctx.Data["PageIsViewCode"] = true
 		})
 
 		m.Group("/wiki", func() {

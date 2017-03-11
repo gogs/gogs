@@ -22,6 +22,7 @@ const (
 )
 
 func RefCommits(ctx *context.Context) {
+	ctx.Data["PageIsViewCode"] = true
 	switch {
 	case len(ctx.Repo.TreePath) == 0:
 		Commits(ctx)
