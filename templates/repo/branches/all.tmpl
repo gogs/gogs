@@ -17,9 +17,9 @@
 						<span class="ui text light grey">{{$.i18n.Tr "repo.branches.updated_by" $timeSince .Commit.Committer.Name | Safe}}</span>
 					</div>
 					<div class="ui four wide column">
-						{{if eq $.BranchName .Name}}
+						{{if and (eq $.BranchName .Name) $.IsRepositoryWriter}}
 							<a class="ui basic blue button" href="{{$.RepoLink}}/settings/branches">{{$.i18n.Tr "repo.branches.change_default_branch"}}</a>
-						{{else}}
+						{{else if $.IsRepositoryAdmin}}
 							<a class="ui basic button" href="{{$.RepoLink}}/compare/{{$.DefaultBranch.Name}}...{{.Name}}"><i class="octicon octicon-git-pull-request"></i> {{$.i18n.Tr "repo.pulls.new"}}</a>
 						{{end}}
 					</div>
