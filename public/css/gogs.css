@@ -1232,7 +1232,7 @@ footer .ui.language .menu {
 }
 .repository.branches .ui.list > .item {
   margin: 0;
-  line-height: 2em;
+  line-height: 31px;
 }
 .repository.branches .ui.list > .item:not(:last-child) {
   border-bottom: 1px solid #DDD;
