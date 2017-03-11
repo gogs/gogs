@@ -15,8 +15,11 @@ import (
 )
 
 type Branch struct {
-	Path string
-	Name string
+	RepoPath string
+	Name     string
+
+	IsProtected bool
+	Commit      *git.Commit
 }
 
 func GetBranchesByPath(path string) ([]*Branch, error) {
@@ -33,8 +36,8 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 	branches := make([]*Branch, len(brs))
 	for i := range brs {
 		branches[i] = &Branch{
-			Path: path,
-			Name: brs[i],
+			RepoPath: path,
+			Name:     brs[i],
 		}
 	}
 	return branches, nil
@@ -45,8 +48,8 @@ func (repo *Repository) GetBranch(br string) (*Branch, error) {
 		return nil, ErrBranchNotExist{br}
 	}
 	return &Branch{
-		Path: repo.RepoPath(),
-		Name: br,
+		RepoPath: repo.RepoPath(),
+		Name:     br,
 	}, nil
 }
 
@@ -55,7 +58,7 @@ func (repo *Repository) GetBranches() ([]*Branch, error) {
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {
-	gitRepo, err := git.OpenRepository(br.Path)
+	gitRepo, err := git.OpenRepository(br.RepoPath)
 	if err != nil {
 		return nil, err
 	}

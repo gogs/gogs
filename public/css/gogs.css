@@ -1227,6 +1227,33 @@ footer .ui.language .menu {
   right: 0!important;
   left: auto!important;
 }
+.repository.branches .ui.list {
+  padding: 0;
+}
+.repository.branches .ui.list > .item {
+  margin: 0;
+  line-height: 2em;
+}
+.repository.branches .ui.list > .item:not(:last-child) {
+  border-bottom: 1px solid #DDD;
+}
+.repository.branches .ui.list > .item .column {
+  padding: 5px 15px;
+}
+.repository.branches .ui.list > .item .column .octicon {
+  vertical-align: text-bottom;
+}
+.repository.branches .ui.list > .item .column code {
+  padding: 4px 0;
+  font-size: 12px;
+}
+.repository.branches .ui.list > .item .column .ui.text:not(i) {
+  font-size: 12px;
+}
+.repository.branches .ui.list > .item .column .ui.button {
+  font-size: 12px;
+  padding: 8px 10px;
+}
 .repository.file.list #repo-desc {
   font-size: 1.2em;
 }
@@ -1249,7 +1276,7 @@ footer .ui.language .menu {
 }
 .repository.file.list #git-stats .list .item {
   margin-left: 0;
-  width: 50%;
+  width: 33.33%;
 }
 .repository.file.list #git-stats .list .item .text b {
   font-size: 15px;

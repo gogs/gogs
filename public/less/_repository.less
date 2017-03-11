@@ -150,6 +150,36 @@
 		}
 	}
 
+	&.branches {
+		.ui.list {
+			padding: 0;
+			>.item {
+				margin: 0;
+				line-height: 2em;
+				&:not(:last-child) {
+					border-bottom: 1px solid #DDD;
+				}
+				.column {
+					padding: 5px 15px;
+					.octicon {
+						vertical-align: text-bottom;
+					}
+					code {
+						padding: 4px 0;
+						font-size: 12px;
+					}
+					.ui.text:not(i) {
+						font-size: 12px;
+					}
+					.ui.button {
+						font-size: 12px;
+						padding: 8px 10px;
+					}
+				}
+			}
+		}
+	}
+
 	&.file.list {
 		#repo-desc {
 			font-size: 1.2em;
@@ -174,7 +204,7 @@
 				width: 100%;
 				.item {
 					margin-left: 0;
-					width: 50%;
+					width: 33.33%;
 					.text b {
 						font-size: 15px;
 					}
