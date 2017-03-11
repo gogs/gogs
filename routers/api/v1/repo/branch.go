@@ -7,15 +7,20 @@ package repo
 import (
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get-branch
 func GetBranch(ctx *context.APIContext) {
-	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params(":branchname"))
+	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params("*"))
 	if err != nil {
-		ctx.Error(500, "GetBranch", err)
+		if models.IsErrBranchNotExist(err) {
+			ctx.Error(404, "GetBranch", err)
+		} else {
+			ctx.Error(500, "GetBranch", err)
+		}
 		return
 	}
 
