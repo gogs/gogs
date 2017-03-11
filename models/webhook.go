@@ -537,6 +537,10 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			if !w.HasPullRequestEvent() {
 				continue
 			}
+		case HOOK_EVENT_RELEASE:
+			if !w.HasReleaseEvent() {
+				continue
+			}
 		}
 
 		// Use separate objects so modifcations won't be made on payload on non-Gogs type hooks.
