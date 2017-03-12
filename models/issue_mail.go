@@ -108,7 +108,13 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		return fmt.Errorf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
 
-	tos := make([]string, 0, len(watchers)) // List of email addresses.
+	// In case the issue poster is not watching the repository,
+	// even if we have duplicated in watchers, can be safely filtered out.
+	if issue.PosterID != doer.ID {
+		participants = append(participants, issue.Poster)
+	}
+
+	tos := make([]string, 0, len(watchers)) // List of email addresses
 	names := make([]string, 0, len(watchers))
 	for i := range watchers {
 		if watchers[i].UserID == doer.ID {
