@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -30,6 +29,7 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/avatar"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/markdown"
@@ -41,15 +41,6 @@ type UserType int
 const (
 	USER_TYPE_INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
 	USER_TYPE_ORGANIZATION
-)
-
-var (
-	ErrUserNotKeyOwner       = errors.New("User does not the owner of public key")
-	ErrEmailNotExist         = errors.New("E-mail does not exist")
-	ErrEmailNotActivated     = errors.New("E-mail address has not been activated")
-	ErrUserNameIllegal       = errors.New("User name contains illegal characters")
-	ErrLoginSourceNotActived = errors.New("Login source is not actived")
-	ErrUnsupportedLoginType  = errors.New("Login source is unknown")
 )
 
 // User represents the object of individual and member of organization.
@@ -519,7 +510,7 @@ var (
 func isUsableName(names, patterns []string, name string) error {
 	name = strings.TrimSpace(strings.ToLower(name))
 	if utf8.RuneCountInString(name) == 0 {
-		return ErrNameEmpty
+		return errors.EmptyName{}
 	}
 
 	for i := range names {
@@ -890,11 +881,11 @@ func UserPath(userName string) string {
 
 func GetUserByKeyID(keyID int64) (*User, error) {
 	user := new(User)
-	has, err := x.Sql("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
+	has, err := x.SQL("SELECT a.* FROM `user` AS a, public_key AS b WHERE a.id = b.owner_id AND b.id=?", keyID).Get(user)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotKeyOwner
+		return nil, errors.UserNotKeyOwner{keyID}
 	}
 	return user, nil
 }

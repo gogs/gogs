@@ -16,6 +16,7 @@ import (
 
 	"github.com/gogits/git-module"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/sync"
@@ -185,7 +186,7 @@ func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMirrorNotExist
+		return nil, errors.MirrorNotExist{repoID}
 	}
 	return m, nil
 }

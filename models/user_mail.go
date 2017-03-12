@@ -7,6 +7,8 @@ package models
 import (
 	"fmt"
 	"strings"
+
+	"github.com/gogits/gogs/models/errors"
 )
 
 // EmailAdresses is the list of all email addresses of a user. Can contain the
@@ -163,11 +165,11 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrEmailNotExist
+		return errors.EmailNotFound{email.Email}
 	}
 
 	if !email.IsActivated {
-		return ErrEmailNotActivated
+		return errors.EmailNotVerified{email.Email}
 	}
 
 	user := &User{ID: email.UID}

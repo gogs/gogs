@@ -5,7 +5,6 @@
 package models
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -796,7 +796,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 func GetIssueByRef(ref string) (*Issue, error) {
 	n := strings.IndexByte(ref, byte('#'))
 	if n == -1 {
-		return nil, ErrMissingIssueNumber
+		return nil, errors.InvalidIssueReference{ref}
 	}
 
 	index, err := com.StrTo(ref[n+1:]).Int64()

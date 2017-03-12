@@ -6,7 +6,6 @@ package models
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -29,6 +28,7 @@ import (
 	git "github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/bindata"
 	"github.com/gogits/gogs/modules/markdown"
 	"github.com/gogits/gogs/modules/process"
@@ -37,14 +37,6 @@ import (
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
-
-var (
-	ErrRepoFileNotExist  = errors.New("Repository file does not exist")
-	ErrRepoFileNotLoaded = errors.New("Repository file not loaded")
-	ErrMirrorNotExist    = errors.New("Mirror does not exist")
-	ErrInvalidReference  = errors.New("Invalid reference specified")
-	ErrNameEmpty         = errors.New("Name is empty")
-)
 
 var (
 	Gitignores, Licenses, Readmes, LabelTemplates []string
@@ -1028,7 +1020,7 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 			repoPath, fmt.Sprintf("CreateRepository 'git update-server-info': %s", repoPath),
 			"git", "update-server-info")
 		if err != nil {
-			return nil, errors.New("CreateRepository 'git update-server-info': " + stderr)
+			return nil, fmt.Errorf("CreateRepository 'git update-server-info': %s", stderr)
 		}
 	}
 
@@ -1474,7 +1466,7 @@ func DeleteRepository(uid, repoID int64) error {
 func GetRepositoryByRef(ref string) (*Repository, error) {
 	n := strings.IndexByte(ref, byte('/'))
 	if n < 2 {
-		return nil, ErrInvalidReference
+		return nil, errors.InvalidRepoReference{ref}
 	}
 
 	userName, repoName := ref[:n], ref[n+1:]

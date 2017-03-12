@@ -51,10 +51,13 @@ func SettingsPost(ctx *context.Context, f form.UpdateOrgSetting) {
 			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &f)
 			return
 		} else if err = models.ChangeUserName(org, f.Name); err != nil {
-			if err == models.ErrUserNameIllegal {
-				ctx.Data["OrgName"] = true
-				ctx.RenderWithErr(ctx.Tr("form.illegal_username"), SETTINGS_OPTIONS, &f)
-			} else {
+			ctx.Data["OrgName"] = true
+			switch {
+			case models.IsErrNameReserved(err):
+				ctx.RenderWithErr(ctx.Tr("user.form.name_reserved"), SETTINGS_OPTIONS, &f)
+			case models.IsErrNamePatternNotAllowed(err):
+				ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed"), SETTINGS_OPTIONS, &f)
+			default:
 				ctx.Handle(500, "ChangeUserName", err)
 			}
 			return
