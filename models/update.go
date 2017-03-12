@@ -85,7 +85,11 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
 
-	// Push tags.
+	if err = repo.UpdateSize(); err != nil {
+		return fmt.Errorf("UpdateSize: %v", err)
+	}
+
+	// Push tags
 	if strings.HasPrefix(opts.RefFullName, git.TAG_PREFIX) {
 		if err := CommitRepoAction(CommitRepoActionOptions{
 			PusherName:  opts.PusherName,
@@ -104,7 +108,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	var l *list.List
 	// Skip read parent commits when delete branch
 	if !isDelRef {
-		// Push new branch.
+		// Push new branch
 		newCommit, err := gitRepo.GetCommit(opts.NewCommitID)
 		if err != nil {
 			return fmt.Errorf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)

@@ -60,6 +60,8 @@ var migrations = []Migration{
 	NewMigration("set comment updated with created", setCommentUpdatedWithCreated),
 	// v14 -> v15:v0.9.147
 	NewMigration("generate and migrate Git hooks", generateAndMigrateGitHooks),
+	// v15 -> v16:v0.10.16
+	NewMigration("update repository sizes", updateRepositorySizes),
 }
 
 // Migrate database to current version
