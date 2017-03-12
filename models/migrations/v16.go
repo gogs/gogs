@@ -28,6 +28,9 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 		ID   int64
 		Name string
 	}
+	if err = x.Sync2(new(Repository)); err != nil {
+		return fmt.Errorf("Sync2: %v", err)
+	}
 	return x.Where("id > 0").Iterate(new(Repository),
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
