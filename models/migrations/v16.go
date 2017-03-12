@@ -51,7 +51,8 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 
 			countObject, err := git.GetRepoSize(repoPath)
 			if err != nil {
-				return fmt.Errorf("GetRepoSize: %v", err)
+				log.Warn("GetRepoSize: %v", err)
+				return nil
 			}
 
 			repo.Size = countObject.Size + countObject.SizePack
