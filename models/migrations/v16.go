@@ -18,6 +18,7 @@ import (
 )
 
 func updateRepositorySizes(x *xorm.Engine) (err error) {
+	log.Info("This migration could take up to minutes, please be patient.")
 	type Repository struct {
 		ID      int64
 		OwnerID int64
@@ -31,9 +32,22 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 	if err = x.Sync2(new(Repository)); err != nil {
 		return fmt.Errorf("Sync2: %v", err)
 	}
-	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
-			repo := bean.(*Repository)
+
+	// For the sake of SQLite3, we can't use x.Iterate here.
+	offset := 0
+	for {
+		repos := make([]*Repository, 0, 10)
+		if err = x.Sql(fmt.Sprintf("SELECT * FROM `repository` ORDER BY id ASC LIMIT 10 OFFSET %d", offset)).
+			Find(&repos); err != nil {
+			return fmt.Errorf("select repos [offset: %d]: %v", offset, err)
+		}
+		log.Trace("Select [offset: %d, repos: %d]", offset, len(repos))
+		if len(repos) == 0 {
+			break
+		}
+		offset += 10
+
+		for _, repo := range repos {
 			if repo.Name == "." || repo.Name == ".." {
 				return nil
 			}
@@ -47,8 +61,6 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 			}
 
 			repoPath := filepath.Join(setting.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name)) + ".git"
-			log.Trace("[%04d]: %s", idx, repoPath)
-
 			countObject, err := git.GetRepoSize(repoPath)
 			if err != nil {
 				log.Warn("GetRepoSize: %v", err)
@@ -59,6 +71,7 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 			if _, err = x.Id(repo.ID).Cols("size").Update(repo); err != nil {
 				return fmt.Errorf("update size: %v", err)
 			}
-			return nil
-		})
+		}
+	}
+	return nil
 }
