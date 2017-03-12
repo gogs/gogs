@@ -49,7 +49,7 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 
 		for _, repo := range repos {
 			if repo.Name == "." || repo.Name == ".." {
-				return nil
+				continue
 			}
 
 			user := new(User)
@@ -57,14 +57,14 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 			if err != nil {
 				return fmt.Errorf("query owner of repository [repo_id: %d, owner_id: %d]: %v", repo.ID, repo.OwnerID, err)
 			} else if !has {
-				return nil
+				continue
 			}
 
 			repoPath := filepath.Join(setting.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name)) + ".git"
 			countObject, err := git.GetRepoSize(repoPath)
 			if err != nil {
 				log.Warn("GetRepoSize: %v", err)
-				return nil
+				continue
 			}
 
 			repo.Size = countObject.Size + countObject.SizePack
