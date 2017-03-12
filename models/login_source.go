@@ -7,7 +7,6 @@ package models
 import (
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/smtp"
 	"net/textproto"
@@ -20,6 +19,7 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/auth/ldap"
 	"github.com/gogits/gogs/modules/auth/pam"
 )
@@ -394,7 +394,7 @@ func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
 		}
 		return nil
 	}
-	return ErrUnsupportedLoginType
+	return errors.New("Unsupported SMTP authentication method")
 }
 
 // LoginViaSMTP queries if login/password is valid against the SMTP,
@@ -416,7 +416,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	} else if cfg.Auth == SMTP_LOGIN {
 		auth = &smtpLoginAuth{login, password}
 	} else {
-		return nil, errors.New("Unsupported SMTP auth type")
+		return nil, errors.New("Unsupported SMTP authentication type")
 	}
 
 	if err := SMTPAuth(auth, cfg); err != nil {
@@ -489,7 +489,7 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 
 func ExternalUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
-		return nil, ErrLoginSourceNotActived
+		return nil, errors.LoginSourceNotActivated{source.ID}
 	}
 
 	switch source.Type {
@@ -501,7 +501,7 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
 	}
 
-	return nil, ErrUnsupportedLoginType
+	return nil, errors.InvalidLoginSourceType{source.Type}
 }
 
 // UserSignIn validates user name and password.
