@@ -11,7 +11,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/Unknwon/com"
 )
 
 // Repository represents a Git repository.
@@ -218,4 +221,60 @@ func ResetHEAD(repoPath string, hard bool, revision string) error {
 func MoveFile(repoPath, oldTreeName, newTreeName string) error {
 	_, err := NewCommand("mv").AddArguments(oldTreeName, newTreeName).RunInDir(repoPath)
 	return err
+}
+
+// CountObject represents disk usage report of Git repository.
+type CountObject struct {
+	Count         int64
+	Size          int64
+	InPack        int64
+	Packs         int64
+	SizePack      int64
+	PrunePackable int64
+	Garbage       int64
+	SizeGarbage   int64
+}
+
+const (
+	_STAT_COUNT          = "count: "
+	_STAT_SIZE           = "size: "
+	_STAT_IN_PACK        = "in-pack: "
+	_STAT_PACKS          = "packs: "
+	_STAT_SIZE_PACK      = "size-pack: "
+	_STAT_PRUNE_PACKABLE = "prune-packable: "
+	_STAT_GARBAGE        = "garbage: "
+	_STAT_SIZE_GARBAGE   = "size-garbage: "
+)
+
+// GetRepoSize returns disk usage report of repository in given path.
+func GetRepoSize(repoPath string) (*CountObject, error) {
+	cmd := NewCommand("count-objects", "-v")
+	stdout, err := cmd.RunInDir(repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	countObject := new(CountObject)
+	for _, line := range strings.Split(stdout, "\n") {
+		switch {
+		case strings.HasPrefix(line, _STAT_COUNT):
+			countObject.Count = com.StrTo(line[7:]).MustInt64()
+		case strings.HasPrefix(line, _STAT_SIZE):
+			countObject.Size = com.StrTo(line[6:]).MustInt64() * 1024
+		case strings.HasPrefix(line, _STAT_IN_PACK):
+			countObject.InPack = com.StrTo(line[9:]).MustInt64() * 1024
+		case strings.HasPrefix(line, _STAT_PACKS):
+			countObject.Packs = com.StrTo(line[7:]).MustInt64()
+		case strings.HasPrefix(line, _STAT_SIZE_PACK):
+			countObject.SizePack = com.StrTo(line[11:]).MustInt64() * 1024
+		case strings.HasPrefix(line, _STAT_PRUNE_PACKABLE):
+			countObject.PrunePackable = com.StrTo(line[16:]).MustInt64()
+		case strings.HasPrefix(line, _STAT_GARBAGE):
+			countObject.Garbage = com.StrTo(line[9:]).MustInt64()
+		case strings.HasPrefix(line, _STAT_SIZE_GARBAGE):
+			countObject.SizeGarbage = com.StrTo(line[14:]).MustInt64() * 1024
+		}
+	}
+
+	return countObject, nil
 }

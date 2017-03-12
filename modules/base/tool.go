@@ -372,7 +372,7 @@ func logn(n, b float64) float64 {
 
 func humanateBytes(s uint64, base float64, sizes []string) string {
 	if s < 10 {
-		return fmt.Sprintf("%dB", s)
+		return fmt.Sprintf("%d B", s)
 	}
 	e := math.Floor(logn(float64(s), base))
 	suffix := sizes[int(e)]
@@ -382,7 +382,7 @@ func humanateBytes(s uint64, base float64, sizes []string) string {
 		f = "%.1f"
 	}
 
-	return fmt.Sprintf(f+"%s", val, suffix)
+	return fmt.Sprintf(f+" %s", val, suffix)
 }
 
 // FileSize calculates the file size and generate user-friendly string.

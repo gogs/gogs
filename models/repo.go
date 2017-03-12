@@ -140,7 +140,7 @@ func NewRepoContext() {
 	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(setting.AppDataPath, "tmp"))
 }
 
-// Repository represents a git repository.
+// Repository contains information of a repository.
 type Repository struct {
 	ID            int64  `xorm:"pk autoincr"`
 	OwnerID       int64  `xorm:"UNIQUE(s)"`
@@ -150,6 +150,7 @@ type Repository struct {
 	Description   string
 	Website       string
 	DefaultBranch string
+	Size          int64 `xorm:"NOT NULL DEFAULT 0"`
 
 	NumWatches          int
 	NumStars            int
@@ -290,6 +291,19 @@ func (repo *Repository) mustOwner(e Engine) *User {
 	}
 
 	return repo.Owner
+}
+
+func (repo *Repository) UpdateSize() error {
+	countObject, err := git.GetRepoSize(repo.RepoPath())
+	if err != nil {
+		return fmt.Errorf("GetRepoSize: %v", err)
+	}
+
+	repo.Size = countObject.Size + countObject.SizePack
+	if _, err = x.Id(repo.ID).Cols("size").Update(repo); err != nil {
+		return fmt.Errorf("update size: %v", err)
+	}
+	return nil
 }
 
 // ComposeMetas composes a map of metas for rendering external issue tracker URL.
