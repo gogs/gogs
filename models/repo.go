@@ -1570,7 +1570,7 @@ func GetRepositoryCount(u *User) (int64, error) {
 type SearchRepoOptions struct {
 	Keyword  string
 	OwnerID  int64
-	UserID   int64 // if set results will contain all public/private repositories user has access to
+	UserID   int64 // When set results will contain all public/private repositories user has access to
 	OrderBy  string
 	Private  bool // Include private repositories in results
 	Page     int
@@ -1591,21 +1591,21 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 
 	repos = make([]*Repository, 0, opts.PageSize)
 	sess := x.Alias("repo")
-	// Attempt to find repositories that opts.UserId has access to
-	// This does not include other people's private repositories even if opts.UserId is an admin
+	// Attempt to find repositories that opts.UserID has access to,
+	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
-		sess.Join("LEFT", "access", "access.repo_id = repo.id")
-		sess.Where("repo.lower_name LIKE ? AND (repo.owner_id=? OR access.user_id=? OR repo.is_private=?)",
-			"%"+opts.Keyword+"%", opts.UserID, opts.UserID, false)
+		sess.Join("LEFT", "access", "access.repo_id = repo.id").
+			Where("repo.lower_name LIKE ? AND (repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ?)",
+				"%"+opts.Keyword+"%", opts.UserID, opts.UserID, false)
 	} else {
 		sess.Where("repo.lower_name LIKE ?", "%"+opts.Keyword+"%")
-		// only return public repositories if opts.Private is not set
+		// Only return public repositories if opts.Private is not set
 		if !opts.Private {
-			sess.And("repo.is_private=?", false)
+			sess.And("repo.is_private = ?", false)
 		}
 	}
 	if opts.OwnerID > 0 {
-		sess.And("repo.owner_id=?", opts.OwnerID)
+		sess.And("repo.owner_id = ?", opts.OwnerID)
 	}
 
 	var countSess xorm.Session
