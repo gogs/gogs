@@ -48,22 +48,23 @@
 					<label>{{.i18n.Tr "repo.release.content"}}</label>
 					<textarea name="content">{{.content}}</textarea>
 				</div>
-				{{if .attachments}}
-					<table class="ui table">
-						<thead></thead>
-						<tbody>
-							{{range .attachments}}
-								<tr>
-									<td>
-										<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
-										<a class="ui text red right delete-attachment-button" href="#"><i class="octicon octicon-x" data-uuid="{{.UUID}}"></i></a>
-										<input name="files" type="hidden" value="{{.UUID}}">
-									</td>
-								</tr>
-							{{end}}
-						</tbody>
-					</table>
-				{{end}}
+				<div class="field">
+					{{if .attachments}}
+						<table class="ui table">
+							<tbody>
+								{{range .attachments}}
+									<tr>
+										<td>
+											<a target="_blank" href="{{AppSubUrl}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
+											<a class="ui text red right delete-attachment-button" href="#"><i class="octicon octicon-x" data-uuid="{{.UUID}}"></i></a>
+											<input name="files" type="hidden" value="{{.UUID}}">
+										</td>
+									</tr>
+								{{end}}
+							</tbody>
+						</table>
+					{{end}}
+				</div>
 				{{if .IsAttachmentEnabled}}
 					<div class="files"></div>
 					<div class="ui basic button dropzone" id="dropzone" data-upload-url="{{AppSubUrl}}/releases/attachments" data-accepts="{{.AttachmentAllowedTypes}}" data-max-file="{{.AttachmentMaxFiles}}" data-max-size="{{.AttachmentMaxSize}}" data-default-message="{{.i18n.Tr "dropzone.default_message"}}" data-invalid-input-type="{{.i18n.Tr "dropzone.invalid_input_type"}}" data-file-too-big="{{.i18n.Tr "dropzone.file_too_big"}}" data-remove-file="{{.i18n.Tr "dropzone.remove_file"}}"></div>
@@ -122,9 +123,18 @@
 {{end}}
 
 <script>
-	// Delete attachment field
+	// Delete attachment row
 	$('.delete-attachment-button').click(function (e) {
-		$(this).parentsUntil('tbody').remove();
+		var $row = $(this).parentsUntil('tbody');
+		var $tbody = $row.parentsUntil('table');
+
+		$row.remove();
+
+		// Remove the entire table if this was the last row
+		if ($tbody.children().length == 0) {
+			$tbody.parentsUntil('.field').remove();
+		}
+
 		e.preventDefault();
 	})
 </script>

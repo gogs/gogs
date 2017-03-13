@@ -15,6 +15,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"
@@ -323,11 +324,10 @@ func runWeb(ctx *cli.Context) error {
 		m.Get("/attachments/:uuid", func(ctx *context.Context) {
 			attach, err := models.GetAttachmentByUUID(ctx.Params(":uuid"))
 			if err != nil {
-				if models.IsErrAttachmentNotExist(err) {
-					ctx.Error(404)
-				} else {
-					ctx.Handle(500, "GetAttachmentByUUID", err)
-				}
+				ctx.NotFoundOrServerError("GetAttachmentByUUID", models.IsErrAttachmentNotExist, err)
+				return
+			} else if !com.IsFile(attach.LocalPath()) {
+				ctx.NotFound()
 				return
 			}
 
