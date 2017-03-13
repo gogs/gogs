@@ -1588,8 +1588,8 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	// Attempt to find repositories that opts.UserId has access to
 	// This does not include other people's private repositories even if opts.UserId is an admin
 	if !opts.Private && opts.UserID > 0 {
-		sess.Join("LEFT", []string{"access", "acc"}, "acc.repo_id = repo.id")
-		sess.Where("repo.lower_name like ? and (repo.owner_id=? or acc.user_id=? or repo.is_private=?)",
+		sess.Join("LEFT", "access", "access.repo_id = repo.id")
+		sess.Where("repo.lower_name LIKE ? AND (repo.owner_id=? OR access.user_id=? OR repo.is_private=?)",
 			"%"+opts.Keyword+"%", opts.UserID, opts.UserID, false)
 	} else {
 		sess.Where("repo.lower_name LIKE ?", "%"+opts.Keyword+"%")
@@ -1599,7 +1599,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 		}
 	}
 	if opts.OwnerID > 0 {
-		sess.And("repo.owner_id = ?", opts.OwnerID)
+		sess.And("repo.owner_id=?", opts.OwnerID)
 	}
 
 	var countSess xorm.Session
