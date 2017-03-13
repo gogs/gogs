@@ -51,12 +51,19 @@
 							<div class="download">
 								<h2>{{$.i18n.Tr "repo.release.downloads"}}</h2>
 								<ul class="list">
-									<li>
-										<a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow"><i class="octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>
-									</li>
-									<li>
-										<a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz"><i class="octicon octicon-file-zip"></i> {{$.i18n.Tr "repo.release.source_code"}} (TAR.GZ)</a>
-									</li>
+									{{range .Attachments}}
+										<li>
+											<i class="octicon octicon-package"></i> <a href="{{AppSubUrl}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
+										</li>
+									{{end}}
+									{{if not .IsDraft}}
+										<li>
+											<i class="octicon octicon-file-zip"></i> <a href="{{$.RepoLink}}/archive/{{.TagName}}.zip" rel="nofollow">{{$.i18n.Tr "repo.release.source_code"}} (ZIP)</a>
+										</li>
+										<li>
+											<i class="octicon octicon-file-zip"></i> <a href="{{$.RepoLink}}/archive/{{.TagName}}.tar.gz">{{$.i18n.Tr "repo.release.source_code"}} (TAR.GZ)</a>
+										</li>
+									{{end}}
 								</ul>
 							</div>
 						{{else}}

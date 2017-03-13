@@ -348,7 +348,7 @@ func NewIssue(ctx *context.Context) {
 	ctx.HTML(200, ISSUE_NEW)
 }
 
-func ValidateRepoMetas(ctx *context.Context, f form.CreateIssue) ([]int64, int64, int64) {
+func ValidateRepoMetas(ctx *context.Context, f form.NewIssue) ([]int64, int64, int64) {
 	var (
 		repo = ctx.Repo.Repository
 		err  error
@@ -402,25 +402,16 @@ func ValidateRepoMetas(ctx *context.Context, f form.CreateIssue) ([]int64, int64
 	return labelIDs, milestoneID, assigneeID
 }
 
-func NewIssuePost(ctx *context.Context, f form.CreateIssue) {
+func NewIssuePost(ctx *context.Context, f form.NewIssue) {
 	ctx.Data["Title"] = ctx.Tr("repo.issues.new")
 	ctx.Data["PageIsIssueList"] = true
 	ctx.Data["RequireHighlightJS"] = true
 	ctx.Data["RequireSimpleMDE"] = true
 	renderAttachmentSettings(ctx)
 
-	var (
-		repo        = ctx.Repo.Repository
-		attachments []string
-	)
-
 	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(ctx, f)
 	if ctx.Written() {
 		return
-	}
-
-	if setting.AttachmentEnabled {
-		attachments = f.Files
 	}
 
 	if ctx.HasError() {
@@ -428,8 +419,13 @@ func NewIssuePost(ctx *context.Context, f form.CreateIssue) {
 		return
 	}
 
+	var attachments []string
+	if setting.AttachmentEnabled {
+		attachments = f.Files
+	}
+
 	issue := &models.Issue{
-		RepoID:      repo.ID,
+		RepoID:      ctx.Repo.Repository.ID,
 		Title:       f.Title,
 		PosterID:    ctx.User.ID,
 		Poster:      ctx.User,
@@ -437,21 +433,16 @@ func NewIssuePost(ctx *context.Context, f form.CreateIssue) {
 		AssigneeID:  assigneeID,
 		Content:     f.Content,
 	}
-	if err := models.NewIssue(repo, issue, labelIDs, attachments); err != nil {
+	if err := models.NewIssue(ctx.Repo.Repository, issue, labelIDs, attachments); err != nil {
 		ctx.Handle(500, "NewIssue", err)
 		return
 	}
 
-	log.Trace("Issue created: %d/%d", repo.ID, issue.ID)
+	log.Trace("Issue created: %d/%d", ctx.Repo.Repository.ID, issue.ID)
 	ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
 }
 
-func UploadIssueAttachment(ctx *context.Context) {
-	if !setting.AttachmentEnabled {
-		ctx.Error(404, "attachment is not enabled")
-		return
-	}
-
+func uploadAttachment(ctx *context.Context, allowedTypes []string) {
 	file, header, err := ctx.Req.FormFile("file")
 	if err != nil {
 		ctx.Error(500, fmt.Sprintf("FormFile: %v", err))
@@ -466,7 +457,6 @@ func UploadIssueAttachment(ctx *context.Context) {
 	}
 	fileType := http.DetectContentType(buf)
 
-	allowedTypes := strings.Split(setting.AttachmentAllowedTypes, ",")
 	allowed := false
 	for _, t := range allowedTypes {
 		t := strings.Trim(t, " ")
@@ -491,6 +481,15 @@ func UploadIssueAttachment(ctx *context.Context) {
 	ctx.JSON(200, map[string]string{
 		"uuid": attach.UUID,
 	})
+}
+
+func UploadIssueAttachment(ctx *context.Context) {
+	if !setting.AttachmentEnabled {
+		ctx.NotFound()
+		return
+	}
+
+	uploadAttachment(ctx, strings.Split(setting.AttachmentAllowedTypes, ","))
 }
 
 func ViewIssue(ctx *context.Context) {

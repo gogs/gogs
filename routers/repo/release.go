@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"strings"
 
 	log "gopkg.in/clog.v1"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 const (
@@ -148,16 +150,26 @@ func Releases(ctx *context.Context) {
 	ctx.HTML(200, RELEASES)
 }
 
+func renderReleaseAttachmentSettings(ctx *context.Context) {
+	ctx.Data["RequireDropzone"] = true
+	ctx.Data["IsAttachmentEnabled"] = setting.Release.Attachment.Enabled
+	ctx.Data["AttachmentAllowedTypes"] = strings.Join(setting.Release.Attachment.AllowedTypes, ",")
+	ctx.Data["AttachmentMaxSize"] = setting.Release.Attachment.MaxSize
+	ctx.Data["AttachmentMaxFiles"] = setting.Release.Attachment.MaxFiles
+}
+
 func NewRelease(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["tag_target"] = ctx.Repo.Repository.DefaultBranch
+	renderReleaseAttachmentSettings(ctx)
 	ctx.HTML(200, RELEASE_NEW)
 }
 
 func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.new_release")
 	ctx.Data["PageIsReleaseList"] = true
+	renderReleaseAttachmentSettings(ctx)
 
 	if ctx.HasError() {
 		ctx.HTML(200, RELEASE_NEW)
@@ -169,6 +181,7 @@ func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 		return
 	}
 
+	// Use current time if tag not yet exist, otherwise get time from Git
 	var tagCreatedUnix int64
 	tag, err := ctx.Repo.GitRepo.GetTag(f.TagName)
 	if err == nil {
@@ -190,6 +203,11 @@ func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 		return
 	}
 
+	var attachments []string
+	if setting.Release.Attachment.Enabled {
+		attachments = f.Files
+	}
+
 	rel := &models.Release{
 		RepoID:       ctx.Repo.Repository.ID,
 		PublisherID:  ctx.User.ID,
@@ -203,7 +221,7 @@ func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 		IsPrerelease: f.Prerelease,
 		CreatedUnix:  tagCreatedUnix,
 	}
-	if err = models.CreateRelease(ctx.Repo.GitRepo, rel); err != nil {
+	if err = models.NewRelease(ctx.Repo.GitRepo, rel, attachments); err != nil {
 		ctx.Data["Err_TagName"] = true
 		switch {
 		case models.IsErrReleaseAlreadyExist(err):
@@ -211,7 +229,7 @@ func NewReleasePost(ctx *context.Context, f form.NewRelease) {
 		case models.IsErrInvalidTagName(err):
 			ctx.RenderWithErr(ctx.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
 		default:
-			ctx.Handle(500, "CreateRelease", err)
+			ctx.Handle(500, "NewRelease", err)
 		}
 		return
 	}
@@ -224,6 +242,7 @@ func EditRelease(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
+	renderReleaseAttachmentSettings(ctx)
 
 	tagName := ctx.Params("*")
 	rel, err := models.GetRelease(ctx.Repo.Repository.ID, tagName)
@@ -240,6 +259,7 @@ func EditRelease(ctx *context.Context) {
 	ctx.Data["tag_target"] = rel.Target
 	ctx.Data["title"] = rel.Title
 	ctx.Data["content"] = rel.Note
+	ctx.Data["attachments"] = rel.Attachments
 	ctx.Data["prerelease"] = rel.IsPrerelease
 	ctx.Data["IsDraft"] = rel.IsDraft
 
@@ -250,6 +270,7 @@ func EditReleasePost(ctx *context.Context, f form.EditRelease) {
 	ctx.Data["Title"] = ctx.Tr("repo.release.edit_release")
 	ctx.Data["PageIsReleaseList"] = true
 	ctx.Data["PageIsEditRelease"] = true
+	renderReleaseAttachmentSettings(ctx)
 
 	tagName := ctx.Params("*")
 	rel, err := models.GetRelease(ctx.Repo.Repository.ID, tagName)
@@ -265,6 +286,7 @@ func EditReleasePost(ctx *context.Context, f form.EditRelease) {
 	ctx.Data["tag_target"] = rel.Target
 	ctx.Data["title"] = rel.Title
 	ctx.Data["content"] = rel.Note
+	ctx.Data["attachments"] = rel.Attachments
 	ctx.Data["prerelease"] = rel.IsPrerelease
 	ctx.Data["IsDraft"] = rel.IsDraft
 
@@ -273,16 +295,29 @@ func EditReleasePost(ctx *context.Context, f form.EditRelease) {
 		return
 	}
 
+	var attachments []string
+	if setting.Release.Attachment.Enabled {
+		attachments = f.Files
+	}
+
 	isPublish := rel.IsDraft && len(f.Draft) == 0
 	rel.Title = f.Title
 	rel.Note = f.Content
 	rel.IsDraft = len(f.Draft) > 0
 	rel.IsPrerelease = f.Prerelease
-	if err = models.UpdateRelease(ctx.User, ctx.Repo.GitRepo, rel, isPublish); err != nil {
+	if err = models.UpdateRelease(ctx.User, ctx.Repo.GitRepo, rel, isPublish, attachments); err != nil {
 		ctx.Handle(500, "UpdateRelease", err)
 		return
 	}
 	ctx.Redirect(ctx.Repo.RepoLink + "/releases")
+}
+
+func UploadReleaseAttachment(ctx *context.Context) {
+	if !setting.Release.Attachment.Enabled {
+		ctx.NotFound()
+		return
+	}
+	uploadAttachment(ctx, setting.Release.Attachment.AllowedTypes)
 }
 
 func DeleteRelease(ctx *context.Context) {

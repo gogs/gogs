@@ -634,7 +634,7 @@ func CompareAndPullRequest(ctx *context.Context) {
 	ctx.HTML(200, COMPARE_PULL)
 }
 
-func CompareAndPullRequestPost(ctx *context.Context, f form.CreateIssue) {
+func CompareAndPullRequestPost(ctx *context.Context, f form.NewIssue) {
 	ctx.Data["Title"] = ctx.Tr("repo.pulls.compare_changes")
 	ctx.Data["PageIsComparePull"] = true
 	ctx.Data["IsDiffCompare"] = true

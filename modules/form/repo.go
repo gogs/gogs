@@ -200,7 +200,7 @@ func (f *NewDiscordHook) Validate(ctx *macaron.Context, errs binding.Errors) bin
 // |___/____  >____  >____/  \___  >
 //          \/     \/            \/
 
-type CreateIssue struct {
+type NewIssue struct {
 	Title       string `binding:"Required;MaxSize(255)"`
 	LabelIDs    string `form:"label_ids"`
 	MilestoneID int64
@@ -209,7 +209,7 @@ type CreateIssue struct {
 	Files       []string
 }
 
-func (f *CreateIssue) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+func (f *NewIssue) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -279,6 +279,7 @@ type NewRelease struct {
 	Content    string
 	Draft      string
 	Prerelease bool
+	Files      []string
 }
 
 func (f *NewRelease) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -290,6 +291,7 @@ type EditRelease struct {
 	Content    string
 	Draft      string
 	Prerelease bool
+	Files      []string
 }
 
 func (f *EditRelease) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
