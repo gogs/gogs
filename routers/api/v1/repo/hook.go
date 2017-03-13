@@ -59,9 +59,14 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 		HookEvent: &models.HookEvent{
 			ChooseEvents: true,
 			HookEvents: models.HookEvents{
-				Create:      com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE)),
-				Push:        com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH)),
-				PullRequest: com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST)),
+				Create:       com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE)),
+				Delete:       com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_DELETE)),
+				Fork:         com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_FORK)),
+				Push:         com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH)),
+				Issues:       com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUES)),
+				IssueComment: com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUE_COMMENT)),
+				PullRequest:  com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST)),
+				Release:      com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_RELEASE)),
 			},
 		},
 		IsActive:     form.Active,
@@ -146,8 +151,13 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 	w.SendEverything = false
 	w.ChooseEvents = true
 	w.Create = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE))
+	w.Delete = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_DELETE))
+	w.Fork = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_FORK))
 	w.Push = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH))
+	w.Issues = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUES))
+	w.IssueComment = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUE_COMMENT))
 	w.PullRequest = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST))
+	w.Release = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_RELEASE))
 	if err = w.UpdateEvent(); err != nil {
 		ctx.Error(500, "UpdateEvent", err)
 		return
