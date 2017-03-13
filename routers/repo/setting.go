@@ -499,6 +499,7 @@ func SettingsGitHooks(ctx *context.Context) {
 func SettingsGitHooksEdit(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.githooks")
 	ctx.Data["PageIsSettingsGitHooks"] = true
+	ctx.Data["RequireSimpleMDE"] = true
 
 	name := ctx.Params(":name")
 	hook, err := ctx.Repo.GitRepo.GetHook(name)
@@ -530,7 +531,7 @@ func SettingsGitHooksEditPost(ctx *context.Context) {
 		ctx.Handle(500, "hook.Update", err)
 		return
 	}
-	ctx.Redirect(ctx.Repo.RepoLink + "/settings/hooks/git")
+	ctx.Redirect(ctx.Data["Link"].(string))
 }
 
 func SettingsDeployKeys(ctx *context.Context) {
