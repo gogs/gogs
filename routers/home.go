@@ -77,6 +77,7 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 	} else {
 		repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
 			Keyword:  keyword,
+			UserID:   ctx.User.ID,
 			OrderBy:  opts.OrderBy,
 			Private:  opts.Private,
 			Page:     page,
