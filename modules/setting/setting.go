@@ -146,6 +146,17 @@ var (
 		PagingNum      int
 	}
 
+	// Release settigns
+	Release struct {
+		Attachment struct {
+			Enabled      bool
+			TempPath     string
+			AllowedTypes []string `delim:"|"`
+			MaxSize      int64
+			MaxFiles     int
+		} `ini:"-"`
+	}
+
 	// Markdown sttings
 	Markdown struct {
 		EnableHardLineBreak bool
@@ -590,6 +601,8 @@ func NewContext() {
 		log.Fatal(2, "Fail to map HTTP settings: %v", err)
 	} else if err = Cfg.Section("webhook").MapTo(&Webhook); err != nil {
 		log.Fatal(2, "Fail to map Webhook settings: %v", err)
+	} else if err = Cfg.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
+		log.Fatal(2, "Fail to map Release.Attachment settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(2, "Fail to map Markdown settings: %v", err)
 	} else if err = Cfg.Section("smartypants").MapTo(&Smartypants); err != nil {

@@ -39,6 +39,8 @@ type Release struct {
 
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
+
+	Attachments []*Attachment `xorm:"-"`
 }
 
 func (r *Release) BeforeInsert() {
@@ -71,6 +73,13 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 			} else {
 				return fmt.Errorf("getUserByID.(Publisher) [publisher_id: %d]: %v", r.PublisherID, err)
 			}
+		}
+	}
+
+	if r.Attachments == nil {
+		r.Attachments, err = getAttachmentsByReleaseID(e, r.ID)
+		if err != nil {
+			return fmt.Errorf("getAttachmentsByReleaseID [%d]: %v", r.ID, err)
 		}
 	}
 
@@ -150,8 +159,8 @@ func (r *Release) preparePublishWebhooks() {
 	}
 }
 
-// CreateRelease creates a new release of repository.
-func CreateRelease(gitRepo *git.Repository, r *Release) error {
+// NewRelease creates a new release with attachments for repository.
+func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	isExist, err := IsReleaseExist(r.RepoID, r.TagName)
 	if err != nil {
 		return err
@@ -163,8 +172,25 @@ func CreateRelease(gitRepo *git.Repository, r *Release) error {
 		return err
 	}
 	r.LowerTagName = strings.ToLower(r.TagName)
-	if _, err = x.Insert(r); err != nil {
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	if _, err = sess.Insert(r); err != nil {
 		return fmt.Errorf("Insert: %v", err)
+	}
+
+	if len(uuids) > 0 {
+		if _, err = sess.In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
+			return fmt.Errorf("link attachments: %v", err)
+		}
+	}
+
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
 	}
 
 	// Only send webhook when actually published, skip drafts
@@ -254,14 +280,35 @@ func SortReleases(rels []*Release) {
 }
 
 // UpdateRelease updates information of a release.
-func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bool) (err error) {
+func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bool, uuids []string) (err error) {
 	if err = createTag(gitRepo, r); err != nil {
 		return fmt.Errorf("createTag: %v", err)
 	}
 
 	r.PublisherID = doer.ID
-	if _, err = x.Id(r.ID).AllCols().Update(r); err != nil {
+
+	sess := x.NewSession()
+	defer sessionRelease(sess)
+	if err = sess.Begin(); err != nil {
 		return err
+	}
+	if _, err = sess.Id(r.ID).AllCols().Update(r); err != nil {
+		return fmt.Errorf("Update: %v", err)
+	}
+
+	// Unlink all current attachments and link back later if still valid
+	if _, err = sess.Exec("UPDATE attachment SET release_id = 0 WHERE release_id = ?", r.ID); err != nil {
+		return fmt.Errorf("unlink current attachments: %v", err)
+	}
+
+	if len(uuids) > 0 {
+		if _, err = sess.In("uuid", uuids).Cols("release_id").Update(&Attachment{ReleaseID: r.ID}); err != nil {
+			return fmt.Errorf("link attachments: %v", err)
+		}
+	}
+
+	if err = sess.Commit(); err != nil {
+		return fmt.Errorf("Commit: %v", err)
 	}
 
 	if !isPublish {

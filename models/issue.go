@@ -741,7 +741,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 	return opts.Issue.loadAttributes(e)
 }
 
-// NewIssue creates new issue with labels for repository.
+// NewIssue creates new issue with labels and attachments for repository.
 func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
 	sess := x.NewSession()
 	defer sessionRelease(sess)

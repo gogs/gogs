@@ -110,7 +110,7 @@ func GetAttachmentByUUID(uuid string) (*Attachment, error) {
 }
 
 func getAttachmentsByIssueID(e Engine, issueID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 10)
+	attachments := make([]*Attachment, 0, 5)
 	return attachments, e.Where("issue_id = ? AND comment_id = 0", issueID).Find(&attachments)
 }
 
@@ -120,13 +120,23 @@ func GetAttachmentsByIssueID(issueID int64) ([]*Attachment, error) {
 }
 
 func getAttachmentsByCommentID(e Engine, commentID int64) ([]*Attachment, error) {
-	attachments := make([]*Attachment, 0, 10)
+	attachments := make([]*Attachment, 0, 5)
 	return attachments, e.Where("comment_id=?", commentID).Find(&attachments)
 }
 
-// GetAttachmentsByCommentID returns all attachments if comment by given ID.
+// GetAttachmentsByCommentID returns all attachments of a comment.
 func GetAttachmentsByCommentID(commentID int64) ([]*Attachment, error) {
 	return getAttachmentsByCommentID(x, commentID)
+}
+
+func getAttachmentsByReleaseID(e Engine, releaseID int64) ([]*Attachment, error) {
+	attachments := make([]*Attachment, 0, 10)
+	return attachments, e.Where("release_id = ?", releaseID).Find(&attachments)
+}
+
+// GetAttachmentsByReleaseID returns all attachments of a release.
+func GetAttachmentsByReleaseID(releaseID int64) ([]*Attachment, error) {
+	return getAttachmentsByReleaseID(x, releaseID)
 }
 
 // DeleteAttachment deletes the given attachment and optionally the associated file.

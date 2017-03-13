@@ -339,15 +339,15 @@ func runWeb(ctx *cli.Context) error {
 			defer fr.Close()
 
 			ctx.Header().Set("Cache-Control", "public,max-age=86400")
+			fmt.Println("attach.Name:", attach.Name)
 			ctx.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
-			// Fix #312. Attachments with , in their name are not handled correctly by Google Chrome.
-			// We must put the name in " manually.
-			if err = repo.ServeData(ctx, "\""+attach.Name+"\"", fr); err != nil {
+			if err = repo.ServeData(ctx, attach.Name, fr); err != nil {
 				ctx.Handle(500, "ServeData", err)
 				return
 			}
 		})
 		m.Post("/issues/attachments", repo.UploadIssueAttachment)
+		m.Post("/releases/attachments", repo.UploadReleaseAttachment)
 	}, ignSignIn)
 
 	m.Group("/:username", func() {
@@ -490,7 +490,7 @@ func runWeb(ctx *cli.Context) error {
 		// So they can apply their own enable/disable logic on routers.
 		m.Group("/issues", func() {
 			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
-				Post(bindIgnErr(form.CreateIssue{}), repo.NewIssuePost)
+				Post(bindIgnErr(form.NewIssue{}), repo.NewIssuePost)
 
 			m.Group("/:index", func() {
 				m.Post("/label", repo.UpdateIssueLabel)
@@ -538,7 +538,7 @@ func runWeb(ctx *cli.Context) error {
 		// e.g. /org1/test-repo/compare/master...org1:develop
 		// which should be /org1/test-repo/compare/master...develop
 		m.Combo("/compare/*", repo.MustAllowPulls).Get(repo.CompareAndPullRequest).
-			Post(bindIgnErr(form.CreateIssue{}), repo.CompareAndPullRequestPost)
+			Post(bindIgnErr(form.NewIssue{}), repo.CompareAndPullRequestPost)
 
 		m.Group("", func() {
 			m.Combo("/_edit/*").Get(repo.EditFile).
