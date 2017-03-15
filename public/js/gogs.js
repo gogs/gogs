@@ -1233,8 +1233,7 @@ $(document).ready(function () {
 
     // Semantic UI modules.
     $('.ui.dropdown').dropdown({
-        forceSelection: false,
-        action:'select'
+        forceSelection: false
     });
     $('.jump.dropdown').dropdown({
         action: 'select',
