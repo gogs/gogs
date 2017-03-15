@@ -1233,10 +1233,11 @@ $(document).ready(function () {
 
     // Semantic UI modules.
     $('.ui.dropdown').dropdown({
-        forceSelection: false
+        forceSelection: false,
+        action:'select'
     });
     $('.jump.dropdown').dropdown({
-        action: 'hide',
+        action: 'select',
         onShow: function () {
             $('.poping.up').popup('hide');
         }
