@@ -24,6 +24,6 @@
 			<input id="secret" name="secret" type="password" value="{{.Webhook.Secret}}" autocomplete="off">
 			<p class="text grey desc">{{.i18n.Tr "repo.settings.secret_desc" | Safe}}</p>
 		</div>
-		{{template "repo/settings/webhook_settings" .}}
+		{{template "repo/settings/webhook/settings" .}}
 	</form>
 {{end}}
