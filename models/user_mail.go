@@ -177,7 +177,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrUserNotExist{email.UID, ""}
+		return errors.UserNotExist{email.UID, ""}
 	}
 
 	// Make sure the former primary email doesn't disappear.

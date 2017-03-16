@@ -18,6 +18,7 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/sync"
@@ -101,7 +102,7 @@ func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 
 	if pr.HasMerged && pr.Merger == nil {
 		pr.Merger, err = getUserByID(e, pr.MergerID)
-		if IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			pr.MergerID = -1
 			pr.Merger = NewGhostUser()
 		} else if err != nil {

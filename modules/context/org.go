@@ -10,6 +10,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -49,11 +50,7 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 	var err error
 	ctx.Org.Organization, err = models.GetUserByName(orgName)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.Handle(404, "GetUserByName", err)
-		} else {
-			ctx.Handle(500, "GetUserByName", err)
-		}
+		ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return
 	}
 	org := ctx.Org.Organization

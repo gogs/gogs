@@ -15,6 +15,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -449,11 +450,7 @@ func ParseCompareInfo(ctx *context.Context) (*models.User, *models.Repository, *
 	} else if len(headInfos) == 2 {
 		headUser, err = models.GetUserByName(headInfos[0])
 		if err != nil {
-			if models.IsErrUserNotExist(err) {
-				ctx.Handle(404, "GetUserByName", nil)
-			} else {
-				ctx.Handle(500, "GetUserByName", err)
-			}
+			ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return nil, nil, nil, nil, "", ""
 		}
 		headBranch = headInfos[1]
@@ -719,7 +716,7 @@ func CompareAndPullRequestPost(ctx *context.Context, f form.NewIssue) {
 func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) {
 	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
-		ctx.NotFoundOrServerError("GetUserByName", models.IsErrUserNotExist, err)
+		ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return nil, nil
 	}
 
@@ -753,11 +750,7 @@ func TriggerTask(ctx *context.Context) {
 
 	pusher, err := models.GetUserByID(pusherID)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.Error(404)
-		} else {
-			ctx.Handle(500, "GetUserByID", err)
-		}
+		ctx.NotFoundOrServerError("GetUserByID", errors.IsUserNotExist, err)
 		return
 	}
 

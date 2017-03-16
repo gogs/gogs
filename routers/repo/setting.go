@@ -14,6 +14,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -311,7 +312,7 @@ func SettingsCollaborationPost(ctx *context.Context) {
 
 	u, err := models.GetUserByName(name)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 			ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
 		} else {

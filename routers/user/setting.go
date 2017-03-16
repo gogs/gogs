@@ -5,7 +5,6 @@
 package user
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -456,7 +456,7 @@ func SettingsDelete(ctx *context.Context) {
 
 	if ctx.Req.Method == "POST" {
 		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
-			if models.IsErrUserNotExist(err) {
+			if errors.IsUserNotExist(err) {
 				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
 				ctx.Handle(500, "UserSignIn", err)

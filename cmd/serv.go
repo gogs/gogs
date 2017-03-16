@@ -17,6 +17,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/setting"
 	http "github.com/gogits/gogs/routers/repo"
 )
@@ -153,7 +154,7 @@ func runServ(c *cli.Context) error {
 
 	owner, err := models.GetUserByName(ownerName)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
 		}
 		fail("Internal error", "Fail to get repository owner '%s': %v", ownerName, err)

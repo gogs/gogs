@@ -22,6 +22,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
@@ -59,7 +60,7 @@ func HTTPContexter() macaron.Handler {
 
 		owner, err := models.GetUserByName(ownerName)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetUserByName", models.IsErrUserNotExist, err)
+			ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return
 		}
 
@@ -107,7 +108,7 @@ func HTTPContexter() macaron.Handler {
 		}
 
 		authUser, err := models.UserSignIn(authUsername, authPassword)
-		if err != nil && !models.IsErrUserNotExist(err) {
+		if err != nil && !errors.IsUserNotExist(err) {
 			ctx.Handle(http.StatusInternalServerError, "UserSignIn", err)
 			return
 		}

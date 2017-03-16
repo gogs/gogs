@@ -296,7 +296,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LOGIN_DLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
-		return nil, ErrUserNotExist{0, login}
+		return nil, errors.UserNotExist{0, login}
 	}
 
 	if !autoRegister {
@@ -404,9 +404,9 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(login, "@")
 		if idx == -1 {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		} else if !com.IsSliceContainsStr(strings.Split(cfg.AllowedDomains, ","), login[idx+1:]) {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		}
 	}
 
@@ -425,7 +425,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		}
 		return nil, err
 	}
@@ -465,7 +465,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		}
 		return nil, err
 	}
@@ -525,7 +525,7 @@ func UserSignIn(username, password string) (*User, error) {
 				return user, nil
 			}
 
-			return nil, ErrUserNotExist{user.ID, user.Name}
+			return nil, errors.UserNotExist{user.ID, user.Name}
 
 		default:
 			var source LoginSource
@@ -554,5 +554,5 @@ func UserSignIn(username, password string) (*User, error) {
 		log.Warn("Failed to login '%s' via '%s': %v", username, source.Name, err)
 	}
 
-	return nil, ErrUserNotExist{user.ID, user.Name}
+	return nil, errors.UserNotExist{user.ID, user.Name}
 }

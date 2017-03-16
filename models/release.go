@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/process"
 )
 
@@ -67,7 +68,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Publisher == nil {
 		r.Publisher, err = getUserByID(e, r.PublisherID)
 		if err != nil {
-			if IsErrUserNotExist(err) {
+			if errors.IsUserNotExist(err) {
 				r.PublisherID = -1
 				r.Publisher = NewGhostUser()
 			} else {

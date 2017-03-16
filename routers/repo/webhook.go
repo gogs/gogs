@@ -6,7 +6,6 @@ package repo
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -16,6 +15,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -468,7 +468,7 @@ func TestWebhook(ctx *context.Context) {
 		author, err := models.GetUserByEmail(commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
-		} else if !models.IsErrUserNotExist(err) {
+		} else if !errors.IsUserNotExist(err) {
 			ctx.Flash.Error(fmt.Sprintf("GetUserByEmail.(author) [%s]: %v", commit.Author.Email, err))
 			ctx.Status(500)
 			return
@@ -477,7 +477,7 @@ func TestWebhook(ctx *context.Context) {
 		committer, err := models.GetUserByEmail(commit.Committer.Email)
 		if err == nil {
 			committerUsername = committer.Name
-		} else if !models.IsErrUserNotExist(err) {
+		} else if !errors.IsUserNotExist(err) {
 			ctx.Flash.Error(fmt.Sprintf("GetUserByEmail.(committer) [%s]: %v", commit.Committer.Email, err))
 			ctx.Status(500)
 			return

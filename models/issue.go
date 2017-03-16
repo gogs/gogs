@@ -90,7 +90,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Poster == nil {
 		issue.Poster, err = getUserByID(e, issue.PosterID)
 		if err != nil {
-			if IsErrUserNotExist(err) {
+			if errors.IsUserNotExist(err) {
 				issue.PosterID = -1
 				issue.Poster = NewGhostUser()
 			} else {
@@ -390,7 +390,7 @@ func (i *Issue) GetAssignee() (err error) {
 	}
 
 	i.Assignee, err = GetUserByID(i.AssigneeID)
-	if IsErrUserNotExist(err) {
+	if errors.IsUserNotExist(err) {
 		return nil
 	}
 	return err
@@ -595,7 +595,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	}
 
 	issue.Assignee, err = GetUserByID(issue.AssigneeID)
-	if err != nil && !IsErrUserNotExist(err) {
+	if err != nil && !errors.IsUserNotExist(err) {
 		log.Error(4, "GetUserByID [assignee_id: %v]: %v", issue.AssigneeID, err)
 		return nil
 	}
@@ -668,7 +668,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 
 	if opts.Issue.AssigneeID > 0 {
 		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
-		if err != nil && !IsErrUserNotExist(err) {
+		if err != nil && !errors.IsUserNotExist(err) {
 			return fmt.Errorf("getUserByID: %v", err)
 		}
 

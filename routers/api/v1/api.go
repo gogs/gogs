@@ -13,6 +13,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/routers/api/v1/admin"
@@ -38,7 +39,7 @@ func repoAssignment() macaron.Handler {
 		} else {
 			owner, err = models.GetUserByName(userName)
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					ctx.Status(404)
 				} else {
 					ctx.Error(500, "GetUserByName", err)
@@ -137,7 +138,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 		if assignOrg {
 			ctx.Org.Organization, err = models.GetUserByName(ctx.Params(":orgname"))
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					ctx.Status(404)
 				} else {
 					ctx.Error(500, "GetUserByName", err)
@@ -149,7 +150,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 		if assignTeam {
 			ctx.Org.Team, err = models.GetTeamByID(ctx.ParamsInt64(":teamid"))
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					ctx.Status(404)
 				} else {
 					ctx.Error(500, "GetTeamById", err)
