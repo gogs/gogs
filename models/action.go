@@ -251,20 +251,30 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit {
+func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoLink string) ([]*api.PayloadCommit, error) {
 	commits := make([]*api.PayloadCommit, len(pc.Commits))
 	for i, commit := range pc.Commits {
 		authorUsername := ""
 		author, err := GetUserByEmail(commit.AuthorEmail)
 		if err == nil {
 			authorUsername = author.Name
+		} else if !errors.IsUserNotExist(err) {
+			return nil, fmt.Errorf("GetUserByEmail: %v", err)
 		}
+
 		committerUsername := ""
 		committer, err := GetUserByEmail(commit.CommitterEmail)
 		if err == nil {
-			// TODO: check errors other than email not found.
 			committerUsername = committer.Name
+		} else if !errors.IsUserNotExist(err) {
+			return nil, fmt.Errorf("GetUserByEmail: %v", err)
 		}
+
+		fileStatus, err := git.GetCommitFileStatus(repoPath, commit.Sha1)
+		if err != nil {
+			return nil, fmt.Errorf("FileStatus [commit_sha1: %s]: %v", commit.Sha1, err)
+		}
+
 		commits[i] = &api.PayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
@@ -279,10 +289,13 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,
 			},
+			Added:     fileStatus.Added,
+			Removed:   fileStatus.Removed,
+			Modified:  fileStatus.Modified,
 			Timestamp: commit.Timestamp,
 		}
 	}
-	return commits
+	return commits, nil
 }
 
 // AvatarLink tries to match user in database with e-mail
@@ -546,12 +559,17 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			}
 		}
 
+		commits, err := opts.Commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
+		if err != nil {
+			return fmt.Errorf("ToApiPayloadCommits: %v", err)
+		}
+
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
 			CompareURL: compareURL,
-			Commits:    opts.Commits.ToApiPayloadCommits(repo.HTMLURL()),
+			Commits:    commits,
 			Repo:       apiRepo,
 			Pusher:     apiPusher,
 			Sender:     apiPusher,

@@ -278,12 +278,12 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	}
 
 	if err = MergePullRequestAction(doer, pr.Issue.Repo, pr.Issue); err != nil {
-		log.Error(4, "MergePullRequestAction [%d]: %v", pr.ID, err)
+		log.Error(2, "MergePullRequestAction [%d]: %v", pr.ID, err)
 	}
 
 	// Reload pull request information.
 	if err = pr.LoadAttributes(); err != nil {
-		log.Error(4, "LoadAttributes: %v", err)
+		log.Error(2, "LoadAttributes: %v", err)
 		return nil
 	}
 	if err = PrepareWebhooks(pr.Issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -293,13 +293,13 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		Repository:  pr.Issue.Repo.APIFormat(nil),
 		Sender:      doer.APIFormat(),
 	}); err != nil {
-		log.Error(4, "PrepareWebhooks: %v", err)
+		log.Error(2, "PrepareWebhooks: %v", err)
 		return nil
 	}
 
 	l, err := headGitRepo.CommitsBetweenIDs(pr.MergedCommitID, pr.MergeBase)
 	if err != nil {
-		log.Error(4, "CommitsBetweenIDs: %v", err)
+		log.Error(2, "CommitsBetweenIDs: %v", err)
 		return nil
 	}
 
@@ -309,23 +309,30 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 	// to avoid strange diff commits produced.
 	mergeCommit, err := baseGitRepo.GetBranchCommit(pr.BaseBranch)
 	if err != nil {
-		log.Error(4, "GetBranchCommit: %v", err)
+		log.Error(2, "GetBranchCommit: %v", err)
 		return nil
 	}
 	l.PushFront(mergeCommit)
+
+	commits, err := ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
+	if err != nil {
+		log.Error(2, "ToApiPayloadCommits: %v", err)
+		return nil
+	}
 
 	p := &api.PushPayload{
 		Ref:        git.BRANCH_PREFIX + pr.BaseBranch,
 		Before:     pr.MergeBase,
 		After:      pr.MergedCommitID,
 		CompareURL: setting.AppUrl + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
-		Commits:    ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.HTMLURL()),
+		Commits:    commits,
 		Repo:       pr.BaseRepo.APIFormat(nil),
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),
 	}
 	if err = PrepareWebhooks(pr.BaseRepo, HOOK_EVENT_PUSH, p); err != nil {
-		return fmt.Errorf("PrepareWebhooks: %v", err)
+		log.Error(2, "PrepareWebhooks: %v", err)
+		return nil
 	}
 	return nil
 }
