@@ -19,6 +19,6 @@
 			<label for="color">{{.i18n.Tr "repo.settings.slack_color"}}</label>
 			<input id="color" name="color" value="{{.SlackHook.Color}}" placeholder="e.g. #dd4b39">
 		</div>
-		{{template "repo/settings/webhook_settings" .}}
+		{{template "repo/settings/webhook/settings" .}}
 	</form>
 {{end}}

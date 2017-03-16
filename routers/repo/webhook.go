@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	WEBHOOKS        base.TplName = "repo/settings/webhooks"
-	WEBHOOK_NEW     base.TplName = "repo/settings/webhook_new"
+	WEBHOOKS        base.TplName = "repo/settings/webhook/base"
+	WEBHOOK_NEW     base.TplName = "repo/settings/webhook/new"
 	ORG_WEBHOOK_NEW base.TplName = "org/settings/webhook_new"
 )
 
