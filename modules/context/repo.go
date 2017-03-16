@@ -18,6 +18,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -169,7 +170,7 @@ func RepoAssignment(args ...bool) macaron.Handler {
 		} else {
 			owner, err = models.GetUserByName(ownerName)
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					if ctx.Query("go-get") == "1" {
 						earlyResponseForGoGetMeta(ctx)
 						return

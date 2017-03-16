@@ -14,6 +14,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -65,7 +66,7 @@ func SignedInID(ctx *macaron.Context, sess session.Store) int64 {
 	}
 	if id, ok := uid.(int64); ok {
 		if _, err := models.GetUserByID(id); err != nil {
-			if !models.IsErrUserNotExist(err) {
+			if !errors.IsUserNotExist(err) {
 				log.Error(2, "GetUserById: %v", err)
 			}
 			return 0
@@ -90,7 +91,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 			if len(webAuthUser) > 0 {
 				u, err := models.GetUserByName(webAuthUser)
 				if err != nil {
-					if !models.IsErrUserNotExist(err) {
+					if !errors.IsUserNotExist(err) {
 						log.Error(4, "GetUserByName: %v", err)
 						return nil, false
 					}
@@ -125,7 +126,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 
 				u, err := models.UserSignIn(uname, passwd)
 				if err != nil {
-					if !models.IsErrUserNotExist(err) {
+					if !errors.IsUserNotExist(err) {
 						log.Error(4, "UserSignIn: %v", err)
 					}
 					return nil, false

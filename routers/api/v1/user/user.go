@@ -10,6 +10,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 )
 
@@ -54,7 +55,7 @@ func Search(ctx *context.APIContext) {
 func GetInfo(ctx *context.APIContext) {
 	u, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetUserByName", err)

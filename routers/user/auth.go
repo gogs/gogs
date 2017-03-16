@@ -12,6 +12,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -49,7 +50,7 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 
 	u, err := models.GetUserByName(uname)
 	if err != nil {
-		if !models.IsErrUserNotExist(err) {
+		if !errors.IsUserNotExist(err) {
 			return false, fmt.Errorf("GetUserByName: %v", err)
 		}
 		return false, nil
@@ -113,7 +114,7 @@ func SignInPost(ctx *context.Context, f form.SignIn) {
 
 	u, err := models.UserSignIn(f.UserName, f.Password)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &f)
 		} else {
 			ctx.Handle(500, "UserSignIn", err)
@@ -286,11 +287,7 @@ func Activate(ctx *context.Context) {
 			return
 		}
 		if err := models.UpdateUser(user); err != nil {
-			if models.IsErrUserNotExist(err) {
-				ctx.Error(404)
-			} else {
-				ctx.Handle(500, "UpdateUser", err)
-			}
+			ctx.Handle(500, "UpdateUser", err)
 			return
 		}
 
@@ -351,7 +348,7 @@ func ForgotPasswdPost(ctx *context.Context) {
 
 	u, err := models.GetUserByEmail(email)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 			ctx.Data["IsResetSent"] = true
 			ctx.HTML(200, FORGOT_PASSWORD)

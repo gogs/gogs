@@ -9,6 +9,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
@@ -100,7 +101,7 @@ func Invitation(ctx *context.Context) {
 		uname := ctx.Query("uname")
 		u, err := models.GetUserByName(uname)
 		if err != nil {
-			if models.IsErrUserNotExist(err) {
+			if errors.IsUserNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
 				ctx.Redirect(ctx.Org.OrgLink + "/invitations/new")
 			} else {

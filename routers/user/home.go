@@ -12,6 +12,7 @@ import (
 	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
@@ -32,11 +33,7 @@ func getDashboardContextUser(ctx *context.Context) *models.User {
 		// Organization.
 		org, err := models.GetUserByName(orgName)
 		if err != nil {
-			if models.IsErrUserNotExist(err) {
-				ctx.Handle(404, "GetUserByName", err)
-			} else {
-				ctx.Handle(500, "GetUserByName", err)
-			}
+			ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return nil
 		}
 		ctxUser = org
@@ -71,7 +68,7 @@ func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID, offset in
 		if !ok {
 			u, err := models.GetUserByName(act.ActUserName)
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					continue
 				}
 				ctx.Handle(500, "GetUserByName", err)
@@ -406,11 +403,7 @@ func showOrgProfile(ctx *context.Context) {
 func Email2User(ctx *context.Context) {
 	u, err := models.GetUserByEmail(ctx.Query("email"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.Handle(404, "GetUserByEmail", err)
-		} else {
-			ctx.Handle(500, "GetUserByEmail", err)
-		}
+		ctx.NotFoundOrServerError("GetUserByEmail", errors.IsUserNotExist, err)
 		return
 	}
 	ctx.Redirect(setting.AppSubUrl + "/user/" + u.Name)

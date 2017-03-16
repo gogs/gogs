@@ -12,6 +12,7 @@ import (
 	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
@@ -26,11 +27,7 @@ const (
 func GetUserByName(ctx *context.Context, name string) *models.User {
 	user, err := models.GetUserByName(name)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
-			ctx.Handle(404, "GetUserByName", nil)
-		} else {
-			ctx.Handle(500, "GetUserByName", err)
-		}
+		ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return nil
 	}
 	return user

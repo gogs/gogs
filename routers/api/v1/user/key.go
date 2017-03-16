@@ -8,6 +8,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
@@ -17,7 +18,7 @@ import (
 func GetUserByParamsName(ctx *context.APIContext, name string) *models.User {
 	user, err := models.GetUserByName(ctx.Params(name))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetUserByName", err)

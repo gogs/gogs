@@ -16,6 +16,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -47,7 +48,7 @@ func checkContextUser(ctx *context.Context, uid int64) *models.User {
 	}
 
 	org, err := models.GetUserByID(uid)
-	if models.IsErrUserNotExist(err) {
+	if errors.IsUserNotExist(err) {
 		return ctx.User
 	}
 

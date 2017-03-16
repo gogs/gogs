@@ -8,13 +8,14 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 )
 
 func ListCollaborators(ctx *context.APIContext) {
 	collaborators, err := ctx.Repo.Repository.GetCollaborators()
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetCollaborators", err)
@@ -32,7 +33,7 @@ func ListCollaborators(ctx *context.APIContext) {
 func AddCollaborator(ctx *context.APIContext, form api.AddCollaboratorOption) {
 	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetUserByName", err)
@@ -58,7 +59,7 @@ func AddCollaborator(ctx *context.APIContext, form api.AddCollaboratorOption) {
 func IsCollaborator(ctx *context.APIContext) {
 	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetUserByName", err)
@@ -82,7 +83,7 @@ func IsCollaborator(ctx *context.APIContext) {
 func DeleteCollaborator(ctx *context.APIContext) {
 	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetUserByName", err)

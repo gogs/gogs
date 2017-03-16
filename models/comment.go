@@ -15,6 +15,7 @@ import (
 
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/markdown"
 )
 
@@ -95,7 +96,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Poster == nil {
 		c.Poster, err = GetUserByID(c.PosterID)
 		if err != nil {
-			if IsErrUserNotExist(err) {
+			if errors.IsUserNotExist(err) {
 				c.PosterID = -1
 				c.Poster = NewGhostUser()
 			} else {

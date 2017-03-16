@@ -12,6 +12,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/setting"
@@ -80,7 +81,7 @@ func Search(ctx *context.APIContext) {
 func listUserRepositories(ctx *context.APIContext, username string) {
 	user, err := models.GetUserByName(username)
 	if err != nil {
-		ctx.NotFoundOrServerError("GetUserByName", models.IsErrUserNotExist, err)
+		ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return
 	}
 
@@ -190,7 +191,7 @@ func Create(ctx *context.APIContext, opt api.CreateRepoOption) {
 func CreateOrgRepo(ctx *context.APIContext, opt api.CreateRepoOption) {
 	org, err := models.GetOrgByName(ctx.Params(":org"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetOrgByName", err)
@@ -213,7 +214,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 	if f.Uid != ctxUser.ID {
 		org, err := models.GetUserByID(f.Uid)
 		if err != nil {
-			if models.IsErrUserNotExist(err) {
+			if errors.IsUserNotExist(err) {
 				ctx.Error(422, "", err)
 			} else {
 				ctx.Error(500, "GetUserByID", err)
@@ -280,7 +281,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 func parseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repository) {
 	owner, err := models.GetUserByName(ctx.Params(":username"))
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			ctx.Error(422, "", err)
 		} else {
 			ctx.Error(500, "GetUserByName", err)

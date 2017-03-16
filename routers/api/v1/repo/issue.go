@@ -11,6 +11,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -86,7 +87,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 		if len(form.Assignee) > 0 {
 			assignee, err := models.GetUserByName(form.Assignee)
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					ctx.Error(422, "", fmt.Sprintf("Assignee does not exist: [name: %s]", form.Assignee))
 				} else {
 					ctx.Error(500, "GetUserByName", err)
@@ -152,7 +153,7 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		} else {
 			assignee, err := models.GetUserByName(*form.Assignee)
 			if err != nil {
-				if models.IsErrUserNotExist(err) {
+				if errors.IsUserNotExist(err) {
 					ctx.Error(422, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
 				} else {
 					ctx.Error(500, "GetUserByName", err)

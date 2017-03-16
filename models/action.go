@@ -20,6 +20,7 @@ import (
 	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/setting"
 )
@@ -292,7 +293,7 @@ func (push *PushCommits) AvatarLink(email string) string {
 		u, err := GetUserByEmail(email)
 		if err != nil {
 			push.avatars[email] = base.AvatarLink(email)
-			if !IsErrUserNotExist(err) {
+			if !errors.IsUserNotExist(err) {
 				log.Error(4, "GetUserByEmail: %v", err)
 			}
 		} else {
