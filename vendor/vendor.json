@@ -159,16 +159,16 @@
 			"revisionTime": "2016-08-10T03:50:02Z"
 		},
 		{
-			"checksumSHA1": "W2THy51ey2gNT9PbBS98GG4o3fQ=",
+			"checksumSHA1": "zkRQagaPCQPU9o+8kGZYIQoysu4=",
 			"path": "github.com/gogits/git-module",
-			"revision": "b6678775980f8bcd0bbf400a88c176210c8a22e6",
-			"revisionTime": "2017-03-12T06:43:33Z"
+			"revision": "f9c2e671705cc0bb8281a932efe9371404c956b0",
+			"revisionTime": "2017-03-16T21:31:27Z"
 		},
 		{
-			"checksumSHA1": "1p1/OSDPORWbSBCD791BbGh2vVc=",
+			"checksumSHA1": "D2kVXl0QpIw6t3891Sl7IM9wL+w=",
 			"path": "github.com/gogits/go-gogs-client",
-			"revision": "08824b5ad7408bc38f2b9287c94be2f059c9966a",
-			"revisionTime": "2017-03-11T23:40:19Z"
+			"revision": "6422399bb531fae9500b29b5d8bfe23aa0ce6beb",
+			"revisionTime": "2017-03-16T21:31:09Z"
 		},
 		{
 			"checksumSHA1": "p4yoFWgDiTfpu1JYgh26t6+VDTk=",

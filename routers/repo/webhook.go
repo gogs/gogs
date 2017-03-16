@@ -484,6 +484,13 @@ func TestWebhook(ctx *context.Context) {
 		}
 	}
 
+	fileStatus, err := commit.FileStatus()
+	if err != nil {
+		ctx.Flash.Error("FileStatus: " + err.Error())
+		ctx.Status(500)
+		return
+	}
+
 	apiUser := ctx.User.APIFormat()
 	p := &api.PushPayload{
 		Ref:    git.BRANCH_PREFIX + ctx.Repo.Repository.DefaultBranch,
@@ -504,6 +511,9 @@ func TestWebhook(ctx *context.Context) {
 					Email:    commit.Committer.Email,
 					UserName: committerUsername,
 				},
+				Added:    fileStatus.Added,
+				Removed:  fileStatus.Removed,
+				Modified: fileStatus.Modified,
 			},
 		},
 		Repo:   ctx.Repo.Repository.APIFormat(nil),
@@ -514,7 +524,6 @@ func TestWebhook(ctx *context.Context) {
 		ctx.Flash.Error("TestWebhook: " + err.Error())
 		ctx.Status(500)
 	} else {
-		go models.HookQueue.Add(ctx.Repo.Repository.ID)
 		ctx.Flash.Info(ctx.Tr("repo.settings.webhook.test_delivery_success"))
 		ctx.Status(200)
 	}

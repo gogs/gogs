@@ -86,7 +86,12 @@ type PayloadCommit struct {
 	URL       string       `json:"url"`
 	Author    *PayloadUser `json:"author"`
 	Committer *PayloadUser `json:"committer"`
-	Timestamp time.Time    `json:"timestamp"`
+
+	Added    []string `json:"added"`
+	Removed  []string `json:"removed"`
+	Modified []string `json:"modified"`
+
+	Timestamp time.Time `json:"timestamp"`
 }
 
 var (
