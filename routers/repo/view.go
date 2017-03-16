@@ -184,6 +184,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 				output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
 			}
 			ctx.Data["LineNums"] = gotemplate.HTML(output.String())
+			ctx.Data["LineCount"] = len(lines)
 		}
 
 		if canEnableEditor {

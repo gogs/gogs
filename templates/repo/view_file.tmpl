@@ -5,11 +5,22 @@
 			{{if .ReadmeInList}}
 				<strong>{{.FileName}}</strong>
 			{{else}}
-				<strong>{{.FileName}}</strong> <span class="text grey normal">{{FileSize .FileSize}}</span>
+				<div class="ui large breadcrumb">
+					<strong>{{.FileName}}</strong> <span class="text grey normal">{{FileSize .FileSize}}</span>
+						<div class="divider">|</div>
+					<span class="text grey small">{{.LineCount}} lines </span>
+					<div class="divider">|</div>
+					<span class="text grey small">Highlighting: {{ .HighlightClass }}</span>
+				</div>
 			{{end}}
 		{{else}}
-			<i class="file text outline icon ui left"></i>
-			<strong>{{.FileName}}</strong> <span class="text grey normal">{{FileSize .FileSize}}</span>
+			<div class="ui large breadcrumb">
+			<i class="file text outline icon ui left"></i><strong>{{.FileName}}</strong> <span class="text grey normal">{{FileSize .FileSize}}</span>
+			<div class="divider">|</div>
+				<span class="text grey small">{{.LineCount}} lines </span>
+				<div class="divider">|</div>
+				<span class="text grey small">Highlighting: {{ .HighlightClass }}</span>
+			</div>
 		{{end}}
 		{{if not .ReadmeInList}}
 			<div class="ui right file-actions">
