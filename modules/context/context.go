@@ -42,6 +42,13 @@ type Context struct {
 	Org  *Organization
 }
 
+func (ctx *Context) UserID() int64 {
+	if !ctx.IsSigned {
+		return 0
+	}
+	return ctx.User.ID
+}
+
 // HasError returns true if error occurs in form validation.
 func (ctx *Context) HasApiError() bool {
 	hasErr, ok := ctx.Data["HasError"]

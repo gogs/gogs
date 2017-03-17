@@ -620,16 +620,18 @@ func (prs PullRequestList) loadAttributes(e Engine) (err error) {
 	}
 
 	// Load issues
-	issueIDs := make([]int64, 0, len(prs))
+	set := make(map[int64]*Issue)
 	for i := range prs {
-		issueIDs = append(issueIDs, prs[i].IssueID)
+		set[prs[i].IssueID] = nil
+	}
+	issueIDs := make([]int64, 0, len(prs))
+	for issueID := range set {
+		issueIDs = append(issueIDs, issueID)
 	}
 	issues := make([]*Issue, 0, len(issueIDs))
 	if err = e.Where("id > 0").In("id", issueIDs).Find(&issues); err != nil {
 		return fmt.Errorf("find issues: %v", err)
 	}
-
-	set := make(map[int64]*Issue)
 	for i := range issues {
 		set[issues[i].ID] = issues[i]
 	}
