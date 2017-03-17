@@ -29,6 +29,7 @@ type Install struct {
 	HTTPPort            string `binding:"Required"`
 	AppUrl              string `binding:"Required"`
 	LogRootPath         string `binding:"Required"`
+	EnableConsoleMode   bool
 
 	SMTPHost        string
 	SMTPFrom        string
