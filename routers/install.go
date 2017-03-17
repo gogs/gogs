@@ -335,7 +335,11 @@ func InstallPost(ctx *context.Context, f form.Install) {
 
 	cfg.Section("session").Key("PROVIDER").SetValue("file")
 
-	cfg.Section("log").Key("MODE").SetValue("file")
+	mode := "file"
+	if f.EnableConsoleMode {
+		mode = "console, file"
+	}
+	cfg.Section("log").Key("MODE").SetValue(mode)
 	cfg.Section("log").Key("LEVEL").SetValue("Info")
 	cfg.Section("log").Key("ROOT_PATH").SetValue(f.LogRootPath)
 

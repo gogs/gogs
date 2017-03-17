@@ -99,7 +99,7 @@
 						<input id="ssh_port" name="ssh_port" value="{{.ssh_port}}">
 						<span class="help">{{.i18n.Tr "install.ssh_port_helper"}}</span>
 					</div>
-					<div class="inline field" id="use-builtin-ssh-server">
+					<div class="inline field checkbox">
 						<div class="ui checkbox">
 							<label class="poping up" data-content="{{.i18n.Tr "install.use_builtin_ssh_server_popup"}}"><strong>{{.i18n.Tr "install.use_builtin_ssh_server"}}</strong></label>
 							<input name="use_builtin_ssh_server" type="checkbox" {{if .use_builtin_ssh_server}}checked{{end}}>
@@ -119,6 +119,12 @@
 						<label for="log_root_path">{{.i18n.Tr "install.log_root_path"}}</label>
 						<input id="log_root_path" name="log_root_path" value="{{.log_root_path}}" placeholder="log" required>
 						<span class="help">{{.i18n.Tr "install.log_root_path_helper"}}</span>
+					</div>
+					<div class="inline field checkbox">
+						<div class="ui checkbox">
+							<label class="poping up" data-content="{{.i18n.Tr "install.enable_console_mode_popup"}}"><strong>{{.i18n.Tr "install.enable_console_mode"}}</strong></label>
+							<input name="enable_console_mode" type="checkbox" {{if .enable_console_mode}}checked{{end}}>
+						</div>
 					</div>
 
 
@@ -247,4 +253,70 @@
 		</div>
 	</div>
 </div>
+
+<script>
+	// Database type change detection.
+	$("#db_type").change(function () {
+		var sqliteDefault = 'data/gogs.db';
+
+		var dbType = $(this).val();
+		if (dbType === "SQLite3") {
+			$('#sql_settings').hide();
+			$('#pgsql_settings').hide();
+			$('#sqlite_settings').show();
+
+			if (dbType === "SQLite3") {
+				$('#db_path').val(sqliteDefault);
+			}
+			return;
+		}
+
+		var dbDefaults = {
+			"MySQL": "127.0.0.1:3306",
+			"PostgreSQL": "127.0.0.1:5432",
+			"MSSQL": "127.0.0.1, 1433"
+		};
+
+		$('#sqlite_settings').hide();
+		$('#sql_settings').show();
+		$('#pgsql_settings').toggle(dbType === "PostgreSQL");
+		$.each(dbDefaults, function(type, defaultHost) {
+			if ($('#db_host').val() == defaultHost) {
+				$('#db_host').val(dbDefaults[dbType]);
+				return false;
+			}
+		});
+	});
+
+	// TODO: better handling of exclusive relations.
+	$('#offline-mode input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#disable-gravatar').checkbox('check');
+			$('#federated-avatar-lookup').checkbox('uncheck');
+		}
+	});
+	$('#disable-gravatar input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#federated-avatar-lookup').checkbox('uncheck');
+		} else {
+			$('#offline-mode').checkbox('uncheck');
+		}
+	});
+	$('#federated-avatar-lookup input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#disable-gravatar').checkbox('uncheck');
+			$('#offline-mode').checkbox('uncheck');
+		}
+	});
+	$('#disable-registration input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#enable-captcha').checkbox('uncheck');
+		}
+	});
+	$('#enable-captcha input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#disable-registration').checkbox('uncheck');
+		}
+	});
+</script>
 {{template "base/footer" .}}
