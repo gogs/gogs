@@ -93,13 +93,15 @@ var (
 	}
 
 	// Security settings
-	InstallLock          bool
-	SecretKey            string
-	LogInRememberDays    int
-	CookieUserName       string
-	CookieRememberName   string
-	CookieSecure         bool
-	ReverseProxyAuthUser string
+	InstallLock             bool
+	SecretKey               string
+	LoginRememberDays       int
+	CookieUserName          string
+	CookieRememberName      string
+	CookieSecure            bool
+	ReverseProxyAuthUser    string
+	EnableLoginStatusCookie bool
+	LoginStatusCookieName   string
 
 	// Database settings
 	UseSQLite3    bool
@@ -492,11 +494,13 @@ func NewContext() {
 	sec = Cfg.Section("security")
 	InstallLock = sec.Key("INSTALL_LOCK").MustBool()
 	SecretKey = sec.Key("SECRET_KEY").String()
-	LogInRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
+	LoginRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
 	CookieUserName = sec.Key("COOKIE_USERNAME").String()
 	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
 	CookieSecure = sec.Key("COOKIE_SECURE").MustBool(false)
 	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
+	EnableLoginStatusCookie = sec.Key("ENABLE_LOGIN_STATUS_COOKIE").MustBool(false)
+	LoginStatusCookieName = sec.Key("LOGIN_STATUS_COOKIE_NAME").MustString("login_status")
 
 	sec = Cfg.Section("attachment")
 	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))

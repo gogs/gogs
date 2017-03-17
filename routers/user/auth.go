@@ -45,6 +45,7 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 			log.Trace("auto-login cookie cleared: %s", uname)
 			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
 			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
+			ctx.SetCookie(setting.LoginStatusCookieName, "", -1, setting.AppSubUrl)
 		}
 	}()
 
@@ -64,6 +65,9 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 	ctx.Session.Set("uid", u.ID)
 	ctx.Session.Set("uname", u.Name)
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	if setting.EnableLoginStatusCookie {
+		ctx.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
+	}
 	return true, nil
 }
 
@@ -123,7 +127,7 @@ func SignInPost(ctx *context.Context, f form.SignIn) {
 	}
 
 	if f.Remember {
-		days := 86400 * setting.LogInRememberDays
+		days := 86400 * setting.LoginRememberDays
 		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
 		ctx.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
 	}
@@ -133,6 +137,9 @@ func SignInPost(ctx *context.Context, f form.SignIn) {
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	if setting.EnableLoginStatusCookie {
+		ctx.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
+	}
 
 	redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
 	ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
