@@ -120,6 +120,7 @@ var (
 		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
 		EnableLocalPathMigration bool
 		CommitsFetchConcurrency  int
+		EnableRawFileRenderMode  bool
 
 		// Repository editor settings
 		Editor struct {
