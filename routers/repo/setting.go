@@ -373,7 +373,15 @@ func SettingsBranches(ctx *context.Context) {
 		ctx.Handle(500, "GetProtectBranchesByRepoID", err)
 		return
 	}
-	ctx.Data["ProtectBranches"] = protectBranches
+
+	// Filter out deleted branches
+	branches := make([]string, 0, len(protectBranches))
+	for i := range protectBranches {
+		if ctx.Repo.GitRepo.IsBranchExist(protectBranches[i].Name) {
+			branches = append(branches, protectBranches[i].Name)
+		}
+	}
+	ctx.Data["ProtectBranches"] = branches
 
 	ctx.HTML(200, SETTINGS_BRANCHES)
 }
