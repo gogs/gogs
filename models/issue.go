@@ -895,7 +895,7 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 		if len(opts.RepoIDs) == 0 {
 			return nil
 		}
-		sess.In("issue.repo_id", base.Int64sToStrings(opts.RepoIDs)).And("issue.is_closed=?", opts.IsClosed)
+		sess.In("issue.repo_id", opts.RepoIDs).And("issue.is_closed=?", opts.IsClosed)
 	} else {
 		sess.Where("issue.is_closed=?", opts.IsClosed)
 	}
@@ -930,7 +930,7 @@ func buildIssuesQuery(opts *IssuesOptions) *xorm.Session {
 	}
 
 	if len(opts.Labels) > 0 && opts.Labels != "0" {
-		labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
+		labelIDs := strings.Split(opts.Labels, ",")
 		if len(labelIDs) > 0 {
 			sess.Join("INNER", "issue_label", "issue.id = issue_label.issue_id").In("issue_label.label_id", labelIDs)
 		}

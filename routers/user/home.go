@@ -52,8 +52,8 @@ func getDashboardContextUser(ctx *context.Context) *models.User {
 // retrieveFeeds loads feeds from database by given context user.
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID, offset int64, isProfile bool) {
-	actions, err := models.GetFeeds(ctxUser, userID, offset, isProfile)
+func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, page int, isProfile bool) {
+	actions, err := models.GetFeeds(ctxUser, userID, page, isProfile)
 	if err != nil {
 		ctx.Handle(500, "GetFeeds", err)
 		return
@@ -143,7 +143,7 @@ func Dashboard(ctx *context.Context) {
 	ctx.Data["MirrorCount"] = len(mirrors)
 	ctx.Data["Mirrors"] = mirrors
 
-	retrieveFeeds(ctx, ctxUser, ctx.User.ID, 0, false)
+	retrieveFeeds(ctx, ctxUser, ctx.User.ID, 1, false)
 	if ctx.Written() {
 		return
 	}
