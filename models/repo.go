@@ -115,6 +115,7 @@ func NewRepoContext() {
 	}
 	git.HookDir = "custom_hooks"
 	git.HookSampleDir = "hooks"
+	git.DefaultCommitsPageSize = setting.UI.User.CommitsPagingNum
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {

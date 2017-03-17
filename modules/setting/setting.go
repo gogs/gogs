@@ -280,6 +280,7 @@ var (
 		User struct {
 			RepoPagingNum     int
 			NewsFeedPagingNum int
+			CommitsPagingNum  int
 		} `ini:"ui.user"`
 	}
 

@@ -209,10 +209,10 @@ func (repo *Repository) CommitsByRangeSize(revision string, page, size int) (*li
 	return repo.parsePrettyFormatLogToList(stdout)
 }
 
-const DEFAULT_COMMITS_PAGE_SIZE = 30
+var DefaultCommitsPageSize = 30
 
 func (repo *Repository) CommitsByRange(revision string, page int) (*list.List, error) {
-	return repo.CommitsByRangeSize(revision, page, DEFAULT_COMMITS_PAGE_SIZE)
+	return repo.CommitsByRangeSize(revision, page, DefaultCommitsPageSize)
 }
 
 func (repo *Repository) searchCommits(id sha1, keyword string) (*list.List, error) {
@@ -245,7 +245,7 @@ func (repo *Repository) CommitsByFileAndRangeSize(revision, file string, page, s
 }
 
 func (repo *Repository) CommitsByFileAndRange(revision, file string, page int) (*list.List, error) {
-	return repo.CommitsByFileAndRangeSize(revision, file, page, DEFAULT_COMMITS_PAGE_SIZE)
+	return repo.CommitsByFileAndRangeSize(revision, file, page, DefaultCommitsPageSize)
 }
 
 func (repo *Repository) FilesCountBetween(startCommitID, endCommitID string) (int, error) {
