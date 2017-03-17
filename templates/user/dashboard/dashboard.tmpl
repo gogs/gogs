@@ -5,6 +5,7 @@
 		<div class="ui grid">
 			<div class="ten wide column">
 				{{template "user/dashboard/feeds" .}}
+				<button class="ui fluid basic button center ajax-load-button" data-url="{{.Link}}?after_id={{.AfterID}}">More</button>
 			</div>
 			<div class="six wide column">
 				<div class="ui {{if not .ContextUser.IsOrganization}}three{{else}}two{{end}} item tabable menu">
