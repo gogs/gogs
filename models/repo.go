@@ -1555,7 +1555,7 @@ func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
 func GetRecentUpdatedRepositories(page, pageSize int, userID int64) (repos []*Repository, err error) {
 	repos, _, err = SearchRepositoryByName(&SearchRepoOptions{
-		Keyword:  "%",
+		Keyword:  "",
 		UserID:   userID,
 		OrderBy:  "updated_unix DESC",
 		Private:  false,
@@ -1589,9 +1589,6 @@ type SearchRepoOptions struct {
 // SearchRepositoryByName takes keyword and part of repository name to search,
 // it returns results in given range and number of total results.
 func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int64, _ error) {
-	if len(opts.Keyword) == 0 {
-		return repos, 0, nil
-	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
 
 	if opts.Page <= 0 {
@@ -1600,6 +1597,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 
 	repos = make([]*Repository, 0, opts.PageSize)
 	sess := x.Alias("repo")
+
 	// Attempt to find repositories that opts.UserID has access to,
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
