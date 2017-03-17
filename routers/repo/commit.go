@@ -52,7 +52,7 @@ func renderCommits(ctx *context.Context, filename string) {
 	}
 	pageSize := ctx.QueryInt("pageSize")
 	if pageSize < 1 {
-		pageSize = git.DEFAULT_COMMITS_PAGE_SIZE
+		pageSize = git.DefaultCommitsPageSize
 	}
 
 	// Both 'git log branchName' and 'git log commitID' work.
