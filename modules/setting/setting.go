@@ -278,7 +278,8 @@ var (
 			OrgPagingNum    int
 		} `ini:"ui.admin"`
 		User struct {
-			RepoPagingNum int
+			RepoPagingNum     int
+			NewsFeedPagingNum int
 		} `ini:"ui.user"`
 	}
 
