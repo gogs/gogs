@@ -1073,14 +1073,14 @@ func CountUserRepositories(userID int64, private bool) int64 {
 	return countRepositories(userID, private)
 }
 
-func Repositories(page, pageSize int) (_ []*Repository, err error) {
+func Repositories(page, pageSize int, _ int64) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
 	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
 // RepositoriesWithUsers returns number of repos in given page.
 func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
-	repos, err := Repositories(page, pageSize)
+	repos, err := Repositories(page, pageSize, -1)
 	if err != nil {
 		return nil, fmt.Errorf("Repositories: %v", err)
 	}
@@ -1554,9 +1554,18 @@ func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 }
 
 // GetRecentUpdatedRepositories returns the list of repositories that are recently updated.
-func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err error) {
-	return repos, x.Limit(pageSize, (page-1)*pageSize).
-		Where("is_private=?", false).Limit(pageSize).Desc("updated_unix").Find(&repos)
+func GetRecentUpdatedRepositories(page, pageSize int, userID int64) (repos []*Repository, err error) {
+	repos, _, err = SearchRepositoryByName(&SearchRepoOptions{
+		Keyword:  "",
+		UserID:   userID,
+		OrderBy:  "updated_unix DESC",
+		Private:  false,
+		Page:     page,
+		PageSize: pageSize,
+	})
+	return repos, err
+	//return repos, x.Limit(pageSize, (page-1)*pageSize).
+	//	Where("is_private=?", false).Limit(pageSize).Desc("updated_unix").Find(&repos)
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {
@@ -1581,9 +1590,6 @@ type SearchRepoOptions struct {
 // SearchRepositoryByName takes keyword and part of repository name to search,
 // it returns results in given range and number of total results.
 func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int64, _ error) {
-	if len(opts.Keyword) == 0 {
-		return repos, 0, nil
-	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
 
 	if opts.Page <= 0 {
@@ -1592,6 +1598,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 
 	repos = make([]*Repository, 0, opts.PageSize)
 	sess := x.Alias("repo")
+
 	// Attempt to find repositories that opts.UserID has access to,
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
