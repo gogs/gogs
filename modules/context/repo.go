@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 	"gopkg.in/macaron.v1"
 
@@ -143,15 +142,8 @@ func earlyResponseForGoGetMeta(ctx *Context) {
 		})))
 }
 
-func RepoAssignment(args ...bool) macaron.Handler {
+func RepoAssignment() macaron.Handler {
 	return func(ctx *Context) {
-		var (
-			displayBare bool // To display bare page if it is a bare repo.
-		)
-		if len(args) >= 1 {
-			displayBare = args[0]
-		}
-
 		var (
 			owner *models.User
 			err   error
@@ -282,15 +274,6 @@ func RepoAssignment(args ...bool) macaron.Handler {
 
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {
-			log.Trace("Bare repository: %s", ctx.Repo.RepoLink)
-			// NOTE: to prevent templating error
-			ctx.Data["BranchName"] = ""
-			if displayBare {
-				if !ctx.Repo.IsAdmin() {
-					ctx.Flash.Info(ctx.Tr("repo.repo_is_empty"), true)
-				}
-				ctx.HTML(200, "repo/bare")
-			}
 			return
 		}
 

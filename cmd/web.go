@@ -529,7 +529,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/delete", repo.DeleteRelease)
 			m.Get("/edit/*", repo.EditRelease)
 			m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-		}, reqRepoWriter, func(ctx *context.Context) {
+		}, repo.MustBeNotBare, reqRepoWriter, func(ctx *context.Context) {
 			ctx.Data["PageIsViewCode"] = true
 		})
 
@@ -560,17 +560,17 @@ func runWeb(ctx *cli.Context) error {
 					return
 				}
 			})
-		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
+		}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
 			if !ctx.Repo.CanEnableEditor() {
 				ctx.NotFound()
 				return
 			}
 		})
-	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare)
+	}, reqSignIn, context.RepoAssignment())
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
-			m.Get("/releases", repo.Releases)
+			m.Get("/releases", repo.MustBeNotBare, repo.Releases)
 			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
 			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
@@ -581,7 +581,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("", repo.Branches)
 			m.Get("/all", repo.AllBranches)
 			m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
-		}, func(ctx *context.Context) {
+		}, repo.MustBeNotBare, func(ctx *context.Context) {
 			ctx.Data["PageIsViewCode"] = true
 		})
 
@@ -598,7 +598,7 @@ func runWeb(ctx *cli.Context) error {
 			}, reqSignIn, reqRepoWriter)
 		}, repo.MustEnableWiki, context.RepoRef())
 
-		m.Get("/archive/*", repo.Download)
+		m.Get("/archive/*", repo.MustBeNotBare, repo.Download)
 
 		m.Group("/pulls/:index", func() {
 			m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
@@ -612,18 +612,18 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/commits/*", repo.RefCommits)
 			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.Diff)
 			m.Get("/forks", repo.Forks)
-		}, context.RepoRef())
-		m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.RawDiff)
+		}, repo.MustBeNotBare, context.RepoRef())
+		m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.MustBeNotBare, repo.RawDiff)
 
-		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", context.RepoRef(), repo.CompareDiff)
-	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare)
+		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
+	}, ignSignIn, context.RepoAssignment())
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
 		m.Get("/watchers", repo.Watchers)
 	}, ignSignIn, context.RepoAssignment(), context.RepoRef())
 
 	m.Group("/:username", func() {
-		m.Get("/:reponame", ignSignIn, context.RepoAssignment(true), context.RepoRef(), repo.Home)
+		m.Get("/:reponame", ignSignIn, context.RepoAssignment(), context.RepoRef(), repo.Home)
 
 		m.Group("/:reponame", func() {
 			m.Head("/tasks/trigger", repo.TriggerTask)
@@ -632,7 +632,7 @@ func runWeb(ctx *cli.Context) error {
 		// Duplicated routes to enable different ways of accessing same set of URLs,
 		// e.g. with or without ".git" suffix.
 		m.Group("/:reponame([\\d\\w-_\\.]+\\.git$)", func() {
-			m.Get("", ignSignIn, context.RepoAssignment(true), context.RepoRef(), repo.Home)
+			m.Get("", ignSignIn, context.RepoAssignment(), context.RepoRef(), repo.Home)
 			m.Route("/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 		})
 		m.Route("/:reponame/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)

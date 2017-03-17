@@ -27,6 +27,7 @@ import (
 )
 
 const (
+	BARE     base.TplName = "repo/bare"
 	HOME     base.TplName = "repo/home"
 	WATCHERS base.TplName = "repo/watchers"
 	FORKS    base.TplName = "repo/forks"
@@ -223,6 +224,13 @@ func setEditorconfigIfExists(ctx *context.Context) {
 }
 
 func Home(ctx *context.Context) {
+	ctx.Data["PageIsViewCode"] = true
+
+	if ctx.Repo.Repository.IsBare {
+		ctx.HTML(200, BARE)
+		return
+	}
+
 	title := ctx.Repo.Repository.Owner.Name + "/" + ctx.Repo.Repository.Name
 	if len(ctx.Repo.Repository.Description) > 0 {
 		title += ": " + ctx.Repo.Repository.Description
@@ -231,7 +239,6 @@ func Home(ctx *context.Context) {
 	if ctx.Repo.BranchName != ctx.Repo.Repository.DefaultBranch {
 		ctx.Data["Title"] = title + " @ " + ctx.Repo.BranchName
 	}
-	ctx.Data["PageIsViewCode"] = true
 	ctx.Data["RequireHighlightJS"] = true
 
 	branchLink := ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchName

@@ -46,7 +46,7 @@
 		</div><!-- end grid -->
 	</div><!-- end container -->
 {{end}}
-{{if not (or .IsBareRepo .IsDiffCompare)}}
+{{if not .IsDiffCompare}}
 	<div class="ui tabs container">
 		<div class="ui tabular menu navbar">
 			<a class="{{if .PageIsViewCode}}active{{end}} item" href="{{.RepoLink}}">
