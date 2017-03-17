@@ -1581,11 +1581,6 @@ type SearchRepoOptions struct {
 // SearchRepositoryByName takes keyword and part of repository name to search,
 // it returns results in given range and number of total results.
 func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int64, _ error) {
-	if len(opts.Keyword) == 0 {
-		return repos, 0, nil
-	}
-	opts.Keyword = strings.ToLower(opts.Keyword)
-
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
@@ -1596,14 +1591,15 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
 		sess.Join("LEFT", "access", "access.repo_id = repo.id").
-			Where("repo.lower_name LIKE ? AND (repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ?)",
-				"%"+opts.Keyword+"%", opts.UserID, opts.UserID, false)
+			Where("(repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ?)", opts.UserID, opts.UserID, false)
 	} else {
-		sess.Where("repo.lower_name LIKE ?", "%"+opts.Keyword+"%")
 		// Only return public repositories if opts.Private is not set
 		if !opts.Private {
 			sess.And("repo.is_private = ?", false)
 		}
+	}
+	if len(opts.Keyword) > 0 {
+		sess.And("repo.lower_name LIKE ?", "%"+strings.ToLower(opts.Keyword)+"%")
 	}
 	if opts.OwnerID > 0 {
 		sess.And("repo.owner_id = ?", opts.OwnerID)
@@ -1949,7 +1945,7 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 		return nil
 	}
 
-	// Load owners.
+	// Load owners
 	set := make(map[int64]*User)
 	for i := range repos {
 		set[repos[i].OwnerID] = nil
