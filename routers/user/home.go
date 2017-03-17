@@ -20,6 +20,7 @@ import (
 
 const (
 	DASHBOARD base.TplName = "user/dashboard/dashboard"
+	NEWS_FEED base.TplName = "user/dashboard/feeds"
 	ISSUES    base.TplName = "user/dashboard/issues"
 	PROFILE   base.TplName = "user/profile"
 	ORG_HOME  base.TplName = "org/home"
@@ -52,8 +53,8 @@ func getDashboardContextUser(ctx *context.Context) *models.User {
 // retrieveFeeds loads feeds from database by given context user.
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, page int, isProfile bool) {
-	actions, err := models.GetFeeds(ctxUser, userID, page, isProfile)
+func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, isProfile bool) {
+	actions, err := models.GetFeeds(ctxUser, userID, ctx.QueryInt64("after_id"), isProfile)
 	if err != nil {
 		ctx.Handle(500, "GetFeeds", err)
 		return
@@ -81,11 +82,26 @@ func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, pag
 		feeds = append(feeds, act)
 	}
 	ctx.Data["Feeds"] = feeds
+	if len(feeds) > 0 {
+		afterID := feeds[len(feeds)-1].ID
+		ctx.Data["AfterID"] = afterID
+		ctx.Header().Set("X-AJAX-URL", fmt.Sprintf("%s?after_id=%d", ctx.Data["Link"], afterID))
+	}
 }
 
 func Dashboard(ctx *context.Context) {
 	ctxUser := getDashboardContextUser(ctx)
 	if ctx.Written() {
+		return
+	}
+
+	retrieveFeeds(ctx, ctxUser, ctx.User.ID, false)
+	if ctx.Written() {
+		return
+	}
+
+	if ctx.Req.Header.Get("X-AJAX") == "true" {
+		ctx.HTML(200, NEWS_FEED)
 		return
 	}
 
@@ -143,10 +159,6 @@ func Dashboard(ctx *context.Context) {
 	ctx.Data["MirrorCount"] = len(mirrors)
 	ctx.Data["Mirrors"] = mirrors
 
-	retrieveFeeds(ctx, ctxUser, ctx.User.ID, 1, false)
-	if ctx.Written() {
-		return
-	}
 	ctx.HTML(200, DASHBOARD)
 }
 

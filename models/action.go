@@ -671,14 +671,12 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 // GetFeeds returns action list of given user in given context.
 // actorID is the user who's requesting, ctxUserID is the user/org that is requested.
 // actorID can be -1 when isProfile is true or to skip the permission check.
-func GetFeeds(ctxUser *User, actorID int64, page int, isProfile bool) ([]*Action, error) {
-	if page <= 0 {
-		page = 1
-	}
-
+func GetFeeds(ctxUser *User, actorID, afterID int64, isProfile bool) ([]*Action, error) {
 	actions := make([]*Action, 0, setting.UI.User.NewsFeedPagingNum)
-	sess := x.Limit(setting.UI.User.NewsFeedPagingNum, (page-1)*setting.UI.User.NewsFeedPagingNum).
-		Desc("id").Where("user_id = ?", ctxUser.ID)
+	sess := x.Limit(setting.UI.User.NewsFeedPagingNum).Where("user_id = ?", ctxUser.ID).Desc("id")
+	if afterID > 0 {
+		sess.And("id < ?", afterID)
+	}
 	if isProfile {
 		sess.And("is_private = ?", false).And("act_user_id = ?", ctxUser.ID)
 	} else if actorID != -1 && ctxUser.IsOrganization() {
