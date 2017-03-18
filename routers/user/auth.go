@@ -274,8 +274,9 @@ func Activate(ctx *context.Context) {
 				ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
 				mailer.SendActivateAccountMail(ctx.Context, models.NewMailerUser(ctx.User))
 
-				if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
-					log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
+				keyName := "MailResendLimit_" + ctx.User.LowerName
+				if err := ctx.Cache.Put(keyName, ctx.User.LowerName, 180); err != nil {
+					log.Error(2, "Set cache '%s' fail: %v", keyName, err)
 				}
 			}
 		} else {

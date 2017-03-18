@@ -309,7 +309,11 @@ func Get(ctx *context.APIContext) {
 		return
 	}
 
-	ctx.JSON(200, repo.APIFormat(&api.Permission{true, true, true}))
+	ctx.JSON(200, repo.APIFormat(&api.Permission{
+		Admin: ctx.Repo.IsAdmin(),
+		Push:  ctx.Repo.IsWriter(),
+		Pull:  true,
+	}))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#delete
