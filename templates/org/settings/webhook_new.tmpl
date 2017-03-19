@@ -11,8 +11,8 @@
 					<div class="ui right">
 						{{if eq .HookType "gogs"}}
 							<img class="img-13" src="{{AppSubUrl}}/img/favicon.png">
-						{{else if eq .HookType "slack"}}
-							<img class="img-13" src="{{AppSubUrl}}/img/slack.png">
+						{{else}}
+							<img class="img-13" src="{{AppSubUrl}}/img/{{.HookType}}.png">
 						{{end}}
 					</div>
 				</h4>

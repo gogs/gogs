@@ -12,6 +12,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
@@ -106,7 +107,7 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 	w, err := models.GetWebhookOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrWebhookNotExist(err) {
+		if errors.IsWebhookNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetWebhookOfRepoByID", err)

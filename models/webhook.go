@@ -21,6 +21,7 @@ import (
 
 	api "github.com/gogits/go-gogs-client"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/sync"
@@ -241,7 +242,7 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrWebhookNotExist{bean.ID}
+		return nil, errors.WebhookNotExist{bean.ID}
 	}
 	return bean, nil
 }
@@ -494,6 +495,21 @@ func createHookTask(e Engine, t *HookTask) error {
 	return err
 }
 
+// GetHookTaskOfWebhookByUUID returns hook task of given webhook by UUID.
+func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error) {
+	hookTask := &HookTask{
+		HookID: webhookID,
+		UUID:   uuid,
+	}
+	has, err := x.Get(hookTask)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, errors.HookTaskNotExist{webhookID, uuid}
+	}
+	return hookTask, nil
+}
+
 // UpdateHookTask updates information of hook task.
 func UpdateHookTask(t *HookTask) error {
 	_, err := x.Id(t.ID).AllCols().Update(t)
@@ -704,7 +720,7 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	x.Where("is_delivered=?", false).Iterate(new(HookTask),
+	x.Where("is_delivered = ?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			t.deliver()
@@ -725,7 +741,7 @@ func DeliverHooks() {
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
-		if err := x.Where("repo_id=? AND is_delivered=?", repoID, false).Find(&tasks); err != nil {
+		if err := x.Where("repo_id = ?", repoID).And("is_delivered = ?", false).Find(&tasks); err != nil {
 			log.Error(4, "Get repository [%s] hook tasks: %v", repoID, err)
 			continue
 		}

@@ -55,6 +55,7 @@ type OrgRepoCtx struct {
 // getOrgRepoCtx determines whether this is a repo context or organization context.
 func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 	if len(ctx.Repo.RepoLink) > 0 {
+		ctx.Data["PageIsRepositoryContext"] = true
 		return &OrgRepoCtx{
 			RepoID:      ctx.Repo.Repository.ID,
 			Link:        ctx.Repo.RepoLink,
@@ -63,6 +64,7 @@ func getOrgRepoCtx(ctx *context.Context) (*OrgRepoCtx, error) {
 	}
 
 	if len(ctx.Org.OrgLink) > 0 {
+		ctx.Data["PageIsOrganizationContext"] = true
 		return &OrgRepoCtx{
 			OrgID:       ctx.Org.Organization.ID,
 			Link:        ctx.Org.OrgLink,
@@ -284,11 +286,7 @@ func checkWebhook(ctx *context.Context) (*OrgRepoCtx, *models.Webhook) {
 		w, err = models.GetWebhookByOrgID(ctx.Org.Organization.ID, ctx.ParamsInt64(":id"))
 	}
 	if err != nil {
-		if models.IsErrWebhookNotExist(err) {
-			ctx.Handle(404, "GetWebhookByID", nil)
-		} else {
-			ctx.Handle(500, "GetWebhookByID", err)
-		}
+		ctx.NotFoundOrServerError("GetWebhookOfRepoByID/GetWebhookByOrgID", errors.IsWebhookNotExist, err)
 		return nil, nil
 	}
 
@@ -469,8 +467,7 @@ func TestWebhook(ctx *context.Context) {
 		if err == nil {
 			authorUsername = author.Name
 		} else if !errors.IsUserNotExist(err) {
-			ctx.Flash.Error(fmt.Sprintf("GetUserByEmail.(author) [%s]: %v", commit.Author.Email, err))
-			ctx.Status(500)
+			ctx.Handle(500, "GetUserByEmail.(author)", err)
 			return
 		}
 
@@ -478,16 +475,14 @@ func TestWebhook(ctx *context.Context) {
 		if err == nil {
 			committerUsername = committer.Name
 		} else if !errors.IsUserNotExist(err) {
-			ctx.Flash.Error(fmt.Sprintf("GetUserByEmail.(committer) [%s]: %v", commit.Committer.Email, err))
-			ctx.Status(500)
+			ctx.Handle(500, "GetUserByEmail.(committer)", err)
 			return
 		}
 	}
 
 	fileStatus, err := commit.FileStatus()
 	if err != nil {
-		ctx.Flash.Error("FileStatus: " + err.Error())
-		ctx.Status(500)
+		ctx.Handle(500, "FileStatus", err)
 		return
 	}
 
@@ -520,11 +515,33 @@ func TestWebhook(ctx *context.Context) {
 		Pusher: apiUser,
 		Sender: apiUser,
 	}
-	if err := models.TestWebhook(ctx.Repo.Repository, models.HOOK_EVENT_PUSH, p, ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("TestWebhook: " + err.Error())
-		ctx.Status(500)
+	if err := models.TestWebhook(ctx.Repo.Repository, models.HOOK_EVENT_PUSH, p, ctx.ParamsInt64("id")); err != nil {
+		ctx.Handle(500, "TestWebhook", err)
 	} else {
 		ctx.Flash.Info(ctx.Tr("repo.settings.webhook.test_delivery_success"))
+		ctx.Status(200)
+	}
+}
+
+func RedeliveryWebhook(ctx *context.Context) {
+	webhook, err := models.GetWebhookOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+	if err != nil {
+		ctx.NotFoundOrServerError("GetWebhookOfRepoByID/GetWebhookByOrgID", errors.IsWebhookNotExist, err)
+		return
+	}
+
+	hookTask, err := models.GetHookTaskOfWebhookByUUID(webhook.ID, ctx.Query("uuid"))
+	if err != nil {
+		ctx.NotFoundOrServerError("GetHookTaskOfWebhookByUUID/GetWebhookByOrgID", errors.IsHookTaskNotExist, err)
+		return
+	}
+
+	hookTask.IsDelivered = false
+	if err = models.UpdateHookTask(hookTask); err != nil {
+		ctx.Handle(500, "UpdateHookTask", err)
+	} else {
+		go models.HookQueue.Add(ctx.Repo.Repository.ID)
+		ctx.Flash.Info(ctx.Tr("repo.settings.webhook.redelivery_success", hookTask.UUID))
 		ctx.Status(200)
 	}
 }
