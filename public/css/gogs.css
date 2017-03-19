@@ -2375,6 +2375,15 @@ footer .ui.language .menu {
   margin-left: 26px;
   padding-top: 0;
 }
+.webhook .hook.history.list .right.menu .redelivery.button {
+  font-size: 12px;
+  margin-top: 6px;
+  height: 30px;
+}
+.webhook .hook.history.list .right.menu .redelivery.button .octicon {
+  font: normal normal normal 13px/1 Octicons;
+  width: 12px;
+}
 .user-cards .list {
   padding: 0;
 }

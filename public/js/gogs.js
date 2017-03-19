@@ -513,20 +513,6 @@ function initRepository() {
     }
 }
 
-function initRepositoryCollaboration() {
-    console.log('initRepositoryCollaboration');
-
-    // Change collaborator access mode
-    $('.access-mode.menu .item').click(function () {
-        var $menu = $(this).parent();
-        $.post($menu.data('url'), {
-            "_csrf": csrf,
-            "uid": $menu.data('uid'),
-            "mode": $(this).data('value')
-        })
-    });
-}
-
 function initWikiForm() {
     var $editArea = $('.repository.wiki textarea#edit_area');
     if ($editArea.length > 0) {
@@ -828,61 +814,6 @@ function initOrganization() {
     }
 }
 
-function initUserSettings() {
-    console.log('initUserSettings');
-
-    // Options
-    if ($('.user.settings.profile').length > 0) {
-        $('#username').keyup(function () {
-            var $prompt = $('#name-change-prompt');
-            if ($(this).val().toString().toLowerCase() != $(this).data('name').toString().toLowerCase()) {
-                $prompt.show();
-            } else {
-                $prompt.hide();
-            }
-        });
-    }
-}
-
-function initWebhook() {
-    if ($('.new.webhook').length == 0) {
-        return;
-    }
-
-    $('.events.checkbox input').change(function () {
-        if ($(this).is(':checked')) {
-            $('.events.fields').show();
-        }
-    });
-    $('.non-events.checkbox input').change(function () {
-        if ($(this).is(':checked')) {
-            $('.events.fields').hide();
-        }
-    });
-
-    // Highlight payload on first click
-    $('.hook.history.list .toggle.button').click(function () {
-        $($(this).data('target') + ' .nohighlight').each(function () {
-            var $this = $(this);
-            $this.removeClass('nohighlight');
-            setTimeout(function(){ hljs.highlightBlock($this[0]) }, 500);
-        })
-    })
-
-    // Test delivery
-    $('#test-delivery').click(function () {
-        var $this = $(this);
-        $this.addClass('loading disabled');
-        $.post($this.data('link'), {
-            "_csrf": csrf
-        }).done(
-            setTimeout(function () {
-                window.location.href = $this.data('redirect');
-            }, 5000)
-        )
-    });
-}
-
 function initAdmin() {
     if ($('.admin').length == 0) {
         return;
@@ -1152,6 +1083,71 @@ function initCodeView() {
     }
 }
 
+function initUserSettings() {
+    console.log('initUserSettings');
+
+    // Options
+    if ($('.user.settings.profile').length > 0) {
+        $('#username').keyup(function () {
+            var $prompt = $('#name-change-prompt');
+            if ($(this).val().toString().toLowerCase() != $(this).data('name').toString().toLowerCase()) {
+                $prompt.show();
+            } else {
+                $prompt.hide();
+            }
+        });
+    }
+}
+
+function initRepositoryCollaboration() {
+    console.log('initRepositoryCollaboration');
+
+    // Change collaborator access mode
+    $('.access-mode.menu .item').click(function () {
+        var $menu = $(this).parent();
+        $.post($menu.data('url'), {
+            "_csrf": csrf,
+            "uid": $menu.data('uid'),
+            "mode": $(this).data('value')
+        })
+    });
+}
+
+function initWebhookSettings() {
+    $('.events.checkbox input').change(function () {
+        if ($(this).is(':checked')) {
+            $('.events.fields').show();
+        }
+    });
+    $('.non-events.checkbox input').change(function () {
+        if ($(this).is(':checked')) {
+            $('.events.fields').hide();
+        }
+    });
+
+    // Highlight payload on first click
+    $('.hook.history.list .toggle.button').click(function () {
+        $($(this).data('target') + ' .nohighlight').each(function () {
+            var $this = $(this);
+            $this.removeClass('nohighlight');
+            setTimeout(function(){ hljs.highlightBlock($this[0]) }, 500);
+        })
+    })
+
+    // Trigger delivery
+    $('.delivery.button, .redelivery.button').click(function () {
+        var $this = $(this);
+        $this.addClass('loading disabled');
+        $.post($this.data('link'), {
+            "_csrf": csrf
+        }).done(
+            setTimeout(function () {
+                window.location.href = $this.data('redirect');
+            }, 5000)
+        );
+    });
+}
+
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
@@ -1359,7 +1355,6 @@ $(document).ready(function () {
     initEditForm();
     initEditor();
     initOrganization();
-    initWebhook();
     initAdmin();
     initCodeView();
 
@@ -1379,7 +1374,8 @@ $(document).ready(function () {
 
     var routes = {
         'div.user.settings': initUserSettings,
-        'div.repository.settings.collaboration': initRepositoryCollaboration
+        'div.repository.settings.collaboration': initRepositoryCollaboration,
+        'div.webhook.settings': initWebhookSettings
     };
 
     var selector;
