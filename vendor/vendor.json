@@ -105,10 +105,10 @@
 			"revisionTime": "2016-06-27T17:00:12Z"
 		},
 		{
-			"checksumSHA1": "bwYWc6t4Lapw4Xl3v4o2hzOZ5kw=",
+			"checksumSHA1": "gO0dj0NqsmBTkf4D0JzJDtOEx+U=",
 			"path": "github.com/go-macaron/session",
-			"revision": "66031fcb37a0fff002a1f028eb0b3a815c78306b",
-			"revisionTime": "2015-10-14T03:41:01Z"
+			"revision": "b8e286a0dba8f4999042d6b258daf51b31d08938",
+			"revisionTime": "2017-03-20T17:22:09Z"
 		},
 		{
 			"checksumSHA1": "jVW5CmzplA0UDjai0AFYJFVXAJk=",
