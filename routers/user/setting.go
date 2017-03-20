@@ -456,6 +456,7 @@ func SettingsLeaveOrganization(ctx *context.Context) {
 func SettingsRepos(ctx *context.Context) {
 
 	ctx.Data["Title"] = ctx.Tr("admin.repositories")
+	ctx.Data["PageIsSettingsRepositories"] = true
 
 	keyword := ctx.Query("q")
 	page := ctx.QueryInt("page")
@@ -465,10 +466,8 @@ func SettingsRepos(ctx *context.Context) {
 
 	repos, count, err := models.SearchRepositoryByName(&models.SearchRepoOptions{
 		Keyword:  keyword,
-		UserID:   -1,
-		OwnerID:  ctx.User.ID,
+		UserID:   ctx.User.ID,
 		OrderBy:  "lower_name",
-		Private:  true,
 		Page:     page,
 		PageSize: setting.UI.Admin.RepoPagingNum,
 	})
