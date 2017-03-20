@@ -23,7 +23,7 @@ func listIssues(ctx *context.APIContext, opts *models.IssuesOptions) {
 	}
 	if ctx.Query("state") == "all" {
 		opts.IsClosed = !opts.IsClosed
-		temp_issues, err := models.Issues(&opts)
+		temp_issues, err := models.Issues(opts)
 		if err != nil {
 			ctx.Error(500, "Issues", err)
 			return
