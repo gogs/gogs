@@ -142,11 +142,7 @@ func ForkPost(ctx *context.Context, f form.CreateRepo) {
 func checkPullInfo(ctx *context.Context) *models.Issue {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "GetIssueByIndex", err)
-		} else {
-			ctx.Handle(500, "GetIssueByIndex", err)
-		}
+		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return nil
 	}
 	ctx.Data["Title"] = issue.Title

@@ -64,7 +64,7 @@ func ListIssues(ctx *context.APIContext) {
 func GetIssue(ctx *context.APIContext) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if models.IsErrIssueNotExist(err) {
+		if errors.IsIssueNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetIssueByIndex", err)
@@ -126,7 +126,7 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if models.IsErrIssueNotExist(err) {
+		if errors.IsIssueNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetIssueByIndex", err)
