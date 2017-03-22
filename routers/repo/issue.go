@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,6 +18,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
@@ -497,13 +497,15 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
 
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	index := ctx.ParamsInt64(":index")
+	if index <= 0 {
+		ctx.NotFound()
+		return
+	}
+
+	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, index)
 	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Handle(404, "GetIssueByIndex", err)
-		} else {
-			ctx.Handle(500, "GetIssueByIndex", err)
-		}
+		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 	ctx.Data["Title"] = issue.Title
@@ -653,11 +655,7 @@ func ViewIssue(ctx *context.Context) {
 func getActionIssue(ctx *context.Context) *models.Issue {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		if models.IsErrIssueNotExist(err) {
-			ctx.Error(404, "GetIssueByIndex")
-		} else {
-			ctx.Handle(500, "GetIssueByIndex", err)
-		}
+		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return nil
 	}
 	return issue
@@ -807,7 +805,7 @@ func UpdateIssueAssignee(ctx *context.Context) {
 func NewComment(ctx *context.Context, f form.CreateComment) {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
-		ctx.NotFoundOrServerError("GetIssueByIndex", models.IsErrIssueNotExist, err)
+		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 

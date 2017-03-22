@@ -827,7 +827,7 @@ func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrIssueNotExist{0, repoID, index}
+		return nil, errors.IssueNotExist{0, repoID, index}
 	}
 	return issue, nil
 }
@@ -847,7 +847,7 @@ func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrIssueNotExist{id, 0, 0}
+		return nil, errors.IssueNotExist{id, 0, 0}
 	}
 	return issue, nil
 }
