@@ -534,7 +534,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/edit/*", repo.EditRelease)
 			m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
 		}, repo.MustBeNotBare, reqRepoWriter, func(ctx *context.Context) {
-			ctx.Data["PageIsViewCode"] = true
+			ctx.Data["PageIsViewFiles"] = true
 		})
 
 		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
@@ -569,6 +569,8 @@ func runWeb(ctx *cli.Context) error {
 				ctx.NotFound()
 				return
 			}
+
+			ctx.Data["PageIsViewFiles"] = true
 		})
 	}, reqSignIn, context.RepoAssignment())
 
@@ -586,7 +588,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/all", repo.AllBranches)
 			m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 		}, repo.MustBeNotBare, func(ctx *context.Context) {
-			ctx.Data["PageIsViewCode"] = true
+			ctx.Data["PageIsViewFiles"] = true
 		})
 
 		m.Group("/wiki", func() {

@@ -224,7 +224,7 @@ func setEditorconfigIfExists(ctx *context.Context) {
 }
 
 func Home(ctx *context.Context) {
-	ctx.Data["PageIsViewCode"] = true
+	ctx.Data["PageIsViewFiles"] = true
 
 	if ctx.Repo.Repository.IsBare {
 		ctx.HTML(200, BARE)
