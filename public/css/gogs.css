@@ -1181,6 +1181,7 @@ footer .ui.language .menu {
   float: left;
   margin-left: -5px;
   margin-right: -7px;
+  width: 16px;
 }
 .repository .filter.menu .menu {
   max-height: 300px;
