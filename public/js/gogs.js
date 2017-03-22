@@ -108,16 +108,21 @@ function initCommentForm() {
         });
     }
 
+    // Add &nbsp; to each unselected label to keep UI looks good.
+    // This should be added directly to HTML but somehow just get empty <span> on this page.
+    $labelMenu.find('.item:not(.no-select) .octicon:not(.octicon-check)').each(function () {
+        $(this).html('&nbsp;');
+    })
     $labelMenu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked');
-            $(this).find('.octicon').removeClass('octicon-check');
+            $(this).find('.octicon').removeClass('octicon-check').html('&nbsp;');
             if (hasLabelUpdateAction) {
                 updateIssueMeta($labelMenu.data('update-url'), "detach", $(this).data('id'));
             }
         } else {
             $(this).addClass('checked');
-            $(this).find('.octicon').addClass('octicon-check');
+            $(this).find('.octicon').addClass('octicon-check').html('');
             if (hasLabelUpdateAction) {
                 updateIssueMeta($labelMenu.data('update-url'), "attach", $(this).data('id'));
             }
@@ -147,7 +152,7 @@ function initCommentForm() {
 
         $(this).parent().find('.item').each(function () {
             $(this).removeClass('checked');
-            $(this).find('.octicon').removeClass('octicon-check');
+            $(this).find('.octicon').removeClass('octicon-check').html('&nbsp;');
         });
 
         $list.find('.item').each(function () {
