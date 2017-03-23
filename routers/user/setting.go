@@ -7,9 +7,11 @@ package user
 import (
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/Unknwon/paginater"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
@@ -30,6 +32,7 @@ const (
 	SETTINGS_SOCIAL        base.TplName = "user/settings/social"
 	SETTINGS_APPLICATIONS  base.TplName = "user/settings/applications"
 	SETTINGS_ORGANIZATIONS base.TplName = "user/settings/organizations"
+	SETTINGS_REPOS         base.TplName = "user/settings/repos"
 	SETTINGS_DELETE        base.TplName = "user/settings/delete"
 	NOTIFICATION           base.TplName = "user/notification"
 	SECURITY               base.TplName = "user/security"
@@ -448,6 +451,66 @@ func SettingsLeaveOrganization(ctx *context.Context) {
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubUrl + "/user/settings/organizations",
 	})
+}
+
+func SettingsRepos(ctx *context.Context) {
+
+	ctx.Data["Title"] = ctx.Tr("admin.repositories")
+	ctx.Data["PageIsSettingsRepositories"] = true
+
+	keyword := ctx.Query("q")
+	page := ctx.QueryInt("page")
+	if page <= 0 {
+		page = 1
+	}
+
+	repos, count, err := models.SearchRepositoryByName(&models.SearchRepoOptions{
+		Keyword:  keyword,
+		UserID:   ctx.User.ID,
+		OrderBy:  "lower_name",
+		Page:     page,
+		PageSize: setting.UI.Admin.RepoPagingNum,
+	})
+	if err != nil {
+		ctx.Handle(500, "SearchRepositoryByName", err)
+		return
+	}
+	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+		ctx.Handle(500, "LoadAttributes", err)
+		return
+	}
+
+	ctx.Data["Keyword"] = keyword
+	ctx.Data["Total"] = count
+	ctx.Data["Page"] = paginater.New(int(count), setting.UI.Admin.RepoPagingNum, page, 5)
+	ctx.Data["Repos"] = repos
+	ctx.HTML(200, SETTINGS_REPOS)
+}
+
+func SettingsDeleteRepo(ctx *context.Context) {
+	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
+	if err != nil {
+		ctx.Handle(500, "GetRepositoryByID", err)
+		return
+	}
+	// make sure the user owns the repository or is an admin before allowing them to delete it
+	if repo.OwnerID == ctx.User.ID || ctx.User.IsAdmin {
+		if err := models.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
+			ctx.Handle(500, "DeleteRepository", err)
+			return
+		}
+		log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
+
+		ctx.Flash.Success(ctx.Tr("repo.settings.deletion_success"))
+		ctx.JSON(200, map[string]interface{}{
+			"redirect": setting.AppSubUrl + "/user/settings/repos?page=" + ctx.Query("page") + "&q=" + url.QueryEscape(ctx.Query("q")),
+		})
+	} else {
+		// logged in user doesn't have rights to delete this repository
+		err := errors.New("You do not have rights to delete repository '" + repo.FullName() + "'")
+		ctx.Handle(403, "SettingsDeleteRepo", err)
+	}
+
 }
 
 func SettingsDelete(ctx *context.Context) {
