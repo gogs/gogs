@@ -88,7 +88,7 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 	if pr.HeadRepo == nil {
 		pr.HeadRepo, err = getRepositoryByID(e, pr.HeadRepoID)
-		if err != nil && !IsErrRepoNotExist(err) {
+		if err != nil && !errors.IsRepoNotExist(err) {
 			return fmt.Errorf("getRepositoryByID.(HeadRepo) [%d]: %v", pr.HeadRepoID, err)
 		}
 	}

@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	log "gopkg.in/clog.v1"
+
+	"github.com/gogits/gogs/models/errors"
 )
 
 type AccessMode int
@@ -109,7 +111,7 @@ func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	for _, access := range accesses {
 		repo, err := GetRepositoryByID(access.RepoID)
 		if err != nil {
-			if IsErrRepoNotExist(err) {
+			if errors.IsRepoNotExist(err) {
 				log.Error(4, "GetRepositoryByID: %v", err)
 				continue
 			}

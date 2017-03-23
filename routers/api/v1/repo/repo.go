@@ -291,7 +291,7 @@ func parseOwnerAndRepo(ctx *context.APIContext) (*models.User, *models.Repositor
 
 	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
+		if errors.IsRepoNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetRepositoryByName", err)

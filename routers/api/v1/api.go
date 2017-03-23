@@ -52,7 +52,7 @@ func repoAssignment() macaron.Handler {
 		// Get repository.
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			if models.IsErrRepoNotExist(err) {
+			if errors.IsRepoNotExist(err) {
 				ctx.Status(404)
 			} else {
 				ctx.Error(500, "GetRepositoryByName", err)

@@ -162,7 +162,7 @@ func runServ(c *cli.Context) error {
 
 	repo, err := models.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
+		if errors.IsRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		fail("Internal error", "Fail to get repository: %v", err)
