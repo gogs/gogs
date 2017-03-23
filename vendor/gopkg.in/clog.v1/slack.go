@@ -92,8 +92,12 @@ func (s *slack) ExchangeChans(errorChan chan<- error) chan *Message {
 	return s.msgChan
 }
 
+func buildSlackAttachment(msg *Message) string {
+	return fmt.Sprintf(_SLACK_ATTACHMENT, msg.Body, slackColors[msg.Level])
+}
+
 func (s *slack) write(msg *Message) {
-	attachment := fmt.Sprintf(_SLACK_ATTACHMENT, msg.Body, slackColors[msg.Level])
+	attachment := buildSlackAttachment(msg)
 	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(attachment)))
 	if err != nil {
 		s.errorChan <- fmt.Errorf("slack: %v", err)
