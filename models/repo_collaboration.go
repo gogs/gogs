@@ -7,6 +7,8 @@ package models
 import (
 	"fmt"
 
+	log "gopkg.in/clog.v1"
+
 	api "github.com/gogits/go-gogs-client"
 )
 
@@ -31,14 +33,22 @@ func (c *Collaboration) ModeI18nKey() string {
 	}
 }
 
-//IsCollaborator returns true if the user is a collaborator
-func (repo *Repository) IsCollaborator(uid int64) (bool, error) {
+// IsCollaborator returns true if the user is a collaborator of the repository.
+func IsCollaborator(repoID, userID int64) bool {
 	collaboration := &Collaboration{
-		RepoID: repo.ID,
-		UserID: uid,
+		RepoID: repoID,
+		UserID: userID,
 	}
+	has, err := x.Get(collaboration)
+	if err != nil {
+		log.Error(2, "get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		return false
+	}
+	return has
+}
 
-	return x.Get(collaboration)
+func (repo *Repository) IsCollaborator(userID int64) bool {
+	return IsCollaborator(repo.ID, userID)
 }
 
 // AddCollaborator adds new collaboration to a repository with default access mode.
@@ -186,10 +196,14 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 }
 
 // DeleteCollaboration removes collaboration relation between the user and repository.
-func (repo *Repository) DeleteCollaboration(uid int64) (err error) {
+func DeleteCollaboration(repo *Repository, userID int64) (err error) {
+	if !IsCollaborator(repo.ID, userID) {
+		return nil
+	}
+
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: uid,
+		UserID: userID,
 	}
 
 	sess := x.NewSession()
@@ -205,4 +219,8 @@ func (repo *Repository) DeleteCollaboration(uid int64) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+func (repo *Repository) DeleteCollaboration(userID int64) error {
+	return DeleteCollaboration(repo, userID)
 }

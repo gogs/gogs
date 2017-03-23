@@ -228,6 +228,21 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+func (repo *Repository) loadAttributes(e Engine) (err error) {
+	if repo.Owner == nil {
+		repo.Owner, err = getUserByID(e, repo.OwnerID)
+		if err != nil {
+			return fmt.Errorf("getUserByID [%d]: %v", repo.OwnerID, err)
+		}
+	}
+
+	return nil
+}
+
+func (repo *Repository) LoadAttributes() error {
+	return repo.loadAttributes(x)
+}
+
 // MustOwner always returns a valid *User object to avoid
 // conceptually impossible error handling.
 // It creates a fake object that contains error deftail
@@ -1557,6 +1572,24 @@ func GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 func GetRecentUpdatedRepositories(page, pageSize int) (repos []*Repository, err error) {
 	return repos, x.Limit(pageSize, (page-1)*pageSize).
 		Where("is_private=?", false).Limit(pageSize).Desc("updated_unix").Find(&repos)
+}
+
+// GetUserAndCollaborativeRepositories returns list of repositories the user owns and collaborates.
+func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
+	repos := make([]*Repository, 0, 10)
+	if err := x.Alias("repo").
+		Join("INNER", "collaboration", "collaboration.repo_id = repo.id").
+		Where("collaboration.user_id = ?", userID).
+		Find(&repos); err != nil {
+		return nil, fmt.Errorf("select collaborative repositories: %v", err)
+	}
+
+	ownRepos := make([]*Repository, 0, 10)
+	if err := x.Where("owner_id = ?", userID).Find(&ownRepos); err != nil {
+		return nil, fmt.Errorf("select own repositories: %v", err)
+	}
+
+	return append(repos, ownRepos...), nil
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {

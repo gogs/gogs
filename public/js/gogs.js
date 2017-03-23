@@ -1308,7 +1308,7 @@ $(document).ready(function () {
                 $.post($this.data('url'), {
                     "_csrf": csrf,
                     "id": $this.data("id")
-                }).done(function (data) {
+                }).success(function (data) {
                     window.location.href = data.redirect;
                 });
             }
