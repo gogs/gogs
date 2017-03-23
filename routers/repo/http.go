@@ -66,7 +66,7 @@ func HTTPContexter() macaron.Handler {
 
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetRepositoryByName", models.IsErrRepoNotExist, err)
+			ctx.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
 		}
 

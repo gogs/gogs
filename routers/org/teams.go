@@ -121,7 +121,7 @@ func TeamsRepoAction(ctx *context.Context) {
 		var repo *models.Repository
 		repo, err = models.GetRepositoryByName(ctx.Org.Organization.ID, repoName)
 		if err != nil {
-			if models.IsErrRepoNotExist(err) {
+			if errors.IsRepoNotExist(err) {
 				ctx.Flash.Error(ctx.Tr("org.teams.add_nonexistent_repo"))
 				ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName + "/repositories")
 				return

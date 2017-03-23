@@ -6,13 +6,14 @@ package admin
 
 import (
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/context"
 )
 
 func GetRepositoryByParams(ctx *context.APIContext) *models.Repository {
 	repo, err := models.GetRepositoryByName(ctx.Org.Team.OrgID, ctx.Params(":reponame"))
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
+		if errors.IsRepoNotExist(err) {
 			ctx.Status(404)
 		} else {
 			ctx.Error(500, "GetRepositoryByName", err)

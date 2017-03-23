@@ -42,7 +42,7 @@ var (
 func parseBaseRepository(ctx *context.Context) *models.Repository {
 	baseRepo, err := models.GetRepositoryByID(ctx.ParamsInt64(":repoid"))
 	if err != nil {
-		ctx.NotFoundOrServerError("GetRepositoryByID", models.IsErrRepoNotExist, err)
+		ctx.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
 		return nil
 	}
 
@@ -718,7 +718,7 @@ func parseOwnerAndRepo(ctx *context.Context) (*models.User, *models.Repository) 
 
 	repo, err := models.GetRepositoryByName(owner.ID, ctx.Params(":reponame"))
 	if err != nil {
-		ctx.NotFoundOrServerError("GetRepositoryByName", models.IsErrRepoNotExist, err)
+		ctx.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 		return nil, nil
 	}
 

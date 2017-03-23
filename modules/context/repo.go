@@ -111,7 +111,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
 	// Non-fork repository will not return error in this method.
 	if err := repo.GetBaseRepo(); err != nil {
-		if models.IsErrRepoNotExist(err) {
+		if errors.IsRepoNotExist(err) {
 			repo.IsFork = false
 			repo.ForkID = 0
 			return
@@ -180,7 +180,7 @@ func RepoAssignment() macaron.Handler {
 		// Get repository.
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			if models.IsErrRepoNotExist(err) {
+			if errors.IsRepoNotExist(err) {
 				if ctx.Query("go-get") == "1" {
 					earlyResponseForGoGetMeta(ctx)
 					return

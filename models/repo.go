@@ -1366,7 +1366,7 @@ func DeleteRepository(uid, repoID int64) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrRepoNotExist{repoID, uid, ""}
+		return errors.RepoNotExist{repoID, uid, ""}
 	}
 
 	// In case is a organization.
@@ -1503,9 +1503,9 @@ func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist{0, ownerID, name}
+		return nil, errors.RepoNotExist{0, ownerID, name}
 	}
-	return repo, err
+	return repo, repo.LoadAttributes()
 }
 
 func getRepositoryByID(e Engine, id int64) (*Repository, error) {
@@ -1514,9 +1514,9 @@ func getRepositoryByID(e Engine, id int64) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist{id, 0, ""}
+		return nil, errors.RepoNotExist{id, 0, ""}
 	}
-	return repo, nil
+	return repo, repo.loadAttributes(e)
 }
 
 // GetRepositoryByID returns the repository by given id if exists.

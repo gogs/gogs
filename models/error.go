@@ -305,21 +305,6 @@ func (err ErrLastOrgOwner) Error() string {
 //  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
 //         \/     \/|__|              \/                       \/
 
-type ErrRepoNotExist struct {
-	ID   int64
-	UID  int64
-	Name string
-}
-
-func IsErrRepoNotExist(err error) bool {
-	_, ok := err.(ErrRepoNotExist)
-	return ok
-}
-
-func (err ErrRepoNotExist) Error() string {
-	return fmt.Sprintf("repository does not exist [id: %d, uid: %d, name: %s]", err.ID, err.UID, err.Name)
-}
-
 type ErrRepoAlreadyExist struct {
 	Uname string
 	Name  string
