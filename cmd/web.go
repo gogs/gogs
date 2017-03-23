@@ -255,9 +255,9 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("", user.SettingsOrganizations)
 			m.Post("/leave", user.SettingsLeaveOrganization)
 		})
-		m.Group("/repos", func() {
+		m.Group("/repositories", func() {
 			m.Get("", user.SettingsRepos)
-			m.Post("/delete", user.SettingsDeleteRepo)
+			m.Post("/leave", user.SettingsLeaveRepo)
 		})
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *context.Context) {

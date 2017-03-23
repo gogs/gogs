@@ -67,13 +67,7 @@ func IsCollaborator(ctx *context.APIContext) {
 		return
 	}
 
-	is, err := ctx.Repo.Repository.IsCollaborator(collaborator.ID)
-	if err != nil {
-		ctx.Error(500, "IsCollaboration", err)
-		return
-	}
-
-	if !is {
+	if !ctx.Repo.Repository.IsCollaborator(collaborator.ID) {
 		ctx.Status(404)
 	} else {
 		ctx.Status(204)
