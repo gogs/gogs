@@ -22,6 +22,9 @@
 		<a class="{{if .PageIsSettingsOrganizations}}active{{end}} item" href="{{AppSubUrl}}/user/settings/organizations">
 			{{.i18n.Tr "settings.orgs"}}
 		</a>
+		<a class="{{if .PageIsSettingsRepositories}}active{{end}} item" href="{{AppSubUrl}}/user/settings/repos">
+			{{.i18n.Tr "admin.repositories"}} 
+		</a>
 		<a class="{{if .PageIsSettingsDelete}}active{{end}} item" href="{{AppSubUrl}}/user/settings/delete">
 			{{.i18n.Tr "settings.delete"}}
 		</a>

@@ -1,0 +1,49 @@
+{{template "base/head" .}}
+<div class="user">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.repositories"}} ({{.i18n.Tr "admin.total" .Total}})
+				</h4>
+				<div class="ui attached segment">
+					{{template "admin/base/search" .}}
+				</div>
+
+				{{range .Repos}}
+				<div class="ui attached segment repos">
+				<div class="ui list">
+						<div class="item">
+							<a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">
+								<span class="octicon octicon-repo text light grey"></span> 
+								{{.Owner.Name}}/{{.Name}}
+							</a> 
+							<span class="ui text light grey">{{.Size | FileSize}}</span>
+							{{if .IsPrivate}}
+							<div class="right floated content">
+								<a class="ui red tiny button inline text-thin delete-button" href="" data-url="{{$.Link}}/leave?page={{$.Page.Current}}" data-id="{{.ID}}">{{$.i18n.Tr "settings.leave"}}</a>
+							</div>
+							{{end}}
+						</div>
+					</div>
+					</div>
+				{{end}}
+
+				{{template "admin/base/page" .}}
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="ui small basic leave modal">
+	<div class="ui icon header">
+		{{.i18n.Tr "teams.leave"}}
+	</div>
+	<div class="content">
+		<p>{{.i18n.Tr "teams.leave_desc"}}</p>
+	</div>
+	{{template "base/delete_modal_actions" .}}
+</div>
+{{template "base/footer" .}}
