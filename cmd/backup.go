@@ -33,6 +33,7 @@ portable among all supported database engines.`,
 		boolFlag("verbose, v", "Show process details"),
 		stringFlag("tempdir, t", os.TempDir(), "Temporary directory path"),
 		stringFlag("target", "./", "Target directory path to save backup archive"),
+		stringFlag("archive-name", fmt.Sprintf("gogs-backup-%d.zip", time.Now().Unix()), "Name of backup archive"),
 		boolFlag("database-only", "Only dump database"),
 		boolFlag("exclude-repos", "Exclude repositories"),
 	},
@@ -69,7 +70,7 @@ func runBackup(c *cli.Context) error {
 		log.Fatal(0, "Fail to save metadata '%s': %v", metaFile, err)
 	}
 
-	archiveName := path.Join(c.String("target"), fmt.Sprintf("gogs-backup-%d.zip", time.Now().Unix()))
+	archiveName := path.Join(c.String("target"), c.String("archive-name"))
 	log.Info("Packing backup files to: %s", archiveName)
 
 	z, err := zip.Create(archiveName)
