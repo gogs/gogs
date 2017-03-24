@@ -493,17 +493,14 @@ func runWeb(ctx *cli.Context) error {
 
 	m.Get("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
+		m.Get("/issues", repo.RetrieveLabels, repo.Issues)
+		m.Get("/issues/:index", repo.ViewIssue)
+
 		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
 		// So they can apply their own enable/disable logic on routers.
 		m.Group("/issues", func() {
 			m.Combo("/new", repo.MustEnableIssues).Get(context.RepoRef(), repo.NewIssue).
 				Post(bindIgnErr(form.NewIssue{}), repo.NewIssuePost)
-
-			m.Group("/:index", func() {
-				m.Post("/label", repo.UpdateIssueLabel)
-				m.Post("/milestone", repo.UpdateIssueMilestone)
-				m.Post("/assignee", repo.UpdateIssueAssignee)
-			}, reqRepoWriter)
 
 			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
@@ -514,6 +511,24 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/comments/:id", func() {
 			m.Post("", repo.UpdateCommentContent)
 			m.Post("/delete", repo.DeleteComment)
+		})
+	}, ignSignIn, context.RepoAssignment(true))
+	m.Group("/:username/:reponame", func() {
+		m.Group("/wiki", func() {
+			m.Get("/?:page", repo.Wiki)
+			m.Get("/_pages", repo.WikiPages)
+		}, repo.MustEnableWiki, context.RepoRef())
+	}, ignSignIn, context.RepoAssignment(false, true))
+
+	m.Group("/:username/:reponame", func() {
+		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
+		// So they can apply their own enable/disable logic on routers.
+		m.Group("/issues", func() {
+			m.Group("/:index", func() {
+				m.Post("/label", repo.UpdateIssueLabel)
+				m.Post("/milestone", repo.UpdateIssueMilestone)
+				m.Post("/assignee", repo.UpdateIssueAssignee)
+			}, reqRepoWriter)
 		})
 		m.Group("/labels", func() {
 			m.Post("/new", bindIgnErr(form.CreateLabel{}), repo.NewLabel)
@@ -580,8 +595,8 @@ func runWeb(ctx *cli.Context) error {
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
 			m.Get("/releases", repo.MustBeNotBare, repo.Releases)
-			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
-			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
+			m.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
+			m.Get("/pulls/:index", repo.ViewPull)
 			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
 			m.Get("/milestones", repo.Milestones)
 		}, context.RepoRef())
@@ -595,9 +610,6 @@ func runWeb(ctx *cli.Context) error {
 		})
 
 		m.Group("/wiki", func() {
-			m.Get("/?:page", repo.Wiki)
-			m.Get("/_pages", repo.WikiPages)
-
 			m.Group("", func() {
 				m.Combo("/_new").Get(repo.NewWiki).
 					Post(bindIgnErr(form.NewWiki{}), repo.NewWikiPost)

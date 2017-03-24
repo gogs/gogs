@@ -89,8 +89,7 @@ func RetrieveLabels(ctx *context.Context) {
 	ctx.Data["NumLabels"] = len(labels)
 }
 
-func Issues(ctx *context.Context) {
-	isPullList := ctx.Params(":type") == "pulls"
+func issues(ctx *context.Context, isPullList bool) {
 	if isPullList {
 		MustAllowPulls(ctx)
 		if ctx.Written() {
@@ -245,6 +244,14 @@ func Issues(ctx *context.Context) {
 	}
 
 	ctx.HTML(200, ISSUES)
+}
+
+func Issues(ctx *context.Context) {
+	issues(ctx, false)
+}
+
+func Pulls(ctx *context.Context) {
+	issues(ctx, true)
 }
 
 func renderAttachmentSettings(ctx *context.Context) {
@@ -492,7 +499,7 @@ func UploadIssueAttachment(ctx *context.Context) {
 	uploadAttachment(ctx, strings.Split(setting.AttachmentAllowedTypes, ","))
 }
 
-func ViewIssue(ctx *context.Context) {
+func viewIssue(ctx *context.Context, isPullList bool) {
 	ctx.Data["RequireHighlightJS"] = true
 	ctx.Data["RequireDropzone"] = true
 	renderAttachmentSettings(ctx)
@@ -511,10 +518,10 @@ func ViewIssue(ctx *context.Context) {
 	ctx.Data["Title"] = issue.Title
 
 	// Make sure type and URL matches.
-	if ctx.Params(":type") == "issues" && issue.IsPull {
+	if !isPullList && issue.IsPull {
 		ctx.Redirect(ctx.Repo.RepoLink + "/pulls/" + com.ToStr(issue.Index))
 		return
-	} else if ctx.Params(":type") == "pulls" && !issue.IsPull {
+	} else if isPullList && !issue.IsPull {
 		ctx.Redirect(ctx.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
 		return
 	}
@@ -652,12 +659,27 @@ func ViewIssue(ctx *context.Context) {
 	ctx.HTML(200, ISSUE_VIEW)
 }
 
+func ViewIssue(ctx *context.Context) {
+	viewIssue(ctx, false)
+}
+
+func ViewPull(ctx *context.Context) {
+	viewIssue(ctx, true)
+}
+
 func getActionIssue(ctx *context.Context) *models.Issue {
 	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
 	if err != nil {
 		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return nil
 	}
+
+	// Prevent guests accessing pull requests
+	if !ctx.Repo.HasAccess() && issue.IsPull {
+		ctx.NotFound()
+		return nil
+	}
+
 	return issue
 }
 
@@ -803,9 +825,8 @@ func UpdateIssueAssignee(ctx *context.Context) {
 }
 
 func NewComment(ctx *context.Context, f form.CreateComment) {
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
-	if err != nil {
-		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+	issue := getActionIssue(ctx)
+	if ctx.Written() {
 		return
 	}
 
@@ -820,6 +841,7 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 		return
 	}
 
+	var err error
 	var comment *models.Comment
 	defer func() {
 		// Check if issue admin/poster changes the status of issue.
@@ -895,8 +917,8 @@ func UpdateCommentContent(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
-		ctx.Error(403)
+	if ctx.UserID() != comment.PosterID && !ctx.Repo.IsAdmin() {
+		ctx.Error(404)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
 		ctx.Error(204)
@@ -928,8 +950,8 @@ func DeleteComment(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin()) {
-		ctx.Error(403)
+	if ctx.UserID() != comment.PosterID && !ctx.Repo.IsAdmin() {
+		ctx.Error(404)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
 		ctx.Error(204)

@@ -138,9 +138,11 @@ func SettingsPost(ctx *context.Context, f form.RepoSetting) {
 
 	case "advanced":
 		repo.EnableWiki = f.EnableWiki
+		repo.AllowPublicWiki = f.AllowPublicWiki
 		repo.EnableExternalWiki = f.EnableExternalWiki
 		repo.ExternalWikiURL = f.ExternalWikiURL
 		repo.EnableIssues = f.EnableIssues
+		repo.AllowPublicIssues = f.AllowPublicIssues
 		repo.EnableExternalTracker = f.EnableExternalTracker
 		repo.ExternalTrackerURL = f.ExternalTrackerURL
 		repo.ExternalTrackerFormat = f.TrackerURLFormat

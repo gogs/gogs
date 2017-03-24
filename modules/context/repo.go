@@ -126,12 +126,23 @@ func earlyResponseForGoGetMeta(ctx *Context) {
 		})))
 }
 
-func RepoAssignment() macaron.Handler {
+// [0]: issues, [1]: wiki
+func RepoAssignment(pages ...bool) macaron.Handler {
 	return func(ctx *Context) {
 		var (
-			owner *models.User
-			err   error
+			owner        *models.User
+			err          error
+			isIssuesPage bool
+			isWikiPage   bool
 		)
+
+		if len(pages) > 0 {
+			isIssuesPage = pages[0]
+		}
+		if len(pages) > 1 {
+			isWikiPage = pages[1]
+		}
+		_, _ = isIssuesPage, isWikiPage
 
 		ownerName := ctx.Params(":username")
 		repoName := strings.TrimSuffix(ctx.Params(":reponame"), ".git")
@@ -174,20 +185,20 @@ func RepoAssignment() macaron.Handler {
 				ctx.Handle(500, "GetRepositoryByName", err)
 			}
 			return
-		} else if err = repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", err)
-			return
 		}
+
+		ctx.Repo.Repository = repo
+		ctx.Data["RepoName"] = ctx.Repo.Repository.Name
+		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare
+		ctx.Repo.RepoLink = repo.Link()
+		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
+		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 
 		// Admin has super access.
 		if ctx.IsSigned && ctx.User.IsAdmin {
 			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
-			var userID int64
-			if ctx.IsSigned {
-				userID = ctx.User.ID
-			}
-			mode, err := models.AccessLevel(userID, repo)
+			mode, err := models.AccessLevel(ctx.UserID(), repo)
 			if err != nil {
 				ctx.Handle(500, "AccessLevel", err)
 				return
@@ -195,16 +206,40 @@ func RepoAssignment() macaron.Handler {
 			ctx.Repo.AccessMode = mode
 		}
 
-		// Check access.
+		// Check access
 		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
 			if ctx.Query("go-get") == "1" {
 				earlyResponseForGoGetMeta(ctx)
 				return
 			}
-			ctx.NotFound()
-			return
+
+			// Redirect to any accessible page if not yet on it
+			if repo.IsPartialPublic() &&
+				(!(isIssuesPage || isWikiPage) ||
+					(isIssuesPage && !repo.CanGuestViewIssues()) ||
+					(isWikiPage && !repo.CanGuestViewWiki())) {
+				switch {
+				case repo.CanGuestViewIssues():
+					ctx.Redirect(repo.Link() + "/issues")
+				case repo.CanGuestViewWiki():
+					ctx.Redirect(repo.Link() + "/wiki")
+				default:
+					ctx.NotFound()
+				}
+				return
+			}
+
+			// Response 404 if user is on completely private repository or possible accessible page but owner doesn't enabled
+			if !repo.IsPartialPublic() ||
+				(isIssuesPage && !repo.CanGuestViewIssues()) ||
+				(isWikiPage && !repo.CanGuestViewWiki()) {
+				ctx.NotFound()
+				return
+			}
+
+			ctx.Repo.Repository.EnableIssues = repo.CanGuestViewIssues()
+			ctx.Repo.Repository.EnableWiki = repo.CanGuestViewWiki()
 		}
-		ctx.Data["HasAccess"] = true
 
 		if repo.IsMirror {
 			ctx.Repo.Mirror, err = models.GetMirrorByRepoID(repo.ID)
@@ -217,19 +252,12 @@ func RepoAssignment() macaron.Handler {
 			ctx.Data["Mirror"] = ctx.Repo.Mirror
 		}
 
-		ctx.Repo.Repository = repo
-		ctx.Data["RepoName"] = ctx.Repo.Repository.Name
-		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare
-
 		gitRepo, err := git.OpenRepository(models.RepoPath(ownerName, repoName))
 		if err != nil {
 			ctx.Handle(500, "RepoAssignment Invalid repo "+models.RepoPath(ownerName, repoName), err)
 			return
 		}
 		ctx.Repo.GitRepo = gitRepo
-		ctx.Repo.RepoLink = repo.Link()
-		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
-		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 
 		tags, err := ctx.Repo.GitRepo.GetTags()
 		if err != nil {
@@ -288,6 +316,8 @@ func RepoAssignment() macaron.Handler {
 			ctx.Data["GoDocDirectory"] = prefix + "{/dir}"
 			ctx.Data["GoDocFile"] = prefix + "{/dir}/{file}#L{line}"
 		}
+
+		ctx.Data["IsGuest"] = !ctx.Repo.HasAccess()
 	}
 }
 

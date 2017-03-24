@@ -173,9 +173,11 @@ type Repository struct {
 
 	// Advanced settings
 	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	AllowPublicWiki       bool
 	EnableExternalWiki    bool
 	ExternalWikiURL       string
 	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
+	AllowPublicIssues     bool
 	EnableExternalTracker bool
 	ExternalTrackerURL    string
 	ExternalTrackerFormat string
@@ -253,10 +255,21 @@ func (repo *Repository) LoadAttributes() error {
 	return repo.loadAttributes(x)
 }
 
-// MustOwner always returns a valid *User object to avoid
-// conceptually impossible error handling.
-// It creates a fake object that contains error deftail
-// when error occurs.
+// IsPartialPublic returns true if repository is public or allow public access to wiki or issues.
+func (repo *Repository) IsPartialPublic() bool {
+	return !repo.IsPrivate || repo.AllowPublicWiki || repo.AllowPublicIssues
+}
+
+func (repo *Repository) CanGuestViewWiki() bool {
+	return repo.IsPartialPublic() && repo.EnableWiki && !repo.EnableExternalWiki && repo.AllowPublicWiki
+}
+
+func (repo *Repository) CanGuestViewIssues() bool {
+	return repo.IsPartialPublic() && repo.EnableIssues && !repo.EnableExternalTracker && repo.AllowPublicIssues
+}
+
+// MustOwner always returns a valid *User object to avoid conceptually impossible error handling.
+// It creates a fake object that contains error deftail when error occurs.
 func (repo *Repository) MustOwner() *User {
 	return repo.mustOwner(x)
 }
