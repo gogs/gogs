@@ -103,6 +103,15 @@ func (m *Milestone) APIFormat() *api.Milestone {
 	return apiMilestone
 }
 
+func (m *Milestone) CountIssues(isClosed, includePulls bool) int64 {
+	sess := x.Where("milestone_id = ?", m.ID).And("is_closed = ?", isClosed)
+	if !includePulls {
+		sess.And("is_pull = ?", false)
+	}
+	count, _ := sess.Count(new(Issue))
+	return count
+}
+
 // NewMilestone creates new milestone of repository.
 func NewMilestone(m *Milestone) (err error) {
 	sess := x.NewSession()
