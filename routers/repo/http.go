@@ -243,7 +243,7 @@ func serviceRPC(h serviceHandler, service string) {
 		err     error
 	)
 
-	// Handle GZIP.
+	// Handle GZIP
 	if h.r.Header.Get("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {

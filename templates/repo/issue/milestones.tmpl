@@ -45,8 +45,10 @@
 							{{end}}
 						{{end}}
 						<span class="issue-stats">
-							<i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.open_tab" .NumOpenIssues}}
-							<i class="octicon octicon-issue-closed"></i> {{$.i18n.Tr "repo.issues.close_tab" .NumClosedIssues}}
+							{{ $openCount := .CountIssues false false}}
+							{{ $closedCount := .CountIssues true false}}
+							<i class="octicon octicon-issue-opened"></i> {{$.i18n.Tr "repo.issues.open_tab" $openCount}}
+							<i class="octicon octicon-issue-closed"></i> {{$.i18n.Tr "repo.issues.close_tab" $closedCount}}
 						</span>
 					</div>
 					{{if $.IsRepositoryWriter}}
