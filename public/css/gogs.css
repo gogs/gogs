@@ -2321,6 +2321,9 @@ footer .ui.language .menu {
 .repository.wiki.view > .markdown h6:first-of-type {
   margin-top: 0;
 }
+.repository.settings.options .box.field {
+  padding-left: 27px;
+}
 .repository.settings.collaboration .collaborator.list {
   padding: 0;
 }

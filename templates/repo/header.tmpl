@@ -13,34 +13,36 @@
 						{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.Link}}">{{SubStr .BaseRepo.RelLink 1 -1}}</a></div>{{end}}
 					</div>
 
-					<div class="ui right">
-						<div class="ui labeled button" tabindex="0">
-							<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
-								<i class="icon fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
-							</a>
-							<a class="ui basic label" href="{{.Link}}/watchers">
-								{{.NumWatches}}
-							</a>
-						</div>
-						<div class="ui labeled button" tabindex="0">
-							<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
-								<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
-							</a>
-							<a class="ui basic label" href="{{.Link}}/stars">
-								{{.NumStars}}
-							</a>
-						</div>
-						{{if .CanBeForked}}
+					{{if not $.IsGuest}}
+						<div class="ui right">
 							<div class="ui labeled button" tabindex="0">
-								<a class="ui basic button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" href="{{AppSubUrl}}/repo/fork/{{.ID}}">
-									<i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+								<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
+									<i class="icon fa-eye{{if not $.IsWatchingRepo}}-slash{{end}}"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
 								</a>
-								<a class="ui basic label" href="{{.Link}}/forks">
-									{{.NumForks}}
+								<a class="ui basic label" href="{{.Link}}/watchers">
+									{{.NumWatches}}
 								</a>
 							</div>
-						{{end}}
-					</div>
+							<div class="ui labeled button" tabindex="0">
+								<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
+									<i class="icon fa-star{{if not $.IsStaringRepo}}-o{{end}}"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
+								</a>
+								<a class="ui basic label" href="{{.Link}}/stars">
+									{{.NumStars}}
+								</a>
+							</div>
+							{{if .CanBeForked}}
+								<div class="ui labeled button" tabindex="0">
+									<a class="ui basic button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" href="{{AppSubUrl}}/repo/fork/{{.ID}}">
+										<i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+									</a>
+									<a class="ui basic label" href="{{.Link}}/forks">
+										{{.NumForks}}
+									</a>
+								</div>
+							{{end}}
+						</div>
+					{{end}}
 				</div>
 			</div><!-- end column -->
 		</div><!-- end grid -->
@@ -49,15 +51,17 @@
 {{if not .IsDiffCompare}}
 	<div class="ui tabs container">
 		<div class="ui tabular menu navbar">
-			<a class="{{if .PageIsViewFiles}}active{{end}} item" href="{{.RepoLink}}">
-				<i class="octicon octicon-file-text"></i> {{.i18n.Tr "repo.files"}}
-			</a>
+			{{if not $.IsGuest}}
+				<a class="{{if .PageIsViewFiles}}active{{end}} item" href="{{.RepoLink}}">
+					<i class="octicon octicon-file-text"></i> {{.i18n.Tr "repo.files"}}
+				</a>
+			{{end}}
 			{{if .Repository.EnableIssues}}
 				<a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
 					<i class="octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} {{if not .Repository.EnableExternalTracker}}<span class="ui {{if not .Repository.NumOpenIssues}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenIssues}}{{end}}</span>
 				</a>
 			{{end}}
-			{{if .Repository.AllowsPulls}}
+			{{if and .Repository.AllowsPulls (not .IsGuest)}}
 				<a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
 					<i class="octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if not .Repository.NumOpenPulls}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenPulls}}</span>
 				</a>

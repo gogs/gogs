@@ -15,7 +15,7 @@
 						<input type="hidden" name="action" value="update">
 						<div class="required field {{if .Err_RepoName}}error{{end}}">
 							<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}<span class="text red hide" id="repo-name-change-prompt"> {{.i18n.Tr "repo.settings.change_reponame_prompt"}}</span></label>
-							<input id="repo_name" name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" autofocus required>
+							<input id="repo_name" name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" required>
 						</div>
 						<div class="field {{if .Err_Description}}error{{end}}">
 							<label for="description">{{$.i18n.Tr "repo.repo_desc"}}</label>
@@ -96,6 +96,7 @@
 						{{.CsrfTokenHtml}}
 						<input type="hidden" name="action" value="advanced">
 
+						<!-- Wiki -->
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.wiki"}}</label>
 							<div class="ui checkbox">
@@ -103,28 +104,34 @@
 								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}</label>
 							</div>
 						</div>
-						<div class="field {{if not .Repository.EnableWiki}}disabled{{end}}" id="wiki_box">
+						<div class="ui segment field {{if not .Repository.EnableWiki}}disabled{{end}}" id="wiki_box">
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="false" data-target="#external_wiki_box" {{if not .Repository.EnableExternalWiki}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="false" data-enable="#internal_wiki_box" data-disable="#external_wiki_box" {{if not .Repository.EnableExternalWiki}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_internal_wiki"}}</label>
 								</div>
 							</div>
+							<div class="box field {{if .Repository.EnableExternalWiki}}disabled{{end}}" id="internal_wiki_box">
+								<div class="ui checkbox">
+									<input name="allow_public_wiki" type="checkbox" {{if .Repository.AllowPublicWiki}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.allow_public_wiki_desc"}}</label>
+								</div>
+							</div>
+
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-target="#external_wiki_box" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-enable="#external_wiki_box" data-disable="#internal_wiki_box" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_external_wiki"}}</label>
 								</div>
 							</div>
-							<div class="field {{if not .Repository.EnableExternalWiki}}disabled{{end}}" id="external_wiki_box">
+							<div class="box field {{if not .Repository.EnableExternalWiki}}disabled{{end}}" id="external_wiki_box">
 								<label for="external_wiki_url">{{.i18n.Tr "repo.settings.external_wiki_url"}}</label>
 								<input id="external_wiki_url" name="external_wiki_url" type="url" value="{{.Repository.ExternalWikiURL}}">
 								<p class="help">{{.i18n.Tr "repo.settings.external_wiki_url_desc"}}</p>
 							</div>
 						</div>
 
-						<div class="ui divider"></div>
-
+						<!-- Issues -->
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.issues"}}</label>
 							<div class="ui checkbox">
@@ -132,20 +139,27 @@
 								<label>{{.i18n.Tr "repo.settings.issues_desc"}}</label>
 							</div>
 						</div>
-						<div class="field {{if not .Repository.EnableIssues}}disabled{{end}}" id="issue_box">
+						<div class="ui segment field {{if not .Repository.EnableIssues}}disabled{{end}}" id="issue_box">
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="false" data-target="#external_issue_box" {{if not .Repository.EnableExternalTracker}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="false" data-enable="#internal_issue_box" data-disable="#external_issue_box" {{if not .Repository.EnableExternalTracker}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_internal_issue_tracker"}}</label>
 								</div>
 							</div>
+							<div class="box field {{if .Repository.EnableExternalTracker}}disabled{{end}}" id="internal_issue_box">
+								<div class="ui checkbox">
+									<input name="allow_public_issues" type="checkbox" {{if .Repository.AllowPublicIssues}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.allow_public_issues_desc"}}</label>
+								</div>
+							</div>
+
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-target="#external_issue_box" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-enable="#external_issue_box" data-disable="#internal_issue_box" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_external_issue_tracker"}}</label>
 								</div>
 							</div>
-							<div class="field {{if not .Repository.EnableExternalTracker}}disabled{{end}}" id="external_issue_box">
+							<div class="box field {{if not .Repository.EnableExternalTracker}}disabled{{end}}" id="external_issue_box">
 								<div class="field">
 									<label for="external_tracker_url">{{.i18n.Tr "repo.settings.external_tracker_url"}}</label>
 									<input id="external_tracker_url" name="external_tracker_url" type="url" value="{{.Repository.ExternalTrackerURL}}">
@@ -174,9 +188,8 @@
 							</div>
 						</div>
 
+						<!-- Pull Requests -->
 						{{if .Repository.CanEnablePulls}}
-							<div class="ui divider"></div>
-
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.pulls"}}</label>
 								<div class="ui checkbox">

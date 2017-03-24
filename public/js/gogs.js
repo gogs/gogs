@@ -265,11 +265,8 @@ function initRepository() {
             }
         });
         $('.enable-system-radio').change(function () {
-            if (this.value == 'false') {
-                $($(this).data('target')).addClass('disabled');
-            } else if (this.value == 'true') {
-                $($(this).data('target')).removeClass('disabled');
-            }
+			$($(this).data('enable')).removeClass('disabled');
+			$($(this).data('disable')).addClass('disabled');
         });
     }
 
@@ -1289,7 +1286,7 @@ $(document).ready(function () {
                 $this.data('url', url);
                 $this.removeClass('disabled');
             } else {
-                $this.remove(); 
+                $this.remove();
             }
         });
     });

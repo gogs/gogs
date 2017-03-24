@@ -92,9 +92,11 @@ type RepoSetting struct {
 
 	// Advanced settings
 	EnableWiki            bool
+	AllowPublicWiki       bool
 	EnableExternalWiki    bool
 	ExternalWikiURL       string
 	EnableIssues          bool
+	AllowPublicIssues     bool
 	EnableExternalTracker bool
 	ExternalTrackerURL    string
 	TrackerURLFormat      string
