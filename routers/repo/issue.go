@@ -1087,6 +1087,11 @@ func Milestones(ctx *context.Context) {
 		return
 	}
 	for _, m := range miles {
+		m.NumOpenIssues = int(m.CountIssues(false, false))
+		m.NumClosedIssues = int(m.CountIssues(true, false))
+		if m.NumOpenIssues+m.NumClosedIssues > 0 {
+			m.Completeness = m.NumClosedIssues * 100 / (m.NumOpenIssues + m.NumClosedIssues)
+		}
 		m.RenderedContent = string(markdown.Render([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	}
 	ctx.Data["Milestones"] = miles
