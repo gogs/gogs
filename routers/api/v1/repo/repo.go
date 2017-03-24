@@ -359,3 +359,16 @@ func ListForks(ctx *context.APIContext) {
 
 	ctx.JSON(200, &apiForks)
 }
+
+func MirrorSync(ctx *context.APIContext) {
+	_, repo := parseOwnerAndRepo(ctx)
+	if ctx.Written() {
+		return
+	} else if !repo.IsMirror {
+		ctx.Status(404)
+		return
+	}
+
+	go models.MirrorQueue.Add(repo.ID)
+	ctx.Status(202)
+}
