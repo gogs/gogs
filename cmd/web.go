@@ -512,6 +512,9 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("", repo.UpdateCommentContent)
 			m.Post("/delete", repo.DeleteComment)
 		})
+
+		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
+		m.Get("/milestones", repo.Milestones)
 	}, ignSignIn, context.RepoAssignment(true))
 	m.Group("/:username/:reponame", func() {
 		m.Group("/wiki", func() {
@@ -597,8 +600,6 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/releases", repo.MustBeNotBare, repo.Releases)
 			m.Get("/pulls", repo.RetrieveLabels, repo.Pulls)
 			m.Get("/pulls/:index", repo.ViewPull)
-			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-			m.Get("/milestones", repo.Milestones)
 		}, context.RepoRef())
 
 		m.Group("/branches", func() {

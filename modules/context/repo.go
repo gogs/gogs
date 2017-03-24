@@ -142,7 +142,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if len(pages) > 1 {
 			isWikiPage = pages[1]
 		}
-		_, _ = isIssuesPage, isWikiPage
 
 		ownerName := ctx.Params(":username")
 		repoName := strings.TrimSuffix(ctx.Params(":reponame"), ".git")

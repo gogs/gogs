@@ -261,11 +261,11 @@ func (repo *Repository) IsPartialPublic() bool {
 }
 
 func (repo *Repository) CanGuestViewWiki() bool {
-	return repo.IsPartialPublic() && repo.EnableWiki && !repo.EnableExternalWiki && repo.AllowPublicWiki
+	return repo.EnableWiki && !repo.EnableExternalWiki && repo.AllowPublicWiki
 }
 
 func (repo *Repository) CanGuestViewIssues() bool {
-	return repo.IsPartialPublic() && repo.EnableIssues && !repo.EnableExternalTracker && repo.AllowPublicIssues
+	return repo.EnableIssues && !repo.EnableExternalTracker && repo.AllowPublicIssues
 }
 
 // MustOwner always returns a valid *User object to avoid conceptually impossible error handling.
