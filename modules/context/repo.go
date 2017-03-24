@@ -108,22 +108,6 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 	return fmt.Sprintf("%s/compare/%s...%s:%s", repoLink, baseBranch, r.Owner.Name, headBranch)
 }
 
-func RetrieveBaseRepo(ctx *Context, repo *models.Repository) {
-	// Non-fork repository will not return error in this method.
-	if err := repo.GetBaseRepo(); err != nil {
-		if errors.IsRepoNotExist(err) {
-			repo.IsFork = false
-			repo.ForkID = 0
-			return
-		}
-		ctx.Handle(500, "GetBaseRepo", err)
-		return
-	} else if err = repo.BaseRepo.GetOwner(); err != nil {
-		ctx.Handle(500, "BaseRepo.GetOwner", err)
-		return
-	}
-}
-
 // composeGoGetImport returns go-get-import meta content.
 func composeGoGetImport(owner, repo string) string {
 	return path.Join(setting.Domain, setting.AppSubUrl, owner, repo)
@@ -410,23 +394,24 @@ func RepoRef() macaron.Handler {
 		ctx.Data["IsViewTag"] = ctx.Repo.IsViewTag
 		ctx.Data["IsViewCommit"] = ctx.Repo.IsViewCommit
 
-		if ctx.Repo.Repository.IsFork {
-			RetrieveBaseRepo(ctx, ctx.Repo.Repository)
-			if ctx.Written() {
-				return
-			}
-		}
-
 		// People who have push access or have fored repository can propose a new pull request.
 		if ctx.Repo.IsWriter() || (ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if ctx.Repo.Repository.BaseRepo != nil {
 				if ctx.Repo.Repository.BaseRepo.AllowsPulls() {
-					ctx.Data["BaseRepo"] = ctx.Repo.Repository.BaseRepo
-					ctx.Repo.PullRequest.BaseRepo = ctx.Repo.Repository.BaseRepo
 					ctx.Repo.PullRequest.Allowed = true
-					ctx.Repo.PullRequest.HeadInfo = ctx.Repo.Owner.Name + ":" + ctx.Repo.BranchName
+					// In-repository pull requests has higher priority than cross-repository if user is viewing
+					// base repository and 1) has write access to it 2) has forked it.
+					if ctx.Repo.IsWriter() {
+						ctx.Data["BaseRepo"] = ctx.Repo.Repository.BaseRepo
+						ctx.Repo.PullRequest.BaseRepo = ctx.Repo.Repository.BaseRepo
+						ctx.Repo.PullRequest.HeadInfo = ctx.Repo.Owner.Name + ":" + ctx.Repo.BranchName
+					} else {
+						ctx.Data["BaseRepo"] = ctx.Repo.Repository
+						ctx.Repo.PullRequest.BaseRepo = ctx.Repo.Repository
+						ctx.Repo.PullRequest.HeadInfo = ctx.User.Name + ":" + ctx.Repo.BranchName
+					}
 				}
 			} else {
 				// Or, this is repository accepts pull requests between branches.

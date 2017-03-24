@@ -236,6 +236,18 @@ func (repo *Repository) loadAttributes(e Engine) (err error) {
 		}
 	}
 
+	if repo.IsFork && repo.BaseRepo == nil {
+		repo.BaseRepo, err = getRepositoryByID(e, repo.ForkID)
+		if err != nil {
+			if errors.IsRepoNotExist(err) {
+				repo.IsFork = false
+				repo.ForkID = 0
+			} else {
+				return fmt.Errorf("getRepositoryByID [%d]: %v", repo.ForkID, err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -415,15 +427,6 @@ func (repo *Repository) IssueStats(userID int64, filterMode FilterMode, isPull b
 
 func (repo *Repository) GetMirror() (err error) {
 	repo.Mirror, err = GetMirrorByRepoID(repo.ID)
-	return err
-}
-
-func (repo *Repository) GetBaseRepo() (err error) {
-	if !repo.IsFork {
-		return nil
-	}
-
-	repo.BaseRepo, err = GetRepositoryByID(repo.ForkID)
 	return err
 }
 

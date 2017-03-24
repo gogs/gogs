@@ -194,7 +194,6 @@ func SetEngine() (err error) {
 	// WARNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
 	sec := setting.Cfg.Section("log.xorm")
-	fmt.Println(sec.Key("ROTATE_DAILY").MustBool(true))
 	logger, err := log.NewFileWriter(path.Join(setting.LogRootPath, "xorm.log"),
 		log.FileRotationConfig{
 			Rotate:  sec.Key("ROTATE").MustBool(true),
