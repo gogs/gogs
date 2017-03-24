@@ -710,6 +710,10 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		if headBranch != nil {
 			repo.DefaultBranch = headBranch.Name
 		}
+
+		if err = repo.UpdateSize(); err != nil {
+			log.Error(2, "UpdateSize [repo_id: %d]: %v", repo.ID, err)
+		}
 	}
 
 	if opts.IsMirror {
@@ -2233,6 +2237,8 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 	}
 
 	repoPath := repo.repoPath(sess)
+	RemoveAllWithNotice("Repository path erase before creation", repoPath)
+
 	_, stderr, err := process.ExecTimeout(10*time.Minute,
 		fmt.Sprintf("ForkRepository 'git clone': %s/%s", owner.Name, repo.Name),
 		"git", "clone", "--bare", baseRepo.RepoPath(), repoPath)
@@ -2249,15 +2255,23 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 
 	if err = createDelegateHooks(repoPath); err != nil {
 		return nil, fmt.Errorf("createDelegateHooks: %v", err)
-	} else if err = prepareWebhooks(sess, baseRepo, HOOK_EVENT_FORK, &api.ForkPayload{
+	}
+
+	if err = sess.Commit(); err != nil {
+		return nil, fmt.Errorf("Commit: %v", err)
+	}
+
+	if err = repo.UpdateSize(); err != nil {
+		log.Error(2, "UpdateSize [repo_id: %d]: %v", repo.ID, err)
+	}
+	if err = PrepareWebhooks(baseRepo, HOOK_EVENT_FORK, &api.ForkPayload{
 		Forkee: repo.APIFormat(nil),
 		Repo:   baseRepo.APIFormat(nil),
 		Sender: doer.APIFormat(),
 	}); err != nil {
-		return nil, fmt.Errorf("prepareWebhooks: %v", err)
+		log.Error(2, "PrepareWebhooks [repo_id: %d]: %v", baseRepo.ID, err)
 	}
-
-	return repo, sess.Commit()
+	return repo, nil
 }
 
 func (repo *Repository) GetForks() ([]*Repository, error) {

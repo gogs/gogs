@@ -164,6 +164,11 @@ func (m *Mirror) runSync() bool {
 		}
 		return false
 	}
+
+	if err := m.Repo.UpdateSize(); err != nil {
+		log.Error(2, "UpdateSize [repo_id: %d]: %v", m.Repo.ID, err)
+	}
+
 	if m.Repo.HasWiki() {
 		if _, stderr, err := process.ExecDir(
 			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
