@@ -7,13 +7,11 @@ package models
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -491,18 +489,6 @@ func (repo *Repository) CanEnableEditor() bool {
 // closely enough.
 func (repo *Repository) NextIssueIndex() int64 {
 	return int64(repo.NumIssues+repo.NumPulls) + 1
-}
-
-var (
-	DescPattern = regexp.MustCompile(`https?://\S+`)
-)
-
-// DescriptionHtml does special handles to description and return HTML string.
-func (repo *Repository) DescriptionHtml() template.HTML {
-	sanitize := func(s string) string {
-		return fmt.Sprintf(`<a href="%[1]s" target="_blank">%[1]s</a>`, s)
-	}
-	return template.HTML(DescPattern.ReplaceAllStringFunc(markdown.Sanitizer.Sanitize(repo.Description), sanitize))
 }
 
 func (repo *Repository) LocalCopyPath() string {
