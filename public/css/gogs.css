@@ -2861,6 +2861,9 @@ footer .ui.language .menu {
 .user.settings.repositories .repos .item .button {
   margin-top: -5px;
 }
+.user.profile .ui.card .header {
+  word-break: break-all;
+}
 .user.profile .ui.card .username {
   display: block;
 }
