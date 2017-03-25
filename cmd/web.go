@@ -24,15 +24,10 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
-	"github.com/go-xorm/xorm"
 	"github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
-	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
-
-	"github.com/gogits/git-module"
-	"github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/bindata"
@@ -62,49 +57,19 @@ and it takes care of all the other things for you`,
 	},
 }
 
-type VerChecker struct {
-	ImportPath string
-	Version    func() string
-	Expected   string
-}
-
 // checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
 	// Templates.
 	data, err := ioutil.ReadFile(setting.StaticRootPath + "/templates/.VERSION")
 	if err != nil {
-		log.Fatal(4, "Fail to read 'templates/.VERSION': %v", err)
+		log.Fatal(2, "Fail to read 'templates/.VERSION': %v", err)
 	}
 	tplVer := string(data)
 	if tplVer != setting.AppVer {
 		if version.Compare(tplVer, setting.AppVer, ">") {
-			log.Fatal(4, "Binary version is lower than template file version, did you forget to recompile Gogs?")
+			log.Fatal(2, "Binary version is lower than template file version, did you forget to recompile Gogs?")
 		} else {
-			log.Fatal(4, "Binary version is higher than template file version, did you forget to update template files?")
-		}
-	}
-
-	// Check dependency version.
-	// LEGACY [0.11]: no need to check version as we check in vendor into version control
-	checkers := []VerChecker{
-		{"github.com/go-xorm/xorm", func() string { return xorm.Version }, "0.6.0"},
-		{"github.com/go-macaron/binding", binding.Version, "0.3.2"},
-		{"github.com/go-macaron/cache", cache.Version, "0.1.2"},
-		{"github.com/go-macaron/csrf", csrf.Version, "0.1.0"},
-		{"github.com/go-macaron/i18n", i18n.Version, "0.3.0"},
-		{"github.com/go-macaron/session", session.Version, "0.1.6"},
-		{"github.com/go-macaron/toolbox", toolbox.Version, "0.1.3"},
-		{"gopkg.in/ini.v1", ini.Version, "1.8.4"},
-		{"gopkg.in/macaron.v1", macaron.Version, "1.1.7"},
-		{"github.com/gogits/git-module", git.Version, "0.4.12"},
-		{"github.com/gogits/go-gogs-client", gogs.Version, "0.12.1"},
-	}
-	for _, c := range checkers {
-		if !version.Compare(c.Version(), c.Expected, ">=") {
-			log.Fatal(4, `Dependency outdated!
-Package '%s' current version (%s) is below requirement (%s),
-please use following command to update this package and recompile Gogs:
-go get -u %[1]s`, c.ImportPath, c.Version(), c.Expected)
+			log.Fatal(2, "Binary version is higher than template file version, did you forget to update template files?")
 		}
 	}
 }
