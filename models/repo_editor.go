@@ -135,12 +135,12 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 	gitRepo, err := git.OpenRepository(repo.RepoPath())
 	if err != nil {
-		log.Error(4, "OpenRepository: %v", err)
+		log.Error(2, "OpenRepository: %v", err)
 		return nil
 	}
 	commit, err := gitRepo.GetBranchCommit(opts.NewBranch)
 	if err != nil {
-		log.Error(4, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
+		log.Error(2, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
 		return nil
 	}
 
@@ -162,10 +162,11 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		NewCommitID: commit.ID.String(),
 		Commits:     pushCommits,
 	}); err != nil {
-		log.Error(4, "CommitRepoAction: %v", err)
+		log.Error(2, "CommitRepoAction: %v", err)
 		return nil
 	}
 
+	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return nil
 }
 
@@ -265,12 +266,12 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 
 	gitRepo, err := git.OpenRepository(repo.RepoPath())
 	if err != nil {
-		log.Error(4, "OpenRepository: %v", err)
+		log.Error(2, "OpenRepository: %v", err)
 		return nil
 	}
 	commit, err := gitRepo.GetBranchCommit(opts.NewBranch)
 	if err != nil {
-		log.Error(4, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
+		log.Error(2, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
 		return nil
 	}
 
@@ -288,10 +289,11 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		NewCommitID: commit.ID.String(),
 		Commits:     pushCommits,
 	}); err != nil {
-		log.Error(4, "CommitRepoAction: %v", err)
+		log.Error(2, "CommitRepoAction: %v", err)
 		return nil
 	}
 
+	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return nil
 }
 
@@ -489,12 +491,12 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 
 	gitRepo, err := git.OpenRepository(repo.RepoPath())
 	if err != nil {
-		log.Error(4, "OpenRepository: %v", err)
+		log.Error(2, "OpenRepository: %v", err)
 		return nil
 	}
 	commit, err := gitRepo.GetBranchCommit(opts.NewBranch)
 	if err != nil {
-		log.Error(4, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
+		log.Error(2, "GetBranchCommit [branch: %s]: %v", opts.NewBranch, err)
 		return nil
 	}
 
@@ -512,9 +514,10 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		NewCommitID: commit.ID.String(),
 		Commits:     pushCommits,
 	}); err != nil {
-		log.Error(4, "CommitRepoAction: %v", err)
+		log.Error(2, "CommitRepoAction: %v", err)
 		return nil
 	}
 
+	go AddTestPullRequestTask(doer, repo.ID, opts.NewBranch, true)
 	return DeleteUploads(uploads...)
 }
