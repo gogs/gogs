@@ -602,8 +602,8 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 	}
 
 	// It's safe to fail when the whole function is called during hook execution
-	// because resource released after exit.
-	// FIXME: need a more safe way to not call this function if it's during hook execution.
+	// because resource released after exit. Also, there is no process started to
+	// consume this input during hook execution.
 	go HookQueue.Add(repo.ID)
 	return nil
 }

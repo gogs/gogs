@@ -607,7 +607,7 @@ func (pr *PullRequest) AddToTaskQueue() {
 	go PullRequestQueue.AddFunc(pr.ID, func() {
 		pr.Status = PULL_REQUEST_STATUS_CHECKING
 		if err := pr.UpdateCols("status"); err != nil {
-			log.Error(5, "AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
+			log.Error(3, "AddToTaskQueue.UpdateCols[%d].(add to queue): %v", pr.ID, err)
 		}
 	})
 }
@@ -674,20 +674,20 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 	log.Trace("AddTestPullRequestTask [head_repo_id: %d, head_branch: %s]: finding pull requests", repoID, branch)
 	prs, err := GetUnmergedPullRequestsByHeadInfo(repoID, branch)
 	if err != nil {
-		log.Error(4, "Find pull requests [head_repo_id: %d, head_branch: %s]: %v", repoID, branch, err)
+		log.Error(2, "Find pull requests [head_repo_id: %d, head_branch: %s]: %v", repoID, branch, err)
 		return
 	}
 
 	if isSync {
 		if err = PullRequestList(prs).LoadAttributes(); err != nil {
-			log.Error(4, "PullRequestList.LoadAttributes: %v", err)
+			log.Error(2, "PullRequestList.LoadAttributes: %v", err)
 		}
 
 		if err == nil {
 			for _, pr := range prs {
 				pr.Issue.PullRequest = pr
 				if err = pr.Issue.LoadAttributes(); err != nil {
-					log.Error(4, "LoadAttributes: %v", err)
+					log.Error(2, "LoadAttributes: %v", err)
 					continue
 				}
 				if err = PrepareWebhooks(pr.Issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -697,10 +697,9 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 					Repository:  pr.Issue.Repo.APIFormat(nil),
 					Sender:      doer.APIFormat(),
 				}); err != nil {
-					log.Error(4, "PrepareWebhooks [pull_id: %v]: %v", pr.ID, err)
+					log.Error(2, "PrepareWebhooks [pull_id: %v]: %v", pr.ID, err)
 					continue
 				}
-				go HookQueue.Add(pr.Issue.Repo.ID)
 			}
 		}
 	}
@@ -710,7 +709,7 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 	log.Trace("AddTestPullRequestTask [base_repo_id: %d, base_branch: %s]: finding pull requests", repoID, branch)
 	prs, err = GetUnmergedPullRequestsByBaseInfo(repoID, branch)
 	if err != nil {
-		log.Error(4, "Find pull requests [base_repo_id: %d, base_branch: %s]: %v", repoID, branch, err)
+		log.Error(2, "Find pull requests [base_repo_id: %d, base_branch: %s]: %v", repoID, branch, err)
 		return
 	}
 	for _, pr := range prs {
