@@ -442,11 +442,13 @@ func SettingsOrganizations(ctx *context.Context) {
 
 func SettingsLeaveOrganization(ctx *context.Context) {
 	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
-	if models.IsErrLastOrgOwner(err) {
-		ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
-	} else {
-		ctx.Handle(500, "RemoveOrgUser", err)
-		return
+	if err != nil {
+		if models.IsErrLastOrgOwner(err) {
+			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+		} else {
+			ctx.Handle(500, "RemoveOrgUser", err)
+			return
+		}
 	}
 
 	ctx.JSON(200, map[string]interface{}{
