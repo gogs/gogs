@@ -341,7 +341,7 @@ function initRepository() {
     if ($('.repository.view.issue').length > 0) {
         // Edit issue title
         var $issueTitle = $('#issue-title');
-        var $editInput = $('#edit-title-input input');
+        var $editInput = $('#edit-title-input').find('input');
         var editTitleToggle = function () {
             $issueTitle.toggle();
             $('.not-in-edit').toggle();
