@@ -1654,7 +1654,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 	if len(opts.OrderBy) > 0 {
 		sess.OrderBy("repo." + opts.OrderBy)
 	}
-	return repos, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
+	return repos, count, sess.Distinct("repo.*").Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
 }
 
 func DeleteOldRepositoryArchives() {
