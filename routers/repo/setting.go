@@ -370,6 +370,12 @@ func SettingsBranches(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("repo.settings.branches")
 	ctx.Data["PageIsSettingsBranches"] = true
 
+	if ctx.Repo.Repository.IsBare {
+		ctx.Flash.Info(ctx.Tr("repo.settings.branches_bare"), true)
+		ctx.HTML(200, SETTINGS_BRANCHES)
+		return
+	}
+
 	protectBranches, err := models.GetProtectBranchesByRepoID(ctx.Repo.Repository.ID)
 	if err != nil {
 		ctx.Handle(500, "GetProtectBranchesByRepoID", err)
