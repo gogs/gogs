@@ -16,7 +16,6 @@ ln -s /app/gogs/build ${GOPATH}/src/github.com/gogits/gogs
 cd ${GOPATH}/src/github.com/gogits/gogs
 # Needed since git 2.9.3 or 2.9.4
 git config --global http.https://gopkg.in.followRedirects true
-go get -v -tags "sqlite cert pam" ./...
 make build TAGS="sqlite cert pam"
 
 # Cleanup GOPATH
