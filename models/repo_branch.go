@@ -187,6 +187,13 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		protectBranch.WhitelistTeamIDs = strings.Join(base.Int64sToStrings(validTeamIDs), ",")
 	}
 
+	// Make sure protectBranch.ID is not 0 for whitelists
+	if protectBranch.ID == 0 {
+		if _, err = x.Insert(protectBranch); err != nil {
+			return fmt.Errorf("Insert: %v", err)
+		}
+	}
+
 	// Merge users and members of teams
 	var whitelists []*ProtectBranchWhitelist
 	if hasUsersChanged || hasTeamsChanged {
@@ -224,12 +231,6 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	defer sessionRelease(sess)
 	if err = sess.Begin(); err != nil {
 		return err
-	}
-
-	if protectBranch.ID == 0 {
-		if _, err = sess.Insert(protectBranch); err != nil {
-			return fmt.Errorf("Insert: %v", err)
-		}
 	}
 
 	if _, err = sess.Id(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
