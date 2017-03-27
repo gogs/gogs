@@ -62,6 +62,8 @@ var migrations = []Migration{
 	NewMigration("generate and migrate Git hooks", generateAndMigrateGitHooks),
 	// v15 -> v16:v0.10.16
 	NewMigration("update repository sizes", updateRepositorySizes),
+	// v16 -> v17:v0.10.31
+	NewMigration("remove invalid protect branch whitelist", removeInvalidProtectBranchWhitelist),
 }
 
 // Migrate database to current version
