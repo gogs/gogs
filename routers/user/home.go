@@ -124,8 +124,9 @@ func Dashboard(ctx *context.Context) {
 
 	var err error
 	var repos, mirrors []*models.Repository
+	var repoCount int64
 	if ctxUser.IsOrganization() {
-		repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, setting.UI.User.RepoPagingNum)
+		repos, repoCount, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, setting.UI.User.RepoPagingNum)
 		if err != nil {
 			ctx.Handle(500, "GetUserRepositories", err)
 			return
@@ -142,6 +143,7 @@ func Dashboard(ctx *context.Context) {
 			return
 		}
 		repos = ctxUser.Repos
+		repoCount = int64(ctxUser.NumRepos)
 
 		mirrors, err = ctxUser.GetMirrorRepositories()
 		if err != nil {
@@ -150,6 +152,7 @@ func Dashboard(ctx *context.Context) {
 		}
 	}
 	ctx.Data["Repos"] = repos
+	ctx.Data["RepoCount"] = repoCount
 	ctx.Data["MaxShowRepoNum"] = setting.UI.User.RepoPagingNum
 
 	if err := models.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
