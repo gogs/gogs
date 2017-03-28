@@ -5,10 +5,15 @@
 package migrations
 
 import (
+	"strings"
+
 	"github.com/go-xorm/xorm"
 )
 
 func removeInvalidProtectBranchWhitelist(x *xorm.Engine) error {
 	_, err := x.Exec("DELETE FROM protect_branch_whitelist WHERE protect_branch_id = 0")
+	if strings.Contains(err.Error(), "no such table") {
+		return nil
+	}
 	return err
 }
