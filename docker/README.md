@@ -73,7 +73,7 @@ Most of settings are obvious and easy to understand, but there are some settings
 
 Full documentation of application settings can be found [here](https://gogs.io/docs/advanced/configuration_cheat_sheet.html).
 
-### Container Options
+### Container Options
 
 This container have some options available via environment variables, these options are opt-in features that can help the administration of this container:
 
