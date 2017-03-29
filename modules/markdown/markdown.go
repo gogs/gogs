@@ -32,8 +32,8 @@ var Sanitizer = bluemonday.UGCPolicy()
 // BuildSanitizer initializes sanitizer with allowed attributes based on settings.
 // This function should only be called once during entire application lifecycle.
 func BuildSanitizer() {
-	// Normal markdown-stuff
-	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`[\p{L}\p{N}\s\-_',:\[\]!\./\\\(\)&]*`)).OnElements("code")
+	// We only want to allow HighlightJS specific classes for code blocks
+	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`^language-\w+`)).OnElements("code")
 
 	// Checkboxes
 	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
