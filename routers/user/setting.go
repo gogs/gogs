@@ -36,10 +36,16 @@ const (
 	SECURITY               base.TplName = "user/security"
 )
 
-func Settings(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsProfile"] = true
-	ctx.HTML(200, SETTINGS_PROFILE)
+func Settings(c *context.Context) {
+	c.Data["Title"] = c.Tr("settings")
+	c.Data["PageIsSettingsProfile"] = true
+	c.Data["origin_name"] = c.User.Name
+	c.Data["name"] = c.User.Name
+	c.Data["full_name"] = c.User.FullName
+	c.Data["email"] = c.User.Email
+	c.Data["website"] = c.User.Website
+	c.Data["location"] = c.User.Location
+	c.Success(SETTINGS_PROFILE)
 }
 
 func handleUsernameChange(ctx *context.Context, newName string) {
@@ -80,6 +86,7 @@ func handleUsernameChange(ctx *context.Context, newName string) {
 func SettingsPost(ctx *context.Context, f form.UpdateProfile) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsProfile"] = true
+	ctx.Data["origin_name"] = ctx.User.Name
 
 	if ctx.HasError() {
 		ctx.HTML(200, SETTINGS_PROFILE)
