@@ -75,10 +75,10 @@
 			"revisionTime": "2015-10-13T08:11:02Z"
 		},
 		{
-			"checksumSHA1": "ifjG+PNGY7+sNm3WoA3UntmUTa4=",
+			"checksumSHA1": "kWnClaQsy/2YLvx2SrSUGgSyhzk=",
 			"path": "github.com/go-macaron/captcha",
-			"revision": "8aa5919789ab301e865595eb4b1114d6b9847deb",
-			"revisionTime": "2015-11-23T22:51:53Z"
+			"revision": "a9d45b762e2537878323cd8a4147644378f09be1",
+			"revisionTime": "2017-03-28T22:26:02Z"
 		},
 		{
 			"checksumSHA1": "i52HJHpyI3avut3QAIrrD0h7gmY=",

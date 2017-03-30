@@ -50,7 +50,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Gravatar and Federated avatar with custom source
 - Mail service
 - Administration panel
-- Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (experimental)
+- Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (via MySQL protocol)
 - Multi-language support ([23 languages](https://crowdin.com/project/gogs))
 
 ## Hardware Requirements
