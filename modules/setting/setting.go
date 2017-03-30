@@ -532,6 +532,16 @@ func NewContext() {
 	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
 
 	RunUser = Cfg.Section("").Key("RUN_USER").String()
+
+	switch mode := Cfg.Section("").Key("RUN_MODE").String(); mode {
+	case "prod":
+		ProdMode = true
+	case "dev":
+		ProdMode = false
+	case "test":
+		ProdMode = false
+	}
+
 	// Does not check run user when the install lock is off.
 	if InstallLock {
 		currentUser, match := IsRunUserMatchCurrentUser(RunUser)
