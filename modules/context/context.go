@@ -79,10 +79,15 @@ func (ctx *Context) HasValue(name string) bool {
 	return ok
 }
 
-// HTML calls Context.HTML and converts template name to string.
+// HTML responses template with given status.
 func (ctx *Context) HTML(status int, name base.TplName) {
 	log.Trace("Template: %s", name)
 	ctx.Context.HTML(status, string(name))
+}
+
+// Success responses template with status 200.
+func (c *Context) Success(name base.TplName) {
+	c.HTML(200, name)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
