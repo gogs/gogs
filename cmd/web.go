@@ -230,7 +230,6 @@ func runWeb(ctx *cli.Context) error {
 	})
 
 	m.Group("/user", func() {
-		// r.Get("/feeds", binding.Bind(form.Feeds{}), user.Feeds)
 		m.Any("/activate", user.Activate)
 		m.Any("/activate_email", user.ActivateEmail)
 		m.Get("/email2user", user.Email2User)
@@ -460,7 +459,10 @@ func runWeb(ctx *cli.Context) error {
 	m.Group("/:username/:reponame", func() {
 		m.Get("/issues", repo.RetrieveLabels, repo.Issues)
 		m.Get("/issues/:index", repo.ViewIssue)
-
+		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
+		m.Get("/milestones", repo.Milestones)
+	}, ignSignIn, context.RepoAssignment(true))
+	m.Group("/:username/:reponame", func() {
 		// FIXME: should use different URLs but mostly same logic for comments of issue and pull reuqest.
 		// So they can apply their own enable/disable logic on routers.
 		m.Group("/issues", func() {
@@ -477,10 +479,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("", repo.UpdateCommentContent)
 			m.Post("/delete", repo.DeleteComment)
 		})
-
-		m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
-		m.Get("/milestones", repo.Milestones)
-	}, ignSignIn, context.RepoAssignment(true))
+	}, reqSignIn, context.RepoAssignment(true))
 	m.Group("/:username/:reponame", func() {
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
