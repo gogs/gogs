@@ -16,7 +16,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 )
 
 // CommentType defines whether a comment is just a simple comment, an action (like close) or a reference.
@@ -168,7 +168,7 @@ func (c *Comment) EventTag() string {
 // mailParticipants sends new comment emails to repository watchers
 // and mentioned people.
 func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) (err error) {
-	mentions := markdown.FindAllMentions(cmt.Content)
+	mentions := markup.FindAllMentions(cmt.Content)
 	if err = updateIssueMentions(e, cmt.IssueID, mentions); err != nil {
 		return fmt.Errorf("UpdateIssueMentions [%d]: %v", cmt.IssueID, err)
 	}

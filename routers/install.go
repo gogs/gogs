@@ -26,7 +26,7 @@ import (
 	"github.com/gogits/gogs/modules/cron"
 	"github.com/gogits/gogs/modules/form"
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/ssh"
 	"github.com/gogits/gogs/modules/template/highlight"
@@ -62,7 +62,7 @@ func GlobalInit() {
 
 	if setting.InstallLock {
 		highlight.NewContext()
-		markdown.BuildSanitizer()
+		markup.BuildSanitizer()
 		if err := models.NewEngine(); err != nil {
 			log.Fatal(2, "Fail to initialize ORM engine: %v", err)
 		}

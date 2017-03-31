@@ -11,7 +11,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -162,7 +162,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 // MailParticipants sends new issue thread created emails to repository watchers
 // and mentioned people.
 func (issue *Issue) MailParticipants() (err error) {
-	mentions := markdown.FindAllMentions(issue.Content)
+	mentions := markup.FindAllMentions(issue.Content)
 	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
 		return fmt.Errorf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}

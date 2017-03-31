@@ -8,7 +8,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
@@ -25,9 +25,9 @@ func Markdown(ctx *context.APIContext, form api.MarkdownOption) {
 
 	switch form.Mode {
 	case "gfm":
-		ctx.Write(markdown.Render([]byte(form.Text), form.Context, nil))
+		ctx.Write(markup.Render([]byte(form.Text), form.Context, nil))
 	default:
-		ctx.Write(markdown.RenderRaw([]byte(form.Text), ""))
+		ctx.Write(markup.RenderRaw([]byte(form.Text), ""))
 	}
 }
 
@@ -38,5 +38,5 @@ func MarkdownRaw(ctx *context.APIContext) {
 		ctx.Error(422, "", err)
 		return
 	}
-	ctx.Write(markdown.RenderRaw(body, ""))
+	ctx.Write(markup.RenderRaw(body, ""))
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -83,7 +83,7 @@ func Releases(ctx *context.Context) {
 				return
 			}
 
-			r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+			r.Note = markup.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
 			results[i] = r
 			break
 		}
@@ -132,7 +132,7 @@ func Releases(ctx *context.Context) {
 				return
 			}
 
-			r.Note = markdown.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+			r.Note = markup.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
 		}
 
 		if len(drafts) > 0 {

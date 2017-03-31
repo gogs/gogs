@@ -20,7 +20,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/template"
 	"github.com/gogits/gogs/modules/template/highlight"
@@ -55,7 +55,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 
 	var readmeFile *git.Blob
 	for _, entry := range entries {
-		if entry.IsDir() || !markdown.IsReadmeFile(entry.Name()) {
+		if entry.IsDir() || !markup.IsReadmeFile(entry.Name()) {
 			continue
 		}
 
@@ -86,9 +86,9 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 			d, _ := ioutil.ReadAll(dataRc)
 			buf = append(buf, d...)
 			switch {
-			case markdown.IsMarkdownFile(readmeFile.Name()):
+			case markup.IsMarkdownFile(readmeFile.Name()):
 				ctx.Data["IsMarkdown"] = true
-				buf = markdown.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+				buf = markup.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
 			default:
 				buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 			}
@@ -153,14 +153,14 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		d, _ := ioutil.ReadAll(dataRc)
 		buf = append(buf, d...)
 
-		isMarkdown := markdown.IsMarkdownFile(blob.Name())
+		isMarkdown := markup.IsMarkdownFile(blob.Name())
 		ctx.Data["IsMarkdown"] = isMarkdown
-		ctx.Data["ReadmeExist"] = isMarkdown && markdown.IsReadmeFile(blob.Name())
+		ctx.Data["ReadmeExist"] = isMarkdown && markup.IsReadmeFile(blob.Name())
 
 		ctx.Data["IsIPythonNotebook"] = strings.HasSuffix(blob.Name(), ".ipynb")
 
 		if isMarkdown {
-			ctx.Data["FileContent"] = string(markdown.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+			ctx.Data["FileContent"] = string(markup.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else {
 			// Building code view blocks with line number on server side.
 			var fileContent string
