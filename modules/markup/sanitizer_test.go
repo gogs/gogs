@@ -13,7 +13,7 @@ import (
 )
 
 func Test_Sanitizer(t *testing.T) {
-	BuildSanitizer()
+	NewSanitizer()
 	Convey("Sanitize HTML string and bytes", t, func() {
 		testCases := []string{
 			// Regular
