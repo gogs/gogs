@@ -13,7 +13,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -174,7 +174,7 @@ func composeTplData(subject, body, link string) map[string]interface{} {
 
 func composeIssueMessage(issue Issue, repo Repository, doer User, tplName base.TplName, tos []string, info string) *Message {
 	subject := issue.MailSubject()
-	body := string(markdown.RenderSpecialLink([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
+	body := string(markup.RenderSpecialLink([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
 	data["Doer"] = doer
 	content, err := mailRender.HTMLString(string(tplName), data)

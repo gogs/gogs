@@ -22,7 +22,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/setting"
 )
 
@@ -541,7 +541,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 		ctx.Data["PageIsIssueList"] = true
 	}
 
-	issue.RenderedContent = string(markdown.Render([]byte(issue.Content), ctx.Repo.RepoLink,
+	issue.RenderedContent = string(markup.Render([]byte(issue.Content), ctx.Repo.RepoLink,
 		ctx.Repo.Repository.ComposeMetas()))
 
 	repo := ctx.Repo.Repository
@@ -608,7 +608,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
-			comment.RenderedContent = string(markdown.Render([]byte(comment.Content), ctx.Repo.RepoLink,
+			comment.RenderedContent = string(markup.Render([]byte(comment.Content), ctx.Repo.RepoLink,
 				ctx.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
@@ -728,7 +728,7 @@ func UpdateIssueContent(ctx *context.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(markdown.Render([]byte(issue.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
+		"content": string(markup.Render([]byte(issue.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -939,7 +939,7 @@ func UpdateCommentContent(ctx *context.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(markdown.Render([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
+		"content": string(markup.Render([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -1092,7 +1092,7 @@ func Milestones(ctx *context.Context) {
 		if m.NumOpenIssues+m.NumClosedIssues > 0 {
 			m.Completeness = m.NumClosedIssues * 100 / (m.NumOpenIssues + m.NumClosedIssues)
 		}
-		m.RenderedContent = string(markdown.Render([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		m.RenderedContent = string(markup.Render([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	}
 	ctx.Data["Milestones"] = miles
 

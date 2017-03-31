@@ -1,7 +1,7 @@
-package markdown_test
+package markup_test
 
 import (
-	. "github.com/gogits/gogs/modules/markdown"
+	. "github.com/gogits/gogs/modules/markup"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 

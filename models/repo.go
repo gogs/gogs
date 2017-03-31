@@ -28,7 +28,7 @@ import (
 
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/modules/bindata"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 	"github.com/gogits/gogs/modules/process"
 	"github.com/gogits/gogs/modules/setting"
 	"github.com/gogits/gogs/modules/sync"
@@ -219,7 +219,7 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	case "external_tracker_style":
 		if len(repo.ExternalTrackerStyle) == 0 {
-			repo.ExternalTrackerStyle = markdown.ISSUE_NAME_STYLE_NUMERIC
+			repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_NUMERIC
 		}
 	case "created_unix":
 		repo.Created = time.Unix(repo.CreatedUnix, 0).Local()
@@ -356,10 +356,10 @@ func (repo *Repository) ComposeMetas() map[string]string {
 			"repo":   repo.Name,
 		}
 		switch repo.ExternalTrackerStyle {
-		case markdown.ISSUE_NAME_STYLE_ALPHANUMERIC:
-			repo.ExternalMetas["style"] = markdown.ISSUE_NAME_STYLE_ALPHANUMERIC
+		case markup.ISSUE_NAME_STYLE_ALPHANUMERIC:
+			repo.ExternalMetas["style"] = markup.ISSUE_NAME_STYLE_ALPHANUMERIC
 		default:
-			repo.ExternalMetas["style"] = markdown.ISSUE_NAME_STYLE_NUMERIC
+			repo.ExternalMetas["style"] = markup.ISSUE_NAME_STYLE_NUMERIC
 		}
 
 	}

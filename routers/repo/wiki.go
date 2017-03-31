@@ -15,7 +15,7 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/context"
 	"github.com/gogits/gogs/modules/form"
-	"github.com/gogits/gogs/modules/markdown"
+	"github.com/gogits/gogs/modules/markup"
 )
 
 const (
@@ -107,7 +107,7 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, str
 		return nil, ""
 	}
 	if isViewPage {
-		ctx.Data["content"] = string(markdown.Render(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		ctx.Data["content"] = string(markup.Render(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	} else {
 		ctx.Data["content"] = string(data)
 	}
