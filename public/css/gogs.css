@@ -1450,7 +1450,8 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content .plain-text {
   font-size: 14px;
-  padding: 10px 15px;
+  padding: 15px 15px 10px 15px;
+  font-family: Consolas;
 }
 .repository.file.list #file-content .code-view * {
   font-size: 12px;
