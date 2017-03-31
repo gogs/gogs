@@ -541,8 +541,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 		ctx.Data["PageIsIssueList"] = true
 	}
 
-	issue.RenderedContent = string(markup.Render([]byte(issue.Content), ctx.Repo.RepoLink,
-		ctx.Repo.Repository.ComposeMetas()))
+	issue.RenderedContent = string(markup.Markdown(issue.Content, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 
 	repo := ctx.Repo.Repository
 
@@ -608,8 +607,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
 		if comment.Type == models.COMMENT_TYPE_COMMENT {
-			comment.RenderedContent = string(markup.Render([]byte(comment.Content), ctx.Repo.RepoLink,
-				ctx.Repo.Repository.ComposeMetas()))
+			comment.RenderedContent = string(markup.Markdown(comment.Content, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
 			tag, ok = marked[comment.PosterID]
@@ -728,7 +726,7 @@ func UpdateIssueContent(ctx *context.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(markup.Render([]byte(issue.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
+		"content": markup.Markdown(issue.Content, ctx.Query("context"), ctx.Repo.Repository.ComposeMetas()),
 	})
 }
 
@@ -939,7 +937,7 @@ func UpdateCommentContent(ctx *context.Context) {
 	}
 
 	ctx.JSON(200, map[string]interface{}{
-		"content": string(markup.Render([]byte(comment.Content), ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
+		"content": markup.Markdown(comment.Content, ctx.Query("context"), ctx.Repo.Repository.ComposeMetas()),
 	})
 }
 
@@ -1092,7 +1090,7 @@ func Milestones(ctx *context.Context) {
 		if m.NumOpenIssues+m.NumClosedIssues > 0 {
 			m.Completeness = m.NumClosedIssues * 100 / (m.NumOpenIssues + m.NumClosedIssues)
 		}
-		m.RenderedContent = string(markup.Render([]byte(m.Content), ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		m.RenderedContent = string(markup.Markdown(m.Content, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	}
 	ctx.Data["Milestones"] = miles
 

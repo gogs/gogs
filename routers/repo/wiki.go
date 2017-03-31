@@ -107,7 +107,7 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, str
 		return nil, ""
 	}
 	if isViewPage {
-		ctx.Data["content"] = string(markup.Render(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		ctx.Data["content"] = string(markup.Markdown(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 	} else {
 		ctx.Data["content"] = string(data)
 	}

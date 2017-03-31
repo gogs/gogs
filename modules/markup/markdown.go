@@ -458,16 +458,21 @@ OUTER_LOOP:
 	return rawHTML
 }
 
-// Render renders Markdown to HTML with special links.
-func Render(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+// Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
+func Markdown(input interface{}, urlPrefix string, metas map[string]string) []byte {
+	var rawBytes []byte
+	switch v := input.(type) {
+	case []byte:
+		rawBytes = v
+	case string:
+		rawBytes = []byte(v)
+	default:
+		panic(fmt.Sprintf("unexpected input content type: %T", input))
+	}
+
 	urlPrefix = strings.Replace(urlPrefix, space, spaceEncoded, -1)
 	result := RenderRaw(rawBytes, urlPrefix)
 	result = PostProcess(result, urlPrefix, metas)
 	result = SanitizeBytes(result)
 	return result
-}
-
-// RenderString renders Markdown to HTML with special links and returns string type.
-func RenderString(raw, urlPrefix string, metas map[string]string) string {
-	return string(Render([]byte(raw), urlPrefix, metas))
 }

@@ -88,7 +88,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 			switch {
 			case markup.IsMarkdownFile(readmeFile.Name()):
 				ctx.Data["IsMarkdown"] = true
-				buf = markup.Render(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+				buf = markup.Markdown(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
 			default:
 				buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 			}
@@ -160,7 +160,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		ctx.Data["IsIPythonNotebook"] = strings.HasSuffix(blob.Name(), ".ipynb")
 
 		if isMarkdown {
-			ctx.Data["FileContent"] = string(markup.Render(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+			ctx.Data["FileContent"] = string(markup.Markdown(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else {
 			// Building code view blocks with line number on server side.
 			var fileContent string

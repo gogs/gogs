@@ -83,7 +83,7 @@ func Releases(ctx *context.Context) {
 				return
 			}
 
-			r.Note = markup.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+			r.Note = string(markup.Markdown(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 			results[i] = r
 			break
 		}
@@ -132,7 +132,7 @@ func Releases(ctx *context.Context) {
 				return
 			}
 
-			r.Note = markup.RenderString(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas())
+			r.Note = string(markup.Markdown(r.Note, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
 		}
 
 		if len(drafts) > 0 {
