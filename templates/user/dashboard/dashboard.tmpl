@@ -18,7 +18,7 @@
 					<a class="item" data-tab="mirrors">{{.i18n.Tr "mirror"}}</a>
 				</div>
 				<div class="ui tab active list" data-tab="repos">
-					<h4 class="ui top attached header">
+					<div class="ui top attached header">
 						{{.i18n.Tr "home.my_repos"}} <span class="ui grey label">{{.RepoCount}}</span>
 						<div class="ui right">
 							<a class="poping up" href="{{AppSubUrl}}/repo/create{{if .ContextUser.IsOrganization}}?org={{.ContextUser.ID}}{{end}}" data-content="{{.i18n.Tr "new_repo"}}" data-variation="tiny inverted" data-position="left center">
@@ -26,7 +26,7 @@
 								<span class="sr-only">{{.i18n.Tr "new_repo"}}</span>
 							</a>
 						</div>
-					</h4>
+					</div>
 					<div class="ui attached table segment">
 						<ul class="repo-owner-name-list">
 							{{range .Repos}}
@@ -74,7 +74,7 @@
 
 				{{if not .ContextUser.IsOrganization}}
 					<div class="ui tab list" data-tab="orgs">
-						<h4 class="ui top attached header">
+						<div class="ui top attached header">
 							{{.i18n.Tr "home.my_orgs"}} <span class="ui grey label">{{.ContextUser.GetOrganizationCount}}</span>
 							<div class="ui right">
 								<a class="poping up" href="{{AppSubUrl}}/org/create" data-content="{{.i18n.Tr "new_org"}}" data-variation="tiny inverted" data-position="left center">
@@ -82,7 +82,7 @@
 									<span class="sr-only">{{.i18n.Tr "new_org"}}</span>
 								</a>
 							</div>
-						</h4>
+						</div>
 						<div class="ui attached table segment">
 							<ul class="repo-owner-name-list">
 								{{range .ContextUser.Orgs}}
@@ -102,7 +102,7 @@
 				{{end}}
 
 				<div class="ui tab list" data-tab="mirrors">
-					<h4 class="ui top attached header">
+					<div class="ui top attached header">
 						{{.i18n.Tr "home.my_mirrors"}} <span class="ui grey label">{{.MirrorCount}}</span>
 						<div class="ui right">
 							<a class="poping up" href="{{AppSubUrl}}/repo/migrate?mirror=1" data-content="{{.i18n.Tr "new_mirror"}}" data-variation="tiny inverted" data-position="left center">
@@ -110,7 +110,7 @@
 								<span class="sr-only">{{.i18n.Tr "new_mirror"}}</span>
 							</a>
 						</div>
-					</h4>
+					</div>
 					<div class="ui attached table segment">
 						<ul class="repo-owner-name-list">
 							{{range .Mirrors}}

@@ -36,14 +36,14 @@
 			</div>
 
 			<div class="ui five wide column">
-				<h4 class="ui top attached header">
+				<div class="ui top attached header">
 					<strong>{{.i18n.Tr "org.people"}}</strong>
 					{{if .IsOrganizationMember}}
 						<div class="ui right">
 							<a class="text grey" href="{{.OrgLink}}/members">{{.Org.NumMembers}} <span class="octicon octicon-chevron-right"></span></a>
 						</div>
 					{{end}}
-				</h4>
+				</div>
 				<div class="ui attached segment members">
 					{{$isMember := .IsOrganizationMember}}
 					{{range .Members}}
