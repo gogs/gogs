@@ -125,7 +125,7 @@ func Safe(raw string) template.HTML {
 }
 
 func Str2html(raw string) template.HTML {
-	return template.HTML(markup.Sanitizer.Sanitize(raw))
+	return template.HTML(markup.Sanitize(raw))
 }
 
 func List(l *list.List) chan interface{} {

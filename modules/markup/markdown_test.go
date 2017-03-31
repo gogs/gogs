@@ -1,13 +1,14 @@
 package markup_test
 
 import (
-	. "github.com/gogits/gogs/modules/markup"
-	. "github.com/smartystreets/goconvey/convey"
+	"bytes"
 	"testing"
 
-	"bytes"
-	"github.com/gogits/gogs/modules/setting"
 	"github.com/russross/blackfriday"
+	. "github.com/smartystreets/goconvey/convey"
+
+	. "github.com/gogits/gogs/modules/markup"
+	"github.com/gogits/gogs/modules/setting"
 )
 
 func TestMarkdown(t *testing.T) {

@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
-	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
 	"golang.org/x/net/html"
 
@@ -26,22 +25,6 @@ const (
 	ISSUE_NAME_STYLE_NUMERIC      = "numeric"
 	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
 )
-
-var Sanitizer = bluemonday.UGCPolicy()
-
-// BuildSanitizer initializes sanitizer with allowed attributes based on settings.
-// This function should only be called once during entire application lifecycle.
-func BuildSanitizer() {
-	// We only want to allow HighlightJS specific classes for code blocks
-	Sanitizer.AllowAttrs("class").Matching(regexp.MustCompile(`^language-\w+`)).OnElements("code")
-
-	// Checkboxes
-	Sanitizer.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
-	Sanitizer.AllowAttrs("checked", "disabled").OnElements("input")
-
-	// Custom URL-Schemes
-	Sanitizer.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
-}
 
 var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://|^mailto:`)
 
@@ -480,7 +463,7 @@ func Render(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
 	urlPrefix = strings.Replace(urlPrefix, space, spaceEncoded, -1)
 	result := RenderRaw(rawBytes, urlPrefix)
 	result = PostProcess(result, urlPrefix, metas)
-	result = Sanitizer.SanitizeBytes(result)
+	result = SanitizeBytes(result)
 	return result
 }
 
