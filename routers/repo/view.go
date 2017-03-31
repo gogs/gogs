@@ -85,11 +85,15 @@ func renderDirectory(c *context.Context, treeLink string) {
 		if isTextFile {
 			d, _ := ioutil.ReadAll(dataRc)
 			buf = append(buf, d...)
-			switch {
-			case markup.IsMarkdownFile(readmeFile.Name()):
-				c.Data["IsMarkdown"] = true
-				buf = markup.Markdown(buf, treeLink, c.Repo.Repository.ComposeMetas())
-			case markup.IsIPythonNotebook(readmeFile.Name()):
+
+			switch markup.Detect(readmeFile.Name()) {
+			case markup.MARKDOWN:
+				ctx.Data["IsMarkdown"] = true
+				buf = markup.Markdown(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+			case markup.ORG_MODE:
+				ctx.Data["IsMarkdown"] = true
+				buf = markup.OrgMode(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
@@ -153,18 +157,21 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 			break
 		}
 
+		ctx.Data["ReadmeExist"] = markup.IsReadmeFile(blob.Name())
+
 		d, _ := ioutil.ReadAll(dataRc)
 		buf = append(buf, d...)
 
-		isMarkdown := markup.IsMarkdownFile(blob.Name())
-		ctx.Data["IsMarkdown"] = isMarkdown
-		ctx.Data["ReadmeExist"] = isMarkdown && markup.IsReadmeFile(blob.Name())
-
-		ctx.Data["IsIPythonNotebook"] = markup.IsIPythonNotebook(blob.Name())
-
-		if isMarkdown {
+		switch markup.Detect(blob.Name()) {
+		case markup.MARKDOWN:
+			ctx.Data["IsMarkdown"] = true
 			ctx.Data["FileContent"] = string(markup.Markdown(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
-		} else {
+		case markup.ORG_MODE:
+			ctx.Data["IsMarkdown"] = true
+			ctx.Data["FileContent"] = string(markup.OrgMode(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+		case markup.IPYTHON_NOTEBOOK:
+			ctx.Data["IsIPythonNotebook"] = true
+		default:
 			// Building code view blocks with line number on server side.
 			var fileContent string
 			if err, content := template.ToUTF8WithErr(buf); err != nil {
