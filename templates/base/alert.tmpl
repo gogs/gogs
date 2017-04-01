@@ -3,6 +3,11 @@
 		<p>{{.Flash.ErrorMsg | Str2html}}</p>
 	</div>
 {{end}}
+{{if .Flash.WarningMsg}}
+	<div class="ui warning message">
+		<p>{{.Flash.WarningMsg | Str2html}}</p>
+	</div>
+{{end}}
 {{if .Flash.SuccessMsg}}
 	<div class="ui positive message">
 		<p>{{.Flash.SuccessMsg | Str2html}}</p>
