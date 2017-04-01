@@ -404,6 +404,10 @@ func UpdateDefaultBranch(ctx *context.Context) {
 				ctx.Handle(500, "SetDefaultBranch", err)
 				return
 			}
+
+			ctx.Flash.Warning(ctx.Tr("repo.settings.update_default_branch_unsupported"))
+			ctx.Redirect(ctx.Repo.RepoLink + "/settings/branches")
+			return
 		}
 	}
 
