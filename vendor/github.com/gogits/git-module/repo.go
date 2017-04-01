@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/mcuadros/go-version"
 )
 
 // Repository represents a Git repository.
@@ -248,6 +249,10 @@ const (
 
 // GetRepoSize returns disk usage report of repository in given path.
 func GetRepoSize(repoPath string) (*CountObject, error) {
+	if version.Compare(gitVersion, "1.8.3", "<") {
+		return nil, ErrUnsupportedVersion{"1.8.3"}
+	}
+
 	cmd := NewCommand("count-objects", "-v")
 	stdout, err := cmd.RunInDir(repoPath)
 	if err != nil {
@@ -262,7 +267,7 @@ func GetRepoSize(repoPath string) (*CountObject, error) {
 		case strings.HasPrefix(line, _STAT_SIZE):
 			countObject.Size = com.StrTo(line[6:]).MustInt64() * 1024
 		case strings.HasPrefix(line, _STAT_IN_PACK):
-			countObject.InPack = com.StrTo(line[9:]).MustInt64() * 1024
+			countObject.InPack = com.StrTo(line[9:]).MustInt64()
 		case strings.HasPrefix(line, _STAT_PACKS):
 			countObject.Packs = com.StrTo(line[7:]).MustInt64()
 		case strings.HasPrefix(line, _STAT_SIZE_PACK):
