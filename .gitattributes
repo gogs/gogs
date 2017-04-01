@@ -1,7 +1,6 @@
-public/conf/gitignore/* linguist-vendored
-public/conf/license/* linguist-vendored
+conf/gitignore/* linguist-vendored
+conf/license/* linguist-vendored
 public/assets/* linguist-vendored
-public/plugins/* linguist-vendored
 public/plugins/* linguist-vendored
 public/css/themes/* linguist-vendored
 public/css/github.min.css linguist-vendored
