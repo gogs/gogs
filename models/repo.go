@@ -335,12 +335,7 @@ func (repo *Repository) mustOwner(e Engine) *User {
 func (repo *Repository) UpdateSize() error {
 	countObject, err := git.GetRepoSize(repo.RepoPath())
 	if err != nil {
-		if !git.IsErrUnsupportedVersion(err) {
-			return fmt.Errorf("GetRepoSize: %v", err)
-		}
-
-		log.Warn("Get repository size is not supported by the Git version on server")
-		return nil
+		return fmt.Errorf("GetRepoSize: %v", err)
 	}
 
 	repo.Size = countObject.Size + countObject.SizePack
