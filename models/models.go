@@ -24,7 +24,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models/migrations"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 // Engine represents a xorm engine or session.

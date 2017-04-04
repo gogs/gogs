@@ -24,7 +24,7 @@ import (
 
 	"github.com/gogits/chardet"
 
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 // EncodeMD5 encodes string to md5 hex value.

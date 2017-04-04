@@ -21,8 +21,8 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/httplib"
+	"github.com/gogits/gogs/pkg/setting"
 	http "github.com/gogits/gogs/routers/repo"
 )
 

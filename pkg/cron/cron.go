@@ -12,7 +12,7 @@ import (
 	"github.com/gogits/cron"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 var c = cron.New()

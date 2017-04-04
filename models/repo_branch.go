@@ -11,7 +11,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/pkg/base"
 )
 
 type Branch struct {

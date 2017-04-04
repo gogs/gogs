@@ -13,9 +13,9 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/form"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/context"
+	"github.com/gogits/gogs/pkg/form"
+	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 

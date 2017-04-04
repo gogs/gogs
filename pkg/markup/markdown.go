@@ -14,8 +14,8 @@ import (
 
 	"github.com/russross/blackfriday"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 // IsMarkdownFile reports whether name looks like a Markdown file based on its extension.

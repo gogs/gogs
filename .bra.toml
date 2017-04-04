@@ -7,7 +7,7 @@ watch_all = true
 watch_dirs = [
 	"$WORKDIR/cmd",
 	"$WORKDIR/models",
-	"$WORKDIR/modules",
+	"$WORKDIR/pkg",
 	"$WORKDIR/routers"
 ]
 watch_exts = [".go"]

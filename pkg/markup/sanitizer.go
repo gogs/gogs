@@ -10,7 +10,7 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 // Sanitizer is a protection wrapper of *bluemonday.Policy which does not allow

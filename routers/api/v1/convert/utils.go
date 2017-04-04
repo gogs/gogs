@@ -5,7 +5,7 @@
 package convert
 
 import (
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 // ToCorrectPageSize makes sure page size is in allowed range.
