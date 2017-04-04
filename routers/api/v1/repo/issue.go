@@ -22,6 +22,15 @@ func listIssues(ctx *context.APIContext, opts *models.IssuesOptions) {
 		ctx.Error(500, "Issues", err)
 		return
 	}
+	if ctx.Query("state") == "all" {
+		opts.IsClosed = !opts.IsClosed
+		temp_issues, err := models.Issues(opts)
+		if err != nil {
+			ctx.Error(500, "Issues", err)
+			return
+		}
+		issues = append(issues, temp_issues...)
+	}
 
 	count, err := models.IssuesCount(opts)
 	if err != nil {
@@ -56,6 +65,7 @@ func ListIssues(ctx *context.APIContext) {
 	opts := models.IssuesOptions{
 		RepoID: ctx.Repo.Repository.ID,
 		Page:   ctx.QueryInt("page"),
+		IsClosed: ctx.Query("state") == "closed",
 	}
 
 	listIssues(ctx, &opts)
