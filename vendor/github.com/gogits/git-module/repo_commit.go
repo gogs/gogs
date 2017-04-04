@@ -106,7 +106,7 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 
 	data, err := NewCommand("cat-file", "-p", id.String()).RunInDirBytes(repo.Path)
 	if err != nil {
-		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
+		if strings.Contains(err.Error(), "exit status 128") {
 			return nil, ErrNotExist{id.String(), ""}
 		}
 		return nil, err
@@ -129,6 +129,9 @@ func (repo *Repository) GetCommit(commitID string) (*Commit, error) {
 		var err error
 		commitID, err = NewCommand("rev-parse", commitID).RunInDir(repo.Path)
 		if err != nil {
+			if strings.Contains(err.Error(), "exit status 128") {
+				return nil, ErrNotExist{commitID, ""}
+			}
 			return nil, err
 		}
 	}
