@@ -141,7 +141,7 @@ func Diff(ctx *context.Context) {
 		commitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
-		ctx.Handle(404, "GetDiffCommit", err)
+		ctx.NotFoundOrServerError("GetDiffCommit", git.IsErrNotExist, err)
 		return
 	}
 
@@ -180,10 +180,10 @@ func Diff(ctx *context.Context) {
 }
 
 func RawDiff(ctx *context.Context) {
-	if err := models.GetRawDiff(
+	if err := git.GetRawDiff(
 		models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name),
 		ctx.Params(":sha"),
-		models.RawDiffType(ctx.Params(":ext")),
+		git.RawDiffType(ctx.Params(":ext")),
 		ctx.Resp,
 	); err != nil {
 		ctx.Handle(500, "GetRawDiff", err)
