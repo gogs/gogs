@@ -48,68 +48,75 @@ type HTTPContext struct {
 	AuthUser  *models.User
 }
 
+// askCredentials responses HTTP header and status which informs client to provide credentials.
+func askCredentials(c *context.Context, status int, text string) {
+	c.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+	c.HandleText(status, text)
+}
+
 func HTTPContexter() macaron.Handler {
-	return func(ctx *context.Context) {
-		ownerName := ctx.Params(":username")
-		repoName := strings.TrimSuffix(ctx.Params(":reponame"), ".git")
+	return func(c *context.Context) {
+		ownerName := c.Params(":username")
+		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
 		repoName = strings.TrimSuffix(repoName, ".wiki")
 
-		isPull := ctx.Query("service") == "git-upload-pack" ||
-			strings.HasSuffix(ctx.Req.URL.Path, "git-upload-pack") ||
-			ctx.Req.Method == "GET"
+		isPull := c.Query("service") == "git-upload-pack" ||
+			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
+			c.Req.Method == "GET"
 
 		owner, err := models.GetUserByName(ownerName)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return
 		}
 
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
+			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
 		}
 
 		// Authentication is not required for pulling from public repositories.
 		if isPull && !repo.IsPrivate && !setting.Service.RequireSignInView {
-			ctx.Map(&HTTPContext{
-				Context: ctx,
+			c.Map(&HTTPContext{
+				Context: c,
 			})
 			return
 		}
 
 		// In case user requested a wrong URL and not intended to access Git objects.
-		action := ctx.Params("*")
+		action := c.Params("*")
 		if !strings.Contains(action, "git-") &&
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
 			!strings.Contains(action, "objects/") {
-			ctx.NotFound()
+			c.NotFound()
 			return
 		}
 
 		// Handle HTTP Basic Authentication
-		authHead := ctx.Req.Header.Get("Authorization")
+		authHead := c.Req.Header.Get("Authorization")
 		if len(authHead) == 0 {
-			ctx.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
-			ctx.Error(http.StatusUnauthorized)
+			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
 
 		auths := strings.Fields(authHead)
 		if len(auths) != 2 || auths[0] != "Basic" {
-			ctx.Error(http.StatusUnauthorized)
+			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
 		authUsername, authPassword, err := base.BasicAuthDecode(auths[1])
 		if err != nil {
-			ctx.Error(http.StatusUnauthorized)
+			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
+		fmt.Println(authUsername, authPassword)
 
 		authUser, err := models.UserSignIn(authUsername, authPassword)
 		if err != nil && !errors.IsUserNotExist(err) {
-			ctx.Handle(http.StatusInternalServerError, "UserSignIn", err)
+
+			c.Handle(http.StatusInternalServerError, "UserSignIn", err)
 			return
 		}
 
@@ -118,9 +125,9 @@ func HTTPContexter() macaron.Handler {
 			token, err := models.GetAccessTokenBySHA(authUsername)
 			if err != nil {
 				if models.IsErrAccessTokenEmpty(err) || models.IsErrAccessTokenNotExist(err) {
-					ctx.Error(http.StatusUnauthorized)
+					askCredentials(c, http.StatusUnauthorized, "")
 				} else {
-					ctx.Handle(http.StatusInternalServerError, "GetAccessTokenBySHA", err)
+					c.Handle(http.StatusInternalServerError, "GetAccessTokenBySHA", err)
 				}
 				return
 			}
@@ -130,10 +137,12 @@ func HTTPContexter() macaron.Handler {
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
-				ctx.Handle(http.StatusInternalServerError, "GetUserByID", err)
+				c.Handle(http.StatusInternalServerError, "GetUserByID", err)
 				return
 			}
 		}
+
+		log.Trace("HTTPGit - Authenticated user: %s", authUser.Name)
 
 		mode := models.ACCESS_MODE_WRITE
 		if isPull {
@@ -141,20 +150,20 @@ func HTTPContexter() macaron.Handler {
 		}
 		has, err := models.HasAccess(authUser.ID, repo, mode)
 		if err != nil {
-			ctx.Handle(http.StatusInternalServerError, "HasAccess", err)
+			c.Handle(http.StatusInternalServerError, "HasAccess", err)
 			return
 		} else if !has {
-			ctx.HandleText(http.StatusForbidden, "User permission denied")
+			askCredentials(c, http.StatusUnauthorized, "User permission denied")
 			return
 		}
 
 		if !isPull && repo.IsMirror {
-			ctx.HandleText(http.StatusForbidden, "Mirror repository is read-only")
+			c.HandleText(http.StatusForbidden, "Mirror repository is read-only")
 			return
 		}
 
-		ctx.Map(&HTTPContext{
-			Context:   ctx,
+		c.Map(&HTTPContext{
+			Context:   c,
 			OwnerName: ownerName,
 			OwnerSalt: owner.Salt,
 			RepoID:    repo.ID,
