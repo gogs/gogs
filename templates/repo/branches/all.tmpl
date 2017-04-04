@@ -19,7 +19,7 @@
 					<div class="ui four wide column">
 						{{if and (eq $.BranchName .Name) $.IsRepositoryWriter}}
 							<a class="ui basic blue button" href="{{$.RepoLink}}/settings/branches">{{$.i18n.Tr "repo.branches.change_default_branch"}}</a>
-						{{else if $.IsRepositoryAdmin}}
+						{{else if and $.IsRepositoryWriter $.AllowPullRequest}}
 							<a class="ui basic button" href="{{$.RepoLink}}/compare/{{$.DefaultBranch.Name}}...{{.Name}}"><i class="octicon octicon-git-pull-request"></i> {{$.i18n.Tr "repo.pulls.new"}}</a>
 						{{end}}
 					</div>
