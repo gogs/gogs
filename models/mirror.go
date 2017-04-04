@@ -6,6 +6,7 @@ package models
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -119,6 +120,33 @@ func (m *Mirror) FullAddress() string {
 	return m.address
 }
 
+// escapeCredentials returns mirror address with escaped credentials.
+func escapeMirrorCredentials(addr string) string {
+	// Find end of credentials (start of path)
+	end := strings.LastIndex(addr, "@")
+	if end == -1 {
+		return addr
+	}
+
+	// Find delimiter of credentials (end of username)
+	start := strings.Index(addr, "://")
+	if start == -1 {
+		return addr
+	}
+	start += 3
+	delim := strings.Index(addr[:start], ":")
+	if delim == -1 {
+		return addr
+	}
+	delim += 1
+
+	if start+delim > end {
+		return addr // No password portion presented
+	}
+
+	return addr[:start+delim] + url.QueryEscape(addr[start+delim:end]) + addr[end:]
+}
+
 // SaveAddress writes new address to Git repository config.
 func (m *Mirror) SaveAddress(addr string) error {
 	configPath := m.Repo.GitConfigPath()
@@ -127,7 +155,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 		return fmt.Errorf("Load: %v", err)
 	}
 
-	cfg.Section("remote \"origin\"").Key("url").SetValue(addr)
+	cfg.Section("remote \"origin\"").Key("url").SetValue(escapeMirrorCredentials(addr))
 	return cfg.SaveToIndent(configPath, "\t")
 }
 
