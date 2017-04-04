@@ -16,7 +16,7 @@ h4,
 h5,
 .ui.header,
 .ui.input input,
-.ui.button {
+.ui.button:not(.label) {
   font-family: "PingFang SC", 'Hiragino Sans GB', "Helvetica Neue", "Microsoft YaHei", SimSun, Arial, Helvetica, sans-serif !important;
 }
 img {
