@@ -271,10 +271,7 @@ func NewCommitFileStatus() *CommitFileStatus {
 // GetCommitFileStatus returns file status of commit in given repository.
 func GetCommitFileStatus(repoPath, commitID string) (*CommitFileStatus, error) {
 	stdout, w := io.Pipe()
-	defer stdout.Close()
-
-	stderr := new(bytes.Buffer)
-
+	done := make(chan struct{})
 	fileStatus := NewCommitFileStatus()
 	go func() {
 		scanner := bufio.NewScanner(stdout)
@@ -293,12 +290,17 @@ func GetCommitFileStatus(repoPath, commitID string) (*CommitFileStatus, error) {
 				fileStatus.Modified = append(fileStatus.Modified, fields[1])
 			}
 		}
+		done <- struct{}{}
 	}()
 
-	if err := NewCommand("log", "-1", "--name-status", "--pretty=format:''", commitID).RunInDirPipeline(repoPath, w, stderr); err != nil {
+	stderr := new(bytes.Buffer)
+	err := NewCommand("log", "-1", "--name-status", "--pretty=format:''", commitID).RunInDirPipeline(repoPath, w, stderr)
+	w.Close() // Close writer to exit parsing goroutine
+	if err != nil {
 		return nil, concatenateError(err, stderr.String())
 	}
 
+	<-done
 	return fileStatus, nil
 }
 
