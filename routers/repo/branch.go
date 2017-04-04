@@ -61,6 +61,7 @@ func loadBranches(ctx *context.Context) []*Branch {
 		}
 	}
 
+	ctx.Data["AllowPullRequest"] = ctx.Repo.Repository.AllowsPulls()
 	return branches
 }
 

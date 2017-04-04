@@ -35,7 +35,7 @@
 							{{$timeSince := TimeSince .Commit.Committer.When $.Lang}}
 							<span class="ui text light grey">{{$.i18n.Tr "repo.branches.updated_by" $timeSince .Commit.Committer.Name | Safe}}</span>
 						</div>
-						{{if $.IsRepositoryWriter}}
+						{{if and $.IsRepositoryWriter $.AllowPullRequest}}
 							<div class="ui four wide column">
 								<a class="ui basic button" href="{{$.RepoLink}}/compare/{{$.DefaultBranch.Name}}...{{.Name}}"><i class="octicon octicon-git-pull-request"></i> {{$.i18n.Tr "repo.pulls.new"}}</a>
 							</div>
