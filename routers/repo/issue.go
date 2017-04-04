@@ -725,8 +725,8 @@ func UpdateIssueContent(ctx *context.Context) {
 		return
 	}
 
-	ctx.JSON(200, map[string]interface{}{
-		"content": markup.Markdown(issue.Content, ctx.Query("context"), ctx.Repo.Repository.ComposeMetas()),
+	ctx.JSON(200, map[string]string{
+		"content": string(markup.Markdown(issue.Content, ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
@@ -936,8 +936,8 @@ func UpdateCommentContent(ctx *context.Context) {
 		return
 	}
 
-	ctx.JSON(200, map[string]interface{}{
-		"content": markup.Markdown(comment.Content, ctx.Query("context"), ctx.Repo.Repository.ComposeMetas()),
+	ctx.JSON(200, map[string]string{
+		"content": string(markup.Markdown(comment.Content, ctx.Query("context"), ctx.Repo.Repository.ComposeMetas())),
 	})
 }
 
