@@ -85,9 +85,9 @@ func (ctx *Context) HTML(status int, name base.TplName) {
 	ctx.Context.HTML(status, string(name))
 }
 
-// Success responses template with status 200.
+// Success responses template with status http.StatusOK.
 func (c *Context) Success(name base.TplName) {
-	c.HTML(200, name)
+	c.HTML(http.StatusOK, name)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
@@ -97,15 +97,15 @@ func (ctx *Context) RenderWithErr(msg string, tpl base.TplName, f interface{}) {
 	}
 	ctx.Flash.ErrorMsg = msg
 	ctx.Data["Flash"] = ctx.Flash
-	ctx.HTML(200, tpl)
+	ctx.HTML(http.StatusOK, tpl)
 }
 
 // Handle handles and logs error by given status.
 func (ctx *Context) Handle(status int, title string, err error) {
 	switch status {
-	case 404:
+	case http.StatusNotFound:
 		ctx.Data["Title"] = "Page Not Found"
-	case 500:
+	case http.StatusInternalServerError:
 		ctx.Data["Title"] = "Internal Server Error"
 		log.Error(2, "%s: %v", title, err)
 		if !setting.ProdMode || (ctx.IsSigned && ctx.User.IsAdmin) {
@@ -115,21 +115,25 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	ctx.HTML(status, base.TplName(fmt.Sprintf("status/%d", status)))
 }
 
-// NotFound simply renders the 404 page.
+// NotFound renders the 404 page.
 func (ctx *Context) NotFound() {
-	ctx.Handle(404, "", nil)
+	ctx.Handle(http.StatusNotFound, "", nil)
+}
+
+// ServerError renders the 500 page.
+func (c *Context) ServerError(title string, err error) {
+	c.Handle(http.StatusInternalServerError, title, err)
 }
 
 // NotFoundOrServerError use error check function to determine if the error
 // is about not found. It responses with 404 status code for not found error,
 // or error context description for logging purpose of 500 server error.
-func (ctx *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
+func (c *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
 	if errck(err) {
-		ctx.NotFound()
+		c.NotFound()
 		return
 	}
-
-	ctx.Handle(500, title, err)
+	c.ServerError(title, err)
 }
 
 func (ctx *Context) HandleText(status int, title string) {
