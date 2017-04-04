@@ -22,9 +22,9 @@ import (
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/markup"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/markup"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 func NewFuncMap() []template.FuncMap {

@@ -10,9 +10,9 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/context"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (

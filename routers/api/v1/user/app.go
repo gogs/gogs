@@ -8,7 +8,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/pkg/context"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users#list-access-tokens-for-a-user

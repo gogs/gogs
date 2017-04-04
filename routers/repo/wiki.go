@@ -12,10 +12,10 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/form"
-	"github.com/gogits/gogs/modules/markup"
+	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/context"
+	"github.com/gogits/gogs/pkg/form"
+	"github.com/gogits/gogs/pkg/markup"
 )
 
 const (

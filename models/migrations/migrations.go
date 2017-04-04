@@ -13,7 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogits/gogs/pkg/base"
 )
 
 const _MIN_DB_VER = 10
@@ -105,7 +105,7 @@ Please save following instructions to somewhere and start working:
 Once finished downloading,
 
 1. Extract the archive and to upgrade steps as usual.
-2. Run it once. To verify, you should see some migration traces. 
+2. Run it once. To verify, you should see some migration traces.
 3. Once it starts web server successfully, stop it.
 4. Now it's time to put back the release archive you originally intent to upgrade.
 5. Enjoy!

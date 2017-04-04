@@ -7,7 +7,7 @@ package admin
 import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/pkg/context"
 )
 
 func GetRepositoryByParams(ctx *context.APIContext) *models.Repository {

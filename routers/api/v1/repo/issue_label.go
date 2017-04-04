@@ -9,7 +9,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/modules/context"
+	"github.com/gogits/gogs/pkg/context"
 )
 
 func ListIssueLabels(ctx *context.APIContext) {

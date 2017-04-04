@@ -16,8 +16,8 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 var (

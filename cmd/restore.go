@@ -16,7 +16,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 var Restore = cli.Command{
@@ -24,9 +24,9 @@ var Restore = cli.Command{
 	Usage: "Restore files and database from backup",
 	Description: `Restore imports all related files and database from a backup archive.
 The backup version must lower or equal to current Gogs version. You can also import
-backup from other database engines, which is useful for database migrating. 
+backup from other database engines, which is useful for database migrating.
 
-If corresponding files or database tables are not presented in the archive, they will 
+If corresponding files or database tables are not presented in the archive, they will
 be skipped and remian unchanged.`,
 	Action: runRestore,
 	Flags: []cli.Flag{

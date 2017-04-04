@@ -20,8 +20,8 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/modules/auth/ldap"
-	"github.com/gogits/gogs/modules/auth/pam"
+	"github.com/gogits/gogs/pkg/auth/ldap"
+	"github.com/gogits/gogs/pkg/auth/pam"
 )
 
 type LoginType int

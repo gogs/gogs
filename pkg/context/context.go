@@ -20,10 +20,10 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/form"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/pkg/auth"
+	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/form"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 // Context represents context of a request.
