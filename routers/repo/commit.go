@@ -179,14 +179,14 @@ func Diff(ctx *context.Context) {
 	ctx.HTML(200, DIFF)
 }
 
-func RawDiff(ctx *context.Context) {
+func RawDiff(c *context.Context) {
 	if err := git.GetRawDiff(
-		models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name),
-		ctx.Params(":sha"),
-		git.RawDiffType(ctx.Params(":ext")),
-		ctx.Resp,
+		models.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name),
+		c.Params(":sha"),
+		git.RawDiffType(c.Params(":ext")),
+		c.Resp,
 	); err != nil {
-		ctx.Handle(500, "GetRawDiff", err)
+		c.NotFoundOrServerError("GetRawDiff", git.IsErrNotExist, err)
 		return
 	}
 }
