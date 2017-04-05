@@ -11,7 +11,6 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/markup"
@@ -19,8 +18,8 @@ import (
 )
 
 const (
-	RELEASES    tool.TplName = "repo/release/list"
-	RELEASE_NEW tool.TplName = "repo/release/new"
+	RELEASES    = "repo/release/list"
+	RELEASE_NEW = "repo/release/new"
 )
 
 // calReleaseNumCommitsBehind calculates given release has how many commits behind release target.

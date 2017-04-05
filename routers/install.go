@@ -21,7 +21,6 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/cron"
 	"github.com/gogits/gogs/pkg/form"
@@ -30,11 +29,12 @@ import (
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/ssh"
 	"github.com/gogits/gogs/pkg/template/highlight"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/user"
 )
 
 const (
-	INSTALL tool.TplName = "install"
+	INSTALL = "install"
 )
 
 func checkRunMode() {

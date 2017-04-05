@@ -12,17 +12,16 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/markup"
 )
 
 const (
-	WIKI_START tool.TplName = "repo/wiki/start"
-	WIKI_VIEW  tool.TplName = "repo/wiki/view"
-	WIKI_NEW   tool.TplName = "repo/wiki/new"
-	WIKI_PAGES tool.TplName = "repo/wiki/pages"
+	WIKI_START = "repo/wiki/start"
+	WIKI_VIEW  = "repo/wiki/view"
+	WIKI_NEW   = "repo/wiki/new"
+	WIKI_PAGES = "repo/wiki/pages"
 )
 
 func MustEnableWiki(ctx *context.Context) {

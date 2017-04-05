@@ -14,25 +14,25 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
-	SETTINGS_PROFILE       tool.TplName = "user/settings/profile"
-	SETTINGS_AVATAR        tool.TplName = "user/settings/avatar"
-	SETTINGS_PASSWORD      tool.TplName = "user/settings/password"
-	SETTINGS_EMAILS        tool.TplName = "user/settings/email"
-	SETTINGS_SSH_KEYS      tool.TplName = "user/settings/sshkeys"
-	SETTINGS_SECURITY      tool.TplName = "user/settings/security"
-	SETTINGS_REPOSITORIES  tool.TplName = "user/settings/repositories"
-	SETTINGS_ORGANIZATIONS tool.TplName = "user/settings/organizations"
-	SETTINGS_APPLICATIONS  tool.TplName = "user/settings/applications"
-	SETTINGS_DELETE        tool.TplName = "user/settings/delete"
-	NOTIFICATION           tool.TplName = "user/notification"
+	SETTINGS_PROFILE       = "user/settings/profile"
+	SETTINGS_AVATAR        = "user/settings/avatar"
+	SETTINGS_PASSWORD      = "user/settings/password"
+	SETTINGS_EMAILS        = "user/settings/email"
+	SETTINGS_SSH_KEYS      = "user/settings/sshkeys"
+	SETTINGS_SECURITY      = "user/settings/security"
+	SETTINGS_REPOSITORIES  = "user/settings/repositories"
+	SETTINGS_ORGANIZATIONS = "user/settings/organizations"
+	SETTINGS_APPLICATIONS  = "user/settings/applications"
+	SETTINGS_DELETE        = "user/settings/delete"
+	NOTIFICATION           = "user/notification"
 )
 
 func Settings(c *context.Context) {

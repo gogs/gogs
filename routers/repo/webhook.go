@@ -16,16 +16,15 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	WEBHOOKS        tool.TplName = "repo/settings/webhook/base"
-	WEBHOOK_NEW     tool.TplName = "repo/settings/webhook/new"
-	ORG_WEBHOOK_NEW tool.TplName = "org/settings/webhook_new"
+	WEBHOOKS        = "repo/settings/webhook/base"
+	WEBHOOK_NEW     = "repo/settings/webhook/new"
+	ORG_WEBHOOK_NEW = "org/settings/webhook_new"
 )
 
 func Webhooks(ctx *context.Context) {
@@ -49,7 +48,7 @@ type OrgRepoCtx struct {
 	OrgID       int64
 	RepoID      int64
 	Link        string
-	NewTemplate tool.TplName
+	NewTemplate string
 }
 
 // getOrgRepoCtx determines whether this is a repo context or organization context.

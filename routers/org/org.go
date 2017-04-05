@@ -8,14 +8,13 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/form"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
+	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	CREATE tool.TplName = "org/create"
+	CREATE = "org/create"
 )
 
 func Create(ctx *context.Context) {

@@ -11,7 +11,6 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
@@ -20,9 +19,9 @@ import (
 )
 
 const (
-	USERS     tool.TplName = "admin/user/list"
-	USER_NEW  tool.TplName = "admin/user/new"
-	USER_EDIT tool.TplName = "admin/user/edit"
+	USERS     = "admin/user/list"
+	USER_NEW  = "admin/user/new"
+	USER_EDIT = "admin/user/edit"
 )
 
 func Users(ctx *context.Context) {

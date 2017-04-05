@@ -13,7 +13,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
@@ -21,11 +20,11 @@ import (
 )
 
 const (
-	SIGNIN          tool.TplName = "user/auth/signin"
-	SIGNUP          tool.TplName = "user/auth/signup"
-	ACTIVATE        tool.TplName = "user/auth/activate"
-	FORGOT_PASSWORD tool.TplName = "user/auth/forgot_passwd"
-	RESET_PASSWORD  tool.TplName = "user/auth/reset_passwd"
+	SIGNIN          = "user/auth/signin"
+	SIGNUP          = "user/auth/signup"
+	ACTIVATE        = "user/auth/activate"
+	FORGOT_PASSWORD = "user/auth/forgot_passwd"
+	RESET_PASSWORD  = "user/auth/reset_passwd"
 )
 
 // AutoSignIn reads cookie and try to auto-login.

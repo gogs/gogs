@@ -19,23 +19,23 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
-	ISSUES     tool.TplName = "repo/issue/list"
-	ISSUE_NEW  tool.TplName = "repo/issue/new"
-	ISSUE_VIEW tool.TplName = "repo/issue/view"
+	ISSUES     = "repo/issue/list"
+	ISSUE_NEW  = "repo/issue/new"
+	ISSUE_VIEW = "repo/issue/view"
 
-	LABELS tool.TplName = "repo/issue/labels"
+	LABELS = "repo/issue/labels"
 
-	MILESTONE      tool.TplName = "repo/issue/milestones"
-	MILESTONE_NEW  tool.TplName = "repo/issue/milestone_new"
-	MILESTONE_EDIT tool.TplName = "repo/issue/milestone_edit"
+	MILESTONE      = "repo/issue/milestones"
+	MILESTONE_NEW  = "repo/issue/milestone_new"
+	MILESTONE_EDIT = "repo/issue/milestone_edit"
 
 	ISSUE_TEMPLATE_KEY = "IssueTemplate"
 )

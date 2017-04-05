@@ -15,7 +15,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
@@ -23,13 +22,13 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS          tool.TplName = "repo/settings/options"
-	SETTINGS_COLLABORATION    tool.TplName = "repo/settings/collaboration"
-	SETTINGS_BRANCHES         tool.TplName = "repo/settings/branches"
-	SETTINGS_PROTECTED_BRANCH tool.TplName = "repo/settings/protected_branch"
-	SETTINGS_GITHOOKS         tool.TplName = "repo/settings/githooks"
-	SETTINGS_GITHOOK_EDIT     tool.TplName = "repo/settings/githook_edit"
-	SETTINGS_DEPLOY_KEYS      tool.TplName = "repo/settings/deploy_keys"
+	SETTINGS_OPTIONS          = "repo/settings/options"
+	SETTINGS_COLLABORATION    = "repo/settings/collaboration"
+	SETTINGS_BRANCHES         = "repo/settings/branches"
+	SETTINGS_PROTECTED_BRANCH = "repo/settings/protected_branch"
+	SETTINGS_GITHOOKS         = "repo/settings/githooks"
+	SETTINGS_GITHOOK_EDIT     = "repo/settings/githook_edit"
+	SETTINGS_DEPLOY_KEYS      = "repo/settings/deploy_keys"
 )
 
 func Settings(ctx *context.Context) {
