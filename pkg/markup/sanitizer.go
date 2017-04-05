@@ -20,14 +20,15 @@ type Sanitizer struct {
 	init   sync.Once
 }
 
-var sanitizer = &Sanitizer{}
+var sanitizer = &Sanitizer{
+	policy: bluemonday.UGCPolicy(),
+}
 
 // NewSanitizer initializes sanitizer with allowed attributes based on settings.
 // Multiple calls to this function will only create one instance of Sanitizer during
 // entire application lifecycle.
 func NewSanitizer() {
 	sanitizer.init.Do(func() {
-		sanitizer.policy = bluemonday.UGCPolicy()
 		// We only want to allow HighlightJS specific classes for code blocks
 		sanitizer.policy.AllowAttrs("class").Matching(regexp.MustCompile(`^language-\w+$`)).OnElements("code")
 
