@@ -212,18 +212,17 @@ func runWeb(ctx *cli.Context) error {
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).
 			Post(bindIgnErr(form.AddSSHKey{}), user.SettingsSSHKeysPost)
 		m.Post("/ssh/delete", user.DeleteSSHKey)
-		m.Combo("/applications").Get(user.SettingsApplications).
-			Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
-		m.Post("/applications/delete", user.SettingsDeleteApplication)
-
-		m.Group("/organizations", func() {
-			m.Get("", user.SettingsOrganizations)
-			m.Post("/leave", user.SettingsLeaveOrganization)
-		})
 		m.Group("/repositories", func() {
 			m.Get("", user.SettingsRepos)
 			m.Post("/leave", user.SettingsLeaveRepo)
 		})
+		m.Group("/organizations", func() {
+			m.Get("", user.SettingsOrganizations)
+			m.Post("/leave", user.SettingsLeaveOrganization)
+		})
+		m.Combo("/applications").Get(user.SettingsApplications).
+			Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
+		m.Post("/applications/delete", user.SettingsDeleteApplication)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
 	}, reqSignIn, func(ctx *context.Context) {
 		ctx.Data["PageIsUserSettings"] = true
