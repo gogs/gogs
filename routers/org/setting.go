@@ -11,7 +11,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS  base.TplName = "org/settings/options"
-	SETTINGS_DELETE   base.TplName = "org/settings/delete"
-	SETTINGS_WEBHOOKS base.TplName = "org/settings/webhooks"
+	SETTINGS_OPTIONS  tool.TplName = "org/settings/options"
+	SETTINGS_DELETE   tool.TplName = "org/settings/delete"
+	SETTINGS_WEBHOOKS tool.TplName = "org/settings/webhooks"
 )
 
 func Settings(ctx *context.Context) {

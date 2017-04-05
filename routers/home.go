@@ -8,17 +8,17 @@ import (
 	"github.com/Unknwon/paginater"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/routers/user"
 )
 
 const (
-	HOME                  base.TplName = "home"
-	EXPLORE_REPOS         base.TplName = "explore/repos"
-	EXPLORE_USERS         base.TplName = "explore/users"
-	EXPLORE_ORGANIZATIONS base.TplName = "explore/organizations"
+	HOME                  tool.TplName = "home"
+	EXPLORE_REPOS         tool.TplName = "explore/repos"
+	EXPLORE_USERS         tool.TplName = "explore/users"
+	EXPLORE_ORGANIZATIONS tool.TplName = "explore/organizations"
 )
 
 func Home(ctx *context.Context) {
@@ -84,7 +84,7 @@ type UserSearchOptions struct {
 	Ranger   func(int, int) ([]*models.User, error)
 	PageSize int
 	OrderBy  string
-	TplName  base.TplName
+	TplName  tool.TplName
 }
 
 func RenderUserSearch(ctx *context.Context, opts *UserSearchOptions) {

@@ -15,7 +15,7 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -128,6 +128,6 @@ func DeleteNoticesByIDs(ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	_, err := x.Where("id IN (" + strings.Join(base.Int64sToStrings(ids), ",") + ")").Delete(new(Notice))
+	_, err := x.Where("id IN (" + strings.Join(tool.Int64sToStrings(ids), ",") + ")").Delete(new(Notice))
 	return err
 }

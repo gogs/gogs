@@ -10,7 +10,7 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
@@ -22,8 +22,8 @@ func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 		buf = buf[:n]
 	}
 
-	if !base.IsTextFile(buf) {
-		if !base.IsImageFile(buf) {
+	if !tool.IsTextFile(buf) {
+		if !tool.IsImageFile(buf) {
 			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
 			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}

@@ -14,7 +14,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
@@ -22,18 +22,17 @@ import (
 )
 
 const (
-	SETTINGS_PROFILE       base.TplName = "user/settings/profile"
-	SETTINGS_AVATAR        base.TplName = "user/settings/avatar"
-	SETTINGS_PASSWORD      base.TplName = "user/settings/password"
-	SETTINGS_EMAILS        base.TplName = "user/settings/email"
-	SETTINGS_SSH_KEYS      base.TplName = "user/settings/sshkeys"
-	SETTINGS_SOCIAL        base.TplName = "user/settings/social"
-	SETTINGS_APPLICATIONS  base.TplName = "user/settings/applications"
-	SETTINGS_ORGANIZATIONS base.TplName = "user/settings/organizations"
-	SETTINGS_REPOSITORIES  base.TplName = "user/settings/repositories"
-	SETTINGS_DELETE        base.TplName = "user/settings/delete"
-	NOTIFICATION           base.TplName = "user/notification"
-	SECURITY               base.TplName = "user/security"
+	SETTINGS_PROFILE       tool.TplName = "user/settings/profile"
+	SETTINGS_AVATAR        tool.TplName = "user/settings/avatar"
+	SETTINGS_PASSWORD      tool.TplName = "user/settings/password"
+	SETTINGS_EMAILS        tool.TplName = "user/settings/email"
+	SETTINGS_SSH_KEYS      tool.TplName = "user/settings/sshkeys"
+	SETTINGS_SECURITY      tool.TplName = "user/settings/security"
+	SETTINGS_REPOSITORIES  tool.TplName = "user/settings/repositories"
+	SETTINGS_ORGANIZATIONS tool.TplName = "user/settings/organizations"
+	SETTINGS_APPLICATIONS  tool.TplName = "user/settings/applications"
+	SETTINGS_DELETE        tool.TplName = "user/settings/delete"
+	NOTIFICATION           tool.TplName = "user/notification"
 )
 
 func Settings(c *context.Context) {
@@ -116,7 +115,7 @@ func SettingsPost(ctx *context.Context, f form.UpdateProfile) {
 func UpdateAvatarSetting(ctx *context.Context, f form.Avatar, ctxUser *models.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
-		ctxUser.Avatar = base.EncodeMD5(f.Gravatar)
+		ctxUser.Avatar = tool.EncodeMD5(f.Gravatar)
 		ctxUser.AvatarEmail = f.Gravatar
 	}
 
@@ -131,7 +130,7 @@ func UpdateAvatarSetting(ctx *context.Context, f form.Avatar, ctxUser *models.Us
 		if err != nil {
 			return fmt.Errorf("ioutil.ReadAll: %v", err)
 		}
-		if !base.IsImageFile(data) {
+		if !tool.IsImageFile(data) {
 			return errors.New(ctx.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxUser.UploadAvatar(data); err != nil {

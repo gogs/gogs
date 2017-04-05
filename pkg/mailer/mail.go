@@ -12,21 +12,21 @@ import (
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	MAIL_AUTH_ACTIVATE        base.TplName = "auth/activate"
-	MAIL_AUTH_ACTIVATE_EMAIL  base.TplName = "auth/activate_email"
-	MAIL_AUTH_RESET_PASSWORD  base.TplName = "auth/reset_passwd"
-	MAIL_AUTH_REGISTER_NOTIFY base.TplName = "auth/register_notify"
+	MAIL_AUTH_ACTIVATE        tool.TplName = "auth/activate"
+	MAIL_AUTH_ACTIVATE_EMAIL  tool.TplName = "auth/activate_email"
+	MAIL_AUTH_RESET_PASSWORD  tool.TplName = "auth/reset_passwd"
+	MAIL_AUTH_REGISTER_NOTIFY tool.TplName = "auth/register_notify"
 
-	MAIL_ISSUE_COMMENT base.TplName = "issue/comment"
-	MAIL_ISSUE_MENTION base.TplName = "issue/mention"
+	MAIL_ISSUE_COMMENT tool.TplName = "issue/comment"
+	MAIL_ISSUE_MENTION tool.TplName = "issue/mention"
 
-	MAIL_NOTIFY_COLLABORATOR base.TplName = "notify/collaborator"
+	MAIL_NOTIFY_COLLABORATOR tool.TplName = "notify/collaborator"
 )
 
 type MailRender interface {
@@ -79,7 +79,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(c *macaron.Context, u User, tpl base.TplName, code, subject, info string) {
+func SendUserMail(c *macaron.Context, u User, tpl tool.TplName, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   setting.Service.ActiveCodeLives / 60,
@@ -172,7 +172,7 @@ func composeTplData(subject, body, link string) map[string]interface{} {
 	return data
 }
 
-func composeIssueMessage(issue Issue, repo Repository, doer User, tplName base.TplName, tos []string, info string) *Message {
+func composeIssueMessage(issue Issue, repo Repository, doer User, tplName tool.TplName, tos []string, info string) *Message {
 	subject := issue.MailSubject()
 	body := string(markup.RenderSpecialLink([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())

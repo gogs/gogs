@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package base
+package tool
 
 const DOC_URL = "https://github.com/gogits/go-gogs-client/wiki"
 

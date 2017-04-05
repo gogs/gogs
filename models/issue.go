@@ -16,7 +16,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -1213,7 +1213,7 @@ func GetIssueStats(opts *IssueStatsOptions) *IssueStats {
 		sess := x.Where("issue.repo_id = ?", opts.RepoID).And("is_pull = ?", opts.IsPull)
 
 		if len(opts.Labels) > 0 && opts.Labels != "0" {
-			labelIDs := base.StringsToInt64s(strings.Split(opts.Labels, ","))
+			labelIDs := tool.StringsToInt64s(strings.Split(opts.Labels, ","))
 			if len(labelIDs) > 0 {
 				sess.Join("INNER", "issue_label", "issue.id = issue_id").In("label_id", labelIDs)
 			}

@@ -12,13 +12,13 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 )
 
 const (
-	BRANCHES_OVERVIEW base.TplName = "repo/branches/overview"
-	BRANCHES_ALL      base.TplName = "repo/branches/all"
+	BRANCHES_OVERVIEW tool.TplName = "repo/branches/overview"
+	BRANCHES_ALL      tool.TplName = "repo/branches/all"
 )
 
 type Branch struct {

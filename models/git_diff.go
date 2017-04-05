@@ -17,7 +17,7 @@ import (
 
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/template/highlight"
 )
@@ -145,7 +145,7 @@ func NewDiff(gitDiff *git.Diff) *Diff {
 			}
 		}
 
-		charsetLabel, err := base.DetectEncoding(buf.Bytes())
+		charsetLabel, err := tool.DetectEncoding(buf.Bytes())
 		if charsetLabel != "UTF-8" && err == nil {
 			encoding, _ := charset.Lookup(charsetLabel)
 			if encoding != nil {

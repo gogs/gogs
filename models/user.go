@@ -31,7 +31,7 @@ import (
 
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/avatar"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -191,7 +191,7 @@ func (u *User) HTMLURL() string {
 
 // GenerateEmailActivateCode generates an activate code based on user information and given e-mail.
 func (u *User) GenerateEmailActivateCode(email string) string {
-	code := base.CreateTimeLimitCode(
+	code := tool.CreateTimeLimitCode(
 		com.ToStr(u.ID)+email+u.LowerName+u.Passwd+u.Rands,
 		setting.Service.ActiveCodeLives, nil)
 
@@ -262,7 +262,7 @@ func (u *User) RelAvatarLink() string {
 
 		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.ID)
 	}
-	return base.AvatarLink(u.AvatarEmail)
+	return tool.AvatarLink(u.AvatarEmail)
 }
 
 // AvatarLink returns user avatar absolute link.
@@ -462,7 +462,7 @@ func (u *User) DisplayName() string {
 }
 
 func (u *User) ShortName(length int) string {
-	return base.EllipsisString(u.Name, length)
+	return tool.EllipsisString(u.Name, length)
 }
 
 // IsMailable checks if a user is elegible
@@ -484,7 +484,7 @@ func IsUserExist(uid int64, name string) (bool, error) {
 
 // GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() (string, error) {
-	return base.GetRandomString(10)
+	return tool.GetRandomString(10)
 }
 
 // NewGhostUser creates and returns a fake user for someone has deleted his/her account.
@@ -553,7 +553,7 @@ func CreateUser(u *User) (err error) {
 
 	u.LowerName = strings.ToLower(u.Name)
 	u.AvatarEmail = u.Email
-	u.Avatar = base.HashEmail(u.AvatarEmail)
+	u.Avatar = tool.HashEmail(u.AvatarEmail)
 	if u.Rands, err = GetUserSalt(); err != nil {
 		return err
 	}
@@ -596,12 +596,12 @@ func Users(page, pageSize int) ([]*User, error) {
 
 // get user by erify code
 func getVerifyUser(code string) (user *User) {
-	if len(code) <= base.TimeLimitCodeLength {
+	if len(code) <= tool.TimeLimitCodeLength {
 		return nil
 	}
 
 	// use tail hex username query user
-	hexStr := code[base.TimeLimitCodeLength:]
+	hexStr := code[tool.TimeLimitCodeLength:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = GetUserByName(string(b)); user != nil {
 			return user
@@ -618,10 +618,10 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 	if user = getVerifyUser(code); user != nil {
 		// time limit code
-		prefix := code[:base.TimeLimitCodeLength]
+		prefix := code[:tool.TimeLimitCodeLength]
 		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Passwd + user.Rands
 
-		if base.VerifyTimeLimitCode(data, minutes, prefix) {
+		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
 			return user
 		}
 	}
@@ -634,10 +634,10 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 	if user := getVerifyUser(code); user != nil {
 		// time limit code
-		prefix := code[:base.TimeLimitCodeLength]
+		prefix := code[:tool.TimeLimitCodeLength]
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Passwd + user.Rands
 
-		if base.VerifyTimeLimitCode(data, minutes, prefix) {
+		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
 			emailAddress := &EmailAddress{Email: email}
 			if has, _ := x.Get(emailAddress); has {
 				return emailAddress
@@ -696,13 +696,13 @@ func updateUser(e Engine, u *User) error {
 		if len(u.AvatarEmail) == 0 {
 			u.AvatarEmail = u.Email
 		}
-		u.Avatar = base.HashEmail(u.AvatarEmail)
+		u.Avatar = tool.HashEmail(u.AvatarEmail)
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
-	u.Location = base.TruncateString(u.Location, 255)
-	u.Website = base.TruncateString(u.Website, 255)
-	u.Description = base.TruncateString(u.Description, 255)
+	u.Location = tool.TruncateString(u.Location, 255)
+	u.Website = tool.TruncateString(u.Website, 255)
+	u.Description = tool.TruncateString(u.Description, 255)
 
 	_, err := e.Id(u.ID).AllCols().Update(u)
 	return err

@@ -15,7 +15,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/cron"
 	"github.com/gogits/gogs/pkg/mailer"
@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	DASHBOARD base.TplName = "admin/dashboard"
-	CONFIG    base.TplName = "admin/config"
-	MONITOR   base.TplName = "admin/monitor"
+	DASHBOARD tool.TplName = "admin/dashboard"
+	CONFIG    tool.TplName = "admin/config"
+	MONITOR   tool.TplName = "admin/monitor"
 )
 
 var (
@@ -75,37 +75,37 @@ var sysStatus struct {
 }
 
 func updateSystemStatus() {
-	sysStatus.Uptime = base.TimeSincePro(startTime)
+	sysStatus.Uptime = tool.TimeSincePro(startTime)
 
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
 	sysStatus.NumGoroutine = runtime.NumGoroutine()
 
-	sysStatus.MemAllocated = base.FileSize(int64(m.Alloc))
-	sysStatus.MemTotal = base.FileSize(int64(m.TotalAlloc))
-	sysStatus.MemSys = base.FileSize(int64(m.Sys))
+	sysStatus.MemAllocated = tool.FileSize(int64(m.Alloc))
+	sysStatus.MemTotal = tool.FileSize(int64(m.TotalAlloc))
+	sysStatus.MemSys = tool.FileSize(int64(m.Sys))
 	sysStatus.Lookups = m.Lookups
 	sysStatus.MemMallocs = m.Mallocs
 	sysStatus.MemFrees = m.Frees
 
-	sysStatus.HeapAlloc = base.FileSize(int64(m.HeapAlloc))
-	sysStatus.HeapSys = base.FileSize(int64(m.HeapSys))
-	sysStatus.HeapIdle = base.FileSize(int64(m.HeapIdle))
-	sysStatus.HeapInuse = base.FileSize(int64(m.HeapInuse))
-	sysStatus.HeapReleased = base.FileSize(int64(m.HeapReleased))
+	sysStatus.HeapAlloc = tool.FileSize(int64(m.HeapAlloc))
+	sysStatus.HeapSys = tool.FileSize(int64(m.HeapSys))
+	sysStatus.HeapIdle = tool.FileSize(int64(m.HeapIdle))
+	sysStatus.HeapInuse = tool.FileSize(int64(m.HeapInuse))
+	sysStatus.HeapReleased = tool.FileSize(int64(m.HeapReleased))
 	sysStatus.HeapObjects = m.HeapObjects
 
-	sysStatus.StackInuse = base.FileSize(int64(m.StackInuse))
-	sysStatus.StackSys = base.FileSize(int64(m.StackSys))
-	sysStatus.MSpanInuse = base.FileSize(int64(m.MSpanInuse))
-	sysStatus.MSpanSys = base.FileSize(int64(m.MSpanSys))
-	sysStatus.MCacheInuse = base.FileSize(int64(m.MCacheInuse))
-	sysStatus.MCacheSys = base.FileSize(int64(m.MCacheSys))
-	sysStatus.BuckHashSys = base.FileSize(int64(m.BuckHashSys))
-	sysStatus.GCSys = base.FileSize(int64(m.GCSys))
-	sysStatus.OtherSys = base.FileSize(int64(m.OtherSys))
+	sysStatus.StackInuse = tool.FileSize(int64(m.StackInuse))
+	sysStatus.StackSys = tool.FileSize(int64(m.StackSys))
+	sysStatus.MSpanInuse = tool.FileSize(int64(m.MSpanInuse))
+	sysStatus.MSpanSys = tool.FileSize(int64(m.MSpanSys))
+	sysStatus.MCacheInuse = tool.FileSize(int64(m.MCacheInuse))
+	sysStatus.MCacheSys = tool.FileSize(int64(m.MCacheSys))
+	sysStatus.BuckHashSys = tool.FileSize(int64(m.BuckHashSys))
+	sysStatus.GCSys = tool.FileSize(int64(m.GCSys))
+	sysStatus.OtherSys = tool.FileSize(int64(m.OtherSys))
 
-	sysStatus.NextGC = base.FileSize(int64(m.NextGC))
+	sysStatus.NextGC = tool.FileSize(int64(m.NextGC))
 	sysStatus.LastGC = fmt.Sprintf("%.1fs", float64(time.Now().UnixNano()-int64(m.LastGC))/1000/1000/1000)
 	sysStatus.PauseTotalNs = fmt.Sprintf("%.1fs", float64(m.PauseTotalNs)/1000/1000/1000)
 	sysStatus.PauseNs = fmt.Sprintf("%.3fs", float64(m.PauseNs[(m.NumGC+255)%256])/1000/1000/1000)

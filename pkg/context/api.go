@@ -12,7 +12,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -37,7 +37,7 @@ func (ctx *APIContext) Error(status int, title string, obj interface{}) {
 
 	ctx.JSON(status, map[string]string{
 		"message": message,
-		"url":     base.DOC_URL,
+		"url":     tool.DOC_URL,
 	})
 }
 

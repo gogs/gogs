@@ -15,7 +15,7 @@ import (
 
 	"github.com/gogits/git-module"
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
@@ -23,10 +23,10 @@ import (
 )
 
 const (
-	EDIT_FILE         base.TplName = "repo/editor/edit"
-	EDIT_DIFF_PREVIEW base.TplName = "repo/editor/diff_preview"
-	DELETE_FILE       base.TplName = "repo/editor/delete"
-	UPLOAD_FILE       base.TplName = "repo/editor/upload"
+	EDIT_FILE         tool.TplName = "repo/editor/edit"
+	EDIT_DIFF_PREVIEW tool.TplName = "repo/editor/diff_preview"
+	DELETE_FILE       tool.TplName = "repo/editor/delete"
+	UPLOAD_FILE       tool.TplName = "repo/editor/upload"
 )
 
 // getParentTreeFields returns list of parent tree names and corresponding tree paths
@@ -80,7 +80,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		buf = buf[:n]
 
 		// Only text file are editable online.
-		if !base.IsTextFile(buf) {
+		if !tool.IsTextFile(buf) {
 			ctx.Handle(404, "", nil)
 			return
 		}

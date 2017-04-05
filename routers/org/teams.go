@@ -12,16 +12,16 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 )
 
 const (
-	TEAMS             base.TplName = "org/team/teams"
-	TEAM_NEW          base.TplName = "org/team/new"
-	TEAM_MEMBERS      base.TplName = "org/team/members"
-	TEAM_REPOSITORIES base.TplName = "org/team/repositories"
+	TEAMS             tool.TplName = "org/team/teams"
+	TEAM_NEW          tool.TplName = "org/team/new"
+	TEAM_MEMBERS      tool.TplName = "org/team/members"
+	TEAM_REPOSITORIES tool.TplName = "org/team/repositories"
 )
 
 func Teams(ctx *context.Context) {

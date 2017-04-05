@@ -11,7 +11,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/gogits/git-module"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 type Branch struct {
@@ -149,10 +149,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	}
 
 	hasUsersChanged := false
-	validUserIDs := base.StringsToInt64s(strings.Split(protectBranch.WhitelistUserIDs, ","))
+	validUserIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistUserIDs, ","))
 	if protectBranch.WhitelistUserIDs != whitelistUserIDs {
 		hasUsersChanged = true
-		userIDs := base.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
+		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
 		validUserIDs = make([]int64, 0, len(userIDs))
 		for _, userID := range userIDs {
 			has, err := HasAccess(userID, repo, ACCESS_MODE_WRITE)
@@ -165,14 +165,14 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 			validUserIDs = append(validUserIDs, userID)
 		}
 
-		protectBranch.WhitelistUserIDs = strings.Join(base.Int64sToStrings(validUserIDs), ",")
+		protectBranch.WhitelistUserIDs = strings.Join(tool.Int64sToStrings(validUserIDs), ",")
 	}
 
 	hasTeamsChanged := false
-	validTeamIDs := base.StringsToInt64s(strings.Split(protectBranch.WhitelistTeamIDs, ","))
+	validTeamIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistTeamIDs, ","))
 	if protectBranch.WhitelistTeamIDs != whitelistTeamIDs {
 		hasTeamsChanged = true
-		teamIDs := base.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
+		teamIDs := tool.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
 		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, ACCESS_MODE_WRITE)
 		if err != nil {
 			return fmt.Errorf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
@@ -184,7 +184,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 			}
 		}
 
-		protectBranch.WhitelistTeamIDs = strings.Join(base.Int64sToStrings(validTeamIDs), ",")
+		protectBranch.WhitelistTeamIDs = strings.Join(tool.Int64sToStrings(validTeamIDs), ",")
 	}
 
 	// Make sure protectBranch.ID is not 0 for whitelists

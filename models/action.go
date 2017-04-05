@@ -21,7 +21,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -108,7 +108,7 @@ func (a *Action) GetActUserName() string {
 }
 
 func (a *Action) ShortActUserName() string {
-	return base.EllipsisString(a.ActUserName, 20)
+	return tool.EllipsisString(a.ActUserName, 20)
 }
 
 func (a *Action) GetRepoUserName() string {
@@ -116,7 +116,7 @@ func (a *Action) GetRepoUserName() string {
 }
 
 func (a *Action) ShortRepoUserName() string {
-	return base.EllipsisString(a.RepoUserName, 20)
+	return tool.EllipsisString(a.RepoUserName, 20)
 }
 
 func (a *Action) GetRepoName() string {
@@ -124,7 +124,7 @@ func (a *Action) GetRepoName() string {
 }
 
 func (a *Action) ShortRepoName() string {
-	return base.EllipsisString(a.RepoName, 33)
+	return tool.EllipsisString(a.RepoName, 33)
 }
 
 func (a *Action) GetRepoPath() string {
@@ -305,7 +305,7 @@ func (push *PushCommits) AvatarLink(email string) string {
 	if !ok {
 		u, err := GetUserByEmail(email)
 		if err != nil {
-			push.avatars[email] = base.AvatarLink(email)
+			push.avatars[email] = tool.AvatarLink(email)
 			if !errors.IsUserNotExist(err) {
 				log.Error(4, "GetUserByEmail: %v", err)
 			}

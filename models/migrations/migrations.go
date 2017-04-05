@@ -13,7 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const _MIN_DB_VER = 10
@@ -159,10 +159,10 @@ func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	}
 
 	for _, org := range orgs {
-		if org.Rands, err = base.GetRandomString(10); err != nil {
+		if org.Rands, err = tool.GetRandomString(10); err != nil {
 			return err
 		}
-		if org.Salt, err = base.GetRandomString(10); err != nil {
+		if org.Salt, err = tool.GetRandomString(10); err != nil {
 			return err
 		}
 		if _, err = sess.Id(org.ID).Update(org); err != nil {

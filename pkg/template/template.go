@@ -22,7 +22,7 @@ import (
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
 )
@@ -59,14 +59,14 @@ func NewFuncMap() []template.FuncMap {
 		"LoadTimes": func(startTime time.Time) string {
 			return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
 		},
-		"AvatarLink":   base.AvatarLink,
+		"AvatarLink":   tool.AvatarLink,
 		"Safe":         Safe,
 		"Sanitize":     bluemonday.UGCPolicy().Sanitize,
 		"Str2html":     Str2html,
-		"TimeSince":    base.TimeSince,
-		"RawTimeSince": base.RawTimeSince,
-		"FileSize":     base.FileSize,
-		"Subtract":     base.Subtract,
+		"TimeSince":    tool.TimeSince,
+		"RawTimeSince": tool.RawTimeSince,
+		"FileSize":     tool.FileSize,
+		"Subtract":     tool.Subtract,
 		"Add": func(a, b int) int {
 			return a + b
 		},
@@ -91,13 +91,13 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return str[start:end]
 		},
-		"Join":              strings.Join,
-		"EllipsisString":    base.EllipsisString,
-		"DiffTypeToStr":     DiffTypeToStr,
-		"DiffLineTypeToStr": DiffLineTypeToStr,
-		"Sha1":              Sha1,
-		"ShortSha":          base.ShortSha,
-		"MD5":               base.EncodeMD5,
+		"Join":                  strings.Join,
+		"EllipsisString":        tool.EllipsisString,
+		"DiffTypeToStr":         DiffTypeToStr,
+		"DiffLineTypeToStr":     DiffLineTypeToStr,
+		"Sha1":                  Sha1,
+		"ShortSha":              tool.ShortSha,
+		"MD5":                   tool.EncodeMD5,
 		"ActionContent2Commits": ActionContent2Commits,
 		"EscapePound":           EscapePound,
 		"RenderCommitMessage":   RenderCommitMessage,
@@ -142,11 +142,11 @@ func List(l *list.List) chan interface{} {
 }
 
 func Sha1(str string) string {
-	return base.EncodeSha1(str)
+	return tool.EncodeSha1(str)
 }
 
 func ToUTF8WithErr(content []byte) (error, string) {
-	charsetLabel, err := base.DetectEncoding(content)
+	charsetLabel, err := tool.DetectEncoding(content)
 	if err != nil {
 		return err, ""
 	} else if charsetLabel == "UTF-8" {
