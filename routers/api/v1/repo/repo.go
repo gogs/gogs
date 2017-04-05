@@ -270,7 +270,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 				log.Error(4, "DeleteRepository: %v", errDelete)
 			}
 		}
-		ctx.Error(500, "MigrateRepository", models.HandleCloneUserCredentials(err.Error(), true))
+		ctx.Error(500, "MigrateRepository", models.HandleMirrorCredentials(err.Error(), true))
 		return
 	}
 

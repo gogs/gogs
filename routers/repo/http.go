@@ -111,7 +111,6 @@ func HTTPContexter() macaron.Handler {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
-		fmt.Println(authUsername, authPassword)
 
 		authUser, err := models.UserSignIn(authUsername, authPassword)
 		if err != nil && !errors.IsUserNotExist(err) {
