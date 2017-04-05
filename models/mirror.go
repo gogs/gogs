@@ -71,6 +71,46 @@ func (m *Mirror) ScheduleNextUpdate() {
 	m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
 }
 
+// findPasswordInMirrorAddress returns start (inclusive) and end index (exclusive)
+// of password portion of credentials in given mirror address.
+// It returns a boolean value to indicate whether password portion is found.
+func findPasswordInMirrorAddress(addr string) (start int, end int, found bool) {
+	// Find end of credentials (start of path)
+	end = strings.LastIndex(addr, "@")
+	if end == -1 {
+		return -1, -1, false
+	}
+
+	// Find delimiter of credentials (end of username)
+	start = strings.Index(addr, "://")
+	if start == -1 {
+		return -1, -1, false
+	}
+	start += 3
+	delim := strings.Index(addr[start:], ":")
+	if delim == -1 {
+		return -1, -1, false
+	}
+	delim += 1
+
+	if start+delim >= end {
+		return -1, -1, false // No password portion presented
+	}
+
+	return start + delim, end, true
+}
+
+// unescapeMirrorCredentials returns mirror address with unescaped credentials.
+func unescapeMirrorCredentials(addr string) string {
+	start, end, found := findPasswordInMirrorAddress(addr)
+	if !found {
+		return addr
+	}
+
+	password, _ := url.QueryUnescape(addr[start:end])
+	return addr[:start] + password + addr[end:]
+}
+
 func (m *Mirror) readAddress() {
 	if len(m.address) > 0 {
 		return
@@ -81,7 +121,7 @@ func (m *Mirror) readAddress() {
 		log.Error(2, "Load: %v", err)
 		return
 	}
-	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
+	m.address = unescapeMirrorCredentials(cfg.Section("remote \"origin\"").Key("url").Value())
 }
 
 // HandleCloneUserCredentials replaces user credentials from HTTP/HTTPS URL
@@ -122,29 +162,12 @@ func (m *Mirror) FullAddress() string {
 
 // escapeCredentials returns mirror address with escaped credentials.
 func escapeMirrorCredentials(addr string) string {
-	// Find end of credentials (start of path)
-	end := strings.LastIndex(addr, "@")
-	if end == -1 {
+	start, end, found := findPasswordInMirrorAddress(addr)
+	if !found {
 		return addr
 	}
 
-	// Find delimiter of credentials (end of username)
-	start := strings.Index(addr, "://")
-	if start == -1 {
-		return addr
-	}
-	start += 3
-	delim := strings.Index(addr[:start], ":")
-	if delim == -1 {
-		return addr
-	}
-	delim += 1
-
-	if start+delim > end {
-		return addr // No password portion presented
-	}
-
-	return addr[:start+delim] + url.QueryEscape(addr[start+delim:end]) + addr[end:]
+	return addr[:start] + url.QueryEscape(addr[start:end]) + addr[end:]
 }
 
 // SaveAddress writes new address to Git repository config.
