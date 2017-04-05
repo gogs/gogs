@@ -13,15 +13,15 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/routers/repo"
 )
 
 const (
-	FOLLOWERS base.TplName = "user/meta/followers"
-	STARS     base.TplName = "user/meta/stars"
+	FOLLOWERS tool.TplName = "user/meta/followers"
+	STARS     tool.TplName = "user/meta/stars"
 )
 
 func GetUserByName(ctx *context.Context, name string) *models.User {

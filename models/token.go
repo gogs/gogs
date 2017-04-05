@@ -10,7 +10,7 @@ import (
 	"github.com/go-xorm/xorm"
 	gouuid "github.com/satori/go.uuid"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 // AccessToken represents a personal access token.
@@ -49,7 +49,7 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
-	t.Sha1 = base.EncodeSha1(gouuid.NewV4().String())
+	t.Sha1 = tool.EncodeSha1(gouuid.NewV4().String())
 	_, err := x.Insert(t)
 	return err
 }

@@ -19,7 +19,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/markup"
@@ -27,15 +27,15 @@ import (
 )
 
 const (
-	ISSUES     base.TplName = "repo/issue/list"
-	ISSUE_NEW  base.TplName = "repo/issue/new"
-	ISSUE_VIEW base.TplName = "repo/issue/view"
+	ISSUES     tool.TplName = "repo/issue/list"
+	ISSUE_NEW  tool.TplName = "repo/issue/new"
+	ISSUE_VIEW tool.TplName = "repo/issue/view"
 
-	LABELS base.TplName = "repo/issue/labels"
+	LABELS tool.TplName = "repo/issue/labels"
 
-	MILESTONE      base.TplName = "repo/issue/milestones"
-	MILESTONE_NEW  base.TplName = "repo/issue/milestone_new"
-	MILESTONE_EDIT base.TplName = "repo/issue/milestone_edit"
+	MILESTONE      tool.TplName = "repo/issue/milestones"
+	MILESTONE_NEW  tool.TplName = "repo/issue/milestone_new"
+	MILESTONE_EDIT tool.TplName = "repo/issue/milestone_edit"
 
 	ISSUE_TEMPLATE_KEY = "IssueTemplate"
 )
@@ -371,8 +371,8 @@ func ValidateRepoMetas(ctx *context.Context, f form.NewIssue) ([]int64, int64, i
 	}
 
 	// Check labels.
-	labelIDs := base.StringsToInt64s(strings.Split(f.LabelIDs, ","))
-	labelIDMark := base.Int64sToMap(labelIDs)
+	labelIDs := tool.StringsToInt64s(strings.Split(f.LabelIDs, ","))
+	labelIDMark := tool.Int64sToMap(labelIDs)
 	hasSelected := false
 	for i := range labels {
 		if labelIDMark[labels[i].ID] {

@@ -18,7 +18,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
@@ -27,10 +27,10 @@ import (
 )
 
 const (
-	BARE     base.TplName = "repo/bare"
-	HOME     base.TplName = "repo/home"
-	WATCHERS base.TplName = "repo/watchers"
-	FORKS    base.TplName = "repo/forks"
+	BARE     tool.TplName = "repo/bare"
+	HOME     tool.TplName = "repo/home"
+	WATCHERS tool.TplName = "repo/watchers"
+	FORKS    tool.TplName = "repo/forks"
 )
 
 func renderDirectory(ctx *context.Context, treeLink string) {
@@ -79,7 +79,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 		n, _ := dataRc.Read(buf)
 		buf = buf[:n]
 
-		isTextFile := base.IsTextFile(buf)
+		isTextFile := tool.IsTextFile(buf)
 		ctx.Data["IsTextFile"] = isTextFile
 		ctx.Data["FileName"] = readmeFile.Name()
 		if isTextFile {
@@ -134,7 +134,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 	n, _ := dataRc.Read(buf)
 	buf = buf[:n]
 
-	isTextFile := base.IsTextFile(buf)
+	isTextFile := tool.IsTextFile(buf)
 	ctx.Data["IsTextFile"] = isTextFile
 
 	// Assume file is not editable first.
@@ -196,11 +196,11 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 			ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.fork_before_edit")
 		}
 
-	case base.IsPDFFile(buf):
+	case tool.IsPDFFile(buf):
 		ctx.Data["IsPDFFile"] = true
-	case base.IsVideoFile(buf):
+	case tool.IsVideoFile(buf):
 		ctx.Data["IsVideoFile"] = true
-	case base.IsImageFile(buf):
+	case tool.IsImageFile(buf):
 		ctx.Data["IsImageFile"] = true
 	}
 
@@ -304,7 +304,7 @@ func Home(ctx *context.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*models.User, error), tpl base.TplName) {
+func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*models.User, error), tpl tool.TplName) {
 	page := ctx.QueryInt("page")
 	if page <= 0 {
 		page = 1

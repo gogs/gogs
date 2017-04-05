@@ -13,16 +13,16 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/pkg/auth/ldap"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	AUTHS     base.TplName = "admin/auth/list"
-	AUTH_NEW  base.TplName = "admin/auth/new"
-	AUTH_EDIT base.TplName = "admin/auth/edit"
+	AUTHS     tool.TplName = "admin/auth/list"
+	AUTH_NEW  tool.TplName = "admin/auth/new"
+	AUTH_EDIT tool.TplName = "admin/auth/edit"
 )
 
 func Authentications(ctx *context.Context) {

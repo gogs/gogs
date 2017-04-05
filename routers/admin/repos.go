@@ -9,13 +9,13 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	REPOS base.TplName = "admin/repo/list"
+	REPOS tool.TplName = "admin/repo/list"
 )
 
 func Repos(ctx *context.Context) {

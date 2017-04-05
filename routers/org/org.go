@@ -9,13 +9,13 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/pkg/form"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	CREATE base.TplName = "org/create"
+	CREATE tool.TplName = "org/create"
 )
 
 func Create(ctx *context.Context) {

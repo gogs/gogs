@@ -23,7 +23,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
@@ -106,7 +106,7 @@ func HTTPContexter() macaron.Handler {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
-		authUsername, authPassword, err := base.BasicAuthDecode(auths[1])
+		authUsername, authPassword, err := tool.BasicAuthDecode(auths[1])
 		if err != nil {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
@@ -229,7 +229,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
 		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
 		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
-		ENV_REPO_OWNER_SALT_MD5 + "=" + base.EncodeMD5(opts.OwnerSalt),
+		ENV_REPO_OWNER_SALT_MD5 + "=" + tool.EncodeMD5(opts.OwnerSalt),
 		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
 		ENV_REPO_NAME + "=" + opts.RepoName,
 		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + path.Join(opts.RepoPath, "custom_hooks"),

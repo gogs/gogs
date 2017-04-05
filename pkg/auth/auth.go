@@ -15,7 +15,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -122,7 +122,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 		if len(baHead) > 0 {
 			auths := strings.Fields(baHead)
 			if len(auths) == 2 && auths[0] == "Basic" {
-				uname, passwd, _ := base.BasicAuthDecode(auths[1])
+				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
 				u, err := models.UserSignIn(uname, passwd)
 				if err != nil {

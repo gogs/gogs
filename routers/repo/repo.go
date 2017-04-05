@@ -17,15 +17,15 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	CREATE  base.TplName = "repo/create"
-	MIGRATE base.TplName = "repo/migrate"
+	CREATE  tool.TplName = "repo/create"
+	MIGRATE tool.TplName = "repo/migrate"
 )
 
 func MustBeNotBare(ctx *context.Context) {
@@ -85,7 +85,7 @@ func Create(ctx *context.Context) {
 	ctx.HTML(200, CREATE)
 }
 
-func handleCreateError(ctx *context.Context, owner *models.User, err error, name string, tpl base.TplName, form interface{}) {
+func handleCreateError(ctx *context.Context, owner *models.User, err error, name string, tpl tool.TplName, form interface{}) {
 	switch {
 	case models.IsErrReachLimitOfRepo(err):
 		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
@@ -323,7 +323,7 @@ func Download(ctx *context.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, base.ShortSha(commit.ID.String())+ext)
+	archivePath = path.Join(archivePath, tool.ShortSha(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)

@@ -21,7 +21,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/cron"
 	"github.com/gogits/gogs/pkg/form"
@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	INSTALL base.TplName = "install"
+	INSTALL tool.TplName = "install"
 )
 
 func checkRunMode() {
@@ -344,7 +344,7 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(f.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	secretKey, err := base.GetRandomString(15)
+	secretKey, err := tool.GetRandomString(15)
 	if err != nil {
 		ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), INSTALL, &f)
 		return

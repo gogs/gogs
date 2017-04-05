@@ -14,7 +14,7 @@ import (
 
 	"github.com/russross/blackfriday"
 
-	"github.com/gogits/gogs/pkg/base"
+	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -72,7 +72,7 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			if j == -1 {
 				j = len(m)
 			}
-			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, base.ShortSha(string(m[i+7:j]))))
+			out.WriteString(fmt.Sprintf(` <code><a href="%s">%s</a></code>`, m, tool.ShortSha(string(m[i+7:j]))))
 			return
 		}
 
