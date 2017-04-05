@@ -390,6 +390,58 @@ func SettingsApplications(ctx *context.Context) {
 	ctx.HTML(200, SETTINGS_APPLICATIONS)
 }
 
+func SettingsRepos(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("settings")
+	ctx.Data["PageIsSettingsRepositories"] = true
+
+	repos, err := models.GetUserAndCollaborativeRepositories(ctx.User.ID)
+	if err != nil {
+		ctx.Handle(500, "GetUserAndCollaborativeRepositories", err)
+		return
+	}
+	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+		ctx.Handle(500, "LoadAttributes", err)
+		return
+	}
+	ctx.Data["Repos"] = repos
+
+	ctx.HTML(200, SETTINGS_REPOSITORIES)
+}
+
+func SettingsLeaveOrganization(ctx *context.Context) {
+	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
+	if err != nil {
+		if models.IsErrLastOrgOwner(err) {
+			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+		} else {
+			ctx.Handle(500, "RemoveOrgUser", err)
+			return
+		}
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/organizations",
+	})
+}
+
+func SettingsLeaveRepo(ctx *context.Context) {
+	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
+	if err != nil {
+		ctx.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
+		return
+	}
+
+	if err = repo.DeleteCollaboration(ctx.User.ID); err != nil {
+		ctx.Handle(500, "DeleteCollaboration", err)
+		return
+	}
+
+	ctx.Flash.Success(ctx.Tr("settings.repos.leave_success", repo.FullName()))
+	ctx.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/repositories",
+	})
+}
+
 func SettingsApplicationsPost(ctx *context.Context, f form.NewAccessToken) {
 	ctx.Data["Title"] = ctx.Tr("settings")
 	ctx.Data["PageIsSettingsApplications"] = true
@@ -444,58 +496,6 @@ func SettingsOrganizations(ctx *context.Context) {
 	ctx.Data["Orgs"] = orgs
 
 	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
-}
-
-func SettingsLeaveOrganization(ctx *context.Context) {
-	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
-	if err != nil {
-		if models.IsErrLastOrgOwner(err) {
-			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
-		} else {
-			ctx.Handle(500, "RemoveOrgUser", err)
-			return
-		}
-	}
-
-	ctx.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubUrl + "/user/settings/organizations",
-	})
-}
-
-func SettingsRepos(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsRepositories"] = true
-
-	repos, err := models.GetUserAndCollaborativeRepositories(ctx.User.ID)
-	if err != nil {
-		ctx.Handle(500, "GetUserAndCollaborativeRepositories", err)
-		return
-	}
-	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
-		ctx.Handle(500, "LoadAttributes", err)
-		return
-	}
-	ctx.Data["Repos"] = repos
-
-	ctx.HTML(200, SETTINGS_REPOSITORIES)
-}
-
-func SettingsLeaveRepo(ctx *context.Context) {
-	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
-	if err != nil {
-		ctx.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
-		return
-	}
-
-	if err = repo.DeleteCollaboration(ctx.User.ID); err != nil {
-		ctx.Handle(500, "DeleteCollaboration", err)
-		return
-	}
-
-	ctx.Flash.Success(ctx.Tr("settings.repos.leave_success", repo.FullName()))
-	ctx.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubUrl + "/user/settings/repositories",
-	})
 }
 
 func SettingsDelete(ctx *context.Context) {
