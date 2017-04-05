@@ -13,17 +13,16 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	DASHBOARD tool.TplName = "user/dashboard/dashboard"
-	NEWS_FEED tool.TplName = "user/dashboard/feeds"
-	ISSUES    tool.TplName = "user/dashboard/issues"
-	PROFILE   tool.TplName = "user/profile"
-	ORG_HOME  tool.TplName = "org/home"
+	DASHBOARD = "user/dashboard/dashboard"
+	NEWS_FEED = "user/dashboard/feeds"
+	ISSUES    = "user/dashboard/issues"
+	PROFILE   = "user/profile"
+	ORG_HOME  = "org/home"
 )
 
 // getDashboardContextUser finds out dashboard is viewing as which context user.

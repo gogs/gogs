@@ -6,14 +6,13 @@ package admin
 
 import (
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/routers"
 )
 
 const (
-	ORGS tool.TplName = "admin/org/list"
+	ORGS = "admin/org/list"
 )
 
 func Organizations(ctx *context.Context) {

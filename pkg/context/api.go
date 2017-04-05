@@ -12,7 +12,6 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
@@ -20,6 +19,9 @@ type APIContext struct {
 	*Context
 	Org *APIOrganization
 }
+
+// FIXME: move to github.com/gogits/go-gogs-client
+const DOC_URL = "https://github.com/gogits/go-gogs-client/wiki"
 
 // Error responses error message to client with given message.
 // If status is 500, also it prints error to log.
@@ -37,7 +39,7 @@ func (ctx *APIContext) Error(status int, title string, obj interface{}) {
 
 	ctx.JSON(status, map[string]string{
 		"message": message,
-		"url":     tool.DOC_URL,
+		"url":     DOC_URL,
 	})
 }
 

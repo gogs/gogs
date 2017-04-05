@@ -10,14 +10,13 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	MEMBERS       tool.TplName = "org/member/members"
-	MEMBER_INVITE tool.TplName = "org/member/invite"
+	MEMBERS       = "org/member/members"
+	MEMBER_INVITE = "org/member/invite"
 )
 
 func Members(ctx *context.Context) {

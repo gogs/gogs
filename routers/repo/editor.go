@@ -15,18 +15,18 @@ import (
 
 	"github.com/gogits/git-module"
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/template"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
-	EDIT_FILE         tool.TplName = "repo/editor/edit"
-	EDIT_DIFF_PREVIEW tool.TplName = "repo/editor/diff_preview"
-	DELETE_FILE       tool.TplName = "repo/editor/delete"
-	UPLOAD_FILE       tool.TplName = "repo/editor/upload"
+	EDIT_FILE         = "repo/editor/edit"
+	EDIT_DIFF_PREVIEW = "repo/editor/diff_preview"
+	DELETE_FILE       = "repo/editor/delete"
+	UPLOAD_FILE       = "repo/editor/upload"
 )
 
 // getParentTreeFields returns list of parent tree names and corresponding tree paths

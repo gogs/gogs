@@ -12,21 +12,20 @@ import (
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	MAIL_AUTH_ACTIVATE        tool.TplName = "auth/activate"
-	MAIL_AUTH_ACTIVATE_EMAIL  tool.TplName = "auth/activate_email"
-	MAIL_AUTH_RESET_PASSWORD  tool.TplName = "auth/reset_passwd"
-	MAIL_AUTH_REGISTER_NOTIFY tool.TplName = "auth/register_notify"
+	MAIL_AUTH_ACTIVATE        = "auth/activate"
+	MAIL_AUTH_ACTIVATE_EMAIL  = "auth/activate_email"
+	MAIL_AUTH_RESET_PASSWORD  = "auth/reset_passwd"
+	MAIL_AUTH_REGISTER_NOTIFY = "auth/register_notify"
 
-	MAIL_ISSUE_COMMENT tool.TplName = "issue/comment"
-	MAIL_ISSUE_MENTION tool.TplName = "issue/mention"
+	MAIL_ISSUE_COMMENT = "issue/comment"
+	MAIL_ISSUE_MENTION = "issue/mention"
 
-	MAIL_NOTIFY_COLLABORATOR tool.TplName = "notify/collaborator"
+	MAIL_NOTIFY_COLLABORATOR = "notify/collaborator"
 )
 
 type MailRender interface {
@@ -79,7 +78,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(c *macaron.Context, u User, tpl tool.TplName, code, subject, info string) {
+func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   setting.Service.ActiveCodeLives / 60,
@@ -172,12 +171,12 @@ func composeTplData(subject, body, link string) map[string]interface{} {
 	return data
 }
 
-func composeIssueMessage(issue Issue, repo Repository, doer User, tplName tool.TplName, tos []string, info string) *Message {
+func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) *Message {
 	subject := issue.MailSubject()
 	body := string(markup.RenderSpecialLink([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
 	data["Doer"] = doer
-	content, err := mailRender.HTMLString(string(tplName), data)
+	content, err := mailRender.HTMLString(tplName, data)
 	if err != nil {
 		log.Error(3, "HTMLString (%s): %v", tplName, err)
 	}

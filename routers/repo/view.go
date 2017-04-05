@@ -18,19 +18,19 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/template"
 	"github.com/gogits/gogs/pkg/template/highlight"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
-	BARE     tool.TplName = "repo/bare"
-	HOME     tool.TplName = "repo/home"
-	WATCHERS tool.TplName = "repo/watchers"
-	FORKS    tool.TplName = "repo/forks"
+	BARE     = "repo/bare"
+	HOME     = "repo/home"
+	WATCHERS = "repo/watchers"
+	FORKS    = "repo/forks"
 )
 
 func renderDirectory(ctx *context.Context, treeLink string) {
@@ -304,7 +304,7 @@ func Home(ctx *context.Context) {
 	ctx.HTML(200, HOME)
 }
 
-func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*models.User, error), tpl tool.TplName) {
+func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*models.User, error), tpl string) {
 	page := ctx.QueryInt("page")
 	if page <= 0 {
 		page = 1

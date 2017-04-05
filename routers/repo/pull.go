@@ -16,17 +16,17 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
-	FORK         tool.TplName = "repo/pulls/fork"
-	COMPARE_PULL tool.TplName = "repo/pulls/compare"
-	PULL_COMMITS tool.TplName = "repo/pulls/commits"
-	PULL_FILES   tool.TplName = "repo/pulls/files"
+	FORK         = "repo/pulls/fork"
+	COMPARE_PULL = "repo/pulls/compare"
+	PULL_COMMITS = "repo/pulls/commits"
+	PULL_FILES   = "repo/pulls/files"
 
 	PULL_REQUEST_TEMPLATE_KEY = "PullRequestTemplate"
 )

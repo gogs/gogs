@@ -15,18 +15,18 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/cron"
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
-	DASHBOARD tool.TplName = "admin/dashboard"
-	CONFIG    tool.TplName = "admin/config"
-	MONITOR   tool.TplName = "admin/monitor"
+	DASHBOARD = "admin/dashboard"
+	CONFIG    = "admin/config"
+	MONITOR   = "admin/monitor"
 )
 
 var (

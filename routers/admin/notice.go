@@ -10,13 +10,12 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
 )
 
 const (
-	NOTICES tool.TplName = "admin/notice"
+	NOTICES = "admin/notice"
 )
 
 func Notices(ctx *context.Context) {

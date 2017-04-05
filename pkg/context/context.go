@@ -21,7 +21,6 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/pkg/auth"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
 )
@@ -80,18 +79,18 @@ func (ctx *Context) HasValue(name string) bool {
 }
 
 // HTML responses template with given status.
-func (ctx *Context) HTML(status int, name tool.TplName) {
+func (ctx *Context) HTML(status int, name string) {
 	log.Trace("Template: %s", name)
-	ctx.Context.HTML(status, string(name))
+	ctx.Context.HTML(status, name)
 }
 
 // Success responses template with status http.StatusOK.
-func (c *Context) Success(name tool.TplName) {
+func (c *Context) Success(name string) {
 	c.HTML(http.StatusOK, name)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (ctx *Context) RenderWithErr(msg string, tpl tool.TplName, f interface{}) {
+func (ctx *Context) RenderWithErr(msg, tpl string, f interface{}) {
 	if f != nil {
 		form.Assign(f, ctx.Data)
 	}
@@ -112,7 +111,7 @@ func (ctx *Context) Handle(status int, title string, err error) {
 			ctx.Data["ErrorMsg"] = err
 		}
 	}
-	ctx.HTML(status, tool.TplName(fmt.Sprintf("status/%d", status)))
+	ctx.HTML(status, fmt.Sprintf("status/%d", status))
 }
 
 // NotFound renders the 404 page.
