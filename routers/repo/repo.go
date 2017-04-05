@@ -217,11 +217,11 @@ func MigratePost(ctx *context.Context, f form.MigrateRepo) {
 	if strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		ctx.Data["Err_Auth"] = true
-		ctx.RenderWithErr(ctx.Tr("form.auth_failed", models.HandleCloneUserCredentials(err.Error(), true)), MIGRATE, &f)
+		ctx.RenderWithErr(ctx.Tr("form.auth_failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
 		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		ctx.Data["Err_CloneAddr"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", models.HandleCloneUserCredentials(err.Error(), true)), MIGRATE, &f)
+		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
 		return
 	}
 

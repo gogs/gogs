@@ -121,13 +121,13 @@ func (m *Mirror) readAddress() {
 		log.Error(2, "Load: %v", err)
 		return
 	}
-	m.address = unescapeMirrorCredentials(cfg.Section("remote \"origin\"").Key("url").Value())
+	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
 }
 
-// HandleCloneUserCredentials replaces user credentials from HTTP/HTTPS URL
+// HandleMirrorCredentials replaces user credentials from HTTP/HTTPS URL
 // with placeholder <credentials>.
-// It will fail for any other forms of clone addresses.
-func HandleCloneUserCredentials(url string, mosaics bool) string {
+// It returns original string if protocol is not HTTP/HTTPS.
+func HandleMirrorCredentials(url string, mosaics bool) string {
 	i := strings.Index(url, "@")
 	if i == -1 {
 		return url
@@ -145,19 +145,25 @@ func HandleCloneUserCredentials(url string, mosaics bool) string {
 // Address returns mirror address from Git repository config without credentials.
 func (m *Mirror) Address() string {
 	m.readAddress()
-	return HandleCloneUserCredentials(m.address, false)
+	return HandleMirrorCredentials(m.address, false)
 }
 
 // MosaicsAddress returns mirror address from Git repository config with credentials under mosaics.
 func (m *Mirror) MosaicsAddress() string {
 	m.readAddress()
-	return HandleCloneUserCredentials(m.address, true)
+	return HandleMirrorCredentials(m.address, true)
 }
 
-// FullAddress returns mirror address from Git repository config.
-func (m *Mirror) FullAddress() string {
+// RawAddress returns raw mirror address directly from Git repository config.
+func (m *Mirror) RawAddress() string {
 	m.readAddress()
 	return m.address
+}
+
+// FullAddress returns mirror address from Git repository config with unescaped credentials.
+func (m *Mirror) FullAddress() string {
+	m.readAddress()
+	return unescapeMirrorCredentials(m.address)
 }
 
 // escapeCredentials returns mirror address with escaped credentials.
@@ -191,7 +197,7 @@ func (m *Mirror) runSync() bool {
 	// Do a fast-fail testing against on repository URL to ensure it is accessible under
 	// good condition to prevent long blocking on URL resolution without syncing anything.
 	if !git.IsRepoURLAccessible(git.NetworkOptions{
-		URL:     m.FullAddress(),
+		URL:     m.RawAddress(),
 		Timeout: 10 * time.Second,
 	}) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
