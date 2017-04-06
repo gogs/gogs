@@ -33,6 +33,18 @@
 			"revisionTime": "2017-02-05T23:42:31Z"
 		},
 		{
+			"checksumSHA1": "tLl952GRIVsso2Pk/IH3cMJaK8E=",
+			"path": "github.com/boombuler/barcode",
+			"revision": "0dc17c9053c4956f07a6db58b2863924fe03b643",
+			"revisionTime": "2017-04-03T18:34:37Z"
+		},
+		{
+			"checksumSHA1": "tbwzn+sWiZv6veyXae3qRfTjlcQ=",
+			"path": "github.com/boombuler/barcode/qr",
+			"revision": "0dc17c9053c4956f07a6db58b2863924fe03b643",
+			"revisionTime": "2017-04-03T18:34:37Z"
+		},
+		{
 			"checksumSHA1": "fNAC4qgZDqF3kxq74/yyk3PWdy8=",
 			"path": "github.com/bradfitz/gomemcache/memcache",
 			"revision": "fb1f79c6b65acda83063cbc69f6bba1522558bfc",
@@ -277,6 +289,24 @@
 			"path": "github.com/nfnt/resize",
 			"revision": "891127d8d1b52734debe1b3c3d7e747502b6c366",
 			"revisionTime": "2016-07-24T20:39:20Z"
+		},
+		{
+			"checksumSHA1": "woY3inKe+d7B1jPTFxVKNCCFH9c=",
+			"path": "github.com/pquerna/otp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
+		},
+		{
+			"checksumSHA1": "xo32aXW4ZXXRHJ/9E6m10vXJZAo=",
+			"path": "github.com/pquerna/otp/hotp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
+		},
+		{
+			"checksumSHA1": "Ie55pTQw1rnOZ8KDekSDXUWDT1I=",
+			"path": "github.com/pquerna/otp/totp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
 		},
 		{
 			"checksumSHA1": "c7jHQZk5ZEsFR9EXsWJXkszPBZA=",
