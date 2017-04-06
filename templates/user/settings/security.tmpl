@@ -23,6 +23,7 @@
 				{{if .TwoFactor}}
 					<br>
 					<p>{{.i18n.Tr "settings.two_factor_view_recovery_codes" AppSubUrl "/user/settings/security/two_factor_recovery_codes" | Safe}}</p>
+					<p>{{.i18n.Tr "settings.two_factor_http" AppSubUrl "/user/settings/applications" "https://{token}@try.gogs.io/user/repo.git" | Safe}}</p>
 				{{end}}
 			</div>
 		</div>

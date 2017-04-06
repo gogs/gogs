@@ -29,6 +29,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持在线编辑仓库文件和 Wiki
 - 支持自定义源的 Gravatar 和 Federated Avatar
 - 支持 Jupyter Notebook
+- 支持两步验证登录
 - 支持邮件服务
 - 支持后台管理面板
 - 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（通过 MySQL 协议）数据库

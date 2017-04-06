@@ -47,6 +47,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Migrate and mirror repository and its wiki
 - Web editor for repository files and wiki
 - Jupyter Notebook
+- Two-factor authentication
 - Gravatar and Federated avatar with custom source
 - Mail service
 - Administration panel
