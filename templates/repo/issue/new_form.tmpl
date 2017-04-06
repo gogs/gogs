@@ -1,5 +1,5 @@
 <form class="ui comment form grid" action="{{EscapePound .Link}}" method="post">
-	{{.CsrfTokenHtml}}
+	{{.CSRFTokenHTML}}
 	{{if .Flash}}
 		<div class="sixteen wide column">
 			{{template "base/alert" .}}

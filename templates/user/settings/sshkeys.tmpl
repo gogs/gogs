@@ -50,7 +50,7 @@
 					</h4>
 					<div class="ui attached segment">
 						<form class="ui form" action="{{.Link}}" method="post">
-							{{.CsrfTokenHtml}}
+							{{.CSRFTokenHTML}}
 							<div class="field {{if .Err_Title}}error{{end}}">
 								<label for="title">{{.i18n.Tr "settings.key_name"}}</label>
 								<input id="title" name="title" value="{{.title}}" autofocus required>

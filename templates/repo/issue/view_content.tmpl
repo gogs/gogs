@@ -166,7 +166,7 @@
 									<div class="ui divider"></div>
 									<div>
 										<form class="ui form" action="{{.DeleteBranchLink}}" method="post">
-											{{.CsrfTokenHtml}}
+											{{.CSRFTokenHTML}}
 											<button class="ui red button">{{$.i18n.Tr "repo.pulls.delete_branch"}}</button>
 										</form>
 									</div>
@@ -194,7 +194,7 @@
 									<div class="ui divider"></div>
 									<div>
 										<form class="ui form" action="{{.Link}}/merge" method="post">
-											{{.CsrfTokenHtml}}
+											{{.CSRFTokenHTML}}
 											<button class="ui green button">
 												<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
 											</button>
@@ -224,7 +224,7 @@
 					<div class="content">
 						<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
 							{{template "repo/issue/comment_tab" .}}
-							{{.CsrfTokenHtml}}
+							{{.CSRFTokenHTML}}
 							<input id="status" name="status" type="hidden">
 							<div class="text right">
 								{{if and .IsIssueOwner (not .DisableStatusChange)}}

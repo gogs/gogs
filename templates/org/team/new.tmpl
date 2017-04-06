@@ -4,7 +4,7 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{if .PageIsOrgTeamsNew}}{{.OrgLink}}/teams/new{{else}}{{.OrgLink}}/teams/{{.Team.LowerName}}/edit{{end}}" data-delete-url="{{.OrgLink}}/teams/{{.Team.LowerName}}/delete" method="post">
-				{{.CsrfTokenHtml}}
+				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached header">
 					{{if .PageIsOrgTeamsNew}}{{.i18n.Tr "org.create_new_team"}}{{else}}{{.i18n.Tr "org.teams.settings"}}{{end}}
 				</h3>

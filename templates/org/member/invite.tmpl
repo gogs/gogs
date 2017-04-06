@@ -6,7 +6,7 @@
 			{{template "base/alert" .}}
 			<h2>{{.i18n.Tr "org.members.invite_desc" .Org.DisplayName}}</h2>
 			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+				{{.CSRFTokenHTML}}
 				<div class="inline field ui left">
 					<div id="search-user-box">
 						<div class="ui input">

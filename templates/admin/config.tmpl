@@ -178,7 +178,7 @@
 							<dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
 							<dd>{{if .Mailer.User}}{{.Mailer.User}}{{else}}(empty){{end}}</dd><br>
 							<form class="ui form" action="{{AppSubUrl}}/admin/config/test_mail" method="post">
-								{{.CsrfTokenHtml}}
+								{{.CSRFTokenHTML}}
 								<div class="inline field ui left">
 									<div class="ui input">
 										<input type="email" name="email" required>

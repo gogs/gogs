@@ -13,7 +13,7 @@
 		</h2>
 		{{template "base/alert" .}}
 		<form class="ui form grid" action="{{.Link}}" method="post">
-			{{.CsrfTokenHtml}}
+			{{.CSRFTokenHTML}}
 			<div class="ui seven wide column target">
 				<div class="inline field {{if .Err_TagName}}error{{end}}">
 					{{if .PageIsEditRelease}}
