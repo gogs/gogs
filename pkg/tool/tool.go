@@ -27,11 +27,16 @@ import (
 	"github.com/gogits/gogs/pkg/setting"
 )
 
-// EncodeMD5 encodes string to md5 hex value.
-func EncodeMD5(str string) string {
+// MD5Bytes encodes string to MD5 bytes.
+func MD5Bytes(str string) []byte {
 	m := md5.New()
 	m.Write([]byte(str))
-	return hex.EncodeToString(m.Sum(nil))
+	return m.Sum(nil)
+}
+
+// EncodeMD5 encodes string to MD5 hex value.
+func EncodeMD5(str string) string {
+	return hex.EncodeToString(MD5Bytes(str))
 }
 
 // Encode string to sha1 hex value.

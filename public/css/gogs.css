@@ -960,7 +960,7 @@ footer .ui.language .menu {
 }
 #create-page-form form input,
 #create-page-form form textarea {
-  width: 50%!important;
+  width: 50% !important;
 }
 .user.activate form,
 .user.forgot.password form,
@@ -1017,14 +1017,14 @@ footer .ui.language .menu {
 .user.reset.password form textarea,
 .user.signin form textarea,
 .user.signup form textarea {
-  width: 50%!important;
+  width: 50% !important;
 }
 .user.activate form,
 .user.forgot.password form,
 .user.reset.password form,
 .user.signin form,
 .user.signup form {
-  width: 700px!important;
+  width: 700px !important;
 }
 .user.activate form .header,
 .user.forgot.password form .header,
@@ -1039,6 +1039,12 @@ footer .ui.language .menu {
 .user.signin form .inline.field > label,
 .user.signup form .inline.field > label {
   width: 200px !important;
+}
+.user.signin.two-factor form {
+  width: 300px !important;
+}
+.user.signin.two-factor form .header {
+  padding-left: inherit !important;
 }
 .repository.new.repo form,
 .repository.new.migrate form,
@@ -1079,7 +1085,7 @@ footer .ui.language .menu {
 .repository.new.repo form textarea,
 .repository.new.migrate form textarea,
 .repository.new.fork form textarea {
-  width: 50%!important;
+  width: 50% !important;
 }
 .repository.new.repo form .dropdown .dropdown.icon,
 .repository.new.migrate form .dropdown .dropdown.icon,
@@ -2752,7 +2758,7 @@ footer .ui.language .menu {
 }
 .organization.new.org form input,
 .organization.new.org form textarea {
-  width: 50%!important;
+  width: 50% !important;
 }
 .organization.options input {
   min-width: 300px;
@@ -2856,15 +2862,8 @@ footer .ui.language .menu {
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
 }
-.user.settings.organizations .orgs.non-empty {
-  padding: 0;
-}
-.user.settings.organizations .orgs .item {
-  padding: 10px;
-}
-.user.settings.organizations .orgs .item .button {
-  margin-top: 5px;
-  margin-right: 8px;
+.user.settings.security .two-factor .toggle.button {
+  margin-top: -5px;
 }
 .user.settings.repositories .repos {
   padding: 0;
@@ -2875,6 +2874,16 @@ footer .ui.language .menu {
 }
 .user.settings.repositories .repos .item .button {
   margin-top: -5px;
+}
+.user.settings.organizations .orgs.non-empty {
+  padding: 0;
+}
+.user.settings.organizations .orgs .item {
+  padding: 10px;
+}
+.user.settings.organizations .orgs .item .button {
+  margin-top: 5px;
+  margin-right: 8px;
 }
 .user.profile .ui.card .header {
   word-break: break-all;

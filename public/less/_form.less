@@ -42,7 +42,7 @@
 		}
 		input,
 		textarea {
-			width: 50%!important;
+			width: 50% !important;
 		}
 	}
 }
@@ -52,15 +52,24 @@
 .user.reset.password,
 .user.signin,
 .user.signup {
-	@input-padding: 200px!important;
+	@input-padding: 200px !important;
 	#create-page-form;
 	form {
-		width: 700px!important;
+		width: 700px !important;
 		.header {
 			padding-left: @input-padding+30px;
 		}
 		.inline.field > label {
 			width: @input-padding;
+		}
+	}
+}
+
+.user.signin.two-factor {
+	form {
+		width: 300px !important;
+		.header {
+			padding-left: inherit !important;
 		}
 	}
 }

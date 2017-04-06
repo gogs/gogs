@@ -16,6 +16,9 @@
 		<a class="{{if .PageIsSettingsSSHKeys}}active{{end}} item" href="{{AppSubUrl}}/user/settings/ssh">
 			{{.i18n.Tr "settings.ssh_keys"}}
 		</a>
+		<a class="{{if .PageIsSettingsSecurity}}active{{end}} item" href="{{AppSubUrl}}/user/settings/security">
+			{{.i18n.Tr "settings.security"}}
+		</a>
 		<a class="{{if .PageIsSettingsRepositories}}active{{end}} item" href="{{AppSubUrl}}/user/settings/repositories">
 			{{.i18n.Tr "settings.repos"}}
 		</a>

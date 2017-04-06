@@ -190,8 +190,13 @@ func runWeb(ctx *cli.Context) error {
 
 	// ***** START: User *****
 	m.Group("/user", func() {
-		m.Get("/login", user.SignIn)
-		m.Post("/login", bindIgnErr(form.SignIn{}), user.SignInPost)
+		m.Group("/login", func() {
+			m.Combo("").Get(user.Login).
+				Post(bindIgnErr(form.SignIn{}), user.LoginPost)
+			m.Combo("/two_factor").Get(user.LoginTwoFactor).Post(user.LoginTwoFactorPost)
+			m.Combo("/two_factor_recovery_code").Get(user.LoginTwoFactorRecoveryCode).Post(user.LoginTwoFactorRecoveryCodePost)
+		})
+
 		m.Get("/sign_up", user.SignUp)
 		m.Post("/sign_up", bindIgnErr(form.Register{}), user.SignUpPost)
 		m.Get("/reset_password", user.ResetPasswd)
@@ -212,6 +217,14 @@ func runWeb(ctx *cli.Context) error {
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).
 			Post(bindIgnErr(form.AddSSHKey{}), user.SettingsSSHKeysPost)
 		m.Post("/ssh/delete", user.DeleteSSHKey)
+		m.Group("/security", func() {
+			m.Get("", user.SettingsSecurity)
+			m.Combo("/two_factor_enable").Get(user.SettingsTwoFactorEnable).
+				Post(user.SettingsTwoFactorEnablePost)
+			m.Combo("/two_factor_recovery_codes").Get(user.SettingsTwoFactorRecoveryCodes).
+				Post(user.SettingsTwoFactorRecoveryCodesPost)
+			m.Post("/two_factor_disable", user.SettingsTwoFactorDisable)
+		})
 		m.Group("/repositories", func() {
 			m.Get("", user.SettingsRepos)
 			m.Post("/leave", user.SettingsLeaveRepo)
