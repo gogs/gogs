@@ -123,7 +123,7 @@ func SettingsPost(ctx *context.Context, f form.UpdateProfile) {
 func UpdateAvatarSetting(ctx *context.Context, f form.Avatar, ctxUser *models.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
-		ctxUser.Avatar = tool.EncodeMD5(f.Gravatar)
+		ctxUser.Avatar = tool.MD5(f.Gravatar)
 		ctxUser.AvatarEmail = f.Gravatar
 	}
 

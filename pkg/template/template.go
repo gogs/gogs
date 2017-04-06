@@ -96,8 +96,8 @@ func NewFuncMap() []template.FuncMap {
 		"DiffTypeToStr":         DiffTypeToStr,
 		"DiffLineTypeToStr":     DiffLineTypeToStr,
 		"Sha1":                  Sha1,
-		"ShortSha":              tool.ShortSha,
-		"MD5":                   tool.EncodeMD5,
+		"ShortSHA1":              tool.ShortSHA1,
+		"MD5":                   tool.MD5,
 		"ActionContent2Commits": ActionContent2Commits,
 		"EscapePound":           EscapePound,
 		"RenderCommitMessage":   RenderCommitMessage,
@@ -142,7 +142,7 @@ func List(l *list.List) chan interface{} {
 }
 
 func Sha1(str string) string {
-	return tool.EncodeSha1(str)
+	return tool.SHA1(str)
 }
 
 func ToUTF8WithErr(content []byte) (error, string) {

@@ -323,7 +323,7 @@ func Download(ctx *context.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, tool.ShortSha(commit.ID.String())+ext)
+	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)

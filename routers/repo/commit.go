@@ -165,7 +165,7 @@ func Diff(ctx *context.Context) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = commit.IsImageFile
-	ctx.Data["Title"] = commit.Summary() + " · " + tool.ShortSha(commitID)
+	ctx.Data["Title"] = commit.Summary() + " · " + tool.ShortSHA1(commitID)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Author"] = models.ValidateCommitWithEmail(commit)
 	ctx.Data["Diff"] = diff
@@ -228,7 +228,7 @@ func CompareDiff(ctx *context.Context) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = commit.IsImageFile
-	ctx.Data["Title"] = "Comparing " + tool.ShortSha(beforeCommitID) + "..." + tool.ShortSha(afterCommitID) + " · " + userName + "/" + repoName
+	ctx.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
