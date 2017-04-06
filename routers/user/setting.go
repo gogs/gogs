@@ -5,11 +5,17 @@
 package user
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
+	"html/template"
+	"image/png"
 	"io/ioutil"
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
@@ -22,17 +28,19 @@ import (
 )
 
 const (
-	SETTINGS_PROFILE       = "user/settings/profile"
-	SETTINGS_AVATAR        = "user/settings/avatar"
-	SETTINGS_PASSWORD      = "user/settings/password"
-	SETTINGS_EMAILS        = "user/settings/email"
-	SETTINGS_SSH_KEYS      = "user/settings/sshkeys"
-	SETTINGS_SECURITY      = "user/settings/security"
-	SETTINGS_REPOSITORIES  = "user/settings/repositories"
-	SETTINGS_ORGANIZATIONS = "user/settings/organizations"
-	SETTINGS_APPLICATIONS  = "user/settings/applications"
-	SETTINGS_DELETE        = "user/settings/delete"
-	NOTIFICATION           = "user/notification"
+	SETTINGS_PROFILE                   = "user/settings/profile"
+	SETTINGS_AVATAR                    = "user/settings/avatar"
+	SETTINGS_PASSWORD                  = "user/settings/password"
+	SETTINGS_EMAILS                    = "user/settings/email"
+	SETTINGS_SSH_KEYS                  = "user/settings/sshkeys"
+	SETTINGS_SECURITY                  = "user/settings/security"
+	SETTINGS_TWO_FACTOR_ENABLE         = "user/settings/two_factor_enable"
+	SETTINGS_TWO_FACTOR_RECOVERY_CODES = "user/settings/two_factor_recovery_codes"
+	SETTINGS_REPOSITORIES              = "user/settings/repositories"
+	SETTINGS_ORGANIZATIONS             = "user/settings/organizations"
+	SETTINGS_APPLICATIONS              = "user/settings/applications"
+	SETTINGS_DELETE                    = "user/settings/delete"
+	NOTIFICATION                       = "user/notification"
 )
 
 func Settings(c *context.Context) {
@@ -373,6 +381,141 @@ func DeleteSSHKey(ctx *context.Context) {
 
 	ctx.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubUrl + "/user/settings/ssh",
+	})
+}
+
+func SettingsSecurity(c *context.Context) {
+	c.Data["Title"] = c.Tr("settings")
+	c.Data["PageIsSettingsSecurity"] = true
+
+	t, err := models.GetTwoFactorByUserID(c.UserID())
+	if err != nil && !errors.IsTwoFactorNotFound(err) {
+		c.ServerError("GetTwoFactorByUserID", err)
+		return
+	}
+	c.Data["TwoFactor"] = t
+
+	c.Success(SETTINGS_SECURITY)
+}
+
+func SettingsTwoFactorEnable(c *context.Context) {
+	if c.User.IsEnabledTwoFactor() {
+		c.NotFound()
+		return
+	}
+
+	c.Data["Title"] = c.Tr("settings")
+	c.Data["PageIsSettingsSecurity"] = true
+
+	var key *otp.Key
+	var err error
+	keyURL := c.Session.Get("twoFactorURL")
+	if keyURL != nil {
+		key, _ = otp.NewKeyFromURL(keyURL.(string))
+	}
+	if key == nil {
+		key, err = totp.Generate(totp.GenerateOpts{
+			Issuer:      setting.AppName,
+			AccountName: c.User.Email,
+		})
+		if err != nil {
+			c.ServerError("Generate", err)
+			return
+		}
+	}
+	c.Data["TwoFactorSecret"] = key.Secret()
+
+	img, err := key.Image(240, 240)
+	if err != nil {
+		c.ServerError("Image", err)
+		return
+	}
+
+	var buf bytes.Buffer
+	if err = png.Encode(&buf, img); err != nil {
+		c.ServerError("Encode", err)
+		return
+	}
+	c.Data["QRCode"] = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()))
+
+	c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
+	c.Session.Set("twoFactorURL", key.String())
+	c.Success(SETTINGS_TWO_FACTOR_ENABLE)
+}
+
+func SettingsTwoFactorEnablePost(c *context.Context) {
+	secret, ok := c.Session.Get("twoFactorSecret").(string)
+	if !ok {
+		c.NotFound()
+		return
+	}
+
+	if !totp.Validate(c.Query("passcode"), secret) {
+		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
+		c.Redirect(setting.AppSubUrl + "/user/settings/security/two_factor_enable")
+		return
+	}
+
+	if err := models.NewTwoFactor(c.UserID(), secret); err != nil {
+		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
+		c.Redirect(setting.AppSubUrl + "/user/settings/security/two_factor_enable")
+		return
+	}
+
+	c.Session.Delete("twoFactorSecret")
+	c.Session.Delete("twoFactorURL")
+	c.Flash.Success(c.Tr("settings.two_factor_enable_success"))
+	c.Redirect(setting.AppSubUrl + "/user/settings/security/two_factor_recovery_codes")
+}
+
+func SettingsTwoFactorRecoveryCodes(c *context.Context) {
+	if !c.User.IsEnabledTwoFactor() {
+		c.NotFound()
+		return
+	}
+
+	c.Data["Title"] = c.Tr("settings")
+	c.Data["PageIsSettingsSecurity"] = true
+
+	recoveryCodes, err := models.GetRecoveryCodesByUserID(c.UserID())
+	if err != nil {
+		c.ServerError("GetRecoveryCodesByUserID", err)
+		return
+	}
+	c.Data["RecoveryCodes"] = recoveryCodes
+
+	c.Success(SETTINGS_TWO_FACTOR_RECOVERY_CODES)
+}
+
+func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
+	if !c.User.IsEnabledTwoFactor() {
+		c.NotFound()
+		return
+	}
+
+	if err := models.RegenerateRecoveryCodes(c.UserID()); err != nil {
+		c.Flash.Error(c.Tr("settings.two_factor_regenerate_recovery_codes_error", err))
+	} else {
+		c.Flash.Success(c.Tr("settings.two_factor_regenerate_recovery_codes_success"))
+	}
+
+	c.Redirect(setting.AppSubUrl + "/user/settings/security/two_factor_recovery_codes")
+}
+
+func SettingsTwoFactorDisable(c *context.Context) {
+	if !c.User.IsEnabledTwoFactor() {
+		c.NotFound()
+		return
+	}
+
+	if err := models.DeleteTwoFactor(c.UserID()); err != nil {
+		c.ServerError("DeleteTwoFactor", err)
+		return
+	}
+
+	c.Flash.Success(c.Tr("settings.two_factor_disable_success"))
+	c.JSONSuccess(map[string]interface{}{
+		"redirect": setting.AppSubUrl + "/user/settings/security",
 	})
 }
 

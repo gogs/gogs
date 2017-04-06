@@ -27,7 +27,7 @@ import (
 	"github.com/gogits/gogs/pkg/setting"
 )
 
-// Engine represents a xorm engine or session.
+// Engine represents a XORM engine or session.
 type Engine interface {
 	Delete(interface{}) (int64, error)
 	Exec(string, ...interface{}) (sql.Result, error)
@@ -64,7 +64,7 @@ var (
 
 func init() {
 	tables = append(tables,
-		new(User), new(PublicKey), new(AccessToken),
+		new(User), new(PublicKey), new(AccessToken), new(TwoFactor), new(TwoFactorRecoveryCode),
 		new(Repository), new(DeployKey), new(Collaboration), new(Access), new(Upload),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),

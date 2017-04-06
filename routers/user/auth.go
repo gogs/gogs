@@ -20,20 +20,22 @@ import (
 )
 
 const (
-	SIGNIN          = "user/auth/signin"
-	SIGNUP          = "user/auth/signup"
-	ACTIVATE        = "user/auth/activate"
-	FORGOT_PASSWORD = "user/auth/forgot_passwd"
-	RESET_PASSWORD  = "user/auth/reset_passwd"
+	LOGIN                    = "user/auth/login"
+	TWO_FACTOR               = "user/auth/two_factor"
+	TWO_FACTOR_RECOVERY_CODE = "user/auth/two_factor_recovery_code"
+	SIGNUP                   = "user/auth/signup"
+	ACTIVATE                 = "user/auth/activate"
+	FORGOT_PASSWORD          = "user/auth/forgot_passwd"
+	RESET_PASSWORD           = "user/auth/reset_passwd"
 )
 
-// AutoSignIn reads cookie and try to auto-login.
-func AutoSignIn(ctx *context.Context) (bool, error) {
+// AutoLogin reads cookie and try to auto-login.
+func AutoLogin(c *context.Context) (bool, error) {
 	if !models.HasEngine {
 		return false, nil
 	}
 
-	uname := ctx.GetCookie(setting.CookieUserName)
+	uname := c.GetCookie(setting.CookieUserName)
 	if len(uname) == 0 {
 		return false, nil
 	}
@@ -42,9 +44,9 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
-			ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
-			ctx.SetCookie(setting.LoginStatusCookieName, "", -1, setting.AppSubUrl)
+			c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
+			c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
+			c.SetCookie(setting.LoginStatusCookieName, "", -1, setting.AppSubUrl)
 		}
 	}()
 
@@ -56,16 +58,16 @@ func AutoSignIn(ctx *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if val, ok := ctx.GetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName); !ok || val != u.Name {
+	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName); !ok || val != u.Name {
 		return false, nil
 	}
 
 	isSucceed = true
-	ctx.Session.Set("uid", u.ID)
-	ctx.Session.Set("uname", u.Name)
-	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	c.Session.Set("uid", u.ID)
+	c.Session.Set("uname", u.Name)
+	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
 	if setting.EnableLoginStatusCookie {
-		ctx.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
+		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
 	}
 	return true, nil
 }
@@ -77,77 +79,165 @@ func isValidRedirect(url string) bool {
 	return len(url) >= 2 && url[0] == '/' && url[1] != '/'
 }
 
-func SignIn(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("sign_in")
+func Login(c *context.Context) {
+	c.Data["Title"] = c.Tr("sign_in")
 
 	// Check auto-login.
-	isSucceed, err := AutoSignIn(ctx)
+	isSucceed, err := AutoLogin(c)
 	if err != nil {
-		ctx.Handle(500, "AutoSignIn", err)
+		c.Handle(500, "AutoLogin", err)
 		return
 	}
 
-	redirectTo := ctx.Query("redirect_to")
+	redirectTo := c.Query("redirect_to")
 	if len(redirectTo) > 0 {
-		ctx.SetCookie("redirect_to", redirectTo, 0, setting.AppSubUrl)
+		c.SetCookie("redirect_to", redirectTo, 0, setting.AppSubUrl)
 	} else {
-		redirectTo, _ = url.QueryUnescape(ctx.GetCookie("redirect_to"))
+		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
 	}
-	ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+	c.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
 
 	if isSucceed {
 		if isValidRedirect(redirectTo) {
-			ctx.Redirect(redirectTo)
+			c.Redirect(redirectTo)
 		} else {
-			ctx.Redirect(setting.AppSubUrl + "/")
+			c.Redirect(setting.AppSubUrl + "/")
 		}
 		return
 	}
 
-	ctx.HTML(200, SIGNIN)
+	c.HTML(200, LOGIN)
 }
 
-func SignInPost(ctx *context.Context, f form.SignIn) {
-	ctx.Data["Title"] = ctx.Tr("sign_in")
+func afterLogin(c *context.Context, u *models.User, remember bool) {
+	if remember {
+		days := 86400 * setting.LoginRememberDays
+		c.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
+		c.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
+	}
 
-	if ctx.HasError() {
-		ctx.HTML(200, SIGNIN)
+	c.Session.Set("uid", u.ID)
+	c.Session.Set("uname", u.Name)
+	c.Session.Delete("twoFactorRemember")
+	c.Session.Delete("twoFactorUserID")
+
+	// Clear whatever CSRF has right now, force to generate a new one
+	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	if setting.EnableLoginStatusCookie {
+		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
+	}
+
+	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
+	c.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+	if isValidRedirect(redirectTo) {
+		c.Redirect(redirectTo)
+		return
+	}
+
+	c.Redirect(setting.AppSubUrl + "/")
+}
+
+func LoginPost(c *context.Context, f form.SignIn) {
+	c.Data["Title"] = c.Tr("sign_in")
+
+	if c.HasError() {
+		c.Success(LOGIN)
 		return
 	}
 
 	u, err := models.UserSignIn(f.UserName, f.Password)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.RenderWithErr(ctx.Tr("form.username_password_incorrect"), SIGNIN, &f)
+			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
 		} else {
-			ctx.Handle(500, "UserSignIn", err)
+			c.ServerError("UserSignIn", err)
 		}
 		return
 	}
 
-	if f.Remember {
-		days := 86400 * setting.LoginRememberDays
-		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
-		ctx.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
-	}
-
-	ctx.Session.Set("uid", u.ID)
-	ctx.Session.Set("uname", u.Name)
-
-	// Clear whatever CSRF has right now, force to generate a new one
-	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
-	if setting.EnableLoginStatusCookie {
-		ctx.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
-	}
-
-	redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to"))
-	ctx.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
-	if isValidRedirect(redirectTo) {
-		ctx.Redirect(redirectTo)
+	if !u.IsEnabledTwoFactor() {
+		afterLogin(c, u, f.Remember)
 		return
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/")
+	c.Session.Set("twoFactorRemember", f.Remember)
+	c.Session.Set("twoFactorUserID", u.ID)
+	c.Redirect(setting.AppSubUrl + "/user/login/two_factor")
+}
+
+func LoginTwoFactor(c *context.Context) {
+	_, ok := c.Session.Get("twoFactorUserID").(int64)
+	if !ok {
+		c.NotFound()
+		return
+	}
+
+	c.Success(TWO_FACTOR)
+}
+
+func LoginTwoFactorPost(c *context.Context) {
+	userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	if !ok {
+		c.NotFound()
+		return
+	}
+
+	t, err := models.GetTwoFactorByUserID(userID)
+	if err != nil {
+		c.ServerError("GetTwoFactorByUserID", err)
+		return
+	}
+	valid, err := t.ValidateTOTP(c.Query("passcode"))
+	if err != nil {
+		c.ServerError("ValidateTOTP", err)
+		return
+	} else if !valid {
+		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
+		c.Redirect(setting.AppSubUrl + "/user/login/two_factor")
+		return
+	}
+
+	u, err := models.GetUserByID(userID)
+	if err != nil {
+		c.ServerError("GetUserByID", err)
+		return
+	}
+	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
+}
+
+func LoginTwoFactorRecoveryCode(c *context.Context) {
+	_, ok := c.Session.Get("twoFactorUserID").(int64)
+	if !ok {
+		c.NotFound()
+		return
+	}
+
+	c.Success(TWO_FACTOR_RECOVERY_CODE)
+}
+
+func LoginTwoFactorRecoveryCodePost(c *context.Context) {
+	userID, ok := c.Session.Get("twoFactorUserID").(int64)
+	if !ok {
+		c.NotFound()
+		return
+	}
+
+	if err := models.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
+		if errors.IsTwoFactorRecoveryCodeNotFound(err) {
+			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
+			c.Redirect(setting.AppSubUrl + "/user/login/two_factor_recovery_code")
+		} else {
+			c.ServerError("UseRecoveryCode", err)
+		}
+		return
+	}
+
+	u, err := models.GetUserByID(userID)
+	if err != nil {
+		c.ServerError("GetUserByID", err)
+		return
+	}
+	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
 }
 
 func SignOut(ctx *context.Context) {

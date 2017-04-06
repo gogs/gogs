@@ -31,8 +31,8 @@ import (
 
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/avatar"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 type UserType int
@@ -404,6 +404,11 @@ func (u *User) IsPublicMember(orgId int64) bool {
 	return IsPublicMembership(orgId, u.ID)
 }
 
+// IsEnabledTwoFactor returns true if user has enabled two-factor authentication.
+func (u *User) IsEnabledTwoFactor() bool {
+	return IsUserEnabledTwoFactor(u.ID)
+}
+
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
 }
@@ -479,7 +484,7 @@ func IsUserExist(uid int64, name string) (bool, error) {
 	if len(name) == 0 {
 		return false, nil
 	}
-	return x.Where("id!=?", uid).Get(&User{LowerName: strings.ToLower(name)})
+	return x.Where("id != ?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
 // GetUserSalt returns a ramdom user salt token.

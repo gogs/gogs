@@ -23,9 +23,9 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
@@ -114,7 +114,6 @@ func HTTPContexter() macaron.Handler {
 
 		authUser, err := models.UserSignIn(authUsername, authPassword)
 		if err != nil && !errors.IsUserNotExist(err) {
-
 			c.Handle(http.StatusInternalServerError, "UserSignIn", err)
 			return
 		}
@@ -139,6 +138,10 @@ func HTTPContexter() macaron.Handler {
 				c.Handle(http.StatusInternalServerError, "GetUserByID", err)
 				return
 			}
+		} else if authUser.IsEnabledTwoFactor() {
+			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
+Please create and use personal access token on user settings page`)
+			return
 		}
 
 		log.Trace("HTTPGit - Authenticated user: %s", authUser.Name)
@@ -152,7 +155,7 @@ func HTTPContexter() macaron.Handler {
 			c.Handle(http.StatusInternalServerError, "HasAccess", err)
 			return
 		} else if !has {
-			askCredentials(c, http.StatusUnauthorized, "User permission denied")
+			askCredentials(c, http.StatusForbidden, "User permission denied")
 			return
 		}
 

@@ -25,6 +25,9 @@ check: test
 
 dist: release
 
+web: build
+	./gogs web
+
 govet:
 	$(GOVET) gogs.go
 	$(GOVET) models pkg routers
