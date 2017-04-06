@@ -92,6 +92,28 @@
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{$cfg.AttributeMail}}" placeholder="e.g. mail" required>
 							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "admin.auths.groups_enabled"}}</strong></label>
+									<input name="groups_enabled" type="checkbox" {{if $cfg.GroupsEnabled}}checked{{end}}>
+								</div>
+							</div>
+							<div class="field">
+								<label for="group_base">{{.i18n.Tr "admin.auths.group_base"}}</label>
+								<input id="group_base" name="group_base" value="{{$cfg.GroupDN}}" placeholder="e.g. ou=group,dc=mydomain,dc=com">
+							</div>
+							<div class="field">
+								<label for="group_filter">{{.i18n.Tr "admin.auths.group_filter"}}</label>
+								<input id="group_filter" name="group_filter" value="{{$cfg.GroupFilter}}" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
+							</div>
+							<div class="field">
+								<label for="group_member_list">{{.i18n.Tr "admin.auths.group_member_list"}}</label>
+								<input id="group_member_list" name="group_member_list" value="{{$cfg.GroupMemberUid}}" placeholder="e.g. memberUid">
+							</div>
+							<div class="field">
+								<label for="group_user_uid">{{.i18n.Tr "admin.auths.group_user_uid"}}</label>
+								<input id="group_user_uid" name="group_user_uid" value="{{$cfg.UserUID}}" placeholder="e.g. uid">
+							</div>
 							{{if .Source.IsLDAP}}
 								<div class="inline field">
 									<div class="ui checkbox">
