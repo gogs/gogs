@@ -66,9 +66,9 @@ func IsUserEnabledTwoFactor(userID int64) bool {
 func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
 	recoveryCodes := make([]*TwoFactorRecoveryCode, 10)
 	for i := 0; i < 10; i++ {
-		code, err := tool.GetRandomString(10)
+		code, err := tool.RandomString(10)
 		if err != nil {
-			return nil, fmt.Errorf("GetRandomString: %v", err)
+			return nil, fmt.Errorf("RandomString: %v", err)
 		}
 		recoveryCodes[i] = &TwoFactorRecoveryCode{
 			UserID: userID,

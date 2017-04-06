@@ -489,7 +489,7 @@ func IsUserExist(uid int64, name string) (bool, error) {
 
 // GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() (string, error) {
-	return tool.GetRandomString(10)
+	return tool.RandomString(10)
 }
 
 // NewGhostUser creates and returns a fake user for someone has deleted his/her account.
@@ -601,12 +601,12 @@ func Users(page, pageSize int) ([]*User, error) {
 
 // get user by erify code
 func getVerifyUser(code string) (user *User) {
-	if len(code) <= tool.TimeLimitCodeLength {
+	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
 		return nil
 	}
 
 	// use tail hex username query user
-	hexStr := code[tool.TimeLimitCodeLength:]
+	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = GetUserByName(string(b)); user != nil {
 			return user
@@ -623,7 +623,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 	if user = getVerifyUser(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TimeLimitCodeLength]
+		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
 		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Passwd + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
@@ -639,7 +639,7 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 	if user := getVerifyUser(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TimeLimitCodeLength]
+		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Passwd + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {

@@ -34,28 +34,30 @@ func MD5Bytes(str string) []byte {
 	return m.Sum(nil)
 }
 
-// EncodeMD5 encodes string to MD5 hex value.
-func EncodeMD5(str string) string {
+// MD5 encodes string to MD5 hex value.
+func MD5(str string) string {
 	return hex.EncodeToString(MD5Bytes(str))
 }
 
-// Encode string to sha1 hex value.
-func EncodeSha1(str string) string {
+// SHA1 encodes string to SHA1 hex value.
+func SHA1(str string) string {
 	h := sha1.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func ShortSha(sha1 string) string {
+// ShortSHA1 truncates SHA1 string length to at most 10.
+func ShortSHA1(sha1 string) string {
 	if len(sha1) > 10 {
 		return sha1[:10]
 	}
 	return sha1
 }
 
+// DetectEncoding returns best guess of encoding of given content.
 func DetectEncoding(content []byte) (string, error) {
 	if utf8.Valid(content) {
-		log.Trace("Detected encoding: utf-8 (fast)")
+		log.Trace("Detected encoding: UTF-8 (fast)")
 		return "UTF-8", nil
 	}
 
@@ -69,6 +71,8 @@ func DetectEncoding(content []byte) (string, error) {
 	return result.Charset, err
 }
 
+// BasicAuthDecode decodes username and password portions of HTTP Basic Authentication
+// from encoded content.
 func BasicAuthDecode(encoded string) (string, string, error) {
 	s, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
@@ -79,14 +83,16 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 	return auth[0], auth[1], nil
 }
 
+// BasicAuthEncode encodes username and password in HTTP Basic Authentication format.
 func BasicAuthEncode(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 }
 
-// GetRandomString generate random string by specify chars.
-func GetRandomString(n int) (string, error) {
-	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
+// RandomString returns generated random string in given length of characters.
+// It also returns possible error during generation.
+func RandomString(n int) (string, error) {
 	buffer := make([]byte, n)
 	max := big.NewInt(int64(len(alphanum)))
 
@@ -138,7 +144,7 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 	return false
 }
 
-const TimeLimitCodeLength = 12 + 6 + 40
+const TIME_LIMIT_CODE_LENGTH = 12 + 6 + 40
 
 // create a time limit code
 // code format: 12 length date time string + 6 minutes string + 40 sha1 encoded string

@@ -738,7 +738,7 @@ func TriggerTask(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-	if secret != tool.EncodeMD5(owner.Salt) {
+	if secret != tool.MD5(owner.Salt) {
 		ctx.Error(404)
 		log.Trace("TriggerTask [%s/%s]: invalid secret", owner.Name, repo.Name)
 		return

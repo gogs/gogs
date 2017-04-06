@@ -140,7 +140,7 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 		if com.StrTo(m).MustInt() > 0 {
 			return m
 		}
-		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSha(string(m)))
+		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSHA1(string(m)))
 	}))
 }
 

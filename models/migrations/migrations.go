@@ -159,10 +159,10 @@ func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	}
 
 	for _, org := range orgs {
-		if org.Rands, err = tool.GetRandomString(10); err != nil {
+		if org.Rands, err = tool.RandomString(10); err != nil {
 			return err
 		}
-		if org.Salt, err = tool.GetRandomString(10); err != nil {
+		if org.Salt, err = tool.RandomString(10); err != nil {
 			return err
 		}
 		if _, err = sess.Id(org.ID).Update(org); err != nil {
