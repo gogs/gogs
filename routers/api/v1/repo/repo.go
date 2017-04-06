@@ -167,7 +167,7 @@ func CreateUserRepo(ctx *context.APIContext, owner *models.User, opt api.CreateR
 		} else {
 			if repo != nil {
 				if err = models.DeleteRepository(ctx.User.ID, repo.ID); err != nil {
-					log.Error(4, "DeleteRepository: %v", err)
+					log.Error(2, "DeleteRepository: %v", err)
 				}
 			}
 			ctx.Error(500, "CreateRepository", err)
@@ -221,7 +221,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 			}
 			return
 		} else if !org.IsOrganization() {
-			ctx.Error(403, "", err)
+			ctx.Error(403, "", "Given user is not an organization")
 			return
 		}
 		ctxUser = org
@@ -235,7 +235,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 	if ctxUser.IsOrganization() && !ctx.User.IsAdmin {
 		// Check ownership of organization.
 		if !ctxUser.IsOwnedBy(ctx.User.ID) {
-			ctx.Error(403, "", "Given user is not owner of organization.")
+			ctx.Error(403, "", "Given user is not owner of organization")
 			return
 		}
 	}
@@ -248,7 +248,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 			case addrErr.IsURLError:
 				ctx.Error(422, "", err)
 			case addrErr.IsPermissionDenied:
-				ctx.Error(422, "", "You are not allowed to import local repositories.")
+				ctx.Error(422, "", "You are not allowed to import local repositories")
 			case addrErr.IsInvalidPath:
 				ctx.Error(422, "", "Invalid local path, it does not exist or not a directory.")
 			default:
@@ -270,7 +270,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 	if err != nil {
 		if repo != nil {
 			if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-				log.Error(4, "DeleteRepository: %v", errDelete)
+				log.Error(2, "DeleteRepository: %v", errDelete)
 			}
 		}
 		ctx.Error(500, "MigrateRepository", models.HandleMirrorCredentials(err.Error(), true))
