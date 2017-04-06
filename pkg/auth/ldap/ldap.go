@@ -42,11 +42,11 @@ type Source struct {
 	AttributesInBind  bool   // fetch attributes in bind context (not user)
 	Filter            string // Query filter to validate entry
 	AdminFilter       string // Query filter to check if user is admin
-	GroupsEnabled	  string // if the group checking is enabled
-	GroupDN			  string // Group Search Base
-	GroupFilter		  string // Group Name Filter
+	GroupsEnabled     bool   // if the group checking is enabled
+	GroupDN           string // Group Search Base
+	GroupFilter       string // Group Name Filter
 	GroupMemberUid    string // Group Attribute containing array of UserUID
-	UserUID 		  string // User Attribute listed in Group
+	UserUID           string // User Attribute listed in Group
 	Enabled           bool   // if this source is disabled
 }
 
@@ -74,9 +74,9 @@ func (ls *Source) sanitizedUserDN(username string) (string, bool) {
 
 func (ls *Source) sanitizedGroupFilter(group string) (string, bool) {
 	// See http://tools.ietf.org/search/rfc4515
-	badCharacters := "\x00()*\\"
+	badCharacters := "\x00*\\"
 	if strings.ContainsAny(group, badCharacters) {
-		log.Trace("Group filter invalid query characters: %s", username)
+		log.Trace("Group filter invalid query characters: %s", group)
 		return "", false
 	}
 
@@ -275,8 +275,8 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 		// for each srg.Entries[n]
 		isMember := false
-		for _,group := srg.Entries {
-			for _,member := group.GetAttributeValues(ls.GroupMemberUid) {
+		for _,group := range srg.Entries {
+			for _,member := range group.GetAttributeValues(ls.GroupMemberUid) {
 				// Search for uid in member list
 				if member == uid {
 					isMember = true
