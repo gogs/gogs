@@ -46,7 +46,7 @@
 					</h4>
 					<div class="ui attached segment">
 						<form class="ui form" action="{{.Link}}" method="post">
-							{{.CsrfTokenHtml}}
+							{{.CSRFTokenHTML}}
 							<p>{{.i18n.Tr "settings.new_token_desc"}}</p>
 							<div class="field {{if .Err_Name}}error{{end}}">
 								<label for="name">{{.i18n.Tr "settings.token_name"}}</label>

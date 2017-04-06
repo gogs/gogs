@@ -27,7 +27,7 @@
 										{{if .IsActivated}}
 											<div class="ui right">
 												<form action="{{$.Link}}" method="post">
-													{{$.CsrfTokenHtml}}
+													{{$.CSRFTokenHTML}}
 													<input name="_method" type="hidden" value="PRIMARY">
 													<input name="id" type="hidden" value="{{.ID}}">
 													<button class="ui green tiny button">{{$.i18n.Tr "settings.primary_email"}}</button>
@@ -42,7 +42,7 @@
 				</div>
 				<div class="ui attached bottom segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<div class="required field {{if .Err_Email}}error{{end}}">
 							<label for="email">{{.i18n.Tr "settings.add_new_email"}}</label>
 							<input id="email" name="email" type="email" autofocus required>

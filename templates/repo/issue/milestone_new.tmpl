@@ -22,7 +22,7 @@
 		</h2>
 		{{template "base/alert" .}}
 		<form class="ui form grid" action="{{.Link}}" method="post">
-			{{.CsrfTokenHtml}}
+			{{.CSRFTokenHTML}}
 			<div class="eleven wide column">
 				<div class="field {{if .Err_Title}}error{{end}}">
 					<label>{{.i18n.Tr "repo.milestones.title"}}</label>

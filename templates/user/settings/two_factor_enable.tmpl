@@ -13,7 +13,7 @@
 					<img src="{{.QRCode}}" alt="{{.TwoFactorSecret}}">
 					<p>{{.i18n.Tr "settings.two_factor_or_enter_secret"}} <b>{{.TwoFactorSecret}}</b></p>
 					<form class="ui form" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<div class="required inline field">
 							<span>{{.i18n.Tr "settings.two_factor_then_enter_passcode"}}</span>
 							<input class="ui input" name="passcode" autocomplete="off" autofocus required>

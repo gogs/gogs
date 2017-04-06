@@ -212,10 +212,10 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		ctx.Data["CsrfToken"] = x.GetToken()
-		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		ctx.Data["CSRFToken"] = x.GetToken()
+		ctx.Data["CSRFTokenHTML"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
 		log.Trace("Session ID: %s", sess.ID())
-		log.Trace("CSRF Token: %v", ctx.Data["CsrfToken"])
+		log.Trace("CSRF Token: %v", ctx.Data["CSRFToken"])
 
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding

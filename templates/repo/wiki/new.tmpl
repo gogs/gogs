@@ -12,7 +12,7 @@
 			{{end}}
 		</div>
 		<form class="ui form" action="{{EscapePound .Link}}" method="post">
-			{{.CsrfTokenHtml}}
+			{{.CSRFTokenHTML}}
 			<input type="hidden" name="old_title" value="{{.old_title}}">
 			<div class="field {{if .Err_Title}}error{{end}}">
 				<input name="title" value="{{.title}}" autofocus required>

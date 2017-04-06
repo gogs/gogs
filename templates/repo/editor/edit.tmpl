@@ -4,7 +4,7 @@
 	<div class="ui container">
 		{{template "base/alert" .}}
 		<form class="ui edit form" method="post">
-			{{.CsrfTokenHtml}}
+			{{.CSRFTokenHTML}}
 			<input type="hidden" name="last_commit" value="{{.last_commit}}">
 			<div class="ui secondary menu">
 				<div class="fitted item treepath">

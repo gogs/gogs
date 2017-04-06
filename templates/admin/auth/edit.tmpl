@@ -10,7 +10,7 @@
 				</h4>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<input type="hidden" name="id" value="{{.Source.ID}}">
 						<div class="inline field">
 							<label>{{$.i18n.Tr "admin.auths.auth_type"}}</label>
