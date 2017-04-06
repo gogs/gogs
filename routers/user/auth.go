@@ -44,9 +44,9 @@ func AutoLogin(c *context.Context) (bool, error) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
-			c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
-			c.SetCookie(setting.LoginStatusCookieName, "", -1, setting.AppSubUrl)
+			c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
+			c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
+			c.SetCookie(setting.LoginStatusCookieName, "", -1, setting.AppSubURL)
 		}
 	}()
 
@@ -65,9 +65,9 @@ func AutoLogin(c *context.Context) (bool, error) {
 	isSucceed = true
 	c.Session.Set("uid", u.ID)
 	c.Session.Set("uname", u.Name)
-	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
 	if setting.EnableLoginStatusCookie {
-		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
+		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubURL)
 	}
 	return true, nil
 }
@@ -91,17 +91,17 @@ func Login(c *context.Context) {
 
 	redirectTo := c.Query("redirect_to")
 	if len(redirectTo) > 0 {
-		c.SetCookie("redirect_to", redirectTo, 0, setting.AppSubUrl)
+		c.SetCookie("redirect_to", redirectTo, 0, setting.AppSubURL)
 	} else {
 		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
 	}
-	c.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+	c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
 
 	if isSucceed {
 		if isValidRedirect(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
-			c.Redirect(setting.AppSubUrl + "/")
+			c.Redirect(setting.AppSubURL + "/")
 		}
 		return
 	}
@@ -112,8 +112,8 @@ func Login(c *context.Context) {
 func afterLogin(c *context.Context, u *models.User, remember bool) {
 	if remember {
 		days := 86400 * setting.LoginRememberDays
-		c.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubUrl, "", setting.CookieSecure, true)
+		c.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubURL, "", setting.CookieSecure, true)
+		c.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubURL, "", setting.CookieSecure, true)
 	}
 
 	c.Session.Set("uid", u.ID)
@@ -122,19 +122,19 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 	c.Session.Delete("twoFactorUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
-	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
+	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
 	if setting.EnableLoginStatusCookie {
-		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubUrl)
+		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubURL)
 	}
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
-	c.SetCookie("redirect_to", "", -1, setting.AppSubUrl)
+	c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
 	if isValidRedirect(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
 
-	c.Redirect(setting.AppSubUrl + "/")
+	c.Redirect(setting.AppSubURL + "/")
 }
 
 func LoginPost(c *context.Context, f form.SignIn) {
@@ -162,7 +162,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 
 	c.Session.Set("twoFactorRemember", f.Remember)
 	c.Session.Set("twoFactorUserID", u.ID)
-	c.Redirect(setting.AppSubUrl + "/user/login/two_factor")
+	c.Redirect(setting.AppSubURL + "/user/login/two_factor")
 }
 
 func LoginTwoFactor(c *context.Context) {
@@ -193,7 +193,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	} else if !valid {
 		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
-		c.Redirect(setting.AppSubUrl + "/user/login/two_factor")
+		c.Redirect(setting.AppSubURL + "/user/login/two_factor")
 		return
 	}
 
@@ -225,7 +225,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 	if err := models.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
 		if errors.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
-			c.Redirect(setting.AppSubUrl + "/user/login/two_factor_recovery_code")
+			c.Redirect(setting.AppSubURL + "/user/login/two_factor_recovery_code")
 		} else {
 			c.ServerError("UseRecoveryCode", err)
 		}
@@ -243,10 +243,10 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 func SignOut(ctx *context.Context) {
 	ctx.Session.Delete("uid")
 	ctx.Session.Delete("uname")
-	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubUrl)
-	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubUrl)
-	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubUrl)
-	ctx.Redirect(setting.AppSubUrl + "/")
+	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
+	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
+	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
+	ctx.Redirect(setting.AppSubURL + "/")
 }
 
 func SignUp(ctx *context.Context) {
@@ -341,7 +341,7 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/user/login")
+	ctx.Redirect(setting.AppSubURL + "/user/login")
 }
 
 func Activate(ctx *context.Context) {
@@ -389,7 +389,7 @@ func Activate(ctx *context.Context) {
 
 		ctx.Session.Set("uid", user.ID)
 		ctx.Session.Set("uname", user.Name)
-		ctx.Redirect(setting.AppSubUrl + "/")
+		ctx.Redirect(setting.AppSubURL + "/")
 		return
 	}
 
@@ -411,7 +411,7 @@ func ActivateEmail(ctx *context.Context) {
 		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/user/settings/email")
+	ctx.Redirect(setting.AppSubURL + "/user/settings/email")
 	return
 }
 
@@ -525,7 +525,7 @@ func ResetPasswdPost(ctx *context.Context) {
 		}
 
 		log.Trace("User password reset: %s", u.Name)
-		ctx.Redirect(setting.AppSubUrl + "/user/login")
+		ctx.Redirect(setting.AppSubURL + "/user/login")
 		return
 	}
 

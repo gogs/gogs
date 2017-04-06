@@ -4,7 +4,7 @@
 			<th class="four wide">
 				{{if .LatestCommitUser}}
 					<img class="ui avatar image img-12" src="{{.LatestCommitUser.RelAvatarLink}}" />
-					<a href="{{AppSubUrl}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
+					<a href="{{AppSubURL}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
 				{{else}}
 					<img class="ui avatar image img-12" src="{{AvatarLink .LatestCommit.Author.Email}}" />
 					<strong>{{.LatestCommit.Author.Name}}</strong>
@@ -30,7 +30,7 @@
 				{{if $entry.IsSubModule}}
 					<td>
 						<span class="octicon octicon-file-submodule"></span>
-						{{$refURL := $commit.RefURL AppUrl $.BranchLink}}
+						{{$refURL := $commit.RefURL AppURL $.BranchLink}}
 						{{if $refURL}}
 							<a href="{{$refURL}}">{{$entry.Name}}</a> @ <a href="{{$refURL}}/commit/{{$commit.RefID}}">{{ShortSHA1 $commit.RefID}}</a>
 						{{else}}

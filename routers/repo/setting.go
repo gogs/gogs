@@ -189,7 +189,7 @@ func SettingsPost(ctx *context.Context, f form.RepoSetting) {
 		}
 		log.Trace("Repository converted from mirror to regular: %s/%s", ctx.Repo.Owner.Name, repo.Name)
 		ctx.Flash.Success(ctx.Tr("repo.settings.convert_succeed"))
-		ctx.Redirect(setting.AppSubUrl + "/" + ctx.Repo.Owner.Name + "/" + repo.Name)
+		ctx.Redirect(setting.AppSubURL + "/" + ctx.Repo.Owner.Name + "/" + repo.Name)
 
 	case "transfer":
 		if !ctx.Repo.IsOwner() {
@@ -228,7 +228,7 @@ func SettingsPost(ctx *context.Context, f form.RepoSetting) {
 		}
 		log.Trace("Repository transfered: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newOwner)
 		ctx.Flash.Success(ctx.Tr("repo.settings.transfer_succeed"))
-		ctx.Redirect(setting.AppSubUrl + "/" + newOwner + "/" + repo.Name)
+		ctx.Redirect(setting.AppSubURL + "/" + newOwner + "/" + repo.Name)
 
 	case "delete":
 		if !ctx.Repo.IsOwner() {
@@ -307,7 +307,7 @@ func SettingsCollaboration(ctx *context.Context) {
 func SettingsCollaborationPost(ctx *context.Context) {
 	name := strings.ToLower(ctx.Query("collaborator"))
 	if len(name) == 0 || ctx.Repo.Owner.LowerName == name {
-		ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
+		ctx.Redirect(setting.AppSubURL + ctx.Req.URL.Path)
 		return
 	}
 
@@ -315,7 +315,7 @@ func SettingsCollaborationPost(ctx *context.Context) {
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
-			ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
+			ctx.Redirect(setting.AppSubURL + ctx.Req.URL.Path)
 		} else {
 			ctx.Handle(500, "GetUserByName", err)
 		}
@@ -325,7 +325,7 @@ func SettingsCollaborationPost(ctx *context.Context) {
 	// Organization is not allowed to be added as a collaborator
 	if u.IsOrganization() {
 		ctx.Flash.Error(ctx.Tr("repo.settings.org_not_allowed_to_be_collaborator"))
-		ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
+		ctx.Redirect(setting.AppSubURL + ctx.Req.URL.Path)
 		return
 	}
 
@@ -339,7 +339,7 @@ func SettingsCollaborationPost(ctx *context.Context) {
 	}
 
 	ctx.Flash.Success(ctx.Tr("repo.settings.add_collaborator_success"))
-	ctx.Redirect(setting.AppSubUrl + ctx.Req.URL.Path)
+	ctx.Redirect(setting.AppSubURL + ctx.Req.URL.Path)
 }
 
 func ChangeCollaborationAccessMode(ctx *context.Context) {

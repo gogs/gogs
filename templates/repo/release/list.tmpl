@@ -40,7 +40,7 @@
 							<p class="text grey">
 								<span class="author">
 									<img class="img-10" src="{{.Publisher.RelAvatarLink}}">
-									<a href="{{AppSubUrl}}/{{.Publisher.Name}}">{{.Publisher.DisplayName}}</a>
+									<a href="{{AppSubURL}}/{{.Publisher.Name}}">{{.Publisher.DisplayName}}</a>
 								</span>
 								{{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
 								<span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2html}}</span>
@@ -53,7 +53,7 @@
 								<ul class="list">
 									{{range .Attachments}}
 										<li>
-											<i class="octicon octicon-package"></i> <a href="{{AppSubUrl}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
+											<i class="octicon octicon-package"></i> <a href="{{AppSubURL}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
 										</li>
 									{{end}}
 									{{if not .IsDraft}}

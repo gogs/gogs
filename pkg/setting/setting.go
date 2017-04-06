@@ -54,16 +54,17 @@ var (
 	// App settings
 	AppVer         string
 	AppName        string
-	AppUrl         string
-	AppSubUrl      string
-	AppSubUrlDepth int // Number of slashes
+	AppURL         string
+	AppSubURL      string
+	AppSubURLDepth int // Number of slashes
 	AppPath        string
 	AppDataPath    string
 
 	// Server settings
 	Protocol             Scheme
 	Domain               string
-	HTTPAddr, HTTPPort   string
+	HTTPAddr             string
+	HTTPPort             string
 	LocalURL             string
 	OfflineMode          bool
 	DisableRouterLog     bool
@@ -288,8 +289,9 @@ var (
 	}
 
 	// I18n settings
-	Langs, Names []string
-	dateLangs    map[string]string
+	Langs     []string
+	Names     []string
+	dateLangs map[string]string
 
 	// Highlight settings are loaded in modules/template/hightlight.go
 
@@ -416,20 +418,20 @@ func NewContext() {
 
 	sec := Cfg.Section("server")
 	AppName = Cfg.Section("").Key("APP_NAME").MustString("Gogs")
-	AppUrl = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
-	if AppUrl[len(AppUrl)-1] != '/' {
-		AppUrl += "/"
+	AppURL = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
+	if AppURL[len(AppURL)-1] != '/' {
+		AppURL += "/"
 	}
 
 	// Check if has app suburl.
-	url, err := url.Parse(AppUrl)
+	url, err := url.Parse(AppURL)
 	if err != nil {
-		log.Fatal(2, "Invalid ROOT_URL '%s': %s", AppUrl, err)
+		log.Fatal(2, "Invalid ROOT_URL '%s': %s", AppURL, err)
 	}
 	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
 	// This value is empty if site does not have sub-url.
-	AppSubUrl = strings.TrimSuffix(url.Path, "/")
-	AppSubUrlDepth = strings.Count(AppSubUrl, "/")
+	AppSubURL = strings.TrimSuffix(url.Path, "/")
+	AppSubURLDepth = strings.Count(AppSubURL, "/")
 
 	Protocol = SCHEME_HTTP
 	if sec.Key("PROTOCOL").String() == "https" {
@@ -771,7 +773,7 @@ func newSessionService() {
 		[]string{"memory", "file", "redis", "mysql"})
 	SessionConfig.ProviderConfig = strings.Trim(Cfg.Section("session").Key("PROVIDER_CONFIG").String(), "\" ")
 	SessionConfig.CookieName = Cfg.Section("session").Key("COOKIE_NAME").MustString("i_like_gogits")
-	SessionConfig.CookiePath = AppSubUrl
+	SessionConfig.CookiePath = AppSubURL
 	SessionConfig.Secure = Cfg.Section("session").Key("COOKIE_SECURE").MustBool()
 	SessionConfig.Gclifetime = Cfg.Section("session").Key("GC_INTERVAL_TIME").MustInt64(3600)
 	SessionConfig.Maxlifetime = Cfg.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)

@@ -77,7 +77,7 @@ func getDiscordCreatePayload(p *api.CreatePayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppUrl + p.Sender.UserName,
+			URL:         setting.AppURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -94,7 +94,7 @@ func getDiscordDeletePayload(p *api.DeletePayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppUrl + p.Sender.UserName,
+			URL:         setting.AppURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -111,7 +111,7 @@ func getDiscordForkPayload(p *api.ForkPayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppUrl + p.Sender.UserName,
+			URL:         setting.AppURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -159,7 +159,7 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppUrl + p.Sender.UserName,
+			URL:         setting.AppURL + p.Sender.UserName,
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
@@ -360,7 +360,7 @@ func getDiscordReleasePayload(p *api.ReleasePayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppUrl + p.Sender.UserName,
+			URL:         setting.AppURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
