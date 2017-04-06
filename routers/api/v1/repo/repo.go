@@ -220,6 +220,9 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 				ctx.Error(500, "GetUserByID", err)
 			}
 			return
+		} else if !org.IsOrganization() {
+			ctx.Error(403, "", err)
+			return
 		}
 		ctxUser = org
 	}
