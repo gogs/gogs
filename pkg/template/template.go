@@ -33,16 +33,16 @@ func NewFuncMap() []template.FuncMap {
 			return strings.Title(runtime.Version())
 		},
 		"UseHTTPS": func() bool {
-			return strings.HasPrefix(setting.AppUrl, "https")
+			return strings.HasPrefix(setting.AppURL, "https")
 		},
 		"AppName": func() string {
 			return setting.AppName
 		},
-		"AppSubUrl": func() string {
-			return setting.AppSubUrl
+		"AppSubURL": func() string {
+			return setting.AppSubURL
 		},
-		"AppUrl": func() string {
-			return setting.AppUrl
+		"AppURL": func() string {
+			return setting.AppURL
 		},
 		"AppVer": func() string {
 			return setting.AppVer

@@ -34,7 +34,7 @@
 					<tr>
 						<td class="author">
 							{{if .User}}
-								<img class="ui avatar image" src="{{.User.RelAvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
+								<img class="ui avatar image" src="{{.User.RelAvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubURL}}/{{.User.Name}}">{{.Author.Name}}</a>
 							{{else}}
 								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
 							{{end}}
@@ -45,7 +45,7 @@
 							{{if not (and $.Username $.Reponame)}}
 								<span class="ui sha label">{{ShortSHA1 .ID.String}}</span>
 							{{else}}
-								<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
+								<a rel="nofollow" class="ui sha label" href="{{AppSubURL}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
 							{{end}}
 							<span {{if gt .ParentCount 1}}class="grey text"{{end}}>{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}</span>
 						</td>

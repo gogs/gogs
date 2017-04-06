@@ -16,7 +16,7 @@ import (
 )
 
 func composeDeployKeysAPILink(repoPath string) string {
-	return setting.AppUrl + "api/v1/repos/" + repoPath + "/keys/"
+	return setting.AppURL + "api/v1/repos/" + repoPath + "/keys/"
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys

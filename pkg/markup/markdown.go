@@ -63,7 +63,7 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 
 	// Since this method could only possibly serve one link at a time,
 	// we do not need to find all.
-	if bytes.HasPrefix(link, []byte(setting.AppUrl)) {
+	if bytes.HasPrefix(link, []byte(setting.AppURL)) {
 		m := CommitPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
@@ -86,14 +86,14 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			}
 
 			index := string(m[i+7 : j])
-			fullRepoURL := setting.AppUrl + strings.TrimPrefix(r.urlPrefix, "/")
+			fullRepoURL := setting.AppURL + strings.TrimPrefix(r.urlPrefix, "/")
 			var link string
 			if strings.HasPrefix(string(m), fullRepoURL) {
 				// Use a short issue reference if the URL refers to this repository
 				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
 			} else {
 				// Use a cross-repository issue reference if the URL refers to a different repository
-				repo := string(m[len(setting.AppUrl) : i-1])
+				repo := string(m[len(setting.AppURL) : i-1])
 				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
 			}
 			out.WriteString(link)

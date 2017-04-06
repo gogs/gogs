@@ -62,7 +62,7 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 			urlPrefix                   = "/prefix"
 			metas     map[string]string = nil
 		)
-		setting.AppSubUrlDepth = 0
+		setting.AppSubURLDepth = 0
 
 		Convey("To the internal issue tracker", func() {
 			Convey("It should not render anything when there are no mentions", func() {

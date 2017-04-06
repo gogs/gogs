@@ -52,5 +52,5 @@ func CreatePost(ctx *context.Context, f form.CreateOrg) {
 	}
 	log.Trace("Organization created: %s", org.Name)
 
-	ctx.Redirect(setting.AppSubUrl + "/org/" + f.OrgName + "/dashboard")
+	ctx.Redirect(setting.AppSubURL + "/org/" + f.OrgName + "/dashboard")
 }

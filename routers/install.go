@@ -145,7 +145,7 @@ func Install(ctx *context.Context) {
 	f.SSHPort = setting.SSH.Port
 	f.UseBuiltinSSHServer = setting.SSH.StartBuiltinServer
 	f.HTTPPort = setting.HTTPPort
-	f.AppUrl = setting.AppUrl
+	f.AppUrl = setting.AppURL
 	f.LogRootPath = setting.LogRootPath
 
 	// E-mail service settings

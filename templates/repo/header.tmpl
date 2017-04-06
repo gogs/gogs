@@ -6,7 +6,7 @@
 				<div class="ui header">
 					<div class="ui huge breadcrumb">
 						<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
-						<a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+						<a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
 						<div class="divider"> / </div>
 						<a href="{{$.RepoLink}}">{{.Name}}</a>
 						{{if .IsMirror}}<div class="fork-flag">{{$.i18n.Tr "repo.mirror_from"}} <a target="_blank" href="{{$.Mirror.Address}}">{{$.Mirror.Address}}</a></div>{{end}}
@@ -33,7 +33,7 @@
 							</div>
 							{{if .CanBeForked}}
 								<div class="ui labeled button" tabindex="0">
-									<a class="ui basic button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" href="{{AppSubUrl}}/repo/fork/{{.ID}}">
+									<a class="ui basic button {{if eq .OwnerID $.SignedUserID}}poping up{{end}}" href="{{AppSubURL}}/repo/fork/{{.ID}}">
 										<i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
 									</a>
 									<a class="ui basic label" href="{{.Link}}/forks">

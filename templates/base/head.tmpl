@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head data-suburl="{{AppSubUrl}}">
+<head data-suburl="{{AppSubURL}}">
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	{{if not .PageIsAdmin}}
@@ -10,7 +10,7 @@
 	{{end}}
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CSRFToken}}" />
-	<meta name="_suburl" content="{{AppSubUrl}}" />
+	<meta name="_suburl" content="{{AppSubURL}}" />
 	{{if .GoGetImport}}
 		<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
 		<meta name="go-source" content="{{.GoGetImport}} _ {{.GoDocDirectory}} {{.GoDocFile}}">
@@ -31,44 +31,44 @@
 		<meta property="og:description" content="{{.Repository.Description}}">
 		<meta property="og:image" content="{{.Repository.Owner.AvatarLink}}" />
 	{{else}}
-		<meta property="og:url" content="{{AppUrl}}" />
+		<meta property="og:url" content="{{AppURL}}" />
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content="{{AppName}}">
 		<meta property="og:description" content="Gogs is a painless self-hosted Git service.">
-		<meta property="og:image" content="{{AppUrl}}img/gogs-lg.png" />
+		<meta property="og:image" content="{{AppURL}}img/gogs-lg.png" />
 		<meta property="og:site_name" content="Gogs">
 	{{end}}
 
-	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
+	<link rel="shortcut icon" href="{{AppSubURL}}/img/favicon.png" />
 
-	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
-	<script src="{{AppSubUrl}}/js/libs/jquery.are-you-sure.js"></script>
-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-4.3.0/octicons.min.css">
+	<script src="{{AppSubURL}}/js/jquery-1.11.3.min.js"></script>
+	<script src="{{AppSubURL}}/js/libs/jquery.are-you-sure.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
+	<link rel="stylesheet" href="{{AppSubURL}}/assets/octicons-4.3.0/octicons.min.css">
 
 	<!-- notebook.js for rendering ipython notebooks and marked.js for rendering markdown in notebooks -->
 	{{if .IsIPythonNotebook }}
-		<script src="{{AppSubUrl}}/plugins/notebookjs-0.2.6/notebook.min.js"></script>
-		<script src="{{AppSubUrl}}/plugins/marked-0.3.6/marked.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/notebookjs-0.2.6/notebook.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/marked-0.3.6/marked.min.js"></script>
 	{{end}}
 
 	{{if .RequireSimpleMDE}}
-		<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.css">
-		<script src="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
-		<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
-		<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
+		<link rel="stylesheet" href="{{AppSubURL}}/plugins/simplemde-1.10.1/simplemde.min.css">
+		<script src="{{AppSubURL}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
 		<script>
-			CodeMirror.modeURL =  "{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
+			CodeMirror.modeURL =  "{{AppSubURL}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
 		</script>
 	{{end}}
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.2.10.min.css">
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/gogs.css?v={{MD5 AppVer}}">
+	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.2.10.min.css">
+	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.css?v={{MD5 AppVer}}">
 
 	<!-- JavaScript -->
-	<script src="{{AppSubUrl}}/js/semantic-2.2.10.min.js"></script>
-	<script src="{{AppSubUrl}}/js/gogs.js?v={{MD5 AppVer}}"></script>
+	<script src="{{AppSubURL}}/js/semantic-2.2.10.min.js"></script>
+	<script src="{{AppSubURL}}/js/gogs.js?v={{MD5 AppVer}}"></script>
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 
@@ -86,19 +86,19 @@
 					<div class="ui grid">
 						<div class="column">
 							<div class="ui top secondary menu">
-								<a class="item brand" href="{{AppSubUrl}}/">
-									<img class="ui mini image" src="{{AppSubUrl}}/img/favicon.png">
+								<a class="item brand" href="{{AppSubURL}}/">
+									<img class="ui mini image" src="{{AppSubURL}}/img/favicon.png">
 								</a>
 
 								{{if .IsSigned}}
-									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "dashboard"}}</a>
-									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubUrl}}/issues">{{.i18n.Tr "issues"}}</a>
-									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubUrl}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
+									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "dashboard"}}</a>
+									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubURL}}/issues">{{.i18n.Tr "issues"}}</a>
+									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubURL}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
 								{{else}}
-									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubUrl}}/">{{.i18n.Tr "home"}}</a>
+									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "home"}}</a>
 								{{end}}
 
-								<a class="item{{if .PageIsExplore}} active{{end}}" href="{{AppSubUrl}}/explore/repos">{{.i18n.Tr "explore"}}</a>
+								<a class="item{{if .PageIsExplore}} active{{end}}" href="{{AppSubURL}}/explore/repos">{{.i18n.Tr "explore"}}</a>
 								{{/*<div class="item">
 									<div class="ui icon input">
 									<input class="searchbox" type="text" placeholder="{{.i18n.Tr "search_project"}}">
@@ -114,14 +114,14 @@
 												<i class="octicon octicon-triangle-down"></i>
 											</span>
 											<div class="menu">
-												<a class="item" href="{{AppSubUrl}}/repo/create">
+												<a class="item" href="{{AppSubURL}}/repo/create">
 													<i class="octicon octicon-plus"></i> {{.i18n.Tr "new_repo"}}
 												</a>
-												<a class="item" href="{{AppSubUrl}}/repo/migrate">
+												<a class="item" href="{{AppSubURL}}/repo/migrate">
 													<i class="octicon octicon-repo-clone"></i> {{.i18n.Tr "new_migrate"}}
 												</a>
 												{{if .SignedUser.CanCreateOrganization}}
-												<a class="item" href="{{AppSubUrl}}/org/create">
+												<a class="item" href="{{AppSubURL}}/org/create">
 													<i class="octicon octicon-organization"></i> {{.i18n.Tr "new_org"}}
 												</a>
 												{{end}}
@@ -140,11 +140,11 @@
 												</div>
 
 												<div class="divider"></div>
-												<a class="item" href="{{AppSubUrl}}/{{.SignedUser.Name}}">
+												<a class="item" href="{{AppSubURL}}/{{.SignedUser.Name}}">
 													<i class="octicon octicon-person"></i>
 													{{.i18n.Tr "your_profile"}}<!-- Your profile -->
 												</a>
-												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubUrl}}/user/settings">
+												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubURL}}/user/settings">
 													<i class="octicon octicon-settings"></i>
 													{{.i18n.Tr "your_settings"}}<!-- Your settings -->
 												</a>
@@ -155,14 +155,14 @@
 												{{if .IsAdmin}}
 													<div class="divider"></div>
 
-													<a class="{{if .PageIsAdmin}}active{{end}} item" href="{{AppSubUrl}}/admin">
+													<a class="{{if .PageIsAdmin}}active{{end}} item" href="{{AppSubURL}}/admin">
 														<i class="icon settings"></i>
 														{{.i18n.Tr "admin_panel"}}<!-- Admin Panel -->
 													</a>
 												{{end}}
 
 												<div class="divider"></div>
-												<a class="item" href="{{AppSubUrl}}/user/logout">
+												<a class="item" href="{{AppSubURL}}/user/logout">
 													<i class="octicon octicon-sign-out"></i>
 													{{.i18n.Tr "sign_out"}}<!-- Sign Out -->
 												</a>
@@ -175,11 +175,11 @@
 									<a class="item" target="_blank" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}</a>
 									<div class="right menu">
 										{{if .ShowRegistrationButton}}
-											<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubUrl}}/user/sign_up">
+											<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubURL}}/user/sign_up">
 												<i class="octicon octicon-person"></i> {{.i18n.Tr "register"}}
 											</a>
 										{{end}}
-										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubUrl}}/user/login?redirect_to={{.Link}}">
+										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubURL}}/user/login?redirect_to={{.Link}}">
 											<i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
 										</a>
 									</div><!-- end anonymous right menu -->

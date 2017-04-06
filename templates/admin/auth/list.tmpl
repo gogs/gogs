@@ -8,7 +8,7 @@
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.auths.auth_manage_panel"}} ({{.i18n.Tr "admin.total" .Total}})
 					<div class="ui right">
-						<a class="ui blue tiny button" href="{{AppSubUrl}}/admin/auths/new">{{.i18n.Tr "admin.auths.new"}}</a>
+						<a class="ui blue tiny button" href="{{AppSubURL}}/admin/auths/new">{{.i18n.Tr "admin.auths.new"}}</a>
 					</div>
 				</h4>
 				<div class="ui attached table segment">
@@ -28,12 +28,12 @@
 							{{range .Sources}}
 								<tr>
 									<td>{{.ID}}</td>
-									<td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}">{{.Name}}</a></td>
+									<td><a href="{{AppSubURL}}/admin/auths/{{.ID}}">{{.Name}}</a></td>
 									<td>{{.TypeName}}</td>
 									<td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
 									<td><span class="poping up" data-content="{{DateFmtLong .Updated}}" data-variation="tiny">{{DateFmtShort .Updated}}</span></td>
 									<td><span class="poping up" data-content="{{DateFmtLong .Created}}" data-variation="tiny">{{DateFmtShort .Created}}</span></td>
-									<td><a href="{{AppSubUrl}}/admin/auths/{{.ID}}"><i class="fa fa-pencil-square-o"></i></a></td>
+									<td><a href="{{AppSubURL}}/admin/auths/{{.ID}}"><i class="fa fa-pencil-square-o"></i></a></td>
 								</tr>
 							{{end}}
 						</tbody>

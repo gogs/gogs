@@ -40,7 +40,7 @@ func Test_IsMarkdownFile(t *testing.T) {
 
 func Test_Markdown(t *testing.T) {
 	Convey("Rendering an issue URL", t, func() {
-		setting.AppUrl = "http://localhost:3000/"
+		setting.AppURL = "http://localhost:3000/"
 		htmlFlags := 0
 		htmlFlags |= blackfriday.HTML_SKIP_STYLE
 		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
@@ -82,7 +82,7 @@ func Test_Markdown(t *testing.T) {
 	})
 
 	Convey("Rendering a commit URL", t, func() {
-		setting.AppUrl = "http://localhost:3000/"
+		setting.AppURL = "http://localhost:3000/"
 		htmlFlags := 0
 		htmlFlags |= blackfriday.HTML_SKIP_STYLE
 		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS

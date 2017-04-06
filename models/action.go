@@ -136,8 +136,8 @@ func (a *Action) ShortRepoPath() string {
 }
 
 func (a *Action) GetRepoLink() string {
-	if len(setting.AppSubUrl) > 0 {
-		return path.Join(setting.AppSubUrl, a.GetRepoPath())
+	if len(setting.AppSubURL) > 0 {
+		return path.Join(setting.AppSubURL, a.GetRepoPath())
 	}
 	return "/" + a.GetRepoPath()
 }
@@ -540,7 +540,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return nil
 		}
 
-		compareURL := setting.AppUrl + opts.Commits.CompareURL
+		compareURL := setting.AppURL + opts.Commits.CompareURL
 		if isNewRef {
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{

@@ -74,7 +74,7 @@ func cutoutVerbosePrefix(prefix string) string {
 		if prefix[i] == '/' {
 			count++
 		}
-		if count >= 3+setting.AppSubUrlDepth {
+		if count >= 3+setting.AppSubURLDepth {
 			return prefix[:i]
 		}
 	}
@@ -128,7 +128,7 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, me
 		repo := string(m[:delimIdx])
 		index := string(m[delimIdx+1:])
 
-		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppUrl, repo, index, m)
+		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppURL, repo, index, m)
 		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
 	return rawBytes
@@ -150,7 +150,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	for _, m := range ms {
 		m = m[bytes.Index(m, []byte("@")):]
 		rawBytes = bytes.Replace(rawBytes, m,
-			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubUrl, m[1:], m)), -1)
+			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubURL, m[1:], m)), -1)
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)

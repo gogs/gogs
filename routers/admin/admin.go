@@ -165,7 +165,7 @@ func Dashboard(ctx *context.Context) {
 		} else {
 			ctx.Flash.Success(success)
 		}
-		ctx.Redirect(setting.AppSubUrl + "/admin")
+		ctx.Redirect(setting.AppSubURL + "/admin")
 		return
 	}
 
@@ -185,7 +185,7 @@ func SendTestMail(ctx *context.Context) {
 		ctx.Flash.Info(ctx.Tr("admin.config.test_mail_sent", email))
 	}
 
-	ctx.Redirect(setting.AppSubUrl + "/admin/config")
+	ctx.Redirect(setting.AppSubURL + "/admin/config")
 }
 
 func Config(ctx *context.Context) {
@@ -193,7 +193,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminConfig"] = true
 
-	ctx.Data["AppUrl"] = setting.AppUrl
+	ctx.Data["AppURL"] = setting.AppURL
 	ctx.Data["Domain"] = setting.Domain
 	ctx.Data["OfflineMode"] = setting.OfflineMode
 	ctx.Data["DisableRouterLog"] = setting.DisableRouterLog
