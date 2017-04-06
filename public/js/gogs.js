@@ -1153,6 +1153,11 @@ function initWebhookSettings() {
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
+    
+    // Set cursor to the end of autofocus input string
+    $('input[autofocus]').each(function () {
+        $(this).val($(this).val());
+    })
 
     // Show exact time
     $('.time-since').each(function () {
