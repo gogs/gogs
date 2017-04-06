@@ -45,6 +45,12 @@
 			"revisionTime": "2017-04-03T18:34:37Z"
 		},
 		{
+			"checksumSHA1": "axe0OTdOjYa+XKDUYqzOv7FGaWo=",
+			"path": "github.com/boombuler/barcode/utils",
+			"revision": "0dc17c9053c4956f07a6db58b2863924fe03b643",
+			"revisionTime": "2017-04-03T18:34:37Z"
+		},
+		{
 			"checksumSHA1": "fNAC4qgZDqF3kxq74/yyk3PWdy8=",
 			"path": "github.com/bradfitz/gomemcache/memcache",
 			"revision": "fb1f79c6b65acda83063cbc69f6bba1522558bfc",
