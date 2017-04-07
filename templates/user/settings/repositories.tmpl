@@ -29,8 +29,8 @@
 								</a> 
 								<span class="ui text light grey">{{.Size | FileSize}}</span>
 								{{if not (eq .OwnerID $.LoggedUserID)}}
-								<div class="right floated content">
-									<a class="ui red tiny button inline text-thin delete-button" href="" data-url="{{$.Link}}/leave" data-id="{{.ID}}">{{$.i18n.Tr "settings.repos.leave"}}</a>
+								<div class="right floated">
+									<a class="ui red tiny basic button inline delete-button" href="" data-url="{{$.Link}}/leave" data-id="{{.ID}}">{{$.i18n.Tr "settings.repos.leave"}}</a>
 								</div>
 								{{end}}
 							</div>

@@ -136,6 +136,9 @@ code.wrap {
 .ui.form .ui.button {
   font-weight: normal;
 }
+.ui.form .box.field {
+  padding-left: 27px;
+}
 .ui.menu,
 .ui.vertical.menu,
 .ui.segment {
@@ -2339,9 +2342,6 @@ footer .ui.language .menu {
 .repository.wiki.view > .markdown h6:first-of-type {
   margin-top: 0;
 }
-.repository.settings.options .box.field {
-  padding-left: 27px;
-}
 .repository.settings.collaboration .collaborator.list {
   padding: 0;
 }
@@ -2861,6 +2861,14 @@ footer .ui.language .menu {
 }
 .user.settings .email.list .item:not(:first-child) .button {
   margin-top: -10px;
+}
+.user.settings .email.list .item .ui.primary.label {
+  margin-top: -5px;
+}
+.user.settings.sshkeys .right.floated.button,
+.user.settings.applications .right.floated.button {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 .user.settings.security .two-factor .toggle.button {
   margin-top: -5px;
