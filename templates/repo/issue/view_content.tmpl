@@ -79,7 +79,7 @@
 											{{end}}
 										</div>
 									{{end}}
-									{{if or $.IsRepositoryAdmin (eq .Poster.ID $.SignedUserID)}}
+									{{if or $.IsRepositoryAdmin (eq .Poster.ID $.LoggedUserID)}}
 										<div class="item action">
 											<a class="edit-content" href="#"><i class="octicon octicon-pencil"></i></a>
 											<a class="delete-comment" href="#" data-comment-id={{.HashTag}} data-url="{{$.RepoLink}}/comments/{{.ID}}/delete" data-locale="{{$.i18n.Tr "repo.issues.delete_comment_confirm"}}"><i class="octicon octicon-x"></i></a>
@@ -216,10 +216,10 @@
 				</div>
 			{{end}}
 
-			{{if .IsSigned}}
+			{{if .IsLogged}}
 				<div class="comment form">
-					<a class="avatar" href="{{.SignedUser.HomeLink}}">
-						<img src="{{.SignedUser.RelAvatarLink}}">
+					<a class="avatar" href="{{.LoggedUser.HomeLink}}">
+						<img src="{{.LoggedUser.RelAvatarLink}}">
 					</a>
 					<div class="content">
 						<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">

@@ -21,7 +21,7 @@ const (
 )
 
 func Home(ctx *context.Context) {
-	if ctx.IsSigned {
+	if ctx.IsLogged {
 		if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
 			ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
 			ctx.HTML(200, user.ACTIVATE)

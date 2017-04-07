@@ -151,7 +151,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		// Check if the user is the same as the repository owner
-		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(ownerName) {
+		if ctx.IsLogged && ctx.User.LowerName == strings.ToLower(ownerName) {
 			owner = ctx.User
 		} else {
 			owner, err = models.GetUserByName(ownerName)
@@ -194,7 +194,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
 
 		// Admin has super access.
-		if ctx.IsSigned && ctx.User.IsAdmin {
+		if ctx.IsLogged && ctx.User.IsAdmin {
 			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
 			mode, err := models.AccessLevel(ctx.UserID(), repo)
@@ -278,7 +278,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		ctx.Data["CloneLink"] = repo.CloneLink()
 		ctx.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
-		if ctx.IsSigned {
+		if ctx.IsLogged {
 			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.ID, repo.ID)
 			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.ID, repo.ID)
 		}
@@ -424,7 +424,7 @@ func RepoRef() macaron.Handler {
 		ctx.Data["IsViewCommit"] = ctx.Repo.IsViewCommit
 
 		// People who have push access or have fored repository can propose a new pull request.
-		if ctx.Repo.IsWriter() || (ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)) {
+		if ctx.Repo.IsWriter() || (ctx.IsLogged && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if ctx.Repo.Repository.BaseRepo != nil {
@@ -459,7 +459,7 @@ func RepoRef() macaron.Handler {
 
 func RequireRepoAdmin() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.IsSigned || (!ctx.Repo.IsAdmin() && !ctx.User.IsAdmin) {
+		if !ctx.IsLogged || (!ctx.Repo.IsAdmin() && !ctx.User.IsAdmin) {
 			ctx.NotFound()
 			return
 		}
@@ -468,7 +468,7 @@ func RequireRepoAdmin() macaron.Handler {
 
 func RequireRepoWriter() macaron.Handler {
 	return func(ctx *Context) {
-		if !ctx.IsSigned || (!ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
+		if !ctx.IsLogged || (!ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
 			ctx.NotFound()
 			return
 		}

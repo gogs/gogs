@@ -379,7 +379,7 @@ func showOrgProfile(ctx *context.Context) {
 		count int64
 		err   error
 	)
-	if ctx.IsSigned && !ctx.User.IsAdmin {
+	if ctx.IsLogged && !ctx.User.IsAdmin {
 		repos, count, err = org.GetUserRepositories(ctx.User.ID, page, setting.UI.User.RepoPagingNum)
 		if err != nil {
 			ctx.Handle(500, "GetUserRepositories", err)
@@ -387,7 +387,7 @@ func showOrgProfile(ctx *context.Context) {
 		}
 		ctx.Data["Repos"] = repos
 	} else {
-		showPrivate := ctx.IsSigned && ctx.User.IsAdmin
+		showPrivate := ctx.IsLogged && ctx.User.IsAdmin
 		repos, err = models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   org.ID,
 			Private:  showPrivate,

@@ -14,8 +14,8 @@
 						{{.CSRFTokenHTML}}
 						<div class="required field {{if .Err_Name}}error{{end}}">
 							<label for="username">{{.i18n.Tr "username"}}<span class="text red {{if eq .name .origin_name}}hide{{end}}" id="name-change-prompt"> {{.i18n.Tr "settings.change_username_prompt"}}</span></label>
-							<input id="username" name="name" value="{{.name}}" data-name="{{.origin_name}}" autofocus required {{if not .SignedUser.IsLocal}}readonly{{end}}>
-							{{if not .SignedUser.IsLocal}}
+							<input id="username" name="name" value="{{.name}}" data-name="{{.origin_name}}" autofocus required {{if not .LoggedUser.IsLocal}}readonly{{end}}>
+							{{if not .LoggedUser.IsLocal}}
 							<p class="help text blue">{{$.i18n.Tr "settings.password_username_disabled"}}</p>
 							{{end}}
 						</div>
