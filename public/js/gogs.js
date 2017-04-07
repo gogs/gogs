@@ -627,7 +627,7 @@ function setSimpleMDE($editArea) {
             "code", "quote", "|",
             "unordered-list", "ordered-list", "|",
             "link", "image", "table", "horizontal-rule", "|",
-            "clean-block", "preview", "fullscreen", "side-by-side"]
+            "clean-block"]
     });
 
     return true;
