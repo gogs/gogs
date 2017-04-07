@@ -95,25 +95,27 @@
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{.attribute_mail}}" placeholder="e.g. mail">
 							</div>
-							<div class="ui checkbox">
-								<label><strong>{{.i18n.Tr "admin.auths.groups_enabled"}}</strong></label>
-								<input name="groups_enabled" type="checkbox" {{if .groups_enabled}}checked{{end}}>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>Verify group membership in LDAP</strong></label>
+									<input name="groups_enabled" type="checkbox">
+								</div>
 							</div>
 							<div class="field">
-								<label for="group_base">{{.i18n.Tr "admin.auths.group_base"}}</label>
-								<input id="group_base" name="group_base" value="{{.group_base}}" placeholder="e.g. ou=group,dc=mydomain,dc=com">
+								<label for="group_dn">Group search Base DN</label>
+								<input id="group_dn" name="group_dn" placeholder="e.g. ou=group,dc=mydomain,dc=com">
 							</div>
 							<div class="field">
-								<label for="group_filter">{{.i18n.Tr "admin.auths.group_filter"}}</label>
-								<input id="group_filter" name="group_filter" value="{{.group_filter}}" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
+								<label for="group_filter">Valid groups filter</label>
+								<input id="group_filter" name="group_filter" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
 							</div>
 							<div class="field">
-								<label for="group_member_list">{{.i18n.Tr "admin.auths.group_member_list"}}</label>
-								<input id="group_member_list" name="group_member_list" value="{{.group_member_list}}" placeholder="e.g. memberUid">
+								<label for="group_member_uid">Group attribute containing list of users</label>
+								<input id="group_member_uid" name="group_member_uid" placeholder="e.g. memberUid">
 							</div>
 							<div class="field">
-								<label for="group_user_uid">{{.i18n.Tr "admin.auths.group_user_uid"}}</label>
-								<input id="group_user_uid" name="group_user_uid" value="{{.group_user_uid}}" placeholder="e.g. uid">
+								<label for="user_uid">User attribute listed in group</label>
+								<input id="user_uid" name="user_uid" placeholder="e.g. uid">
 							</div>
 						</div>
 

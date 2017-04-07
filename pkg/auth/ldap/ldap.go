@@ -80,18 +80,18 @@ func (ls *Source) sanitizedGroupFilter(group string) (string, bool) {
 		return "", false
 	}
 
-	return fmt.Sprintf(ls.Filter, group), true
+	return group, true
 }
 
 func (ls *Source) sanitizedGroupDN(groupDn string) (string, bool) {
 	// See http://tools.ietf.org/search/rfc4514: "special characters"
-	badCharacters := "\x00()*\\,='\"#+;<>"
+	badCharacters := "\x00()*\\'\"#+;<>"
 	if strings.ContainsAny(groupDn, badCharacters) || strings.HasPrefix(groupDn, " ") || strings.HasSuffix(groupDn, " ") {
 		log.Trace("Group DN contains invalid query characters: %s", groupDn)
 		return "", false
 	}
 
-	return fmt.Sprintf(ls.Filter, groupDn), true
+	return groupDn, true
 }
 
 func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
@@ -221,7 +221,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		return "", "", "", "", false, false
 	}
 
-	log.Trace("Fetching attributes '%v', '%v', '%v', '%v' with filter '%s' and base '%s'", ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, userFilter, userDN)
+	log.Trace("Fetching attributes '%v', '%v', '%v', '%v', '%v' with filter '%s' and base '%s'", ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, ls.UserUID, userFilter, userDN)
 	search := ldap.NewSearchRequest(
 		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, userFilter,
 		[]string{ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, ls.UserUID},
@@ -258,7 +258,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 			return "", "", "", "", false, false
 		}
 
-		log.Trace("Fetching groups '%v'with filter '%s' and base '%s'", ls.GroupMemberUid, groupFilter, groupDN)
+		log.Trace("Fetching groups '%v' with filter '%s' and base '%s'", ls.GroupMemberUid, groupFilter, groupDN)
 		groupSearch := ldap.NewSearchRequest(
 			groupDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, groupFilter,
 			[]string{ls.GroupMemberUid},
@@ -273,11 +273,9 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 			return "", "", "", "", false, false
 		}
 
-		// for each srg.Entries[n]
 		isMember := false
 		for _,group := range srg.Entries {
 			for _,member := range group.GetAttributeValues(ls.GroupMemberUid) {
-				// Search for uid in member list
 				if member == uid {
 					isMember = true
 				}
