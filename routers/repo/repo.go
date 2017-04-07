@@ -87,7 +87,7 @@ func Create(ctx *context.Context) {
 
 func handleCreateError(ctx *context.Context, owner *models.User, err error, name, tpl string, form interface{}) {
 	switch {
-	case models.IsErrReachLimitOfRepo(err):
+	case errors.IsReachLimitOfRepo(err):
 		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
 	case models.IsErrRepoAlreadyExist(err):
 		ctx.Data["Err_RepoName"] = true

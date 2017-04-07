@@ -610,8 +610,9 @@ func getVerifyUser(code string) (user *User) {
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = GetUserByName(string(b)); user != nil {
 			return user
+		} else if !errors.IsUserNotExist(err) {
+			log.Error(2, "GetUserByName: %v", err)
 		}
-		log.Error(4, "user.getVerifyUser: %v", err)
 	}
 
 	return nil
