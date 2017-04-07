@@ -39,7 +39,11 @@
 					</td>
 				{{else}}
 					<td class="name">
-						<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+						{{if $entry.IsLink}}
+							<span class="octicon octicon-file-symlink-file"></span>
+						{{else}}
+							<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+						{{end}}
 						<a href="{{EscapePound $.TreeLink}}/{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
 					</td>
 				{{end}}
