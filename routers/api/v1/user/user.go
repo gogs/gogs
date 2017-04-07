@@ -41,7 +41,7 @@ func Search(ctx *context.APIContext) {
 			AvatarUrl: users[i].AvatarLink(),
 			FullName:  users[i].FullName,
 		}
-		if ctx.IsSigned {
+		if ctx.IsLogged {
 			results[i].Email = users[i].Email
 		}
 	}
@@ -64,7 +64,7 @@ func GetInfo(ctx *context.APIContext) {
 	}
 
 	// Hide user e-mail when API caller isn't signed in.
-	if !ctx.IsSigned {
+	if !ctx.IsLogged {
 		u.Email = ""
 	}
 	ctx.JSON(200, u.APIFormat())

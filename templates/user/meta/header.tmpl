@@ -8,9 +8,9 @@
 
 	<div class="ui right">
 		{{if or $.PageIsFollowers $.PageIsFollowing}}
-			{{if and $.IsSigned (ne $.SignedUserName .Name)}}
+			{{if and $.IsLogged (ne $.LoggedUserName .Name)}}
 				<div class="follow">
-					{{if $.SignedUser.IsFollowing .ID}}
+					{{if $.LoggedUser.IsFollowing .ID}}
 					<a class="ui small basic red button" href="{{.HomeLink}}/action/unfollow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{$.i18n.Tr "user.unfollow"}}</a>
 					{{else}}
 					<a class="ui small basic green button" href="{{.HomeLink}}/action/follow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{$.i18n.Tr "user.follow"}}</a>

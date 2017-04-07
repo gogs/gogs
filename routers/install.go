@@ -145,7 +145,7 @@ func Install(ctx *context.Context) {
 	f.SSHPort = setting.SSH.Port
 	f.UseBuiltinSSHServer = setting.SSH.StartBuiltinServer
 	f.HTTPPort = setting.HTTPPort
-	f.AppUrl = setting.AppUrl
+	f.AppUrl = setting.AppURL
 	f.LogRootPath = setting.LogRootPath
 
 	// E-mail service settings
@@ -344,7 +344,7 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(f.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	secretKey, err := tool.GetRandomString(15)
+	secretKey, err := tool.RandomString(15)
 	if err != nil {
 		ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), INSTALL, &f)
 		return

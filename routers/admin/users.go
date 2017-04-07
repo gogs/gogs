@@ -120,7 +120,7 @@ func NewUserPost(ctx *context.Context, f form.AdminCrateUser) {
 	}
 
 	ctx.Flash.Success(ctx.Tr("admin.users.new_success", u.Name))
-	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + com.ToStr(u.ID))
+	ctx.Redirect(setting.AppSubURL + "/admin/users/" + com.ToStr(u.ID))
 }
 
 func prepareUserInfo(ctx *context.Context) *models.User {
@@ -226,7 +226,7 @@ func EditUserPost(ctx *context.Context, f form.AdminEditUser) {
 	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
 
 	ctx.Flash.Success(ctx.Tr("admin.users.update_profile_success"))
-	ctx.Redirect(setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"))
+	ctx.Redirect(setting.AppSubURL + "/admin/users/" + ctx.Params(":userid"))
 }
 
 func DeleteUser(ctx *context.Context) {
@@ -241,12 +241,12 @@ func DeleteUser(ctx *context.Context) {
 		case models.IsErrUserOwnRepos(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_own_repo"))
 			ctx.JSON(200, map[string]interface{}{
-				"redirect": setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"),
+				"redirect": setting.AppSubURL + "/admin/users/" + ctx.Params(":userid"),
 			})
 		case models.IsErrUserHasOrgs(err):
 			ctx.Flash.Error(ctx.Tr("admin.users.still_has_org"))
 			ctx.JSON(200, map[string]interface{}{
-				"redirect": setting.AppSubUrl + "/admin/users/" + ctx.Params(":userid"),
+				"redirect": setting.AppSubURL + "/admin/users/" + ctx.Params(":userid"),
 			})
 		default:
 			ctx.Handle(500, "DeleteUser", err)
@@ -257,6 +257,6 @@ func DeleteUser(ctx *context.Context) {
 
 	ctx.Flash.Success(ctx.Tr("admin.users.deletion_success"))
 	ctx.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubUrl + "/admin/users",
+		"redirect": setting.AppSubURL + "/admin/users",
 	})
 }

@@ -85,7 +85,7 @@ func newMacaron() *macaron.Macaron {
 		m.Use(gzip.Gziper())
 	}
 	if setting.Protocol == setting.SCHEME_FCGI {
-		m.SetURLPrefix(setting.AppSubUrl)
+		m.SetURLPrefix(setting.AppSubURL)
 	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
@@ -120,7 +120,7 @@ func newMacaron() *macaron.Macaron {
 		localFiles[name] = bindata.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
-		SubURL:          setting.AppSubUrl,
+		SubURL:          setting.AppSubURL,
 		Files:           localFiles,
 		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
 		Langs:           setting.Langs,
@@ -134,7 +134,7 @@ func newMacaron() *macaron.Macaron {
 		Interval:      setting.CacheInterval,
 	}))
 	m.Use(captcha.Captchaer(captcha.Options{
-		SubURL: setting.AppSubUrl,
+		SubURL: setting.AppSubURL,
 	}))
 	m.Use(session.Sessioner(setting.SessionConfig))
 	m.Use(csrf.Csrfer(csrf.Options{
@@ -142,7 +142,7 @@ func newMacaron() *macaron.Macaron {
 		Cookie:     setting.CSRFCookieName,
 		SetCookie:  true,
 		Header:     "X-Csrf-Token",
-		CookiePath: setting.AppSubUrl,
+		CookiePath: setting.AppSubURL,
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
@@ -178,7 +178,7 @@ func runWeb(ctx *cli.Context) error {
 	m.Get("/", ignSignIn, routers.Home)
 	m.Group("/explore", func() {
 		m.Get("", func(ctx *context.Context) {
-			ctx.Redirect(setting.AppSubUrl + "/explore/repos")
+			ctx.Redirect(setting.AppSubURL + "/explore/repos")
 		})
 		m.Get("/repos", routers.ExploreRepos)
 		m.Get("/users", routers.ExploreUsers)
@@ -655,7 +655,7 @@ func runWeb(ctx *cli.Context) error {
 
 	// Flag for port number in case first time run conflict.
 	if ctx.IsSet("port") {
-		setting.AppUrl = strings.Replace(setting.AppUrl, setting.HTTPPort, ctx.String("port"), 1)
+		setting.AppURL = strings.Replace(setting.AppURL, setting.HTTPPort, ctx.String("port"), 1)
 		setting.HTTPPort = ctx.String("port")
 	}
 
@@ -665,7 +665,7 @@ func runWeb(ctx *cli.Context) error {
 	} else {
 		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
 	}
-	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubUrl)
+	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubURL)
 
 	var err error
 	switch setting.Protocol {

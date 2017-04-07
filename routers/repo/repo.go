@@ -132,7 +132,7 @@ func CreatePost(ctx *context.Context, f form.CreateRepo) {
 	})
 	if err == nil {
 		log.Trace("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
-		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + repo.Name)
+		ctx.Redirect(setting.AppSubURL + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
@@ -204,7 +204,7 @@ func MigratePost(ctx *context.Context, f form.MigrateRepo) {
 	})
 	if err == nil {
 		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
-		ctx.Redirect(setting.AppSubUrl + "/" + ctxUser.Name + "/" + f.RepoName)
+		ctx.Redirect(setting.AppSubURL + "/" + ctxUser.Name + "/" + f.RepoName)
 		return
 	}
 
@@ -323,7 +323,7 @@ func Download(ctx *context.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, tool.ShortSha(commit.ID.String())+ext)
+	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archivePath, archiveType); err != nil {
 			ctx.Handle(500, "Download -> CreateArchive "+archivePath, err)

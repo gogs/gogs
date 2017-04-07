@@ -34,18 +34,37 @@ type Context struct {
 	Session session.Store
 
 	User        *models.User
-	IsSigned    bool
+	IsLogged    bool
 	IsBasicAuth bool
 
 	Repo *Repository
 	Org  *Organization
 }
 
-func (ctx *Context) UserID() int64 {
-	if !ctx.IsSigned {
+// Title sets "Title" field in template data.
+func (c *Context) Title(locale string) {
+	c.Data["Title"] = c.Tr(locale)
+}
+
+// PageIs sets "PageIsxxx" field in template data.
+func (c *Context) PageIs(name string) {
+	c.Data["PageIs"+name] = true
+}
+
+// FormErr sets "Err_xxx" field in template data.
+func (c *Context) FormErr(names ...string) {
+	for i := range names {
+		c.Data["Err_"+names[i]] = true
+	}
+}
+
+// UserID returns ID of current logged in user.
+// It returns 0 if visitor is anonymous.
+func (c *Context) UserID() int64 {
+	if !c.IsLogged {
 		return 0
 	}
-	return ctx.User.ID
+	return c.User.ID
 }
 
 // HasError returns true if error occurs in form validation.
@@ -94,6 +113,12 @@ func (c *Context) JSONSuccess(data interface{}) {
 	c.JSON(http.StatusOK, data)
 }
 
+// SubURLRedirect responses redirection wtih given location and status.
+// It prepends setting.AppSubURL to the location string.
+func (c *Context) SubURLRedirect(location string, status ...int) {
+	c.Redirect(setting.AppSubURL + location)
+}
+
 // RenderWithErr used for page has form validation but need to prompt error to users.
 func (ctx *Context) RenderWithErr(msg, tpl string, f interface{}) {
 	if f != nil {
@@ -112,7 +137,7 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	case http.StatusInternalServerError:
 		ctx.Data["Title"] = "Internal Server Error"
 		log.Error(2, "%s: %v", title, err)
-		if !setting.ProdMode || (ctx.IsSigned && ctx.User.IsAdmin) {
+		if !setting.ProdMode || (ctx.IsLogged && ctx.User.IsAdmin) {
 			ctx.Data["ErrorMsg"] = err
 		}
 	}
@@ -185,7 +210,7 @@ func Contexter() macaron.Handler {
 		}
 
 		// Compute current URL for real-time change language.
-		ctx.Data["Link"] = setting.AppSubUrl + strings.TrimSuffix(ctx.Req.URL.Path, "/")
+		ctx.Data["Link"] = setting.AppSubURL + strings.TrimSuffix(ctx.Req.URL.Path, "/")
 
 		ctx.Data["PageStartTime"] = time.Now()
 
@@ -193,15 +218,15 @@ func Contexter() macaron.Handler {
 		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Context, ctx.Session)
 
 		if ctx.User != nil {
-			ctx.IsSigned = true
-			ctx.Data["IsSigned"] = ctx.IsSigned
-			ctx.Data["SignedUser"] = ctx.User
-			ctx.Data["SignedUserID"] = ctx.User.ID
-			ctx.Data["SignedUserName"] = ctx.User.Name
+			ctx.IsLogged = true
+			ctx.Data["IsLogged"] = ctx.IsLogged
+			ctx.Data["LoggedUser"] = ctx.User
+			ctx.Data["LoggedUserID"] = ctx.User.ID
+			ctx.Data["LoggedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		} else {
-			ctx.Data["SignedUserID"] = 0
-			ctx.Data["SignedUserName"] = ""
+			ctx.Data["LoggedUserID"] = 0
+			ctx.Data["LoggedUserName"] = ""
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
@@ -212,10 +237,10 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		ctx.Data["CsrfToken"] = x.GetToken()
-		ctx.Data["CsrfTokenHtml"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		ctx.Data["CSRFToken"] = x.GetToken()
+		ctx.Data["CSRFTokenHTML"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
 		log.Trace("Session ID: %s", sess.ID())
-		log.Trace("CSRF Token: %v", ctx.Data["CsrfToken"])
+		log.Trace("CSRF Token: %v", ctx.Data["CSRFToken"])
 
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding

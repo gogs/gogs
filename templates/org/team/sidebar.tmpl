@@ -2,10 +2,10 @@
 	<h4 class="ui top attached header">
 		<strong>{{.Team.Name}}</strong>
 		<div class="ui right">
-			{{if .Team.IsMember $.SignedUser.ID}}
-				<a class="ui red tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/leave?uid={{$.SignedUser.ID}}&page=team">{{$.i18n.Tr "org.teams.leave"}}</a>
+			{{if .Team.IsMember $.LoggedUser.ID}}
+				<a class="ui red tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/leave?uid={{$.LoggedUser.ID}}&page=team">{{$.i18n.Tr "org.teams.leave"}}</a>
 			{{else if .IsOrganizationOwner}}
-				<a class="ui blue tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/join?uid={{$.SignedUser.ID}}&page=team">{{$.i18n.Tr "org.teams.join"}}</a>
+				<a class="ui blue tiny button" href="{{.OrgLink}}/teams/{{.Team.LowerName}}/action/join?uid={{$.LoggedUser.ID}}&page=team">{{$.i18n.Tr "org.teams.join"}}</a>
 			{{end}}
 		</div>
 	</h4>

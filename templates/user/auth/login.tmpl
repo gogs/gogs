@@ -3,7 +3,7 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached header">
 					{{.i18n.Tr "sign_in"}}
 				</h3>
@@ -28,12 +28,12 @@
 					<div class="inline field">
 						<label></label>
 						<button class="ui green button">{{.i18n.Tr "sign_in"}}</button>
-						<a href="{{AppSubUrl}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
+						<a href="{{AppSubURL}}/user/forget_password">{{.i18n.Tr "auth.forget_password"}}</a>
 					</div>
 					{{if .ShowRegistrationButton}}
 						<div class="inline field">
 							<label></label>
-							<a href="{{AppSubUrl}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
+							<a href="{{AppSubURL}}/user/sign_up">{{.i18n.Tr "auth.sign_up_now" | Str2html}}</a>
 						</div>
 					{{end}}
 				</div>

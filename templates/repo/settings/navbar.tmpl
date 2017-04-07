@@ -15,7 +15,7 @@
 		<a class="{{if .PageIsSettingsHooks}}active{{end}} item" href="{{.RepoLink}}/settings/hooks">
 			{{.i18n.Tr "repo.settings.hooks"}}
 		</a>
-		{{if .SignedUser.CanEditGitHook}}
+		{{if .LoggedUser.CanEditGitHook}}
 			<a class="{{if .PageIsSettingsGitHooks}}active{{end}} item" href="{{.RepoLink}}/settings/hooks/git">
 				{{.i18n.Tr "repo.settings.githooks"}}
 			</a>

@@ -14,7 +14,7 @@
 			<div class="ui attached info segment">
 				{{if .Author}}
 					<img class="ui avatar image" src="{{.Author.RelAvatarLink}}" />
-					<a href="{{.Author.HomeLink}}"><strong>{{.Commit.Author.Name}}</strong></a> {{if .IsSigned}}<{{.Commit.Author.Email}}>{{end}}
+					<a href="{{.Author.HomeLink}}"><strong>{{.Commit.Author.Name}}</strong></a> {{if .IsLogged}}<{{.Commit.Author.Email}}>{{end}}
 				{{else}}
 					<img class="ui avatar image" src="{{AvatarLink .Commit.Author.Email}}" />
 					<strong>{{.Commit.Author.Name}}</strong>
@@ -28,12 +28,12 @@
 							</div>
 							<div class="item">
 								{{range .Parents}}
-									<a class="ui blue sha label" href="{{$.RepoLink}}/commit/{{.}}">{{ShortSha .}}</a>
+									<a class="ui blue sha label" href="{{$.RepoLink}}/commit/{{.}}">{{ShortSHA1 .}}</a>
 								{{end}}
 							</div>
 						{{end}}
 						<div class="item">{{.i18n.Tr "repo.diff.commit"}}</div>
-						<div class="item"><span class="ui blue sha label">{{ShortSha .CommitID}}</span></div>
+						<div class="item"><span class="ui blue sha label">{{ShortSHA1 .CommitID}}</span></div>
 					</div>
 				</div>
 			</div>

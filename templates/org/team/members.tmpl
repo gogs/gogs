@@ -25,8 +25,8 @@
 				{{if .IsOrganizationOwner}}
 					<div class="ui bottom attached segment">
 						<form class="ui form" id="add-member-form" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/add" method="post">
-							{{.CsrfTokenHtml}}
-							<input type="hidden" name="uid" value="{{.SignedUser.ID}}">
+							{{.CSRFTokenHTML}}
+							<input type="hidden" name="uid" value="{{.LoggedUser.ID}}">
 							<div class="inline field ui left">
 								<div id="search-user-box">
 									<div class="ui input">

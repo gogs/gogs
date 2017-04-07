@@ -63,7 +63,7 @@ func SettingsPost(ctx *context.Context, f form.UpdateOrgSetting) {
 			return
 		}
 		// reset ctx.org.OrgLink with new name
-		ctx.Org.OrgLink = setting.AppSubUrl + "/org/" + f.Name
+		ctx.Org.OrgLink = setting.AppSubURL + "/org/" + f.Name
 		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
 	// In case it's just a case change.
@@ -130,7 +130,7 @@ func SettingsDelete(ctx *context.Context) {
 			}
 		} else {
 			log.Trace("Organization deleted: %s", org.Name)
-			ctx.Redirect(setting.AppSubUrl + "/")
+			ctx.Redirect(setting.AppSubURL + "/")
 		}
 		return
 	}

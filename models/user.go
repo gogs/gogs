@@ -175,18 +175,18 @@ func (u *User) CanImportLocal() bool {
 // DashboardLink returns the user dashboard page link.
 func (u *User) DashboardLink() string {
 	if u.IsOrganization() {
-		return setting.AppSubUrl + "/org/" + u.Name + "/dashboard/"
+		return setting.AppSubURL + "/org/" + u.Name + "/dashboard/"
 	}
-	return setting.AppSubUrl + "/"
+	return setting.AppSubURL + "/"
 }
 
 // HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
-	return setting.AppSubUrl + "/" + u.Name
+	return setting.AppSubURL + "/" + u.Name
 }
 
 func (u *User) HTMLURL() string {
-	return setting.AppUrl + u.Name
+	return setting.AppURL + u.Name
 }
 
 // GenerateEmailActivateCode generates an activate code based on user information and given e-mail.
@@ -242,7 +242,7 @@ func (u *User) GenerateRandomAvatar() error {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func (u *User) RelAvatarLink() string {
-	defaultImgUrl := setting.AppSubUrl + "/img/avatar_default.png"
+	defaultImgUrl := setting.AppSubURL + "/img/avatar_default.png"
 	if u.ID == -1 {
 		return defaultImgUrl
 	}
@@ -252,7 +252,7 @@ func (u *User) RelAvatarLink() string {
 		if !com.IsExist(u.CustomAvatarPath()) {
 			return defaultImgUrl
 		}
-		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.ID)
+		return setting.AppSubURL + "/avatars/" + com.ToStr(u.ID)
 	case setting.DisableGravatar, setting.OfflineMode:
 		if !com.IsExist(u.CustomAvatarPath()) {
 			if err := u.GenerateRandomAvatar(); err != nil {
@@ -260,7 +260,7 @@ func (u *User) RelAvatarLink() string {
 			}
 		}
 
-		return setting.AppSubUrl + "/avatars/" + com.ToStr(u.ID)
+		return setting.AppSubURL + "/avatars/" + com.ToStr(u.ID)
 	}
 	return tool.AvatarLink(u.AvatarEmail)
 }
@@ -269,7 +269,7 @@ func (u *User) RelAvatarLink() string {
 func (u *User) AvatarLink() string {
 	link := u.RelAvatarLink()
 	if link[0] == '/' && link[1] != '/' {
-		return setting.AppUrl + strings.TrimPrefix(link, setting.AppSubUrl)[1:]
+		return setting.AppURL + strings.TrimPrefix(link, setting.AppSubURL)[1:]
 	}
 	return link
 }
@@ -489,7 +489,7 @@ func IsUserExist(uid int64, name string) (bool, error) {
 
 // GetUserSalt returns a ramdom user salt token.
 func GetUserSalt() (string, error) {
-	return tool.GetRandomString(10)
+	return tool.RandomString(10)
 }
 
 // NewGhostUser creates and returns a fake user for someone has deleted his/her account.
@@ -601,12 +601,12 @@ func Users(page, pageSize int) ([]*User, error) {
 
 // get user by erify code
 func getVerifyUser(code string) (user *User) {
-	if len(code) <= tool.TimeLimitCodeLength {
+	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
 		return nil
 	}
 
 	// use tail hex username query user
-	hexStr := code[tool.TimeLimitCodeLength:]
+	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = GetUserByName(string(b)); user != nil {
 			return user
@@ -623,7 +623,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 
 	if user = getVerifyUser(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TimeLimitCodeLength]
+		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
 		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Passwd + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
@@ -639,7 +639,7 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 	if user := getVerifyUser(code); user != nil {
 		// time limit code
-		prefix := code[:tool.TimeLimitCodeLength]
+		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Passwd + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {

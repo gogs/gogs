@@ -10,7 +10,7 @@
 				</h4>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<div class="inline field {{if .Err_UserName}}error{{end}}">
 							<label for="user_name">{{.i18n.Tr "username"}}</label>
 							<span>{{.User.Name}}</span>

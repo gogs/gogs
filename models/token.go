@@ -49,7 +49,7 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
-	t.Sha1 = tool.EncodeSha1(gouuid.NewV4().String())
+	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
 	_, err := x.Insert(t)
 	return err
 }

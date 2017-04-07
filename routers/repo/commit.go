@@ -165,17 +165,17 @@ func Diff(ctx *context.Context) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = commit.IsImageFile
-	ctx.Data["Title"] = commit.Summary() + " · " + tool.ShortSha(commitID)
+	ctx.Data["Title"] = commit.Summary() + " · " + tool.ShortSHA1(commitID)
 	ctx.Data["Commit"] = commit
 	ctx.Data["Author"] = models.ValidateCommitWithEmail(commit)
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", commitID)
+	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", commitID)
 	if commit.ParentCount() > 0 {
-		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", parents[0])
+		ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
-	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", commitID)
+	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "raw", commitID)
 	ctx.HTML(200, DIFF)
 }
 
@@ -228,12 +228,12 @@ func CompareDiff(ctx *context.Context) {
 	ctx.Data["Username"] = userName
 	ctx.Data["Reponame"] = repoName
 	ctx.Data["IsImageFile"] = commit.IsImageFile
-	ctx.Data["Title"] = "Comparing " + tool.ShortSha(beforeCommitID) + "..." + tool.ShortSha(afterCommitID) + " · " + userName + "/" + repoName
+	ctx.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", afterCommitID)
-	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "src", beforeCommitID)
-	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(userName, repoName, "raw", afterCommitID)
+	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", afterCommitID)
+	ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", beforeCommitID)
+	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "raw", afterCommitID)
 	ctx.HTML(200, DIFF)
 }

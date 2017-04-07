@@ -153,7 +153,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		return nil
 	}
 
-	if ctx.IsSigned {
+	if ctx.IsLogged {
 		// Update issue-user.
 		if err = issue.ReadBy(ctx.User.ID); err != nil {
 			ctx.Handle(500, "ReadBy", err)
@@ -371,9 +371,9 @@ func ViewPullFiles(ctx *context.Context) {
 		ctx.Data["Reponame"] = pull.HeadRepo.Name
 
 		headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
-		ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", endCommitID)
-		ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", startCommitID)
-		ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", endCommitID)
+		ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", endCommitID)
+		ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", startCommitID)
+		ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(headTarget, "raw", endCommitID)
 	}
 
 	ctx.Data["RequireHighlightJS"] = true
@@ -573,9 +573,9 @@ func PrepareCompareDiff(
 	ctx.Data["IsImageFile"] = headCommit.IsImageFile
 
 	headTarget := path.Join(headUser.Name, repo.Name)
-	ctx.Data["SourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", headCommitID)
-	ctx.Data["BeforeSourcePath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
-	ctx.Data["RawPath"] = setting.AppSubUrl + "/" + path.Join(headTarget, "raw", headCommitID)
+	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", headCommitID)
+	ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
+	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(headTarget, "raw", headCommitID)
 	return false
 }
 
@@ -738,7 +738,7 @@ func TriggerTask(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-	if secret != tool.EncodeMD5(owner.Salt) {
+	if secret != tool.MD5(owner.Salt) {
 		ctx.Error(404)
 		log.Trace("TriggerTask [%s/%s]: invalid secret", owner.Name, repo.Name)
 		return

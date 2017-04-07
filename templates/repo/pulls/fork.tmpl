@@ -3,7 +3,7 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached header">
 					{{.i18n.Tr "new_fork"}}
 				</h3>
@@ -19,12 +19,12 @@
 							</span>
 							<i class="dropdown icon"></i>
 							<div class="menu">
-								<div class="item" data-value="{{.SignedUser.ID}}">
-									<img class="ui mini image" src="{{.SignedUser.RelAvatarLink}}">
-									{{.SignedUser.ShortName 20}}
+								<div class="item" data-value="{{.LoggedUser.ID}}">
+									<img class="ui mini image" src="{{.LoggedUser.RelAvatarLink}}">
+									{{.LoggedUser.ShortName 20}}
 								</div>
 								{{range .Orgs}}
-									{{if .IsOwnedBy $.SignedUser.ID}}
+									{{if .IsOwnedBy $.LoggedUser.ID}}
 										<div class="item" data-value="{{.ID}}">
 											<img class="ui mini image" src="{{.RelAvatarLink}}">
 											{{.ShortName 20}}
@@ -37,7 +37,7 @@
 
 					<div class="inline field">
 						<label>{{.i18n.Tr "repo.fork_from"}}</label>
-						<a href="{{AppSubUrl}}/{{.ForkFrom}}">{{.ForkFrom}}</a>
+						<a href="{{AppSubURL}}/{{.ForkFrom}}">{{.ForkFrom}}</a>
 					</div>
 					<div class="inline required field {{if .Err_RepoName}}error{{end}}">
 						<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
@@ -61,7 +61,7 @@
 						<button class="ui green button">
 							{{.i18n.Tr "repo.fork_repo"}}
 						</button>
-						<a class="ui button" href="{{AppSubUrl}}/{{.ForkFrom}}">{{.i18n.Tr "cancel"}}</a>
+						<a class="ui button" href="{{AppSubURL}}/{{.ForkFrom}}">{{.i18n.Tr "cancel"}}</a>
 					</div>
 				</div>
 			</form>
