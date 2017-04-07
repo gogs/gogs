@@ -16,14 +16,14 @@
 						<div class="ui middle aligned divided list">
 							{{range .Orgs}}
 							<div class="item">
-								<div class="right floated content">
-									<button class="ui red tiny button inline text-thin delete-button" data-url="{{$.Link}}/leave" data-id="{{.ID}}">
+								<div class="right floated">
+									<button class="ui red tiny basic button inline delete-button" data-url="{{$.Link}}/leave" data-id="{{.ID}}">
 										{{$.i18n.Tr "org.members.leave"}}
 									</button>
 								</div>
 								<img class="ui mini image" src="{{.RelAvatarLink}}">
 								<div class="content">
-										<a href="{{.HomeLink}}">{{.Name}}</a>
+									<a href="{{.HomeLink}}">{{.Name}}</a>
 								</div>
 							</div>
 							{{end}}
