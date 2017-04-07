@@ -184,7 +184,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 		return fmt.Errorf("Load: %v", err)
 	}
 
-	cfg.Section("remote \"origin\"").Key("url").SetValue(escapeMirrorCredentials(addr))
+	cfg.Section(`remote "origin"`).Key("url").SetValue(escapeMirrorCredentials(addr))
 	return cfg.SaveToIndent(configPath, "\t")
 }
 
@@ -320,9 +320,19 @@ func SyncMirrors() {
 			continue
 		}
 
-		// Update repository last updated time
-		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", time.Now().Unix(), m.RepoID); err != nil {
+		// Get latest commit date and compare to current repository updated time,
+		// update if latest commit date is newer.
+		commitDate, err := git.GetLatestCommitDate(m.Repo.RepoPath(), "")
+		if err != nil {
+			log.Error(2, "GetLatestCommitDate [%s]: %v", m.RepoID, err)
+			continue
+		} else if commitDate.Before(m.Repo.Updated) {
+			continue
+		}
+
+		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", commitDate.Unix(), m.RepoID); err != nil {
 			log.Error(2, "Update repository 'updated_unix' [%s]: %v", m.RepoID, err)
+			continue
 		}
 	}
 }
