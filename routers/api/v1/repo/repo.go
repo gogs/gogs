@@ -250,7 +250,7 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 			case addrErr.IsPermissionDenied:
 				ctx.Error(422, "", "You are not allowed to import local repositories")
 			case addrErr.IsInvalidPath:
-				ctx.Error(422, "", "Invalid local path, it does not exist or not a directory.")
+				ctx.Error(422, "", "Invalid local path, it does not exist or not a directory")
 			default:
 				ctx.Error(500, "ParseRemoteAddr", "Unknown error type (ErrInvalidCloneAddr): "+err.Error())
 			}
@@ -273,7 +273,12 @@ func Migrate(ctx *context.APIContext, f form.MigrateRepo) {
 				log.Error(2, "DeleteRepository: %v", errDelete)
 			}
 		}
-		ctx.Error(500, "MigrateRepository", models.HandleMirrorCredentials(err.Error(), true))
+
+		if errors.IsReachLimitOfRepo(err) {
+			ctx.Error(422, "", err)
+		} else {
+			ctx.Error(500, "MigrateRepository", models.HandleMirrorCredentials(err.Error(), true))
+		}
 		return
 	}
 

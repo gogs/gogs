@@ -21,6 +21,19 @@ func (err RepoNotExist) Error() string {
 	return fmt.Sprintf("repository does not exist [id: %d, user_id: %d, name: %s]", err.ID, err.UserID, err.Name)
 }
 
+type ReachLimitOfRepo struct {
+	Limit int
+}
+
+func IsReachLimitOfRepo(err error) bool {
+	_, ok := err.(ReachLimitOfRepo)
+	return ok
+}
+
+func (err ReachLimitOfRepo) Error() string {
+	return fmt.Sprintf("user has reached maximum limit of repositories [limit: %d]", err.Limit)
+}
+
 type InvalidRepoReference struct {
 	Ref string
 }
