@@ -44,8 +44,8 @@ const (
 )
 
 func Settings(c *context.Context) {
-	c.Data["Title"] = c.Tr("settings")
-	c.Data["PageIsSettingsProfile"] = true
+	c.Title("settings.profile")
+	c.PageIs("SettingsProfile")
 	c.Data["origin_name"] = c.User.Name
 	c.Data["name"] = c.User.Name
 	c.Data["full_name"] = c.User.FullName
@@ -55,72 +55,64 @@ func Settings(c *context.Context) {
 	c.Success(SETTINGS_PROFILE)
 }
 
-func handleUsernameChange(ctx *context.Context, newName string) {
-	// Non-local users are not allowed to change their username.
-	if len(newName) == 0 || !ctx.User.IsLocal() {
+func SettingsPost(c *context.Context, f form.UpdateProfile) {
+	c.Title("settings.profile")
+	c.PageIs("SettingsProfile")
+	c.Data["origin_name"] = c.User.Name
+
+	if c.HasError() {
+		c.Success(SETTINGS_PROFILE)
 		return
 	}
 
-	// Check if user name has been changed
-	if ctx.User.LowerName != strings.ToLower(newName) {
-		if err := models.ChangeUserName(ctx.User, newName); err != nil {
-			switch {
-			case models.IsErrUserAlreadyExist(err):
-				ctx.Flash.Error(ctx.Tr("newName_been_taken"))
-				ctx.Redirect(setting.AppSubURL + "/user/settings")
-			case models.IsErrEmailAlreadyUsed(err):
-				ctx.Flash.Error(ctx.Tr("form.email_been_used"))
-				ctx.Redirect(setting.AppSubURL + "/user/settings")
-			case models.IsErrNameReserved(err):
-				ctx.Flash.Error(ctx.Tr("user.newName_reserved"))
-				ctx.Redirect(setting.AppSubURL + "/user/settings")
-			case models.IsErrNamePatternNotAllowed(err):
-				ctx.Flash.Error(ctx.Tr("user.newName_pattern_not_allowed"))
-				ctx.Redirect(setting.AppSubURL + "/user/settings")
-			default:
-				ctx.Handle(500, "ChangeUserName", err)
+	// Non-local users are not allowed to change their username
+	if c.User.IsLocal() {
+		// Check if username characters have been changed
+		if c.User.LowerName != strings.ToLower(f.Name) {
+			if err := models.ChangeUserName(c.User, f.Name); err != nil {
+				c.FormErr("Name")
+				var msg string
+				switch {
+				case models.IsErrUserAlreadyExist(err):
+					msg = c.Tr("form.username_been_taken")
+				case models.IsErrEmailAlreadyUsed(err):
+					msg = c.Tr("form.email_been_used")
+				case models.IsErrNameReserved(err):
+					msg = c.Tr("form.name_reserved")
+				case models.IsErrNamePatternNotAllowed(err):
+					msg = c.Tr("form.name_pattern_not_allowed")
+				default:
+					c.ServerError("ChangeUserName", err)
+					return
+				}
+
+				c.RenderWithErr(msg, SETTINGS_PROFILE, &f)
+				return
 			}
-			return
+
+			log.Trace("Username changed: %s -> %s", c.User.Name, f.Name)
 		}
-		log.Trace("User name changed: %s -> %s", ctx.User.Name, newName)
+
+		// In case it's just a case change
+		c.User.Name = f.Name
+		c.User.LowerName = strings.ToLower(f.Name)
 	}
 
-	// In case it's just a case change
-	ctx.User.Name = newName
-	ctx.User.LowerName = strings.ToLower(newName)
-}
-
-func SettingsPost(ctx *context.Context, f form.UpdateProfile) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsProfile"] = true
-	ctx.Data["origin_name"] = ctx.User.Name
-
-	if ctx.HasError() {
-		ctx.HTML(200, SETTINGS_PROFILE)
+	c.User.FullName = f.FullName
+	c.User.Email = f.Email
+	c.User.Website = f.Website
+	c.User.Location = f.Location
+	if err := models.UpdateUser(c.User); err != nil {
+		c.ServerError("UpdateUser", err)
 		return
 	}
 
-	handleUsernameChange(ctx, f.Name)
-	if ctx.Written() {
-		return
-	}
-
-	ctx.User.FullName = f.FullName
-	ctx.User.Email = f.Email
-	ctx.User.Website = f.Website
-	ctx.User.Location = f.Location
-	if err := models.UpdateUser(ctx.User); err != nil {
-		ctx.Handle(500, "UpdateUser", err)
-		return
-	}
-
-	log.Trace("User settings updated: %s", ctx.User.Name)
-	ctx.Flash.Success(ctx.Tr("settings.update_profile_success"))
-	ctx.Redirect(setting.AppSubURL + "/user/settings")
+	c.Flash.Success(c.Tr("settings.update_profile_success"))
+	c.SubURLRedirect("/user/settings")
 }
 
 // FIXME: limit size.
-func UpdateAvatarSetting(ctx *context.Context, f form.Avatar, ctxUser *models.User) error {
+func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
 		ctxUser.Avatar = tool.MD5(f.Gravatar)
@@ -128,18 +120,18 @@ func UpdateAvatarSetting(ctx *context.Context, f form.Avatar, ctxUser *models.Us
 	}
 
 	if f.Avatar != nil {
-		fr, err := f.Avatar.Open()
+		r, err := f.Avatar.Open()
 		if err != nil {
 			return fmt.Errorf("Avatar.Open: %v", err)
 		}
-		defer fr.Close()
+		defer r.Close()
 
-		data, err := ioutil.ReadAll(fr)
+		data, err := ioutil.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("ioutil.ReadAll: %v", err)
 		}
 		if !tool.IsImageFile(data) {
-			return errors.New(ctx.Tr("settings.uploaded_avatar_not_a_image"))
+			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxUser.UploadAvatar(data); err != nil {
 			return fmt.Errorf("UploadAvatar: %v", err)
@@ -161,232 +153,228 @@ func UpdateAvatarSetting(ctx *context.Context, f form.Avatar, ctxUser *models.Us
 	return nil
 }
 
-func SettingsAvatar(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsAvatar"] = true
-	ctx.HTML(200, SETTINGS_AVATAR)
+func SettingsAvatar(c *context.Context) {
+	c.Title("settings.avatar")
+	c.PageIs("SettingsAvatar")
+	c.Success(SETTINGS_AVATAR)
 }
 
-func SettingsAvatarPost(ctx *context.Context, f form.Avatar) {
-	if err := UpdateAvatarSetting(ctx, f, ctx.User); err != nil {
-		ctx.Flash.Error(err.Error())
+func SettingsAvatarPost(c *context.Context, f form.Avatar) {
+	if err := UpdateAvatarSetting(c, f, c.User); err != nil {
+		c.Flash.Error(err.Error())
 	} else {
-		ctx.Flash.Success(ctx.Tr("settings.update_avatar_success"))
+		c.Flash.Success(c.Tr("settings.update_avatar_success"))
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/user/settings/avatar")
+	c.SubURLRedirect("/user/settings/avatar")
 }
 
-func SettingsDeleteAvatar(ctx *context.Context) {
-	if err := ctx.User.DeleteAvatar(); err != nil {
-		ctx.Flash.Error(err.Error())
+func SettingsDeleteAvatar(c *context.Context) {
+	if err := c.User.DeleteAvatar(); err != nil {
+		c.Flash.Error(fmt.Sprintf("DeleteAvatar: %v", err))
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/user/settings/avatar")
+	c.SubURLRedirect("/user/settings/avatar")
 }
 
-func SettingsPassword(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsPassword"] = true
-	ctx.HTML(200, SETTINGS_PASSWORD)
+func SettingsPassword(c *context.Context) {
+	c.Title("settings.password")
+	c.PageIs("SettingsPassword")
+	c.Success(SETTINGS_PASSWORD)
 }
 
-func SettingsPasswordPost(ctx *context.Context, f form.ChangePassword) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsPassword"] = true
+func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
+	c.Title("settings.password")
+	c.PageIs("SettingsPassword")
 
-	if ctx.HasError() {
-		ctx.HTML(200, SETTINGS_PASSWORD)
+	if c.HasError() {
+		c.Success(SETTINGS_PASSWORD)
 		return
 	}
 
-	if !ctx.User.ValidatePassword(f.OldPassword) {
-		ctx.Flash.Error(ctx.Tr("settings.password_incorrect"))
+	if !c.User.ValidatePassword(f.OldPassword) {
+		c.Flash.Error(c.Tr("settings.password_incorrect"))
 	} else if f.Password != f.Retype {
-		ctx.Flash.Error(ctx.Tr("form.password_not_match"))
+		c.Flash.Error(c.Tr("form.password_not_match"))
 	} else {
-		ctx.User.Passwd = f.Password
+		c.User.Passwd = f.Password
 		var err error
-		if ctx.User.Salt, err = models.GetUserSalt(); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+		if c.User.Salt, err = models.GetUserSalt(); err != nil {
+			c.ServerError("GetUserSalt", err)
 			return
 		}
-		ctx.User.EncodePasswd()
-		if err := models.UpdateUser(ctx.User); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+		c.User.EncodePasswd()
+		if err := models.UpdateUser(c.User); err != nil {
+			c.ServerError("UpdateUser", err)
 			return
 		}
-		log.Trace("User password updated: %s", ctx.User.Name)
-		ctx.Flash.Success(ctx.Tr("settings.change_password_success"))
+		c.Flash.Success(c.Tr("settings.change_password_success"))
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/user/settings/password")
+	c.SubURLRedirect("/user/settings/password")
 }
 
-func SettingsEmails(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsEmails"] = true
+func SettingsEmails(c *context.Context) {
+	c.Title("settings.emails")
+	c.PageIs("SettingsEmails")
 
-	emails, err := models.GetEmailAddresses(ctx.User.ID)
+	emails, err := models.GetEmailAddresses(c.User.ID)
 	if err != nil {
-		ctx.Handle(500, "GetEmailAddresses", err)
+		c.ServerError("GetEmailAddresses", err)
 		return
 	}
-	ctx.Data["Emails"] = emails
+	c.Data["Emails"] = emails
 
-	ctx.HTML(200, SETTINGS_EMAILS)
+	c.Success(SETTINGS_EMAILS)
 }
 
-func SettingsEmailPost(ctx *context.Context, f form.AddEmail) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsEmails"] = true
+func SettingsEmailPost(c *context.Context, f form.AddEmail) {
+	c.Title("settings.emails")
+	c.PageIs("SettingsEmails")
 
 	// Make emailaddress primary.
-	if ctx.Query("_method") == "PRIMARY" {
-		if err := models.MakeEmailPrimary(&models.EmailAddress{ID: ctx.QueryInt64("id")}); err != nil {
-			ctx.Handle(500, "MakeEmailPrimary", err)
+	if c.Query("_method") == "PRIMARY" {
+		if err := models.MakeEmailPrimary(&models.EmailAddress{ID: c.QueryInt64("id")}); err != nil {
+			c.ServerError("MakeEmailPrimary", err)
 			return
 		}
 
-		log.Trace("Email made primary: %s", ctx.User.Name)
-		ctx.Redirect(setting.AppSubURL + "/user/settings/email")
+		c.SubURLRedirect("/user/settings/email")
 		return
 	}
 
 	// Add Email address.
-	emails, err := models.GetEmailAddresses(ctx.User.ID)
+	emails, err := models.GetEmailAddresses(c.User.ID)
 	if err != nil {
-		ctx.Handle(500, "GetEmailAddresses", err)
+		c.ServerError("GetEmailAddresses", err)
 		return
 	}
-	ctx.Data["Emails"] = emails
+	c.Data["Emails"] = emails
 
-	if ctx.HasError() {
-		ctx.HTML(200, SETTINGS_EMAILS)
+	if c.HasError() {
+		c.Success(SETTINGS_EMAILS)
 		return
 	}
 
 	email := &models.EmailAddress{
-		UID:         ctx.User.ID,
+		UID:         c.User.ID,
 		Email:       f.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
 	if err := models.AddEmailAddress(email); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
-			return
+			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
+		} else {
+			c.ServerError("AddEmailAddress", err)
 		}
-		ctx.Handle(500, "AddEmailAddress", err)
 		return
 	}
 
 	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmailMail(ctx.Context, models.NewMailerUser(ctx.User), email.Email)
+		mailer.SendActivateEmailMail(c.Context, models.NewMailerUser(c.User), email.Email)
 
-		if err := ctx.Cache.Put("MailResendLimit_"+ctx.User.LowerName, ctx.User.LowerName, 180); err != nil {
-			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
+		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
+			log.Error(2, "Set cache 'MailResendLimit' failed: %v", err)
 		}
-		ctx.Flash.Info(ctx.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
+		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
 	} else {
-		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
+		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
 
-	log.Trace("Email address added: %s", email.Email)
-	ctx.Redirect(setting.AppSubURL + "/user/settings/email")
+	c.SubURLRedirect("/user/settings/email")
 }
 
-func DeleteEmail(ctx *context.Context) {
+func DeleteEmail(c *context.Context) {
 	if err := models.DeleteEmailAddress(&models.EmailAddress{
-		ID:  ctx.QueryInt64("id"),
-		UID: ctx.User.ID,
+		ID:  c.QueryInt64("id"),
+		UID: c.User.ID,
 	}); err != nil {
-		ctx.Handle(500, "DeleteEmail", err)
+		c.ServerError("DeleteEmailAddress", err)
 		return
 	}
-	log.Trace("Email address deleted: %s", ctx.User.Name)
 
-	ctx.Flash.Success(ctx.Tr("settings.email_deletion_success"))
-	ctx.JSON(200, map[string]interface{}{
+	c.Flash.Success(c.Tr("settings.email_deletion_success"))
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": setting.AppSubURL + "/user/settings/email",
 	})
 }
 
-func SettingsSSHKeys(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsSSHKeys"] = true
+func SettingsSSHKeys(c *context.Context) {
+	c.Title("settings.ssh_keys")
+	c.PageIs("SettingsSSHKeys")
 
-	keys, err := models.ListPublicKeys(ctx.User.ID)
+	keys, err := models.ListPublicKeys(c.User.ID)
 	if err != nil {
-		ctx.Handle(500, "ListPublicKeys", err)
+		c.ServerError("ListPublicKeys", err)
 		return
 	}
-	ctx.Data["Keys"] = keys
+	c.Data["Keys"] = keys
 
-	ctx.HTML(200, SETTINGS_SSH_KEYS)
+	c.Success(SETTINGS_SSH_KEYS)
 }
 
-func SettingsSSHKeysPost(ctx *context.Context, f form.AddSSHKey) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsSSHKeys"] = true
+func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
+	c.Title("settings.ssh_keys")
+	c.PageIs("SettingsSSHKeys")
 
-	keys, err := models.ListPublicKeys(ctx.User.ID)
+	keys, err := models.ListPublicKeys(c.User.ID)
 	if err != nil {
-		ctx.Handle(500, "ListPublicKeys", err)
+		c.ServerError("ListPublicKeys", err)
 		return
 	}
-	ctx.Data["Keys"] = keys
+	c.Data["Keys"] = keys
 
-	if ctx.HasError() {
-		ctx.HTML(200, SETTINGS_SSH_KEYS)
+	if c.HasError() {
+		c.Success(SETTINGS_SSH_KEYS)
 		return
 	}
 
 	content, err := models.CheckPublicKeyString(f.Content)
 	if err != nil {
 		if models.IsErrKeyUnableVerify(err) {
-			ctx.Flash.Info(ctx.Tr("form.unable_verify_ssh_key"))
+			c.Flash.Info(c.Tr("form.unable_verify_ssh_key"))
 		} else {
-			ctx.Flash.Error(ctx.Tr("form.invalid_ssh_key", err.Error()))
-			ctx.Redirect(setting.AppSubURL + "/user/settings/ssh")
+			c.Flash.Error(c.Tr("form.invalid_ssh_key", err.Error()))
+			c.SubURLRedirect("/user/settings/ssh")
 			return
 		}
 	}
 
-	if _, err = models.AddPublicKey(ctx.User.ID, f.Title, content); err != nil {
-		ctx.Data["HasError"] = true
+	if _, err = models.AddPublicKey(c.User.ID, f.Title, content); err != nil {
+		c.Data["HasError"] = true
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
-			ctx.Data["Err_Content"] = true
-			ctx.RenderWithErr(ctx.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &f)
+			c.FormErr("Content")
+			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &f)
 		case models.IsErrKeyNameAlreadyUsed(err):
-			ctx.Data["Err_Title"] = true
-			ctx.RenderWithErr(ctx.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &f)
+			c.FormErr("Title")
+			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &f)
 		default:
-			ctx.Handle(500, "AddPublicKey", err)
+			c.ServerError("AddPublicKey", err)
 		}
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("settings.add_key_success", f.Title))
-	ctx.Redirect(setting.AppSubURL + "/user/settings/ssh")
+	c.Flash.Success(c.Tr("settings.add_key_success", f.Title))
+	c.SubURLRedirect("/user/settings/ssh")
 }
 
-func DeleteSSHKey(ctx *context.Context) {
-	if err := models.DeletePublicKey(ctx.User, ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("DeletePublicKey: " + err.Error())
+func DeleteSSHKey(c *context.Context) {
+	if err := models.DeletePublicKey(c.User, c.QueryInt64("id")); err != nil {
+		c.Flash.Error("DeletePublicKey: " + err.Error())
 	} else {
-		ctx.Flash.Success(ctx.Tr("settings.ssh_key_deletion_success"))
+		c.Flash.Success(c.Tr("settings.ssh_key_deletion_success"))
 	}
 
-	ctx.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": setting.AppSubURL + "/user/settings/ssh",
 	})
 }
 
 func SettingsSecurity(c *context.Context) {
-	c.Data["Title"] = c.Tr("settings")
-	c.Data["PageIsSettingsSecurity"] = true
+	c.Title("settings.security")
+	c.PageIs("SettingsSecurity")
 
 	t, err := models.GetTwoFactorByUserID(c.UserID())
 	if err != nil && !errors.IsTwoFactorNotFound(err) {
@@ -404,8 +392,8 @@ func SettingsTwoFactorEnable(c *context.Context) {
 		return
 	}
 
-	c.Data["Title"] = c.Tr("settings")
-	c.Data["PageIsSettingsSecurity"] = true
+	c.Title("settings.two_factor_enable_title")
+	c.PageIs("SettingsSecurity")
 
 	var key *otp.Key
 	var err error
@@ -452,20 +440,20 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 
 	if !totp.Validate(c.Query("passcode"), secret) {
 		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
-		c.Redirect(setting.AppSubURL + "/user/settings/security/two_factor_enable")
+		c.SubURLRedirect("/user/settings/security/two_factor_enable")
 		return
 	}
 
 	if err := models.NewTwoFactor(c.UserID(), secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
-		c.Redirect(setting.AppSubURL + "/user/settings/security/two_factor_enable")
+		c.SubURLRedirect("/user/settings/security/two_factor_enable")
 		return
 	}
 
 	c.Session.Delete("twoFactorSecret")
 	c.Session.Delete("twoFactorURL")
 	c.Flash.Success(c.Tr("settings.two_factor_enable_success"))
-	c.Redirect(setting.AppSubURL + "/user/settings/security/two_factor_recovery_codes")
+	c.SubURLRedirect("/user/settings/security/two_factor_recovery_codes")
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {
@@ -474,8 +462,8 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 		return
 	}
 
-	c.Data["Title"] = c.Tr("settings")
-	c.Data["PageIsSettingsSecurity"] = true
+	c.Title("settings.two_factor_recovery_codes_title")
+	c.PageIs("SettingsSecurity")
 
 	recoveryCodes, err := models.GetRecoveryCodesByUserID(c.UserID())
 	if err != nil {
@@ -499,7 +487,7 @@ func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
 		c.Flash.Success(c.Tr("settings.two_factor_regenerate_recovery_codes_success"))
 	}
 
-	c.Redirect(setting.AppSubURL + "/user/settings/security/two_factor_recovery_codes")
+	c.SubURLRedirect("/user/settings/security/two_factor_recovery_codes")
 }
 
 func SettingsTwoFactorDisable(c *context.Context) {
@@ -519,159 +507,158 @@ func SettingsTwoFactorDisable(c *context.Context) {
 	})
 }
 
-func SettingsApplications(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsApplications"] = true
+func SettingsRepos(c *context.Context) {
+	c.Title("settings.repos")
+	c.PageIs("SettingsRepositories")
 
-	tokens, err := models.ListAccessTokens(ctx.User.ID)
+	repos, err := models.GetUserAndCollaborativeRepositories(c.User.ID)
 	if err != nil {
-		ctx.Handle(500, "ListAccessTokens", err)
-		return
-	}
-	ctx.Data["Tokens"] = tokens
-
-	ctx.HTML(200, SETTINGS_APPLICATIONS)
-}
-
-func SettingsRepos(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsRepositories"] = true
-
-	repos, err := models.GetUserAndCollaborativeRepositories(ctx.User.ID)
-	if err != nil {
-		ctx.Handle(500, "GetUserAndCollaborativeRepositories", err)
+		c.ServerError("GetUserAndCollaborativeRepositories", err)
 		return
 	}
 	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
-		ctx.Handle(500, "LoadAttributes", err)
+		c.ServerError("LoadAttributes", err)
 		return
 	}
-	ctx.Data["Repos"] = repos
+	c.Data["Repos"] = repos
 
-	ctx.HTML(200, SETTINGS_REPOSITORIES)
+	c.Success(SETTINGS_REPOSITORIES)
 }
 
-func SettingsLeaveOrganization(ctx *context.Context) {
-	err := models.RemoveOrgUser(ctx.QueryInt64("id"), ctx.User.ID)
+func SettingsLeaveRepo(c *context.Context) {
+	repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
 	if err != nil {
-		if models.IsErrLastOrgOwner(err) {
-			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
-		} else {
-			ctx.Handle(500, "RemoveOrgUser", err)
-			return
-		}
-	}
-
-	ctx.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/organizations",
-	})
-}
-
-func SettingsLeaveRepo(ctx *context.Context) {
-	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
-	if err != nil {
-		ctx.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
+		c.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
 		return
 	}
 
-	if err = repo.DeleteCollaboration(ctx.User.ID); err != nil {
-		ctx.Handle(500, "DeleteCollaboration", err)
+	if err = repo.DeleteCollaboration(c.User.ID); err != nil {
+		c.ServerError("DeleteCollaboration", err)
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("settings.repos.leave_success", repo.FullName()))
-	ctx.JSON(200, map[string]interface{}{
+	c.Flash.Success(c.Tr("settings.repos.leave_success", repo.FullName()))
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": setting.AppSubURL + "/user/settings/repositories",
 	})
 }
 
-func SettingsApplicationsPost(ctx *context.Context, f form.NewAccessToken) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsApplications"] = true
+func SettingsOrganizations(c *context.Context) {
+	c.Title("settings.orgs")
+	c.PageIs("SettingsOrganizations")
 
-	if ctx.HasError() {
-		tokens, err := models.ListAccessTokens(ctx.User.ID)
-		if err != nil {
-			ctx.Handle(500, "ListAccessTokens", err)
+	orgs, err := models.GetOrgsByUserID(c.User.ID, true)
+	if err != nil {
+		c.ServerError("GetOrgsByUserID", err)
+		return
+	}
+	c.Data["Orgs"] = orgs
+
+	c.Success(SETTINGS_ORGANIZATIONS)
+}
+
+func SettingsLeaveOrganization(c *context.Context) {
+	if err := models.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
+		if models.IsErrLastOrgOwner(err) {
+			c.Flash.Error(c.Tr("form.last_org_owner"))
+		} else {
+			c.ServerError("RemoveOrgUser", err)
 			return
 		}
-		ctx.Data["Tokens"] = tokens
-		ctx.HTML(200, SETTINGS_APPLICATIONS)
+	}
+
+	c.JSONSuccess(map[string]interface{}{
+		"redirect": setting.AppSubURL + "/user/settings/organizations",
+	})
+}
+
+func SettingsApplications(c *context.Context) {
+	c.Title("settings.applications")
+	c.PageIs("SettingsApplications")
+
+	tokens, err := models.ListAccessTokens(c.User.ID)
+	if err != nil {
+		c.ServerError("ListAccessTokens", err)
+		return
+	}
+	c.Data["Tokens"] = tokens
+
+	c.Success(SETTINGS_APPLICATIONS)
+}
+
+func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
+	c.Title("settings.applications")
+	c.PageIs("SettingsApplications")
+
+	if c.HasError() {
+		tokens, err := models.ListAccessTokens(c.User.ID)
+		if err != nil {
+			c.ServerError("ListAccessTokens", err)
+			return
+		}
+
+		c.Data["Tokens"] = tokens
+		c.Success(SETTINGS_APPLICATIONS)
 		return
 	}
 
 	t := &models.AccessToken{
-		UID:  ctx.User.ID,
+		UID:  c.User.ID,
 		Name: f.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
-		ctx.Handle(500, "NewAccessToken", err)
+		c.ServerError("NewAccessToken", err)
 		return
 	}
 
-	ctx.Flash.Success(ctx.Tr("settings.generate_token_succees"))
-	ctx.Flash.Info(t.Sha1)
-
-	ctx.Redirect(setting.AppSubURL + "/user/settings/applications")
+	c.Flash.Success(c.Tr("settings.generate_token_succees"))
+	c.Flash.Info(t.Sha1)
+	c.SubURLRedirect("/user/settings/applications")
 }
 
-func SettingsDeleteApplication(ctx *context.Context) {
-	if err := models.DeleteAccessTokenOfUserByID(ctx.User.ID, ctx.QueryInt64("id")); err != nil {
-		ctx.Flash.Error("DeleteAccessTokenByID: " + err.Error())
+func SettingsDeleteApplication(c *context.Context) {
+	if err := models.DeleteAccessTokenOfUserByID(c.User.ID, c.QueryInt64("id")); err != nil {
+		c.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
-		ctx.Flash.Success(ctx.Tr("settings.delete_token_success"))
+		c.Flash.Success(c.Tr("settings.delete_token_success"))
 	}
 
-	ctx.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": setting.AppSubURL + "/user/settings/applications",
 	})
 }
 
-func SettingsOrganizations(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsOrganizations"] = true
+func SettingsDelete(c *context.Context) {
+	c.Title("settings.delete")
+	c.PageIs("SettingsDelete")
 
-	orgs, err := models.GetOrgsByUserID(ctx.User.ID, true)
-	if err != nil {
-		ctx.Handle(500, "GetOrgsByUserID", err)
-		return
-	}
-	ctx.Data["Orgs"] = orgs
-
-	ctx.HTML(200, SETTINGS_ORGANIZATIONS)
-}
-
-func SettingsDelete(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("settings")
-	ctx.Data["PageIsSettingsDelete"] = true
-
-	if ctx.Req.Method == "POST" {
-		if _, err := models.UserSignIn(ctx.User.Name, ctx.Query("password")); err != nil {
+	if c.Req.Method == "POST" {
+		if _, err := models.UserSignIn(c.User.Name, c.Query("password")); err != nil {
 			if errors.IsUserNotExist(err) {
-				ctx.RenderWithErr(ctx.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
-				ctx.Handle(500, "UserSignIn", err)
+				c.ServerError("UserSignIn", err)
 			}
 			return
 		}
 
-		if err := models.DeleteUser(ctx.User); err != nil {
+		if err := models.DeleteUser(c.User); err != nil {
 			switch {
 			case models.IsErrUserOwnRepos(err):
-				ctx.Flash.Error(ctx.Tr("form.still_own_repo"))
-				ctx.Redirect(setting.AppSubURL + "/user/settings/delete")
+				c.Flash.Error(c.Tr("form.still_own_repo"))
+				c.Redirect(setting.AppSubURL + "/user/settings/delete")
 			case models.IsErrUserHasOrgs(err):
-				ctx.Flash.Error(ctx.Tr("form.still_has_org"))
-				ctx.Redirect(setting.AppSubURL + "/user/settings/delete")
+				c.Flash.Error(c.Tr("form.still_has_org"))
+				c.Redirect(setting.AppSubURL + "/user/settings/delete")
 			default:
-				ctx.Handle(500, "DeleteUser", err)
+				c.ServerError("DeleteUser", err)
 			}
 		} else {
-			log.Trace("Account deleted: %s", ctx.User.Name)
-			ctx.Redirect(setting.AppSubURL + "/")
+			log.Trace("Account deleted: %s", c.User.Name)
+			c.Redirect(setting.AppSubURL + "/")
 		}
 		return
 	}
 
-	ctx.HTML(200, SETTINGS_DELETE)
+	c.Success(SETTINGS_DELETE)
 }

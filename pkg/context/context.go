@@ -41,6 +41,23 @@ type Context struct {
 	Org  *Organization
 }
 
+// Title sets "Title" field in template data.
+func (c *Context) Title(locale string) {
+	c.Data["Title"] = c.Tr(locale)
+}
+
+// PageIs sets "PageIsxxx" field in template data.
+func (c *Context) PageIs(name string) {
+	c.Data["PageIs"+name] = true
+}
+
+// FormErr sets "Err_xxx" field in template data.
+func (c *Context) FormErr(names ...string) {
+	for i := range names {
+		c.Data["Err_"+names[i]] = true
+	}
+}
+
 // UserID returns ID of current logged in user.
 // It returns 0 if visitor is anonymous.
 func (c *Context) UserID() int64 {
@@ -94,6 +111,12 @@ func (c *Context) Success(name string) {
 // JSONSuccess responses JSON with status http.StatusOK.
 func (c *Context) JSONSuccess(data interface{}) {
 	c.JSON(http.StatusOK, data)
+}
+
+// SubURLRedirect responses redirection wtih given location and status.
+// It prepends setting.AppSubURL to the location string.
+func (c *Context) SubURLRedirect(location string, status ...int) {
+	c.Redirect(setting.AppSubURL + location)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
