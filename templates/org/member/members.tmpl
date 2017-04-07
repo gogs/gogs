@@ -28,10 +28,10 @@
 							{{ $isPublic := .IsPublicMember $.Org.ID}}
 							{{if $isPublic}}
 								<strong>{{$.i18n.Tr "org.members.public"}}</strong>
-								{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{$.i18n.Tr "org.members.public_helper"}}</a>){{end}}
+								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/private?uid={{.ID}}">{{$.i18n.Tr "org.members.public_helper"}}</a>){{end}}
 							{{else}}
 								<strong>{{$.i18n.Tr "org.members.private"}}</strong>
-								{{if or (eq $.SignedUser.ID .ID) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{$.i18n.Tr "org.members.private_helper"}}</a>){{end}}
+								{{if or (eq $.LoggedUser.ID .ID) $.IsOrganizationOwner}}(<a href="{{$.OrgLink}}/members/action/public?uid={{.ID}}">{{$.i18n.Tr "org.members.private_helper"}}</a>){{end}}
 							{{end}}
 						</div>
 					</div>
@@ -45,7 +45,7 @@
 					</div>
 					<div class="ui four wide column">
 						<div class="text right">
-							{{if eq $.SignedUser.ID .ID}}
+							{{if eq $.LoggedUser.ID .ID}}
 								<a class="ui red small button" href="{{$.OrgLink}}/members/action/leave?uid={{.ID}}">{{$.i18n.Tr "org.members.leave"}}</a>
 							{{else if $.IsOrganizationOwner}}
 								<a class="ui red small button" href="{{$.OrgLink}}/members/action/remove?uid={{.ID}}">{{$.i18n.Tr "org.members.remove"}}</a>

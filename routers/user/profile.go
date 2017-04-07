@@ -73,7 +73,7 @@ func Profile(ctx *context.Context) {
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Owner"] = ctxUser
 
-	orgs, err := models.GetOrgsByUserID(ctxUser.ID, ctx.IsSigned && (ctx.User.IsAdmin || ctx.User.ID == ctxUser.ID))
+	orgs, err := models.GetOrgsByUserID(ctxUser.ID, ctx.IsLogged && (ctx.User.IsAdmin || ctx.User.ID == ctxUser.ID))
 	if err != nil {
 		ctx.Handle(500, "GetOrgsByUserIDDesc", err)
 		return
@@ -95,7 +95,7 @@ func Profile(ctx *context.Context) {
 			page = 1
 		}
 
-		showPrivate := ctx.IsSigned && (ctxUser.ID == ctx.User.ID || ctx.User.IsAdmin)
+		showPrivate := ctx.IsLogged && (ctxUser.ID == ctx.User.ID || ctx.User.IsAdmin)
 		ctx.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   ctxUser.ID,
 			Private:  showPrivate,

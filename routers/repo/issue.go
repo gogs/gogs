@@ -70,7 +70,7 @@ func MustAllowPulls(ctx *context.Context) {
 	}
 
 	// User can send pull request if owns a forked repository.
-	if ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID) {
+	if ctx.IsLogged && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID) {
 		ctx.Repo.PullRequest.Allowed = true
 		ctx.Repo.PullRequest.HeadInfo = ctx.User.Name + ":" + ctx.Repo.BranchName
 	}
@@ -115,7 +115,7 @@ func issues(ctx *context.Context, isPullList bool) {
 	}
 
 	// Must sign in to see issues about you.
-	if viewType != "all" && !ctx.IsSigned {
+	if viewType != "all" && !ctx.IsLogged {
 		ctx.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubURL+ctx.Req.RequestURI), 0, setting.AppSubURL)
 		ctx.Redirect(setting.AppSubURL + "/user/login")
 		return
@@ -138,7 +138,7 @@ func issues(ctx *context.Context, isPullList bool) {
 	}
 
 	var uid int64 = -1
-	if ctx.IsSigned {
+	if ctx.IsLogged {
 		uid = ctx.User.ID
 	}
 
@@ -197,7 +197,7 @@ func issues(ctx *context.Context, isPullList bool) {
 
 	// Get posters.
 	for i := range issues {
-		if !ctx.IsSigned {
+		if !ctx.IsLogged {
 			issues[i].IsRead = true
 			continue
 		}
@@ -587,7 +587,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 		}
 	}
 
-	if ctx.IsSigned {
+	if ctx.IsLogged {
 		// Update issue-user.
 		if err = issue.ReadBy(ctx.User.ID); err != nil {
 			ctx.Handle(500, "ReadBy", err)
@@ -652,7 +652,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 	ctx.Data["Participants"] = participants
 	ctx.Data["NumParticipants"] = len(participants)
 	ctx.Data["Issue"] = issue
-	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))
+	ctx.Data["IsIssueOwner"] = ctx.Repo.IsWriter() || (ctx.IsLogged && issue.IsPoster(ctx.User.ID))
 	ctx.Data["SignInLink"] = setting.AppSubURL + "/user/login?redirect_to=" + ctx.Data["Link"].(string)
 	ctx.HTML(200, ISSUE_VIEW)
 }
@@ -687,7 +687,7 @@ func UpdateIssueTitle(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (!issue.IsPoster(ctx.User.ID) && !ctx.Repo.IsWriter()) {
+	if !ctx.IsLogged || (!issue.IsPoster(ctx.User.ID) && !ctx.Repo.IsWriter()) {
 		ctx.Error(403)
 		return
 	}
@@ -714,7 +714,7 @@ func UpdateIssueContent(ctx *context.Context) {
 		return
 	}
 
-	if !ctx.IsSigned || (ctx.User.ID != issue.PosterID && !ctx.Repo.IsWriter()) {
+	if !ctx.IsLogged || (ctx.User.ID != issue.PosterID && !ctx.Repo.IsWriter()) {
 		ctx.Error(403)
 		return
 	}
@@ -843,7 +843,7 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 	var comment *models.Comment
 	defer func() {
 		// Check if issue admin/poster changes the status of issue.
-		if (ctx.Repo.IsWriter() || (ctx.IsSigned && issue.IsPoster(ctx.User.ID))) &&
+		if (ctx.Repo.IsWriter() || (ctx.IsLogged && issue.IsPoster(ctx.User.ID))) &&
 			(f.Status == "reopen" || f.Status == "close") &&
 			!(issue.IsPull && issue.PullRequest.HasMerged) {
 

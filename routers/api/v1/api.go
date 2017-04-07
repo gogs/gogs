@@ -34,7 +34,7 @@ func repoAssignment() macaron.Handler {
 		)
 
 		// Check if the user is the same as the repository owner.
-		if ctx.IsSigned && ctx.User.LowerName == strings.ToLower(userName) {
+		if ctx.IsLogged && ctx.User.LowerName == strings.ToLower(userName) {
 			owner = ctx.User
 		} else {
 			owner, err = models.GetUserByName(userName)
@@ -63,7 +63,7 @@ func repoAssignment() macaron.Handler {
 			return
 		}
 
-		if ctx.IsSigned && ctx.User.IsAdmin {
+		if ctx.IsLogged && ctx.User.IsAdmin {
 			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
 			mode, err := models.AccessLevel(ctx.User.ID, repo)
@@ -86,7 +86,7 @@ func repoAssignment() macaron.Handler {
 // Contexter middleware already checks token for user sign in process.
 func reqToken() macaron.Handler {
 	return func(ctx *context.Context) {
-		if !ctx.IsSigned {
+		if !ctx.IsLogged {
 			ctx.Error(401)
 			return
 		}
@@ -104,7 +104,7 @@ func reqBasicAuth() macaron.Handler {
 
 func reqAdmin() macaron.Handler {
 	return func(ctx *context.Context) {
-		if !ctx.IsSigned || !ctx.User.IsAdmin {
+		if !ctx.IsLogged || !ctx.User.IsAdmin {
 			ctx.Error(403)
 			return
 		}

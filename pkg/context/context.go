@@ -34,18 +34,20 @@ type Context struct {
 	Session session.Store
 
 	User        *models.User
-	IsSigned    bool
+	IsLogged    bool
 	IsBasicAuth bool
 
 	Repo *Repository
 	Org  *Organization
 }
 
-func (ctx *Context) UserID() int64 {
-	if !ctx.IsSigned {
+// UserID returns ID of current logged in user.
+// It returns 0 if visitor is anonymous.
+func (c *Context) UserID() int64 {
+	if !c.IsLogged {
 		return 0
 	}
-	return ctx.User.ID
+	return c.User.ID
 }
 
 // HasError returns true if error occurs in form validation.
@@ -112,7 +114,7 @@ func (ctx *Context) Handle(status int, title string, err error) {
 	case http.StatusInternalServerError:
 		ctx.Data["Title"] = "Internal Server Error"
 		log.Error(2, "%s: %v", title, err)
-		if !setting.ProdMode || (ctx.IsSigned && ctx.User.IsAdmin) {
+		if !setting.ProdMode || (ctx.IsLogged && ctx.User.IsAdmin) {
 			ctx.Data["ErrorMsg"] = err
 		}
 	}
@@ -193,15 +195,15 @@ func Contexter() macaron.Handler {
 		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Context, ctx.Session)
 
 		if ctx.User != nil {
-			ctx.IsSigned = true
-			ctx.Data["IsSigned"] = ctx.IsSigned
-			ctx.Data["SignedUser"] = ctx.User
-			ctx.Data["SignedUserID"] = ctx.User.ID
-			ctx.Data["SignedUserName"] = ctx.User.Name
+			ctx.IsLogged = true
+			ctx.Data["IsLogged"] = ctx.IsLogged
+			ctx.Data["LoggedUser"] = ctx.User
+			ctx.Data["LoggedUserID"] = ctx.User.ID
+			ctx.Data["LoggedUserName"] = ctx.User.Name
 			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
 		} else {
-			ctx.Data["SignedUserID"] = 0
-			ctx.Data["SignedUserName"] = ""
+			ctx.Data["LoggedUserID"] = 0
+			ctx.Data["LoggedUserName"] = ""
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.

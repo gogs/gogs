@@ -28,7 +28,7 @@ func Search(ctx *context.APIContext) {
 	}
 
 	// Check visibility.
-	if ctx.IsSigned && opts.OwnerID > 0 {
+	if ctx.IsLogged && opts.OwnerID > 0 {
 		if ctx.User.ID == opts.OwnerID {
 			opts.Private = true
 		} else {

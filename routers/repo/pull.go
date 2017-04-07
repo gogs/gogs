@@ -153,7 +153,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		return nil
 	}
 
-	if ctx.IsSigned {
+	if ctx.IsLogged {
 		// Update issue-user.
 		if err = issue.ReadBy(ctx.User.ID); err != nil {
 			ctx.Handle(500, "ReadBy", err)
