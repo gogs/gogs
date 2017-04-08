@@ -23,6 +23,11 @@ func IsReadmeFile(name string) bool {
 	return strings.HasPrefix(strings.ToLower(name), "readme")
 }
 
+// IsIPythonNotebook reports whether name looks like a IPython notebook based on its extension.
+func IsIPythonNotebook(name string) bool {
+	return strings.HasSuffix(name, ".ipynb")
+}
+
 const (
 	ISSUE_NAME_STYLE_NUMERIC      = "numeric"
 	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
