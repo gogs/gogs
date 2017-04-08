@@ -137,8 +137,8 @@
 							<i class="icon dropdown"></i>
 							{{.i18n.Tr "install.email_title"}}
 						</div>
-						<div class="content">
-							<div class="inline field">
+						<div class="content {{if .Err_SMTP}}active{{end}}">
+							<div class="inline field {{if .Err_SMTPHost}}error{{end}}">
 								<label for="smtp_host">{{.i18n.Tr "install.smtp_host"}}</label>
 								<input id="smtp_host" name="smtp_host" value="{{.smtp_host}}">
 							</div>
@@ -176,7 +176,7 @@
 							<i class="icon dropdown"></i>
 							{{.i18n.Tr "install.server_service_title"}}
 						</div>
-						<div class="content">
+						<div class="content {{if .Err_Services}}active{{end}}">
 							<div class="inline field">
 								<div class="ui checkbox" id="offline-mode">
 									<label class="poping up" data-content="{{.i18n.Tr "install.offline_mode_popup"}}"><strong>{{.i18n.Tr "install.offline_mode"}}</strong></label>
@@ -222,7 +222,7 @@
 							<i class="icon dropdown"></i>
 							{{.i18n.Tr "install.admin_title"}}
 						</div>
-						<div class="content">
+						<div class="content {{if .Err_Admin}}active{{end}}">
 							<p class="center">{{.i18n.Tr "install.admin_setting_desc"}}</p>
 							<div class="inline field {{if .Err_AdminName}}error{{end}}">
 								<label for="admin_name">{{.i18n.Tr "install.admin_name"}}</label>

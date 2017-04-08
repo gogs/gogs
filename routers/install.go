@@ -5,7 +5,6 @@
 package routers
 
 import (
-	"errors"
 	"net/mail"
 	"os"
 	"os/exec"
@@ -92,23 +91,23 @@ func GlobalInit() {
 	}
 }
 
-func InstallInit(ctx *context.Context) {
+func InstallInit(c *context.Context) {
 	if setting.InstallLock {
-		ctx.Handle(404, "Install", errors.New("Installation is prohibited"))
+		c.NotFound()
 		return
 	}
 
-	ctx.Data["Title"] = ctx.Tr("install.install")
-	ctx.Data["PageIsInstall"] = true
+	c.Title("install.install")
+	c.PageIs("Install")
 
 	dbOpts := []string{"MySQL", "PostgreSQL", "MSSQL"}
 	if models.EnableSQLite3 {
 		dbOpts = append(dbOpts, "SQLite3")
 	}
-	ctx.Data["DbOptions"] = dbOpts
+	c.Data["DbOptions"] = dbOpts
 }
 
-func Install(ctx *context.Context) {
+func Install(c *context.Context) {
 	f := form.Install{}
 
 	// Database settings
@@ -117,15 +116,15 @@ func Install(ctx *context.Context) {
 	f.DbName = models.DbCfg.Name
 	f.DbPath = models.DbCfg.Path
 
-	ctx.Data["CurDbOption"] = "MySQL"
+	c.Data["CurDbOption"] = "MySQL"
 	switch models.DbCfg.Type {
 	case "postgres":
-		ctx.Data["CurDbOption"] = "PostgreSQL"
+		c.Data["CurDbOption"] = "PostgreSQL"
 	case "mssql":
-		ctx.Data["CurDbOption"] = "MSSQL"
+		c.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
 		if models.EnableSQLite3 {
-			ctx.Data["CurDbOption"] = "SQLite3"
+			c.Data["CurDbOption"] = "SQLite3"
 		}
 	}
 
@@ -165,29 +164,29 @@ func Install(ctx *context.Context) {
 	f.EnableCaptcha = setting.Service.EnableCaptcha
 	f.RequireSignInView = setting.Service.RequireSignInView
 
-	form.Assign(f, ctx.Data)
-	ctx.HTML(200, INSTALL)
+	form.Assign(f, c.Data)
+	c.Success(INSTALL)
 }
 
-func InstallPost(ctx *context.Context, f form.Install) {
-	ctx.Data["CurDbOption"] = f.DbType
+func InstallPost(c *context.Context, f form.Install) {
+	c.Data["CurDbOption"] = f.DbType
 
-	if ctx.HasError() {
-		if ctx.HasValue("Err_SMTPEmail") {
-			ctx.Data["Err_SMTP"] = true
+	if c.HasError() {
+		if c.HasValue("Err_SMTPEmail") {
+			c.FormErr("SMTP")
 		}
-		if ctx.HasValue("Err_AdminName") ||
-			ctx.HasValue("Err_AdminPasswd") ||
-			ctx.HasValue("Err_AdminEmail") {
-			ctx.Data["Err_Admin"] = true
+		if c.HasValue("Err_AdminName") ||
+			c.HasValue("Err_AdminPasswd") ||
+			c.HasValue("Err_AdminEmail") {
+			c.FormErr("Admin")
 		}
 
-		ctx.HTML(200, INSTALL)
+		c.Success(INSTALL)
 		return
 	}
 
 	if _, err := exec.LookPath("git"); err != nil {
-		ctx.RenderWithErr(ctx.Tr("install.test_git_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.test_git_failed", err), INSTALL, &f)
 		return
 	}
 
@@ -203,8 +202,8 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	models.DbCfg.Path = f.DbPath
 
 	if models.DbCfg.Type == "sqlite3" && len(models.DbCfg.Path) == 0 {
-		ctx.Data["Err_DbPath"] = true
-		ctx.RenderWithErr(ctx.Tr("install.err_empty_db_path"), INSTALL, &f)
+		c.FormErr("DbPath")
+		c.RenderWithErr(c.Tr("install.err_empty_db_path"), INSTALL, &f)
 		return
 	}
 
@@ -212,11 +211,11 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	var x *xorm.Engine
 	if err := models.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
-			ctx.Data["Err_DbType"] = true
-			ctx.RenderWithErr(ctx.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &f)
+			c.FormErr("DbType")
+			c.RenderWithErr(c.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &f)
 		} else {
-			ctx.Data["Err_DbSetting"] = true
-			ctx.RenderWithErr(ctx.Tr("install.invalid_db_setting", err), INSTALL, &f)
+			c.FormErr("DbSetting")
+			c.RenderWithErr(c.Tr("install.invalid_db_setting", err), INSTALL, &f)
 		}
 		return
 	}
@@ -224,23 +223,30 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	// Test repository root path.
 	f.RepoRootPath = strings.Replace(f.RepoRootPath, "\\", "/", -1)
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
-		ctx.Data["Err_RepoRootPath"] = true
-		ctx.RenderWithErr(ctx.Tr("install.invalid_repo_path", err), INSTALL, &f)
+		c.FormErr("RepoRootPath")
+		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), INSTALL, &f)
 		return
 	}
 
 	// Test log root path.
 	f.LogRootPath = strings.Replace(f.LogRootPath, "\\", "/", -1)
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
-		ctx.Data["Err_LogRootPath"] = true
-		ctx.RenderWithErr(ctx.Tr("install.invalid_log_root_path", err), INSTALL, &f)
+		c.FormErr("LogRootPath")
+		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), INSTALL, &f)
 		return
 	}
 
 	currentUser, match := setting.IsRunUserMatchCurrentUser(f.RunUser)
 	if !match {
-		ctx.Data["Err_RunUser"] = true
-		ctx.RenderWithErr(ctx.Tr("install.run_user_not_match", f.RunUser, currentUser), INSTALL, &f)
+		c.FormErr("RunUser")
+		c.RenderWithErr(c.Tr("install.run_user_not_match", f.RunUser, currentUser), INSTALL, &f)
+		return
+	}
+
+	// Check host address and port
+	if len(f.SMTPHost) > 0 && !strings.Contains(f.SMTPHost, ":") {
+		c.FormErr("SMTP", "SMTPHost")
+		c.RenderWithErr(c.Tr("install.smtp_host_missing_port"), INSTALL, &f)
 		return
 	}
 
@@ -248,32 +254,28 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	if len(f.SMTPFrom) > 0 {
 		_, err := mail.ParseAddress(f.SMTPFrom)
 		if err != nil {
-			ctx.Data["Err_SMTP"] = true
-			ctx.Data["Err_SMTPFrom"] = true
-			ctx.RenderWithErr(ctx.Tr("install.invalid_smtp_from", err), INSTALL, &f)
+			c.FormErr("SMTP", "SMTPFrom")
+			c.RenderWithErr(c.Tr("install.invalid_smtp_from", err), INSTALL, &f)
 			return
 		}
 	}
 
 	// Check logic loophole between disable self-registration and no admin account.
 	if f.DisableRegistration && len(f.AdminName) == 0 {
-		ctx.Data["Err_Services"] = true
-		ctx.Data["Err_Admin"] = true
-		ctx.RenderWithErr(ctx.Tr("install.no_admin_and_disable_registration"), INSTALL, f)
+		c.FormErr("Services", "Admin")
+		c.RenderWithErr(c.Tr("install.no_admin_and_disable_registration"), INSTALL, f)
 		return
 	}
 
 	// Check admin password.
 	if len(f.AdminName) > 0 && len(f.AdminPasswd) == 0 {
-		ctx.Data["Err_Admin"] = true
-		ctx.Data["Err_AdminPasswd"] = true
-		ctx.RenderWithErr(ctx.Tr("install.err_empty_admin_password"), INSTALL, f)
+		c.FormErr("Admin", "AdminPasswd")
+		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), INSTALL, f)
 		return
 	}
 	if f.AdminPasswd != f.AdminConfirmPasswd {
-		ctx.Data["Err_Admin"] = true
-		ctx.Data["Err_AdminPasswd"] = true
-		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), INSTALL, f)
+		c.FormErr("Admin", "AdminPasswd")
+		c.RenderWithErr(c.Tr("form.password_not_match"), INSTALL, f)
 		return
 	}
 
@@ -286,7 +288,7 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	if com.IsFile(setting.CustomConf) {
 		// Keeps custom settings if there is already something.
 		if err := cfg.Append(setting.CustomConf); err != nil {
-			log.Error(4, "Fail to load custom conf '%s': %v", setting.CustomConf, err)
+			log.Error(2, "Fail to load custom conf '%s': %v", setting.CustomConf, err)
 		}
 	}
 	cfg.Section("database").Key("DB_TYPE").SetValue(models.DbCfg.Type)
@@ -346,14 +348,14 @@ func InstallPost(ctx *context.Context, f form.Install) {
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
 	secretKey, err := tool.RandomString(15)
 	if err != nil {
-		ctx.RenderWithErr(ctx.Tr("install.secret_key_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.secret_key_failed", err), INSTALL, &f)
 		return
 	}
 	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
 	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
 	if err := cfg.SaveTo(setting.CustomConf); err != nil {
-		ctx.RenderWithErr(ctx.Tr("install.save_config_failed", err), INSTALL, &f)
+		c.RenderWithErr(c.Tr("install.save_config_failed", err), INSTALL, &f)
 		return
 	}
 
@@ -371,9 +373,8 @@ func InstallPost(ctx *context.Context, f form.Install) {
 		if err := models.CreateUser(u); err != nil {
 			if !models.IsErrUserAlreadyExist(err) {
 				setting.InstallLock = false
-				ctx.Data["Err_AdminName"] = true
-				ctx.Data["Err_AdminEmail"] = true
-				ctx.RenderWithErr(ctx.Tr("install.invalid_admin_setting", err), INSTALL, &f)
+				c.FormErr("AdminName", "AdminEmail")
+				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
 				return
 			}
 			log.Info("Admin account already exist")
@@ -381,11 +382,11 @@ func InstallPost(ctx *context.Context, f form.Install) {
 		}
 
 		// Auto-login for admin
-		ctx.Session.Set("uid", u.ID)
-		ctx.Session.Set("uname", u.Name)
+		c.Session.Set("uid", u.ID)
+		c.Session.Set("uname", u.Name)
 	}
 
 	log.Info("First-time run install finished!")
-	ctx.Flash.Success(ctx.Tr("install.install_success"))
-	ctx.Redirect(f.AppUrl + "user/login")
+	c.Flash.Success(c.Tr("install.install_success"))
+	c.Redirect(f.AppUrl + "user/login")
 }
