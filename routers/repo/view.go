@@ -33,23 +33,23 @@ const (
 	FORKS    = "repo/forks"
 )
 
-func renderDirectory(ctx *context.Context, treeLink string) {
-	tree, err := ctx.Repo.Commit.SubTree(ctx.Repo.TreePath)
+func renderDirectory(c *context.Context, treeLink string) {
+	tree, err := c.Repo.Commit.SubTree(c.Repo.TreePath)
 	if err != nil {
-		ctx.NotFoundOrServerError("Repo.Commit.SubTree", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("Repo.Commit.SubTree", git.IsErrNotExist, err)
 		return
 	}
 
 	entries, err := tree.ListEntries()
 	if err != nil {
-		ctx.Handle(500, "ListEntries", err)
+		c.ServerError("ListEntries", err)
 		return
 	}
 	entries.Sort()
 
-	ctx.Data["Files"], err = entries.GetCommitsInfoWithCustomConcurrency(ctx.Repo.Commit, ctx.Repo.TreePath, setting.Repository.CommitsFetchConcurrency)
+	c.Data["Files"], err = entries.GetCommitsInfoWithCustomConcurrency(c.Repo.Commit, c.Repo.TreePath, setting.Repository.CommitsFetchConcurrency)
 	if err != nil {
-		ctx.Handle(500, "GetCommitsInfo", err)
+		c.ServerError("GetCommitsInfoWithCustomConcurrency", err)
 		return
 	}
 
@@ -65,13 +65,13 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 	}
 
 	if readmeFile != nil {
-		ctx.Data["RawFileLink"] = ""
-		ctx.Data["ReadmeInList"] = true
-		ctx.Data["ReadmeExist"] = true
+		c.Data["RawFileLink"] = ""
+		c.Data["ReadmeInList"] = true
+		c.Data["ReadmeExist"] = true
 
 		dataRc, err := readmeFile.Data()
 		if err != nil {
-			ctx.Handle(500, "Data", err)
+			c.ServerError("readmeFile.Data", err)
 			return
 		}
 
@@ -80,38 +80,41 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 		buf = buf[:n]
 
 		isTextFile := tool.IsTextFile(buf)
-		ctx.Data["IsTextFile"] = isTextFile
-		ctx.Data["FileName"] = readmeFile.Name()
+		c.Data["IsTextFile"] = isTextFile
+		c.Data["FileName"] = readmeFile.Name()
 		if isTextFile {
 			d, _ := ioutil.ReadAll(dataRc)
 			buf = append(buf, d...)
 			switch {
 			case markup.IsMarkdownFile(readmeFile.Name()):
-				ctx.Data["IsMarkdown"] = true
-				buf = markup.Markdown(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+				c.Data["IsMarkdown"] = true
+				buf = markup.Markdown(buf, treeLink, c.Repo.Repository.ComposeMetas())
+			case markup.IsIPythonNotebook(readmeFile.Name()):
+				c.Data["IsIPythonNotebook"] = true
+				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
 				buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 			}
-			ctx.Data["FileContent"] = string(buf)
+			c.Data["FileContent"] = string(buf)
 		}
 	}
 
 	// Show latest commit info of repository in table header,
 	// or of directory if not in root directory.
-	latestCommit := ctx.Repo.Commit
-	if len(ctx.Repo.TreePath) > 0 {
-		latestCommit, err = ctx.Repo.Commit.GetCommitByPath(ctx.Repo.TreePath)
+	latestCommit := c.Repo.Commit
+	if len(c.Repo.TreePath) > 0 {
+		latestCommit, err = c.Repo.Commit.GetCommitByPath(c.Repo.TreePath)
 		if err != nil {
-			ctx.Handle(500, "GetCommitByPath", err)
+			c.ServerError("GetCommitByPath", err)
 			return
 		}
 	}
-	ctx.Data["LatestCommit"] = latestCommit
-	ctx.Data["LatestCommitUser"] = models.ValidateCommitWithEmail(latestCommit)
+	c.Data["LatestCommit"] = latestCommit
+	c.Data["LatestCommitUser"] = models.ValidateCommitWithEmail(latestCommit)
 
-	if ctx.Repo.CanEnableEditor() {
-		ctx.Data["CanAddFile"] = true
-		ctx.Data["CanUploadFile"] = setting.Repository.Upload.Enabled
+	if c.Repo.CanEnableEditor() {
+		c.Data["CanAddFile"] = true
+		c.Data["CanUploadFile"] = setting.Repository.Upload.Enabled
 	}
 }
 
@@ -157,7 +160,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 		ctx.Data["IsMarkdown"] = isMarkdown
 		ctx.Data["ReadmeExist"] = isMarkdown && markup.IsReadmeFile(blob.Name())
 
-		ctx.Data["IsIPythonNotebook"] = strings.HasSuffix(blob.Name(), ".ipynb")
+		ctx.Data["IsIPythonNotebook"] = markup.IsIPythonNotebook(blob.Name())
 
 		if isMarkdown {
 			ctx.Data["FileContent"] = string(markup.Markdown(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
