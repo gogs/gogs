@@ -327,7 +327,12 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 		IsActive:    true,
 		IsAdmin:     isAdmin,
 	}
-	return user, CreateUser(user)
+	
+	if IsUserExist(0, user.Name) {
+		return user, UpdateUser(user)
+	} else {
+		return user, CreateUser(user)
+	}
 }
 
 //   _________   __________________________
