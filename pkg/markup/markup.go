@@ -14,8 +14,8 @@ import (
 	"github.com/Unknwon/com"
 	"golang.org/x/net/html"
 
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 // IsReadmeFile reports whether name looks like a README file based on its extension.
@@ -320,7 +320,7 @@ func Render(typ Type, input interface{}, urlPrefix string, metas map[string]stri
 		panic(fmt.Sprintf("unrecognized input content type: %T", input))
 	}
 
-	urlPrefix = strings.Replace(urlPrefix, " ", "%20", -1)
+	urlPrefix = strings.TrimRight(strings.Replace(urlPrefix, " ", "%20", -1), "/")
 	var rawHTML []byte
 	switch typ {
 	case MARKDOWN:

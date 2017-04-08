@@ -51,6 +51,19 @@ func (c *Context) PageIs(name string) {
 	c.Data["PageIs"+name] = true
 }
 
+// Require sets "Requirexxx" field in template data.
+func (c *Context) Require(name string) {
+	c.Data["Require"+name] = true
+}
+
+func (c *Context) RequireHighlightJS() {
+	c.Require("HighlightJS")
+}
+
+func (c *Context) RequireSimpleMDE() {
+	c.Require("SimpleMDE")
+}
+
 // FormErr sets "Err_xxx" field in template data.
 func (c *Context) FormErr(names ...string) {
 	for i := range names {
