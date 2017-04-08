@@ -328,7 +328,10 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 		IsAdmin:     isAdmin,
 	}
 	
-	if IsUserExist(0, user.Name) {
+	if ok, err := IsUserExist(0, user.Name); err != nil {
+		return user, err
+	}
+	if ok {
 		return user, UpdateUser(user)
 	} else {
 		return user, CreateUser(user)
