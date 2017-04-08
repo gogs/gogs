@@ -44,36 +44,36 @@ func getParentTreeFields(treePath string) (treeNames []string, treePaths []strin
 	return treeNames, treePaths
 }
 
-func editFile(ctx *context.Context, isNewFile bool) {
-	ctx.Data["PageIsEdit"] = true
-	ctx.Data["IsNewFile"] = isNewFile
-	ctx.Data["RequireHighlightJS"] = true
-	ctx.Data["RequireSimpleMDE"] = true
+func editFile(c *context.Context, isNewFile bool) {
+	c.PageIs("Edit")
+	c.RequireHighlightJS()
+	c.RequireSimpleMDE()
+	c.Data["IsNewFile"] = isNewFile
 
-	treeNames, treePaths := getParentTreeFields(ctx.Repo.TreePath)
+	treeNames, treePaths := getParentTreeFields(c.Repo.TreePath)
 
 	if !isNewFile {
-		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(ctx.Repo.TreePath)
+		entry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
+			c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
 			return
 		}
 
 		// No way to edit a directory online.
 		if entry.IsDir() {
-			ctx.Handle(404, "", nil)
+			c.NotFound()
 			return
 		}
 
 		blob := entry.Blob()
 		dataRc, err := blob.Data()
 		if err != nil {
-			ctx.Handle(404, "blob.Data", err)
+			c.ServerError("blob.Data", err)
 			return
 		}
 
-		ctx.Data["FileSize"] = blob.Size()
-		ctx.Data["FileName"] = blob.Name()
+		c.Data["FileSize"] = blob.Size()
+		c.Data["FileName"] = blob.Name()
 
 		buf := make([]byte, 1024)
 		n, _ := dataRc.Read(buf)
@@ -81,7 +81,7 @@ func editFile(ctx *context.Context, isNewFile bool) {
 
 		// Only text file are editable online.
 		if !tool.IsTextFile(buf) {
-			ctx.Handle(404, "", nil)
+			c.NotFound()
 			return
 		}
 
@@ -89,51 +89,52 @@ func editFile(ctx *context.Context, isNewFile bool) {
 		buf = append(buf, d...)
 		if err, content := template.ToUTF8WithErr(buf); err != nil {
 			if err != nil {
-				log.Error(4, "ToUTF8WithErr: %v", err)
+				log.Error(2, "ToUTF8WithErr: %v", err)
 			}
-			ctx.Data["FileContent"] = string(buf)
+			c.Data["FileContent"] = string(buf)
 		} else {
-			ctx.Data["FileContent"] = content
+			c.Data["FileContent"] = content
 		}
 	} else {
 		treeNames = append(treeNames, "") // Append empty string to allow user name the new file.
 	}
 
-	ctx.Data["TreeNames"] = treeNames
-	ctx.Data["TreePaths"] = treePaths
-	ctx.Data["BranchLink"] = ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchName
-	ctx.Data["commit_summary"] = ""
-	ctx.Data["commit_message"] = ""
-	ctx.Data["commit_choice"] = "direct"
-	ctx.Data["new_branch_name"] = ""
-	ctx.Data["last_commit"] = ctx.Repo.Commit.ID
-	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
-	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
-	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
-	ctx.Data["EditorconfigURLPrefix"] = fmt.Sprintf("%s/api/v1/repos/%s/editorconfig/", setting.AppSubURL, ctx.Repo.Repository.FullName())
+	c.Data["ParentTreePath"] = path.Dir(c.Repo.TreePath)
+	c.Data["TreeNames"] = treeNames
+	c.Data["TreePaths"] = treePaths
+	c.Data["BranchLink"] = c.Repo.RepoLink + "/src/" + c.Repo.BranchName
+	c.Data["commit_summary"] = ""
+	c.Data["commit_message"] = ""
+	c.Data["commit_choice"] = "direct"
+	c.Data["new_branch_name"] = ""
+	c.Data["last_commit"] = c.Repo.Commit.ID
+	c.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
+	c.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
+	c.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
+	c.Data["EditorconfigURLPrefix"] = fmt.Sprintf("%s/api/v1/repos/%s/editorconfig/", setting.AppSubURL, c.Repo.Repository.FullName())
 
-	ctx.HTML(200, EDIT_FILE)
+	c.Success(EDIT_FILE)
 }
 
-func EditFile(ctx *context.Context) {
-	editFile(ctx, false)
+func EditFile(c *context.Context) {
+	editFile(c, false)
 }
 
-func NewFile(ctx *context.Context) {
-	editFile(ctx, true)
+func NewFile(c *context.Context) {
+	editFile(c, true)
 }
 
-func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
-	ctx.Data["PageIsEdit"] = true
-	ctx.Data["IsNewFile"] = isNewFile
-	ctx.Data["RequireHighlightJS"] = true
-	ctx.Data["RequireSimpleMDE"] = true
+func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
+	c.PageIs("Edit")
+	c.RequireHighlightJS()
+	c.RequireSimpleMDE()
+	c.Data["IsNewFile"] = isNewFile
 
-	oldBranchName := ctx.Repo.BranchName
+	oldBranchName := c.Repo.BranchName
 	branchName := oldBranchName
-	oldTreePath := ctx.Repo.TreePath
+	oldTreePath := c.Repo.TreePath
 	lastCommit := f.LastCommit
-	f.LastCommit = ctx.Repo.Commit.ID.String()
+	f.LastCommit = c.Repo.Commit.ID.String()
 
 	if f.IsNewBrnach() {
 		branchName = f.NewBranchName
@@ -142,35 +143,36 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 	f.TreePath = strings.Trim(f.TreePath, " /")
 	treeNames, treePaths := getParentTreeFields(f.TreePath)
 
-	ctx.Data["TreePath"] = f.TreePath
-	ctx.Data["TreeNames"] = treeNames
-	ctx.Data["TreePaths"] = treePaths
-	ctx.Data["BranchLink"] = ctx.Repo.RepoLink + "/src/" + branchName
-	ctx.Data["FileContent"] = f.Content
-	ctx.Data["commit_summary"] = f.CommitSummary
-	ctx.Data["commit_message"] = f.CommitMessage
-	ctx.Data["commit_choice"] = f.CommitChoice
-	ctx.Data["new_branch_name"] = branchName
-	ctx.Data["last_commit"] = f.LastCommit
-	ctx.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
-	ctx.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
-	ctx.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
+	c.Data["ParentTreePath"] = path.Dir(c.Repo.TreePath)
+	c.Data["TreePath"] = f.TreePath
+	c.Data["TreeNames"] = treeNames
+	c.Data["TreePaths"] = treePaths
+	c.Data["BranchLink"] = c.Repo.RepoLink + "/src/" + branchName
+	c.Data["FileContent"] = f.Content
+	c.Data["commit_summary"] = f.CommitSummary
+	c.Data["commit_message"] = f.CommitMessage
+	c.Data["commit_choice"] = f.CommitChoice
+	c.Data["new_branch_name"] = branchName
+	c.Data["last_commit"] = f.LastCommit
+	c.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
+	c.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
+	c.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
 
-	if ctx.HasError() {
-		ctx.HTML(200, EDIT_FILE)
+	if c.HasError() {
+		c.Success(EDIT_FILE)
 		return
 	}
 
 	if len(f.TreePath) == 0 {
-		ctx.Data["Err_TreePath"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.editor.filename_cannot_be_empty"), EDIT_FILE, &f)
+		c.FormErr("TreePath")
+		c.RenderWithErr(c.Tr("repo.editor.filename_cannot_be_empty"), EDIT_FILE, &f)
 		return
 	}
 
 	if oldBranchName != branchName {
-		if _, err := ctx.Repo.Repository.GetBranch(branchName); err == nil {
-			ctx.Data["Err_NewBranchName"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.editor.branch_already_exists", branchName), EDIT_FILE, &f)
+		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
+			c.FormErr("NewBranchName")
+			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), EDIT_FILE, &f)
 			return
 		}
 	}
@@ -178,56 +180,56 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 	var newTreePath string
 	for index, part := range treeNames {
 		newTreePath = path.Join(newTreePath, part)
-		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(newTreePath)
+		entry, err := c.Repo.Commit.GetTreeEntryByPath(newTreePath)
 		if err != nil {
 			if git.IsErrNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}
 
-			ctx.Handle(500, "Repo.Commit.GetTreeEntryByPath", err)
+			c.ServerError("Repo.Commit.GetTreeEntryByPath", err)
 			return
 		}
 		if index != len(treeNames)-1 {
 			if !entry.IsDir() {
-				ctx.Data["Err_TreePath"] = true
-				ctx.RenderWithErr(ctx.Tr("repo.editor.directory_is_a_file", part), EDIT_FILE, &f)
+				c.FormErr("TreePath")
+				c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), EDIT_FILE, &f)
 				return
 			}
 		} else {
 			if entry.IsLink() {
-				ctx.Data["Err_TreePath"] = true
-				ctx.RenderWithErr(ctx.Tr("repo.editor.file_is_a_symlink", part), EDIT_FILE, &f)
+				c.FormErr("TreePath")
+				c.RenderWithErr(c.Tr("repo.editor.file_is_a_symlink", part), EDIT_FILE, &f)
 				return
 			} else if entry.IsDir() {
-				ctx.Data["Err_TreePath"] = true
-				ctx.RenderWithErr(ctx.Tr("repo.editor.filename_is_a_directory", part), EDIT_FILE, &f)
+				c.FormErr("TreePath")
+				c.RenderWithErr(c.Tr("repo.editor.filename_is_a_directory", part), EDIT_FILE, &f)
 				return
 			}
 		}
 	}
 
 	if !isNewFile {
-		_, err := ctx.Repo.Commit.GetTreeEntryByPath(oldTreePath)
+		_, err := c.Repo.Commit.GetTreeEntryByPath(oldTreePath)
 		if err != nil {
 			if git.IsErrNotExist(err) {
-				ctx.Data["Err_TreePath"] = true
-				ctx.RenderWithErr(ctx.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), EDIT_FILE, &f)
+				c.FormErr("TreePath")
+				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), EDIT_FILE, &f)
 			} else {
-				ctx.Handle(500, "GetTreeEntryByPath", err)
+				c.ServerError("GetTreeEntryByPath", err)
 			}
 			return
 		}
-		if lastCommit != ctx.Repo.CommitID {
-			files, err := ctx.Repo.Commit.GetFilesChangedSinceCommit(lastCommit)
+		if lastCommit != c.Repo.CommitID {
+			files, err := c.Repo.Commit.GetFilesChangedSinceCommit(lastCommit)
 			if err != nil {
-				ctx.Handle(500, "GetFilesChangedSinceCommit", err)
+				c.ServerError("GetFilesChangedSinceCommit", err)
 				return
 			}
 
 			for _, file := range files {
 				if file == f.TreePath {
-					ctx.RenderWithErr(ctx.Tr("repo.editor.file_changed_while_editing", ctx.Repo.RepoLink+"/compare/"+lastCommit+"..."+ctx.Repo.CommitID), EDIT_FILE, &f)
+					c.RenderWithErr(c.Tr("repo.editor.file_changed_while_editing", c.Repo.RepoLink+"/compare/"+lastCommit+"..."+c.Repo.CommitID), EDIT_FILE, &f)
 					return
 				}
 			}
@@ -236,16 +238,16 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 
 	if oldTreePath != f.TreePath {
 		// We have a new filename (rename or completely new file) so we need to make sure it doesn't already exist, can't clobber.
-		entry, err := ctx.Repo.Commit.GetTreeEntryByPath(f.TreePath)
+		entry, err := c.Repo.Commit.GetTreeEntryByPath(f.TreePath)
 		if err != nil {
 			if !git.IsErrNotExist(err) {
-				ctx.Handle(500, "GetTreeEntryByPath", err)
+				c.ServerError("GetTreeEntryByPath", err)
 				return
 			}
 		}
 		if entry != nil {
-			ctx.Data["Err_TreePath"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.editor.file_already_exists", f.TreePath), EDIT_FILE, &f)
+			c.FormErr("TreePath")
+			c.RenderWithErr(c.Tr("repo.editor.file_already_exists", f.TreePath), EDIT_FILE, &f)
 			return
 		}
 	}
@@ -253,9 +255,9 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 	message := strings.TrimSpace(f.CommitSummary)
 	if len(message) == 0 {
 		if isNewFile {
-			message = ctx.Tr("repo.editor.add", f.TreePath)
+			message = c.Tr("repo.editor.add", f.TreePath)
 		} else {
-			message = ctx.Tr("repo.editor.update", f.TreePath)
+			message = c.Tr("repo.editor.update", f.TreePath)
 		}
 	}
 
@@ -264,7 +266,7 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := ctx.Repo.Repository.UpdateRepoFile(ctx.User, models.UpdateRepoFileOptions{
+	if err := c.Repo.Repository.UpdateRepoFile(c.User, models.UpdateRepoFileOptions{
 		LastCommitID: lastCommit,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -274,15 +276,15 @@ func editFilePost(ctx *context.Context, f form.EditRepoFile, isNewFile bool) {
 		Content:      strings.Replace(f.Content, "\r", "", -1),
 		IsNewFile:    isNewFile,
 	}); err != nil {
-		ctx.Data["Err_TreePath"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.editor.fail_to_update_file", f.TreePath, err), EDIT_FILE, &f)
+		c.FormErr("TreePath")
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, err), EDIT_FILE, &f)
 		return
 	}
 
-	if f.IsNewBrnach() && ctx.Repo.PullRequest.Allowed {
-		ctx.Redirect(ctx.Repo.PullRequestURL(oldBranchName, f.NewBranchName))
+	if f.IsNewBrnach() && c.Repo.PullRequest.Allowed {
+		c.Redirect(c.Repo.PullRequestURL(oldBranchName, f.NewBranchName))
 	} else {
-		ctx.Redirect(ctx.Repo.RepoLink + "/src/" + branchName + "/" + template.EscapePound(f.TreePath))
+		c.Redirect(c.Repo.RepoLink + "/src/" + branchName + "/" + template.EscapePound(f.TreePath))
 	}
 }
 

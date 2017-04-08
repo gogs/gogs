@@ -64,7 +64,6 @@ function initEditDiffTab($form) {
         var $this = $(this);
         $.post($this.data('url'), {
                 "_csrf": csrf,
-                "context": $this.data('context'),
                 "content": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
             },
             function (data) {
@@ -704,9 +703,13 @@ function initEditor() {
                 parts.push(element.text());
             }
         });
-        if ($(this).val())
+        if ($(this).val()) {
             parts.push($(this).val());
-        $('#tree_path').val(parts.join('/'));
+        }
+
+        var tree_path = parts.join('/');
+        $('#tree_path').val(tree_path);
+        $('#preview-tab').data('context', $('#preview-tab').data('root-context') + tree_path.substring(0, tree_path.lastIndexOf("/")+1));
     }).trigger('keyup');
 
     var $editArea = $('.repository.editor textarea#edit_area');
