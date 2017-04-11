@@ -862,6 +862,7 @@ function initAdmin() {
             $('.smtp').hide();
             $('.pam').hide();
             $('.has-tls').hide();
+            $('.crowd').hide();
 
             var authType = $(this).val();
             switch (authType) {
@@ -877,6 +878,9 @@ function initAdmin() {
                     break;
                 case '5':     // LDAP
                     $('.dldap').show();
+                    break;
+                case '6':     //Crowd
+                    $('.crowd').show();
                     break;
             }
 

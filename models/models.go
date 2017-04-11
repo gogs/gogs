@@ -339,6 +339,8 @@ func ImportDatabase(dirPath string) (err error) {
 					bean.Cfg = new(SMTPConfig)
 				case LOGIN_PAM:
 					bean.Cfg = new(PAMConfig)
+				case LOGIN_CROWD:
+					bean.Cfg = new(CrowdConfig)
 				default:
 					return fmt.Errorf("unrecognized login source type:: %v", tp)
 				}

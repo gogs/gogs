@@ -51,6 +51,7 @@ var (
 		{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
 		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
 		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
+		{models.LoginNames[models.LOGIN_CROWD], models.LOGIN_CROWD},
 	}
 	securityProtocols = []dropdownItem{
 		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
@@ -134,6 +135,13 @@ func NewAuthSourcePost(ctx *context.Context, f form.Authentication) {
 		config = &models.PAMConfig{
 			ServiceName: f.PAMServiceName,
 		}
+	case models.LOGIN_CROWD:
+		config = &models.CrowdConfig{
+			Host:     f.CrowdHost,
+			AppName:  f.CrowdAppName,
+			Password: f.CrowdPassword,
+			Groups:   f.CrowdGroups,
+		}
 	default:
 		ctx.Error(400)
 		return
@@ -214,6 +222,13 @@ func EditAuthSourcePost(ctx *context.Context, f form.Authentication) {
 	case models.LOGIN_PAM:
 		config = &models.PAMConfig{
 			ServiceName: f.PAMServiceName,
+		}
+	case models.LOGIN_CROWD:
+		config = &models.CrowdConfig{
+			Host:     f.CrowdHost,
+			AppName:  f.CrowdAppName,
+			Password: f.CrowdPassword,
+			Groups:   f.CrowdGroups,
 		}
 	default:
 		ctx.Error(400)

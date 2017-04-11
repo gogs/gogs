@@ -20,6 +20,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models/errors"
+	"github.com/gogits/gogs/pkg/auth/crowd"
 	"github.com/gogits/gogs/pkg/auth/ldap"
 	"github.com/gogits/gogs/pkg/auth/pam"
 )
@@ -34,6 +35,7 @@ const (
 	LOGIN_SMTP             // 3
 	LOGIN_PAM              // 4
 	LOGIN_DLDAP            // 5
+	LOGIN_CROWD            // 6
 )
 
 var LoginNames = map[LoginType]string{
@@ -41,6 +43,7 @@ var LoginNames = map[LoginType]string{
 	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
 	LOGIN_SMTP:  "SMTP",
 	LOGIN_PAM:   "PAM",
+	LOGIN_CROWD: "CROWD/JIRA",
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
@@ -54,6 +57,7 @@ var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
 	_ core.Conversion = &PAMConfig{}
+	_ core.Conversion = &CrowdConfig{}
 )
 
 type LDAPConfig struct {
@@ -101,6 +105,21 @@ func (cfg *PAMConfig) ToDB() ([]byte, error) {
 	return json.Marshal(cfg)
 }
 
+type CrowdConfig struct {
+	Host     string
+	AppName  string
+	Password string
+	Groups   string
+}
+
+func (cfg *CrowdConfig) FromDB(bs []byte) error {
+	return json.Unmarshal(bs, &cfg)
+}
+
+func (cfg *CrowdConfig) ToDB() ([]byte, error) {
+	return json.Marshal(cfg)
+}
+
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
 	ID        int64 `xorm:"pk autoincr"`
@@ -145,6 +164,8 @@ func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 			source.Cfg = new(SMTPConfig)
 		case LOGIN_PAM:
 			source.Cfg = new(PAMConfig)
+		case LOGIN_CROWD:
+			source.Cfg = new(CrowdConfig)
 		default:
 			panic("unrecognized login source type: " + com.ToStr(*val))
 		}
@@ -178,6 +199,10 @@ func (source *LoginSource) IsSMTP() bool {
 
 func (source *LoginSource) IsPAM() bool {
 	return source.Type == LOGIN_PAM
+}
+
+func (source *LoginSource) IsCrowd() bool {
+	return source.Type == LOGIN_CROWD
 }
 
 func (source *LoginSource) HasTLS() bool {
@@ -219,6 +244,11 @@ func (source *LoginSource) SMTP() *SMTPConfig {
 func (source *LoginSource) PAM() *PAMConfig {
 	return source.Cfg.(*PAMConfig)
 }
+
+func (source *LoginSource) CROWD() *CrowdConfig {
+	return source.Cfg.(*CrowdConfig)
+}
+
 func CreateLoginSource(source *LoginSource) error {
 	has, err := x.Get(&LoginSource{Name: source.Name})
 	if err != nil {
@@ -487,6 +517,46 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	return user, CreateUser(user)
 }
 
+// CROWD
+
+// LoginViaCrowd queries if login/password is valid against the Crowd/JIRA server,
+// and create a local user if success when enabled.
+func LoginViaCrowd(user *User, login, password string, sourceID int64, cfg *CrowdConfig, autoRegister bool) (*User, error) {
+	client := crowd.NewCrowdClient(cfg.Host, cfg.AppName, cfg.Password)
+	crowdUser, err := client.Auth(login, password)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !crowdUser.Active {
+		return nil, fmt.Errorf("User[%s] is not active in CROWD/JIRA", login)
+	}
+
+	if len(cfg.Groups) > 0 {
+		if !client.IsUserInGroups(login, strings.Split(cfg.Groups, ",")) {
+			return nil, fmt.Errorf("User[%s] is not in %s", login, cfg.Groups)
+		}
+	}
+
+	if !autoRegister {
+		return user, nil
+	}
+
+	user = &User{
+		LowerName:   strings.ToLower(crowdUser.Name),
+		Name:        crowdUser.Name,
+		Email:       crowdUser.Email,
+		Passwd:      password,
+		LoginType:   LOGIN_CROWD,
+		LoginSource: sourceID,
+		LoginName:   login,
+		IsActive:    crowdUser.Active,
+	}
+
+	return user, CreateUser(user)
+}
+
 func ExternalUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
 		return nil, errors.LoginSourceNotActivated{source.ID}
@@ -499,6 +569,8 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 		return LoginViaSMTP(user, login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
 	case LOGIN_PAM:
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	case LOGIN_CROWD:
+		return LoginViaCrowd(user, login, password, source.ID, source.Cfg.(*CrowdConfig), autoRegister)
 	}
 
 	return nil, errors.InvalidLoginSourceType{source.Type}
