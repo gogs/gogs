@@ -146,20 +146,20 @@
 						{{if .Source.IsCrowd}}
 							{{ $cfg:=.Source.CROWD }}
 							<div class="required field">
-								<lable for="crowd_host">{{.i18n.Tr "admin.auths.crowd_host"}}</lable>
+								<label for="crowd_host">{{.i18n.Tr "admin.auths.crowd_host"}}</label>
 								<input id="crowd_host" name="crowd_host" value="{{$cfg.Host}}" required>
 							</div>
 							<div class="required field">
-								<lable for="crowd_app_name">{{.i18n.Tr "admin.auths.crowd_app_name"}}</lable>
+								<label for="crowd_app_name">{{.i18n.Tr "admin.auths.crowd_app_name"}}</label>
 								<input id="crowd_app_name" name="crowd_app_name" value="{{$cfg.AppName}}" required>
 							</div>
 							<div class="required field">
-								<lable for="crowd_password">{{.i18n.Tr "admin.auths.crowd_password"}}</lable>
+								<label for="crowd_password">{{.i18n.Tr "admin.auths.crowd_password"}}</label>
 								<input id="crowd_password" name="crowd_password" type="password" value="{{$cfg.Password}}" required>
 								<p class="help text red">{{.i18n.Tr "admin.auths.crowd_password_help"}}</p>
 							</div>
 							<div class="field">
-								<lable for="crowd_groups">{{.i18n.Tr "admin.auths.crowd_groups"}}</lable>
+								<label for="crowd_groups">{{.i18n.Tr "admin.auths.crowd_groups"}}</label>
 								<input id="crowd_groups" name="crowd_groups" value="{{$cfg.Groups}}">
 								<p class="help text">{{.i18n.Tr "admin.auths.crowd_groups_help"}}</p>
 							</div>
