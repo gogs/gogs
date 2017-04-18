@@ -28,6 +28,9 @@ dist: release
 web: build
 	./gogs web
 
+updatedeps:
+	go get -u ./...
+
 govet:
 	$(GOVET) gogs.go
 	$(GOVET) models pkg routers
