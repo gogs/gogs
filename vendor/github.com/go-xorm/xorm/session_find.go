@@ -41,16 +41,18 @@ func (session *Session) Find(rowsSlicePtr interface{}, condiBean ...interface{})
 		if sliceElementType.Kind() == reflect.Ptr {
 			if sliceElementType.Elem().Kind() == reflect.Struct {
 				pv := reflect.New(sliceElementType.Elem())
-				session.Statement.setRefValue(pv.Elem())
+				if err := session.Statement.setRefValue(pv.Elem()); err != nil {
+					return err
+				}
 			} else {
-				//return errors.New("slice type")
 				tp = tpNonStruct
 			}
 		} else if sliceElementType.Kind() == reflect.Struct {
 			pv := reflect.New(sliceElementType)
-			session.Statement.setRefValue(pv.Elem())
+			if err := session.Statement.setRefValue(pv.Elem()); err != nil {
+				return err
+			}
 		} else {
-			//return errors.New("slice type")
 			tp = tpNonStruct
 		}
 	}
@@ -148,62 +150,10 @@ func (session *Session) Find(rowsSlicePtr interface{}, condiBean ...interface{})
 		}
 	}
 
-	if sliceValue.Kind() != reflect.Map {
-		return session.noCacheFind(sliceValue, sqlStr, args...)
-	}
-
-	resultsSlice, err := session.query(sqlStr, args...)
-	if err != nil {
-		return err
-	}
-
-	keyType := sliceValue.Type().Key()
-
-	for _, results := range resultsSlice {
-		var newValue reflect.Value
-		if sliceElementType.Kind() == reflect.Ptr {
-			newValue = reflect.New(sliceElementType.Elem())
-		} else {
-			newValue = reflect.New(sliceElementType)
-		}
-		err := session.scanMapIntoStruct(newValue.Interface(), results)
-		if err != nil {
-			return err
-		}
-		var key interface{}
-		// if there is only one pk, we can put the id as map key.
-		if len(table.PrimaryKeys) == 1 {
-			key, err = str2PK(string(results[table.PrimaryKeys[0]]), keyType)
-			if err != nil {
-				return err
-			}
-		} else {
-			if keyType.Kind() != reflect.Slice {
-				panic("don't support multiple primary key's map has non-slice key type")
-			} else {
-				var keys core.PK = make([]interface{}, 0, len(table.PrimaryKeys))
-				for _, pk := range table.PrimaryKeys {
-					skey, err := str2PK(string(results[pk]), keyType)
-					if err != nil {
-						return err
-					}
-					keys = append(keys, skey)
-				}
-				key = keys
-			}
-		}
-
-		if sliceElementType.Kind() == reflect.Ptr {
-			sliceValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(newValue.Interface()))
-		} else {
-			sliceValue.SetMapIndex(reflect.ValueOf(key), reflect.Indirect(reflect.ValueOf(newValue.Interface())))
-		}
-	}
-
-	return nil
+	return session.noCacheFind(table, sliceValue, sqlStr, args...)
 }
 
-func (session *Session) noCacheFind(sliceValue reflect.Value, sqlStr string, args ...interface{}) error {
+func (session *Session) noCacheFind(table *core.Table, containerValue reflect.Value, sqlStr string, args ...interface{}) error {
 	var rawRows *core.Rows
 	var err error
 
@@ -223,48 +173,109 @@ func (session *Session) noCacheFind(sliceValue reflect.Value, sqlStr string, arg
 		return err
 	}
 
-	var newElemFunc func() reflect.Value
-	sliceElementType := sliceValue.Type().Elem()
-	if sliceElementType.Kind() == reflect.Ptr {
-		newElemFunc = func() reflect.Value {
-			return reflect.New(sliceElementType.Elem())
+	var newElemFunc func(fields []string) reflect.Value
+	elemType := containerValue.Type().Elem()
+	var isPointer bool
+	if elemType.Kind() == reflect.Ptr {
+		isPointer = true
+		elemType = elemType.Elem()
+	}
+	if elemType.Kind() == reflect.Ptr {
+		return errors.New("pointer to pointer is not supported")
+	}
+
+	newElemFunc = func(fields []string) reflect.Value {
+		switch elemType.Kind() {
+		case reflect.Slice:
+			slice := reflect.MakeSlice(elemType, len(fields), len(fields))
+			x := reflect.New(slice.Type())
+			x.Elem().Set(slice)
+			return x
+		case reflect.Map:
+			mp := reflect.MakeMap(elemType)
+			x := reflect.New(mp.Type())
+			x.Elem().Set(mp)
+			return x
+		}
+		return reflect.New(elemType)
+	}
+
+	var containerValueSetFunc func(*reflect.Value, core.PK) error
+
+	if containerValue.Kind() == reflect.Slice {
+		containerValueSetFunc = func(newValue *reflect.Value, pk core.PK) error {
+			if isPointer {
+				containerValue.Set(reflect.Append(containerValue, newValue.Elem().Addr()))
+			} else {
+				containerValue.Set(reflect.Append(containerValue, newValue.Elem()))
+			}
+			return nil
 		}
 	} else {
-		newElemFunc = func() reflect.Value {
-			return reflect.New(sliceElementType)
+		keyType := containerValue.Type().Key()
+		if len(table.PrimaryKeys) == 0 {
+			return errors.New("don't support multiple primary key's map has non-slice key type")
+		}
+		if len(table.PrimaryKeys) > 1 && keyType.Kind() != reflect.Slice {
+			return errors.New("don't support multiple primary key's map has non-slice key type")
+		}
+
+		containerValueSetFunc = func(newValue *reflect.Value, pk core.PK) error {
+			keyValue := reflect.New(keyType)
+			err := convertPKToValue(table, keyValue.Interface(), pk)
+			if err != nil {
+				return err
+			}
+			if isPointer {
+				containerValue.SetMapIndex(keyValue.Elem(), newValue.Elem().Addr())
+			} else {
+				containerValue.SetMapIndex(keyValue.Elem(), newValue.Elem())
+			}
+			return nil
 		}
 	}
 
-	var sliceValueSetFunc func(*reflect.Value)
-
-	if sliceValue.Kind() == reflect.Slice {
-		if sliceElementType.Kind() == reflect.Ptr {
-			sliceValueSetFunc = func(newValue *reflect.Value) {
-				sliceValue.Set(reflect.Append(sliceValue, reflect.ValueOf(newValue.Interface())))
-			}
-		} else {
-			sliceValueSetFunc = func(newValue *reflect.Value) {
-				sliceValue.Set(reflect.Append(sliceValue, reflect.Indirect(reflect.ValueOf(newValue.Interface()))))
-			}
+	if elemType.Kind() == reflect.Struct {
+		var newValue = newElemFunc(fields)
+		dataStruct := rValue(newValue.Interface())
+		tb, err := session.Engine.autoMapType(dataStruct)
+		if err != nil {
+			return err
 		}
-	}
-
-	var newValue = newElemFunc()
-	dataStruct := rValue(newValue.Interface())
-	if dataStruct.Kind() == reflect.Struct {
-		return session.rows2Beans(rawRows, fields, len(fields), session.Engine.autoMapType(dataStruct), newElemFunc, sliceValueSetFunc)
+		return session.rows2Beans(rawRows, fields, len(fields), tb, newElemFunc, containerValueSetFunc)
 	}
 
 	for rawRows.Next() {
-		var newValue = newElemFunc()
+		var newValue = newElemFunc(fields)
 		bean := newValue.Interface()
 
-		if err := rawRows.Scan(bean); err != nil {
+		switch elemType.Kind() {
+		case reflect.Slice:
+			err = rawRows.ScanSlice(bean)
+		case reflect.Map:
+			err = rawRows.ScanMap(bean)
+		default:
+			err = rawRows.Scan(bean)
+		}
+
+		if err != nil {
 			return err
 		}
 
-		sliceValueSetFunc(&newValue)
+		if err := containerValueSetFunc(&newValue, nil); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func convertPKToValue(table *core.Table, dst interface{}, pk core.PK) error {
+	cols := table.PKColumns()
+	if len(cols) == 1 {
+		return convertAssign(dst, pk[0])
+	}
+
+	dst = pk
 	return nil
 }
 
@@ -404,7 +415,10 @@ func (session *Session) cacheFind(t reflect.Type, sqlStr string, rowsSlicePtr in
 			if rv.Kind() != reflect.Ptr {
 				rv = rv.Addr()
 			}
-			id := session.Engine.IdOfV(rv)
+			id, err := session.Engine.idOfV(rv)
+			if err != nil {
+				return err
+			}
 			sid, err := id.ToString()
 			if err != nil {
 				return err
