@@ -67,7 +67,9 @@ func (session *Session) innerInsertMulti(rowsSlicePtr interface{}) (int64, error
 		return 0, errors.New("could not insert a empty slice")
 	}
 
-	session.Statement.setRefValue(sliceValue.Index(0))
+	if err := session.Statement.setRefValue(sliceValue.Index(0)); err != nil {
+		return 0, err
+	}
 
 	if len(session.Statement.TableName()) <= 0 {
 		return 0, ErrTableNotFound
@@ -210,13 +212,29 @@ func (session *Session) innerInsertMulti(rowsSlicePtr interface{}) (int64, error
 	}
 	cleanupProcessorsClosures(&session.beforeClosures)
 
-	statement := fmt.Sprintf("INSERT INTO %s (%v%v%v) VALUES (%v)",
-		session.Engine.Quote(session.Statement.TableName()),
-		session.Engine.QuoteStr(),
-		strings.Join(colNames, session.Engine.QuoteStr()+", "+session.Engine.QuoteStr()),
-		session.Engine.QuoteStr(),
-		strings.Join(colMultiPlaces, "),("))
-
+	var sql = "INSERT INTO %s (%v%v%v) VALUES (%v)"
+	var statement string
+	if session.Engine.dialect.DBType() == core.ORACLE {
+		sql = "INSERT ALL INTO %s (%v%v%v) VALUES (%v) SELECT 1 FROM DUAL"
+		temp := fmt.Sprintf(") INTO %s (%v%v%v) VALUES (",
+			session.Engine.Quote(session.Statement.TableName()),
+			session.Engine.QuoteStr(),
+			strings.Join(colNames, session.Engine.QuoteStr()+", "+session.Engine.QuoteStr()),
+			session.Engine.QuoteStr())
+		statement = fmt.Sprintf(sql,
+			session.Engine.Quote(session.Statement.TableName()),
+			session.Engine.QuoteStr(),
+			strings.Join(colNames, session.Engine.QuoteStr()+", "+session.Engine.QuoteStr()),
+			session.Engine.QuoteStr(),
+			strings.Join(colMultiPlaces, temp))
+	} else {
+		statement = fmt.Sprintf(sql,
+			session.Engine.Quote(session.Statement.TableName()),
+			session.Engine.QuoteStr(),
+			strings.Join(colNames, session.Engine.QuoteStr()+", "+session.Engine.QuoteStr()),
+			session.Engine.QuoteStr(),
+			strings.Join(colMultiPlaces, "),("))
+	}
 	res, err := session.exec(statement, args...)
 	if err != nil {
 		return 0, err
@@ -281,7 +299,9 @@ func (session *Session) InsertMulti(rowsSlicePtr interface{}) (int64, error) {
 }
 
 func (session *Session) innerInsert(bean interface{}) (int64, error) {
-	session.Statement.setRefValue(rValue(bean))
+	if err := session.Statement.setRefValue(rValue(bean)); err != nil {
+		return 0, err
+	}
 	if len(session.Statement.TableName()) <= 0 {
 		return 0, ErrTableNotFound
 	}
