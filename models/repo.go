@@ -295,7 +295,7 @@ func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 		Empty:         repo.IsBare,
 		Size:          int(repo.Size/1024),
 		Fork:          repo.IsFork,
-		Parent:        repo.BaseRepo,
+		Parent:        repo.BaseRepo.APIFormat(),
 		Mirror:        repo.IsMirror,
 		HTMLURL:       repo.HTMLURL(),
 		SSHURL:        cloneLink.SSH,
