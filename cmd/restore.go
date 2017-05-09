@@ -27,7 +27,7 @@ The backup version must lower or equal to current Gogs version. You can also imp
 backup from other database engines, which is useful for database migrating.
 
 If corresponding files or database tables are not presented in the archive, they will
-be skipped and remian unchanged.`,
+be skipped and remain unchanged.`,
 	Action: runRestore,
 	Flags: []cli.Flag{
 		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
