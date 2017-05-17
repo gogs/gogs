@@ -57,6 +57,12 @@
 			"revisionTime": "2016-01-17T19:21:50Z"
 		},
 		{
+			"checksumSHA1": "NKoZRlZix5wzCfN0rTg29GtKZRU=",
+			"path": "github.com/chaseadamsio/goorgeous",
+			"revision": "677defd0e024333503d8c946dd4ba3f32ad3e5d2",
+			"revisionTime": "2017-04-27T12:50:10Z"
+		},
+		{
 			"checksumSHA1": "HG4+dlJq5h+07VI1rOlpc5KBlfg=",
 			"path": "github.com/denisenkom/go-mssqldb",
 			"revision": "9e40d9d5d325edfaa84d3374bfde6e1adce02d58",
