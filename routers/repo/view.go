@@ -88,11 +88,11 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 			switch markup.Detect(readmeFile.Name()) {
 			case markup.MARKDOWN:
-				ctx.Data["IsMarkdown"] = true
-				buf = markup.Markdown(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+				c.Data["IsMarkdown"] = true
+				buf = markup.Markdown(buf, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.ORG_MODE:
-				ctx.Data["IsMarkdown"] = true
-				buf = markup.OrgMode(buf, treeLink, ctx.Repo.Repository.ComposeMetas())
+				c.Data["IsMarkdown"] = true
+				buf = markup.OrgMode(buf, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
