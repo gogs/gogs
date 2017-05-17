@@ -87,7 +87,7 @@ func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 	}
 	body, err := mailRender.HTMLString(string(tpl), data)
 	if err != nil {
-		log.Error(3, "HTMLString: %v", err)
+		log.Error(2, "HTMLString: %v", err)
 		return
 	}
 

@@ -146,8 +146,8 @@ func VerifyTimeLimitCode(data string, minutes int, code string) bool {
 
 const TIME_LIMIT_CODE_LENGTH = 12 + 6 + 40
 
-// create a time limit code
-// code format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
+// CreateTimeLimitCode generates a time limit code based on given input data.
+// Format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
 func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
 	format := "200601021504"
 

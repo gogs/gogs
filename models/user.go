@@ -599,13 +599,14 @@ func Users(page, pageSize int) ([]*User, error) {
 	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("id").Find(&users)
 }
 
-// get user by erify code
-func getVerifyUser(code string) (user *User) {
+// parseUserFromCode returns user by username encoded in code.
+// It returns nil if code or username is invalid.
+func parseUserFromCode(code string) (user *User) {
 	if len(code) <= tool.TIME_LIMIT_CODE_LENGTH {
 		return nil
 	}
 
-	// use tail hex username query user
+	// Use tail hex username to query user
 	hexStr := code[tool.TIME_LIMIT_CODE_LENGTH:]
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = GetUserByName(string(b)); user != nil {
@@ -622,7 +623,7 @@ func getVerifyUser(code string) (user *User) {
 func VerifyUserActiveCode(code string) (user *User) {
 	minutes := setting.Service.ActiveCodeLives
 
-	if user = getVerifyUser(code); user != nil {
+	if user = parseUserFromCode(code); user != nil {
 		// time limit code
 		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
 		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Passwd + user.Rands
@@ -638,7 +639,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 func VerifyActiveEmailCode(code, email string) *EmailAddress {
 	minutes := setting.Service.ActiveCodeLives
 
-	if user := getVerifyUser(code); user != nil {
+	if user := parseUserFromCode(code); user != nil {
 		// time limit code
 		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Passwd + user.Rands
@@ -919,7 +920,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 	return GetUserByID(userID)
 }
 
-// GetUserByName returns user by given name.
+// GetUserByName returns a user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
 		return nil, errors.UserNotExist{0, name}
