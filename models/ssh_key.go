@@ -23,9 +23,9 @@ import (
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
@@ -298,6 +298,10 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	// remove any unnecessary whitespace now
 	content = strings.TrimSpace(content)
 
+	if !setting.SSH.MinimumKeySizeCheck {
+		return content, nil
+	}
+
 	var (
 		fnName  string
 		keyType string
@@ -315,9 +319,6 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	}
 	log.Trace("Key info [native: %v]: %s-%d", setting.SSH.StartBuiltinServer, keyType, length)
 
-	if !setting.SSH.MinimumKeySizeCheck {
-		return content, nil
-	}
 	if minLen, found := setting.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
 		return content, nil
 	} else if found && length < minLen {
