@@ -672,8 +672,21 @@ func runWeb(ctx *cli.Context) error {
 	case setting.SCHEME_HTTP:
 		err = http.ListenAndServe(listenAddr, m)
 	case setting.SCHEME_HTTPS:
+		var tlsMinVersion uint16
+		switch setting.TLSMinVersion {
+		case "SSL30":
+			tlsMinVersion = tls.VersionSSL30
+		case "TLS12":
+			tlsMinVersion = tls.VersionTLS12
+		case "TLS11":
+			tlsMinVersion = tls.VersionTLS11
+		case "TLS10":
+			fallthrough
+		default:
+			tlsMinVersion = tls.VersionTLS10
+		}
 		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{
-			MinVersion:               tls.VersionTLS10,
+			MinVersion:               tlsMinVersion,
 			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
 			PreferServerCipherSuites: true,
 			CipherSuites: []uint16{
