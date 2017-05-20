@@ -69,6 +69,7 @@ var (
 	OfflineMode          bool
 	DisableRouterLog     bool
 	CertFile, KeyFile    string
+	TLSMinVersion        string
 	StaticRootPath       string
 	EnableGzip           bool
 	LandingPageURL       LandingPage
@@ -438,6 +439,7 @@ func NewContext() {
 		Protocol = SCHEME_HTTPS
 		CertFile = sec.Key("CERT_FILE").String()
 		KeyFile = sec.Key("KEY_FILE").String()
+		TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
 	} else if sec.Key("PROTOCOL").String() == "fcgi" {
 		Protocol = SCHEME_FCGI
 	} else if sec.Key("PROTOCOL").String() == "unix" {
