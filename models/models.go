@@ -302,7 +302,9 @@ func DumpDatabase(dirPath string) (err error) {
 }
 
 // ImportDatabase imports data from backup archive.
-func ImportDatabase(dirPath string) (err error) {
+func ImportDatabase(dirPath string, verbose bool) (err error) {
+	snakeMapper := core.SnakeMapper{}
+
 	// Purposely create a local variable to not modify global variable
 	tables := append(tables, new(Version))
 	for _, table := range tables {
@@ -310,6 +312,10 @@ func ImportDatabase(dirPath string) (err error) {
 		tableFile := path.Join(dirPath, tableName+".json")
 		if !com.IsExist(tableFile) {
 			continue
+		}
+
+		if verbose {
+			log.Trace("Importing table '%s'...", tableName)
 		}
 
 		if err = x.DropTables(table); err != nil {
@@ -351,6 +357,15 @@ func ImportDatabase(dirPath string) (err error) {
 
 			if _, err = x.Insert(table); err != nil {
 				return fmt.Errorf("fail to insert strcut: %v", err)
+			}
+		}
+
+		// PostgreSQL needs manually reset table sequence for auto increment keys
+		if setting.UsePostgreSQL {
+			rawTableName := snakeMapper.Obj2Table(tableName)
+			seqName := rawTableName + "_id_seq"
+			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
+				return fmt.Errorf("fail to reset table '%s' sequence: %v", rawTableName, err)
 			}
 		}
 	}

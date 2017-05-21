@@ -83,7 +83,7 @@ func runRestore(c *cli.Context) error {
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = models.ImportDatabase(dbDir); err != nil {
+	if err = models.ImportDatabase(dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal(0, "Fail to import database: %v", err)
 	}
 
