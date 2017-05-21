@@ -16,8 +16,8 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
-	ID              int64       `xorm:"pk autoincr"`
+	ID              int64
 	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
 	Repo            *Repository `xorm:"-"`
 	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
@@ -1007,7 +1007,7 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          int64
 	UID         int64 `xorm:"INDEX"` // User ID.
 	IssueID     int64
 	RepoID      int64 `xorm:"INDEX"`

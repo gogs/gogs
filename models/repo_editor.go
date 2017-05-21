@@ -307,7 +307,7 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 
 // Upload represent a uploaded file to a repo to be deleted when moved
 type Upload struct {
-	ID   int64  `xorm:"pk autoincr"`
+	ID   int64
 	UUID string `xorm:"uuid UNIQUE"`
 	Name string
 }

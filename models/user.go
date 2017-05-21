@@ -44,7 +44,7 @@ const (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	ID        int64  `xorm:"pk autoincr"`
+	ID        int64
 	LowerName string `xorm:"UNIQUE NOT NULL"`
 	Name      string `xorm:"UNIQUE NOT NULL"`
 	FullName  string
@@ -1087,7 +1087,7 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 
 // Follow represents relations of user and his/her followers.
 type Follow struct {
-	ID       int64 `xorm:"pk autoincr"`
+	ID       int64
 	UserID   int64 `xorm:"UNIQUE(follow)"`
 	FollowID int64 `xorm:"UNIQUE(follow)"`
 }

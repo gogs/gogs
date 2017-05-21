@@ -18,7 +18,7 @@ import (
 
 // Milestone represents a milestone of repository.
 type Milestone struct {
-	ID              int64 `xorm:"pk autoincr"`
+	ID              int64
 	RepoID          int64 `xorm:"INDEX"`
 	Name            string
 	Content         string `xorm:"TEXT"`

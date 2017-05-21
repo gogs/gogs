@@ -43,7 +43,7 @@ const (
 
 // PullRequest represents relation between pull request and repositories.
 type PullRequest struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	Type   PullRequestType
 	Status PullRequestStatus
 

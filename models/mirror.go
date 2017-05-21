@@ -27,7 +27,7 @@ var MirrorQueue = sync.NewUniqueQueue(setting.Repository.MirrorQueueLength)
 
 // Mirror represents mirror information of a repository.
 type Mirror struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          int64
 	RepoID      int64
 	Repo        *Repository `xorm:"-"`
 	Interval    int         // Hour.

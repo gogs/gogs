@@ -53,7 +53,7 @@ func ParseAccessMode(permission string) AccessMode {
 // that is not in this table is the real owner of a repository. In case of an organization
 // repository, the members of the owners team are in this table.
 type Access struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	UserID int64 `xorm:"UNIQUE(s)"`
 	RepoID int64 `xorm:"UNIQUE(s)"`
 	Mode   AccessMode

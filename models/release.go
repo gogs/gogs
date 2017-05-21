@@ -22,7 +22,7 @@ import (
 
 // Release represents a release of repository.
 type Release struct {
-	ID               int64 `xorm:"pk autoincr"`
+	ID               int64
 	RepoID           int64
 	Repo             *Repository `xorm:"-"`
 	PublisherID      int64
