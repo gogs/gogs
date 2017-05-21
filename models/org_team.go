@@ -16,7 +16,7 @@ const OWNER_TEAM = "Owners"
 
 // Team represents a organization team.
 type Team struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          int64
 	OrgID       int64 `xorm:"INDEX"`
 	LowerName   string
 	Name        string
@@ -406,7 +406,7 @@ func DeleteTeam(t *Team) error {
 
 // TeamUser represents an team-user relation.
 type TeamUser struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	OrgID  int64 `xorm:"INDEX"`
 	TeamID int64 `xorm:"UNIQUE(s)"`
 	UID    int64 `xorm:"UNIQUE(s)"`

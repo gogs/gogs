@@ -141,7 +141,7 @@ func NewRepoContext() {
 
 // Repository contains information of a repository.
 type Repository struct {
-	ID            int64  `xorm:"pk autoincr"`
+	ID            int64
 	OwnerID       int64  `xorm:"UNIQUE(s)"`
 	Owner         *User  `xorm:"-"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
@@ -2055,7 +2055,7 @@ func (repos MirrorRepositoryList) LoadAttributes() error {
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	UserID int64 `xorm:"UNIQUE(watch)"`
 	RepoID int64 `xorm:"UNIQUE(watch)"`
 }
@@ -2161,7 +2161,7 @@ func NotifyWatchers(act *Action) error {
 //         \/           \/
 
 type Star struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	UID    int64 `xorm:"UNIQUE(s)"`
 	RepoID int64 `xorm:"UNIQUE(s)"`
 }

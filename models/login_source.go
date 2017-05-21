@@ -103,7 +103,7 @@ func (cfg *PAMConfig) ToDB() ([]byte, error) {
 
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
-	ID        int64 `xorm:"pk autoincr"`
+	ID        int64
 	Type      LoginType
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
@@ -327,16 +327,16 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 		IsActive:    true,
 		IsAdmin:     isAdmin,
 	}
-	
+
 	ok, err := IsUserExist(0, user.Name)
 	if err != nil {
 		return user, err
 	}
-	
+
 	if ok {
 		return user, UpdateUser(user)
 	}
-	
+
 	return user, CreateUser(user)
 }
 

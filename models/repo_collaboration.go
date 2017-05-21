@@ -14,7 +14,7 @@ import (
 
 // Collaboration represent the relation between an individual and a repository.
 type Collaboration struct {
-	ID     int64      `xorm:"pk autoincr"`
+	ID     int64
 	RepoID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`

@@ -92,7 +92,7 @@ const (
 
 // Webhook represents a web hook object.
 type Webhook struct {
-	ID           int64 `xorm:"pk autoincr"`
+	ID           int64
 	RepoID       int64
 	OrgID        int64
 	URL          string `xorm:"url TEXT"`
@@ -407,7 +407,7 @@ type HookResponse struct {
 
 // HookTask represents a hook task.
 type HookTask struct {
-	ID              int64 `xorm:"pk autoincr"`
+	ID              int64
 	RepoID          int64 `xorm:"INDEX"`
 	HookID          int64
 	UUID            string

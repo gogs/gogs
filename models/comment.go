@@ -49,7 +49,7 @@ const (
 
 // Comment represents a comment in commit and issue page.
 type Comment struct {
-	ID              int64 `xorm:"pk autoincr"`
+	ID              int64
 	Type            CommentType
 	PosterID        int64
 	Poster          *User  `xorm:"-"`

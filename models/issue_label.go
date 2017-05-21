@@ -54,7 +54,7 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 
 // Label represents a label of repository for issues.
 type Label struct {
-	ID              int64 `xorm:"pk autoincr"`
+	ID              int64
 	RepoID          int64 `xorm:"INDEX"`
 	Name            string
 	Color           string `xorm:"VARCHAR(7)"`
@@ -213,7 +213,7 @@ func DeleteLabel(repoID, labelID int64) error {
 
 // IssueLabel represetns an issue-lable relation.
 type IssueLabel struct {
-	ID      int64 `xorm:"pk autoincr"`
+	ID      int64
 	IssueID int64 `xorm:"UNIQUE(s)"`
 	LabelID int64 `xorm:"UNIQUE(s)"`
 }

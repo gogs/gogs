@@ -237,7 +237,7 @@ func DeleteOrganization(org *User) (err error) {
 
 // OrgUser represents an organization-user relation.
 type OrgUser struct {
-	ID       int64 `xorm:"pk autoincr"`
+	ID       int64
 	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
 	OrgID    int64 `xorm:"INDEX UNIQUE(s)"`
 	IsPublic bool

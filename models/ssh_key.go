@@ -43,7 +43,7 @@ const (
 
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
-	ID          int64      `xorm:"pk autoincr"`
+	ID          int64
 	OwnerID     int64      `xorm:"INDEX NOT NULL"`
 	Name        string     `xorm:"NOT NULL"`
 	Fingerprint string     `xorm:"NOT NULL"`
@@ -566,7 +566,7 @@ func RewriteAllPublicKeys() error {
 
 // DeployKey represents deploy key information and its relation with repository.
 type DeployKey struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          int64
 	KeyID       int64 `xorm:"UNIQUE(s) INDEX"`
 	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
 	Name        string
