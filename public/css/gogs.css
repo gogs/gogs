@@ -3123,7 +3123,7 @@ footer .ui.language .menu {
   width: 100px;
 }
 .admin.config .log-config table tbody tr td:not(first-child) {
-  max-width: 0;
+  max-width: 200px;
 }
 .explore {
   padding-top: 15px;
