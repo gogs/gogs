@@ -174,7 +174,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 		return fmt.Errorf("update collaboration: %v", err)
 	}
 
-	access := Access{
+	access := &Access{
 		UserID: userID,
 		RepoID: repo.ID,
 	}
