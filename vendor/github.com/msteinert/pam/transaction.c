@@ -19,7 +19,7 @@ int cb_pam_conv(
 		struct cbPAMConv_return result = cbPAMConv(
 				msg[i]->msg_style,
 				(char *)msg[i]->msg,
-				appdata_ptr);
+				(long)appdata_ptr);
 		if (result.r1 != PAM_SUCCESS) {
 			goto error;
 		}
@@ -39,13 +39,8 @@ error:
 	return PAM_CONV_ERR;
 }
 
-struct pam_conv *make_pam_conv(void *appdata_ptr)
+void init_pam_conv(struct pam_conv *conv, long c)
 {
-	struct pam_conv* conv = malloc(sizeof *conv);
-	if (!conv) {
-		return NULL;
-	}
 	conv->conv = cb_pam_conv;
-	conv->appdata_ptr = appdata_ptr;
-	return conv;
+	conv->appdata_ptr = (void *)c;
 }
