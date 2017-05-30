@@ -4,7 +4,7 @@ package pam
 //#include <stdlib.h>
 //#cgo CFLAGS: -Wall -std=c99
 //#cgo LDFLAGS: -lpam
-//struct pam_conv *make_pam_conv(void *);
+//struct pam_conv *make_pam_conv();
 import "C"
 
 import (
@@ -61,7 +61,8 @@ type conversation struct {
 func newConversation(handler ConversationHandler) (*conversation, C.int) {
 	c := &conversation{}
 	c.handler = handler
-	c.conv = C.make_pam_conv(unsafe.Pointer(c))
+	c.conv = C.make_pam_conv()
+        c.conv.appdata_ptr = unsafe.Pointer(c)
 	if c.conv == nil {
 		return nil, C.PAM_BUF_ERR
 	}

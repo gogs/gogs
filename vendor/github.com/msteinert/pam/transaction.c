@@ -39,13 +39,12 @@ error:
 	return PAM_CONV_ERR;
 }
 
-struct pam_conv *make_pam_conv(void *appdata_ptr)
+struct pam_conv *make_pam_conv()
 {
 	struct pam_conv* conv = malloc(sizeof *conv);
 	if (!conv) {
 		return NULL;
 	}
 	conv->conv = cb_pam_conv;
-	conv->appdata_ptr = appdata_ptr;
 	return conv;
 }
