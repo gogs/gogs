@@ -57,7 +57,6 @@
 								<label for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
 								<input id="bind_dn" name="bind_dn" value="{{.bind_dn}}" placeholder="e.g. cn=Search,dc=mydomain,dc=com">
 							</div>
-							<input class="fake" type="password">
 							<div class="ldap field {{if not (eq .type 2)}}hide{{end}}">
 								<label for="bind_password">{{.i18n.Tr "admin.auths.bind_password"}}</label>
 								<input id="bind_password" name="bind_password" type="password" value="{{.bind_password}}">
@@ -95,27 +94,30 @@
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{.attribute_mail}}" placeholder="e.g. mail">
 							</div>
+							
 							<div class="inline field">
 								<div class="ui checkbox">
-									<label><strong>Verify group membership in LDAP</strong></label>
-									<input name="groups_enabled" type="checkbox">
+									<label><strong>{{.i18n.Tr "admin.auths.verify_group_membership"}}</strong></label>
+									<input class="enable-system" type="checkbox" name="group_enabled" data-target="#group_box" {{if .group_enabled}}checked{{end}}>
 								</div>
 							</div>
-							<div class="field">
-								<label for="group_dn">Group search Base DN</label>
-								<input id="group_dn" name="group_dn" placeholder="e.g. ou=group,dc=mydomain,dc=com">
-							</div>
-							<div class="field">
-								<label for="group_filter">Valid groups filter</label>
-								<input id="group_filter" name="group_filter" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
-							</div>
-							<div class="field">
-								<label for="group_member_uid">Group attribute containing list of users</label>
-								<input id="group_member_uid" name="group_member_uid" placeholder="e.g. memberUid">
-							</div>
-							<div class="field">
-								<label for="user_uid">User attribute listed in group</label>
-								<input id="user_uid" name="user_uid" placeholder="e.g. uid">
+							<div class="ui segment field {{if not .group_enabled}}disabled{{end}}" id="group_box">
+								<div class="field">
+									<label for="group_dn">{{.i18n.Tr "admin.auths.group_search_base_dn"}}</label>
+									<input id="group_dn" name="group_dn" value="{{.group_dn}}" placeholder="e.g. ou=group,dc=mydomain,dc=com">
+								</div>
+								<div class="field">
+									<label for="group_filter">{{.i18n.Tr "admin.auths.group_filter"}}</label>
+									<input id="group_filter" name="group_filter" value="{{.group_filter}}" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
+								</div>
+								<div class="field">
+									<label for="group_member_uid">{{.i18n.Tr "admin.auths.group_attribute_contain_user_list"}}</label>
+									<input id="group_member_uid" name="group_member_uid" value="{{.group_member_uid}}" placeholder="e.g. memberUid">
+								</div>
+								<div class="field">
+									<label for="user_uid">{{.i18n.Tr "admin.auths.user_attribute_listed_in_group"}}</label>
+									<input id="user_uid" name="user_uid" value="{{.user_uid}}" placeholder="e.g. uid">
+								</div>
 							</div>
 						</div>
 

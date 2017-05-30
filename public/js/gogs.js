@@ -254,19 +254,6 @@ function initRepository() {
                 $prompt.hide();
             }
         });
-
-        // Enable or select internal/external wiki system and issue tracker.
-        $('.enable-system').change(function () {
-            if (this.checked) {
-                $($(this).data('target')).removeClass('disabled');
-            } else {
-                $($(this).data('target')).addClass('disabled');
-            }
-        });
-        $('.enable-system-radio').change(function () {
-			$($(this).data('enable')).removeClass('disabled');
-			$($(this).data('disable')).addClass('disabled');
-        });
     }
 
     // Branches
@@ -1299,7 +1286,7 @@ $(document).ready(function () {
         });
     });
 
-    // Helpers.
+    // Helpers
     $('.delete-button').click(function () {
         var $this = $(this);
         $('.delete.modal').modal({
@@ -1333,6 +1320,19 @@ $(document).ready(function () {
         }).done(function () {
             window.location.href = $this.data('done-url');
         });
+    });
+
+    // Check or select on option to enable/disable target region
+    $('.enable-system').change(function () {
+        if (this.checked) {
+            $($(this).data('target')).removeClass('disabled');
+        } else {
+            $($(this).data('target')).addClass('disabled');
+        }
+    });
+    $('.enable-system-radio').change(function () {
+        $($(this).data('enable')).removeClass('disabled');
+        $($(this).data('disable')).addClass('disabled');
     });
 
     // Set anchor.
