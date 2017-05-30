@@ -42,6 +42,11 @@ type Source struct {
 	AttributesInBind  bool   // fetch attributes in bind context (not user)
 	Filter            string // Query filter to validate entry
 	AdminFilter       string // Query filter to check if user is admin
+	GroupsEnabled     bool   // if the group checking is enabled
+	GroupDN           string // Group Search Base
+	GroupFilter       string // Group Name Filter
+	GroupMemberUid    string // Group Attribute containing array of UserUID
+	UserUID           string // User Attribute listed in Group
 	Enabled           bool   // if this source is disabled
 }
 
@@ -65,6 +70,28 @@ func (ls *Source) sanitizedUserDN(username string) (string, bool) {
 	}
 
 	return fmt.Sprintf(ls.UserDN, username), true
+}
+
+func (ls *Source) sanitizedGroupFilter(group string) (string, bool) {
+	// See http://tools.ietf.org/search/rfc4515
+	badCharacters := "\x00*\\"
+	if strings.ContainsAny(group, badCharacters) {
+		log.Trace("Group filter invalid query characters: %s", group)
+		return "", false
+	}
+
+	return group, true
+}
+
+func (ls *Source) sanitizedGroupDN(groupDn string) (string, bool) {
+	// See http://tools.ietf.org/search/rfc4514: "special characters"
+	badCharacters := "\x00()*\\'\"#+;<>"
+	if strings.ContainsAny(groupDn, badCharacters) || strings.HasPrefix(groupDn, " ") || strings.HasSuffix(groupDn, " ") {
+		log.Trace("Group DN contains invalid query characters: %s", groupDn)
+		return "", false
+	}
+
+	return groupDn, true
 }
 
 func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
@@ -194,15 +221,15 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		return "", "", "", "", false, false
 	}
 
-	log.Trace("Fetching attributes '%v', '%v', '%v', '%v' with filter '%s' and base '%s'", ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, userFilter, userDN)
+	log.Trace("Fetching attributes '%v', '%v', '%v', '%v', '%v' with filter '%s' and base '%s'", ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, ls.UserUID, userFilter, userDN)
 	search := ldap.NewSearchRequest(
 		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, userFilter,
-		[]string{ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail},
+		[]string{ls.AttributeUsername, ls.AttributeName, ls.AttributeSurname, ls.AttributeMail, ls.UserUID},
 		nil)
 
 	sr, err := l.Search(search)
 	if err != nil {
-		log.Error(4, "LDAP search failed: %v", err)
+		log.Error(4, "LDAP user search failed: %v", err)
 		return "", "", "", "", false, false
 	} else if len(sr.Entries) < 1 {
 		if directBind {
@@ -218,6 +245,48 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	firstname := sr.Entries[0].GetAttributeValue(ls.AttributeName)
 	surname := sr.Entries[0].GetAttributeValue(ls.AttributeSurname)
 	mail := sr.Entries[0].GetAttributeValue(ls.AttributeMail)
+	uid := sr.Entries[0].GetAttributeValue(ls.UserUID)
+
+	// Check group membership
+	if ls.GroupsEnabled {
+		groupFilter, ok := ls.sanitizedGroupFilter(ls.GroupFilter)
+		if !ok {
+			return "", "", "", "", false, false
+		}
+		groupDN, ok := ls.sanitizedGroupDN(ls.GroupDN)
+		if !ok {
+			return "", "", "", "", false, false
+		}
+
+		log.Trace("Fetching groups '%v' with filter '%s' and base '%s'", ls.GroupMemberUid, groupFilter, groupDN)
+		groupSearch := ldap.NewSearchRequest(
+			groupDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, groupFilter,
+			[]string{ls.GroupMemberUid},
+			nil)
+
+		srg, err := l.Search(groupSearch)
+		if err != nil {
+			log.Error(4, "LDAP group search failed: %v", err)
+			return "", "", "", "", false, false
+		} else if len(sr.Entries) < 1 {
+			log.Error(4, "LDAP group search failed: 0 entries")
+			return "", "", "", "", false, false
+		}
+
+		isMember := false
+		for _,group := range srg.Entries {
+			for _,member := range group.GetAttributeValues(ls.GroupMemberUid) {
+				if member == uid {
+					isMember = true
+				}
+			}
+		}
+
+		if !isMember {
+			log.Error(4, "LDAP group membership test failed")
+			return "", "", "", "", false, false
+		}
+	}
 
 	isAdmin := false
 	if len(ls.AdminFilter) > 0 {
