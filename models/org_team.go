@@ -450,10 +450,11 @@ func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
 		return nil, err
 	}
 
-	teamIDs := make([]int64, len(teamUsers))
+	teamIDs := make([]int64, len(teamUsers)+1)
 	for i := range teamUsers {
 		teamIDs[i] = teamUsers[i].TeamID
 	}
+	teamIDs[len(teamUsers)] = -1
 
 	teams := make([]*Team, 0, len(teamIDs))
 	return teams, e.Where("org_id = ?", orgID).In("id", teamIDs).Find(&teams)
