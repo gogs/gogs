@@ -95,6 +95,28 @@
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{.attribute_mail}}" placeholder="e.g. mail">
 							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>Verify group membership in LDAP</strong></label>
+									<input name="groups_enabled" type="checkbox">
+								</div>
+							</div>
+							<div class="field">
+								<label for="group_dn">Group search Base DN</label>
+								<input id="group_dn" name="group_dn" placeholder="e.g. ou=group,dc=mydomain,dc=com">
+							</div>
+							<div class="field">
+								<label for="group_filter">Valid groups filter</label>
+								<input id="group_filter" name="group_filter" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
+							</div>
+							<div class="field">
+								<label for="group_member_uid">Group attribute containing list of users</label>
+								<input id="group_member_uid" name="group_member_uid" placeholder="e.g. memberUid">
+							</div>
+							<div class="field">
+								<label for="user_uid">User attribute listed in group</label>
+								<input id="user_uid" name="user_uid" placeholder="e.g. uid">
+							</div>
 						</div>
 
 						<!-- SMTP -->
