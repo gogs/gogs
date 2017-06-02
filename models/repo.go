@@ -285,7 +285,7 @@ func (repo *Repository) HTMLURL() string {
 // Arguments that are allowed to be nil: permission
 func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 	cloneLink := repo.CloneLink()
-	return &api.Repository{
+	apiRepo := &api.Repository{
 		ID:            repo.ID,
 		Owner:         repo.Owner.APIFormat(),
 		Name:          repo.Name,
@@ -293,7 +293,9 @@ func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 		Description:   repo.Description,
 		Private:       repo.IsPrivate,
 		Fork:          repo.IsFork,
+		Empty:         repo.IsBare,
 		Mirror:        repo.IsMirror,
+		Size:          repo.Size,
 		HTMLURL:       repo.HTMLURL(),
 		SSHURL:        cloneLink.SSH,
 		CloneURL:      cloneLink.HTTPS,
@@ -307,6 +309,11 @@ func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 		Updated:       repo.Updated,
 		Permissions:   permission,
 	}
+	if repo.IsFork {
+		// FIXME: check precise permission for base repository
+		apiRepo.Parent = repo.BaseRepo.APIFormat(nil)
+	}
+	return apiRepo
 }
 
 func (repo *Repository) getOwner(e Engine) (err error) {
