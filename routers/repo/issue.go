@@ -822,9 +822,9 @@ func UpdateIssueAssignee(ctx *context.Context) {
 	})
 }
 
-func NewComment(ctx *context.Context, f form.CreateComment) {
-	issue := getActionIssue(ctx)
-	if ctx.Written() {
+func NewComment(c *context.Context, f form.CreateComment) {
+	issue := getActionIssue(c)
+	if c.Written() {
 		return
 	}
 
@@ -833,9 +833,9 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 		attachments = f.Files
 	}
 
-	if ctx.HasError() {
-		ctx.Flash.Error(ctx.Data["ErrorMsg"].(string))
-		ctx.Redirect(fmt.Sprintf("%s/issues/%d", ctx.Repo.RepoLink, issue.Index))
+	if c.HasError() {
+		c.Flash.Error(c.Data["ErrorMsg"].(string))
+		c.Redirect(fmt.Sprintf("%s/issues/%d", c.Repo.RepoLink, issue.Index))
 		return
 	}
 
@@ -843,7 +843,7 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 	var comment *models.Comment
 	defer func() {
 		// Check if issue admin/poster changes the status of issue.
-		if (ctx.Repo.IsWriter() || (ctx.IsLogged && issue.IsPoster(ctx.User.ID))) &&
+		if (c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))) &&
 			(f.Status == "reopen" || f.Status == "close") &&
 			!(issue.IsPull && issue.PullRequest.HasMerged) {
 
@@ -855,7 +855,7 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 				pr, err = models.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 				if err != nil {
 					if !models.IsErrPullRequestNotExist(err) {
-						ctx.Handle(500, "GetUnmergedPullRequest", err)
+						c.ServerError("GetUnmergedPullRequest", err)
 						return
 					}
 				}
@@ -863,7 +863,7 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 				// Regenerate patch and test conflict.
 				if pr == nil {
 					if err = issue.PullRequest.UpdatePatch(); err != nil {
-						ctx.Handle(500, "UpdatePatch", err)
+						c.ServerError("UpdatePatch", err)
 						return
 					}
 
@@ -872,10 +872,10 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 			}
 
 			if pr != nil {
-				ctx.Flash.Info(ctx.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
+				c.Flash.Info(c.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
 			} else {
-				if err = issue.ChangeStatus(ctx.User, ctx.Repo.Repository, f.Status == "close"); err != nil {
-					log.Error(4, "ChangeStatus: %v", err)
+				if err = issue.ChangeStatus(c.User, c.Repo.Repository, f.Status == "close"); err != nil {
+					log.Error(2, "ChangeStatus: %v", err)
 				} else {
 					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
@@ -888,9 +888,9 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 			typeName = "pulls"
 		}
 		if comment != nil {
-			ctx.Redirect(fmt.Sprintf("%s/%s/%d#%s", ctx.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
+			c.Redirect(fmt.Sprintf("%s/%s/%d#%s", c.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
 		} else {
-			ctx.Redirect(fmt.Sprintf("%s/%s/%d", ctx.Repo.RepoLink, typeName, issue.Index))
+			c.Redirect(fmt.Sprintf("%s/%s/%d", c.Repo.RepoLink, typeName, issue.Index))
 		}
 	}()
 
@@ -899,13 +899,13 @@ func NewComment(ctx *context.Context, f form.CreateComment) {
 		return
 	}
 
-	comment, err = models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, f.Content, attachments)
+	comment, err = models.CreateIssueComment(c.User, c.Repo.Repository, issue, f.Content, attachments)
 	if err != nil {
-		ctx.Handle(500, "CreateIssueComment", err)
+		c.ServerError("CreateIssueComment", err)
 		return
 	}
 
-	log.Trace("Comment created: %d/%d/%d", ctx.Repo.Repository.ID, issue.ID, comment.ID)
+	log.Trace("Comment created: %d/%d/%d", c.Repo.Repository.ID, issue.ID, comment.ID)
 }
 
 func UpdateCommentContent(ctx *context.Context) {

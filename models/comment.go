@@ -275,7 +275,10 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err != nil {
 			return nil, err
 		}
+	}
 
+	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
+		return nil, fmt.Errorf("update issue 'updated_unix': %v", err)
 	}
 
 	// Notify watchers for whatever action comes in, ignore if no action type.
