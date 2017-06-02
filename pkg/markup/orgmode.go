@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	log "gopkg.in/clog.v1"
+
 	"github.com/chaseadamsio/goorgeous"
 )
 
@@ -25,7 +27,14 @@ func IsOrgModeFile(name string) bool {
 }
 
 // RawOrgMode renders content in Org-mode syntax to HTML without handling special links.
-func RawOrgMode(body []byte, urlPrefix string) []byte {
+func RawOrgMode(body []byte, urlPrefix string) (result []byte) {
+	// TODO: remove recover code once the third-party package is stable
+	defer func() {
+		if err := recover(); err != nil {
+			result = body
+			log.Warn("PANIC (RawOrgMode): %v", err)
+		}
+	}()
 	return goorgeous.OrgCommon(body)
 }
 
