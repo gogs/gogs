@@ -24,9 +24,9 @@ import (
 )
 
 func repoAssignment() macaron.Handler {
-	return func(ctx *context.APIContext) {
-		userName := ctx.Params(":username")
-		repoName := ctx.Params(":reponame")
+	return func(c *context.APIContext) {
+		userName := c.Params(":username")
+		repoName := c.Params(":reponame")
 
 		var (
 			owner *models.User
@@ -34,87 +34,87 @@ func repoAssignment() macaron.Handler {
 		)
 
 		// Check if the user is the same as the repository owner.
-		if ctx.IsLogged && ctx.User.LowerName == strings.ToLower(userName) {
-			owner = ctx.User
+		if c.IsLogged && c.User.LowerName == strings.ToLower(userName) {
+			owner = c.User
 		} else {
 			owner, err = models.GetUserByName(userName)
 			if err != nil {
 				if errors.IsUserNotExist(err) {
-					ctx.Status(404)
+					c.Status(404)
 				} else {
-					ctx.Error(500, "GetUserByName", err)
+					c.Error(500, "GetUserByName", err)
 				}
 				return
 			}
 		}
-		ctx.Repo.Owner = owner
+		c.Repo.Owner = owner
 
 		// Get repository.
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			if errors.IsRepoNotExist(err) {
-				ctx.Status(404)
+				c.Status(404)
 			} else {
-				ctx.Error(500, "GetRepositoryByName", err)
+				c.Error(500, "GetRepositoryByName", err)
 			}
 			return
 		} else if err = repo.GetOwner(); err != nil {
-			ctx.Error(500, "GetOwner", err)
+			c.Error(500, "GetOwner", err)
 			return
 		}
 
-		if ctx.IsLogged && ctx.User.IsAdmin {
-			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
+		if c.IsLogged && c.User.IsAdmin {
+			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
-			mode, err := models.AccessLevel(ctx.User.ID, repo)
+			mode, err := models.AccessLevel(c.User.ID, repo)
 			if err != nil {
-				ctx.Error(500, "AccessLevel", err)
+				c.Error(500, "AccessLevel", err)
 				return
 			}
-			ctx.Repo.AccessMode = mode
+			c.Repo.AccessMode = mode
 		}
 
-		if !ctx.Repo.HasAccess() {
-			ctx.Status(404)
+		if !c.Repo.HasAccess() {
+			c.Status(404)
 			return
 		}
 
-		ctx.Repo.Repository = repo
+		c.Repo.Repository = repo
 	}
 }
 
 // Contexter middleware already checks token for user sign in process.
 func reqToken() macaron.Handler {
-	return func(ctx *context.Context) {
-		if !ctx.IsLogged {
-			ctx.Error(401)
+	return func(c *context.Context) {
+		if !c.IsLogged {
+			c.Error(401)
 			return
 		}
 	}
 }
 
 func reqBasicAuth() macaron.Handler {
-	return func(ctx *context.Context) {
-		if !ctx.IsBasicAuth {
-			ctx.Error(401)
+	return func(c *context.Context) {
+		if !c.IsBasicAuth {
+			c.Error(401)
 			return
 		}
 	}
 }
 
 func reqAdmin() macaron.Handler {
-	return func(ctx *context.Context) {
-		if !ctx.IsLogged || !ctx.User.IsAdmin {
-			ctx.Error(403)
+	return func(c *context.Context) {
+		if !c.IsLogged || !c.User.IsAdmin {
+			c.Error(403)
 			return
 		}
 	}
 }
 
 func reqRepoWriter() macaron.Handler {
-	return func(ctx *context.Context) {
-		if !ctx.Repo.IsWriter() {
-			ctx.Error(403)
+	return func(c *context.Context) {
+		if !c.Repo.IsWriter() {
+			c.Error(403)
 			return
 		}
 	}
@@ -131,29 +131,29 @@ func orgAssignment(args ...bool) macaron.Handler {
 	if len(args) > 1 {
 		assignTeam = args[1]
 	}
-	return func(ctx *context.APIContext) {
-		ctx.Org = new(context.APIOrganization)
+	return func(c *context.APIContext) {
+		c.Org = new(context.APIOrganization)
 
 		var err error
 		if assignOrg {
-			ctx.Org.Organization, err = models.GetUserByName(ctx.Params(":orgname"))
+			c.Org.Organization, err = models.GetUserByName(c.Params(":orgname"))
 			if err != nil {
 				if errors.IsUserNotExist(err) {
-					ctx.Status(404)
+					c.Status(404)
 				} else {
-					ctx.Error(500, "GetUserByName", err)
+					c.Error(500, "GetUserByName", err)
 				}
 				return
 			}
 		}
 
 		if assignTeam {
-			ctx.Org.Team, err = models.GetTeamByID(ctx.ParamsInt64(":teamid"))
+			c.Org.Team, err = models.GetTeamByID(c.ParamsInt64(":teamid"))
 			if err != nil {
 				if errors.IsUserNotExist(err) {
-					ctx.Status(404)
+					c.Status(404)
 				} else {
-					ctx.Error(500, "GetTeamById", err)
+					c.Error(500, "GetTeamById", err)
 				}
 				return
 			}
@@ -161,9 +161,9 @@ func orgAssignment(args ...bool) macaron.Handler {
 	}
 }
 
-func mustEnableIssues(ctx *context.APIContext) {
-	if !ctx.Repo.Repository.EnableIssues || ctx.Repo.Repository.EnableExternalTracker {
-		ctx.Status(404)
+func mustEnableIssues(c *context.APIContext) {
+	if !c.Repo.Repository.EnableIssues || c.Repo.Repository.EnableExternalTracker {
+		c.Status(404)
 		return
 	}
 }
@@ -323,8 +323,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 			m.Combo("/teams").Get(org.ListTeams)
 		}, orgAssignment(true))
 
-		m.Any("/*", func(ctx *context.Context) {
-			ctx.Error(404)
+		m.Any("/*", func(c *context.Context) {
+			c.Error(404)
 		})
 
 		m.Group("/admin", func() {

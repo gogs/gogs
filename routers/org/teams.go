@@ -23,75 +23,75 @@ const (
 	TEAM_REPOSITORIES = "org/team/repositories"
 )
 
-func Teams(ctx *context.Context) {
-	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.FullName
-	ctx.Data["PageIsOrgTeams"] = true
+func Teams(c *context.Context) {
+	org := c.Org.Organization
+	c.Data["Title"] = org.FullName
+	c.Data["PageIsOrgTeams"] = true
 
 	for _, t := range org.Teams {
 		if err := t.GetMembers(); err != nil {
-			ctx.Handle(500, "GetMembers", err)
+			c.Handle(500, "GetMembers", err)
 			return
 		}
 	}
-	ctx.Data["Teams"] = org.Teams
+	c.Data["Teams"] = org.Teams
 
-	ctx.HTML(200, TEAMS)
+	c.HTML(200, TEAMS)
 }
 
-func TeamsAction(ctx *context.Context) {
-	uid := com.StrTo(ctx.Query("uid")).MustInt64()
+func TeamsAction(c *context.Context) {
+	uid := com.StrTo(c.Query("uid")).MustInt64()
 	if uid == 0 {
-		ctx.Redirect(ctx.Org.OrgLink + "/teams")
+		c.Redirect(c.Org.OrgLink + "/teams")
 		return
 	}
 
-	page := ctx.Query("page")
+	page := c.Query("page")
 	var err error
-	switch ctx.Params(":action") {
+	switch c.Params(":action") {
 	case "join":
-		if !ctx.Org.IsOwner {
-			ctx.Error(404)
+		if !c.Org.IsOwner {
+			c.Error(404)
 			return
 		}
-		err = ctx.Org.Team.AddMember(ctx.User.ID)
+		err = c.Org.Team.AddMember(c.User.ID)
 	case "leave":
-		err = ctx.Org.Team.RemoveMember(ctx.User.ID)
+		err = c.Org.Team.RemoveMember(c.User.ID)
 	case "remove":
-		if !ctx.Org.IsOwner {
-			ctx.Error(404)
+		if !c.Org.IsOwner {
+			c.Error(404)
 			return
 		}
-		err = ctx.Org.Team.RemoveMember(uid)
+		err = c.Org.Team.RemoveMember(uid)
 		page = "team"
 	case "add":
-		if !ctx.Org.IsOwner {
-			ctx.Error(404)
+		if !c.Org.IsOwner {
+			c.Error(404)
 			return
 		}
-		uname := ctx.Query("uname")
+		uname := c.Query("uname")
 		var u *models.User
 		u, err = models.GetUserByName(uname)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
-				ctx.Flash.Error(ctx.Tr("form.user_not_exist"))
-				ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName)
+				c.Flash.Error(c.Tr("form.user_not_exist"))
+				c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName)
 			} else {
-				ctx.Handle(500, " GetUserByName", err)
+				c.Handle(500, " GetUserByName", err)
 			}
 			return
 		}
 
-		err = ctx.Org.Team.AddMember(u.ID)
+		err = c.Org.Team.AddMember(u.ID)
 		page = "team"
 	}
 
 	if err != nil {
 		if models.IsErrLastOrgOwner(err) {
-			ctx.Flash.Error(ctx.Tr("form.last_org_owner"))
+			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
-			log.Error(3, "Action(%s): %v", ctx.Params(":action"), err)
-			ctx.JSON(200, map[string]interface{}{
+			log.Error(3, "Action(%s): %v", c.Params(":action"), err)
+			c.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
 			})
@@ -101,124 +101,124 @@ func TeamsAction(ctx *context.Context) {
 
 	switch page {
 	case "team":
-		ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName)
+		c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName)
 	default:
-		ctx.Redirect(ctx.Org.OrgLink + "/teams")
+		c.Redirect(c.Org.OrgLink + "/teams")
 	}
 }
 
-func TeamsRepoAction(ctx *context.Context) {
-	if !ctx.Org.IsOwner {
-		ctx.Error(404)
+func TeamsRepoAction(c *context.Context) {
+	if !c.Org.IsOwner {
+		c.Error(404)
 		return
 	}
 
 	var err error
-	switch ctx.Params(":action") {
+	switch c.Params(":action") {
 	case "add":
-		repoName := path.Base(ctx.Query("repo_name"))
+		repoName := path.Base(c.Query("repo_name"))
 		var repo *models.Repository
-		repo, err = models.GetRepositoryByName(ctx.Org.Organization.ID, repoName)
+		repo, err = models.GetRepositoryByName(c.Org.Organization.ID, repoName)
 		if err != nil {
 			if errors.IsRepoNotExist(err) {
-				ctx.Flash.Error(ctx.Tr("org.teams.add_nonexistent_repo"))
-				ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName + "/repositories")
+				c.Flash.Error(c.Tr("org.teams.add_nonexistent_repo"))
+				c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName + "/repositories")
 				return
 			}
-			ctx.Handle(500, "GetRepositoryByName", err)
+			c.Handle(500, "GetRepositoryByName", err)
 			return
 		}
-		err = ctx.Org.Team.AddRepository(repo)
+		err = c.Org.Team.AddRepository(repo)
 	case "remove":
-		err = ctx.Org.Team.RemoveRepository(com.StrTo(ctx.Query("repoid")).MustInt64())
+		err = c.Org.Team.RemoveRepository(com.StrTo(c.Query("repoid")).MustInt64())
 	}
 
 	if err != nil {
-		log.Error(3, "Action(%s): '%s' %v", ctx.Params(":action"), ctx.Org.Team.Name, err)
-		ctx.Handle(500, "TeamsRepoAction", err)
+		log.Error(3, "Action(%s): '%s' %v", c.Params(":action"), c.Org.Team.Name, err)
+		c.Handle(500, "TeamsRepoAction", err)
 		return
 	}
-	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + ctx.Org.Team.LowerName + "/repositories")
+	c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName + "/repositories")
 }
 
-func NewTeam(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Org.Organization.FullName
-	ctx.Data["PageIsOrgTeams"] = true
-	ctx.Data["PageIsOrgTeamsNew"] = true
-	ctx.Data["Team"] = &models.Team{}
-	ctx.HTML(200, TEAM_NEW)
+func NewTeam(c *context.Context) {
+	c.Data["Title"] = c.Org.Organization.FullName
+	c.Data["PageIsOrgTeams"] = true
+	c.Data["PageIsOrgTeamsNew"] = true
+	c.Data["Team"] = &models.Team{}
+	c.HTML(200, TEAM_NEW)
 }
 
-func NewTeamPost(ctx *context.Context, f form.CreateTeam) {
-	ctx.Data["Title"] = ctx.Org.Organization.FullName
-	ctx.Data["PageIsOrgTeams"] = true
-	ctx.Data["PageIsOrgTeamsNew"] = true
+func NewTeamPost(c *context.Context, f form.CreateTeam) {
+	c.Data["Title"] = c.Org.Organization.FullName
+	c.Data["PageIsOrgTeams"] = true
+	c.Data["PageIsOrgTeamsNew"] = true
 
 	t := &models.Team{
-		OrgID:       ctx.Org.Organization.ID,
+		OrgID:       c.Org.Organization.ID,
 		Name:        f.TeamName,
 		Description: f.Description,
 		Authorize:   models.ParseAccessMode(f.Permission),
 	}
-	ctx.Data["Team"] = t
+	c.Data["Team"] = t
 
-	if ctx.HasError() {
-		ctx.HTML(200, TEAM_NEW)
+	if c.HasError() {
+		c.HTML(200, TEAM_NEW)
 		return
 	}
 
 	if err := models.NewTeam(t); err != nil {
-		ctx.Data["Err_TeamName"] = true
+		c.Data["Err_TeamName"] = true
 		switch {
 		case models.IsErrTeamAlreadyExist(err):
-			ctx.RenderWithErr(ctx.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
 		case models.IsErrNameReserved(err):
-			ctx.RenderWithErr(ctx.Tr("org.form.team_name_reserved", err.(models.ErrNameReserved).Name), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(models.ErrNameReserved).Name), TEAM_NEW, &f)
 		default:
-			ctx.Handle(500, "NewTeam", err)
+			c.Handle(500, "NewTeam", err)
 		}
 		return
 	}
-	log.Trace("Team created: %s/%s", ctx.Org.Organization.Name, t.Name)
-	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
+	log.Trace("Team created: %s/%s", c.Org.Organization.Name, t.Name)
+	c.Redirect(c.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
-func TeamMembers(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Org.Team.Name
-	ctx.Data["PageIsOrgTeams"] = true
-	if err := ctx.Org.Team.GetMembers(); err != nil {
-		ctx.Handle(500, "GetMembers", err)
+func TeamMembers(c *context.Context) {
+	c.Data["Title"] = c.Org.Team.Name
+	c.Data["PageIsOrgTeams"] = true
+	if err := c.Org.Team.GetMembers(); err != nil {
+		c.Handle(500, "GetMembers", err)
 		return
 	}
-	ctx.HTML(200, TEAM_MEMBERS)
+	c.HTML(200, TEAM_MEMBERS)
 }
 
-func TeamRepositories(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Org.Team.Name
-	ctx.Data["PageIsOrgTeams"] = true
-	if err := ctx.Org.Team.GetRepositories(); err != nil {
-		ctx.Handle(500, "GetRepositories", err)
+func TeamRepositories(c *context.Context) {
+	c.Data["Title"] = c.Org.Team.Name
+	c.Data["PageIsOrgTeams"] = true
+	if err := c.Org.Team.GetRepositories(); err != nil {
+		c.Handle(500, "GetRepositories", err)
 		return
 	}
-	ctx.HTML(200, TEAM_REPOSITORIES)
+	c.HTML(200, TEAM_REPOSITORIES)
 }
 
-func EditTeam(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Org.Organization.FullName
-	ctx.Data["PageIsOrgTeams"] = true
-	ctx.Data["team_name"] = ctx.Org.Team.Name
-	ctx.Data["desc"] = ctx.Org.Team.Description
-	ctx.HTML(200, TEAM_NEW)
+func EditTeam(c *context.Context) {
+	c.Data["Title"] = c.Org.Organization.FullName
+	c.Data["PageIsOrgTeams"] = true
+	c.Data["team_name"] = c.Org.Team.Name
+	c.Data["desc"] = c.Org.Team.Description
+	c.HTML(200, TEAM_NEW)
 }
 
-func EditTeamPost(ctx *context.Context, f form.CreateTeam) {
-	t := ctx.Org.Team
-	ctx.Data["Title"] = ctx.Org.Organization.FullName
-	ctx.Data["PageIsOrgTeams"] = true
-	ctx.Data["Team"] = t
+func EditTeamPost(c *context.Context, f form.CreateTeam) {
+	t := c.Org.Team
+	c.Data["Title"] = c.Org.Organization.FullName
+	c.Data["PageIsOrgTeams"] = true
+	c.Data["Team"] = t
 
-	if ctx.HasError() {
-		ctx.HTML(200, TEAM_NEW)
+	if c.HasError() {
+		c.HTML(200, TEAM_NEW)
 		return
 	}
 
@@ -234,7 +234,7 @@ func EditTeamPost(ctx *context.Context, f form.CreateTeam) {
 		case "admin":
 			auth = models.ACCESS_MODE_ADMIN
 		default:
-			ctx.Error(401)
+			c.Error(401)
 			return
 		}
 
@@ -246,26 +246,26 @@ func EditTeamPost(ctx *context.Context, f form.CreateTeam) {
 	}
 	t.Description = f.Description
 	if err := models.UpdateTeam(t, isAuthChanged); err != nil {
-		ctx.Data["Err_TeamName"] = true
+		c.Data["Err_TeamName"] = true
 		switch {
 		case models.IsErrTeamAlreadyExist(err):
-			ctx.RenderWithErr(ctx.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
 		default:
-			ctx.Handle(500, "UpdateTeam", err)
+			c.Handle(500, "UpdateTeam", err)
 		}
 		return
 	}
-	ctx.Redirect(ctx.Org.OrgLink + "/teams/" + t.LowerName)
+	c.Redirect(c.Org.OrgLink + "/teams/" + t.LowerName)
 }
 
-func DeleteTeam(ctx *context.Context) {
-	if err := models.DeleteTeam(ctx.Org.Team); err != nil {
-		ctx.Flash.Error("DeleteTeam: " + err.Error())
+func DeleteTeam(c *context.Context) {
+	if err := models.DeleteTeam(c.Org.Team); err != nil {
+		c.Flash.Error("DeleteTeam: " + err.Error())
 	} else {
-		ctx.Flash.Success(ctx.Tr("org.teams.delete_team_success"))
+		c.Flash.Success(c.Tr("org.teams.delete_team_success"))
 	}
 
-	ctx.JSON(200, map[string]interface{}{
-		"redirect": ctx.Org.OrgLink + "/teams",
+	c.JSON(200, map[string]interface{}{
+		"redirect": c.Org.OrgLink + "/teams",
 	})
 }

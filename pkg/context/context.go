@@ -85,39 +85,39 @@ func (c *Context) UserID() int64 {
 }
 
 // HasError returns true if error occurs in form validation.
-func (ctx *Context) HasApiError() bool {
-	hasErr, ok := ctx.Data["HasError"]
+func (c *Context) HasApiError() bool {
+	hasErr, ok := c.Data["HasError"]
 	if !ok {
 		return false
 	}
 	return hasErr.(bool)
 }
 
-func (ctx *Context) GetErrMsg() string {
-	return ctx.Data["ErrorMsg"].(string)
+func (c *Context) GetErrMsg() string {
+	return c.Data["ErrorMsg"].(string)
 }
 
 // HasError returns true if error occurs in form validation.
-func (ctx *Context) HasError() bool {
-	hasErr, ok := ctx.Data["HasError"]
+func (c *Context) HasError() bool {
+	hasErr, ok := c.Data["HasError"]
 	if !ok {
 		return false
 	}
-	ctx.Flash.ErrorMsg = ctx.Data["ErrorMsg"].(string)
-	ctx.Data["Flash"] = ctx.Flash
+	c.Flash.ErrorMsg = c.Data["ErrorMsg"].(string)
+	c.Data["Flash"] = c.Flash
 	return hasErr.(bool)
 }
 
 // HasValue returns true if value of given name exists.
-func (ctx *Context) HasValue(name string) bool {
-	_, ok := ctx.Data[name]
+func (c *Context) HasValue(name string) bool {
+	_, ok := c.Data[name]
 	return ok
 }
 
 // HTML responses template with given status.
-func (ctx *Context) HTML(status int, name string) {
+func (c *Context) HTML(status int, name string) {
 	log.Trace("Template: %s", name)
-	ctx.Context.HTML(status, name)
+	c.Context.HTML(status, name)
 }
 
 // Success responses template with status http.StatusOK.
@@ -137,33 +137,33 @@ func (c *Context) SubURLRedirect(location string, status ...int) {
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (ctx *Context) RenderWithErr(msg, tpl string, f interface{}) {
+func (c *Context) RenderWithErr(msg, tpl string, f interface{}) {
 	if f != nil {
-		form.Assign(f, ctx.Data)
+		form.Assign(f, c.Data)
 	}
-	ctx.Flash.ErrorMsg = msg
-	ctx.Data["Flash"] = ctx.Flash
-	ctx.HTML(http.StatusOK, tpl)
+	c.Flash.ErrorMsg = msg
+	c.Data["Flash"] = c.Flash
+	c.HTML(http.StatusOK, tpl)
 }
 
 // Handle handles and logs error by given status.
-func (ctx *Context) Handle(status int, title string, err error) {
+func (c *Context) Handle(status int, title string, err error) {
 	switch status {
 	case http.StatusNotFound:
-		ctx.Data["Title"] = "Page Not Found"
+		c.Data["Title"] = "Page Not Found"
 	case http.StatusInternalServerError:
-		ctx.Data["Title"] = "Internal Server Error"
+		c.Data["Title"] = "Internal Server Error"
 		log.Error(2, "%s: %v", title, err)
-		if !setting.ProdMode || (ctx.IsLogged && ctx.User.IsAdmin) {
-			ctx.Data["ErrorMsg"] = err
+		if !setting.ProdMode || (c.IsLogged && c.User.IsAdmin) {
+			c.Data["ErrorMsg"] = err
 		}
 	}
-	ctx.HTML(status, fmt.Sprintf("status/%d", status))
+	c.HTML(status, fmt.Sprintf("status/%d", status))
 }
 
 // NotFound renders the 404 page.
-func (ctx *Context) NotFound() {
-	ctx.Handle(http.StatusNotFound, "", nil)
+func (c *Context) NotFound() {
+	c.Handle(http.StatusNotFound, "", nil)
 }
 
 // ServerError renders the 500 page.
@@ -182,11 +182,11 @@ func (c *Context) NotFoundOrServerError(title string, errck func(error) bool, er
 	c.ServerError(title, err)
 }
 
-func (ctx *Context) HandleText(status int, title string) {
-	ctx.PlainText(status, []byte(title))
+func (c *Context) HandleText(status int, title string) {
+	c.PlainText(status, []byte(title))
 }
 
-func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
+func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
 	modtime := time.Now()
 	for _, p := range params {
 		switch v := p.(type) {
@@ -194,14 +194,14 @@ func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interfa
 			modtime = v
 		}
 	}
-	ctx.Resp.Header().Set("Content-Description", "File Transfer")
-	ctx.Resp.Header().Set("Content-Type", "application/octet-stream")
-	ctx.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
-	ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
-	ctx.Resp.Header().Set("Expires", "0")
-	ctx.Resp.Header().Set("Cache-Control", "must-revalidate")
-	ctx.Resp.Header().Set("Pragma", "public")
-	http.ServeContent(ctx.Resp, ctx.Req.Request, name, modtime, r)
+	c.Resp.Header().Set("Content-Description", "File Transfer")
+	c.Resp.Header().Set("Content-Type", "application/octet-stream")
+	c.Resp.Header().Set("Content-Disposition", "attachment; filename="+name)
+	c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+	c.Resp.Header().Set("Expires", "0")
+	c.Resp.Header().Set("Cache-Control", "must-revalidate")
+	c.Resp.Header().Set("Pragma", "public")
+	http.ServeContent(c.Resp, c.Req.Request, name, modtime, r)
 }
 
 // Contexter initializes a classic context for a request.
@@ -228,8 +228,8 @@ func Contexter() macaron.Handler {
 		// This is particular a workaround for "go get" command which does not respect
 		// .netrc file.
 		if c.Query("go-get") == "1" {
-			ownerName := ctx.Params(":username")
-			repoName := ctx.Params(":reponame")
+			ownerName := c.Params(":username")
+			repoName := c.Params(":reponame")
 			branchName := "master"
 
 			owner, err := models.GetUserByName(ownerName)
@@ -244,7 +244,7 @@ func Contexter() macaron.Handler {
 			}
 
 			prefix := setting.AppURL + path.Join(ownerName, repoName, "src", branchName)
-			ctx.PlainText(http.StatusOK, []byte(com.Expand(`
+			c.PlainText(http.StatusOK, []byte(com.Expand(`
 <html>
 	<head>
 		<meta name="go-import" content="{GoGetImport} git {CloneLink}">

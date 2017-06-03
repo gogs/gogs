@@ -125,111 +125,111 @@ const (
 	REINIT_MISSING_REPOSITORY
 )
 
-func Dashboard(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.dashboard")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminDashboard"] = true
+func Dashboard(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.dashboard")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminDashboard"] = true
 
 	// Run operation.
-	op, _ := com.StrTo(ctx.Query("op")).Int()
+	op, _ := com.StrTo(c.Query("op")).Int()
 	if op > 0 {
 		var err error
 		var success string
 
 		switch AdminOperation(op) {
 		case CLEAN_INACTIVATE_USER:
-			success = ctx.Tr("admin.dashboard.delete_inactivate_accounts_success")
+			success = c.Tr("admin.dashboard.delete_inactivate_accounts_success")
 			err = models.DeleteInactivateUsers()
 		case CLEAN_REPO_ARCHIVES:
-			success = ctx.Tr("admin.dashboard.delete_repo_archives_success")
+			success = c.Tr("admin.dashboard.delete_repo_archives_success")
 			err = models.DeleteRepositoryArchives()
 		case CLEAN_MISSING_REPOS:
-			success = ctx.Tr("admin.dashboard.delete_missing_repos_success")
+			success = c.Tr("admin.dashboard.delete_missing_repos_success")
 			err = models.DeleteMissingRepositories()
 		case GIT_GC_REPOS:
-			success = ctx.Tr("admin.dashboard.git_gc_repos_success")
+			success = c.Tr("admin.dashboard.git_gc_repos_success")
 			err = models.GitGcRepos()
 		case SYNC_SSH_AUTHORIZED_KEY:
-			success = ctx.Tr("admin.dashboard.resync_all_sshkeys_success")
+			success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
 			err = models.RewriteAllPublicKeys()
 		case SYNC_REPOSITORY_HOOKS:
-			success = ctx.Tr("admin.dashboard.resync_all_hooks_success")
+			success = c.Tr("admin.dashboard.resync_all_hooks_success")
 			err = models.SyncRepositoryHooks()
 		case REINIT_MISSING_REPOSITORY:
-			success = ctx.Tr("admin.dashboard.reinit_missing_repos_success")
+			success = c.Tr("admin.dashboard.reinit_missing_repos_success")
 			err = models.ReinitMissingRepositories()
 		}
 
 		if err != nil {
-			ctx.Flash.Error(err.Error())
+			c.Flash.Error(err.Error())
 		} else {
-			ctx.Flash.Success(success)
+			c.Flash.Success(success)
 		}
-		ctx.Redirect(setting.AppSubURL + "/admin")
+		c.Redirect(setting.AppSubURL + "/admin")
 		return
 	}
 
-	ctx.Data["Stats"] = models.GetStatistic()
+	c.Data["Stats"] = models.GetStatistic()
 	// FIXME: update periodically
 	updateSystemStatus()
-	ctx.Data["SysStatus"] = sysStatus
-	ctx.HTML(200, DASHBOARD)
+	c.Data["SysStatus"] = sysStatus
+	c.HTML(200, DASHBOARD)
 }
 
-func SendTestMail(ctx *context.Context) {
-	email := ctx.Query("email")
+func SendTestMail(c *context.Context) {
+	email := c.Query("email")
 	// Send a test email to the user's email address and redirect back to Config
 	if err := mailer.SendTestMail(email); err != nil {
-		ctx.Flash.Error(ctx.Tr("admin.config.test_mail_failed", email, err))
+		c.Flash.Error(c.Tr("admin.config.test_mail_failed", email, err))
 	} else {
-		ctx.Flash.Info(ctx.Tr("admin.config.test_mail_sent", email))
+		c.Flash.Info(c.Tr("admin.config.test_mail_sent", email))
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/admin/config")
+	c.Redirect(setting.AppSubURL + "/admin/config")
 }
 
-func Config(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.config")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminConfig"] = true
+func Config(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.config")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminConfig"] = true
 
-	ctx.Data["AppURL"] = setting.AppURL
-	ctx.Data["Domain"] = setting.Domain
-	ctx.Data["OfflineMode"] = setting.OfflineMode
-	ctx.Data["DisableRouterLog"] = setting.DisableRouterLog
-	ctx.Data["RunUser"] = setting.RunUser
-	ctx.Data["RunMode"] = strings.Title(macaron.Env)
-	ctx.Data["StaticRootPath"] = setting.StaticRootPath
-	ctx.Data["LogRootPath"] = setting.LogRootPath
-	ctx.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
+	c.Data["AppURL"] = setting.AppURL
+	c.Data["Domain"] = setting.Domain
+	c.Data["OfflineMode"] = setting.OfflineMode
+	c.Data["DisableRouterLog"] = setting.DisableRouterLog
+	c.Data["RunUser"] = setting.RunUser
+	c.Data["RunMode"] = strings.Title(macaron.Env)
+	c.Data["StaticRootPath"] = setting.StaticRootPath
+	c.Data["LogRootPath"] = setting.LogRootPath
+	c.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
 
-	ctx.Data["SSH"] = setting.SSH
+	c.Data["SSH"] = setting.SSH
 
-	ctx.Data["RepoRootPath"] = setting.RepoRootPath
-	ctx.Data["ScriptType"] = setting.ScriptType
-	ctx.Data["Repository"] = setting.Repository
+	c.Data["RepoRootPath"] = setting.RepoRootPath
+	c.Data["ScriptType"] = setting.ScriptType
+	c.Data["Repository"] = setting.Repository
 
-	ctx.Data["Service"] = setting.Service
-	ctx.Data["DbCfg"] = models.DbCfg
-	ctx.Data["Webhook"] = setting.Webhook
+	c.Data["Service"] = setting.Service
+	c.Data["DbCfg"] = models.DbCfg
+	c.Data["Webhook"] = setting.Webhook
 
-	ctx.Data["MailerEnabled"] = false
+	c.Data["MailerEnabled"] = false
 	if setting.MailService != nil {
-		ctx.Data["MailerEnabled"] = true
-		ctx.Data["Mailer"] = setting.MailService
+		c.Data["MailerEnabled"] = true
+		c.Data["Mailer"] = setting.MailService
 	}
 
-	ctx.Data["CacheAdapter"] = setting.CacheAdapter
-	ctx.Data["CacheInterval"] = setting.CacheInterval
-	ctx.Data["CacheConn"] = setting.CacheConn
+	c.Data["CacheAdapter"] = setting.CacheAdapter
+	c.Data["CacheInterval"] = setting.CacheInterval
+	c.Data["CacheConn"] = setting.CacheConn
 
-	ctx.Data["SessionConfig"] = setting.SessionConfig
+	c.Data["SessionConfig"] = setting.SessionConfig
 
-	ctx.Data["DisableGravatar"] = setting.DisableGravatar
-	ctx.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
+	c.Data["DisableGravatar"] = setting.DisableGravatar
+	c.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
 
-	ctx.Data["GitVersion"] = setting.Git.Version
-	ctx.Data["Git"] = setting.Git
+	c.Data["GitVersion"] = setting.Git.Version
+	c.Data["Git"] = setting.Git
 
 	type logger struct {
 		Mode, Config string
@@ -243,16 +243,16 @@ func Config(ctx *context.Context) {
 		result, _ := json.MarshalIndent(setting.LogConfigs[i], "", "  ")
 		loggers[i].Config = string(result)
 	}
-	ctx.Data["Loggers"] = loggers
+	c.Data["Loggers"] = loggers
 
-	ctx.HTML(200, CONFIG)
+	c.HTML(200, CONFIG)
 }
 
-func Monitor(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.monitor")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminMonitor"] = true
-	ctx.Data["Processes"] = process.Processes
-	ctx.Data["Entries"] = cron.ListTasks()
-	ctx.HTML(200, MONITOR)
+func Monitor(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.monitor")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminMonitor"] = true
+	c.Data["Processes"] = process.Processes
+	c.Data["Entries"] = cron.ListTasks()
+	c.HTML(200, MONITOR)
 }

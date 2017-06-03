@@ -11,10 +11,10 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/convert"
 )
 
-func ListTeams(ctx *context.APIContext) {
-	org := ctx.Org.Organization
+func ListTeams(c *context.APIContext) {
+	org := c.Org.Organization
 	if err := org.GetTeams(); err != nil {
-		ctx.Error(500, "GetTeams", err)
+		c.Error(500, "GetTeams", err)
 		return
 	}
 
@@ -22,5 +22,5 @@ func ListTeams(ctx *context.APIContext) {
 	for i := range org.Teams {
 		apiTeams[i] = convert.ToTeam(org.Teams[i])
 	}
-	ctx.JSON(200, apiTeams)
+	c.JSON(200, apiTeams)
 }

@@ -10,41 +10,41 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 )
 
-func GetRepositoryByParams(ctx *context.APIContext) *models.Repository {
-	repo, err := models.GetRepositoryByName(ctx.Org.Team.OrgID, ctx.Params(":reponame"))
+func GetRepositoryByParams(c *context.APIContext) *models.Repository {
+	repo, err := models.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
 	if err != nil {
 		if errors.IsRepoNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetRepositoryByName", err)
+			c.Error(500, "GetRepositoryByName", err)
 		}
 		return nil
 	}
 	return repo
 }
 
-func AddTeamRepository(ctx *context.APIContext) {
-	repo := GetRepositoryByParams(ctx)
-	if ctx.Written() {
+func AddTeamRepository(c *context.APIContext) {
+	repo := GetRepositoryByParams(c)
+	if c.Written() {
 		return
 	}
-	if err := ctx.Org.Team.AddRepository(repo); err != nil {
-		ctx.Error(500, "AddRepository", err)
+	if err := c.Org.Team.AddRepository(repo); err != nil {
+		c.Error(500, "AddRepository", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }
 
-func RemoveTeamRepository(ctx *context.APIContext) {
-	repo := GetRepositoryByParams(ctx)
-	if ctx.Written() {
+func RemoveTeamRepository(c *context.APIContext) {
+	repo := GetRepositoryByParams(c)
+	if c.Written() {
 		return
 	}
-	if err := ctx.Org.Team.RemoveRepository(repo.ID); err != nil {
-		ctx.Error(500, "RemoveRepository", err)
+	if err := c.Org.Team.RemoveRepository(repo.ID); err != nil {
+		c.Error(500, "RemoveRepository", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }

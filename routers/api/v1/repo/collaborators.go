@@ -12,13 +12,13 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 )
 
-func ListCollaborators(ctx *context.APIContext) {
-	collaborators, err := ctx.Repo.Repository.GetCollaborators()
+func ListCollaborators(c *context.APIContext) {
+	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "GetCollaborators", err)
+			c.Error(500, "GetCollaborators", err)
 		}
 		return
 	}
@@ -27,68 +27,68 @@ func ListCollaborators(ctx *context.APIContext) {
 	for i := range collaborators {
 		apiCollaborators[i] = collaborators[i].APIFormat()
 	}
-	ctx.JSON(200, &apiCollaborators)
+	c.JSON(200, &apiCollaborators)
 }
 
-func AddCollaborator(ctx *context.APIContext, form api.AddCollaboratorOption) {
-	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
+func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
+	collaborator, err := models.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "GetUserByName", err)
+			c.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
-	if err := ctx.Repo.Repository.AddCollaborator(collaborator); err != nil {
-		ctx.Error(500, "AddCollaborator", err)
+	if err := c.Repo.Repository.AddCollaborator(collaborator); err != nil {
+		c.Error(500, "AddCollaborator", err)
 		return
 	}
 
 	if form.Permission != nil {
-		if err := ctx.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, models.ParseAccessMode(*form.Permission)); err != nil {
-			ctx.Error(500, "ChangeCollaborationAccessMode", err)
+		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, models.ParseAccessMode(*form.Permission)); err != nil {
+			c.Error(500, "ChangeCollaborationAccessMode", err)
 			return
 		}
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }
 
-func IsCollaborator(ctx *context.APIContext) {
-	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
+func IsCollaborator(c *context.APIContext) {
+	collaborator, err := models.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "GetUserByName", err)
+			c.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
-	if !ctx.Repo.Repository.IsCollaborator(collaborator.ID) {
-		ctx.Status(404)
+	if !c.Repo.Repository.IsCollaborator(collaborator.ID) {
+		c.Status(404)
 	} else {
-		ctx.Status(204)
+		c.Status(204)
 	}
 }
 
-func DeleteCollaborator(ctx *context.APIContext) {
-	collaborator, err := models.GetUserByName(ctx.Params(":collaborator"))
+func DeleteCollaborator(c *context.APIContext) {
+	collaborator, err := models.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "GetUserByName", err)
+			c.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
-	if err := ctx.Repo.Repository.DeleteCollaboration(collaborator.ID); err != nil {
-		ctx.Error(500, "DeleteCollaboration", err)
+	if err := c.Repo.Repository.DeleteCollaboration(collaborator.ID); err != nil {
+		c.Error(500, "DeleteCollaboration", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }

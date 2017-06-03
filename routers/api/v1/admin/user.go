@@ -16,7 +16,7 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, loginName string) {
+func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, loginName string) {
 	if sourceID == 0 {
 		return
 	}
@@ -24,9 +24,9 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 	source, err := models.GetLoginSourceByID(sourceID)
 	if err != nil {
 		if models.IsErrLoginSourceNotExist(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "GetLoginSourceByID", err)
+			c.Error(500, "GetLoginSourceByID", err)
 		}
 		return
 	}
@@ -37,7 +37,7 @@ func parseLoginSource(ctx *context.APIContext, u *models.User, sourceID int64, l
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-new-user
-func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
+func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
 		FullName:  form.FullName,
@@ -47,8 +47,8 @@ func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 		LoginType: models.LOGIN_PLAIN,
 	}
 
-	parseLoginSource(ctx, u, form.SourceID, form.LoginName)
-	if ctx.Written() {
+	parseLoginSource(c, u, form.SourceID, form.LoginName)
+	if c.Written() {
 		return
 	}
 
@@ -57,31 +57,31 @@ func CreateUser(ctx *context.APIContext, form api.CreateUserOption) {
 			models.IsErrEmailAlreadyUsed(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "CreateUser", err)
+			c.Error(500, "CreateUser", err)
 		}
 		return
 	}
-	log.Trace("Account created by admin (%s): %s", ctx.User.Name, u.Name)
+	log.Trace("Account created by admin (%s): %s", c.User.Name, u.Name)
 
 	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(ctx.Context.Context, models.NewMailerUser(u))
+		mailer.SendRegisterNotifyMail(c.Context.Context, models.NewMailerUser(u))
 	}
 
-	ctx.JSON(201, u.APIFormat())
+	c.JSON(201, u.APIFormat())
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
-func EditUser(ctx *context.APIContext, form api.EditUserOption) {
-	u := user.GetUserByParams(ctx)
-	if ctx.Written() {
+func EditUser(c *context.APIContext, form api.EditUserOption) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
 		return
 	}
 
-	parseLoginSource(ctx, u, form.SourceID, form.LoginName)
-	if ctx.Written() {
+	parseLoginSource(c, u, form.SourceID, form.LoginName)
+	if c.Written() {
 		return
 	}
 
@@ -89,7 +89,7 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 		u.Passwd = form.Password
 		var err error
 		if u.Salt, err = models.GetUserSalt(); err != nil {
-			ctx.Error(500, "UpdateUser", err)
+			c.Error(500, "UpdateUser", err)
 			return
 		}
 		u.EncodePasswd()
@@ -118,43 +118,43 @@ func EditUser(ctx *context.APIContext, form api.EditUserOption) {
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "UpdateUser", err)
+			c.Error(500, "UpdateUser", err)
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin (%s): %s", ctx.User.Name, u.Name)
+	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
 
-	ctx.JSON(200, u.APIFormat())
+	c.JSON(200, u.APIFormat())
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user
-func DeleteUser(ctx *context.APIContext) {
-	u := user.GetUserByParams(ctx)
-	if ctx.Written() {
+func DeleteUser(c *context.APIContext) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
 		return
 	}
 
 	if err := models.DeleteUser(u); err != nil {
 		if models.IsErrUserOwnRepos(err) ||
 			models.IsErrUserHasOrgs(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "DeleteUser", err)
+			c.Error(500, "DeleteUser", err)
 		}
 		return
 	}
-	log.Trace("Account deleted by admin(%s): %s", ctx.User.Name, u.Name)
+	log.Trace("Account deleted by admin(%s): %s", c.User.Name, u.Name)
 
-	ctx.Status(204)
+	c.Status(204)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-public-key-for-user
-func CreatePublicKey(ctx *context.APIContext, form api.CreateKeyOption) {
-	u := user.GetUserByParams(ctx)
-	if ctx.Written() {
+func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
 		return
 	}
-	user.CreateUserPublicKey(ctx, form, u.ID)
+	user.CreateUserPublicKey(c, form, u.ID)
 }

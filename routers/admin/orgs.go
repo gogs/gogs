@@ -15,12 +15,12 @@ const (
 	ORGS = "admin/org/list"
 )
 
-func Organizations(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.organizations")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminOrganizations"] = true
+func Organizations(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.organizations")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminOrganizations"] = true
 
-	routers.RenderUserSearch(ctx, &routers.UserSearchOptions{
+	routers.RenderUserSearch(c, &routers.UserSearchOptions{
 		Type:     models.USER_TYPE_ORGANIZATION,
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,

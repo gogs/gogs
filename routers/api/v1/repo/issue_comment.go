@@ -12,22 +12,22 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 )
 
-func ListIssueComments(ctx *context.APIContext) {
+func ListIssueComments(c *context.APIContext) {
 	var since time.Time
-	if len(ctx.Query("since")) > 0 {
-		since, _ = time.Parse(time.RFC3339, ctx.Query("since"))
+	if len(c.Query("since")) > 0 {
+		since, _ = time.Parse(time.RFC3339, c.Query("since"))
 	}
 
 	// comments,err:=models.GetCommentsByIssueIDSince(, since)
-	issue, err := models.GetRawIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+	issue, err := models.GetRawIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		ctx.Error(500, "GetRawIssueByIndex", err)
+		c.Error(500, "GetRawIssueByIndex", err)
 		return
 	}
 
 	comments, err := models.GetCommentsByIssueIDSince(issue.ID, since.Unix())
 	if err != nil {
-		ctx.Error(500, "GetCommentsByIssueIDSince", err)
+		c.Error(500, "GetCommentsByIssueIDSince", err)
 		return
 	}
 
@@ -35,18 +35,18 @@ func ListIssueComments(ctx *context.APIContext) {
 	for i := range comments {
 		apiComments[i] = comments[i].APIFormat()
 	}
-	ctx.JSON(200, &apiComments)
+	c.JSON(200, &apiComments)
 }
 
-func ListRepoIssueComments(ctx *context.APIContext) {
+func ListRepoIssueComments(c *context.APIContext) {
 	var since time.Time
-	if len(ctx.Query("since")) > 0 {
-		since, _ = time.Parse(time.RFC3339, ctx.Query("since"))
+	if len(c.Query("since")) > 0 {
+		since, _ = time.Parse(time.RFC3339, c.Query("since"))
 	}
 
-	comments, err := models.GetCommentsByRepoIDSince(ctx.Repo.Repository.ID, since.Unix())
+	comments, err := models.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix())
 	if err != nil {
-		ctx.Error(500, "GetCommentsByRepoIDSince", err)
+		c.Error(500, "GetCommentsByRepoIDSince", err)
 		return
 	}
 
@@ -54,75 +54,75 @@ func ListRepoIssueComments(ctx *context.APIContext) {
 	for i := range comments {
 		apiComments[i] = comments[i].APIFormat()
 	}
-	ctx.JSON(200, &apiComments)
+	c.JSON(200, &apiComments)
 }
 
-func CreateIssueComment(ctx *context.APIContext, form api.CreateIssueCommentOption) {
-	issue, err := models.GetIssueByIndex(ctx.Repo.Repository.ID, ctx.ParamsInt64(":index"))
+func CreateIssueComment(c *context.APIContext, form api.CreateIssueCommentOption) {
+	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		ctx.Error(500, "GetIssueByIndex", err)
+		c.Error(500, "GetIssueByIndex", err)
 		return
 	}
 
-	comment, err := models.CreateIssueComment(ctx.User, ctx.Repo.Repository, issue, form.Body, nil)
+	comment, err := models.CreateIssueComment(c.User, c.Repo.Repository, issue, form.Body, nil)
 	if err != nil {
-		ctx.Error(500, "CreateIssueComment", err)
+		c.Error(500, "CreateIssueComment", err)
 		return
 	}
 
-	ctx.JSON(201, comment.APIFormat())
+	c.JSON(201, comment.APIFormat())
 }
 
-func EditIssueComment(ctx *context.APIContext, form api.EditIssueCommentOption) {
-	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
+func EditIssueComment(c *context.APIContext, form api.EditIssueCommentOption) {
+	comment, err := models.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrCommentNotExist(err) {
-			ctx.Error(404, "GetCommentByID", err)
+			c.Error(404, "GetCommentByID", err)
 		} else {
-			ctx.Error(500, "GetCommentByID", err)
+			c.Error(500, "GetCommentByID", err)
 		}
 		return
 	}
 
-	if ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin() {
-		ctx.Status(403)
+	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
+		c.Status(403)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
-		ctx.Status(204)
+		c.Status(204)
 		return
 	}
 
 	oldContent := comment.Content
 	comment.Content = form.Body
-	if err := models.UpdateComment(ctx.User, comment, oldContent); err != nil {
-		ctx.Error(500, "UpdateComment", err)
+	if err := models.UpdateComment(c.User, comment, oldContent); err != nil {
+		c.Error(500, "UpdateComment", err)
 		return
 	}
-	ctx.JSON(200, comment.APIFormat())
+	c.JSON(200, comment.APIFormat())
 }
 
-func DeleteIssueComment(ctx *context.APIContext) {
-	comment, err := models.GetCommentByID(ctx.ParamsInt64(":id"))
+func DeleteIssueComment(c *context.APIContext) {
+	comment, err := models.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrCommentNotExist(err) {
-			ctx.Error(404, "GetCommentByID", err)
+			c.Error(404, "GetCommentByID", err)
 		} else {
-			ctx.Error(500, "GetCommentByID", err)
+			c.Error(500, "GetCommentByID", err)
 		}
 		return
 	}
 
-	if ctx.User.ID != comment.PosterID && !ctx.Repo.IsAdmin() {
-		ctx.Status(403)
+	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
+		c.Status(403)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
-		ctx.Status(204)
+		c.Status(204)
 		return
 	}
 
-	if err = models.DeleteCommentByID(ctx.User, comment.ID); err != nil {
-		ctx.Error(500, "DeleteCommentByID", err)
+	if err = models.DeleteCommentByID(c.User, comment.ID); err != nil {
+		c.Error(500, "DeleteCommentByID", err)
 		return
 	}
-	ctx.Status(204)
+	c.Status(204)
 }

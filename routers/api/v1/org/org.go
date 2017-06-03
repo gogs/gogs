@@ -13,9 +13,9 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func listUserOrgs(ctx *context.APIContext, u *models.User, all bool) {
+func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
-		ctx.Error(500, "GetOrganizations", err)
+		c.Error(500, "GetOrganizations", err)
 		return
 	}
 
@@ -23,33 +23,33 @@ func listUserOrgs(ctx *context.APIContext, u *models.User, all bool) {
 	for i := range u.Orgs {
 		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
 	}
-	ctx.JSON(200, &apiOrgs)
+	c.JSON(200, &apiOrgs)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-your-organizations
-func ListMyOrgs(ctx *context.APIContext) {
-	listUserOrgs(ctx, ctx.User, true)
+func ListMyOrgs(c *context.APIContext) {
+	listUserOrgs(c, c.User, true)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-user-organizations
-func ListUserOrgs(ctx *context.APIContext) {
-	u := user.GetUserByParams(ctx)
-	if ctx.Written() {
+func ListUserOrgs(c *context.APIContext) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
 		return
 	}
-	listUserOrgs(ctx, u, false)
+	listUserOrgs(c, u, false)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#get-an-organization
-func Get(ctx *context.APIContext) {
-	ctx.JSON(200, convert.ToOrganization(ctx.Org.Organization))
+func Get(c *context.APIContext) {
+	c.JSON(200, convert.ToOrganization(c.Org.Organization))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#edit-an-organization
-func Edit(ctx *context.APIContext, form api.EditOrgOption) {
-	org := ctx.Org.Organization
-	if !org.IsOwnedBy(ctx.User.ID) {
-		ctx.Status(403)
+func Edit(c *context.APIContext, form api.EditOrgOption) {
+	org := c.Org.Organization
+	if !org.IsOwnedBy(c.User.ID) {
+		c.Status(403)
 		return
 	}
 
@@ -58,9 +58,9 @@ func Edit(ctx *context.APIContext, form api.EditOrgOption) {
 	org.Website = form.Website
 	org.Location = form.Location
 	if err := models.UpdateUser(org); err != nil {
-		ctx.Error(500, "UpdateUser", err)
+		c.Error(500, "UpdateUser", err)
 		return
 	}
 
-	ctx.JSON(200, convert.ToOrganization(org))
+	c.JSON(200, convert.ToOrganization(org))
 }

@@ -13,48 +13,48 @@ import (
 	"github.com/gogits/gogs/routers/api/v1/user"
 )
 
-func CreateTeam(ctx *context.APIContext, form api.CreateTeamOption) {
+func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {
 	team := &models.Team{
-		OrgID:       ctx.Org.Organization.ID,
+		OrgID:       c.Org.Organization.ID,
 		Name:        form.Name,
 		Description: form.Description,
 		Authorize:   models.ParseAccessMode(form.Permission),
 	}
 	if err := models.NewTeam(team); err != nil {
 		if models.IsErrTeamAlreadyExist(err) {
-			ctx.Error(422, "", err)
+			c.Error(422, "", err)
 		} else {
-			ctx.Error(500, "NewTeam", err)
+			c.Error(500, "NewTeam", err)
 		}
 		return
 	}
 
-	ctx.JSON(201, convert.ToTeam(team))
+	c.JSON(201, convert.ToTeam(team))
 }
 
-func AddTeamMember(ctx *context.APIContext) {
-	u := user.GetUserByParams(ctx)
-	if ctx.Written() {
+func AddTeamMember(c *context.APIContext) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
 		return
 	}
-	if err := ctx.Org.Team.AddMember(u.ID); err != nil {
-		ctx.Error(500, "AddMember", err)
+	if err := c.Org.Team.AddMember(u.ID); err != nil {
+		c.Error(500, "AddMember", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }
 
-func RemoveTeamMember(ctx *context.APIContext) {
-	u := user.GetUserByParams(ctx)
-	if ctx.Written() {
+func RemoveTeamMember(c *context.APIContext) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
 		return
 	}
 
-	if err := ctx.Org.Team.RemoveMember(u.ID); err != nil {
-		ctx.Error(500, "RemoveMember", err)
+	if err := c.Org.Team.RemoveMember(u.ID); err != nil {
+		c.Error(500, "RemoveMember", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }

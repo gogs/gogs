@@ -20,61 +20,61 @@ const (
 	EXPLORE_ORGANIZATIONS = "explore/organizations"
 )
 
-func Home(ctx *context.Context) {
-	if ctx.IsLogged {
-		if !ctx.User.IsActive && setting.Service.RegisterEmailConfirm {
-			ctx.Data["Title"] = ctx.Tr("auth.active_your_account")
-			ctx.HTML(200, user.ACTIVATE)
+func Home(c *context.Context) {
+	if c.IsLogged {
+		if !c.User.IsActive && setting.Service.RegisterEmailConfirm {
+			c.Data["Title"] = c.Tr("auth.active_your_account")
+			c.HTML(200, user.ACTIVATE)
 		} else {
-			user.Dashboard(ctx)
+			user.Dashboard(c)
 		}
 		return
 	}
 
 	// Check auto-login.
-	uname := ctx.GetCookie(setting.CookieUserName)
+	uname := c.GetCookie(setting.CookieUserName)
 	if len(uname) != 0 {
-		ctx.Redirect(setting.AppSubURL + "/user/login")
+		c.Redirect(setting.AppSubURL + "/user/login")
 		return
 	}
 
-	ctx.Data["PageIsHome"] = true
-	ctx.HTML(200, HOME)
+	c.Data["PageIsHome"] = true
+	c.HTML(200, HOME)
 }
 
-func ExploreRepos(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("explore")
-	ctx.Data["PageIsExplore"] = true
-	ctx.Data["PageIsExploreRepositories"] = true
+func ExploreRepos(c *context.Context) {
+	c.Data["Title"] = c.Tr("explore")
+	c.Data["PageIsExplore"] = true
+	c.Data["PageIsExploreRepositories"] = true
 
-	page := ctx.QueryInt("page")
+	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
 
-	keyword := ctx.Query("q")
+	keyword := c.Query("q")
 	repos, count, err := models.SearchRepositoryByName(&models.SearchRepoOptions{
 		Keyword:  keyword,
-		UserID:   ctx.UserID(),
+		UserID:   c.UserID(),
 		OrderBy:  "updated_unix DESC",
 		Page:     page,
 		PageSize: setting.UI.ExplorePagingNum,
 	})
 	if err != nil {
-		ctx.Handle(500, "SearchRepositoryByName", err)
+		c.Handle(500, "SearchRepositoryByName", err)
 		return
 	}
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["Total"] = count
-	ctx.Data["Page"] = paginater.New(int(count), setting.UI.ExplorePagingNum, page, 5)
+	c.Data["Keyword"] = keyword
+	c.Data["Total"] = count
+	c.Data["Page"] = paginater.New(int(count), setting.UI.ExplorePagingNum, page, 5)
 
 	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
-		ctx.Handle(500, "LoadAttributes", err)
+		c.Handle(500, "LoadAttributes", err)
 		return
 	}
-	ctx.Data["Repos"] = repos
+	c.Data["Repos"] = repos
 
-	ctx.HTML(200, EXPLORE_REPOS)
+	c.HTML(200, EXPLORE_REPOS)
 }
 
 type UserSearchOptions struct {
@@ -86,8 +86,8 @@ type UserSearchOptions struct {
 	TplName  string
 }
 
-func RenderUserSearch(ctx *context.Context, opts *UserSearchOptions) {
-	page := ctx.QueryInt("page")
+func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
+	page := c.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	}
@@ -98,11 +98,11 @@ func RenderUserSearch(ctx *context.Context, opts *UserSearchOptions) {
 		err   error
 	)
 
-	keyword := ctx.Query("q")
+	keyword := c.Query("q")
 	if len(keyword) == 0 {
 		users, err = opts.Ranger(page, opts.PageSize)
 		if err != nil {
-			ctx.Handle(500, "opts.Ranger", err)
+			c.Handle(500, "opts.Ranger", err)
 			return
 		}
 		count = opts.Counter()
@@ -115,24 +115,24 @@ func RenderUserSearch(ctx *context.Context, opts *UserSearchOptions) {
 			PageSize: opts.PageSize,
 		})
 		if err != nil {
-			ctx.Handle(500, "SearchUserByName", err)
+			c.Handle(500, "SearchUserByName", err)
 			return
 		}
 	}
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["Total"] = count
-	ctx.Data["Page"] = paginater.New(int(count), opts.PageSize, page, 5)
-	ctx.Data["Users"] = users
+	c.Data["Keyword"] = keyword
+	c.Data["Total"] = count
+	c.Data["Page"] = paginater.New(int(count), opts.PageSize, page, 5)
+	c.Data["Users"] = users
 
-	ctx.HTML(200, opts.TplName)
+	c.HTML(200, opts.TplName)
 }
 
-func ExploreUsers(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("explore")
-	ctx.Data["PageIsExplore"] = true
-	ctx.Data["PageIsExploreUsers"] = true
+func ExploreUsers(c *context.Context) {
+	c.Data["Title"] = c.Tr("explore")
+	c.Data["PageIsExplore"] = true
+	c.Data["PageIsExploreUsers"] = true
 
-	RenderUserSearch(ctx, &UserSearchOptions{
+	RenderUserSearch(c, &UserSearchOptions{
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,
@@ -142,12 +142,12 @@ func ExploreUsers(ctx *context.Context) {
 	})
 }
 
-func ExploreOrganizations(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("explore")
-	ctx.Data["PageIsExplore"] = true
-	ctx.Data["PageIsExploreOrganizations"] = true
+func ExploreOrganizations(c *context.Context) {
+	c.Data["Title"] = c.Tr("explore")
+	c.Data["PageIsExplore"] = true
+	c.Data["PageIsExploreOrganizations"] = true
 
-	RenderUserSearch(ctx, &UserSearchOptions{
+	RenderUserSearch(c, &UserSearchOptions{
 		Type:     models.USER_TYPE_ORGANIZATION,
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,
@@ -157,7 +157,7 @@ func ExploreOrganizations(ctx *context.Context) {
 	})
 }
 
-func NotFound(ctx *context.Context) {
-	ctx.Data["Title"] = "Page Not Found"
-	ctx.Handle(404, "home.NotFound", nil)
+func NotFound(c *context.Context) {
+	c.Data["Title"] = "Page Not Found"
+	c.NotFound()
 }

@@ -156,9 +156,9 @@ func newMacaron() *macaron.Macaron {
 	return m
 }
 
-func runWeb(ctx *cli.Context) error {
-	if ctx.IsSet("config") {
-		setting.CustomConf = ctx.String("config")
+func runWeb(c *cli.Context) error {
+	if c.IsSet("config") {
+		setting.CustomConf = c.String("config")
 	}
 	routers.GlobalInit()
 	checkVersion()
@@ -177,8 +177,8 @@ func runWeb(ctx *cli.Context) error {
 	// Routers.
 	m.Get("/", ignSignIn, routers.Home)
 	m.Group("/explore", func() {
-		m.Get("", func(ctx *context.Context) {
-			ctx.Redirect(setting.AppSubURL + "/explore/repos")
+		m.Get("", func(c *context.Context) {
+			c.Redirect(setting.AppSubURL + "/explore/repos")
 		})
 		m.Get("/repos", routers.ExploreRepos)
 		m.Get("/users", routers.ExploreUsers)
@@ -237,8 +237,8 @@ func runWeb(ctx *cli.Context) error {
 			Post(bindIgnErr(form.NewAccessToken{}), user.SettingsApplicationsPost)
 		m.Post("/applications/delete", user.SettingsDeleteApplication)
 		m.Route("/delete", "GET,POST", user.SettingsDelete)
-	}, reqSignIn, func(ctx *context.Context) {
-		ctx.Data["PageIsUserSettings"] = true
+	}, reqSignIn, func(c *context.Context) {
+		c.Data["PageIsUserSettings"] = true
 	})
 
 	m.Group("/user", func() {
@@ -300,28 +300,28 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/stars", user.Stars)
 		})
 
-		m.Get("/attachments/:uuid", func(ctx *context.Context) {
-			attach, err := models.GetAttachmentByUUID(ctx.Params(":uuid"))
+		m.Get("/attachments/:uuid", func(c *context.Context) {
+			attach, err := models.GetAttachmentByUUID(c.Params(":uuid"))
 			if err != nil {
-				ctx.NotFoundOrServerError("GetAttachmentByUUID", models.IsErrAttachmentNotExist, err)
+				c.NotFoundOrServerError("GetAttachmentByUUID", models.IsErrAttachmentNotExist, err)
 				return
 			} else if !com.IsFile(attach.LocalPath()) {
-				ctx.NotFound()
+				c.NotFound()
 				return
 			}
 
 			fr, err := os.Open(attach.LocalPath())
 			if err != nil {
-				ctx.Handle(500, "Open", err)
+				c.Handle(500, "Open", err)
 				return
 			}
 			defer fr.Close()
 
-			ctx.Header().Set("Cache-Control", "public,max-age=86400")
+			c.Header().Set("Cache-Control", "public,max-age=86400")
 			fmt.Println("attach.Name:", attach.Name)
-			ctx.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
-			if err = repo.ServeData(ctx, attach.Name, fr); err != nil {
-				ctx.Handle(500, "ServeData", err)
+			c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
+			if err = repo.ServeData(c, attach.Name, fr); err != nil {
+				c.Handle(500, "ServeData", err)
 				return
 			}
 		})
@@ -345,9 +345,9 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("", func() {
 			m.Get("/create", org.Create)
 			m.Post("/create", bindIgnErr(form.CreateOrg{}), org.CreatePost)
-		}, func(ctx *context.Context) {
-			if !ctx.User.CanCreateOrganization() {
-				ctx.NotFound()
+		}, func(c *context.Context) {
+			if !c.User.CanCreateOrganization() {
+				c.NotFound()
 			}
 		})
 
@@ -425,9 +425,9 @@ func runWeb(ctx *cli.Context) error {
 				m.Post("/default_branch", repo.UpdateDefaultBranch)
 				m.Combo("/*").Get(repo.SettingsProtectedBranch).
 					Post(bindIgnErr(form.ProtectBranch{}), repo.SettingsProtectedBranchPost)
-			}, func(ctx *context.Context) {
-				if ctx.Repo.Repository.IsMirror {
-					ctx.NotFound()
+			}, func(c *context.Context) {
+				if c.Repo.Repository.IsMirror {
+					c.NotFound()
 					return
 				}
 			})
@@ -462,8 +462,8 @@ func runWeb(ctx *cli.Context) error {
 				m.Post("/delete", repo.DeleteDeployKey)
 			})
 
-		}, func(ctx *context.Context) {
-			ctx.Data["PageIsSettings"] = true
+		}, func(c *context.Context) {
+			c.Data["PageIsSettings"] = true
 		})
 	}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
 
@@ -530,11 +530,11 @@ func runWeb(ctx *cli.Context) error {
 			m.Post("/delete", repo.DeleteRelease)
 			m.Get("/edit/*", repo.EditRelease)
 			m.Post("/edit/*", bindIgnErr(form.EditRelease{}), repo.EditReleasePost)
-		}, repo.MustBeNotBare, reqRepoWriter, func(ctx *context.Context) {
-			ctx.Data["PageIsViewFiles"] = true
+		}, repo.MustBeNotBare, reqRepoWriter, func(c *context.Context) {
+			c.Data["PageIsViewFiles"] = true
 		})
 
-		// FIXME: Should use ctx.Repo.PullRequest to unify template, currently we have inconsistent URL
+		// FIXME: Should use c.Repo.PullRequest to unify template, currently we have inconsistent URL
 		// for PR in same repository. After select branch on the page, the URL contains redundant head user name.
 		// e.g. /org1/test-repo/compare/master...org1:develop
 		// which should be /org1/test-repo/compare/master...develop
@@ -555,19 +555,19 @@ func runWeb(ctx *cli.Context) error {
 					Post(bindIgnErr(form.UploadRepoFile{}), repo.UploadFilePost)
 				m.Post("/upload-file", repo.UploadFileToServer)
 				m.Post("/upload-remove", bindIgnErr(form.RemoveUploadFile{}), repo.RemoveUploadFileFromServer)
-			}, func(ctx *context.Context) {
+			}, func(c *context.Context) {
 				if !setting.Repository.Upload.Enabled {
-					ctx.NotFound()
+					c.NotFound()
 					return
 				}
 			})
-		}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
-			if !ctx.Repo.CanEnableEditor() {
-				ctx.NotFound()
+		}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(c *context.Context) {
+			if !c.Repo.CanEnableEditor() {
+				c.NotFound()
 				return
 			}
 
-			ctx.Data["PageIsViewFiles"] = true
+			c.Data["PageIsViewFiles"] = true
 		})
 	}, reqSignIn, context.RepoAssignment())
 
@@ -582,8 +582,8 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("", repo.Branches)
 			m.Get("/all", repo.AllBranches)
 			m.Post("/delete/*", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
-		}, repo.MustBeNotBare, func(ctx *context.Context) {
-			ctx.Data["PageIsViewFiles"] = true
+		}, repo.MustBeNotBare, func(c *context.Context) {
+			c.Data["PageIsViewFiles"] = true
 		})
 
 		m.Group("/wiki", func() {
@@ -642,11 +642,11 @@ func runWeb(ctx *cli.Context) error {
 	}, ignSignIn)
 
 	// robots.txt
-	m.Get("/robots.txt", func(ctx *context.Context) {
+	m.Get("/robots.txt", func(c *context.Context) {
 		if setting.HasRobotsTxt {
-			ctx.ServeFileContent(path.Join(setting.CustomPath, "robots.txt"))
+			c.ServeFileContent(path.Join(setting.CustomPath, "robots.txt"))
 		} else {
-			ctx.Error(404)
+			c.NotFound()
 		}
 	})
 
@@ -654,9 +654,9 @@ func runWeb(ctx *cli.Context) error {
 	m.NotFound(routers.NotFound)
 
 	// Flag for port number in case first time run conflict.
-	if ctx.IsSet("port") {
-		setting.AppURL = strings.Replace(setting.AppURL, setting.HTTPPort, ctx.String("port"), 1)
-		setting.HTTPPort = ctx.String("port")
+	if c.IsSet("port") {
+		setting.AppURL = strings.Replace(setting.AppURL, setting.HTTPPort, c.String("port"), 1)
+		setting.HTTPPort = c.String("port")
 	}
 
 	var listenAddr string

@@ -15,7 +15,7 @@ import (
 	"github.com/gogits/gogs/pkg/setting"
 )
 
-func ServeData(ctx *context.Context, name string, reader io.Reader) error {
+func ServeData(c *context.Context, name string, reader io.Reader) error {
 	buf := make([]byte, 1024)
 	n, _ := reader.Read(buf)
 	if n >= 0 {
@@ -24,37 +24,37 @@ func ServeData(ctx *context.Context, name string, reader io.Reader) error {
 
 	if !tool.IsTextFile(buf) {
 		if !tool.IsImageFile(buf) {
-			ctx.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
-			ctx.Resp.Header().Set("Content-Transfer-Encoding", "binary")
+			c.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
+			c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
-	} else if !setting.Repository.EnableRawFileRenderMode || !ctx.QueryBool("render") {
-		ctx.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	} else if !setting.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
+		c.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
-	ctx.Resp.Write(buf)
-	_, err := io.Copy(ctx.Resp, reader)
+	c.Resp.Write(buf)
+	_, err := io.Copy(c.Resp, reader)
 	return err
 }
 
-func ServeBlob(ctx *context.Context, blob *git.Blob) error {
+func ServeBlob(c *context.Context, blob *git.Blob) error {
 	dataRc, err := blob.Data()
 	if err != nil {
 		return err
 	}
 
-	return ServeData(ctx, path.Base(ctx.Repo.TreePath), dataRc)
+	return ServeData(c, path.Base(c.Repo.TreePath), dataRc)
 }
 
-func SingleDownload(ctx *context.Context) {
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreePath)
+func SingleDownload(c *context.Context) {
+	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
-			ctx.Handle(404, "GetBlobByPath", nil)
+			c.Handle(404, "GetBlobByPath", nil)
 		} else {
-			ctx.Handle(500, "GetBlobByPath", err)
+			c.Handle(500, "GetBlobByPath", err)
 		}
 		return
 	}
-	if err = ServeBlob(ctx, blob); err != nil {
-		ctx.Handle(500, "ServeBlob", err)
+	if err = ServeBlob(c, blob); err != nil {
+		c.Handle(500, "ServeBlob", err)
 	}
 }

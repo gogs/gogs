@@ -26,25 +26,25 @@ const (
 )
 
 // getDashboardContextUser finds out dashboard is viewing as which context user.
-func getDashboardContextUser(ctx *context.Context) *models.User {
-	ctxUser := ctx.User
-	orgName := ctx.Params(":org")
+func getDashboardContextUser(c *context.Context) *models.User {
+	ctxUser := c.User
+	orgName := c.Params(":org")
 	if len(orgName) > 0 {
 		// Organization.
 		org, err := models.GetUserByName(orgName)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return nil
 		}
 		ctxUser = org
 	}
-	ctx.Data["ContextUser"] = ctxUser
+	c.Data["ContextUser"] = ctxUser
 
-	if err := ctx.User.GetOrganizations(true); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
+	if err := c.User.GetOrganizations(true); err != nil {
+		c.Handle(500, "GetOrganizations", err)
 		return nil
 	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	c.Data["Orgs"] = c.User.Orgs
 
 	return ctxUser
 }
@@ -52,10 +52,10 @@ func getDashboardContextUser(ctx *context.Context) *models.User {
 // retrieveFeeds loads feeds from database by given context user.
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
-func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, isProfile bool) {
-	actions, err := models.GetFeeds(ctxUser, userID, ctx.QueryInt64("after_id"), isProfile)
+func retrieveFeeds(c *context.Context, ctxUser *models.User, userID int64, isProfile bool) {
+	actions, err := models.GetFeeds(ctxUser, userID, c.QueryInt64("after_id"), isProfile)
 	if err != nil {
-		ctx.Handle(500, "GetFeeds", err)
+		c.Handle(500, "GetFeeds", err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, isP
 				if errors.IsUserNotExist(err) {
 					continue
 				}
-				ctx.Handle(500, "GetUserByName", err)
+				c.Handle(500, "GetUserByName", err)
 				return
 			}
 			unameAvatars[act.ActUserName] = u.RelAvatarLink()
@@ -80,65 +80,65 @@ func retrieveFeeds(ctx *context.Context, ctxUser *models.User, userID int64, isP
 		act.ActAvatar = unameAvatars[act.ActUserName]
 		feeds = append(feeds, act)
 	}
-	ctx.Data["Feeds"] = feeds
+	c.Data["Feeds"] = feeds
 	if len(feeds) > 0 {
 		afterID := feeds[len(feeds)-1].ID
-		ctx.Data["AfterID"] = afterID
-		ctx.Header().Set("X-AJAX-URL", fmt.Sprintf("%s?after_id=%d", ctx.Data["Link"], afterID))
+		c.Data["AfterID"] = afterID
+		c.Header().Set("X-AJAX-URL", fmt.Sprintf("%s?after_id=%d", c.Data["Link"], afterID))
 	}
 }
 
-func Dashboard(ctx *context.Context) {
-	ctxUser := getDashboardContextUser(ctx)
-	if ctx.Written() {
+func Dashboard(c *context.Context) {
+	ctxUser := getDashboardContextUser(c)
+	if c.Written() {
 		return
 	}
 
-	retrieveFeeds(ctx, ctxUser, ctx.User.ID, false)
-	if ctx.Written() {
+	retrieveFeeds(c, ctxUser, c.User.ID, false)
+	if c.Written() {
 		return
 	}
 
-	if ctx.Req.Header.Get("X-AJAX") == "true" {
-		ctx.HTML(200, NEWS_FEED)
+	if c.Req.Header.Get("X-AJAX") == "true" {
+		c.HTML(200, NEWS_FEED)
 		return
 	}
 
-	ctx.Data["Title"] = ctxUser.DisplayName() + " - " + ctx.Tr("dashboard")
-	ctx.Data["PageIsDashboard"] = true
-	ctx.Data["PageIsNews"] = true
+	c.Data["Title"] = ctxUser.DisplayName() + " - " + c.Tr("dashboard")
+	c.Data["PageIsDashboard"] = true
+	c.Data["PageIsNews"] = true
 
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
-		collaborateRepos, err := ctx.User.GetAccessibleRepositories(setting.UI.User.RepoPagingNum)
+		collaborateRepos, err := c.User.GetAccessibleRepositories(setting.UI.User.RepoPagingNum)
 		if err != nil {
-			ctx.Handle(500, "GetAccessibleRepositories", err)
+			c.Handle(500, "GetAccessibleRepositories", err)
 			return
 		} else if err = models.RepositoryList(collaborateRepos).LoadAttributes(); err != nil {
-			ctx.Handle(500, "RepositoryList.LoadAttributes", err)
+			c.Handle(500, "RepositoryList.LoadAttributes", err)
 			return
 		}
-		ctx.Data["CollaborativeRepos"] = collaborateRepos
+		c.Data["CollaborativeRepos"] = collaborateRepos
 	}
 
 	var err error
 	var repos, mirrors []*models.Repository
 	var repoCount int64
 	if ctxUser.IsOrganization() {
-		repos, repoCount, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, setting.UI.User.RepoPagingNum)
+		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, setting.UI.User.RepoPagingNum)
 		if err != nil {
-			ctx.Handle(500, "GetUserRepositories", err)
+			c.Handle(500, "GetUserRepositories", err)
 			return
 		}
 
-		mirrors, err = ctxUser.GetUserMirrorRepositories(ctx.User.ID)
+		mirrors, err = ctxUser.GetUserMirrorRepositories(c.User.ID)
 		if err != nil {
-			ctx.Handle(500, "GetUserMirrorRepositories", err)
+			c.Handle(500, "GetUserMirrorRepositories", err)
 			return
 		}
 	} else {
 		if err = ctxUser.GetRepositories(1, setting.UI.User.RepoPagingNum); err != nil {
-			ctx.Handle(500, "GetRepositories", err)
+			c.Handle(500, "GetRepositories", err)
 			return
 		}
 		repos = ctxUser.Repos
@@ -146,47 +146,47 @@ func Dashboard(ctx *context.Context) {
 
 		mirrors, err = ctxUser.GetMirrorRepositories()
 		if err != nil {
-			ctx.Handle(500, "GetMirrorRepositories", err)
+			c.Handle(500, "GetMirrorRepositories", err)
 			return
 		}
 	}
-	ctx.Data["Repos"] = repos
-	ctx.Data["RepoCount"] = repoCount
-	ctx.Data["MaxShowRepoNum"] = setting.UI.User.RepoPagingNum
+	c.Data["Repos"] = repos
+	c.Data["RepoCount"] = repoCount
+	c.Data["MaxShowRepoNum"] = setting.UI.User.RepoPagingNum
 
 	if err := models.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
-		ctx.Handle(500, "MirrorRepositoryList.LoadAttributes", err)
+		c.Handle(500, "MirrorRepositoryList.LoadAttributes", err)
 		return
 	}
-	ctx.Data["MirrorCount"] = len(mirrors)
-	ctx.Data["Mirrors"] = mirrors
+	c.Data["MirrorCount"] = len(mirrors)
+	c.Data["Mirrors"] = mirrors
 
-	ctx.HTML(200, DASHBOARD)
+	c.HTML(200, DASHBOARD)
 }
 
-func Issues(ctx *context.Context) {
-	isPullList := ctx.Params(":type") == "pulls"
+func Issues(c *context.Context) {
+	isPullList := c.Params(":type") == "pulls"
 	if isPullList {
-		ctx.Data["Title"] = ctx.Tr("pull_requests")
-		ctx.Data["PageIsPulls"] = true
+		c.Data["Title"] = c.Tr("pull_requests")
+		c.Data["PageIsPulls"] = true
 	} else {
-		ctx.Data["Title"] = ctx.Tr("issues")
-		ctx.Data["PageIsIssues"] = true
+		c.Data["Title"] = c.Tr("issues")
+		c.Data["PageIsIssues"] = true
 	}
 
-	ctxUser := getDashboardContextUser(ctx)
-	if ctx.Written() {
+	ctxUser := getDashboardContextUser(c)
+	if c.Written() {
 		return
 	}
 
 	var (
-		sortType   = ctx.Query("sort")
+		sortType   = c.Query("sort")
 		filterMode = models.FILTER_MODE_YOUR_REPOS
 	)
 
 	// Note: Organization does not have view type and filter mode.
 	if !ctxUser.IsOrganization() {
-		viewType := ctx.Query("type")
+		viewType := c.Query("type")
 		types := []string{
 			string(models.FILTER_MODE_YOUR_REPOS),
 			string(models.FILTER_MODE_ASSIGN),
@@ -198,13 +198,13 @@ func Issues(ctx *context.Context) {
 		filterMode = models.FilterMode(viewType)
 	}
 
-	page := ctx.QueryInt("page")
+	page := c.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	}
 
-	repoID := ctx.QueryInt64("repo")
-	isShowClosed := ctx.Query("state") == "closed"
+	repoID := c.QueryInt64("repo")
+	isShowClosed := c.Query("state") == "closed"
 
 	// Get repositories.
 	var (
@@ -214,14 +214,14 @@ func Issues(ctx *context.Context) {
 		showRepos   = make([]*models.Repository, 0, 10)
 	)
 	if ctxUser.IsOrganization() {
-		repos, _, err = ctxUser.GetUserRepositories(ctx.User.ID, 1, ctxUser.NumRepos)
+		repos, _, err = ctxUser.GetUserRepositories(c.User.ID, 1, ctxUser.NumRepos)
 		if err != nil {
-			ctx.Handle(500, "GetRepositories", err)
+			c.Handle(500, "GetRepositories", err)
 			return
 		}
 	} else {
-		if err := ctxUser.GetRepositories(1, ctx.User.NumRepos); err != nil {
-			ctx.Handle(500, "GetRepositories", err)
+		if err := ctxUser.GetRepositories(1, c.User.NumRepos); err != nil {
+			c.Handle(500, "GetRepositories", err)
 			return
 		}
 		repos = ctxUser.Repos
@@ -255,7 +255,7 @@ func Issues(ctx *context.Context) {
 	if !isPullList {
 		userRepoIDs, err = models.FilterRepositoryWithIssues(userRepoIDs)
 		if err != nil {
-			ctx.Handle(500, "FilterRepositoryWithIssues", err)
+			c.Handle(500, "FilterRepositoryWithIssues", err)
 			return
 		}
 	}
@@ -287,32 +287,32 @@ func Issues(ctx *context.Context) {
 
 	issues, err := models.Issues(issueOptions)
 	if err != nil {
-		ctx.Handle(500, "Issues", err)
+		c.Handle(500, "Issues", err)
 		return
 	}
 
 	if repoID > 0 {
 		repo, err := models.GetRepositoryByID(repoID)
 		if err != nil {
-			ctx.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d] %v", repoID, err))
+			c.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d] %v", repoID, err))
 			return
 		}
 
 		if err = repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", repoID, err))
+			c.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", repoID, err))
 			return
 		}
 
 		// Check if user has access to given repository.
 		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(ctxUser.ID) {
-			ctx.Handle(404, "Issues", fmt.Errorf("#%d", repoID))
+			c.Handle(404, "Issues", fmt.Errorf("#%d", repoID))
 			return
 		}
 	}
 
 	for _, issue := range issues {
 		if err = issue.Repo.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", issue.RepoID, err))
+			c.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", issue.RepoID, err))
 			return
 		}
 	}
@@ -326,28 +326,28 @@ func Issues(ctx *context.Context) {
 		total = int(issueStats.ClosedCount)
 	}
 
-	ctx.Data["Issues"] = issues
-	ctx.Data["Repos"] = showRepos
-	ctx.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
-	ctx.Data["IssueStats"] = issueStats
-	ctx.Data["ViewType"] = string(filterMode)
-	ctx.Data["SortType"] = sortType
-	ctx.Data["RepoID"] = repoID
-	ctx.Data["IsShowClosed"] = isShowClosed
+	c.Data["Issues"] = issues
+	c.Data["Repos"] = showRepos
+	c.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
+	c.Data["IssueStats"] = issueStats
+	c.Data["ViewType"] = string(filterMode)
+	c.Data["SortType"] = sortType
+	c.Data["RepoID"] = repoID
+	c.Data["IsShowClosed"] = isShowClosed
 
 	if isShowClosed {
-		ctx.Data["State"] = "closed"
+		c.Data["State"] = "closed"
 	} else {
-		ctx.Data["State"] = "open"
+		c.Data["State"] = "open"
 	}
 
-	ctx.HTML(200, ISSUES)
+	c.HTML(200, ISSUES)
 }
 
-func ShowSSHKeys(ctx *context.Context, uid int64) {
+func ShowSSHKeys(c *context.Context, uid int64) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {
-		ctx.Handle(500, "ListPublicKeys", err)
+		c.Handle(500, "ListPublicKeys", err)
 		return
 	}
 
@@ -356,20 +356,20 @@ func ShowSSHKeys(ctx *context.Context, uid int64) {
 		buf.WriteString(keys[i].OmitEmail())
 		buf.WriteString("\n")
 	}
-	ctx.PlainText(200, buf.Bytes())
+	c.PlainText(200, buf.Bytes())
 }
 
-func showOrgProfile(ctx *context.Context) {
-	ctx.SetParams(":org", ctx.Params(":username"))
-	context.HandleOrgAssignment(ctx)
-	if ctx.Written() {
+func showOrgProfile(c *context.Context) {
+	c.SetParams(":org", c.Params(":username"))
+	context.HandleOrgAssignment(c)
+	if c.Written() {
 		return
 	}
 
-	org := ctx.Org.Organization
-	ctx.Data["Title"] = org.FullName
+	org := c.Org.Organization
+	c.Data["Title"] = org.FullName
 
-	page := ctx.QueryInt("page")
+	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
@@ -379,15 +379,15 @@ func showOrgProfile(ctx *context.Context) {
 		count int64
 		err   error
 	)
-	if ctx.IsLogged && !ctx.User.IsAdmin {
-		repos, count, err = org.GetUserRepositories(ctx.User.ID, page, setting.UI.User.RepoPagingNum)
+	if c.IsLogged && !c.User.IsAdmin {
+		repos, count, err = org.GetUserRepositories(c.User.ID, page, setting.UI.User.RepoPagingNum)
 		if err != nil {
-			ctx.Handle(500, "GetUserRepositories", err)
+			c.Handle(500, "GetUserRepositories", err)
 			return
 		}
-		ctx.Data["Repos"] = repos
+		c.Data["Repos"] = repos
 	} else {
-		showPrivate := ctx.IsLogged && ctx.User.IsAdmin
+		showPrivate := c.IsLogged && c.User.IsAdmin
 		repos, err = models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   org.ID,
 			Private:  showPrivate,
@@ -395,30 +395,30 @@ func showOrgProfile(ctx *context.Context) {
 			PageSize: setting.UI.User.RepoPagingNum,
 		})
 		if err != nil {
-			ctx.Handle(500, "GetRepositories", err)
+			c.Handle(500, "GetRepositories", err)
 			return
 		}
-		ctx.Data["Repos"] = repos
+		c.Data["Repos"] = repos
 		count = models.CountUserRepositories(org.ID, showPrivate)
 	}
-	ctx.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
+	c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
 
 	if err := org.GetMembers(); err != nil {
-		ctx.Handle(500, "GetMembers", err)
+		c.Handle(500, "GetMembers", err)
 		return
 	}
-	ctx.Data["Members"] = org.Members
+	c.Data["Members"] = org.Members
 
-	ctx.Data["Teams"] = org.Teams
+	c.Data["Teams"] = org.Teams
 
-	ctx.HTML(200, ORG_HOME)
+	c.HTML(200, ORG_HOME)
 }
 
-func Email2User(ctx *context.Context) {
-	u, err := models.GetUserByEmail(ctx.Query("email"))
+func Email2User(c *context.Context) {
+	u, err := models.GetUserByEmail(c.Query("email"))
 	if err != nil {
-		ctx.NotFoundOrServerError("GetUserByEmail", errors.IsUserNotExist, err)
+		c.NotFoundOrServerError("GetUserByEmail", errors.IsUserNotExist, err)
 		return
 	}
-	ctx.Redirect(setting.AppSubURL + "/user/" + u.Name)
+	c.Redirect(setting.AppSubURL + "/user/" + u.Name)
 }

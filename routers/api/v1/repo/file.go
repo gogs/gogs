@@ -13,60 +13,60 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-raw-content
-func GetRawFile(ctx *context.APIContext) {
-	if !ctx.Repo.HasAccess() {
-		ctx.Status(404)
+func GetRawFile(c *context.APIContext) {
+	if !c.Repo.HasAccess() {
+		c.Status(404)
 		return
 	}
 
-	if ctx.Repo.Repository.IsBare {
-		ctx.Status(404)
+	if c.Repo.Repository.IsBare {
+		c.Status(404)
 		return
 	}
 
-	blob, err := ctx.Repo.Commit.GetBlobByPath(ctx.Repo.TreePath)
+	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 	if err != nil {
 		if git.IsErrNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetBlobByPath", err)
+			c.Error(500, "GetBlobByPath", err)
 		}
 		return
 	}
-	if err = repo.ServeBlob(ctx.Context, blob); err != nil {
-		ctx.Error(500, "ServeBlob", err)
+	if err = repo.ServeBlob(c.Context, blob); err != nil {
+		c.Error(500, "ServeBlob", err)
 	}
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-archive
-func GetArchive(ctx *context.APIContext) {
-	repoPath := models.RepoPath(ctx.Params(":username"), ctx.Params(":reponame"))
+func GetArchive(c *context.APIContext) {
+	repoPath := models.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
-		ctx.Error(500, "OpenRepository", err)
+		c.Error(500, "OpenRepository", err)
 		return
 	}
-	ctx.Repo.GitRepo = gitRepo
+	c.Repo.GitRepo = gitRepo
 
-	repo.Download(ctx.Context)
+	repo.Download(c.Context)
 }
 
-func GetEditorconfig(ctx *context.APIContext) {
-	ec, err := ctx.Repo.GetEditorconfig()
+func GetEditorconfig(c *context.APIContext) {
+	ec, err := c.Repo.GetEditorconfig()
 	if err != nil {
 		if git.IsErrNotExist(err) {
-			ctx.Error(404, "GetEditorconfig", err)
+			c.Error(404, "GetEditorconfig", err)
 		} else {
-			ctx.Error(500, "GetEditorconfig", err)
+			c.Error(500, "GetEditorconfig", err)
 		}
 		return
 	}
 
-	fileName := ctx.Params("filename")
+	fileName := c.Params("filename")
 	def := ec.GetDefinitionForFilename(fileName)
 	if def == nil {
-		ctx.Error(404, "GetDefinitionForFilename", err)
+		c.Error(404, "GetDefinitionForFilename", err)
 		return
 	}
-	ctx.JSON(200, def)
+	c.JSON(200, def)
 }

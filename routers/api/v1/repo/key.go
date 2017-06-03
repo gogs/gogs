@@ -20,95 +20,95 @@ func composeDeployKeysAPILink(repoPath string) string {
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
-func ListDeployKeys(ctx *context.APIContext) {
-	keys, err := models.ListDeployKeys(ctx.Repo.Repository.ID)
+func ListDeployKeys(c *context.APIContext) {
+	keys, err := models.ListDeployKeys(c.Repo.Repository.ID)
 	if err != nil {
-		ctx.Error(500, "ListDeployKeys", err)
+		c.Error(500, "ListDeployKeys", err)
 		return
 	}
 
-	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
+	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
 	apiKeys := make([]*api.DeployKey, len(keys))
 	for i := range keys {
 		if err = keys[i].GetContent(); err != nil {
-			ctx.Error(500, "GetContent", err)
+			c.Error(500, "GetContent", err)
 			return
 		}
 		apiKeys[i] = convert.ToDeployKey(apiLink, keys[i])
 	}
 
-	ctx.JSON(200, &apiKeys)
+	c.JSON(200, &apiKeys)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
-func GetDeployKey(ctx *context.APIContext) {
-	key, err := models.GetDeployKeyByID(ctx.ParamsInt64(":id"))
+func GetDeployKey(c *context.APIContext) {
+	key, err := models.GetDeployKeyByID(c.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrDeployKeyNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetDeployKeyByID", err)
+			c.Error(500, "GetDeployKeyByID", err)
 		}
 		return
 	}
 
 	if err = key.GetContent(); err != nil {
-		ctx.Error(500, "GetContent", err)
+		c.Error(500, "GetContent", err)
 		return
 	}
 
-	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
-	ctx.JSON(200, convert.ToDeployKey(apiLink, key))
+	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
+	c.JSON(200, convert.ToDeployKey(apiLink, key))
 }
 
-func HandleCheckKeyStringError(ctx *context.APIContext, err error) {
+func HandleCheckKeyStringError(c *context.APIContext, err error) {
 	if models.IsErrKeyUnableVerify(err) {
-		ctx.Error(422, "", "Unable to verify key content")
+		c.Error(422, "", "Unable to verify key content")
 	} else {
-		ctx.Error(422, "", fmt.Errorf("Invalid key content: %v", err))
+		c.Error(422, "", fmt.Errorf("Invalid key content: %v", err))
 	}
 }
 
-func HandleAddKeyError(ctx *context.APIContext, err error) {
+func HandleAddKeyError(c *context.APIContext, err error) {
 	switch {
 	case models.IsErrKeyAlreadyExist(err):
-		ctx.Error(422, "", "Key content has been used as non-deploy key")
+		c.Error(422, "", "Key content has been used as non-deploy key")
 	case models.IsErrKeyNameAlreadyUsed(err):
-		ctx.Error(422, "", "Key title has been used")
+		c.Error(422, "", "Key title has been used")
 	default:
-		ctx.Error(500, "AddKey", err)
+		c.Error(500, "AddKey", err)
 	}
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
-func CreateDeployKey(ctx *context.APIContext, form api.CreateKeyOption) {
+func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
-		HandleCheckKeyStringError(ctx, err)
+		HandleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content)
+	key, err := models.AddDeployKey(c.Repo.Repository.ID, form.Title, content)
 	if err != nil {
-		HandleAddKeyError(ctx, err)
+		HandleAddKeyError(c, err)
 		return
 	}
 
 	key.Content = content
-	apiLink := composeDeployKeysAPILink(ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name)
-	ctx.JSON(201, convert.ToDeployKey(apiLink, key))
+	apiLink := composeDeployKeysAPILink(c.Repo.Owner.Name + "/" + c.Repo.Repository.Name)
+	c.JSON(201, convert.ToDeployKey(apiLink, key))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
-func DeleteDeploykey(ctx *context.APIContext) {
-	if err := models.DeleteDeployKey(ctx.User, ctx.ParamsInt64(":id")); err != nil {
+func DeleteDeploykey(c *context.APIContext) {
+	if err := models.DeleteDeployKey(c.User, c.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {
-			ctx.Error(403, "", "You do not have access to this key")
+			c.Error(403, "", "You do not have access to this key")
 		} else {
-			ctx.Error(500, "DeleteDeployKey", err)
+			c.Error(500, "DeleteDeployKey", err)
 		}
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }

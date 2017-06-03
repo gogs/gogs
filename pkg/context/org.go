@@ -25,7 +25,7 @@ type Organization struct {
 	Team *models.Team
 }
 
-func HandleOrgAssignment(ctx *Context, args ...bool) {
+func HandleOrgAssignment(c *Context, args ...bool) {
 	var (
 		requireMember     bool
 		requireOwner      bool
@@ -45,106 +45,106 @@ func HandleOrgAssignment(ctx *Context, args ...bool) {
 		requireTeamAdmin = args[3]
 	}
 
-	orgName := ctx.Params(":org")
+	orgName := c.Params(":org")
 
 	var err error
-	ctx.Org.Organization, err = models.GetUserByName(orgName)
+	c.Org.Organization, err = models.GetUserByName(orgName)
 	if err != nil {
-		ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return
 	}
-	org := ctx.Org.Organization
-	ctx.Data["Org"] = org
+	org := c.Org.Organization
+	c.Data["Org"] = org
 
 	// Force redirection when username is actually a user.
 	if !org.IsOrganization() {
-		ctx.Redirect("/" + org.Name)
+		c.Redirect("/" + org.Name)
 		return
 	}
 
 	// Admin has super access.
-	if ctx.IsLogged && ctx.User.IsAdmin {
-		ctx.Org.IsOwner = true
-		ctx.Org.IsMember = true
-		ctx.Org.IsTeamMember = true
-		ctx.Org.IsTeamAdmin = true
-	} else if ctx.IsLogged {
-		ctx.Org.IsOwner = org.IsOwnedBy(ctx.User.ID)
-		if ctx.Org.IsOwner {
-			ctx.Org.IsMember = true
-			ctx.Org.IsTeamMember = true
-			ctx.Org.IsTeamAdmin = true
+	if c.IsLogged && c.User.IsAdmin {
+		c.Org.IsOwner = true
+		c.Org.IsMember = true
+		c.Org.IsTeamMember = true
+		c.Org.IsTeamAdmin = true
+	} else if c.IsLogged {
+		c.Org.IsOwner = org.IsOwnedBy(c.User.ID)
+		if c.Org.IsOwner {
+			c.Org.IsMember = true
+			c.Org.IsTeamMember = true
+			c.Org.IsTeamAdmin = true
 		} else {
-			if org.IsOrgMember(ctx.User.ID) {
-				ctx.Org.IsMember = true
+			if org.IsOrgMember(c.User.ID) {
+				c.Org.IsMember = true
 			}
 		}
 	} else {
 		// Fake data.
-		ctx.Data["SignedUser"] = &models.User{}
+		c.Data["SignedUser"] = &models.User{}
 	}
-	if (requireMember && !ctx.Org.IsMember) ||
-		(requireOwner && !ctx.Org.IsOwner) {
-		ctx.Handle(404, "OrgAssignment", err)
+	if (requireMember && !c.Org.IsMember) ||
+		(requireOwner && !c.Org.IsOwner) {
+		c.Handle(404, "OrgAssignment", err)
 		return
 	}
-	ctx.Data["IsOrganizationOwner"] = ctx.Org.IsOwner
-	ctx.Data["IsOrganizationMember"] = ctx.Org.IsMember
+	c.Data["IsOrganizationOwner"] = c.Org.IsOwner
+	c.Data["IsOrganizationMember"] = c.Org.IsMember
 
-	ctx.Org.OrgLink = setting.AppSubURL + "/org/" + org.Name
-	ctx.Data["OrgLink"] = ctx.Org.OrgLink
+	c.Org.OrgLink = setting.AppSubURL + "/org/" + org.Name
+	c.Data["OrgLink"] = c.Org.OrgLink
 
 	// Team.
-	if ctx.Org.IsMember {
-		if ctx.Org.IsOwner {
+	if c.Org.IsMember {
+		if c.Org.IsOwner {
 			if err := org.GetTeams(); err != nil {
-				ctx.Handle(500, "GetTeams", err)
+				c.Handle(500, "GetTeams", err)
 				return
 			}
 		} else {
-			org.Teams, err = org.GetUserTeams(ctx.User.ID)
+			org.Teams, err = org.GetUserTeams(c.User.ID)
 			if err != nil {
-				ctx.Handle(500, "GetUserTeams", err)
+				c.Handle(500, "GetUserTeams", err)
 				return
 			}
 		}
 	}
 
-	teamName := ctx.Params(":team")
+	teamName := c.Params(":team")
 	if len(teamName) > 0 {
 		teamExists := false
 		for _, team := range org.Teams {
 			if team.LowerName == strings.ToLower(teamName) {
 				teamExists = true
-				ctx.Org.Team = team
-				ctx.Org.IsTeamMember = true
-				ctx.Data["Team"] = ctx.Org.Team
+				c.Org.Team = team
+				c.Org.IsTeamMember = true
+				c.Data["Team"] = c.Org.Team
 				break
 			}
 		}
 
 		if !teamExists {
-			ctx.Handle(404, "OrgAssignment", err)
+			c.Handle(404, "OrgAssignment", err)
 			return
 		}
 
-		ctx.Data["IsTeamMember"] = ctx.Org.IsTeamMember
-		if requireTeamMember && !ctx.Org.IsTeamMember {
-			ctx.Handle(404, "OrgAssignment", err)
+		c.Data["IsTeamMember"] = c.Org.IsTeamMember
+		if requireTeamMember && !c.Org.IsTeamMember {
+			c.Handle(404, "OrgAssignment", err)
 			return
 		}
 
-		ctx.Org.IsTeamAdmin = ctx.Org.Team.IsOwnerTeam() || ctx.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
-		ctx.Data["IsTeamAdmin"] = ctx.Org.IsTeamAdmin
-		if requireTeamAdmin && !ctx.Org.IsTeamAdmin {
-			ctx.Handle(404, "OrgAssignment", err)
+		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= models.ACCESS_MODE_ADMIN
+		c.Data["IsTeamAdmin"] = c.Org.IsTeamAdmin
+		if requireTeamAdmin && !c.Org.IsTeamAdmin {
+			c.Handle(404, "OrgAssignment", err)
 			return
 		}
 	}
 }
 
 func OrgAssignment(args ...bool) macaron.Handler {
-	return func(ctx *Context) {
-		HandleOrgAssignment(ctx, args...)
+	return func(c *Context) {
+		HandleOrgAssignment(c, args...)
 	}
 }
