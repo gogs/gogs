@@ -9,9 +9,11 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
+	"github.com/Unknwon/com"
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/i18n"
@@ -20,6 +22,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/auth"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
@@ -33,6 +36,7 @@ type Context struct {
 	Flash   *session.Flash
 	Session session.Store
 
+	Link        string // Current request URL
 	User        *models.User
 	IsLogged    bool
 	IsBasicAuth bool
@@ -202,63 +206,102 @@ func (ctx *Context) ServeContent(name string, r io.ReadSeeker, params ...interfa
 
 // Contexter initializes a classic context for a request.
 func Contexter() macaron.Handler {
-	return func(c *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
-		ctx := &Context{
-			Context: c,
+	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
+		c := &Context{
+			Context: ctx,
 			Cache:   cache,
 			csrf:    x,
 			Flash:   f,
 			Session: sess,
+			Link:    setting.AppSubURL + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
 			Org: &Organization{},
 		}
+		c.Data["Link"] = c.Link
+		c.Data["PageStartTime"] = time.Now()
 
-		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
-			ctx.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
-			ctx.Header().Set("'Access-Control-Allow-Credentials' ", "true")
-			ctx.Header().Set("Access-Control-Max-Age", "3600")
-			ctx.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+		// Quick responses appropriate go-get meta with status 200
+		// regardless of if user have access to the repository,
+		// or the repository does not exist at all.
+		// This is particular a workaround for "go get" command which does not respect
+		// .netrc file.
+		if c.Query("go-get") == "1" {
+			ownerName := ctx.Params(":username")
+			repoName := ctx.Params(":reponame")
+			branchName := "master"
+
+			owner, err := models.GetUserByName(ownerName)
+			if err != nil {
+				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+				return
+			}
+
+			repo, err := models.GetRepositoryByName(owner.ID, repoName)
+			if err == nil && len(repo.DefaultBranch) > 0 {
+				branchName = repo.DefaultBranch
+			}
+
+			prefix := setting.AppURL + path.Join(ownerName, repoName, "src", branchName)
+			ctx.PlainText(http.StatusOK, []byte(com.Expand(`
+<html>
+	<head>
+		<meta name="go-import" content="{GoGetImport} git {CloneLink}">
+		<meta name="go-source" content="{GoGetImport} _ {GoDocDirectory} {GoDocFile}">
+	</head>
+	<body>
+		go get {GoGetImport}
+	</body>
+</html>
+`, map[string]string{
+				"GoGetImport":    path.Join(setting.Domain, setting.AppSubURL, c.Link),
+				"CloneLink":      models.ComposeHTTPSCloneURL(ownerName, repoName),
+				"GoDocDirectory": prefix + "{/dir}",
+				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
+			})))
+			return
 		}
 
-		// Compute current URL for real-time change language.
-		ctx.Data["Link"] = setting.AppSubURL + strings.TrimSuffix(ctx.Req.URL.Path, "/")
-
-		ctx.Data["PageStartTime"] = time.Now()
+		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
+			c.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+			c.Header().Set("'Access-Control-Allow-Credentials' ", "true")
+			c.Header().Set("Access-Control-Max-Age", "3600")
+			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+		}
 
 		// Get user from session if logined.
-		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Context, ctx.Session)
+		c.User, c.IsBasicAuth = auth.SignedInUser(c.Context, c.Session)
 
-		if ctx.User != nil {
-			ctx.IsLogged = true
-			ctx.Data["IsLogged"] = ctx.IsLogged
-			ctx.Data["LoggedUser"] = ctx.User
-			ctx.Data["LoggedUserID"] = ctx.User.ID
-			ctx.Data["LoggedUserName"] = ctx.User.Name
-			ctx.Data["IsAdmin"] = ctx.User.IsAdmin
+		if c.User != nil {
+			c.IsLogged = true
+			c.Data["IsLogged"] = c.IsLogged
+			c.Data["LoggedUser"] = c.User
+			c.Data["LoggedUserID"] = c.User.ID
+			c.Data["LoggedUserName"] = c.User.Name
+			c.Data["IsAdmin"] = c.User.IsAdmin
 		} else {
-			ctx.Data["LoggedUserID"] = 0
-			ctx.Data["LoggedUserName"] = ""
+			c.Data["LoggedUserID"] = 0
+			c.Data["LoggedUserName"] = ""
 		}
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
-		if ctx.Req.Method == "POST" && strings.Contains(ctx.Req.Header.Get("Content-Type"), "multipart/form-data") {
-			if err := ctx.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
-				ctx.Handle(500, "ParseMultipartForm", err)
+		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
+			if err := c.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
+				c.Handle(500, "ParseMultipartForm", err)
 				return
 			}
 		}
 
-		ctx.Data["CSRFToken"] = x.GetToken()
-		ctx.Data["CSRFTokenHTML"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		c.Data["CSRFToken"] = x.GetToken()
+		c.Data["CSRFTokenHTML"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
 		log.Trace("Session ID: %s", sess.ID())
-		log.Trace("CSRF Token: %v", ctx.Data["CSRFToken"])
+		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
-		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
-		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding
-		ctx.Data["ShowFooterVersion"] = setting.ShowFooterVersion
+		c.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
+		c.Data["ShowFooterBranding"] = setting.ShowFooterBranding
+		c.Data["ShowFooterVersion"] = setting.ShowFooterVersion
 
-		c.Map(ctx)
+		ctx.Map(c)
 	}
 }
