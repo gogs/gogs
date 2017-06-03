@@ -399,9 +399,9 @@ func getGitRepoPath(dir string) (string, error) {
 	return filename, nil
 }
 
-func HTTP(ctx *HTTPContext) {
+func HTTP(c *HTTPContext) {
 	for _, route := range routes {
-		reqPath := strings.ToLower(ctx.Req.URL.Path)
+		reqPath := strings.ToLower(c.Req.URL.Path)
 		m := route.reg.FindStringSubmatch(reqPath)
 		if m == nil {
 			continue
@@ -411,12 +411,12 @@ func HTTP(ctx *HTTPContext) {
 		// but we only want to output this message only if user is really trying to access
 		// Git HTTP endpoints.
 		if setting.Repository.DisableHTTPGit {
-			ctx.HandleText(http.StatusForbidden, "Interacting with repositories by HTTP protocol is not disabled")
+			c.HandleText(http.StatusForbidden, "Interacting with repositories by HTTP protocol is not disabled")
 			return
 		}
 
-		if route.method != ctx.Req.Method {
-			ctx.NotFound()
+		if route.method != c.Req.Method {
+			c.NotFound()
 			return
 		}
 
@@ -424,24 +424,24 @@ func HTTP(ctx *HTTPContext) {
 		dir, err := getGitRepoPath(m[1])
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
-			ctx.NotFound()
+			c.NotFound()
 			return
 		}
 
 		route.handler(serviceHandler{
-			w:    ctx.Resp,
-			r:    ctx.Req.Request,
+			w:    c.Resp,
+			r:    c.Req.Request,
 			dir:  dir,
 			file: file,
 
-			authUser:  ctx.AuthUser,
-			ownerName: ctx.OwnerName,
-			ownerSalt: ctx.OwnerSalt,
-			repoID:    ctx.RepoID,
-			repoName:  ctx.RepoName,
+			authUser:  c.AuthUser,
+			ownerName: c.OwnerName,
+			ownerSalt: c.OwnerSalt,
+			repoID:    c.RepoID,
+			repoName:  c.RepoName,
 		})
 		return
 	}
 
-	ctx.NotFound()
+	c.NotFound()
 }

@@ -23,28 +23,28 @@ const (
 	STARS     = "user/meta/stars"
 )
 
-func GetUserByName(ctx *context.Context, name string) *models.User {
+func GetUserByName(c *context.Context, name string) *models.User {
 	user, err := models.GetUserByName(name)
 	if err != nil {
-		ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return nil
 	}
 	return user
 }
 
 // GetUserByParams returns user whose name is presented in URL paramenter.
-func GetUserByParams(ctx *context.Context) *models.User {
-	return GetUserByName(ctx, ctx.Params(":username"))
+func GetUserByParams(c *context.Context) *models.User {
+	return GetUserByName(c, c.Params(":username"))
 }
 
-func Profile(ctx *context.Context) {
-	uname := ctx.Params(":username")
+func Profile(c *context.Context) {
+	uname := c.Params(":username")
 	// Special handle for FireFox requests favicon.ico.
 	if uname == "favicon.ico" {
-		ctx.ServeFile(path.Join(setting.StaticRootPath, "public/img/favicon.png"))
+		c.ServeFile(path.Join(setting.StaticRootPath, "public/img/favicon.png"))
 		return
 	} else if strings.HasSuffix(uname, ".png") {
-		ctx.Error(404)
+		c.Error(404)
 		return
 	}
 
@@ -53,117 +53,117 @@ func Profile(ctx *context.Context) {
 		isShowKeys = true
 	}
 
-	ctxUser := GetUserByName(ctx, strings.TrimSuffix(uname, ".keys"))
-	if ctx.Written() {
+	ctxUser := GetUserByName(c, strings.TrimSuffix(uname, ".keys"))
+	if c.Written() {
 		return
 	}
 
 	// Show SSH keys.
 	if isShowKeys {
-		ShowSSHKeys(ctx, ctxUser.ID)
+		ShowSSHKeys(c, ctxUser.ID)
 		return
 	}
 
 	if ctxUser.IsOrganization() {
-		showOrgProfile(ctx)
+		showOrgProfile(c)
 		return
 	}
 
-	ctx.Data["Title"] = ctxUser.DisplayName()
-	ctx.Data["PageIsUserProfile"] = true
-	ctx.Data["Owner"] = ctxUser
+	c.Data["Title"] = ctxUser.DisplayName()
+	c.Data["PageIsUserProfile"] = true
+	c.Data["Owner"] = ctxUser
 
-	orgs, err := models.GetOrgsByUserID(ctxUser.ID, ctx.IsLogged && (ctx.User.IsAdmin || ctx.User.ID == ctxUser.ID))
+	orgs, err := models.GetOrgsByUserID(ctxUser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == ctxUser.ID))
 	if err != nil {
-		ctx.Handle(500, "GetOrgsByUserIDDesc", err)
+		c.Handle(500, "GetOrgsByUserIDDesc", err)
 		return
 	}
 
-	ctx.Data["Orgs"] = orgs
+	c.Data["Orgs"] = orgs
 
-	tab := ctx.Query("tab")
-	ctx.Data["TabName"] = tab
+	tab := c.Query("tab")
+	c.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		retrieveFeeds(ctx, ctxUser, -1, true)
-		if ctx.Written() {
+		retrieveFeeds(c, ctxUser, -1, true)
+		if c.Written() {
 			return
 		}
 	default:
-		page := ctx.QueryInt("page")
+		page := c.QueryInt("page")
 		if page <= 0 {
 			page = 1
 		}
 
-		showPrivate := ctx.IsLogged && (ctxUser.ID == ctx.User.ID || ctx.User.IsAdmin)
-		ctx.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
+		showPrivate := c.IsLogged && (ctxUser.ID == c.User.ID || c.User.IsAdmin)
+		c.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   ctxUser.ID,
 			Private:  showPrivate,
 			Page:     page,
 			PageSize: setting.UI.User.RepoPagingNum,
 		})
 		if err != nil {
-			ctx.Handle(500, "GetRepositories", err)
+			c.Handle(500, "GetRepositories", err)
 			return
 		}
 
 		count := models.CountUserRepositories(ctxUser.ID, showPrivate)
-		ctx.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
+		c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
 	}
 
-	ctx.HTML(200, PROFILE)
+	c.HTML(200, PROFILE)
 }
 
-func Followers(ctx *context.Context) {
-	u := GetUserByParams(ctx)
-	if ctx.Written() {
+func Followers(c *context.Context) {
+	u := GetUserByParams(c)
+	if c.Written() {
 		return
 	}
-	ctx.Data["Title"] = u.DisplayName()
-	ctx.Data["CardsTitle"] = ctx.Tr("user.followers")
-	ctx.Data["PageIsFollowers"] = true
-	ctx.Data["Owner"] = u
-	repo.RenderUserCards(ctx, u.NumFollowers, u.GetFollowers, FOLLOWERS)
+	c.Data["Title"] = u.DisplayName()
+	c.Data["CardsTitle"] = c.Tr("user.followers")
+	c.Data["PageIsFollowers"] = true
+	c.Data["Owner"] = u
+	repo.RenderUserCards(c, u.NumFollowers, u.GetFollowers, FOLLOWERS)
 }
 
-func Following(ctx *context.Context) {
-	u := GetUserByParams(ctx)
-	if ctx.Written() {
+func Following(c *context.Context) {
+	u := GetUserByParams(c)
+	if c.Written() {
 		return
 	}
-	ctx.Data["Title"] = u.DisplayName()
-	ctx.Data["CardsTitle"] = ctx.Tr("user.following")
-	ctx.Data["PageIsFollowing"] = true
-	ctx.Data["Owner"] = u
-	repo.RenderUserCards(ctx, u.NumFollowing, u.GetFollowing, FOLLOWERS)
+	c.Data["Title"] = u.DisplayName()
+	c.Data["CardsTitle"] = c.Tr("user.following")
+	c.Data["PageIsFollowing"] = true
+	c.Data["Owner"] = u
+	repo.RenderUserCards(c, u.NumFollowing, u.GetFollowing, FOLLOWERS)
 }
 
-func Stars(ctx *context.Context) {
+func Stars(c *context.Context) {
 
 }
 
-func Action(ctx *context.Context) {
-	u := GetUserByParams(ctx)
-	if ctx.Written() {
+func Action(c *context.Context) {
+	u := GetUserByParams(c)
+	if c.Written() {
 		return
 	}
 
 	var err error
-	switch ctx.Params(":action") {
+	switch c.Params(":action") {
 	case "follow":
-		err = models.FollowUser(ctx.User.ID, u.ID)
+		err = models.FollowUser(c.User.ID, u.ID)
 	case "unfollow":
-		err = models.UnfollowUser(ctx.User.ID, u.ID)
+		err = models.UnfollowUser(c.User.ID, u.ID)
 	}
 
 	if err != nil {
-		ctx.Handle(500, fmt.Sprintf("Action (%s)", ctx.Params(":action")), err)
+		c.Handle(500, fmt.Sprintf("Action (%s)", c.Params(":action")), err)
 		return
 	}
 
-	redirectTo := ctx.Query("redirect_to")
+	redirectTo := c.Query("redirect_to")
 	if len(redirectTo) == 0 {
 		redirectTo = u.HomeLink()
 	}
-	ctx.Redirect(redirectTo)
+	c.Redirect(redirectTo)
 }

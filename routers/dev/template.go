@@ -10,15 +10,15 @@ import (
 	"github.com/gogits/gogs/pkg/setting"
 )
 
-func TemplatePreview(ctx *context.Context) {
-	ctx.Data["User"] = models.User{Name: "Unknown"}
-	ctx.Data["AppName"] = setting.AppName
-	ctx.Data["AppVer"] = setting.AppVer
-	ctx.Data["AppURL"] = setting.AppURL
-	ctx.Data["Code"] = "2014031910370000009fff6782aadb2162b4a997acb69d4400888e0b9274657374"
-	ctx.Data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
-	ctx.Data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
-	ctx.Data["CurDbValue"] = ""
+func TemplatePreview(c *context.Context) {
+	c.Data["User"] = models.User{Name: "Unknown"}
+	c.Data["AppName"] = setting.AppName
+	c.Data["AppVer"] = setting.AppVer
+	c.Data["AppURL"] = setting.AppURL
+	c.Data["Code"] = "2014031910370000009fff6782aadb2162b4a997acb69d4400888e0b9274657374"
+	c.Data["ActiveCodeLives"] = setting.Service.ActiveCodeLives / 60
+	c.Data["ResetPwdCodeLives"] = setting.Service.ResetPwdCodeLives / 60
+	c.Data["CurDbValue"] = ""
 
-	ctx.HTML(200, (ctx.Params("*")))
+	c.HTML(200, (c.Params("*")))
 }

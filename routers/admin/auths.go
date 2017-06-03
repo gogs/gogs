@@ -24,20 +24,20 @@ const (
 	AUTH_EDIT = "admin/auth/edit"
 )
 
-func Authentications(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.authentication")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminAuthentications"] = true
+func Authentications(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.authentication")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminAuthentications"] = true
 
 	var err error
-	ctx.Data["Sources"], err = models.LoginSources()
+	c.Data["Sources"], err = models.LoginSources()
 	if err != nil {
-		ctx.Handle(500, "LoginSources", err)
+		c.Handle(500, "LoginSources", err)
 		return
 	}
 
-	ctx.Data["Total"] = models.CountLoginSources()
-	ctx.HTML(200, AUTHS)
+	c.Data["Total"] = models.CountLoginSources()
+	c.HTML(200, AUTHS)
 }
 
 type dropdownItem struct {
@@ -59,20 +59,20 @@ var (
 	}
 )
 
-func NewAuthSource(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminAuthentications"] = true
+func NewAuthSource(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.auths.new")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["type"] = models.LOGIN_LDAP
-	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LOGIN_LDAP]
-	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
-	ctx.Data["smtp_auth"] = "PLAIN"
-	ctx.Data["is_active"] = true
-	ctx.Data["AuthSources"] = authSources
-	ctx.Data["SecurityProtocols"] = securityProtocols
-	ctx.Data["SMTPAuths"] = models.SMTPAuths
-	ctx.HTML(200, AUTH_NEW)
+	c.Data["type"] = models.LOGIN_LDAP
+	c.Data["CurrentTypeName"] = models.LoginNames[models.LOGIN_LDAP]
+	c.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
+	c.Data["smtp_auth"] = "PLAIN"
+	c.Data["is_active"] = true
+	c.Data["AuthSources"] = authSources
+	c.Data["SecurityProtocols"] = securityProtocols
+	c.Data["SMTPAuths"] = models.SMTPAuths
+	c.HTML(200, AUTH_NEW)
 }
 
 func parseLDAPConfig(f form.Authentication) *models.LDAPConfig {
@@ -115,16 +115,16 @@ func parseSMTPConfig(f form.Authentication) *models.SMTPConfig {
 	}
 }
 
-func NewAuthSourcePost(ctx *context.Context, f form.Authentication) {
-	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminAuthentications"] = true
+func NewAuthSourcePost(c *context.Context, f form.Authentication) {
+	c.Data["Title"] = c.Tr("admin.auths.new")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LoginType(f.Type)]
-	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SecurityProtocol(f.SecurityProtocol)]
-	ctx.Data["AuthSources"] = authSources
-	ctx.Data["SecurityProtocols"] = securityProtocols
-	ctx.Data["SMTPAuths"] = models.SMTPAuths
+	c.Data["CurrentTypeName"] = models.LoginNames[models.LoginType(f.Type)]
+	c.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SecurityProtocol(f.SecurityProtocol)]
+	c.Data["AuthSources"] = authSources
+	c.Data["SecurityProtocols"] = securityProtocols
+	c.Data["SMTPAuths"] = models.SMTPAuths
 
 	hasTLS := false
 	var config core.Conversion
@@ -140,13 +140,13 @@ func NewAuthSourcePost(ctx *context.Context, f form.Authentication) {
 			ServiceName: f.PAMServiceName,
 		}
 	default:
-		ctx.Error(400)
+		c.Error(400)
 		return
 	}
-	ctx.Data["HasTLS"] = hasTLS
+	c.Data["HasTLS"] = hasTLS
 
-	if ctx.HasError() {
-		ctx.HTML(200, AUTH_NEW)
+	if c.HasError() {
+		c.HTML(200, AUTH_NEW)
 		return
 	}
 
@@ -157,56 +157,56 @@ func NewAuthSourcePost(ctx *context.Context, f form.Authentication) {
 		Cfg:       config,
 	}); err != nil {
 		if models.IsErrLoginSourceAlreadyExist(err) {
-			ctx.Data["Err_Name"] = true
-			ctx.RenderWithErr(ctx.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
+			c.Data["Err_Name"] = true
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
 		} else {
-			ctx.Handle(500, "CreateSource", err)
+			c.Handle(500, "CreateSource", err)
 		}
 		return
 	}
 
-	log.Trace("Authentication created by admin(%s): %s", ctx.User.Name, f.Name)
+	log.Trace("Authentication created by admin(%s): %s", c.User.Name, f.Name)
 
-	ctx.Flash.Success(ctx.Tr("admin.auths.new_success", f.Name))
-	ctx.Redirect(setting.AppSubURL + "/admin/auths")
+	c.Flash.Success(c.Tr("admin.auths.new_success", f.Name))
+	c.Redirect(setting.AppSubURL + "/admin/auths")
 }
 
-func EditAuthSource(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminAuthentications"] = true
+func EditAuthSource(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.auths.edit")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["SecurityProtocols"] = securityProtocols
-	ctx.Data["SMTPAuths"] = models.SMTPAuths
+	c.Data["SecurityProtocols"] = securityProtocols
+	c.Data["SMTPAuths"] = models.SMTPAuths
 
-	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
+	source, err := models.GetLoginSourceByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		ctx.Handle(500, "GetLoginSourceByID", err)
+		c.Handle(500, "GetLoginSourceByID", err)
 		return
 	}
-	ctx.Data["Source"] = source
-	ctx.Data["HasTLS"] = source.HasTLS()
+	c.Data["Source"] = source
+	c.Data["HasTLS"] = source.HasTLS()
 
-	ctx.HTML(200, AUTH_EDIT)
+	c.HTML(200, AUTH_EDIT)
 }
 
-func EditAuthSourcePost(ctx *context.Context, f form.Authentication) {
-	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminAuthentications"] = true
+func EditAuthSourcePost(c *context.Context, f form.Authentication) {
+	c.Data["Title"] = c.Tr("admin.auths.edit")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["SMTPAuths"] = models.SMTPAuths
+	c.Data["SMTPAuths"] = models.SMTPAuths
 
-	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
+	source, err := models.GetLoginSourceByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		ctx.Handle(500, "GetLoginSourceByID", err)
+		c.Handle(500, "GetLoginSourceByID", err)
 		return
 	}
-	ctx.Data["Source"] = source
-	ctx.Data["HasTLS"] = source.HasTLS()
+	c.Data["Source"] = source
+	c.Data["HasTLS"] = source.HasTLS()
 
-	if ctx.HasError() {
-		ctx.HTML(200, AUTH_EDIT)
+	if c.HasError() {
+		c.HTML(200, AUTH_EDIT)
 		return
 	}
 
@@ -221,7 +221,7 @@ func EditAuthSourcePost(ctx *context.Context, f form.Authentication) {
 			ServiceName: f.PAMServiceName,
 		}
 	default:
-		ctx.Error(400)
+		c.Error(400)
 		return
 	}
 
@@ -229,37 +229,37 @@ func EditAuthSourcePost(ctx *context.Context, f form.Authentication) {
 	source.IsActived = f.IsActive
 	source.Cfg = config
 	if err := models.UpdateSource(source); err != nil {
-		ctx.Handle(500, "UpdateSource", err)
+		c.Handle(500, "UpdateSource", err)
 		return
 	}
-	log.Trace("Authentication changed by admin(%s): %d", ctx.User.Name, source.ID)
+	log.Trace("Authentication changed by admin(%s): %d", c.User.Name, source.ID)
 
-	ctx.Flash.Success(ctx.Tr("admin.auths.update_success"))
-	ctx.Redirect(setting.AppSubURL + "/admin/auths/" + com.ToStr(f.ID))
+	c.Flash.Success(c.Tr("admin.auths.update_success"))
+	c.Redirect(setting.AppSubURL + "/admin/auths/" + com.ToStr(f.ID))
 }
 
-func DeleteAuthSource(ctx *context.Context) {
-	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
+func DeleteAuthSource(c *context.Context) {
+	source, err := models.GetLoginSourceByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		ctx.Handle(500, "GetLoginSourceByID", err)
+		c.Handle(500, "GetLoginSourceByID", err)
 		return
 	}
 
 	if err = models.DeleteSource(source); err != nil {
 		if models.IsErrLoginSourceInUse(err) {
-			ctx.Flash.Error(ctx.Tr("admin.auths.still_in_used"))
+			c.Flash.Error(c.Tr("admin.auths.still_in_used"))
 		} else {
-			ctx.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
+			c.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
-		ctx.JSON(200, map[string]interface{}{
-			"redirect": setting.AppSubURL + "/admin/auths/" + ctx.Params(":authid"),
+		c.JSON(200, map[string]interface{}{
+			"redirect": setting.AppSubURL + "/admin/auths/" + c.Params(":authid"),
 		})
 		return
 	}
-	log.Trace("Authentication deleted by admin(%s): %d", ctx.User.Name, source.ID)
+	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, source.ID)
 
-	ctx.Flash.Success(ctx.Tr("admin.auths.deletion_success"))
-	ctx.JSON(200, map[string]interface{}{
+	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
+	c.JSON(200, map[string]interface{}{
 		"redirect": setting.AppSubURL + "/admin/auths",
 	})
 }

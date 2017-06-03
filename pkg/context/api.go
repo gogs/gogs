@@ -25,7 +25,7 @@ const DOC_URL = "https://github.com/gogits/go-gogs-client/wiki"
 
 // Error responses error message to client with given message.
 // If status is 500, also it prints error to log.
-func (ctx *APIContext) Error(status int, title string, obj interface{}) {
+func (c *APIContext) Error(status int, title string, obj interface{}) {
 	var message string
 	if err, ok := obj.(error); ok {
 		message = err.Error()
@@ -37,39 +37,39 @@ func (ctx *APIContext) Error(status int, title string, obj interface{}) {
 		log.Error(3, "%s: %s", title, message)
 	}
 
-	ctx.JSON(status, map[string]string{
+	c.JSON(status, map[string]string{
 		"message": message,
 		"url":     DOC_URL,
 	})
 }
 
 // SetLinkHeader sets pagination link header by given totol number and page size.
-func (ctx *APIContext) SetLinkHeader(total, pageSize int) {
-	page := paginater.New(total, pageSize, ctx.QueryInt("page"), 0)
+func (c *APIContext) SetLinkHeader(total, pageSize int) {
+	page := paginater.New(total, pageSize, c.QueryInt("page"), 0)
 	links := make([]string, 0, 4)
 	if page.HasNext() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", setting.AppURL, ctx.Req.URL.Path[1:], page.Next()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", setting.AppURL, c.Req.URL.Path[1:], page.Next()))
 	}
 	if !page.IsLast() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", setting.AppURL, ctx.Req.URL.Path[1:], page.TotalPages()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", setting.AppURL, c.Req.URL.Path[1:], page.TotalPages()))
 	}
 	if !page.IsFirst() {
-		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", setting.AppURL, ctx.Req.URL.Path[1:]))
+		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", setting.AppURL, c.Req.URL.Path[1:]))
 	}
 	if page.HasPrevious() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", setting.AppURL, ctx.Req.URL.Path[1:], page.Previous()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", setting.AppURL, c.Req.URL.Path[1:], page.Previous()))
 	}
 
 	if len(links) > 0 {
-		ctx.Header().Set("Link", strings.Join(links, ","))
+		c.Header().Set("Link", strings.Join(links, ","))
 	}
 }
 
 func APIContexter() macaron.Handler {
-	return func(c *Context) {
-		ctx := &APIContext{
-			Context: c,
+	return func(ctx *Context) {
+		c := &APIContext{
+			Context: ctx,
 		}
-		c.Map(ctx)
+		ctx.Map(c)
 	}
 }

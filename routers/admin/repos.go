@@ -17,12 +17,12 @@ const (
 	REPOS = "admin/repo/list"
 )
 
-func Repos(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.repositories")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminRepositories"] = true
+func Repos(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.repositories")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminRepositories"] = true
 
-	page := ctx.QueryInt("page")
+	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
@@ -33,11 +33,11 @@ func Repos(ctx *context.Context) {
 		err   error
 	)
 
-	keyword := ctx.Query("q")
+	keyword := c.Query("q")
 	if len(keyword) == 0 {
 		repos, err = models.Repositories(page, setting.UI.Admin.RepoPagingNum)
 		if err != nil {
-			ctx.Handle(500, "Repositories", err)
+			c.Handle(500, "Repositories", err)
 			return
 		}
 		count = models.CountRepositories(true)
@@ -50,38 +50,38 @@ func Repos(ctx *context.Context) {
 			PageSize: setting.UI.Admin.RepoPagingNum,
 		})
 		if err != nil {
-			ctx.Handle(500, "SearchRepositoryByName", err)
+			c.Handle(500, "SearchRepositoryByName", err)
 			return
 		}
 	}
-	ctx.Data["Keyword"] = keyword
-	ctx.Data["Total"] = count
-	ctx.Data["Page"] = paginater.New(int(count), setting.UI.Admin.RepoPagingNum, page, 5)
+	c.Data["Keyword"] = keyword
+	c.Data["Total"] = count
+	c.Data["Page"] = paginater.New(int(count), setting.UI.Admin.RepoPagingNum, page, 5)
 
 	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
-		ctx.Handle(500, "LoadAttributes", err)
+		c.Handle(500, "LoadAttributes", err)
 		return
 	}
-	ctx.Data["Repos"] = repos
+	c.Data["Repos"] = repos
 
-	ctx.HTML(200, REPOS)
+	c.HTML(200, REPOS)
 }
 
-func DeleteRepo(ctx *context.Context) {
-	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
+func DeleteRepo(c *context.Context) {
+	repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
 	if err != nil {
-		ctx.Handle(500, "GetRepositoryByID", err)
+		c.Handle(500, "GetRepositoryByID", err)
 		return
 	}
 
 	if err := models.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
-		ctx.Handle(500, "DeleteRepository", err)
+		c.Handle(500, "DeleteRepository", err)
 		return
 	}
 	log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
 
-	ctx.Flash.Success(ctx.Tr("repo.settings.deletion_success"))
-	ctx.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubURL + "/admin/repos?page=" + ctx.Query("page"),
+	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
+	c.JSON(200, map[string]interface{}{
+		"redirect": setting.AppSubURL + "/admin/repos?page=" + c.Query("page"),
 	})
 }

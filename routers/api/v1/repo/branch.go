@@ -13,43 +13,43 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#get-branch
-func GetBranch(ctx *context.APIContext) {
-	branch, err := ctx.Repo.Repository.GetBranch(ctx.Params("*"))
+func GetBranch(c *context.APIContext) {
+	branch, err := c.Repo.Repository.GetBranch(c.Params("*"))
 	if err != nil {
 		if models.IsErrBranchNotExist(err) {
-			ctx.Error(404, "GetBranch", err)
+			c.Error(404, "GetBranch", err)
 		} else {
-			ctx.Error(500, "GetBranch", err)
+			c.Error(500, "GetBranch", err)
 		}
 		return
 	}
 
-	c, err := branch.GetCommit()
+	commit, err := branch.GetCommit()
 	if err != nil {
-		ctx.Error(500, "GetCommit", err)
+		c.Error(500, "GetCommit", err)
 		return
 	}
 
-	ctx.JSON(200, convert.ToBranch(branch, c))
+	c.JSON(200, convert.ToBranch(branch, commit))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-branches
-func ListBranches(ctx *context.APIContext) {
-	branches, err := ctx.Repo.Repository.GetBranches()
+func ListBranches(c *context.APIContext) {
+	branches, err := c.Repo.Repository.GetBranches()
 	if err != nil {
-		ctx.Error(500, "GetBranches", err)
+		c.Error(500, "GetBranches", err)
 		return
 	}
 
 	apiBranches := make([]*api.Branch, len(branches))
 	for i := range branches {
-		c, err := branches[i].GetCommit()
+		commit, err := branches[i].GetCommit()
 		if err != nil {
-			ctx.Error(500, "GetCommit", err)
+			c.Error(500, "GetCommit", err)
 			return
 		}
-		apiBranches[i] = convert.ToBranch(branches[i], c)
+		apiBranches[i] = convert.ToBranch(branches[i], commit)
 	}
 
-	ctx.JSON(200, &apiBranches)
+	c.JSON(200, &apiBranches)
 }

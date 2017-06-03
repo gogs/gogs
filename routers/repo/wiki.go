@@ -24,14 +24,14 @@ const (
 	WIKI_PAGES = "repo/wiki/pages"
 )
 
-func MustEnableWiki(ctx *context.Context) {
-	if !ctx.Repo.Repository.EnableWiki {
-		ctx.Handle(404, "MustEnableWiki", nil)
+func MustEnableWiki(c *context.Context) {
+	if !c.Repo.Repository.EnableWiki {
+		c.Handle(404, "MustEnableWiki", nil)
 		return
 	}
 
-	if ctx.Repo.Repository.EnableExternalWiki {
-		ctx.Redirect(ctx.Repo.Repository.ExternalWikiURL)
+	if c.Repo.Repository.EnableExternalWiki {
+		c.Redirect(c.Repo.Repository.ExternalWikiURL)
 		return
 	}
 }
@@ -42,15 +42,15 @@ type PageMeta struct {
 	Updated time.Time
 }
 
-func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, string) {
-	wikiRepo, err := git.OpenRepository(ctx.Repo.Repository.WikiPath())
+func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, string) {
+	wikiRepo, err := git.OpenRepository(c.Repo.Repository.WikiPath())
 	if err != nil {
-		ctx.Handle(500, "OpenRepository", err)
+		c.Handle(500, "OpenRepository", err)
 		return nil, ""
 	}
 	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
-		ctx.Handle(500, "GetBranchCommit", err)
+		c.Handle(500, "GetBranchCommit", err)
 		return nil, ""
 	}
 
@@ -58,7 +58,7 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, str
 	if isViewPage {
 		entries, err := commit.ListEntries()
 		if err != nil {
-			ctx.Handle(500, "ListEntries", err)
+			c.Handle(500, "ListEntries", err)
 			return nil, ""
 		}
 		pages := make([]PageMeta, 0, len(entries))
@@ -71,204 +71,204 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, str
 				})
 			}
 		}
-		ctx.Data["Pages"] = pages
+		c.Data["Pages"] = pages
 	}
 
-	pageURL := ctx.Params(":page")
+	pageURL := c.Params(":page")
 	if len(pageURL) == 0 {
 		pageURL = "Home"
 	}
-	ctx.Data["PageURL"] = pageURL
+	c.Data["PageURL"] = pageURL
 
 	pageName := models.ToWikiPageName(pageURL)
-	ctx.Data["old_title"] = pageName
-	ctx.Data["Title"] = pageName
-	ctx.Data["title"] = pageName
-	ctx.Data["RequireHighlightJS"] = true
+	c.Data["old_title"] = pageName
+	c.Data["Title"] = pageName
+	c.Data["title"] = pageName
+	c.Data["RequireHighlightJS"] = true
 
 	blob, err := commit.GetBlobByPath(pageName + ".md")
 	if err != nil {
 		if git.IsErrNotExist(err) {
-			ctx.Redirect(ctx.Repo.RepoLink + "/wiki/_pages")
+			c.Redirect(c.Repo.RepoLink + "/wiki/_pages")
 		} else {
-			ctx.Handle(500, "GetBlobByPath", err)
+			c.Handle(500, "GetBlobByPath", err)
 		}
 		return nil, ""
 	}
 	r, err := blob.Data()
 	if err != nil {
-		ctx.Handle(500, "Data", err)
+		c.Handle(500, "Data", err)
 		return nil, ""
 	}
 	data, err := ioutil.ReadAll(r)
 	if err != nil {
-		ctx.Handle(500, "ReadAll", err)
+		c.Handle(500, "ReadAll", err)
 		return nil, ""
 	}
 	if isViewPage {
-		ctx.Data["content"] = string(markup.Markdown(data, ctx.Repo.RepoLink, ctx.Repo.Repository.ComposeMetas()))
+		c.Data["content"] = string(markup.Markdown(data, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
 	} else {
-		ctx.Data["content"] = string(data)
+		c.Data["content"] = string(data)
 	}
 
 	return wikiRepo, pageName
 }
 
-func Wiki(ctx *context.Context) {
-	ctx.Data["PageIsWiki"] = true
+func Wiki(c *context.Context) {
+	c.Data["PageIsWiki"] = true
 
-	if !ctx.Repo.Repository.HasWiki() {
-		ctx.Data["Title"] = ctx.Tr("repo.wiki")
-		ctx.HTML(200, WIKI_START)
+	if !c.Repo.Repository.HasWiki() {
+		c.Data["Title"] = c.Tr("repo.wiki")
+		c.HTML(200, WIKI_START)
 		return
 	}
 
-	wikiRepo, pageName := renderWikiPage(ctx, true)
-	if ctx.Written() {
+	wikiRepo, pageName := renderWikiPage(c, true)
+	if c.Written() {
 		return
 	}
 
 	// Get last change information.
 	lastCommit, err := wikiRepo.GetCommitByPath(pageName + ".md")
 	if err != nil {
-		ctx.Handle(500, "GetCommitByPath", err)
+		c.Handle(500, "GetCommitByPath", err)
 		return
 	}
-	ctx.Data["Author"] = lastCommit.Author
+	c.Data["Author"] = lastCommit.Author
 
-	ctx.HTML(200, WIKI_VIEW)
+	c.HTML(200, WIKI_VIEW)
 }
 
-func WikiPages(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.wiki.pages")
-	ctx.Data["PageIsWiki"] = true
+func WikiPages(c *context.Context) {
+	c.Data["Title"] = c.Tr("repo.wiki.pages")
+	c.Data["PageIsWiki"] = true
 
-	if !ctx.Repo.Repository.HasWiki() {
-		ctx.Redirect(ctx.Repo.RepoLink + "/wiki")
+	if !c.Repo.Repository.HasWiki() {
+		c.Redirect(c.Repo.RepoLink + "/wiki")
 		return
 	}
 
-	wikiRepo, err := git.OpenRepository(ctx.Repo.Repository.WikiPath())
+	wikiRepo, err := git.OpenRepository(c.Repo.Repository.WikiPath())
 	if err != nil {
-		ctx.Handle(500, "OpenRepository", err)
+		c.Handle(500, "OpenRepository", err)
 		return
 	}
 	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
-		ctx.Handle(500, "GetBranchCommit", err)
+		c.Handle(500, "GetBranchCommit", err)
 		return
 	}
 
 	entries, err := commit.ListEntries()
 	if err != nil {
-		ctx.Handle(500, "ListEntries", err)
+		c.Handle(500, "ListEntries", err)
 		return
 	}
 	pages := make([]PageMeta, 0, len(entries))
 	for i := range entries {
 		if entries[i].Type == git.OBJECT_BLOB && strings.HasSuffix(entries[i].Name(), ".md") {
-			c, err := wikiRepo.GetCommitByPath(entries[i].Name())
+			commit, err := wikiRepo.GetCommitByPath(entries[i].Name())
 			if err != nil {
-				ctx.Handle(500, "GetCommit", err)
+				c.ServerError("GetCommitByPath", err)
 				return
 			}
 			name := strings.TrimSuffix(entries[i].Name(), ".md")
 			pages = append(pages, PageMeta{
 				Name:    name,
 				URL:     models.ToWikiPageURL(name),
-				Updated: c.Author.When,
+				Updated: commit.Author.When,
 			})
 		}
 	}
-	ctx.Data["Pages"] = pages
+	c.Data["Pages"] = pages
 
-	ctx.HTML(200, WIKI_PAGES)
+	c.HTML(200, WIKI_PAGES)
 }
 
-func NewWiki(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
-	ctx.Data["PageIsWiki"] = true
-	ctx.Data["RequireSimpleMDE"] = true
+func NewWiki(c *context.Context) {
+	c.Data["Title"] = c.Tr("repo.wiki.new_page")
+	c.Data["PageIsWiki"] = true
+	c.Data["RequireSimpleMDE"] = true
 
-	if !ctx.Repo.Repository.HasWiki() {
-		ctx.Data["title"] = "Home"
+	if !c.Repo.Repository.HasWiki() {
+		c.Data["title"] = "Home"
 	}
 
-	ctx.HTML(200, WIKI_NEW)
+	c.HTML(200, WIKI_NEW)
 }
 
-func NewWikiPost(ctx *context.Context, f form.NewWiki) {
-	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
-	ctx.Data["PageIsWiki"] = true
-	ctx.Data["RequireSimpleMDE"] = true
+func NewWikiPost(c *context.Context, f form.NewWiki) {
+	c.Data["Title"] = c.Tr("repo.wiki.new_page")
+	c.Data["PageIsWiki"] = true
+	c.Data["RequireSimpleMDE"] = true
 
-	if ctx.HasError() {
-		ctx.HTML(200, WIKI_NEW)
+	if c.HasError() {
+		c.HTML(200, WIKI_NEW)
 		return
 	}
 
-	if err := ctx.Repo.Repository.AddWikiPage(ctx.User, f.Title, f.Content, f.Message); err != nil {
+	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
 		if models.IsErrWikiAlreadyExist(err) {
-			ctx.Data["Err_Title"] = true
-			ctx.RenderWithErr(ctx.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
+			c.Data["Err_Title"] = true
+			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
 		} else {
-			ctx.Handle(500, "AddWikiPage", err)
+			c.Handle(500, "AddWikiPage", err)
 		}
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
+	c.Redirect(c.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
 }
 
-func EditWiki(ctx *context.Context) {
-	ctx.Data["PageIsWiki"] = true
-	ctx.Data["PageIsWikiEdit"] = true
-	ctx.Data["RequireSimpleMDE"] = true
+func EditWiki(c *context.Context) {
+	c.Data["PageIsWiki"] = true
+	c.Data["PageIsWikiEdit"] = true
+	c.Data["RequireSimpleMDE"] = true
 
-	if !ctx.Repo.Repository.HasWiki() {
-		ctx.Redirect(ctx.Repo.RepoLink + "/wiki")
+	if !c.Repo.Repository.HasWiki() {
+		c.Redirect(c.Repo.RepoLink + "/wiki")
 		return
 	}
 
-	renderWikiPage(ctx, false)
-	if ctx.Written() {
+	renderWikiPage(c, false)
+	if c.Written() {
 		return
 	}
 
-	ctx.HTML(200, WIKI_NEW)
+	c.HTML(200, WIKI_NEW)
 }
 
-func EditWikiPost(ctx *context.Context, f form.NewWiki) {
-	ctx.Data["Title"] = ctx.Tr("repo.wiki.new_page")
-	ctx.Data["PageIsWiki"] = true
-	ctx.Data["RequireSimpleMDE"] = true
+func EditWikiPost(c *context.Context, f form.NewWiki) {
+	c.Data["Title"] = c.Tr("repo.wiki.new_page")
+	c.Data["PageIsWiki"] = true
+	c.Data["RequireSimpleMDE"] = true
 
-	if ctx.HasError() {
-		ctx.HTML(200, WIKI_NEW)
+	if c.HasError() {
+		c.HTML(200, WIKI_NEW)
 		return
 	}
 
-	if err := ctx.Repo.Repository.EditWikiPage(ctx.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
-		ctx.Handle(500, "EditWikiPage", err)
+	if err := c.Repo.Repository.EditWikiPage(c.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
+		c.Handle(500, "EditWikiPage", err)
 		return
 	}
 
-	ctx.Redirect(ctx.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
+	c.Redirect(c.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
 }
 
-func DeleteWikiPagePost(ctx *context.Context) {
-	pageURL := ctx.Params(":page")
+func DeleteWikiPagePost(c *context.Context) {
+	pageURL := c.Params(":page")
 	if len(pageURL) == 0 {
 		pageURL = "Home"
 	}
 
 	pageName := models.ToWikiPageName(pageURL)
-	if err := ctx.Repo.Repository.DeleteWikiPage(ctx.User, pageName); err != nil {
-		ctx.Handle(500, "DeleteWikiPage", err)
+	if err := c.Repo.Repository.DeleteWikiPage(c.User, pageName); err != nil {
+		c.Handle(500, "DeleteWikiPage", err)
 		return
 	}
 
-	ctx.JSON(200, map[string]interface{}{
-		"redirect": ctx.Repo.RepoLink + "/wiki/",
+	c.JSON(200, map[string]interface{}{
+		"redirect": c.Repo.RepoLink + "/wiki/",
 	})
 }

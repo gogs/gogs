@@ -14,11 +14,11 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 )
 
-func Search(ctx *context.APIContext) {
+func Search(c *context.APIContext) {
 	opts := &models.SearchUserOptions{
-		Keyword:  ctx.Query("q"),
+		Keyword:  c.Query("q"),
 		Type:     models.USER_TYPE_INDIVIDUAL,
-		PageSize: com.StrTo(ctx.Query("limit")).MustInt(),
+		PageSize: com.StrTo(c.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {
 		opts.PageSize = 10
@@ -26,7 +26,7 @@ func Search(ctx *context.APIContext) {
 
 	users, _, err := models.SearchUserByName(opts)
 	if err != nil {
-		ctx.JSON(500, map[string]interface{}{
+		c.JSON(500, map[string]interface{}{
 			"ok":    false,
 			"error": err.Error(),
 		})
@@ -41,35 +41,35 @@ func Search(ctx *context.APIContext) {
 			AvatarUrl: users[i].AvatarLink(),
 			FullName:  users[i].FullName,
 		}
-		if ctx.IsLogged {
+		if c.IsLogged {
 			results[i].Email = users[i].Email
 		}
 	}
 
-	ctx.JSON(200, map[string]interface{}{
+	c.JSON(200, map[string]interface{}{
 		"ok":   true,
 		"data": results,
 	})
 }
 
-func GetInfo(ctx *context.APIContext) {
-	u, err := models.GetUserByName(ctx.Params(":username"))
+func GetInfo(c *context.APIContext) {
+	u, err := models.GetUserByName(c.Params(":username"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetUserByName", err)
+			c.Error(500, "GetUserByName", err)
 		}
 		return
 	}
 
 	// Hide user e-mail when API caller isn't signed in.
-	if !ctx.IsLogged {
+	if !c.IsLogged {
 		u.Email = ""
 	}
-	ctx.JSON(200, u.APIFormat())
+	c.JSON(200, u.APIFormat())
 }
 
-func GetAuthenticatedUser(ctx *context.APIContext) {
-	ctx.JSON(200, ctx.User.APIFormat())
+func GetAuthenticatedUser(c *context.APIContext) {
+	c.JSON(200, c.User.APIFormat())
 }

@@ -26,16 +26,16 @@ type Branch struct {
 	IsProtected bool
 }
 
-func loadBranches(ctx *context.Context) []*Branch {
-	rawBranches, err := ctx.Repo.Repository.GetBranches()
+func loadBranches(c *context.Context) []*Branch {
+	rawBranches, err := c.Repo.Repository.GetBranches()
 	if err != nil {
-		ctx.Handle(500, "GetBranches", err)
+		c.Handle(500, "GetBranches", err)
 		return nil
 	}
 
-	protectBranches, err := models.GetProtectBranchesByRepoID(ctx.Repo.Repository.ID)
+	protectBranches, err := models.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		ctx.Handle(500, "GetProtectBranchesByRepoID", err)
+		c.Handle(500, "GetProtectBranchesByRepoID", err)
 		return nil
 	}
 
@@ -43,7 +43,7 @@ func loadBranches(ctx *context.Context) []*Branch {
 	for i := range rawBranches {
 		commit, err := rawBranches[i].GetCommit()
 		if err != nil {
-			ctx.Handle(500, "GetCommit", err)
+			c.Handle(500, "GetCommit", err)
 			return nil
 		}
 
@@ -60,16 +60,16 @@ func loadBranches(ctx *context.Context) []*Branch {
 		}
 	}
 
-	ctx.Data["AllowPullRequest"] = ctx.Repo.Repository.AllowsPulls()
+	c.Data["AllowPullRequest"] = c.Repo.Repository.AllowsPulls()
 	return branches
 }
 
-func Branches(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.git_branches")
-	ctx.Data["PageIsBranchesOverview"] = true
+func Branches(c *context.Context) {
+	c.Data["Title"] = c.Tr("repo.git_branches")
+	c.Data["PageIsBranchesOverview"] = true
 
-	branches := loadBranches(ctx)
-	if ctx.Written() {
+	branches := loadBranches(c)
+	if c.Written() {
 		return
 	}
 
@@ -78,8 +78,8 @@ func Branches(ctx *context.Context) {
 	staleBranches := make([]*Branch, 0, 3)
 	for i := range branches {
 		switch {
-		case branches[i].Name == ctx.Repo.BranchName:
-			ctx.Data["DefaultBranch"] = branches[i]
+		case branches[i].Name == c.Repo.BranchName:
+			c.Data["DefaultBranch"] = branches[i]
 		case branches[i].Commit.Committer.When.Add(30 * 24 * time.Hour).After(now): // 30 days
 			activeBranches = append(activeBranches, branches[i])
 		case branches[i].Commit.Committer.When.Add(3 * 30 * 24 * time.Hour).Before(now): // 90 days
@@ -87,53 +87,53 @@ func Branches(ctx *context.Context) {
 		}
 	}
 
-	ctx.Data["ActiveBranches"] = activeBranches
-	ctx.Data["StaleBranches"] = staleBranches
-	ctx.HTML(200, BRANCHES_OVERVIEW)
+	c.Data["ActiveBranches"] = activeBranches
+	c.Data["StaleBranches"] = staleBranches
+	c.HTML(200, BRANCHES_OVERVIEW)
 }
 
-func AllBranches(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.git_branches")
-	ctx.Data["PageIsBranchesAll"] = true
+func AllBranches(c *context.Context) {
+	c.Data["Title"] = c.Tr("repo.git_branches")
+	c.Data["PageIsBranchesAll"] = true
 
-	branches := loadBranches(ctx)
-	if ctx.Written() {
+	branches := loadBranches(c)
+	if c.Written() {
 		return
 	}
-	ctx.Data["Branches"] = branches
+	c.Data["Branches"] = branches
 
-	ctx.HTML(200, BRANCHES_ALL)
+	c.HTML(200, BRANCHES_ALL)
 }
 
-func DeleteBranchPost(ctx *context.Context) {
-	branchName := ctx.Params("*")
-	commitID := ctx.Query("commit")
+func DeleteBranchPost(c *context.Context) {
+	branchName := c.Params("*")
+	commitID := c.Query("commit")
 
 	defer func() {
-		redirectTo := ctx.Query("redirect_to")
+		redirectTo := c.Query("redirect_to")
 		if len(redirectTo) == 0 {
-			redirectTo = ctx.Repo.RepoLink
+			redirectTo = c.Repo.RepoLink
 		}
-		ctx.Redirect(redirectTo)
+		c.Redirect(redirectTo)
 	}()
 
-	if !ctx.Repo.GitRepo.IsBranchExist(branchName) {
+	if !c.Repo.GitRepo.IsBranchExist(branchName) {
 		return
 	}
 	if len(commitID) > 0 {
-		branchCommitID, err := ctx.Repo.GitRepo.GetBranchCommitID(branchName)
+		branchCommitID, err := c.Repo.GitRepo.GetBranchCommitID(branchName)
 		if err != nil {
 			log.Error(2, "GetBranchCommitID: %v", err)
 			return
 		}
 
 		if branchCommitID != commitID {
-			ctx.Flash.Error(ctx.Tr("repo.pulls.delete_branch_has_new_commits"))
+			c.Flash.Error(c.Tr("repo.pulls.delete_branch_has_new_commits"))
 			return
 		}
 	}
 
-	if err := ctx.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
+	if err := c.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
 		Force: true,
 	}); err != nil {
 		log.Error(2, "DeleteBranch '%s': %v", branchName, err)

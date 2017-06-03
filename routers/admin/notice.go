@@ -18,31 +18,31 @@ const (
 	NOTICES = "admin/notice"
 )
 
-func Notices(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("admin.notices")
-	ctx.Data["PageIsAdmin"] = true
-	ctx.Data["PageIsAdminNotices"] = true
+func Notices(c *context.Context) {
+	c.Data["Title"] = c.Tr("admin.notices")
+	c.Data["PageIsAdmin"] = true
+	c.Data["PageIsAdminNotices"] = true
 
 	total := models.CountNotices()
-	page := ctx.QueryInt("page")
+	page := c.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	}
-	ctx.Data["Page"] = paginater.New(int(total), setting.UI.Admin.NoticePagingNum, page, 5)
+	c.Data["Page"] = paginater.New(int(total), setting.UI.Admin.NoticePagingNum, page, 5)
 
 	notices, err := models.Notices(page, setting.UI.Admin.NoticePagingNum)
 	if err != nil {
-		ctx.Handle(500, "Notices", err)
+		c.Handle(500, "Notices", err)
 		return
 	}
-	ctx.Data["Notices"] = notices
+	c.Data["Notices"] = notices
 
-	ctx.Data["Total"] = total
-	ctx.HTML(200, NOTICES)
+	c.Data["Total"] = total
+	c.HTML(200, NOTICES)
 }
 
-func DeleteNotices(ctx *context.Context) {
-	strs := ctx.QueryStrings("ids[]")
+func DeleteNotices(c *context.Context) {
+	strs := c.QueryStrings("ids[]")
 	ids := make([]int64, 0, len(strs))
 	for i := range strs {
 		id := com.StrTo(strs[i]).MustInt64()
@@ -52,21 +52,21 @@ func DeleteNotices(ctx *context.Context) {
 	}
 
 	if err := models.DeleteNoticesByIDs(ids); err != nil {
-		ctx.Flash.Error("DeleteNoticesByIDs: " + err.Error())
-		ctx.Status(500)
+		c.Flash.Error("DeleteNoticesByIDs: " + err.Error())
+		c.Status(500)
 	} else {
-		ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
-		ctx.Status(200)
+		c.Flash.Success(c.Tr("admin.notices.delete_success"))
+		c.Status(200)
 	}
 }
 
-func EmptyNotices(ctx *context.Context) {
+func EmptyNotices(c *context.Context) {
 	if err := models.DeleteNotices(0, 0); err != nil {
-		ctx.Handle(500, "DeleteNotices", err)
+		c.Handle(500, "DeleteNotices", err)
 		return
 	}
 
-	log.Trace("System notices deleted by admin (%s): [start: %d]", ctx.User.Name, 0)
-	ctx.Flash.Success(ctx.Tr("admin.notices.delete_success"))
-	ctx.Redirect(setting.AppSubURL + "/admin/notices")
+	log.Trace("System notices deleted by admin (%s): [start: %d]", c.User.Name, 0)
+	c.Flash.Success(c.Tr("admin.notices.delete_success"))
+	c.Redirect(setting.AppSubURL + "/admin/notices")
 }

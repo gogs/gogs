@@ -108,7 +108,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 
 // [0]: issues, [1]: wiki
 func RepoAssignment(pages ...bool) macaron.Handler {
-	return func(ctx *Context) {
+	return func(c *Context) {
 		var (
 			owner        *models.User
 			err          error
@@ -123,53 +123,53 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			isWikiPage = pages[1]
 		}
 
-		ownerName := ctx.Params(":username")
-		repoName := strings.TrimSuffix(ctx.Params(":reponame"), ".git")
-		refName := ctx.Params(":branchname")
+		ownerName := c.Params(":username")
+		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
+		refName := c.Params(":branchname")
 		if len(refName) == 0 {
-			refName = ctx.Params(":path")
+			refName = c.Params(":path")
 		}
 
 		// Check if the user is the same as the repository owner
-		if ctx.IsLogged && ctx.User.LowerName == strings.ToLower(ownerName) {
-			owner = ctx.User
+		if c.IsLogged && c.User.LowerName == strings.ToLower(ownerName) {
+			owner = c.User
 		} else {
 			owner, err = models.GetUserByName(ownerName)
 			if err != nil {
-				ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
 			}
 		}
-		ctx.Repo.Owner = owner
-		ctx.Data["Username"] = ctx.Repo.Owner.Name
+		c.Repo.Owner = owner
+		c.Data["Username"] = c.Repo.Owner.Name
 
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			ctx.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
+			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
 		}
 
-		ctx.Repo.Repository = repo
-		ctx.Data["RepoName"] = ctx.Repo.Repository.Name
-		ctx.Data["IsBareRepo"] = ctx.Repo.Repository.IsBare
-		ctx.Repo.RepoLink = repo.Link()
-		ctx.Data["RepoLink"] = ctx.Repo.RepoLink
-		ctx.Data["RepoRelPath"] = ctx.Repo.Owner.Name + "/" + ctx.Repo.Repository.Name
+		c.Repo.Repository = repo
+		c.Data["RepoName"] = c.Repo.Repository.Name
+		c.Data["IsBareRepo"] = c.Repo.Repository.IsBare
+		c.Repo.RepoLink = repo.Link()
+		c.Data["RepoLink"] = c.Repo.RepoLink
+		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
 
 		// Admin has super access.
-		if ctx.IsLogged && ctx.User.IsAdmin {
-			ctx.Repo.AccessMode = models.ACCESS_MODE_OWNER
+		if c.IsLogged && c.User.IsAdmin {
+			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
-			mode, err := models.AccessLevel(ctx.UserID(), repo)
+			mode, err := models.AccessLevel(c.UserID(), repo)
 			if err != nil {
-				ctx.ServerError("AccessLevel", err)
+				c.ServerError("AccessLevel", err)
 				return
 			}
-			ctx.Repo.AccessMode = mode
+			c.Repo.AccessMode = mode
 		}
 
 		// Check access
-		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
+		if c.Repo.AccessMode == models.ACCESS_MODE_NONE {
 			// Redirect to any accessible page if not yet on it
 			if repo.IsPartialPublic() &&
 				(!(isIssuesPage || isWikiPage) ||
@@ -177,11 +177,11 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 					(isWikiPage && !repo.CanGuestViewWiki())) {
 				switch {
 				case repo.CanGuestViewIssues():
-					ctx.Redirect(repo.Link() + "/issues")
+					c.Redirect(repo.Link() + "/issues")
 				case repo.CanGuestViewWiki():
-					ctx.Redirect(repo.Link() + "/wiki")
+					c.Redirect(repo.Link() + "/wiki")
 				default:
-					ctx.NotFound()
+					c.NotFound()
 				}
 				return
 			}
@@ -190,92 +190,92 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			if !repo.IsPartialPublic() ||
 				(isIssuesPage && !repo.CanGuestViewIssues()) ||
 				(isWikiPage && !repo.CanGuestViewWiki()) {
-				ctx.NotFound()
+				c.NotFound()
 				return
 			}
 
-			ctx.Repo.Repository.EnableIssues = repo.CanGuestViewIssues()
-			ctx.Repo.Repository.EnableWiki = repo.CanGuestViewWiki()
+			c.Repo.Repository.EnableIssues = repo.CanGuestViewIssues()
+			c.Repo.Repository.EnableWiki = repo.CanGuestViewWiki()
 		}
 
 		if repo.IsMirror {
-			ctx.Repo.Mirror, err = models.GetMirrorByRepoID(repo.ID)
+			c.Repo.Mirror, err = models.GetMirrorByRepoID(repo.ID)
 			if err != nil {
-				ctx.Handle(500, "GetMirror", err)
+				c.ServerError("GetMirror", err)
 				return
 			}
-			ctx.Data["MirrorEnablePrune"] = ctx.Repo.Mirror.EnablePrune
-			ctx.Data["MirrorInterval"] = ctx.Repo.Mirror.Interval
-			ctx.Data["Mirror"] = ctx.Repo.Mirror
+			c.Data["MirrorEnablePrune"] = c.Repo.Mirror.EnablePrune
+			c.Data["MirrorInterval"] = c.Repo.Mirror.Interval
+			c.Data["Mirror"] = c.Repo.Mirror
 		}
 
 		gitRepo, err := git.OpenRepository(models.RepoPath(ownerName, repoName))
 		if err != nil {
-			ctx.Handle(500, "RepoAssignment Invalid repo "+models.RepoPath(ownerName, repoName), err)
+			c.ServerError(fmt.Sprintf("RepoAssignment Invalid repo '%s'", c.Repo.Repository.RepoPath()), err)
 			return
 		}
-		ctx.Repo.GitRepo = gitRepo
+		c.Repo.GitRepo = gitRepo
 
-		tags, err := ctx.Repo.GitRepo.GetTags()
+		tags, err := c.Repo.GitRepo.GetTags()
 		if err != nil {
-			ctx.Handle(500, fmt.Sprintf("GetTags '%s'", ctx.Repo.Repository.RepoPath()), err)
+			c.ServerError(fmt.Sprintf("GetTags '%s'", c.Repo.Repository.RepoPath()), err)
 			return
 		}
-		ctx.Data["Tags"] = tags
-		ctx.Repo.Repository.NumTags = len(tags)
+		c.Data["Tags"] = tags
+		c.Repo.Repository.NumTags = len(tags)
 
-		ctx.Data["Title"] = owner.Name + "/" + repo.Name
-		ctx.Data["Repository"] = repo
-		ctx.Data["Owner"] = ctx.Repo.Repository.Owner
-		ctx.Data["IsRepositoryOwner"] = ctx.Repo.IsOwner()
-		ctx.Data["IsRepositoryAdmin"] = ctx.Repo.IsAdmin()
-		ctx.Data["IsRepositoryWriter"] = ctx.Repo.IsWriter()
+		c.Data["Title"] = owner.Name + "/" + repo.Name
+		c.Data["Repository"] = repo
+		c.Data["Owner"] = c.Repo.Repository.Owner
+		c.Data["IsRepositoryOwner"] = c.Repo.IsOwner()
+		c.Data["IsRepositoryAdmin"] = c.Repo.IsAdmin()
+		c.Data["IsRepositoryWriter"] = c.Repo.IsWriter()
 
-		ctx.Data["DisableSSH"] = setting.SSH.Disabled
-		ctx.Data["DisableHTTP"] = setting.Repository.DisableHTTPGit
-		ctx.Data["CloneLink"] = repo.CloneLink()
-		ctx.Data["WikiCloneLink"] = repo.WikiCloneLink()
+		c.Data["DisableSSH"] = setting.SSH.Disabled
+		c.Data["DisableHTTP"] = setting.Repository.DisableHTTPGit
+		c.Data["CloneLink"] = repo.CloneLink()
+		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
-		if ctx.IsLogged {
-			ctx.Data["IsWatchingRepo"] = models.IsWatching(ctx.User.ID, repo.ID)
-			ctx.Data["IsStaringRepo"] = models.IsStaring(ctx.User.ID, repo.ID)
+		if c.IsLogged {
+			c.Data["IsWatchingRepo"] = models.IsWatching(c.User.ID, repo.ID)
+			c.Data["IsStaringRepo"] = models.IsStaring(c.User.ID, repo.ID)
 		}
 
 		// repo is bare and display enable
-		if ctx.Repo.Repository.IsBare {
+		if c.Repo.Repository.IsBare {
 			return
 		}
 
-		ctx.Data["TagName"] = ctx.Repo.TagName
-		brs, err := ctx.Repo.GitRepo.GetBranches()
+		c.Data["TagName"] = c.Repo.TagName
+		brs, err := c.Repo.GitRepo.GetBranches()
 		if err != nil {
-			ctx.Handle(500, "GetBranches", err)
+			c.ServerError("GetBranches", err)
 			return
 		}
-		ctx.Data["Branches"] = brs
-		ctx.Data["BrancheCount"] = len(brs)
+		c.Data["Branches"] = brs
+		c.Data["BrancheCount"] = len(brs)
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
-		if len(ctx.Repo.BranchName) == 0 {
-			if len(ctx.Repo.Repository.DefaultBranch) > 0 && gitRepo.IsBranchExist(ctx.Repo.Repository.DefaultBranch) {
-				ctx.Repo.BranchName = ctx.Repo.Repository.DefaultBranch
+		if len(c.Repo.BranchName) == 0 {
+			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.IsBranchExist(c.Repo.Repository.DefaultBranch) {
+				c.Repo.BranchName = c.Repo.Repository.DefaultBranch
 			} else if len(brs) > 0 {
-				ctx.Repo.BranchName = brs[0]
+				c.Repo.BranchName = brs[0]
 			}
 		}
-		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["CommitID"] = ctx.Repo.CommitID
+		c.Data["BranchName"] = c.Repo.BranchName
+		c.Data["CommitID"] = c.Repo.CommitID
 
-		ctx.Data["IsGuest"] = !ctx.Repo.HasAccess()
+		c.Data["IsGuest"] = !c.Repo.HasAccess()
 	}
 }
 
 // RepoRef handles repository reference name including those contain `/`.
 func RepoRef() macaron.Handler {
-	return func(ctx *Context) {
+	return func(c *Context) {
 		// Empty repository does not have reference information.
-		if ctx.Repo.Repository.IsBare {
+		if c.Repo.Repository.IsBare {
 			return
 		}
 
@@ -285,44 +285,44 @@ func RepoRef() macaron.Handler {
 		)
 
 		// For API calls.
-		if ctx.Repo.GitRepo == nil {
-			repoPath := models.RepoPath(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
-			ctx.Repo.GitRepo, err = git.OpenRepository(repoPath)
+		if c.Repo.GitRepo == nil {
+			repoPath := models.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
+			c.Repo.GitRepo, err = git.OpenRepository(repoPath)
 			if err != nil {
-				ctx.Handle(500, "RepoRef Invalid repo "+repoPath, err)
+				c.Handle(500, "RepoRef Invalid repo "+repoPath, err)
 				return
 			}
 		}
 
 		// Get default branch.
-		if len(ctx.Params("*")) == 0 {
-			refName = ctx.Repo.Repository.DefaultBranch
-			if !ctx.Repo.GitRepo.IsBranchExist(refName) {
-				brs, err := ctx.Repo.GitRepo.GetBranches()
+		if len(c.Params("*")) == 0 {
+			refName = c.Repo.Repository.DefaultBranch
+			if !c.Repo.GitRepo.IsBranchExist(refName) {
+				brs, err := c.Repo.GitRepo.GetBranches()
 				if err != nil {
-					ctx.Handle(500, "GetBranches", err)
+					c.Handle(500, "GetBranches", err)
 					return
 				}
 				refName = brs[0]
 			}
-			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName)
+			c.Repo.Commit, err = c.Repo.GitRepo.GetBranchCommit(refName)
 			if err != nil {
-				ctx.Handle(500, "GetBranchCommit", err)
+				c.Handle(500, "GetBranchCommit", err)
 				return
 			}
-			ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
-			ctx.Repo.IsViewBranch = true
+			c.Repo.CommitID = c.Repo.Commit.ID.String()
+			c.Repo.IsViewBranch = true
 
 		} else {
 			hasMatched := false
-			parts := strings.Split(ctx.Params("*"), "/")
+			parts := strings.Split(c.Params("*"), "/")
 			for i, part := range parts {
 				refName = strings.TrimPrefix(refName+"/"+part, "/")
 
-				if ctx.Repo.GitRepo.IsBranchExist(refName) ||
-					ctx.Repo.GitRepo.IsTagExist(refName) {
+				if c.Repo.GitRepo.IsBranchExist(refName) ||
+					c.Repo.GitRepo.IsTagExist(refName) {
 					if i < len(parts)-1 {
-						ctx.Repo.TreePath = strings.Join(parts[i+1:], "/")
+						c.Repo.TreePath = strings.Join(parts[i+1:], "/")
 					}
 					hasMatched = true
 					break
@@ -330,97 +330,97 @@ func RepoRef() macaron.Handler {
 			}
 			if !hasMatched && len(parts[0]) == 40 {
 				refName = parts[0]
-				ctx.Repo.TreePath = strings.Join(parts[1:], "/")
+				c.Repo.TreePath = strings.Join(parts[1:], "/")
 			}
 
-			if ctx.Repo.GitRepo.IsBranchExist(refName) {
-				ctx.Repo.IsViewBranch = true
+			if c.Repo.GitRepo.IsBranchExist(refName) {
+				c.Repo.IsViewBranch = true
 
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.GetBranchCommit(refName)
 				if err != nil {
-					ctx.Handle(500, "GetBranchCommit", err)
+					c.Handle(500, "GetBranchCommit", err)
 					return
 				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
+				c.Repo.CommitID = c.Repo.Commit.ID.String()
 
-			} else if ctx.Repo.GitRepo.IsTagExist(refName) {
-				ctx.Repo.IsViewTag = true
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetTagCommit(refName)
+			} else if c.Repo.GitRepo.IsTagExist(refName) {
+				c.Repo.IsViewTag = true
+				c.Repo.Commit, err = c.Repo.GitRepo.GetTagCommit(refName)
 				if err != nil {
-					ctx.Handle(500, "GetTagCommit", err)
+					c.Handle(500, "GetTagCommit", err)
 					return
 				}
-				ctx.Repo.CommitID = ctx.Repo.Commit.ID.String()
+				c.Repo.CommitID = c.Repo.Commit.ID.String()
 			} else if len(refName) == 40 {
-				ctx.Repo.IsViewCommit = true
-				ctx.Repo.CommitID = refName
+				c.Repo.IsViewCommit = true
+				c.Repo.CommitID = refName
 
-				ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetCommit(refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.GetCommit(refName)
 				if err != nil {
-					ctx.NotFound()
+					c.NotFound()
 					return
 				}
 			} else {
-				ctx.Handle(404, "RepoRef invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
+				c.Handle(404, "RepoRef invalid repo", fmt.Errorf("branch or tag not exist: %s", refName))
 				return
 			}
 		}
 
-		ctx.Repo.BranchName = refName
-		ctx.Data["BranchName"] = ctx.Repo.BranchName
-		ctx.Data["CommitID"] = ctx.Repo.CommitID
-		ctx.Data["TreePath"] = ctx.Repo.TreePath
-		ctx.Data["IsViewBranch"] = ctx.Repo.IsViewBranch
-		ctx.Data["IsViewTag"] = ctx.Repo.IsViewTag
-		ctx.Data["IsViewCommit"] = ctx.Repo.IsViewCommit
+		c.Repo.BranchName = refName
+		c.Data["BranchName"] = c.Repo.BranchName
+		c.Data["CommitID"] = c.Repo.CommitID
+		c.Data["TreePath"] = c.Repo.TreePath
+		c.Data["IsViewBranch"] = c.Repo.IsViewBranch
+		c.Data["IsViewTag"] = c.Repo.IsViewTag
+		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have fored repository can propose a new pull request.
-		if ctx.Repo.IsWriter() || (ctx.IsLogged && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)) {
+		if c.Repo.IsWriter() || (c.IsLogged && c.User.HasForkedRepo(c.Repo.Repository.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
-			if ctx.Repo.Repository.BaseRepo != nil {
-				if ctx.Repo.Repository.BaseRepo.AllowsPulls() {
-					ctx.Repo.PullRequest.Allowed = true
+			if c.Repo.Repository.BaseRepo != nil {
+				if c.Repo.Repository.BaseRepo.AllowsPulls() {
+					c.Repo.PullRequest.Allowed = true
 					// In-repository pull requests has higher priority than cross-repository if user is viewing
 					// base repository and 1) has write access to it 2) has forked it.
-					if ctx.Repo.IsWriter() {
-						ctx.Data["BaseRepo"] = ctx.Repo.Repository.BaseRepo
-						ctx.Repo.PullRequest.BaseRepo = ctx.Repo.Repository.BaseRepo
-						ctx.Repo.PullRequest.HeadInfo = ctx.Repo.Owner.Name + ":" + ctx.Repo.BranchName
+					if c.Repo.IsWriter() {
+						c.Data["BaseRepo"] = c.Repo.Repository.BaseRepo
+						c.Repo.PullRequest.BaseRepo = c.Repo.Repository.BaseRepo
+						c.Repo.PullRequest.HeadInfo = c.Repo.Owner.Name + ":" + c.Repo.BranchName
 					} else {
-						ctx.Data["BaseRepo"] = ctx.Repo.Repository
-						ctx.Repo.PullRequest.BaseRepo = ctx.Repo.Repository
-						ctx.Repo.PullRequest.HeadInfo = ctx.User.Name + ":" + ctx.Repo.BranchName
+						c.Data["BaseRepo"] = c.Repo.Repository
+						c.Repo.PullRequest.BaseRepo = c.Repo.Repository
+						c.Repo.PullRequest.HeadInfo = c.User.Name + ":" + c.Repo.BranchName
 					}
 				}
 			} else {
 				// Or, this is repository accepts pull requests between branches.
-				if ctx.Repo.Repository.AllowsPulls() {
-					ctx.Data["BaseRepo"] = ctx.Repo.Repository
-					ctx.Repo.PullRequest.BaseRepo = ctx.Repo.Repository
-					ctx.Repo.PullRequest.Allowed = true
-					ctx.Repo.PullRequest.SameRepo = true
-					ctx.Repo.PullRequest.HeadInfo = ctx.Repo.BranchName
+				if c.Repo.Repository.AllowsPulls() {
+					c.Data["BaseRepo"] = c.Repo.Repository
+					c.Repo.PullRequest.BaseRepo = c.Repo.Repository
+					c.Repo.PullRequest.Allowed = true
+					c.Repo.PullRequest.SameRepo = true
+					c.Repo.PullRequest.HeadInfo = c.Repo.BranchName
 				}
 			}
 		}
-		ctx.Data["PullRequestCtx"] = ctx.Repo.PullRequest
+		c.Data["PullRequestCtx"] = c.Repo.PullRequest
 	}
 }
 
 func RequireRepoAdmin() macaron.Handler {
-	return func(ctx *Context) {
-		if !ctx.IsLogged || (!ctx.Repo.IsAdmin() && !ctx.User.IsAdmin) {
-			ctx.NotFound()
+	return func(c *Context) {
+		if !c.IsLogged || (!c.Repo.IsAdmin() && !c.User.IsAdmin) {
+			c.NotFound()
 			return
 		}
 	}
 }
 
 func RequireRepoWriter() macaron.Handler {
-	return func(ctx *Context) {
-		if !ctx.IsLogged || (!ctx.Repo.IsWriter() && !ctx.User.IsAdmin) {
-			ctx.NotFound()
+	return func(c *Context) {
+		if !c.IsLogged || (!c.Repo.IsWriter() && !c.User.IsAdmin) {
+			c.NotFound()
 			return
 		}
 	}
@@ -428,9 +428,9 @@ func RequireRepoWriter() macaron.Handler {
 
 // GitHookService checks if repository Git hooks service has been enabled.
 func GitHookService() macaron.Handler {
-	return func(ctx *Context) {
-		if !ctx.User.CanEditGitHook() {
-			ctx.NotFound()
+	return func(c *Context) {
+		if !c.User.CanEditGitHook() {
+			c.NotFound()
 			return
 		}
 	}

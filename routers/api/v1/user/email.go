@@ -14,30 +14,30 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
-func ListEmails(ctx *context.APIContext) {
-	emails, err := models.GetEmailAddresses(ctx.User.ID)
+func ListEmails(c *context.APIContext) {
+	emails, err := models.GetEmailAddresses(c.User.ID)
 	if err != nil {
-		ctx.Error(500, "GetEmailAddresses", err)
+		c.Error(500, "GetEmailAddresses", err)
 		return
 	}
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
 		apiEmails[i] = convert.ToEmail(emails[i])
 	}
-	ctx.JSON(200, &apiEmails)
+	c.JSON(200, &apiEmails)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#add-email-addresses
-func AddEmail(ctx *context.APIContext, form api.CreateEmailOption) {
+func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
-		ctx.Status(422)
+		c.Status(422)
 		return
 	}
 
 	emails := make([]*models.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &models.EmailAddress{
-			UID:         ctx.User.ID,
+			UID:         c.User.ID,
 			Email:       form.Emails[i],
 			IsActivated: !setting.Service.RegisterEmailConfirm,
 		}
@@ -45,9 +45,9 @@ func AddEmail(ctx *context.APIContext, form api.CreateEmailOption) {
 
 	if err := models.AddEmailAddresses(emails); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
-			ctx.Error(422, "", "Email address has been used: "+err.(models.ErrEmailAlreadyUsed).Email)
+			c.Error(422, "", "Email address has been used: "+err.(models.ErrEmailAlreadyUsed).Email)
 		} else {
-			ctx.Error(500, "AddEmailAddresses", err)
+			c.Error(500, "AddEmailAddresses", err)
 		}
 		return
 	}
@@ -56,27 +56,27 @@ func AddEmail(ctx *context.APIContext, form api.CreateEmailOption) {
 	for i := range emails {
 		apiEmails[i] = convert.ToEmail(emails[i])
 	}
-	ctx.JSON(201, &apiEmails)
+	c.JSON(201, &apiEmails)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Users-Emails#delete-email-addresses
-func DeleteEmail(ctx *context.APIContext, form api.CreateEmailOption) {
+func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
-		ctx.Status(204)
+		c.Status(204)
 		return
 	}
 
 	emails := make([]*models.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &models.EmailAddress{
-			UID:   ctx.User.ID,
+			UID:   c.User.ID,
 			Email: form.Emails[i],
 		}
 	}
 
 	if err := models.DeleteEmailAddresses(emails); err != nil {
-		ctx.Error(500, "DeleteEmailAddresses", err)
+		c.Error(500, "DeleteEmailAddresses", err)
 		return
 	}
-	ctx.Status(204)
+	c.Status(204)
 }

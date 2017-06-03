@@ -12,31 +12,31 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
-func Markdown(ctx *context.APIContext, form api.MarkdownOption) {
-	if ctx.HasApiError() {
-		ctx.Error(422, "", ctx.GetErrMsg())
+func Markdown(c *context.APIContext, form api.MarkdownOption) {
+	if c.HasApiError() {
+		c.Error(422, "", c.GetErrMsg())
 		return
 	}
 
 	if len(form.Text) == 0 {
-		ctx.Write([]byte(""))
+		c.Write([]byte(""))
 		return
 	}
 
 	switch form.Mode {
 	case "gfm":
-		ctx.Write(markup.Markdown([]byte(form.Text), form.Context, nil))
+		c.Write(markup.Markdown([]byte(form.Text), form.Context, nil))
 	default:
-		ctx.Write(markup.RawMarkdown([]byte(form.Text), ""))
+		c.Write(markup.RawMarkdown([]byte(form.Text), ""))
 	}
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
-func MarkdownRaw(ctx *context.APIContext) {
-	body, err := ctx.Req.Body().Bytes()
+func MarkdownRaw(c *context.APIContext) {
+	body, err := c.Req.Body().Bytes()
 	if err != nil {
-		ctx.Error(422, "", err)
+		c.Error(422, "", err)
 		return
 	}
-	ctx.Write(markup.RawMarkdown(body, ""))
+	c.Write(markup.RawMarkdown(body, ""))
 }

@@ -122,55 +122,55 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 }
 
-func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink string) {
-	ctx.Data["IsViewFile"] = true
+func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink string) {
+	c.Data["IsViewFile"] = true
 
 	blob := entry.Blob()
 	dataRc, err := blob.Data()
 	if err != nil {
-		ctx.Handle(500, "Data", err)
+		c.Handle(500, "Data", err)
 		return
 	}
 
-	ctx.Data["FileSize"] = blob.Size()
-	ctx.Data["FileName"] = blob.Name()
-	ctx.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
-	ctx.Data["RawFileLink"] = rawLink + "/" + ctx.Repo.TreePath
+	c.Data["FileSize"] = blob.Size()
+	c.Data["FileName"] = blob.Name()
+	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
+	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
 
 	buf := make([]byte, 1024)
 	n, _ := dataRc.Read(buf)
 	buf = buf[:n]
 
 	isTextFile := tool.IsTextFile(buf)
-	ctx.Data["IsTextFile"] = isTextFile
+	c.Data["IsTextFile"] = isTextFile
 
 	// Assume file is not editable first.
 	if !isTextFile {
-		ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.cannot_edit_non_text_files")
+		c.Data["EditFileTooltip"] = c.Tr("repo.editor.cannot_edit_non_text_files")
 	}
 
-	canEnableEditor := ctx.Repo.CanEnableEditor()
+	canEnableEditor := c.Repo.CanEnableEditor()
 	switch {
 	case isTextFile:
 		if blob.Size() >= setting.UI.MaxDisplayFileSize {
-			ctx.Data["IsFileTooLarge"] = true
+			c.Data["IsFileTooLarge"] = true
 			break
 		}
 
-		ctx.Data["ReadmeExist"] = markup.IsReadmeFile(blob.Name())
+		c.Data["ReadmeExist"] = markup.IsReadmeFile(blob.Name())
 
 		d, _ := ioutil.ReadAll(dataRc)
 		buf = append(buf, d...)
 
 		switch markup.Detect(blob.Name()) {
 		case markup.MARKDOWN:
-			ctx.Data["IsMarkdown"] = true
-			ctx.Data["FileContent"] = string(markup.Markdown(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+			c.Data["IsMarkdown"] = true
+			c.Data["FileContent"] = string(markup.Markdown(buf, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
 		case markup.ORG_MODE:
-			ctx.Data["IsMarkdown"] = true
-			ctx.Data["FileContent"] = string(markup.OrgMode(buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
+			c.Data["IsMarkdown"] = true
+			c.Data["FileContent"] = string(markup.OrgMode(buf, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
 		case markup.IPYTHON_NOTEBOOK:
-			ctx.Data["IsIPythonNotebook"] = true
+			c.Data["IsIPythonNotebook"] = true
 		default:
 			// Building code view blocks with line number on server side.
 			var fileContent string
@@ -188,180 +188,180 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 			for index, line := range lines {
 				output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, gotemplate.HTMLEscapeString(line)) + "\n")
 			}
-			ctx.Data["FileContent"] = gotemplate.HTML(output.String())
+			c.Data["FileContent"] = gotemplate.HTML(output.String())
 
 			output.Reset()
 			for i := 0; i < len(lines); i++ {
 				output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
 			}
-			ctx.Data["LineNums"] = gotemplate.HTML(output.String())
+			c.Data["LineNums"] = gotemplate.HTML(output.String())
 		}
 
 		if canEnableEditor {
-			ctx.Data["CanEditFile"] = true
-			ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.edit_this_file")
-		} else if !ctx.Repo.IsViewBranch {
-			ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.must_be_on_a_branch")
-		} else if !ctx.Repo.IsWriter() {
-			ctx.Data["EditFileTooltip"] = ctx.Tr("repo.editor.fork_before_edit")
+			c.Data["CanEditFile"] = true
+			c.Data["EditFileTooltip"] = c.Tr("repo.editor.edit_this_file")
+		} else if !c.Repo.IsViewBranch {
+			c.Data["EditFileTooltip"] = c.Tr("repo.editor.must_be_on_a_branch")
+		} else if !c.Repo.IsWriter() {
+			c.Data["EditFileTooltip"] = c.Tr("repo.editor.fork_before_edit")
 		}
 
 	case tool.IsPDFFile(buf):
-		ctx.Data["IsPDFFile"] = true
+		c.Data["IsPDFFile"] = true
 	case tool.IsVideoFile(buf):
-		ctx.Data["IsVideoFile"] = true
+		c.Data["IsVideoFile"] = true
 	case tool.IsImageFile(buf):
-		ctx.Data["IsImageFile"] = true
+		c.Data["IsImageFile"] = true
 	}
 
 	if canEnableEditor {
-		ctx.Data["CanDeleteFile"] = true
-		ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.delete_this_file")
-	} else if !ctx.Repo.IsViewBranch {
-		ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.must_be_on_a_branch")
-	} else if !ctx.Repo.IsWriter() {
-		ctx.Data["DeleteFileTooltip"] = ctx.Tr("repo.editor.must_have_write_access")
+		c.Data["CanDeleteFile"] = true
+		c.Data["DeleteFileTooltip"] = c.Tr("repo.editor.delete_this_file")
+	} else if !c.Repo.IsViewBranch {
+		c.Data["DeleteFileTooltip"] = c.Tr("repo.editor.must_be_on_a_branch")
+	} else if !c.Repo.IsWriter() {
+		c.Data["DeleteFileTooltip"] = c.Tr("repo.editor.must_have_write_access")
 	}
 }
 
-func setEditorconfigIfExists(ctx *context.Context) {
-	ec, err := ctx.Repo.GetEditorconfig()
+func setEditorconfigIfExists(c *context.Context) {
+	ec, err := c.Repo.GetEditorconfig()
 	if err != nil && !git.IsErrNotExist(err) {
-		log.Trace("setEditorconfigIfExists.GetEditorconfig [%d]: %v", ctx.Repo.Repository.ID, err)
+		log.Trace("setEditorconfigIfExists.GetEditorconfig [%d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
-	ctx.Data["Editorconfig"] = ec
+	c.Data["Editorconfig"] = ec
 }
 
-func Home(ctx *context.Context) {
-	ctx.Data["PageIsViewFiles"] = true
+func Home(c *context.Context) {
+	c.Data["PageIsViewFiles"] = true
 
-	if ctx.Repo.Repository.IsBare {
-		ctx.HTML(200, BARE)
+	if c.Repo.Repository.IsBare {
+		c.HTML(200, BARE)
 		return
 	}
 
-	title := ctx.Repo.Repository.Owner.Name + "/" + ctx.Repo.Repository.Name
-	if len(ctx.Repo.Repository.Description) > 0 {
-		title += ": " + ctx.Repo.Repository.Description
+	title := c.Repo.Repository.Owner.Name + "/" + c.Repo.Repository.Name
+	if len(c.Repo.Repository.Description) > 0 {
+		title += ": " + c.Repo.Repository.Description
 	}
-	ctx.Data["Title"] = title
-	if ctx.Repo.BranchName != ctx.Repo.Repository.DefaultBranch {
-		ctx.Data["Title"] = title + " @ " + ctx.Repo.BranchName
+	c.Data["Title"] = title
+	if c.Repo.BranchName != c.Repo.Repository.DefaultBranch {
+		c.Data["Title"] = title + " @ " + c.Repo.BranchName
 	}
-	ctx.Data["RequireHighlightJS"] = true
+	c.Data["RequireHighlightJS"] = true
 
-	branchLink := ctx.Repo.RepoLink + "/src/" + ctx.Repo.BranchName
+	branchLink := c.Repo.RepoLink + "/src/" + c.Repo.BranchName
 	treeLink := branchLink
-	rawLink := ctx.Repo.RepoLink + "/raw/" + ctx.Repo.BranchName
+	rawLink := c.Repo.RepoLink + "/raw/" + c.Repo.BranchName
 
 	isRootDir := false
-	if len(ctx.Repo.TreePath) > 0 {
-		treeLink += "/" + ctx.Repo.TreePath
+	if len(c.Repo.TreePath) > 0 {
+		treeLink += "/" + c.Repo.TreePath
 	} else {
 		isRootDir = true
 
 		// Only show Git stats panel when view root directory
 		var err error
-		ctx.Repo.CommitsCount, err = ctx.Repo.Commit.CommitsCount()
+		c.Repo.CommitsCount, err = c.Repo.Commit.CommitsCount()
 		if err != nil {
-			ctx.Handle(500, "CommitsCount", err)
+			c.Handle(500, "CommitsCount", err)
 			return
 		}
-		ctx.Data["CommitsCount"] = ctx.Repo.CommitsCount
+		c.Data["CommitsCount"] = c.Repo.CommitsCount
 	}
-	ctx.Data["PageIsRepoHome"] = isRootDir
+	c.Data["PageIsRepoHome"] = isRootDir
 
 	// Get current entry user currently looking at.
-	entry, err := ctx.Repo.Commit.GetTreeEntryByPath(ctx.Repo.TreePath)
+	entry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
 	if err != nil {
-		ctx.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", git.IsErrNotExist, err)
 		return
 	}
 
 	if entry.IsDir() {
-		renderDirectory(ctx, treeLink)
+		renderDirectory(c, treeLink)
 	} else {
-		renderFile(ctx, entry, treeLink, rawLink)
+		renderFile(c, entry, treeLink, rawLink)
 	}
-	if ctx.Written() {
+	if c.Written() {
 		return
 	}
 
-	setEditorconfigIfExists(ctx)
-	if ctx.Written() {
+	setEditorconfigIfExists(c)
+	if c.Written() {
 		return
 	}
 
 	var treeNames []string
 	paths := make([]string, 0, 5)
-	if len(ctx.Repo.TreePath) > 0 {
-		treeNames = strings.Split(ctx.Repo.TreePath, "/")
+	if len(c.Repo.TreePath) > 0 {
+		treeNames = strings.Split(c.Repo.TreePath, "/")
 		for i := range treeNames {
 			paths = append(paths, strings.Join(treeNames[:i+1], "/"))
 		}
 
-		ctx.Data["HasParentPath"] = true
+		c.Data["HasParentPath"] = true
 		if len(paths)-2 >= 0 {
-			ctx.Data["ParentPath"] = "/" + paths[len(paths)-2]
+			c.Data["ParentPath"] = "/" + paths[len(paths)-2]
 		}
 	}
 
-	ctx.Data["Paths"] = paths
-	ctx.Data["TreeLink"] = treeLink
-	ctx.Data["TreeNames"] = treeNames
-	ctx.Data["BranchLink"] = branchLink
-	ctx.HTML(200, HOME)
+	c.Data["Paths"] = paths
+	c.Data["TreeLink"] = treeLink
+	c.Data["TreeNames"] = treeNames
+	c.Data["BranchLink"] = branchLink
+	c.HTML(200, HOME)
 }
 
-func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*models.User, error), tpl string) {
-	page := ctx.QueryInt("page")
+func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*models.User, error), tpl string) {
+	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
 	pager := paginater.New(total, models.ItemsPerPage, page, 5)
-	ctx.Data["Page"] = pager
+	c.Data["Page"] = pager
 
 	items, err := getter(pager.Current())
 	if err != nil {
-		ctx.Handle(500, "getter", err)
+		c.Handle(500, "getter", err)
 		return
 	}
-	ctx.Data["Cards"] = items
+	c.Data["Cards"] = items
 
-	ctx.HTML(200, tpl)
+	c.HTML(200, tpl)
 }
 
-func Watchers(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.watchers")
-	ctx.Data["CardsTitle"] = ctx.Tr("repo.watchers")
-	ctx.Data["PageIsWatchers"] = true
-	RenderUserCards(ctx, ctx.Repo.Repository.NumWatches, ctx.Repo.Repository.GetWatchers, WATCHERS)
+func Watchers(c *context.Context) {
+	c.Data["Title"] = c.Tr("repo.watchers")
+	c.Data["CardsTitle"] = c.Tr("repo.watchers")
+	c.Data["PageIsWatchers"] = true
+	RenderUserCards(c, c.Repo.Repository.NumWatches, c.Repo.Repository.GetWatchers, WATCHERS)
 }
 
-func Stars(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repo.stargazers")
-	ctx.Data["CardsTitle"] = ctx.Tr("repo.stargazers")
-	ctx.Data["PageIsStargazers"] = true
-	RenderUserCards(ctx, ctx.Repo.Repository.NumStars, ctx.Repo.Repository.GetStargazers, WATCHERS)
+func Stars(c *context.Context) {
+	c.Data["Title"] = c.Tr("repo.stargazers")
+	c.Data["CardsTitle"] = c.Tr("repo.stargazers")
+	c.Data["PageIsStargazers"] = true
+	RenderUserCards(c, c.Repo.Repository.NumStars, c.Repo.Repository.GetStargazers, WATCHERS)
 }
 
-func Forks(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("repos.forks")
+func Forks(c *context.Context) {
+	c.Data["Title"] = c.Tr("repos.forks")
 
-	forks, err := ctx.Repo.Repository.GetForks()
+	forks, err := c.Repo.Repository.GetForks()
 	if err != nil {
-		ctx.Handle(500, "GetForks", err)
+		c.Handle(500, "GetForks", err)
 		return
 	}
 
 	for _, fork := range forks {
 		if err = fork.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", err)
+			c.Handle(500, "GetOwner", err)
 			return
 		}
 	}
-	ctx.Data["Forks"] = forks
+	c.Data["Forks"] = forks
 
-	ctx.HTML(200, FORKS)
+	c.HTML(200, FORKS)
 }

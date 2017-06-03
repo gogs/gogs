@@ -18,34 +18,34 @@ import (
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
-func ListHooks(ctx *context.APIContext) {
-	hooks, err := models.GetWebhooksByRepoID(ctx.Repo.Repository.ID)
+func ListHooks(c *context.APIContext) {
+	hooks, err := models.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		ctx.Error(500, "GetWebhooksByRepoID", err)
+		c.Error(500, "GetWebhooksByRepoID", err)
 		return
 	}
 
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = convert.ToHook(ctx.Repo.RepoLink, hooks[i])
+		apiHooks[i] = convert.ToHook(c.Repo.RepoLink, hooks[i])
 	}
-	ctx.JSON(200, &apiHooks)
+	c.JSON(200, &apiHooks)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
-func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
+func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
-		ctx.Error(422, "", "Invalid hook type")
+		c.Error(422, "", "Invalid hook type")
 		return
 	}
 	for _, name := range []string{"url", "content_type"} {
 		if _, ok := form.Config[name]; !ok {
-			ctx.Error(422, "", "Missing config option: "+name)
+			c.Error(422, "", "Missing config option: "+name)
 			return
 		}
 	}
 	if !models.IsValidHookContentType(form.Config["content_type"]) {
-		ctx.Error(422, "", "Invalid content type")
+		c.Error(422, "", "Invalid content type")
 		return
 	}
 
@@ -53,7 +53,7 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 		form.Events = []string{"push"}
 	}
 	w := &models.Webhook{
-		RepoID:      ctx.Repo.Repository.ID,
+		RepoID:      c.Repo.Repository.ID,
 		URL:         form.Config["url"],
 		ContentType: models.ToHookContentType(form.Config["content_type"]),
 		Secret:      form.Config["secret"],
@@ -76,7 +76,7 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 	if w.HookTaskType == models.SLACK {
 		channel, ok := form.Config["channel"]
 		if !ok {
-			ctx.Error(422, "", "Missing config option: channel")
+			c.Error(422, "", "Missing config option: channel")
 			return
 		}
 		meta, err := json.Marshal(&models.SlackMeta{
@@ -86,31 +86,31 @@ func CreateHook(ctx *context.APIContext, form api.CreateHookOption) {
 			Color:    form.Config["color"],
 		})
 		if err != nil {
-			ctx.Error(500, "slack: JSON marshal failed", err)
+			c.Error(500, "slack: JSON marshal failed", err)
 			return
 		}
 		w.Meta = string(meta)
 	}
 
 	if err := w.UpdateEvent(); err != nil {
-		ctx.Error(500, "UpdateEvent", err)
+		c.Error(500, "UpdateEvent", err)
 		return
 	} else if err := models.CreateWebhook(w); err != nil {
-		ctx.Error(500, "CreateWebhook", err)
+		c.Error(500, "CreateWebhook", err)
 		return
 	}
 
-	ctx.JSON(201, convert.ToHook(ctx.Repo.RepoLink, w))
+	c.JSON(201, convert.ToHook(c.Repo.RepoLink, w))
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
-func EditHook(ctx *context.APIContext, form api.EditHookOption) {
-	w, err := models.GetWebhookOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+func EditHook(c *context.APIContext, form api.EditHookOption) {
+	w, err := models.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		if errors.IsWebhookNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetWebhookOfRepoByID", err)
+			c.Error(500, "GetWebhookOfRepoByID", err)
 		}
 		return
 	}
@@ -121,7 +121,7 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 		}
 		if ct, ok := form.Config["content_type"]; ok {
 			if !models.IsValidHookContentType(ct) {
-				ctx.Error(422, "", "Invalid content type")
+				c.Error(422, "", "Invalid content type")
 				return
 			}
 			w.ContentType = models.ToHookContentType(ct)
@@ -136,7 +136,7 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 					Color:    form.Config["color"],
 				})
 				if err != nil {
-					ctx.Error(500, "slack: JSON marshal failed", err)
+					c.Error(500, "slack: JSON marshal failed", err)
 					return
 				}
 				w.Meta = string(meta)
@@ -160,7 +160,7 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 	w.PullRequest = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST))
 	w.Release = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_RELEASE))
 	if err = w.UpdateEvent(); err != nil {
-		ctx.Error(500, "UpdateEvent", err)
+		c.Error(500, "UpdateEvent", err)
 		return
 	}
 
@@ -169,18 +169,18 @@ func EditHook(ctx *context.APIContext, form api.EditHookOption) {
 	}
 
 	if err := models.UpdateWebhook(w); err != nil {
-		ctx.Error(500, "UpdateWebhook", err)
+		c.Error(500, "UpdateWebhook", err)
 		return
 	}
 
-	ctx.JSON(200, convert.ToHook(ctx.Repo.RepoLink, w))
+	c.JSON(200, convert.ToHook(c.Repo.RepoLink, w))
 }
 
-func DeleteHook(ctx *context.APIContext) {
-	if err := models.DeleteWebhookOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id")); err != nil {
-		ctx.Error(500, "DeleteWebhookByRepoID", err)
+func DeleteHook(c *context.APIContext) {
+	if err := models.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+		c.Error(500, "DeleteWebhookByRepoID", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }

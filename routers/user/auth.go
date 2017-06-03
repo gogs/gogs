@@ -240,53 +240,53 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
 }
 
-func SignOut(ctx *context.Context) {
-	ctx.Session.Delete("uid")
-	ctx.Session.Delete("uname")
-	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
-	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
-	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
-	ctx.Redirect(setting.AppSubURL + "/")
+func SignOut(c *context.Context) {
+	c.Session.Delete("uid")
+	c.Session.Delete("uname")
+	c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
+	c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
+	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
+	c.Redirect(setting.AppSubURL + "/")
 }
 
-func SignUp(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("sign_up")
+func SignUp(c *context.Context) {
+	c.Data["Title"] = c.Tr("sign_up")
 
-	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
+	c.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
 
 	if setting.Service.DisableRegistration {
-		ctx.Data["DisableRegistration"] = true
-		ctx.HTML(200, SIGNUP)
+		c.Data["DisableRegistration"] = true
+		c.HTML(200, SIGNUP)
 		return
 	}
 
-	ctx.HTML(200, SIGNUP)
+	c.HTML(200, SIGNUP)
 }
 
-func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, f form.Register) {
-	ctx.Data["Title"] = ctx.Tr("sign_up")
+func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
+	c.Data["Title"] = c.Tr("sign_up")
 
-	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
+	c.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
 
 	if setting.Service.DisableRegistration {
-		ctx.Error(403)
+		c.Error(403)
 		return
 	}
 
-	if ctx.HasError() {
-		ctx.HTML(200, SIGNUP)
+	if c.HasError() {
+		c.HTML(200, SIGNUP)
 		return
 	}
 
-	if setting.Service.EnableCaptcha && !cpt.VerifyReq(ctx.Req) {
-		ctx.Data["Err_Captcha"] = true
-		ctx.RenderWithErr(ctx.Tr("form.captcha_incorrect"), SIGNUP, &f)
+	if setting.Service.EnableCaptcha && !cpt.VerifyReq(c.Req) {
+		c.Data["Err_Captcha"] = true
+		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f)
 		return
 	}
 
 	if f.Password != f.Retype {
-		ctx.Data["Err_Password"] = true
-		ctx.RenderWithErr(ctx.Tr("form.password_not_match"), SIGNUP, &f)
+		c.Data["Err_Password"] = true
+		c.RenderWithErr(c.Tr("form.password_not_match"), SIGNUP, &f)
 		return
 	}
 
@@ -299,19 +299,19 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, f form.Register) {
 	if err := models.CreateUser(u); err != nil {
 		switch {
 		case models.IsErrUserAlreadyExist(err):
-			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("form.username_been_taken"), SIGNUP, &f)
+			c.Data["Err_UserName"] = true
+			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f)
 		case models.IsErrEmailAlreadyUsed(err):
-			ctx.Data["Err_Email"] = true
-			ctx.RenderWithErr(ctx.Tr("form.email_been_used"), SIGNUP, &f)
+			c.Data["Err_Email"] = true
+			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
 		case models.IsErrNameReserved(err):
-			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &f)
+			c.Data["Err_UserName"] = true
+			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &f)
 		case models.IsErrNamePatternNotAllowed(err):
-			ctx.Data["Err_UserName"] = true
-			ctx.RenderWithErr(ctx.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
+			c.Data["Err_UserName"] = true
+			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
 		default:
-			ctx.Handle(500, "CreateUser", err)
+			c.Handle(500, "CreateUser", err)
 		}
 		return
 	}
@@ -322,53 +322,53 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, f form.Register) {
 		u.IsAdmin = true
 		u.IsActive = true
 		if err := models.UpdateUser(u); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+			c.Handle(500, "UpdateUser", err)
 			return
 		}
 	}
 
 	// Send confirmation email, no need for social account.
 	if setting.Service.RegisterEmailConfirm && u.ID > 1 {
-		mailer.SendActivateAccountMail(ctx.Context, models.NewMailerUser(u))
-		ctx.Data["IsSendRegisterMail"] = true
-		ctx.Data["Email"] = u.Email
-		ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-		ctx.HTML(200, ACTIVATE)
+		mailer.SendActivateAccountMail(c.Context, models.NewMailerUser(u))
+		c.Data["IsSendRegisterMail"] = true
+		c.Data["Email"] = u.Email
+		c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+		c.HTML(200, ACTIVATE)
 
-		if err := ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
+		if err := c.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 		}
 		return
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/user/login")
+	c.Redirect(setting.AppSubURL + "/user/login")
 }
 
-func Activate(ctx *context.Context) {
-	code := ctx.Query("code")
+func Activate(c *context.Context) {
+	code := c.Query("code")
 	if len(code) == 0 {
-		ctx.Data["IsActivatePage"] = true
-		if ctx.User.IsActive {
-			ctx.Error(404)
+		c.Data["IsActivatePage"] = true
+		if c.User.IsActive {
+			c.Error(404)
 			return
 		}
 		// Resend confirmation email.
 		if setting.Service.RegisterEmailConfirm {
-			if ctx.Cache.IsExist("MailResendLimit_" + ctx.User.LowerName) {
-				ctx.Data["ResendLimited"] = true
+			if c.Cache.IsExist("MailResendLimit_" + c.User.LowerName) {
+				c.Data["ResendLimited"] = true
 			} else {
-				ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-				mailer.SendActivateAccountMail(ctx.Context, models.NewMailerUser(ctx.User))
+				c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+				mailer.SendActivateAccountMail(c.Context, models.NewMailerUser(c.User))
 
-				keyName := "MailResendLimit_" + ctx.User.LowerName
-				if err := ctx.Cache.Put(keyName, ctx.User.LowerName, 180); err != nil {
+				keyName := "MailResendLimit_" + c.User.LowerName
+				if err := c.Cache.Put(keyName, c.User.LowerName, 180); err != nil {
 					log.Error(2, "Set cache '%s' fail: %v", keyName, err)
 				}
 			}
 		} else {
-			ctx.Data["ServiceNotEnabled"] = true
+			c.Data["ServiceNotEnabled"] = true
 		}
-		ctx.HTML(200, ACTIVATE)
+		c.HTML(200, ACTIVATE)
 		return
 	}
 
@@ -377,158 +377,158 @@ func Activate(ctx *context.Context) {
 		user.IsActive = true
 		var err error
 		if user.Rands, err = models.GetUserSalt(); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+			c.Handle(500, "UpdateUser", err)
 			return
 		}
 		if err := models.UpdateUser(user); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+			c.Handle(500, "UpdateUser", err)
 			return
 		}
 
 		log.Trace("User activated: %s", user.Name)
 
-		ctx.Session.Set("uid", user.ID)
-		ctx.Session.Set("uname", user.Name)
-		ctx.Redirect(setting.AppSubURL + "/")
+		c.Session.Set("uid", user.ID)
+		c.Session.Set("uname", user.Name)
+		c.Redirect(setting.AppSubURL + "/")
 		return
 	}
 
-	ctx.Data["IsActivateFailed"] = true
-	ctx.HTML(200, ACTIVATE)
+	c.Data["IsActivateFailed"] = true
+	c.HTML(200, ACTIVATE)
 }
 
-func ActivateEmail(ctx *context.Context) {
-	code := ctx.Query("code")
-	email_string := ctx.Query("email")
+func ActivateEmail(c *context.Context) {
+	code := c.Query("code")
+	email_string := c.Query("email")
 
 	// Verify code.
 	if email := models.VerifyActiveEmailCode(code, email_string); email != nil {
 		if err := email.Activate(); err != nil {
-			ctx.Handle(500, "ActivateEmail", err)
+			c.Handle(500, "ActivateEmail", err)
 		}
 
 		log.Trace("Email activated: %s", email.Email)
-		ctx.Flash.Success(ctx.Tr("settings.add_email_success"))
+		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
 
-	ctx.Redirect(setting.AppSubURL + "/user/settings/email")
+	c.Redirect(setting.AppSubURL + "/user/settings/email")
 	return
 }
 
-func ForgotPasswd(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
+func ForgotPasswd(c *context.Context) {
+	c.Data["Title"] = c.Tr("auth.forgot_password")
 
 	if setting.MailService == nil {
-		ctx.Data["IsResetDisable"] = true
-		ctx.HTML(200, FORGOT_PASSWORD)
+		c.Data["IsResetDisable"] = true
+		c.HTML(200, FORGOT_PASSWORD)
 		return
 	}
 
-	ctx.Data["IsResetRequest"] = true
-	ctx.HTML(200, FORGOT_PASSWORD)
+	c.Data["IsResetRequest"] = true
+	c.HTML(200, FORGOT_PASSWORD)
 }
 
-func ForgotPasswdPost(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("auth.forgot_password")
+func ForgotPasswdPost(c *context.Context) {
+	c.Data["Title"] = c.Tr("auth.forgot_password")
 
 	if setting.MailService == nil {
-		ctx.Handle(403, "ForgotPasswdPost", nil)
+		c.Handle(403, "ForgotPasswdPost", nil)
 		return
 	}
-	ctx.Data["IsResetRequest"] = true
+	c.Data["IsResetRequest"] = true
 
-	email := ctx.Query("email")
-	ctx.Data["Email"] = email
+	email := c.Query("email")
+	c.Data["Email"] = email
 
 	u, err := models.GetUserByEmail(email)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-			ctx.Data["IsResetSent"] = true
-			ctx.HTML(200, FORGOT_PASSWORD)
+			c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+			c.Data["IsResetSent"] = true
+			c.HTML(200, FORGOT_PASSWORD)
 			return
 		} else {
-			ctx.Handle(500, "user.ResetPasswd(check existence)", err)
+			c.Handle(500, "user.ResetPasswd(check existence)", err)
 		}
 		return
 	}
 
 	if !u.IsLocal() {
-		ctx.Data["Err_Email"] = true
-		ctx.RenderWithErr(ctx.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil)
+		c.Data["Err_Email"] = true
+		c.RenderWithErr(c.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil)
 		return
 	}
 
-	if ctx.Cache.IsExist("MailResendLimit_" + u.LowerName) {
-		ctx.Data["ResendLimited"] = true
-		ctx.HTML(200, FORGOT_PASSWORD)
+	if c.Cache.IsExist("MailResendLimit_" + u.LowerName) {
+		c.Data["ResendLimited"] = true
+		c.HTML(200, FORGOT_PASSWORD)
 		return
 	}
 
-	mailer.SendResetPasswordMail(ctx.Context, models.NewMailerUser(u))
-	if err = ctx.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
+	mailer.SendResetPasswordMail(c.Context, models.NewMailerUser(u))
+	if err = c.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 		log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
 	}
 
-	ctx.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-	ctx.Data["IsResetSent"] = true
-	ctx.HTML(200, FORGOT_PASSWORD)
+	c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+	c.Data["IsResetSent"] = true
+	c.HTML(200, FORGOT_PASSWORD)
 }
 
-func ResetPasswd(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("auth.reset_password")
+func ResetPasswd(c *context.Context) {
+	c.Data["Title"] = c.Tr("auth.reset_password")
 
-	code := ctx.Query("code")
+	code := c.Query("code")
 	if len(code) == 0 {
-		ctx.Error(404)
+		c.Error(404)
 		return
 	}
-	ctx.Data["Code"] = code
-	ctx.Data["IsResetForm"] = true
-	ctx.HTML(200, RESET_PASSWORD)
+	c.Data["Code"] = code
+	c.Data["IsResetForm"] = true
+	c.HTML(200, RESET_PASSWORD)
 }
 
-func ResetPasswdPost(ctx *context.Context) {
-	ctx.Data["Title"] = ctx.Tr("auth.reset_password")
+func ResetPasswdPost(c *context.Context) {
+	c.Data["Title"] = c.Tr("auth.reset_password")
 
-	code := ctx.Query("code")
+	code := c.Query("code")
 	if len(code) == 0 {
-		ctx.Error(404)
+		c.Error(404)
 		return
 	}
-	ctx.Data["Code"] = code
+	c.Data["Code"] = code
 
 	if u := models.VerifyUserActiveCode(code); u != nil {
 		// Validate password length.
-		passwd := ctx.Query("password")
+		passwd := c.Query("password")
 		if len(passwd) < 6 {
-			ctx.Data["IsResetForm"] = true
-			ctx.Data["Err_Password"] = true
-			ctx.RenderWithErr(ctx.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
+			c.Data["IsResetForm"] = true
+			c.Data["Err_Password"] = true
+			c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
 			return
 		}
 
 		u.Passwd = passwd
 		var err error
 		if u.Rands, err = models.GetUserSalt(); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+			c.Handle(500, "UpdateUser", err)
 			return
 		}
 		if u.Salt, err = models.GetUserSalt(); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+			c.Handle(500, "UpdateUser", err)
 			return
 		}
 		u.EncodePasswd()
 		if err := models.UpdateUser(u); err != nil {
-			ctx.Handle(500, "UpdateUser", err)
+			c.Handle(500, "UpdateUser", err)
 			return
 		}
 
 		log.Trace("User password reset: %s", u.Name)
-		ctx.Redirect(setting.AppSubURL + "/user/login")
+		c.Redirect(setting.AppSubURL + "/user/login")
 		return
 	}
 
-	ctx.Data["IsResetFailed"] = true
-	ctx.HTML(200, RESET_PASSWORD)
+	c.Data["IsResetFailed"] = true
+	c.HTML(200, RESET_PASSWORD)
 }

@@ -11,10 +11,10 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 )
 
-func ListLabels(ctx *context.APIContext) {
-	labels, err := models.GetLabelsByRepoID(ctx.Repo.Repository.ID)
+func ListLabels(c *context.APIContext) {
+	labels, err := models.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		ctx.Error(500, "GetLabelsByRepoID", err)
+		c.Error(500, "GetLabelsByRepoID", err)
 		return
 	}
 
@@ -22,53 +22,53 @@ func ListLabels(ctx *context.APIContext) {
 	for i := range labels {
 		apiLabels[i] = labels[i].APIFormat()
 	}
-	ctx.JSON(200, &apiLabels)
+	c.JSON(200, &apiLabels)
 }
 
-func GetLabel(ctx *context.APIContext) {
-	label, err := models.GetLabelOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+func GetLabel(c *context.APIContext) {
+	label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetLabelByRepoID", err)
+			c.Error(500, "GetLabelByRepoID", err)
 		}
 		return
 	}
 
-	ctx.JSON(200, label.APIFormat())
+	c.JSON(200, label.APIFormat())
 }
 
-func CreateLabel(ctx *context.APIContext, form api.CreateLabelOption) {
-	if !ctx.Repo.IsWriter() {
-		ctx.Status(403)
+func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
+	if !c.Repo.IsWriter() {
+		c.Status(403)
 		return
 	}
 
 	label := &models.Label{
 		Name:   form.Name,
 		Color:  form.Color,
-		RepoID: ctx.Repo.Repository.ID,
+		RepoID: c.Repo.Repository.ID,
 	}
 	if err := models.NewLabels(label); err != nil {
-		ctx.Error(500, "NewLabel", err)
+		c.Error(500, "NewLabel", err)
 		return
 	}
-	ctx.JSON(201, label.APIFormat())
+	c.JSON(201, label.APIFormat())
 }
 
-func EditLabel(ctx *context.APIContext, form api.EditLabelOption) {
-	if !ctx.Repo.IsWriter() {
-		ctx.Status(403)
+func EditLabel(c *context.APIContext, form api.EditLabelOption) {
+	if !c.Repo.IsWriter() {
+		c.Status(403)
 		return
 	}
 
-	label, err := models.GetLabelOfRepoByID(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id"))
+	label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
-			ctx.Status(404)
+			c.Status(404)
 		} else {
-			ctx.Error(500, "GetLabelByRepoID", err)
+			c.Error(500, "GetLabelByRepoID", err)
 		}
 		return
 	}
@@ -80,22 +80,22 @@ func EditLabel(ctx *context.APIContext, form api.EditLabelOption) {
 		label.Color = *form.Color
 	}
 	if err := models.UpdateLabel(label); err != nil {
-		ctx.Handle(500, "UpdateLabel", err)
+		c.Handle(500, "UpdateLabel", err)
 		return
 	}
-	ctx.JSON(200, label.APIFormat())
+	c.JSON(200, label.APIFormat())
 }
 
-func DeleteLabel(ctx *context.APIContext) {
-	if !ctx.Repo.IsWriter() {
-		ctx.Status(403)
+func DeleteLabel(c *context.APIContext) {
+	if !c.Repo.IsWriter() {
+		c.Status(403)
 		return
 	}
 
-	if err := models.DeleteLabel(ctx.Repo.Repository.ID, ctx.ParamsInt64(":id")); err != nil {
-		ctx.Error(500, "DeleteLabel", err)
+	if err := models.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+		c.Error(500, "DeleteLabel", err)
 		return
 	}
 
-	ctx.Status(204)
+	c.Status(204)
 }
