@@ -8,6 +8,11 @@ body {
   font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
   background-color: #fff;
   overflow-y: scroll;
+  overflow-x: auto;
+  min-width: 1020px;
+}
+.ui.container {
+  width: 980px !important;
 }
 h1,
 h2,
@@ -41,7 +46,6 @@ code.raw {
 pre.wrap,
 code.wrap {
   white-space: pre-wrap;
-  /* CSS 3 */
   word-break: break-word;
 }
 .dont-break-out {
@@ -3121,9 +3125,6 @@ footer .ui.language .menu {
 }
 .admin.config .log-config table tbody tr td:first-child {
   width: 100px;
-}
-.admin.config .log-config table tbody tr td:not(first-child) {
-  max-width: 0;
 }
 .explore {
   padding-top: 15px;
