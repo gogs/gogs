@@ -11,10 +11,6 @@
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CSRFToken}}" />
 	<meta name="_suburl" content="{{AppSubURL}}" />
-	{{if .GoGetImport}}
-		<meta name="go-import" content="{{.GoGetImport}} git {{.CloneLink.HTTPS}}">
-		<meta name="go-source" content="{{.GoGetImport}} _ {{.GoDocDirectory}} {{.GoDocFile}}">
-	{{end}}
 	
 	<!-- Open Graph Tags -->
 	{{if .PageIsAdmin}}

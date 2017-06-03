@@ -7,10 +7,8 @@ package context
 import (
 	"fmt"
 	"io/ioutil"
-	"path"
 	"strings"
 
-	"github.com/Unknwon/com"
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 	"gopkg.in/macaron.v1"
 
@@ -108,24 +106,6 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 	return fmt.Sprintf("%s/compare/%s...%s:%s", repoLink, baseBranch, r.Owner.Name, headBranch)
 }
 
-// composeGoGetImport returns go-get-import meta content.
-func composeGoGetImport(owner, repo string) string {
-	return path.Join(setting.Domain, setting.AppSubURL, owner, repo)
-}
-
-// earlyResponseForGoGetMeta responses appropriate go-get meta with status 200
-// if user does not have actual access to the requested repository,
-// or the owner or repository does not exist at all.
-// This is particular a workaround for "go get" command which does not respect
-// .netrc file.
-func earlyResponseForGoGetMeta(ctx *Context) {
-	ctx.PlainText(200, []byte(com.Expand(`<meta name="go-import" content="{GoGetImport} git {CloneLink}">`,
-		map[string]string{
-			"GoGetImport": composeGoGetImport(ctx.Params(":username"), ctx.Params(":reponame")),
-			"CloneLink":   models.ComposeHTTPSCloneURL(ctx.Params(":username"), ctx.Params(":reponame")),
-		})))
-}
-
 // [0]: issues, [1]: wiki
 func RepoAssignment(pages ...bool) macaron.Handler {
 	return func(ctx *Context) {
@@ -156,33 +136,16 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		} else {
 			owner, err = models.GetUserByName(ownerName)
 			if err != nil {
-				if errors.IsUserNotExist(err) {
-					if ctx.Query("go-get") == "1" {
-						earlyResponseForGoGetMeta(ctx)
-						return
-					}
-					ctx.NotFound()
-				} else {
-					ctx.Handle(500, "GetUserByName", err)
-				}
+				ctx.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
 			}
 		}
 		ctx.Repo.Owner = owner
 		ctx.Data["Username"] = ctx.Repo.Owner.Name
 
-		// Get repository.
 		repo, err := models.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			if errors.IsRepoNotExist(err) {
-				if ctx.Query("go-get") == "1" {
-					earlyResponseForGoGetMeta(ctx)
-					return
-				}
-				ctx.NotFound()
-			} else {
-				ctx.Handle(500, "GetRepositoryByName", err)
-			}
+			ctx.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
 		}
 
@@ -199,7 +162,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		} else {
 			mode, err := models.AccessLevel(ctx.UserID(), repo)
 			if err != nil {
-				ctx.Handle(500, "AccessLevel", err)
+				ctx.ServerError("AccessLevel", err)
 				return
 			}
 			ctx.Repo.AccessMode = mode
@@ -207,11 +170,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		// Check access
 		if ctx.Repo.AccessMode == models.ACCESS_MODE_NONE {
-			if ctx.Query("go-get") == "1" {
-				earlyResponseForGoGetMeta(ctx)
-				return
-			}
-
 			// Redirect to any accessible page if not yet on it
 			if repo.IsPartialPublic() &&
 				(!(isIssuesPage || isWikiPage) ||
@@ -308,13 +266,6 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 		ctx.Data["BranchName"] = ctx.Repo.BranchName
 		ctx.Data["CommitID"] = ctx.Repo.CommitID
-
-		if ctx.Query("go-get") == "1" {
-			ctx.Data["GoGetImport"] = composeGoGetImport(owner.Name, repo.Name)
-			prefix := setting.AppURL + path.Join(owner.Name, repo.Name, "src", ctx.Repo.BranchName)
-			ctx.Data["GoDocDirectory"] = prefix + "{/dir}"
-			ctx.Data["GoDocFile"] = prefix + "{/dir}/{file}#L{line}"
-		}
 
 		ctx.Data["IsGuest"] = !ctx.Repo.HasAccess()
 	}
