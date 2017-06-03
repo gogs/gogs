@@ -515,7 +515,7 @@ func viewIssue(ctx *context.Context, isPullList bool) {
 		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
-	ctx.Data["Title"] = issue.Title
+	ctx.Data["Title"] = fmt.Sprintf("#%d - %s", issue.Index, issue.Title)
 
 	// Make sure type and URL matches.
 	if !isPullList && issue.IsPull {

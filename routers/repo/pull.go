@@ -6,6 +6,7 @@ package repo
 
 import (
 	"container/list"
+	"fmt"
 	"path"
 	"strings"
 
@@ -145,7 +146,7 @@ func checkPullInfo(ctx *context.Context) *models.Issue {
 		ctx.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return nil
 	}
-	ctx.Data["Title"] = issue.Title
+	ctx.Data["Title"] = fmt.Sprintf("#%d - %s", issue.Index, issue.Title)
 	ctx.Data["Issue"] = issue
 
 	if !issue.IsPull {
