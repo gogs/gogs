@@ -23,7 +23,7 @@ type PullRequestInfo struct {
 func (repo *Repository) GetMergeBase(base, head string) (string, error) {
 	stdout, err := NewCommand("merge-base", base, head).RunInDir(repo.Path)
 	if err != nil {
-		if strings.HasSuffix(err.Error(), " 1") {
+		if strings.Contains(err.Error(), "exit status 1") {
 			return "", ErrNoMergeBase{}
 		}
 		return "", err
