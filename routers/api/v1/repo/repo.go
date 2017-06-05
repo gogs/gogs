@@ -220,7 +220,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 				c.Error(500, "GetUserByID", err)
 			}
 			return
-		} else if !org.IsOrganization() {
+		} else if !org.IsOrganization() && !c.User.IsAdmin {
 			c.Error(403, "", "Given user is not an organization")
 			return
 		}
