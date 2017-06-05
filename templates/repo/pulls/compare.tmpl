@@ -50,6 +50,10 @@
 				<div class="ui segment">
 					{{.i18n.Tr "repo.pulls.nothing_to_compare"}}
 				</div>
+			{{else if .IsNoMergeBase}}
+				<div class="ui segment">
+					{{.i18n.Tr "repo.pulls.nothing_merge_base"}}
+				</div>
 			{{else if .HasPullRequest}}
 				<div class="ui segment">
 					{{.i18n.Tr "repo.pulls.has_pull_request" $.RepoLink $.RepoRelPath .PullRequest.Index | Safe}}

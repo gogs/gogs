@@ -22,7 +22,13 @@ type PullRequestInfo struct {
 // GetMergeBase checks and returns merge base of two branches.
 func (repo *Repository) GetMergeBase(base, head string) (string, error) {
 	stdout, err := NewCommand("merge-base", base, head).RunInDir(repo.Path)
-	return strings.TrimSpace(stdout), err
+	if err != nil {
+		if strings.HasSuffix(err.Error(), " 1") {
+			return "", ErrNoMergeBase{}
+		}
+		return "", err
+	}
+	return strings.TrimSpace(stdout), nil
 }
 
 // GetPullRequestInfo generates and returns pull request information
@@ -47,7 +53,7 @@ func (repo *Repository) GetPullRequestInfo(basePath, baseBranch, headBranch stri
 	prInfo := new(PullRequestInfo)
 	prInfo.MergeBase, err = repo.GetMergeBase(remoteBranch, headBranch)
 	if err != nil {
-		return nil, fmt.Errorf("GetMergeBase: %v", err)
+		return nil, err
 	}
 
 	logs, err := NewCommand("log", prInfo.MergeBase+"..."+headBranch, _PRETTY_LOG_FORMAT).RunInDirBytes(repo.Path)

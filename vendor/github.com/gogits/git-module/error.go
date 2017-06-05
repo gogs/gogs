@@ -48,3 +48,14 @@ func IsErrUnsupportedVersion(err error) bool {
 func (err ErrUnsupportedVersion) Error() string {
 	return fmt.Sprintf("Operation requires higher version [required: %s]", err.Required)
 }
+
+type ErrNoMergeBase struct{}
+
+func IsErrNoMergeBase(err error) bool {
+	_, ok := err.(ErrNoMergeBase)
+	return ok
+}
+
+func (err ErrNoMergeBase) Error() string {
+	return "no merge based found"
+}
