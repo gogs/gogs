@@ -153,7 +153,7 @@ func (c *Context) Handle(status int, title string, err error) {
 		c.Data["Title"] = "Page Not Found"
 	case http.StatusInternalServerError:
 		c.Data["Title"] = "Internal Server Error"
-		log.Error(2, "%s: %v", title, err)
+		log.Error(3, "%s: %v", title, err)
 		if !setting.ProdMode || (c.IsLogged && c.User.IsAdmin) {
 			c.Data["ErrorMsg"] = err
 		}
