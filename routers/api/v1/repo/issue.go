@@ -47,6 +47,7 @@ func ListUserIssues(c *context.APIContext) {
 	opts := models.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
+		IsClosed:   api.StateType(c.Query("state")) == api.STATE_CLOSED,
 	}
 
 	listIssues(c, &opts)
@@ -54,8 +55,9 @@ func ListUserIssues(c *context.APIContext) {
 
 func ListIssues(c *context.APIContext) {
 	opts := models.IssuesOptions{
-		RepoID: c.Repo.Repository.ID,
-		Page:   c.QueryInt("page"),
+		RepoID:   c.Repo.Repository.ID,
+		Page:     c.QueryInt("page"),
+		IsClosed: api.StateType(c.Query("state")) == api.STATE_CLOSED,
 	}
 
 	listIssues(c, &opts)
