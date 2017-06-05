@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"github.com/Unknwon/com"
+
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
@@ -26,7 +28,14 @@ func ListLabels(c *context.APIContext) {
 }
 
 func GetLabel(c *context.APIContext) {
-	label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	var label *models.Label
+	var err error
+	idStr := c.Params(":id")
+	if id := com.StrTo(idStr).MustInt64(); id > 0 {
+		label, err = models.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
+	} else {
+		label, err = models.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
+	}
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
 			c.Status(404)
