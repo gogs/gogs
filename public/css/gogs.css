@@ -1402,6 +1402,9 @@ footer .ui.language .menu {
 .repository.file.list #file-content #ipython-notebook .nb-cell.nb-heading-cell {
   margin-top: 0.5em;
 }
+.repository.file.list #file-content #ipython-notebook .nb-cell img {
+  max-width: 100%;
+}
 .repository.file.list #file-content #ipython-notebook .nb-raw-cell {
   white-space: pre-wrap;
   background-color: #f5f2f0;
