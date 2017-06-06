@@ -53,7 +53,8 @@
 
 						// Overwrite image method to append proper prefix to the source URL
 						var renderer = new marked.Renderer();
-						var context = '{{.BranchLink}}'.replace('/src/', '/raw/');
+						var context = '{{.RawFileLink}}';
+						context = context.substring(0, context.lastIndexOf("/"));
 						renderer.image = function (href, title, text) {
 							return `<img src="${context}/${href}"`
 						}
