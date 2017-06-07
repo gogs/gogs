@@ -249,8 +249,12 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["TagName"] = c.Repo.TagName
 		brs, err := c.Repo.GitRepo.GetBranches()
 		if err != nil {
-			c.ServerError("GetBranches", err)
-			return
+			brs = make([]string, 0)
+			_, err = c.Repo.GitRepo.GetTags()
+			if err != nil {
+				c.Handle(500, "GetBranches|GetTags", err)
+				return
+			}
 		}
 		c.Data["Branches"] = brs
 		c.Data["BrancheCount"] = len(brs)
@@ -296,22 +300,35 @@ func RepoRef() macaron.Handler {
 
 		// Get default branch.
 		if len(c.Params("*")) == 0 {
+			isBranch := true
 			refName = c.Repo.Repository.DefaultBranch
 			if !c.Repo.GitRepo.IsBranchExist(refName) {
 				brs, err := c.Repo.GitRepo.GetBranches()
 				if err != nil {
-					c.Handle(500, "GetBranches", err)
-					return
+					brs, err = c.Repo.GitRepo.GetTags()
+					if err != nil {
+						c.Handle(500, "GetBranches|GetTags", err)
+						return
+					}
+					isBranch = false
 				}
 				refName = brs[0]
 			}
-			c.Repo.Commit, err = c.Repo.GitRepo.GetBranchCommit(refName)
+			if isBranch {
+				c.Repo.Commit, err = c.Repo.GitRepo.GetBranchCommit(refName)
+			} else {
+				c.Repo.Commit, err = c.Repo.GitRepo.GetTagCommit(refName)
+			}
 			if err != nil {
 				c.Handle(500, "GetBranchCommit", err)
 				return
 			}
 			c.Repo.CommitID = c.Repo.Commit.ID.String()
-			c.Repo.IsViewBranch = true
+			if (isBranch) {
+				c.Repo.IsViewBranch = true
+			} else {
+				c.Repo.IsViewTag = true
+			}
 
 		} else {
 			hasMatched := false
