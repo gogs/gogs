@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version show the xorm's version
-	Version string = "0.6.2.0412"
+	Version string = "0.6.2.0605"
 )
 
 func regDrvsNDialects() bool {
@@ -87,6 +87,12 @@ func NewEngine(driverName string, dataSourceName string) (*Engine, error) {
 		TagIdentifier: "xorm",
 		TZLocation:    time.Local,
 		tagHandlers:   defaultTagHandlers,
+	}
+
+	if uri.DbType == core.SQLITE {
+		engine.DatabaseTZ = time.UTC
+	} else {
+		engine.DatabaseTZ = time.Local
 	}
 
 	logger := NewSimpleLogger(os.Stdout)

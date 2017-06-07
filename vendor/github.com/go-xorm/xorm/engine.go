@@ -40,7 +40,7 @@ type Engine struct {
 	showExecTime bool
 
 	logger     core.ILogger
-	TZLocation *time.Location
+	TZLocation *time.Location // The timezone of the application
 	DatabaseTZ *time.Location // The timezone of the database
 
 	disableGlobalCache bool
@@ -143,7 +143,6 @@ func (engine *Engine) Quote(value string) string {
 
 // QuoteTo quotes string and writes into the buffer
 func (engine *Engine) QuoteTo(buf *bytes.Buffer, value string) {
-
 	if buf == nil {
 		return
 	}
@@ -194,6 +193,11 @@ func (engine *Engine) SetMaxOpenConns(conns int) {
 // SetMaxIdleConns set the max idle connections on pool, default is 2
 func (engine *Engine) SetMaxIdleConns(conns int) {
 	engine.db.SetMaxIdleConns(conns)
+}
+
+// SetConnMaxLifetime sets the maximum amount of time a connection may be reused.
+func (engine *Engine) SetConnMaxLifetime(d time.Duration) {
+	engine.db.SetConnMaxLifetime(d)
 }
 
 // SetDefaultCacher set the default cacher. Xorm's default not enable cacher.
@@ -781,6 +785,12 @@ func (engine *Engine) Having(conditions string) *Session {
 	return session.Having(conditions)
 }
 
+func (engine *Engine) unMapType(t reflect.Type) {
+	engine.mutex.Lock()
+	defer engine.mutex.Unlock()
+	delete(engine.Tables, t)
+}
+
 func (engine *Engine) autoMapType(v reflect.Value) (*core.Table, error) {
 	t := v.Type()
 	engine.mutex.Lock()
@@ -1007,6 +1017,10 @@ func (engine *Engine) mapType(v reflect.Value) (*core.Table, error) {
 			col = core.NewColumn(engine.ColumnMapper.Obj2Table(t.Field(i).Name),
 				t.Field(i).Name, sqlType, sqlType.DefaultLength,
 				sqlType.DefaultLength2, true)
+
+			if fieldType.Kind() == reflect.Int64 && (strings.ToUpper(col.FieldName) == "ID" || strings.HasSuffix(strings.ToUpper(col.FieldName), ".ID")) {
+				idFieldColName = col.Name
+			}
 		}
 		if col.IsAutoIncrement {
 			col.Nullable = false
@@ -1014,9 +1028,6 @@ func (engine *Engine) mapType(v reflect.Value) (*core.Table, error) {
 
 		table.AddColumn(col)
 
-		if fieldType.Kind() == reflect.Int64 && (strings.ToUpper(col.FieldName) == "ID" || strings.HasSuffix(strings.ToUpper(col.FieldName), ".ID")) {
-			idFieldColName = col.Name
-		}
 	} // end for
 
 	if idFieldColName != "" && len(table.PrimaryKeys) == 0 {
@@ -1241,7 +1252,6 @@ func (engine *Engine) Sync(beans ...interface{}) error {
 					return err
 				}
 				if index.Type == core.UniqueType {
-					//isExist, err := session.isIndexExist(table.Name, name, true)
 					isExist, err := session.isIndexExist2(tableName, index.Cols, true)
 					if err != nil {
 						return err
@@ -1291,23 +1301,6 @@ func (engine *Engine) Sync2(beans ...interface{}) error {
 	return s.Sync2(beans...)
 }
 
-// Drop all mapped table
-func (engine *Engine) dropAll() error {
-	session := engine.NewSession()
-	defer session.Close()
-
-	err := session.Begin()
-	if err != nil {
-		return err
-	}
-	err = session.dropAll()
-	if err != nil {
-		session.Rollback()
-		return err
-	}
-	return session.Commit()
-}
-
 // CreateTables create tabls according bean
 func (engine *Engine) CreateTables(beans ...interface{}) error {
 	session := engine.NewSession()
@@ -1348,10 +1341,11 @@ func (engine *Engine) DropTables(beans ...interface{}) error {
 	return session.Commit()
 }
 
-func (engine *Engine) createAll() error {
+// DropIndexes drop indexes of a table
+func (engine *Engine) DropIndexes(bean interface{}) error {
 	session := engine.NewSession()
 	defer session.Close()
-	return session.createAll()
+	return session.DropIndexes(bean)
 }
 
 // Exec raw sql
@@ -1509,7 +1503,6 @@ func (engine *Engine) Import(r io.Reader) ([]sql.Result, error) {
 			results = append(results, result)
 			if err != nil {
 				return nil, err
-				//lastError = err
 			}
 		}
 	}
@@ -1517,49 +1510,28 @@ func (engine *Engine) Import(r io.Reader) ([]sql.Result, error) {
 	return results, lastError
 }
 
-// TZTime change one time to xorm time location
-func (engine *Engine) TZTime(t time.Time) time.Time {
-	if !t.IsZero() { // if time is not initialized it's not suitable for Time.In()
-		return t.In(engine.TZLocation)
-	}
-	return t
-}
-
-// NowTime return current time
-func (engine *Engine) NowTime(sqlTypeName string) interface{} {
-	t := time.Now()
-	return engine.FormatTime(sqlTypeName, t)
-}
-
 // NowTime2 return current time
 func (engine *Engine) NowTime2(sqlTypeName string) (interface{}, time.Time) {
 	t := time.Now()
-	return engine.FormatTime(sqlTypeName, t), t
-}
-
-// FormatTime format time
-func (engine *Engine) FormatTime(sqlTypeName string, t time.Time) (v interface{}) {
-	return engine.formatTime(engine.TZLocation, sqlTypeName, t)
+	return engine.formatTime(sqlTypeName, t.In(engine.DatabaseTZ)), t.In(engine.TZLocation)
 }
 
 func (engine *Engine) formatColTime(col *core.Column, t time.Time) (v interface{}) {
-	if col.DisableTimeZone {
-		return engine.formatTime(nil, col.SQLType.Name, t)
-	} else if col.TimeZone != nil {
-		return engine.formatTime(col.TimeZone, col.SQLType.Name, t)
+	if t.IsZero() {
+		if col.Nullable {
+			return nil
+		}
+		return ""
 	}
-	return engine.formatTime(engine.TZLocation, col.SQLType.Name, t)
+
+	if col.TimeZone != nil {
+		return engine.formatTime(col.SQLType.Name, t.In(col.TimeZone))
+	}
+	return engine.formatTime(col.SQLType.Name, t.In(engine.DatabaseTZ))
 }
 
-func (engine *Engine) formatTime(tz *time.Location, sqlTypeName string, t time.Time) (v interface{}) {
-	if engine.dialect.DBType() == core.ORACLE {
-		return t
-	}
-	if tz != nil {
-		t = t.In(tz)
-	} else {
-		t = engine.TZTime(t)
-	}
+// formatTime format time as column type
+func (engine *Engine) formatTime(sqlTypeName string, t time.Time) (v interface{}) {
 	switch sqlTypeName {
 	case core.Time:
 		s := t.Format("2006-01-02 15:04:05") //time.RFC3339
@@ -1567,18 +1539,10 @@ func (engine *Engine) formatTime(tz *time.Location, sqlTypeName string, t time.T
 	case core.Date:
 		v = t.Format("2006-01-02")
 	case core.DateTime, core.TimeStamp:
-		if engine.dialect.DBType() == "ql" {
-			v = t
-		} else if engine.dialect.DBType() == "sqlite3" {
-			v = t.UTC().Format("2006-01-02 15:04:05")
-		} else {
-			v = t.Format("2006-01-02 15:04:05")
-		}
+		v = t.Format("2006-01-02 15:04:05")
 	case core.TimeStampz:
 		if engine.dialect.DBType() == core.MSSQL {
 			v = t.Format("2006-01-02T15:04:05.9999999Z07:00")
-		} else if engine.DriverName() == "mssql" {
-			v = t
 		} else {
 			v = t.Format(time.RFC3339Nano)
 		}

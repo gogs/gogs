@@ -8,7 +8,7 @@ import "database/sql"
 
 // Count counts the records. bean's non-empty fields
 // are conditions.
-func (session *Session) Count(bean interface{}) (int64, error) {
+func (session *Session) Count(bean ...interface{}) (int64, error) {
 	defer session.resetStatement()
 	if session.IsAutoClose {
 		defer session.Close()
@@ -17,7 +17,10 @@ func (session *Session) Count(bean interface{}) (int64, error) {
 	var sqlStr string
 	var args []interface{}
 	if session.Statement.RawSQL == "" {
-		sqlStr, args = session.Statement.genCountSQL(bean)
+		if len(bean) == 0 {
+			return 0, ErrTableNotFound
+		}
+		sqlStr, args = session.Statement.genCountSQL(bean[0])
 	} else {
 		sqlStr = session.Statement.RawSQL
 		args = session.Statement.RawParams

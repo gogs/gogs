@@ -67,7 +67,7 @@ func (session *Session) innerInsertMulti(rowsSlicePtr interface{}) (int64, error
 		return 0, errors.New("could not insert a empty slice")
 	}
 
-	if err := session.Statement.setRefValue(sliceValue.Index(0)); err != nil {
+	if err := session.Statement.setRefValue(reflect.ValueOf(sliceValue.Index(0).Interface())); err != nil {
 		return 0, err
 	}
 
@@ -343,15 +343,26 @@ func (session *Session) innerInsert(bean interface{}) (int64, error) {
 	if len(exprColVals) > 0 {
 		colPlaces = colPlaces + strings.Join(exprColVals, ", ")
 	} else {
-		colPlaces = colPlaces[0 : len(colPlaces)-2]
+		if len(colPlaces) > 0 {
+			colPlaces = colPlaces[0 : len(colPlaces)-2]
+		}
 	}
 
-	sqlStr := fmt.Sprintf("INSERT INTO %s (%v%v%v) VALUES (%v)",
-		session.Engine.Quote(session.Statement.TableName()),
-		session.Engine.QuoteStr(),
-		strings.Join(colNames, session.Engine.Quote(", ")),
-		session.Engine.QuoteStr(),
-		colPlaces)
+	var sqlStr string
+	if len(colPlaces) > 0 {
+		sqlStr = fmt.Sprintf("INSERT INTO %s (%v%v%v) VALUES (%v)",
+			session.Engine.Quote(session.Statement.TableName()),
+			session.Engine.QuoteStr(),
+			strings.Join(colNames, session.Engine.Quote(", ")),
+			session.Engine.QuoteStr(),
+			colPlaces)
+	} else {
+		if session.Engine.dialect.DBType() == core.MYSQL {
+			sqlStr = fmt.Sprintf("INSERT INTO %s VALUES ()", session.Engine.Quote(session.Statement.TableName()))
+		} else {
+			sqlStr = fmt.Sprintf("INSERT INTO %s DEFAULT VALUES", session.Engine.Quote(session.Statement.TableName()))
+		}
+	}
 
 	handleAfterInsertProcessorFunc := func(bean interface{}) {
 		if session.IsAutoCommit {
@@ -384,7 +395,6 @@ func (session *Session) innerInsert(bean interface{}) (int64, error) {
 	// for postgres, many of them didn't implement lastInsertId, so we should
 	// implemented it ourself.
 	if session.Engine.dialect.DBType() == core.ORACLE && len(table.AutoIncrement) > 0 {
-		//assert table.AutoIncrement != ""
 		res, err := session.query("select seq_atable.currval from dual", args...)
 		if err != nil {
 			return 0, err

@@ -89,24 +89,6 @@ func (session *Session) createOneTable() error {
 	return err
 }
 
-// to be deleted
-func (session *Session) createAll() error {
-	if session.IsAutoClose {
-		defer session.Close()
-	}
-
-	for _, table := range session.Engine.Tables {
-		session.Statement.RefTable = table
-		session.Statement.tableName = table.Name
-		err := session.createOneTable()
-		session.resetStatement()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // DropIndexes drop indexes
 func (session *Session) DropIndexes(bean interface{}) error {
 	v := rValue(bean)
@@ -208,22 +190,6 @@ func (session *Session) isTableEmpty(tableName string) (bool, error) {
 	return total == 0, nil
 }
 
-func (session *Session) isIndexExist(tableName, idxName string, unique bool) (bool, error) {
-	defer session.resetStatement()
-	if session.IsAutoClose {
-		defer session.Close()
-	}
-	var idx string
-	if unique {
-		idx = uniqueName(tableName, idxName)
-	} else {
-		idx = indexName(tableName, idxName)
-	}
-	sqlStr, args := session.Engine.dialect.IndexCheckSql(tableName, idx)
-	results, err := session.query(sqlStr, args...)
-	return len(results) > 0, err
-}
-
 // find if index is exist according cols
 func (session *Session) isIndexExist2(tableName string, cols []string, unique bool) (bool, error) {
 	defer session.resetStatement()
@@ -280,25 +246,6 @@ func (session *Session) addUnique(tableName, uqeName string) error {
 	sqlStr := session.Engine.dialect.CreateIndexSql(tableName, index)
 	_, err := session.exec(sqlStr)
 	return err
-}
-
-// To be deleted
-func (session *Session) dropAll() error {
-	defer session.resetStatement()
-	if session.IsAutoClose {
-		defer session.Close()
-	}
-
-	for _, table := range session.Engine.Tables {
-		session.Statement.Init()
-		session.Statement.RefTable = table
-		sqlStr := session.Engine.Dialect().DropTableSql(session.Statement.TableName())
-		_, err := session.exec(sqlStr)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Sync2 synchronize structs to database tables

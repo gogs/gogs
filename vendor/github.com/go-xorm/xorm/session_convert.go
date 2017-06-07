@@ -23,6 +23,11 @@ func (session *Session) str2Time(col *core.Column, data string) (outTime time.Ti
 	var x time.Time
 	var err error
 
+	var parseLoc = session.Engine.DatabaseTZ
+	if col.TimeZone != nil {
+		parseLoc = col.TimeZone
+	}
+
 	if sdata == "0000-00-00 00:00:00" ||
 		sdata == "0001-01-01 00:00:00" {
 	} else if !strings.ContainsAny(sdata, "- :") { // !nashtsai! has only found that mymysql driver is using this for time type column
@@ -30,33 +35,26 @@ func (session *Session) str2Time(col *core.Column, data string) (outTime time.Ti
 		sd, err := strconv.ParseInt(sdata, 10, 64)
 		if err == nil {
 			x = time.Unix(sd, 0)
-			// !nashtsai! HACK mymysql driver is causing Local location being change to CHAT and cause wrong time conversion
-			if col.TimeZone == nil {
-				x = x.In(session.Engine.TZLocation)
-			} else {
-				x = x.In(col.TimeZone)
-			}
 			session.Engine.logger.Debugf("time(0) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 		} else {
 			session.Engine.logger.Debugf("time(0) err key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 		}
 	} else if len(sdata) > 19 && strings.Contains(sdata, "-") {
-		x, err = time.ParseInLocation(time.RFC3339Nano, sdata, session.Engine.TZLocation)
+		x, err = time.ParseInLocation(time.RFC3339Nano, sdata, parseLoc)
 		session.Engine.logger.Debugf("time(1) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 		if err != nil {
-			x, err = time.ParseInLocation("2006-01-02 15:04:05.999999999", sdata, session.Engine.TZLocation)
+			x, err = time.ParseInLocation("2006-01-02 15:04:05.999999999", sdata, parseLoc)
 			session.Engine.logger.Debugf("time(2) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 		}
 		if err != nil {
-			x, err = time.ParseInLocation("2006-01-02 15:04:05.9999999 Z07:00", sdata, session.Engine.TZLocation)
+			x, err = time.ParseInLocation("2006-01-02 15:04:05.9999999 Z07:00", sdata, parseLoc)
 			session.Engine.logger.Debugf("time(3) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 		}
-
 	} else if len(sdata) == 19 && strings.Contains(sdata, "-") {
-		x, err = time.ParseInLocation("2006-01-02 15:04:05", sdata, session.Engine.TZLocation)
+		x, err = time.ParseInLocation("2006-01-02 15:04:05", sdata, parseLoc)
 		session.Engine.logger.Debugf("time(4) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 	} else if len(sdata) == 10 && sdata[4] == '-' && sdata[7] == '-' {
-		x, err = time.ParseInLocation("2006-01-02", sdata, session.Engine.TZLocation)
+		x, err = time.ParseInLocation("2006-01-02", sdata, parseLoc)
 		session.Engine.logger.Debugf("time(5) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 	} else if col.SQLType.Name == core.Time {
 		if strings.Contains(sdata, " ") {
@@ -70,7 +68,7 @@ func (session *Session) str2Time(col *core.Column, data string) (outTime time.Ti
 		}
 
 		st := fmt.Sprintf("2006-01-02 %v", sdata)
-		x, err = time.ParseInLocation("2006-01-02 15:04:05", st, session.Engine.TZLocation)
+		x, err = time.ParseInLocation("2006-01-02 15:04:05", st, parseLoc)
 		session.Engine.logger.Debugf("time(6) key[%v]: %+v | sdata: [%v]\n", col.FieldName, x, sdata)
 	} else {
 		outErr = fmt.Errorf("unsupported time format %v", sdata)
@@ -80,7 +78,7 @@ func (session *Session) str2Time(col *core.Column, data string) (outTime time.Ti
 		outErr = fmt.Errorf("unsupported time format %v: %v", sdata, err)
 		return
 	}
-	outTime = x
+	outTime = x.In(session.Engine.TZLocation)
 	return
 }
 
@@ -588,12 +586,7 @@ func (session *Session) value2Interface(col *core.Column, fieldValue reflect.Val
 	case reflect.Struct:
 		if fieldType.ConvertibleTo(core.TimeType) {
 			t := fieldValue.Convert(core.TimeType).Interface().(time.Time)
-			if session.Engine.dialect.DBType() == core.MSSQL {
-				if t.IsZero() {
-					return nil, nil
-				}
-			}
-			tf := session.Engine.FormatTime(col.SQLType.Name, t)
+			tf := session.Engine.formatColTime(col, t)
 			return tf, nil
 		}
 

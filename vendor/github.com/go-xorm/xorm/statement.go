@@ -376,7 +376,7 @@ func buildUpdates(engine *Engine, table *core.Table, bean interface{},
 				if !requiredField && (t.IsZero() || !fieldValue.IsValid()) {
 					continue
 				}
-				val = engine.FormatTime(col.SQLType.Name, t)
+				val = engine.formatColTime(col, t)
 			} else if nulType, ok := fieldValue.Interface().(driver.Valuer); ok {
 				val, _ = nulType.Value()
 			} else {
@@ -612,7 +612,7 @@ func buildConds(engine *Engine, table *core.Table, bean interface{},
 				if !requiredField && (t.IsZero() || !fieldValue.IsValid()) {
 					continue
 				}
-				val = engine.FormatTime(col.SQLType.Name, t)
+				val = engine.formatColTime(col, t)
 			} else if _, ok := reflect.New(fieldType).Interface().(core.Conversion); ok {
 				continue
 			} else if valNul, ok := fieldValue.Interface().(driver.Valuer); ok {
@@ -1278,7 +1278,7 @@ func (statement *Statement) genSelectSQL(columnStr, condSQL string) (a string) {
 	}
 
 	// !nashtsai! REVIEW Sprintf is considered slowest mean of string concatnation, better to work with builder pattern
-	a = fmt.Sprintf("SELECT %v%v%v%v%v", top, distinct, columnStr, fromStr, whereStr)
+	a = fmt.Sprintf("SELECT %v%v%v%v%v", distinct, top, columnStr, fromStr, whereStr)
 	if len(mssqlCondi) > 0 {
 		if len(whereStr) > 0 {
 			a += " AND " + mssqlCondi
