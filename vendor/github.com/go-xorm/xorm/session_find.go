@@ -122,7 +122,10 @@ func (session *Session) Find(rowsSlicePtr interface{}, condiBean ...interface{})
 			}
 		}
 
-		condSQL, condArgs, _ := builder.ToSQL(session.Statement.cond.And(autoCond))
+		condSQL, condArgs, err := builder.ToSQL(session.Statement.cond.And(autoCond))
+		if err != nil {
+			return err
+		}
 
 		args = append(session.Statement.joinArgs, condArgs...)
 		sqlStr = session.Statement.genSelectSQL(columnStr, condSQL)

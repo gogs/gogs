@@ -298,7 +298,19 @@ func (session *Session) Update(bean interface{}, condiBean ...interface{}) (int6
 				condSQL = "WHERE " + condSQL
 			}
 		} else if st.Engine.dialect.DBType() == core.MSSQL {
-			top = fmt.Sprintf("top (%d) ", st.LimitN)
+			if st.OrderStr != "" && st.Engine.dialect.DBType() == core.MSSQL &&
+				table != nil && len(table.PrimaryKeys) == 1 {
+				cond = builder.Expr(fmt.Sprintf("%s IN (SELECT TOP (%d) %s FROM %v%v)",
+					table.PrimaryKeys[0], st.LimitN, table.PrimaryKeys[0],
+					session.Engine.Quote(session.Statement.TableName()), condSQL), condArgs...)
+
+				condSQL, condArgs, _ = builder.ToSQL(cond)
+				if len(condSQL) > 0 {
+					condSQL = "WHERE " + condSQL
+				}
+			} else {
+				top = fmt.Sprintf("TOP (%d) ", st.LimitN)
+			}
 		}
 	}
 
