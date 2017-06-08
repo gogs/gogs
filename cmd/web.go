@@ -111,6 +111,8 @@ func newMacaron() *macaron.Macaron {
 	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
 		path.Join(setting.CustomPath, "templates/mail"), funcMap)
 
+	m.SetAutoHead(true)
+
 	localeNames, err := bindata.AssetDir("conf/locale")
 	if err != nil {
 		log.Fatal(4, "Fail to list locale files: %v", err)
