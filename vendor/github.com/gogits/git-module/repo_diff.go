@@ -293,6 +293,8 @@ func ParsePatch(done chan<- error, maxLines, maxLineCharacteres, maxFiles int, r
 					curFile.Name = b
 					curFile.Index = b
 					break CHECK_TYPE
+				case strings.HasPrefix(line, "old mode"):
+					break CHECK_TYPE
 				}
 			}
 		}
