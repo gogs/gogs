@@ -1,0 +1,22 @@
+gogs:
+  image: gogs/gogs:latest
+  links: 
+    - db
+  volumes:
+    - /var/gogs:/data
+  ports:
+    - "10080:3000"
+    - "10022:22"
+  environment:
+    DB_TYPE: mysql
+    HOST: db
+    NAME: gogs
+    USER: gogs
+    PASSWD: changeme
+db:
+  image: library/mariadb:latest
+  environment:
+    MYSQL_ROOT_PASSWORD: changeme
+    MYSQL_DATABASE: gogs
+    MYSQL_USER: gogs
+    MYSQL_PASSWORD: changeme
