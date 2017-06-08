@@ -101,6 +101,7 @@ func runRestore(c *cli.Context) error {
 
 	// Data files
 	if !c.Bool("database-only") {
+		os.MkdirAll(setting.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars"} {
 			dirPath := path.Join(setting.AppDataPath, dir)
 			if com.IsExist(dirPath) {
