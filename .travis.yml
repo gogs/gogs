@@ -1,9 +1,8 @@
 language: go
 go:
-  - 1.5.x
-  - 1.6.x
-  - 1.7.x
-  - 1.8.x
+  - 1.6
+  - 1.7
+  - 1.8
   - master
 
 before_install:
