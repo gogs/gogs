@@ -18,6 +18,10 @@ $ docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
 
 # Use `docker start` if you have stopped it.
 $ docker start gogs
+
+# Or using docker-compose
+$ POSTGRES_USER=<your_db_user> POSTGRES_PASSWORD=<your_db_password> docker-compose up -d
+
 ```
 
 Note: It is important to map the Gogs ssh service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Gogs Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
