@@ -1,0 +1,25 @@
+version: '2'
+services:
+    gogs_server:
+        image: gogs/gogs
+        container_name: gogs_server
+        ports:
+            - "3000:3000"
+            - "10022:22"
+        links:
+            - gogs_db:mysql
+        volumes:
+            - gogs_server_data:/data
+    gogs_db:
+        image: mysql
+        container_name: gogs_db
+        volumes:
+            - gogs_db_data:/var/lib/mysql
+        environment:
+            - MYSQL_ROOT_PASSWORD=password
+            - MYSQL_DATABASE=gogs
+volumes:
+  gogs_server_data:
+    driver: local
+  gogs_db_data:
+    driver: local
