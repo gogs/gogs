@@ -65,10 +65,7 @@ func Search(c *context.APIContext) {
 			})
 			return
 		}
-		results[i] = &api.Repository{
-			ID:       repos[i].ID,
-			FullName: path.Join(repos[i].Owner.Name, repos[i].Name),
-		}
+		results[i] = repos[i].APIFormat(nil)
 	}
 
 	c.SetLinkHeader(int(count), setting.API.MaxResponseItems)
