@@ -1021,7 +1021,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return fmt.Errorf("newRepoAction: %v", err)
 	}
 
-	return nil
+	return repo.loadAttributes(e)
 }
 
 // CreateRepository creates a repository for given user or organization.
@@ -1993,12 +1993,12 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 	}
 
 	// Load owners
-	set := make(map[int64]*User)
+	userSet := make(map[int64]*User)
 	for i := range repos {
-		set[repos[i].OwnerID] = nil
+		userSet[repos[i].OwnerID] = nil
 	}
-	userIDs := make([]int64, 0, len(set))
-	for userID := range set {
+	userIDs := make([]int64, 0, len(userSet))
+	for userID := range userSet {
 		userIDs = append(userIDs, userID)
 	}
 	users := make([]*User, 0, len(userIDs))
@@ -2006,11 +2006,36 @@ func (repos RepositoryList) loadAttributes(e Engine) error {
 		return fmt.Errorf("find users: %v", err)
 	}
 	for i := range users {
-		set[users[i].ID] = users[i]
+		userSet[users[i].ID] = users[i]
 	}
 	for i := range repos {
-		repos[i].Owner = set[repos[i].OwnerID]
+		repos[i].Owner = userSet[repos[i].OwnerID]
 	}
+
+	// Load base repositories
+	repoSet := make(map[int64]*Repository)
+	for i := range repos {
+		if repos[i].IsFork {
+			repoSet[repos[i].ForkID] = nil
+		}
+	}
+	baseIDs := make([]int64, 0, len(repoSet))
+	for baseID := range repoSet {
+		baseIDs = append(baseIDs, baseID)
+	}
+	baseRepos := make([]*Repository, 0, len(baseIDs))
+	if err := e.Where("id > 0").In("id", baseIDs).Find(&baseRepos); err != nil {
+		return fmt.Errorf("find base repositories: %v", err)
+	}
+	for i := range baseRepos {
+		repoSet[baseRepos[i].ID] = baseRepos[i]
+	}
+	for i := range repos {
+		if repos[i].IsFork {
+			repos[i].BaseRepo = repoSet[repos[i].ForkID]
+		}
+	}
+
 	return nil
 }
 

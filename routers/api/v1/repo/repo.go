@@ -56,15 +56,16 @@ func Search(c *context.APIContext) {
 		return
 	}
 
+	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+		c.JSON(500, map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+		})
+		return
+	}
+
 	results := make([]*api.Repository, len(repos))
 	for i := range repos {
-		if err = repos[i].GetOwner(); err != nil {
-			c.JSON(500, map[string]interface{}{
-				"ok":    false,
-				"error": err.Error(),
-			})
-			return
-		}
 		results[i] = repos[i].APIFormat(nil)
 	}
 
