@@ -289,7 +289,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		return "", errors.New("only a single line with a single key please")
 	}
 
-	// remove any unnecessary whitespace now
+	// Remove any unnecessary whitespace
 	content = strings.TrimSpace(content)
 
 	if !setting.SSH.MinimumKeySizeCheck {

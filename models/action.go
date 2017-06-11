@@ -75,7 +75,7 @@ type Action struct {
 	ID           int64
 	UserID       int64 // Receiver user ID
 	OpType       ActionType
-	ActUserID    int64  // Doer user OD
+	ActUserID    int64  // Doer user ID
 	ActUserName  string // Doer user name
 	ActAvatar    string `xorm:"-"`
 	RepoID       int64  `xorm:"INDEX"`
