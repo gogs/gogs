@@ -73,10 +73,10 @@ func init() {
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
 	ID           int64
-	UserID       int64 // Receiver user id.
+	UserID       int64 // Receiver user ID
 	OpType       ActionType
-	ActUserID    int64  // Action user id.
-	ActUserName  string // Action user name.
+	ActUserID    int64  // Doer user OD
+	ActUserName  string // Doer user name
 	ActAvatar    string `xorm:"-"`
 	RepoID       int64  `xorm:"INDEX"`
 	RepoUserName string

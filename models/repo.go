@@ -1339,14 +1339,14 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 			return fmt.Errorf("getOwner: %v", err)
 		}
 		if repo.Owner.IsOrganization() {
-			// Organization repository need to recalculate access table when visivility is changed.
+			// Organization repository need to recalculate access table when visivility is changed
 			if err = repo.recalculateTeamAccesses(e, 0); err != nil {
 				return fmt.Errorf("recalculateTeamAccesses: %v", err)
 			}
 		}
 
-		// Create/Remove git-daemon-export-ok for git-daemon...
-		daemonExportFile := path.Join(repo.RepoPath(), `git-daemon-export-ok`)
+		// Create/Remove git-daemon-export-ok for git-daemon
+		daemonExportFile := path.Join(repo.RepoPath(), "git-daemon-export-ok")
 		if repo.IsPrivate && com.IsExist(daemonExportFile) {
 			if err = os.Remove(daemonExportFile); err != nil {
 				log.Error(4, "Failed to remove %s: %v", daemonExportFile, err)
@@ -1372,7 +1372,7 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 
 		// Change visibility of generated actions
 		if _, err = e.Where("repo_id = ?", repo.ID).Cols("is_private").Update(&Action{IsPrivate: repo.IsPrivate}); err != nil {
-			return fmt.Errorf("change action visibility of repository [id: %d]: %v", repo.ID, err)
+			return fmt.Errorf("change action visibility of repository: %v", err)
 		}
 	}
 
