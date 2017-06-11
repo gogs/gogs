@@ -67,7 +67,7 @@ func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration.Mode = ACCESS_MODE_WRITE
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func DeleteCollaboration(repo *Repository, userID int64) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}

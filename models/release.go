@@ -175,7 +175,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	r.LowerTagName = strings.ToLower(r.TagName)
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -289,7 +289,7 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 	r.PublisherID = doer.ID
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}

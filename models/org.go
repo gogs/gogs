@@ -124,7 +124,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	org.NumMembers = 1
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func DeleteOrganization(org *User) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func RemoveOrgUser(orgID, userID int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err := sess.Begin(); err != nil {
 		return err
 	}
