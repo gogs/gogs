@@ -32,21 +32,21 @@ const (
 )
 
 func Settings(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsOptions"] = true
-	c.HTML(200, SETTINGS_OPTIONS)
+	c.Title("repo.settings")
+	c.PageIs("SettingsOptions")
+	c.Success(SETTINGS_OPTIONS)
 }
 
 func SettingsPost(c *context.Context, f form.RepoSetting) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsOptions"] = true
+	c.Title("repo.settings")
+	c.PageIs("SettingsOptions")
 
 	repo := c.Repo.Repository
 
 	switch c.Query("action") {
 	case "update":
 		if c.HasError() {
-			c.HTML(200, SETTINGS_OPTIONS)
+			c.Success(SETTINGS_OPTIONS)
 			return
 		}
 
@@ -57,7 +57,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		if repo.LowerName != strings.ToLower(newRepoName) {
 			isNameChanged = true
 			if err := models.ChangeRepositoryName(c.Repo.Owner, repo.Name, newRepoName); err != nil {
-				c.Data["Err_RepoName"] = true
+				c.FormErr("RepoName")
 				switch {
 				case models.IsErrRepoAlreadyExist(err):
 					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
@@ -66,7 +66,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				case models.IsErrNamePatternNotAllowed(err):
 					c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f)
 				default:
-					c.Handle(500, "ChangeRepositoryName", err)
+					c.ServerError("ChangeRepositoryName", err)
 				}
 				return
 			}
@@ -88,14 +88,14 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		visibilityChanged := repo.IsPrivate != f.Private
 		repo.IsPrivate = f.Private
 		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
-			c.Handle(500, "UpdateRepository", err)
+			c.ServerError("UpdateRepository", err)
 			return
 		}
 		log.Trace("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
 			if err := models.RenameRepoAction(c.User, oldRepoName, repo); err != nil {
-				log.Error(4, "RenameRepoAction: %v", err)
+				log.Error(2, "RenameRepoAction: %v", err)
 			}
 		}
 
@@ -104,7 +104,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 	case "mirror":
 		if !repo.IsMirror {
-			c.Handle(404, "", nil)
+			c.NotFound()
 			return
 		}
 
@@ -113,12 +113,12 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.Repo.Mirror.Interval = f.Interval
 			c.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(f.Interval) * time.Hour)
 			if err := models.UpdateMirror(c.Repo.Mirror); err != nil {
-				c.Handle(500, "UpdateMirror", err)
+				c.ServerError("UpdateMirror", err)
 				return
 			}
 		}
 		if err := c.Repo.Mirror.SaveAddress(f.MirrorAddress); err != nil {
-			c.Handle(500, "SaveAddress", err)
+			c.ServerError("SaveAddress", err)
 			return
 		}
 
@@ -127,7 +127,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 	case "mirror-sync":
 		if !repo.IsMirror {
-			c.Handle(404, "", nil)
+			c.NotFound()
 			return
 		}
 
@@ -149,7 +149,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repo.EnablePulls = f.EnablePulls
 
 		if err := models.UpdateRepository(repo, false); err != nil {
-			c.Handle(500, "UpdateRepository", err)
+			c.ServerError("UpdateRepository", err)
 			return
 		}
 		log.Trace("Repository advanced settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
@@ -159,7 +159,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 	case "convert":
 		if !c.Repo.IsOwner() {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		if repo.Name != f.RepoName {
@@ -169,22 +169,22 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		if c.Repo.Owner.IsOrganization() {
 			if !c.Repo.Owner.IsOwnedBy(c.User.ID) {
-				c.Error(404)
+				c.NotFound()
 				return
 			}
 		}
 
 		if !repo.IsMirror {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		repo.IsMirror = false
 
 		if _, err := models.CleanUpMigrateInfo(repo); err != nil {
-			c.Handle(500, "CleanUpMigrateInfo", err)
+			c.ServerError("CleanUpMigrateInfo", err)
 			return
 		} else if err = models.DeleteMirrorByRepoID(c.Repo.Repository.ID); err != nil {
-			c.Handle(500, "DeleteMirrorByRepoID", err)
+			c.ServerError("DeleteMirrorByRepoID", err)
 			return
 		}
 		log.Trace("Repository converted from mirror to regular: %s/%s", c.Repo.Owner.Name, repo.Name)
@@ -193,7 +193,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 	case "transfer":
 		if !c.Repo.IsOwner() {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		if repo.Name != f.RepoName {
@@ -203,7 +203,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		if c.Repo.Owner.IsOrganization() && !c.User.IsAdmin {
 			if !c.Repo.Owner.IsOwnedBy(c.User.ID) {
-				c.Error(404)
+				c.NotFound()
 				return
 			}
 		}
@@ -211,7 +211,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		newOwner := c.Query("new_owner_name")
 		isExist, err := models.IsUserExist(0, newOwner)
 		if err != nil {
-			c.Handle(500, "IsUserExist", err)
+			c.ServerError("IsUserExist", err)
 			return
 		} else if !isExist {
 			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
@@ -222,7 +222,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			if models.IsErrRepoAlreadyExist(err) {
 				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
-				c.Handle(500, "TransferOwnership", err)
+				c.ServerError("TransferOwnership", err)
 			}
 			return
 		}
@@ -232,7 +232,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 	case "delete":
 		if !c.Repo.IsOwner() {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		if repo.Name != f.RepoName {
@@ -242,13 +242,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		if c.Repo.Owner.IsOrganization() && !c.User.IsAdmin {
 			if !c.Repo.Owner.IsOwnedBy(c.User.ID) {
-				c.Error(404)
+				c.NotFound()
 				return
 			}
 		}
 
 		if err := models.DeleteRepository(c.Repo.Owner.ID, repo.ID); err != nil {
-			c.Handle(500, "DeleteRepository", err)
+			c.ServerError("DeleteRepository", err)
 			return
 		}
 		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
@@ -258,7 +258,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 	case "delete-wiki":
 		if !c.Repo.IsOwner() {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		if repo.Name != f.RepoName {
@@ -268,7 +268,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		if c.Repo.Owner.IsOrganization() && !c.User.IsAdmin {
 			if !c.Repo.Owner.IsOwnedBy(c.User.ID) {
-				c.Error(404)
+				c.NotFound()
 				return
 			}
 		}
@@ -278,7 +278,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		repo.EnableWiki = false
 		if err := models.UpdateRepository(repo, false); err != nil {
-			c.Handle(500, "UpdateRepository", err)
+			c.ServerError("UpdateRepository", err)
 			return
 		}
 
@@ -286,7 +286,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		c.Redirect(c.Repo.RepoLink + "/settings")
 
 	default:
-		c.Handle(404, "", nil)
+		c.NotFound()
 	}
 }
 
