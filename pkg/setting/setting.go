@@ -21,12 +21,14 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
+	"github.com/mcuadros/go-version"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
 	"github.com/gogits/go-libravatar"
 
 	"github.com/gogits/gogs/pkg/bindata"
+	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/user"
 )
 
@@ -90,7 +92,7 @@ var (
 		ServerCiphers       []string       `ini:"SSH_SERVER_CIPHERS"`
 		KeyTestPath         string         `ini:"SSH_KEY_TEST_PATH"`
 		KeygenPath          string         `ini:"SSH_KEYGEN_PATH"`
-		MinimumKeySizeCheck bool           `ini:"-"`
+		MinimumKeySizeCheck bool           `ini:"MINIMUM_KEY_SIZE_CHECK"`
 		MinimumKeySizes     map[string]int `ini:"-"`
 	}
 
@@ -377,6 +379,21 @@ func IsRunUserMatchCurrentUser(runUser string) (string, bool) {
 	return currentUser, runUser == currentUser
 }
 
+// getOpenSSHVersion parses and returns string representation of OpenSSH version
+// returned by command "ssh -V".
+func getOpenSSHVersion() string {
+	// Note: somehow version is printed to stderr
+	_, stderr, err := process.Exec("getOpenSSHVersion", "ssh", "-V")
+	if err != nil {
+		log.Fatal(2, "Fail to get OpenSSH version: %v - %s", err, stderr)
+	}
+
+	// Trim unused information: https://github.com/gogits/gogs/issues/4507#issuecomment-305150441
+	version := strings.TrimRight(strings.Fields(stderr)[0], ",1234567890")
+	version = strings.TrimSuffix(strings.TrimPrefix(version, "OpenSSH_"), "p")
+	return version
+}
+
 // NewContext initializes configuration context.
 // NOTE: do not print any log except error.
 func NewContext() {
@@ -474,9 +491,9 @@ func NewContext() {
 	if err = Cfg.Section("server").MapTo(&SSH); err != nil {
 		log.Fatal(2, "Fail to map SSH settings: %v", err)
 	}
-	// When disable SSH, start builtin server value is ignored.
 	if SSH.Disabled {
 		SSH.StartBuiltinServer = false
+		SSH.MinimumKeySizeCheck = false
 	}
 
 	if !SSH.Disabled && !SSH.StartBuiltinServer {
@@ -487,12 +504,23 @@ func NewContext() {
 		}
 	}
 
-	SSH.MinimumKeySizeCheck = sec.Key("MINIMUM_KEY_SIZE_CHECK").MustBool()
-	SSH.MinimumKeySizes = map[string]int{}
-	minimumKeySizes := Cfg.Section("ssh.minimum_key_sizes").Keys()
-	for _, key := range minimumKeySizes {
-		if key.MustInt() != -1 {
-			SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
+	// Check if server is eligible for minimum key size check when user choose to enable.
+	// Windows server and OpenSSH version lower than 5.1 (https://github.com/gogits/gogs/issues/4507)
+	// are forced to be disabled because the "ssh-keygen" in Windows does not print key type.
+	if SSH.MinimumKeySizeCheck &&
+		(IsWindows || version.Compare(getOpenSSHVersion(), "5.1", "<")) {
+		SSH.MinimumKeySizeCheck = false
+		log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+1. Windows server
+2. OpenSSH version is lower than 5.1`)
+	}
+
+	if SSH.MinimumKeySizeCheck {
+		SSH.MinimumKeySizes = map[string]int{}
+		for _, key := range Cfg.Section("ssh.minimum_key_sizes").Keys() {
+			if key.MustInt() != -1 {
+				SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
+			}
 		}
 	}
 
