@@ -119,7 +119,7 @@ func IsBranchOfRepoRequirePullRequest(repoID int64, name string) bool {
 // If ID is 0, it creates a new record. Otherwise, updates existing record.
 func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}

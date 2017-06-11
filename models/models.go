@@ -43,13 +43,6 @@ type Engine interface {
 	Where(interface{}, ...interface{}) *xorm.Session
 }
 
-func sessionRelease(sess *xorm.Session) {
-	if !sess.IsCommitedOrRollbacked {
-		sess.Rollback()
-	}
-	sess.Close()
-}
-
 var (
 	x         *xorm.Engine
 	tables    []interface{}

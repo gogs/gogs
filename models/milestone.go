@@ -115,7 +115,7 @@ func (m *Milestone) CountIssues(isClosed, includePulls bool) int64 {
 // NewMilestone creates new milestone of repository.
 func NewMilestone(m *Milestone) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func changeMilestoneIssueStats(e *xorm.Session, issue *Issue) error {
 // for the milestone associated with the given issue.
 func ChangeMilestoneIssueStats(issue *Issue) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -378,7 +378,7 @@ func DeleteMilestoneOfRepoByID(repoID, id int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}

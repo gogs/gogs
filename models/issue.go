@@ -325,7 +325,7 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 
 func (issue *Issue) ClearLabels(doer *User) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -370,7 +370,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 // ReplaceLabels removes all current labels and add new labels to the issue.
 func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -455,7 +455,7 @@ func (i *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isCl
 // ChangeStatus changes issue status to open or closed.
 func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -744,7 +744,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 // NewIssue creates new issue with labels and attachments for repository.
 func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -1062,7 +1062,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 // NewIssueUsers adds new issue-user relations for new issue of repository.
 func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -1391,7 +1391,7 @@ func updateIssueUserByAssignee(e *xorm.Session, issue *Issue) (err error) {
 // UpdateIssueUserByAssignee updates issue-user relation for assignee.
 func UpdateIssueUserByAssignee(issue *Issue) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
