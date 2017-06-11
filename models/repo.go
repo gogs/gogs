@@ -1369,6 +1369,11 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 				return fmt.Errorf("updateRepository[%d]: %v", forkRepos[i].ID, err)
 			}
 		}
+
+		// Change visibility of generated actions
+		if _, err = e.Where("repo_id = ?", repo.ID).Cols("is_private").Update(&Action{IsPrivate: repo.IsPrivate}); err != nil {
+			return fmt.Errorf("change action visibility of repository [id: %d]: %v", repo.ID, err)
+		}
 	}
 
 	return nil
@@ -1376,7 +1381,7 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 
 func UpdateRepository(repo *Repository, visibilityChanged bool) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
