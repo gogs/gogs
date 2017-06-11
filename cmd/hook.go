@@ -23,7 +23,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/pkg/httplib"
 	"github.com/gogits/gogs/pkg/setting"
-	http "github.com/gogits/gogs/routers/repo"
+	http "github.com/gogits/gogs/routes/repo"
 )
 
 var (

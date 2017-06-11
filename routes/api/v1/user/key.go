@@ -11,8 +11,8 @@ import (
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
-	"github.com/gogits/gogs/routers/api/v1/repo"
+	"github.com/gogits/gogs/routes/api/v1/convert"
+	"github.com/gogits/gogs/routes/api/v1/repo"
 )
 
 func GetUserByParamsName(c *context.APIContext, name string) *models.User {

@@ -16,7 +16,7 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routers/api/v1/convert"
+	"github.com/gogits/gogs/routes/api/v1/convert"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories#search-repositories

@@ -36,13 +36,13 @@ import (
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/template"
-	"github.com/gogits/gogs/routers"
-	"github.com/gogits/gogs/routers/admin"
-	apiv1 "github.com/gogits/gogs/routers/api/v1"
-	"github.com/gogits/gogs/routers/dev"
-	"github.com/gogits/gogs/routers/org"
-	"github.com/gogits/gogs/routers/repo"
-	"github.com/gogits/gogs/routers/user"
+	"github.com/gogits/gogs/routes"
+	"github.com/gogits/gogs/routes/admin"
+	apiv1 "github.com/gogits/gogs/routes/api/v1"
+	"github.com/gogits/gogs/routes/dev"
+	"github.com/gogits/gogs/routes/org"
+	"github.com/gogits/gogs/routes/repo"
+	"github.com/gogits/gogs/routes/user"
 )
 
 var Web = cli.Command{
@@ -160,7 +160,7 @@ func runWeb(c *cli.Context) error {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
-	routers.GlobalInit()
+	routes.GlobalInit()
 	checkVersion()
 
 	m := newMacaron()
@@ -175,17 +175,17 @@ func runWeb(c *cli.Context) error {
 	// FIXME: not all routes need go through same middlewares.
 	// Especially some AJAX requests, we can reduce middleware number to improve performance.
 	// Routers.
-	m.Get("/", ignSignIn, routers.Home)
+	m.Get("/", ignSignIn, routes.Home)
 	m.Group("/explore", func() {
 		m.Get("", func(c *context.Context) {
 			c.Redirect(setting.AppSubURL + "/explore/repos")
 		})
-		m.Get("/repos", routers.ExploreRepos)
-		m.Get("/users", routers.ExploreUsers)
-		m.Get("/organizations", routers.ExploreOrganizations)
+		m.Get("/repos", routes.ExploreRepos)
+		m.Get("/users", routes.ExploreUsers)
+		m.Get("/organizations", routes.ExploreOrganizations)
 	}, ignSignIn)
-	m.Combo("/install", routers.InstallInit).Get(routers.Install).
-		Post(bindIgnErr(form.Install{}), routers.InstallPost)
+	m.Combo("/install", routes.InstallInit).Get(routes.Install).
+		Post(bindIgnErr(form.Install{}), routes.InstallPost)
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 	// ***** START: User *****
@@ -651,7 +651,7 @@ func runWeb(c *cli.Context) error {
 	})
 
 	// Not found handler.
-	m.NotFound(routers.NotFound)
+	m.NotFound(routes.NotFound)
 
 	// Flag for port number in case first time run conflict.
 	if c.IsSet("port") {

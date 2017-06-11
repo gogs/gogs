@@ -8,7 +8,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routes"
 )
 
 const (
@@ -20,7 +20,7 @@ func Organizations(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminOrganizations"] = true
 
-	routers.RenderUserSearch(c, &routers.UserSearchOptions{
+	routes.RenderUserSearch(c, &routes.UserSearchOptions{
 		Type:     models.USER_TYPE_ORGANIZATION,
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,

@@ -9,7 +9,7 @@ import (
 
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/routers/repo"
+	"github.com/gogits/gogs/routes/repo"
 )
 
 // https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-raw-content

@@ -15,7 +15,7 @@ import (
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routers/repo"
+	"github.com/gogits/gogs/routes/repo"
 )
 
 const (
