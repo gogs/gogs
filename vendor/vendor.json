@@ -75,10 +75,10 @@
 			"revisionTime": "2017-01-13T15:16:12Z"
 		},
 		{
-			"checksumSHA1": "qM/kf31cT2cxjtHxdzbu8q8jPq0=",
+			"checksumSHA1": "J0tcl2i76AQvMio9MWNQaucepYA=",
 			"path": "github.com/go-macaron/binding",
-			"revision": "9440f336b443056c90d7d448a0a55ad8c7599880",
-			"revisionTime": "2016-07-11T22:56:54Z"
+			"revision": "ac54ee249c27dca7e76fad851a4a04b73bd1b183",
+			"revisionTime": "2017-06-11T06:58:19Z"
 		},
 		{
 			"checksumSHA1": "6pSblXcT+pZJWhPCEyLZONiQUHg=",
