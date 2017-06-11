@@ -15,7 +15,7 @@ import (
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routers"
+	"github.com/gogits/gogs/routes"
 )
 
 const (
@@ -29,7 +29,7 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	routers.RenderUserSearch(c, &routers.UserSearchOptions{
+	routes.RenderUserSearch(c, &routes.UserSearchOptions{
 		Type:     models.USER_TYPE_INDIVIDUAL,
 		Counter:  models.CountUsers,
 		Ranger:   models.Users,

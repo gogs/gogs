@@ -14,7 +14,7 @@ import (
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routers/user"
+	"github.com/gogits/gogs/routes/user"
 )
 
 const (

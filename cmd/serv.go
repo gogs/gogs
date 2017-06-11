@@ -19,7 +19,7 @@ import (
 	"github.com/gogits/gogs/models"
 	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/setting"
-	http "github.com/gogits/gogs/routers/repo"
+	http "github.com/gogits/gogs/routes/repo"
 )
 
 const (
