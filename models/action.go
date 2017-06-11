@@ -21,8 +21,8 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 type ActionType int
@@ -78,7 +78,7 @@ type Action struct {
 	ActUserID    int64  // Action user id.
 	ActUserName  string // Action user name.
 	ActAvatar    string `xorm:"-"`
-	RepoID       int64
+	RepoID       int64  `xorm:"INDEX"`
 	RepoUserName string
 	RepoName     string
 	RefName      string
