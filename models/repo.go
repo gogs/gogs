@@ -282,6 +282,8 @@ func (repo *Repository) HTMLURL() string {
 	return setting.AppURL + repo.FullName()
 }
 
+// This method assumes following fields have been assigned with valid values:
+// Required - BaseRepo (if fork)
 // Arguments that are allowed to be nil: permission
 func (repo *Repository) APIFormat(permission *api.Permission) *api.Repository {
 	cloneLink := repo.CloneLink()

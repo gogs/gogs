@@ -112,14 +112,12 @@ func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 		repo, err := GetRepositoryByID(access.RepoID)
 		if err != nil {
 			if errors.IsRepoNotExist(err) {
-				log.Error(4, "GetRepositoryByID: %v", err)
+				log.Error(2, "GetRepositoryByID: %v", err)
 				continue
 			}
 			return nil, err
 		}
-		if err = repo.GetOwner(); err != nil {
-			return nil, err
-		} else if repo.OwnerID == u.ID {
+		if repo.OwnerID == u.ID {
 			continue
 		}
 		repos[repo] = access.Mode
