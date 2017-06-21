@@ -101,6 +101,12 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
+	if err = models.RepositoryList(ownRepos).LoadAttributes(); err != nil {
+		c.Error(500, "LoadAttributes(ownRepos)", err)
+		return
+	}
+
+	// Early return for querying other user's repositories
 	if c.User.ID != user.ID {
 		repos := make([]*api.Repository, len(ownRepos))
 		for i := range ownRepos {
