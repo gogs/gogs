@@ -103,13 +103,19 @@ func runRestore(c *cli.Context) error {
 	if !c.Bool("database-only") {
 		os.MkdirAll(setting.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars"} {
+			// Skip if backup archive does not have corresponding data
+			srcPath := path.Join(archivePath, "data", dir)
+			if !com.IsDir(srcPath) {
+				continue
+			}
+
 			dirPath := path.Join(setting.AppDataPath, dir)
 			if com.IsExist(dirPath) {
 				if err = os.Rename(dirPath, dirPath+".bak"); err != nil {
 					log.Fatal(0, "Fail to backup current 'data': %v", err)
 				}
 			}
-			if err = os.Rename(path.Join(archivePath, "data", dir), dirPath); err != nil {
+			if err = os.Rename(srcPath, dirPath); err != nil {
 				log.Fatal(0, "Fail to import 'data': %v", err)
 			}
 		}
