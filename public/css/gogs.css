@@ -2138,6 +2138,7 @@ footer .ui.language .menu {
 .repository .diff-file-box .code-diff .lines-num {
   border-right: 1px solid #d4d4d5;
   padding: 0 5px;
+  user-select: none;
 }
 .repository .diff-file-box .code-diff .lines-num.lines-num-old,
 .repository .diff-file-box .code-diff .lines-num.lines-num-new {
