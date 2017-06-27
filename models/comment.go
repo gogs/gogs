@@ -110,6 +110,12 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 		if err != nil {
 			return fmt.Errorf("getIssueByID [%d]: %v", c.IssueID, err)
 		}
+		if c.Issue.Repo == nil {
+			c.Issue.Repo, err = getRepositoryByID(e, c.Issue.RepoID)
+			if err != nil {
+				return fmt.Errorf("getRepositoryByID [%d]: %v", c.Issue.RepoID, err)
+			}
+		}
 	}
 
 	if c.Attachments == nil {
