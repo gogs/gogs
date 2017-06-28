@@ -15,7 +15,12 @@ import (
 func ListIssueComments(c *context.APIContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
-		since, _ = time.Parse(time.RFC3339, c.Query("since"))
+		var err error
+		since, err = time.Parse(time.RFC3339, c.Query("since"))
+		if err != nil {
+			c.Error(422, "", err)
+			return
+		}
 	}
 
 	// comments,err:=models.GetCommentsByIssueIDSince(, since)
@@ -41,7 +46,12 @@ func ListIssueComments(c *context.APIContext) {
 func ListRepoIssueComments(c *context.APIContext) {
 	var since time.Time
 	if len(c.Query("since")) > 0 {
-		since, _ = time.Parse(time.RFC3339, c.Query("since"))
+		var err error
+		since, err = time.Parse(time.RFC3339, c.Query("since"))
+		if err != nil {
+			c.Error(422, "", err)
+			return
+		}
 	}
 
 	comments, err := models.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix())
