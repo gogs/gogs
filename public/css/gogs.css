@@ -1480,6 +1480,9 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view table {
   width: 100%;
 }
+.repository.file.list #file-content .code-view td{
+  border: none;
+}
 .repository.file.list #file-content .code-view .blob-num {
   width: 1%;
   min-width: 50px; 
