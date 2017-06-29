@@ -186,7 +186,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			var output bytes.Buffer
 			lines := strings.Split(fileContent, "\n")
 			for index, line := range lines {
-				output.WriteString(fmt.Sprintf(`<tr><td class="blob-num">%d</td><td id="L%d" rel="L%d" class="blob-code">%s</td></tr>`, index+1, index+1, index+1, gotemplate.HTMLEscapeString(strings.TrimRight(line, "\r"))) + "\n")
+				output.WriteString(fmt.Sprintf(`<tr><td class="blob-num">%d</td><td id="L%d" rel="L%d" class="blob-code"><pre><code class="hljs">%s</code></pre></td></tr>`, index+1, index+1, index+1, gotemplate.HTMLEscapeString(strings.TrimRight(line, "\r"))) + "\n")
 			}
 			c.Data["FileContent"] = gotemplate.HTML(output.String())
 
