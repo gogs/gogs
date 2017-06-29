@@ -1480,6 +1480,21 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view table {
   width: 100%;
 }
+.repository.file.list #file-content .code-view .line-num {
+  width: 1%;
+  min-width: 50px;
+  padding-right: 10px;
+  padding-left: 10px;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: top;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 .repository.file.list #file-content .code-view .lines-num {
   vertical-align: top;
   text-align: right;
