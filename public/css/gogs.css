@@ -1480,12 +1480,11 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view table {
   width: 100%;
 }
-.repository.file.list #file-content .code-view td{
+.repository.file.list #file-content .code-view td {
   border: none;
 }
 .repository.file.list #file-content .code-view .blob-num {
   width: 1%;
-  min-width: 50px; 
   line-height: 20px;
   cursor: pointer;
   text-align: right;
@@ -1505,15 +1504,14 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content .code-view .blob-code pre,
 .repository.file.list #file-content .code-view .blob-code .hljs {
-  background-color: white;
   margin: 0;
   padding: 0 !important;
 }
-
-.repository.file.list #file-content .code-view .blob-code pre li.active,
-.repository.file.list #file-content .code-view .blob-code ol li.active,
-.repository.file.list #file-content .code-view .blob-code .hljs li.active {
-  background: #ffffdd;
+.repository.file.list #file-content .code-view .blob-code {
+  background-color: white;
+}
+.repository.file.list #file-content .code-view .blob-code.active {
+  background: #ffffdd !important;;
 }
 
 .repository.file.list .sidebar {

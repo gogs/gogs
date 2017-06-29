@@ -1048,11 +1048,11 @@ function searchRepositories() {
 
 function initCodeView() {
     if ($('.code-view .linenums').length > 0) {
-        $(document).on('click', '.lines-num span', function (e) {
+         $(document).on('click', '.blob-num', function (e) {
             var $select = $(this);
-            var $list = $select.parent().siblings('.lines-code').find('ol.linenums > li');
-            selectRange($list, $list.filter('[rel=' + $select.attr('id') + ']'), (e.shiftKey ? $list.filter('.active').eq(0) : null));
-            deSelect();
+            var $code = $select.parent().find('.blob-code');
+            $select.parent().parent().find(".blob-code").removeClass("active");
+            $code.addClass("active");
         });
 
         $(window).on('hashchange', function (e) {
