@@ -420,41 +420,39 @@
 				table {
 					width: 100%;
 				}
-				.lines-num {
-					vertical-align: top;
+				td {
+					border: none;
+				}
+				.blob-num {
+					width: 1%;
+					line-height: 20px;
+					cursor: pointer;
 					text-align: right;
+					white-space: nowrap;
+					vertical-align: top;
+					cursor: pointer;
+					-webkit-user-select: none;
+					-moz-user-select: none;
+					-ms-user-select: none;
+					user-select: none;
 					color: #999;
 					background: #f5f5f5;
-					width: 1%;
-
-					span {
-						line-height: 20px;
-						padding: 0 10px;
-						cursor: pointer;
-						display: block;
+				}
+				.blob-num,
+				.blob-code {
+					  padding: 0 10px;
+				}
+				.blob-code{
+					background-color: white;
+					pre, .hljs {
+					margin: 0;
+					padding: 0 !important;
 					}
 				}
-				.lines-num,
-				.lines-code {
-					padding: 0;
-					pre,
-					ol,
-					.hljs {
-						background-color: white;
-						margin: 0;
-						padding: 0 !important;
-						li {
-							display: inline-block;
-							width: 100%;
-							&.active {
-								background: #ffffdd;
-							}
-							&:before {
-								content: ' ';
-							}
-						}
-					}
+				.blob-code.active{
+					  background: #ffffdd !important;;
 				}
+				
 			}
 		}
 
@@ -1026,7 +1024,7 @@
 			background-color: #f7f7f7;
 		}
 		.file-body.file-code {
-			.lines-num {
+			.blob-num {
 				text-align: right;
 				color: #A7A7A7;
 				background: #fafafa;
@@ -1037,7 +1035,7 @@
 					text-align: center;
 				}
 			}
-			.lines-num-old {
+			.blob-num-old {
 				border-right: 1px solid #DDD;
 			}
 		}
@@ -1052,12 +1050,12 @@
 			pre {
 				margin: 0;
 			}
-			.lines-num {
+			.blob-num {
 				border-right: 1px solid #d4d4d5;
 				padding: 0 5px;
 				user-select: none;
 
-				&.lines-num-old, &.lines-num-new {
+				&.blob-num-old, &.blob-num-new {
 					cursor: pointer;
 					&:hover {
 						color: #383636;
