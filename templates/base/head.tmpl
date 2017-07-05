@@ -51,10 +51,22 @@
 	{{if .RequireSimpleMDE}}
 		<link rel="stylesheet" href="{{AppSubURL}}/plugins/simplemde-1.10.1/simplemde.min.css">
 		<script src="{{AppSubURL}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
-		<script src="{{AppSubURL}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
-		<script src="{{AppSubURL}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/mode/loadmode.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/mode/meta.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/lint/lint.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/lint/yaml-lint.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/lint/json-lint.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/lint/css-lint.js"></script>
+		<script src="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/lint/javascript-lint.js"></script>
+		
+		<script src="{{AppSubURL}}/plugins/jshint/jshint.js"></script>
+		<script src="{{AppSubURL}}/plugins/jsonlint/jsonlint.js"></script>
+		<script src="{{AppSubURL}}/plugins/csslint/csslint.js"></script>
+		<script src="{{AppSubURL}}/plugins/js-yaml/dist/js-yaml.min.js"></script>
+		<link rel="stylesheet" href="{{AppSubURL}}/plugins/codemirror-5.27.4/lib/codemirror.css">
+		<link rel="stylesheet" href="{{AppSubURL}}/plugins/codemirror-5.27.4/addon/lint/lint.css">
 		<script>
-			CodeMirror.modeURL =  "{{AppSubURL}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
+			CodeMirror.modeURL =  "{{AppSubURL}}/plugins/codemirror-5.27.4/mode/%N/%N.js";
 		</script>
 	{{end}}
 

@@ -630,7 +630,9 @@ function setCodeMirror($editArea) {
     }
 
     codeMirrorEditor = CodeMirror.fromTextArea($editArea[0], {
-        lineNumbers: true
+        lineNumbers: true,
+	gutters: ["Code-Mirror-code", "CodeMirror-lint-markers", "CodeMirror-gutter-filler", "CodeMirror-gutters"],
+	lint: true
     });
     codeMirrorEditor.on("change", function (cm, change) {
         $editArea.val(cm.getValue());
