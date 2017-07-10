@@ -186,15 +186,15 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			var output bytes.Buffer
 			lines := strings.Split(fileContent, "\n")
 			for index, line := range lines {
-				output.WriteString(fmt.Sprintf(`<li class="L%d" rel="L%d">%s</li>`, index+1, index+1, gotemplate.HTMLEscapeString(strings.TrimRight(line, "\r"))) + "\n")
+				output.WriteString(fmt.Sprintf(`<tr><td class="blob-num">%d</td><td id="L%d" rel="L%d" class="blob-code"><pre><code class="hljs">%s</code></pre></td></tr>`, index+1, index+1, index+1, gotemplate.HTMLEscapeString(strings.TrimRight(line, "\r"))) + "\n")
 			}
 			c.Data["FileContent"] = gotemplate.HTML(output.String())
 
-			output.Reset()
-			for i := 0; i < len(lines); i++ {
-				output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
-			}
-			c.Data["LineNums"] = gotemplate.HTML(output.String())
+			// output.Reset()
+			// for i := 0; i < len(lines); i++ {
+			// 	output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+			// }
+			// c.Data["LineNums"] = gotemplate.HTML(output.String())
 		}
 
 		if canEnableEditor {
