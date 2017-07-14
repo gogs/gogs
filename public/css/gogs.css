@@ -2140,6 +2140,9 @@ footer .ui.language .menu {
   padding: 0 5px;
   user-select: none;
 }
+.repository .diff-file-box .code-diff .lines-num::before {
+  content: attr(data-line-number);
+}
 .repository .diff-file-box .code-diff .lines-num.lines-num-old,
 .repository .diff-file-box .code-diff .lines-num.lines-num-new {
   cursor: pointer;

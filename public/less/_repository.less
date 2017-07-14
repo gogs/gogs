@@ -1057,6 +1057,10 @@
 				padding: 0 5px;
 				user-select: none;
 
+				&::before {
+					content: attr(data-line-number);
+				}
+
 				&.lines-num-old, &.lines-num-new {
 					cursor: pointer;
 					&:hover {
