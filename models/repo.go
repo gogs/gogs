@@ -2257,10 +2257,13 @@ func (repo *Repository) GetStargazers(page int) ([]*User, error) {
 
 // HasForkedRepo checks if given user has already forked a repository.
 // When user has already forked, it returns true along with the repository.
-func HasForkedRepo(ownerID, repoID int64) (*Repository, bool) {
+func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 	repo := new(Repository)
-	has, _ := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
-	return repo, has
+	has, err := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
+	if err != nil {
+		return nil, false, err
+	}
+	return repo, has, repo.LoadAttributes()
 }
 
 // ForkRepository creates a fork of target repository under another user domain.

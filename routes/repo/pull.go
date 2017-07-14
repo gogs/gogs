@@ -101,8 +101,11 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, has := models.HasForkedRepo(ctxUser.ID, baseRepo.ID)
-	if has {
+	repo, has, err := models.HasForkedRepo(ctxUser.ID, baseRepo.ID)
+	if err != nil {
+		c.ServerError("HasForkedRepo", err)
+		return
+	} else if has {
 		c.Redirect(repo.Link())
 		return
 	}
@@ -119,7 +122,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err := models.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
+	repo, err = models.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
 	if err != nil {
 		c.Data["Err_RepoName"] = true
 		switch {
@@ -475,8 +478,11 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 	// no need to check the fork relation.
 	if !isSameRepo {
 		var has bool
-		headRepo, has = models.HasForkedRepo(headUser.ID, baseRepo.ID)
-		if !has {
+		headRepo, has, err = models.HasForkedRepo(headUser.ID, baseRepo.ID)
+		if err != nil {
+			c.ServerError("HasForkedRepo", err)
+			return nil, nil, nil, nil, "", ""
+		} else if !has {
 			log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have fork or in same repository", baseRepo.ID)
 			c.NotFound()
 			return nil, nil, nil, nil, "", ""

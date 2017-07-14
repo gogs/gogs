@@ -137,7 +137,7 @@ func (u *User) IsLocal() bool {
 
 // HasForkedRepo checks if user has already forked a repository with given ID.
 func (u *User) HasForkedRepo(repoID int64) bool {
-	_, has := HasForkedRepo(u.ID, repoID)
+	_, has, _ := HasForkedRepo(u.ID, repoID)
 	return has
 }
 
