@@ -30,7 +30,7 @@ web: build
 
 govet:
 	$(GOVET) gogs.go
-	$(GOVET) models pkg routers
+	$(GOVET) models pkg routes
 
 build: $(GENERATED)
 	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'

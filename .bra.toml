@@ -8,11 +8,13 @@ watch_dirs = [
 	"$WORKDIR/cmd",
 	"$WORKDIR/models",
 	"$WORKDIR/pkg",
-	"$WORKDIR/routers"
+	"$WORKDIR/routes"
 ]
 watch_exts = [".go"]
 ignore_files = [".+_test.go"]
 build_delay = 1500
+interrupt_timout = 1
+graceful_kill = true
 cmds = [
 	["make", "build-dev"], # TAGS=sqlite cert pam tidb
 	["./gogs", "web"]
