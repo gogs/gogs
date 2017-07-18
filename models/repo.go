@@ -2262,8 +2262,10 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 	has, err := x.Where("owner_id = ? AND fork_id = ?", ownerID, repoID).Get(repo)
 	if err != nil {
 		return nil, false, err
+	} else if !has {
+		return nil, false, nil
 	}
-	return repo, has, repo.LoadAttributes()
+	return repo, true, repo.LoadAttributes()
 }
 
 // ForkRepository creates a fork of target repository under another user domain.
