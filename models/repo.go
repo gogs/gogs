@@ -1659,9 +1659,8 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int
 		sess.And("repo.owner_id = ?", opts.OwnerID)
 	}
 
-	var countSess xorm.Session
-	countSess = *sess
-	count, err := countSess.Count(new(Repository))
+	// We need all fields (repo.*) in final list but only ID (repo.id) is good enough for counting.
+	count, err = sess.Clone().Distinct("repo.id").Count(new(Repository))
 	if err != nil {
 		return nil, 0, fmt.Errorf("Count: %v", err)
 	}
