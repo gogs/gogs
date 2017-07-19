@@ -24,7 +24,7 @@ func Home(c *context.Context) {
 	if c.IsLogged {
 		if !c.User.IsActive && setting.Service.RegisterEmailConfirm {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
-			c.HTML(200, user.ACTIVATE)
+			c.Success(user.ACTIVATE)
 		} else {
 			user.Dashboard(c)
 		}
@@ -39,7 +39,7 @@ func Home(c *context.Context) {
 	}
 
 	c.Data["PageIsHome"] = true
-	c.HTML(200, HOME)
+	c.Success(HOME)
 }
 
 func ExploreRepos(c *context.Context) {
@@ -61,7 +61,7 @@ func ExploreRepos(c *context.Context) {
 		PageSize: setting.UI.ExplorePagingNum,
 	})
 	if err != nil {
-		c.Handle(500, "SearchRepositoryByName", err)
+		c.ServerError("SearchRepositoryByName", err)
 		return
 	}
 	c.Data["Keyword"] = keyword
@@ -69,12 +69,12 @@ func ExploreRepos(c *context.Context) {
 	c.Data["Page"] = paginater.New(int(count), setting.UI.ExplorePagingNum, page, 5)
 
 	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
-		c.Handle(500, "LoadAttributes", err)
+		c.ServerError("RepositoryList.LoadAttributes", err)
 		return
 	}
 	c.Data["Repos"] = repos
 
-	c.HTML(200, EXPLORE_REPOS)
+	c.Success(EXPLORE_REPOS)
 }
 
 type UserSearchOptions struct {
@@ -102,7 +102,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	if len(keyword) == 0 {
 		users, err = opts.Ranger(page, opts.PageSize)
 		if err != nil {
-			c.Handle(500, "opts.Ranger", err)
+			c.ServerError("Ranger", err)
 			return
 		}
 		count = opts.Counter()
@@ -115,7 +115,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 			PageSize: opts.PageSize,
 		})
 		if err != nil {
-			c.Handle(500, "SearchUserByName", err)
+			c.ServerError("SearchUserByName", err)
 			return
 		}
 	}
@@ -124,7 +124,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	c.Data["Page"] = paginater.New(int(count), opts.PageSize, page, 5)
 	c.Data["Users"] = users
 
-	c.HTML(200, opts.TplName)
+	c.Success(opts.TplName)
 }
 
 func ExploreUsers(c *context.Context) {

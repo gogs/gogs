@@ -1634,7 +1634,7 @@ type SearchRepoOptions struct {
 
 // SearchRepositoryByName takes keyword and part of repository name to search,
 // it returns results in given range and number of total results.
-func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, _ int64, _ error) {
+func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count int64, err error) {
 	if opts.Page <= 0 {
 		opts.Page = 1
 	}
