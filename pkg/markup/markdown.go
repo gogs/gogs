@@ -12,10 +12,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/barracks510/go-table"
+	"github.com/gohugoio/hugo/parser"
 	"github.com/russross/blackfriday"
 
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 // IsMarkdownFile reports whether name looks like a Markdown file based on its extension.
@@ -157,8 +159,20 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
 	}
 
-	body = blackfriday.Markdown(body, renderer, extensions)
-	return body
+	page, err := parser.ReadFrom(bytes.NewBuffer(body))
+	if err != nil {
+		return blackfriday.Markdown(body, renderer, extensions)
+	}
+	body = blackfriday.Markdown(page.Content(), renderer, extensions)
+	data, err := page.Metadata()
+	if err != nil {
+		return body
+	}
+	table, err := table.MakeTable(data)
+	if err != nil {
+		return body
+	}
+	return append(table.(*bytes.Buffer).Bytes(), body...)
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
