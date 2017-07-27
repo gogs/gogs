@@ -832,9 +832,10 @@ var (
 	MailService *Mailer
 )
 
+// newMailService initializes mail service options from configuration.
+// No non-error log will be printed in hook mode.
 func newMailService() {
 	sec := Cfg.Section("mailer")
-	// Check mailer setting.
 	if !sec.Key("ENABLED").MustBool() {
 		return
 	}
@@ -863,6 +864,9 @@ func newMailService() {
 		MailService.FromEmail = parsed.Address
 	}
 
+	if HookMode {
+		return
+	}
 	log.Info("Mail Service Enabled")
 }
 
@@ -877,6 +881,8 @@ func newRegisterMailService() {
 	log.Info("Register Mail Service Enabled")
 }
 
+// newNotifyMailService initializes notification email service options from configuration.
+// No non-error log will be printed in hook mode.
 func newNotifyMailService() {
 	if !Cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
 		return
@@ -885,6 +891,10 @@ func newNotifyMailService() {
 		return
 	}
 	Service.EnableNotifyMail = true
+
+	if HookMode {
+		return
+	}
 	log.Info("Notify Mail Service Enabled")
 }
 
@@ -899,5 +909,17 @@ func NewServices() {
 	newSessionService()
 	newMailService()
 	newRegisterMailService()
+	newNotifyMailService()
+}
+
+// HookMode indicates whether program starts as Git server-side hook callback.
+var HookMode bool
+
+// NewPostReceiveHookServices initializes all services that are needed by
+// Git server-side post-receive hook callback.
+func NewPostReceiveHookServices() {
+	HookMode = true
+	newService()
+	newMailService()
 	newNotifyMailService()
 }
