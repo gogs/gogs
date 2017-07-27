@@ -771,16 +771,16 @@ func cleanUpMigrateGitConfig(configPath string) error {
 }
 
 var hooksTpls = map[string]string{
-	"pre-receive":  "#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n",
-	"update":       "#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n",
-	"post-receive": "#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n",
+	"pre-receive":  "#!/usr/bin/env %s\n\"%s\" hook pre-receive\n",
+	"update":       "#!/usr/bin/env %s\n\"%s\" hook update $1 $2 $3\n",
+	"post-receive": "#!/usr/bin/env %s\n\"%s\" hook post-receive\n",
 }
 
 func createDelegateHooks(repoPath string) (err error) {
 	for _, name := range git.HookNames {
 		hookPath := filepath.Join(repoPath, "hooks", name)
 		if err = ioutil.WriteFile(hookPath,
-			[]byte(fmt.Sprintf(hooksTpls[name], setting.ScriptType, setting.AppPath, setting.CustomConf)),
+			[]byte(fmt.Sprintf(hooksTpls[name], setting.ScriptType, setting.AppPath)),
 			os.ModePerm); err != nil {
 			return fmt.Errorf("create delegate hook '%s': %v", hookPath, err)
 		}
