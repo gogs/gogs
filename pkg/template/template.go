@@ -22,11 +22,12 @@ import (
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
 	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/tool"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
+// TODO: only initialize map once and save to a local variable to reduce copies.
 func NewFuncMap() []template.FuncMap {
 	return []template.FuncMap{map[string]interface{}{
 		"GoVer": func() string {
@@ -91,13 +92,13 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return str[start:end]
 		},
-		"Join":                  strings.Join,
-		"EllipsisString":        tool.EllipsisString,
-		"DiffTypeToStr":         DiffTypeToStr,
-		"DiffLineTypeToStr":     DiffLineTypeToStr,
-		"Sha1":                  Sha1,
-		"ShortSHA1":              tool.ShortSHA1,
-		"MD5":                   tool.MD5,
+		"Join":              strings.Join,
+		"EllipsisString":    tool.EllipsisString,
+		"DiffTypeToStr":     DiffTypeToStr,
+		"DiffLineTypeToStr": DiffLineTypeToStr,
+		"Sha1":              Sha1,
+		"ShortSHA1":         tool.ShortSHA1,
+		"MD5":               tool.MD5,
 		"ActionContent2Commits": ActionContent2Commits,
 		"EscapePound":           EscapePound,
 		"RenderCommitMessage":   RenderCommitMessage,
