@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"net/http"
 
 	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
@@ -88,16 +89,16 @@ func Create(c *context.Context) {
 func handleCreateError(c *context.Context, owner *models.User, err error, name, tpl string, form interface{}) {
 	switch {
 	case errors.IsReachLimitOfRepo(err):
-		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form, http.StatusNotAcceptable)
 	case models.IsErrRepoAlreadyExist(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tpl, form)
+		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tpl, form, http.StatusBadRequest)
 	case models.IsErrNameReserved(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), tpl, form, http.StatusBadRequest)
 	case models.IsErrNamePatternNotAllowed(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), tpl, form, http.StatusBadRequest)
 	default:
 		c.Handle(500, name, err)
 	}
@@ -181,11 +182,11 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 			addrErr := err.(models.ErrInvalidCloneAddr)
 			switch {
 			case addrErr.IsURLError:
-				c.RenderWithErr(c.Tr("form.url_error"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("form.url_error"), MIGRATE, &f, http.StatusBadRequest)
 			case addrErr.IsPermissionDenied:
-				c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), MIGRATE, &f, http.StatusForbidden)
 			case addrErr.IsInvalidPath:
-				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f, http.StatusInternalServerError)
 			default:
 				c.Handle(500, "Unknown error", err)
 			}
@@ -217,11 +218,11 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	if strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		c.Data["Err_Auth"] = true
-		c.RenderWithErr(c.Tr("form.auth_failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		c.RenderWithErr(c.Tr("form.auth_failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f, http.StatusUnauthorized)
 		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		c.Data["Err_CloneAddr"] = true
-		c.RenderWithErr(c.Tr("repo.migrate.failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		c.RenderWithErr(c.Tr("repo.migrate.failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f, http.StatusInternalServerError)
 		return
 	}
 

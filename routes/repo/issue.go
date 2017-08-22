@@ -1131,7 +1131,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f, http.StatusBadRequest)
 		return
 	}
 
@@ -1191,7 +1191,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
 	if err != nil {
 		c.Data["Err_Deadline"] = true
-		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f)
+		c.RenderWithErr(c.Tr("repo.milestones.invalid_due_date_format"), MILESTONE_NEW, &f, http.StatusBadRequest)
 		return
 	}
 

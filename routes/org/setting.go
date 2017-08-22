@@ -6,6 +6,7 @@ package org
 
 import (
 	"strings"
+	"net/http"
 
 	log "gopkg.in/clog.v1"
 
@@ -48,15 +49,15 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 			return
 		} else if isExist {
 			c.Data["OrgName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &f, http.StatusBadRequest)
 			return
 		} else if err = models.ChangeUserName(org, f.Name); err != nil {
 			c.Data["OrgName"] = true
 			switch {
 			case models.IsErrNameReserved(err):
-				c.RenderWithErr(c.Tr("user.form.name_reserved"), SETTINGS_OPTIONS, &f)
+				c.RenderWithErr(c.Tr("user.form.name_reserved"), SETTINGS_OPTIONS, &f, http.StatusBadRequest)
 			case models.IsErrNamePatternNotAllowed(err):
-				c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed"), SETTINGS_OPTIONS, &f)
+				c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed"), SETTINGS_OPTIONS, &f, http.StatusBadRequest)
 			default:
 				c.Handle(500, "ChangeUserName", err)
 			}
@@ -114,7 +115,7 @@ func SettingsDelete(c *context.Context) {
 	if c.Req.Method == "POST" {
 		if _, err := models.UserSignIn(c.User.Name, c.Query("password")); err != nil {
 			if errors.IsUserNotExist(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil, http.StatusBadRequest)
 			} else {
 				c.Handle(500, "UserSignIn", err)
 			}

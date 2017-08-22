@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"net/http"
 
 	log "gopkg.in/clog.v1"
 
@@ -60,11 +61,11 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				c.FormErr("RepoName")
 				switch {
 				case models.IsErrRepoAlreadyExist(err):
-					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f, http.StatusBadRequest)
 				case models.IsErrNameReserved(err):
-					c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &f, http.StatusBadRequest)
 				case models.IsErrNamePatternNotAllowed(err):
-					c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f)
+					c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f, http.StatusBadRequest)
 				default:
 					c.ServerError("ChangeRepositoryName", err)
 				}
@@ -163,7 +164,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil, http.StatusBadRequest)
 			return
 		}
 
@@ -197,7 +198,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil, http.StatusBadRequest)
 			return
 		}
 
@@ -214,13 +215,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.ServerError("IsUserExist", err)
 			return
 		} else if !isExist {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil, http.StatusBadRequest)
 			return
 		}
 
 		if err = models.TransferOwnership(c.User, newOwner, repo); err != nil {
 			if models.IsErrRepoAlreadyExist(err) {
-				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
+				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil, http.StatusBadRequest)
 			} else {
 				c.ServerError("TransferOwnership", err)
 			}
@@ -236,7 +237,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil, http.StatusBadRequest)
 			return
 		}
 
@@ -262,7 +263,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 		if repo.Name != f.RepoName {
-			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil)
+			c.RenderWithErr(c.Tr("form.enterred_invalid_repo_name"), SETTINGS_OPTIONS, nil, http.StatusBadRequest)
 			return
 		}
 
@@ -603,10 +604,10 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
 			c.Data["Err_Content"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &f, http.StatusBadRequest)
 		case models.IsErrKeyNameAlreadyUsed(err):
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &f)
+			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &f, http.StatusBadRequest)
 		default:
 			c.Handle(500, "AddDeployKey", err)
 		}

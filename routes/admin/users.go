@@ -6,6 +6,7 @@ package admin
 
 import (
 	"strings"
+	"net/http"
 
 	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
@@ -97,16 +98,16 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		switch {
 		case models.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f, http.StatusBadRequest)
 		case models.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f, http.StatusBadRequest)
 		case models.IsErrNameReserved(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), USER_NEW, &f, http.StatusBadRequest)
 		case models.IsErrNamePatternNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f, http.StatusBadRequest)
 		default:
 			c.Handle(500, "CreateUser", err)
 		}
@@ -217,7 +218,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f, http.StatusBadRequest)
 		} else {
 			c.Handle(500, "UpdateUser", err)
 		}

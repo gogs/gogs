@@ -7,6 +7,7 @@ package repo
 import (
 	"fmt"
 	"strings"
+	"net/http"
 
 	log "gopkg.in/clog.v1"
 
@@ -176,7 +177,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	}
 
 	if !c.Repo.GitRepo.IsBranchExist(f.Target) {
-		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f)
+		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f, http.StatusBadRequest)
 		return
 	}
 
@@ -224,9 +225,9 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		c.Data["Err_TagName"] = true
 		switch {
 		case models.IsErrReleaseAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_already_exist"), RELEASE_NEW, &f, http.StatusBadRequest)
 		case models.IsErrInvalidTagName(err):
-			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f, http.StatusBadRequest)
 		default:
 			c.Handle(500, "NewRelease", err)
 		}

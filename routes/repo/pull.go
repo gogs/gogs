@@ -8,6 +8,7 @@ import (
 	"container/list"
 	"path"
 	"strings"
+	"net/http"
 
 	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
@@ -118,7 +119,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 
 	// Cannot fork to same owner
 	if ctxUser.ID == baseRepo.OwnerID {
-		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f)
+		c.RenderWithErr(c.Tr("repo.settings.cannot_fork_to_same_owner"), FORK, &f, http.StatusBadRequest)
 		return
 	}
 
@@ -127,11 +128,11 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case models.IsErrRepoAlreadyExist(err):
-			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f, http.StatusBadRequest)
 		case models.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &f, http.StatusBadRequest)
 		case models.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &f, http.StatusBadRequest)
 		default:
 			c.ServerError("ForkPost", err)
 		}

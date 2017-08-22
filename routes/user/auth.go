@@ -6,6 +6,7 @@ package user
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/go-macaron/captcha"
@@ -85,7 +86,8 @@ func Login(c *context.Context) {
 	// Check auto-login.
 	isSucceed, err := AutoLogin(c)
 	if err != nil {
-		c.Handle(500, "AutoLogin", err)
+		log.Warn("%s authfail : Autologin failure", c.RemoteAddr())
+		c.Handle(http.StatusInternalServerError, "AutoLogin", err)
 		return
 	}
 
@@ -106,7 +108,7 @@ func Login(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, LOGIN)
+	c.HTML(http.StatusOK, LOGIN)
 }
 
 func afterLogin(c *context.Context, u *models.User, remember bool) {
@@ -141,14 +143,16 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	c.Data["Title"] = c.Tr("sign_in")
 
 	if c.HasError() {
-		c.Success(LOGIN)
+		log.Warn("%s authfail : Content error", c.RemoteAddr(), f.UserName)
+		c.HTML(http.StatusBadRequest, LOGIN)
 		return
 	}
 
 	u, err := models.UserSignIn(f.UserName, f.Password)
 	if err != nil {
+		log.Warn("%s authfail : Authentication failure for user '%s'", c.RemoteAddr(), f.UserName)
 		if errors.IsUserNotExist(err) {
-			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
+			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f, http.StatusUnauthorized)
 		} else {
 			c.ServerError("UserSignIn", err)
 		}
@@ -256,11 +260,11 @@ func SignUp(c *context.Context) {
 
 	if setting.Service.DisableRegistration {
 		c.Data["DisableRegistration"] = true
-		c.HTML(200, SIGNUP)
+		c.HTML(http.StatusOK, SIGNUP)
 		return
 	}
 
-	c.HTML(200, SIGNUP)
+	c.HTML(http.StatusOK, SIGNUP)
 }
 
 func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
@@ -269,24 +273,24 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	c.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
 
 	if setting.Service.DisableRegistration {
-		c.Error(403)
+		c.Error(http.StatusForbidden)
 		return
 	}
 
 	if c.HasError() {
-		c.HTML(200, SIGNUP)
+		c.HTML(http.StatusOK, SIGNUP)
 		return
 	}
 
 	if setting.Service.EnableCaptcha && !cpt.VerifyReq(c.Req) {
 		c.Data["Err_Captcha"] = true
-		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f)
+		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f, http.StatusBadRequest)
 		return
 	}
 
 	if f.Password != f.Retype {
 		c.Data["Err_Password"] = true
-		c.RenderWithErr(c.Tr("form.password_not_match"), SIGNUP, &f)
+		c.RenderWithErr(c.Tr("form.password_not_match"), SIGNUP, &f, http.StatusBadRequest)
 		return
 	}
 
@@ -300,18 +304,18 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		switch {
 		case models.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f, http.StatusBadRequest)
 		case models.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
-			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f, http.StatusBadRequest)
 		case models.IsErrNameReserved(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &f, http.StatusBadRequest)
 		case models.IsErrNamePatternNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f, http.StatusBadRequest)
 		default:
-			c.Handle(500, "CreateUser", err)
+			c.Handle(http.StatusInternalServerError, "CreateUser", err)
 		}
 		return
 	}
@@ -322,7 +326,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		u.IsAdmin = true
 		u.IsActive = true
 		if err := models.UpdateUser(u); err != nil {
-			c.Handle(500, "UpdateUser", err)
+			c.Handle(http.StatusInternalServerError, "UpdateUser", err)
 			return
 		}
 	}
@@ -333,7 +337,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email
 		c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-		c.HTML(200, ACTIVATE)
+		c.HTML(http.StatusOK, ACTIVATE)
 
 		if err := c.Cache.Put("MailResendLimit_"+u.LowerName, u.LowerName, 180); err != nil {
 			log.Error(4, "Set cache(MailResendLimit) fail: %v", err)
@@ -349,7 +353,7 @@ func Activate(c *context.Context) {
 	if len(code) == 0 {
 		c.Data["IsActivatePage"] = true
 		if c.User.IsActive {
-			c.Error(404)
+			c.Error(http.StatusNotFound)
 			return
 		}
 		// Resend confirmation email.
@@ -455,7 +459,7 @@ func ForgotPasswdPost(c *context.Context) {
 
 	if !u.IsLocal() {
 		c.Data["Err_Email"] = true
-		c.RenderWithErr(c.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil)
+		c.RenderWithErr(c.Tr("auth.non_local_account"), FORGOT_PASSWORD, nil, http.StatusBadRequest)
 		return
 	}
 
@@ -504,7 +508,7 @@ func ResetPasswdPost(c *context.Context) {
 		if len(passwd) < 6 {
 			c.Data["IsResetForm"] = true
 			c.Data["Err_Password"] = true
-			c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
+			c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil, http.StatusBadRequest)
 			return
 		}
 

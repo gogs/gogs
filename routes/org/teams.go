@@ -6,6 +6,7 @@ package org
 
 import (
 	"path"
+	"net/http"
 
 	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
@@ -171,9 +172,9 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case models.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f, http.StatusBadRequest)
 		case models.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(models.ErrNameReserved).Name), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(models.ErrNameReserved).Name), TEAM_NEW, &f, http.StatusBadRequest)
 		default:
 			c.Handle(500, "NewTeam", err)
 		}
@@ -249,7 +250,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		c.Data["Err_TeamName"] = true
 		switch {
 		case models.IsErrTeamAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
+			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f, http.StatusBadRequest)
 		default:
 			c.Handle(500, "UpdateTeam", err)
 		}

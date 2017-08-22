@@ -6,6 +6,7 @@ package admin
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
@@ -158,7 +159,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}); err != nil {
 		if models.IsErrLoginSourceAlreadyExist(err) {
 			c.Data["Err_Name"] = true
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f, http.StatusBadRequest)
 		} else {
 			c.Handle(500, "CreateSource", err)
 		}

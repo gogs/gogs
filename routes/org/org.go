@@ -5,6 +5,7 @@
 package org
 
 import (
+	"net/http"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogits/gogs/models"
@@ -40,11 +41,11 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		c.Data["Err_OrgName"] = true
 		switch {
 		case models.IsErrUserAlreadyExist(err):
-			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
+			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f, http.StatusBadRequest)
 		case models.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), CREATE, &f)
+			c.RenderWithErr(c.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), CREATE, &f, http.StatusBadRequest)
 		case models.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), CREATE, &f)
+			c.RenderWithErr(c.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), CREATE, &f, http.StatusBadRequest)
 		default:
 			c.Handle(500, "CreateOrganization", err)
 		}

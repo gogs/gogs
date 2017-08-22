@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"html/template"
 	"image/png"
 	"io/ioutil"
@@ -86,7 +87,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 					return
 				}
 
-				c.RenderWithErr(msg, SETTINGS_PROFILE, &f)
+				c.RenderWithErr(msg, SETTINGS_PROFILE, &f, http.StatusBadRequest)
 				return
 			}
 
@@ -263,7 +264,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 	if err := models.AddEmailAddress(email); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
-			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
+			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f, http.StatusBadRequest)
 		} else {
 			c.ServerError("AddEmailAddress", err)
 		}
@@ -346,10 +347,10 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		switch {
 		case models.IsErrKeyAlreadyExist(err):
 			c.FormErr("Content")
-			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &f)
+			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &f, http.StatusBadRequest)
 		case models.IsErrKeyNameAlreadyUsed(err):
 			c.FormErr("Title")
-			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &f)
+			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &f, http.StatusBadRequest)
 		default:
 			c.ServerError("AddPublicKey", err)
 		}
@@ -635,7 +636,7 @@ func SettingsDelete(c *context.Context) {
 	if c.Req.Method == "POST" {
 		if _, err := models.UserSignIn(c.User.Name, c.Query("password")); err != nil {
 			if errors.IsUserNotExist(err) {
-				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
+				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil, http.StatusUnauthorized)
 			} else {
 				c.ServerError("UserSignIn", err)
 			}

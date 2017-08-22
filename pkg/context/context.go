@@ -137,13 +137,13 @@ func (c *Context) SubURLRedirect(location string, status ...int) {
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (c *Context) RenderWithErr(msg, tpl string, f interface{}) {
+func (c *Context) RenderWithErr(msg, tpl string, f interface{}, http_status int) {
 	if f != nil {
 		form.Assign(f, c.Data)
 	}
 	c.Flash.ErrorMsg = msg
 	c.Data["Flash"] = c.Flash
-	c.HTML(http.StatusOK, tpl)
+	c.HTML(http_status, tpl)
 }
 
 // Handle handles and logs error by given status.

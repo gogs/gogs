@@ -210,7 +210,7 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
 		if models.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
-			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
+			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f, 400)
 		} else {
 			c.Handle(500, "AddWikiPage", err)
 		}
