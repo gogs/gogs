@@ -46,6 +46,7 @@ type LandingPage string
 const (
 	LANDING_PAGE_HOME    LandingPage = "/"
 	LANDING_PAGE_EXPLORE LandingPage = "/explore"
+	LANDING_PAGE_LOGIN   LandingPage = "/user/login"
 )
 
 var (
@@ -481,6 +482,8 @@ func NewContext() {
 	switch sec.Key("LANDING_PAGE").MustString("home") {
 	case "explore":
 		LandingPageURL = LANDING_PAGE_EXPLORE
+	case "login":
+		LandingPageURL = LANDING_PAGE_LOGIN
 	default:
 		LandingPageURL = LANDING_PAGE_HOME
 	}
