@@ -10,6 +10,10 @@ import (
 	api "github.com/gogits/go-gogs-client"
 )
 
+const (
+	DingtalkNotificationTitle = "Gogs Notification"
+)
+
 //Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
 type DingtalkActionCard struct {
 	Title          string `json:"title"`
@@ -39,6 +43,14 @@ func (p *DingtalkPayload) JSONPayload() ([]byte, error) {
 		return []byte{}, err
 	}
 	return data, nil
+}
+
+func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
+	return DingtalkActionCard{
+		Title:       DingtalkNotificationTitle,
+		SingleURL:   singleURL,
+		SingleTitle: singleTitle,
+	}
 }
 
 //TODO: add content
