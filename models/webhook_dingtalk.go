@@ -6,7 +6,10 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
+	"github.com/gogits/git-module"
 	api "github.com/gogits/go-gogs-client"
 )
 
@@ -55,7 +58,30 @@ func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
 
 //TODO: add content
 func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
-	return nil, nil
+	switch event {
+	case HOOK_EVENT_CREATE:
+		payload, err = getDingtalkCreatePayload(p.(*api.CreatePayload))
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("event '%s': %v", event, err)
+	}
+
+	return payload, nil
+}
+
+func getDingtalkCreatePayload(p *api.CreatePayload) (*DingtalkPayload, error) {
+	refName := git.RefEndName(p.Ref)
+	refType := strings.Title(p.RefType)
+
+	actionCard := NewDingtalkActionCard("View "+refType, p.Repo.HTMLURL+"/src/"+refName)
+
+	actionCard.Text += "# New " + refType + " Create Event"
+	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
+	actionCard.Text += "\n- New " + refType + ": **" + MarkdownLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName) + "**"
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
 
 //Format link addr and title into markdown style
 func MarkdownLinkFormatter(link, text string) string {
