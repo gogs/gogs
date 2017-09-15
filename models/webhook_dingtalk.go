@@ -73,6 +73,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 		payload, err = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
 	case HOOK_EVENT_PULL_REQUEST:
 		payload, err = getDingtalkPullRequestPayload(p.(*api.PullRequestPayload))
+	case HOOK_EVENT_RELEASE:
+		payload, err = getDingtalkReleasePayload(p.(*api.ReleasePayload))
 	}
 
 	if err != nil {
@@ -222,6 +224,31 @@ func getDingtalkPullRequestPayload(p *api.PullRequestPayload) (*DingtalkPayload,
 
 	if p.Action == api.HOOK_ISSUE_OPENED || p.Action == api.HOOK_ISSUE_EDITED {
 		actionCard.Text += "\n> " + p.PullRequest.Body
+	}
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkReleasePayload(p *api.ReleasePayload) (*DingtalkPayload, error) {
+	releaseURL := p.Repository.HTMLURL + "/src/" + p.Release.TagName
+
+	author := p.Release.Author.FullName
+	if author == "" {
+		author = p.Release.Author.UserName
+	}
+
+	actionCard := NewDingtalkActionCard("View Release", releaseURL)
+
+	actionCard.Text += "# New Release Published"
+	actionCard.Text += "\n- Repo: " + MarkdownLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
+	actionCard.Text += "\n- Tag: " + MarkdownLinkFormatter(releaseURL, p.Release.TagName)
+	actionCard.Text += "\n- Author: " + author
+	actionCard.Text += fmt.Sprintf("\n- Draft?: %t", p.Release.Draft)
+	actionCard.Text += fmt.Sprintf("\n- Pre Release?: %t", p.Release.Prerelease)
+	actionCard.Text += "\n- Title: " + p.Release.Name
+
+	if p.Release.Body != "" {
+		actionCard.Text += "\n- Note: " + p.Release.Body
 	}
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
