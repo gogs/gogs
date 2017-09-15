@@ -61,6 +61,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 	switch event {
 	case HOOK_EVENT_CREATE:
 		payload, err = getDingtalkCreatePayload(p.(*api.CreatePayload))
+	case HOOK_EVENT_DELETE:
+		payload, err = getDingtalkDeletePayload(p.(*api.DeletePayload))
 	}
 
 	if err != nil {
@@ -79,6 +81,19 @@ func getDingtalkCreatePayload(p *api.CreatePayload) (*DingtalkPayload, error) {
 	actionCard.Text += "# New " + refType + " Create Event"
 	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- New " + refType + ": **" + MarkdownLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName) + "**"
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkDeletePayload(p *api.DeletePayload) (*DingtalkPayload, error) {
+	refName := git.RefEndName(p.Ref)
+	refType := strings.Title(p.RefType)
+
+	actionCard := NewDingtalkActionCard("View Repo", p.Repo.HTMLURL)
+
+	actionCard.Text += "# " + refType + " Delete Event"
+	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
+	actionCard.Text += "\n- " + refType + ": **" + refName + "**"
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
