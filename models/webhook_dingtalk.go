@@ -65,6 +65,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 		payload, err = getDingtalkDeletePayload(p.(*api.DeletePayload))
 	case HOOK_EVENT_FORK:
 		payload, err = getDingtalkForkPayload(p.(*api.ForkPayload))
+	case HOOK_EVENT_PUSH:
+		payload, err = getDingtalkPushPayload(p.(*api.PushPayload))
 	}
 
 	if err != nil {
@@ -106,6 +108,33 @@ func getDingtalkForkPayload(p *api.ForkPayload) (*DingtalkPayload, error) {
 	actionCard.Text += "# Repo Fork Event"
 	actionCard.Text += "\n- From Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- To Repo: **" + MarkdownLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName) + "**"
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkPushPayload(p *api.PushPayload) (*DingtalkPayload, error) {
+	refName := git.RefEndName(p.Ref)
+
+	pusher := p.Pusher.FullName
+	if pusher == "" {
+		pusher = p.Pusher.UserName
+	}
+
+	var detail string
+	for i, commit := range p.Commits {
+		msg := strings.Split(commit.Message, "\n")[0]
+		commitLink := MarkdownLinkFormatter(commit.URL, commit.ID[:7])
+		detail += fmt.Sprintf("> %d. %s %s - %s\n", i, commitLink, commit.Author.Name, msg)
+	}
+
+	actionCard := NewDingtalkActionCard("View Changes", p.CompareURL)
+
+	actionCard.Text += "# Repo Push Event"
+	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
+	actionCard.Text += "\n- Ref: **" + MarkdownLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName) + "**"
+	actionCard.Text += "\n- Pusher: **" + pusher + "**"
+	actionCard.Text += "\n## " + fmt.Sprintf("Total %d commits(s)", len(p.Commits))
+	actionCard.Text += "\n" + detail
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
