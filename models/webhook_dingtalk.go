@@ -69,6 +69,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 		payload, err = getDingtalkPushPayload(p.(*api.PushPayload))
 	case HOOK_EVENT_ISSUES:
 		payload, err = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
+	case HOOK_EVENT_ISSUE_COMMENT:
+		payload, err = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
 	}
 
 	if err != nil {
@@ -169,6 +171,25 @@ func getDingtalkIssuesPayload(p *api.IssuesPayload) (*DingtalkPayload, error) {
 	if p.Issue.Body != "" {
 		actionCard.Text += "\n> " + p.Issue.Body
 	}
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) (*DingtalkPayload, error) {
+	issueName := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
+	commentURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
+	if p.Action != api.HOOK_ISSUE_COMMENT_DELETED {
+		commentURL += "#" + CommentHashTag(p.Comment.ID)
+	}
+
+	issueURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
+
+	actionCard := NewDingtalkActionCard("View Issue Comment", commentURL)
+
+	actionCard.Text += "# Issue Comment " + strings.Title(string(p.Action))
+	actionCard.Text += "\n- Issue: " + MarkdownLinkFormatter(issueURL, issueName)
+	actionCard.Text += "\n- Comment content: "
+	actionCard.Text += "\n> " + p.Comment.Body
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
