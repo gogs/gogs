@@ -63,6 +63,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 		payload, err = getDingtalkCreatePayload(p.(*api.CreatePayload))
 	case HOOK_EVENT_DELETE:
 		payload, err = getDingtalkDeletePayload(p.(*api.DeletePayload))
+	case HOOK_EVENT_FORK:
+		payload, err = getDingtalkForkPayload(p.(*api.ForkPayload))
 	}
 
 	if err != nil {
@@ -94,6 +96,16 @@ func getDingtalkDeletePayload(p *api.DeletePayload) (*DingtalkPayload, error) {
 	actionCard.Text += "# " + refType + " Delete Event"
 	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- " + refType + ": **" + refName + "**"
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkForkPayload(p *api.ForkPayload) (*DingtalkPayload, error) {
+	actionCard := NewDingtalkActionCard("View Forkee", p.Forkee.HTMLURL)
+
+	actionCard.Text += "# Repo Fork Event"
+	actionCard.Text += "\n- From Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
+	actionCard.Text += "\n- To Repo: **" + MarkdownLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName) + "**"
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
