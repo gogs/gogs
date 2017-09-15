@@ -334,6 +334,8 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	case models.DISCORD:
 		c.Data["SlackHook"] = w.GetSlackHook()
 		c.Data["HookType"] = "discord"
+	case models.DINGTALK:
+		c.Data["HookType"] = "dingtalk"
 	default:
 		c.Data["HookType"] = "gogs"
 	}
@@ -469,6 +471,37 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 
 	w.URL = f.PayloadURL
 	w.Meta = string(meta)
+	w.HookEvent = ParseHookEvent(f.Webhook)
+	w.IsActive = f.Active
+	if err := w.UpdateEvent(); err != nil {
+		c.Handle(500, "UpdateEvent", err)
+		return
+	} else if err := models.UpdateWebhook(w); err != nil {
+		c.Handle(500, "UpdateWebhook", err)
+		return
+	}
+
+	c.Flash.Success(c.Tr("repo.settings.update_hook_success"))
+	c.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
+}
+
+func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
+	c.Data["Title"] = c.Tr("repo.settings")
+	c.Data["PageIsSettingsHooks"] = true
+	c.Data["PageIsSettingsHooksEdit"] = true
+
+	orCtx, w := checkWebhook(c)
+	if c.Written() {
+		return
+	}
+	c.Data["Webhook"] = w
+
+	if c.HasError() {
+		c.HTML(200, orCtx.NewTemplate)
+		return
+	}
+
+	w.URL = f.PayloadURL
 	w.HookEvent = ParseHookEvent(f.Webhook)
 	w.IsActive = f.Active
 	if err := w.UpdateEvent(); err != nil {
