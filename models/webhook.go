@@ -349,6 +349,7 @@ const (
 	GOGS HookTaskType = iota + 1
 	SLACK
 	DISCORD
+	DINGTALK
 )
 
 var hookTaskTypes = map[string]HookTaskType{
