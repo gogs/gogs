@@ -67,6 +67,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 		payload, err = getDingtalkForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
 		payload, err = getDingtalkPushPayload(p.(*api.PushPayload))
+	case HOOK_EVENT_ISSUES:
+		payload, err = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
 	}
 
 	if err != nil {
@@ -135,6 +137,38 @@ func getDingtalkPushPayload(p *api.PushPayload) (*DingtalkPayload, error) {
 	actionCard.Text += "\n- Pusher: **" + pusher + "**"
 	actionCard.Text += "\n## " + fmt.Sprintf("Total %d commits(s)", len(p.Commits))
 	actionCard.Text += "\n" + detail
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkIssuesPayload(p *api.IssuesPayload) (*DingtalkPayload, error) {
+	issueName := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
+	issueURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
+
+	actionCard := NewDingtalkActionCard("View Issue", issueURL)
+
+	actionCard.Text += "# Issue Event " + strings.Title(string(p.Action))
+	actionCard.Text += "\n- Issue: **" + MarkdownLinkFormatter(issueURL, issueName) + "**"
+
+	if p.Action == api.HOOK_ISSUE_ASSIGNED {
+		actionCard.Text += "\n- New Assignee: **" + p.Issue.Assignee.UserName + "**"
+	} else if p.Action == api.HOOK_ISSUE_MILESTONED {
+		actionCard.Text += "\n- New Milestone: **" + p.Issue.Milestone.Title + "**"
+	} else if p.Action == api.HOOK_ISSUE_LABEL_UPDATED {
+		if len(p.Issue.Labels) > 0 {
+			labels := make([]string, len(p.Issue.Labels))
+			for i, label := range p.Issue.Labels {
+				labels[i] = "**" + label.Name + "**"
+			}
+			actionCard.Text += "\n- Labels: " + strings.Join(labels, ",")
+		} else {
+			actionCard.Text += "\n- Labels: **empty**"
+		}
+	}
+
+	if p.Issue.Body != "" {
+		actionCard.Text += "\n> " + p.Issue.Body
+	}
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
