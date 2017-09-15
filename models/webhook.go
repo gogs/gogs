@@ -572,6 +572,11 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			if err != nil {
 				return fmt.Errorf("GetDiscordPayload: %v", err)
 			}
+		case DINGTALK:
+			payloader, err = GetDingtalkPayload(p, event)
+			if err != nil {
+				return fmt.Errorf("GetDingtalkPayload: %v", err)
+			}
 		default:
 			payloader = p
 		}
