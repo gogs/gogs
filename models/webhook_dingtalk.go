@@ -71,6 +71,8 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 		payload, err = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
 	case HOOK_EVENT_ISSUE_COMMENT:
 		payload, err = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
+	case HOOK_EVENT_PULL_REQUEST:
+		payload, err = getDingtalkPullRequestPayload(p.(*api.PullRequestPayload))
 	}
 
 	if err != nil {
@@ -190,6 +192,37 @@ func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) (*DingtalkPayloa
 	actionCard.Text += "\n- Issue: " + MarkdownLinkFormatter(issueURL, issueName)
 	actionCard.Text += "\n- Comment content: "
 	actionCard.Text += "\n> " + p.Comment.Body
+
+	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+}
+
+func getDingtalkPullRequestPayload(p *api.PullRequestPayload) (*DingtalkPayload, error) {
+	title := "# Pull Request " + strings.Title(string(p.Action))
+	if p.Action == api.HOOK_ISSUE_CLOSED && p.PullRequest.HasMerged {
+		title = "# Pull Request Merged"
+	}
+
+	pullRequestURL := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
+
+	content := "- PR: " + MarkdownLinkFormatter(pullRequestURL, fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
+	if p.Action == api.HOOK_ISSUE_ASSIGNED {
+		content += "\n- New Assignee: **" + p.PullRequest.Assignee.UserName + "**"
+	} else if p.Action == api.HOOK_ISSUE_MILESTONED {
+		content += "\n- New Milestone: *" + p.PullRequest.Milestone.Title + "*"
+	} else if p.Action == api.HOOK_ISSUE_LABEL_UPDATED {
+		labels := make([]string, len(p.PullRequest.Labels))
+		for i, label := range p.PullRequest.Labels {
+			labels[i] = "**" + label.Name + "**"
+		}
+		content += "\n- New Labels: " + strings.Join(labels, ",")
+	}
+
+	actionCard := NewDingtalkActionCard("View Pull Request", pullRequestURL)
+	actionCard.Text += title + "\n" + content
+
+	if p.Action == api.HOOK_ISSUE_OPENED || p.Action == api.HOOK_ISSUE_EDITED {
+		actionCard.Text += "\n> " + p.PullRequest.Body
+	}
 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
