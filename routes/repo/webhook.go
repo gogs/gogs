@@ -268,6 +268,44 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 	c.Redirect(orCtx.Link + "/settings/hooks")
 }
 
+func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
+	c.Data["Title"] = c.Tr("repo.settings")
+	c.Data["PageIsSettingsHooks"] = true
+	c.Data["PageIsSettingsHooksNew"] = true
+	c.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+
+	orCtx, err := getOrgRepoCtx(c)
+	if err != nil {
+		c.Handle(500, "getOrgRepoCtx", err)
+		return
+	}
+
+	if c.HasError() {
+		c.HTML(200, orCtx.NewTemplate)
+		return
+	}
+
+	w := &models.Webhook{
+		RepoID:       orCtx.RepoID,
+		URL:          f.PayloadURL,
+		ContentType:  models.JSON,
+		HookEvent:    ParseHookEvent(f.Webhook),
+		IsActive:     f.Active,
+		HookTaskType: models.DINGTALK,
+		OrgID:        orCtx.OrgID,
+	}
+	if err := w.UpdateEvent(); err != nil {
+		c.Handle(500, "UpdateEvent", err)
+		return
+	} else if err := models.CreateWebhook(w); err != nil {
+		c.Handle(500, "CreateWebhook", err)
+		return
+	}
+
+	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
+	c.Redirect(orCtx.Link + "/settings/hooks")
+}
+
 func checkWebhook(c *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	c.Data["RequireHighlightJS"] = true
 
