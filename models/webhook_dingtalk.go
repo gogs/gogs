@@ -44,4 +44,8 @@ func (p *DingtalkPayload) JSONPayload() ([]byte, error) {
 //TODO: add content
 func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
 	return nil, nil
+
+//Format link addr and title into markdown style
+func MarkdownLinkFormatter(link, text string) string {
+	return "[" + text + "](" + link + ")"
 }
