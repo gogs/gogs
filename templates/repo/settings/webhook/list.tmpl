@@ -20,6 +20,10 @@
 								<a class="item" href="{{$.BaseLink}}/settings/hooks/discord/new">
 									<img class="img-12" src="{{AppSubURL}}/img/discord.png">Discord
 								</a>
+							{{else if eq . "dingtalk"}}
+								<a class="item" href="{{$.BaseLink}}/settings/hooks/dingtalk/new">
+									<img class="img-12" src="{{AppSubURL}}/img/dingtalk.png">Dingtalk
+								</a>
 							{{end}}
 						{{end}}
 					</div>
