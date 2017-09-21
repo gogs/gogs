@@ -620,9 +620,9 @@ func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
 	repo.Owner = repo.MustOwner()
 	cl := new(CloneLink)
 	if setting.SSH.Port != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSH.Domain, setting.SSH.Port, repo.Owner.Name, repoLowerName)
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d%s/%s/%s.git", setting.RunUser, setting.SSH.Domain, setting.SSH.Port, setting.RepoRootPath, repo.Owner.Name, repoLowerName)
 	} else {
-		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSH.Domain, repo.Owner.Name, repoLowerName)
+		cl.SSH = fmt.Sprintf("%s@%s:%s/%s/%s.git", setting.RunUser, setting.SSH.Domain, setting.RepoRootPath, repo.Owner.Name, repoLowerName)
 	}
 	cl.HTTPS = ComposeHTTPSCloneURL(repo.Owner.Name, repoName)
 	return cl
