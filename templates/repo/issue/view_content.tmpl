@@ -196,7 +196,11 @@
 										<form class="ui form" action="{{.Link}}/merge" method="post">
 											{{.CSRFTokenHTML}}
 											<button class="ui green button">
-												<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
+												{{if .Issue.Repo.PullUseRebase }}
+													<span class="octicon octicon-git-pull-request"></span> {{$.i18n.Tr "repo.pulls.rebase_merge_pull_request"}}
+												{{else}}
+													<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
+												{{end}}
 											</button>
 										</form>
 									</div>

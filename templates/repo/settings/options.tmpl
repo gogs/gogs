@@ -193,8 +193,14 @@
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.pulls"}}</label>
 								<div class="ui checkbox">
-									<input name="enable_pulls" type="checkbox" {{if .Repository.EnablePulls}}checked{{end}}>
+									<input class="enable-system" name="enable_pulls" type="checkbox" data-target="#pull_box" {{if .Repository.EnablePulls}}checked{{end}}>
 									<label>{{.i18n.Tr "repo.settings.pulls_desc"}}</label>
+								</div>
+							</div>
+							<div class="ui segment field {{if not .Repository.EnablePulls}}disabled{{end}}" id="pull_box">
+								<div class="ui checkbox">
+									<input name="pull_use_rebase" type="checkbox" {{if .Repository.PullUseRebase}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.use_rebase_desc"}}</label>
 								</div>
 							</div>
 						{{end}}
