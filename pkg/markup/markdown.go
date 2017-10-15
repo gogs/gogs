@@ -119,6 +119,7 @@ func (options *MarkdownRenderer) ListItem(out *bytes.Buffer, text []byte, flags 
 // RawMarkdown renders content in Markdown syntax to HTML without handling special links.
 func RawMarkdown(body []byte, urlPrefix string) []byte {
 	htmlFlags := 0
+	htmlFlags |= blackfriday.HTML_SKIP_HTML
 	htmlFlags |= blackfriday.HTML_SKIP_STYLE
 	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
 
@@ -145,6 +146,7 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 
 	// set up the parser
 	extensions := 0
+	extensions |= blackfriday.EXTENSION_LAX_HTML_BLOCKS
 	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
 	extensions |= blackfriday.EXTENSION_TABLES
 	extensions |= blackfriday.EXTENSION_FENCED_CODE
