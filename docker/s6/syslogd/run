@@ -4,4 +4,9 @@ if test -f ./setup; then
     source ./setup
 fi
 
-exec gosu root /sbin/syslogd -nS -O-
+if [ "$(grep -Ei 'debian' /etc/*release)" ]; then
+    exec gosu root /sbin/syslogd -nS
+else
+    exec gosu root /sbin/syslogd -nS -O-
+fi
+
