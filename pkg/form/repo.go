@@ -195,6 +195,15 @@ func (f *NewDiscordHook) Validate(ctx *macaron.Context, errs binding.Errors) bin
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+type NewDingtalkHook struct {
+	PayloadURL string `binding:"Required;Url"`
+	Webhook
+}
+
+func (f *NewDingtalkHook) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // .___
 // |   | ______ ________ __   ____
 // |   |/  ___//  ___/  |  \_/ __ \

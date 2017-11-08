@@ -95,7 +95,6 @@ func Login(c *context.Context) {
 	} else {
 		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
 	}
-	c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
 
 	if isSucceed {
 		if isValidRedirect(redirectTo) {
@@ -103,6 +102,7 @@ func Login(c *context.Context) {
 		} else {
 			c.Redirect(setting.AppSubURL + "/")
 		}
+		c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
 		return
 	}
 

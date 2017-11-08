@@ -24,6 +24,7 @@ import (
 type Message struct {
 	Info string // Message information for log purpose.
 	*gomail.Message
+	confirmChan chan struct{}
 }
 
 // NewMessageFrom creates new mail message object with custom From header.
@@ -48,9 +49,9 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 		}
 	}
 	msg.SetBody(contentType, body)
-
 	return &Message{
-		Message: msg,
+		Message:     msg,
+		confirmChan: make(chan struct{}),
 	}
 }
 
@@ -204,12 +205,14 @@ func processMailQueue() {
 			} else {
 				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
 			}
+			msg.confirmChan <- struct{}{}
 		}
 	}
 }
 
 var mailQueue chan *Message
 
+// NewContext initializes settings for mailer.
 func NewContext() {
 	// Need to check if mailQueue is nil because in during reinstall (user had installed
 	// before but swithed install lock off), this function will be called again
@@ -222,8 +225,18 @@ func NewContext() {
 	go processMailQueue()
 }
 
-func SendAsync(msg *Message) {
+// Send puts new message object into mail queue.
+// It returns without confirmation (mail processed asynchronously) in normal cases,
+// but waits/blocks under hook mode to make sure mail has been sent.
+func Send(msg *Message) {
+	mailQueue <- msg
+
+	if setting.HookMode {
+		<-msg.confirmChan
+		return
+	}
+
 	go func() {
-		mailQueue <- msg
+		<-msg.confirmChan
 	}()
 }

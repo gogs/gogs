@@ -84,6 +84,17 @@
 		"outputPathIsSetByUser": 0,
 		"processed": 1
 		},
+	"\/img\/dingtalk.png": {
+		"fileType": 32768,
+		"ignore": 0,
+		"ignoreWasSetByUser": 0,
+		"initialSize": 30738,
+		"inputAbbreviatedPath": "\/img\/dingtalk.png",
+		"outputAbbreviatedPath": "\/img\/dingtalk.png",
+		"outputPathIsOutsideProject": 0,
+		"outputPathIsSetByUser": 0,
+		"processed": 0
+		},
 	"\/img\/discord.png": {
 		"fileType": 32768,
 		"ignore": 0,

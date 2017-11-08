@@ -155,7 +155,6 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		tos = append(tos, mentions[i])
 	}
 	mailer.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), GetUserEmailsByNames(tos))
-
 	return nil
 }
 
@@ -168,7 +167,7 @@ func (issue *Issue) MailParticipants() (err error) {
 	}
 
 	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {
-		log.Error(4, "mailIssueCommentToParticipants: %v", err)
+		log.Error(2, "mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil
