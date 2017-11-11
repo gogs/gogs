@@ -9,14 +9,14 @@
 				<div class="ui user list">
 					{{range .Users}}
 						<div class="item">
-						  <img class="ui avatar image" src="{{.AvatarLink}}">
+						  <img class="ui avatar image" src="{{.RelAvatarLink}}">
 						  <div class="content">
 						  	<span class="header"><a href="{{.HomeLink}}">{{.Name}}</a> {{.FullName}}</span>
 						    <div class="description">
 									{{if .Location}}
 										<i class="octicon octicon-location"></i> {{.Location}}
 									{{end}}
-									{{if and .Email $.IsSigned}}
+									{{if and .Email $.IsLogged}}
 										<i class="octicon octicon-mail"></i>
 										<a href="mailto:{{.Email}}" rel="nofollow">{{.Email}}</a>
 									{{end}}

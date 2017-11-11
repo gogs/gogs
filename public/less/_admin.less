@@ -29,10 +29,6 @@
 			}
 		}
 	}
-	.ui.header,
-	.ui.segment {
-		box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
-	}
 
 	&.user {
 		.email {
@@ -61,6 +57,20 @@
 	&.config {
 		#test-mail-btn {
 			margin-left: 5px;
+		}
+		table tbody tr td:first-child {
+			font-weight: bold;
+		}
+		pre {
+			background-color: #f7f7f7;
+			padding: 5px;
+		}
+		.log-config {
+			table tbody tr td {
+				&:first-child {
+					width: 100px;
+				}
+			}
 		}
 	}
 }

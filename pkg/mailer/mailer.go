@@ -1,0 +1,242 @@
+// Copyright 2014 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+package mailer
+
+import (
+	"crypto/tls"
+	"fmt"
+	"io"
+	"net"
+	"net/smtp"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/jaytaylor/html2text"
+	log "gopkg.in/clog.v1"
+	"gopkg.in/gomail.v2"
+
+	"github.com/gogits/gogs/pkg/setting"
+)
+
+type Message struct {
+	Info string // Message information for log purpose.
+	*gomail.Message
+	confirmChan chan struct{}
+}
+
+// NewMessageFrom creates new mail message object with custom From header.
+func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
+	log.Trace("NewMessageFrom (htmlBody):\n%s", htmlBody)
+
+	msg := gomail.NewMessage()
+	msg.SetHeader("From", from)
+	msg.SetHeader("To", to...)
+	msg.SetHeader("Subject", subject)
+	msg.SetDateHeader("Date", time.Now())
+
+	contentType := "text/html"
+	body := htmlBody
+	if setting.MailService.UsePlainText {
+		plainBody, err := html2text.FromString(htmlBody)
+		if err != nil {
+			log.Error(2, "html2text.FromString: %v", err)
+		} else {
+			contentType = "text/plain"
+			body = plainBody
+		}
+	}
+	msg.SetBody(contentType, body)
+	return &Message{
+		Message:     msg,
+		confirmChan: make(chan struct{}),
+	}
+}
+
+// NewMessage creates new mail message object with default From header.
+func NewMessage(to []string, subject, body string) *Message {
+	return NewMessageFrom(to, setting.MailService.From, subject, body)
+}
+
+type loginAuth struct {
+	username, password string
+}
+
+// SMTP AUTH LOGIN Auth Handler
+func LoginAuth(username, password string) smtp.Auth {
+	return &loginAuth{username, password}
+}
+
+func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	return "LOGIN", []byte{}, nil
+}
+
+func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+	if more {
+		switch string(fromServer) {
+		case "Username:":
+			return []byte(a.username), nil
+		case "Password:":
+			return []byte(a.password), nil
+		default:
+			return nil, fmt.Errorf("unknwon fromServer: %s", string(fromServer))
+		}
+	}
+	return nil, nil
+}
+
+type Sender struct {
+}
+
+func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
+	opts := setting.MailService
+
+	host, port, err := net.SplitHostPort(opts.Host)
+	if err != nil {
+		return err
+	}
+
+	tlsconfig := &tls.Config{
+		InsecureSkipVerify: opts.SkipVerify,
+		ServerName:         host,
+	}
+
+	if opts.UseCertificate {
+		cert, err := tls.LoadX509KeyPair(opts.CertFile, opts.KeyFile)
+		if err != nil {
+			return err
+		}
+		tlsconfig.Certificates = []tls.Certificate{cert}
+	}
+
+	conn, err := net.Dial("tcp", net.JoinHostPort(host, port))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	isSecureConn := false
+	// Start TLS directly if the port ends with 465 (SMTPS protocol)
+	if strings.HasSuffix(port, "465") {
+		conn = tls.Client(conn, tlsconfig)
+		isSecureConn = true
+	}
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return fmt.Errorf("NewClient: %v", err)
+	}
+
+	if !opts.DisableHelo {
+		hostname := opts.HeloHostname
+		if len(hostname) == 0 {
+			hostname, err = os.Hostname()
+			if err != nil {
+				return err
+			}
+		}
+
+		if err = client.Hello(hostname); err != nil {
+			return fmt.Errorf("Hello: %v", err)
+		}
+	}
+
+	// If not using SMTPS, alway use STARTTLS if available
+	hasStartTLS, _ := client.Extension("STARTTLS")
+	if !isSecureConn && hasStartTLS {
+		if err = client.StartTLS(tlsconfig); err != nil {
+			return fmt.Errorf("StartTLS: %v", err)
+		}
+	}
+
+	canAuth, options := client.Extension("AUTH")
+	if canAuth && len(opts.User) > 0 {
+		var auth smtp.Auth
+
+		if strings.Contains(options, "CRAM-MD5") {
+			auth = smtp.CRAMMD5Auth(opts.User, opts.Passwd)
+		} else if strings.Contains(options, "PLAIN") {
+			auth = smtp.PlainAuth("", opts.User, opts.Passwd, host)
+		} else if strings.Contains(options, "LOGIN") {
+			// Patch for AUTH LOGIN
+			auth = LoginAuth(opts.User, opts.Passwd)
+		}
+
+		if auth != nil {
+			if err = client.Auth(auth); err != nil {
+				return fmt.Errorf("Auth: %v", err)
+			}
+		}
+	}
+
+	if err = client.Mail(from); err != nil {
+		return fmt.Errorf("Mail: %v", err)
+	}
+
+	for _, rec := range to {
+		if err = client.Rcpt(rec); err != nil {
+			return fmt.Errorf("Rcpt: %v", err)
+		}
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("Data: %v", err)
+	} else if _, err = msg.WriteTo(w); err != nil {
+		return fmt.Errorf("WriteTo: %v", err)
+	} else if err = w.Close(); err != nil {
+		return fmt.Errorf("Close: %v", err)
+	}
+
+	return client.Quit()
+}
+
+func processMailQueue() {
+	sender := &Sender{}
+
+	for {
+		select {
+		case msg := <-mailQueue:
+			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
+			if err := gomail.Send(sender, msg.Message); err != nil {
+				log.Error(3, "Fail to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+			} else {
+				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
+			}
+			msg.confirmChan <- struct{}{}
+		}
+	}
+}
+
+var mailQueue chan *Message
+
+// NewContext initializes settings for mailer.
+func NewContext() {
+	// Need to check if mailQueue is nil because in during reinstall (user had installed
+	// before but swithed install lock off), this function will be called again
+	// while mail queue is already processing tasks, and produces a race condition.
+	if setting.MailService == nil || mailQueue != nil {
+		return
+	}
+
+	mailQueue = make(chan *Message, setting.MailService.QueueLength)
+	go processMailQueue()
+}
+
+// Send puts new message object into mail queue.
+// It returns without confirmation (mail processed asynchronously) in normal cases,
+// but waits/blocks under hook mode to make sure mail has been sent.
+func Send(msg *Message) {
+	mailQueue <- msg
+
+	if setting.HookMode {
+		<-msg.confirmChan
+		return
+	}
+
+	go func() {
+		<-msg.confirmChan
+	}()
+}

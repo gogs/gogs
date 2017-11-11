@@ -1,0 +1,31 @@
+{{template "base/head" .}}
+<div class="repository settings new webhook">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{if .PageIsSettingsHooksNew}}{{.i18n.Tr "repo.settings.add_webhook"}}{{else}}{{.i18n.Tr "repo.settings.update_webhook"}}{{end}}
+					<div class="ui right">
+						{{if eq .HookType "gogs"}}
+							<img class="img-13" src="{{AppSubURL}}/img/favicon.png">
+						{{else}}
+							<img class="img-13" src="{{AppSubURL}}/img/{{.HookType}}.png">
+						{{end}}
+					</div>
+				</h4>
+				<div class="ui attached segment">
+					{{template "repo/settings/webhook/gogs" .}}
+					{{template "repo/settings/webhook/slack" .}}
+					{{template "repo/settings/webhook/discord" .}}
+					{{template "repo/settings/webhook/dingtalk" .}}
+				</div>
+
+				{{template "repo/settings/webhook/history" .}}
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

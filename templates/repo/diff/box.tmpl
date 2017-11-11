@@ -1,0 +1,157 @@
+{{if .DiffNotAvailable}}
+	<h4>{{.i18n.Tr "repo.diff.data_not_available"}}</h4>
+{{else}}
+	<div class="diff-detail-box diff-box">
+		<div>
+			<i class="fa fa-retweet"></i>
+			{{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2html}}
+			<div class="ui right">
+				<a class="ui tiny basic toggle button" href="?style={{if .IsSplitStyle}}unified{{else}}split{{end}}">{{ if .IsSplitStyle }}{{.i18n.Tr "repo.diff.show_unified_view"}}{{else}}{{.i18n.Tr "repo.diff.show_split_view"}}{{end}}</a>
+				<a class="ui tiny basic toggle button" data-target="#diff-files">{{.i18n.Tr "repo.diff.show_diff_stats"}}</a>
+			</div>
+		</div>
+		<ol class="detail-files hide" id="diff-files">
+			{{range .Diff.Files}}
+				<li>
+					<div class="diff-counter count pull-right">
+						{{if not .IsBin}}
+							<span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
+							<span class="bar">
+								<span class="pull-left add"></span>
+								<span class="pull-left del"></span>
+							</span>
+							<span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
+						{{else}}
+							<span>{{$.i18n.Tr "repo.diff.bin"}}</span>
+						{{end}}
+					</div>
+					<!-- todo finish all file status, now modify, add, delete and rename -->
+					<span class="status {{DiffTypeToStr .GetType}} poping up" data-content="{{DiffTypeToStr .GetType}}" data-variation="inverted tiny" data-position="right center">&nbsp;</span>
+					<a class="file" href="#diff-{{.Index}}">{{.Name}}</a>
+				</li>
+			{{end}}
+		</ol>
+	</div>
+
+	{{range $i, $file := .Diff.Files}}
+		{{if $file.IsIncomplete}}
+			<div class="diff-file-box diff-box file-content">
+				<h4 class="ui top attached normal header">
+					{{$.i18n.Tr "repo.diff.file_suppressed"}}
+					<div class="diff-counter count ui left">
+						{{if not $file.IsRenamed}}
+							<span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+							<span class="bar">
+								<span class="pull-left add"></span>
+								<span class="pull-left del"></span>
+							</span>
+							<span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+						{{end}}
+					</div>
+					<span class="file">{{$file.Name}}</span>
+				</h4>
+			</div>
+		{{else}}
+			<div class="diff-file-box diff-box file-content {{TabSizeClass $.Editorconfig $file.Name}}" id="diff-{{.Index}}">
+				<h4 class="ui top attached normal header">
+					<div class="diff-counter count ui left">
+						{{if $file.IsBin}}
+							{{$.i18n.Tr "repo.diff.bin"}}
+						{{else if not $file.IsRenamed}}
+							<span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+							<span class="bar">
+								<span class="pull-left add"></span>
+								<span class="pull-left del"></span>
+							</span>
+							<span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+						{{end}}
+					</div>
+					<span class="file">{{if $file.IsRenamed}}{{$file.OldName}} &rarr; {{end}}{{$file.Name}}</span>
+					{{if not $file.IsSubmodule}}
+						<div class="ui right">
+							{{if $file.IsDeleted}}
+								<a class="ui basic grey tiny button" rel="nofollow" href="{{EscapePound $.BeforeSourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+							{{else if $.SourcePath}} {{/* No SourcePath we assume the source repository no longer exists */}}
+								<a class="ui basic grey tiny button" rel="nofollow" href="{{EscapePound $.SourcePath}}/{{EscapePound .Name}}">{{$.i18n.Tr "repo.diff.view_file"}}</a>
+							{{end}}
+						</div>
+					{{end}}
+				</h4>
+				<div class="ui attached table segment">
+					{{if not $file.IsRenamed}}
+						{{$isImage := (call $.IsImageFile $file.Name)}}
+						{{if and $isImage}}
+							<div class="center">
+								<img src="{{$.RawPath}}/{{EscapePound .Name}}">
+							</div>
+						{{else}}
+							<div class="file-body file-code code-view code-diff">
+								<table>
+									<tbody>
+										{{if $.IsSplitStyle}}
+											{{$highlightClass := $file.HighlightClass}}
+											{{range $j, $section := $file.Sections}}
+												{{range $k, $line := $section.Lines}}
+													<tr class="{{DiffLineTypeToStr .GetType}}-code nl-{{$k}} ol-{{$k}}">
+														{{if eq .GetType 4}}
+															<td class="lines-num"></td>
+															<td colspan="3"  class="lines-code">
+																<pre><code class="{{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{$section.ComputedInlineDiffFor $line}}</code></pre>
+															</td>
+														{{else}}
+															<td class="lines-num lines-num-old" {{if $line.LeftIdx}} id="diff-{{Sha1 $file.Index}}L{{$line.LeftIdx}}" data-line-number="{{$line.LeftIdx}}"{{end}}>
+															</td>
+															<td class="lines-code halfwidth">
+																<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.LeftIdx}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
+															</td>
+															<td class="lines-num lines-num-new" {{if $line.RightIdx}} id="diff-{{Sha1 $file.Index}}R{{$line.RightIdx}}" data-line-number="{{$line.RightIdx}}"{{end}}>
+															</td>
+															<td class="lines-code halfwidth">
+																<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.RightIdx}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
+															</td>
+														{{end}}
+													</tr>
+												{{end}}
+											{{end}}
+										{{else}}
+											{{template "repo/diff/section_unified" .}}
+										{{end}}
+									</tbody>
+								</table>
+							</div>
+						{{end}}
+					{{end}}
+				</div>
+			</div>
+		{{end}}
+	<br>
+	{{end}}
+
+	{{if .Diff.IsIncomplete}}
+		<div class="diff-file-box diff-box file-content">
+			<h4 class="ui top attached normal header">
+				{{$.i18n.Tr "repo.diff.too_many_files"}}
+			</h4>
+		</div>
+	{{end}}
+
+	{{if .IsSplitStyle}}
+		<script>
+			(function() {
+				$('.add-code').each(function() {
+					var prev = $(this).prev();
+					if(prev.is('.del-code') && prev.children().eq(3).text().trim() === '') {
+						while(prev.prev().is('.del-code') && prev.prev().children().eq(3).text().trim() === '') {
+							prev = prev.prev();
+						}
+						prev.children().eq(3).html($(this).children().eq(3).html());
+						prev.children().eq(2).html($(this).children().eq(2).html());
+						prev.children().eq(3).addClass('add-code');
+						prev.children().eq(2).addClass('add-code');
+						$(this).remove();
+					}
+				});
+			}());
+		</script>
+	{{end}}
+{{end}}

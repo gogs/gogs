@@ -3,6 +3,8 @@
 # Provides:          gogs
 # Required-Start:    $syslog $network
 # Required-Stop:     $syslog
+# Should-Start:      mysql postgresql
+# Should-Stop:       mysql postgresql
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: A self-hosted Git service written in Go.
@@ -15,7 +17,7 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="Go Git Service"
+DESC="Gogs"
 NAME=gogs
 SERVICEVERBOSE=yes
 PIDFILE=/var/run/$NAME.pid
@@ -122,5 +124,3 @@ case "$1" in
 		exit 3
 		;;
 esac
-
-:

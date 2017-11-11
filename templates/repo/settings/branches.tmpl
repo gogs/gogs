@@ -1,0 +1,62 @@
+{{template "base/head" .}}
+<div class="repository settings branches">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "repo.settings.default_branch"}}
+				</h4>
+				<div class="ui attached segment default-branch">
+					<p>{{.i18n.Tr "repo.settings.default_branch_desc"}}</p>
+					<form class="ui form" action="{{.Link}}/default_branch" method="post">
+						{{.CSRFTokenHTML}}
+						<div class="required inline field {{if .Repository.IsBare}}disabled{{end}}">
+							<div class="ui selection dropdown">
+								<input type="hidden" id="branch" name="branch" value="{{.Repository.DefaultBranch}}">
+								<div class="text">{{.Repository.DefaultBranch}}</div>
+								<i class="dropdown icon"></i>
+								<div class="menu">
+									{{range .Branches}}
+										<div class="item" data-value="{{.}}">{{.}}</div>
+									{{end}}
+								</div>
+							</div>
+							<button class="ui green button">{{$.i18n.Tr "repo.settings.update"}}</button>
+						</div>
+					</form>
+				</div>
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "repo.settings.protected_branches"}}
+				</h4>
+				<div class="ui attached segment protected-branches">
+					<p>{{.i18n.Tr "repo.settings.protected_branches_desc"}}</p>
+					<div class="ui form">
+						<div class="required inline field {{if .Repository.IsBare}}disabled{{end}}">
+							<div class="ui selection dropdown">
+								<div class="text">{{.i18n.Tr "repo.settings.choose_a_branch"}}</div>
+								<i class="dropdown icon"></i>
+								<div class="menu">
+									{{range .Branches}}
+										<div class="item" data-url="{{$.Link}}/{{.}}">{{.}}</div>
+									{{end}}
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="ui protected-branches list">
+						{{range .ProtectBranches}}
+							<div class="item">
+								<a href="{{$.Link}}/{{.}}"><code>{{.}}</code></a>
+							</div>
+						{{end}}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

@@ -1,0 +1,52 @@
+{{template "base/head" .}}
+<div class="user settings security">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.two_factor"}}
+				</h4>
+				<div class="ui attached segment two-factor">
+					<p class="text bold">
+						{{.i18n.Tr "settings.two_factor_status"}}
+						{{if .TwoFactor}}
+							<span class="text green">{{.i18n.Tr "settings.two_factor_on"}} <i class="octicon octicon-check"></i></span>
+							<button class="ui right mini red toggle button delete-button" data-url="{{$.Link}}/two_factor_disable">{{.i18n.Tr "settings.two_factor_disable"}}</button>
+						{{else}}
+							<span class="text red">{{.i18n.Tr "settings.two_factor_off"}} <i class="octicon octicon-x"></i></span>
+							<a class="ui right mini green toggle button" href="{{AppSubURL}}/user/settings/security/two_factor_enable">{{.i18n.Tr "settings.two_factor_enable"}}</a>
+						{{end}}
+					</p>
+				</div>
+				{{if .TwoFactor}}
+					<br>
+					<p>{{.i18n.Tr "settings.two_factor_view_recovery_codes" AppSubURL "/user/settings/security/two_factor_recovery_codes" | Safe}}</p>
+					<p>{{.i18n.Tr "settings.two_factor_http" AppSubURL "/user/settings/applications" "https://{token}@try.gogs.io/user/repo.git" | Safe}}</p>
+				{{end}}
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="ui small basic delete modal">
+	<div class="ui icon header">
+		<i class="trash icon"></i>
+		{{.i18n.Tr "settings.two_factor_disable_title"}}
+	</div>
+	<div class="content">
+		<p>{{.i18n.Tr "settings.two_factor_disable_desc"}}</p>
+	</div>
+	<div class="actions">
+		<div class="ui red basic inverted cancel button">
+			<i class="remove icon"></i>
+			{{.i18n.Tr "modal.no"}}
+		</div>
+		<div class="ui green basic inverted ok button">
+			<i class="checkmark icon"></i>
+			{{.i18n.Tr "modal.yes"}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

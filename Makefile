@@ -1,9 +1,11 @@
-LDFLAGS += -X "github.com/gogits/gogs/modules/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
-LDFLAGS += -X "github.com/gogits/gogs/modules/setting.BuildGitHash=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "github.com/gogits/gogs/pkg/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
+LDFLAGS += -X "github.com/gogits/gogs/pkg/setting.BuildGitHash=$(shell git rev-parse HEAD)"
 
 DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
-GENERATED  := modules/bindata/bindata.go public/css/gogs.css
+GENERATED  := pkg/bindata/bindata.go public/css/gogs.css
+
+OS := $(shell uname)
 
 TAGS = ""
 BUILD_FLAGS = "-v"
@@ -11,19 +13,34 @@ BUILD_FLAGS = "-v"
 RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
+GOVET = go tool vet -composites=false -methods=false -structtags=false
 
 .PHONY: build pack release bindata clean
 
 .IGNORE: public/css/gogs.css
 
+all: build
+
+check: test
+
+dist: release
+
+web: build
+	./gogs web
+
+govet:
+	$(GOVET) gogs.go
+	$(GOVET) models pkg routes
+
 build: $(GENERATED)
 	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
-govet:
-	go tool vet -composites=false -methods=false -structtags=false .
-
 build-dev: $(GENERATED) govet
+	go install $(BUILD_FLAGS) -tags '$(TAGS)'
+	cp '$(GOPATH)/bin/gogs' .
+
+build-dev-race: $(GENERATED) govet
 	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
@@ -36,9 +53,9 @@ pack:
 
 release: build pack
 
-bindata: modules/bindata/bindata.go
+bindata: pkg/bindata/bindata.go
 
-modules/bindata/bindata.go: $(DATA_FILES)
+pkg/bindata/bindata.go: $(DATA_FILES)
 	go-bindata -o=$@ -ignore="\\.DS_Store|README.md|TRANSLATORS" -pkg=bindata conf/...
 
 less: public/css/gogs.css
@@ -56,7 +73,11 @@ test:
 	go test -cover -race ./...
 
 fixme:
-	grep -rnw "FIXME" routers models modules
+	grep -rnw "FIXME" cmd routers models pkg
 
 todo:
-	grep -rnw "TODO" routers models modules
+	grep -rnw "TODO" cmd routers models pkg
+
+# Legacy code should be remove by the time of release
+legacy:
+	grep -rnw "LEGACY" cmd routers models pkg

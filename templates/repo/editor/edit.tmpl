@@ -1,0 +1,56 @@
+{{template "base/head" .}}
+<div class="repository file editor edit">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		{{template "base/alert" .}}
+		<form class="ui edit form" method="post">
+			{{.CSRFTokenHTML}}
+			<input type="hidden" name="last_commit" value="{{.last_commit}}">
+			<div class="ui secondary menu">
+				<div class="fitted item treepath">
+					<div class="ui breadcrumb field {{if .Err_TreePath}}error{{end}}">
+						<a class="section" href="{{EscapePound $.BranchLink}}">{{.Repository.Name}}</a>
+						{{ $n := len .TreeNames}}
+						{{ $l := Subtract $n 1}}
+						{{range $i, $v := .TreeNames}}
+							<div class="divider"> / </div>
+							{{if eq $i $l}}
+								<input id="file-name" value="{{$v}}" placeholder="{{$.i18n.Tr "repo.editor.name_your_file"}}" data-ec-url-prefix="{{$.EditorconfigURLPrefix}}" required autofocus>
+								<span class="octicon octicon-info poping up" data-content="{{$.i18n.Tr "repo.editor.filename_help"}}" data-position="bottom center" data-variation="tiny inverted"></span>
+							{{else}}
+								<span class="section"><a href="{{EscapePound $.BranchLink}}/{{index $.TreePaths $i | EscapePound}}">{{$v}}</a></span>
+							{{end}}
+						{{end}}
+						<span>{{.i18n.Tr "repo.editor.or"}} <a href="{{EscapePound $.BranchLink}}{{if not .IsNewFile}}/{{EscapePound .TreePath}}{{end}}">{{.i18n.Tr "repo.editor.cancel_lower"}}</a></span>
+						<input type="hidden" id="tree_path" name="tree_path" value="{{.TreePath}}" required>
+					</div>
+				</div>
+			</div>
+			<div class="field">
+				<div class="ui top attached tabular menu" data-write="write" data-preview="preview" data-diff="diff">
+					<a class="active item" data-tab="write"><i class="octicon octicon-code"></i> {{if .IsNewFile}}{{.i18n.Tr "repo.editor.new_file"}}{{else}}{{.i18n.Tr "repo.editor.edit_file"}}{{end}}</a>
+					{{if not .IsNewFile}}
+					<a class="item" id="preview-tab" data-tab="preview" data-url="{{AppSubURL}}/api/v1/markdown" data-root-context="{{.BranchLink}}/" data-context="{{.BranchLink}}/{{.ParentTreePath}}" data-preview-file-modes="{{.PreviewableFileModes}}"><i class="octicon octicon-eye"></i> {{.i18n.Tr "repo.release.preview"}}</a>
+					<a class="item" data-tab="diff" data-url="{{.RepoLink}}/_preview/{{.BranchName}}/{{.TreePath}}"><i class="octicon octicon-diff"></i> {{.i18n.Tr "repo.editor.preview_changes"}}</a>
+					{{end}}
+				</div>
+				<div class="ui bottom attached active tab segment" data-tab="write">
+					<textarea id="edit_area" name="content" data-id="repo-{{.Repository.Name}}-{{.TreePath}}"
+						data-url="{{AppSubURL}}/api/v1/markdown"
+						data-context="{{.RepoLink}}"
+						data-markdown-file-exts="{{.MarkdownFileExts}}"
+						data-line-wrap-extensions="{{.LineWrapExtensions}}">
+{{.FileContent}}</textarea required>
+				</div>
+				<div class="ui bottom attached tab segment markdown" data-tab="preview">
+					{{.i18n.Tr "repo.release.loading"}}
+				</div>
+				<div class="ui bottom attached tab segment diff" data-tab="diff">
+					{{.i18n.Tr "repo.release.loading"}}
+				</div>
+			</div>
+			{{template "repo/editor/commit_form" .}}
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

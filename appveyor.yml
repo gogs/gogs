@@ -1,0 +1,20 @@
+version: "{build}"
+skip_tags: true
+clone_folder: c:\gopath\src\github.com\gogits\gogs
+clone_depth: 1
+
+environment:
+  GOPATH: c:\gopath
+  GOVERSION: 1.7
+
+build: false
+deploy: false
+
+install:
+  - go build -v
+
+notifications:
+  - provider: Email
+    to:
+      - u@gogs.io
+    on_build_success: false

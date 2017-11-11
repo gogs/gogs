@@ -1,0 +1,12 @@
+{{template "base/head" .}}
+<div class="repository file editor delete">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		{{template "base/alert" .}}
+		<form class="ui form" method="post">
+			{{.CSRFTokenHTML}}
+			{{template "repo/editor/commit_form" .}}
+		</form>
+	</div>
+</div>
+{{template "base/footer" .}}

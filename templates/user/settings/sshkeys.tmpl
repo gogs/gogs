@@ -24,7 +24,7 @@
 								<div class="one wide column">
 									<i class="mega-octicon octicon-key left"></i>
 								</div>
-								<div class="eleven wide column">
+								<div class="ten wide column">
 									<strong>{{.Name}}</strong>
 									<div class="print meta">
 										{{.Fingerprint}}
@@ -33,8 +33,8 @@
 										<i>{{$.i18n.Tr "settings.add_on"}} <span>{{DateFmtShort .Created}}</span> —  <i class="octicon octicon-info"></i> {{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} <span>{{DateFmtShort .Updated}}</span>{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i>
 									</div>
 								</div>
-								<div class="two wide column">
-									<button class="ui red tiny button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+								<div class="right floated button">
+									<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
 										{{$.i18n.Tr "settings.delete_key"}}
 									</button>
 								</div>
@@ -50,7 +50,7 @@
 					</h4>
 					<div class="ui attached segment">
 						<form class="ui form" action="{{.Link}}" method="post">
-							{{.CsrfTokenHtml}}
+							{{.CSRFTokenHTML}}
 							<div class="field {{if .Err_Title}}error{{end}}">
 								<label for="title">{{.i18n.Tr "settings.key_name"}}</label>
 								<input id="title" name="title" value="{{.title}}" autofocus required>

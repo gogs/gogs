@@ -7,7 +7,7 @@ package cmd
 import (
 	"time"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 func stringFlag(name, value, usage string) cli.StringFlag {

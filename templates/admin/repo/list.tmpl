@@ -22,6 +22,7 @@
 								<th>{{.i18n.Tr "admin.repos.watches"}}</th>
 								<th>{{.i18n.Tr "admin.repos.stars"}}</th>
 								<th>{{.i18n.Tr "admin.repos.issues"}}</th>
+								<th>{{.i18n.Tr "admin.repos.size"}}</th>
 								<th>{{.i18n.Tr "admin.users.created"}}</th>
 								<th>{{.i18n.Tr "admin.notices.op"}}</th>
 							</tr>
@@ -30,12 +31,13 @@
 							{{range .Repos}}
 								<tr>
 									<td>{{.ID}}</td>
-									<td><a href="{{AppSubUrl}}/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
-									<td><a href="{{AppSubUrl}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
+									<td><a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
+									<td><a href="{{AppSubURL}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
 									<td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
 									<td>{{.NumWatches}}</td>
 									<td>{{.NumStars}}</td>
 									<td>{{.NumIssues}}</td>
+									<td>{{.Size | FileSize}}</td>
 									<td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
 									<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Current}}" data-id="{{.ID}}"><i class="trash icon text red"></i></a></td>
 								</tr>
@@ -57,10 +59,8 @@
 	</div>
 	<div class="content">
 		<p>{{.i18n.Tr "repo.settings.delete_desc"}}</p>
-		<p>{{.i18n.Tr "repo.settings.delete_notices_2"}}</p>
-		<p>{{.i18n.Tr "repo.settings.delete_notices_fork_1"}}</p>
-		<p>{{.i18n.Tr "repo.settings.delete_notices_fork_2"}}</p>
-		<p>{{.i18n.Tr "repo.settings.delete_notices_fork_3"}}</p>
+		{{.i18n.Tr "repo.settings.delete_notices_2"}}<br>
+		{{.i18n.Tr "repo.settings.delete_notices_fork_1"}}<br>
 	</div>
 	{{template "base/delete_modal_actions" .}}
 </div>

@@ -1,5 +1,5 @@
 {{template "base/head" .}}
-<div class="user settings">
+<div class="user settings applications">
 	<div class="ui container">
 		<div class="ui grid">
 			{{template "user/settings/navbar" .}}
@@ -24,14 +24,14 @@
 								<div class="one wide column">
 									<i class="fa fa-send fa-2x left"></i>
 								</div>
-								<div class="eleven wide column">
+								<div class="ten wide column">
 									<strong>{{.Name}}</strong>
 									<div class="activity meta">
 										<i>{{$.i18n.Tr "settings.add_on"}} <span>{{DateFmtShort .Created}}</span> —  <i class="octicon octicon-info"></i> {{if .HasUsed}}{{$.i18n.Tr "settings.last_used"}} <span>{{DateFmtShort .Updated}}</span>{{else}}{{$.i18n.Tr "settings.no_activity"}}{{end}}</i>
 									</div>
 								</div>
-								<div class="two wide column">
-									<button class="ui red tiny button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+								<div class="right floated button">
+									<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
 										{{$.i18n.Tr "settings.delete_token"}}
 									</button>
 								</div>
@@ -46,7 +46,7 @@
 					</h4>
 					<div class="ui attached segment">
 						<form class="ui form" action="{{.Link}}" method="post">
-							{{.CsrfTokenHtml}}
+							{{.CSRFTokenHTML}}
 							<p>{{.i18n.Tr "settings.new_token_desc"}}</p>
 							<div class="field {{if .Err_Name}}error{{end}}">
 								<label for="name">{{.i18n.Tr "settings.token_name"}}</label>

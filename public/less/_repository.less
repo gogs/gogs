@@ -6,8 +6,8 @@
 
 	.head {
 		.column {
-			padding-top: 5px!important;
-			padding-bottom: 5px!important;
+			padding-top: 5px !important;
+			padding-bottom: 5px !important;
 		}
 		.ui.compact.menu {
 			margin-left: 1rem;
@@ -29,6 +29,10 @@
 			display: block;
 			font-size: 12px;
 			white-space: nowrap;
+		}
+		.octicon.octicon-repo-forked {
+			margin-top: -1px;
+			font-size: 15px;
 		}
 	}
 
@@ -53,13 +57,15 @@
 			.hide {
 				display: none!important;
 			}
+			.item {
+				padding: 0px;
+			}
 			.label.color {
 				padding: 0 8px;
 				margin-right: 5px;
 			}
 			a {
-				padding-top: 5px;
-				padding-right: 10px;
+				margin: 2px 0;
 				.text {
 					color: #444;
 					&:hover {
@@ -77,6 +83,9 @@
 		.ui.tabs.divider {
 			border-bottom: none;
 		}
+		.ui.tabular .octicon {
+			margin-right: 5px;
+		}
 	}
 	.filter.menu {
 		.label.color {
@@ -88,6 +97,7 @@
 			float: left;
 			margin-left: -5px;
 			margin-right: -7px;
+			width: 16px;
 		}
 		.menu {
 			max-height: 300px;
@@ -117,7 +127,8 @@
 
 	#clone-panel {
 		margin-top: -8px;
-		width: 100%;
+		margin-left: 5px;
+		width: 350px;
 
 		input {
 			border-radius: 0;
@@ -140,6 +151,36 @@
 		}
 	}
 
+	&.branches:not(.settings) {
+		.ui.list {
+			padding: 0;
+			>.item {
+				margin: 0;
+				line-height: 31px;
+				&:not(:last-child) {
+					border-bottom: 1px solid #DDD;
+				}
+				.column {
+					padding: 5px 15px;
+					.octicon {
+						vertical-align: text-bottom;
+					}
+					code {
+						padding: 4px 0;
+						font-size: 12px;
+					}
+					.ui.text:not(i) {
+						font-size: 12px;
+					}
+					.ui.button {
+						font-size: 12px;
+						padding: 8px 10px;
+					}
+				}
+			}
+		}
+	}
+
 	&.file.list {
 		#repo-desc {
 			font-size: 1.2em;
@@ -147,6 +188,28 @@
 		.choose.reference {
 			.header .icon {
 				font-size: 1.4em;
+			}
+		}
+		#file-buttons {
+			font-weight: normal;
+			
+			.ui.button {
+				padding: 8px 10px;
+				font-weight: normal;
+			}
+		}
+		#git-stats {
+			padding: 10px;
+			line-height: 0;
+			.list {
+				width: 100%;
+				.item {
+					margin-left: 0;
+					width: 33.33%;
+					.text b {
+						font-size: 15px;
+					}
+				}
 			}
 		}
 
@@ -168,9 +231,16 @@
 				}
 			}
 			tbody {
-				.icon {
+				.octicon {
 					margin-left: 3px;
 					margin-right: 5px;
+					color: #777;
+					&.octicon-mail-reply {
+						margin-right: 10px;
+					}
+					&.octicon-file-directory, &.octicon-file-submodule {
+						color: #1e70bf;
+					}
 				}
 			}
 			td {
@@ -188,16 +258,158 @@
 					font-size: 1em;
 					margin-top: -2px;
 				}
+				.file-actions {
+					padding-left: 20px;
+					.btn-octicon {
+					  display: inline-block;
+					  padding: 5px;
+					  margin-left: 5px;
+					  line-height: 1;
+					  color: #767676;
+					  vertical-align: middle;
+					  background: transparent;
+					  border: 0;
+					  outline: none;
+					 }
+					.btn-octicon:hover {
+					  color: #4078c0;
+					}
+					.btn-octicon-danger:hover {
+					  color: #bd2c00;
+					}
+					.btn-octicon.disabled {
+					  color: #bbb;
+					  cursor: default;
+					}
+					#delete-file-form {
+						display: inline-block;
+					}
+				}
 			}
 			.view-raw {
+				padding: 5px;
 				* {
 					max-width: 100%;
 				}
 				img {
-					padding: 5px 5px 0 5px;
+					margin-bottom: -5px;
 				}
 			}
 
+			#ipython-notebook {
+				margin-left: 95px;
+				padding-top: 1px;
+
+				.nb-notebook {
+					line-height: 1.5;
+				}
+
+				.nb-stdout, .nb-stderr {
+					white-space: pre-wrap;
+					margin: 1em 0;
+					padding: 0.1em 0.5em;
+				}
+
+				.nb-stderr {
+					background-color: #FAA;
+				}
+
+				.nb-cell + .nb-cell {
+					margin-top: 0.5em;
+				}
+
+				.nb-cell {
+					position: relative;    
+
+					&.nb-heading-cell {
+						margin-top: 0.5em;
+					}
+					
+					img {
+						max-width: 100%;
+					}
+				}
+
+				.nb-raw-cell {
+					white-space: pre-wrap;
+					background-color: #f5f2f0;
+					font-family: Consolas, Monaco, 'Andale Mono', monospace;
+					padding: 1em;
+					margin: .5em 0;
+				}
+
+				.nb-input:before, 
+				.nb-output:before {
+					position: absolute;    
+					font-family: monospace;
+					color: #999;
+					left: -7.5em;
+					width: 7em;
+					text-align: right;
+				}
+				.nb-input {
+					&:before {
+						content: "In [" attr(data-prompt-number) "]:";
+					}
+
+					pre {
+						background-color: #f7f7f7;
+						margin-right: 10px;
+						padding: 5px 10px;
+
+						code {
+							min-height: 18px;
+							line-height: 18px;
+							font-size: 14px;
+						}
+					}
+				}
+				.nb-output{
+					&:before {
+						content: "Out [" attr(data-prompt-number) "]:";
+					}
+					
+					pre {
+						padding: 5px 10px;
+						font-size: 14px;
+					}
+					img {
+						max-width: 100%;
+					}
+				  table {
+						border: 1px solid #000;
+						border-collapse: collapse;
+					}
+				  th {
+						font-weight: bold;
+					}
+					th,
+					td {
+						border: 1px solid #000;
+						padding: 0.25em;    
+						text-align: left;
+						vertical-align: middle;
+						border-collapse: collapse;
+					}
+				}
+
+				.nb-markdown-cell {
+					margin-top: 10px;
+					margin-right: 10px;
+					padding: 10px;
+				}
+
+				// Fix pandas dataframe formatting
+				div[style="max-height:1000px;max-width:1500px;overflow:auto;"] {
+					max-height: none !important;    
+				}
+			}
+
+			.plain-text {
+				font-size: 14px;
+				padding: 15px 15px 10px 15px;
+				font-family: Consolas;
+			}
 			.code-view {
 				* {
 					font-size: 12px;
@@ -225,8 +437,6 @@
 				.lines-num,
 				.lines-code {
 					padding: 0;
-
-
 					pre,
 					ol,
 					.hljs {
@@ -234,9 +444,13 @@
 						margin: 0;
 						padding: 0 !important;
 						li {
-							padding-left: 5px;
+							display: inline-block;
+							width: 100%;
 							&.active {
 								background: #ffffdd;
+							}
+							&:before {
+								content: ' ';
 							}
 						}
 					}
@@ -249,6 +463,72 @@
 
 			.octicon {
 				width: 16px;
+			}
+		}
+	}
+
+	&.file.editor {
+		.treepath {
+			width: 100%;
+
+			input {
+				vertical-align: middle;
+				box-shadow: rgba(0, 0, 0, 0.0745098) 0px 1px 2px inset;
+				width: inherit;
+				padding: 7px 8px;
+				margin-right: 5px;
+			}
+		}
+
+		.tabular.menu {
+			.octicon {
+				margin-right: 5px;
+			}
+		}
+
+		.commit-form-wrapper {
+			padding-left: 64px;
+			.commit-avatar {
+				float: left;
+				margin-left: -64px;
+				width: 3em;
+		    height: auto;
+			}
+			.commit-form {
+			  position: relative;
+			  padding: 15px;
+			  margin-bottom: 10px;
+			  border: 1px solid #ddd;
+			  border-radius: 3px;
+			  #avatar-arrow;
+				&:after {
+					border-right-color: #fff;
+				}
+
+				.quick-pull-choice {
+					.branch-name {
+						display: inline-block;
+				    padding: 3px 6px;
+				    font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+				    color: rgba(0,0,0,0.65);
+				    background-color: rgba(209,227,237,0.45);
+				    border-radius: 3px;
+					}
+					.new-branch-name-input {
+				    position: relative;
+				    margin-left: 25px;
+				    input {
+				    	width: 240px !important;
+		    	    padding-left: 26px !important;
+				    }
+					}
+					.octicon-git-branch {
+						position: absolute;
+				    top: 9px;
+				    left: 10px;
+				    color: #b0c4ce;
+					}
+				}
 			}
 		}
 	}
@@ -381,10 +661,13 @@
 				.actions {
 					.item {
 						float: left;
-					}
-					a.item {
-						margin-top: 6px;
-						margin-left: 10px;
+						&.tag {
+							margin-right: 5px;
+						}
+						&.action {
+							margin-top: 6px;
+							margin-left: 10px;
+						}
 					}
 				}
 				.content {
@@ -442,6 +725,13 @@
 							margin: 0;
 							vertical-align: middle;
 						}
+						span.ui.image {
+							font-size: 8vw;
+							color: #000000;
+						}
+						span.ui.image:hover {
+							color: #000000;
+						}
 					}
 				}
 
@@ -471,19 +761,23 @@
 				.octicon {
 					width: 30px;
 					float: left;
-					margin-left: -36px;
 					text-align: center;
 					&.octicon-circle-slash {
 						margin-top: 5px;
+						margin-left: -34.5px;
 						font-size: 20px;
 						color: #bd2c00;
 					}
 					&.octicon-primitive-dot {
+						margin-left: -28.5px;
+						margin-right: -1px;
 						font-size: 30px;
 						color: #6cc644;
 					}
 					&.octicon-bookmark {
 						margin-top: 3px;
+						margin-left: -31px;
+						margin-right: -1px;
 						font-size: 25px;
 					}
 				}
@@ -540,7 +834,7 @@
 	.label.list {
 		list-style: none;
 		padding-top: 15px;
-		.item {
+		>.item {
 			padding-top: 10px;
 			padding-bottom: 10px;
 			border-bottom: 1px dashed #AAA;
@@ -761,12 +1055,24 @@
 			.lines-num {
 				border-right: 1px solid #d4d4d5;
 				padding: 0 5px;
+				user-select: none;
+
+				&::before {
+					content: attr(data-line-number);
+				}
+
+				&.lines-num-old, &.lines-num-new {
+					cursor: pointer;
+					&:hover {
+						color: #383636;
+					}
+				}
 			}
 			tbody {
 				tr {
 
 					&.tag-code {
-						td, pre {
+						td {
 							background-color: #F0F0F0 !important;
 							border-color: #D2CECE!important;
 							padding-top: 4px;
@@ -775,15 +1081,12 @@
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
 					}
-					// &.same-code {
-					// 	td.selected-line, td.selected-line pre {
-					// 		background-color: #ffffdd !important;
-					// 	}
-					// }
+					&.same-code {
+						td.active {
+							background-color: #ffffdd !important;
+						}
+					}
 					&.del-code {
 						// Duplicate here to enforce add code color.
 						td.add-code {
@@ -795,29 +1098,29 @@
 
 							}
 						}
-						td, pre {
+						td {
 							background-color: #ffecec !important;
 					    border-color: #f1c0c0 !important;
+						}
+						td.active {
+							background-color: #ffffdd !important;
 						}
 
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
 					}
 					&.add-code {
-						td, pre {
+						td {
 							background-color: #eaffea !important;
 							border-color: #c1e9c1 !important;
 						}
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
+						td.active {
+							background-color: #ffffdd !important;
+						}
 					}
 
 					.removed-code {
@@ -884,11 +1187,11 @@
 
 					.tag:not(.icon) {
 						display: block;
-						margin-top: 15px;
+						margin-top: 6px;
 					}
 					.commit {
 						display: block;
-						margin-top: 10px;
+						margin-top: 6px;
 					}
 				}
 				.detail {
@@ -941,6 +1244,10 @@
 	&.new.release {
 		.target {
 			min-width: 500px;
+
+			#tag-name {
+				margin-top: -4px;
+			}
 
 			.at {
 				margin-left: -5px;
@@ -1016,7 +1323,8 @@
 				text-transform: none;
 			}
 			.markdown {
-				padding: 15px 30px;
+				padding-left: 25px;
+				margin-left: -25px;
 
 				h1, h2, h3, h4, h5, h6 {
 					&:first-of-type {
@@ -1054,9 +1362,81 @@
 				}
 			}
 		}
+
+		&.settings.branches {
+			.protected-branches {
+				.selection.dropdown {
+					width: 300px;
+				}
+				.item {
+			    border: 1px solid #eaeaea;
+			    padding: 10px 15px;
+
+			    &:not(:last-child) {
+				    border-bottom: 0;
+			    }
+				}
+			}
+			.branch-protection {
+				.help {
+					margin-left: 26px;
+					padding-top: 0;
+				}
+				.fields {
+					margin-left: 20px;
+					display: block;
+				}
+				.whitelist {
+					margin-left: 26px;
+
+					.dropdown img {
+						display: inline-block;
+					}
+				}
+			}
+		}
+
+		&.webhooks {
+			.types {
+				.menu .item {
+					padding: 10px !important;
+				}
+			}
+		}
+
+		&.webhook {
+			.text.desc {
+				margin-top: 5px;
+			}
+			.events {
+				.column {
+					padding-bottom: 0;
+				}
+				.help {
+					font-size: 13px;
+					margin-left: 26px;
+					padding-top: 0;
+				}
+			}
+		}
 	}
 }
 // End of .repository
+
+// Should apply organization webhooks page
+.webhook .hook.history.list {
+	.right.menu {
+		.redelivery.button {
+			font-size: 12px;
+			margin-top: 6px;
+			height: 30px;
+			.octicon {
+				font: normal normal normal 13px/1 Octicons;
+				width: 12px;
+			}
+		}
+	}
+}
 
 &.user-cards {
 	.list {
@@ -1152,7 +1532,7 @@
 	padding-top: 15px;
 }
 
-.ui.comments {
+.ui.form {
 	.dropzone {
 		width: 100%;
 		margin-bottom: 10px;
@@ -1167,10 +1547,6 @@
 .settings {
 	.content {
 		margin-top: 2px;
-		>.header,
-		.segment {
-			box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
-		}
 	}
 	.key.list {
 		.item:not(:first-child) {
@@ -1205,6 +1581,9 @@
 			.fa {
 				width: 20px;
 				text-align: center;
+			}
+			a {
+				.dont-break-out;
 			}
 		}
 	}
@@ -1322,4 +1701,12 @@
 	}
 }
 
-
+// generate .tab-size-{i} from 1 to 16
+.generate-tab-size(16);
+.generate-tab-size(@n, @i: 1) when (@i =< @n) {
+	.tab-size-@{i} {
+		tab-size: @i !important;
+		-moz-tab-size: @i !important;
+	}
+	.generate-tab-size(@n, (@i + 1));
+}

@@ -2,8 +2,8 @@
 <div class="user activate">
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
-			<form class="ui form" action="{{AppSubUrl}}/user/activate" method="post">
-				{{.CsrfTokenHtml}}
+			<form class="ui form" action="{{AppSubURL}}/user/activate" method="post">
+				{{.CSRFTokenHTML}}
 				<h2 class="ui top attached header">
 					{{.i18n.Tr "auth.active_your_account"}}
 				</h2>
@@ -15,7 +15,7 @@
 						{{else if .ResendLimited}}
 							<p class="center">{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
 						{{else}}
-							<p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .SignedUser.Email .Hours | Str2html}}</p>
+							<p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .LoggedUser.Email .Hours | Str2html}}</p>
 						{{end}}
 					{{else}}
 						{{if .IsSendRegisterMail}}
@@ -23,7 +23,7 @@
 						{{else if .IsActivateFailed}}
 							<p>{{.i18n.Tr "auth.invalid_code"}}</p>
 						{{else}}
-							<p>{{.i18n.Tr "auth.has_unconfirmed_mail" .SignedUser.Name .SignedUser.Email | Str2html}}</p>
+							<p>{{.i18n.Tr "auth.has_unconfirmed_mail" .LoggedUser.Name .LoggedUser.Email | Str2html}}</p>
 							<div class="ui divider"></div>
 							<div class="text right">
 								<button class="ui blue button">{{.i18n.Tr "auth.resend_mail"}}</button>

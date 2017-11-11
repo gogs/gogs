@@ -6,33 +6,56 @@ package models
 
 import (
 	"fmt"
+
+	log "gopkg.in/clog.v1"
+
+	api "github.com/gogits/go-gogs-client"
 )
 
 // Collaboration represent the relation between an individual and a repository.
 type Collaboration struct {
-	ID     int64      `xorm:"pk autoincr"`
+	ID     int64
 	RepoID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
 }
 
-func (c *Collaboration) ModeName() string {
+func (c *Collaboration) ModeI18nKey() string {
 	switch c.Mode {
 	case ACCESS_MODE_READ:
-		return "Read"
+		return "repo.settings.collaboration.read"
 	case ACCESS_MODE_WRITE:
-		return "Write"
+		return "repo.settings.collaboration.write"
 	case ACCESS_MODE_ADMIN:
-		return "Admin"
+		return "repo.settings.collaboration.admin"
+	default:
+		return "repo.settings.collaboration.undefined"
 	}
-	return "Undefined"
 }
 
-// AddCollaborator adds new collaboration relation between an individual and a repository.
+// IsCollaborator returns true if the user is a collaborator of the repository.
+func IsCollaborator(repoID, userID int64) bool {
+	collaboration := &Collaboration{
+		RepoID: repoID,
+		UserID: userID,
+	}
+	has, err := x.Get(collaboration)
+	if err != nil {
+		log.Error(2, "get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		return false
+	}
+	return has
+}
+
+func (repo *Repository) IsCollaborator(userID int64) bool {
+	return IsCollaborator(repo.ID, userID)
+}
+
+// AddCollaborator adds new collaboration to a repository with default access mode.
 func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: u.Id,
+		UserID: u.ID,
 	}
 
 	has, err := x.Get(collaboration)
@@ -44,22 +67,15 @@ func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration.Mode = ACCESS_MODE_WRITE
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.InsertOne(collaboration); err != nil {
+	if _, err = sess.Insert(collaboration); err != nil {
 		return err
-	}
-
-	if repo.Owner.IsOrganization() {
-		err = repo.recalculateTeamAccesses(sess, 0)
-	} else {
-		err = repo.recalculateAccesses(sess)
-	}
-	if err != nil {
-		return fmt.Errorf("recalculateAccesses 'team=%v': %v", repo.Owner.IsOrganization(), err)
+	} else if err = repo.recalculateAccesses(sess); err != nil {
+		return fmt.Errorf("recalculateAccesses [repo_id: %v]: %v", repo.ID, err)
 	}
 
 	return sess.Commit()
@@ -74,6 +90,17 @@ func (repo *Repository) getCollaborations(e Engine) ([]*Collaboration, error) {
 type Collaborator struct {
 	*User
 	Collaboration *Collaboration
+}
+
+func (c *Collaborator) APIFormat() *api.Collaborator {
+	return &api.Collaborator{
+		User: c.User.APIFormat(),
+		Permissions: api.Permission{
+			Admin: c.Collaboration.Mode >= ACCESS_MODE_ADMIN,
+			Push:  c.Collaboration.Mode >= ACCESS_MODE_WRITE,
+			Pull:  c.Collaboration.Mode >= ACCESS_MODE_READ,
+		},
+	}
 }
 
 func (repo *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
@@ -102,7 +129,7 @@ func (repo *Repository) GetCollaborators() ([]*Collaborator, error) {
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
-func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode) error {
+func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
 	// Discard invalid input
 	if mode <= ACCESS_MODE_NONE || mode > ACCESS_MODE_OWNER {
 		return nil
@@ -110,7 +137,7 @@ func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode
 
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: uid,
+		UserID: userID,
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
@@ -119,32 +146,68 @@ func (repo *Repository) ChangeCollaborationAccessMode(uid int64, mode AccessMode
 		return nil
 	}
 
+	if collaboration.Mode == mode {
+		return nil
+	}
 	collaboration.Mode = mode
 
+	// If it's an organizational repository, merge with team access level for highest permission
+	if repo.Owner.IsOrganization() {
+		teams, err := GetUserTeams(repo.OwnerID, userID)
+		if err != nil {
+			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", repo.OwnerID, userID, err)
+		}
+		for i := range teams {
+			if mode < teams[i].Authorize {
+				mode = teams[i].Authorize
+			}
+		}
+	}
+
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	if _, err = sess.Id(collaboration.ID).AllCols().Update(collaboration); err != nil {
 		return fmt.Errorf("update collaboration: %v", err)
-	} else if _, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, uid, repo.ID); err != nil {
-		return fmt.Errorf("update access table: %v", err)
+	}
+
+	access := &Access{
+		UserID: userID,
+		RepoID: repo.ID,
+	}
+	has, err = sess.Get(access)
+	if err != nil {
+		return fmt.Errorf("get access record: %v", err)
+	}
+	if has {
+		_, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, repo.ID)
+	} else {
+		access.Mode = mode
+		_, err = sess.Insert(access)
+	}
+	if err != nil {
+		return fmt.Errorf("update/insert access table: %v", err)
 	}
 
 	return sess.Commit()
 }
 
 // DeleteCollaboration removes collaboration relation between the user and repository.
-func (repo *Repository) DeleteCollaboration(uid int64) (err error) {
+func DeleteCollaboration(repo *Repository, userID int64) (err error) {
+	if !IsCollaborator(repo.ID, userID) {
+		return nil
+	}
+
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: uid,
+		UserID: userID,
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -156,4 +219,8 @@ func (repo *Repository) DeleteCollaboration(uid int64) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+func (repo *Repository) DeleteCollaboration(userID int64) error {
+	return DeleteCollaboration(repo, userID)
 }

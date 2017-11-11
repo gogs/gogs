@@ -1,0 +1,45 @@
+{{template "base/head" .}}
+<div class="repository diff">
+	{{template "repo/header" .}}
+	<div class="ui container {{if .IsSplitStyle}}fluid padded{{end}}">
+		{{if .IsDiffCompare }}
+			{{template "repo/commits_table" .}}
+		{{else}}
+			<div class="ui top attached info clearing segment">
+				<a class="ui floated right blue tiny button" href="{{EscapePound .SourcePath}}">
+					{{.i18n.Tr "repo.diff.browse_source"}}
+				</a>
+				{{RenderCommitMessage true .Commit.Message $.RepoLink $.Repository.ComposeMetas}}
+			</div>
+			<div class="ui attached info segment">
+				{{if .Author}}
+					<img class="ui avatar image" src="{{.Author.RelAvatarLink}}" />
+					<a href="{{.Author.HomeLink}}"><strong>{{.Commit.Author.Name}}</strong></a> {{if .IsLogged}}<{{.Commit.Author.Email}}>{{end}}
+				{{else}}
+					<img class="ui avatar image" src="{{AvatarLink .Commit.Author.Email}}" />
+					<strong>{{.Commit.Author.Name}}</strong>
+				{{end}}
+				<span class="text grey" id="authored-time">{{TimeSince .Commit.Author.When $.Lang}}</span>
+				<div class="ui right">
+					<div class="ui horizontal list">
+						{{if .Parents}}
+							<div class="item">
+								{{.i18n.Tr "repo.diff.parent"}}
+							</div>
+							<div class="item">
+								{{range .Parents}}
+									<a class="ui blue sha label" href="{{$.RepoLink}}/commit/{{.}}">{{ShortSHA1 .}}</a>
+								{{end}}
+							</div>
+						{{end}}
+						<div class="item">{{.i18n.Tr "repo.diff.commit"}}</div>
+						<div class="item"><span class="ui blue sha label">{{ShortSHA1 .CommitID}}</span></div>
+					</div>
+				</div>
+			</div>
+		{{end}}
+
+		{{template "repo/diff/box" .}}
+	</div>
+</div>
+{{template "base/footer" .}}

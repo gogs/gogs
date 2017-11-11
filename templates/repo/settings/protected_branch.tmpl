@@ -1,0 +1,86 @@
+{{template "base/head" .}}
+<div class="repository settings branches">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "repo/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "repo.settings.branch_protection"}}
+				</h4>
+				<div class="ui attached segment branch-protection">
+					<p>{{.i18n.Tr "repo.settings.branch_protection_desc" .Branch.Name | Str2html}}</p>
+					<form class="ui form" action="{{.Link}}" method="post">
+						{{.CSRFTokenHTML}}
+						<div class="inline field">
+							<div class="ui checkbox">
+								<input class="enable-protection" name="protected" type="checkbox" data-target="#protection_box" {{if .Branch.Protected}}checked{{end}}>
+								<label>{{.i18n.Tr "repo.settings.protect_this_branch"}}</label>
+								<p class="help">{{.i18n.Tr "repo.settings.protect_this_branch_desc"}}</p>
+							</div>
+						</div>
+						<div id="protection_box" class="fields {{if not .Branch.Protected}}disabled{{end}}">
+							<div class="field">
+								<div class="ui checkbox">
+									<input name="require_pull_request" type="checkbox" {{if .Branch.RequirePullRequest}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.protect_require_pull_request"}}</label>
+									<p class="help">{{.i18n.Tr "repo.settings.protect_require_pull_request_desc"}}</p>
+								</div>
+							</div>
+							{{if .Owner.IsOrganization}}
+								<div class="field">
+									<div class="ui checkbox">
+										<input class="enable-whitelist" name="enable_whitelist" type="checkbox" data-target="#whitelist_box" {{if .Branch.EnableWhitelist}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.protect_whitelist_committers"}}</label>
+										<p class="help">{{.i18n.Tr "repo.settings.protect_whitelist_committers_desc"}}</p>
+									</div>
+								</div>
+								<div id="whitelist_box" class="field {{if not .Branch.EnableWhitelist}}disabled{{end}}">
+									<div class="whitelist field">
+										<label>{{.i18n.Tr "repo.settings.protect_whitelist_users"}}</label>
+										<div class="ui multiple search selection dropdown">
+											<input type="hidden" name="whitelist_users" value="{{.whitelist_users}}">
+											<div class="default text">{{.i18n.Tr "repo.settings.protect_whitelist_search_users"}}</div>
+											<div class="menu">
+												{{range .Users}}
+													<div class="item" data-value="{{.ID}}">
+														<img class="ui mini image" src="{{.RelAvatarLink}}">
+														{{.Name}}
+													</div>
+												{{end}}
+											</div>
+										</div>
+									</div>
+									<br>
+									<div class="whitelist field">
+										<label>{{.i18n.Tr "repo.settings.protect_whitelist_teams"}}</label>
+										<div class="ui multiple search selection dropdown">
+											<input type="hidden" name="whitelist_teams" value="{{.whitelist_teams}}">
+											<div class="default text">{{.i18n.Tr "repo.settings.protect_whitelist_search_teams"}}</div>
+											<div class="menu">
+												{{range .Teams}}
+													<div class="item" data-value="{{.ID}}">
+														<i class="octicon octicon-jersey"></i>
+														{{.Name}}
+													</div>
+												{{end}}
+											</div>
+										</div>
+									</div>
+								</div>
+							{{end}}
+						</div>
+
+						<div class="ui divider"></div>
+
+						<div class="field">
+							<button class="ui green button">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
