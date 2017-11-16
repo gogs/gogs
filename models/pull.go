@@ -183,9 +183,17 @@ func (pr *PullRequest) CanAutoMerge() bool {
 	return pr.Status == PULL_REQUEST_STATUS_MERGEABLE
 }
 
+// MergeStyle represents the approach to merge commits into base branch.
+type MergeStyle string
+
+const (
+	MERGE_STYLE_REGULAR MergeStyle = "create_merge_commit"
+	MERGE_STYLE_REBASE  MergeStyle = "rebase_before_merging"
+)
+
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
-func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error) {
+func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle) (err error) {
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -239,15 +247,13 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 		return fmt.Errorf("git fetch [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
 	}
 
-	if (pr.BaseRepo.PullUseRebase) {
-		// Rebase.
-		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
-			fmt.Sprintf("PullRequest.Rebase (git rebase): %s", tmpBasePath),
-			"git", "rebase", "-q", pr.BaseBranch, "head_repo/"+pr.HeadBranch); err != nil {
-			return fmt.Errorf("git rebase [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
-		}
-	} else {
-		// Merge commits.
+	// Check if merge style is allowed, reset to default style if not
+	if mergeStyle == MERGE_STYLE_REBASE && !pr.BaseRepo.PullsAllowRebase {
+		mergeStyle = MERGE_STYLE_REGULAR
+	}
+
+	switch mergeStyle {
+	case MERGE_STYLE_REGULAR: // Create merge commit
 		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 			fmt.Sprintf("PullRequest.Merge (git merge --no-ff --no-commit): %s", tmpBasePath),
 			"git", "merge", "--no-ff", "--no-commit", "head_repo/"+pr.HeadBranch); err != nil {
@@ -261,6 +267,16 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository) (err error
 			"-m", fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch)); err != nil {
 			return fmt.Errorf("git commit [%s]: %v - %s", tmpBasePath, err, stderr)
 		}
+
+	case MERGE_STYLE_REBASE: // Rebase before merging
+		if _, stderr, err = process.ExecDir(-1, tmpBasePath,
+			fmt.Sprintf("PullRequest.Merge (git rebase): %s", tmpBasePath),
+			"git", "rebase", "-q", pr.BaseBranch, "head_repo/"+pr.HeadBranch); err != nil {
+			return fmt.Errorf("git rebase [%s -> %s]: %s", headRepoPath, tmpBasePath, stderr)
+		}
+
+	default:
+		return fmt.Errorf("unknown merge style: %s", mergeStyle)
 	}
 
 	// Push back to upstream.

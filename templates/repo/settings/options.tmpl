@@ -199,8 +199,8 @@
 							</div>
 							<div class="ui segment field {{if not .Repository.EnablePulls}}disabled{{end}}" id="pull_box">
 								<div class="ui checkbox">
-									<input name="pull_use_rebase" type="checkbox" {{if .Repository.PullUseRebase}}checked{{end}}>
-									<label>{{.i18n.Tr "repo.settings.use_rebase_desc"}}</label>
+									<input name="pulls_allow_rebase" type="checkbox" {{if .Repository.PullsAllowRebase}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.pulls.allow_rebase_merge"}}</label>
 								</div>
 							</div>
 						{{end}}
