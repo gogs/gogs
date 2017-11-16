@@ -21,6 +21,7 @@ import (
 
 	git "github.com/gogits/git-module"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
 )
@@ -92,13 +93,29 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		return fmt.Errorf("UpdateLocalCopyBranch [branch: %s]: %v", opts.OldBranch, err)
 	}
 
+	repoPath := repo.RepoPath()
+	localPath := repo.LocalCopyPath()
+
 	if opts.OldBranch != opts.NewBranch {
+		// Directly return error if new branch already exists in the server
+		if git.IsBranchExist(repoPath, opts.NewBranch) {
+			return errors.BranchAlreadyExists{opts.NewBranch}
+		}
+
+		// Otherwise, delete branch from local copy in case out of sync
+		if git.IsBranchExist(localPath, opts.NewBranch) {
+			if err = git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
+				Force: true,
+			}); err != nil {
+				return fmt.Errorf("DeleteBranch [name: %s]: %v", opts.NewBranch, err)
+			}
+		}
+
 		if err := repo.CheckoutNewBranch(opts.OldBranch, opts.NewBranch); err != nil {
 			return fmt.Errorf("CheckoutNewBranch [old_branch: %s, new_branch: %s]: %v", opts.OldBranch, opts.NewBranch, err)
 		}
 	}
 
-	localPath := repo.LocalCopyPath()
 	oldFilePath := path.Join(localPath, opts.OldTreeName)
 	filePath := path.Join(localPath, opts.NewTreeName)
 	os.MkdirAll(path.Dir(filePath), os.ModePerm)
