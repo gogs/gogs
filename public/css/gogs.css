@@ -108,9 +108,6 @@ code.wrap {
 .following.bar .avatar > .ui.image {
   margin-right: 0;
 }
-.following.bar .avatar .octicon-triangle-down {
-  margin-top: 6.5px;
-}
 .following.bar .searchbox {
   background-color: #f4f4f4 !important;
 }
