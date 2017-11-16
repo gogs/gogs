@@ -102,7 +102,7 @@ type RepoSetting struct {
 	TrackerURLFormat      string
 	TrackerIssueStyle     string
 	EnablePulls           bool
-	PullUseRebase         bool
+	PullsAllowRebase      bool
 }
 
 func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {

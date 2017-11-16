@@ -184,7 +184,7 @@ type Repository struct {
 	ExternalTrackerStyle  string
 	ExternalMetas         map[string]string `xorm:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
-	PullUseRebase         bool              `xorm:"NOT NULL DEFAULT false"`
+	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
 	ForkID   int64

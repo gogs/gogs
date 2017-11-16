@@ -389,7 +389,7 @@ func MergePullRequest(c *context.Context) {
 		return
 	}
 	if issue.IsClosed {
-		c.Handle(404, "MergePullRequest", nil)
+		c.NotFound()
 		return
 	}
 
@@ -400,13 +400,13 @@ func MergePullRequest(c *context.Context) {
 	}
 
 	if !pr.CanAutoMerge() || pr.HasMerged {
-		c.Handle(404, "MergePullRequest", nil)
+		c.NotFound()
 		return
 	}
 
 	pr.Issue = issue
 	pr.Issue.Repo = c.Repo.Repository
-	if err = pr.Merge(c.User, c.Repo.GitRepo); err != nil {
+	if err = pr.Merge(c.User, c.Repo.GitRepo, models.MergeStyle(c.Query("merge_style"))); err != nil {
 		c.ServerError("Merge", err)
 		return
 	}

@@ -190,20 +190,29 @@
 									<span class="octicon octicon-check"></span>
 									{{$.i18n.Tr "repo.pulls.can_auto_merge_desc"}}
 								</div>
+
 								{{if .IsRepositoryWriter}}
 									<div class="ui divider"></div>
-									<div>
-										<form class="ui form" action="{{.Link}}/merge" method="post">
-											{{.CSRFTokenHTML}}
-											<button class="ui green button">
-												{{if .Issue.Repo.PullUseRebase }}
-													<span class="octicon octicon-git-pull-request"></span> {{$.i18n.Tr "repo.pulls.rebase_merge_pull_request"}}
-												{{else}}
-													<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
-												{{end}}
-											</button>
-										</form>
-									</div>
+									<form class="ui form" action="{{.Link}}/merge" method="post">
+										{{.CSRFTokenHTML}}
+										<div class="field">
+											<div class="ui radio checkbox">
+											  <input type="radio" name="merge_style" value="create_merge_commit" checked="checked">
+											  <label>{{$.i18n.Tr "repo.pulls.create_merge_commit"}}</label>
+											</div>
+										</div>
+										{{if .Issue.Repo.PullsAllowRebase}}
+											<div class="field">
+												<div class="ui radio checkbox">
+												  <input type="radio" name="merge_style" value="rebase_before_merging">
+												  <label>{{$.i18n.Tr "repo.pulls.rebase_before_merging"}}</label>
+												</div>
+											</div>
+										{{end}}
+										<button class="ui green button">
+											<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
+										</button>
+									</form>
 								{{end}}
 							{{else}}
 								<div class="item text red">
