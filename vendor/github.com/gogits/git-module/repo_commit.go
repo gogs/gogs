@@ -104,7 +104,7 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 		return c.(*Commit), nil
 	}
 
-	data, err := NewCommand("cat-file", "-p", id.String()).RunInDirBytes(repo.Path)
+	data, err := NewCommand("cat-file", "commit", id.String()).RunInDirBytes(repo.Path)
 	if err != nil {
 		if strings.Contains(err.Error(), "exit status 128") {
 			return nil, ErrNotExist{id.String(), ""}
