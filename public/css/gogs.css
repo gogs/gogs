@@ -3127,6 +3127,9 @@ footer .ui.language .menu {
   background-color: #f7f7f7;
   padding: 5px;
 }
+.admin.config code {
+  color: #db2828;
+}
 .admin.config .log-config table tbody tr td:first-child {
   width: 100px;
 }
