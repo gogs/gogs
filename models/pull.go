@@ -392,10 +392,16 @@ func (pr *PullRequest) testPatch() (err error) {
 		return fmt.Errorf("UpdateLocalCopy [%d]: %v", pr.BaseRepoID, err)
 	}
 
+	args := []string{"apply", "--check"}
+	if pr.BaseRepo.PullsIgnoreWhitespace {
+		args = append(args, "--ignore-whitespace")
+	}
+	args = append(args, patchPath)
+
 	pr.Status = PULL_REQUEST_STATUS_CHECKING
 	_, stderr, err := process.ExecDir(-1, pr.BaseRepo.LocalCopyPath(),
 		fmt.Sprintf("testPatch (git apply --check): %d", pr.BaseRepo.ID),
-		"git", "apply", "--check", patchPath)
+		"git", args...)
 	if err != nil {
 		log.Trace("PullRequest[%d].testPatch (apply): has conflit\n%s", pr.ID, stderr)
 		pr.Status = PULL_REQUEST_STATUS_CONFLICT
