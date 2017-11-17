@@ -197,10 +197,18 @@
 									<label>{{.i18n.Tr "repo.settings.pulls_desc"}}</label>
 								</div>
 							</div>
-							<div class="ui segment field {{if not .Repository.EnablePulls}}disabled{{end}}" id="pull_box">
-								<div class="ui checkbox">
-									<input name="pulls_allow_rebase" type="checkbox" {{if .Repository.PullsAllowRebase}}checked{{end}}>
-									<label>{{.i18n.Tr "repo.settings.pulls.allow_rebase_merge"}}</label>
+							<div class="ui segment {{if not .Repository.EnablePulls}}disabled{{end}}" id="pull_box">
+								<div class="field">
+									<div class="ui checkbox">
+										<input name="pulls_ignore_whitespace" type="checkbox" {{if .Repository.PullsIgnoreWhitespace}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.ignore_whitespace"}}</label>
+									</div>
+								</div>
+								<div class="field">
+									<div class="ui checkbox">
+										<input name="pulls_allow_rebase" type="checkbox" {{if .Repository.PullsAllowRebase}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.allow_rebase_merge"}}</label>
+									</div>
 								</div>
 							</div>
 						{{end}}

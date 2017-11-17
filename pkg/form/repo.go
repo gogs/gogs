@@ -102,6 +102,7 @@ type RepoSetting struct {
 	TrackerURLFormat      string
 	TrackerIssueStyle     string
 	EnablePulls           bool
+	PullsIgnoreWhitespace bool
 	PullsAllowRebase      bool
 }
 
