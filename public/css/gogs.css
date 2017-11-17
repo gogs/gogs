@@ -2203,6 +2203,10 @@ footer .ui.language .menu {
   overflow-x: auto;
   overflow-y: hidden;
 }
+.repository .code-view table {
+  width: 100%;
+  border-spacing: 0;
+}
 .repository.quickstart .guide .item {
   padding: 1em;
 }
