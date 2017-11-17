@@ -50,6 +50,7 @@
 								<div class="field">
 									<label for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
 									<input id="bind_dn" name="bind_dn" value="{{$cfg.BindDN}}" placeholder="e.g. cn=Search,dc=mydomain,dc=com">
+									<p class="help text red">{{.i18n.Tr "admin.auths.bind_dn_helper"}}</p>
 								</div>
 								<input class="fake" type="password">
 								<div class="field">

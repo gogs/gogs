@@ -96,13 +96,15 @@ func (ls *Source) sanitizedGroupDN(groupDn string) (string, bool) {
 
 func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
 	log.Trace("Search for LDAP user: %s", name)
-	if ls.BindDN != "" && ls.BindPassword != "" {
-		err := l.Bind(ls.BindDN, ls.BindPassword)
+	if len(ls.BindDN) > 0 && len(ls.BindPassword) > 0 {
+		// Replace placeholders with username
+		bindDN := strings.Replace(ls.BindDN, "%s", name, -1)
+		err := l.Bind(bindDN, ls.BindPassword)
 		if err != nil {
-			log.Trace("LDAP: Failed to bind as BindDN '%s': %v", ls.BindDN, err)
+			log.Trace("LDAP: Failed to bind as BindDN '%s': %v", bindDN, err)
 			return "", false
 		}
-		log.Trace("LDAP: Bound as BindDN: %s", ls.BindDN)
+		log.Trace("LDAP: Bound as BindDN: %s", bindDN)
 	} else {
 		log.Trace("LDAP: Proceeding with anonymous LDAP search")
 	}
