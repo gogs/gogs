@@ -275,7 +275,7 @@ func ViewPullCommits(c *context.Context) {
 		if c.Written() {
 			return
 		} else if prInfo == nil {
-			c.Handle(404, "ViewPullCommits", nil)
+			c.NotFound()
 			return
 		}
 		commits = prInfo.Commits
