@@ -353,9 +353,10 @@ const (
 )
 
 var hookTaskTypes = map[string]HookTaskType{
-	"gogs":    GOGS,
-	"slack":   SLACK,
-	"discord": DISCORD,
+	"gogs":     GOGS,
+	"slack":    SLACK,
+	"discord":  DISCORD,
+	"dingtalk": DINGTALK,
 }
 
 // ToHookTaskType returns HookTaskType by given name.
@@ -371,6 +372,8 @@ func (t HookTaskType) Name() string {
 		return "slack"
 	case DISCORD:
 		return "discord"
+	case DINGTALK:
+		return "dingtalk"
 	}
 	return ""
 }

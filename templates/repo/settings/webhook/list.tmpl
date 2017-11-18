@@ -9,19 +9,19 @@
 					<div class="menu">
 						{{range .Types}}
 							{{if eq . "gogs"}}
-								<a class="item" href="{{$.BaseLink}}/settings/hooks/gogs/new">
+								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/gogs/new">
 									<img class="img-12" src="{{AppSubURL}}/img/favicon.png">Gogs
 								</a>
 							{{else if eq . "slack"}}
-								<a class="item" href="{{$.BaseLink}}/settings/hooks/slack/new">
+								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/slack/new">
 									<img class="img-12" src="{{AppSubURL}}/img/slack.png">Slack
 								</a>
 							{{else if eq . "discord"}}
-								<a class="item" href="{{$.BaseLink}}/settings/hooks/discord/new">
+								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/discord/new">
 									<img class="img-12" src="{{AppSubURL}}/img/discord.png">Discord
 								</a>
 							{{else if eq . "dingtalk"}}
-								<a class="item" href="{{$.BaseLink}}/settings/hooks/dingtalk/new">
+								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/dingtalk/new">
 									<img class="img-12" src="{{AppSubURL}}/img/dingtalk.png">Dingtalk
 								</a>
 							{{end}}
