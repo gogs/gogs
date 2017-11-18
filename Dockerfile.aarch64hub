@@ -19,14 +19,13 @@ RUN [ "cross-build-start" ]
 # Install system utils & Gogs runtime dependencies
 ADD https://github.com/tianon/gosu/releases/download/1.9/gosu-arm64 /usr/sbin/gosu
 RUN chmod +x /usr/sbin/gosu \
- && apk --no-cache --no-progress add ca-certificates bash git linux-pam s6 curl openssh socat tzdata
+ && apk --no-cache --no-progress add ca-certificates bash git linux-pam s6 curl openssh socat tzdata go
 
 
 COPY . /app/gogs/build
 WORKDIR /app/gogs/build
 
-RUN    ./docker/build-go.sh \
-    && ./docker/build.sh \
+RUN    ./docker/build.sh \
     && ./docker/finalize.sh
 
 # Configure LibC Name Service
