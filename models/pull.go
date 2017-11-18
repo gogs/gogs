@@ -328,7 +328,6 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return nil
 	}
 
-	// TODO: when squash commits, no need to append merge commit.
 	// It is possible that head branch is not fully sync with base branch for merge commits,
 	// so we need to get latest head commit and append merge commit manully
 	// to avoid strange diff commits produced.
@@ -337,7 +336,9 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		log.Error(2, "GetBranchCommit: %v", err)
 		return nil
 	}
-	l.PushFront(mergeCommit)
+	if mergeStyle == MERGE_STYLE_REGULAR {
+		l.PushFront(mergeCommit)
+	}
 
 	commits, err := ListToPushCommits(l).ToApiPayloadCommits(pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
 	if err != nil {
@@ -348,7 +349,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	p := &api.PushPayload{
 		Ref:        git.BRANCH_PREFIX + pr.BaseBranch,
 		Before:     pr.MergeBase,
-		After:      pr.MergedCommitID,
+		After:      mergeCommit.ID.String(),
 		CompareURL: setting.AppURL + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
 		Commits:    commits,
 		Repo:       pr.BaseRepo.APIFormat(nil),
