@@ -80,4 +80,4 @@ todo:
 
 # Legacy code should be remove by the time of release
 legacy:
-	grep -rnw "LEGACY" cmd routers models pkg
+	grep -rnw "LEGACY" cmd routes models pkg
