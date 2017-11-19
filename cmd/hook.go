@@ -127,7 +127,7 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 
 		// Check force push
-		output, err := git.NewCommand("rev-list", oldCommitID, "^"+newCommitID).
+		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
 			RunInDir(models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME)))
 		if err != nil {
 			fail("Internal error", "Fail to detect force push: %v", err)
@@ -141,7 +141,12 @@ func runHookPreReceive(c *cli.Context) error {
 		return nil
 	}
 
-	hookCmd := exec.Command(customHooksPath)
+	var hookCmd *exec.Cmd
+	if setting.IsWindows {
+		hookCmd = exec.Command("bash.exe", "custom_hooks/pre-receive")
+	} else {
+		hookCmd = exec.Command(customHooksPath)
+	}
 	hookCmd.Dir = models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
@@ -170,7 +175,12 @@ func runHookUpdate(c *cli.Context) error {
 		return nil
 	}
 
-	hookCmd := exec.Command(customHooksPath, args...)
+	var hookCmd *exec.Cmd
+	if setting.IsWindows {
+		hookCmd = exec.Command("bash.exe", append([]string{"custom_hooks/update"}, args...)...)
+	} else {
+		hookCmd = exec.Command(customHooksPath, args...)
+	}
 	hookCmd.Dir = models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
@@ -250,7 +260,12 @@ func runHookPostReceive(c *cli.Context) error {
 		return nil
 	}
 
-	hookCmd := exec.Command(customHooksPath)
+	var hookCmd *exec.Cmd
+	if setting.IsWindows {
+		hookCmd = exec.Command("bash.exe", "custom_hooks/post-receive")
+	} else {
+		hookCmd = exec.Command(customHooksPath)
+	}
 	hookCmd.Dir = models.RepoPath(os.Getenv(http.ENV_REPO_OWNER_NAME), os.Getenv(http.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
