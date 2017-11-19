@@ -108,6 +108,9 @@ code.wrap {
 .following.bar .avatar > .ui.image {
   margin-right: 0;
 }
+.following.bar .avatar .octicon-triangle-down {
+  margin-top: 6.5px;
+}
 .following.bar .searchbox {
   background-color: #f4f4f4 !important;
 }
@@ -438,6 +441,14 @@ footer .ui.language .menu {
 .hljs {
   background: inherit !important;
   padding: 0 !important;
+}
+.ui.dropdown .menu > .item > .image,
+.ui.dropdown .menu > .item > img,
+.ui.dropdown > .text > .image,
+.ui.dropdown > .text > img {
+  vertical-align: middle;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 .markdown:not(code) {
   overflow: hidden;
