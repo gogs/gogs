@@ -282,7 +282,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	// Push back to upstream.
 	if _, stderr, err = process.ExecDir(-1, tmpBasePath,
 		fmt.Sprintf("PullRequest.Merge (git push): %s", tmpBasePath),
-		"git", "push", "head_repo", "HEAD:"+pr.BaseBranch); err != nil {
+		"git", "push", baseGitRepo.Path, pr.BaseBranch); err != nil {
 		return fmt.Errorf("git push: %s", stderr)
 	}
 
