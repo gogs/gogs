@@ -1,16 +1,48 @@
 #!/sbin/openrc-run
+# Copyright 1999-2017 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
 
-DIR=/home/git/gogs
+
 USER=git
-PORT=3000
+DESC="Gogs"
+NAME=gogs
+SERVICEVERBOSE=yes
+PIDFILE=/var/run/$NAME.pid
+SCRIPTNAME=/etc/init.d/$NAME
+WORKINGDIR=/home/git/gogs
+DAEMON=$WORKINGDIR/$NAME
+DAEMON_ARGS="web"
 
-start_stop_daemon_args="--user ${USER} --chdir ${DIR}"
-command="${DIR}/gogs"
-command_args="web -port ${PORT}"
-command_background=yes
-pidfile=/var/run/gogs.pid
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
 
-depend()
-{
-    need net
+depend() {
+        use logger
+        need net
+}
+
+start() {
+        ebegin "Starting Gogs"
+        sh -c "USER=$USER start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
+                --test --chdir $WORKINGDIR --chuid $USER \\
+                --exec $DAEMON -- $DAEMON_ARGS > /dev/null \\
+                || return 1"
+        sh -c "USER=$USER start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
+                --background --chdir $WORKINGDIR --chuid $USER \\
+                --exec $DAEMON -- $DAEMON_ARGS \\
+                || return 2"
+        eend $?
+
+}
+
+stop() {
+        ebegin "Stopping Gogs"
+        RETVAL="$?"
+        [ "$RETVAL" = 2 ] && return 2
+        start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+        [ "$?" = 2 ] && return 2
+        # Many daemons don't delete their pidfiles when they exit.
+        rm -f $PIDFILE
+        #return "$RETVAL"
+        eend $?
 }
