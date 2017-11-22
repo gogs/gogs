@@ -1,6 +1,6 @@
 outPlattform=linux
 outArch=amd64
-outPath=./output_$outPlattform_$outArch
+outPath=./output_${outPlattform}_$outArch
 
 rm -rf $outPath
 mkdir $outPath
