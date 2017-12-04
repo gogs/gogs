@@ -105,6 +105,12 @@ func NewEngine(driverName string, dataSourceName string) (*Engine, error) {
 	return engine, nil
 }
 
+func NewEngine2(driverName string, dataSourceName string, params map[string]string) (*Engine, error) {
+	engine, err := NewEngine(driverName, dataSourceName)
+	engine.dialect.SetArguments(params)
+	return engine, err
+}
+
 // Clone clone an engine
 func (engine *Engine) Clone() (*Engine, error) {
 	return NewEngine(engine.DriverName(), engine.DataSourceName())

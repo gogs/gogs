@@ -121,7 +121,7 @@ var (
 		"MINUTE_MICROSECOND": true, "MINUTE_SECOND": true, "MOD": true,
 		"MODIFIES": true, "NATURAL": true, "NOT": true,
 		"NO_WRITE_TO_BINLOG": true, "NULL": true, "NUMERIC": true,
-		"ON	OPTIMIZE": true, "OPTION": true,
+		"ON OPTIMIZE": true, "OPTION": true,
 		"OPTIONALLY": true, "OR": true, "ORDER": true,
 		"OUT": true, "OUTER": true, "OUTFILE": true,
 		"PRECISION": true, "PRIMARY": true, "PROCEDURE": true,
@@ -172,10 +172,31 @@ type mysql struct {
 	allowAllFiles     bool
 	allowOldPasswords bool
 	clientFoundRows   bool
+	rowFormat         string
 }
 
 func (db *mysql) Init(d *core.DB, uri *core.Uri, drivername, dataSourceName string) error {
 	return db.Base.Init(d, db, uri, drivername, dataSourceName)
+}
+
+func (db *mysql) SetArguments(args map[string]string) {
+	rowFormat, ok := args["rowFormat"]
+	if ok {
+		var t = strings.ToUpper(rowFormat)
+		switch t {
+		case "COMPACT":
+			fallthrough
+		case "REDUNDANT":
+			fallthrough
+		case "DYNAMIC":
+			fallthrough
+		case "COMPRESSED":
+			db.rowFormat = t
+			break
+		default:
+			break
+		}
+	}
 }
 
 func (db *mysql) SqlType(c *core.Column) string {
@@ -285,9 +306,9 @@ func (db *mysql) IndexCheckSql(tableName, idxName string) (string, []interface{}
 }
 
 /*func (db *mysql) ColumnCheckSql(tableName, colName string) (string, []interface{}) {
-	args := []interface{}{db.DbName, tableName, colName}
-	sql := "SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?"
-	return sql, args
+  args := []interface{}{db.DbName, tableName, colName}
+  sql := "SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?"
+  return sql, args
 }*/
 
 func (db *mysql) TableCheckSql(tableName string) (string, []interface{}) {
@@ -485,6 +506,59 @@ func (db *mysql) GetIndexes(tableName string) (map[string]*core.Index, error) {
 		index.AddColumn(colName)
 	}
 	return indexes, nil
+}
+
+func (db *mysql) CreateTableSql(table *core.Table, tableName, storeEngine, charset string) string {
+	var sql string
+	sql = "CREATE TABLE IF NOT EXISTS "
+	if tableName == "" {
+		tableName = table.Name
+	}
+
+	sql += db.Quote(tableName)
+	sql += " ("
+
+	if len(table.ColumnsSeq()) > 0 {
+		pkList := table.PrimaryKeys
+
+		for _, colName := range table.ColumnsSeq() {
+			col := table.GetColumn(colName)
+			if col.IsPrimaryKey && len(pkList) == 1 {
+				sql += col.String(db)
+			} else {
+				sql += col.StringNoPk(db)
+			}
+			sql = strings.TrimSpace(sql)
+			if len(col.Comment) > 0 {
+				sql += " COMMENT '" + col.Comment + "'"
+			}
+			sql += ", "
+		}
+
+		if len(pkList) > 1 {
+			sql += "PRIMARY KEY ( "
+			sql += db.Quote(strings.Join(pkList, db.Quote(",")))
+			sql += " ), "
+		}
+
+		sql = sql[:len(sql)-2]
+	}
+	sql += ")"
+
+	if storeEngine != "" {
+		sql += " ENGINE=" + storeEngine
+	}
+
+	if len(charset) == 0 {
+		charset = db.URI().Charset
+	} else if len(charset) > 0 {
+		sql += " DEFAULT CHARSET " + charset
+	}
+
+	if db.rowFormat != "" {
+		sql += " ROW_FORMAT=" + db.rowFormat
+	}
+	return sql
 }
 
 func (db *mysql) Filters() []core.Filter {
