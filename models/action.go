@@ -379,8 +379,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
 			} else if !strings.Contains(ref, "/") {
-				// We don't support User#ID syntax yet
-				// return ErrNotImplemented
+				// FIXME: We don't support User#ID syntax yet
 				continue
 			}
 

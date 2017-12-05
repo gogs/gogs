@@ -442,6 +442,14 @@ footer .ui.language .menu {
   background: inherit !important;
   padding: 0 !important;
 }
+.ui.dropdown .menu > .item > .image,
+.ui.dropdown .menu > .item > img,
+.ui.dropdown > .text > .image,
+.ui.dropdown > .text > img {
+  vertical-align: middle;
+  margin-top: 0;
+  margin-bottom: 0;
+}
 .markdown:not(code) {
   overflow: hidden;
   font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
@@ -2206,6 +2214,10 @@ footer .ui.language .menu {
   overflow-x: auto;
   overflow-y: hidden;
 }
+.repository .code-view table {
+  width: 100%;
+  border-spacing: 0;
+}
 .repository.quickstart .guide .item {
   padding: 1em;
 }
@@ -2397,6 +2409,9 @@ footer .ui.language .menu {
 }
 .repository.settings.webhooks .types .menu .item {
   padding: 10px !important;
+}
+.repository.settings.webhooks .logo.item img {
+  margin-top: -4px;
 }
 .repository.settings.webhook .text.desc {
   margin-top: 5px;
@@ -3129,6 +3144,9 @@ footer .ui.language .menu {
 .admin.config pre {
   background-color: #f7f7f7;
   padding: 5px;
+}
+.admin.config code {
+  color: #db2828;
 }
 .admin.config .log-config table tbody tr td:first-child {
   width: 100px;

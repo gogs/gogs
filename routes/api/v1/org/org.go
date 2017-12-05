@@ -13,6 +13,34 @@ import (
 	"github.com/gogits/gogs/routes/api/v1/user"
 )
 
+func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *models.User) {
+	if c.Written() {
+		return
+	}
+
+	org := &models.User{
+		Name:        apiForm.UserName,
+		FullName:    apiForm.FullName,
+		Description: apiForm.Description,
+		Website:     apiForm.Website,
+		Location:    apiForm.Location,
+		IsActive:    true,
+		Type:        models.USER_TYPE_ORGANIZATION,
+	}
+	if err := models.CreateOrganization(org, user); err != nil {
+		if models.IsErrUserAlreadyExist(err) ||
+			models.IsErrNameReserved(err) ||
+			models.IsErrNamePatternNotAllowed(err) {
+			c.Error(422, "", err)
+		} else {
+			c.Error(500, "CreateOrganization", err)
+		}
+		return
+	}
+
+	c.JSON(201, convert.ToOrganization(org))
+}
+
 func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
 		c.Error(500, "GetOrganizations", err)
@@ -29,6 +57,11 @@ func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-your-organizations
 func ListMyOrgs(c *context.APIContext) {
 	listUserOrgs(c, c.User, true)
+}
+
+// https://github.com/gogits/go-gogs-client/wiki/Organizations#create-your-organization
+func CreateMyOrg(c *context.APIContext, apiForm api.CreateOrgOption) {
+	CreateOrgForUser(c, apiForm, c.User)
 }
 
 // https://github.com/gogits/go-gogs-client/wiki/Organizations#list-user-organizations

@@ -86,8 +86,8 @@ type DeleteBranchOptions struct {
 	Force bool
 }
 
-// DeleteBranch delete a branch by name on repository.
-func (repo *Repository) DeleteBranch(name string, opts DeleteBranchOptions) error {
+// DeleteBranch deletes a branch from given repository path.
+func DeleteBranch(repoPath, name string, opts DeleteBranchOptions) error {
 	cmd := NewCommand("branch")
 
 	if opts.Force {
@@ -97,9 +97,14 @@ func (repo *Repository) DeleteBranch(name string, opts DeleteBranchOptions) erro
 	}
 
 	cmd.AddArguments(name)
-	_, err := cmd.RunInDir(repo.Path)
+	_, err := cmd.RunInDir(repoPath)
 
 	return err
+}
+
+// DeleteBranch deletes a branch from repository.
+func (repo *Repository) DeleteBranch(name string, opts DeleteBranchOptions) error {
+	return DeleteBranch(repo.Path, name, opts)
 }
 
 // AddRemote adds a new remote to repository.

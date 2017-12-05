@@ -94,7 +94,7 @@ func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 	msg := NewMessage([]string{u.Email()}, subject, body)
 	msg.Info = fmt.Sprintf("UID: %d, %s", u.ID(), info)
 
-	SendAsync(msg)
+	Send(msg)
 }
 
 func SendActivateAccountMail(c *macaron.Context, u User) {
@@ -122,7 +122,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 	msg := NewMessage([]string{email}, c.Tr("mail.activate_email"), body)
 	msg.Info = fmt.Sprintf("UID: %d, activate email", u.ID())
 
-	SendAsync(msg)
+	Send(msg)
 }
 
 // SendRegisterNotifyMail triggers a notify e-mail by admin created a account.
@@ -139,7 +139,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) {
 	msg := NewMessage([]string{u.Email()}, c.Tr("mail.register_notify"), body)
 	msg.Info = fmt.Sprintf("UID: %d, registration notify", u.ID())
 
-	SendAsync(msg)
+	Send(msg)
 }
 
 // SendCollaboratorMail sends mail notification to new collaborator.
@@ -160,7 +160,7 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 	msg := NewMessage([]string{u.Email()}, subject, body)
 	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID())
 
-	SendAsync(msg)
+	Send(msg)
 }
 
 func composeTplData(subject, body, link string) map[string]interface{} {
@@ -192,7 +192,7 @@ func SendIssueCommentMail(issue Issue, repo Repository, doer User, tos []string)
 		return
 	}
 
-	SendAsync(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_COMMENT, tos, "issue comment"))
+	Send(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_COMMENT, tos, "issue comment"))
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
@@ -200,5 +200,5 @@ func SendIssueMentionMail(issue Issue, repo Repository, doer User, tos []string)
 	if len(tos) == 0 {
 		return
 	}
-	SendAsync(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_MENTION, tos, "issue mention"))
+	Send(composeIssueMessage(issue, repo, doer, MAIL_ISSUE_MENTION, tos, "issue mention"))
 }

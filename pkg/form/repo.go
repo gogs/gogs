@@ -102,6 +102,8 @@ type RepoSetting struct {
 	TrackerURLFormat      string
 	TrackerIssueStyle     string
 	EnablePulls           bool
+	PullsIgnoreWhitespace bool
+	PullsAllowRebase      bool
 }
 
 func (f *RepoSetting) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
@@ -192,6 +194,15 @@ type NewDiscordHook struct {
 }
 
 func (f *NewDiscordHook) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+type NewDingtalkHook struct {
+	PayloadURL string `binding:"Required;Url"`
+	Webhook
+}
+
+func (f *NewDingtalkHook) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 

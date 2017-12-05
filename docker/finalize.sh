@@ -6,9 +6,6 @@ set -e
 
 # Move to final place
 mv /app/gogs/build/gogs /app/gogs/
-mv /app/gogs/build/templates /app/gogs/
-mv /app/gogs/build/public /app/gogs/
-mv /app/gogs/build/docker /app/gogs/
 
 # Final cleaning
 rm -rf /app/gogs/build

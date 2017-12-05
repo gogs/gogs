@@ -492,7 +492,7 @@ func GetUserSalt() (string, error) {
 	return tool.RandomString(10)
 }
 
-// NewGhostUser creates and returns a fake user for someone has deleted his/her account.
+// NewGhostUser creates and returns a fake user for someone who has deleted his/her account.
 func NewGhostUser() *User {
 	return &User{
 		ID:        -1,
@@ -502,7 +502,7 @@ func NewGhostUser() *User {
 }
 
 var (
-	reservedUsernames    = []string{"assets", "css", "img", "js", "less", "plugins", "debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
+	reservedUsernames    = []string{"explore", "create", "assets", "css", "img", "js", "less", "plugins", "debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
 	reservedUserPatterns = []string{"*.keys"}
 )
 

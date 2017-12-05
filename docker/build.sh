@@ -25,5 +25,6 @@ rm -r $GOPATH
 apk --no-progress del build-deps
 
 # Create git user for Gogs
-adduser -H -D -g 'Gogs Git User' git -h /data/git -s /bin/bash && passwd -u git
+addgroup -S git
+adduser -G git -H -D -g 'Gogs Git User' git -h /data/git -s /bin/bash && usermod -p '*' git && passwd -u git
 echo "export GOGS_CUSTOM=${GOGS_CUSTOM}" >> /etc/profile

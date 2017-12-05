@@ -349,12 +349,14 @@ const (
 	GOGS HookTaskType = iota + 1
 	SLACK
 	DISCORD
+	DINGTALK
 )
 
 var hookTaskTypes = map[string]HookTaskType{
-	"gogs":    GOGS,
-	"slack":   SLACK,
-	"discord": DISCORD,
+	"gogs":     GOGS,
+	"slack":    SLACK,
+	"discord":  DISCORD,
+	"dingtalk": DINGTALK,
 }
 
 // ToHookTaskType returns HookTaskType by given name.
@@ -370,6 +372,8 @@ func (t HookTaskType) Name() string {
 		return "slack"
 	case DISCORD:
 		return "discord"
+	case DINGTALK:
+		return "dingtalk"
 	}
 	return ""
 }
@@ -570,6 +574,11 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			payloader, err = GetDiscordPayload(p, event, w.Meta)
 			if err != nil {
 				return fmt.Errorf("GetDiscordPayload: %v", err)
+			}
+		case DINGTALK:
+			payloader, err = GetDingtalkPayload(p, event)
+			if err != nil {
+				return fmt.Errorf("GetDingtalkPayload: %v", err)
 			}
 		default:
 			payloader = p

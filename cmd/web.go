@@ -387,10 +387,12 @@ func runWeb(c *cli.Context) error {
 					m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebHooksNewPost)
 					m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksNewPost)
 					m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksNewPost)
+					m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.DingtalkHooksNewPost)
 					m.Get("/:id", repo.WebHooksEdit)
 					m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebHooksEditPost)
 					m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksEditPost)
 					m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksEditPost)
+					m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.DingtalkHooksEditPost)
 				})
 
 				m.Route("/delete", "GET,POST", org.SettingsDelete)
@@ -439,9 +441,11 @@ func runWeb(c *cli.Context) error {
 				m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebHooksNewPost)
 				m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksNewPost)
 				m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksNewPost)
+				m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.DingtalkHooksNewPost)
 				m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebHooksEditPost)
 				m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.SlackHooksEditPost)
 				m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.DiscordHooksEditPost)
+				m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.DingtalkHooksEditPost)
 
 				m.Group("/:id", func() {
 					m.Get("", repo.WebHooksEdit)
