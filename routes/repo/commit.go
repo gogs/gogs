@@ -45,6 +45,7 @@ func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
 func renderCommits(c *context.Context, filename string) {
 	c.Data["Title"] = c.Tr("repo.commits.commit_history") + " · " + c.Repo.Repository.FullName()
 	c.Data["PageIsCommits"] = true
+	c.Data["FileName"] = filename
 
 	page := c.QueryInt("page")
 	if page < 1 {
