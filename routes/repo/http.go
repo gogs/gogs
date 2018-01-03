@@ -56,6 +56,18 @@ func askCredentials(c *context.Context, status int, text string) {
 
 func HTTPContexter() macaron.Handler {
 	return func(c *context.Context) {
+		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
+			// Set CORS headers for browser-based git clients
+			c.Resp.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+			c.Resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			// Handle preflight OPTIONS request
+			if c.Req.Method == "OPTIONS" {
+				c.Status(http.StatusOK)
+				return
+			}
+		}
+
 		ownerName := c.Params(":username")
 		repoName := strings.TrimSuffix(c.Params(":reponame"), ".git")
 		repoName = strings.TrimSuffix(repoName, ".wiki")
