@@ -71,7 +71,7 @@
 							<a class="title has-emoji" href="{{AppSubURL}}/{{.Repo.Owner.Name}}/{{.Repo.Name}}/issues/{{.Index}}">{{.Title}}</a>
 
 							{{range .Labels}}
-								<a class="ui label" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{.ID}}&milestone={{$.MilestoneID}}&assignee={{$.AssigneeID}}" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name | Sanitize}}</a>
+								<a class="ui label" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name | Sanitize}}</a>
 							{{end}}
 							
 							{{if .NumComments}}
