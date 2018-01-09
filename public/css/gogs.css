@@ -2235,6 +2235,9 @@ footer .ui.language .menu {
   padding: 5px 10px;
   font-size: 1.2em;
 }
+.repository #repo-clone-url {
+  width: 190px;
+}
 .repository.release #release-list {
   border-top: 1px solid #DDD;
   margin-top: 20px;
