@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM golang:1.8-alpine
 
 # Install system utils & Gogs runtime dependencies
 ADD https://github.com/tianon/gosu/releases/download/1.9/gosu-amd64 /usr/sbin/gosu
@@ -27,8 +27,7 @@ COPY public /app/gogs/public
 WORKDIR /app/gogs/build
 COPY . .
 
-RUN    ./docker/build-go.sh \
-    && ./docker/build.sh \
+RUN    ./docker/build.sh \
     && ./docker/finalize.sh
 
 # Configure Docker Container
