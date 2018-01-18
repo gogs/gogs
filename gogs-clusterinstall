@@ -1,0 +1,5 @@
+gogs-clusterinstall
+1.mysql install
+2.gogs cluster install
+3.ngnix gogs config
+4.gogs use
