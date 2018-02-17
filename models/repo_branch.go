@@ -252,5 +252,5 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 // GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repostiory.
 func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
 	protectBranches := make([]*ProtectBranch, 0, 2)
-	return protectBranches, x.Where("repo_id = ?", repoID).Asc("name").Find(&protectBranches)
+	return protectBranches, x.Where("repo_id = ? and protected=true", repoID).Asc("name").Find(&protectBranches)
 }
