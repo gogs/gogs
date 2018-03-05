@@ -52,7 +52,7 @@ The goal of this project is to make the easiest, fastest, and most painless way 
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (via MySQL protocol)
-- Multi-language support ([26 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([28 languages](https://crowdin.com/project/gogs))
 
 ## Hardware Requirements
 

@@ -33,7 +33,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持邮件服务
 - 支持后台管理面板
 - 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（通过 MySQL 协议）数据库
-- 支持多语言本地化（[26 种语言]([more](https://crowdin.com/project/gogs))）
+- 支持多语言本地化（[28 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 硬件要求
 
