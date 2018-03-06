@@ -199,7 +199,7 @@ func AvatarLink(email string) (url string) {
 		}
 	}
 	if len(url) == 0 && !setting.DisableGravatar {
-		url = setting.GravatarSource + HashEmail(email)
+		url = setting.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
 	if len(url) == 0 {
 		url = setting.AppSubURL + "/img/avatar_default.png"
