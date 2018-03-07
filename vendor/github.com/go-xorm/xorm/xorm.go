@@ -105,7 +105,7 @@ func NewEngine(driverName string, dataSourceName string) (*Engine, error) {
 	return engine, nil
 }
 
-func NewEngine2(driverName string, dataSourceName string, params map[string]string) (*Engine, error) {
+func NewEngineWithParams(driverName string, dataSourceName string, params map[string]string) (*Engine, error) {
 	engine, err := NewEngine(driverName, dataSourceName)
 	engine.dialect.SetArguments(params)
 	return engine, err
