@@ -7,6 +7,8 @@ targets:
       - git
   debian-8:
     <<: *debian
+  debian-9:
+    <<: *debian
   ubuntu-12.04:
     <<: *debian
   ubuntu-14.04:
