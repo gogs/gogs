@@ -642,8 +642,14 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 	if issue.IsPull && issue.PullRequest.HasMerged {
 		pull := issue.PullRequest
+		branchProtected := false
+		protectBranch, err := models.GetProtectBranchOfRepoByName(pull.BaseRepoID, pull.HeadBranch)
+		if err == nil {
+			branchProtected = protectBranch.Protected
+		}
 		c.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
-			c.Repo.IsWriter() && c.Repo.GitRepo.IsBranchExist(pull.HeadBranch)
+			c.Repo.IsWriter() && c.Repo.GitRepo.IsBranchExist(pull.HeadBranch) &&
+			!branchProtected
 
 		deleteBranchUrl := c.Repo.RepoLink + "/branches/delete/" + pull.HeadBranch
 		c.Data["DeleteBranchLink"] = fmt.Sprintf("%s?commit=%s&redirect_to=%s", deleteBranchUrl, pull.MergedCommitID, c.Data["Link"])
