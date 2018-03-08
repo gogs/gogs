@@ -7,7 +7,7 @@ package repo
 import (
 	api "github.com/gogits/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/routes/api/v1/convert"
 )
@@ -16,7 +16,7 @@ import (
 func GetBranch(c *context.APIContext) {
 	branch, err := c.Repo.Repository.GetBranch(c.Params("*"))
 	if err != nil {
-		if models.IsErrBranchNotExist(err) {
+		if errors.IsErrBranchNotExist(err) {
 			c.Error(404, "GetBranch", err)
 		} else {
 			c.Error(500, "GetBranch", err)

@@ -22,6 +22,7 @@ import (
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/httplib"
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/setting"
@@ -94,7 +95,7 @@ func runHookPreReceive(c *cli.Context) error {
 		repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).MustInt64()
 		protectBranch, err := models.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
-			if models.IsErrBranchNotExist(err) {
+			if errors.IsErrBranchNotExist(err) {
 				continue
 			}
 			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
