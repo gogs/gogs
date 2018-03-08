@@ -644,9 +644,15 @@ func viewIssue(c *context.Context, isPullList bool) {
 		pull := issue.PullRequest
 		branchProtected := false
 		protectBranch, err := models.GetProtectBranchOfRepoByName(pull.BaseRepoID, pull.HeadBranch)
-		if err == nil {
+		if err != nil {
+			if !errors.IsErrBranchNotExist(err) {
+				c.ServerError("GetProtectBranchOfRepoByName", err)
+				return
+			}
+		} else {
 			branchProtected = protectBranch.Protected
 		}
+
 		c.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
 			c.Repo.IsWriter() && c.Repo.GitRepo.IsBranchExist(pull.HeadBranch) &&
 			!branchProtected
