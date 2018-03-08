@@ -433,7 +433,7 @@ func SettingsProtectedBranch(c *context.Context) {
 
 	protectBranch, err := models.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branch)
 	if err != nil {
-		if !models.IsErrBranchNotExist(err) {
+		if !errors.IsErrBranchNotExist(err) {
 			c.Handle(500, "GetProtectBranchOfRepoByName", err)
 			return
 		}
@@ -475,7 +475,7 @@ func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
 
 	protectBranch, err := models.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branch)
 	if err != nil {
-		if !models.IsErrBranchNotExist(err) {
+		if !errors.IsErrBranchNotExist(err) {
 			c.Handle(500, "GetProtectBranchOfRepoByName", err)
 			return
 		}
