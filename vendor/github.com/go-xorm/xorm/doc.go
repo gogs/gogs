@@ -8,7 +8,7 @@ Package xorm is a simple and powerful ORM for Go.
 
 Installation
 
-Make sure you have installed Go 1.5+ and then:
+Make sure you have installed Go 1.6+ and then:
 
     go get github.com/go-xorm/xorm
 
@@ -90,7 +90,7 @@ another is Rows
 
 5. Update one or more records
 
-    affected, err := engine.Id(...).Update(&user)
+    affected, err := engine.ID(...).Update(&user)
     // UPDATE user SET ...
 
 6. Delete one or more records, Delete MUST has condition
