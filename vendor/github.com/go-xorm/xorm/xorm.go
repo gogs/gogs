@@ -17,7 +17,7 @@ import (
 
 const (
 	// Version show the xorm's version
-	Version string = "0.6.2.0605"
+	Version string = "0.6.4.0910"
 )
 
 func regDrvsNDialects() bool {
@@ -50,10 +50,13 @@ func close(engine *Engine) {
 	engine.Close()
 }
 
+func init() {
+	regDrvsNDialects()
+}
+
 // NewEngine new a db manager according to the parameter. Currently support four
 // drivers
 func NewEngine(driverName string, dataSourceName string) (*Engine, error) {
-	regDrvsNDialects()
 	driver := core.QueryDriver(driverName)
 	if driver == nil {
 		return nil, fmt.Errorf("Unsupported driver name: %v", driverName)
@@ -103,6 +106,13 @@ func NewEngine(driverName string, dataSourceName string) (*Engine, error) {
 	runtime.SetFinalizer(engine, close)
 
 	return engine, nil
+}
+
+// NewEngineWithParams new a db manager with params. The params will be passed to dialect.
+func NewEngineWithParams(driverName string, dataSourceName string, params map[string]string) (*Engine, error) {
+	engine, err := NewEngine(driverName, dataSourceName)
+	engine.dialect.SetParams(params)
+	return engine, err
 }
 
 // Clone clone an engine

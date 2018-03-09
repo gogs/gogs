@@ -358,7 +358,7 @@ func genCols(table *core.Table, session *Session, bean interface{}, useCol bool,
 
 	for _, col := range table.Columns() {
 		if useCol && !col.IsVersion && !col.IsCreated && !col.IsUpdated {
-			if _, ok := getFlagForColumn(session.Statement.columnMap, col); !ok {
+			if _, ok := getFlagForColumn(session.statement.columnMap, col); !ok {
 				continue
 			}
 		}
@@ -397,28 +397,32 @@ func genCols(table *core.Table, session *Session, bean interface{}, useCol bool,
 			continue
 		}
 
-		if session.Statement.ColumnStr != "" {
-			if _, ok := getFlagForColumn(session.Statement.columnMap, col); !ok {
+		if session.statement.ColumnStr != "" {
+			if _, ok := getFlagForColumn(session.statement.columnMap, col); !ok {
+				continue
+			} else if _, ok := session.statement.incrColumns[col.Name]; ok {
+				continue
+			} else if _, ok := session.statement.decrColumns[col.Name]; ok {
 				continue
 			}
 		}
-		if session.Statement.OmitStr != "" {
-			if _, ok := getFlagForColumn(session.Statement.columnMap, col); ok {
+		if session.statement.OmitStr != "" {
+			if _, ok := getFlagForColumn(session.statement.columnMap, col); ok {
 				continue
 			}
 		}
 
 		// !evalphobia! set fieldValue as nil when column is nullable and zero-value
-		if _, ok := getFlagForColumn(session.Statement.nullableMap, col); ok {
+		if _, ok := getFlagForColumn(session.statement.nullableMap, col); ok {
 			if col.Nullable && isZero(fieldValue.Interface()) {
 				var nilValue *int
 				fieldValue = reflect.ValueOf(nilValue)
 			}
 		}
 
-		if (col.IsCreated || col.IsUpdated) && session.Statement.UseAutoTime /*&& isZero(fieldValue.Interface())*/ {
+		if (col.IsCreated || col.IsUpdated) && session.statement.UseAutoTime /*&& isZero(fieldValue.Interface())*/ {
 			// if time is non-empty, then set to auto time
-			val, t := session.Engine.NowTime2(col.SQLType.Name)
+			val, t := session.engine.nowTime(col)
 			args = append(args, val)
 
 			var colName = col.Name
@@ -426,7 +430,7 @@ func genCols(table *core.Table, session *Session, bean interface{}, useCol bool,
 				col := table.GetColumn(colName)
 				setColumnTime(bean, col, t)
 			})
-		} else if col.IsVersion && session.Statement.checkVersion {
+		} else if col.IsVersion && session.statement.checkVersion {
 			args = append(args, 1)
 		} else {
 			arg, err := session.value2Interface(col, fieldValue)
@@ -437,7 +441,7 @@ func genCols(table *core.Table, session *Session, bean interface{}, useCol bool,
 		}
 
 		if includeQuote {
-			colNames = append(colNames, session.Engine.Quote(col.Name)+" = ?")
+			colNames = append(colNames, session.engine.Quote(col.Name)+" = ?")
 		} else {
 			colNames = append(colNames, col.Name)
 		}
