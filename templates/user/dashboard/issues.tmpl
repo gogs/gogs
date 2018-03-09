@@ -73,6 +73,14 @@
 							{{if .NumComments}}
 								<span class="comment ui right"><i class="octicon octicon-comment"></i> {{.NumComments}}</span>
 							{{end}}
+							
+							<div>
+								<span class="ui right">
+									{{range .Labels}}
+										<a class="ui label" style="color: {{.ForegroundColor}}; background-color: {{.Color}}">{{.Name | Sanitize}}</a>
+									{{end}}
+								</span>
+							</div>
 
 							<p class="desc">
 								{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.HomeLink .Poster.Name | Safe}}

@@ -12,7 +12,7 @@
 			{{range .Branches}}
 				<div class="item ui grid">
 					<div class="ui eleven wide column">
-						{{if .IsProtected}}<i class="octicon octicon-shield"></i> {{end}}<a class="markdown" href="{{$.RepoLink}}/src/{{.Name}}"><code>{{.Name}}</code></a>
+						{{if .IsProtected}}<i class="octicon octicon-shield"></i> {{end}}<a class="markdown" href="{{$.RepoLink}}/src/{{EscapePound .Name}}"><code>{{.Name}}</code></a>
 						{{$timeSince := TimeSince .Commit.Committer.When $.Lang}}
 						<span class="ui text light grey">{{$.i18n.Tr "repo.branches.updated_by" $timeSince .Commit.Committer.Name | Safe}}</span>
 					</div>

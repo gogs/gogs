@@ -133,13 +133,6 @@ In case you're stilling getting this notice, go through instructions again until
 	return nil
 }
 
-func sessionRelease(sess *xorm.Session) {
-	if !sess.IsCommitedOrRollbacked {
-		sess.Rollback()
-	}
-	sess.Close()
-}
-
 func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	type User struct {
 		ID    int64  `xorm:"pk autoincr"`

@@ -74,8 +74,7 @@ type Dialect interface {
 	GetIndexes(tableName string) (map[string]*Index, error)
 
 	Filters() []Filter
-
-	SetArguments(args map[string]string)
+	SetParams(params map[string]string)
 }
 
 func OpenDialect(dialect Dialect) (*DB, error) {
@@ -246,6 +245,9 @@ func (b *Base) CreateTableSql(table *Table, tableName, storeEngine, charset stri
 				sql += col.StringNoPk(b.dialect)
 			}
 			sql = strings.TrimSpace(sql)
+			if b.DriverName() == MYSQL && len(col.Comment) > 0 {
+				sql += " COMMENT '" + col.Comment + "'"
+			}
 			sql += ", "
 		}
 
@@ -288,7 +290,7 @@ func (b *Base) LogSQL(sql string, args []interface{}) {
 	}
 }
 
-func (b *Base) SetArguments(args map[string]string) {
+func (b *Base) SetParams(params map[string]string) {
 }
 
 var (

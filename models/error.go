@@ -388,26 +388,6 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
 }
 
-// __________                             .__
-// \______   \____________    ____   ____ |  |__
-//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
-//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
-//  |______  / |__|  (____  /___|  /\___  >___|  /
-//         \/             \/     \/     \/     \/
-
-type ErrBranchNotExist struct {
-	Name string
-}
-
-func IsErrBranchNotExist(err error) bool {
-	_, ok := err.(ErrBranchNotExist)
-	return ok
-}
-
-func (err ErrBranchNotExist) Error() string {
-	return fmt.Sprintf("branch does not exist [name: %s]", err.Name)
-}
-
 // __________      .__  .__ __________                                     __
 // \______   \__ __|  | |  |\______   \ ____  ________ __   ____   _______/  |_
 //  |     ___/  |  \  | |  | |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\

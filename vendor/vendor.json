@@ -159,16 +159,16 @@
 			"revisionTime": "2017-05-19T03:21:30Z"
 		},
 		{
-			"checksumSHA1": "GnWfEqqhYT5MsxzlB6bRESmkDvM=",
+			"checksumSHA1": "g4e+Nb6gh55ERPYcUCsdYCZ8bdo=",
 			"path": "github.com/go-xorm/core",
-			"revision": "6c9f9bf3130d143937e4adcef1cf1bb9f6899260",
-			"revisionTime": "2017-05-03T12:16:46Z"
+			"revision": "7d5d723a716c3c1adf5f478990ff7a2ff77d3abe",
+			"revisionTime": "2018-03-08T01:08:13Z"
 		},
 		{
-			"checksumSHA1": "UN8r+3fuSzXJ1tXCe+M8g5eRpOI=",
+			"checksumSHA1": "TLZlub4tqDx0a3BM8nXzuKksRwE=",
 			"path": "github.com/go-xorm/xorm",
-			"revision": "8a877636fdbbb0f7133b158fe5cde3588464b035",
-			"revisionTime": "2017-06-06T06:54:59Z"
+			"revision": "11743c1a80897b0fdbf79d88ebcaa7dd5f9d3cf3",
+			"revisionTime": "2018-03-08T01:30:38Z"
 		},
 		{
 			"checksumSHA1": "1ft/4j5MFa7C9dPI9whL03HSUzk=",
@@ -183,10 +183,10 @@
 			"revisionTime": "2016-08-10T03:50:02Z"
 		},
 		{
-			"checksumSHA1": "baBdY7sA0U60da7wfhIialHmMwU=",
+			"checksumSHA1": "uKdOeK8zCfl5p7pZTRiZqDO2Tns=",
 			"path": "github.com/gogits/git-module",
-			"revision": "5cc36acd9bc119acc0376a4db452e8ce55451c9f",
-			"revisionTime": "2017-11-16T18:10:54Z"
+			"revision": "e76267f9b4e90e15a82189b72aae8bf1c799c52a",
+			"revisionTime": "2018-03-02T07:13:32Z"
 		},
 		{
 			"checksumSHA1": "GBfb+meRaVNarQavLB/bzbDoBtY=",
@@ -597,10 +597,10 @@
 			"revisionTime": "2016-08-08T14:54:09Z"
 		},
 		{
-			"checksumSHA1": "qM9ubEa57g4oNa6JLFQ+e1TCMno=",
+			"checksumSHA1": "7c6yCe2PjyV+/qWiPBWUf+j+1us=",
 			"path": "gopkg.in/macaron.v1",
-			"revision": "a325110f8b392bce3e5cdeb8c44bf98078ada3be",
-			"revisionTime": "2017-02-19T20:49:11Z"
+			"revision": "c1be95e6d21e769e44e1ec33cec9da5837861c10",
+			"revisionTime": "2018-03-06T06:20:08Z"
 		},
 		{
 			"checksumSHA1": "6QPjE+qflEBHg+JPJd9e4iQuRAk=",

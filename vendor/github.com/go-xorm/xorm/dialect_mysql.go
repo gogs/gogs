@@ -179,8 +179,8 @@ func (db *mysql) Init(d *core.DB, uri *core.Uri, drivername, dataSourceName stri
 	return db.Base.Init(d, db, uri, drivername, dataSourceName)
 }
 
-func (db *mysql) SetArguments(args map[string]string) {
-	rowFormat, ok := args["rowFormat"]
+func (db *mysql) SetParams(params map[string]string) {
+	rowFormat, ok := params["rowFormat"]
 	if ok {
 		var t = strings.ToUpper(rowFormat)
 		switch t {

@@ -11,6 +11,7 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/gogits/git-module"
 
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/tool"
 )
 
@@ -45,7 +46,7 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 
 func (repo *Repository) GetBranch(br string) (*Branch, error) {
 	if !git.IsBranchExist(repo.RepoPath(), br) {
-		return nil, ErrBranchNotExist{br}
+		return nil, errors.ErrBranchNotExist{br}
 	}
 	return &Branch{
 		RepoPath: repo.RepoPath(),
@@ -101,7 +102,7 @@ func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, er
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrBranchNotExist{name}
+		return nil, errors.ErrBranchNotExist{name}
 	}
 	return protectBranch, nil
 }
@@ -252,5 +253,5 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 // GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repostiory.
 func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
 	protectBranches := make([]*ProtectBranch, 0, 2)
-	return protectBranches, x.Where("repo_id = ?", repoID).Asc("name").Find(&protectBranches)
+	return protectBranches, x.Where("repo_id = ? and protected=true", repoID).Asc("name").Find(&protectBranches)
 }
