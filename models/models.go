@@ -140,6 +140,8 @@ func getEngine() (*xorm.Engine, error) {
 			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
 				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
 		}
+		var engineParams = map[string]string{"rowFormat": "DYNAMIC"}
+		return xorm.NewEngineWithParams(DbCfg.Type, connStr, engineParams)
 	case "postgres":
 		host, port := parsePostgreSQLHostPort(DbCfg.Host)
 		if host[0] == '/' { // looks like a unix socket
