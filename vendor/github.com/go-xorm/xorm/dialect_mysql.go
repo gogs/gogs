@@ -306,9 +306,9 @@ func (db *mysql) IndexCheckSql(tableName, idxName string) (string, []interface{}
 }
 
 /*func (db *mysql) ColumnCheckSql(tableName, colName string) (string, []interface{}) {
- 	args := []interface{}{db.DbName, tableName, colName}
- 	sql := "SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?"
- 	return sql, args
+	args := []interface{}{db.DbName, tableName, colName}
+	sql := "SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ? AND `COLUMN_NAME` = ?"
+	return sql, args
 }*/
 
 func (db *mysql) TableCheckSql(tableName string) (string, []interface{}) {
