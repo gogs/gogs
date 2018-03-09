@@ -74,6 +74,7 @@ type Dialect interface {
 	GetIndexes(tableName string) (map[string]*Index, error)
 
 	Filters() []Filter
+	SetParams(params map[string]string)
 }
 
 func OpenDialect(dialect Dialect) (*DB, error) {
@@ -287,6 +288,9 @@ func (b *Base) LogSQL(sql string, args []interface{}) {
 			b.logger.Infof("[SQL] %v", sql)
 		}
 	}
+}
+
+func (b *Base) SetParams(params map[string]string) {
 }
 
 var (
