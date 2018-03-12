@@ -20,7 +20,7 @@
 						{{if and (and (eq $.BranchName .Name) $.IsRepositoryAdmin) (not $.Repository.IsMirror)}}
 							<a class="ui basic blue button" href="{{$.RepoLink}}/settings/branches">{{$.i18n.Tr "repo.branches.change_default_branch"}}</a>
 						{{else if and $.IsRepositoryWriter $.AllowPullRequest}}
-							<a class="ui basic button" href="{{$.RepoLink}}/compare/{{$.BranchName}}...{{.Name}}"><i class="octicon octicon-git-pull-request"></i> {{$.i18n.Tr "repo.pulls.new"}}</a>
+							<a class="ui basic button" href="{{$.RepoLink}}/compare/{{EscapePound $.BranchName}}...{{EscapePound .Name}}"><i class="octicon octicon-git-pull-request"></i> {{$.i18n.Tr "repo.pulls.new"}}</a>
 						{{end}}
 					</div>
 				</div>
