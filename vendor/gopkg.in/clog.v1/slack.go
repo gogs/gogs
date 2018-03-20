@@ -16,22 +16,24 @@ package clog
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 )
 
+type slackAttachment struct {
+	Text  string `json:"text"`
+	Color string `json:"color"`
+}
+
+type slackPayload struct {
+	Attachments []slackAttachment `json:"attachments"`
+}
+
 const (
-	SLACK             = "slack"
-	_SLACK_ATTACHMENT = `{
-	"attachments": [
-		{
-			"text": "%s",
-			"color": "%s"
-		}
-	]
-}`
+	SLACK = "slack"
 )
 
 var slackColors = []string{
@@ -92,13 +94,30 @@ func (s *slack) ExchangeChans(errorChan chan<- error) chan *Message {
 	return s.msgChan
 }
 
-func buildSlackAttachment(msg *Message) string {
-	return fmt.Sprintf(_SLACK_ATTACHMENT, msg.Body, slackColors[msg.Level])
+func buildSlackPayload(msg *Message) (string, error) {
+	payload := slackPayload{
+		Attachments: []slackAttachment{
+			{
+				Text:  msg.Body,
+				Color: slackColors[msg.Level],
+			},
+		},
+	}
+	p, err := json.Marshal(&payload)
+	if err != nil {
+		return "", err
+	}
+	return string(p), nil
 }
 
 func (s *slack) write(msg *Message) {
-	attachment := buildSlackAttachment(msg)
-	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(attachment)))
+	payload, err := buildSlackPayload(msg)
+	if err != nil {
+		s.errorChan <- fmt.Errorf("slack.buildSlackPayload: %v", err)
+		return
+	}
+
+	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(payload)))
 	if err != nil {
 		s.errorChan <- fmt.Errorf("slack: %v", err)
 	}
