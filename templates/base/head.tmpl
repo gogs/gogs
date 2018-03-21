@@ -61,6 +61,12 @@
 	<!-- Stylesheet -->
 	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.2.13.min.css">
 	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.css?v={{MD5 AppVer}}">
+	<noscript>
+		<style>
+			.dropdown:hover > .menu { display: block; }
+			.ui.secondary.menu .dropdown.item > .menu { margin-top: 0; }
+		 </style>
+	</noscript>
 
 	<!-- JavaScript -->
 	<script src="{{AppSubURL}}/js/semantic-2.2.13.min.js"></script>
@@ -74,7 +80,7 @@
 </head>
 <body>
 	<div class="full height">
-		<noscript>Please enable JavaScript in your browser!</noscript>
+		<noscript>This website works better with JavaScript</noscript>
 
 		{{if not .PageIsInstall}}
 			<div class="following bar light">
