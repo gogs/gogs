@@ -41,7 +41,7 @@
 								<i class="dropdown icon"></i>
 								<div class="menu">
 									{{range .Branches}}
-										<div class="item" data-url="{{$.Link}}/{{.}}">{{.}}</div>
+										<div class="item" data-url="{{$.Link}}/{{EscapePound .}}">{{.}}</div>
 									{{end}}
 								</div>
 							</div>
@@ -50,7 +50,7 @@
 					<div class="ui protected-branches list">
 						{{range .ProtectBranches}}
 							<div class="item">
-								<a href="{{$.Link}}/{{.}}"><code>{{.}}</code></a>
+								<a href="{{$.Link}}/{{EscapePound .}}"><code>{{.}}</code></a>
 							</div>
 						{{end}}
 					</div>
