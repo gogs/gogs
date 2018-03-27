@@ -243,6 +243,16 @@ func Contexter() macaron.Handler {
 				branchName = repo.DefaultBranch
 			}
 
+			cloneLink := models.ComposeHTTPSCloneURL(ownerName, repoName)
+
+			if setting.Repository.DisableHTTPGit {
+				if setting.SSH.Port != 22 {
+					cloneLink = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", setting.RunUser, setting.SSH.Domain, setting.SSH.Port, ownerName, repoName)
+				} else {
+					cloneLink = fmt.Sprintf("%s@%s:%s/%s.git", setting.RunUser, setting.SSH.Domain, ownerName, repoName)
+				}
+			}
+
 			prefix := setting.AppURL + path.Join(ownerName, repoName, "src", branchName)
 			c.PlainText(http.StatusOK, []byte(com.Expand(`<!doctype html>
 <html>
