@@ -84,10 +84,20 @@ func GlobalInit() {
 	}
 	checkRunMode()
 
-	if setting.InstallLock && setting.SSH.StartBuiltinServer {
+	if !setting.InstallLock {
+		return
+	}
+
+	if setting.SSH.StartBuiltinServer {
 		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort, setting.SSH.ServerCiphers)
 		log.Info("SSH server started on %s:%v", setting.SSH.ListenHost, setting.SSH.ListenPort)
 		log.Trace("SSH server cipher list: %v", setting.SSH.ServerCiphers)
+	}
+
+	if setting.SSH.RewriteAuthorizedKeysAtStrat {
+		if err := models.RewriteAuthorizedKeys(); err != nil {
+			log.Warn("Fail to rewrite authorized_keys file: %v", err)
+		}
 	}
 }
 
