@@ -151,7 +151,7 @@ func Dashboard(c *context.Context) {
 			err = models.GitGcRepos()
 		case SYNC_SSH_AUTHORIZED_KEY:
 			success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
-			err = models.RewriteAllPublicKeys()
+			err = models.RewriteAuthorizedKeys()
 		case SYNC_REPOSITORY_HOOKS:
 			success = c.Tr("admin.dashboard.resync_all_hooks_success")
 			err = models.SyncRepositoryHooks()
