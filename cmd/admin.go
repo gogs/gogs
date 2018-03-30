@@ -27,7 +27,7 @@ to make automatic initialization process more smoothly`,
 			subcmdDeleteRepositoryArchives,
 			subcmdDeleteMissingRepositories,
 			subcmdGitGcRepos,
-			subcmdRewriteAllPublicKeys,
+			subcmdRewriteAuthorizedKeys,
 			subcmdSyncRepositoryHooks,
 			subcmdReinitMissingRepositories,
 		},
@@ -94,11 +94,11 @@ to make automatic initialization process more smoothly`,
 		},
 	}
 
-	subcmdRewriteAllPublicKeys = cli.Command{
-		Name:  "rewrite-public-keys",
+	subcmdRewriteAuthorizedKeys = cli.Command{
+		Name:  "rewrite-authorized-keys",
 		Usage: "Rewrite '.ssh/authorized_keys' file (caution: non-Gogs keys will be lost)",
 		Action: adminDashboardOperation(
-			models.RewriteAllPublicKeys,
+			models.RewriteAuthorizedKeys,
 			"All public keys have been rewritten successfully",
 		),
 		Flags: []cli.Flag{

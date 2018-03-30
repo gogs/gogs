@@ -853,7 +853,7 @@ func DeleteUser(u *User) (err error) {
 		return err
 	}
 
-	return RewriteAllPublicKeys()
+	return RewriteAuthorizedKeys()
 }
 
 // DeleteInactivateUsers deletes all inactivate users and email addresses.
