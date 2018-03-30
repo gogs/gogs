@@ -89,7 +89,7 @@ var (
 		ListenHost                   string         `ini:"SSH_LISTEN_HOST"`
 		ListenPort                   int            `ini:"SSH_LISTEN_PORT"`
 		RootPath                     string         `ini:"SSH_ROOT_PATH"`
-		RewriteAuthorizedKeysAtStrat bool           `ini:"REWRITE_AUTHORIZED_KEYS_AT_START"`
+		RewriteAuthorizedKeysAtStart bool           `ini:"REWRITE_AUTHORIZED_KEYS_AT_START"`
 		ServerCiphers                []string       `ini:"SSH_SERVER_CIPHERS"`
 		KeyTestPath                  string         `ini:"SSH_KEY_TEST_PATH"`
 		KeygenPath                   string         `ini:"SSH_KEYGEN_PATH"`
@@ -487,7 +487,7 @@ func NewContext() {
 	}
 
 	SSH.RootPath = path.Join(homeDir, ".ssh")
-	SSH.RewriteAuthorizedKeysAtStrat = sec.Key("REWRITE_AUTHORIZED_KEYS_AT_START").MustBool()
+	SSH.RewriteAuthorizedKeysAtStart = sec.Key("REWRITE_AUTHORIZED_KEYS_AT_START").MustBool()
 	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
 	SSH.KeyTestPath = os.TempDir()
 	if err = Cfg.Section("server").MapTo(&SSH); err != nil {
@@ -507,7 +507,7 @@ func NewContext() {
 	}
 
 	if SSH.StartBuiltinServer {
-		SSH.RewriteAuthorizedKeysAtStrat = false
+		SSH.RewriteAuthorizedKeysAtStart = false
 	}
 
 	// Check if server is eligible for minimum key size check when user choose to enable.

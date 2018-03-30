@@ -94,9 +94,9 @@ func GlobalInit() {
 		log.Trace("SSH server cipher list: %v", setting.SSH.ServerCiphers)
 	}
 
-	if setting.SSH.RewriteAuthorizedKeysAtStrat {
+	if setting.SSH.RewriteAuthorizedKeysAtStart {
 		if err := models.RewriteAuthorizedKeys(); err != nil {
-			log.Warn("Fail to rewrite authorized_keys file: %v", err)
+			log.Warn("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
 }
