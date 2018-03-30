@@ -821,7 +821,7 @@ func newSessionService() {
 // Mailer represents mail service.
 type Mailer struct {
 	QueueLength       int
-	Subject           string
+	SubjectPrefix     string
 	Host              string
 	From              string
 	FromEmail         string
@@ -848,7 +848,7 @@ func newMailService() {
 
 	MailService = &Mailer{
 		QueueLength:    sec.Key("SEND_BUFFER_LEN").MustInt(100),
-		Subject:        sec.Key("SUBJECT").MustString(AppName),
+		SubjectPrefix:  sec.Key("SUBJECT_PREFIX").MustString("[" + AppName + "] "),
 		Host:           sec.Key("HOST").String(),
 		User:           sec.Key("USER").String(),
 		Passwd:         sec.Key("PASSWD").String(),

@@ -190,8 +190,8 @@
 						<dt>{{.i18n.Tr "admin.config.mailer_enabled"}}</dt>
 						<dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
 						{{if .MailerEnabled}}
-							<dt>{{.i18n.Tr "admin.config.mailer_name"}}</dt>
-							<dd>{{.Mailer.Subject}}</dd>
+							<dt>{{.i18n.Tr "admin.config.mailer_subject_prefix"}}</dt>
+							<dd><code>{{.Mailer.SubjectPrefix}}</code></dd>
 							<dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
 							<dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>
 							<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
