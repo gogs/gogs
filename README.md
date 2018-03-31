@@ -124,9 +124,9 @@ There are 5 ways to install Gogs:
 ## Acknowledgments
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing logo.
-- Thanks [Crowdin](https://crowdin.com/project/gogs) for providing open source translation plan.
-- Thanks [DigitalOcean](https://www.digitalocean.com) for hosting home and demo sites.
-- Thanks [KeyCDN](https://www.keycdn.com/) and [QiNiu](http://www.qiniu.com/) for providing CDN service.
+- Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
+- Thanks [DigitalOcean](https://www.digitalocean.com) for sponsoring VPS service.
+- Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
 
 ## Contributors
 
