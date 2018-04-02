@@ -77,8 +77,8 @@ code.wrap {
   background-color: #24292e;
   border-bottom: 1px solid #DDDDDD;
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.04);
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
 }
 .following.bar .column .menu {
   margin-top: 0;
