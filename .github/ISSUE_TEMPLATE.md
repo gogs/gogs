@@ -1,7 +1,8 @@
 The issue will be closed without any reasons if it does not satisfy any of following requirements:
 
-1. Please speak English, we have forum in [Chinese](https://discuss.gogs.io/c/getting-help/getting-help-chinese).
+1. Please speak English, we have forum in [中文](https://discuss.gogs.io/c/getting-help/getting-help-chinese).
 2. Please post questions or config/deploy problems on our forum: https://discuss.gogs.io, here are bugs and feature requests only.
+3. Please do not end your title with a question mark or period.
 3. Please take a moment to search that an issue doesn't already exist.
 4. Please give all relevant information below for bug reports; incomplete details considered invalid report.
 
