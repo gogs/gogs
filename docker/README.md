@@ -36,6 +36,10 @@ Directory `/var/gogs` keeps Git repositories and Gogs data:
         |-- data
         |-- log
 
+#### Custom Directory
+
+The "custom" directory may not be obvious in Docker environment. The `/var/gogs/gogs` (in the host) and `/data/gogs` (in the container) is already the "custom" directory and you do not need to create another layer but directly edit corresponding files under this directory.
+
 ### Volume With Data Container
 
 If you're more comfortable with mounting data to a data container, the commands you execute at the first time will look like as follows:
