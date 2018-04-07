@@ -1741,6 +1741,7 @@ func DeleteRepositoryLabel(id int64, owner *User) (err error) {
 	if _, err = sess.Delete(label); err != nil {
 		return fmt.Errorf("remove repository label '%d': %v", id, err)
 	}
+	sess.Where("label_id = ?", id).Delete(&RepositoryRepoLabel{})
 	return sess.Commit()
 }
 
@@ -1765,18 +1766,38 @@ func GetRepositoryLabelsForRepository(repo *Repository) ([]*RepositoryLabel, err
 	return labels, nil
 }
 
-func RemoveRepoLabelFromRepository(repo *Repository, labelID int64, user *User) (err error) {
+func RemoveRepoLabelFromRepository(repo *Repository, label *RepositoryLabel, user *User) (err error) {
 	sess := x.NewSession()
 	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	// FIXME check that user is OwnerID of the label and admin on the repository
-	label := &RepositoryRepoLabel{ RepositoryID: repo.ID, LabelID: labelID }
-	if _, err = sess.Delete(label); err != nil {
-		return fmt.Errorf("remove label '%d' for repository '%d' : %v", labelID, repo.ID, err)
+	// FIXME check that user is admin on the repository
+	labelRel := &RepositoryRepoLabel{ RepositoryID: repo.ID, LabelID: label.ID }
+	if _, err = sess.Delete(labelRel); err != nil {
+		return fmt.Errorf("remove label '%d' for repository '%d' : %v", label.ID, repo.ID, err)
 	}
+	return sess.Commit()
+}
+
+func AddRepoLabelToRepository(repo *Repository, label *RepositoryLabel, user *User) (err error) {
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	// FIXME check that user is admin on the repository
+
+	repoLabel := &RepositoryRepoLabel {
+		RepositoryID: repo.ID,
+		LabelID:      label.ID,
+	}
+	if _, err = sess.Insert(repoLabel); err != nil {
+		return err
+	}
+
 	return sess.Commit()
 }
 

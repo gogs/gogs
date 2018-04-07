@@ -266,6 +266,21 @@ function initRepository() {
                 $('.repository-label-to-remove').val(removeLabels.join(';'));
             }
         });
+
+        $('.repository-available-label-list .menu').click(function(e) {
+            var target = e.target;
+            while (target != e.currentTarget) {
+                var $target = $(target);
+                if ($target.hasClass('item')) {
+                    addLabels.push($target.data("labelid"));
+                    $('.repository-label-to-add').val(addLabels.join(';'));
+                    $target.remove();
+                    $('.repository-label-list').append("<span><span class=\"column\"><span class=\"ui label\" style=\"background-color: " +$target.data('color') +"; color: " +$target.data('foreground-color') +"\">" +$target.data('name') +"</span></span></span>");
+                    break;
+                }
+                target = target.parentElement;
+            }
+        });
     }
 
     // Branches

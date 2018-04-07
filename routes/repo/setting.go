@@ -41,7 +41,25 @@ func Settings(c *context.Context) {
 		c.ServerError("GetUserAndCollaborativeRepositories", err)
 		return
 	}
+	availableLabels := make([]*models.RepositoryLabel, 0, 10)
+	if allRepositoryLabels, err := models.GetRepositoryLabels(c.User.ID); err == nil {
+		for i := 0; i < len(allRepositoryLabels); i++ {
+			found := false
+			for j := 0; j < len(repoLabels) && !found; j++ {
+				if repoLabels[j].ID == allRepositoryLabels[i].ID {
+					found = true;
+				}
+			}
+			if !found {
+				availableLabels = append(availableLabels, allRepositoryLabels[i])
+			}
+		}
+	} else {
+		c.ServerError("GetUserAndCollaborativeRepositories", err)
+		return
+	}
 	c.Data["RepositoryLabels"] = repoLabels
+	c.Data["AvailableLabels"] = availableLabels
 	c.Success(SETTINGS_OPTIONS)
 }
 
@@ -147,13 +165,17 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repositoryLabelsToRemove := strings.Split(c.Query("repositoryLabelsToRemove"), ";")
 		for i := 0; i < len(repositoryLabelsToRemove) ; i++ {
 			if labelId, err := strconv.ParseInt(repositoryLabelsToRemove[i], 10, 64); err == nil {
-				models.RemoveRepoLabelFromRepository(c.Repo.Repository, labelId, c.User)
+				if label, err := models.GetRepositoryLabel(labelId, c.User); err == nil {
+					models.RemoveRepoLabelFromRepository(c.Repo.Repository, label, c.User)
+				}
 			}
 		}
 		repositoryLabelsToAdd := strings.Split(c.Query("repositoryLabelsToAdd"), ";")
 		for i := 0; i < len(repositoryLabelsToAdd) ; i++ {
 			if labelId, err := strconv.ParseInt(repositoryLabelsToAdd[i], 10, 64); err == nil {
-				// FIXME models.AddRepoLabelToRepository(c.Repo.Repository, labelId, c.User)
+				if label, err := models.GetRepositoryLabel(labelId, c.User); err == nil {
+					models.AddRepoLabelToRepository(c.Repo.Repository, label, c.User)
+				}
 			}
 		}
 		c.Redirect(repo.Link() + "/settings")

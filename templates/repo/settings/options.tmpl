@@ -99,15 +99,26 @@
 						<input type="hidden" name="repositoryLabelsToRemove" value="" class="repository-label-to-remove"/>
 						<div class="field repository-label-list">
 							{{range .RepositoryLabels}}
-							<span class="">
-								<span class="column">
-									<span class="ui label" style="background-color: {{.Color}}; color: {{.ForegroundColor}}" data-labelid="{{.ID}}">
-										{{.Name}}
-										<i class="delete button icon"></i>
-									</span>
+							<span><span class="column">
+								<span class="ui label" style="background-color: {{.Color}}; color: {{.ForegroundColor}}" data-labelid="{{.ID}}">
+									{{.Name}}
+									<i class="delete button icon"></i>
 								</span>
-							</span>
+							</span></span>
 							{{end}}
+						</div>
+						<div class="field repository-available-label-list">
+							<div class="ui floating jump select-label dropdown" tabindex="0">
+								<span class="text">
+									<strong>{{$.i18n.Tr "repo.settings.labels_add"}}</strong>
+									<span class="octicon octicon-plus"></span>
+								</span>
+								<div class="filter menu transition hidden">
+									{{range .AvailableLabels}}
+									<a class="item" href="#" data-labelid="{{.ID}}" data-color="{{.Color}}" data-name="{{.Name}}" data-foreground-color="{{.ForegroundColor}}"><span class="label color" style="background-color: {{.Color}}; color: {{.ForegroundColor}}">&nbsp;</span>{{.Name}}</a>
+									{{end}}
+								</div>
+							</div>
 						</div>
 						<div class="field">
 							<button class="ui green button submit">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
