@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"html/template"
+	"strconv"
 	"os"
 	"os/exec"
 	"path"
@@ -137,6 +139,23 @@ func NewRepoContext() {
 	}
 
 	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(setting.AppDataPath, "tmp"))
+}
+
+// Repository label
+type RepositoryLabel struct {
+	ID			int64
+	OwnerID		int64
+	Owner		*User  `xorm:"-"`
+	Name		string `xorm:"INDEX NOT NULL"`
+	Color		string `xorm:"VARCHAR(7)"`
+	IsPrivate	bool
+
+	NumRepo		int
+
+	Created     time.Time `xorm:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-"`
+	UpdatedUnix int64
 }
 
 // Repository contains information of a repository.
@@ -1617,6 +1636,128 @@ func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	}
 
 	return append(repos, ownRepos...), nil
+}
+
+// ForegroundColor calculates the text color for labels based
+// on their background color.
+func (l *RepositoryLabel) ForegroundColor() template.CSS {
+	if strings.HasPrefix(l.Color, "#") {
+		if color, err := strconv.ParseUint(l.Color[1:], 16, 64); err == nil {
+			r := float32(0xFF & (color >> 16))
+			g := float32(0xFF & (color >> 8))
+			b := float32(0xFF & color)
+			luminance := (0.2126*r + 0.7152*g + 0.0722*b) / 255
+
+			if luminance < 0.66 {
+				return template.CSS("#fff")
+			}
+		}
+	}
+
+	// default to black
+	return template.CSS("#000")
+}
+
+
+func CreateRepositoryLabel(owner *User, opts *CreateRepoLabelOptions) (_ *RepositoryLabel, err error) {
+	if !owner.CanCreateRepo() {
+		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+	}
+	// FIXME check color is /#[0-9A-Fa-F]{6}/
+
+	repoLabel := &RepositoryLabel{
+		OwnerID:      owner.ID,
+		Owner:        owner,
+		Name:         opts.Name,
+		Color:        opts.Color,
+		IsPrivate:    opts.IsPrivate,
+	}
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
+
+	if err = createRepositoryLabel(sess, repoLabel); err != nil {
+		return nil, err
+	}
+
+	return repoLabel, sess.Commit()
+}
+
+func UpdateRepositoryLabel(id int64, owner *User, opts *CreateRepoLabelOptions) (_ *RepositoryLabel, err error) {
+	if !owner.CanCreateRepo() {
+		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+	}
+	// FIXME check color is /#[0-9A-Fa-F]{6}/
+
+	repoLabel, err := GetRepositoryLabel(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// FIXME check user.ID is repoLabel.OwnerID
+	repoLabel.Name = opts.Name
+	repoLabel.Color = opts.Color
+	repoLabel.IsPrivate = opts.IsPrivate
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return nil, err
+	}
+
+	// Use same rules for label name than for repository names
+	if err = IsUsableRepoName(repoLabel.Name); err != nil {
+		return nil, err
+	}
+
+	if _, err = sess.ID(repoLabel.ID).Update(repoLabel); err != nil {
+		return nil, err
+	}
+
+	return repoLabel, sess.Commit()
+}
+
+func GetRepositoryLabels(userID int64) ([]*RepositoryLabel, error) {
+	labels := make([]*RepositoryLabel, 0, 5)
+	if err := x.Where("owner_id = ?", userID).Find(&labels); err != nil {
+		return nil, fmt.Errorf("select repository labels: %v", err)
+	}
+
+	return labels, nil
+}
+
+func GetRepositoryLabel(labelId int64) (*RepositoryLabel, error) {
+	label := new(RepositoryLabel)
+
+	if has, err := x.Where("ID = ?", labelId).Get(label); err != nil {
+		return nil, fmt.Errorf("select repository labels: %v", err)
+	} else if !has {
+		return nil, fmt.Errorf("Label %d not found", labelId)
+	}
+
+	return label, nil
+}
+
+type CreateRepoLabelOptions struct {
+	Name        string
+	IsPrivate   bool
+	Color       string
+}
+
+func createRepositoryLabel(e *xorm.Session, repoLabel *RepositoryLabel) (err error) {
+	// Use same rules for label name than for repository names
+	if err = IsUsableRepoName(repoLabel.Name); err != nil {
+		return err
+	}
+
+	if _, err = e.Insert(repoLabel); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func getRepositoryCount(e Engine, u *User) (int64, error) {

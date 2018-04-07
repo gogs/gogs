@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"html/template"
 	"image/png"
 	"io/ioutil"
@@ -521,8 +522,44 @@ func SettingsRepos(c *context.Context) {
 		return
 	}
 	c.Data["Repos"] = repos
+	c.Data["RequireMinicolors"] = true
+
+	repoLabels, err := models.GetRepositoryLabels(c.User.ID)
+	if err != nil {
+		c.ServerError("GetUserAndCollaborativeRepositories", err)
+		return
+	}
+	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+		c.ServerError("LoadAttributes", err)
+		return
+	}
+	c.Data["RepoLabels"] = repoLabels
 
 	c.Success(SETTINGS_REPOSITORIES)
+}
+
+func SettingsAddOrEditRepoLabel(c *context.Context) {
+	id, _ := strconv.ParseInt(c.Query("id"), 10, 64)
+	repoLabelOptions := &models.CreateRepoLabelOptions{
+		Name:       c.Query("name"),
+		Color:      c.Query("color"),
+		IsPrivate:  false,
+	}
+	if id != 0 {
+		// update
+		if _, err := models.UpdateRepositoryLabel(id, c.User, repoLabelOptions); err != nil {
+			c.ServerError("UpdateRepositoryLabel", err)
+			return
+		}
+		c.Redirect(setting.AppSubURL + "/user/settings/repositories")
+	} else {
+		// create
+		if _, err := models.CreateRepositoryLabel(c.User, repoLabelOptions); err != nil {
+			c.ServerError("AddRepositoryLabel", err)
+			return
+		}
+		c.Redirect(setting.AppSubURL + "/user/settings/repositories")
+	}
 }
 
 func SettingsLeaveRepo(c *context.Context) {

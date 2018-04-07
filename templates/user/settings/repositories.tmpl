@@ -37,7 +37,64 @@
 						{{end}}
 					</div>
 				</div>
+
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.repoLabels"}}
+					<div class="ui right">
+						<div class="ui blue tiny new-label button">{{.i18n.Tr "settings.add_repo_label"}}</div>
+					</div>
+				</h4>
+
+				<div class="ui segment attached repo-labels">
+					<div class="ui list">
+						{{range .RepoLabels}}
+						<div class="item">
+							<span class="column">
+								<span class="ui label" style="background-color: {{.Color}}; color: {{.ForegroundColor}}">
+									{{.Name}}
+								</span>
+								<div class="ui right">
+									<a class="ui right delete-button" href="#" data-url="{{$.Link}}/labels/delete" data-id="{{.ID}}"><i class="octicon octicon-trashcan"></i> {{$.i18n.Tr "repo.label_delete"}}</a>
+									<a class="ui right edit-label-button" href="#" data-id={{.ID}} data-name={{.Name}} data-color={{.Color}}><i class="octicon octicon-pencil"></i> {{$.i18n.Tr "repo.issues.label_edit"}}</a>
+									<a class="ui right repositories" href="/issues?labels={{.ID}}"><i class="octicon octicon-repo"></i> {{$.i18n.Tr "repo.repositories" .NumRepo}}</a>
+								</div>
+							</span>
+						</div>
+						{{end}}
+					</div>
+				</div>
 			</div>
+		</div>
+	</div>
+</div>
+
+<div class="ui small add-edit-label modal">
+	<div class="header" data-createText="{{.i18n.Tr "repo.issues.label_create"}}" data-editText="{{.i18n.Tr "repo.issues.label_modify"}}">
+	</div>
+	<div class="content">
+		<form class="ui form" action="{{$.Link}}/labels" method="post">
+			{{.CSRFTokenHTML}}
+			<input name="id" type="hidden" class="label-id">
+			<div class="ui grid">
+				<div class="five wide column">
+					<div class="ui small input">
+						<input class="label-name" name="name" placeholder="{{.i18n.Tr "repo.issues.new_label_placeholder"}}" autofocus required>
+					</div>
+				</div>
+				<div class="color picker column">
+					<input class="color-picker" name="color" value="#70c24a" required>
+				</div>
+				<div class="column precolors">
+					{{template "repo/issue/label_precolors"}}
+				</div>
+			</div>
+		</form>
+	</div>
+	<div class="actions">
+		<div class="ui negative button">{{.i18n.Tr "modal.no"}}</div>
+		<div class="ui positive right submit labeled icon button">
+			{{.i18n.Tr "modal.send"}}
+			<i class="checkmark icon"></i>
 		</div>
 	</div>
 </div>

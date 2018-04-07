@@ -1089,6 +1089,51 @@ function initUserSettings() {
             }
         });
     }
+
+    // Repository labels
+    if ($('.repo-labels').length > 0) {
+        var $newLabelPanel = $('.add-edit-label.modal'),
+            $header = $newLabelPanel.find('.header'),
+            $submitButton = $newLabelPanel.find('.actions .positive');
+
+        $newLabelPanel.find('.color-picker').first().minicolors();
+
+        $('.new-label.button').click(function () {
+            $('.label-name').val('');
+            $('.label-id').val('');
+            $header.html($header.data('createtext'));
+            $submitButton.html($submitButton.data('createtext'));
+
+            var defaultColor = $newLabelPanel.find('.precolors .color').first().data('color-hex');
+            $('.color-picker').val(defaultColor);
+            $('.minicolors-swatch-color').css("background-color", defaultColor);
+
+            $newLabelPanel.modal('show');
+        });
+        $('.edit-label-button').click(function() {
+            var $this = $(this);
+            $('.label-name').val($this.data('name'));
+            $('.label-id').val($this.data('id'));
+            $header.html($header.data('edittext'));
+            $submitButton.html($submitButton.data('edittext'));
+
+            $('.color-picker').val($this.data('color'));
+            $('.minicolors-swatch-color').css("background-color", $this.data('color'));
+
+            $newLabelPanel.modal('show');
+        });
+        $('.add-edit-label .submit').click(function (e) {
+            e.stopPropagation();
+            $('.add-edit-label .form').submit();
+        });
+
+        $('.precolors .color').click(function () {
+            var color = $(this).data('color-hex');
+            $('.color-picker').val(color);
+            $('.minicolors-swatch-color').css("background-color", color);
+        });
+    }
+
 }
 
 function initRepositoryCollaboration() {

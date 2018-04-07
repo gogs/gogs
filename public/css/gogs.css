@@ -2613,25 +2613,30 @@ footer .ui.language .menu {
   background: #f0f0f0;
 }
 .edit-label.modal .form .column,
+.add-edit-label.modal .form .column,
 .new-label.segment .form .column {
   padding-right: 0;
 }
 .edit-label.modal .form .buttons,
+.add-edit-label.modal .form .buttons,
 .new-label.segment .form .buttons {
   margin-left: auto;
   padding-top: 15px;
 }
 .edit-label.modal .form .color.picker.column,
+.add-edit-label.modal .form .color.picker.column,
 .new-label.segment .form .color.picker.column {
   width: auto;
 }
 .edit-label.modal .form .color.picker.column .color-picker,
+.add-edit-label.modal .form .color.picker.column .color-picker,
 .new-label.segment .form .color.picker.column .color-picker {
   height: 35px;
   width: auto;
   padding-left: 30px;
 }
 .edit-label.modal .form .minicolors-swatch.minicolors-sprite,
+.add-edit-label.modal .form .minicolors-swatch.minicolors-sprite,
 .new-label.segment .form .minicolors-swatch.minicolors-sprite {
   top: 10px;
   left: 10px;
@@ -2639,6 +2644,7 @@ footer .ui.language .menu {
   height: 15px;
 }
 .edit-label.modal .form .precolors,
+.add-edit-label.modal .form .precolors,
 .new-label.segment .form .precolors {
   padding-left: 0;
   padding-right: 0;
@@ -2646,6 +2652,7 @@ footer .ui.language .menu {
   width: 120px;
 }
 .edit-label.modal .form .precolors .color,
+.add-edit-label.modal .form .precolors .color,
 .new-label.segment .form .precolors .color {
   float: left;
   width: 15px;
