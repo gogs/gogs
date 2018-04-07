@@ -158,6 +158,13 @@ type RepositoryLabel struct {
 	UpdatedUnix int64
 }
 
+// RepositoryRepoLabel represents an Repository-label relation.
+type RepositoryRepoLabel struct {
+	ID            int64
+	RepositoryID  int64 `xorm:"UNIQUE(s)"`
+	LabelID       int64 `xorm:"UNIQUE(s)"`
+}
+
 // Repository contains information of a repository.
 type Repository struct {
 	ID            int64
@@ -1658,12 +1665,13 @@ func (l *RepositoryLabel) ForegroundColor() template.CSS {
 	return template.CSS("#000")
 }
 
-
 func CreateRepositoryLabel(owner *User, opts *CreateRepoLabelOptions) (_ *RepositoryLabel, err error) {
 	if !owner.CanCreateRepo() {
 		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
 	}
-	// FIXME check color is /#[0-9A-Fa-F]{6}/
+	if !labelColorPattern.MatchString(opts.Color) {
+		return nil, fmt.Errorf("bad HTML color code %s", opts.Color)
+	}
 
 	repoLabel := &RepositoryLabel{
 		OwnerID:      owner.ID,
@@ -1690,7 +1698,9 @@ func UpdateRepositoryLabel(id int64, owner *User, opts *CreateRepoLabelOptions) 
 	if !owner.CanCreateRepo() {
 		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
 	}
-	// FIXME check color is /#[0-9A-Fa-F]{6}/
+	if !labelColorPattern.MatchString(opts.Color) {
+		return nil, fmt.Errorf("bad HTML color code %s", opts.Color)
+	}
 
 	repoLabel, err := GetRepositoryLabel(id, owner)
 	if err != nil {
@@ -1743,10 +1753,37 @@ func GetRepositoryLabels(userID int64) ([]*RepositoryLabel, error) {
 	return labels, nil
 }
 
+func GetRepositoryLabelsForRepository(repo *Repository) ([]*RepositoryLabel, error) {
+	labels := make([]*RepositoryLabel, 0, 5)
+	if err := x.
+		Where("repository_id = ?", repo.ID).
+		Join("INNER", "repository_repo_label", "repository_repo_label.label_id = repository_label.id").
+		Find(&labels); err != nil {
+		return nil, fmt.Errorf("select repository labels: %v", err)
+	}
+
+	return labels, nil
+}
+
+func RemoveRepoLabelFromRepository(repo *Repository, labelID int64, user *User) (err error) {
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	// FIXME check that user is OwnerID of the label and admin on the repository
+	label := &RepositoryRepoLabel{ RepositoryID: repo.ID, LabelID: labelID }
+	if _, err = sess.Delete(label); err != nil {
+		return fmt.Errorf("remove label '%d' for repository '%d' : %v", labelID, repo.ID, err)
+	}
+	return sess.Commit()
+}
+
 func GetRepositoryLabel(labelId int64, owner *User) (*RepositoryLabel, error) {
 	label := new(RepositoryLabel)
 
-	if has, err := x.Where("ID = ? AND ownerID = ?", labelId, owner.ID).Get(label); err != nil {
+	if has, err := x.Where("ID = ? AND owner_id = ?", labelId, owner.ID).Get(label); err != nil {
 		return nil, fmt.Errorf("select repository labels: %v", err)
 	} else if !has {
 		return nil, fmt.Errorf("Label %d not found", labelId)

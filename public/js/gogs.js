@@ -254,6 +254,18 @@ function initRepository() {
                 $prompt.hide();
             }
         });
+        var addLabels = [],
+            removeLabels = [];
+
+        $('.repository-label-list').click(function(e) {
+            if (e.target.classList.contains("button") && e.target.classList.contains("delete")) {
+                var $target = $(e.target).parent(".label");
+                $target.addClass("removed");
+                $(e.target).remove();
+                removeLabels.push($target.data("labelid"));
+                $('.repository-label-to-remove').val(removeLabels.join(';'));
+            }
+        });
     }
 
     // Branches

@@ -65,7 +65,7 @@ func init() {
 		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(HookTask),
 		new(ProtectBranch), new(ProtectBranchWhitelist),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
-		new(Notice), new(EmailAddress), new (RepositoryLabel))
+		new(Notice), new(EmailAddress), new (RepositoryLabel), new (RepositoryRepoLabel))
 
 	gonicNames := []string{"SSL"}
 	for _, name := range gonicNames {

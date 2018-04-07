@@ -89,6 +89,33 @@
 				{{end}}
 
 				<div class="ui top attached header">
+					{{.i18n.Tr "repo.settings.labels"}}
+				</div>
+				<div class="repository-label ui attached segment">
+					<form class="ui form" method="POST">
+						{{.CSRFTokenHTML}}
+						<input type="hidden" name="action" value="repository-labels">
+						<input type="hidden" name="repositoryLabelsToAdd" value="" class="repository-label-to-add" />
+						<input type="hidden" name="repositoryLabelsToRemove" value="" class="repository-label-to-remove"/>
+						<div class="field repository-label-list">
+							{{range .RepositoryLabels}}
+							<span class="">
+								<span class="column">
+									<span class="ui label" style="background-color: {{.Color}}; color: {{.ForegroundColor}}" data-labelid="{{.ID}}">
+										{{.Name}}
+										<i class="delete button icon"></i>
+									</span>
+								</span>
+							</span>
+							{{end}}
+						</div>
+						<div class="field">
+							<button class="ui green button submit">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
+						</div>
+					</form>
+				</div>
+
+				<div class="ui top attached header">
 					{{.i18n.Tr "repo.settings.advanced_settings"}}
 				</div>
 				<div class="ui attached segment">

@@ -1631,6 +1631,9 @@ footer .ui.language .menu {
 .repository.options .danger .ui.divider {
   margin: 0;
 }
+.repository.options .repository-label-list .removed {
+  text-decoration: line-through;
+}
 .repository.new.issue .comment.form .comment .avatar {
   width: 3em;
 }

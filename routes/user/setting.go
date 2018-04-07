@@ -564,8 +564,7 @@ func SettingsAddOrEditRepoLabel(c *context.Context) {
 
 func SettingsDeleteRepoLabel(c *context.Context) {
 	if err := models.DeleteRepositoryLabel(c.QueryInt64("id"), c.User); err != nil {
-		//c.NotFound()
-		c.ServerError("", err)
+		c.NotFound()
 		return
 	}
 	c.JSONSuccess(map[string]interface{}{

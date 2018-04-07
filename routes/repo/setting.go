@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"strconv"
 
 	log "gopkg.in/clog.v1"
 
@@ -34,6 +35,13 @@ const (
 func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
+
+	repoLabels, err := models.GetRepositoryLabelsForRepository(c.Repo.Repository)
+	if err != nil {
+		c.ServerError("GetUserAndCollaborativeRepositories", err)
+		return
+	}
+	c.Data["RepositoryLabels"] = repoLabels
 	c.Success(SETTINGS_OPTIONS)
 }
 
@@ -133,6 +141,21 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		go models.MirrorQueue.Add(repo.ID)
 		c.Flash.Info(c.Tr("repo.settings.mirror_sync_in_progress"))
+		c.Redirect(repo.Link() + "/settings")
+
+	case "repository-labels":
+		repositoryLabelsToRemove := strings.Split(c.Query("repositoryLabelsToRemove"), ";")
+		for i := 0; i < len(repositoryLabelsToRemove) ; i++ {
+			if labelId, err := strconv.ParseInt(repositoryLabelsToRemove[i], 10, 64); err == nil {
+				models.RemoveRepoLabelFromRepository(c.Repo.Repository, labelId, c.User)
+			}
+		}
+		repositoryLabelsToAdd := strings.Split(c.Query("repositoryLabelsToAdd"), ";")
+		for i := 0; i < len(repositoryLabelsToAdd) ; i++ {
+			if labelId, err := strconv.ParseInt(repositoryLabelsToAdd[i], 10, 64); err == nil {
+				// FIXME models.AddRepoLabelToRepository(c.Repo.Repository, labelId, c.User)
+			}
+		}
 		c.Redirect(repo.Link() + "/settings")
 
 	case "advanced":
