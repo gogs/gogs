@@ -1132,6 +1132,28 @@ function initUserSettings() {
             $('.color-picker').val(color);
             $('.minicolors-swatch-color').css("background-color", color);
         });
+
+        // Delete button
+        $('.delete-label-button').click(function () {
+            var $this = $(this);
+            $('.delete-label.modal').modal({
+                closable: false,
+                onApprove: function () {
+                    if ($this.data('type') == "form") {
+                        $($this.data('form')).submit();
+                        return;
+                    }
+
+                    $.post($this.data('url'), {
+                        "_csrf": csrf,
+                        "id": $this.data("id")
+                    }).success(function (data) {
+                        window.location.href = data.redirect;
+                    });
+                }
+            }).modal('show');
+            return false;
+        });
     }
 
 }

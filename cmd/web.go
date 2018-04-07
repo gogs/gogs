@@ -231,6 +231,7 @@ func runWeb(c *cli.Context) error {
 			m.Get("", user.SettingsRepos)
 			m.Post("/leave", user.SettingsLeaveRepo)
 			m.Post("/labels", user.SettingsAddOrEditRepoLabel)
+			m.Post("/labels/delete", user.SettingsDeleteRepoLabel)
 		})
 		m.Group("/organizations", func() {
 			m.Get("", user.SettingsOrganizations)

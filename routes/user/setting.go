@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"strconv"
 	"html/template"
 	"image/png"
 	"io/ioutil"
@@ -539,7 +538,8 @@ func SettingsRepos(c *context.Context) {
 }
 
 func SettingsAddOrEditRepoLabel(c *context.Context) {
-	id, _ := strconv.ParseInt(c.Query("id"), 10, 64)
+	id := c.QueryInt64("id")
+
 	repoLabelOptions := &models.CreateRepoLabelOptions{
 		Name:       c.Query("name"),
 		Color:      c.Query("color"),
@@ -560,6 +560,17 @@ func SettingsAddOrEditRepoLabel(c *context.Context) {
 		}
 		c.Redirect(setting.AppSubURL + "/user/settings/repositories")
 	}
+}
+
+func SettingsDeleteRepoLabel(c *context.Context) {
+	if err := models.DeleteRepositoryLabel(c.QueryInt64("id"), c.User); err != nil {
+		//c.NotFound()
+		c.ServerError("", err)
+		return
+	}
+	c.JSONSuccess(map[string]interface{}{
+		"redirect": setting.AppSubURL + "/user/settings/repositories",
+	})
 }
 
 func SettingsLeaveRepo(c *context.Context) {

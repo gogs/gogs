@@ -1692,12 +1692,11 @@ func UpdateRepositoryLabel(id int64, owner *User, opts *CreateRepoLabelOptions) 
 	}
 	// FIXME check color is /#[0-9A-Fa-F]{6}/
 
-	repoLabel, err := GetRepositoryLabel(id)
+	repoLabel, err := GetRepositoryLabel(id, owner)
 	if err != nil {
 		return nil, err
 	}
 
-	// FIXME check user.ID is repoLabel.OwnerID
 	repoLabel.Name = opts.Name
 	repoLabel.Color = opts.Color
 	repoLabel.IsPrivate = opts.IsPrivate
@@ -1720,6 +1719,21 @@ func UpdateRepositoryLabel(id int64, owner *User, opts *CreateRepoLabelOptions) 
 	return repoLabel, sess.Commit()
 }
 
+func DeleteRepositoryLabel(id int64, owner *User) (err error) {
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	// TODO remove Repository <> RepositoryLabel relationship
+	label := &RepositoryLabel{ID: id, OwnerID: owner.ID}
+	if _, err = sess.Delete(label); err != nil {
+		return fmt.Errorf("remove repository label '%d': %v", id, err)
+	}
+	return sess.Commit()
+}
+
 func GetRepositoryLabels(userID int64) ([]*RepositoryLabel, error) {
 	labels := make([]*RepositoryLabel, 0, 5)
 	if err := x.Where("owner_id = ?", userID).Find(&labels); err != nil {
@@ -1729,10 +1743,10 @@ func GetRepositoryLabels(userID int64) ([]*RepositoryLabel, error) {
 	return labels, nil
 }
 
-func GetRepositoryLabel(labelId int64) (*RepositoryLabel, error) {
+func GetRepositoryLabel(labelId int64, owner *User) (*RepositoryLabel, error) {
 	label := new(RepositoryLabel)
 
-	if has, err := x.Where("ID = ?", labelId).Get(label); err != nil {
+	if has, err := x.Where("ID = ? AND ownerID = ?", labelId, owner.ID).Get(label); err != nil {
 		return nil, fmt.Errorf("select repository labels: %v", err)
 	} else if !has {
 		return nil, fmt.Errorf("Label %d not found", labelId)
