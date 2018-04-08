@@ -74,6 +74,14 @@ func ExploreRepos(c *context.Context) {
 	}
 	c.Data["Repos"] = repos
 
+	labelsByRepoId := make(map[int64] []*models.RepositoryLabel)
+	for _, currentRepo := range repos {
+		if labels, err := models.GetRepositoryLabelsForRepository(currentRepo, c.User); err == nil {
+			labelsByRepoId[currentRepo.ID] = labels
+		}
+	}
+	c.Data["LabelsByRepoId"] = labelsByRepoId
+
 	c.Success(EXPLORE_REPOS)
 }
 

@@ -44,6 +44,11 @@
 						</div>
 					{{end}}
 				</div>
+				<div class="label-list">
+					{{range $.RepositoryLabels}}
+					<div class="ui label" style="background-color:{{.Color}}; color:{{.ForegroundColor}}">{{.Name}}</div>
+					{{end}}
+				</div>
 			</div><!-- end column -->
 		</div><!-- end grid -->
 	</div><!-- end container -->

@@ -37,6 +37,7 @@ type Repository struct {
 	Commit       *git.Commit
 	Tag          *git.Tag
 	GitRepo      *git.Repository
+	Labels       []*models.RepositoryLabel
 	BranchName   string
 	TagName      string
 	TreePath     string
@@ -216,6 +217,12 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 		c.Repo.GitRepo = gitRepo
 
+		if allLabels, err := models.GetRepositoryLabelsForRepository(c.Repo.Repository, c.User); err == nil {
+			c.Repo.Labels = allLabels
+		} else {
+			c.Repo.Labels = make([]*models.RepositoryLabel, 0, 0)
+		}
+
 		tags, err := c.Repo.GitRepo.GetTags()
 		if err != nil {
 			c.ServerError(fmt.Sprintf("GetTags '%s'", c.Repo.Repository.RepoPath()), err)
@@ -235,6 +242,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["DisableHTTP"] = setting.Repository.DisableHTTPGit
 		c.Data["CloneLink"] = repo.CloneLink()
 		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
+		c.Data["RepositoryLabels"] = c.Repo.Labels
 
 		if c.IsLogged {
 			c.Data["IsWatchingRepo"] = models.IsWatching(c.User.ID, repo.ID)

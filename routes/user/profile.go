@@ -96,7 +96,7 @@ func Profile(c *context.Context) {
 		}
 
 		showPrivate := c.IsLogged && (ctxUser.ID == c.User.ID || c.User.IsAdmin)
-		c.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
+		repositories, err := models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   ctxUser.ID,
 			Private:  showPrivate,
 			Page:     page,
@@ -106,6 +106,15 @@ func Profile(c *context.Context) {
 			c.Handle(500, "GetRepositories", err)
 			return
 		}
+		c.Data["Repos"] = repositories
+
+		labelsByRepoId := make(map[int64] []*models.RepositoryLabel)
+		for _, currentRepo := range repositories {
+			if labels, err := models.GetRepositoryLabelsForRepository(currentRepo, c.User); err == nil {
+				labelsByRepoId[currentRepo.ID] = labels
+			}
+		}
+		c.Data["LabelsByRepoId"] = labelsByRepoId
 
 		count := models.CountUserRepositories(ctxUser.ID, showPrivate)
 		c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)

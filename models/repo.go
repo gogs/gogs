@@ -1754,11 +1754,20 @@ func GetRepositoryLabels(userID int64) ([]*RepositoryLabel, error) {
 	return labels, nil
 }
 
-func GetRepositoryLabelsForRepository(repo *Repository) ([]*RepositoryLabel, error) {
+func GetRepositoryLabelsForRepository(repo *Repository, asOfView *User) ([]*RepositoryLabel, error) {
 	labels := make([]*RepositoryLabel, 0, 5)
-	if err := x.
-		Where("repository_id = ?", repo.ID).
-		Join("INNER", "repository_repo_label", "repository_repo_label.label_id = repository_label.id").
+	query := x.Join("INNER", "repository_repo_label", "repository_repo_label.label_id = repository_label.id")
+
+	if asOfView == nil {
+		query = query.Where("repository_id =? AND repository_label.is_private=0", repo.ID)
+	} else if asOfView.IsAdmin {
+		query = query.Where("repository_id =?", repo.ID)
+	} else {
+		query = query.Join("LEFT", "access", "access.repo_id=repository_repo_label.repository_id").
+			Where("repository_id = ? AND (access.user_id=? OR repository_label.is_private=0)", repo.ID, asOfView.ID)
+	}
+
+	if err := query.
 		Find(&labels); err != nil {
 		return nil, fmt.Errorf("select repository labels: %v", err)
 	}
@@ -1805,6 +1814,18 @@ func GetRepositoryLabel(labelId int64, owner *User) (*RepositoryLabel, error) {
 	label := new(RepositoryLabel)
 
 	if has, err := x.Where("ID = ? AND owner_id = ?", labelId, owner.ID).Get(label); err != nil {
+		return nil, fmt.Errorf("select repository labels: %v", err)
+	} else if !has {
+		return nil, fmt.Errorf("Label %d not found", labelId)
+	}
+
+	return label, nil
+}
+
+func GetRepositoryLabelById(labelId int64) (*RepositoryLabel, error) {
+	label := new(RepositoryLabel)
+
+	if has, err := x.Where("ID = ?", labelId).Get(label); err != nil {
 		return nil, fmt.Errorf("select repository labels: %v", err)
 	} else if !has {
 		return nil, fmt.Errorf("Label %d not found", labelId)

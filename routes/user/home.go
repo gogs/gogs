@@ -403,6 +403,15 @@ func showOrgProfile(c *context.Context) {
 	}
 	c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
 
+	labelsByRepoId := make(map[int64] []*models.RepositoryLabel)
+	for _, currentRepo := range repos {
+		if labels, err := models.GetRepositoryLabelsForRepository(currentRepo, c.User); err == nil {
+			labelsByRepoId[currentRepo.ID] = labels
+		}
+	}
+	c.Data["LabelsByRepoId"] = labelsByRepoId
+
+
 	if err := org.GetMembers(); err != nil {
 		c.Handle(500, "GetMembers", err)
 		return

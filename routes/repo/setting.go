@@ -36,29 +36,21 @@ func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
 
-	repoLabels, err := models.GetRepositoryLabelsForRepository(c.Repo.Repository)
-	if err != nil {
-		c.ServerError("GetUserAndCollaborativeRepositories", err)
-		return
-	}
-	availableLabels := make([]*models.RepositoryLabel, 0, 10)
+	availableLabels := make([]*models.RepositoryLabel, 0, 5)
 	if allRepositoryLabels, err := models.GetRepositoryLabels(c.User.ID); err == nil {
-		for i := 0; i < len(allRepositoryLabels); i++ {
+		for _, repositoryLabel := range(allRepositoryLabels) {
 			found := false
-			for j := 0; j < len(repoLabels) && !found; j++ {
-				if repoLabels[j].ID == allRepositoryLabels[i].ID {
-					found = true;
-				}
+			for i := 0; i < len(c.Repo.Labels) && !found; i++ {
+				found = c.Repo.Labels[i].ID == repositoryLabel.ID
 			}
 			if !found {
-				availableLabels = append(availableLabels, allRepositoryLabels[i])
+				availableLabels = append(availableLabels, repositoryLabel)
 			}
 		}
 	} else {
 		c.ServerError("GetUserAndCollaborativeRepositories", err)
 		return
 	}
-	c.Data["RepositoryLabels"] = repoLabels
 	c.Data["AvailableLabels"] = availableLabels
 	c.Success(SETTINGS_OPTIONS)
 }
@@ -165,7 +157,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repositoryLabelsToRemove := strings.Split(c.Query("repositoryLabelsToRemove"), ";")
 		for i := 0; i < len(repositoryLabelsToRemove) ; i++ {
 			if labelId, err := strconv.ParseInt(repositoryLabelsToRemove[i], 10, 64); err == nil {
-				if label, err := models.GetRepositoryLabel(labelId, c.User); err == nil {
+				if label, err := models.GetRepositoryLabelById(labelId); err == nil {
 					models.RemoveRepoLabelFromRepository(c.Repo.Repository, label, c.User)
 				}
 			}
