@@ -379,7 +379,8 @@ func showOrgProfile(c *context.Context) {
 		count int64
 		err   error
 	)
-	if c.IsLogged && !c.User.IsAdmin {
+	labelID := c.ParamsInt64(":labelID")
+	if c.IsLogged && !c.User.IsAdmin && labelID == 0 {
 		repos, count, err = org.GetUserRepositories(c.User.ID, page, setting.UI.User.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "GetUserRepositories", err)
@@ -388,10 +389,18 @@ func showOrgProfile(c *context.Context) {
 		c.Data["Repos"] = repos
 	} else {
 		showPrivate := c.IsLogged && c.User.IsAdmin
+		if labelID != 0 {
+			label, err := models.GetRepositoryLabelById(labelID)
+			if err != nil || (label.IsPrivate && !showPrivate) {
+				c.NotFound()
+				return
+			}
+		}
 		repos, err = models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   org.ID,
 			Private:  showPrivate,
 			Page:     page,
+			LabelID:  labelID,
 			PageSize: setting.UI.User.RepoPagingNum,
 		})
 		if err != nil {
