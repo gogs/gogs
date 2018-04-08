@@ -1595,6 +1595,7 @@ func GetRepositoryByID(id int64) (*Repository, error) {
 type UserRepoOptions struct {
 	UserID   int64
 	Private  bool
+	LabelID  int64
 	Page     int
 	PageSize int
 }
@@ -1604,6 +1605,9 @@ func GetUserRepositories(opts *UserRepoOptions) ([]*Repository, error) {
 	sess := x.Where("owner_id=?", opts.UserID).Desc("updated_unix")
 	if !opts.Private {
 		sess.And("is_private=?", false)
+	}
+	if opts.LabelID != 0 {
+		sess.Join("INNER", "repository_repo_label", "repository_repo_label.repository_id=repository.id AND repository_repo_label.label_id=?", opts.LabelID)
 	}
 
 	if opts.Page <= 0 {
@@ -1665,10 +1669,16 @@ func (l *RepositoryLabel) ForegroundColor() template.CSS {
 	return template.CSS("#000")
 }
 
-func CreateRepositoryLabel(owner *User, opts *CreateRepoLabelOptions) (_ *RepositoryLabel, err error) {
-	if !owner.CanCreateRepo() {
-		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+func (l *RepositoryLabel) GetOwner() *User {
+	if l.Owner == nil {
+		if owner, err := GetUserByID(l.OwnerID); err == nil {
+			l.Owner = owner
+		}
 	}
+	return l.Owner
+}
+
+func CreateRepositoryLabel(owner *User, opts *CreateRepoLabelOptions) (_ *RepositoryLabel, err error) {
 	if !labelColorPattern.MatchString(opts.Color) {
 		return nil, fmt.Errorf("bad HTML color code %s", opts.Color)
 	}
@@ -1695,9 +1705,6 @@ func CreateRepositoryLabel(owner *User, opts *CreateRepoLabelOptions) (_ *Reposi
 }
 
 func UpdateRepositoryLabel(id int64, owner *User, opts *CreateRepoLabelOptions) (_ *RepositoryLabel, err error) {
-	if !owner.CanCreateRepo() {
-		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
-	}
 	if !labelColorPattern.MatchString(opts.Color) {
 		return nil, fmt.Errorf("bad HTML color code %s", opts.Color)
 	}

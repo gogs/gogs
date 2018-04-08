@@ -17,8 +17,8 @@
 				</div>
 			</div>
 			<div class="ui labels">
-				{{range index $.LabelsByRepoId .ID}}
-				<a class="ui label" style="background-color:{{.Color}};color:{{.ForegroundColor}}" href="{{AppSubURL}}/{{$.Owner.Name}}/labels/{{.ID}}">{{.Name}}</a>
+				{{$currentOwner:=.Owner}}{{range index $.LabelsByRepoId .ID}}
+				<a class="ui label" style="background-color:{{.Color}};color:{{.ForegroundColor}}" href="{{AppSubURL}}/{{if $currentOwner}}{{$currentOwner.Name}}{{else if $.Org}}{{$.Org.Name}}{{else}}{{$.Owner.Name}}{{end}}/labels/{{.ID}}">{{.Name}}</a>
 				{{end}}
 			</div>
 			{{if .Description}}<p class="has-emoji">{{.Description | Str2html}}</p>{{end}}

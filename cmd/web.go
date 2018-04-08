@@ -304,6 +304,10 @@ func runWeb(c *cli.Context) error {
 			m.Get("/stars", user.Stars)
 		})
 
+		m.Group("/:username/labels", func() {
+			m.Get("/:labelID", user.Profile)
+		})
+
 		m.Get("/attachments/:uuid", func(c *context.Context) {
 			attach, err := models.GetAttachmentByUUID(c.Params(":uuid"))
 			if err != nil {

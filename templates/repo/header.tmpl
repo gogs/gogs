@@ -46,7 +46,7 @@
 				</div>
 				<div class="label-list">
 					{{range $.RepositoryLabels}}
-					<div class="ui label" style="background-color:{{.Color}}; color:{{.ForegroundColor}}">{{.Name}}</div>
+					<a class="ui label" style="background-color:{{.Color}}; color:{{.ForegroundColor}}" href="{{AppSubURL}}/{{.GetOwner.Name}}/labels/{{.ID}}">{{.Name}}</a>
 					{{end}}
 				</div>
 			</div><!-- end column -->

@@ -95,11 +95,20 @@ func Profile(c *context.Context) {
 			page = 1
 		}
 
+		labelID := c.ParamsInt64(":labelID")
 		showPrivate := c.IsLogged && (ctxUser.ID == c.User.ID || c.User.IsAdmin)
+		if labelID != 0 {
+			label, err := models.GetRepositoryLabelById(labelID)
+			if err != nil || (label.IsPrivate && !showPrivate) {
+				c.NotFound()
+				return
+			}
+		}
 		repositories, err := models.GetUserRepositories(&models.UserRepoOptions{
 			UserID:   ctxUser.ID,
 			Private:  showPrivate,
 			Page:     page,
+			LabelID:  labelID,
 			PageSize: setting.UI.User.RepoPagingNum,
 		})
 		if err != nil {
