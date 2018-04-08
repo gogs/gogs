@@ -1743,12 +1743,12 @@ func DeleteRepositoryLabel(id int64, owner *User) (err error) {
 		return err
 	}
 
-	// TODO remove Repository <> RepositoryLabel relationship
-	label := &RepositoryLabel{ID: id, OwnerID: owner.ID}
-	if _, err = sess.Delete(label); err != nil {
+	if _, err = sess.Delete(&RepositoryRepoLabel{LabelID: id}); err != nil {
 		return fmt.Errorf("remove repository label '%d': %v", id, err)
 	}
-	sess.Where("label_id = ?", id).Delete(&RepositoryRepoLabel{})
+	if _, err = sess.Delete(&RepositoryLabel{ID: id, OwnerID: owner.ID}); err != nil {
+		return fmt.Errorf("remove repository label '%d': %v", id, err)
+	}
 	return sess.Commit()
 }
 
