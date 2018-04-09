@@ -5,7 +5,6 @@ set -e
 # Set temp environment vars
 export GOPATH=/tmp/go
 export PATH=/usr/local/go/bin:${PATH}:${GOPATH}/bin
-export GO15VENDOREXPERIMENT=1
 
 # Install build deps
 apk --no-cache --no-progress add --virtual build-deps build-base linux-pam-dev
