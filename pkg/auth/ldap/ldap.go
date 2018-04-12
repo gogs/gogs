@@ -26,15 +26,14 @@ const (
 
 // Basic LDAP authentication service
 type Source struct {
-	Name              string // canonical name (ie. corporate.ad)
 	Host              string // LDAP host
 	Port              int    // port number
 	SecurityProtocol  SecurityProtocol
 	SkipVerify        bool
-	BindDN            string // DN to bind with
-	BindPassword      string // Bind DN password
-	UserBase          string // Base search path for users
-	UserDN            string // Template for the DN of the user for simple auth
+	BindDN            string `ini:"bind_dn,omitempty"` // DN to bind with
+	BindPassword      string `ini:",omitempty"`        // Bind DN password
+	UserBase          string `ini:",omitempty"`        // Base search path for users
+	UserDN            string `ini:"user_dn,omitempty"` // Template for the DN of the user for simple auth
 	AttributeUsername string // Username attribute
 	AttributeName     string // First name attribute
 	AttributeSurname  string // Surname attribute
@@ -43,11 +42,10 @@ type Source struct {
 	Filter            string // Query filter to validate entry
 	AdminFilter       string // Query filter to check if user is admin
 	GroupEnabled      bool   // if the group checking is enabled
-	GroupDN           string // Group Search Base
+	GroupDN           string `ini:"group_dn"` // Group Search Base
 	GroupFilter       string // Group Name Filter
-	GroupMemberUID    string // Group Attribute containing array of UserUID
-	UserUID           string // User Attribute listed in Group
-	Enabled           bool   // if this source is disabled
+	GroupMemberUID    string `ini:"group_member_uid"` // Group Attribute containing array of UserUID
+	UserUID           string `ini:"user_uid"`         // User Attribute listed in Group
 }
 
 func (ls *Source) sanitizedUserQuery(username string) (string, bool) {
@@ -186,7 +184,6 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	l, err := dial(ls)
 	if err != nil {
 		log.Error(2, "LDAP connect failed for '%s': %v", ls.Host, err)
-		ls.Enabled = false
 		return "", "", "", "", false, false
 	}
 	defer l.Close()

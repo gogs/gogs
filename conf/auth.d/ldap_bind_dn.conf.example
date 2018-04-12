@@ -1,0 +1,29 @@
+# This is an example of LDAP (BindDN) authentication
+#
+id           = 101
+type         = ldap_bind_dn
+name         = LDAP BindDN
+is_activated = true
+
+[config]
+host               = mydomain.com
+port               = 636
+# 0 - Unencrypted, 1 - LDAPS, 2 - StartTLS
+security_protocol  = 0
+skip_verify        = false
+bind_dn            = 
+bind_password      = 
+user_base          = ou=Users,dc=mydomain,dc=com
+attribute_username = 
+attribute_name     = 
+attribute_surname  = 
+attribute_mail     = mail
+attributes_in_bind = false
+filter             = (&(objectClass=posixAccount)(cn=%s))
+admin_filter       = 
+group_enabled      = false
+group_dn           = 
+group_filter       = 
+group_member_uid   = 
+user_uid           = 
+

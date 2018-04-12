@@ -124,9 +124,9 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := models.UserSignIn(authUsername, authPassword)
+		authUser, err := models.UserLogin(authUsername, authPassword, -1)
 		if err != nil && !errors.IsUserNotExist(err) {
-			c.Handle(http.StatusInternalServerError, "UserSignIn", err)
+			c.Handle(http.StatusInternalServerError, "UserLogin", err)
 			return
 		}
 

@@ -6,6 +6,19 @@ package errors
 
 import "fmt"
 
+type LoginSourceNotExist struct {
+	ID int64
+}
+
+func IsLoginSourceNotExist(err error) bool {
+	_, ok := err.(LoginSourceNotExist)
+	return ok
+}
+
+func (err LoginSourceNotExist) Error() string {
+	return fmt.Sprintf("login source does not exist [id: %d]", err.ID)
+}
+
 type LoginSourceNotActivated struct {
 	SourceID int64
 }
@@ -30,4 +43,18 @@ func IsInvalidLoginSourceType(err error) bool {
 
 func (err InvalidLoginSourceType) Error() string {
 	return fmt.Sprintf("invalid login source type [type: %v]", err.Type)
+}
+
+type LoginSourceMismatch struct {
+	Expect int64
+	Actual int64
+}
+
+func IsLoginSourceMismatch(err error) bool {
+	_, ok := err.(LoginSourceMismatch)
+	return ok
+}
+
+func (err LoginSourceMismatch) Error() string {
+	return fmt.Sprintf("login source mismatch [expect: %d, actual: %d]", err.Expect, err.Actual)
 }

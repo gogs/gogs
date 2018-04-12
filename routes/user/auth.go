@@ -80,12 +80,12 @@ func isValidRedirect(url string) bool {
 }
 
 func Login(c *context.Context) {
-	c.Data["Title"] = c.Tr("sign_in")
+	c.Title("sign_in")
 
-	// Check auto-login.
+	// Check auto-login
 	isSucceed, err := AutoLogin(c)
 	if err != nil {
-		c.Handle(500, "AutoLogin", err)
+		c.ServerError("AutoLogin", err)
 		return
 	}
 
@@ -106,7 +106,15 @@ func Login(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, LOGIN)
+	// Display normal login page
+	loginSources, err := models.ActivatedLoginSources()
+	if err != nil {
+		c.ServerError("ActivatedLoginSources", err)
+		return
+	}
+	c.Data["LoginSources"] = loginSources
+
+	c.Success(LOGIN)
 }
 
 func afterLogin(c *context.Context, u *models.User, remember bool) {
@@ -138,19 +146,33 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 }
 
 func LoginPost(c *context.Context, f form.SignIn) {
-	c.Data["Title"] = c.Tr("sign_in")
+	c.Title("sign_in")
+
+	loginSources, err := models.ActivatedLoginSources()
+	if err != nil {
+		c.ServerError("ActivatedLoginSources", err)
+		return
+	}
+	c.Data["LoginSources"] = loginSources
 
 	if c.HasError() {
 		c.Success(LOGIN)
 		return
 	}
 
-	u, err := models.UserSignIn(f.UserName, f.Password)
+	u, err := models.UserLogin(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
-		if errors.IsUserNotExist(err) {
+		switch err.(type) {
+		case errors.UserNotExist:
+			c.FormErr("UserName")
+			c.FormErr("Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
-		} else {
-			c.ServerError("UserSignIn", err)
+		case errors.LoginSourceMismatch:
+			c.FormErr("LoginSource")
+			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
+
+		default:
+			c.ServerError("UserLogin", err)
 		}
 		return
 	}
