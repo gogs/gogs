@@ -189,7 +189,9 @@
 
 						<div class="field">
 							<button class="ui green button">{{.i18n.Tr "admin.auths.update"}}</button>
-							<div class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}">{{.i18n.Tr "admin.auths.delete"}}</div>
+							{{if not .Source.LocalFile}}
+								<div class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}">{{.i18n.Tr "admin.auths.delete"}}</div>
+							{{end}}
 						</div>
 					</form>
 				</div>

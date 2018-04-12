@@ -505,19 +505,6 @@ func (err ErrAttachmentNotExist) Error() string {
 // |_______ \____/\___  /|__|___|  / /_______  /\____/|____/ |__|    \___  >___  >
 //         \/    /_____/         \/          \/                          \/    \/
 
-type ErrLoginSourceNotExist struct {
-	ID int64
-}
-
-func IsErrLoginSourceNotExist(err error) bool {
-	_, ok := err.(ErrLoginSourceNotExist)
-	return ok
-}
-
-func (err ErrLoginSourceNotExist) Error() string {
-	return fmt.Sprintf("login source does not exist [id: %d]", err.ID)
-}
-
 type ErrLoginSourceAlreadyExist struct {
 	Name string
 }

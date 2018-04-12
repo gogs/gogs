@@ -67,6 +67,7 @@ func GlobalInit() {
 		}
 		models.HasEngine = true
 
+		models.LoadAuthSources()
 		models.LoadRepoConfig()
 		models.NewRepoContext()
 

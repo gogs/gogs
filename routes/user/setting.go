@@ -633,11 +633,11 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := models.UserSignIn(c.User.Name, c.Query("password")); err != nil {
+		if _, err := models.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if errors.IsUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
-				c.ServerError("UserSignIn", err)
+				c.ServerError("UserLogin", err)
 			}
 			return
 		}

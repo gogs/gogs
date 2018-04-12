@@ -17,6 +17,24 @@
 						<label for="password">{{.i18n.Tr "password"}}</label>
 						<input id="password" name="password" type="password" autocomplete="off" value="{{.password}}" required>
 					</div>
+					{{if .LoginSources}}
+						<div class="required inline field {{if .Err_LoginSource}}error{{end}}">
+							<label for="password">{{.i18n.Tr "auth.auth_source"}}</label>
+							<div class="ui selection dropdown">
+								<input type="hidden" id="login_source" name="login_source" value="{{.login_source}}" required>
+								<span class="text">
+									{{.i18n.Tr "auth.local"}}
+								</span>
+								<i class="dropdown icon"></i>
+								<div class="menu">
+									<div class="item" data-value="0">{{.i18n.Tr "auth.local"}}</div>
+									{{range .LoginSources}}
+										<div class="item" data-value="{{.ID}}">{{.Name}}</div>
+									{{end}}
+								</div>
+							</div>
+						</div>
+					{{end}}
 					<div class="inline field">
 						<label></label>
 						<div class="ui checkbox">

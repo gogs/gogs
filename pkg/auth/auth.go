@@ -127,10 +127,10 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := models.UserSignIn(uname, passwd)
+				u, err := models.UserLogin(uname, passwd, -1)
 				if err != nil {
 					if !errors.IsUserNotExist(err) {
-						log.Error(4, "UserSignIn: %v", err)
+						log.Error(4, "UserLogin: %v", err)
 					}
 					return nil, false
 				}

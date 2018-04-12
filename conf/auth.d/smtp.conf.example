@@ -1,0 +1,16 @@
+# This is an example of SMTP authentication
+#
+id           = 103
+type         = smtp
+name         = GMail
+is_activated = true
+
+[config]
+# Either "PLAIN" or "LOGIN"
+auth            = PLAIN
+host            = smtp.gmail.com
+port            = 587
+allowed_domains = 
+tls             = true
+skip_verify     = false
+

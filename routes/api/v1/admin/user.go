@@ -10,6 +10,7 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models"
+	"github.com/gogits/gogs/models/errors"
 	"github.com/gogits/gogs/pkg/context"
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/setting"
@@ -23,7 +24,7 @@ func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, log
 
 	source, err := models.GetLoginSourceByID(sourceID)
 	if err != nil {
-		if models.IsErrLoginSourceNotExist(err) {
+		if errors.IsLoginSourceNotExist(err) {
 			c.Error(422, "", err)
 		} else {
 			c.Error(500, "GetLoginSourceByID", err)

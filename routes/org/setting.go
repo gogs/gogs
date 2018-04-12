@@ -107,16 +107,16 @@ func SettingsDeleteAvatar(c *context.Context) {
 }
 
 func SettingsDelete(c *context.Context) {
-	c.Data["Title"] = c.Tr("org.settings")
-	c.Data["PageIsSettingsDelete"] = true
+	c.Title("org.settings")
+	c.PageIs("SettingsDelete")
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := models.UserSignIn(c.User.Name, c.Query("password")); err != nil {
+		if _, err := models.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if errors.IsUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
-				c.Handle(500, "UserSignIn", err)
+				c.ServerError("UserLogin", err)
 			}
 			return
 		}
@@ -126,7 +126,7 @@ func SettingsDelete(c *context.Context) {
 				c.Flash.Error(c.Tr("form.org_still_own_repo"))
 				c.Redirect(c.Org.OrgLink + "/settings/delete")
 			} else {
-				c.Handle(500, "DeleteOrganization", err)
+				c.ServerError("DeleteOrganization", err)
 			}
 		} else {
 			log.Trace("Organization deleted: %s", org.Name)
@@ -135,7 +135,7 @@ func SettingsDelete(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, SETTINGS_DELETE)
+	c.Success(SETTINGS_DELETE)
 }
 
 func Webhooks(c *context.Context) {
