@@ -59,7 +59,7 @@
 	{{end}}
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.2.13.min.css">
+	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.3.1.min.css">
 	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.css?v={{MD5 AppVer}}">
 	<noscript>
 		<style>
@@ -69,7 +69,7 @@
 	</noscript>
 
 	<!-- JavaScript -->
-	<script src="{{AppSubURL}}/js/semantic-2.2.13.min.js"></script>
+	<script src="{{AppSubURL}}/js/semantic-2.3.1.min.js"></script>
 	<script src="{{AppSubURL}}/js/gogs.js?v={{MD5 AppVer}}"></script>
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
@@ -143,30 +143,25 @@
 
 												<div class="divider"></div>
 												<a class="item" href="{{AppSubURL}}/{{.LoggedUser.Name}}">
-													<i class="octicon octicon-person"></i>
-													{{.i18n.Tr "your_profile"}}<!-- Your profile -->
+													<i class="octicon octicon-person"></i> {{.i18n.Tr "your_profile"}}
 												</a>
 												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubURL}}/user/settings">
-													<i class="octicon octicon-settings"></i>
-													{{.i18n.Tr "your_settings"}}<!-- Your settings -->
+													<i class="octicon octicon-settings"></i> {{.i18n.Tr "your_settings"}}
 												</a>
 												<a class="item" target="_blank" href="https://gogs.io/docs" rel="noreferrer">
-													<i class="octicon octicon-question"></i>
-													{{.i18n.Tr "help"}}<!-- Help -->
+													<i class="octicon octicon-question"></i> {{.i18n.Tr "help"}}
 												</a>
 												{{if .IsAdmin}}
 													<div class="divider"></div>
 
 													<a class="{{if .PageIsAdmin}}active{{end}} item" href="{{AppSubURL}}/admin">
-														<i class="icon settings"></i>
-														{{.i18n.Tr "admin_panel"}}<!-- Admin Panel -->
+														<i class="icon settings"></i> {{.i18n.Tr "admin_panel"}}
 													</a>
 												{{end}}
 
 												<div class="divider"></div>
 												<a class="item" href="{{AppSubURL}}/user/logout">
-													<i class="octicon octicon-sign-out"></i>
-													{{.i18n.Tr "sign_out"}}<!-- Sign Out -->
+													<i class="octicon octicon-sign-out"></i> {{.i18n.Tr "sign_out"}}
 												</a>
 											</div><!-- end content avatar menu -->
 										</div><!-- end dropdown avatar menu -->
