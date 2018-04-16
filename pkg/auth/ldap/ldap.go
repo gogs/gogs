@@ -56,7 +56,7 @@ func (ls *Source) sanitizedUserQuery(username string) (string, bool) {
 		return "", false
 	}
 
-	return fmt.Sprintf(ls.Filter, username), true
+	return strings.Replace(ls.Filter, "%s", username, -1), true
 }
 
 func (ls *Source) sanitizedUserDN(username string) (string, bool) {
@@ -67,7 +67,7 @@ func (ls *Source) sanitizedUserDN(username string) (string, bool) {
 		return "", false
 	}
 
-	return fmt.Sprintf(ls.UserDN, username), true
+	return strings.Replace(ls.UserDN, "%s", username, -1), true
 }
 
 func (ls *Source) sanitizedGroupFilter(group string) (string, bool) {
