@@ -23,6 +23,7 @@ import (
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/template"
 	"github.com/gogits/gogs/pkg/tool"
 )
 
@@ -657,7 +658,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 			c.Repo.IsWriter() && c.Repo.GitRepo.IsBranchExist(pull.HeadBranch) &&
 			!branchProtected
 
-		deleteBranchUrl := c.Repo.RepoLink + "/branches/delete/" + pull.HeadBranch
+		deleteBranchUrl := template.EscapePound(c.Repo.RepoLink + "/branches/delete/" + pull.HeadBranch)
 		c.Data["DeleteBranchLink"] = fmt.Sprintf("%s?commit=%s&redirect_to=%s", deleteBranchUrl, pull.MergedCommitID, c.Data["Link"])
 	}
 

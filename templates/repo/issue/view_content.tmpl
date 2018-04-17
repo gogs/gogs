@@ -165,7 +165,7 @@
 								{{if .IsPullBranchDeletable}}
 									<div class="ui divider"></div>
 									<div>
-										<form class="ui form" action="{{EscapePound .DeleteBranchLink}}" method="post">
+										<form class="ui form" action="{{.DeleteBranchLink}}" method="post">
 											{{.CSRFTokenHTML}}
 											<button class="ui red button">{{$.i18n.Tr "repo.pulls.delete_branch"}}</button>
 										</form>
