@@ -207,6 +207,14 @@ func AvatarLink(email string) (url string) {
 	return url
 }
 
+// AppendAvatarSize appends avatar size query parameter to the URL in the correct format.
+func AppendAvatarSize(url string, size int) string {
+	if strings.Contains(url, "?") {
+		return url + "&s=" + com.ToStr(size)
+	}
+	return url + "?s=" + com.ToStr(size)
+}
+
 // Seconds-based time units
 const (
 	Minute = 60
