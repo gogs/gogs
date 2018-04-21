@@ -45,9 +45,9 @@ var (
 	// e.g. https://try.gogs.io/gogs/gogs/issues/4#issue-685
 	IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	// IssueNumericPattern matches string that references to a numeric issue, e.g. #1287
-	IssueNumericPattern = regexp.MustCompile(`( |^|\()#[0-9]+\b`)
+	IssueNumericPattern = regexp.MustCompile(`( |^|\(|\[)#[0-9]+\b`)
 	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
-	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\()[A-Z]{1,10}-[1-9][0-9]*\b`)
+	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\(|\[)[A-Z]{1,10}-[1-9][0-9]*\b`)
 	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a difference repository
 	// e.g. gogits/gogs#12345
 	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
@@ -97,8 +97,9 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 
 	ms := pattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
-		if m[0] == ' ' || m[0] == '(' {
-			m = m[1:] // ignore leading space or opening parentheses
+		if m[0] == ' ' || m[0] == '(' || m[0] == '[' {
+			// ignore leading space, opening parentheses, or opening square brackets
+			m = m[1:]
 		}
 		var link string
 		if metas == nil {
