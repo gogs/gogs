@@ -121,6 +121,19 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 					So(string(RenderIssueIndexPattern([]byte(testCases[i]), urlPrefix, metas)), ShouldEqual, testCases[i+1])
 				}
 			})
+			Convey("It should render issue mention in square brackets", func() {
+				testCases := []string{
+					"[#54321 issue]", "[<a href=\"/prefix/issues/54321\">#54321</a> issue]",
+					"test [#54321] issue", "test [<a href=\"/prefix/issues/54321\">#54321</a>] issue",
+					"test [#54321 extra] issue", "test [<a href=\"/prefix/issues/54321\">#54321</a> extra] issue",
+					"test [#54321 issue]", "test [<a href=\"/prefix/issues/54321\">#54321</a> issue]",
+					"test [#54321]", "test [<a href=\"/prefix/issues/54321\">#54321</a>]",
+				}
+
+				for i := 0; i < len(testCases); i += 2 {
+					So(string(RenderIssueIndexPattern([]byte(testCases[i]), urlPrefix, metas)), ShouldEqual, testCases[i+1])
+				}
+			})
 			Convey("It should render multiple issue mentions in the same line", func() {
 				testCases := []string{
 					"#54321 #1243", "<a href=\"/prefix/issues/54321\">#54321</a> <a href=\"/prefix/issues/1243\">#1243</a>",
@@ -259,6 +272,19 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 					"test (ABG-124 extra) issue", "test (<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> extra) issue",
 					"test (ABG-124 issue)", "test (<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> issue)",
 					"test (ABG-124)", "test (<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>)",
+				}
+
+				for i := 0; i < len(testCases); i += 2 {
+					So(string(RenderIssueIndexPattern([]byte(testCases[i]), urlPrefix, metas)), ShouldEqual, testCases[i+1])
+				}
+			})
+			Convey("It should render issue mention in square brackets", func() {
+				testCases := []string{
+					"[ABG-124] issue", "[<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>] issue",
+					"test [ABG-124] issue", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>] issue",
+					"test [ABG-124 extra] issue", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> extra] issue",
+					"test [ABG-124 issue]", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a> issue]",
+					"test [ABG-124]", "test [<a href=\"https://someurl.com/someuser/somerepo/?b=ABG-124\">ABG-124</a>]",
 				}
 
 				for i := 0; i < len(testCases); i += 2 {
