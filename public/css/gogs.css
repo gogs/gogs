@@ -83,6 +83,7 @@ code.wrap {
 }
 .following.bar .top.menu a.item.brand {
   padding-left: 0;
+  padding-right: 0;
 }
 .following.bar .brand .ui.mini.image {
   width: 30px;
