@@ -35,7 +35,7 @@
 			</div>
 		{{end}}
 	</h4>
-	<div class="ui attached table segment">
+	<div class="ui unstackable attached table segment">
 		<div id="{{if .IsIPythonNotebook}}ipython-notebook{{end}}" class="file-view {{if .IsMarkdown}}markdown{{else if .IsIPythonNotebook}}ipython-notebook{{else if .ReadmeInList}}plain-text{{else if and .IsTextFile}}code-view{{end}} has-emoji">
 			{{if .IsMarkdown}}
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}

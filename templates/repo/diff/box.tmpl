@@ -77,7 +77,7 @@
 						</div>
 					{{end}}
 				</h4>
-				<div class="ui attached table segment">
+				<div class="ui unstackable attached table segment">
 					{{if not $file.IsRenamed}}
 						{{$isImage := (call $.IsImageFile $file.Name)}}
 						{{if and $isImage}}
