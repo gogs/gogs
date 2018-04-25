@@ -15,26 +15,7 @@ Depends on the situation, you will:
 
 ### Bug Report
 
-If you find something you consider a bug, please create a issue on [GitHub](https://github.com/gogits/gogs/issues). To avoid wasting time and reduce back-and-forth communication with team members, please include at least the following information in a form comfortable for you:
-
-- Bug Description
-- Gogs Version
-- Git Version
-- System Type
-- Error Log
-- Other information
-
-Please take a moment to check that an issue on [GitHub](https://github.com/gogits/gogs/issues) doesn't already exist documenting your bug report or improvement proposal. If it does, it never hurts to add a quick "+1" or "I have this problem too". This will help prioritize the most common problems and requests.
-
-#### Bug Report Example
-
-Gogs crashed when creating a repository with a license, using v0.5.13.0207, SQLite3, Git 1.9.0, Ubuntu 12.04.
-
-Error log:
-
-```
-2014/09/01 07:21:49 [E] nil pointer
-```
+If you find something you consider a bug, please create an issue on [GitHub](https://github.com/gogits/gogs/issues). To avoid wasting time and reduce back-and-forth communication with team members, please be respect to [Issue Template](ISSUE_TEMPLATE.md).
 
 ### Feature Request
 
