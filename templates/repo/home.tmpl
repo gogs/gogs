@@ -25,7 +25,7 @@
 		<div class="ui secondary menu">
 			{{if .PullRequestCtx.Allowed}}
 				<div class="fitted item">
-					<a href="{{.BaseRepo.Link}}/compare/{{.BaseRepo.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">
+					<a href="{{.BaseRepo.Link}}/compare/{{EscapePound .BaseRepo.DefaultBranch}}...{{EscapePound .PullRequestCtx.HeadInfo}}">
 						<button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
 					</a>
 				</div>
