@@ -422,13 +422,18 @@
 
 				table {
 					width: 100%;
+					tbody {
+						tr {
+							padding: 0 !important;
+						}
+					}
 				}
 				.lines-num {
 					vertical-align: top;
 					text-align: right;
 					color: #999;
 					background: #f5f5f5;
-					width: 1%;
+					width: 42px;
 
 					span {
 						line-height: 20px;
@@ -439,7 +444,8 @@
 				}
 				.lines-num,
 				.lines-code {
-					padding: 0;
+					display: table-cell !important;
+					padding: 0 !important;
 					pre,
 					ol,
 					.hljs {
