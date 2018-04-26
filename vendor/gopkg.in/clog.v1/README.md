@@ -28,7 +28,7 @@ Please apply `-u` flag to update in the future.
 
 ## Getting Started
 
-Clog currently has three builtin logger adapters: `console`, `file` and `slack`. 
+Clog currently has three builtin logger adapters: `console`, `file`, `slack` and `discord`.
 
 It is extremely easy to create one with all default settings. Generally, you would want to create new logger inside `init` or `main` function.
 
@@ -139,6 +139,22 @@ Slack logger is also supported in a simple way:
 ```
 
 This logger also works for [Discord Slack](https://discordapp.com/developers/docs/resources/webhook#execute-slackcompatible-webhook) endpoint.
+
+## Discord
+
+Discord logger is supported in rich format via [Embed Object](https://discordapp.com/developers/docs/resources/channel#embed-object):
+
+```go
+...
+	err := log.New(log.DISCORD, log.DiscordConfig{
+		Level:              log.INFO, 
+		BufferSize:         100,  
+		URL:                "https://url-to-discord-webhook",  
+	})
+...
+```
+
+This logger also retries automatically if hits rate limit after `retry_after`.
 
 ## Credits
 

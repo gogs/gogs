@@ -32,10 +32,6 @@ type slackPayload struct {
 	Attachments []slackAttachment `json:"attachments"`
 }
 
-const (
-	SLACK = "slack"
-)
-
 var slackColors = []string{
 	"",        // Trace
 	"#3aa3e3", // Info
@@ -113,13 +109,14 @@ func buildSlackPayload(msg *Message) (string, error) {
 func (s *slack) write(msg *Message) {
 	payload, err := buildSlackPayload(msg)
 	if err != nil {
-		s.errorChan <- fmt.Errorf("slack.buildSlackPayload: %v", err)
+		s.errorChan <- fmt.Errorf("slack: buildSlackPayload: %v", err)
 		return
 	}
 
 	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(payload)))
 	if err != nil {
 		s.errorChan <- fmt.Errorf("slack: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 
