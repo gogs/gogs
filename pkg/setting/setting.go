@@ -777,6 +777,14 @@ func newLogService() {
 				BufferSize: Cfg.Section("log").Key("BUFFER_LEN").MustInt64(100),
 				URL:        sec.Key("URL").String(),
 			}
+
+		case log.DISCORD:
+			LogConfigs[i] = log.DiscordConfig{
+				Level:      level,
+				BufferSize: Cfg.Section("log").Key("BUFFER_LEN").MustInt64(100),
+				URL:        sec.Key("URL").String(),
+				Username:   sec.Key("USERNAME").String(),
+			}
 		}
 
 		log.New(log.MODE(mode), LogConfigs[i])
