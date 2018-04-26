@@ -1492,12 +1492,15 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view table {
   width: 100%;
 }
+.repository.file.list #file-content .code-view table tbody tr {
+  padding: 0 !important;
+}
 .repository.file.list #file-content .code-view .lines-num {
   vertical-align: top;
   text-align: right;
   color: #999;
   background: #f5f5f5;
-  width: 1%;
+  width: 42px;
 }
 .repository.file.list #file-content .code-view .lines-num span {
   line-height: 20px;
@@ -1507,7 +1510,8 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content .code-view .lines-num,
 .repository.file.list #file-content .code-view .lines-code {
-  padding: 0;
+  display: table-cell !important;
+  padding: 0 !important;
 }
 .repository.file.list #file-content .code-view .lines-num pre,
 .repository.file.list #file-content .code-view .lines-code pre,
