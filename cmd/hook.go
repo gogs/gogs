@@ -236,9 +236,9 @@ func runHookPostReceive(c *cli.Context) error {
 			log.Error(2, "PushUpdate: %v", err)
 		}
 
-		// Ask for running deliver hook and test pull request tasks.
+		// Ask for running deliver hook and test pull request tasks
 		reqURL := setting.LocalURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
-			strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX) +
+			template.EscapePound(strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX)) +
 			"&secret=" + os.Getenv(http.ENV_REPO_OWNER_SALT_MD5) +
 			"&pusher=" + os.Getenv(http.ENV_AUTH_USER_ID)
 		log.Trace("Trigger task: %s", reqURL)
