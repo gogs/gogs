@@ -20,8 +20,6 @@ import (
 	"github.com/fatih/color"
 )
 
-const CONSOLE MODE = "console"
-
 // Console color set for different levels.
 var consoleColors = []func(a ...interface{}) string{
 	color.New(color.FgBlue).SprintFunc(),   // Trace
