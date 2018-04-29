@@ -64,7 +64,25 @@
 					});
 				</script>
 			{{else if .ReadmeInList}}
-				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
+        <script src="/js/asciidoctor.js"></script>
+        <link rel="stylesheet" href="/css/asciidoctor.css"></link>
+        <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+<div id="adoc">
+{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
+</div>
+        <script>
+          var readme = document.getElementById("adoc");
+          var text = readme.innerText;
+          console.log(text);
+          var adoc = Asciidoctor();
+          var html = adoc.convert(
+              text, {
+                safe: "safe", 
+                to_file: true,
+                attributes: {showtitle: true, icons: "font"}});
+          console.log(html);
+          readme.innerHTML = html;
+        </script>
 			{{else if not .IsTextFile}}
 				<div class="view-raw ui center">
 					{{if .IsImageFile}}
