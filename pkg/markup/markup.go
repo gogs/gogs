@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -26,6 +27,17 @@ func IsReadmeFile(name string) bool {
 // IsIPythonNotebook reports whether name looks like a IPython notebook based on its extension.
 func IsIPythonNotebook(name string) bool {
 	return strings.HasSuffix(name, ".ipynb")
+}
+
+// IsAsciidocFile reports whether name looks like a Asciidoc file based on its extension.
+func IsAsciidocFile(name string) bool {
+	extension := strings.ToLower(filepath.Ext(name))
+	for _, ext := range setting.Asciidoc.FileExtensions {
+		if strings.ToLower(ext) == extension {
+			return true
+		}
+	}
+	return false
 }
 
 const (
@@ -313,6 +325,7 @@ const (
 	MARKDOWN         Type = "markdown"
 	ORG_MODE         Type = "orgmode"
 	IPYTHON_NOTEBOOK Type = "ipynb"
+	ASCIIDOC         Type = "asciidoc"
 )
 
 // Detect returns best guess of a markup type based on file name.
@@ -324,6 +337,8 @@ func Detect(filename string) Type {
 		return ORG_MODE
 	case IsIPythonNotebook(filename):
 		return IPYTHON_NOTEBOOK
+	case IsAsciidocFile(filename):
+		return ASCIIDOC
 	default:
 		return UNRECOGNIZED
 	}

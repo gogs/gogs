@@ -172,6 +172,11 @@ var (
 		FileExtensions      []string
 	}
 
+	// Asciidoc sttings
+	Asciidoc struct {
+		FileExtensions []string
+	}
+
 	// Smartypants settings
 	Smartypants struct {
 		Enabled      bool
@@ -650,6 +655,8 @@ func NewContext() {
 		log.Fatal(2, "Fail to map Release.Attachment settings: %v", err)
 	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal(2, "Fail to map Markdown settings: %v", err)
+	} else if err = Cfg.Section("asciidoc").MapTo(&Asciidoc); err != nil {
+		log.Fatal(2, "Fail to map Asciidoc settings: %v", err)
 	} else if err = Cfg.Section("smartypants").MapTo(&Smartypants); err != nil {
 		log.Fatal(2, "Fail to map Smartypants settings: %v", err)
 	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {

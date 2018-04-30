@@ -96,6 +96,8 @@ func renderDirectory(c *context.Context, treeLink string) {
 			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
+			case markup.ASCIIDOC:
+				c.Data["IsAsciidoc"] = true
 			default:
 				buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
 			}
