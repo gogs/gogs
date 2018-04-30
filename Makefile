@@ -5,6 +5,10 @@ DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
 GENERATED  := pkg/bindata/bindata.go public/css/gogs.css
 
+ADOCJS		 := node_modules/asciidoctor.js/dist/asciidoctor.min.js
+LESSCDIR   := node_modules/less/bin
+NODE_MODULES := $(ADOCJS) $(LESSCDIR)
+
 OS := $(shell uname)
 
 TAGS = ""
@@ -18,6 +22,10 @@ GOVET = go tool vet -composites=false -methods=false -structtags=false
 .PHONY: build pack release bindata clean
 
 .IGNORE: public/css/gogs.css
+
+adocjsupdate: $(NODE_MODULES)
+	npm update
+	cp '$(ADOCJS)' public/js/
 
 all: build
 
@@ -36,11 +44,11 @@ build: $(GENERATED)
 	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
-build-dev: $(GENERATED) govet
+build-dev: $(GENERATED) govet adocjsupdate
 	go install $(BUILD_FLAGS) -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
-build-dev-race: $(GENERATED) govet
+build-dev-race: $(GENERATED) govet adocjsupdate
 	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
 	cp '$(GOPATH)/bin/gogs' .
 
@@ -58,10 +66,13 @@ bindata: pkg/bindata/bindata.go
 pkg/bindata/bindata.go: $(DATA_FILES)
 	go-bindata -o=$@ -ignore="\\.DS_Store|README.md|TRANSLATORS|auth.d" -pkg=bindata conf/...
 
-less: public/css/gogs.css
+less: public/css/gogs.css $(NODE_MODULES)
 
 public/css/gogs.css: $(LESS_FILES)
-	lessc $< $@
+	'$(LESSCDIR)'/lessc $< $@
+
+$(NODE_MODULES):
+	npm install --only=dev
 
 clean:
 	go clean -i ./...
