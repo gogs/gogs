@@ -1,6 +1,10 @@
 .DS_Store
+.*.swp
+.*.swo
+tags
 *.db
 *.log
+/node_modules/
 log/
 custom/
 data/
