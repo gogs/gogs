@@ -872,6 +872,9 @@ footer .ui.language .menu {
   background: #f8f8f8;
   border-top: 0;
 }
+.asciidoc:not(code).file-view {
+  padding: 0.2em 2em 2em !important;
+}
 .home {
   padding-bottom: 80px;
 }
