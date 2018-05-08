@@ -854,7 +854,7 @@ type CreateRepoOptions struct {
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
-	relPath := path.Join("conf", tp, strings.TrimLeft(name, "./"))
+	relPath := path.Join("conf", tp, strings.TrimLeft(path.Clean("/"+name), "/"))
 
 	// Use custom file when available.
 	customPath := path.Join(setting.CustomPath, relPath)
