@@ -3095,7 +3095,7 @@ footer .ui.language .menu {
   margin-bottom: -4px;
 }
 .feeds .list #collaborative-repo-list .owner-and-repo {
-  max-width: 80%;
+  max-width: 75%;
   margin-bottom: -5px;
 }
 .feeds .list #collaborative-repo-list .owner-name {
