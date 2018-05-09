@@ -188,6 +188,7 @@ var (
 
 	// Picture settings
 	AvatarUploadPath      string
+	RepositoryAvatarUploadPath      string
 	GravatarSource        string
 	DisableGravatar       bool
 	EnableFederatedAvatar bool
@@ -607,6 +608,11 @@ func NewContext() {
 	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
+	}
+	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "repo-avatars"))
+	forcePathSeparator(RepositoryAvatarUploadPath)
+	if !filepath.IsAbs(RepositoryAvatarUploadPath) {
+		RepositoryAvatarUploadPath = path.Join(workDir, RepositoryAvatarUploadPath)
 	}
 	switch source := sec.Key("GRAVATAR_SOURCE").MustString("gravatar"); source {
 	case "duoshuo":

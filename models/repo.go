@@ -16,9 +16,14 @@ import (
 	"strings"
 	"time"
 
+	"image"
+	_ "image/jpeg"
+	"image/png"
+
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"github.com/nfnt/resize"
 	"github.com/mcuadros/go-version"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
@@ -27,11 +32,13 @@ import (
 	api "github.com/gogits/go-gogs-client"
 
 	"github.com/gogits/gogs/models/errors"
+	"github.com/gogits/gogs/pkg/avatar"
 	"github.com/gogits/gogs/pkg/bindata"
 	"github.com/gogits/gogs/pkg/markup"
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/sync"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
@@ -191,6 +198,11 @@ type Repository struct {
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-"`
 
+	// Avatar
+	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
+	AvatarEmail     string `xorm:"NOT NULL"`
+	UseCustomAvatar bool
+
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
 	Updated     time.Time `xorm:"-"`
@@ -284,6 +296,121 @@ func (repo *Repository) HTMLURL() string {
 	return setting.AppURL + repo.FullName()
 }
 
+// CustomAvatarPath returns repository custom avatar file path.
+func (repo *Repository) CustomAvatarPath() string {
+	return filepath.Join(setting.RepositoryAvatarUploadPath, com.ToStr(repo.ID))
+}
+
+// GenerateRandomAvatar generates a random avatar for repository.
+func (repo *Repository) GenerateRandomAvatar() error {
+	seed := repo.AvatarEmail
+	if len(seed) == 0 {
+		seed = repo.Name
+	}
+
+	img, err := avatar.RandomImage([]byte(seed))
+	if err != nil {
+		return fmt.Errorf("RandomImage: %v", err)
+	}
+	if err = os.MkdirAll(filepath.Dir(repo.CustomAvatarPath()), os.ModePerm); err != nil {
+		return fmt.Errorf("MkdirAll: %v", err)
+	}
+	fw, err := os.Create(repo.CustomAvatarPath())
+	if err != nil {
+		return fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if err = png.Encode(fw, img); err != nil {
+		return fmt.Errorf("Encode: %v", err)
+	}
+
+	log.Info("New random avatar created: %d", repo.ID)
+	return nil
+}
+
+// RelAvatarLink returns relative avatar link to the site domain,
+// which includes app sub-url as prefix. However, it is possible
+// to return full URL if user enables Gravatar-like service.
+func (repo *Repository) RelAvatarLink() string {
+	defaultImgUrl := setting.AppSubURL + "/img/avatar_default.png"
+	if repo.ID == -1 {
+		return defaultImgUrl
+	}
+
+	switch {
+	case repo.UseCustomAvatar:
+		if !com.IsExist(repo.CustomAvatarPath()) {
+			return defaultImgUrl
+		}
+		return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
+	case setting.DisableGravatar, setting.OfflineMode:
+		if !com.IsExist(repo.CustomAvatarPath()) {
+			if err := repo.GenerateRandomAvatar(); err != nil {
+				log.Error(3, "GenerateRandomAvatar: %v", err)
+			}
+		}
+		return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
+	}
+	return tool.AvatarLink(repo.AvatarEmail)
+}
+
+// AvatarLink returns user avatar absolute link.
+func (repo *Repository) AvatarLink() string {
+	link := repo.RelAvatarLink()
+	if link[0] == '/' && link[1] != '/' {
+		return setting.AppURL + strings.TrimPrefix(link, setting.AppSubURL)[1:]
+	}
+	return link
+}
+
+// UploadAvatar saves custom avatar for repository.
+// FIXME: split uploads to different subdirs in case we have massive repositories.
+func (repo *Repository) UploadAvatar(data []byte) error {
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return fmt.Errorf("Decode: %v", err)
+	}
+
+	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
+
+	sess := x.NewSession()
+	defer sess.Close()
+	if err = sess.Begin(); err != nil {
+		return err
+	}
+
+	repo.UseCustomAvatar = true
+	if err = updateRepository(sess, repo, false); err != nil {
+		return fmt.Errorf("updateRepository: %v", err)
+	}
+
+	os.MkdirAll(setting.RepositoryAvatarUploadPath, os.ModePerm)
+	fw, err := os.Create(repo.CustomAvatarPath())
+	if err != nil {
+		return fmt.Errorf("Create: %v", err)
+	}
+	defer fw.Close()
+
+	if err = png.Encode(fw, m); err != nil {
+		return fmt.Errorf("Encode: %v", err)
+	}
+
+	return sess.Commit()
+}
+
+// DeleteAvatar deletes the repository custom avatar.
+func (repo *Repository) DeleteAvatar() error {
+	log.Trace("DeleteAvatar [%d]: %s", repo.ID, repo.CustomAvatarPath())
+	os.Remove(repo.CustomAvatarPath())
+
+	repo.UseCustomAvatar = false
+	if err := UpdateRepository(repo, false); err != nil {
+		return fmt.Errorf("UpdateRepository: %v", err)
+	}
+	return nil
+}
+
 // This method assumes following fields have been assigned with valid values:
 // Required - BaseRepo (if fork)
 // Arguments that are allowed to be nil: permission
@@ -312,6 +439,8 @@ func (repo *Repository) APIFormat(permission *api.Permission, user ...*User) *ap
 		Created:       repo.Created,
 		Updated:       repo.Updated,
 		Permissions:   permission,
+// Reserved for go-gogs-client change
+//		AvatarUrl:     repo.AvatarLink(),
 	}
 	if repo.IsFork {
 		p := &api.Permission{Pull: true}
@@ -1001,6 +1130,8 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return err
 	}
 
+	repo.GenerateRandomAvatar()
+
 	owner.NumRepos++
 	// Remember visibility preference.
 	owner.LastRepoVisibility = repo.IsPrivate
@@ -1049,6 +1180,8 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 		EnableIssues: true,
 		EnablePulls:  true,
 	}
+
+	repo.UseCustomAvatar = true
 
 	sess := x.NewSession()
 	defer sess.Close()

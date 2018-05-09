@@ -9,8 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"io/ioutil"
+
 	log "gopkg.in/clog.v1"
 
+	"github.com/Unknwon/com"
 	"github.com/gogits/git-module"
 
 	"github.com/gogits/gogs/models"
@@ -19,10 +22,12 @@ import (
 	"github.com/gogits/gogs/pkg/form"
 	"github.com/gogits/gogs/pkg/mailer"
 	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogits/gogs/pkg/tool"
 )
 
 const (
 	SETTINGS_OPTIONS          = "repo/settings/options"
+	SETTINGS_REPO_AVATAR      = "repo/settings/avatar"
 	SETTINGS_COLLABORATION    = "repo/settings/collaboration"
 	SETTINGS_BRANCHES         = "repo/settings/branches"
 	SETTINGS_PROTECTED_BRANCH = "repo/settings/protected_branch"
@@ -632,19 +637,67 @@ func DeleteDeployKey(c *context.Context) {
 	})
 }
 
-func SettingsAvatar(c *context.Context, f form.Avatar) {
+func SettingsAvatar(c *context.Context) {
+	c.Title("settings.avatar")
+	c.PageIs("SettingsAvatar")
+	c.Success(SETTINGS_REPO_AVATAR)
+}
+
+func SettingsAvatarPost(c *context.Context, f form.Avatar) {
 	f.Source = form.AVATAR_LOCAL
-	if err := user.UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
+	if err := UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
 		c.Flash.Error(err.Error())
 	} else {
-		c.Flash.Success(c.Tr("repo.settings.update_avatar_success"))
+		c.Flash.Success(c.Tr("settings.update_avatar_success"))
 	}
-	c.Redirect(c.Repo.RepoLink + "/settings")
+	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
 	if err := c.Repo.Repository.DeleteAvatar(); err != nil {
-		c.Flash.Error(err.Error())
+		c.Flash.Error(fmt.Sprintf("DeleteAvatar: %v", err))
 	}
-	c.Redirect(c.Repo.RepoLink + "/settings")
+	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
+}
+
+// FIXME: limit size.
+func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repository) error {
+	ctxRepo.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
+	if len(f.Gravatar) > 0 {
+		ctxRepo.Avatar = tool.MD5(f.Gravatar)
+		ctxRepo.AvatarEmail = f.Gravatar
+	}
+
+	if f.Avatar != nil {
+		r, err := f.Avatar.Open()
+		if err != nil {
+			return fmt.Errorf("Avatar.Open: %v", err)
+		}
+		defer r.Close()
+
+		data, err := ioutil.ReadAll(r)
+		if err != nil {
+			return fmt.Errorf("ioutil.ReadAll: %v", err)
+		}
+		if !tool.IsImageFile(data) {
+			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
+		}
+		if err = ctxRepo.UploadAvatar(data); err != nil {
+			return fmt.Errorf("UploadAvatar: %v", err)
+		}
+	} else {
+		// No avatar is uploaded but setting has been changed to enable,
+		// generate a random one when needed.
+		if ctxRepo.UseCustomAvatar && !com.IsFile(ctxRepo.CustomAvatarPath()) {
+			if err := ctxRepo.GenerateRandomAvatar(); err != nil {
+				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxRepo.ID, err)
+			}
+		}
+	}
+
+	if err := models.UpdateRepository(ctxRepo, false); err != nil {
+		return fmt.Errorf("UpdateRepository: %v", err)
+	}
+
+	return nil
 }

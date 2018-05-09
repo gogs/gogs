@@ -13,6 +13,7 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -413,12 +414,36 @@ func runWeb(c *cli.Context) error {
 		m.Post("/migrate", bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
 		m.Combo("/fork/:repoid").Get(repo.Fork).
 			Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
+		m.Get("-avatars/:uuid", func(c *context.Context) {
+			repoAvaPath := filepath.Join(setting.RepositoryAvatarUploadPath, com.ToStr(c.Params(":uuid")))
+			if !com.IsFile(repoAvaPath) {
+				c.NotFound()
+				return
+			}
+
+			fr, err := os.Open(repoAvaPath)
+			if err != nil {
+				c.Handle(500, "Open", err)
+				return
+			}
+			defer fr.Close()
+
+			c.Header().Set("Cache-Control", "public,max-age=86400")
+			c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s.png"`, c.Params(":uuid")))
+			if err = repo.ServeData(c, c.Params(":uuid"), fr); err != nil {
+				c.Handle(500, "ServeData", err)
+				return
+			}
+		})
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("/settings", func() {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
+			m.Combo("/avatar").Get(repo.SettingsAvatar).
+				Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)
+			m.Post("/avatar/delete", repo.SettingsDeleteAvatar)
 			m.Group("/collaboration", func() {
 				m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
 				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)

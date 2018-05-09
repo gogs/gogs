@@ -4,6 +4,7 @@
 		<div class="ui vertically padded grid head"><!-- start grid -->
 			<div class="column"><!-- start column -->
 				<div class="ui header">
+					<img class="ui image" src="{{.RelAvatarLink}}?s=100">
 					<div class="ui huge breadcrumb">
 						<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
 						<a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
