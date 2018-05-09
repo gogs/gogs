@@ -631,3 +631,20 @@ func DeleteDeployKey(c *context.Context) {
 		"redirect": c.Repo.RepoLink + "/settings/keys",
 	})
 }
+
+func SettingsAvatar(c *context.Context, f form.Avatar) {
+	f.Source = form.AVATAR_LOCAL
+	if err := user.UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
+		c.Flash.Error(err.Error())
+	} else {
+		c.Flash.Success(c.Tr("repo.settings.update_avatar_success"))
+	}
+	c.Redirect(c.Repo.RepoLink + "/settings")
+}
+
+func SettingsDeleteAvatar(c *context.Context) {
+	if err := c.Repo.Repository.DeleteAvatar(); err != nil {
+		c.Flash.Error(err.Error())
+	}
+	c.Redirect(c.Repo.RepoLink + "/settings")
+}
