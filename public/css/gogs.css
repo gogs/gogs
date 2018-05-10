@@ -3216,13 +3216,3 @@ footer .ui.language .menu {
 .ui.user.list .item .description a:hover {
   text-decoration: underline;
 }
-/* fix font-awesome family override by semantic */
-i.icon.fa {
-  font-family: FontAwesome;
-}
-i.icon.fa.fa-star::before {
-  content: "\f005";
-}
-i.icon.fa.fa-star-o::before {
-  content: "\f006";
-}
