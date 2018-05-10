@@ -18,16 +18,16 @@ func updateRepositoryDescriptionField(x *xorm.Engine) error {
 	} else if !exist {
 		return nil
 	}
-	if (settings.UseMySQL) {
+	if (setting.UseMySQL) {
 		_, err = x.Exec("ALTER TABLE `repository` MODIFY `description` TEXT")
 	}
-	if (settings.UseMSSQL) {
+	if (setting.UseMSSQL) {
 		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TEXT")
 	}
-	if (settings.UsePostgreSQL) {
+	if (setting.UsePostgreSQL) {
 		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE TEXT")
 	}
-	if (settings.UseSQLite3) {
+	if (setting.UseSQLite3) {
 		// Wait, no! Sqlite3 uses TEXT field by default for any string type field.
 	}
 	return err
