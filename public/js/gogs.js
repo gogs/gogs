@@ -1448,7 +1448,7 @@ function showMessageMaxLength(maxLen, textElemId, counterId) {
     var $msg = $('#'+textElemId);                      //text message
     $('#'+counterId).html(maxLen - $msg.val().length); //symbols count
 
-    onMessageKey = function (e) {
+    var onMessageKey = function (e) {
         var $msg = $(this);
         var text = $msg.val();
         var len = text.length;
