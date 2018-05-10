@@ -75,6 +75,7 @@ func Create(c *context.Context) {
 	c.Data["readme"] = "Default"
 	c.Data["private"] = c.User.LastRepoVisibility
 	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
+	c.Data["RequireAutosize"] = true
 
 	ctxUser := checkContextUser(c, c.QueryInt64("org"))
 	if c.Written() {
