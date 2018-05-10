@@ -416,4 +416,12 @@
 	{{end}}
 {{end}}
 
+<script type="text/javascript">
+$(document).ready(function(){
+	if (typeof window.autosize !== "undefined") {
+		autosize($('#description'));
+	}
+});
+</script>
+
 {{template "base/footer" .}}

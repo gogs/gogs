@@ -34,6 +34,7 @@ const (
 func Settings(c *context.Context) {
 	c.Title("repo.settings")
 	c.PageIs("SettingsOptions")
+	c.Data["RequireAutosize"] = true
 	c.Success(SETTINGS_OPTIONS)
 }
 

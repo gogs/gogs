@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-xorm/xorm"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 func updateRepositoryDescriptionField(x *xorm.Engine) error {
@@ -17,12 +18,17 @@ func updateRepositoryDescriptionField(x *xorm.Engine) error {
 	} else if !exist {
 		return nil
 	}
-	// First try is for Postgress / Oracle
-	_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE TEXT")
-	if err != nil {
-		// Second try is for MySQL
+	if (settings.UseMySQL) {
 		_, err = x.Exec("ALTER TABLE `repository` MODIFY `description` TEXT")
 	}
-	// Sqlite will fail here
+	if (settings.UseMSSQL) {
+		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TEXT")
+	}
+	if (settings.UsePostgreSQL) {
+		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE TEXT")
+	}
+	if (settings.UseSQLite3) {
+		// Wait, no! Sqlite3 uses TEXT field by default for any string type field.
+	}
 	return err
 }
