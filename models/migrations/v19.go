@@ -24,14 +24,11 @@ func updateRepositoryAddAvatarFields(x *xorm.Engine) error {
 	}
 	if setting.UseMySQL {
 		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` TINYINT(1) DEFAULT 0")
-	}
-	else if setting.UsePostgreSQL {
+	} else if setting.UsePostgreSQL {
 		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` BOOLEAN DEFAULT FALSE")
-	}
-	else if setting.UseMSSQL {
+	} else if setting.UseMSSQL {
 		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` TINYINT DEFAULT 0")
-	}
-	else if setting.UseSQLite3 {
+	} else if setting.UseSQLite3 {
 		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` INT DEFAULT 0")
 	}
 	if err != nil {
