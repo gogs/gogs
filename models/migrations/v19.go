@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-xorm/xorm"
+	"github.com/gogits/gogs/pkg/setting"
 )
 
 func updateRepositoryAddAvatarFields(x *xorm.Engine) error {
@@ -21,11 +22,18 @@ func updateRepositoryAddAvatarFields(x *xorm.Engine) error {
 	if err != nil {
 		return fmt.Errorf("Add avatar field: %v", err)
 	}
-	_, err = x.Exec("ALTER TABLE `repository` ADD `avatar_email` VARCHAR(256) NOT NULL")
-	if err != nil {
-		return fmt.Errorf("Add avatar_email field: %v", err)
+	if setting.UseMySQL {
+		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` TINYINT(1) DEFAULT 0")
 	}
-	_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` INT(1) DEFAULT NULL")
+	else if setting.UsePostgreSQL {
+		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` BOOLEAN DEFAULT FALSE")
+	}
+	else if setting.UseMSSQL {
+		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` TINYINT DEFAULT 0")
+	}
+	else if setting.UseSQLite3 {
+		_, err = x.Exec("ALTER TABLE `repository` ADD `use_custom_avatar` INT DEFAULT 0")
+	}
 	if err != nil {
 		return fmt.Errorf("Add use_custom_avatar field: %v", err)
 	}

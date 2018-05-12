@@ -200,7 +200,6 @@ type Repository struct {
 
 	// Avatar
 	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
-	AvatarEmail     string `xorm:"NOT NULL"`
 	UseCustomAvatar bool
 
 	Created     time.Time `xorm:"-"`
@@ -303,10 +302,7 @@ func (repo *Repository) CustomAvatarPath() string {
 
 // GenerateRandomAvatar generates a random avatar for repository.
 func (repo *Repository) GenerateRandomAvatar() error {
-	seed := repo.AvatarEmail
-	if len(seed) == 0 {
-		seed = repo.Name
-	}
+	seed = repo.Name
 
 	img, err := avatar.RandomImage([]byte(seed))
 	if err != nil {
@@ -339,20 +335,20 @@ func (repo *Repository) RelAvatarLink() string {
 	}
 
 	switch {
-	case repo.UseCustomAvatar:
-		if !com.IsExist(repo.CustomAvatarPath()) {
-			return defaultImgUrl
-		}
-		return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
-	case setting.DisableGravatar, setting.OfflineMode:
-		if !com.IsExist(repo.CustomAvatarPath()) {
-			if err := repo.GenerateRandomAvatar(); err != nil {
-				log.Error(3, "GenerateRandomAvatar: %v", err)
+		case repo.UseCustomAvatar:
+			if !com.IsExist(repo.CustomAvatarPath()) {
+				return defaultImgUrl
 			}
-		}
-		return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
+			return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
+		case setting.DisableGravatar, setting.OfflineMode:
+			if !com.IsExist(repo.CustomAvatarPath()) {
+				if err := repo.GenerateRandomAvatar(); err != nil {
+					log.Error(3, "GenerateRandomAvatar: %v", err)
+				}
+			}
+			return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
 	}
-	return tool.AvatarLink(repo.AvatarEmail)
+	return defaultImgUrl
 }
 
 // AvatarLink returns user avatar absolute link.
