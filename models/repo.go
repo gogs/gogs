@@ -38,7 +38,6 @@ import (
 	"github.com/gogits/gogs/pkg/process"
 	"github.com/gogits/gogs/pkg/setting"
 	"github.com/gogits/gogs/pkg/sync"
-	"github.com/gogits/gogs/pkg/tool"
 )
 
 var repoWorkingPool = sync.NewExclusivePool()
@@ -302,7 +301,7 @@ func (repo *Repository) CustomAvatarPath() string {
 
 // GenerateRandomAvatar generates a random avatar for repository.
 func (repo *Repository) GenerateRandomAvatar() error {
-	seed = repo.Name
+	seed := repo.Name
 
 	img, err := avatar.RandomImage([]byte(seed))
 	if err != nil {
