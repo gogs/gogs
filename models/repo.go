@@ -326,15 +326,12 @@ func (repo *Repository) GenerateRandomAvatar() error {
 // Since Gravatar support not needed here - just check for image path.
 // And generate random avatar if no image found.
 func (repo *Repository) RelAvatarLink() string {
-	defaultImgUrl := setting.AppSubURL + "/img/avatar_default.png"
+	defaultImgUrl := ""
 	if repo.ID == -1 {
 		return defaultImgUrl
 	}
 	if !com.IsExist(repo.CustomAvatarPath()) {
-		if err := repo.GenerateRandomAvatar(); err != nil {
-			log.Error(3, "GenerateRandomAvatar: %v", err)
-			return defaultImgUrl
-		}
+		return defaultImgUrl
 	}
 	return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
 }
@@ -1098,8 +1095,6 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 	if _, err = e.Insert(repo); err != nil {
 		return err
 	}
-
-	repo.GenerateRandomAvatar()
 
 	owner.NumRepos++
 	// Remember visibility preference.

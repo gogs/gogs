@@ -3,7 +3,7 @@
 		<div class="item">
 			<div class="ui grid">
 				<div class="ui two wide column">
-					<img class="ui image" height="64px" src="{{.RelAvatarLink}}">
+					{{if .RelAvatarLink}}<img class="ui tiny image" src="{{.RelAvatarLink}}">{{else}}<i class="octicon octicon-repo" height="56px"></i>{{end}}
 				</div>
 				<div class="ui fourteen wide column">
 				<div class="ui header">
