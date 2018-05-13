@@ -2,8 +2,8 @@
 	{{range .Repos}}
 		<div class="item">
 			<div class="ui grid">
-				<div class="ui two wide column">
-					{{if .RelAvatarLink}}<img class="ui tiny image" src="{{.RelAvatarLink}}">{{else}}<i class="octicon octicon-repo" height="56px"></i>{{end}}
+				<div class="ui two wide column middle aligned">
+					{{if .RelAvatarLink}}<img class="ui tiny image" src="{{.RelAvatarLink}}">{{else}}<i class="mega-octicon octicon-repo"></i>{{end}}
 				</div>
 				<div class="ui fourteen wide column">
 				<div class="ui header">
@@ -14,6 +14,8 @@
 					<span><i class="octicon octicon-repo-forked"></i></span>
 				{{else if .IsMirror}}
 					<span><i class="octicon octicon-repo-clone"></i></span>
+				{{else}}
+					<span class="text green"><i class="octicon octicon-globe"></i></span>
 				{{end}}
 
 				<div class="ui right metas">
