@@ -297,7 +297,8 @@ func (repo *Repository) CustomAvatarPath() string {
 
 // GenerateRandomAvatar generates a random avatar for repository.
 func (repo *Repository) GenerateRandomAvatar() error {
-	seed := repo.Name
+	// Repository name not unique
+	seed := repo.Name + com.ToStr(repo.ID)
 
 	img, err := avatar.RandomImage([]byte(seed))
 	if err != nil {
