@@ -684,15 +684,11 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repo
 	} else {
 		// No avatar is uploaded but setting has been changed to enable,
 		// generate a random one when needed.
-		if ctxRepo.UseCustomAvatar && !com.IsFile(ctxRepo.CustomAvatarPath()) {
+		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
 			if err := ctxRepo.GenerateRandomAvatar(); err != nil {
 				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxRepo.ID, err)
 			}
 		}
-	}
-
-	if err := models.UpdateRepository(ctxRepo, false); err != nil {
-		return fmt.Errorf("UpdateRepository: %v", err)
 	}
 
 	return nil

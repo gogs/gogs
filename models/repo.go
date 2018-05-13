@@ -197,10 +197,6 @@ type Repository struct {
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-"`
 
-	// Avatar
-	Avatar          string `xorm:"VARCHAR(2048) NOT NULL"`
-	UseCustomAvatar bool
-
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
 	Updated     time.Time `xorm:"-"`
@@ -325,29 +321,21 @@ func (repo *Repository) GenerateRandomAvatar() error {
 }
 
 // RelAvatarLink returns relative avatar link to the site domain,
-// which includes app sub-url as prefix. However, it is possible
-// to return full URL if user enables Gravatar-like service.
+// which includes app sub-url as prefix.
+// Since Gravatar support not needed here - just check for image path.
+// And generate random avatar if no image found.
 func (repo *Repository) RelAvatarLink() string {
 	defaultImgUrl := setting.AppSubURL + "/img/avatar_default.png"
 	if repo.ID == -1 {
 		return defaultImgUrl
 	}
-
-	switch {
-		case repo.UseCustomAvatar:
-			if !com.IsExist(repo.CustomAvatarPath()) {
-				return defaultImgUrl
-			}
-			return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
-		case setting.DisableGravatar, setting.OfflineMode:
-			if !com.IsExist(repo.CustomAvatarPath()) {
-				if err := repo.GenerateRandomAvatar(); err != nil {
-					log.Error(3, "GenerateRandomAvatar: %v", err)
-				}
-			}
-			return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
+	if !com.IsExist(repo.CustomAvatarPath()) {
+		if err := repo.GenerateRandomAvatar(); err != nil {
+			log.Error(3, "GenerateRandomAvatar: %v", err)
+			return defaultImgUrl
+		}
 	}
-	return defaultImgUrl
+	return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
 }
 
 // AvatarLink returns user avatar absolute link.
@@ -360,7 +348,8 @@ func (repo *Repository) AvatarLink() string {
 }
 
 // UploadAvatar saves custom avatar for repository.
-// FIXME: split uploads to different subdirs in case we have massive repositories.
+// FIXME: split uploads to different subdirs
+// in case we have massive number of repositories.
 func (repo *Repository) UploadAvatar(data []byte) error {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
@@ -368,17 +357,6 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 	}
 
 	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	repo.UseCustomAvatar = true
-	if err = updateRepository(sess, repo, false); err != nil {
-		return fmt.Errorf("updateRepository: %v", err)
-	}
 
 	os.MkdirAll(setting.RepositoryAvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(repo.CustomAvatarPath())
@@ -391,18 +369,13 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 		return fmt.Errorf("Encode: %v", err)
 	}
 
-	return sess.Commit()
+	return nil
 }
 
 // DeleteAvatar deletes the repository custom avatar.
 func (repo *Repository) DeleteAvatar() error {
 	log.Trace("DeleteAvatar [%d]: %s", repo.ID, repo.CustomAvatarPath())
 	os.Remove(repo.CustomAvatarPath())
-
-	repo.UseCustomAvatar = false
-	if err := UpdateRepository(repo, false); err != nil {
-		return fmt.Errorf("UpdateRepository: %v", err)
-	}
 	return nil
 }
 
@@ -1175,8 +1148,6 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository,
 		EnableIssues: true,
 		EnablePulls:  true,
 	}
-
-	repo.UseCustomAvatar = true
 
 	sess := x.NewSession()
 	defer sess.Close()
