@@ -662,8 +662,6 @@ func SettingsDeleteAvatar(c *context.Context) {
 
 // FIXME: limit size.
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repository) error {
-	ctxRepo.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
-
 	if f.Avatar != nil {
 		r, err := f.Avatar.Open()
 		if err != nil {
@@ -690,6 +688,5 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repo
 			}
 		}
 	}
-
 	return nil
 }
