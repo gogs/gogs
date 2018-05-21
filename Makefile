@@ -70,7 +70,7 @@ clean-mac: clean
 	find . -name ".DS_Store" -print0 | xargs -0 rm
 
 test:
-	go test -cover -race ./...
+	go test -cover -race -v ./...
 
 fixme:
 	grep -rnw "FIXME" cmd routers models pkg

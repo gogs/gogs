@@ -1,0 +1,18 @@
+pipeline:
+  clone:
+    image: plugins/git
+  build:
+    image: golang
+    environment:
+      GOPATH: /drone
+    commands:
+      - go version
+      - go env
+      - make build
+
+  slack:
+    image: plugins/slack
+    webhook: https://hooks.slack.com/services/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
+    channel: build
+    when:
+      status: [ success, failure ]
