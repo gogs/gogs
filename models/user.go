@@ -120,6 +120,11 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// IDStr returns string representation of user's ID.
+func (u *User) IDStr() string {
+	return com.ToStr(u.ID)
+}
+
 func (u *User) APIFormat() *api.User {
 	return &api.User{
 		ID:        u.ID,
