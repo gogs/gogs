@@ -209,7 +209,9 @@ func LoginTwoFactorPost(c *context.Context) {
 		c.ServerError("GetTwoFactorByUserID", err)
 		return
 	}
-	valid, err := t.ValidateTOTP(c.Query("passcode"))
+
+	passcode := c.Query("passcode")
+	valid, err := t.ValidateTOTP(passcode)
 	if err != nil {
 		c.ServerError("ValidateTOTP", err)
 		return
@@ -224,6 +226,17 @@ func LoginTwoFactorPost(c *context.Context) {
 		c.ServerError("GetUserByID", err)
 		return
 	}
+
+	// Prevent same passcode from being reused
+	if c.Cache.IsExist(u.TwoFactorCacheKey(passcode)) {
+		c.Flash.Error(c.Tr("settings.two_factor_reused_passcode"))
+		c.Redirect(setting.AppSubURL + "/user/login/two_factor")
+		return
+	}
+	if err = c.Cache.Put(u.TwoFactorCacheKey(passcode), 1, 60); err != nil {
+		log.Error(2, "Failed to put cache 'two factor passcode': %v", err)
+	}
+
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
 }
 
