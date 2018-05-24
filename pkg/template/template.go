@@ -131,7 +131,7 @@ func Str2html(raw string) template.HTML {
 }
 
 func Md2html(raw string) template.HTML {
-	return template.HTML(markup.RawMarkdown([]byte(raw)))
+	return template.HTML(markup.RawMarkdown([]byte(raw), ""))
 }
 
 func List(l *list.List) chan interface{} {
