@@ -130,6 +130,10 @@ func Str2html(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
 }
 
+func Md2html(raw string) template.HTML {
+	return template.HTML(markup.RawMarkdown([]byte(raw)))
+}
+
 func List(l *list.List) chan interface{} {
 	e := l.Front()
 	c := make(chan interface{})
