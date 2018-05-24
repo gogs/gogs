@@ -65,6 +65,7 @@ func NewFuncMap() []template.FuncMap {
 		"Safe":             Safe,
 		"Sanitize":         bluemonday.UGCPolicy().Sanitize,
 		"Str2html":         Str2html,
+		"Md2html":          Md2html,
 		"TimeSince":        tool.TimeSince,
 		"RawTimeSince":     tool.RawTimeSince,
 		"FileSize":         tool.FileSize,
