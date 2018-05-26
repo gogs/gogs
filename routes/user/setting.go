@@ -119,7 +119,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User
 		ctxUser.AvatarEmail = f.Gravatar
 	}
 
-	if f.Avatar != nil {
+	if f.Avatar != nil && f.Avatar.Filename != "" {
 		r, err := f.Avatar.Open()
 		if err != nil {
 			return fmt.Errorf("Avatar.Open: %v", err)
