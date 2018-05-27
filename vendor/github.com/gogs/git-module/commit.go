@@ -163,11 +163,6 @@ func commitsCount(repoPath, revision, relpath string) (int64, error) {
 	return strconv.ParseInt(strings.TrimSpace(stdout), 10, 64)
 }
 
-// CommitsCount returns number of total commits of until given revision.
-func CommitsCount(repoPath, revision string) (int64, error) {
-	return commitsCount(repoPath, revision, "")
-}
-
 func (c *Commit) CommitsCount() (int64, error) {
 	return CommitsCount(c.repo.Path, c.ID.String())
 }
