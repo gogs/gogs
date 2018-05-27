@@ -5,7 +5,7 @@
 		{{template "base/alert" .}}
 		{{if .PageIsRepoHome}}
 			<p id="repo-desc">
-				{{if .Repository.Description}}<span class="description has-emoji">{{nl2br .Repository.Description}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
+				{{if .Repository.Description}}<span class="description has-emoji">{{NewLine2br .Repository.Description}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
 				<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
 			</p>
 			<div class="ui segment" id="git-stats">
