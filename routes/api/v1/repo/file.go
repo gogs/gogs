@@ -5,14 +5,14 @@
 package repo
 
 import (
-	"github.com/gogits/git-module"
+	"github.com/gogs/git-module"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/routes/repo"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/routes/repo"
 )
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-raw-content
+// https://github.com/gogs/go-gogs-client/wiki/Repositories-Contents#download-raw-content
 func GetRawFile(c *context.APIContext) {
 	if !c.Repo.HasAccess() {
 		c.Status(404)
@@ -38,7 +38,7 @@ func GetRawFile(c *context.APIContext) {
 	}
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Contents#download-archive
+// https://github.com/gogs/go-gogs-client/wiki/Repositories-Contents#download-archive
 func GetArchive(c *context.APIContext) {
 	repoPath := models.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)

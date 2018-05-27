@@ -22,9 +22,9 @@ import (
 	"github.com/Unknwon/i18n"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/chardet"
+	"github.com/gogs/chardet"
 
-	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 // MD5Bytes encodes string to MD5 bytes.

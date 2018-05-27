@@ -19,11 +19,11 @@ import (
 	gouuid "github.com/satori/go.uuid"
 	log "gopkg.in/clog.v1"
 
-	git "github.com/gogits/git-module"
+	git "github.com/gogs/git-module"
 
-	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/process"
-	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/process"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 // ___________    .___.__  __    ___________.__.__
