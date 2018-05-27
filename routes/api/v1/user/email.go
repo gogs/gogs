@@ -5,15 +5,15 @@
 package user
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routes/api/v1/convert"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/routes/api/v1/convert"
 )
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
+// https://github.com/gogs/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
 func ListEmails(c *context.APIContext) {
 	emails, err := models.GetEmailAddresses(c.User.ID)
 	if err != nil {
@@ -27,7 +27,7 @@ func ListEmails(c *context.APIContext) {
 	c.JSON(200, &apiEmails)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Emails#add-email-addresses
+// https://github.com/gogs/go-gogs-client/wiki/Users-Emails#add-email-addresses
 func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
 		c.Status(422)
@@ -59,7 +59,7 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	c.JSON(201, &apiEmails)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Emails#delete-email-addresses
+// https://github.com/gogs/go-gogs-client/wiki/Users-Emails#delete-email-addresses
 func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
 		c.Status(204)

@@ -6,10 +6,10 @@ package repo
 import (
 	"time"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
 )
 
 func ListIssueComments(c *context.APIContext) {

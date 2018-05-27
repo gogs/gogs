@@ -12,7 +12,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 type APIContext struct {
@@ -20,8 +20,8 @@ type APIContext struct {
 	Org *APIOrganization
 }
 
-// FIXME: move to github.com/gogits/go-gogs-client
-const DOC_URL = "https://github.com/gogits/go-gogs-client/wiki"
+// FIXME: move to github.com/gogs/go-gogs-client
+const DOC_URL = "https://github.com/gogs/go-gogs-client/wiki"
 
 // Error responses error message to client with given message.
 // If status is 500, also it prints error to log.

@@ -5,10 +5,10 @@
 package user
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
 )
 
 func responseApiUsers(c *context.APIContext, users []*models.User) {
@@ -32,7 +32,7 @@ func ListMyFollowers(c *context.APIContext) {
 	listUserFollowers(c, c.User)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Followers#list-followers-of-a-user
+// https://github.com/gogs/go-gogs-client/wiki/Users-Followers#list-followers-of-a-user
 func ListFollowers(c *context.APIContext) {
 	u := GetUserByParams(c)
 	if c.Written() {
@@ -54,7 +54,7 @@ func ListMyFollowing(c *context.APIContext) {
 	listUserFollowing(c, c.User)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Followers#list-users-followed-by-another-user
+// https://github.com/gogs/go-gogs-client/wiki/Users-Followers#list-users-followed-by-another-user
 func ListFollowing(c *context.APIContext) {
 	u := GetUserByParams(c)
 	if c.Written() {
@@ -71,7 +71,7 @@ func checkUserFollowing(c *context.APIContext, u *models.User, followID int64) {
 	}
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Followers#check-if-you-are-following-a-user
+// https://github.com/gogs/go-gogs-client/wiki/Users-Followers#check-if-you-are-following-a-user
 func CheckMyFollowing(c *context.APIContext) {
 	target := GetUserByParams(c)
 	if c.Written() {
@@ -80,7 +80,7 @@ func CheckMyFollowing(c *context.APIContext) {
 	checkUserFollowing(c, c.User, target.ID)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Followers#check-if-one-user-follows-another
+// https://github.com/gogs/go-gogs-client/wiki/Users-Followers#check-if-one-user-follows-another
 func CheckFollowing(c *context.APIContext) {
 	u := GetUserByParams(c)
 	if c.Written() {
@@ -93,7 +93,7 @@ func CheckFollowing(c *context.APIContext) {
 	checkUserFollowing(c, u, target.ID)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Followers#follow-a-user
+// https://github.com/gogs/go-gogs-client/wiki/Users-Followers#follow-a-user
 func Follow(c *context.APIContext) {
 	target := GetUserByParams(c)
 	if c.Written() {
@@ -106,7 +106,7 @@ func Follow(c *context.APIContext) {
 	c.Status(204)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Users-Followers#unfollow-a-user
+// https://github.com/gogs/go-gogs-client/wiki/Users-Followers#unfollow-a-user
 func Unfollow(c *context.APIContext) {
 	target := GetUserByParams(c)
 	if c.Written() {

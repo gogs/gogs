@@ -9,15 +9,15 @@ import (
 
 	"github.com/Unknwon/com"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/routes/api/v1/convert"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/routes/api/v1/convert"
 )
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#list-hooks
+// https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
 func ListHooks(c *context.APIContext) {
 	hooks, err := models.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
@@ -32,7 +32,7 @@ func ListHooks(c *context.APIContext) {
 	c.JSON(200, &apiHooks)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#create-a-hook
+// https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
 func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	if !models.IsValidHookTaskType(form.Type) {
 		c.Error(422, "", "Invalid hook type")
@@ -103,7 +103,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	c.JSON(201, convert.ToHook(c.Repo.RepoLink, w))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories#edit-a-hook
+// https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
 func EditHook(c *context.APIContext, form api.EditHookOption) {
 	w, err := models.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {

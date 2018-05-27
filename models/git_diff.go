@@ -15,11 +15,11 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 
-	"github.com/gogits/git-module"
+	"github.com/gogs/git-module"
 
-	"github.com/gogits/gogs/pkg/tool"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/pkg/template/highlight"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/template/highlight"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 type DiffSection struct {

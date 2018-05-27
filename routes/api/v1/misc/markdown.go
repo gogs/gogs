@@ -5,13 +5,13 @@
 package misc
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/markup"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/markup"
 )
 
-// https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
+// https://github.com/gogs/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
 func Markdown(c *context.APIContext, form api.MarkdownOption) {
 	if c.HasApiError() {
 		c.Error(422, "", c.GetErrMsg())
@@ -31,7 +31,7 @@ func Markdown(c *context.APIContext, form api.MarkdownOption) {
 	}
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
+// https://github.com/gogs/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
 func MarkdownRaw(c *context.APIContext) {
 	body, err := c.Req.Body().Bytes()
 	if err != nil {
