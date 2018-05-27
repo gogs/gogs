@@ -320,6 +320,15 @@ func SyncMirrors() {
 			continue
 		}
 
+		// TODO: Work on #2017 and #4528 together
+		// 1. Get commits after last update time
+		// 2. Simulate push event for new commits, see models/repo_editor.go:164
+		// 		This automatically triggers the "push" webhook
+
+		// ******************************
+		// EDIT AREA - START
+		// ******************************
+
 		// Get latest commit date and compare to current repository updated time,
 		// update if latest commit date is newer.
 		commitDate, err := git.GetLatestCommitDate(m.Repo.RepoPath(), "")
@@ -329,6 +338,10 @@ func SyncMirrors() {
 		} else if commitDate.Before(m.Repo.Updated) {
 			continue
 		}
+
+		// ******************************
+		// EDIT AREA - END
+		// ******************************
 
 		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", commitDate.Unix(), m.RepoID); err != nil {
 			log.Error(2, "Update repository 'updated_unix' [%s]: %v", m.RepoID, err)
