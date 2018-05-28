@@ -5,9 +5,9 @@
 package dev
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 func TemplatePreview(c *context.Context) {

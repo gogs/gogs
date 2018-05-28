@@ -5,12 +5,12 @@
 package org
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/routes/api/v1/convert"
-	"github.com/gogits/gogs/routes/api/v1/user"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/routes/api/v1/convert"
+	"github.com/gogs/gogs/routes/api/v1/user"
 )
 
 func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *models.User) {
@@ -54,17 +54,17 @@ func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
 	c.JSON(200, &apiOrgs)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Organizations#list-your-organizations
+// https://github.com/gogs/go-gogs-client/wiki/Organizations#list-your-organizations
 func ListMyOrgs(c *context.APIContext) {
 	listUserOrgs(c, c.User, true)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Organizations#create-your-organization
+// https://github.com/gogs/go-gogs-client/wiki/Organizations#create-your-organization
 func CreateMyOrg(c *context.APIContext, apiForm api.CreateOrgOption) {
 	CreateOrgForUser(c, apiForm, c.User)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Organizations#list-user-organizations
+// https://github.com/gogs/go-gogs-client/wiki/Organizations#list-user-organizations
 func ListUserOrgs(c *context.APIContext) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
@@ -73,12 +73,12 @@ func ListUserOrgs(c *context.APIContext) {
 	listUserOrgs(c, u, false)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Organizations#get-an-organization
+// https://github.com/gogs/go-gogs-client/wiki/Organizations#get-an-organization
 func Get(c *context.APIContext) {
 	c.JSON(200, convert.ToOrganization(c.Org.Organization))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Organizations#edit-an-organization
+// https://github.com/gogs/go-gogs-client/wiki/Organizations#edit-an-organization
 func Edit(c *context.APIContext, form api.EditOrgOption) {
 	org := c.Org.Organization
 	if !org.IsOwnedBy(c.User.ID) {

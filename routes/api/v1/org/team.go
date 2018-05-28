@@ -5,10 +5,10 @@
 package org
 
 import (
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/routes/api/v1/convert"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/routes/api/v1/convert"
 )
 
 func ListTeams(c *context.APIContext) {

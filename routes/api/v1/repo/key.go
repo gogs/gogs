@@ -7,19 +7,19 @@ package repo
 import (
 	"fmt"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routes/api/v1/convert"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/routes/api/v1/convert"
 )
 
 func composeDeployKeysAPILink(repoPath string) string {
 	return setting.AppURL + "api/v1/repos/" + repoPath + "/keys/"
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
+// https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
 func ListDeployKeys(c *context.APIContext) {
 	keys, err := models.ListDeployKeys(c.Repo.Repository.ID)
 	if err != nil {
@@ -40,7 +40,7 @@ func ListDeployKeys(c *context.APIContext) {
 	c.JSON(200, &apiKeys)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
+// https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
 func GetDeployKey(c *context.APIContext) {
 	key, err := models.GetDeployKeyByID(c.ParamsInt64(":id"))
 	if err != nil {
@@ -80,7 +80,7 @@ func HandleAddKeyError(c *context.APIContext, err error) {
 	}
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
+// https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
 func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
 	content, err := models.CheckPublicKeyString(form.Key)
 	if err != nil {
@@ -99,7 +99,7 @@ func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
 	c.JSON(201, convert.ToDeployKey(apiLink, key))
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
+// https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
 func DeleteDeploykey(c *context.APIContext) {
 	if err := models.DeleteDeployKey(c.User, c.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {

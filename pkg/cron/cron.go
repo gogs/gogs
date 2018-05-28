@@ -9,10 +9,10 @@ import (
 
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/cron"
+	"github.com/gogs/cron"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 var c = cron.New()

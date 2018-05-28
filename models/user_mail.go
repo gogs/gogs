@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gogits/gogs/models/errors"
+	"github.com/gogs/gogs/models/errors"
 )
 
 // EmailAdresses is the list of all email addresses of a user. Can contain the

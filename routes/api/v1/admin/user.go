@@ -7,14 +7,14 @@ package admin
 import (
 	log "gopkg.in/clog.v1"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/mailer"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/routes/api/v1/user"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/mailer"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/routes/api/v1/user"
 )
 
 func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, loginName string) {
@@ -37,7 +37,7 @@ func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, log
 	u.LoginName = loginName
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-new-user
+// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#create-a-new-user
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
@@ -74,7 +74,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	c.JSON(201, u.APIFormat())
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
+// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
 func EditUser(c *context.APIContext, form api.EditUserOption) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
@@ -130,7 +130,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 	c.JSON(200, u.APIFormat())
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#delete-a-user
+// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#delete-a-user
 func DeleteUser(c *context.APIContext) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
@@ -151,7 +151,7 @@ func DeleteUser(c *context.APIContext) {
 	c.Status(204)
 }
 
-// https://github.com/gogits/go-gogs-client/wiki/Administration-Users#create-a-public-key-for-user
+// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#create-a-public-key-for-user
 func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
 	u := user.GetUserByParams(c)
 	if c.Written() {

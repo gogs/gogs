@@ -21,10 +21,10 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/pkg/markup"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/pkg/tool"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/markup"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 // TODO: only initialize map once and save to a local variable to reduce copies.
@@ -65,6 +65,7 @@ func NewFuncMap() []template.FuncMap {
 		"Safe":             Safe,
 		"Sanitize":         bluemonday.UGCPolicy().Sanitize,
 		"Str2html":         Str2html,
+		"NewLine2br":       NewLine2br,
 		"TimeSince":        tool.TimeSince,
 		"RawTimeSince":     tool.RawTimeSince,
 		"FileSize":         tool.FileSize,
@@ -128,6 +129,11 @@ func Safe(raw string) template.HTML {
 
 func Str2html(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
+}
+
+// Simple filter, converts newline symbols to <br>
+func NewLine2br(raw string) template.HTML {
+	return template.HTML(strings.Replace(raw, "\n", "<br>", -1))
 }
 
 func List(l *list.List) chan interface{} {

@@ -18,13 +18,13 @@ import (
 	"github.com/pquerna/otp/totp"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/models/errors"
-	"github.com/gogits/gogs/pkg/context"
-	"github.com/gogits/gogs/pkg/form"
-	"github.com/gogits/gogs/pkg/mailer"
-	"github.com/gogits/gogs/pkg/setting"
-	"github.com/gogits/gogs/pkg/tool"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/context"
+	"github.com/gogs/gogs/pkg/form"
+	"github.com/gogs/gogs/pkg/mailer"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 const (
@@ -119,7 +119,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User
 		ctxUser.AvatarEmail = f.Gravatar
 	}
 
-	if f.Avatar != nil {
+	if f.Avatar != nil && f.Avatar.Filename != "" {
 		r, err := f.Avatar.Open()
 		if err != nil {
 			return fmt.Errorf("Avatar.Open: %v", err)
