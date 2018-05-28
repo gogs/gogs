@@ -65,6 +65,7 @@ func NewFuncMap() []template.FuncMap {
 		"Safe":             Safe,
 		"Sanitize":         bluemonday.UGCPolicy().Sanitize,
 		"Str2html":         Str2html,
+		"NewLine2br":       NewLine2br,
 		"TimeSince":        tool.TimeSince,
 		"RawTimeSince":     tool.RawTimeSince,
 		"FileSize":         tool.FileSize,
@@ -128,6 +129,11 @@ func Safe(raw string) template.HTML {
 
 func Str2html(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
+}
+
+// Simple filter, converts newline symbols to <br>
+func NewLine2br(raw string) template.HTML {
+	return template.HTML(strings.Replace(raw, "\n", "<br>", -1))
 }
 
 func List(l *list.List) chan interface{} {
