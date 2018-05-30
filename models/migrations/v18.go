@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-xorm/xorm"
-	"github.com/gogits/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 func updateRepositoryDescriptionField(x *xorm.Engine) error {
