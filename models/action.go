@@ -27,7 +27,7 @@ import (
 
 type ActionType int
 
-// To maintain backward compatibility only append to the end of list
+// Note: To maintain backward compatibility only append to the end of list
 const (
 	ACTION_CREATE_REPO         ActionType = iota + 1 // 1
 	ACTION_RENAME_REPO                               // 2
@@ -48,6 +48,9 @@ const (
 	ACTION_DELETE_BRANCH                             // 17
 	ACTION_DELETE_TAG                                // 18
 	ACTION_FORK_REPO                                 // 19
+	ACTION_MIRROR_SYNC_PUSH                          // 20
+	ACTION_MIRROR_SYNC_CREATE                        // 21
+	ACTION_MIRROR_SYNC_DELETE                        // 22
 )
 
 var (
@@ -665,6 +668,40 @@ func mergePullRequestAction(e Engine, doer *User, repo *Repository, issue *Issue
 // MergePullRequestAction adds new action for merging pull request.
 func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error {
 	return mergePullRequestAction(x, actUser, repo, pull)
+}
+
+func mirrorSyncAction(opType ActionType, repo *Repository, refName string, data []byte) error {
+	return NotifyWatchers(&Action{
+		ActUserID:    repo.OwnerID,
+		ActUserName:  repo.MustOwner().Name,
+		OpType:       opType,
+		Content:      string(data),
+		RepoID:       repo.ID,
+		RepoUserName: repo.MustOwner().Name,
+		RepoName:     repo.Name,
+		RefName:      refName,
+		IsPrivate:    repo.IsPrivate,
+	})
+}
+
+// MirrorSyncPushAction adds new action for mirror synchronization of pushed commits.
+func MirrorSyncPushAction(repo *Repository, refName string, commits *PushCommits) error {
+	data, err := json.Marshal(commits)
+	if err != nil {
+		return err
+	}
+
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_PUSH, repo, refName, data)
+}
+
+// MirrorSyncCreateAction adds new action for mirror synchronization of new reference.
+func MirrorSyncCreateAction(repo *Repository, refName string) error {
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_CREATE, repo, refName, nil)
+}
+
+// MirrorSyncCreateAction adds new action for mirror synchronization of delete reference.
+func MirrorSyncDeleteAction(repo *Repository, refName string) error {
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_DELETE, repo, refName, nil)
 }
 
 // GetFeeds returns action list of given user in given context.
