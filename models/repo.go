@@ -15,7 +15,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
 	"image"
 	_ "image/jpeg"
 	"image/png"
