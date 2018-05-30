@@ -111,7 +111,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		if f.Interval > 0 {
 			c.Repo.Mirror.EnablePrune = f.EnablePrune
 			c.Repo.Mirror.Interval = f.Interval
-			c.Repo.Mirror.NextUpdate = time.Now().Add(time.Duration(f.Interval) * time.Hour)
+			c.Repo.Mirror.NextSync = time.Now().Add(time.Duration(f.Interval) * time.Hour)
 			if err := models.UpdateMirror(c.Repo.Mirror); err != nil {
 				c.ServerError("UpdateMirror", err)
 				return

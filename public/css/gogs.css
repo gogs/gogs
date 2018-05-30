@@ -3039,7 +3039,7 @@ footer .ui.language .menu {
 .feeds .news .push.news .content ul {
   font-size: 13px;
   list-style: none;
-  padding-left: 10px;
+  padding-left: 0;
 }
 .feeds .news .push.news .content ul img {
   margin-bottom: -2px;
