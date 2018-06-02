@@ -131,9 +131,9 @@ func Str2html(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
 }
 
-// Simple filter, converts newline symbols to <br>
-func NewLine2br(raw string) template.HTML {
-	return template.HTML(strings.Replace(raw, "\n", "<br>", -1))
+// NewLine2br simply replaces "\n" to "<br>".
+func NewLine2br(raw string) string {
+	return strings.Replace(raw, "\n", "<br>", -1)
 }
 
 func List(l *list.List) chan interface{} {
