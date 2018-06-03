@@ -72,16 +72,6 @@
 				</div>
 			</div>
 		</div>
-		<!-- Issue Comment -->
-		<div class="seven wide column">
-			<div class="field">
-				<div class="ui checkbox">
-					<input class="hidden" name="issue_comment" type="checkbox" tabindex="0" {{if .Webhook.IssueComment}}checked{{end}}>
-					<label>{{.i18n.Tr "repo.settings.event_issue_comment"}}</label>
-					<span class="help">{{.i18n.Tr "repo.settings.event_issue_comment_desc"}}</span>
-				</div>
-			</div>
-		</div>
 		<!-- Pull Request -->
 		<div class="seven wide column">
 			<div class="field">
@@ -89,6 +79,16 @@
 					<input class="hidden" name="pull_request" type="checkbox" tabindex="0" {{if .Webhook.PullRequest}}checked{{end}}>
 					<label>{{.i18n.Tr "repo.settings.event_pull_request"}}</label>
 					<span class="help">{{.i18n.Tr "repo.settings.event_pull_request_desc"}}</span>
+				</div>
+			</div>
+		</div>
+		<!-- Issue Comment -->
+		<div class="seven wide column">
+			<div class="field">
+				<div class="ui checkbox">
+					<input class="hidden" name="issue_comment" type="checkbox" tabindex="0" {{if .Webhook.IssueComment}}checked{{end}}>
+					<label>{{.i18n.Tr "repo.settings.event_issue_comment"}}</label>
+					<span class="help">{{.i18n.Tr "repo.settings.event_issue_comment_desc"}}</span>
 				</div>
 			</div>
 		</div>

@@ -68,8 +68,8 @@ type HookEvents struct {
 	Fork         bool `json:"fork"`
 	Push         bool `json:"push"`
 	Issues       bool `json:"issues"`
-	IssueComment bool `json:"issue_comment"`
 	PullRequest  bool `json:"pull_request"`
+	IssueComment bool `json:"issue_comment"`
 	Release      bool `json:"release"`
 }
 
@@ -186,16 +186,16 @@ func (w *Webhook) HasIssuesEvent() bool {
 		(w.ChooseEvents && w.HookEvents.Issues)
 }
 
-// HasIssueCommentEvent returns true if hook enabled issue comment event.
-func (w *Webhook) HasIssueCommentEvent() bool {
-	return w.SendEverything ||
-		(w.ChooseEvents && w.HookEvents.IssueComment)
-}
-
 // HasPullRequestEvent returns true if hook enabled pull request event.
 func (w *Webhook) HasPullRequestEvent() bool {
 	return w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.PullRequest)
+}
+
+// HasIssueCommentEvent returns true if hook enabled issue comment event.
+func (w *Webhook) HasIssueCommentEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.IssueComment)
 }
 
 // HasReleaseEvent returns true if hook enabled release event.
@@ -210,15 +210,15 @@ type eventChecker struct {
 }
 
 func (w *Webhook) EventsArray() []string {
-	events := make([]string, 0, 7)
+	events := make([]string, 0, 8)
 	eventCheckers := []eventChecker{
 		{w.HasCreateEvent, HOOK_EVENT_CREATE},
 		{w.HasDeleteEvent, HOOK_EVENT_DELETE},
 		{w.HasForkEvent, HOOK_EVENT_FORK},
 		{w.HasPushEvent, HOOK_EVENT_PUSH},
 		{w.HasIssuesEvent, HOOK_EVENT_ISSUES},
-		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
 		{w.HasPullRequestEvent, HOOK_EVENT_PULL_REQUEST},
+		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
 		{w.HasReleaseEvent, HOOK_EVENT_RELEASE},
 	}
 	for _, c := range eventCheckers {
@@ -392,8 +392,8 @@ const (
 	HOOK_EVENT_FORK          HookEventType = "fork"
 	HOOK_EVENT_PUSH          HookEventType = "push"
 	HOOK_EVENT_ISSUES        HookEventType = "issues"
-	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
 	HOOK_EVENT_PULL_REQUEST  HookEventType = "pull_request"
+	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
 	HOOK_EVENT_RELEASE       HookEventType = "release"
 )
 
@@ -549,12 +549,12 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			if !w.HasIssuesEvent() {
 				continue
 			}
-		case HOOK_EVENT_ISSUE_COMMENT:
-			if !w.HasIssueCommentEvent() {
-				continue
-			}
 		case HOOK_EVENT_PULL_REQUEST:
 			if !w.HasPullRequestEvent() {
+				continue
+			}
+		case HOOK_EVENT_ISSUE_COMMENT:
+			if !w.HasIssueCommentEvent() {
 				continue
 			}
 		case HOOK_EVENT_RELEASE:

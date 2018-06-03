@@ -398,6 +398,11 @@ func SyncMirrors() {
 		}
 
 		for _, result := range results {
+			// Discard GitHub pull requests, i.e. refs/pull/*
+			if strings.HasPrefix(result.refName, "refs/pull/") {
+				continue
+			}
+
 			// Create reference
 			if result.oldCommitID == GIT_SHORT_EMPTY_SHA {
 				if err = MirrorSyncCreateAction(m.Repo, result.refName); err != nil {
@@ -415,13 +420,27 @@ func SyncMirrors() {
 			}
 
 			// Push commits
-			commits, err := gitRepo.CommitsBetweenIDs(result.newCommitID, result.oldCommitID)
+			oldCommitID, err := git.GetFullCommitID(gitRepo.Path, result.oldCommitID)
 			if err != nil {
-				log.Error(2, "CommitsBetweenIDs [repo_id: %d, new_commit_id: %s, old_commit_id: %s]: %v", m.RepoID, result.newCommitID, result.oldCommitID, err)
+				log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
 				continue
 			}
-			pushCommits := ListToPushCommits(commits)
-			if err = MirrorSyncPushAction(m.Repo, result.refName, pushCommits); err != nil {
+			newCommitID, err := git.GetFullCommitID(gitRepo.Path, result.newCommitID)
+			if err != nil {
+				log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
+				continue
+			}
+			commits, err := gitRepo.CommitsBetweenIDs(newCommitID, oldCommitID)
+			if err != nil {
+				log.Error(2, "CommitsBetweenIDs [repo_id: %d, new_commit_id: %s, old_commit_id: %s]: %v", m.RepoID, newCommitID, oldCommitID, err)
+				continue
+			}
+			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{
+				RefName:     result.refName,
+				OldCommitID: oldCommitID,
+				NewCommitID: newCommitID,
+				Commits:     ListToPushCommits(commits),
+			}); err != nil {
 				log.Error(2, "MirrorSyncPushAction [repo_id: %d]: %v", m.RepoID, err)
 				continue
 			}

@@ -254,7 +254,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoLink string) ([]*api.PayloadCommit, error) {
+func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.PayloadCommit, error) {
 	commits := make([]*api.PayloadCommit, len(pc.Commits))
 	for i, commit := range pc.Commits {
 		authorUsername := ""
@@ -281,7 +281,7 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoLink string) ([]*api.Pa
 		commits[i] = &api.PayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
-			URL:     fmt.Sprintf("%s/commit/%s", repoLink, commit.Sha1),
+			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
 			Author: &api.PayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
@@ -684,14 +684,45 @@ func mirrorSyncAction(opType ActionType, repo *Repository, refName string, data 
 	})
 }
 
+type MirrorSyncPushActionOptions struct {
+	RefName     string
+	OldCommitID string
+	NewCommitID string
+	Commits     *PushCommits
+}
+
 // MirrorSyncPushAction adds new action for mirror synchronization of pushed commits.
-func MirrorSyncPushAction(repo *Repository, refName string, commits *PushCommits) error {
-	data, err := json.Marshal(commits)
+func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) error {
+	if len(opts.Commits.Commits) > setting.UI.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:setting.UI.FeedMaxCommitNum]
+	}
+
+	apiCommits, err := opts.Commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
+	if err != nil {
+		return fmt.Errorf("ToApiPayloadCommits: %v", err)
+	}
+
+	opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
+	apiPusher := repo.MustOwner().APIFormat()
+	if err := PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
+		Ref:        opts.RefName,
+		Before:     opts.OldCommitID,
+		After:      opts.NewCommitID,
+		CompareURL: setting.AppURL + opts.Commits.CompareURL,
+		Commits:    apiCommits,
+		Repo:       repo.APIFormat(nil),
+		Pusher:     apiPusher,
+		Sender:     apiPusher,
+	}); err != nil {
+		return fmt.Errorf("PrepareWebhooks: %v", err)
+	}
+
+	data, err := json.Marshal(opts.Commits)
 	if err != nil {
 		return err
 	}
 
-	return mirrorSyncAction(ACTION_MIRROR_SYNC_PUSH, repo, refName, data)
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_PUSH, repo, opts.RefName, data)
 }
 
 // MirrorSyncCreateAction adds new action for mirror synchronization of new reference.
