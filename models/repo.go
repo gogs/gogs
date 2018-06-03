@@ -150,8 +150,6 @@ type RepositoryLabel struct {
 	Color		string `xorm:"VARCHAR(7)"`
 	IsPrivate	bool
 
-	NumRepo		int
-
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
 	Updated     time.Time `xorm:"-"`
@@ -1867,6 +1865,14 @@ func getRepositoryCount(e Engine, u *User) (int64, error) {
 // GetRepositoryCount returns the total number of repositories of user.
 func GetRepositoryCount(u *User) (int64, error) {
 	return getRepositoryCount(x, u)
+}
+
+func getRepositoryLabelCount(e Engine, u *User) (int64, error) {
+	return x.Count(&RepositoryLabel{OwnerID: u.ID})
+}
+
+func GetRepositoryLabelCount(u *User) (int64, error) {
+	return getRepositoryLabelCount(x, u)
 }
 
 type SearchRepoOptions struct {

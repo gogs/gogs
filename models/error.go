@@ -93,6 +93,19 @@ func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has membership of organizations [uid: %d]", err.UID)
 }
 
+type ErrUserHasRepoLabels struct {
+	UID int64
+}
+
+func IsErrUserHasRepoLabels(err error) bool {
+	_, ok := err.(ErrUserHasRepoLabels)
+	return ok
+}
+
+func (err ErrUserHasRepoLabels) Error() string {
+    return fmt.Sprintf("user still has repository labels [uid: %d]", err.UID)
+}
+
 //  __      __.__ __   .__
 // /  \    /  \__|  | _|__|
 // \   \/\/   /  |  |/ /  |

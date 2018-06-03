@@ -751,6 +751,14 @@ func deleteUser(e *xorm.Session, u *User) error {
 		return ErrUserHasOrgs{UID: u.ID}
 	}
 
+	// Check repository labels
+	count, err = GetRepositoryLabelCount(u)
+	if err != nil {
+		return fmt.Errorf("GetRepositoryLabelCount: %v", err)
+	} else if count > 0 {
+		return ErrUserHasRepoLabels{UID: u.ID}
+	}
+
 	// ***** START: Watch *****
 	watches := make([]*Watch, 0, 10)
 	if err = e.Find(&watches, &Watch{UserID: u.ID}); err != nil {

@@ -697,6 +697,9 @@ func SettingsDelete(c *context.Context) {
 			case models.IsErrUserHasOrgs(err):
 				c.Flash.Error(c.Tr("form.still_has_org"))
 				c.Redirect(setting.AppSubURL + "/user/settings/delete")
+			case models.IsErrUserHasRepoLabels(err):
+				c.Flash.Error(c.Tr("form.still_has_repo_label"))
+				c.Redirect(setting.AppSubURL + "/user/settings/delete")
 			default:
 				c.ServerError("DeleteUser", err)
 			}
