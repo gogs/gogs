@@ -525,6 +525,20 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 	return pr, nil
 }
 
+// CheckPullRequestExist returns if the pull request has been create before create a new pull request
+func CheckPullRequestExist(headRepoID, baseRepoID int64, headBranch, baseBranch string) (bool, error) {
+	pr := new(PullRequest)
+	has, err := x.Where("head_repo_id=? AND head_branch=? AND base_repo_id=? AND base_branch=? AND has_merged=? AND issue.is_closed=?",
+		headRepoID, headBranch, baseRepoID, baseBranch, false, false).
+		Join("INNER", "issue", "issue.id=pull_request.issue_id").Get(pr)
+	if err != nil {
+		return false, err
+	} else if has {
+		return true, ErrPullRequestExist{pr.ID, pr.IssueID, headRepoID, baseRepoID, headBranch, baseBranch}
+	}
+	return false, nil
+}
+
 // GetUnmergedPullRequestsByHeadInfo returnss all pull requests that are open and has not been merged
 // by given head information (repo and branch).
 func GetUnmergedPullRequestsByHeadInfo(repoID int64, branch string) ([]*PullRequest, error) {

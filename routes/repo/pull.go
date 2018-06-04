@@ -655,6 +655,14 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
+	// check one people send the pr at the same time
+	has , err := models.CheckPullRequestExist(headRepo.ID, c.Repo.Repository.ID, headBranch, baseBranch)
+
+	if has || err != nil {
+		c.ServerError("CheckPullRequestExist",err)
+		return
+	}
+
 	labelIDs, milestoneID, assigneeID := ValidateRepoMetas(c, f)
 	if c.Written() {
 		return
