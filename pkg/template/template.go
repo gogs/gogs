@@ -131,8 +131,7 @@ func Str2html(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
 }
 
-// Simple filter, converts newline symbols to <br>
-// This is middle-filter, output must be sanitized by Str2Html
+// NewLine2br simply replaces "\n" to "<br>".
 func NewLine2br(raw string) string {
 	return strings.Replace(raw, "\n", "<br>", -1)
 }
@@ -273,6 +272,8 @@ func ActionIcon(opType int) string {
 		return "alert"
 	case 19: // Fork a repository
 		return "repo-forked"
+	case 20, 21, 22: // Mirror sync
+		return "repo-clone"
 	default:
 		return "invalid type"
 	}

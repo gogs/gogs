@@ -278,18 +278,3 @@ func GetRepoSize(repoPath string) (*CountObject, error) {
 
 	return countObject, nil
 }
-
-// GetLatestCommitDate returns the date of latest commit of repository.
-// If branch is empty, it returns the latest commit across all branches.
-func GetLatestCommitDate(repoPath, branch string) (time.Time, error) {
-	cmd := NewCommand("for-each-ref", "--count=1", "--sort=-committerdate", "--format=%(committerdate:iso8601)")
-	if len(branch) > 0 {
-		cmd.AddArguments("refs/heads/" + branch)
-	}
-	stdout, err := cmd.RunInDir(repoPath)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return time.Parse("2006-01-02 15:04:05 -0700", strings.TrimSpace(stdout))
-}

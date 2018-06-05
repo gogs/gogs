@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mcuadros/go-version"
 )
@@ -125,15 +126,10 @@ func (repo *Repository) getCommit(id sha1) (*Commit, error) {
 
 // GetCommit returns commit object of by ID string.
 func (repo *Repository) GetCommit(commitID string) (*Commit, error) {
-	if len(commitID) != 40 {
-		var err error
-		commitID, err = NewCommand("rev-parse", commitID).RunInDir(repo.Path)
-		if err != nil {
-			if strings.Contains(err.Error(), "exit status 128") {
-				return nil, ErrNotExist{commitID, ""}
-			}
-			return nil, err
-		}
+	var err error
+	commitID, err = GetFullCommitID(repo.Path, commitID)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommitFullID: %v", err)
 	}
 	id, err := NewIDFromString(commitID)
 	if err != nil {
@@ -378,4 +374,35 @@ func (repo *Repository) getCommitsBefore(id sha1) (*list.List, error) {
 func (repo *Repository) getCommitsBeforeLimit(id sha1, num int) (*list.List, error) {
 	l := list.New()
 	return l, repo.commitsBefore(l, nil, id, 1, num)
+}
+
+// CommitsAfterDate returns a list of commits which committed after given date.
+// The format of date should be in RFC3339.
+func (repo *Repository) CommitsAfterDate(date string) (*list.List, error) {
+	stdout, err := NewCommand("log", _PRETTY_LOG_FORMAT, "--since="+date).RunInDirBytes(repo.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return repo.parsePrettyFormatLogToList(stdout)
+}
+
+// CommitsCount returns number of total commits of until given revision.
+func CommitsCount(repoPath, revision string) (int64, error) {
+	return commitsCount(repoPath, revision, "")
+}
+
+// GetLatestCommitDate returns the date of latest commit of repository.
+// If branch is empty, it returns the latest commit across all branches.
+func GetLatestCommitDate(repoPath, branch string) (time.Time, error) {
+	cmd := NewCommand("for-each-ref", "--count=1", "--sort=-committerdate", "--format=%(committerdate:iso8601)")
+	if len(branch) > 0 {
+		cmd.AddArguments("refs/heads/" + branch)
+	}
+	stdout, err := cmd.RunInDir(repoPath)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Parse("2006-01-02 15:04:05 -0700", strings.TrimSpace(stdout))
 }

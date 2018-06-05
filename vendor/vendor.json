@@ -207,6 +207,12 @@
 			"revisionTime": "2017-03-01T03:54:11Z"
 		},
 		{
+			"checksumSHA1": "183Lk59tqgDzO3eZeer4g1w/hk0=",
+			"path": "github.com/gogs/git-module",
+			"revision": "c64f3cabc82d33dfdb0cd47a5dda4e29368f3da2",
+			"revisionTime": "2018-06-03T12:25:16Z"
+		},
+		{
 			"checksumSHA1": "MLO0PyrK2MUO6A7Z9PxWuu43C/A=",
 			"path": "github.com/issue9/identicon",
 			"revision": "d36b54562f4cf70c83653e13dc95c220c79ef521",
@@ -609,5 +615,5 @@
 			"revisionTime": "2014-12-09T11:07:59Z"
 		}
 	],
-	"rootPath": "github.com/gogits/gogs"
+	"rootPath": "github.com/gogs/gogs"
 }

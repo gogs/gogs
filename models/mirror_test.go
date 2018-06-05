@@ -10,6 +10,40 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+func Test_parseRemoteUpdateOutput(t *testing.T) {
+	Convey("Parse mirror remote update output", t, func() {
+		testCases := []struct {
+			output  string
+			results []*mirrorSyncResult
+		}{
+			{
+				`
+From https://try.gogs.io/unknwon/upsteam
+ * [new branch]      develop    -> develop
+   b0bb24f..1d85a4f  master     -> master
+ - [deleted]         (none)     -> bugfix
+`,
+				[]*mirrorSyncResult{
+					{"develop", GIT_SHORT_EMPTY_SHA, ""},
+					{"master", "b0bb24f", "1d85a4f"},
+					{"bugfix", "", GIT_SHORT_EMPTY_SHA},
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			results := parseRemoteUpdateOutput(tc.output)
+			So(len(results), ShouldEqual, len(tc.results))
+
+			for i := range tc.results {
+				So(tc.results[i].refName, ShouldEqual, results[i].refName)
+				So(tc.results[i].oldCommitID, ShouldEqual, results[i].oldCommitID)
+				So(tc.results[i].newCommitID, ShouldEqual, results[i].newCommitID)
+			}
+		}
+	})
+}
+
 func Test_findPasswordInMirrorAddress(t *testing.T) {
 	Convey("Find password portion in mirror address", t, func() {
 		testCases := []struct {
