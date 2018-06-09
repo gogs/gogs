@@ -5,9 +5,10 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -40,7 +41,7 @@ type SlackPayload struct {
 }
 
 func (p *SlackPayload) JSONPayload() ([]byte, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
+	data, err := jsoniter.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}
@@ -288,8 +289,8 @@ func getSlackReleasePayload(p *api.ReleasePayload) (*SlackPayload, error) {
 
 func GetSlackPayload(p api.Payloader, event HookEventType, meta string) (payload *SlackPayload, err error) {
 	slack := &SlackMeta{}
-	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %v", err)
+	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
+		return nil, fmt.Errorf("Unmarshal: %v", err)
 	}
 
 	switch event {

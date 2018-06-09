@@ -5,11 +5,11 @@
 package repo
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/Unknwon/com"
+	"github.com/json-iterator/go"
 
 	git "github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -185,7 +185,7 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&models.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -236,7 +236,7 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&models.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
@@ -415,7 +415,7 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&models.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -459,7 +459,7 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 		return
 	}
 
-	meta, err := json.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&models.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,

@@ -6,7 +6,6 @@ package template
 
 import (
 	"container/list"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"mime"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/json-iterator/go"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
@@ -281,8 +281,8 @@ func ActionIcon(opType int) string {
 
 func ActionContent2Commits(act Actioner) *models.PushCommits {
 	push := models.NewPushCommits()
-	if err := json.Unmarshal([]byte(act.GetContent()), push); err != nil {
-		log.Error(4, "json.Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
+	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
+		log.Error(4, "Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}
 	return push
 }

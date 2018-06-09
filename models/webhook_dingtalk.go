@@ -5,9 +5,10 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -41,7 +42,7 @@ type DingtalkPayload struct {
 }
 
 func (p *DingtalkPayload) JSONPayload() ([]byte, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
+	data, err := jsoniter.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}

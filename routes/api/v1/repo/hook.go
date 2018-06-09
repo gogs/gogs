@@ -5,9 +5,8 @@
 package repo
 
 import (
-	"encoding/json"
-
 	"github.com/Unknwon/com"
+	"github.com/json-iterator/go"
 
 	api "github.com/gogs/go-gogs-client"
 
@@ -79,7 +78,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 			c.Error(422, "", "Missing config option: channel")
 			return
 		}
-		meta, err := json.Marshal(&models.SlackMeta{
+		meta, err := jsoniter.Marshal(&models.SlackMeta{
 			Channel:  channel,
 			Username: form.Config["username"],
 			IconURL:  form.Config["icon_url"],
@@ -129,7 +128,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 
 		if w.HookTaskType == models.SLACK {
 			if channel, ok := form.Config["channel"]; ok {
-				meta, err := json.Marshal(&models.SlackMeta{
+				meta, err := jsoniter.Marshal(&models.SlackMeta{
 					Channel:  channel,
 					Username: form.Config["username"],
 					IconURL:  form.Config["icon_url"],

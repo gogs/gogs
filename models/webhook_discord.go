@@ -5,10 +5,11 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -49,7 +50,7 @@ type DiscordPayload struct {
 }
 
 func (p *DiscordPayload) JSONPayload() ([]byte, error) {
-	data, err := json.MarshalIndent(p, "", "  ")
+	data, err := jsoniter.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}
@@ -371,8 +372,8 @@ func getDiscordReleasePayload(p *api.ReleasePayload) (*DiscordPayload, error) {
 
 func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
 	slack := &SlackMeta{}
-	if err := json.Unmarshal([]byte(meta), &slack); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal: %v", err)
+	if err := jsoniter.Unmarshal([]byte(meta), &slack); err != nil {
+		return nil, fmt.Errorf("jsoniter.Unmarshal: %v", err)
 	}
 
 	switch event {
