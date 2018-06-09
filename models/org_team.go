@@ -22,8 +22,8 @@ type Team struct {
 	Name        string
 	Description string
 	Authorize   AccessMode
-	Repos       []*Repository `xorm:"-"`
-	Members     []*User       `xorm:"-"`
+	Repos       []*Repository `xorm:"-" json:"-"`
+	Members     []*User       `xorm:"-" json:"-"`
 	NumRepos    int
 	NumMembers  int
 }

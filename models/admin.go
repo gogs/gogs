@@ -30,7 +30,7 @@ type Notice struct {
 	ID          int64
 	Type        NoticeType
 	Description string    `xorm:"TEXT"`
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
 }
 

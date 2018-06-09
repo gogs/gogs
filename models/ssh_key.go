@@ -51,12 +51,12 @@ type PublicKey struct {
 	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2"`
 	Type        KeyType    `xorm:"NOT NULL DEFAULT 1"`
 
-	Created           time.Time `xorm:"-"`
+	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-"`
-	HasUsed           bool `xorm:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" json:"-"`
 }
 
 func (k *PublicKey) BeforeInsert() {
@@ -568,14 +568,14 @@ type DeployKey struct {
 	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
 	Name        string
 	Fingerprint string
-	Content     string `xorm:"-"`
+	Content     string `xorm:"-" json:"-"`
 
-	Created           time.Time `xorm:"-"`
+	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-"`
-	HasUsed           bool `xorm:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" json:"-"`
 }
 
 func (k *DeployKey) BeforeInsert() {

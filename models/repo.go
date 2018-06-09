@@ -143,7 +143,7 @@ func NewRepoContext() {
 type Repository struct {
 	ID            int64
 	OwnerID       int64  `xorm:"UNIQUE(s)"`
-	Owner         *User  `xorm:"-"`
+	Owner         *User  `xorm:"-" json:"-"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Name          string `xorm:"INDEX NOT NULL"`
 	Description   string
@@ -156,20 +156,20 @@ type Repository struct {
 	NumForks            int
 	NumIssues           int
 	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-"`
+	NumOpenIssues       int `xorm:"-" json:"-"`
 	NumPulls            int
 	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-"`
+	NumOpenPulls        int `xorm:"-" json:"-"`
 	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
 	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
-	NumOpenMilestones   int `xorm:"-"`
-	NumTags             int `xorm:"-"`
+	NumOpenMilestones   int `xorm:"-" json:"-"`
+	NumTags             int `xorm:"-" json:"-"`
 
 	IsPrivate bool
 	IsBare    bool
 
 	IsMirror bool
-	*Mirror  `xorm:"-"`
+	*Mirror  `xorm:"-" json:"-"`
 
 	// Advanced settings
 	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
@@ -182,18 +182,18 @@ type Repository struct {
 	ExternalTrackerURL    string
 	ExternalTrackerFormat string
 	ExternalTrackerStyle  string
-	ExternalMetas         map[string]string `xorm:"-"`
+	ExternalMetas         map[string]string `xorm:"-" json:"-"`
 	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
 	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false"`
 	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false"`
 
 	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
 	ForkID   int64
-	BaseRepo *Repository `xorm:"-"`
+	BaseRepo *Repository `xorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 

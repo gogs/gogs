@@ -135,12 +135,12 @@ type LoginSource struct {
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
 	Cfg       core.Conversion `xorm:"TEXT"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 
-	LocalFile *AuthSourceFile `xorm:"-"`
+	LocalFile *AuthSourceFile `xorm:"-" json:"-"`
 }
 
 func (s *LoginSource) BeforeInsert() {

@@ -20,12 +20,12 @@ type AccessToken struct {
 	Name string
 	Sha1 string `xorm:"UNIQUE VARCHAR(40)"`
 
-	Created           time.Time `xorm:"-"`
+	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-"`
-	HasUsed           bool `xorm:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" json:"-"`
 }
 
 func (t *AccessToken) BeforeInsert() {

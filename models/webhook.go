@@ -99,16 +99,16 @@ type Webhook struct {
 	ContentType  HookContentType
 	Secret       string `xorm:"TEXT"`
 	Events       string `xorm:"TEXT"`
-	*HookEvent   `xorm:"-"`
+	*HookEvent   `xorm:"-" json:"-"`
 	IsSSL        bool `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
 	LastStatus   HookStatus // Last delivery status
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
@@ -418,21 +418,21 @@ type HookTask struct {
 	Type            HookTaskType
 	URL             string `xorm:"TEXT"`
 	Signature       string `xorm:"TEXT"`
-	api.Payloader   `xorm:"-"`
+	api.Payloader   `xorm:"-" json:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
 	EventType       HookEventType
 	IsSSL           bool
 	IsDelivered     bool
 	Delivered       int64
-	DeliveredString string `xorm:"-"`
+	DeliveredString string `xorm:"-" json:"-"`
 
 	// History info.
 	IsSucceed       bool
 	RequestContent  string        `xorm:"TEXT"`
-	RequestInfo     *HookRequest  `xorm:"-"`
+	RequestInfo     *HookRequest  `xorm:"-" json:"-"`
 	ResponseContent string        `xorm:"TEXT"`
-	ResponseInfo    *HookResponse `xorm:"-"`
+	ResponseInfo    *HookResponse `xorm:"-" json:"-"`
 }
 
 func (t *HookTask) BeforeUpdate() {
