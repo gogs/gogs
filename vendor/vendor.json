@@ -225,6 +225,12 @@
 			"revisionTime": "2016-09-23T19:14:38Z"
 		},
 		{
+			"checksumSHA1": "gydhX7ik17tDsfT5t97UDRseQ7g=",
+			"path": "github.com/json-iterator/go",
+			"revision": "8744d7c5c7b40a53e018f78d8c508b3315260b96",
+			"revisionTime": "2018-05-26T01:43:29Z"
+		},
+		{
 			"checksumSHA1": "tewA7jXVGCw1zb5mA0BDecWi4iQ=",
 			"path": "github.com/jtolds/gls",
 			"revision": "8ddce2a84170772b95dd5d576c48d517b22cac63",
