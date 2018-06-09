@@ -97,10 +97,10 @@ type Webhook struct {
 	OrgID        int64
 	URL          string `xorm:"url TEXT"`
 	ContentType  HookContentType
-	Secret       string `xorm:"TEXT"`
-	Events       string `xorm:"TEXT"`
-	*HookEvent   `xorm:"-" json:"-"`
-	IsSSL        bool `xorm:"is_ssl"`
+	Secret       string     `xorm:"TEXT"`
+	Events       string     `xorm:"TEXT"`
+	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON here, it breaks old backup archive
+	IsSSL        bool       `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes

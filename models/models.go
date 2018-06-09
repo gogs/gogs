@@ -7,7 +7,6 @@ package models
 import (
 	"bufio"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -20,6 +19,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	_ "github.com/lib/pq"
 	log "gopkg.in/clog.v1"
 
@@ -285,8 +285,7 @@ func DumpDatabase(dirPath string) (err error) {
 		}
 
 		if err = x.Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
-			enc := json.NewEncoder(f)
-			return enc.Encode(bean)
+			return jsoniter.NewEncoder(f).Encode(bean)
 		}); err != nil {
 			f.Close()
 			return fmt.Errorf("fail to dump table '%s': %v", tableName, err)
@@ -299,6 +298,10 @@ func DumpDatabase(dirPath string) (err error) {
 // ImportDatabase imports data from backup archive.
 func ImportDatabase(dirPath string, verbose bool) (err error) {
 	snakeMapper := core.SnakeMapper{}
+
+	skipInsertProcessors := map[string]bool{
+		"mirror": true,
+	}
 
 	// Purposely create a local variable to not modify global variable
 	tables := append(tables, new(Version))
@@ -314,22 +317,24 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 		}
 
 		if err = x.DropTables(table); err != nil {
-			return fmt.Errorf("fail to drop table '%s': %v", tableName, err)
+			return fmt.Errorf("drop table '%s': %v", tableName, err)
 		} else if err = x.Sync2(table); err != nil {
-			return fmt.Errorf("fail to sync table '%s': %v", tableName, err)
+			return fmt.Errorf("sync table '%s': %v", tableName, err)
 		}
 
 		f, err := os.Open(tableFile)
 		if err != nil {
-			return fmt.Errorf("fail to open JSON file: %v", err)
+			return fmt.Errorf("open JSON file: %v", err)
 		}
+		rawTableName := x.TableName(table)
+		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			switch bean := table.(type) {
 			case *LoginSource:
 				meta := make(map[string]interface{})
-				if err = json.Unmarshal(scanner.Bytes(), &meta); err != nil {
-					return fmt.Errorf("fail to unmarshal to map: %v", err)
+				if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
+					return fmt.Errorf("unmarshal to map: %v", err)
 				}
 
 				tp := LoginType(com.StrTo(com.ToStr(meta["Type"])).MustInt64())
@@ -346,12 +351,23 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 				table = bean
 			}
 
-			if err = json.Unmarshal(scanner.Bytes(), table); err != nil {
-				return fmt.Errorf("fail to unmarshal to struct: %v", err)
+			if err = jsoniter.Unmarshal(scanner.Bytes(), table); err != nil {
+				return fmt.Errorf("unmarshal to struct: %v", err)
 			}
 
 			if _, err = x.Insert(table); err != nil {
-				return fmt.Errorf("fail to insert strcut: %v", err)
+				return fmt.Errorf("insert strcut: %v", err)
+			}
+
+			// Reset created_unix back to the date save in archive because Insert method updates its value
+			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
+				meta := make(map[string]interface{})
+				if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
+					log.Error(2, "Failed to unmarshal to map: %v", err)
+				}
+				if _, err = x.Exec("UPDATE "+rawTableName+" SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
+					log.Error(2, "Failed to reset 'created_unix': %v", err)
+				}
 			}
 		}
 
@@ -360,7 +376,7 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 			rawTableName := snakeMapper.Obj2Table(tableName)
 			seqName := rawTableName + "_id_seq"
 			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
-				return fmt.Errorf("fail to reset table '%s' sequence: %v", rawTableName, err)
+				return fmt.Errorf("reset table '%s' sequence: %v", rawTableName, err)
 			}
 		}
 	}
