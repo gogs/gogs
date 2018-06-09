@@ -1,6 +1,5 @@
 language: go
 go:
-  - 1.6.x
   - 1.7.x
   - 1.8.x
   - 1.9.x
@@ -14,6 +13,6 @@ before_install:
 env:
   - GO15VENDOREXPERIMENT=1
 
-script: 
+script:
   - go build -v -tags "pam"
   - go test -v -cover -race ./...
