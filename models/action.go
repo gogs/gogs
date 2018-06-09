@@ -80,14 +80,14 @@ type Action struct {
 	OpType       ActionType
 	ActUserID    int64  // Doer user ID
 	ActUserName  string // Doer user name
-	ActAvatar    string `xorm:"-"`
+	ActAvatar    string `xorm:"-" json:"-"`
 	RepoID       int64  `xorm:"INDEX"`
 	RepoUserName string
 	RepoName     string
 	RefName      string
 	IsPrivate    bool      `xorm:"NOT NULL DEFAULT false"`
 	Content      string    `xorm:"TEXT"`
-	Created      time.Time `xorm:"-"`
+	Created      time.Time `xorm:"-" json:"-"`
 	CreatedUnix  int64
 }
 

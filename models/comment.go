@@ -52,26 +52,26 @@ type Comment struct {
 	ID              int64
 	Type            CommentType
 	PosterID        int64
-	Poster          *User  `xorm:"-"`
+	Poster          *User  `xorm:"-" json:"-"`
 	IssueID         int64  `xorm:"INDEX"`
-	Issue           *Issue `xorm:"-"`
+	Issue           *Issue `xorm:"-" json:"-"`
 	CommitID        int64
 	Line            int64
 	Content         string `xorm:"TEXT"`
-	RenderedContent string `xorm:"-"`
+	RenderedContent string `xorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 
 	// Reference issue in commit message
 	CommitSHA string `xorm:"VARCHAR(40)"`
 
-	Attachments []*Attachment `xorm:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-"`
 
 	// For view issue page.
-	ShowTag CommentTag `xorm:"-"`
+	ShowTag CommentTag `xorm:"-" json:"-"`
 }
 
 func (c *Comment) BeforeInsert() {

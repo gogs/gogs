@@ -60,8 +60,8 @@ type Label struct {
 	Color           string `xorm:"VARCHAR(7)"`
 	NumIssues       int
 	NumClosedIssues int
-	NumOpenIssues   int  `xorm:"-"`
-	IsChecked       bool `xorm:"-"`
+	NumOpenIssues   int  `xorm:"-" json:"-"`
+	IsChecked       bool `xorm:"-" json:"-"`
 }
 
 func (label *Label) APIFormat() *api.Label {

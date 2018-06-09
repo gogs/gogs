@@ -55,17 +55,17 @@ type User struct {
 	LoginSource int64 `xorm:"NOT NULL DEFAULT 0"`
 	LoginName   string
 	Type        UserType
-	OwnedOrgs   []*User       `xorm:"-"`
-	Orgs        []*User       `xorm:"-"`
-	Repos       []*Repository `xorm:"-"`
+	OwnedOrgs   []*User       `xorm:"-" json:"-"`
+	Orgs        []*User       `xorm:"-" json:"-"`
+	Repos       []*Repository `xorm:"-" json:"-"`
 	Location    string
 	Website     string
 	Rands       string `xorm:"VARCHAR(10)"`
 	Salt        string `xorm:"VARCHAR(10)"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 
 	// Remember visibility choice for convenience, true for private
@@ -95,8 +95,8 @@ type User struct {
 	Description string
 	NumTeams    int
 	NumMembers  int
-	Teams       []*Team `xorm:"-"`
-	Members     []*User `xorm:"-"`
+	Teams       []*Team `xorm:"-" json:"-"`
+	Members     []*User `xorm:"-" json:"-"`
 }
 
 func (u *User) BeforeInsert() {

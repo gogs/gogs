@@ -28,34 +28,34 @@ var (
 type Issue struct {
 	ID              int64
 	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
-	Repo            *Repository `xorm:"-"`
+	Repo            *Repository `xorm:"-" json:"-"`
 	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
 	PosterID        int64
-	Poster          *User    `xorm:"-"`
+	Poster          *User    `xorm:"-" json:"-"`
 	Title           string   `xorm:"name"`
 	Content         string   `xorm:"TEXT"`
-	RenderedContent string   `xorm:"-"`
-	Labels          []*Label `xorm:"-"`
+	RenderedContent string   `xorm:"-" json:"-"`
+	Labels          []*Label `xorm:"-" json:"-"`
 	MilestoneID     int64
-	Milestone       *Milestone `xorm:"-"`
+	Milestone       *Milestone `xorm:"-" json:"-"`
 	Priority        int
 	AssigneeID      int64
-	Assignee        *User `xorm:"-"`
+	Assignee        *User `xorm:"-" json:"-"`
 	IsClosed        bool
-	IsRead          bool         `xorm:"-"`
+	IsRead          bool         `xorm:"-" json:"-"`
 	IsPull          bool         // Indicates whether is a pull request or not.
-	PullRequest     *PullRequest `xorm:"-"`
+	PullRequest     *PullRequest `xorm:"-" json:"-"`
 	NumComments     int
 
-	Deadline     time.Time `xorm:"-"`
+	Deadline     time.Time `xorm:"-" json:"-"`
 	DeadlineUnix int64
-	Created      time.Time `xorm:"-"`
+	Created      time.Time `xorm:"-" json:"-"`
 	CreatedUnix  int64
-	Updated      time.Time `xorm:"-"`
+	Updated      time.Time `xorm:"-" json:"-"`
 	UpdatedUnix  int64
 
-	Attachments []*Attachment `xorm:"-"`
-	Comments    []*Comment    `xorm:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-"`
+	Comments    []*Comment    `xorm:"-" json:"-"`
 }
 
 func (issue *Issue) BeforeInsert() {
