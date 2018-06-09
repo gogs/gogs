@@ -149,7 +149,8 @@ func (db *Base) SupportDropIfExists() bool {
 }
 
 func (db *Base) DropTableSql(tableName string) string {
-	return fmt.Sprintf("DROP TABLE IF EXISTS `%s`", tableName)
+	quote := db.dialect.Quote
+	return fmt.Sprintf("DROP TABLE IF EXISTS %s", quote(tableName))
 }
 
 func (db *Base) HasRecords(query string, args ...interface{}) (bool, error) {
