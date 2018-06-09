@@ -769,6 +769,8 @@ var (
 	DefaultPostgresSchema = "public"
 )
 
+const postgresPublicSchema = "public"
+
 type postgres struct {
 	core.Base
 }
@@ -893,6 +895,7 @@ func (db *postgres) TableCheckSql(tableName string) (string, []interface{}) {
 		args := []interface{}{tableName}
 		return `SELECT tablename FROM pg_tables WHERE tablename = ?`, args
 	}
+
 	args := []interface{}{db.Schema, tableName}
 	return `SELECT tablename FROM pg_tables WHERE schemaname = ? AND tablename = ?`, args
 }
@@ -910,6 +913,9 @@ func (db *postgres) DropIndexSql(tableName string, index *core.Index) string {
 	quote := db.Quote
 	idxName := index.Name
 
+	tableName = strings.Replace(tableName, `"`, "", -1)
+	tableName = strings.Replace(tableName, `.`, "_", -1)
+
 	if !strings.HasPrefix(idxName, "UQE_") &&
 		!strings.HasPrefix(idxName, "IDX_") {
 		if index.Type == core.UniqueType {
@@ -917,6 +923,9 @@ func (db *postgres) DropIndexSql(tableName string, index *core.Index) string {
 		} else {
 			idxName = fmt.Sprintf("IDX_%v_%v", tableName, index.Name)
 		}
+	}
+	if db.Uri.Schema != "" {
+		idxName = db.Uri.Schema + "." + idxName
 	}
 	return fmt.Sprintf("DROP INDEX %v", quote(idxName))
 }
@@ -958,7 +967,7 @@ WHERE c.relkind = 'r'::char AND c.relname = $1%s AND f.attnum > 0 ORDER BY f.att
 	var f string
 	if len(db.Schema) != 0 {
 		args = append(args, db.Schema)
-		f = "AND s.table_schema = $2"
+		f = " AND s.table_schema = $2"
 	}
 	s = fmt.Sprintf(s, f)
 
@@ -1083,11 +1092,11 @@ func (db *postgres) GetTables() ([]*core.Table, error) {
 func (db *postgres) GetIndexes(tableName string) (map[string]*core.Index, error) {
 	args := []interface{}{tableName}
 	s := fmt.Sprintf("SELECT indexname, indexdef FROM pg_indexes WHERE tablename=$1")
-	db.LogSQL(s, args)
 	if len(db.Schema) != 0 {
 		args = append(args, db.Schema)
 		s = s + " AND schemaname=$2"
 	}
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
 	if err != nil {
@@ -1213,4 +1222,16 @@ func (p *pqDriver) Parse(driverName, dataSourceName string) (*core.Uri, error) {
 	}
 
 	return db, nil
+}
+
+type pqDriverPgx struct {
+	pqDriver
+}
+
+func (pgx *pqDriverPgx) Parse(driverName, dataSourceName string) (*core.Uri, error) {
+	// Remove the leading characters for driver to work
+	if len(dataSourceName) >= 9 && dataSourceName[0] == 0 {
+		dataSourceName = dataSourceName[9:]
+	}
+	return pgx.pqDriver.Parse(driverName, dataSourceName)
 }

@@ -42,6 +42,7 @@ type Interface interface {
 	IsTableExist(beanOrTableName interface{}) (bool, error)
 	Iterate(interface{}, IterFunc) error
 	Limit(int, ...int) *Session
+	MustCols(columns ...string) *Session
 	NoAutoCondition(...bool) *Session
 	NotIn(string, ...interface{}) *Session
 	Join(joinOperator string, tablename interface{}, condition string, args ...interface{}) *Session
@@ -76,6 +77,7 @@ type EngineInterface interface {
 	Dialect() core.Dialect
 	DropTables(...interface{}) error
 	DumpAllToFile(fp string, tp ...core.DbType) error
+	GetCacher(string) core.Cacher
 	GetColumnMapper() core.IMapper
 	GetDefaultCacher() core.Cacher
 	GetTableMapper() core.IMapper
@@ -84,9 +86,11 @@ type EngineInterface interface {
 	NewSession() *Session
 	NoAutoTime() *Session
 	Quote(string) string
+	SetCacher(string, core.Cacher)
 	SetDefaultCacher(core.Cacher)
 	SetLogLevel(core.LogLevel)
 	SetMapper(core.IMapper)
+	SetSchema(string)
 	SetTZDatabase(tz *time.Location)
 	SetTZLocation(tz *time.Location)
 	ShowSQL(show ...bool)
@@ -94,6 +98,7 @@ type EngineInterface interface {
 	Sync2(...interface{}) error
 	StoreEngine(storeEngine string) *Session
 	TableInfo(bean interface{}) *Table
+	TableName(interface{}, ...bool) string
 	UnMapType(reflect.Type)
 }
 
