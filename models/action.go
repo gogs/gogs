@@ -5,7 +5,6 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 	"regexp"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/git-module"
@@ -501,7 +501,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		opts.Commits.Commits = opts.Commits.Commits[:setting.UI.FeedMaxCommitNum]
 	}
 
-	data, err := json.Marshal(opts.Commits)
+	data, err := jsoniter.Marshal(opts.Commits)
 	if err != nil {
 		return fmt.Errorf("Marshal: %v", err)
 	}
@@ -717,7 +717,7 @@ func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) er
 		return fmt.Errorf("PrepareWebhooks: %v", err)
 	}
 
-	data, err := json.Marshal(opts.Commits)
+	data, err := jsoniter.Marshal(opts.Commits)
 	if err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@ package httplib
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"encoding/xml"
 	"io"
 	"io/ioutil"
@@ -23,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/json-iterator/go"
 )
 
 var defaultSetting = Settings{false, "GogsServer", 60 * time.Second, 60 * time.Second, nil, nil, nil, false}
@@ -416,8 +417,7 @@ func (r *Request) ToJson(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(data, v)
-	return err
+	return jsoniter.Unmarshal(data, v)
 }
 
 // ToXml returns the map that marshals from the body bytes as xml in response .
@@ -427,8 +427,7 @@ func (r *Request) ToXml(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = xml.Unmarshal(data, v)
-	return err
+	return xml.Unmarshal(data, v)
 }
 
 // Response executes request client gets response mannually.

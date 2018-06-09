@@ -6,7 +6,6 @@ package models
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"net/smtp"
 	"net/textproto"
@@ -20,6 +19,7 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
@@ -66,11 +66,11 @@ type LDAPConfig struct {
 }
 
 func (cfg *LDAPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg)
+	return jsoniter.Unmarshal(bs, &cfg)
 }
 
 func (cfg *LDAPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
@@ -87,11 +87,11 @@ type SMTPConfig struct {
 }
 
 func (cfg *SMTPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, cfg)
+	return jsoniter.Unmarshal(bs, cfg)
 }
 
 func (cfg *SMTPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 type PAMConfig struct {
@@ -99,11 +99,11 @@ type PAMConfig struct {
 }
 
 func (cfg *PAMConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg)
+	return jsoniter.Unmarshal(bs, &cfg)
 }
 
 func (cfg *PAMConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 // AuthSourceFile contains information of an authentication source file.
