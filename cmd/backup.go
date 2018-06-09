@@ -39,6 +39,7 @@ portable among all supported database engines.`,
 	},
 }
 
+const _CURRENT_BACKUP_FORMAT_VERSION = 1
 const _ARCHIVE_ROOT_DIR = "gogs-backup"
 
 func runBackup(c *cli.Context) error {
@@ -63,7 +64,7 @@ func runBackup(c *cli.Context) error {
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
 	metadata := ini.Empty()
-	metadata.Section("").Key("VERSION").SetValue("1")
+	metadata.Section("").Key("VERSION").SetValue(com.ToStr(_CURRENT_BACKUP_FORMAT_VERSION))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(setting.AppVer)
 	if err = metadata.SaveTo(metaFile); err != nil {
