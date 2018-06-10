@@ -13,7 +13,6 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/Unknwon/com"
