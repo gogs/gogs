@@ -294,36 +294,9 @@ func (repo *Repository) CustomAvatarPath() string {
 	return filepath.Join(setting.RepositoryAvatarUploadPath, com.ToStr(repo.ID))
 }
 
-// GenerateRandomAvatar generates a random avatar for repository.
-func (repo *Repository) GenerateRandomAvatar() error {
-	// Repository name not unique
-	seed := repo.Name + com.ToStr(repo.ID)
-
-	img, err := avatar.RandomImage([]byte(seed))
-	if err != nil {
-		return fmt.Errorf("RandomImage: %v", err)
-	}
-	if err = os.MkdirAll(filepath.Dir(repo.CustomAvatarPath()), os.ModePerm); err != nil {
-		return fmt.Errorf("MkdirAll: %v", err)
-	}
-	fw, err := os.Create(repo.CustomAvatarPath())
-	if err != nil {
-		return fmt.Errorf("Create: %v", err)
-	}
-	defer fw.Close()
-
-	if err = png.Encode(fw, img); err != nil {
-		return fmt.Errorf("Encode: %v", err)
-	}
-
-	log.Info("New random avatar created: %d", repo.ID)
-	return nil
-}
-
 // RelAvatarLink returns relative avatar link to the site domain,
 // which includes app sub-url as prefix.
 // Since Gravatar support not needed here - just check for image path.
-// And generate random avatar if no image found.
 func (repo *Repository) RelAvatarLink() string {
 	defaultImgUrl := ""
 	if repo.ID == -1 {
