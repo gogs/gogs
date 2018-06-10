@@ -1,4 +1,4 @@
-// Copyright 2017 The Gogs Authors. All rights reserved.
+// Copyright 2018 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-xorm/xorm"
+
 	"github.com/gogs/gogs/pkg/setting"
 )
 
@@ -18,17 +19,16 @@ func updateRepositoryDescriptionField(x *xorm.Engine) error {
 	} else if !exist {
 		return nil
 	}
-	if (setting.UseMySQL) {
-		_, err = x.Exec("ALTER TABLE `repository` MODIFY `description` VARCHAR(512);")
-	}
-	if (setting.UseMSSQL) {
-		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` VARCHAR(512);")
-	}
-	if (setting.UsePostgreSQL) {
-		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE VARCHAR(512);")
-	}
-	if (setting.UseSQLite3) {
-		// Wait, no! Sqlite3 uses TEXT field by default for any string type field.
+	switch {
+		case setting.UseMySQL:
+			_, err = x.Exec("ALTER TABLE `repository` MODIFY `description` VARCHAR(512);")
+		case setting.UseMSSQL:
+			_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` VARCHAR(512);")
+		case setting.UsePostgreSQL:
+			_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE VARCHAR(512);")
+		case setting.UseSQLite3:
+			// Sqlite3 uses TEXT field by default for any string type field.
+		default:
 	}
 	return err
 }
