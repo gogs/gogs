@@ -101,6 +101,13 @@ func newMacaron() *macaron.Macaron {
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
+	m.Use(macaron.Static(
+		setting.RepositoryAvatarUploadPath,
+		macaron.StaticOptions{
+			Prefix:      "repo-avatars",
+			SkipLogging: setting.DisableRouterLog,
+		},
+	))
 
 	funcMap := template.NewFuncMap()
 	m.Use(macaron.Renderer(macaron.RenderOptions{
@@ -414,27 +421,6 @@ func runWeb(c *cli.Context) error {
 		m.Post("/migrate", bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
 		m.Combo("/fork/:repoid").Get(repo.Fork).
 			Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
-		m.Get("-avatars/:uuid", func(c *context.Context) {
-			repoAvaPath := filepath.Join(setting.RepositoryAvatarUploadPath, com.ToStr(c.Params(":uuid")))
-			if !com.IsFile(repoAvaPath) {
-				c.NotFound()
-				return
-			}
-
-			fr, err := os.Open(repoAvaPath)
-			if err != nil {
-				c.Handle(500, "Open", err)
-				return
-			}
-			defer fr.Close()
-
-			c.Header().Set("Cache-Control", "public,max-age=86400")
-			c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s.png"`, c.Params(":uuid")))
-			if err = repo.ServeData(c, c.Params(":uuid"), fr); err != nil {
-				c.Handle(500, "ServeData", err)
-				return
-			}
-		})
 	}, reqSignIn)
 
 	m.Group("/:username/:reponame", func() {

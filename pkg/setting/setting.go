@@ -187,12 +187,12 @@ var (
 	}
 
 	// Picture settings
-	AvatarUploadPath      string
-	RepositoryAvatarUploadPath      string
-	GravatarSource        string
-	DisableGravatar       bool
-	EnableFederatedAvatar bool
-	LibravatarService     *libravatar.Libravatar
+	AvatarUploadPath      		string
+	RepositoryAvatarUploadPath	string
+	GravatarSource        		string
+	DisableGravatar       		bool
+	EnableFederatedAvatar 		bool
+	LibravatarService     		*libravatar.Libravatar
 
 	// Log settings
 	LogRootPath string
