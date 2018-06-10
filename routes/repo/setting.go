@@ -682,7 +682,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar) error {
 		// No avatar is uploaded but setting has been changed to enable
 		// No random avatar here.
 		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
-			log.Trace(2, "No avatar was uploaded for repo: %v. Default icon will appear instead.", ctxRepo.ID)
+			log.Trace("No avatar was uploaded for repo: %d. Default icon will appear instead.", ctxRepo.ID)
 		}
 	}
 	return nil
