@@ -27,8 +27,8 @@ func updateRepositoryDescriptionField(x *xorm.Engine) error {
 		case setting.UsePostgreSQL:
 			_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE VARCHAR(512);")
 		case setting.UseSQLite3:
-			// Sqlite3 uses TEXT field by default for any string type field.
-		default:
+			// Sqlite3 uses TEXT type by default for any string type field.
+			// Keep this comment to mention that we don't missed any option.
 	}
 	return err
 }
