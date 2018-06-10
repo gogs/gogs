@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 	"io/ioutil"
 
 	log "gopkg.in/clog.v1"
-
 	"github.com/Unknwon/com"
 	"github.com/gogs/git-module"
 
@@ -645,7 +643,7 @@ func SettingsAvatar(c *context.Context) {
 
 func SettingsAvatarPost(c *context.Context, f form.Avatar) {
 	f.Source = form.AVATAR_LOCAL
-	if err := UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
+	if err := UpdateAvatarSetting(c, f); err != nil {
 		c.Flash.Error(err.Error())
 	} else {
 		c.Flash.Success(c.Tr("settings.update_avatar_success"))
@@ -661,7 +659,8 @@ func SettingsDeleteAvatar(c *context.Context) {
 }
 
 // FIXME: limit size.
-func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repository) error {
+func UpdateAvatarSetting(c *context.Context, f form.Avatar) error {
+	ctxRepo := c.Repo.Repository;
 	if f.Avatar != nil {
 		r, err := f.Avatar.Open()
 		if err != nil {
@@ -680,12 +679,10 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repo
 			return fmt.Errorf("UploadAvatar: %v", err)
 		}
 	} else {
-		// No avatar is uploaded but setting has been changed to enable,
-		// generate a random one when needed.
+		// No avatar is uploaded but setting has been changed to enable
+		// No random avatar here.
 		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
-			if err := ctxRepo.GenerateRandomAvatar(); err != nil {
-				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxRepo.ID, err)
-			}
+			log.Trace(2, "No avatar was uploaded for repo: %v. Default icon will appear instead.", ctxRepo.ID)
 		}
 	}
 	return nil

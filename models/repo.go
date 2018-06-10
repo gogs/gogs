@@ -299,9 +299,6 @@ func (repo *Repository) CustomAvatarPath() string {
 // Since Gravatar support not needed here - just check for image path.
 func (repo *Repository) RelAvatarLink() string {
 	defaultImgUrl := ""
-	if repo.ID == -1 {
-		return defaultImgUrl
-	}
 	if !com.IsExist(repo.CustomAvatarPath()) {
 		return defaultImgUrl
 	}
@@ -327,7 +324,6 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 	}
 
 	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
-
 	os.MkdirAll(setting.RepositoryAvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(repo.CustomAvatarPath())
 	if err != nil {
@@ -345,8 +341,7 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 // DeleteAvatar deletes the repository custom avatar.
 func (repo *Repository) DeleteAvatar() error {
 	log.Trace("DeleteAvatar [%d]: %s", repo.ID, repo.CustomAvatarPath())
-	os.Remove(repo.CustomAvatarPath())
-	return nil
+	return os.Remove(repo.CustomAvatarPath())
 }
 
 // This method assumes following fields have been assigned with valid values:
