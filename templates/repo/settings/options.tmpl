@@ -19,7 +19,7 @@
 						</div>
 						<div class="field {{if .Err_Description}}error{{end}}">
 							<label for="description">{{$.i18n.Tr "repo.repo_desc"}}</label>
-							<textarea id="description" name="description" rows="3">{{.Repository.Description}}</textarea>
+							<textarea class="autosize" id="description" name="description" rows="3">{{.Repository.Description}}</textarea>
 							<p class="help">{{.i18n.Tr "repo.settings.description_desc"}}</p>
 							<p class="help">{{.i18n.Tr "repo.settings.description_length"}}: <span id="descLength"></span></p>
 						</div>
@@ -416,14 +416,5 @@
 	</div>
 	{{end}}
 {{end}}
-
-<script type="text/javascript">
-$(document).ready(function(){
-	if (typeof window.autosize !== "undefined") {
-		autosize($('#description'));
-	}
-	showMessageMaxLength(512, 'description', 'descLength');
-});
-</script>
 
 {{template "base/footer" .}}

@@ -1262,6 +1262,12 @@ $(document).ready(function () {
         e.trigger.setAttribute('data-content', e.trigger.getAttribute('data-original'))
     });
 
+    // Autosize
+    if ($('#description.autosize').length > 0) {
+        autosize($('#description'));
+        showMessageMaxLength(512, 'description', 'descLength');
+    }
+
     // AJAX load buttons
     $('.ajax-load-button').click(function () {
         var $this = $(this);
@@ -1444,14 +1450,32 @@ $(function () {
     $('form').areYouSure();
 });
 
+ // getByteLen counts bytes in a string's UTF-8 representation.
+function getByteLen(normalVal) {
+    // Force string type
+    normalVal = String(normalVal);
+
+    var byteLen = 0;
+    for (var i = 0; i < normalVal.length; i++) {
+        var c = normalVal.charCodeAt(i);
+        byteLen += c < (1 <<  7) ? 1 :
+                   c < (1 << 11) ? 2 :
+                   c < (1 << 16) ? 3 :
+                   c < (1 << 21) ? 4 :
+                   c < (1 << 26) ? 5 :
+                   c < (1 << 31) ? 6 : Number.NaN;
+    }
+    return byteLen;
+}
+
 function showMessageMaxLength(maxLen, textElemId, counterId) {
-    var $msg = $('#'+textElemId);                      //text message
-    $('#'+counterId).html(maxLen - $msg.val().length); //symbols count
+    var $msg = $('#'+textElemId);                      
+    $('#'+counterId).html(maxLen - getByteLen($msg.val()));
 
     var onMessageKey = function (e) {
         var $msg = $(this);
         var text = $msg.val();
-        var len = text.length;
+        var len = getByteLen(text);
         var remainder = maxLen - len;
 
         if (len >= maxLen) {
