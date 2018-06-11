@@ -41,7 +41,9 @@
 	<script src="{{AppSubURL}}/js/libs/jquery.are-you-sure.js"></script>
 	<link rel="stylesheet" href="{{AppSubURL}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
 	<link rel="stylesheet" href="{{AppSubURL}}/assets/octicons-4.3.0/octicons.min.css">
-
+	{{if .RequireAutosize}}
+		<script src="{{AppSubURL}}/plugins/autosize-4.0.2/dist/autosize.min.js"></script>
+	{{end}}
 	<!-- notebook.js for rendering ipython notebooks and marked.js for rendering markdown in notebooks -->
 	{{if .IsIPythonNotebook}}
 		<script src="{{AppSubURL}}/plugins/notebookjs-0.3.0/notebook.min.js"></script>

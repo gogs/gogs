@@ -146,7 +146,7 @@ type Repository struct {
 	Owner         *User  `xorm:"-" json:"-"`
 	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Name          string `xorm:"INDEX NOT NULL"`
-	Description   string
+	Description   string `xorm:"VARCHAR(512)"`
 	Website       string
 	DefaultBranch string
 	Size          int64 `xorm:"NOT NULL DEFAULT 0"`
@@ -1331,8 +1331,8 @@ func GetRepositoriesByForkID(forkID int64) ([]*Repository, error) {
 func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
-	if len(repo.Description) > 255 {
-		repo.Description = repo.Description[:255]
+	if len(repo.Description) > 512 {
+		repo.Description = repo.Description[:512]
 	}
 	if len(repo.Website) > 255 {
 		repo.Website = repo.Website[:255]
