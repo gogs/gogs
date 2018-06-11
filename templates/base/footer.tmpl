@@ -49,6 +49,9 @@
 	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.css">
 	<script src="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.js"></script>
 {{end}}
+{{if .RequireAutosize}}
+	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
+{{end}}
 <script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
 <script src="{{AppSubURL}}/js/libs/clipboard-1.5.9.min.js"></script>
 

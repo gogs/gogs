@@ -66,7 +66,8 @@ func checkContextUser(c *context.Context, uid int64) *models.User {
 }
 
 func Create(c *context.Context) {
-	c.Data["Title"] = c.Tr("new_repo")
+	c.Title("new_repo")
+	c.RequireAutosize()
 
 	// Give default value for template to render.
 	c.Data["Gitignores"] = models.Gitignores
@@ -75,7 +76,6 @@ func Create(c *context.Context) {
 	c.Data["readme"] = "Default"
 	c.Data["private"] = c.User.LastRepoVisibility
 	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
-	c.Data["RequireAutosize"] = true
 
 	ctxUser := checkContextUser(c, c.QueryInt64("org"))
 	if c.Written() {

@@ -68,6 +68,10 @@ func (c *Context) RequireSimpleMDE() {
 	c.Require("SimpleMDE")
 }
 
+func (c *Context) RequireAutosize() {
+	c.Require("Autosize")
+}
+
 // FormErr sets "Err_xxx" field in template data.
 func (c *Context) FormErr(names ...string) {
 	for i := range names {
