@@ -66,6 +66,8 @@ var migrations = []Migration{
 	NewMigration("remove invalid protect branch whitelist", removeInvalidProtectBranchWhitelist),
 	// v17 -> v18:v0.11.48
 	NewMigration("store long text in repository description field", updateRepositoryDescriptionField),
+	// v18 -> v19:v0.11.55
+	NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
 }
 
 // Migrate database to current version
