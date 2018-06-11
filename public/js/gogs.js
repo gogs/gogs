@@ -1443,3 +1443,24 @@ $(function () {
     if ($('.user.signin').length > 0) return;
     $('form').areYouSure();
 });
+
+function showMessageMaxLength(maxLen, textElemId, counterId) {
+    var $msg = $('#'+textElemId);                      //text message
+    $('#'+counterId).html(maxLen - $msg.val().length); //symbols count
+
+    var onMessageKey = function (e) {
+        var $msg = $(this);
+        var text = $msg.val();
+        var len = text.length;
+        var remainder = maxLen - len;
+
+        if (len >= maxLen) {
+            $msg.val($msg.val().substr(0, maxLen));
+            remainder = 0;
+        }
+
+        $('#'+counterId).html(remainder);
+    };
+
+    $msg.keyup(onMessageKey).keydown(onMessageKey);
+}
