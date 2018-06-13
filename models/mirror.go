@@ -362,7 +362,7 @@ func MirrorUpdate() {
 func SyncMirrors() {
 	// Start listening on new sync requests.
 	for repoID := range MirrorQueue.Queue() {
-		log.Trace("SyncMirrors [repo_id: %d]", repoID)
+		log.Trace("SyncMirrors [repo_id: %s]", repoID)
 		MirrorQueue.Remove(repoID)
 
 		m, err := GetMirrorByRepoID(com.StrTo(repoID).MustInt64())
