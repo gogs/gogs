@@ -25,6 +25,7 @@ func Search(c *context.APIContext) {
 		Keyword:  path.Base(c.Query("q")),
 		OwnerID:  c.QueryInt64("uid"),
 		PageSize: convert.ToCorrectPageSize(c.QueryInt("limit")),
+		Page:     c.QueryInt("page"),
 	}
 
 	// Check visibility.
@@ -69,7 +70,7 @@ func Search(c *context.APIContext) {
 		results[i] = repos[i].APIFormat(nil)
 	}
 
-	c.SetLinkHeader(int(count), setting.API.MaxResponseItems)
+	c.SetLinkHeader(int(count), opts.PageSize)
 	c.JSON(200, map[string]interface{}{
 		"ok":   true,
 		"data": results,
