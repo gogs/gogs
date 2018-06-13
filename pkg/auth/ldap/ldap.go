@@ -178,7 +178,7 @@ func bindUser(l *ldap.Conn, userDN, passwd string) error {
 func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, string, string, string, bool, bool) {
 	// See https://tools.ietf.org/search/rfc4513#section-5.1.2
 	if len(passwd) == 0 {
-		log.Trace("authentication failed for '%s' with empty password")
+		log.Trace("authentication failed for '%s' with empty password", name)
 		return "", "", "", "", false, false
 	}
 	l, err := dial(ls)
