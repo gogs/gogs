@@ -293,7 +293,7 @@ func serviceRPC(h serviceHandler, service string) {
 	cmd.Stderr = &stderr
 	cmd.Stdin = reqBody
 	if err = cmd.Run(); err != nil {
-		log.Error(2, "HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr)
+		log.Error(2, "HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
