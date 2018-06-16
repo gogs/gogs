@@ -1653,11 +1653,11 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	// this does not include other people's private repositories even if opts.UserID is an admin.
 	if !opts.Private && opts.UserID > 0 {
 		sess.Join("LEFT", "access", "access.repo_id = repo.id").
-			Where("(repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ?)", opts.UserID, opts.UserID, false)
+			Where("(repo.owner_id = ? OR access.user_id = ? OR repo.is_private = ? OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?)))", opts.UserID, opts.UserID, false, true, true, true)
 	} else {
 		// Only return public repositories if opts.Private is not set
 		if !opts.Private {
-			sess.And("repo.is_private = ?", false)
+			sess.And("(repo.is_private = ? OR (repo.is_private = ? AND (repo.allow_public_wiki = ? OR repo.allow_public_issues = ?))", false, true, true, true)
 		}
 	}
 	if len(opts.Keyword) > 0 {
