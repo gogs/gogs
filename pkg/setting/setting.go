@@ -70,7 +70,8 @@ var (
 	LocalURL             string
 	OfflineMode          bool
 	DisableRouterLog     bool
-	CertFile, KeyFile    string
+	CertFile             string
+	KeyFile              string
 	TLSMinVersion        string
 	StaticRootPath       string
 	EnableGzip           bool
@@ -403,7 +404,9 @@ func NewContext() {
 		log.Fatal(2, "Fail to get work directory: %v", err)
 	}
 
-	Cfg, err = ini.Load(bindata.MustAsset("conf/app.ini"))
+	Cfg, err = ini.LoadSources(ini.LoadOptions{
+		IgnoreInlineComment: true,
+	}, bindata.MustAsset("conf/app.ini"))
 	if err != nil {
 		log.Fatal(2, "Fail to parse 'conf/app.ini': %v", err)
 	}
