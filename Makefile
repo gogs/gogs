@@ -62,7 +62,7 @@ pkg/bindata/bindata.go: $(DATA_FILES)
 less: public/css/gogs.css
 
 public/css/gogs.css: $(LESS_FILES)
-	lessc $< $@
+	lessc $< >$@
 
 clean:
 	go clean -i ./...

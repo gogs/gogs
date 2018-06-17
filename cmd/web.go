@@ -100,6 +100,13 @@ func newMacaron() *macaron.Macaron {
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
+	m.Use(macaron.Static(
+		setting.RepositoryAvatarUploadPath,
+		macaron.StaticOptions{
+			Prefix:      "repo-avatars",
+			SkipLogging: setting.DisableRouterLog,
+		},
+	))
 
 	funcMap := template.NewFuncMap()
 	m.Use(macaron.Renderer(macaron.RenderOptions{
@@ -419,6 +426,9 @@ func runWeb(c *cli.Context) error {
 		m.Group("/settings", func() {
 			m.Combo("").Get(repo.Settings).
 				Post(bindIgnErr(form.RepoSetting{}), repo.SettingsPost)
+			m.Combo("/avatar").Get(repo.SettingsAvatar).
+				Post(binding.MultipartForm(form.Avatar{}), repo.SettingsAvatarPost)
+			m.Post("/avatar/delete", repo.SettingsDeleteAvatar)
 			m.Group("/collaboration", func() {
 				m.Combo("").Get(repo.SettingsCollaboration).Post(repo.SettingsCollaborationPost)
 				m.Post("/access_mode", repo.ChangeCollaborationAccessMode)

@@ -5,7 +5,8 @@
 			<div class="column"><!-- start column -->
 				<div class="ui header">
 					<div class="ui huge breadcrumb">
-						<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+						{{if .RelAvatarLink}}<img class="ui mini spaced image" src="{{.RelAvatarLink}}">{{else}}<i class="mega-octicon octicon-repo"></i>{{end}}
+						<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}globe{{end}}"></i>
 						<a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
 						<div class="divider"> / </div>
 						<a href="{{$.RepoLink}}">{{.Name}}</a>
