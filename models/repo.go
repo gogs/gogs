@@ -7,6 +7,9 @@ package models
 import (
 	"bytes"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	"image/png"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,15 +18,12 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"image"
-	_ "image/jpeg"
-	"image/png"
 
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
-	"github.com/nfnt/resize"
 	"github.com/mcuadros/go-version"
+	"github.com/nfnt/resize"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
@@ -38,6 +38,9 @@ import (
 	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/sync"
 )
+
+// REPO_AVATAR_URL_PREFIX is used to identify a URL is to access repository avatar.
+const REPO_AVATAR_URL_PREFIX = "repo-avatars"
 
 var repoWorkingPool = sync.NewExclusivePool()
 
@@ -146,16 +149,18 @@ func NewRepoContext() {
 
 // Repository contains information of a repository.
 type Repository struct {
-	ID            int64
-	OwnerID       int64  `xorm:"UNIQUE(s)"`
-	Owner         *User  `xorm:"-" json:"-"`
-	LowerName     string `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name          string `xorm:"INDEX NOT NULL"`
-	Description   string `xorm:"VARCHAR(512)"`
-	Website       string
-	DefaultBranch string
-	Size          int64 `xorm:"NOT NULL DEFAULT 0"`
+	ID              int64
+	OwnerID         int64  `xorm:"UNIQUE(s)"`
+	Owner           *User  `xorm:"-" json:"-"`
+	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name            string `xorm:"INDEX NOT NULL"`
+	Description     string `xorm:"VARCHAR(512)"`
+	Website         string
+	DefaultBranch   string
+	Size            int64 `xorm:"NOT NULL DEFAULT 0"`
+	UseCustomAvatar bool
 
+	// Counters
 	NumWatches          int
 	NumStars            int
 	NumForks            int
@@ -302,10 +307,10 @@ func (repo *Repository) RelAvatarLink() string {
 	if !com.IsExist(repo.CustomAvatarPath()) {
 		return defaultImgUrl
 	}
-	return setting.AppSubURL + "/repo-avatars/" + com.ToStr(repo.ID)
+	return fmt.Sprintf("%s/%s/%d", setting.AppSubURL, REPO_AVATAR_URL_PREFIX, repo.ID)
 }
 
-// AvatarLink returns user avatar absolute link.
+// AvatarLink returns repository avatar absolute link.
 func (repo *Repository) AvatarLink() string {
 	link := repo.RelAvatarLink()
 	if link[0] == '/' && link[1] != '/' {
@@ -315,24 +320,23 @@ func (repo *Repository) AvatarLink() string {
 }
 
 // UploadAvatar saves custom avatar for repository.
-// FIXME: split uploads to different subdirs
-// in case we have massive number of repositories.
+// FIXME: split uploads to different subdirs in case we have massive number of repositories.
 func (repo *Repository) UploadAvatar(data []byte) error {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("Decode: %v", err)
+		return fmt.Errorf("decode image: %v", err)
 	}
 
-	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
 	os.MkdirAll(setting.RepositoryAvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(repo.CustomAvatarPath())
 	if err != nil {
-		return fmt.Errorf("Create: %v", err)
+		return fmt.Errorf("create custom avatar directory: %v", err)
 	}
 	defer fw.Close()
 
+	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
 	if err = png.Encode(fw, m); err != nil {
-		return fmt.Errorf("Encode: %v", err)
+		return fmt.Errorf("encode image: %v", err)
 	}
 
 	return nil
@@ -341,7 +345,12 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 // DeleteAvatar deletes the repository custom avatar.
 func (repo *Repository) DeleteAvatar() error {
 	log.Trace("DeleteAvatar [%d]: %s", repo.ID, repo.CustomAvatarPath())
-	return os.Remove(repo.CustomAvatarPath())
+	if err := os.Remove(repo.CustomAvatarPath()); err != nil {
+		return err
+	}
+
+	repo.UseCustomAvatar = false
+	return UpdateRepository(repo, false)
 }
 
 // This method assumes following fields have been assigned with valid values:
@@ -372,8 +381,8 @@ func (repo *Repository) APIFormat(permission *api.Permission, user ...*User) *ap
 		Created:       repo.Created,
 		Updated:       repo.Updated,
 		Permissions:   permission,
-// Reserved for go-gogs-client change
-//		AvatarUrl:     repo.AvatarLink(),
+		// Reserved for go-gogs-client change
+		//		AvatarUrl:     repo.AvatarLink(),
 	}
 	if repo.IsFork {
 		p := &api.Permission{Pull: true}

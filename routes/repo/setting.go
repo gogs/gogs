@@ -6,13 +6,13 @@ package repo
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
-	"io/ioutil"
 
-	log "gopkg.in/clog.v1"
 	"github.com/Unknwon/com"
 	"github.com/gogs/git-module"
+	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/models/errors"
@@ -294,6 +294,63 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 	default:
 		c.NotFound()
 	}
+}
+
+func SettingsAvatar(c *context.Context) {
+	c.Title("settings.avatar")
+	c.PageIs("SettingsAvatar")
+	c.Success(SETTINGS_REPO_AVATAR)
+}
+
+func SettingsAvatarPost(c *context.Context, f form.Avatar) {
+	f.Source = form.AVATAR_LOCAL
+	if err := UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
+		c.Flash.Error(err.Error())
+	} else {
+		c.Flash.Success(c.Tr("settings.update_avatar_success"))
+	}
+	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
+}
+
+func SettingsDeleteAvatar(c *context.Context) {
+	if err := c.Repo.Repository.DeleteAvatar(); err != nil {
+		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
+	}
+	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
+}
+
+// FIXME: limit upload size
+func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repository) error {
+	ctxRepo.UseCustomAvatar = true
+	if f.Avatar != nil {
+		r, err := f.Avatar.Open()
+		if err != nil {
+			return fmt.Errorf("open avatar reader: %v", err)
+		}
+		defer r.Close()
+
+		data, err := ioutil.ReadAll(r)
+		if err != nil {
+			return fmt.Errorf("read avatar content: %v", err)
+		}
+		if !tool.IsImageFile(data) {
+			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
+		}
+		if err = ctxRepo.UploadAvatar(data); err != nil {
+			return fmt.Errorf("upload avatar: %v", err)
+		}
+	} else {
+		// No avatar is uploaded and reset setting back.
+		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
+			ctxRepo.UseCustomAvatar = false
+		}
+	}
+
+	if err := models.UpdateRepository(ctxRepo, false); err != nil {
+		return fmt.Errorf("update repository: %v", err)
+	}
+
+	return nil
 }
 
 func SettingsCollaboration(c *context.Context) {
@@ -634,57 +691,4 @@ func DeleteDeployKey(c *context.Context) {
 	c.JSON(200, map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/settings/keys",
 	})
-}
-
-func SettingsAvatar(c *context.Context) {
-	c.Title("settings.avatar")
-	c.PageIs("SettingsAvatar")
-	c.Success(SETTINGS_REPO_AVATAR)
-}
-
-func SettingsAvatarPost(c *context.Context, f form.Avatar) {
-	f.Source = form.AVATAR_LOCAL
-	if err := UpdateAvatarSetting(c, f); err != nil {
-		c.Flash.Error(err.Error())
-	} else {
-		c.Flash.Success(c.Tr("settings.update_avatar_success"))
-	}
-	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
-}
-
-func SettingsDeleteAvatar(c *context.Context) {
-	if err := c.Repo.Repository.DeleteAvatar(); err != nil {
-		c.Flash.Error(fmt.Sprintf("DeleteAvatar: %v", err))
-	}
-	c.SubURLRedirect(c.Repo.RepoLink + "/settings")
-}
-
-// FIXME: limit size.
-func UpdateAvatarSetting(c *context.Context, f form.Avatar) error {
-	ctxRepo := c.Repo.Repository;
-	if f.Avatar != nil {
-		r, err := f.Avatar.Open()
-		if err != nil {
-			return fmt.Errorf("Avatar.Open: %v", err)
-		}
-		defer r.Close()
-
-		data, err := ioutil.ReadAll(r)
-		if err != nil {
-			return fmt.Errorf("ioutil.ReadAll: %v", err)
-		}
-		if !tool.IsImageFile(data) {
-			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
-		}
-		if err = ctxRepo.UploadAvatar(data); err != nil {
-			return fmt.Errorf("UploadAvatar: %v", err)
-		}
-	} else {
-		// No avatar is uploaded but setting has been changed to enable
-		// No random avatar here.
-		if !com.IsFile(ctxRepo.CustomAvatarPath()) {
-			log.Trace("No avatar was uploaded for repo: %d. Default icon will appear instead.", ctxRepo.ID)
-		}
-	}
-	return nil
 }

@@ -62,7 +62,7 @@ pkg/bindata/bindata.go: $(DATA_FILES)
 less: public/css/gogs.css
 
 public/css/gogs.css: $(LESS_FILES)
-	lessc $< >$@
+	@type lessc >/dev/null 2>&1 && lessc $< >$@ || echo "lessc command not found, skipped."
 
 clean:
 	go clean -i ./...
