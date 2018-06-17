@@ -32,8 +32,7 @@
 							{{range .Repos}}
 								<li {{if .IsPrivate}}class="private"{{end}}>
 									<a href="{{AppSubURL}}/{{$.ContextUser.Name}}/{{.Name}}">
-										{{if .RelAvatarLink}}<img class="ui micro image" src="{{.RelAvatarLink}}" />{{else}}<i class="octicon octicon-repo"></i>{{end}}
-										<i class="octicon octicon-{{if .IsFork}}repo-forked{{else if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else}}globe{{end}}"></i>
+										<i class="octicon octicon-{{if .IsFork}}repo-forked{{else if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
 										<strong class="text truncate item-name">{{.Name}}</strong>
 										<span class="ui right text light grey">
 											{{.NumStars}} <i class="octicon octicon-star rear"></i>
@@ -58,8 +57,7 @@
 								{{range .CollaborativeRepos}}
 									<li {{if .IsPrivate}}class="private"{{end}}>
 										<a href="{{AppSubURL}}/{{.Owner.Name}}/{{.Name}}">
-											{{if .RelAvatarLink}}<img class="ui micro image" src="{{.RelAvatarLink}}" />{{else}}<i class="octicon octicon-repo"></i>{{end}}
-											<i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}globe{{end}}"></i>
+											<i class="octicon octicon-{{if .IsPrivate}}lock{{else if .IsFork}}repo-forked{{else if .IsMirror}}repo-clone{{else}}repo{{end}}"></i>
 											<span class="text truncate owner-and-repo">
 												<span class="text truncate owner-name">{{.Owner.Name}}</span> / <strong>{{.Name}}</strong>
 											</span>
@@ -90,7 +88,6 @@
 								{{range .ContextUser.Orgs}}
 									<li>
 										<a href="{{AppSubURL}}/{{.Name}}">
-											{{if .RelAvatarLink}}<img class="ui micro image" src="{{.RelAvatarLink}}" />{{else}}<i class="octicon octicon-repo"></i>{{end}}
 											<i class="octicon octicon-organization"></i>
 											<strong class="text truncate item-name">{{.Name}}</strong>
 											<span class="ui right text light grey">
@@ -119,7 +116,6 @@
 							{{range .Mirrors}}
 								<li {{if .IsPrivate}}class="private"{{end}}>
 									<a href="{{AppSubURL}}/{{$.ContextUser.Name}}/{{.Name}}">
-										{{if .RelAvatarLink}}<img class="ui micro image" src="{{.RelAvatarLink}}" />{{else}}<i class="octicon octicon-repo"></i>{{end}}
 										<i class="octicon octicon-repo-clone"></i>
 										<strong class="text truncate item-name">{{.Name}}</strong>
 										<span class="ui right text light grey">

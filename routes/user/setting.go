@@ -111,7 +111,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	c.SubURLRedirect("/user/settings")
 }
 
-// FIXME: limit size.
+// FIXME: limit upload size
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
@@ -122,32 +122,32 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User
 	if f.Avatar != nil && f.Avatar.Filename != "" {
 		r, err := f.Avatar.Open()
 		if err != nil {
-			return fmt.Errorf("Avatar.Open: %v", err)
+			return fmt.Errorf("open avatar reader: %v", err)
 		}
 		defer r.Close()
 
 		data, err := ioutil.ReadAll(r)
 		if err != nil {
-			return fmt.Errorf("ioutil.ReadAll: %v", err)
+			return fmt.Errorf("read avatar content: %v", err)
 		}
 		if !tool.IsImageFile(data) {
 			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
 		}
 		if err = ctxUser.UploadAvatar(data); err != nil {
-			return fmt.Errorf("UploadAvatar: %v", err)
+			return fmt.Errorf("upload avatar: %v", err)
 		}
 	} else {
 		// No avatar is uploaded but setting has been changed to enable,
 		// generate a random one when needed.
 		if ctxUser.UseCustomAvatar && !com.IsFile(ctxUser.CustomAvatarPath()) {
 			if err := ctxUser.GenerateRandomAvatar(); err != nil {
-				log.Error(4, "GenerateRandomAvatar[%d]: %v", ctxUser.ID, err)
+				log.Error(2, "generate random avatar [%d]: %v", ctxUser.ID, err)
 			}
 		}
 	}
 
 	if err := models.UpdateUser(ctxUser); err != nil {
-		return fmt.Errorf("UpdateUser: %v", err)
+		return fmt.Errorf("update user: %v", err)
 	}
 
 	return nil
@@ -171,7 +171,7 @@ func SettingsAvatarPost(c *context.Context, f form.Avatar) {
 
 func SettingsDeleteAvatar(c *context.Context) {
 	if err := c.User.DeleteAvatar(); err != nil {
-		c.Flash.Error(fmt.Sprintf("DeleteAvatar: %v", err))
+		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
 	}
 
 	c.SubURLRedirect("/user/settings/avatar")

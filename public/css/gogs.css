@@ -350,6 +350,9 @@ footer .ui.language .menu {
 .center {
   text-align: center;
 }
+.no-padding-left {
+  padding-left: 0 !important;
+}
 .img-1 {
   width: 2px !important;
   height: 2px !important;

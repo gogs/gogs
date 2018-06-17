@@ -35,6 +35,9 @@ import (
 	"github.com/gogs/gogs/pkg/tool"
 )
 
+// USER_AVATAR_URL_PREFIX is used to identify a URL is to access user avatar.
+const USER_AVATAR_URL_PREFIX = "avatars"
+
 type UserType int
 
 const (
@@ -257,7 +260,7 @@ func (u *User) RelAvatarLink() string {
 		if !com.IsExist(u.CustomAvatarPath()) {
 			return defaultImgUrl
 		}
-		return setting.AppSubURL + "/avatars/" + com.ToStr(u.ID)
+		return fmt.Sprintf("%s/%s/%d", setting.AppSubURL, USER_AVATAR_URL_PREFIX, u.ID)
 	case setting.DisableGravatar, setting.OfflineMode:
 		if !com.IsExist(u.CustomAvatarPath()) {
 			if err := u.GenerateRandomAvatar(); err != nil {
@@ -265,7 +268,7 @@ func (u *User) RelAvatarLink() string {
 			}
 		}
 
-		return setting.AppSubURL + "/avatars/" + com.ToStr(u.ID)
+		return fmt.Sprintf("%s/%s/%d", setting.AppSubURL, USER_AVATAR_URL_PREFIX, u.ID)
 	}
 	return tool.AvatarLink(u.AvatarEmail)
 }
@@ -330,50 +333,37 @@ func (u *User) ValidatePassword(passwd string) bool {
 }
 
 // UploadAvatar saves custom avatar for user.
-// FIXME: split uploads to different subdirs in case we have massive users.
+// FIXME: split uploads to different subdirs in case we have massive number of users.
 func (u *User) UploadAvatar(data []byte) error {
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("Decode: %v", err)
-	}
-
-	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	u.UseCustomAvatar = true
-	if err = updateUser(sess, u); err != nil {
-		return fmt.Errorf("updateUser: %v", err)
+		return fmt.Errorf("decode image: %v", err)
 	}
 
 	os.MkdirAll(setting.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
-		return fmt.Errorf("Create: %v", err)
+		return fmt.Errorf("create custom avatar directory: %v", err)
 	}
 	defer fw.Close()
 
+	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
 	if err = png.Encode(fw, m); err != nil {
-		return fmt.Errorf("Encode: %v", err)
+		return fmt.Errorf("encode image: %v", err)
 	}
 
-	return sess.Commit()
+	return nil
 }
 
 // DeleteAvatar deletes the user's custom avatar.
 func (u *User) DeleteAvatar() error {
 	log.Trace("DeleteAvatar [%d]: %s", u.ID, u.CustomAvatarPath())
-	os.Remove(u.CustomAvatarPath())
+	if err := os.Remove(u.CustomAvatarPath()); err != nil {
+		return err
+	}
 
 	u.UseCustomAvatar = false
-	if err := UpdateUser(u); err != nil {
-		return fmt.Errorf("UpdateUser: %v", err)
-	}
-	return nil
+	return UpdateUser(u)
 }
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.

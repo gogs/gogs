@@ -100,7 +100,7 @@ func runBackup(c *cli.Context) error {
 
 	// Data files
 	if !c.Bool("database-only") {
-		for _, dir := range []string{"attachments", "avatars"} {
+		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			dirPath := path.Join(setting.AppDataPath, dir)
 			if !com.IsDir(dirPath) {
 				continue
