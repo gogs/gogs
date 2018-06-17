@@ -1,7 +1,12 @@
 <div class="ui repository list">
 	{{range .Repos}}
 		<div class="item">
-			<div class="ui header">
+			<div class="ui grid">
+				<div class="ui two wide column middle aligned">
+					{{if .RelAvatarLink}}<img class="ui tiny image" src="{{.RelAvatarLink}}">{{else}}<i class="mega-octicon octicon-repo"></i>{{end}}
+				</div>
+				<div class="ui fourteen wide column">
+				<div class="ui header">
 				<a class="name" href="{{AppSubURL}}/{{if .Owner}}{{.Owner.Name}}{{else if $.Org}}{{$.Org.Name}}{{else}}{{$.Owner.Name}}{{end}}/{{.Name}}">{{if $.PageIsExplore}}{{.Owner.Name}} / {{end}}{{.Name}}</a>
 				{{if .IsPrivate}}
 					<span class="text gold"><i class="octicon octicon-lock"></i></span>
@@ -9,6 +14,8 @@
 					<span><i class="octicon octicon-repo-forked"></i></span>
 				{{else if .IsMirror}}
 					<span><i class="octicon octicon-repo-clone"></i></span>
+				{{else}}
+					<span class="text"><i class="octicon octicon-globe"></i></span>
 				{{end}}
 
 				<div class="ui right metas">
@@ -18,6 +25,8 @@
 			</div>
 			{{if .Description}}<p class="has-emoji">{{.Description | Str2html}}</p>{{end}}
 			<p class="time">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
+			</div>
+			</div>
 		</div>
 	{{end}}
 </div>
