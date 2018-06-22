@@ -851,6 +851,7 @@ function initAdmin() {
             $('.dldap').hide();
             $('.smtp').hide();
             $('.pam').hide();
+            $('.github').hide();
             $('.has-tls').hide();
 
             var authType = $(this).val();
@@ -868,7 +869,10 @@ function initAdmin() {
                 case '5':     // LDAP
                     $('.dldap').show();
                     break;
-            }
+                case '6': //GITHUB
+                    $('.github').show();
+                      break;
+              }
 
             if (authType == '2' || authType == '5') {
                 onSecurityProtocolChange()
