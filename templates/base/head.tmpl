@@ -11,6 +11,7 @@
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CSRFToken}}" />
 	<meta name="_suburl" content="{{AppSubURL}}" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 	
 	<!-- Open Graph Tags -->
 	{{if .PageIsAdmin}}
@@ -93,14 +94,25 @@
 								</a>
 
 								{{if .IsLogged}}
-									<a class="item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "dashboard"}}</a>
-									<a class="item{{if .PageIsIssues}} active{{end}}" href="{{AppSubURL}}/issues">{{.i18n.Tr "issues"}}</a>
-									<a class="item{{if .PageIsPulls}} active{{end}}" href="{{AppSubURL}}/pulls">{{.i18n.Tr "pull_requests"}}</a>
+									<a class="main-menu item{{if .PageIsDashboard}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "dashboard"}}
+										<i class="menu-icon octicon octicon-home"></i>
+									</a>
+									<a class="main-menu item{{if .PageIsIssues}} active{{end}}" href="{{AppSubURL}}/issues">{{.i18n.Tr "issues"}}
+										<i class="menu-icon octicon octicon-issue-opened"></i>
+									</a>
+									<a class="main-menu item{{if .PageIsPulls}} active{{end}}" href="{{AppSubURL}}/pulls">{{.i18n.Tr "pull_requests"}}
+										<i class="menu-icon octicon octicon-git-pull-request"></i>
+									</a>
 								{{else}}
-									<a class="item{{if .PageIsHome}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "home"}}</a>
+									<a class="main-menu item{{if .PageIsHome}} active{{end}}" href="{{AppSubURL}}/">{{.i18n.Tr "home"}}
+										<i class="menu-icon octicon octicon-home"></i>
+									</a>
 								{{end}}
 
-								<a class="item{{if .PageIsExplore}} active{{end}}" href="{{AppSubURL}}/explore/repos">{{.i18n.Tr "explore"}}</a>
+								<a class="main-menu item{{if .PageIsExplore}} active{{end}}" href="{{AppSubURL}}/explore/repos">{{.i18n.Tr "explore"}}
+									<i class="menu-icon octicon octicon-file-directory"></i>
+								</a>
+
 								{{/*<div class="item">
 									<div class="ui icon input">
 									<input class="searchbox" type="text" placeholder="{{.i18n.Tr "search_project"}}">
@@ -169,15 +181,17 @@
 
 								{{else}}
 
-									<a class="item" target="_blank" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}</a>
+									<a class="main-menu item" target="_blank" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}
+										<i class="menu-icon octicon octicon-info"></i>
+									</a>
 									<div class="right menu">
 										{{if .ShowRegistrationButton}}
-											<a class="item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubURL}}/user/sign_up">
-												<i class="octicon octicon-person"></i> {{.i18n.Tr "register"}}
+											<a class="main-menu item{{if .PageIsSignUp}} active{{end}}" href="{{AppSubURL}}/user/sign_up">
+												<i class="menu-icon octicon octicon-person"></i> {{.i18n.Tr "register"}}
 											</a>
 										{{end}}
-										<a class="item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubURL}}/user/login?redirect_to={{.Link}}">
-											<i class="octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
+										<a class="main-menu item{{if .PageIsSignIn}} active{{end}}" href="{{AppSubURL}}/user/login?redirect_to={{.Link}}">
+											<i class="menu-icon octicon octicon-sign-in"></i> {{.i18n.Tr "sign_in"}}
 										</a>
 									</div><!-- end anonymous right menu -->
 

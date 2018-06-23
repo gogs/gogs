@@ -17,9 +17,11 @@
 										<i class="octicon octicon-location"></i> {{.Location}}
 									{{end}}
 									{{if and .Email $.IsLogged}}
+									<br class="br" />
 										<i class="octicon octicon-mail"></i>
 										<a href="mailto:{{.Email}}" rel="nofollow">{{.Email}}</a>
 									{{end}}
+									<br class="br" />
 									<i class="octicon octicon-clock"></i> {{$.i18n.Tr "user.join_on"}} {{DateFmtShort .Created}}
 						    </div>
 						  </div>
