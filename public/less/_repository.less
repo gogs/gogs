@@ -1728,3 +1728,125 @@
 	}
 	.generate-tab-size(@n, (@i + 1));
 }
+
+@media (max-width: 1020px) {
+	[class*="vertically padded"].ui.grid,
+	#release-list .ui.grid,
+	#git-stats,
+	.repository.new.repo .ui.form .selection.dropdown:not(.owner),
+	.repository.new.repo form input, 
+	.repository.new.migrate form input, 
+	.repository.new.fork form input, 
+	.repository.new.repo form textarea, 
+	.repository.new.migrate form textarea, 
+	.repository.new.fork form textarea,
+	.ui.grid > [class*="twelve wide"].column,
+	.repository .ui.container .navbar .ui.compact.small.menu{
+		width: 100% !important;
+	}
+	
+	.repository .ui.container .ui.secondary.menu{
+		padding: 6px 6px 30px;
+		position: relative;
+		width: 100%;
+	}
+	
+	.repository.file.list #repo-files-table .grey.has-emoji,
+	.repository.file.list #repo-files-table thead th,
+	.repository.file.list #repo-files-table td.message.collapsing.has-emoji{
+		display: none;
+	}
+	
+	.repository.file.list #repo-files-table thead th:first-child {
+		width: 200%;
+	}
+	
+	.repository.file.list #repo-files-table tr{
+		width: 100%;
+	}
+	
+	#commits-table tbody tr .message.collapsing span,
+	#commits-table thead tr .nine.wide.message span.commits-message{
+		display: none;
+	}
+	
+	#commits-table thead tr th.four.wide,
+	#commits-table thead tr th.nine.wide.message,
+	#commits-table thead tr th.three.wide{
+		width: 33%;
+	}
+	
+	#file-buttons{
+		display: none !important;
+	}
+	
+	.ui.menu .right.fitted.item{
+		height:30px; 
+		width:100%; 
+		top: 50px;
+		position:absolute; 
+		bottom:0;
+	}
+	
+	.repository .ui.container .navbar .ui.compact.small.menu .item{
+		position: relative;
+		width: 50%;
+		text-align: center;
+	}
+	
+	.repository .ui.container .navbar .ui.right{
+		margin-top: 5px;
+		float: none;
+	}
+	
+	.repository .ui.container .navbar .ui.right .ui.green.button{
+		margin: auto;
+		display: table;
+	}
+	
+	.repository.new.repo .ui.form #auto-init,
+	.repository.new.repo form .optional .title,
+	.repository.new.migrate form .optional .title,
+	.repository.new.fork form .optional .title
+	.repository.new.repo form .help, .repository.new.migrate form .help, 
+	.repository.new.fork form .help{
+		margin-left: 0 !important;
+	}
+	
+	.repository.new.repo form .inline.field > label, 
+	.repository.new.migrate form .inline.field > label, 
+	.repository.new.fork form .inline.field > label{
+		text-align: left;
+	}
+	
+	.repository.new.repo form .header, 
+	.repository.new.migrate form .header,
+	.repository.new.fork form .header{
+		padding-left: 0 !important;
+	}
+	
+	.repository .header-wrapper .ui.tabular .octicon{
+		margin: 0 auto !important;
+	}
+	
+	.repository .header-wrapper .ui.tabular .octicon.octicon-file-text{
+		padding-left: 5px;
+	}
+	
+	#repo-desc{
+		text-align: center;
+	}
+	
+	.repository.release #release-list > li .meta {
+		text-align: left;
+		padding-bottom: 0;
+		border-left: 1px solid #DDD;
+	}
+	.repository.release #release-list > li .detail{
+		padding-top: 10px;
+	}
+	
+	.repository .ui.container .ui.secondary.menu.right.floated.menu{
+		display: none;
+	}
+}

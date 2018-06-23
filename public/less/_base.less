@@ -446,7 +446,6 @@ footer {
 
 
 @media (max-width: 1020px) {
-	@media (max-width: 1020px) {
 	body {
 	  min-width: 320px !important;
 	  max-width: 100%;
@@ -454,40 +453,19 @@ footer {
 	
 	img, table, td, blockquote, code, pre, textarea, input, iframe, object, embed, video {
 		max-width: 100%;
-	}
+	}	
 	
-	.item.brand,
-	.six.wide.column,
-	.ui.five.wide.column{
-		display: none !important;
-	}
-	
-	.ten.wide.column,
-	.ui.grid > [class*="four wide"].column,
-	.ui.eleven.wide.column,
-	.ui.grid > [class*="twelve wide"].column,
 	.full.height,
-	.dashboard,
 	.following.bar.light,
-	[class*="vertically padded"].ui.grid,
-	#release-list .ui.grid,
-	#git-stats,
-	.repository.new.repo .ui.form .selection.dropdown:not(.owner),
-	.repository.new.repo form input, 
-	.repository.new.migrate form input, 
-	.repository.new.fork form input, 
-	.repository.new.repo form textarea, 
-	.repository.new.migrate form textarea, 
-	.repository.new.fork form textarea,
 	.ui.form .inline.field > .selection.dropdown,
 	.ui.form .inline.fields .field > .selection.dropdown,
-	.feeds .news .issue.title
-	{
+	.ui.form .inline.field > input, 
+	.ui.form .inline.field > select, 
+	.ui.form .inline.fields .field > input, 
+	.ui.form .inline.fields .field > select{
 		width: 100% !important;
-	}
-	
-	.ui.vertically.padded.grid.head .column{
-		padding: 0;
+	}{
+		width: 100% !important;
 	}
 	
 	.ui.header .ui.right .ui.small.button,
@@ -527,18 +505,10 @@ footer {
 		word-wrap: break-word;
 	}
 	
-	.ui.right .ui.secondary.head.menu .item[href^="/org/"]{
-		display: none;
-	}
-	
 	.ui.language.bottom.floating.slide.up.dropdown.link.item{
 		right: 5%;
 		position: absolute;
 		bottom: 36.5%;
-	}
-	
-	.ui.grid > [class*="ten wide"].column {
-		width: 100% !important;
 	}
 	
 	.following.bar a.main-menu.item .menu-icon.octicon{
@@ -564,11 +534,6 @@ footer {
 		padding-left: 5px;
 	}
 	
-	.ui.vertical.menu{
-		margin: 0 auto !important;
-		width: 90%;
-	}
-	
 	.ui.header{
 		text-align: center;
 	}
@@ -580,42 +545,6 @@ footer {
 		float: none;
 	}
 	
-	.ui.user.list .item .content{
-		width: 85%;
-	}
-	
-	.ui.user.list .item .content .br{
-		display: block;
-	}
-	
-	.ui.user.list .item .content .octicon.octicon-location{
-		padding-left: 5px;
-	}
-	
-	.ui.container .ui.grid .ui.eleven.wide.column .text.right .ui.green.button{
-		width: 100%;
-	}
-	
-	.repository .ui.container .ui.secondary.menu{
-		padding: 6px 6px 30px;
-		position: relative;
-		width: 100%;
-	}
-	
-	
-	.repository.file.list #repo-files-table .grey.has-emoji,
-	.repository.file.list #repo-files-table thead th,
-	.repository.file.list #repo-files-table td.message.collapsing.has-emoji{
-		display: none;
-	}
-	
-	.repository.file.list #repo-files-table thead th:first-child {
-		width: 200%;
-	}
-	
-	.repository.file.list #repo-files-table tr{
-		width: 100%;
-	}
 	.ui.container .ui.header .ui.right .ui.small.button{
 		margin: 0;
 	}
@@ -625,44 +554,12 @@ footer {
 		float: none;
 	}
 	
-	#commits-table tbody tr .message.collapsing span,
-	#commits-table thead tr .nine.wide.message span.commits-message{
-		display: none;
-	}
-	
-	#commits-table thead tr th.four.wide,
-	#commits-table thead tr th.nine.wide.message,
-	#commits-table thead tr th.three.wide{
-		width: 33%;
-	}
-	
-	#file-buttons{
-		display: none !important;
-	}
-	
-	.ui.menu .right.fitted.item{
-		height:30px; 
-		width:100%; 
-		top: 50px;
-		position:absolute; 
-		bottom:0;
-	}
-	
 	.ui.tabs.container .ui.tabular.menu .item{
 		text-indent: -9999px;
 		white-space: nowrap; 
 		overflow: hidden;
 		font-size: 0px;
 		width: 50px;
-	}
-	
-	.repository .ui.container .ui.secondary.menu.right.floated.menu{
-		display: none;
-	}
-	.ui.grid > [class*="one wide"].column{
-		margin-left: -3.25em;
-		margin-top: 3em;
-		position: absolute;
 	}
 	
 	.ui.tabular.menu .item i{
@@ -675,42 +572,10 @@ footer {
 		margin: auto;
 	}
 	
-	.repository .header-wrapper .ui.tabular .octicon{
-		margin: 0 auto !important;
-	}
-	.repository .header-wrapper .ui.tabular .octicon.octicon-file-text{
-		padding-left: 5px;
-	}
-	
-	.ui.tabular.menu .right.menu{
-		/*margin-right: 5%;*/
-	}
-	
-	#repo-desc{
-		text-align: center;
-	}
-	
-	.repository.release #release-list > li .meta {
-		text-align: left;
-		padding-bottom: 0;
-		border-left: 1px solid #DDD;
-	}
-	.repository.release #release-list > li .detail{
-		padding-top: 10px;
-	}
-	
-	.repository.new.repo form .header, 
-	.repository.new.migrate form .header,
-	.repository.new.fork form .header,
-	.organization.new.org form .header,
 	.ui.top.attached.header{
 		padding-left: 0 !important;
 	}
 	
-	.repository.new.repo form .inline.field > label, 
-	.repository.new.migrate form .inline.field > label, 
-	.repository.new.fork form .inline.field > label,
-	.organization.new.org form .inline.field > label,
 	.ui.form .inline.field > :first-child, 
 	.ui.form .inline.fields .field > :first-child{
 		text-align: left;
@@ -718,38 +583,6 @@ footer {
 	
 	.inline.field a[href^="/user/sign_up"]{
 		white-space: nowrap;
-	}
-	
-	.repository.new.repo .ui.form #auto-init,
-	.repository.new.repo form .optional .title,
-	.repository.new.migrate form .optional .title,
-	.repository.new.fork form .optional .title
-	.repository.new.repo form .help, .repository.new.migrate form .help, 
-	.repository.new.fork form .help,
-	.organization.new.org form .help{
-		margin-left: 0 !important;
-	}
-	
-	.repository .ui.container .navbar .ui.compact.small.menu,
-	.ui.form .inline.field > input, 
-	.ui.form .inline.field > select, 
-	.ui.form .inline.fields .field > input, 
-	.ui.form .inline.fields .field > select{
-		width: 100% !important;
-	}
-	
-	.repository .ui.container .navbar .ui.compact.small.menu .item{
-		position: relative;
-		width: 50%;
-		text-align: center;
-	}
-	.repository .ui.container .navbar .ui.right{
-		margin-top: 5px;
-		float: none;
-	}
-	.repository .ui.container .navbar .ui.right .ui.green.button{
-		margin: auto;
-		display: table;
 	}
 	
 	.ui.form .field:last-child,

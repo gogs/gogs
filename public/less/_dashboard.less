@@ -157,3 +157,28 @@
 		}
 	}
 }
+
+@media (max-width: 1020px) {
+	.item.brand,
+	.six.wide.column,
+	.ui.five.wide.column{
+		display: none !important;
+	}
+	
+	.dashboard,
+	.ui.grid > [class*="ten wide"].column,
+	.ten.wide.column,
+	.feeds .news .issue.title{
+		width: 100% !important;
+	}
+	
+	.ui.vertically.padded.grid.head .column{
+		padding: 0;
+	}
+	
+	.ui.grid > [class*="one wide"].column{
+		margin-left: -3.25em;
+		margin-top: 3em;
+		position: absolute;
+	}
+}
