@@ -300,7 +300,8 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 	snakeMapper := core.SnakeMapper{}
 
 	skipInsertProcessors := map[string]bool{
-		"mirror": true,
+		"mirror":    true,
+		"milestone": true,
 	}
 
 	// Purposely create a local variable to not modify global variable
