@@ -207,10 +207,10 @@
 			"revisionTime": "2017-03-01T03:54:11Z"
 		},
 		{
-			"checksumSHA1": "8KekujhL9uUvM97PP6jToeeQi6M=",
+			"checksumSHA1": "dlSQtPgdbhxV8VAcE5YV3aLgSew=",
 			"path": "github.com/gogs/git-module",
-			"revision": "abc97c40967942aec90e470834436ff69e1888f2",
-			"revisionTime": "2018-06-09T01:58:34Z"
+			"revision": "73275fa99ef150d697b7fc81245e22b0319622ae",
+			"revisionTime": "2018-06-25T11:56:28Z"
 		},
 		{
 			"checksumSHA1": "MLO0PyrK2MUO6A7Z9PxWuu43C/A=",

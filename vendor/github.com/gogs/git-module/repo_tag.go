@@ -95,7 +95,7 @@ func (repo *Repository) GetTag(name string) (*Tag, error) {
 // GetTags returns all tags of the repository.
 func (repo *Repository) GetTags() ([]string, error) {
 	cmd := NewCommand("tag", "-l")
-	if version.Compare(gitVersion, "2.0.0", ">=") {
+	if version.Compare(gitVersion, "2.4.9", ">=") {
 		cmd.AddArguments("--sort=-v:taggerdate")
 	}
 
@@ -107,7 +107,7 @@ func (repo *Repository) GetTags() ([]string, error) {
 	tags := strings.Split(stdout, "\n")
 	tags = tags[:len(tags)-1]
 
-	if version.Compare(gitVersion, "2.0.0", "<") {
+	if version.Compare(gitVersion, "2.4.9", "<") {
 		version.Sort(tags)
 
 		// Reverse order
