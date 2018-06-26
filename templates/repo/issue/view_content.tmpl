@@ -196,6 +196,12 @@
 									<form class="ui form" action="{{.Link}}/merge" method="post">
 										{{.CSRFTokenHTML}}
 										<div class="field">
+											<div class="ui top">
+												<label>{{$.i18n.Tr "repo.pulls.commit_description"}}:</label>
+												<textarea id="commit_description" class="edit_area" name="commit_description" tabindex="4"></textarea>
+											</div>
+										</div>
+										<div class="field">
 											<div class="ui radio checkbox">
 											  <input type="radio" name="merge_style" value="create_merge_commit" checked="checked">
 											  <label>{{$.i18n.Tr "repo.pulls.create_merge_commit"}}</label>
