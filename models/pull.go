@@ -193,7 +193,7 @@ const (
 
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
-func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, CommitDescription string) (err error) {
+func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -267,7 +267,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 			fmt.Sprintf("PullRequest.Merge (git merge): %s", tmpBasePath),
 			"git", "commit", fmt.Sprintf("--author='%s <%s>'", sig.Name, sig.Email),
 			"-m", fmt.Sprintf("Merge branch '%s' of %s/%s into %s", pr.HeadBranch, pr.HeadUserName, pr.HeadRepo.Name, pr.BaseBranch),
-			"-m", CommitDescription); err != nil {
+			"-m", commitDescription); err != nil {
 			return fmt.Errorf("git commit [%s]: %v - %s", tmpBasePath, err, stderr)
 		}
 

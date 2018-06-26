@@ -196,12 +196,6 @@
 									<form class="ui form" action="{{.Link}}/merge" method="post">
 										{{.CSRFTokenHTML}}
 										<div class="field">
-											<div class="ui top">
-												<label>{{$.i18n.Tr "repo.pulls.commit_description"}}:</label>
-												<textarea id="commit_description" class="edit_area" name="commit_description" tabindex="4"></textarea>
-											</div>
-										</div>
-										<div class="field">
 											<div class="ui radio checkbox">
 											  <input type="radio" name="merge_style" value="create_merge_commit" checked="checked">
 											  <label>{{$.i18n.Tr "repo.pulls.create_merge_commit"}}</label>
@@ -215,6 +209,12 @@
 												</div>
 											</div>
 										{{end}}
+										<div class="commit description field">
+											<div class="ui top">
+												<p>{{$.i18n.Tr "repo.pulls.commit_description"}}:</p>
+												<textarea id="commit_description" name="commit_description" tabindex="4" rows="3"></textarea>
+											</div>
+										</div>
 										<button class="ui green button">
 											<span class="octicon octicon-git-merge"></span> {{$.i18n.Tr "repo.pulls.merge_pull_request"}}
 										</button>
