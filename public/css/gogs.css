@@ -1731,6 +1731,9 @@ footer .ui.language .menu {
   margin-left: 10px;
   margin-top: 10px;
 }
+.repository.view.issue .pull .merge.box #commit_description {
+  height: auto;
+}
 .repository.view.issue .comment-list:before {
   display: block;
   content: "";
