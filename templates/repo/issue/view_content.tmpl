@@ -41,7 +41,7 @@
 						<div class="ui bottom attached segment">
 							<div class="ui small images">
 								{{range .Issue.Attachments}}
-									<a target="_blank" href="{{AppSubURL}}/attachments/{{.UUID}}">
+									<a target="_blank" rel="noopener noreferrer" href="{{AppSubURL}}/attachments/{{.UUID}}">
 										{{if FilenameIsImage .Name}}
 											<img class="ui image" src="{{AppSubURL}}/attachments/{{.UUID}}" title='{{$.i18n.Tr "repo.issues.attachment.open_tab" .Name}}'>
 										{{else}}
@@ -102,7 +102,7 @@
 								<div class="ui bottom attached segment">
 									<div class="ui small images">
 										{{range .Attachments}}
-											<a target="_blank" href="{{AppSubURL}}/attachments/{{.UUID}}">
+											<a target="_blank" rel="noopener noreferrer" href="{{AppSubURL}}/attachments/{{.UUID}}">
 												{{if FilenameIsImage .Name}}
 													<img class="ui image" src="{{AppSubURL}}/attachments/{{.UUID}}" title='{{$.i18n.Tr "repo.issues.attachment.open_tab" .Name}}'>
 												{{else}}
