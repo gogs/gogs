@@ -654,6 +654,8 @@ func (t *HookTask) deliver() {
 
 	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
+		Header("X-Github-Delivery", t.UUID).
+		Header("X-Github-Event", string(t.EventType)).
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
