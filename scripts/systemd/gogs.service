@@ -18,6 +18,10 @@ WorkingDirectory=/home/git/gogs
 ExecStart=/home/git/gogs/gogs web
 Restart=always
 Environment=USER=git HOME=/home/git
+# Hardening
+ProtectSystem=full
+PrivateDevices=yes
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target
