@@ -176,10 +176,18 @@
 								<input name="skip_verify" type="checkbox" {{if .skip_verify}}checked{{end}}>
 							</div>
 						</div>
+
 						<div class="inline field">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.activated"}}</strong></label>
 								<input name="is_active" type="checkbox" {{if .is_active}}checked{{end}}>
+							</div>
+						</div>
+
+						<div class="inline field">
+							<div class="ui checkbox">
+								<label><strong>{{.i18n.Tr "admin.auths.default_auth"}}</strong></label>
+								<input name="is_default" type="checkbox" {{if .is_default}}checked{{end}}>
 							</div>
 						</div>
 

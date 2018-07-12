@@ -113,7 +113,15 @@ func Login(c *context.Context) {
 		return
 	}
 	c.Data["LoginSources"] = loginSources
-
+	for i := range loginSources {
+		if loginSources[i].IsDefault {
+			c.Data["DefaultSource"] = *loginSources[i]
+			c.Data["login_source"] = loginSources[i].ID
+			newLoginSources := append(loginSources[:i], loginSources[i+1:]...)
+			c.Data["LoginSources"] = newLoginSources
+			break
+		}
+	}
 	c.Success(LOGIN)
 }
 
@@ -172,6 +180,15 @@ func LoginPost(c *context.Context, f form.SignIn) {
 
 		default:
 			c.ServerError("UserLogin", err)
+		}
+		for i := range loginSources {
+			if loginSources[i].IsDefault {
+				c.Data["DefaultSource"] = *loginSources[i]
+				c.Data["login_source"] = loginSources[i].ID
+				newLoginSources := append(loginSources[:i], loginSources[i+1:]...)
+				c.Data["LoginSources"] = newLoginSources
+				break
+			}
 		}
 		return
 	}

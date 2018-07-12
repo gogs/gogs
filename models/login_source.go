@@ -133,6 +133,7 @@ type LoginSource struct {
 	Type      LoginType
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
+	IsDefault bool            `xorm:"DEFAULT NULL"` // for backward compatible
 	Cfg       core.Conversion `xorm:"TEXT"`
 
 	Created     time.Time `xorm:"-" json:"-"`
@@ -257,6 +258,11 @@ func CreateLoginSource(source *LoginSource) error {
 	}
 
 	_, err = x.Insert(source)
+	if err != nil {
+		return err
+	} else if source.IsDefault {
+		return ResetNonDefaultLoginSources(source.ID)
+	}
 	return err
 }
 
@@ -291,22 +297,32 @@ func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	return source, nil
 }
 
+// ResetNonDefaultLoginSources clean other default source flag
+func ResetNonDefaultLoginSources(id int64) error {
+	_, err := x.NotIn("id", []int64{id}).Cols("is_default").Update(&LoginSource{IsDefault: false})
+	return err
+}
+
 // UpdateLoginSource updates information of login source to database or local file.
 func UpdateLoginSource(source *LoginSource) error {
 	if source.LocalFile == nil {
 		_, err := x.Id(source.ID).AllCols().Update(source)
+		if err != nil && source.IsDefault {
+			return ResetNonDefaultLoginSources(source.ID)
+		}
 		return err
 	}
 
 	source.LocalFile.SetGeneral("name", source.Name)
 	source.LocalFile.SetGeneral("is_activated", com.ToStr(source.IsActived))
+	source.LocalFile.SetGeneral("is_default", com.ToStr(source.IsDefault))
 	if err := source.LocalFile.SetConfig(source.Cfg); err != nil {
 		return fmt.Errorf("LocalFile.SetConfig: %v", err)
 	} else if err = source.LocalFile.Save(); err != nil {
 		return fmt.Errorf("LocalFile.Save: %v", err)
 	}
-
 	localLoginSources.UpdateLoginSource(source)
+
 	return nil
 }
 
@@ -361,10 +377,13 @@ func (s *LocalLoginSources) ActivatedList() []*LoginSource {
 		if !s.sources[i].IsActived {
 			continue
 		}
-
 		source := &LoginSource{}
 		*source = *s.sources[i]
-		list = append(list, source)
+		if s.sources[i].IsDefault {
+			list = append([]*LoginSource{source}, list...)
+		} else {
+			list = append(list, source)
+		}
 	}
 	return list
 }
@@ -394,7 +413,8 @@ func (s *LocalLoginSources) UpdateLoginSource(source *LoginSource) {
 	for i := range s.sources {
 		if s.sources[i].ID == source.ID {
 			*s.sources[i] = *source
-			break
+		} else if source.IsDefault {
+			s.sources[i].IsDefault = false
 		}
 	}
 }
@@ -429,6 +449,7 @@ func LoadAuthSources() {
 			ID:        s.Key("id").MustInt64(),
 			Name:      s.Key("name").String(),
 			IsActived: s.Key("is_activated").MustBool(),
+			IsDefault: s.Key("is_default").MustBool(),
 			LocalFile: &AuthSourceFile{
 				abspath: fpath,
 				file:    authSource,
