@@ -413,8 +413,13 @@ type TeamUser struct {
 }
 
 func isTeamMember(e Engine, orgID, teamID, uid int64) bool {
-	has, _ := e.Where("org_id=?", orgID).And("team_id=?", teamID).And("uid=?", uid).Get(new(TeamUser))
-	return has
+	if orgID < 0 {
+		has, _ := e.Where("team_id=?", teamID).And("uid=?", uid).Get(new(TeamUser))
+		return has
+	} else {
+		has, _ := e.Where("org_id=?", orgID).And("team_id=?", teamID).And("uid=?", uid).Get(new(TeamUser))
+		return has
+	}
 }
 
 // IsTeamMember returns true if given user is a member of team.

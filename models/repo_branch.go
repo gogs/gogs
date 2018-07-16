@@ -8,11 +8,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Unknwon/com"
 	"github.com/gogs/git-module"
 
 	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/tool"
+	"strconv"
+	"github.com/Unknwon/com"
 )
 
 type Branch struct {
@@ -76,8 +77,31 @@ type ProtectBranchWhitelist struct {
 
 // IsUserInProtectBranchWhitelist returns true if given user is in the whitelist of a branch in a repository.
 func IsUserInProtectBranchWhitelist(repoID, userID int64, branch string) bool {
-	has, err := x.Where("repo_id = ?", repoID).And("user_id = ?", userID).And("name = ?", branch).Get(new(ProtectBranchWhitelist))
-	return has && err == nil
+	//has, err := x.Where("repo_id = ?", repoID).And("user_id = ?", userID).And("name = ?", branch).Get(new(ProtectBranchWhitelist))
+	//return has && err == nil
+
+	protectBranch, err := GetProtectBranchOfRepoByName(repoID, branch)
+	if err != nil {
+		return false
+	}
+
+	//userIDs contain userID
+	userIDs := strings.Join([]string{",",protectBranch.WhitelistUserIDs},",")
+	i := strings.Index(userIDs, strings.Join([]string{",",strconv.FormatInt(userID,10)},","))
+	if i > -1 {
+		return true
+	}
+
+	//teams contain userID
+	teamIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistTeamIDs, ","))
+	for _, teamID := range teamIDs {
+		if IsTeamMember(-1, teamID, userID) {
+			return true
+		}
+	}
+
+	//default
+	return false
 }
 
 // ProtectBranch contains options of a protected branch.
@@ -149,10 +173,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		return fmt.Errorf("expect repository owner to be an organization")
 	}
 
-	hasUsersChanged := false
+	//hasUsersChanged := false
 	validUserIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistUserIDs, ","))
 	if protectBranch.WhitelistUserIDs != whitelistUserIDs {
-		hasUsersChanged = true
+		//hasUsersChanged = true
 		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
 		validUserIDs = make([]int64, 0, len(userIDs))
 		for _, userID := range userIDs {
@@ -169,10 +193,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		protectBranch.WhitelistUserIDs = strings.Join(tool.Int64sToStrings(validUserIDs), ",")
 	}
 
-	hasTeamsChanged := false
+	//hasTeamsChanged := false
 	validTeamIDs := tool.StringsToInt64s(strings.Split(protectBranch.WhitelistTeamIDs, ","))
 	if protectBranch.WhitelistTeamIDs != whitelistTeamIDs {
-		hasTeamsChanged = true
+		//hasTeamsChanged = true
 		teamIDs := tool.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
 		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, ACCESS_MODE_WRITE)
 		if err != nil {
@@ -195,38 +219,38 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		}
 	}
 
-	// Merge users and members of teams
-	var whitelists []*ProtectBranchWhitelist
-	if hasUsersChanged || hasTeamsChanged {
-		mergedUserIDs := make(map[int64]bool)
-		for _, userID := range validUserIDs {
-			// Empty whitelist users can cause an ID with 0
-			if userID != 0 {
-				mergedUserIDs[userID] = true
-			}
-		}
-
-		for _, teamID := range validTeamIDs {
-			members, err := GetTeamMembers(teamID)
-			if err != nil {
-				return fmt.Errorf("GetTeamMembers [team_id: %d]: %v", teamID, err)
-			}
-
-			for i := range members {
-				mergedUserIDs[members[i].ID] = true
-			}
-		}
-
-		whitelists = make([]*ProtectBranchWhitelist, 0, len(mergedUserIDs))
-		for userID := range mergedUserIDs {
-			whitelists = append(whitelists, &ProtectBranchWhitelist{
-				ProtectBranchID: protectBranch.ID,
-				RepoID:          repo.ID,
-				Name:            protectBranch.Name,
-				UserID:          userID,
-			})
-		}
-	}
+	//// Merge users and members of teams
+	//var whitelists []*ProtectBranchWhitelist
+	//if hasUsersChanged || hasTeamsChanged {
+	//	mergedUserIDs := make(map[int64]bool)
+	//	for _, userID := range validUserIDs {
+	//		// Empty whitelist users can cause an ID with 0
+	//		if userID != 0 {
+	//			mergedUserIDs[userID] = true
+	//		}
+	//	}
+	//
+	//	for _, teamID := range validTeamIDs {
+	//		members, err := GetTeamMembers(teamID)
+	//		if err != nil {
+	//			return fmt.Errorf("GetTeamMembers [team_id: %d]: %v", teamID, err)
+	//		}
+	//
+	//		for i := range members {
+	//			mergedUserIDs[members[i].ID] = true
+	//		}
+	//	}
+	//
+	//	whitelists = make([]*ProtectBranchWhitelist, 0, len(mergedUserIDs))
+	//	for userID := range mergedUserIDs {
+	//		whitelists = append(whitelists, &ProtectBranchWhitelist{
+	//			ProtectBranchID: protectBranch.ID,
+	//			RepoID:          repo.ID,
+	//			Name:            protectBranch.Name,
+	//			UserID:          userID,
+	//		})
+	//	}
+	//}
 
 	sess := x.NewSession()
 	defer sess.Close()
@@ -238,14 +262,14 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		return fmt.Errorf("Update: %v", err)
 	}
 
-	// Refresh whitelists
-	if hasUsersChanged || hasTeamsChanged {
-		if _, err = sess.Delete(&ProtectBranchWhitelist{ProtectBranchID: protectBranch.ID}); err != nil {
-			return fmt.Errorf("delete old protect branch whitelists: %v", err)
-		} else if _, err = sess.Insert(whitelists); err != nil {
-			return fmt.Errorf("insert new protect branch whitelists: %v", err)
-		}
-	}
+	//// Refresh whitelists
+	//if hasUsersChanged || hasTeamsChanged {
+	//	if _, err = sess.Delete(&ProtectBranchWhitelist{ProtectBranchID: protectBranch.ID}); err != nil {
+	//		return fmt.Errorf("delete old protect branch whitelists: %v", err)
+	//	} else if _, err = sess.Insert(whitelists); err != nil {
+	//		return fmt.Errorf("insert new protect branch whitelists: %v", err)
+	//	}
+	//}
 
 	return sess.Commit()
 }
