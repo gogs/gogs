@@ -2348,6 +2348,10 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 
 // ForkRepository creates a fork of target repository under another user domain.
 func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+	if !owner.CanCreateRepo() {
+		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+	}
+
 	repo := &Repository{
 		OwnerID:       owner.ID,
 		Owner:         owner,
