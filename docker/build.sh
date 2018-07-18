@@ -23,7 +23,9 @@ rm -r $GOPATH
 # Remove build deps
 apk --no-progress del build-deps
 
-# Create git user for Gogs
-addgroup -S git
-adduser -G git -H -D -g 'Gogs Git User' git -h /data/git -s /bin/bash && usermod -p '*' git && passwd -u git
-echo "export GOGS_CUSTOM=${GOGS_CUSTOM}" >> /etc/profile
+# Move to final place
+mv /app/gogs/build/gogs /app/gogs/
+
+# Cleanup go
+rm -rf /tmp/go
+rm -rf /usr/local/go
