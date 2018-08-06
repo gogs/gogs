@@ -73,10 +73,10 @@ func AutoLogin(c *context.Context) (bool, error) {
 }
 
 // isValidRedirect returns false if the URL does not redirect to same site.
-// False: //url, http://url
+// False: //url, http://url, /\url
 // True: /url
 func isValidRedirect(url string) bool {
-	return len(url) >= 2 && url[0] == '/' && url[1] != '/'
+	return len(url) >= 2 && url[0] == '/' && url[1] != '/' && url[1] != '\\'
 }
 
 func Login(c *context.Context) {
