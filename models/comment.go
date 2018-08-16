@@ -500,7 +500,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(comment.ID).Delete(new(Comment)); err != nil {
+	if _, err = sess.ID(comment.ID).Delete(new(Comment)); err != nil {
 		return err
 	}
 

@@ -166,7 +166,7 @@ func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) 
 }
 
 func updateMilestone(e Engine, m *Milestone) error {
-	_, err := e.Id(m.ID).AllCols().Update(m)
+	_, err := e.ID(m.ID).AllCols().Update(m)
 	return err
 }
 
@@ -223,7 +223,7 @@ func ChangeMilestoneStatus(m *Milestone, isClosed bool) (err error) {
 
 	repo.NumMilestones = int(countRepoMilestones(sess, repo.ID))
 	repo.NumClosedMilestones = int(countRepoClosedMilestones(sess, repo.ID))
-	if _, err = sess.Id(repo.ID).AllCols().Update(repo); err != nil {
+	if _, err = sess.ID(repo.ID).AllCols().Update(repo); err != nil {
 		return err
 	}
 	return sess.Commit()
@@ -383,13 +383,13 @@ func DeleteMilestoneOfRepoByID(repoID, id int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(m.ID).Delete(new(Milestone)); err != nil {
+	if _, err = sess.ID(m.ID).Delete(new(Milestone)); err != nil {
 		return err
 	}
 
 	repo.NumMilestones = int(countRepoMilestones(sess, repo.ID))
 	repo.NumClosedMilestones = int(countRepoClosedMilestones(sess, repo.ID))
-	if _, err = sess.Id(repo.ID).AllCols().Update(repo); err != nil {
+	if _, err = sess.ID(repo.ID).AllCols().Update(repo); err != nil {
 		return err
 	}
 

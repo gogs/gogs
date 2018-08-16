@@ -132,7 +132,7 @@ func (email *EmailAddress) Activate() error {
 	}
 
 	email.IsActivated = true
-	if _, err := sess.Id(email.ID).AllCols().Update(email); err != nil {
+	if _, err := sess.ID(email.ID).AllCols().Update(email); err != nil {
 		return err
 	} else if err = updateUser(sess, user); err != nil {
 		return err
@@ -202,7 +202,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	}
 
 	user.Email = email.Email
-	if _, err = sess.Id(user.ID).AllCols().Update(user); err != nil {
+	if _, err = sess.ID(user.ID).AllCols().Update(user); err != nil {
 		return err
 	}
 

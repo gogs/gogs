@@ -747,7 +747,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(key.ID).Delete(new(DeployKey)); err != nil {
+	if _, err = sess.ID(key.ID).Delete(new(DeployKey)); err != nil {
 		return fmt.Errorf("delete deploy key [%d]: %v", key.ID, err)
 	}
 
