@@ -165,7 +165,6 @@ func DeleteAttachments(attachments []*Attachment, remove bool) (int, error) {
 // DeleteAttachmentsByIssue deletes all attachments associated with the given issue.
 func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
 	attachments, err := GetAttachmentsByIssueID(issueId)
-
 	if err != nil {
 		return 0, err
 	}
@@ -176,7 +175,6 @@ func DeleteAttachmentsByIssue(issueId int64, remove bool) (int, error) {
 // DeleteAttachmentsByComment deletes all attachments associated with the given comment.
 func DeleteAttachmentsByComment(commentId int64, remove bool) (int, error) {
 	attachments, err := GetAttachmentsByCommentID(commentId)
-
 	if err != nil {
 		return 0, err
 	}
