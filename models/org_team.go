@@ -111,7 +111,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 	}
 
 	t.NumRepos++
-	if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
+	if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
 		return fmt.Errorf("update team: %v", err)
 	}
 
@@ -157,7 +157,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 	}
 
 	t.NumRepos--
-	if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
+	if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
 		return err
 	}
 
@@ -286,7 +286,7 @@ func GetTeamOfOrgByName(orgID int64, name string) (*Team, error) {
 
 func getTeamByID(e Engine, teamID int64) (*Team, error) {
 	t := new(Team)
-	has, err := e.Id(teamID).Get(t)
+	has, err := e.ID(teamID).Get(t)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -334,7 +334,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
 	}
 
-	if _, err = sess.Id(t.ID).AllCols().Update(t); err != nil {
+	if _, err = sess.ID(t.ID).AllCols().Update(t); err != nil {
 		return fmt.Errorf("update: %v", err)
 	}
 
@@ -386,7 +386,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Delete team.
-	if _, err = sess.Id(t.ID).Delete(new(Team)); err != nil {
+	if _, err = sess.ID(t.ID).Delete(new(Team)); err != nil {
 		return err
 	}
 	// Update organization number of teams.
@@ -431,7 +431,7 @@ func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	members := make([]*User, 0, len(teamUsers))
 	for i := range teamUsers {
 		member := new(User)
-		if _, err = e.Id(teamUsers[i].UID).Get(member); err != nil {
+		if _, err = e.ID(teamUsers[i].UID).Get(member); err != nil {
 			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].UID, err)
 		}
 		members = append(members, member)
@@ -500,7 +500,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 	}
 	if _, err = sess.Insert(tu); err != nil {
 		return err
-	} else if _, err = sess.Id(t.ID).Update(t); err != nil {
+	} else if _, err = sess.ID(t.ID).Update(t); err != nil {
 		return err
 	}
 
@@ -520,7 +520,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 	if t.IsOwnerTeam() {
 		ou.IsOwner = true
 	}
-	if _, err = sess.Id(ou.ID).AllCols().Update(ou); err != nil {
+	if _, err = sess.ID(ou.ID).AllCols().Update(ou); err != nil {
 		return err
 	}
 
@@ -562,7 +562,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	}
 	if _, err := e.Delete(tu); err != nil {
 		return err
-	} else if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
+	} else if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
 		return err
 	}
 
@@ -583,7 +583,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	if t.IsOwnerTeam() {
 		ou.IsOwner = false
 	}
-	if _, err = e.Id(ou.ID).AllCols().Update(ou); err != nil {
+	if _, err = e.ID(ou.ID).AllCols().Update(ou); err != nil {
 		return err
 	}
 	return nil

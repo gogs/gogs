@@ -293,7 +293,7 @@ func UpdateRelease(doer *User, gitRepo *git.Repository, r *Release, isPublish bo
 	if err = sess.Begin(); err != nil {
 		return err
 	}
-	if _, err = sess.Id(r.ID).AllCols().Update(r); err != nil {
+	if _, err = sess.ID(r.ID).AllCols().Update(r); err != nil {
 		return fmt.Errorf("Update: %v", err)
 	}
 
