@@ -131,7 +131,7 @@ func (f *AuthSourceFile) Save() error {
 type LoginSource struct {
 	ID        int64
 	Type      LoginType
-	Name      string          `xorm:"UNIQUE"`
+	Name      string          `xorm:"varchar(191) UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
 	Cfg       core.Conversion `xorm:"TEXT"`
 

@@ -48,8 +48,8 @@ const (
 // User represents the object of individual and member of organization.
 type User struct {
 	ID        int64
-	LowerName string `xorm:"UNIQUE NOT NULL"`
-	Name      string `xorm:"UNIQUE NOT NULL"`
+	LowerName string `xorm:"varchar(191) UNIQUE NOT NULL"`
+	Name      string `xorm:"varchar(191) UNIQUE NOT NULL"`
 	FullName  string
 	// Email is the primary email address (to be used for communication)
 	Email       string `xorm:"NOT NULL"`

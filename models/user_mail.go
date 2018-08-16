@@ -16,7 +16,7 @@ import (
 type EmailAddress struct {
 	ID          int64
 	UID         int64  `xorm:"INDEX NOT NULL"`
-	Email       string `xorm:"UNIQUE NOT NULL"`
+	Email       string `xorm:"varchar(191) UNIQUE NOT NULL"`
 	IsActivated bool
 	IsPrimary   bool `xorm:"-" json:"-"`
 }
