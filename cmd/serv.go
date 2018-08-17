@@ -19,7 +19,6 @@ import (
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/setting"
-	http "github.com/gogs/gogs/routes/repo"
 )
 
 const (
@@ -252,7 +251,7 @@ func runServ(c *cli.Context) error {
 		gitCmd = exec.Command(verb, repoFullName)
 	}
 	if requestMode == models.ACCESS_MODE_WRITE {
-		gitCmd.Env = append(os.Environ(), http.ComposeHookEnvs(http.ComposeHookEnvsOptions{
+		gitCmd.Env = append(os.Environ(), models.ComposeHookEnvs(models.ComposeHookEnvsOptions{
 			AuthUser:  user,
 			OwnerName: owner.Name,
 			OwnerSalt: owner.Salt,
