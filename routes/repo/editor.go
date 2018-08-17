@@ -15,6 +15,7 @@ import (
 
 	"github.com/gogs/git-module"
 	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/context"
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/setting"
@@ -276,8 +277,9 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		Content:      strings.Replace(f.Content, "\r", "", -1),
 		IsNewFile:    isNewFile,
 	}); err != nil {
+		log.Error(2, "Failed to update repo file: %v", err)
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, err), EDIT_FILE, &f)
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_update_file", f.TreePath, errors.InternalServerError), EDIT_FILE, &f)
 		return
 	}
 
@@ -380,7 +382,8 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		TreePath:     c.Repo.TreePath,
 		Message:      message,
 	}); err != nil {
-		c.ServerError("DeleteRepoFile", err)
+		log.Error(2, "Failed to delete repo file: %v", err)
+		c.RenderWithErr(c.Tr("repo.editor.fail_to_delete_file", c.Repo.TreePath, errors.InternalServerError), DELETE_FILE, &f)
 		return
 	}
 
@@ -499,8 +502,9 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		Message:      message,
 		Files:        f.Files,
 	}); err != nil {
+		log.Error(2, "Failed to upload files: %v", err)
 		c.FormErr("TreePath")
-		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, err), UPLOAD_FILE, &f)
+		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, errors.InternalServerError), UPLOAD_FILE, &f)
 		return
 	}
 
