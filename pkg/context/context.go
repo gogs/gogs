@@ -72,6 +72,10 @@ func (c *Context) RequireAutosize() {
 	c.Require("Autosize")
 }
 
+func (c *Context) RequireDropzone() {
+	c.Require("Dropzone")
+}
+
 // FormErr sets "Err_xxx" field in template data.
 func (c *Context) FormErr(names ...string) {
 	for i := range names {

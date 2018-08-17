@@ -89,7 +89,7 @@ func editFile(c *context.Context, isNewFile bool) {
 		buf = append(buf, d...)
 		if err, content := template.ToUTF8WithErr(buf); err != nil {
 			if err != nil {
-				log.Error(2, "ToUTF8WithErr: %v", err)
+				log.Error(2, "Failed to convert encoding to UTF-8: %v", err)
 			}
 			c.Data["FileContent"] = string(buf)
 		} else {
@@ -324,18 +324,18 @@ func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 }
 
 func DeleteFile(c *context.Context) {
-	c.Data["PageIsDelete"] = true
+	c.PageIs("Delete")
 	c.Data["BranchLink"] = c.Repo.RepoLink + "/src/" + c.Repo.BranchName
 	c.Data["TreePath"] = c.Repo.TreePath
 	c.Data["commit_summary"] = ""
 	c.Data["commit_message"] = ""
 	c.Data["commit_choice"] = "direct"
 	c.Data["new_branch_name"] = ""
-	c.HTML(200, DELETE_FILE)
+	c.Success(DELETE_FILE)
 }
 
 func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
-	c.Data["PageIsDelete"] = true
+	c.PageIs("Delete")
 	c.Data["BranchLink"] = c.Repo.RepoLink + "/src/" + c.Repo.BranchName
 	c.Data["TreePath"] = c.Repo.TreePath
 
@@ -351,13 +351,13 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	c.Data["new_branch_name"] = branchName
 
 	if c.HasError() {
-		c.HTML(200, DELETE_FILE)
+		c.Success(DELETE_FILE)
 		return
 	}
 
 	if oldBranchName != branchName {
 		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
-			c.Data["Err_NewBranchName"] = true
+			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), DELETE_FILE, &f)
 			return
 		}
@@ -380,7 +380,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		TreePath:     c.Repo.TreePath,
 		Message:      message,
 	}); err != nil {
-		c.Handle(500, "DeleteRepoFile", err)
+		c.ServerError("DeleteRepoFile", err)
 		return
 	}
 
@@ -393,14 +393,14 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 }
 
 func renderUploadSettings(c *context.Context) {
-	c.Data["RequireDropzone"] = true
+	c.RequireDropzone()
 	c.Data["UploadAllowedTypes"] = strings.Join(setting.Repository.Upload.AllowedTypes, ",")
 	c.Data["UploadMaxSize"] = setting.Repository.Upload.FileMaxSize
 	c.Data["UploadMaxFiles"] = setting.Repository.Upload.MaxFiles
 }
 
 func UploadFile(c *context.Context) {
-	c.Data["PageIsUpload"] = true
+	c.PageIs("Upload")
 	renderUploadSettings(c)
 
 	treeNames, treePaths := getParentTreeFields(c.Repo.TreePath)
@@ -416,12 +416,11 @@ func UploadFile(c *context.Context) {
 	c.Data["commit_message"] = ""
 	c.Data["commit_choice"] = "direct"
 	c.Data["new_branch_name"] = ""
-
-	c.HTML(200, UPLOAD_FILE)
+	c.Success(UPLOAD_FILE)
 }
 
 func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
-	c.Data["PageIsUpload"] = true
+	c.PageIs("Upload")
 	renderUploadSettings(c)
 
 	oldBranchName := c.Repo.BranchName
@@ -448,13 +447,13 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	c.Data["new_branch_name"] = branchName
 
 	if c.HasError() {
-		c.HTML(200, UPLOAD_FILE)
+		c.Success(UPLOAD_FILE)
 		return
 	}
 
 	if oldBranchName != branchName {
 		if _, err := c.Repo.Repository.GetBranch(branchName); err == nil {
-			c.Data["Err_NewBranchName"] = true
+			c.FormErr("NewBranchName")
 			c.RenderWithErr(c.Tr("repo.editor.branch_already_exists", branchName), UPLOAD_FILE, &f)
 			return
 		}
@@ -470,13 +469,13 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 				break
 			}
 
-			c.Handle(500, "Repo.Commit.GetTreeEntryByPath", err)
+			c.ServerError("GetTreeEntryByPath", err)
 			return
 		}
 
 		// User can only upload files to a directory.
 		if !entry.IsDir() {
-			c.Data["Err_TreePath"] = true
+			c.FormErr("TreePath")
 			c.RenderWithErr(c.Tr("repo.editor.directory_is_a_file", part), UPLOAD_FILE, &f)
 			return
 		}
@@ -500,7 +499,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		Message:      message,
 		Files:        f.Files,
 	}); err != nil {
-		c.Data["Err_TreePath"] = true
+		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.unable_to_upload_files", f.TreePath, err), UPLOAD_FILE, &f)
 		return
 	}
