@@ -176,10 +176,15 @@ func Pull(repoPath string, opts PullRemoteOptions) error {
 	return err
 }
 
+// PushWithEnvs pushs local commits to given remote branch with given environment variables.
+func PushWithEnvs(repoPath, remote, branch string, envs []string) error {
+	_, err := NewCommand("push", remote, branch).AddEnvs(envs...).RunInDir(repoPath)
+	return err
+}
+
 // Push pushs local commits to given remote branch.
 func Push(repoPath, remote, branch string) error {
-	_, err := NewCommand("push", remote, branch).RunInDir(repoPath)
-	return err
+	return PushWithEnvs(repoPath, remote, branch, nil)
 }
 
 type CheckoutOptions struct {
