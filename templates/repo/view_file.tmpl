@@ -40,8 +40,8 @@
 			{{if .IsMarkdown}}
 				{{if .FileContent}}{{.FileContent | Str2html}}{{end}}
 			{{else if .IsAsciidoc}}
-				<script src="/js/asciidoctor.min.js"></script>
-				<link rel="stylesheet" href="/css/asciidoctor.css"></link>
+				<script src="{{AppSubURL}}/plugins/asciidoctor-1.5.7/asciidoctor.min.js"></script>
+				<link rel="stylesheet" href="{{AppSubURL}}/plugins/asciidoctor-1.5.7/asciidoctor.css"></link>
 				<link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
 				<div id="adoc">
 {{if .FileContent}}{{.FileContent}}{{end}}
