@@ -37,6 +37,5 @@ func main() {
 		cmd.Backup,
 		cmd.Restore,
 	}
-	app.Flags = append(app.Flags, []cli.Flag{}...)
 	app.Run(os.Args)
 }
