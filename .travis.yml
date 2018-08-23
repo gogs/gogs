@@ -10,9 +10,6 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libpam-dev
 
-env:
-  - GO15VENDOREXPERIMENT=1
-
 script:
   - go build -v -tags "pam"
   - go test -v -cover -race ./...
