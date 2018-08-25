@@ -55,7 +55,7 @@
 								{{range .attachments}}
 									<tr>
 										<td>
-											<a target="_blank" href="{{AppSubURL}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
+											<a target="_blank" rel="noopener noreferrer" href="{{AppSubURL}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
 											<a class="ui text red right delete-attachment-button" href="#"><i class="octicon octicon-x" data-uuid="{{.UUID}}"></i></a>
 											<input name="files" type="hidden" value="{{.UUID}}">
 										</td>

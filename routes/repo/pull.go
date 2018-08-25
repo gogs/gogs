@@ -126,6 +126,8 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 	if err != nil {
 		c.Data["Err_RepoName"] = true
 		switch {
+		case errors.IsReachLimitOfRepo(err):
+			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", c.User.RepoCreationNum()), FORK, &f)
 		case models.IsErrRepoAlreadyExist(err):
 			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
 		case models.IsErrNameReserved(err):
@@ -406,7 +408,7 @@ func MergePullRequest(c *context.Context) {
 
 	pr.Issue = issue
 	pr.Issue.Repo = c.Repo.Repository
-	if err = pr.Merge(c.User, c.Repo.GitRepo, models.MergeStyle(c.Query("merge_style"))); err != nil {
+	if err = pr.Merge(c.User, c.Repo.GitRepo, models.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
 		c.ServerError("Merge", err)
 		return
 	}

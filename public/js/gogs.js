@@ -111,7 +111,7 @@ function initCommentForm() {
     // This should be added directly to HTML but somehow just get empty <span> on this page.
     $labelMenu.find('.item:not(.no-select) .octicon:not(.octicon-check)').each(function () {
         $(this).html('&nbsp;');
-    })
+    });
     $labelMenu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked');
@@ -499,6 +499,15 @@ function initRepository() {
     if ($('.repository.compare.pull').length > 0) {
         initFilterSearchDropdown('.choose.branch .dropdown');
     }
+    if ($('.repository.view.pull').length > 0) {
+    	$('.comment.merge.box input[name=merge_style]').change(function () {
+    		if ($(this).val() === 'create_merge_commit') {
+				$('.commit.description.field').show();
+			} else {
+				$('.commit.description.field').hide();
+			}
+		})
+	}
 }
 
 function initWikiForm() {
@@ -1143,7 +1152,7 @@ function initWebhookSettings() {
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
-    
+
     // Set cursor to the end of autofocus input string
     $('input[autofocus]').each(function () {
         $(this).val($(this).val());
@@ -1469,7 +1478,7 @@ function getByteLen(normalVal) {
 }
 
 function showMessageMaxLength(maxLen, textElemId, counterId) {
-    var $msg = $('#'+textElemId);                      
+    var $msg = $('#'+textElemId);
     $('#'+counterId).html(maxLen - getByteLen($msg.val()));
 
     var onMessageKey = function (e) {

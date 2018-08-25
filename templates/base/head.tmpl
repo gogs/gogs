@@ -160,7 +160,7 @@
 												<a class="{{if .PageIsUserSettings}}active{{end}} item" href="{{AppSubURL}}/user/settings">
 													<i class="octicon octicon-settings"></i> {{.i18n.Tr "your_settings"}}
 												</a>
-												<a class="item" target="_blank" href="https://gogs.io/docs" rel="noreferrer">
+												<a class="item" target="_blank" rel="noopener noreferrer" href="https://gogs.io/docs" rel="noreferrer">
 													<i class="octicon octicon-question"></i> {{.i18n.Tr "help"}}
 												</a>
 												{{if .IsAdmin}}
@@ -181,7 +181,7 @@
 
 								{{else}}
 
-									<a class="main-menu item" target="_blank" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}
+									<a class="main-menu item" target="_blank"  rel="noopener noreferrer" href="https://gogs.io/docs" rel="noreferrer">{{.i18n.Tr "help"}}
 										<i class="menu-icon octicon octicon-info"></i>
 									</a>
 									<div class="right menu">

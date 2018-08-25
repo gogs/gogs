@@ -25,7 +25,6 @@ import (
 
 	"github.com/gogs/gogs/pkg/process"
 	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/pkg/tool"
 )
 
 const (
@@ -479,7 +478,7 @@ func deletePublicKeys(e *xorm.Session, keyIDs ...int64) error {
 		return nil
 	}
 
-	_, err := e.In("id", strings.Join(tool.Int64sToStrings(keyIDs), ",")).Delete(new(PublicKey))
+	_, err := e.In("id", keyIDs).Delete(new(PublicKey))
 	return err
 }
 
@@ -748,7 +747,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		return err
 	}
 
-	if _, err = sess.Id(key.ID).Delete(new(DeployKey)); err != nil {
+	if _, err = sess.ID(key.ID).Delete(new(DeployKey)); err != nil {
 		return fmt.Errorf("delete deploy key [%d]: %v", key.ID, err)
 	}
 

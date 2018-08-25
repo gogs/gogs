@@ -402,7 +402,7 @@ func (i *Issue) ReadBy(uid int64) error {
 }
 
 func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
-	_, err := e.Id(issue.ID).Cols(cols...).Update(issue)
+	_, err := e.ID(issue.ID).Cols(cols...).Update(issue)
 	return err
 }
 
@@ -843,7 +843,7 @@ func GetIssueByIndex(repoID, index int64) (*Issue, error) {
 
 func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	issue := new(Issue)
-	has, err := e.Id(id).Get(issue)
+	has, err := e.ID(id).Get(issue)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -1354,7 +1354,7 @@ func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool)
 }
 
 func updateIssue(e Engine, issue *Issue) error {
-	_, err := e.Id(issue.ID).AllCols().Update(issue)
+	_, err := e.ID(issue.ID).AllCols().Update(issue)
 	return err
 }
 
@@ -1423,7 +1423,7 @@ func updateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
 
 		iu.IsMentioned = true
 		if has {
-			_, err = e.Id(iu.ID).AllCols().Update(iu)
+			_, err = e.ID(iu.ID).AllCols().Update(iu)
 		} else {
 			_, err = e.Insert(iu)
 		}
