@@ -133,7 +133,7 @@ type LoginSource struct {
 	Type      LoginType
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
-	IsDefault bool            `xorm:"DEFAULT NULL"` // for backward compatible
+	IsDefault bool            `xorm:"DEFAULT false"`
 	Cfg       core.Conversion `xorm:"TEXT"`
 
 	Created     time.Time `xorm:"-" json:"-"`
@@ -263,7 +263,7 @@ func CreateLoginSource(source *LoginSource) error {
 	} else if source.IsDefault {
 		return ResetNonDefaultLoginSources(source.ID)
 	}
-	return err
+	return nil
 }
 
 // LoginSources returns all login sources defined.
@@ -306,11 +306,16 @@ func ResetNonDefaultLoginSources(id int64) error {
 // UpdateLoginSource updates information of login source to database or local file.
 func UpdateLoginSource(source *LoginSource) error {
 	if source.LocalFile == nil {
-		_, err := x.Id(source.ID).AllCols().Update(source)
-		if err != nil && source.IsDefault {
-			return ResetNonDefaultLoginSources(source.ID)
+		if _, err := x.Id(source.ID).AllCols().Update(source); err != nil {
+			if source.IsDefault {
+				return ResetNonDefaultLoginSources(source.ID)
+			} else {
+				return err
+			}
+		} else {
+			return nil
 		}
-		return err
+
 	}
 
 	source.LocalFile.SetGeneral("name", source.Name)
