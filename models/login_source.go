@@ -307,13 +307,9 @@ func ResetNonDefaultLoginSources(id int64) error {
 func UpdateLoginSource(source *LoginSource) error {
 	if source.LocalFile == nil {
 		if _, err := x.Id(source.ID).AllCols().Update(source); err != nil {
-			if source.IsDefault {
-				return ResetNonDefaultLoginSources(source.ID)
-			} else {
-				return err
-			}
+			return err
 		} else {
-			return nil
+			return ResetNonDefaultLoginSources(source.ID)
 		}
 
 	}
@@ -384,11 +380,7 @@ func (s *LocalLoginSources) ActivatedList() []*LoginSource {
 		}
 		source := &LoginSource{}
 		*source = *s.sources[i]
-		if s.sources[i].IsDefault {
-			list = append([]*LoginSource{source}, list...)
-		} else {
-			list = append(list, source)
-		}
+		list = append(list, source)
 	}
 	return list
 }
