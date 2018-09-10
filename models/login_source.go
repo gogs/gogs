@@ -410,8 +410,7 @@ func (s *LocalLoginSources) UpdateLoginSource(source *LoginSource) {
 	for i := range s.sources {
 		if s.sources[i].ID == source.ID {
 			*s.sources[i] = *source
-		} else if source.IsDefault {
-			s.sources[i].IsDefault = false
+			break
 		}
 	}
 }
