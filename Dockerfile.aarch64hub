@@ -1,4 +1,4 @@
-FROM arm64v8/alpine:3.6
+FROM arm64v8/alpine:3.8
 
 ENV GOGS_CUSTOM /data/gogs
 ENV QEMU_EXECVE 1
@@ -17,13 +17,17 @@ RUN [ "cross-build-start" ]
 #######################
 
 # Install system utils & Gogs runtime dependencies
-ADD https://github.com/tianon/gosu/releases/download/1.9/gosu-arm64 /usr/sbin/gosu
+ADD https://github.com/tianon/gosu/releases/download/1.10/gosu-arm64 /usr/sbin/gosu
 RUN chmod +x /usr/sbin/gosu \
- && apk --no-cache --no-progress add ca-certificates bash git linux-pam s6 curl openssh socat tzdata go
+ && apk --no-cache --no-progress add ca-certificates bash git linux-pam s6 curl openssh socat tzdata go=1.10.1-r0
 
 
-COPY . /app/gogs/build
+
+COPY docker /app/gogs/docker
+COPY templates /app/gogs/templates
+COPY public /app/gogs/public
 WORKDIR /app/gogs/build
+COPY . .
 
 RUN    ./docker/build.sh \
     && ./docker/finalize.sh
