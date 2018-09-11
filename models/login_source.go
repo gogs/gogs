@@ -261,7 +261,7 @@ func CreateLoginSource(source *LoginSource) error {
 	if err != nil {
 		return err
 	} else if source.IsDefault {
-		return ResetNonDefaultLoginSources(source.ID)
+		return ResetNonDefaultLoginSources(source)
 	}
 	return nil
 }
@@ -298,9 +298,29 @@ func GetLoginSourceByID(id int64) (*LoginSource, error) {
 }
 
 // ResetNonDefaultLoginSources clean other default source flag
-func ResetNonDefaultLoginSources(id int64) error {
-	_, err := x.NotIn("id", []int64{id}).Cols("is_default").Update(&LoginSource{IsDefault: false})
-	return err
+func ResetNonDefaultLoginSources(source *LoginSource) error {
+	// update changes to DB
+	if _, err := x.NotIn("id", []int64{source.ID}).Cols("is_default").Update(&LoginSource{IsDefault: false}); err != nil {
+		return err
+	}
+	// write changes to local authentications
+	for i := range localLoginSources.sources {
+		localSource := &LoginSource{}
+		*localSource = *localLoginSources.sources[i]
+		if localSource.LocalFile != nil {
+			if localSource.ID != source.ID {
+				localSource.LocalFile.SetGeneral("is_default", "false")
+				if err := localSource.LocalFile.SetConfig(source.Cfg); err != nil {
+					return fmt.Errorf("LocalFile.SetConfig: %v", err)
+				} else if err = localSource.LocalFile.Save(); err != nil {
+					return fmt.Errorf("LocalFile.Save: %v", err)
+				}
+			}
+		}
+	}
+	// flush memory so that web page can show the same behaviors
+	localLoginSources.UpdateLoginSource(source)
+	return nil
 }
 
 // UpdateLoginSource updates information of login source to database or local file.
@@ -309,7 +329,7 @@ func UpdateLoginSource(source *LoginSource) error {
 		if _, err := x.Id(source.ID).AllCols().Update(source); err != nil {
 			return err
 		} else {
-			return ResetNonDefaultLoginSources(source.ID)
+			return ResetNonDefaultLoginSources(source)
 		}
 
 	}
@@ -322,7 +342,7 @@ func UpdateLoginSource(source *LoginSource) error {
 	} else if err = source.LocalFile.Save(); err != nil {
 		return fmt.Errorf("LocalFile.Save: %v", err)
 	}
-	localLoginSources.UpdateLoginSource(source)
+	ResetNonDefaultLoginSources(source)
 
 	return nil
 }
@@ -410,7 +430,8 @@ func (s *LocalLoginSources) UpdateLoginSource(source *LoginSource) {
 	for i := range s.sources {
 		if s.sources[i].ID == source.ID {
 			*s.sources[i] = *source
-			break
+		} else if source.IsDefault {
+			s.sources[i].IsDefault = false
 		}
 	}
 }
