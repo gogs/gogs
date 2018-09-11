@@ -305,16 +305,12 @@ func ResetNonDefaultLoginSources(source *LoginSource) error {
 	}
 	// write changes to local authentications
 	for i := range localLoginSources.sources {
-		localSource := &LoginSource{}
-		*localSource = *localLoginSources.sources[i]
-		if localSource.LocalFile != nil {
-			if localSource.ID != source.ID {
-				localSource.LocalFile.SetGeneral("is_default", "false")
-				if err := localSource.LocalFile.SetConfig(source.Cfg); err != nil {
-					return fmt.Errorf("LocalFile.SetConfig: %v", err)
-				} else if err = localSource.LocalFile.Save(); err != nil {
-					return fmt.Errorf("LocalFile.Save: %v", err)
-				}
+		if localLoginSources.sources[i].LocalFile != nil && localLoginSources.sources[i].ID != source.ID {
+			localLoginSources.sources[i].LocalFile.SetGeneral("is_default", "false")
+			if err := localLoginSources.sources[i].LocalFile.SetConfig(source.Cfg); err != nil {
+				return fmt.Errorf("LocalFile.SetConfig: %v", err)
+			} else if err = localLoginSources.sources[i].LocalFile.Save(); err != nil {
+				return fmt.Errorf("LocalFile.Save: %v", err)
 			}
 		}
 	}
@@ -342,9 +338,7 @@ func UpdateLoginSource(source *LoginSource) error {
 	} else if err = source.LocalFile.Save(); err != nil {
 		return fmt.Errorf("LocalFile.Save: %v", err)
 	}
-	ResetNonDefaultLoginSources(source)
-
-	return nil
+	return ResetNonDefaultLoginSources(source)
 }
 
 func DeleteSource(source *LoginSource) error {
