@@ -32,6 +32,7 @@ type Authentication struct {
 	GroupMemberUID    string
 	UserUID           string
 	IsActive          bool
+	IsDefault         bool
 	SMTPAuth          string
 	SMTPHost          string
 	SMTPPort          int
