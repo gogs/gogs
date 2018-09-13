@@ -115,10 +115,8 @@ func Login(c *context.Context) {
 	c.Data["LoginSources"] = loginSources
 	for i := range loginSources {
 		if loginSources[i].IsDefault {
-			c.Data["DefaultSource"] = *loginSources[i]
+			c.Data["DefaultLoginSource"] = loginSources[i]
 			c.Data["login_source"] = loginSources[i].ID
-			newLoginSources := append(loginSources[:i], loginSources[i+1:]...)
-			c.Data["LoginSources"] = newLoginSources
 			break
 		}
 	}
@@ -183,10 +181,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		}
 		for i := range loginSources {
 			if loginSources[i].IsDefault {
-				c.Data["DefaultSource"] = *loginSources[i]
-				c.Data["login_source"] = loginSources[i].ID
-				newLoginSources := append(loginSources[:i], loginSources[i+1:]...)
-				c.Data["LoginSources"] = newLoginSources
+				c.Data["DefaultLoginSource"] = loginSources[i]
 				break
 			}
 		}

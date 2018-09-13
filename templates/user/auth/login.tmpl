@@ -22,30 +22,20 @@
 							<label for="password">{{.i18n.Tr "auth.auth_source"}}</label>
 							<div class="ui selection dropdown">
 								<input type="hidden" id="login_source" name="login_source" value="{{.login_source}}" required>
-								{{if .DefaultSource}}
-									<span class="text">
-										{{.DefaultSource.Name}}
-									</span>
-									<i class="dropdown icon"></i>
-									<div class="menu">
-										<div class="item" data-value="{{.DefaultSource.ID}}">{{.DefaultSource.Name}}</div>
-										<div class="item" data-value="0">{{.i18n.Tr "auth.local"}}</div>
-										{{range .LoginSources}}
-											<div class="item" data-value="{{.ID}}">{{.Name}}</div>
-										{{end}}
-									</div>
-								{{else}}
-									<span class="text">
+								<span class="text">
+									{{if .DefaultLoginSource}}
+										{{.DefaultLoginSource.Name}}
+									{{else}}
 										{{.i18n.Tr "auth.local"}}
-									</span>
-									<i class="dropdown icon"></i>
-									<div class="menu">
-										<div class="item" data-value="0">{{.i18n.Tr "auth.local"}}</div>
-										{{range .LoginSources}}
-											<div class="item" data-value="{{.ID}}">{{.Name}}</div>
-										{{end}}
-									</div>
-								{{end}}
+									{{end}}
+								</span>
+								<i class="dropdown icon"></i>
+								<div class="menu">
+									<div class="item" data-value="0">{{.i18n.Tr "auth.local"}}</div>
+									{{range .LoginSources}}
+										<div class="item" data-value="{{.ID}}">{{.Name}}</div>
+									{{end}}
+								</div>
 							</div>
 						</div>
 					{{end}}
