@@ -16,6 +16,7 @@
 								<th>{{.i18n.Tr "admin.auths.name"}}</th>
 								<th>{{.i18n.Tr "admin.auths.type"}}</th>
 								<th>{{.i18n.Tr "admin.auths.enabled"}}</th>
+								<th>{{.i18n.Tr "admin.auths.default"}}</th>
 								<th>{{.i18n.Tr "admin.auths.updated"}}</th>
 								<th>{{.i18n.Tr "admin.users.created"}}</th>
 								<th>{{.i18n.Tr "admin.users.edit"}}</th>
@@ -28,6 +29,7 @@
 									<td><a href="{{AppSubURL}}/admin/auths/{{.ID}}">{{.Name}}</a></td>
 									<td>{{.TypeName}}</td>
 									<td><i class="fa fa{{if .IsActived}}-check{{end}}-square-o"></i></td>
+									<td><i class="fa fa{{if .IsDefault}}-check{{end}}-square-o"></i></td>
 									<td><span class="poping up" data-content="{{DateFmtLong .Updated}}" data-variation="tiny">{{DateFmtShort .Updated}}</span></td>
 									<td>
 										{{if .Created.IsZero}}
