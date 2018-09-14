@@ -3,9 +3,9 @@ Gogs [![Build Status](https://travis-ci.org/gogs/gogs.svg?branch=master)](https:
 
 Gogs 是一款极易搭建的自助 Git 服务。
 
-## 开发目的
+## 项目愿景
 
-Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、macOS、Windows 以及 ARM 平台。
+本项目旨在打造一个以最简便的方式搭建简单、稳定和可扩展的自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、macOS、Windows 以及 ARM 平台。
 
 ## 项目概览
 
