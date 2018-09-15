@@ -124,7 +124,7 @@ func DeleteBranchPost(c *context.Context) {
 	if len(commitID) > 0 {
 		branchCommitID, err := c.Repo.GitRepo.GetBranchCommitID(branchName)
 		if err != nil {
-			log.Error(2, "Failed to get commit ID of branch %q: %v", err)
+			log.Error(2, "Failed to get commit ID of branch %q: %v", branchName, err)
 			return
 		}
 
