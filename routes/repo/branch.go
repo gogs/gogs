@@ -10,6 +10,7 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/git-module"
+	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/pkg/context"
@@ -123,7 +124,7 @@ func DeleteBranchPost(c *context.Context) {
 	if len(commitID) > 0 {
 		branchCommitID, err := c.Repo.GitRepo.GetBranchCommitID(branchName)
 		if err != nil {
-			log.Error(2, "GetBranchCommitID: %v", err)
+			log.Error(2, "Failed to get commit ID of branch %q: %v", err)
 			return
 		}
 
@@ -136,7 +137,18 @@ func DeleteBranchPost(c *context.Context) {
 	if err := c.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
 		Force: true,
 	}); err != nil {
-		log.Error(2, "DeleteBranch '%s': %v", branchName, err)
+		log.Error(2, "Failed to delete branch %q: %v", branchName, err)
+		return
+	}
+
+	if err := models.PrepareWebhooks(c.Repo.Repository, models.HOOK_EVENT_DELETE, &api.DeletePayload{
+		Ref:        branchName,
+		RefType:    "branch",
+		PusherType: api.PUSHER_TYPE_USER,
+		Repo:       c.Repo.Repository.APIFormat(nil),
+		Sender:     c.User.APIFormat(),
+	}); err != nil {
+		log.Error(2, "Failed to prepare webhooks for %q: %v", models.HOOK_EVENT_DELETE, err)
 		return
 	}
 }
