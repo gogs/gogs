@@ -330,6 +330,7 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 		rawTableName := x.TableName(table)
 		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
 		scanner := bufio.NewScanner(f)
+
 		for scanner.Scan() {
 			switch bean := table.(type) {
 			case *LoginSource:
@@ -367,8 +368,11 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				if _, err = x.Exec("UPDATE "+rawTableName+" SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
-					log.Error(2, "Failed to reset 'created_unix': %v", err)
+				timestamp, ok := meta["CreatedUnix"].(uint64)
+				if ok {
+					if _, err = x.Exec("UPDATE "+rawTableName+" SET created_unix=? WHERE id=?", timestamp, meta["ID"]); err != nil {
+						log.Error(2, "Failed to reset 'created_unix': %v", err)
+					}
 				}
 			}
 

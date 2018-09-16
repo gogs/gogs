@@ -152,7 +152,7 @@ type Repository struct {
 	ID              int64
 	OwnerID         int64  `xorm:"UNIQUE(s)"`
 	Owner           *User  `xorm:"-" json:"-"`
-	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	LowerName       string `xorm:"varchar(191) UNIQUE(s) INDEX NOT NULL"`
 	Name            string `xorm:"INDEX NOT NULL"`
 	Description     string `xorm:"VARCHAR(512)"`
 	Website         string

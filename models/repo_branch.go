@@ -70,7 +70,7 @@ type ProtectBranchWhitelist struct {
 	ID              int64
 	ProtectBranchID int64
 	RepoID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
-	Name            string `xorm:"UNIQUE(protect_branch_whitelist)"`
+	Name            string `xorm:"varchar(191) UNIQUE(protect_branch_whitelist)"`
 	UserID          int64  `xorm:"UNIQUE(protect_branch_whitelist)"`
 }
 
@@ -84,7 +84,7 @@ func IsUserInProtectBranchWhitelist(repoID, userID int64, branch string) bool {
 type ProtectBranch struct {
 	ID                 int64
 	RepoID             int64  `xorm:"UNIQUE(protect_branch)"`
-	Name               string `xorm:"UNIQUE(protect_branch)"`
+	Name               string `xorm:"varchar(191) UNIQUE(protect_branch)"`
 	Protected          bool
 	RequirePullRequest bool
 	EnableWhitelist    bool
