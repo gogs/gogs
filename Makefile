@@ -14,7 +14,6 @@ RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 GOVET = go tool vet -composites=false -methods=false -structtags=false
-GOPATH = $(shell echo $${PWD%%src*})
 
 .PHONY: build pack release bindata clean
 
