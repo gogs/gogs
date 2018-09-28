@@ -175,11 +175,11 @@ func Listen(host string, port int, ciphers []string) {
 
 	privateBytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		panic("SSH: Fail to load private key")
+		panic("SSH: Fail to load private key: " + err.Error())
 	}
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		panic("SSH: Fail to parse private key")
+		panic("SSH: Fail to parse private key: " + err.Error())
 	}
 	config.AddHostKey(private)
 
