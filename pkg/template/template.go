@@ -64,7 +64,7 @@ func NewFuncMap() []template.FuncMap {
 		"AppendAvatarSize": tool.AppendAvatarSize,
 		"Safe":             Safe,
 		"Sanitize":         bluemonday.UGCPolicy().Sanitize,
-		"Str2html":         Str2html,
+		"Str2html":         Str2HTML,
 		"NewLine2br":       NewLine2br,
 		"TimeSince":        tool.TimeSince,
 		"RawTimeSince":     tool.RawTimeSince,
@@ -127,7 +127,7 @@ func Safe(raw string) template.HTML {
 	return template.HTML(raw)
 }
 
-func Str2html(raw string) template.HTML {
+func Str2HTML(raw string) template.HTML {
 	return template.HTML(markup.Sanitize(raw))
 }
 

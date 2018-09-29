@@ -6,7 +6,6 @@ package context
 
 import (
 	"fmt"
-	"html/template"
 	"io"
 	"net/http"
 	"path"
@@ -26,6 +25,7 @@ import (
 	"github.com/gogs/gogs/pkg/auth"
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/template"
 )
 
 // Context represents context of a request.
@@ -138,10 +138,16 @@ func (c *Context) JSONSuccess(data interface{}) {
 	c.JSON(http.StatusOK, data)
 }
 
+// Redirect responses redirection wtih given location and status.
+// It escapes special characters in the location string.
+func (c *Context) Redirect(location string, status ...int) {
+	c.Context.Redirect(template.EscapePound(location), status...)
+}
+
 // SubURLRedirect responses redirection wtih given location and status.
 // It prepends setting.AppSubURL to the location string.
 func (c *Context) SubURLRedirect(location string, status ...int) {
-	c.Redirect(setting.AppSubURL + location)
+	c.Redirect(setting.AppSubURL+location, status...)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
@@ -227,7 +233,7 @@ func Contexter() macaron.Handler {
 			},
 			Org: &Organization{},
 		}
-		c.Data["Link"] = c.Link
+		c.Data["Link"] = template.EscapePound(c.Link)
 		c.Data["PageStartTime"] = time.Now()
 
 		// Quick responses appropriate go-get meta with status 200
@@ -296,13 +302,13 @@ func Contexter() macaron.Handler {
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
 		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
 			if err := c.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
-				c.Handle(500, "ParseMultipartForm", err)
+				c.ServerError("ParseMultipartForm", err)
 				return
 			}
 		}
 
 		c.Data["CSRFToken"] = x.GetToken()
-		c.Data["CSRFTokenHTML"] = template.HTML(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 

@@ -286,7 +286,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	if f.IsNewBrnach() && c.Repo.PullRequest.Allowed {
 		c.Redirect(c.Repo.PullRequestURL(oldBranchName, f.NewBranchName))
 	} else {
-		c.Redirect(c.Repo.RepoLink + "/src/" + branchName + "/" + template.EscapePound(f.TreePath))
+		c.Redirect(c.Repo.RepoLink + "/src/" + branchName + "/" + f.TreePath)
 	}
 }
 
