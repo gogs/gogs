@@ -17,6 +17,7 @@ import (
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/mailer"
 	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 const (
@@ -72,13 +73,6 @@ func AutoLogin(c *context.Context) (bool, error) {
 	return true, nil
 }
 
-// isValidRedirect returns false if the URL does not redirect to same site.
-// False: //url, http://url, /\url
-// True: /url
-func isValidRedirect(url string) bool {
-	return len(url) >= 2 && url[0] == '/' && url[1] != '/' && url[1] != '\\'
-}
-
 func Login(c *context.Context) {
 	c.Title("sign_in")
 
@@ -97,7 +91,7 @@ func Login(c *context.Context) {
 	}
 
 	if isSucceed {
-		if isValidRedirect(redirectTo) {
+		if tool.IsSameSiteURLPath(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
 			c.SubURLRedirect("/")
@@ -143,7 +137,7 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
-	if isValidRedirect(redirectTo) {
+	if tool.IsSameSiteURLPath(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
