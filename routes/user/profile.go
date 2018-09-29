@@ -15,6 +15,7 @@ import (
 	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/context"
 	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 	"github.com/gogs/gogs/routes/repo"
 )
 
@@ -157,12 +158,12 @@ func Action(c *context.Context) {
 	}
 
 	if err != nil {
-		c.Handle(500, fmt.Sprintf("Action (%s)", c.Params(":action")), err)
+		c.ServerError(fmt.Sprintf("Action (%s)", c.Params(":action")), err)
 		return
 	}
 
 	redirectTo := c.Query("redirect_to")
-	if len(redirectTo) == 0 {
+	if !tool.IsSameSiteURLPath(redirectTo) {
 		redirectTo = u.HomeLink()
 	}
 	c.Redirect(redirectTo)

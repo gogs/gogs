@@ -242,7 +242,7 @@ func Action(c *context.Context) {
 		err = models.StarRepo(c.User.ID, c.Repo.Repository.ID, false)
 	case "desc": // FIXME: this is not used
 		if !c.Repo.IsOwner() {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 
@@ -252,12 +252,12 @@ func Action(c *context.Context) {
 	}
 
 	if err != nil {
-		c.Handle(500, fmt.Sprintf("Action (%s)", c.Params(":action")), err)
+		c.ServerError(fmt.Sprintf("Action (%s)", c.Params(":action")), err)
 		return
 	}
 
 	redirectTo := c.Query("redirect_to")
-	if len(redirectTo) == 0 {
+	if !tool.IsSameSiteURLPath(redirectTo) {
 		redirectTo = c.Repo.RepoLink
 	}
 	c.Redirect(redirectTo)
