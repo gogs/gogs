@@ -138,6 +138,11 @@ func (c *Context) JSONSuccess(data interface{}) {
 	c.JSON(http.StatusOK, data)
 }
 
+// RawRedirect simply calls underlying Redirect method with no escape.
+func (c *Context) RawRedirect(location string, status ...int) {
+	c.Context.Redirect(location, status...)
+}
+
 // Redirect responses redirection wtih given location and status.
 // It escapes special characters in the location string.
 func (c *Context) Redirect(location string, status ...int) {

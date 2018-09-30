@@ -901,7 +901,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 			typeName = "pulls"
 		}
 		if comment != nil {
-			c.Redirect(fmt.Sprintf("%s/%s/%d#%s", c.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
+			c.RawRedirect(fmt.Sprintf("%s/%s/%d#%s", c.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
 		} else {
 			c.Redirect(fmt.Sprintf("%s/%s/%d", c.Repo.RepoLink, typeName, issue.Index))
 		}
