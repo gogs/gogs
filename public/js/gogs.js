@@ -462,8 +462,22 @@ function initRepository() {
         }
 
         $('.diff-file-box .lines-num').click(function () {
-            if ($(this).attr('id')) {
-                window.location.href = '#' + $(this).attr('id');
+            var linesNum = $(this);
+            if (linesNum.attr('id')) {
+                window.location.href = '#' + linesNum.attr('id');
+
+                var comments = [];
+                var line = linesNum.parent();
+                var linkHref = window.location.pathname+window.location.hash;
+
+                for (var i = 5; i >= 0; i--) {
+                   if (line.length > 0) {
+                     comments.unshift(line.find('.lines-code code').text());
+                   }
+                   line = line.prev('.same-code,.del-code,.add-code');
+                }
+
+                $('#content').val($('#content').val() + "<a href=\""+linkHref+"\">\n```diff\n"+comments.join("\n")+"\n```\n</a>\n");
             }
         });
 
