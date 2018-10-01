@@ -14,6 +14,37 @@
 		<div class="ui bottom attached tab pull segment active">
 			{{template "repo/diff/box" .}}
 		</div>
+		{{if .IsLogged}}
+			<div class="comment form">
+				<div>
+					<form class="ui segment form" id="comment-form" action="{{$.RepoLink}}/issues/{{.Issue.Index}}/comments" method="post">
+						{{template "repo/issue/comment_tab" .}}
+						{{.CSRFTokenHTML}}
+						<input id="status" name="status" type="hidden">
+						<div class="text right">
+							{{if and .IsIssueOwner (not .DisableStatusChange)}}
+								{{if .Issue.IsClosed}}
+									<div id="status-button" class="ui green basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.reopen_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.reopen_comment_issue"}}" data-status-val="reopen">
+										{{.i18n.Tr "repo.issues.reopen_issue"}}
+									</div>
+							se}}
+									<div id="status-button" class="ui red basic button" tabindex="6" data-status="{{.i18n.Tr "repo.issues.close_issue"}}" data-status-and-comment="{{.i18n.Tr "repo.issues.close_comment_issue"}}" data-status-val="close">
+										{{.i18n.Tr "repo.issues.close_issue"}}
+									</div>
+								{{end}}
+							{{end}}
+							<button class="ui green button" tabindex="5">
+											{{.i18n.Tr "repo.issues.create_comment"}}
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		{{else}}
+				<div class="ui warning message">
+					{{.i18n.Tr "repo.issues.sign_in_require_desc" .SignInLink | Safe}}
+				</div>
+		{{end}}
 	</div>
 </div>
 {{template "base/footer" .}}
