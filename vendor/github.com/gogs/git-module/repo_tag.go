@@ -96,7 +96,7 @@ func (repo *Repository) GetTag(name string) (*Tag, error) {
 func (repo *Repository) GetTags() ([]string, error) {
 	cmd := NewCommand("tag", "-l")
 	if version.Compare(gitVersion, "2.4.9", ">=") {
-		cmd.AddArguments("--sort=-v:taggerdate")
+		cmd.AddArguments("--sort=-creatordate")
 	}
 
 	stdout, err := cmd.RunInDir(repo.Path)
