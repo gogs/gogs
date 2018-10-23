@@ -268,16 +268,26 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		if err != nil {
 			log.Error(2, "LDAP: Group search failed: %v", err)
 			return "", "", "", "", false, false
-		} else if len(sr.Entries) < 1 {
+		} else if len(srg.Entries) < 1 {
 			log.Error(2, "LDAP: Group search failed: 0 entries")
 			return "", "", "", "", false, false
 		}
 
 		isMember := false
-		for _, group := range srg.Entries {
-			for _, member := range group.GetAttributeValues(ls.GroupMemberUID) {
-				if member == uid {
-					isMember = true
+		if ls.UserUID == "dn" {
+			for _, group := range srg.Entries {
+				for _, member := range group.GetAttributeValues(ls.GroupMemberUID) {
+					if member == sr.Entries[0].DN {
+						isMember = true
+					}
+				}
+			}
+		} else {
+			for _, group := range srg.Entries {
+				for _, member := range group.GetAttributeValues(ls.GroupMemberUID) {
+					if member == uid {
+						isMember = true
+					}
 				}
 			}
 		}
