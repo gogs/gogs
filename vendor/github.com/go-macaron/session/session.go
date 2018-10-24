@@ -257,7 +257,7 @@ func (m *Manager) sessionID() string {
 func (m *Manager) Start(ctx *macaron.Context) (RawStore, error) {
 	sid := ctx.GetCookie(m.opt.CookieName)
 	if len(sid) > 0 && m.provider.Exist(sid) {
-		return m.provider.Read(sid)
+		return m.Read(sid)
 	}
 
 	sid = m.sessionID()
