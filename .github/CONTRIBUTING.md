@@ -6,16 +6,16 @@ Gogs is not perfect, and it has bugs or incomplete features in rare cases. You'r
 
 ## Contribution guidelines
 
-Depends on the situation, you will:
+Depending on the situation, you will:
 
 - Find a bug and create an issue
 - Need more functionality and make a feature request
 - Want to contribute code and open a pull request
-- Run into issue and need help
+- Run into an issue and need help
 
 ### Bug Report
 
-If you find something you consider a bug, please create an issue on [GitHub](https://github.com/gogits/gogs/issues). To avoid wasting time and reduce back-and-forth communication with team members, please be respect to [Issue Template](ISSUE_TEMPLATE.md).
+If you find something you consider a bug, please create an issue on [GitHub](https://github.com/gogits/gogs/issues). To avoid wasting time and reduce back-and-forth communication with team members, please refer to the [Issue Template](ISSUE_TEMPLATE.md).
 
 ### Feature Request
 
