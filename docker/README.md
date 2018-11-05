@@ -108,11 +108,11 @@ Steps to upgrade Gogs with Docker:
 - `docker pull gogs/gogs`
 - `docker stop gogs`
 - `docker rm gogs`
-- Finally, create container as the first time and don't forget to do same volume and port mapping.
+- Finally, create a container for the first time and don't forget to do the same for the volume and port mapping.
 
 ## Known Issues
 
-- The docker container can not currently be build on Raspberry 1 (armv6l) as our base image `alpine` does not have a `go` package available for this platform.
+- The docker container cannot currently be built on Raspberry 1 (armv6l) as our base image `alpine` does not have a `go` package available for this platform.
 
 ## Useful Links
 
