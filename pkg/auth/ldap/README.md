@@ -11,7 +11,7 @@ LDAP via BindDN functions like most LDAP authentication systems. First, it
 queries the LDAP server using a Bind DN and searches for the user that is
 attempting to sign in. If the user is found, the module attempts to bind to the
 server using the user's supplied credentials. If this succeeds, the user has
-been authenticated, and his account information is retrieved and passed to the
+been authenticated, and their account information is retrieved and passed to the
 Gogs login infrastructure.
 
 LDAP simple authentication does not utilize a Bind DN. Instead, it binds
@@ -20,7 +20,7 @@ succeeds and no filter rules out the user, the user is authenticated.
 
 LDAP via BindDN is recommended for most users. By using a Bind DN, the server
 can perform authorization by restricting which entries the Bind DN account can
-read. Further, using a Bind DN with reduced permissions can reduce security risk
+read. Furthermore, using a Bind DN with reduced permissions can reduce security risk
 in the face of application bugs.
 
 ## Usage
