@@ -22,13 +22,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"gopkg.in/macaron.v1"
 )
 
-const _VERSION = "0.4.0"
+const _VERSION = "0.5.0"
 
 func Version() string {
 	return _VERSION
@@ -252,12 +251,30 @@ func (m *Manager) sessionID() string {
 	return hex.EncodeToString(generateRandomKey(m.opt.IDLength / 2))
 }
 
+// validSessionID tests whether a provided session ID is a valid session ID.
+func (m *Manager) validSessionID(sid string) (bool, error) {
+	if len(sid) != m.opt.IDLength {
+		return false, errors.New("invalid 'sid': " + sid)
+	}
+
+	for i := range sid {
+		switch {
+		case '0' <= sid[i] && sid[i] <= '9':
+		case 'a' <= sid[i] && sid[i] <= 'f':
+		default:
+			return false, errors.New("invalid 'sid': " + sid)
+		}
+	}
+	return true, nil
+}
+
 // Start starts a session by generating new one
 // or retrieve existence one by reading session ID from HTTP request if it's valid.
 func (m *Manager) Start(ctx *macaron.Context) (RawStore, error) {
 	sid := ctx.GetCookie(m.opt.CookieName)
-	if len(sid) > 0 && m.provider.Exist(sid) {
-		return m.Read(sid)
+	valid, _ := m.validSessionID(sid)
+	if len(sid) > 0 && valid && m.provider.Exist(sid) {
+		return m.provider.Read(sid)
 	}
 
 	sid = m.sessionID()
@@ -284,10 +301,9 @@ func (m *Manager) Start(ctx *macaron.Context) (RawStore, error) {
 
 // Read returns raw session store by session ID.
 func (m *Manager) Read(sid string) (RawStore, error) {
-	// No slashes or dots "./" should ever occur in the sid and to prevent session file forgery bug.
-	// See https://github.com/gogs/gogs/issues/5469
-	if strings.ContainsAny(sid, "./") {
-		return nil, errors.New("invalid 'sid': " + sid)
+	// Ensure we're trying to read a valid session ID
+	if _, err := m.validSessionID(sid); err != nil {
+		return nil, err
 	}
 
 	return m.provider.Read(sid)
@@ -298,6 +314,10 @@ func (m *Manager) Destory(ctx *macaron.Context) error {
 	sid := ctx.GetCookie(m.opt.CookieName)
 	if len(sid) == 0 {
 		return nil
+	}
+
+	if _, err := m.validSessionID(sid); err != nil {
+		return err
 	}
 
 	if err := m.provider.Destory(sid); err != nil {
@@ -318,6 +338,10 @@ func (m *Manager) Destory(ctx *macaron.Context) error {
 func (m *Manager) RegenerateId(ctx *macaron.Context) (sess RawStore, err error) {
 	sid := m.sessionID()
 	oldsid := ctx.GetCookie(m.opt.CookieName)
+	_, err = m.validSessionID(oldsid)
+	if err != nil {
+		return nil, err
+	}
 	sess, err = m.provider.Regenerate(oldsid, sid)
 	if err != nil {
 		return nil, err
