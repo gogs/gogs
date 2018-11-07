@@ -47,7 +47,7 @@ func HTTPContexter() macaron.Handler {
 		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
 			c.Resp.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
-			c.Resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			c.Resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
 
 			// Handle preflight OPTIONS request
 			if c.Req.Method == "OPTIONS" {
