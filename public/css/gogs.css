@@ -3034,6 +3034,7 @@ footer .ui.language .menu {
 }
 .feeds .news p {
   line-height: 1em;
+  overflow-wrap: break-word;
 }
 .feeds .news .time-since {
   font-size: 13px;
