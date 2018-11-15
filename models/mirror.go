@@ -5,6 +5,7 @@
 package models
 
 import (
+	"container/list"
 	"fmt"
 	"net/url"
 	"strings"
@@ -211,7 +212,6 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 		}
 
 		refName := lines[i][idx+3:]
-
 		switch {
 		case strings.HasPrefix(lines[i], " * "): // New reference
 			results = append(results, &mirrorSyncResult{
@@ -403,14 +403,6 @@ func SyncMirrors() {
 				continue
 			}
 
-			// Create reference
-			if result.oldCommitID == GIT_SHORT_EMPTY_SHA {
-				if err = MirrorSyncCreateAction(m.Repo, result.refName); err != nil {
-					log.Error(2, "MirrorSyncCreateAction [repo_id: %d]: %v", m.RepoID, err)
-				}
-				continue
-			}
-
 			// Delete reference
 			if result.newCommitID == GIT_SHORT_EMPTY_SHA {
 				if err = MirrorSyncDeleteAction(m.Repo, result.refName); err != nil {
@@ -419,21 +411,54 @@ func SyncMirrors() {
 				continue
 			}
 
+			// New reference
+			isNewRef := false
+			if result.oldCommitID == GIT_SHORT_EMPTY_SHA {
+				if err = MirrorSyncCreateAction(m.Repo, result.refName); err != nil {
+					log.Error(2, "MirrorSyncCreateAction [repo_id: %d]: %v", m.RepoID, err)
+					continue
+				}
+				isNewRef = true
+			}
+
 			// Push commits
-			oldCommitID, err := git.GetFullCommitID(gitRepo.Path, result.oldCommitID)
-			if err != nil {
-				log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
-				continue
-			}
-			newCommitID, err := git.GetFullCommitID(gitRepo.Path, result.newCommitID)
-			if err != nil {
-				log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
-				continue
-			}
-			commits, err := gitRepo.CommitsBetweenIDs(newCommitID, oldCommitID)
-			if err != nil {
-				log.Error(2, "CommitsBetweenIDs [repo_id: %d, new_commit_id: %s, old_commit_id: %s]: %v", m.RepoID, newCommitID, oldCommitID, err)
-				continue
+			var commits *list.List
+			var oldCommitID string
+			var newCommitID string
+			if !isNewRef {
+				oldCommitID, err = git.GetFullCommitID(gitRepo.Path, result.oldCommitID)
+				if err != nil {
+					log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
+					continue
+				}
+				newCommitID, err = git.GetFullCommitID(gitRepo.Path, result.newCommitID)
+				if err != nil {
+					log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
+					continue
+				}
+				commits, err = gitRepo.CommitsBetweenIDs(newCommitID, oldCommitID)
+				if err != nil {
+					log.Error(2, "CommitsBetweenIDs [repo_id: %d, new_commit_id: %s, old_commit_id: %s]: %v", m.RepoID, newCommitID, oldCommitID, err)
+					continue
+				}
+			} else {
+				refNewCommitID, err := gitRepo.GetBranchCommitID(result.refName)
+				if err != nil {
+					log.Error(2, "GetFullCommitID [%d]: %v", m.RepoID, err)
+					continue
+				}
+				if newCommit, err := gitRepo.GetCommit(refNewCommitID); err != nil {
+					log.Error(2, "GetCommit [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommitID, err)
+					continue
+				} else {
+					// TODO: Get the commits for the new ref until the closest ancestor branch like Github does
+					commits, err = newCommit.CommitsBeforeLimit(10)
+					if err != nil {
+						log.Error(2, "CommitsBeforeLimit [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommitID, err)
+					}
+					oldCommitID = git.EMPTY_SHA
+					newCommitID = refNewCommitID
+				}
 			}
 			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{
 				RefName:     result.refName,
