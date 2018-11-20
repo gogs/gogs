@@ -345,6 +345,8 @@ func NewIssue(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["RequireHighlightJS"] = true
 	c.Data["RequireSimpleMDE"] = true
+	c.Data["title"] = c.Query("title")
+	c.Data["content"] = c.Query("content")
 	setTemplateIfExists(c, ISSUE_TEMPLATE_KEY, IssueTemplateCandidates)
 	renderAttachmentSettings(c)
 
