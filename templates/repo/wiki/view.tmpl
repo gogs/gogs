@@ -48,7 +48,7 @@
 			</div>
 		</div>
 		<div class="ui dividing header">
-			{{$title}}
+			<span class="has-emoji">{{$title}}</span>
 			{{if and .IsRepositoryWriter (not .Repository.IsMirror)}}
 				<div class="ui right">
 					<a class="ui small button" href="{{.RepoLink}}/wiki/{{EscapePound .PageURL}}/_edit">{{.i18n.Tr "repo.wiki.edit_page_button"}}</a>
@@ -61,7 +61,7 @@
 				{{.i18n.Tr "repo.wiki.last_commit_info" .Author.Name $timeSince | Safe}}
 			</div>
 		</div>
-		<div class="markdown">
+		<div class="markdown has-emoji">
 			{{.content | Str2html}}
 		</div>
 	</div>
