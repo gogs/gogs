@@ -23,10 +23,11 @@ func IsAPIPath(url string) bool {
 	return strings.HasPrefix(url, "/api/")
 }
 
-// SignedInID returns the id of signed in user.
-func SignedInID(c *macaron.Context, sess session.Store) int64 {
+// SignedInID returns the id of signed in user, along with one bool value which indicates whether user uses token
+// authentication.
+func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
 	if !models.HasEngine {
-		return 0
+		return 0, false
 	}
 
 	// Check access token.
@@ -53,40 +54,40 @@ func SignedInID(c *macaron.Context, sess session.Store) int64 {
 				if !models.IsErrAccessTokenNotExist(err) && !models.IsErrAccessTokenEmpty(err) {
 					log.Error(2, "GetAccessTokenBySHA: %v", err)
 				}
-				return 0
+				return 0, false
 			}
 			t.Updated = time.Now()
 			if err = models.UpdateAccessToken(t); err != nil {
 				log.Error(2, "UpdateAccessToken: %v", err)
 			}
-			return t.UID
+			return t.UID, true
 		}
 	}
 
 	uid := sess.Get("uid")
 	if uid == nil {
-		return 0
+		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
 		if _, err := models.GetUserByID(id); err != nil {
 			if !errors.IsUserNotExist(err) {
 				log.Error(2, "GetUserByID: %v", err)
 			}
-			return 0
+			return 0, false
 		}
-		return id
+		return id, false
 	}
-	return 0
+	return 0, false
 }
 
-// SignedInUser returns the user object of signed user.
-// It returns a bool value to indicate whether user uses basic auth or not.
-func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool) {
+// SignedInUser returns the user object of signed in user, along with two bool values,
+// which indicate whether user uses HTTP Basic Authentication or token authentication respectively.
+func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *models.User, isBasicAuth bool, isTokenAuth bool) {
 	if !models.HasEngine {
-		return nil, false
+		return nil, false, false
 	}
 
-	uid := SignedInID(ctx, sess)
+	uid, isTokenAuth := SignedInID(ctx, sess)
 
 	if uid <= 0 {
 		if setting.Service.EnableReverseProxyAuth {
@@ -95,8 +96,8 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 				u, err := models.GetUserByName(webAuthUser)
 				if err != nil {
 					if !errors.IsUserNotExist(err) {
-						log.Error(4, "GetUserByName: %v", err)
-						return nil, false
+						log.Error(2, "GetUserByName: %v", err)
+						return nil, false, false
 					}
 
 					// Check if enabled auto-registration.
@@ -109,14 +110,14 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 						}
 						if err = models.CreateUser(u); err != nil {
 							// FIXME: should I create a system notice?
-							log.Error(4, "CreateUser: %v", err)
-							return nil, false
+							log.Error(2, "CreateUser: %v", err)
+							return nil, false, false
 						} else {
-							return u, false
+							return u, false, false
 						}
 					}
 				}
-				return u, false
+				return u, false, false
 			}
 		}
 
@@ -130,21 +131,21 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (*models.User, bool)
 				u, err := models.UserLogin(uname, passwd, -1)
 				if err != nil {
 					if !errors.IsUserNotExist(err) {
-						log.Error(4, "UserLogin: %v", err)
+						log.Error(2, "UserLogin: %v", err)
 					}
-					return nil, false
+					return nil, false, false
 				}
 
-				return u, true
+				return u, true, false
 			}
 		}
-		return nil, false
+		return nil, false, false
 	}
 
 	u, err := models.GetUserByID(uid)
 	if err != nil {
-		log.Error(4, "GetUserById: %v", err)
-		return nil, false
+		log.Error(2, "GetUserByID: %v", err)
+		return nil, false, false
 	}
-	return u, false
+	return u, false, isTokenAuth
 }
