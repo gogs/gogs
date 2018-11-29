@@ -86,7 +86,7 @@ func repoAssignment() macaron.Handler {
 // Contexter middleware already checks token for user sign in process.
 func reqToken() macaron.Handler {
 	return func(c *context.Context) {
-		if !c.IsLogged {
+		if !c.IsTokenAuth {
 			c.Error(401)
 			return
 		}
