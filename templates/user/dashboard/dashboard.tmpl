@@ -107,7 +107,7 @@
 					<div class="ui top attached header">
 						{{.i18n.Tr "home.my_mirrors"}} <span class="ui grey label">{{.MirrorCount}}</span>
 						<div class="ui right">
-							<a class="poping up" href="{{AppSubURL}}/repo/migrate?mirror=1" data-content="{{.i18n.Tr "new_mirror"}}" data-variation="tiny inverted" data-position="left center">
+							<a class="poping up" href="{{AppSubURL}}/repo/migrate?mirror=1{{if .ContextUser.IsOrganization}}&org={{.ContextUser.ID}}{{end}}" data-content="{{.i18n.Tr "new_mirror"}}" data-variation="tiny inverted" data-position="left center">
 								<i class="plus icon"></i>
 								<span class="sr-only">{{.i18n.Tr "new_mirror"}}</span>
 							</a>
