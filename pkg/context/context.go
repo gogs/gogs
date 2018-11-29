@@ -40,6 +40,7 @@ type Context struct {
 	User        *models.User
 	IsLogged    bool
 	IsBasicAuth bool
+	IsTokenAuth bool
 
 	Repo *Repository
 	Org  *Organization
@@ -289,8 +290,8 @@ func Contexter() macaron.Handler {
 			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 		}
 
-		// Get user from session if logined.
-		c.User, c.IsBasicAuth = auth.SignedInUser(c.Context, c.Session)
+		// Get user from session or header when possible
+		c.User, c.IsBasicAuth, c.IsTokenAuth = auth.SignedInUser(c.Context, c.Session)
 
 		if c.User != nil {
 			c.IsLogged = true
