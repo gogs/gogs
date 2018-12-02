@@ -1211,7 +1211,7 @@ footer .ui.language .menu {
 .repository .filter.menu .label.color {
   border-radius: 3px;
   margin-left: 15px;
-  padding: 0 8px;
+  padding: 0 10px;
 }
 .repository .filter.menu .octicon {
   float: left;
