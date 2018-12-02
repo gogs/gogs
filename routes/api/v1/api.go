@@ -63,7 +63,7 @@ func repoAssignment() macaron.Handler {
 			return
 		}
 
-		if c.IsLogged && c.User.IsAdmin {
+		if c.IsTokenAuth && c.User.IsAdmin {
 			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
 			mode, err := models.AccessLevel(c.User.ID, repo)
@@ -238,12 +238,13 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/repos", func() {
 			m.Get("/search", repo.Search)
+
+			m.Get("/:username/:reponame", repoAssignment(), repo.Get)
 		})
 
 		m.Group("/repos", func() {
 			m.Post("/migrate", bind(form.MigrateRepo{}), repo.Migrate)
-			m.Combo("/:username/:reponame", repoAssignment()).Get(repo.Get).
-				Delete(repo.Delete)
+			m.Delete("/:username/:reponame", repoAssignment(), repo.Delete)
 
 			m.Group("/:username/:reponame", func() {
 				m.Group("/hooks", func() {
