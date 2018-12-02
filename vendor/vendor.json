@@ -219,6 +219,12 @@
 			"revisionTime": "2018-10-23T10:58:32Z"
 		},
 		{
+			"checksumSHA1": "zQkw7E0MzSfPem4f9eCGhue21Nw=",
+			"path": "github.com/gogs/go-gogs-client",
+			"revision": "0c040274bc4e176c86a466e2ae327324fc143269",
+			"revisionTime": "2018-12-02T17:53:48Z"
+		},
+		{
 			"checksumSHA1": "GaJLoEuMGnP5ofXvuweAI4wx06U=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "a47340a8e42c4ceb44c00c2a05199e24b24fcaef",

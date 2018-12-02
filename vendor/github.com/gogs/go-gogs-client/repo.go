@@ -127,3 +127,21 @@ func (c *Client) MigrateRepo(opt MigrateRepoOption) (*Repository, error) {
 	repo := new(Repository)
 	return repo, c.getParsedResponse("POST", "/repos/migrate", jsonHeader, bytes.NewReader(body), repo)
 }
+
+type EditIssueTrackerOption struct {
+	EnableIssues          *bool   `json:"enable_issues"`
+	EnableExternalTracker *bool   `json:"enable_external_tracker"`
+	ExternalTrackerURL    *string `json:"external_tracker_url"`
+	TrackerURLFormat      *string `json:"tracker_url_format"`
+	TrackerIssueStyle     *string `json:"tracker_issue_style"`
+}
+
+// EditIssueTracker updates issue tracker options of the repository.
+func (c *Client) EditIssueTracker(owner, repo string, opt EditIssueTrackerOption) error {
+	body, err := json.Marshal(&opt)
+	if err != nil {
+		return err
+	}
+	_, err = c.getResponse("PATCH", fmt.Sprintf("/repos/%s/%s/issue-tracker", owner, repo), jsonHeader, bytes.NewReader(body))
+	return err
+}
