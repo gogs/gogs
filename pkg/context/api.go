@@ -44,6 +44,11 @@ func (c *APIContext) Error(status int, title string, obj interface{}) {
 	})
 }
 
+// NoContent renders the 204 response.
+func (c *APIContext) NoContent() {
+	c.Status(http.StatusNoContent)
+}
+
 // NotFound renders the 404 response.
 func (c *APIContext) NotFound() {
 	c.Status(http.StatusNotFound)

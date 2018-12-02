@@ -291,6 +291,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	c.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
 }
 
+// FIXME: Inject to *context.APIContext
 func parseOwnerAndRepo(c *context.APIContext) (*models.User, *models.Repository) {
 	owner, err := models.GetUserByName(c.Params(":username"))
 	if err != nil {
@@ -371,6 +372,36 @@ func ListForks(c *context.APIContext) {
 	}
 
 	c.JSON(200, &apiForks)
+}
+
+func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
+	_, repo := parseOwnerAndRepo(c)
+	if c.Written() {
+		return
+	}
+
+	if form.EnableIssues != nil {
+		repo.EnableIssues = *form.EnableIssues
+	}
+	if form.EnableExternalTracker != nil {
+		repo.EnableExternalTracker = *form.EnableExternalTracker
+	}
+	if form.ExternalTrackerURL != nil {
+		repo.ExternalTrackerURL = *form.ExternalTrackerURL
+	}
+	if form.TrackerURLFormat != nil {
+		repo.ExternalTrackerFormat = *form.TrackerURLFormat
+	}
+	if form.TrackerIssueStyle != nil {
+		repo.ExternalTrackerStyle = *form.TrackerIssueStyle
+	}
+
+	if err := models.UpdateRepository(repo, false); err != nil {
+		c.ServerError("UpdateRepository", err)
+		return
+	}
+
+	c.NoContent()
 }
 
 func MirrorSync(c *context.APIContext) {
