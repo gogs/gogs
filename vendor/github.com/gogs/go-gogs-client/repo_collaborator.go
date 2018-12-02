@@ -29,7 +29,7 @@ func (c *Client) AddCollaborator(user, repo, collaborator string, opt AddCollabo
 	if err != nil {
 		return err
 	}
-	_, err = c.getResponse("PUT", fmt.Sprintf("/repos/%s/%s/collaborators/%s", user, repo, collaborator), nil, bytes.NewReader(body))
+	_, err = c.getResponse("PUT", fmt.Sprintf("/repos/%s/%s/collaborators/%s", user, repo, collaborator), jsonHeader, bytes.NewReader(body))
 	return err
 }
 
