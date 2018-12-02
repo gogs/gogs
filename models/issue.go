@@ -160,8 +160,8 @@ func (issue *Issue) HTMLURL() string {
 }
 
 // State returns string representation of issue status.
-func (i *Issue) State() api.StateType {
-	if i.IsClosed {
+func (issue *Issue) State() api.StateType {
+	if issue.IsClosed {
 		return api.STATE_CLOSED
 	}
 	return api.STATE_OPEN
@@ -208,22 +208,22 @@ func (issue *Issue) APIFormat() *api.Issue {
 }
 
 // HashTag returns unique hash tag for issue.
-func (i *Issue) HashTag() string {
-	return "issue-" + com.ToStr(i.ID)
+func (issue *Issue) HashTag() string {
+	return "issue-" + com.ToStr(issue.ID)
 }
 
 // IsPoster returns true if given user by ID is the poster.
-func (i *Issue) IsPoster(uid int64) bool {
-	return i.PosterID == uid
+func (issue *Issue) IsPoster(uid int64) bool {
+	return issue.PosterID == uid
 }
 
-func (i *Issue) hasLabel(e Engine, labelID int64) bool {
-	return hasIssueLabel(e, i.ID, labelID)
+func (issue *Issue) hasLabel(e Engine, labelID int64) bool {
+	return hasIssueLabel(e, issue.ID, labelID)
 }
 
 // HasLabel returns true if issue has been labeled by given ID.
-func (i *Issue) HasLabel(labelID int64) bool {
-	return i.hasLabel(x, labelID)
+func (issue *Issue) HasLabel(labelID int64) bool {
+	return issue.hasLabel(x, labelID)
 }
 
 func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
@@ -255,8 +255,8 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 	}
 }
 
-func (i *Issue) addLabel(e *xorm.Session, label *Label) error {
-	return newIssueLabel(e, i, label)
+func (issue *Issue) addLabel(e *xorm.Session, label *Label) error {
+	return newIssueLabel(e, issue, label)
 }
 
 // AddLabel adds a new label to the issue.
@@ -389,12 +389,12 @@ func (issue *Issue) ReplaceLabels(labels []*Label) (err error) {
 	return sess.Commit()
 }
 
-func (i *Issue) GetAssignee() (err error) {
-	if i.AssigneeID == 0 || i.Assignee != nil {
+func (issue *Issue) GetAssignee() (err error) {
+	if issue.AssigneeID == 0 || issue.Assignee != nil {
 		return nil
 	}
 
-	i.Assignee, err = GetUserByID(i.AssigneeID)
+	issue.Assignee, err = GetUserByID(issue.AssigneeID)
 	if errors.IsUserNotExist(err) {
 		return nil
 	}
@@ -402,8 +402,8 @@ func (i *Issue) GetAssignee() (err error) {
 }
 
 // ReadBy sets issue to be read by given user.
-func (i *Issue) ReadBy(uid int64) error {
-	return UpdateIssueUserByRead(uid, i.ID)
+func (issue *Issue) ReadBy(uid int64) error {
+	return UpdateIssueUserByRead(uid, issue.ID)
 }
 
 func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
@@ -416,41 +416,41 @@ func UpdateIssueCols(issue *Issue, cols ...string) error {
 	return updateIssueCols(x, issue, cols...)
 }
 
-func (i *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
+func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
 	// Nothing should be performed if current status is same as target status
-	if i.IsClosed == isClosed {
+	if issue.IsClosed == isClosed {
 		return nil
 	}
-	i.IsClosed = isClosed
+	issue.IsClosed = isClosed
 
-	if err = updateIssueCols(e, i, "is_closed"); err != nil {
+	if err = updateIssueCols(e, issue, "is_closed"); err != nil {
 		return err
-	} else if err = updateIssueUsersByStatus(e, i.ID, isClosed); err != nil {
+	} else if err = updateIssueUsersByStatus(e, issue.ID, isClosed); err != nil {
 		return err
 	}
 
 	// Update issue count of labels
-	if err = i.getLabels(e); err != nil {
+	if err = issue.getLabels(e); err != nil {
 		return err
 	}
-	for idx := range i.Labels {
-		if i.IsClosed {
-			i.Labels[idx].NumClosedIssues++
+	for idx := range issue.Labels {
+		if issue.IsClosed {
+			issue.Labels[idx].NumClosedIssues++
 		} else {
-			i.Labels[idx].NumClosedIssues--
+			issue.Labels[idx].NumClosedIssues--
 		}
-		if err = updateLabel(e, i.Labels[idx]); err != nil {
+		if err = updateLabel(e, issue.Labels[idx]); err != nil {
 			return err
 		}
 	}
 
 	// Update issue count of milestone
-	if err = changeMilestoneIssueStats(e, i); err != nil {
+	if err = changeMilestoneIssueStats(e, issue); err != nil {
 		return err
 	}
 
 	// New action comment
-	if _, err = createStatusComment(e, doer, repo, i); err != nil {
+	if _, err = createStatusComment(e, doer, repo, issue); err != nil {
 		return err
 	}
 
