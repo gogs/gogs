@@ -37,7 +37,7 @@ func (c *Client) IsUserFollowing(user, target string) bool {
 }
 
 func (c *Client) Follow(target string) error {
-	_, err := c.getResponse("PUT", fmt.Sprintf("/user/following/%s", target), nil, nil)
+	_, err := c.getResponse("PUT", fmt.Sprintf("/user/following/%s", target), jsonHeader, nil)
 	return err
 }
 

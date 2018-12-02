@@ -50,6 +50,15 @@ type EditOrgOption struct {
 	Location    string `json:"location"`
 }
 
+func (c *Client) CreateOrg(opt CreateOrgOption) (*Organization, error) {
+	body, err := json.Marshal(&opt)
+	if err != nil {
+		return nil, err
+	}
+	org := new(Organization)
+	return org, c.getParsedResponse("POST", "/user/orgs", jsonHeader, bytes.NewReader(body), org)
+}
+
 func (c *Client) EditOrg(orgname string, opt EditOrgOption) error {
 	body, err := json.Marshal(&opt)
 	if err != nil {
