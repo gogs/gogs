@@ -5,11 +5,12 @@
 package models
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/go-xorm/xorm"
+
+	"github.com/gogs/gogs/models/errors"
 )
 
 const OWNER_TEAM = "Owners"
@@ -274,7 +275,7 @@ func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrTeamNotExist
+		return nil, errors.TeamNotExist{0, name}
 	}
 	return t, nil
 }
@@ -290,7 +291,7 @@ func getTeamByID(e Engine, teamID int64) (*Team, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrTeamNotExist
+		return nil, errors.TeamNotExist{teamID, ""}
 	}
 	return t, nil
 }
