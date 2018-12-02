@@ -15,8 +15,7 @@ import (
 )
 
 var (
-	ErrOrgNotExist  = errors.New("Organization does not exist")
-	ErrTeamNotExist = errors.New("Team does not exist")
+	ErrOrgNotExist = errors.New("Organization does not exist")
 )
 
 // IsOwnedBy returns true if given user is in the owner team.
