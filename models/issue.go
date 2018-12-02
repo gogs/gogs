@@ -314,8 +314,13 @@ func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
 		return fmt.Errorf("getLabels: %v", err)
 	}
 
+	// NOTE: issue.removeLabel slices issue.Labels, so we need to create another slice to be unaffected.
+	labels := make([]*Label, len(issue.Labels))
 	for i := range issue.Labels {
-		if err = issue.removeLabel(e, issue.Labels[i]); err != nil {
+		labels[i] = issue.Labels[i]
+	}
+	for i := range labels {
+		if err = issue.removeLabel(e, labels[i]); err != nil {
 			return fmt.Errorf("removeLabel: %v", err)
 		}
 	}
