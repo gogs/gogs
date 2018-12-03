@@ -39,7 +39,7 @@ If applicable, add screenshots to help explain your problem.
 - Gogs version (or commit ref): 
 - Git version: 
 - Operating system: 
-- Database (use `[x]`):
+- Database (replace `[ ]` with `[x]`):
   - [ ] PostgreSQL
   - [ ] MySQL
   - [ ] MSSQL

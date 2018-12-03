@@ -15,11 +15,7 @@ import (
 func ListCollaborators(c *context.APIContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.Error(422, "", err)
-		} else {
-			c.Error(500, "GetCollaborators", err)
-		}
+		c.ServerError("GetCollaborators", err)
 		return
 	}
 
@@ -27,7 +23,7 @@ func ListCollaborators(c *context.APIContext) {
 	for i := range collaborators {
 		apiCollaborators[i] = collaborators[i].APIFormat()
 	}
-	c.JSON(200, &apiCollaborators)
+	c.JSONSuccess(&apiCollaborators)
 }
 
 func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
