@@ -61,6 +61,7 @@ var (
 	AppSubURLDepth int // Number of slashes
 	AppPath        string
 	AppDataPath    string
+	HostAddress    string // AppURL without protocol and slashes
 
 	// Server settings
 	Protocol             Scheme
@@ -463,6 +464,7 @@ func NewContext() {
 	// This value is empty if site does not have sub-url.
 	AppSubURL = strings.TrimSuffix(url.Path, "/")
 	AppSubURLDepth = strings.Count(AppSubURL, "/")
+	HostAddress = url.Host
 
 	Protocol = SCHEME_HTTP
 	if sec.Key("PROTOCOL").String() == "https" {

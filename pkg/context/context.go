@@ -263,13 +263,11 @@ func Contexter() macaron.Handler {
 				branchName = repo.DefaultBranch
 			}
 
-			// Non-80 port needs to match port number in import path as well
-			host := setting.Domain
-			if setting.HTTPPort != "80" {
-				host += ":" + setting.HTTPPort
-			}
-
 			prefix := setting.AppURL + path.Join(ownerName, repoName, "src", branchName)
+			insecureFlag := ""
+			if !strings.HasPrefix(setting.AppURL, "https://") {
+				insecureFlag = "--insecure "
+			}
 			c.PlainText(http.StatusOK, []byte(com.Expand(`<!doctype html>
 <html>
 	<head>
@@ -277,14 +275,15 @@ func Contexter() macaron.Handler {
 		<meta name="go-source" content="{GoGetImport} _ {GoDocDirectory} {GoDocFile}">
 	</head>
 	<body>
-		go get {GoGetImport}
+		go get {InsecureFlag}{GoGetImport}
 	</body>
 </html>
 `, map[string]string{
-				"GoGetImport":    path.Join(host, setting.AppSubURL, repo.FullName()),
+				"GoGetImport":    path.Join(setting.HostAddress, setting.AppSubURL, repo.FullName()),
 				"CloneLink":      models.ComposeHTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
+				"InsecureFlag":   insecureFlag,
 			})))
 			return
 		}
