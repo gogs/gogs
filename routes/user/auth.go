@@ -281,8 +281,8 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 }
 
 func SignOut(c *context.Context) {
-	c.Session.Delete("uid")
-	c.Session.Delete("uname")
+	c.Session.Flush()
+	c.Session.Destory(c.Context)
 	c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
 	c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
 	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
