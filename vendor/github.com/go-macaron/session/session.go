@@ -27,7 +27,7 @@ import (
 	"gopkg.in/macaron.v1"
 )
 
-const _VERSION = "0.5.0"
+const _VERSION = "0.6.0"
 
 func Version() string {
 	return _VERSION
@@ -95,6 +95,8 @@ type Options struct {
 	IDLength int
 	// Configuration section name. Default is "session".
 	Section string
+	// Ignore release for websocket. Default is false.
+	IgnoreReleaseForWebSocket bool
 }
 
 func prepareOptions(options []Options) Options {
@@ -136,6 +138,9 @@ func prepareOptions(options []Options) Options {
 	}
 	if opt.IDLength == 0 {
 		opt.IDLength = sec.Key("ID_LENGTH").MustInt(16)
+	}
+	if !opt.IgnoreReleaseForWebSocket {
+		opt.IgnoreReleaseForWebSocket = sec.Key("IGNORE_RELEASE_FOR_WEBSOCKET").MustBool()
 	}
 
 	return opt
@@ -185,6 +190,10 @@ func Sessioner(options ...Options) macaron.Handler {
 		ctx.MapTo(s, (*Store)(nil))
 
 		ctx.Next()
+
+		if manager.opt.IgnoreReleaseForWebSocket && ctx.Req.Header.Get("Upgrade") == "websocket" {
+			return
+		}
 
 		if err = sess.Release(); err != nil {
 			panic("session(release): " + err.Error())
@@ -346,7 +355,7 @@ func (m *Manager) RegenerateId(ctx *macaron.Context) (sess RawStore, err error) 
 	if err != nil {
 		return nil, err
 	}
-	ck := &http.Cookie{
+	cookie := &http.Cookie{
 		Name:     m.opt.CookieName,
 		Value:    sid,
 		Path:     m.opt.CookiePath,
@@ -355,10 +364,10 @@ func (m *Manager) RegenerateId(ctx *macaron.Context) (sess RawStore, err error) 
 		Domain:   m.opt.Domain,
 	}
 	if m.opt.CookieLifeTime >= 0 {
-		ck.MaxAge = m.opt.CookieLifeTime
+		cookie.MaxAge = m.opt.CookieLifeTime
 	}
-	http.SetCookie(ctx.Resp, ck)
-	ctx.Req.AddCookie(ck)
+	http.SetCookie(ctx.Resp, cookie)
+	ctx.Req.AddCookie(cookie)
 	return sess, nil
 }
 
