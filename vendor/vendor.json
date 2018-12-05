@@ -135,16 +135,16 @@
 			"revisionTime": "2016-06-27T17:00:12Z"
 		},
 		{
-			"checksumSHA1": "qLY+SEQlwlFlpUwT2ZyUv+UlsxA=",
+			"checksumSHA1": "/t1kyFHHcqE/fUrjgdw9X8PlrqQ=",
 			"path": "github.com/go-macaron/session",
-			"revision": "068d408f9c54c7fa7fcc5e2bdd3241ab21280c9e",
-			"revisionTime": "2018-11-07T03:18:28Z"
+			"revision": "cdb0ddf74421e2bbc43443789c46540f5235a71a",
+			"revisionTime": "2018-12-05T00:27:18Z"
 		},
 		{
-			"checksumSHA1": "jVW5CmzplA0UDjai0AFYJFVXAJk=",
+			"checksumSHA1": "AGaED15nGifQkpU2bpU9Kgd7O4A=",
 			"path": "github.com/go-macaron/session/redis",
-			"revision": "068d408f9c54c7fa7fcc5e2bdd3241ab21280c9e",
-			"revisionTime": "2018-11-07T03:18:28Z"
+			"revision": "cdb0ddf74421e2bbc43443789c46540f5235a71a",
+			"revisionTime": "2018-12-05T00:27:18Z"
 		},
 		{
 			"checksumSHA1": "VMRkwnbl0mKWWvK/62CnIlv1oOg=",
