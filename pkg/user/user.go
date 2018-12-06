@@ -9,7 +9,17 @@ import (
 )
 
 func CurrentUsername() string {
-	curUserName := os.Getenv("USER")
+	user, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	curUserName := user.Username
+	if len(curUserName) > 0 {
+		return curUserName
+	}
+
+	curUserName = os.Getenv("USER")
 	if len(curUserName) > 0 {
 		return curUserName
 	}
