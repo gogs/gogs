@@ -257,7 +257,7 @@ func runWeb(c *cli.Context) error {
 		m.Get("/email2user", user.Email2User)
 		m.Get("/forget_password", user.ForgotPasswd)
 		m.Post("/forget_password", user.ForgotPasswdPost)
-		m.Get("/logout", user.SignOut)
+		m.Post("/logout", user.SignOut)
 	})
 	// ***** END: User *****
 
@@ -308,7 +308,7 @@ func runWeb(c *cli.Context) error {
 			m.Get("/followers", user.Followers)
 			m.Get("/following", user.Following)
 			m.Get("/stars", user.Stars)
-		})
+		}, context.InjectParamsUser())
 
 		m.Get("/attachments/:uuid", func(c *context.Context) {
 			attach, err := models.GetAttachmentByUUID(c.Params(":uuid"))
@@ -340,8 +340,8 @@ func runWeb(c *cli.Context) error {
 	}, ignSignIn)
 
 	m.Group("/:username", func() {
-		m.Get("/action/:action", user.Action)
-	}, reqSignIn)
+		m.Post("/action/:action", user.Action)
+	}, reqSignIn, context.InjectParamsUser())
 
 	if macaron.Env == macaron.DEV {
 		m.Get("/template/*", dev.TemplatePreview)
@@ -484,7 +484,7 @@ func runWeb(c *cli.Context) error {
 		})
 	}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
 
-	m.Get("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
+	m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/issues", repo.RetrieveLabels, repo.Issues)
 		m.Get("/issues/:index", repo.ViewIssue)
