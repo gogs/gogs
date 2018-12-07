@@ -160,9 +160,13 @@
 												{{end}}
 
 												<div class="divider"></div>
-												<a class="item" href="{{AppSubURL}}/user/logout">
-													<i class="octicon octicon-sign-out"></i> {{.i18n.Tr "sign_out"}}
-												</a>
+
+												<form id="logout-form" class="item" action="{{AppSubURL}}/user/logout" method="POST">
+													{{.CSRFTokenHTML}}
+													<div class="submit-button" data-form="#logout-form">
+														<i class="octicon octicon-sign-out"></i> {{.i18n.Tr "sign_out"}}
+													</div>
+												</form>
 											</div><!-- end content avatar menu -->
 										</div><!-- end dropdown avatar menu -->
 									</div><!-- end signed user right menu -->

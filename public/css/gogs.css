@@ -347,6 +347,9 @@ footer .ui.language .menu {
 .hide {
   display: none;
 }
+.display.inline {
+  display: inline;
+}
 .center {
   text-align: center;
 }
@@ -2933,6 +2936,9 @@ footer .ui.language .menu {
 .user.settings.organizations .orgs .item .button {
   margin-top: 5px;
   margin-right: 8px;
+}
+.user.profile .ui.card .profile-avatar {
+  height: 287px;
 }
 .user.profile .ui.card .header {
   word-break: break-all;
