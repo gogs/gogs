@@ -20,22 +20,28 @@
 
 					{{if not $.IsGuest}}
 						<div class="ui right">
-							<div class="ui labeled button" tabindex="0">
-								<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}">
-									<i class="eye{{if not $.IsWatchingRepo}} slash outline{{end}} icon"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
-								</a>
-								<a class="ui basic label" href="{{.Link}}/watchers">
-									{{.NumWatches}}
-								</a>
-							</div>
-							<div class="ui labeled button" tabindex="0">
-								<a class="ui basic button" href="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}">
-									<i class="star{{if not $.IsStaringRepo}} outline{{end}} icon"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
-								</a>
-								<a class="ui basic label" href="{{.Link}}/stars">
-									{{.NumStars}}
-								</a>
-							</div>
+							<form class="display inline" action="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}" method="POST">
+								{{$.CSRFTokenHTML}}
+								<div class="ui labeled button" tabindex="0">
+									<button class="ui basic button">
+										<i class="eye{{if not $.IsWatchingRepo}} slash outline{{end}} icon"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
+									</button>
+									<a class="ui basic label" href="{{.Link}}/watchers">
+										{{.NumWatches}}
+									</a>
+								</div>
+							</form>
+							<form class="display inline" action="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}" method="POST">
+								{{$.CSRFTokenHTML}}
+								<div class="ui labeled button" tabindex="0">
+									<button class="ui basic button">
+										<i class="star{{if not $.IsStaringRepo}} outline{{end}} icon"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
+									</button>
+									<a class="ui basic label" href="{{.Link}}/stars">
+										{{.NumStars}}
+									</a>
+								</div>
+							</form>
 							{{if .CanBeForked}}
 								<div class="ui labeled button" tabindex="0">
 									<a class="ui basic button {{if eq .OwnerID $.LoggedUserID}}poping up{{end}}" href="{{AppSubURL}}/repo/fork/{{.ID}}">

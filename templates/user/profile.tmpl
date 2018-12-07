@@ -5,12 +5,12 @@
 			<div class="ui five wide column">
 				<div class="ui card">
 					{{if eq .LoggedUserName .Owner.Name}}
-						<a class="image poping up" href="{{AppSubURL}}/user/settings/avatar" id="profile-avatar" data-content="{{.i18n.Tr "user.change_avatar"}}" data-variation="inverted tiny" data-position="bottom center">
-							<img src="{{AppendAvatarSize .Owner.RelAvatarLink 290}}" title="{{.Owner.Name}}"/>
+						<a class="profile-avatar image poping up" href="{{AppSubURL}}/user/settings/avatar" id="profile-avatar" data-content="{{.i18n.Tr "user.change_avatar"}}" data-variation="inverted tiny" data-position="bottom center">
+							<img src="{{AppendAvatarSize .Owner.RelAvatarLink 287}}" title="{{.Owner.Name}}"/>
 						</a>
 					{{else}}
-						<span class="image">
-							<img src="{{AppendAvatarSize .Owner.RelAvatarLink 290}}" title="{{.Owner.Name}}"/>
+						<span class="profile-avatar image">
+							<img src="{{AppendAvatarSize .Owner.RelAvatarLink 287}}" title="{{.Owner.Name}}"/>
 						</span>
 					{{end}}
 					<div class="content">
@@ -61,13 +61,23 @@
 							</li>
 							{{end}}
 							{{if and .IsLogged (ne .LoggedUserName .Owner.Name)}}
-							<li class="follow">
-								{{if .LoggedUser.IsFollowing .Owner.ID}}
-								<a class="ui basic red button" href="{{.Link}}/action/unfollow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{.i18n.Tr "user.unfollow"}}</a>
-								{{else}}
-								<a class="ui basic green button" href="{{.Link}}/action/follow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{.i18n.Tr "user.follow"}}</a>
-								{{end}}
-							</li>
+								<li class="follow">
+									{{if .LoggedUser.IsFollowing .Owner.ID}}
+										<form action="{{.Link}}/action/unfollow?redirect_to={{$.Link}}" method="POST">
+											{{.CSRFTokenHTML}}
+											<button class="ui basic red button">
+												<i class="octicon octicon-person"></i> {{.i18n.Tr "user.unfollow"}}
+											</button>
+										</form>
+									{{else}}
+										<form action="{{.Link}}/action/follow?redirect_to={{$.Link}}" method="POST">
+											{{.CSRFTokenHTML}}
+											<button class="ui basic green button">
+												<i class="octicon octicon-person"></i> {{.i18n.Tr "user.follow"}}
+											</button>
+										</form>
+									{{end}}
+								</li>
 							{{end}}
 						</ul>
 					</div>
