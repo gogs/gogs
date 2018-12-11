@@ -15,15 +15,15 @@
 						{{else if .ResendLimited}}
 							<p class="center">{{.i18n.Tr "auth.resent_limit_prompt"}}</p>
 						{{else}}
-							<p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .LoggedUser.Email .Hours | Str2html}}</p>
+							<p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .LoggedUser.Email .Hours | Str2HTML}}</p>
 						{{end}}
 					{{else}}
 						{{if .IsSendRegisterMail}}
-							<p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2html}}</p>
+							<p>{{.i18n.Tr "auth.confirmation_mail_sent_prompt" .Email .Hours | Str2HTML}}</p>
 						{{else if .IsActivateFailed}}
 							<p>{{.i18n.Tr "auth.invalid_code"}}</p>
 						{{else}}
-							<p>{{.i18n.Tr "auth.has_unconfirmed_mail" .LoggedUser.Name .LoggedUser.Email | Str2html}}</p>
+							<p>{{.i18n.Tr "auth.has_unconfirmed_mail" .LoggedUser.Name .LoggedUser.Email | Str2HTML}}</p>
 							<div class="ui divider"></div>
 							<div class="text right">
 								<button class="ui blue button">{{.i18n.Tr "auth.resend_mail"}}</button>

@@ -47,7 +47,7 @@
 							{{else}}
 								<a rel="nofollow" class="ui sha label" href="{{AppSubURL}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
 							{{end}}
-							<span class="{{if gt .ParentCount 1}}grey text {{end}} has-emoji">{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas | Str2html}}</span>
+							<span class="{{if gt .ParentCount 1}}grey text {{end}} has-emoji">{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
 						</td>
 						<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
 					</tr>
