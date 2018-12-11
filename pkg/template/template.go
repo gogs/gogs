@@ -64,7 +64,7 @@ func NewFuncMap() []template.FuncMap {
 		"AppendAvatarSize": tool.AppendAvatarSize,
 		"Safe":             Safe,
 		"Sanitize":         bluemonday.UGCPolicy().Sanitize,
-		"Str2html":         Str2HTML,
+		"Str2html":         Str2HTML, // TODO: Rename to Str2HTML
 		"NewLine2br":       NewLine2br,
 		"TimeSince":        tool.TimeSince,
 		"RawTimeSince":     tool.RawTimeSince,
@@ -176,12 +176,14 @@ func ToUTF8WithErr(content []byte) (error, string) {
 	return err, result
 }
 
+// FIXME: Unused function
 func ToUTF8(content string) string {
 	_, res := ToUTF8WithErr([]byte(content))
 	return res
 }
 
 // Replaces all prefixes 'old' in 's' with 'new'.
+// FIXME: Unused function
 func ReplaceLeft(s, old, new string) string {
 	old_len, new_len, i, n := len(old), len(new), 0, 0
 	for ; i < len(s) && strings.HasPrefix(s[i:], old); n += 1 {
@@ -206,16 +208,16 @@ func ReplaceLeft(s, old, new string) string {
 	return string(replacement)
 }
 
-// RenderCommitMessage renders commit message with XSS-safe and special links.
-func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) template.HTML {
+// RenderCommitMessage renders commit message with special links.
+func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) string {
 	cleanMsg := template.HTMLEscapeString(msg)
 	fullMessage := string(markup.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
 	numLines := len(msgLines)
 	if numLines == 0 {
-		return template.HTML("")
+		return ""
 	} else if !full {
-		return template.HTML(msgLines[0])
+		return msgLines[0]
 	} else if numLines == 1 || (numLines >= 2 && len(msgLines[1]) == 0) {
 		// First line is a header, standalone or followed by empty line
 		header := fmt.Sprintf("<h3>%s</h3>", msgLines[0])
@@ -228,7 +230,7 @@ func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]stri
 		// Non-standard git message, there is no header line
 		fullMessage = fmt.Sprintf("<h4>%s</h4>", strings.Join(msgLines, "<br>"))
 	}
-	return template.HTML(fullMessage)
+	return fullMessage
 }
 
 type Actioner interface {
