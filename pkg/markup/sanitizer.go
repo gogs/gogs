@@ -36,6 +36,9 @@ func NewSanitizer() {
 		sanitizer.policy.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
 		sanitizer.policy.AllowAttrs("checked", "disabled").OnElements("input")
 
+		// Data URLs
+		sanitizer.policy.AllowURLSchemes("data")
+
 		// Custom URL-Schemes
 		sanitizer.policy.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
 	})
