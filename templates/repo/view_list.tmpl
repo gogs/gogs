@@ -10,7 +10,7 @@
 					<strong>{{.LatestCommit.Author.Name}}</strong>
 				{{end}}
 				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LatestCommit.ID}}" rel="nofollow">{{ShortSHA1 .LatestCommit.ID.String}}</a>
-				<span class="grey has-emoji">{{RenderCommitMessage false .LatestCommit.Summary .RepoLink $.Repository.ComposeMetas}}</span>
+				<span class="grey has-emoji">{{RenderCommitMessage false .LatestCommit.Summary .RepoLink $.Repository.ComposeMetas | Str2html}}</span>
 			</th>
 			<th class="nine wide">
 			</th>
@@ -49,7 +49,7 @@
 				{{end}}
 				<td class="message collapsing has-emoji">
 					<a rel="nofollow" class="ui sha label" href="{{$.RepoLink}}/commit/{{$commit.ID}}">{{ShortSHA1 $commit.ID.String}}</a>
-					{{RenderCommitMessage false $commit.Summary $.RepoLink $.Repository.ComposeMetas}}
+					{{RenderCommitMessage false $commit.Summary $.RepoLink $.Repository.ComposeMetas | Str2html}}
 				</td>
 				<td class="text grey right age">{{TimeSince $commit.Committer.When $.Lang}}</td>
 			</tr>
