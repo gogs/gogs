@@ -21,7 +21,7 @@
 							<span class="text grey"><i class="octicon octicon-git-branch"></i> {{.NumForks}}</span>
 						</div>
 					</div>
-					{{if .Description}}<p class="has-emoji">{{.Description | Str2html}}</p>{{end}}
+					{{if .Description}}<p class="has-emoji">{{.Description | Str2HTML}}</p>{{end}}
 					<p class="time">{{$.i18n.Tr "org.repo_updated"}} {{TimeSince .Updated $.i18n.Lang}}</p>
 				</div>
 			</div>
