@@ -35,7 +35,7 @@
 					<div class="meta">
 						{{ $closedDate:= TimeSince .ClosedDate $.Lang }}
 						{{if .IsClosed}}
-							<span class="octicon octicon-clock"></span> {{$.i18n.Tr "repo.milestones.closed" $closedDate|Str2html}}
+							<span class="octicon octicon-clock"></span> {{$.i18n.Tr "repo.milestones.closed" $closedDate|Str2HTML}}
 						{{else}}
 							<span class="octicon octicon-calendar"></span>
 							{{if .DeadlineString}}
@@ -62,7 +62,7 @@
 					{{end}}
 					{{if .Content}}
 						<div class="content">
-							{{.RenderedContent|Str2html}}
+							{{.RenderedContent|Str2HTML}}
 						</div>
 					{{end}}
 				</li>
