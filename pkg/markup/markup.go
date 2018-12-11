@@ -190,6 +190,12 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 		return
 	}
 
+	// Skip in case the "src" is data url
+	if strings.HasPrefix(src, "data:") {
+		buf.WriteString(token.String())
+		return
+	}
+
 	// Prepend repository base URL for internal links
 	needPrepend := !isLink([]byte(src))
 	if needPrepend {
