@@ -45,7 +45,6 @@ If applicable, add screenshots to help explain your problem.
   - [ ] MSSQL
   - [ ] SQLite
 - Can you reproduce the bug at https://try.gogs.io:
-  - [ ] Yes (provide example URL)
-  - [ ] No
-  - [ ] Not relevant
+  - [ ] Yes: provide example URL
+  - [ ] No: explain why
 - Log gist (usually found in `log/gogs.log`):
