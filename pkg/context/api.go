@@ -17,7 +17,11 @@ import (
 )
 
 type APIContext struct {
-	*Context
+	*Context // TODO: Reduce to only needed fields instead of full shadow
+
+	// Base URL for the version of API endpoints, e.g. https://try.gogs.io/api/v1
+	BaseURL string
+
 	Org *APIOrganization
 }
 
@@ -96,6 +100,7 @@ func APIContexter() macaron.Handler {
 	return func(ctx *Context) {
 		c := &APIContext{
 			Context: ctx,
+			BaseURL: setting.AppURL + "api/v1",
 		}
 		ctx.Map(c)
 	}
