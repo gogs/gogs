@@ -26,7 +26,7 @@ type APIContext struct {
 }
 
 // FIXME: move to github.com/gogs/go-gogs-client
-const DOC_URL = "https://github.com/gogs/go-gogs-client/wiki"
+const DOC_URL = "https://github.com/gogs/docs-api"
 
 // Error responses error message to client with given message.
 // If status is 500, also it prints error to log.
