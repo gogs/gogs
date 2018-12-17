@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gogs/git-module"
@@ -17,6 +19,12 @@ import (
 )
 
 func GetSingleCommit(c *context.APIContext) {
+	if strings.Contains(c.Req.Header.Get("Accept"), api.MediaApplicationSHA) {
+		c.SetParams("*", c.Params(":sha"))
+		GetReferenceSHA(c)
+		return
+	}
+
 	gitRepo, err := git.OpenRepository(c.Repo.Repository.RepoPath())
 	if err != nil {
 		c.ServerError("OpenRepository", err)
@@ -88,4 +96,43 @@ func GetSingleCommit(c *context.APIContext) {
 		Committer: apiCommitter,
 		Parents:   apiParents,
 	})
+}
+
+func GetReferenceSHA(c *context.APIContext) {
+	gitRepo, err := git.OpenRepository(c.Repo.Repository.RepoPath())
+	if err != nil {
+		c.ServerError("OpenRepository", err)
+		return
+	}
+
+	ref := c.Params("*")
+	refType := 0 // 0-undetermined, 1-branch, 2-tag
+	if strings.HasPrefix(ref, git.BRANCH_PREFIX) {
+		ref = strings.TrimPrefix(ref, git.BRANCH_PREFIX)
+		refType = 1
+	} else if strings.HasPrefix(ref, git.TAG_PREFIX) {
+		ref = strings.TrimPrefix(ref, git.TAG_PREFIX)
+		refType = 2
+	} else {
+		if gitRepo.IsBranchExist(ref) {
+			refType = 1
+		} else if gitRepo.IsTagExist(ref) {
+			refType = 2
+		} else {
+			c.NotFound()
+			return
+		}
+	}
+
+	var sha string
+	if refType == 1 {
+		sha, err = gitRepo.GetBranchCommitID(ref)
+	} else if refType == 2 {
+		sha, err = gitRepo.GetTagCommitID(ref)
+	}
+	if err != nil {
+		c.NotFoundOrServerError("get reference commit ID", git.IsErrNotExist, err)
+		return
+	}
+	c.PlainText(http.StatusOK, []byte(sha))
 }
