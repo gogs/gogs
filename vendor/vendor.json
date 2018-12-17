@@ -219,10 +219,10 @@
 			"revisionTime": "2018-12-15T04:53:36Z"
 		},
 		{
-			"checksumSHA1": "LlzYU6W68aX9nJLibQkKFTiY+9Q=",
+			"checksumSHA1": "81S19W6omjG5N+zVWeI2yRsSfw0=",
 			"path": "github.com/gogs/go-gogs-client",
-			"revision": "61758abf1cdb964b69de42a3f83f7148e3f9454d",
-			"revisionTime": "2018-12-15T05:23:13Z"
+			"revision": "1cd0db3113de87dbac702b9f1a08d9bd0e7142bb",
+			"revisionTime": "2018-12-17T00:43:19Z"
 		},
 		{
 			"checksumSHA1": "GaJLoEuMGnP5ofXvuweAI4wx06U=",
@@ -711,10 +711,10 @@
 			"revisionTime": "2016-08-08T14:54:09Z"
 		},
 		{
-			"checksumSHA1": "7c6yCe2PjyV+/qWiPBWUf+j+1us=",
+			"checksumSHA1": "55kJCeuwX46fYJt2Ww1d7rxMOTo=",
 			"path": "gopkg.in/macaron.v1",
-			"revision": "c1be95e6d21e769e44e1ec33cec9da5837861c10",
-			"revisionTime": "2018-03-06T06:20:08Z"
+			"revision": "dfcb80ca86e8534962c62812efd93209c7e600e7",
+			"revisionTime": "2018-12-17T00:30:54Z"
 		},
 		{
 			"checksumSHA1": "6QPjE+qflEBHg+JPJd9e4iQuRAk=",

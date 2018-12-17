@@ -6,6 +6,7 @@ package gogs
 
 import (
 	"fmt"
+	"net/http"
 )
 
 // CommitMeta contains meta information of a commit in terms of API.
@@ -43,4 +44,10 @@ type Commit struct {
 func (c *Client) GetSingleCommit(user, repo, commitID string) (*Commit, error) {
 	commit := new(Commit)
 	return commit, c.getParsedResponse("GET", fmt.Sprintf("/repos/%s/%s/commits/%s", user, repo, commitID), nil, nil, &commit)
+}
+
+func (c *Client) GetReferenceSHA(user, repo, ref string) (string, error) {
+	data, err := c.getResponse("GET", fmt.Sprintf("/repos/%s/%s/commits/%s", user, repo, ref),
+		http.Header{"Accept": []string{MediaApplicationSHA}}, nil)
+	return string(data), err
 }
