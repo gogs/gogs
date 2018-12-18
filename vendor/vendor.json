@@ -231,6 +231,18 @@
 			"revisionTime": "2018-09-14T20:37:51Z"
 		},
 		{
+			"checksumSHA1": "xbq5LdoNE+8lM/0TjMJCjOZ1Brc=",
+			"path": "github.com/google/go-github/github",
+			"revision": "a83ae98ad5d09188c49d6056edb60ec9bdf202bd",
+			"revisionTime": "2018-06-13T00:47:29Z"
+		},
+		{
+			"checksumSHA1": "p3IB18uJRs4dL2K5yx24MrLYE9A=",
+			"path": "github.com/google/go-querystring/query",
+			"revision": "53e6ce116135b80d037921a7fdd5138cf32d7a8a",
+			"revisionTime": "2017-01-11T10:11:55Z"
+		},
+		{
 			"checksumSHA1": "MLO0PyrK2MUO6A7Z9PxWuu43C/A=",
 			"path": "github.com/issue9/identicon",
 			"revision": "d36b54562f4cf70c83653e13dc95c220c79ef521",

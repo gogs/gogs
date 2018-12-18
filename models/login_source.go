@@ -24,6 +24,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/auth/github"
 	"github.com/gogs/gogs/pkg/auth/ldap"
 	"github.com/gogs/gogs/pkg/auth/pam"
 	"github.com/gogs/gogs/pkg/setting"
@@ -39,13 +40,15 @@ const (
 	LOGIN_SMTP             // 3
 	LOGIN_PAM              // 4
 	LOGIN_DLDAP            // 5
+	LOGIN_GITHUB           // 6
 )
 
 var LoginNames = map[LoginType]string{
-	LOGIN_LDAP:  "LDAP (via BindDN)",
-	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
-	LOGIN_SMTP:  "SMTP",
-	LOGIN_PAM:   "PAM",
+	LOGIN_LDAP:   "LDAP (via BindDN)",
+	LOGIN_DLDAP:  "LDAP (simple auth)", // Via direct bind
+	LOGIN_SMTP:   "SMTP",
+	LOGIN_PAM:    "PAM",
+	LOGIN_GITHUB: "GitHub",
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
@@ -59,6 +62,7 @@ var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
 	_ core.Conversion = &PAMConfig{}
+	_ core.Conversion = &GITHUBConfig{}
 )
 
 type LDAPConfig struct {
@@ -103,6 +107,18 @@ func (cfg *PAMConfig) FromDB(bs []byte) error {
 }
 
 func (cfg *PAMConfig) ToDB() ([]byte, error) {
+	return jsoniter.Marshal(cfg)
+}
+
+type GITHUBConfig struct {
+	ApiEndpoint string // Github service (e.g. https://github.com/api/v1/)
+}
+
+func (cfg *GITHUBConfig) FromDB(bs []byte) error {
+	return jsoniter.Unmarshal(bs, &cfg)
+}
+
+func (cfg *GITHUBConfig) ToDB() ([]byte, error) {
 	return jsoniter.Marshal(cfg)
 }
 
@@ -174,6 +190,8 @@ func (s *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 			s.Cfg = new(SMTPConfig)
 		case LOGIN_PAM:
 			s.Cfg = new(PAMConfig)
+		case LOGIN_GITHUB:
+			s.Cfg = new(GITHUBConfig)
 		default:
 			panic("unrecognized login source type: " + com.ToStr(*val))
 		}
@@ -207,6 +225,10 @@ func (s *LoginSource) IsSMTP() bool {
 
 func (s *LoginSource) IsPAM() bool {
 	return s.Type == LOGIN_PAM
+}
+
+func (s *LoginSource) IsGITHUB() bool {
+	return s.Type == LOGIN_GITHUB
 }
 
 func (s *LoginSource) HasTLS() bool {
@@ -247,6 +269,10 @@ func (s *LoginSource) SMTP() *SMTPConfig {
 
 func (s *LoginSource) PAM() *PAMConfig {
 	return s.Cfg.(*PAMConfig)
+}
+
+func (s *LoginSource) GITHUB() *GITHUBConfig {
+	return s.Cfg.(*GITHUBConfig)
 }
 
 func CreateLoginSource(source *LoginSource) error {
@@ -488,6 +514,9 @@ func LoadAuthSources() {
 		case "pam":
 			loginSource.Type = LOGIN_PAM
 			loginSource.Cfg = &PAMConfig{}
+		case "github":
+			loginSource.Type = LOGIN_GITHUB
+			loginSource.Cfg = &GITHUBConfig{}
 		default:
 			log.Fatal(2, "Failed to load authentication source: unknown type '%s'", authType)
 		}
@@ -726,7 +755,33 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	}
 	return user, CreateUser(user)
 }
+func LoginViaGITHUB(user *User, login, password string, sourceID int64, cfg *GITHUBConfig, autoRegister bool) (*User, error) {
+	login_id, fullname, email, url, location, err := github.GITHUBAuth(cfg.ApiEndpoint, login, password)
+	if err != nil {
+		if strings.Contains(err.Error(), "Authentication failure") {
+			return nil, errors.UserNotExist{0, login}
+		}
+		return nil, err
+	}
 
+	if !autoRegister {
+		return user, nil
+	}
+	user = &User{
+		LowerName:   strings.ToLower(login),
+		Name:        login_id,
+		FullName:    fullname,
+		Email:       email,
+		Website:     url,
+		Passwd:      password,
+		LoginType:   LOGIN_GITHUB,
+		LoginSource: sourceID,
+		LoginName:   login,
+		IsActive:    true,
+		Location:    location,
+	}
+	return user, CreateUser(user)
+}
 func remoteUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
 		return nil, errors.LoginSourceNotActivated{source.ID}
@@ -739,6 +794,8 @@ func remoteUserLogin(user *User, login, password string, source *LoginSource, au
 		return LoginViaSMTP(user, login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
 	case LOGIN_PAM:
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	case LOGIN_GITHUB:
+		return LoginViaGITHUB(user, login, password, source.ID, source.Cfg.(*GITHUBConfig), autoRegister)
 	}
 
 	return nil, errors.InvalidLoginSourceType{source.Type}
