@@ -9,11 +9,11 @@ function initCommentPreviewTab($form) {
     $tabMenu.find('.item[data-tab="' + $tabMenu.data('preview') + '"]').click(function () {
         var $this = $(this);
         $.post($this.data('url'), {
-                "_csrf": csrf,
-                "mode": "gfm",
-                "context": $this.data('context'),
-                "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
-            },
+            "_csrf": csrf,
+            "mode": "gfm",
+            "context": $this.data('context'),
+            "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
+        },
             function (data) {
                 var $previewPanel = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
                 $previewPanel.html(data);
@@ -39,11 +39,11 @@ function initEditPreviewTab($form) {
         $previewTab.click(function () {
             var $this = $(this);
             $.post($this.data('url'), {
-                    "_csrf": csrf,
-                    "mode": "gfm",
-                    "context": $this.data('context'),
-                    "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
-                },
+                "_csrf": csrf,
+                "mode": "gfm",
+                "context": $this.data('context'),
+                "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
+            },
                 function (data) {
                     var $previewPanel = $form.find('.tab.segment[data-tab="' + $tabMenu.data('preview') + '"]');
                     $previewPanel.html(data);
@@ -63,9 +63,9 @@ function initEditDiffTab($form) {
     $tabMenu.find('.item[data-tab="' + $tabMenu.data('diff') + '"]').click(function () {
         var $this = $(this);
         $.post($this.data('url'), {
-                "_csrf": csrf,
-                "content": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
-            },
+            "_csrf": csrf,
+            "content": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
+        },
             function (data) {
                 var $diffPreviewPanel = $form.find('.tab.segment[data-tab="' + $tabMenu.data('diff') + '"]');
                 $diffPreviewPanel.html(data);
@@ -111,7 +111,7 @@ function initCommentForm() {
     // This should be added directly to HTML but somehow just get empty <span> on this page.
     $labelMenu.find('.item:not(.no-select) .octicon:not(.octicon-check)').each(function () {
         $(this).html('&nbsp;');
-    })
+    });
     $labelMenu.find('.item:not(.no-select)').click(function () {
         if ($(this).hasClass('checked')) {
             $(this).removeClass('checked');
@@ -221,7 +221,7 @@ function initRepository() {
                 window.location.href = $choice.data('url');
                 console.log($choice.data('url'))
             },
-            message: {noResults: $dropdown.data('no-results')}
+            message: { noResults: $dropdown.data('no-results') }
         });
     }
 
@@ -346,9 +346,9 @@ function initRepository() {
             }
 
             $.post($(this).data('update-url'), {
-                    "_csrf": csrf,
-                    "title": $editInput.val()
-                },
+                "_csrf": csrf,
+                "title": $editInput.val()
+            },
                 function (data) {
                     $editInput.val(data.title);
                     $issueTitle.text(data.title);
@@ -390,10 +390,10 @@ function initRepository() {
                     $editContentZone.hide();
 
                     $.post($editContentZone.data('update-url'), {
-                            "_csrf": csrf,
-                            "content": $textarea.val(),
-                            "context": $editContentZone.data('context')
-                        },
+                        "_csrf": csrf,
+                        "content": $textarea.val(),
+                        "context": $editContentZone.data('context')
+                    },
                         function (data) {
                             if (data.length == 0) {
                                 $renderContent.html($('#no-content').html());
@@ -499,6 +499,15 @@ function initRepository() {
     if ($('.repository.compare.pull').length > 0) {
         initFilterSearchDropdown('.choose.branch .dropdown');
     }
+    if ($('.repository.view.pull').length > 0) {
+        $('.comment.merge.box input[name=merge_style]').change(function () {
+            if ($(this).val() === 'create_merge_commit') {
+                $('.commit.description.field').show();
+            } else {
+                $('.commit.description.field').hide();
+            }
+        })
+    }
 }
 
 function initWikiForm() {
@@ -512,11 +521,11 @@ function initWikiForm() {
                 setTimeout(function () {
                     // FIXME: still send render request when return back to edit mode
                     $.post($editArea.data('url'), {
-                            "_csrf": csrf,
-                            "mode": "gfm",
-                            "context": $editArea.data('context'),
-                            "text": plainText
-                        },
+                        "_csrf": csrf,
+                        "mode": "gfm",
+                        "context": $editArea.data('context'),
+                        "text": plainText
+                    },
                         function (data) {
                             preview.innerHTML = '<div class="markdown">' + data + '</div>';
                             emojify.run($('.editor-preview')[0]);
@@ -594,11 +603,11 @@ function setSimpleMDE($editArea) {
             setTimeout(function () {
                 // FIXME: still send render request when return back to edit mode
                 $.post($editArea.data('url'), {
-                        "_csrf": csrf,
-                        "mode": "gfm",
-                        "context": $editArea.data('context'),
-                        "text": plainText
-                    },
+                    "_csrf": csrf,
+                    "mode": "gfm",
+                    "context": $editArea.data('context'),
+                    "text": plainText
+                },
                     function (data) {
                         preview.innerHTML = '<div class="markdown">' + data + '</div>';
                         emojify.run($('.editor-preview')[0]);
@@ -643,10 +652,10 @@ function initEditor() {
     $('.js-quick-pull-choice-option').change(function () {
         if ($(this).val() == 'commit-to-new-branch') {
             $('.quick-pull-branch-name').show();
-            $('.quick-pull-branch-name input').prop('required',true);
+            $('.quick-pull-branch-name input').prop('required', true);
         } else {
             $('.quick-pull-branch-name').hide();
-            $('.quick-pull-branch-name input').prop('required',false);
+            $('.quick-pull-branch-name input').prop('required', false);
         }
     });
 
@@ -696,7 +705,7 @@ function initEditor() {
 
         var tree_path = parts.join('/');
         $('#tree_path').val(tree_path);
-        $('#preview-tab').data('context', $('#preview-tab').data('root-context') + tree_path.substring(0, tree_path.lastIndexOf("/")+1));
+        $('#preview-tab').data('context', $('#preview-tab').data('root-context') + tree_path.substring(0, tree_path.lastIndexOf("/") + 1));
     }).trigger('keyup');
 
     var $editArea = $('.repository.editor textarea#edit_area');
@@ -766,7 +775,7 @@ function initEditor() {
         value = value.split('/');
         value = value[value.length - 1];
 
-        $.getJSON($editFilename.data('ec-url-prefix')+value, function(editorconfig) {
+        $.getJSON($editFilename.data('ec-url-prefix') + value, function (editorconfig) {
             if (editorconfig.indent_style === 'tab') {
                 codeMirrorEditor.setOption("indentWithTabs", true);
                 codeMirrorEditor.setOption('extraKeys', {});
@@ -776,7 +785,7 @@ function initEditor() {
                 // - https://github.com/codemirror/CodeMirror/issues/988
                 // - https://codemirror.net/doc/manual.html#keymaps
                 codeMirrorEditor.setOption('extraKeys', {
-                    Tab: function(cm) {
+                    Tab: function (cm) {
                         var spaces = Array(parseInt(cm.getOption("indentUnit")) + 1).join(" ");
                         cm.replaceSelection(spaces);
                     }
@@ -1126,7 +1135,7 @@ function initWebhookSettings() {
         $($(this).data('target') + ' .nohighlight').each(function () {
             var $this = $(this);
             $this.removeClass('nohighlight');
-            setTimeout(function(){ hljs.highlightBlock($this[0]) }, 500);
+            setTimeout(function () { hljs.highlightBlock($this[0]) }, 500);
         })
     })
 
@@ -1147,7 +1156,7 @@ function initWebhookSettings() {
 $(document).ready(function () {
     csrf = $('meta[name=_csrf]').attr("content");
     suburl = $('meta[name=_suburl]').attr("content");
-    
+
     // Set cursor to the end of autofocus input string
     $('input[autofocus]').each(function () {
         $(this).val($(this).val());
@@ -1208,7 +1217,7 @@ $(document).ready(function () {
         var filenameDict = {};
         $dropzone.dropzone({
             url: $dropzone.data('upload-url'),
-            headers: {"X-Csrf-Token": csrf},
+            headers: { "X-Csrf-Token": csrf },
             maxFiles: $dropzone.data('max-file'),
             maxFilesize: $dropzone.data('max-size'),
             acceptedFiles: ($dropzone.data('accepts') === '*/*') ? null : $dropzone.data('accepts'),
@@ -1330,6 +1339,10 @@ $(document).ready(function () {
         }).done(function () {
             window.location.href = $this.data('done-url');
         });
+    });
+    // To make arbitrary form element to behave like a submit button
+    $('.submit-button').click(function () {
+        $($(this).data('form')).submit();
     });
 
     // Check or select on option to enable/disable target region
@@ -1454,7 +1467,7 @@ $(function () {
     $('form').areYouSure();
 });
 
- // getByteLen counts bytes in a string's UTF-8 representation.
+// getByteLen counts bytes in a string's UTF-8 representation.
 function getByteLen(normalVal) {
     // Force string type
     normalVal = String(normalVal);
@@ -1462,19 +1475,19 @@ function getByteLen(normalVal) {
     var byteLen = 0;
     for (var i = 0; i < normalVal.length; i++) {
         var c = normalVal.charCodeAt(i);
-        byteLen += c < (1 <<  7) ? 1 :
-                   c < (1 << 11) ? 2 :
-                   c < (1 << 16) ? 3 :
-                   c < (1 << 21) ? 4 :
-                   c < (1 << 26) ? 5 :
-                   c < (1 << 31) ? 6 : Number.NaN;
+        byteLen += c < (1 << 7) ? 1 :
+            c < (1 << 11) ? 2 :
+                c < (1 << 16) ? 3 :
+                    c < (1 << 21) ? 4 :
+                        c < (1 << 26) ? 5 :
+                            c < (1 << 31) ? 6 : Number.NaN;
     }
     return byteLen;
 }
 
 function showMessageMaxLength(maxLen, textElemId, counterId) {
-    var $msg = $('#'+textElemId);                      
-    $('#'+counterId).html(maxLen - getByteLen($msg.val()));
+    var $msg = $('#' + textElemId);
+    $('#' + counterId).html(maxLen - getByteLen($msg.val()));
 
     var onMessageKey = function (e) {
         var $msg = $(this);
@@ -1487,7 +1500,7 @@ function showMessageMaxLength(maxLen, textElemId, counterId) {
             remainder = 0;
         }
 
-        $('#'+counterId).html(remainder);
+        $('#' + counterId).html(remainder);
     };
 
     $msg.keyup(onMessageKey).keydown(onMessageKey);

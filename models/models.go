@@ -33,7 +33,7 @@ type Engine interface {
 	Exec(string, ...interface{}) (sql.Result, error)
 	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
-	Id(interface{}) *xorm.Session
+	ID(interface{}) *xorm.Session
 	In(string, ...interface{}) *xorm.Session
 	Insert(...interface{}) (int64, error)
 	InsertOne(interface{}) (int64, error)
@@ -300,7 +300,8 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 	snakeMapper := core.SnakeMapper{}
 
 	skipInsertProcessors := map[string]bool{
-		"mirror": true,
+		"mirror":    true,
+		"milestone": true,
 	}
 
 	// Purposely create a local variable to not modify global variable
@@ -361,14 +362,22 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 				return fmt.Errorf("insert strcut: %v", err)
 			}
 
+			meta := make(map[string]interface{})
+			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
+				log.Error(2, "Failed to unmarshal to map: %v", err)
+			}
+
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				meta := make(map[string]interface{})
-				if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
-					log.Error(2, "Failed to unmarshal to map: %v", err)
-				}
 				if _, err = x.Exec("UPDATE "+rawTableName+" SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
 					log.Error(2, "Failed to reset 'created_unix': %v", err)
+				}
+			}
+
+			switch rawTableName {
+			case "milestone":
+				if _, err = x.Exec("UPDATE "+rawTableName+" SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta["DeadlineUnix"], meta["ClosedDateUnix"], meta["ID"]); err != nil {
+					log.Error(2, "Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
 				}
 			}
 		}

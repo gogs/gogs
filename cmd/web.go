@@ -25,6 +25,7 @@ import (
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
 	"github.com/mcuadros/go-version"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
@@ -256,15 +257,15 @@ func runWeb(c *cli.Context) error {
 		m.Get("/email2user", user.Email2User)
 		m.Get("/forget_password", user.ForgotPasswd)
 		m.Post("/forget_password", user.ForgotPasswdPost)
-		m.Get("/logout", user.SignOut)
+		m.Post("/logout", user.SignOut)
 	})
 	// ***** END: User *****
 
-	adminReq := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
+	reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
-		m.Get("", adminReq, admin.Dashboard)
+		m.Get("", admin.Dashboard)
 		m.Get("/config", admin.Config)
 		m.Post("/config/test_mail", admin.SendTestMail)
 		m.Get("/monitor", admin.Monitor)
@@ -298,7 +299,7 @@ func runWeb(c *cli.Context) error {
 			m.Post("/delete", admin.DeleteNotices)
 			m.Get("/empty", admin.EmptyNotices)
 		})
-	}, adminReq)
+	}, reqAdmin)
 	// ***** END: Admin *****
 
 	m.Group("", func() {
@@ -307,7 +308,7 @@ func runWeb(c *cli.Context) error {
 			m.Get("/followers", user.Followers)
 			m.Get("/following", user.Following)
 			m.Get("/stars", user.Stars)
-		})
+		}, context.InjectParamsUser())
 
 		m.Get("/attachments/:uuid", func(c *context.Context) {
 			attach, err := models.GetAttachmentByUUID(c.Params(":uuid"))
@@ -339,8 +340,8 @@ func runWeb(c *cli.Context) error {
 	}, ignSignIn)
 
 	m.Group("/:username", func() {
-		m.Get("/action/:action", user.Action)
-	}, reqSignIn)
+		m.Post("/action/:action", user.Action)
+	}, reqSignIn, context.InjectParamsUser())
 
 	if macaron.Env == macaron.DEV {
 		m.Get("/template/*", dev.TemplatePreview)
@@ -483,7 +484,7 @@ func runWeb(c *cli.Context) error {
 		})
 	}, reqSignIn, context.RepoAssignment(), reqRepoAdmin, context.RepoRef())
 
-	m.Get("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
+	m.Post("/:username/:reponame/action/:action", reqSignIn, context.RepoAssignment(), repo.Action)
 	m.Group("/:username/:reponame", func() {
 		m.Get("/issues", repo.RetrieveLabels, repo.Issues)
 		m.Get("/issues/:index", repo.ViewIssue)
@@ -658,6 +659,18 @@ func runWeb(c *cli.Context) error {
 	m.Group("/api", func() {
 		apiv1.RegisterRoutes(m)
 	}, ignSignIn)
+
+	m.Group("/-", func() {
+		if setting.Prometheus.Enabled {
+			m.Get("/metrics", func(c *context.Context) {
+				if !setting.Prometheus.EnableBasicAuth {
+					return
+				}
+
+				c.RequireBasicAuth(setting.Prometheus.BasicAuthUsername, setting.Prometheus.BasicAuthPassword)
+			}, promhttp.Handler())
+		}
+	})
 
 	// robots.txt
 	m.Get("/robots.txt", func(c *context.Context) {

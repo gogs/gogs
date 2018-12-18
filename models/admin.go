@@ -7,7 +7,6 @@ package models
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/tool"
 )
 
@@ -52,9 +50,9 @@ func (n *Notice) TrStr() string {
 
 // CreateNotice creates new system notice.
 func CreateNotice(tp NoticeType, desc string) error {
-	// prevent panic if database connection is not available at this point
+	// Prevent panic if database connection is not available at this point
 	if x == nil {
-		return fmt.Errorf("Could not save notice due database connection not being available: %d %s", tp, desc)
+		return fmt.Errorf("could not save notice due database connection not being available: %d %s", tp, desc)
 	}
 
 	n := &Notice{
@@ -73,24 +71,11 @@ func CreateRepositoryNotice(desc string) error {
 // RemoveAllWithNotice removes all directories in given path and
 // creates a system notice when error occurs.
 func RemoveAllWithNotice(title, path string) {
-	var err error
-	// LEGACY [Go 1.7, 0.12]: workaround for Go not being able to remove read-only files/folders: https://github.com/golang/go/issues/9606
-	// this bug should be fixed on Go 1.7, so the workaround should be removed when Gogs don't support Go 1.6 anymore:
-	// https://github.com/golang/go/commit/2ffb3e5d905b5622204d199128dec06cefd57790
-	// Note: Windows complains when delete target does not exist, therefore we can skip deletion in such cases.
-	if setting.IsWindows && com.IsExist(path) {
-		// converting "/" to "\" in path on Windows
-		path = strings.Replace(path, "/", "\\", -1)
-		err = exec.Command("cmd", "/C", "rmdir", "/S", "/Q", path).Run()
-	} else {
-		err = os.RemoveAll(path)
-	}
-
-	if err != nil {
+	if err := os.RemoveAll(path); err != nil {
 		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(4, "CreateRepositoryNotice: %v", err)
+			log.Error(2, "CreateRepositoryNotice: %v", err)
 		}
 	}
 }

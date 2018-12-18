@@ -6,6 +6,7 @@ package context
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/Unknwon/paginater"
@@ -16,12 +17,16 @@ import (
 )
 
 type APIContext struct {
-	*Context
+	*Context // TODO: Reduce to only needed fields instead of full shadow
+
+	// Base URL for the version of API endpoints, e.g. https://try.gogs.io/api/v1
+	BaseURL string
+
 	Org *APIOrganization
 }
 
 // FIXME: move to github.com/gogs/go-gogs-client
-const DOC_URL = "https://github.com/gogs/go-gogs-client/wiki"
+const DOC_URL = "https://github.com/gogs/docs-api"
 
 // Error responses error message to client with given message.
 // If status is 500, also it prints error to log.
@@ -33,7 +38,7 @@ func (c *APIContext) Error(status int, title string, obj interface{}) {
 		message = obj.(string)
 	}
 
-	if status == 500 {
+	if status == http.StatusInternalServerError {
 		log.Error(3, "%s: %s", title, message)
 	}
 
@@ -41,6 +46,32 @@ func (c *APIContext) Error(status int, title string, obj interface{}) {
 		"message": message,
 		"url":     DOC_URL,
 	})
+}
+
+// NoContent renders the 204 response.
+func (c *APIContext) NoContent() {
+	c.Status(http.StatusNoContent)
+}
+
+// NotFound renders the 404 response.
+func (c *APIContext) NotFound() {
+	c.Status(http.StatusNotFound)
+}
+
+// ServerError renders the 500 response.
+func (c *APIContext) ServerError(title string, err error) {
+	c.Error(http.StatusInternalServerError, title, err)
+}
+
+// NotFoundOrServerError use error check function to determine if the error
+// is about not found. It responses with 404 status code for not found error,
+// or error context description for logging purpose of 500 server error.
+func (c *APIContext) NotFoundOrServerError(title string, errck func(error) bool, err error) {
+	if errck(err) {
+		c.NotFound()
+		return
+	}
+	c.ServerError(title, err)
 }
 
 // SetLinkHeader sets pagination link header by given total number and page size.
@@ -69,6 +100,7 @@ func APIContexter() macaron.Handler {
 	return func(ctx *Context) {
 		c := &APIContext{
 			Context: ctx,
+			BaseURL: setting.AppURL + "api/v1",
 		}
 		ctx.Map(c)
 	}

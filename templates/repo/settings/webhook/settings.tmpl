@@ -4,19 +4,19 @@
 		<div class="field">
 			<div class="ui radio non-events checkbox">
 				<input class="hidden" name="events" type="radio" value="push_only" {{if or .PageIsSettingsHooksNew .Webhook.PushOnly}}checked{{end}}>
-				<label>{{.i18n.Tr "repo.settings.event_push_only" | Str2html}}</label>
+				<label>{{.i18n.Tr "repo.settings.event_push_only" | Str2HTML}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui radio non-events checkbox">
 				<input class="hidden" name="events" type="radio" value="send_everything" {{if .Webhook.SendEverything}}checked{{end}}>
-				<label>{{.i18n.Tr "repo.settings.event_send_everything" | Str2html}}</label>
+				<label>{{.i18n.Tr "repo.settings.event_send_everything" | Str2HTML}}</label>
 			</div>
 		</div>
 		<div class="field">
 			<div class="ui radio events checkbox">
 				<input class="hidden" name="events" type="radio" value="choose_events" {{if .Webhook.ChooseEvents}}checked{{end}}>
-				<label>{{.i18n.Tr "repo.settings.event_choose" | Str2html}}</label>
+				<label>{{.i18n.Tr "repo.settings.event_choose" | Str2HTML}}</label>
 			</div>
 		</div>
 	</div>

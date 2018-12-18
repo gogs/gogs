@@ -132,6 +132,7 @@ func (u *User) APIFormat() *api.User {
 	return &api.User{
 		ID:        u.ID,
 		UserName:  u.Name,
+		Login:     u.Name,
 		FullName:  u.FullName,
 		Email:     u.Email,
 		AvatarUrl: u.AvatarLink(),
@@ -706,7 +707,7 @@ func updateUser(e Engine, u *User) error {
 	u.Website = tool.TruncateString(u.Website, 255)
 	u.Description = tool.TruncateString(u.Description, 255)
 
-	_, err := e.Id(u.ID).AllCols().Update(u)
+	_, err := e.ID(u.ID).AllCols().Update(u)
 	return err
 }
 
@@ -890,7 +891,7 @@ func GetUserByKeyID(keyID int64) (*User, error) {
 
 func getUserByID(e Engine, id int64) (*User, error) {
 	u := new(User)
-	has, err := e.Id(id).Get(u)
+	has, err := e.ID(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {

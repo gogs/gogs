@@ -58,18 +58,13 @@ var (
 	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
 	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
 
-	IssueCloseKeywordsPat, IssueReopenKeywordsPat *regexp.Regexp
-	IssueReferenceKeywordsPat                     *regexp.Regexp
+	IssueCloseKeywordsPat     = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
+	IssueReopenKeywordsPat    = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
+	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
 )
 
 func assembleKeywordsPattern(words []string) string {
 	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
-}
-
-func init() {
-	IssueCloseKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
-	IssueReopenKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
-	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
 }
 
 // Action represents user operation type and other information to repository,
@@ -492,8 +487,11 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
 		}
 
-		if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
-			log.Error(2, "UpdateIssuesCommit: %v", err)
+		// Only update issues via commits when internal issue tracker is enabled
+		if repo.EnableIssues && !repo.EnableExternalTracker {
+			if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
+				log.Error(2, "UpdateIssuesCommit: %v", err)
+			}
 		}
 	}
 

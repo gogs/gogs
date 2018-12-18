@@ -11,7 +11,7 @@
 					</h4>
 					<div class="ui attached guide table segment">
 						<div class="item">
-							<h3>{{.i18n.Tr "repo.clone_this_repo"}} <small>{{.i18n.Tr "repo.clone_helper" "http://git-scm.com/book/en/Git-Basics-Getting-a-Git-Repository" | Str2html}}</small></h3>
+							<h3>{{.i18n.Tr "repo.clone_this_repo"}} <small>{{.i18n.Tr "repo.clone_helper" "http://git-scm.com/book/en/Git-Basics-Getting-a-Git-Repository" | Str2HTML}}</small></h3>
 							<div class="ui action small input">
 								{{if not $.DisableHTTP}}
 									<button class="ui basic clone button" id="repo-clone-https" data-link="{{.CloneLink.HTTPS}}">

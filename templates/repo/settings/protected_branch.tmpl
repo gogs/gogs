@@ -10,7 +10,7 @@
 					{{.i18n.Tr "repo.settings.branch_protection"}}
 				</h4>
 				<div class="ui attached segment branch-protection">
-					<p>{{.i18n.Tr "repo.settings.branch_protection_desc" .Branch.Name | Str2html}}</p>
+					<p>{{.i18n.Tr "repo.settings.branch_protection_desc" .Branch.Name | Str2HTML}}</p>
 					<form class="ui form" action="{{.Link}}" method="post">
 						{{.CSRFTokenHTML}}
 						<div class="inline field">

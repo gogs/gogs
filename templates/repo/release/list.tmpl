@@ -43,10 +43,10 @@
 									<a href="{{AppSubURL}}/{{.Publisher.Name}}">{{.Publisher.DisplayName}}</a>
 								</span>
 								{{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}
-								<span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2html}}</span>
+								<span class="ahead">{{$.i18n.Tr "repo.release.ahead" .NumCommitsBehind .Target | Str2HTML}}</span>
 							</p>
 							<div class="markdown desc">
-								{{Str2html .Note}}
+								{{Str2HTML .Note}}
 							</div>
 							<div class="download">
 								<h2>{{$.i18n.Tr "repo.release.downloads"}}</h2>

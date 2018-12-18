@@ -131,7 +131,7 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 		}
 	}
 
-	if _, err = sess.Id(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
+	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
 		return fmt.Errorf("Update: %v", err)
 	}
 
@@ -234,7 +234,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		return err
 	}
 
-	if _, err = sess.Id(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
+	if _, err = sess.ID(protectBranch.ID).AllCols().Update(protectBranch); err != nil {
 		return fmt.Errorf("Update: %v", err)
 	}
 

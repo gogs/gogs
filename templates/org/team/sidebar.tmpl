@@ -23,13 +23,13 @@
 		</div>
 		<div class="item">
 			{{if eq .Team.LowerName "owners"}}
-				{{.i18n.Tr "org.teams.owners_permission_desc" | Str2html}}
+				{{.i18n.Tr "org.teams.owners_permission_desc" | Str2HTML}}
 			{{else if (eq .Team.Authorize 1)}}
-				{{.i18n.Tr "org.teams.read_permission_desc" | Str2html}}
+				{{.i18n.Tr "org.teams.read_permission_desc" | Str2HTML}}
 			{{else if (eq .Team.Authorize 2)}}
-				{{.i18n.Tr "org.teams.write_permission_desc" | Str2html}}
+				{{.i18n.Tr "org.teams.write_permission_desc" | Str2HTML}}
 			{{else if (eq .Team.Authorize 3)}}
-				{{.i18n.Tr "org.teams.admin_permission_desc" | Str2html}}
+				{{.i18n.Tr "org.teams.admin_permission_desc" | Str2HTML}}
 			{{end}}
 		</div>
 	</div>

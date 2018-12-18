@@ -345,6 +345,8 @@ func NewIssue(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["RequireHighlightJS"] = true
 	c.Data["RequireSimpleMDE"] = true
+	c.Data["title"] = c.Query("title")
+	c.Data["content"] = c.Query("content")
 	setTemplateIfExists(c, ISSUE_TEMPLATE_KEY, IssueTemplateCandidates)
 	renderAttachmentSettings(c)
 
@@ -901,7 +903,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 			typeName = "pulls"
 		}
 		if comment != nil {
-			c.Redirect(fmt.Sprintf("%s/%s/%d#%s", c.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
+			c.RawRedirect(fmt.Sprintf("%s/%s/%d#%s", c.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
 		} else {
 			c.Redirect(fmt.Sprintf("%s/%s/%d", c.Repo.RepoLink, typeName, issue.Index))
 		}

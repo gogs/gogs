@@ -17,9 +17,8 @@ The issue will be closed without any reasons if it does not satisfy any of follo
   - [ ] MSSQL
   - [ ] SQLite
 - Can you reproduce the bug at https://try.gogs.io:
-  - [ ] Yes (provide example URL)
-  - [ ] No
-  - [ ] Not relevant
+  - [ ] Yes: provide example URL
+  - [ ] No: explain why
 - Log gist (usually found in `log/gogs.log`):
 
 ## Description

@@ -22,9 +22,9 @@ Gogs [![Build Status](https://travis-ci.org/gogs/gogs.svg?branch=master)](https:
 
 [简体中文](README_ZH.md)
 
-## Purpose
+## Vision
 
-The goal of this project is to make the easiest, fastest, and most painless way of setting up a self-hosted Git service. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, macOS, Windows and ARM.
+This project aims to build a simple, stable and extensible self-hosted Git service that can be setup in the most painless way. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, macOS, Windows and ARM.
 
 ## Overview
 
@@ -125,7 +125,7 @@ There are 5 ways to install Gogs:
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
-- Thanks [DigitalOcean](https://www.digitalocean.com) for sponsoring VPS service.
+- Thanks [DigitalOcean](https://www.digitalocean.com) and [VPSServer](https://www.vpsserver.com/) for sponsoring VPS service.
 - Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
 
 ## Contributors
@@ -136,3 +136,5 @@ There are 5 ways to install Gogs:
 ## License
 
 This project is under the MIT License. See the [LICENSE](https://github.com/gogs/gogs/blob/master/LICENSE) file for the full license text.
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fgogs%2Fgogs.svg?type=small)](https://app.fossa.io/projects/git%2Bgithub.com%2Fgogs%2Fgogs?ref=badge_small)

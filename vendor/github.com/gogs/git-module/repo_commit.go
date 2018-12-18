@@ -129,7 +129,7 @@ func (repo *Repository) GetCommit(commitID string) (*Commit, error) {
 	var err error
 	commitID, err = GetFullCommitID(repo.Path, commitID)
 	if err != nil {
-		return nil, fmt.Errorf("GetCommitFullID: %v", err)
+		return nil, err
 	}
 	id, err := NewIDFromString(commitID)
 	if err != nil {

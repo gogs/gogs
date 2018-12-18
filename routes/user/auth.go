@@ -17,6 +17,7 @@ import (
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/mailer"
 	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 const (
@@ -72,13 +73,6 @@ func AutoLogin(c *context.Context) (bool, error) {
 	return true, nil
 }
 
-// isValidRedirect returns false if the URL does not redirect to same site.
-// False: //url, http://url
-// True: /url
-func isValidRedirect(url string) bool {
-	return len(url) >= 2 && url[0] == '/' && url[1] != '/'
-}
-
 func Login(c *context.Context) {
 	c.Title("sign_in")
 
@@ -97,7 +91,7 @@ func Login(c *context.Context) {
 	}
 
 	if isSucceed {
-		if isValidRedirect(redirectTo) {
+		if tool.IsSameSiteURLPath(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
 			c.SubURLRedirect("/")
@@ -113,7 +107,13 @@ func Login(c *context.Context) {
 		return
 	}
 	c.Data["LoginSources"] = loginSources
-
+	for i := range loginSources {
+		if loginSources[i].IsDefault {
+			c.Data["DefaultLoginSource"] = loginSources[i]
+			c.Data["login_source"] = loginSources[i].ID
+			break
+		}
+	}
 	c.Success(LOGIN)
 }
 
@@ -137,7 +137,7 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
 	c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
-	if isValidRedirect(redirectTo) {
+	if tool.IsSameSiteURLPath(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
@@ -172,6 +172,12 @@ func LoginPost(c *context.Context, f form.SignIn) {
 
 		default:
 			c.ServerError("UserLogin", err)
+		}
+		for i := range loginSources {
+			if loginSources[i].IsDefault {
+				c.Data["DefaultLoginSource"] = loginSources[i]
+				break
+			}
 		}
 		return
 	}
@@ -275,8 +281,8 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 }
 
 func SignOut(c *context.Context) {
-	c.Session.Delete("uid")
-	c.Session.Delete("uname")
+	c.Session.Flush()
+	c.Session.Destory(c.Context)
 	c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
 	c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
 	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)

@@ -1264,7 +1264,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	repo.Owner = newOwner
 
 	// Update repository.
-	if _, err := sess.Id(repo.ID).Update(repo); err != nil {
+	if _, err := sess.ID(repo.ID).Update(repo); err != nil {
 		return fmt.Errorf("update owner: %v", err)
 	}
 
@@ -1296,7 +1296,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			}
 
 			t.NumRepos--
-			if _, err := sess.Id(t.ID).AllCols().Update(t); err != nil {
+			if _, err := sess.ID(t.ID).AllCols().Update(t); err != nil {
 				return fmt.Errorf("decrease team repository count '%d': %v", t.ID, err)
 			}
 		}
@@ -1409,7 +1409,7 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 		repo.Website = repo.Website[:255]
 	}
 
-	if _, err = e.Id(repo.ID).AllCols().Update(repo); err != nil {
+	if _, err = e.ID(repo.ID).AllCols().Update(repo); err != nil {
 		return fmt.Errorf("update: %v", err)
 	}
 
@@ -1625,7 +1625,7 @@ func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
 
 func getRepositoryByID(e Engine, id int64) (*Repository, error) {
 	repo := new(Repository)
-	has, err := e.Id(id).Get(repo)
+	has, err := e.ID(id).Get(repo)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -2348,6 +2348,10 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 
 // ForkRepository creates a fork of target repository under another user domain.
 func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
+	if !owner.CanCreateRepo() {
+		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+	}
+
 	repo := &Repository{
 		OwnerID:       owner.ID,
 		Owner:         owner,

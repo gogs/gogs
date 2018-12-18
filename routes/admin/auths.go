@@ -71,6 +71,7 @@ func NewAuthSource(c *context.Context) {
 	c.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
+	c.Data["is_default"] = true
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = models.SMTPAuths
@@ -158,6 +159,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		Type:      models.LoginType(f.Type),
 		Name:      f.Name,
 		IsActived: f.IsActive,
+		IsDefault: f.IsDefault,
 		Cfg:       config,
 	}); err != nil {
 		if models.IsErrLoginSourceAlreadyExist(err) {
@@ -239,11 +241,13 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 	source.Name = f.Name
 	source.IsActived = f.IsActive
+	source.IsDefault = f.IsDefault
 	source.Cfg = config
 	if err := models.UpdateLoginSource(source); err != nil {
 		c.ServerError("UpdateLoginSource", err)
 		return
 	}
+
 	log.Trace("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
