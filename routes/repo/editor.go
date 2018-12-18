@@ -518,7 +518,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 func UploadFileToServer(c *context.Context) {
 	file, header, err := c.Req.FormFile("file")
 	if err != nil {
-		c.Error(500, fmt.Sprintf("FormFile: %v", err))
+		c.Error(http.StatusInternalServerError, fmt.Sprintf("FormFile: %v", err))
 		return
 	}
 	defer file.Close()
@@ -541,19 +541,19 @@ func UploadFileToServer(c *context.Context) {
 		}
 
 		if !allowed {
-			c.Error(400, ErrFileTypeForbidden.Error())
+			c.Error(http.StatusBadRequest, ErrFileTypeForbidden.Error())
 			return
 		}
 	}
 
 	upload, err := models.NewUpload(header.Filename, buf, file)
 	if err != nil {
-		c.Error(500, fmt.Sprintf("NewUpload: %v", err))
+		c.Error(http.StatusInternalServerError, fmt.Sprintf("NewUpload: %v", err))
 		return
 	}
 
-	log.Trace("New file uploaded: %s", upload.UUID)
-	c.JSON(200, map[string]string{
+	log.Trace("New file uploaded by user[%d]: %s", c.UserID(), upload.UUID)
+	c.JSONSuccess(map[string]string{
 		"uuid": upload.UUID,
 	})
 }
