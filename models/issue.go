@@ -804,9 +804,9 @@ func GetIssueByRef(ref string) (*Issue, error) {
 		return nil, errors.InvalidIssueReference{ref}
 	}
 
-	index, err := com.StrTo(ref[n+1:]).Int64()
-	if err != nil {
-		return nil, err
+	index := com.StrTo(ref[n+1:]).MustInt64()
+	if index == 0 {
+		return nil, errors.IssueNotExist{}
 	}
 
 	repo, err := GetRepositoryByRef(ref[:n])
