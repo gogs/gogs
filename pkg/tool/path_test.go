@@ -30,3 +30,19 @@ func Test_IsSameSiteURLPath(t *testing.T) {
 		}
 	})
 }
+
+func Test_SanitizePath(t *testing.T) {
+	Convey("Sanitize malicious user-defined path", t, func() {
+		testCases := []struct {
+			path   string
+			expect string
+		}{
+			{"../../../../../../../../../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", "data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8"},
+
+			{"data/sessions/a/9/a9f0ab6c3ef63dd8", "data/sessions/a/9/a9f0ab6c3ef63dd8"},
+		}
+		for _, tc := range testCases {
+			So(SanitizePath(tc.path), ShouldEqual, tc.expect)
+		}
+	})
+}

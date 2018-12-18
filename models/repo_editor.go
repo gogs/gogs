@@ -328,7 +328,7 @@ func (upload *Upload) LocalPath() string {
 func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
 	upload := &Upload{
 		UUID: gouuid.NewV4().String(),
-		Name: name,
+		Name: tool.SanitizePath(name),
 	}
 
 	localPath := upload.LocalPath()
