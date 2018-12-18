@@ -7,15 +7,16 @@ package admin
 import (
 	"fmt"
 
+	"strings"
+
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
-	log "gopkg.in/clog.v1"
-
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/pkg/auth/ldap"
 	"github.com/gogs/gogs/pkg/context"
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/setting"
+	log "gopkg.in/clog.v1"
 )
 
 const (
@@ -51,6 +52,7 @@ var (
 		{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
 		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
 		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
+		{models.LoginNames[models.LOGIN_GITHUB], models.LOGIN_GITHUB},
 	}
 	securityProtocols = []dropdownItem{
 		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
@@ -138,6 +140,10 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		config = &models.PAMConfig{
 			ServiceName: f.PAMServiceName,
 		}
+	case models.LOGIN_GITHUB:
+		config = &models.GITHUBConfig{
+			ApiEndpoint: f.GithubApiEndpoint,
+		}
 	default:
 		c.Error(400)
 		return
@@ -219,6 +225,14 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	case models.LOGIN_PAM:
 		config = &models.PAMConfig{
 			ServiceName: f.PAMServiceName,
+		}
+	case models.LOGIN_GITHUB:
+		var apiEndpoint = f.GithubApiEndpoint
+		if !strings.HasSuffix(apiEndpoint, "/") {
+			apiEndpoint += "/"
+		}
+		config = &models.GITHUBConfig{
+			ApiEndpoint: apiEndpoint,
 		}
 	default:
 		c.Error(400)
