@@ -17,5 +17,7 @@ func IsSameSiteURLPath(url string) bool {
 
 // SanitizePath sanitizes user-defined file paths to prevent remote code execution.
 func SanitizePath(path string) string {
-	return strings.TrimLeft(path, "./")
+	path = strings.TrimLeft(path, "/")
+	path = strings.Replace(path, "../", "", -1)
+	return path
 }
