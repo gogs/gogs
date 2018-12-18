@@ -157,11 +157,13 @@
 							<label for="pam_service_name">{{.i18n.Tr "admin.auths.pam_service_name"}}</label>
 							<input id="pam_service_name" name="pam_service_name" value="{{.pam_service_name}}" />
 						</div>
-						<!-- GitHub Oauth 2.0 -->
+
+						<!-- GitHub -->
 						<div class="github required field {{if not (eq .type 6)}}hide{{end}}">
 							<label for="github_api_endpoint">{{.i18n.Tr "admin.auths.github_api_endpoint"}}</label>
-							<input id="github_api_endpoint" name="github_api_endpoint" value="{{.github_api_endpoint}}" placeholder="e.g. https://api.github.com" />
+							<input id="github_api_endpoint" name="github_api_endpoint" value="{{.github_api_endpoint}}" placeholder="e.g. https://api.github.com/" />
 						</div>
+
 						<div class="ldap field">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.attributes_in_bind"}}</strong></label>

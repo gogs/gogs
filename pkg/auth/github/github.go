@@ -1,9 +1,12 @@
+// Copyright 2018 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package github
 
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,35 +14,37 @@ import (
 	"github.com/google/go-github/github"
 )
 
-func GITHUBAuth(apiEndpoint, userName, passwd string) (string, string, string, string, string, error) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
+func Authenticate(apiEndpoint, login, passwd string) (name string, email string, website string, location string, _ error) {
 	tp := github.BasicAuthTransport{
-		Username:  strings.TrimSpace(userName),
-		Password:  strings.TrimSpace(passwd),
-		Transport: tr,
+		Username: strings.TrimSpace(login),
+		Password: strings.TrimSpace(passwd),
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
 	client, err := github.NewEnterpriseClient(apiEndpoint, apiEndpoint, tp.Client())
 	if err != nil {
-		return "", "", "", "", "", errors.New("Authentication failure: GitHub Api Endpoint can not be reached")
+		return "", "", "", "", fmt.Errorf("create new client: %v", err)
 	}
-	ctx := context.Background()
-	user, _, err := client.Users.Get(ctx, "")
-	if err != nil || user == nil {
-		fmt.Println(err)
-		msg := fmt.Sprintf("Authentication failure! Github Api Endpoint authticated failed! User %s", userName)
-		return "", "", "", "", "", errors.New(msg)
+	user, _, err := client.Users.Get(context.Background(), "")
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("get user info: %v", err)
 	}
 
-	var website = ""
+	if user.Name != nil {
+		name = *user.Name
+	}
+	if user.Email != nil {
+		email = *user.Email
+	} else {
+		email = login + "+github@local"
+	}
 	if user.HTMLURL != nil {
 		website = strings.ToLower(*user.HTMLURL)
 	}
-	var location = ""
 	if user.Location != nil {
 		location = strings.ToUpper(*user.Location)
 	}
 
-	return *user.Login, *user.Name, *user.Email, website, location, nil
+	return name, email, website, location, nil
 }

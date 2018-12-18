@@ -168,14 +168,15 @@
 							</div>
 						{{end}}
 
-						<!-- GitHub OAuth 2.0 -->
-						{{if .Source.IsGITHUB}}
-							{{ $cfg:=.Source.GITHUB }}
+						<!-- GitHub -->
+						{{if .Source.IsGitHub}}
+							{{ $cfg:=.Source.GitHub }}
 							<div class="required field">
 								<label for="github_api_endpoint">{{.i18n.Tr "admin.auths.github_api_endpoint"}}</label>
-								<input id="github_api_endpoint" name="github_api_endpoint" value="{{$cfg.ApiEndpoint}}" placeholder="e.g. https://api.github.com" required>
+								<input id="github_api_endpoint" name="github_api_endpoint" value="{{$cfg.APIEndpoint}}" placeholder="e.g. https://api.github.com/" required>
 							</div>
 						{{end}}
+						
 						<div class="inline field {{if not .Source.IsSMTP}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>

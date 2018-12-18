@@ -6,17 +6,18 @@ package admin
 
 import (
 	"fmt"
-
+	"net/http"
 	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
+	log "gopkg.in/clog.v1"
+
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/pkg/auth/ldap"
 	"github.com/gogs/gogs/pkg/context"
 	"github.com/gogs/gogs/pkg/form"
 	"github.com/gogs/gogs/pkg/setting"
-	log "gopkg.in/clog.v1"
 )
 
 const (
@@ -141,11 +142,11 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 			ServiceName: f.PAMServiceName,
 		}
 	case models.LOGIN_GITHUB:
-		config = &models.GITHUBConfig{
-			ApiEndpoint: f.GithubApiEndpoint,
+		config = &models.GitHubConfig{
+			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
 	default:
-		c.Error(400)
+		c.Error(http.StatusBadRequest)
 		return
 	}
 	c.Data["HasTLS"] = hasTLS
@@ -163,7 +164,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		Cfg:       config,
 	}); err != nil {
 		if models.IsErrLoginSourceAlreadyExist(err) {
-			c.Data["Err_Name"] = true
+			c.FormErr("Name")
 			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
 		} else {
 			c.ServerError("CreateSource", err)
@@ -227,15 +228,11 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 			ServiceName: f.PAMServiceName,
 		}
 	case models.LOGIN_GITHUB:
-		var apiEndpoint = f.GithubApiEndpoint
-		if !strings.HasSuffix(apiEndpoint, "/") {
-			apiEndpoint += "/"
-		}
-		config = &models.GITHUBConfig{
-			ApiEndpoint: apiEndpoint,
+		config = &models.GitHubConfig{
+			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
 	default:
-		c.Error(400)
+		c.Error(http.StatusBadRequest)
 		return
 	}
 
