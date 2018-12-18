@@ -19,7 +19,7 @@
 					</div>
 					{{if .LoginSources}}
 						<div class="required inline field {{if .Err_LoginSource}}error{{end}}">
-							<label for="password">{{.i18n.Tr "auth.auth_source"}}</label>
+							<label>{{.i18n.Tr "auth.auth_source"}}</label>
 							<div class="ui selection dropdown">
 								<input type="hidden" id="login_source" name="login_source" value="{{.login_source}}" required>
 								<span class="text">

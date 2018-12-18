@@ -1,8 +1,8 @@
 # This is an example of GitHub authentication
 #
-id           = 106
+id           = 105
 type         = github
-name         = GitHub OAuth 2.0
+name         = GitHub
 is_activated = true
 
 [config]

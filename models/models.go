@@ -347,7 +347,7 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 				case LOGIN_PAM:
 					bean.Cfg = new(PAMConfig)
 				case LOGIN_GITHUB:
-					bean.Cfg = new(GITHUBConfig)
+					bean.Cfg = new(GitHubConfig)
 				default:
 					return fmt.Errorf("unrecognized login source type:: %v", tp)
 				}
