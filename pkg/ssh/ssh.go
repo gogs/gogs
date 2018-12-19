@@ -166,7 +166,7 @@ func Listen(host string, port int, ciphers []string) {
 	keyPath := filepath.Join(setting.AppDataPath, "ssh/gogs.rsa")
 	if !com.IsExist(keyPath) {
 		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
-		_, stderr, err := com.ExecCmd(setting.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-N", "")
+		_, stderr, err := com.ExecCmd(setting.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")
 		if err != nil {
 			panic(fmt.Sprintf("Fail to generate private key: %v - %s", err, stderr))
 		}
