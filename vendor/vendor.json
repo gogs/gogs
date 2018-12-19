@@ -153,10 +153,10 @@
 			"revisionTime": "2017-02-20T18:37:56Z"
 		},
 		{
-			"checksumSHA1": "uLlP+3wneMxXVKTGi9zZZVnpZlI=",
+			"checksumSHA1": "wmiJbuFVCxg22zwXIeLsVCudyeY=",
 			"path": "github.com/go-sql-driver/mysql",
-			"revision": "2307b45d3a41dcc64a2bf46db80f61fd182e0186",
-			"revisionTime": "2018-06-12T15:06:50Z"
+			"revision": "c45f530f8e7fe40f4687eaa50d0c8c5f1b66f9e0",
+			"revisionTime": "2018-12-18T12:36:37Z"
 		},
 		{
 			"checksumSHA1": "MjpLNawWs5TXcO1vjaZo8PjnYM4=",
