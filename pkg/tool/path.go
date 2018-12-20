@@ -19,5 +19,6 @@ func IsSameSiteURLPath(url string) bool {
 func SanitizePath(path string) string {
 	path = strings.TrimLeft(path, "/")
 	path = strings.Replace(path, "../", "", -1)
+	path = strings.Replace(path, "..\\", "", -1)
 	return path
 }
