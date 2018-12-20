@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Unknwon/com"
@@ -467,14 +468,19 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 	dirPath := path.Join(localPath, opts.TreePath)
 	os.MkdirAll(dirPath, os.ModePerm)
 
-	// Copy uploaded files into repository.
+	// Copy uploaded files into repository
 	for _, upload := range uploads {
 		tmpPath := upload.LocalPath()
-		targetPath := path.Join(dirPath, upload.Name)
 		if !com.IsFile(tmpPath) {
 			continue
 		}
 
+		// Prevent copying files into .git directory, see https://github.com/gogs/gogs/issues/5558.
+		if strings.HasPrefix(upload.Name, ".git/") {
+			continue
+		}
+
+		targetPath := path.Join(dirPath, upload.Name)
 		if err = com.Copy(tmpPath, targetPath); err != nil {
 			return fmt.Errorf("copy: %v", err)
 		}
