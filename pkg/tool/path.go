@@ -5,7 +5,7 @@
 package tool
 
 import (
-	"strings"
+	"path/filepath"
 )
 
 // IsSameSiteURLPath returns true if the URL path belongs to the same site, false otherwise.
@@ -17,8 +17,6 @@ func IsSameSiteURLPath(url string) bool {
 
 // SanitizePath sanitizes user-defined file paths to prevent remote code execution.
 func SanitizePath(path string) string {
-	path = strings.TrimLeft(path, "/")
-	path = strings.Replace(path, "../", "", -1)
-	path = strings.Replace(path, "..\\", "", -1)
+	path = filepath.Base(path)
 	return path
 }
