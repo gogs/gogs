@@ -45,21 +45,3 @@ func Test_NormalizePath(t *testing.T) {
 		}
 	})
 }
-
-
-func Test_NormalizePathOnWindows(t *testing.T) {
-	os.PathSeparator = "\\"
-	Convey("Normalize malicious user-defined path on Windows", t, func() {
-		testCases := []struct {
-			path   string
-			expect string
-		}{
-			{"..\\..\\..\\..\\..\\..\\..\\..\\..\\a9f0ab6c3ef63dd8", "a9f0ab6c3ef63dd8"},
-			{"...\\.\\a9f0ab6c3ef63dd8", "a9f0ab6c3ef63dd8"},
-		}
-		for _, tc := range testCases {
-			So(NormalizePath(tc.path), ShouldEqual, tc.expect)
-		}
-	})
-}
-
