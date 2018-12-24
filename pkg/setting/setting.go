@@ -861,6 +861,7 @@ type Mailer struct {
 	UseCertificate    bool
 	CertFile, KeyFile string
 	UsePlainText      bool
+	AddPlainTextAlt   bool
 }
 
 var (
@@ -876,18 +877,19 @@ func newMailService() {
 	}
 
 	MailService = &Mailer{
-		QueueLength:    sec.Key("SEND_BUFFER_LEN").MustInt(100),
-		SubjectPrefix:  sec.Key("SUBJECT_PREFIX").MustString("[" + AppName + "] "),
-		Host:           sec.Key("HOST").String(),
-		User:           sec.Key("USER").String(),
-		Passwd:         sec.Key("PASSWD").String(),
-		DisableHelo:    sec.Key("DISABLE_HELO").MustBool(),
-		HeloHostname:   sec.Key("HELO_HOSTNAME").String(),
-		SkipVerify:     sec.Key("SKIP_VERIFY").MustBool(),
-		UseCertificate: sec.Key("USE_CERTIFICATE").MustBool(),
-		CertFile:       sec.Key("CERT_FILE").String(),
-		KeyFile:        sec.Key("KEY_FILE").String(),
-		UsePlainText:   sec.Key("USE_PLAIN_TEXT").MustBool(),
+		QueueLength:     sec.Key("SEND_BUFFER_LEN").MustInt(100),
+		SubjectPrefix:   sec.Key("SUBJECT_PREFIX").MustString("[" + AppName + "] "),
+		Host:            sec.Key("HOST").String(),
+		User:            sec.Key("USER").String(),
+		Passwd:          sec.Key("PASSWD").String(),
+		DisableHelo:     sec.Key("DISABLE_HELO").MustBool(),
+		HeloHostname:    sec.Key("HELO_HOSTNAME").String(),
+		SkipVerify:      sec.Key("SKIP_VERIFY").MustBool(),
+		UseCertificate:  sec.Key("USE_CERTIFICATE").MustBool(),
+		CertFile:        sec.Key("CERT_FILE").String(),
+		KeyFile:         sec.Key("KEY_FILE").String(),
+		UsePlainText:    sec.Key("USE_PLAIN_TEXT").MustBool(),
+		AddPlainTextAlt: sec.Key("ADD_PLAIN_TEXT_ALT").MustBool(),
 	}
 	MailService.From = sec.Key("FROM").MustString(MailService.User)
 

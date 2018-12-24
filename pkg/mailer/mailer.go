@@ -39,7 +39,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 
 	contentType := "text/html"
 	body := htmlBody
-	if setting.MailService.UsePlainText {
+	if setting.MailService.UsePlainText || setting.MailService.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
 			log.Error(2, "html2text.FromString: %v", err)
@@ -49,6 +49,9 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 		}
 	}
 	msg.SetBody(contentType, body)
+	if setting.MailService.AddPlainTextAlt && !setting.MailService.UsePlainText {
+		msg.AddAlternative("text/html", htmlBody)
+	}
 	return &Message{
 		Message:     msg,
 		confirmChan: make(chan struct{}),
