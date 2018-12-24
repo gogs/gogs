@@ -39,6 +39,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 
 	contentType := "text/html"
 	body := htmlBody
+	switchedToPlaintext := false
 	if setting.MailService.UsePlainText || setting.MailService.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
@@ -46,10 +47,11 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 		} else {
 			contentType = "text/plain"
 			body = plainBody
+			switchedToPlaintext = true
 		}
 	}
 	msg.SetBody(contentType, body)
-	if setting.MailService.AddPlainTextAlt && !setting.MailService.UsePlainText {
+	if switchedToPlaintext && setting.MailService.AddPlainTextAlt && !setting.MailService.UsePlainText {
 		msg.AddAlternative("text/html", htmlBody)
 	}
 	return &Message{
