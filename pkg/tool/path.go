@@ -5,6 +5,7 @@
 package tool
 
 import (
+	"path/filepath"
 	"strings"
 )
 
@@ -15,10 +16,8 @@ func IsSameSiteURLPath(url string) bool {
 	return len(url) >= 2 && url[0] == '/' && url[1] != '/' && url[1] != '\\'
 }
 
-// SanitizePath sanitizes user-defined file paths to prevent remote code execution.
-func SanitizePath(path string) string {
-	path = strings.TrimLeft(path, "/")
-	path = strings.Replace(path, "../", "", -1)
-	path = strings.Replace(path, "..\\", "", -1)
-	return path
+// IsMaliciousPath returns true if given path is an absolute path or contains malicious content
+// which has potential to traverse upper level directories.
+func IsMaliciousPath(path string) bool {
+	return filepath.IsAbs(path) || strings.Contains(path, "..")
 }
