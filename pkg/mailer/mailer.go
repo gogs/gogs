@@ -52,6 +52,9 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	}
 	msg.SetBody(contentType, body)
 	if switchedToPlaintext && setting.MailService.AddPlainTextAlt && !setting.MailService.UsePlainText {
+		// The AddAlternative method name is confusing - adding html as an "alternative" will actually cause mail 
+		// clients to show it as first priority, and the text "main body" is the 2nd priority fallback.
+		// See: https://godoc.org/gopkg.in/gomail.v2#Message.AddAlternative
 		msg.AddAlternative("text/html", htmlBody)
 	}
 	return &Message{
