@@ -327,9 +327,13 @@ func (upload *Upload) LocalPath() string {
 
 // NewUpload creates a new upload object.
 func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err error) {
+	if tool.IsMaliciousPath(name) {
+		return nil, fmt.Errorf("malicious path detected: %s", name)
+	}
+
 	upload := &Upload{
 		UUID: gouuid.NewV4().String(),
-		Name: tool.SanitizePath(name),
+		Name: name,
 	}
 
 	localPath := upload.LocalPath()
