@@ -39,16 +39,24 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 
 	contentType := "text/html"
 	body := htmlBody
-	if setting.MailService.UsePlainText {
+	switchedToPlaintext := false
+	if setting.MailService.UsePlainText || setting.MailService.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
 			log.Error(2, "html2text.FromString: %v", err)
 		} else {
 			contentType = "text/plain"
 			body = plainBody
+			switchedToPlaintext = true
 		}
 	}
 	msg.SetBody(contentType, body)
+	if switchedToPlaintext && setting.MailService.AddPlainTextAlt && !setting.MailService.UsePlainText {
+		// The AddAlternative method name is confusing - adding html as an "alternative" will actually cause mail 
+		// clients to show it as first priority, and the text "main body" is the 2nd priority fallback.
+		// See: https://godoc.org/gopkg.in/gomail.v2#Message.AddAlternative
+		msg.AddAlternative("text/html", htmlBody)
+	}
 	return &Message{
 		Message:     msg,
 		confirmChan: make(chan struct{}),
