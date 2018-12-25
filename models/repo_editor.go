@@ -443,6 +443,11 @@ type UploadRepoFileOptions struct {
 	Files        []string // In UUID format
 }
 
+// isRepositoryGitPath returns true if given path is or resides inside ".git" path of the repository.
+func isRepositoryGitPath(path string) bool {
+	return strings.HasSuffix(path, ".git") || strings.Contains(path, ".git"+string(os.PathSeparator))
+}
+
 func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) (err error) {
 	if len(opts.Files) == 0 {
 		return nil
@@ -480,7 +485,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		}
 
 		// Prevent copying files into .git directory, see https://github.com/gogs/gogs/issues/5558.
-		if strings.HasPrefix(upload.Name, ".git/") {
+		if isRepositoryGitPath(upload.Name) {
 			continue
 		}
 
