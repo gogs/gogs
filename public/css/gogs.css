@@ -296,7 +296,7 @@ code.wrap {
   border-top: none;
   line-height: 1em;
   color: rgba(0, 0, 0, 0.8);
-  padding: .71428571em 1.14285714em !important;
+  padding: 0.71428571em 1.14285714em !important;
   font-size: 1rem;
   text-transform: none;
   font-weight: 400;
@@ -944,8 +944,8 @@ footer .ui.language .menu {
 }
 .form .help {
   color: #999999;
-  padding-top: .6em;
-  padding-bottom: .6em;
+  padding-top: 0.6em;
+  padding-bottom: 0.6em;
   display: inline-block;
   word-break: break-word;
 }
@@ -1246,18 +1246,20 @@ footer .ui.language .menu {
 .repository #clone-panel {
   margin-top: -8px;
   margin-left: 5px;
-  width: 350px;
+  width: auto;
 }
 .repository #clone-panel input {
   border-radius: 0;
   padding: 5px 10px;
+  max-width: 190px;
+  width: 190px;
 }
 .repository #clone-panel .clone.button {
   font-size: 13px;
   padding: 0 5px;
 }
 .repository #clone-panel .clone.button:first-child {
-  border-radius: .28571429rem 0 0 .28571429rem;
+  border-radius: 0.28571429rem 0 0 0.28571429rem;
 }
 .repository #clone-panel .icon.button {
   padding: 0 10px;
@@ -1428,7 +1430,7 @@ footer .ui.language .menu {
   background-color: #f5f2f0;
   font-family: Consolas, Monaco, 'Andale Mono', monospace;
   padding: 1em;
-  margin: .5em 0;
+  margin: 0.5em 0;
 }
 .repository.file.list #file-content #ipython-notebook .nb-input:before,
 .repository.file.list #file-content #ipython-notebook .nb-output:before {
@@ -2178,7 +2180,7 @@ footer .ui.language .menu {
 }
 .repository .diff-file-box .code-diff tbody tr.tag-code td {
   background-color: #F0F0F0 !important;
-  border-color: #D2CECE!important;
+  border-color: #D2CECE !important;
   padding-top: 4px;
   padding-bottom: 4px;
 }
@@ -2242,7 +2244,7 @@ footer .ui.language .menu {
   font-weight: normal;
 }
 .repository.quickstart .guide .clone.button:first-child {
-  border-radius: .28571429rem 0 0 .28571429rem;
+  border-radius: 0.28571429rem 0 0 0.28571429rem;
 }
 .repository.quickstart .guide .ui.action.small.input {
   width: 100%;
@@ -2523,10 +2525,10 @@ footer .ui.language .menu {
 }
 .issue.list > .item .desc a.milestone {
   padding-left: 5px;
-  color: #999!important;
+  color: #999 !important;
 }
 .issue.list > .item .desc a.milestone:hover {
-  color: #000!important;
+  color: #000 !important;
 }
 .issue.list > .item .desc .assignee {
   margin-top: -5px;
