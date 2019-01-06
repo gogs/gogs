@@ -103,6 +103,7 @@ There are 5 ways to install Gogs:
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
+- [LunaNode](https://github.com/LunaNode/launchgogs)
 
 ## Software and Service Support
 
