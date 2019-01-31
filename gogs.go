@@ -16,7 +16,7 @@ import (
 	"github.com/gogs/gogs/pkg/setting"
 )
 
-const APP_VER = "0.11.85.1225"
+const APP_VER = "0.11.86.0130"
 
 func init() {
 	setting.AppVer = APP_VER
