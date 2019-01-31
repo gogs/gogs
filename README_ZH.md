@@ -72,6 +72,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/mbugeia/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
+- [LunaNode](https://github.com/LunaNode/launchgogs)
 
 ## 软件及服务支持
 
