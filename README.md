@@ -52,7 +52,7 @@ This project aims to build a simple, stable and extensible self-hosted Git servi
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (via MySQL protocol)
-- Multi-language support ([29 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([30 languages](https://crowdin.com/project/gogs))
 
 ## Hardware Requirements
 
