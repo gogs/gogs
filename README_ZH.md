@@ -95,7 +95,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 
 - 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
-- 感谢 [DigitalOcean](https://www.digitalocean.com) 和 [VPSServer](https://www.vpsserver.com/) 提供服务器赞助。
+- 感谢 [DigitalOcean](https://www.digitalocean.com)、[VPSServer](https://www.vpsserver.com/) 和 [Hosted.nl](https://www.hosted.nl/) 提供服务器赞助。
 - 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
 
 ## 贡献成员
