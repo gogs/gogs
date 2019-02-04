@@ -152,14 +152,6 @@ func newMacaron() *macaron.Macaron {
 		Header:     "X-Csrf-Token",
 		CookiePath: setting.AppSubURL,
 	}))
-	m.Use(toolbox.Toolboxer(m, toolbox.Options{
-		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
-			&toolbox.HealthCheckFuncDesc{
-				Desc: "Database connection",
-				Func: models.Ping,
-			},
-		},
-	}))
 	m.Use(context.Contexter())
 	return m
 }
@@ -264,6 +256,17 @@ func runWeb(c *cli.Context) error {
 	reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
 
 	// ***** START: Admin *****
+	m.Group("", func() {
+		m.Use(toolbox.Toolboxer(m, toolbox.Options{
+			HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
+				&toolbox.HealthCheckFuncDesc{
+					Desc: "Database connection",
+					Func: models.Ping,
+				},
+			},
+		}))
+	}, reqAdmin)
+
 	m.Group("/admin", func() {
 		m.Get("", admin.Dashboard)
 		m.Get("/config", admin.Config)
