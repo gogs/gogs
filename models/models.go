@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/Unknwon/com"
 	_ "github.com/denisenkom/go-mssqldb"
@@ -199,6 +200,11 @@ func SetEngine() (err error) {
 	if err != nil {
 		return fmt.Errorf("Fail to create 'xorm.log': %v", err)
 	}
+
+	// To prevent mystery "MySQL: invalid connection" error,
+	// see https://github.com/gogs/gogs/issues/5532.
+	x.SetMaxIdleConns(0)
+	x.SetConnMaxLifetime(time.Second)
 
 	if setting.ProdMode {
 		x.SetLogger(xorm.NewSimpleLogger3(logger, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
