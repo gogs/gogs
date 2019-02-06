@@ -157,14 +157,14 @@ func getEngine() (*xorm.Engine, error) {
 		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, DbCfg.Name, DbCfg.User, DbCfg.Passwd)
 	case "sqlite3":
 		if !EnableSQLite3 {
-			return nil, errors.New("This binary version does not build support for SQLite3.")
+			return nil, errors.New("this binary version does not build support for SQLite3")
 		}
 		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
-			return nil, fmt.Errorf("Fail to create directories: %v", err)
+			return nil, fmt.Errorf("create directories: %v", err)
 		}
 		connStr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
 	default:
-		return nil, fmt.Errorf("Unknown database type: %s", DbCfg.Type)
+		return nil, fmt.Errorf("unknown database type: %s", DbCfg.Type)
 	}
 	return xorm.NewEngine(DbCfg.Type, connStr)
 }
@@ -172,7 +172,7 @@ func getEngine() (*xorm.Engine, error) {
 func NewTestEngine(x *xorm.Engine) (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("Connect to database: %v", err)
+		return fmt.Errorf("connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -182,7 +182,7 @@ func NewTestEngine(x *xorm.Engine) (err error) {
 func SetEngine() (err error) {
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("Fail to connect to database: %v", err)
+		return fmt.Errorf("connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -198,7 +198,7 @@ func SetEngine() (err error) {
 			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
 		})
 	if err != nil {
-		return fmt.Errorf("Fail to create 'xorm.log': %v", err)
+		return fmt.Errorf("create 'xorm.log': %v", err)
 	}
 
 	// To prevent mystery "MySQL: invalid connection" error,
@@ -225,7 +225,7 @@ func NewEngine() (err error) {
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
-		return fmt.Errorf("sync database struct error: %v\n", err)
+		return fmt.Errorf("sync structs to database tables: %v\n", err)
 	}
 
 	return nil
@@ -287,14 +287,14 @@ func DumpDatabase(dirPath string) (err error) {
 		tableFile := path.Join(dirPath, tableName+".json")
 		f, err := os.Create(tableFile)
 		if err != nil {
-			return fmt.Errorf("fail to create JSON file: %v", err)
+			return fmt.Errorf("create JSON file: %v", err)
 		}
 
 		if err = x.Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
 			return jsoniter.NewEncoder(f).Encode(bean)
 		}); err != nil {
 			f.Close()
-			return fmt.Errorf("fail to dump table '%s': %v", tableName, err)
+			return fmt.Errorf("dump table '%s': %v", tableName, err)
 		}
 		f.Close()
 	}
