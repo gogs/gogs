@@ -256,8 +256,21 @@ func runWeb(c *cli.Context) error {
 	reqAdmin := context.Toggle(&context.ToggleOptions{SignInRequired: true, AdminRequired: true})
 
 	// ***** START: Admin *****
+	const healthCheckUrl = "/healthcheck"
+	reqAdminAsFunc := reqAdmin.(func(c *context.Context))
+	var reqAdminExceptForHealthCheck macaron.Handler = func(c *context.Context) {
+		pathWithoutSlashes := strings.Trim(c.Req.URL.Path, "/")
+		if pathWithoutSlashes == healthCheckUrl[1:] {
+			return
+		} else {
+			reqAdminAsFunc(c)
+		}
+	}
+
+	// Surrounding the Toolboxer with a "" group will let us wrap all of its URL endpoints with our own security checks
 	m.Group("", func() {
 		m.Use(toolbox.Toolboxer(m, toolbox.Options{
+			HealthCheckURL: healthCheckUrl,
 			HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
 				&toolbox.HealthCheckFuncDesc{
 					Desc: "Database connection",
@@ -265,7 +278,7 @@ func runWeb(c *cli.Context) error {
 				},
 			},
 		}))
-	}, reqAdmin)
+	}, reqAdminExceptForHealthCheck)
 
 	m.Group("/admin", func() {
 		m.Get("", admin.Dashboard)
