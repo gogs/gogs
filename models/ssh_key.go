@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	_TPL_PUBLICK_KEY = `command="%s serv key-%d --config='%s'",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
+	_TPL_PUBLICK_KEY = `command="%s serv key-%d --config=%s",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty %s` + "\n"
 )
 
 var sshOpLocker sync.Mutex
