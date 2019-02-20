@@ -92,7 +92,7 @@ func NewMailerIssue(issue *Issue) mailer.Issue {
 
 // mailIssueCommentToParticipants can be used for both new issue creation and comment.
 // This functions sends two list of emails:
-// 1. Repository watchers and users who are participated in comments.
+// 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
 func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string) error {
 	if !setting.Service.EnableNotifyMail {
@@ -141,6 +141,12 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 		tos = append(tos, participants[i].Email)
 		names = append(names, participants[i].Name)
+	}
+	if issue.Assignee != nil && issue.Assignee.ID != doer.ID {
+		if !com.IsSliceContainsStr(names, issue.Assignee.Name) {
+			tos = append(tos, issue.Assignee.Email)
+			names = append(names, issue.Assignee.Name)
+		}
 	}
 	mailer.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
 
