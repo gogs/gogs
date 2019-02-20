@@ -173,7 +173,7 @@ func composeTplData(subject, body, link string) map[string]interface{} {
 
 func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) *Message {
 	subject := issue.MailSubject()
-	body := string(markup.RenderSpecialLink([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
+	body := string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
 	data["Doer"] = doer
 	content, err := mailRender.HTMLString(tplName, data)
