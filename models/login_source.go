@@ -324,6 +324,26 @@ func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	return source, nil
 }
 
+// GetDefaultLoginSourceID retrieve default login source ID. If not found, return -1
+func GetDefaultLoginSourceID() (int64, error) {
+	var defaultLoginSource = &LoginSource{
+		IsDefault: true,
+	}
+	has, err := x.Get(defaultLoginSource)
+	if err != nil {
+		return -1, err
+	} else if has {
+		return defaultLoginSource.ID, nil
+	} else {
+		for i := range localLoginSources.sources {
+			if localLoginSources.sources[i].LocalFile != nil && localLoginSources.sources[i].IsDefault {
+				return localLoginSources.sources[i].ID, err
+			}
+		}
+	}
+	return -1, nil
+}
+
 // ResetNonDefaultLoginSources clean other default source flag
 func ResetNonDefaultLoginSources(source *LoginSource) error {
 	// update changes to DB

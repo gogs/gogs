@@ -111,9 +111,21 @@ func HTTPContexter() macaron.Handler {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
-
 		authUser, err := models.UserLogin(authUsername, authPassword, -1)
-		if err != nil && !errors.IsUserNotExist(err) {
+		if err != nil {
+			// add capability to fresh login with remote source in "git" client window
+			if errors.IsUserNotExist(err) {
+				defaultSourceID, err := models.GetDefaultLoginSourceID()
+				if err != nil {
+					c.Handle(http.StatusInternalServerError, "DefaultLoginSource", err)
+					return
+				}
+				authUser, err = models.UserLogin(authUsername, authPassword, defaultSourceID)
+				if err != nil {
+					c.Handle(http.StatusInternalServerError, "UserLogin", err)
+					return
+				}
+			}
 			c.Handle(http.StatusInternalServerError, "UserLogin", err)
 			return
 		}
