@@ -69,13 +69,14 @@ This project aims to build a simple, stable and extensible self-hosted Git servi
 
 Make sure you install the [prerequisites](https://gogs.io/docs/installation) first.
 
-There are 5 ways to install Gogs:
+There are 6 ways to install Gogs:
 
 - [Install from binary](https://gogs.io/docs/installation/install_from_binary.html)
 - [Install from source](https://gogs.io/docs/installation/install_from_source.html)
 - [Install from packages](https://gogs.io/docs/installation/install_from_packages.html)
 - [Ship with Docker](https://github.com/gogs/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+- [Install with Kubernetes Using Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
 
 ### Tutorials
 
