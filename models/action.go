@@ -6,6 +6,7 @@ package models
 
 import (
 	"fmt"
+	"html/template"
 	"path"
 	"regexp"
 	"strings"
@@ -51,6 +52,10 @@ const (
 	ACTION_MIRROR_SYNC_PUSH                          // 20
 	ACTION_MIRROR_SYNC_CREATE                        // 21
 	ACTION_MIRROR_SYNC_DELETE                        // 22
+	ACTION_LABEL_ISSUE_CHANGE                        // 23
+	ACTION_MILESTONE_ISSUE_CHANGE                    // 24
+	ACTION_TITLE_ISSUE_CHANGE                        // 25
+	ACTION_ASSIGNEE_ISSUE_CHANGE                     // 26
 )
 
 var (
@@ -174,6 +179,266 @@ func (a *Action) GetIssueContent() string {
 		return "500 when get issue"
 	}
 	return issue.Content
+}
+
+func (a *Action) GetIssueOldTitle() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.OldTitle
+}
+
+func (a *Action) GetIssueNewTitle() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.Title
+}
+
+func (a *Action) HasIssueOldAssignee() bool {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return false
+	}
+	return comment.OldAssigneeID > 0
+}
+
+func (a *Action) GetIssueOldAssigneeHomeLink() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.OldAssignee.HomeLink()
+}
+
+func (a *Action) GetIssueOldAssigneeRelAvatarLink() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.OldAssignee.RelAvatarLink()
+}
+
+func (a *Action) GetIssueOldAssigneeName() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.OldAssignee.Name
+}
+
+func (a *Action) HasIssueAssignee() bool {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return false
+	}
+	return comment.AssigneeID > 0
+}
+
+func (a *Action) GetIssueAssigneeHomeLink() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.Assignee.HomeLink()
+}
+
+func (a *Action) GetIssueAssigneeRelAvatarLink() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.Assignee.RelAvatarLink()
+}
+
+func (a *Action) GetIssueAssigneeName() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.Assignee.Name
+}
+
+func (a *Action) HasIssueOldMilestone() bool {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return false
+	}
+	return comment.OldMilestoneID > 0
+}
+
+func (a *Action) GetIssueOldMilestoneID() int64 {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return 0
+	}
+	return comment.OldMilestoneID
+}
+
+func (a *Action) GetIssueOldMilestoneName() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.OldMilestone.Name
+}
+
+func (a *Action) HasIssueMilestone() bool {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return false
+	}
+	return comment.MilestoneID > 0
+}
+
+func (a *Action) GetIssueMilestoneID() int64 {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return 0
+	}
+	return comment.MilestoneID
+}
+
+func (a *Action) GetIssueMilestoneName() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.Milestone.Name
+}
+
+func (a *Action) HasIssueRemovedLabel() bool {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return false
+	}
+	return comment.RemovedLabelID > 0
+}
+
+func (a *Action) GetIssueRemovedLabelID() int64 {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return 0
+	}
+	return comment.RemovedLabel.ID
+}
+
+func (a *Action) GetIssueRemovedLabelForegroundColor() template.CSS {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return template.CSS("#000")
+	}
+	return comment.RemovedLabel.ForegroundColor()
+}
+
+func (a *Action) GetIssueRemovedLabelColor() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.RemovedLabel.Color
+}
+
+func (a *Action) GetIssueRemovedLabelName() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.RemovedLabel.Name
+}
+
+func (a *Action) HasIssueAddedLabel() bool {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return false
+	}
+	return comment.AddedLabelID > 0
+}
+
+func (a *Action) GetIssueAddedLabelID() int64 {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return 0
+	}
+	return comment.AddedLabel.ID
+}
+
+func (a *Action) GetIssueAddedLabelForegroundColor() template.CSS {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return template.CSS("#000")
+	}
+	return comment.AddedLabel.ForegroundColor()
+}
+
+func (a *Action) GetIssueAddedLabelColor() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.AddedLabel.Color
+}
+
+func (a *Action) GetIssueAddedLabelName() string {
+	index := com.StrTo(a.GetIssueInfos()[1]).MustInt64()
+	comment, err := GetCommentByID(index)
+	if err != nil {
+		log.Error(4, "GetCommentByIndex: %v", err)
+		return "500 when get issue"
+	}
+	return comment.AddedLabel.Name
 }
 
 func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {

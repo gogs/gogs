@@ -38,13 +38,13 @@ const (
 	COMMENT_TYPE_PULL_REF
 
 	// Labels
-	COMMENT_TYPE_LABEL
+	COMMENT_TYPE_LABEL_CHANGE
 	// Milestones
-	COMMENT_TYPE_MILESTONE
+	COMMENT_TYPE_MILESTONE_CHANGE
 	// Title
-	COMMENT_TYPE_TITLE
+	COMMENT_TYPE_TITLE_CHANGE
 	// Assignee
-	COMMENT_TYPE_ASSIGNEE
+	COMMENT_TYPE_ASSIGNEE_CHANGE
 )
 
 type CommentTag int
@@ -79,9 +79,9 @@ type Comment struct {
 	OldMilestoneID int64      `xorm:"INDEX" json:"-"`
 	OldMilestone   *Milestone `xorm:"-" json:"-"`
 
-	AssigneeID    int64 `xorm:"INDEX" json:"-"`
+	AssigneeID    int64 `xorm:"-" json:"-"`
 	Assignee      *User `xorm:"-" json:"-"`
-	OldAssigneeID int64 `xorm:"INDEX" json:"-"`
+	OldAssigneeID int64 `xorm:"-" json:"-"`
 	OldAssignee   *User `xorm:"-" json:"-"`
 
 	Title    string `xorm:"TEXT"`
@@ -277,6 +277,35 @@ func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) 
 		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
 	case ACTION_REOPEN_ISSUE:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
+	case ACTION_LABEL_ISSUE_CHANGE:
+		switch {
+		case cmt.AddedLabel != nil:
+			issue.Content = fmt.Sprintf("Added label %s", cmt.AddedLabel.Name)
+		case cmt.RemovedLabel != nil:
+			issue.Content = fmt.Sprintf("Removed label %s", cmt.RemovedLabel.Name)
+		default:
+			issue.Content = "Cleared labels"
+		}
+	case ACTION_MILESTONE_ISSUE_CHANGE:
+		switch {
+		case cmt.OldMilestone == nil:
+			issue.Content = fmt.Sprintf("Added milestone %s", cmt.Milestone.Name)
+		case cmt.Milestone == nil:
+			issue.Content = fmt.Sprintf("Cleared milestone %s", cmt.OldMilestone.Name)
+		default:
+			issue.Content = fmt.Sprintf("Changed milestone from %s to %s", cmt.OldMilestone.Name, cmt.Milestone.Name)
+		}
+	case ACTION_TITLE_ISSUE_CHANGE:
+		issue.Content = fmt.Sprintf("Changed title from '%s' to '%s'", cmt.OldTitle, cmt.Title)
+	case ACTION_ASSIGNEE_ISSUE_CHANGE:
+		switch {
+		case cmt.OldAssignee == nil:
+			issue.Content = fmt.Sprintf("Added assignee %s", cmt.Assignee.Name)
+		case cmt.Assignee == nil:
+			issue.Content = fmt.Sprintf("Cleared milestone %s", cmt.OldAssignee.Name)
+		default:
+			issue.Content = fmt.Sprintf("Changed assignee from %s to %s", cmt.OldAssignee.Name, cmt.Assignee.Name)
+		}
 	}
 	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
 		log.Error(2, "mailIssueCommentToParticipants: %v", err)
@@ -380,10 +409,30 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		if err != nil {
 			return nil, err
 		}
+
+	case COMMENT_TYPE_LABEL_CHANGE:
+		act.OpType = ACTION_LABEL_ISSUE_CHANGE
+		act.Content = fmt.Sprintf("%d|%d", opts.Issue.Index, comment.ID)
+
+	case COMMENT_TYPE_MILESTONE_CHANGE:
+		act.OpType = ACTION_MILESTONE_ISSUE_CHANGE
+		act.Content = fmt.Sprintf("%d|%d", opts.Issue.Index, comment.ID)
+
+	case COMMENT_TYPE_TITLE_CHANGE:
+		act.OpType = ACTION_TITLE_ISSUE_CHANGE
+		act.Content = fmt.Sprintf("%d|%d", opts.Issue.Index, comment.ID)
+
+	case COMMENT_TYPE_ASSIGNEE_CHANGE:
+		act.OpType = ACTION_ASSIGNEE_ISSUE_CHANGE
+		act.Content = fmt.Sprintf("%d|%d", opts.Issue.Index, comment.ID)
 	}
 
 	if _, err = e.Exec("UPDATE `issue` SET updated_unix = ? WHERE id = ?", time.Now().Unix(), opts.Issue.ID); err != nil {
 		return nil, fmt.Errorf("update issue 'updated_unix': %v", err)
+	}
+
+	if err := comment.loadAttributes(e); err != nil {
+		return nil, fmt.Errorf("loadAttributes: %v", err)
 	}
 
 	// Notify watchers for whatever action comes in, ignore if no action type.
@@ -396,7 +445,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		}
 	}
 
-	return comment, comment.loadAttributes(e)
+	return comment, nil
 }
 
 func createStatusComment(e *xorm.Session, doer *User, repo *Repository, issue *Issue) (*Comment, error) {
@@ -505,7 +554,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 // CreateAssigneeComment creates an assignee comment on the issue.
 func CreateAssigneeComment(doer *User, repo *Repository, issue *Issue, oldAssigneeID int64) error {
 	_, err := CreateComment(&CreateCommentOptions{
-		Type:          COMMENT_TYPE_ASSIGNEE,
+		Type:          COMMENT_TYPE_ASSIGNEE_CHANGE,
 		Doer:          doer,
 		Repo:          repo,
 		Issue:         issue,
@@ -518,7 +567,7 @@ func CreateAssigneeComment(doer *User, repo *Repository, issue *Issue, oldAssign
 // CreateTitleComment creates a title change comment on the issue.
 func CreateTitleComment(doer *User, repo *Repository, issue *Issue, oldTitle string) error {
 	_, err := CreateComment(&CreateCommentOptions{
-		Type:     COMMENT_TYPE_TITLE,
+		Type:     COMMENT_TYPE_TITLE_CHANGE,
 		Doer:     doer,
 		Repo:     repo,
 		Issue:    issue,
@@ -531,7 +580,7 @@ func CreateTitleComment(doer *User, repo *Repository, issue *Issue, oldTitle str
 // CreateMilestoneComment creates a milestone change comment on the issue.
 func CreateMilestoneComment(doer *User, repo *Repository, issue *Issue, oldMilestoneID int64) error {
 	_, err := CreateComment(&CreateCommentOptions{
-		Type:           COMMENT_TYPE_MILESTONE,
+		Type:           COMMENT_TYPE_MILESTONE_CHANGE,
 		Doer:           doer,
 		Repo:           repo,
 		Issue:          issue,
@@ -544,7 +593,7 @@ func CreateMilestoneComment(doer *User, repo *Repository, issue *Issue, oldMiles
 // CreateLabelComment creates a milestone change comment on the issue.
 func CreateLabelComment(doer *User, repo *Repository, issue *Issue, removedLabelID, addedLabelID int64) error {
 	_, err := CreateComment(&CreateCommentOptions{
-		Type:           COMMENT_TYPE_LABEL,
+		Type:           COMMENT_TYPE_LABEL_CHANGE,
 		Doer:           doer,
 		Repo:           repo,
 		Issue:          issue,

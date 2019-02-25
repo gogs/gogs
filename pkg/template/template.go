@@ -94,13 +94,13 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return str[start:end]
 		},
-		"Join":              strings.Join,
-		"EllipsisString":    tool.EllipsisString,
-		"DiffTypeToStr":     DiffTypeToStr,
-		"DiffLineTypeToStr": DiffLineTypeToStr,
-		"Sha1":              Sha1,
-		"ShortSHA1":         tool.ShortSHA1,
-		"MD5":               tool.MD5,
+		"Join":                  strings.Join,
+		"EllipsisString":        tool.EllipsisString,
+		"DiffTypeToStr":         DiffTypeToStr,
+		"DiffLineTypeToStr":     DiffLineTypeToStr,
+		"Sha1":                  Sha1,
+		"ShortSHA1":             tool.ShortSHA1,
+		"MD5":                   tool.MD5,
 		"ActionContent2Commits": ActionContent2Commits,
 		"EscapePound":           EscapePound,
 		"RenderCommitMessage":   RenderCommitMessage,
@@ -276,6 +276,14 @@ func ActionIcon(opType int) string {
 		return "repo-forked"
 	case 20, 21, 22: // Mirror sync
 		return "repo-clone"
+	case 23: // Change issue label
+		return "tag"
+	case 24: // Change issue milestone
+		return "milestone"
+	case 25: // Change issue title
+		return "pencil"
+	case 26: // Change issue assignee
+		return "person"
 	default:
 		return "invalid type"
 	}
