@@ -359,7 +359,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
-	return nil
+	return CreateMilestoneComment(doer, issue.Repo, issue, oldMilestoneID)
 }
 
 // DeleteMilestoneOfRepoByID deletes a milestone from a repository.

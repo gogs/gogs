@@ -1888,6 +1888,26 @@ footer .ui.language .menu {
   font-size: 20px;
   color: #bd2c00;
 }
+.repository.view.issue .comment-list .event .octicon.octicon-person {
+  margin-top: 5px;
+  margin-left: -34.5px;
+  font-size: 20px;
+}
+.repository.view.issue .comment-list .event .octicon.octicon-tag {
+  margin-top: 5px;
+  margin-left: -34.5px;
+  font-size: 20px;
+}
+.repository.view.issue .comment-list .event .octicon.octicon-pencil {
+  margin-top: 5px;
+  margin-left: -34.5px;
+  font-size: 20px;
+}
+.repository.view.issue .comment-list .event .octicon.octicon-milestone {
+  margin-top: 5px;
+  margin-left: -34.5px;
+  font-size: 20px;
+}
 .repository.view.issue .comment-list .event .octicon.octicon-primitive-dot {
   margin-left: -28.5px;
   margin-right: -1px;

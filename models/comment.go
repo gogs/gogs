@@ -36,6 +36,15 @@ const (
 	COMMENT_TYPE_COMMENT_REF
 	// Reference from a pull request
 	COMMENT_TYPE_PULL_REF
+
+	// Labels
+	COMMENT_TYPE_LABEL
+	// Milestones
+	COMMENT_TYPE_MILESTONE
+	// Title
+	COMMENT_TYPE_TITLE
+	// Assignee
+	COMMENT_TYPE_ASSIGNEE
 )
 
 type CommentTag int
@@ -59,6 +68,24 @@ type Comment struct {
 	Line            int64
 	Content         string `xorm:"TEXT"`
 	RenderedContent string `xorm:"-" json:"-"`
+
+	AddedLabelID   int64  `xorm:"INDEX" json:"-"`
+	AddedLabel     *Label `xorm:"-" json:"-"`
+	RemovedLabelID int64  `xorm:"INDEX" json:"-"`
+	RemovedLabel   *Label `xorm:"-" json:"-"`
+
+	MilestoneID    int64      `xorm:"INDEX" json:"-"`
+	Milestone      *Milestone `xorm:"-" json:"-"`
+	OldMilestoneID int64      `xorm:"INDEX" json:"-"`
+	OldMilestone   *Milestone `xorm:"-" json:"-"`
+
+	AssigneeID    int64 `xorm:"INDEX" json:"-"`
+	Assignee      *User `xorm:"-" json:"-"`
+	OldAssigneeID int64 `xorm:"INDEX" json:"-"`
+	OldAssignee   *User `xorm:"-" json:"-"`
+
+	Title    string `xorm:"TEXT"`
+	OldTitle string `xorm:"TEXT"`
 
 	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
@@ -125,6 +152,78 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 		}
 	}
 
+	if c.Assignee == nil && c.AssigneeID > 0 {
+		c.Assignee, err = GetUserByID(c.AssigneeID)
+		if err != nil {
+			if errors.IsUserNotExist(err) {
+				c.AssigneeID = -1
+				c.Assignee = NewGhostUser()
+			} else {
+				return fmt.Errorf("getUserByID.(Assignee) [%d]: %v", c.AssigneeID, err)
+			}
+		}
+	}
+
+	if c.OldAssignee == nil && c.OldAssigneeID > 0 {
+		c.OldAssignee, err = GetUserByID(c.OldAssigneeID)
+		if err != nil {
+			if errors.IsUserNotExist(err) {
+				c.OldAssigneeID = -1
+				c.OldAssignee = NewGhostUser()
+			} else {
+				return fmt.Errorf("getUserByID.(OldAssignee) [%d]: %v", c.OldAssigneeID, err)
+			}
+		}
+	}
+
+	if c.Milestone == nil && c.MilestoneID > 0 {
+		c.Milestone, err = c.Issue.Repo.GetMilestoneByID(c.MilestoneID)
+		if err != nil {
+			if _, ok := err.(ErrMilestoneNotExist); ok {
+				c.MilestoneID = -1
+				c.Milestone = &Milestone{ID: -1, RepoID: c.Issue.RepoID, Name: "Ghost"}
+			} else {
+				return fmt.Errorf("GetMilestoneByID.(Milestone) [%d]: %v", c.MilestoneID, err)
+			}
+		}
+	}
+
+	if c.OldMilestone == nil && c.OldMilestoneID > 0 {
+		c.OldMilestone, err = c.Issue.Repo.GetMilestoneByID(c.OldMilestoneID)
+		if err != nil {
+			if _, ok := err.(ErrMilestoneNotExist); ok {
+				c.OldMilestoneID = -1
+				c.OldMilestone = &Milestone{ID: -1, RepoID: c.Issue.RepoID, Name: "Ghost"}
+			} else {
+				return fmt.Errorf("GetMilestoneByID.(OldMilestone) [%d]: %v", c.OldMilestoneID, err)
+			}
+		}
+	}
+
+	if c.AddedLabel == nil && c.AddedLabelID > 0 {
+		c.AddedLabel, err = GetLabelByID(c.AddedLabelID)
+		if err != nil {
+			if _, ok := err.(ErrLabelNotExist); ok {
+				c.AddedLabelID = -1
+				c.AddedLabel = &Label{ID: -1, RepoID: c.Issue.RepoID, Name: "Ghost"}
+			} else {
+				return fmt.Errorf("GetLabelByID.(AddedLabel) [%d]: %v", c.AddedLabelID, err)
+			}
+		}
+	}
+
+	if c.RemovedLabel == nil && c.RemovedLabelID > 0 {
+		c.RemovedLabel, err = GetLabelByID(c.RemovedLabelID)
+		if err != nil {
+			if _, ok := err.(ErrLabelNotExist); ok {
+				c.RemovedLabelID = -1
+				c.RemovedLabel = &Label{ID: -1, RepoID: c.Issue.RepoID, Name: "Ghost"}
+			} else {
+				return fmt.Errorf("GetLabelByID.(RemovedLabel) [%d]: %v", c.RemovedLabelID, err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -188,14 +287,22 @@ func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) 
 
 func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err error) {
 	comment := &Comment{
-		Type:      opts.Type,
-		PosterID:  opts.Doer.ID,
-		Poster:    opts.Doer,
-		IssueID:   opts.Issue.ID,
-		CommitID:  opts.CommitID,
-		CommitSHA: opts.CommitSHA,
-		Line:      opts.LineNum,
-		Content:   opts.Content,
+		Type:           opts.Type,
+		PosterID:       opts.Doer.ID,
+		Poster:         opts.Doer,
+		IssueID:        opts.Issue.ID,
+		CommitID:       opts.CommitID,
+		CommitSHA:      opts.CommitSHA,
+		Line:           opts.LineNum,
+		Content:        opts.Content,
+		MilestoneID:    opts.MilestoneID,
+		OldMilestoneID: opts.OldMilestoneID,
+		AssigneeID:     opts.AssigneeID,
+		OldAssigneeID:  opts.OldAssigneeID,
+		AddedLabelID:   opts.AddedLabelID,
+		RemovedLabelID: opts.RemovedLabelID,
+		Title:          opts.Title,
+		OldTitle:       opts.OldTitle,
 	}
 	if _, err = e.Insert(comment); err != nil {
 		return nil, err
@@ -311,11 +418,15 @@ type CreateCommentOptions struct {
 	Repo  *Repository
 	Issue *Issue
 
-	CommitID    int64
-	CommitSHA   string
-	LineNum     int64
-	Content     string
-	Attachments []string // UUIDs of attachments
+	CommitID                     int64
+	CommitSHA                    string
+	LineNum                      int64
+	Content                      string
+	Attachments                  []string // UUIDs of attachments
+	MilestoneID, OldMilestoneID  int64
+	AssigneeID, OldAssigneeID    int64
+	AddedLabelID, RemovedLabelID int64
+	Title, OldTitle              string
 }
 
 // CreateComment creates comment of issue or commit.
@@ -387,6 +498,58 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 		Issue:     issue,
 		CommitSHA: commitSHA,
 		Content:   content,
+	})
+	return err
+}
+
+// CreateAssigneeComment creates an assignee comment on the issue.
+func CreateAssigneeComment(doer *User, repo *Repository, issue *Issue, oldAssigneeID int64) error {
+	_, err := CreateComment(&CreateCommentOptions{
+		Type:          COMMENT_TYPE_ASSIGNEE,
+		Doer:          doer,
+		Repo:          repo,
+		Issue:         issue,
+		AssigneeID:    issue.AssigneeID,
+		OldAssigneeID: oldAssigneeID,
+	})
+	return err
+}
+
+// CreateTitleComment creates a title change comment on the issue.
+func CreateTitleComment(doer *User, repo *Repository, issue *Issue, oldTitle string) error {
+	_, err := CreateComment(&CreateCommentOptions{
+		Type:     COMMENT_TYPE_TITLE,
+		Doer:     doer,
+		Repo:     repo,
+		Issue:    issue,
+		Title:    issue.Title,
+		OldTitle: oldTitle,
+	})
+	return err
+}
+
+// CreateMilestoneComment creates a milestone change comment on the issue.
+func CreateMilestoneComment(doer *User, repo *Repository, issue *Issue, oldMilestoneID int64) error {
+	_, err := CreateComment(&CreateCommentOptions{
+		Type:           COMMENT_TYPE_MILESTONE,
+		Doer:           doer,
+		Repo:           repo,
+		Issue:          issue,
+		MilestoneID:    issue.MilestoneID,
+		OldMilestoneID: oldMilestoneID,
+	})
+	return err
+}
+
+// CreateLabelComment creates a milestone change comment on the issue.
+func CreateLabelComment(doer *User, repo *Repository, issue *Issue, removedLabelID, addedLabelID int64) error {
+	_, err := CreateComment(&CreateCommentOptions{
+		Type:           COMMENT_TYPE_LABEL,
+		Doer:           doer,
+		Repo:           repo,
+		Issue:          issue,
+		AddedLabelID:   addedLabelID,
+		RemovedLabelID: removedLabelID,
 	})
 	return err
 }

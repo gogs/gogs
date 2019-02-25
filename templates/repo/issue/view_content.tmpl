@@ -143,6 +143,38 @@
 							<span class="text grey">{{.Content | Str2HTML}}</span>
 						</div>
 					</div>
+				{{else if eq .Type 7}}
+					<div class="event">
+						<span class="octicon octicon-tag"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{if .AddedLabel}}{{$.i18n.Tr "repo.issues.added_label"}}{{else if .RemovedLabel}}{{$.i18n.Tr "repo.issues.removed_label"}}{{else}}{{$.i18n.Tr "repo.issues.cleared_labels"}}{{end}} {{if .RemovedLabel}}<a class="ui label" href="{{$.RepoLink}}/issues?labels={{.RemovedLabel.ID}}" style="color: {{.RemovedLabel.ForegroundColor}}; background-color: {{.RemovedLabel.Color}}; text-decoration: line-through">{{.RemovedLabel.Name | Sanitize}}</a>{{end}} {{if .AddedLabel}}<a class="ui label" href="{{$.RepoLink}}/issues?labels={{.AddedLabel.ID}}" style="color: {{.AddedLabel.ForegroundColor}}; background-color: {{.AddedLabel.Color}}">{{.AddedLabel.Name | Sanitize}}</a>{{end}} <a id="{{.EventTag}}" href="{{.EventTag}}">{{$createdStr}}</a></span>
+					</div>
+				{{else if eq .Type 8}}
+					<div class="event">
+						<span class="octicon octicon-milestone"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{if not .OldMilestone}}{{$.i18n.Tr "repo.issues.added_milestone"}}{{else if not .Milestone}}{{$.i18n.Tr "repo.issues.cleared_milestone"}}{{else}}{{$.i18n.Tr "repo.issues.changed_milestone"}}{{end}} {{if .OldMilestone}}<b><del><a class="item" href="{{$.RepoLink}}/issues?milestone={{.OldMilestone.ID}}"> {{.OldMilestone.Name | Sanitize}}</a></del></b>{{end}} {{if .Milestone}}<b><a class="item" href="{{$.RepoLink}}/issues?milestone={{.Milestone.ID}}"> {{.Milestone.Name | Sanitize}}</a></b>{{end}} <a id="{{.EventTag}}" href="{{.EventTag}}">{{$createdStr}}</a></span>
+					</div>
+				{{else if eq .Type 9}}
+					<div class="event">
+						<span class="octicon octicon-pencil"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{$.i18n.Tr "repo.issues.changed_title"}} <b><del>{{.OldTitle}}</del> {{.Title}}</b> <a id="{{.EventTag}}" href="{{.EventTag}}">{{$createdStr}}</a></span>
+					</div>
+				{{else if eq .Type 10}}
+					<div class="event">
+						<span class="octicon octicon-person"></span>
+						<a class="ui avatar image" href="{{.Poster.HomeLink}}">
+							<img src="{{.Poster.RelAvatarLink}}">
+						</a>
+						<span class="text grey"><a href="{{.Poster.HomeLink}}">{{.Poster.Name}}</a> {{if not .OldAssignee}}{{$.i18n.Tr "repo.issues.added_assignee"}}{{else if not .Assignee}}{{$.i18n.Tr "repo.issues.cleared_assignee"}}{{else}}{{$.i18n.Tr "repo.issues.changed_assignee"}}{{end}} {{if .OldAssignee}}<b><del><a class="ui avatar image" href="{{.OldAssignee.HomeLink}}"><img src="{{.OldAssignee.RelAvatarLink}}"></a> <a href="{{.OldAssignee.HomeLink}}">{{.OldAssignee.Name}}</a></del></b>{{end}} {{if .Assignee}}<b><a class="ui avatar image" href="{{.Assignee.HomeLink}}"><img src="{{.Assignee.RelAvatarLink}}"></a> <a href="{{.Assignee.HomeLink}}">{{.Assignee.Name}}</a></b>{{end}} <a id="{{.EventTag}}" href="{{.EventTag}}">{{$createdStr}}</a></span>
+					</div>
 				{{end}}
 
 			{{end}}

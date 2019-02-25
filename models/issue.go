@@ -266,7 +266,7 @@ func (issue *Issue) AddLabel(doer *User, label *Label) error {
 	}
 
 	issue.sendLabelUpdatedWebhook(doer)
-	return nil
+	return CreateLabelComment(doer, issue.Repo, issue, 0, label.ID)
 }
 
 func (issue *Issue) addLabels(e *xorm.Session, labels []*Label) error {
@@ -280,6 +280,11 @@ func (issue *Issue) AddLabels(doer *User, labels []*Label) error {
 	}
 
 	issue.sendLabelUpdatedWebhook(doer)
+	for _, label := range labels {
+		if err := CreateLabelComment(doer, issue.Repo, issue, 0, label.ID); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -306,7 +311,7 @@ func (issue *Issue) RemoveLabel(doer *User, label *Label) error {
 	}
 
 	issue.sendLabelUpdatedWebhook(doer)
-	return nil
+	return CreateLabelComment(doer, issue.Repo, issue, label.ID, 0)
 }
 
 func (issue *Issue) clearLabels(e *xorm.Session) (err error) {
@@ -369,7 +374,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
-	return nil
+	return CreateLabelComment(doer, issue.Repo, issue, 0, 0)
 }
 
 // ReplaceLabels removes all current labels and add new labels to the issue.
@@ -548,7 +553,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
-	return nil
+	return CreateTitleComment(doer, issue.Repo, issue, oldTitle)
 }
 
 func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
@@ -594,6 +599,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 }
 
 func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
+	oldAssigneeID := issue.AssigneeID
 	issue.AssigneeID = assigneeID
 	if err = UpdateIssueUserByAssignee(issue); err != nil {
 		return fmt.Errorf("UpdateIssueUserByAssignee: %v", err)
@@ -639,7 +645,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		log.Error(4, "PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
 	}
 
-	return nil
+	return CreateAssigneeComment(doer, issue.Repo, issue, oldAssigneeID)
 }
 
 type NewIssueOptions struct {
