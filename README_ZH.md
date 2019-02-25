@@ -50,13 +50,14 @@ Gogs 是一款极易搭建的自助 Git 服务。
 
 在安装 Gogs 之前，您需要先安装 [基本环境](https://gogs.io/docs/installation)。
 
-然后，您可以通过以下 5 种方式来安装 Gogs：
+然后，您可以通过以下 6 种方式来安装 Gogs：
 
 - [二进制安装](https://gogs.io/docs/installation/install_from_binary.html)
 - [源码安装](https://gogs.io/docs/installation/install_from_source.html)
 - [包管理安装](https://gogs.io/docs/installation/install_from_packages.html)
 - [采用 Docker 部署](https://github.com/gogs/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+- [通过基于 Kubernetes 的 Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
 
 ### 使用教程
 
