@@ -2315,6 +2315,9 @@ footer .ui.language .menu {
   border-radius: 6px;
   border: 1px solid #FFF;
 }
+.repository.release #release-list .desc {
+  white-space: pre-line;
+}
 .repository.new.release .target {
   min-width: 500px;
 }
