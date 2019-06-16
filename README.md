@@ -3,7 +3,7 @@ Gogs [![Build Status](https://travis-ci.org/gogs/gogs.svg?branch=master)](https:
 
 ![](https://github.com/gogs/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: [`.VERSION`](templates/.VERSION) (see [Releases](https://github.com/gogs/gogs/releases) for binary versions)
+###### Current tip version: [`.VERSION`](templates/.VERSION) (see [Releases](https://github.com/gogs/gogs/releases) for binary versions)
 
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
