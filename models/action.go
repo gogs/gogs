@@ -604,6 +604,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
 			Ref:           refName,
 			RefType:       "tag",
+			Sha:           opts.NewCommitID,
 			DefaultBranch: repo.DefaultBranch,
 			Repo:          apiRepo,
 			Sender:        apiPusher,
