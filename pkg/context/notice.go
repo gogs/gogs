@@ -24,7 +24,6 @@ func readServerNotice() map[string]interface{} {
 		return nil
 	}
 
-	log.Trace("Found notice file")
 	fp, err := os.Open(fileloc)
 	if err != nil {
 		log.Error(2, "Failed to open notice file %s: %v", fileloc, err)
