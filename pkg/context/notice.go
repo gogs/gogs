@@ -16,9 +16,6 @@ import (
 func readServerNotice() map[string]interface{} {
 	fileloc := path.Join(setting.CustomPath, "notice")
 
-	// Limit size to prevent very large messages from breaking pages
-	var maxlen int64 = 1024
-
 	if !com.IsExist(fileloc) {
 		return nil
 	}
@@ -37,12 +34,15 @@ func readServerNotice() map[string]interface{} {
 		return nil
 	}
 
-	if finfo.Size() > maxlen { // Refuse to print very long messages
-		log.Error(2, "Notice file %s size too large [%d > %d]: refusing to render", fileloc, finfo.Size(), maxlen)
+	// Limit size to prevent very large messages from breaking pages
+	var maxSize int64 = 1024
+
+	if finfo.Size() > maxSize { // Refuse to print very long messages
+		log.Error(2, "Notice file %s size too large [%d > %d]: refusing to render", fileloc, finfo.Size(), maxSize)
 		return nil
 	}
 
-	buf := make([]byte, maxlen)
+	buf := make([]byte, maxSize)
 	n, err := fp.Read(buf)
 	if err != nil {
 		log.Error(2, "Failed to read notice file: %v", err)
