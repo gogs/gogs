@@ -10,43 +10,44 @@ import (
 	"strings"
 
 	"github.com/Unknwon/com"
+	log "gopkg.in/clog.v1"
+
 	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/tool"
-	log "gopkg.in/clog.v1"
 )
 
 // readServerNotice checks if a notice file exists and loads the message to display
 // on all pages.
 func readServerNotice() map[string]interface{} {
-	fileloc := path.Join(setting.CustomPath, "notice")
+	fpath := path.Join(setting.CustomPath, "notice")
 
-	if !com.IsExist(fileloc) {
+	if !com.IsExist(fpath) {
 		return nil
 	}
 
-	fp, err := os.Open(fileloc)
+	f, err := os.Open(fpath)
 	if err != nil {
-		log.Error(2, "Failed to open notice file %s: %v", fileloc, err)
+		log.Error(2, "Failed to open notice file %s: %v", fpath, err)
 		return nil
 	}
-	defer fp.Close()
+	defer f.Close()
 
-	finfo, err := fp.Stat()
+	fi, err := f.Stat()
 	if err != nil {
-		log.Error(2, "Failed to stat notice file %s: %v", fileloc, err)
+		log.Error(2, "Failed to stat notice file %s: %v", fpath, err)
 		return nil
 	}
 
 	// Limit size to prevent very large messages from breaking pages
 	var maxSize int64 = 1024
 
-	if finfo.Size() > maxSize { // Refuse to print very long messages
-		log.Error(2, "Notice file %s size too large [%d > %d]: refusing to render", fileloc, finfo.Size(), maxSize)
+	if fi.Size() > maxSize { // Refuse to print very long messages
+		log.Error(2, "Notice file %s size too large [%d > %d]: refusing to render", fpath, fi.Size(), maxSize)
 		return nil
 	}
 
 	buf := make([]byte, maxSize)
-	n, err := fp.Read(buf)
+	n, err := f.Read(buf)
 	if err != nil {
 		log.Error(2, "Failed to read notice file: %v", err)
 		return nil
@@ -54,7 +55,7 @@ func readServerNotice() map[string]interface{} {
 	buf = buf[:n]
 
 	if !tool.IsTextFile(buf) {
-		log.Error(2, "Notice file %s does not appear to be a text file: aborting", fileloc)
+		log.Error(2, "Notice file %s does not appear to be a text file: aborting", fpath)
 		return nil
 	}
 
