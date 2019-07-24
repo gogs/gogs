@@ -20,7 +20,6 @@ import (
 // on all pages.
 func readServerNotice() map[string]interface{} {
 	fpath := path.Join(setting.CustomPath, "notice")
-
 	if !com.IsExist(fpath) {
 		return nil
 	}
