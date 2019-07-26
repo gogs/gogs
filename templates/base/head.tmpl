@@ -196,10 +196,7 @@
 		{{if .ServerNotice}}
 			<div class="ui container grid warning message">
 				<div class="content">
-					<div class="header">
-						{{.ServerNotice.Title}}
-					</div>
-					<p>{{.ServerNotice.Message | Str2HTML}}</p>
+					{{.ServerNotice | Str2HTML}}
 				</div>
 			</div>
 		{{end}}

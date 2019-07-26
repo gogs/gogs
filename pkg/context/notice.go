@@ -7,34 +7,34 @@ package context
 import (
 	"os"
 	"path"
-	"strings"
 
 	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
 
+	"github.com/gogs/gogs/pkg/markup"
 	"github.com/gogs/gogs/pkg/setting"
 	"github.com/gogs/gogs/pkg/tool"
 )
 
 // readServerNotice checks if a notice file exists and loads the message to display
 // on all pages.
-func readServerNotice() map[string]interface{} {
-	fpath := path.Join(setting.CustomPath, "notice")
+func readServerNotice() string {
+	fpath := path.Join(setting.CustomPath, "notice.md")
 	if !com.IsExist(fpath) {
-		return nil
+		return ""
 	}
 
 	f, err := os.Open(fpath)
 	if err != nil {
 		log.Error(2, "Failed to open notice file %s: %v", fpath, err)
-		return nil
+		return ""
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
 		log.Error(2, "Failed to stat notice file %s: %v", fpath, err)
-		return nil
+		return ""
 	}
 
 	// Limit size to prevent very large messages from breaking pages
@@ -42,25 +42,23 @@ func readServerNotice() map[string]interface{} {
 
 	if fi.Size() > maxSize { // Refuse to print very long messages
 		log.Error(2, "Notice file %s size too large [%d > %d]: refusing to render", fpath, fi.Size(), maxSize)
-		return nil
+		return ""
 	}
 
 	buf := make([]byte, maxSize)
 	n, err := f.Read(buf)
 	if err != nil {
 		log.Error(2, "Failed to read notice file: %v", err)
-		return nil
+		return ""
 	}
 	buf = buf[:n]
 
 	if !tool.IsTextFile(buf) {
 		log.Error(2, "Notice file %s does not appear to be a text file: aborting", fpath)
-		return nil
+		return ""
 	}
 
-	noticetext := strings.SplitN(string(buf), "\n", 2)
-	return map[string]interface{}{
-		"Title":   noticetext[0],
-		"Message": noticetext[1],
-	}
+	// noticetext := strings.SplitN(string(buf), "\n", 2)
+
+	return string(markup.RawMarkdown(buf, ""))
 }
