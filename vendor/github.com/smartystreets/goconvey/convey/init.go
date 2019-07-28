@@ -18,9 +18,9 @@ func init() {
 }
 
 func declareFlags() {
-	flag.BoolVar(&json, "json", false, "When true, emits results in JSON blocks. Default: 'false'")
-	flag.BoolVar(&silent, "silent", false, "When true, all output from GoConvey is suppressed.")
-	flag.BoolVar(&story, "story", false, "When true, emits story output, otherwise emits dot output. When not provided, this flag mirros the value of the '-test.v' flag")
+	flag.BoolVar(&json, "convey-json", false, "When true, emits results in JSON blocks. Default: 'false'")
+	flag.BoolVar(&silent, "convey-silent", false, "When true, all output from GoConvey is suppressed.")
+	flag.BoolVar(&story, "convey-story", false, "When true, emits story output, otherwise emits dot output. When not provided, this flag mirrors the value of the '-test.v' flag")
 
 	if noStoryFlagProvided() {
 		story = verboseEnabled
