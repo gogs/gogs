@@ -58,7 +58,5 @@ func readServerNotice() string {
 		return ""
 	}
 
-	// noticetext := strings.SplitN(string(buf), "\n", 2)
-
 	return string(markup.RawMarkdown(buf, ""))
 }
