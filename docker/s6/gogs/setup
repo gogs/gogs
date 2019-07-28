@@ -20,7 +20,7 @@ ln -sfn /data/gogs/data ./data
 ln -sfn /data/git /home/git
 
 # Only chown for the first time, '/data/gogs/conf/app.ini' must exist inside Docker after installation
-if ! test -d /data/gogs/conf/app.ini; then
+if ! test -f /data/gogs/conf/app.ini; then
 	chown -R git:git /data /app/gogs ~git/
 fi
 chmod 0755 /data /data/gogs ~git/

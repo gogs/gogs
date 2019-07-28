@@ -52,7 +52,7 @@ This project aims to build a simple, stable and extensible self-hosted Git servi
 - Mail service
 - Administration panel
 - Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (via MySQL protocol)
-- Multi-language support ([29 languages](https://crowdin.com/project/gogs))
+- Multi-language support ([30 languages](https://crowdin.com/project/gogs))
 
 ## Hardware Requirements
 
@@ -69,13 +69,14 @@ This project aims to build a simple, stable and extensible self-hosted Git servi
 
 Make sure you install the [prerequisites](https://gogs.io/docs/installation) first.
 
-There are 5 ways to install Gogs:
+There are 6 ways to install Gogs:
 
 - [Install from binary](https://gogs.io/docs/installation/install_from_binary.html)
 - [Install from source](https://gogs.io/docs/installation/install_from_source.html)
 - [Install from packages](https://gogs.io/docs/installation/install_from_packages.html)
 - [Ship with Docker](https://github.com/gogs/gogs/tree/master/docker)
 - [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+- [Install with Kubernetes Using Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
 
 ### Tutorials
 
@@ -83,7 +84,7 @@ There are 5 ways to install Gogs:
 - [Run your own GitHub-like service with the help of Docker](http://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
 - [Dockerized Gogs git server and alpine postgres in 20 minutes or less](http://garthwaite.org/docker-gogs.html)
 - [Host Your Own Private GitHub with Gogs](https://eladnava.com/host-your-own-private-github-with-gogs-io/)
-- [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs) (Chinese)
+- [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/) (Chinese)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
 - [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
 - [Gogs on Raspberry Pi](http://blog.meinside.pe.kr/Gogs-on-Raspberry-Pi/)
@@ -103,6 +104,7 @@ There are 5 ways to install Gogs:
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
+- [LunaNode](https://github.com/LunaNode/launchgogs)
 
 ## Software and Service Support
 
@@ -125,7 +127,7 @@ There are 5 ways to install Gogs:
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
-- Thanks [DigitalOcean](https://www.digitalocean.com) and [VPSServer](https://www.vpsserver.com/) for sponsoring VPS service.
+- Thanks [DigitalOcean](https://www.digitalocean.com), [VPSServer](https://www.vpsserver.com/) and [Hosted.nl](https://www.hosted.nl/) for sponsoring VPS services.
 - Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
 
 ## Contributors

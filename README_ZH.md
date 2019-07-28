@@ -33,7 +33,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 - 支持邮件服务
 - 支持后台管理面板
 - 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（通过 MySQL 协议）数据库
-- 支持多语言本地化（[29 种语言]([more](https://crowdin.com/project/gogs))）
+- 支持多语言本地化（[30 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 硬件要求
 
@@ -50,17 +50,18 @@ Gogs 是一款极易搭建的自助 Git 服务。
 
 在安装 Gogs 之前，您需要先安装 [基本环境](https://gogs.io/docs/installation)。
 
-然后，您可以通过以下 5 种方式来安装 Gogs：
+然后，您可以通过以下 6 种方式来安装 Gogs：
 
 - [二进制安装](https://gogs.io/docs/installation/install_from_binary.html)
 - [源码安装](https://gogs.io/docs/installation/install_from_source.html)
 - [包管理安装](https://gogs.io/docs/installation/install_from_packages.html)
 - [采用 Docker 部署](https://github.com/gogs/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+- [通过基于 Kubernetes 的 Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
 
 ### 使用教程
 
-- [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs)
+- [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654)
 
 ### 云端部署
@@ -72,6 +73,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/mbugeia/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
+- [LunaNode](https://github.com/LunaNode/launchgogs)
 
 ## 软件及服务支持
 
@@ -94,7 +96,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 
 - 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
-- 感谢 [DigitalOcean](https://www.digitalocean.com) 和 [VPSServer](https://www.vpsserver.com/) 提供服务器赞助。
+- 感谢 [DigitalOcean](https://www.digitalocean.com)、[VPSServer](https://www.vpsserver.com/) 和 [Hosted.nl](https://www.hosted.nl/) 提供服务器赞助。
 - 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
 
 ## 贡献成员

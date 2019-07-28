@@ -114,6 +114,7 @@ var (
 type CreatePayload struct {
 	Ref           string      `json:"ref"`
 	RefType       string      `json:"ref_type"`
+	Sha           string      `json:"sha"`
 	DefaultBranch string      `json:"default_branch"`
 	Repo          *Repository `json:"repository"`
 	Sender        *User       `json:"sender"`
