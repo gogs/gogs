@@ -477,6 +477,12 @@
 			"revisionTime": "2019-07-19T19:21:57Z"
 		},
 		{
+			"checksumSHA1": "a0CRqejGZH1LxO4G/DZsux7ULWA=",
+			"path": "github.com/smartystreets/assertions/internal/go-diff/diffmatchpatch",
+			"revision": "b2515dfb413c5270515e0dc2e18bbbda06ff0bf8",
+			"revisionTime": "2019-07-19T19:21:57Z"
+		},
+		{
 			"checksumSHA1": "v6W3GIQMzr3QSXB2NtBa9X7SwiI=",
 			"path": "github.com/smartystreets/assertions/internal/go-render/render",
 			"revision": "b2515dfb413c5270515e0dc2e18bbbda06ff0bf8",
