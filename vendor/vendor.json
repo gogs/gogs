@@ -261,10 +261,10 @@
 			"revisionTime": "2018-05-26T01:43:29Z"
 		},
 		{
-			"checksumSHA1": "tewA7jXVGCw1zb5mA0BDecWi4iQ=",
+			"checksumSHA1": "cIiyvAduLLFvu+tg1Qr5Jw3jeWo=",
 			"path": "github.com/jtolds/gls",
-			"revision": "8ddce2a84170772b95dd5d576c48d517b22cac63",
-			"revisionTime": "2016-01-05T22:08:40Z"
+			"revision": "b4936e06046bbecbb94cae9c18127ebe510a2cb9",
+			"revisionTime": "2018-11-10T20:28:10Z"
 		},
 		{
 			"checksumSHA1": "vfzz7zTL9TZLpFO7NC1H6/Du3+s=",
@@ -487,6 +487,12 @@
 			"path": "github.com/smartystreets/assertions/internal/oglematchers",
 			"revision": "287b4346dc4e71a038c346375a9d572453bc469b",
 			"revisionTime": "2016-02-05T03:39:31Z"
+		},
+		{
+			"checksumSHA1": "7E7jpXiYAxa4vxc+2ftP4aBrDy8=",
+			"path": "github.com/smartystreets/goconvey",
+			"revision": "9d28bd7c0945047857c9740bd2eb3d62f98d3d35",
+			"revisionTime": "2019-07-10T18:59:42Z"
 		},
 		{
 			"checksumSHA1": "fQeXVv5U9dlo3ufH2vjk1GNf4Lo=",
