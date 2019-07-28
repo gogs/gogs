@@ -192,6 +192,14 @@
 				</div><!-- end container -->
 			</div><!-- end bar -->
 		{{end}}
+
+		{{if .ServerNotice}}
+			<div class="ui container grid warning message">
+				<div class="content">
+					{{.ServerNotice | Str2HTML}}
+				</div>
+			</div>
+		{{end}}
 {{/*
 	</div>
 </body>
