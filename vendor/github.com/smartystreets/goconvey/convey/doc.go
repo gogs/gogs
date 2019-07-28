@@ -202,7 +202,7 @@ func SuppressConsoleStatistics() {
 	reporting.SuppressConsoleStatistics()
 }
 
-// ConsoleStatistics may be called at any time to print assertion statistics.
+// PrintConsoleStatistics may be called at any time to print assertion statistics.
 // Generally, the best place to do this would be in a TestMain function,
 // after all tests have been run. Something like this:
 //
