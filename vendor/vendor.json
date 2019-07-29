@@ -1,5 +1,9 @@
 {
 	"comment": "",
+	"heroku": {
+		"install": ["."],
+		"sync": false
+	},
 	"ignore": "test",
 	"package": [
 		{
