@@ -39,6 +39,7 @@ import (
 	"github.com/gogs/gogs/pkg/template"
 	"github.com/gogs/gogs/routes"
 	"github.com/gogs/gogs/routes/admin"
+	"github.com/gogs/gogs/routes/api/srcgraph"
 	apiv1 "github.com/gogs/gogs/routes/api/v1"
 	"github.com/gogs/gogs/routes/dev"
 	"github.com/gogs/gogs/routes/org"
@@ -670,6 +671,8 @@ func runWeb(c *cli.Context) error {
 				c.RequireBasicAuth(setting.Prometheus.BasicAuthUsername, setting.Prometheus.BasicAuthPassword)
 			}, promhttp.Handler())
 		}
+
+		m.Get("/srcgraph/*", srcgraph.NewHandler())
 	})
 
 	// robots.txt
