@@ -236,12 +236,12 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Post(bind(api.CreateHookOption{}), repo.CreateHook)
 					m.Combo("/:id").Patch(bind(api.EditHookOption{}), repo.EditHook).
 						Delete(repo.DeleteHook)
-				})
+				}, reqAdmin())
 				m.Group("/collaborators", func() {
 					m.Get("", repo.ListCollaborators)
 					m.Combo("/:collaborator").Get(repo.IsCollaborator).Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
 						Delete(repo.DeleteCollaborator)
-				})
+				}, reqAdmin())
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
 				m.Get("/forks", repo.ListForks)
@@ -260,7 +260,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
 					m.Combo("/:id").Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
-				})
+				}, reqAdmin())
 				m.Group("/issues", func() {
 					m.Combo("").Get(repo.ListIssues).Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
 					m.Group("/comments", func() {
