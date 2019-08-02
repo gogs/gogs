@@ -19,10 +19,9 @@ import (
 
 func NewHandler() http.HandlerFunc {
 	h := adapter.NewHandler(externalService{}, adapter.Options{
-		URL:             setting.AppURL,
-		PathPrefix:      "/-/srcgraph",
-		MaxPageLen:      100000, // Current version returns all repositories at once, does not matter
-		TokenAsUsername: true,
+		URL:        setting.AppURL,
+		PathPrefix: "/-/srcgraph",
+		MaxPageLen: 100000, // Current version returns all repositories at once, does not matter
 	})
 	return h.ServeHTTP
 }
