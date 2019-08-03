@@ -33,6 +33,9 @@ func NewFuncMap() []template.FuncMap {
 		"GoVer": func() string {
 			return strings.Title(runtime.Version())
 		},
+		"Year": func() int {
+			return time.Now().Year()
+		},
 		"UseHTTPS": func() bool {
 			return strings.HasPrefix(setting.AppURL, "https")
 		},
@@ -94,13 +97,13 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return str[start:end]
 		},
-		"Join":              strings.Join,
-		"EllipsisString":    tool.EllipsisString,
-		"DiffTypeToStr":     DiffTypeToStr,
-		"DiffLineTypeToStr": DiffLineTypeToStr,
-		"Sha1":              Sha1,
-		"ShortSHA1":         tool.ShortSHA1,
-		"MD5":               tool.MD5,
+		"Join":                  strings.Join,
+		"EllipsisString":        tool.EllipsisString,
+		"DiffTypeToStr":         DiffTypeToStr,
+		"DiffLineTypeToStr":     DiffLineTypeToStr,
+		"Sha1":                  Sha1,
+		"ShortSHA1":             tool.ShortSHA1,
+		"MD5":                   tool.MD5,
 		"ActionContent2Commits": ActionContent2Commits,
 		"EscapePound":           EscapePound,
 		"RenderCommitMessage":   RenderCommitMessage,
