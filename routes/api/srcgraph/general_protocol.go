@@ -18,7 +18,7 @@ import (
 )
 
 func NewHandler() http.HandlerFunc {
-	h := adapter.NewHandler(externalService{}, adapter.Options{
+	h := adapter.NewHandler(externalServicer{}, adapter.Options{
 		URL:        setting.AppURL,
 		PathPrefix: "/-/srcgraph",
 		MaxPageLen: 100000, // Current version returns all repositories at once, does not matter
@@ -26,13 +26,13 @@ func NewHandler() http.HandlerFunc {
 	return h.ServeHTTP
 }
 
-type externalService struct{}
+type externalServicer struct{}
 
-func (es externalService) ListRepos(ai adapter.AuthInfo, params adapter.Params) ([]*adapter.Repo, adapter.Page, error) {
+func (es externalServicer) ListRepos(ai adapter.AuthInfo, params adapter.Params) ([]*adapter.Repo, adapter.Page, error) {
 	return es.listUserRepos("", ai, params)
 }
 
-func (es externalService) ListUserRepos(user string, ai adapter.AuthInfo, params adapter.Params) ([]*adapter.Repo, adapter.Page, error) {
+func (es externalServicer) ListUserRepos(user string, ai adapter.AuthInfo, params adapter.Params) ([]*adapter.Repo, adapter.Page, error) {
 	return es.listUserRepos(user, ai, params)
 }
 
@@ -59,7 +59,7 @@ func toRepo(r *models.Repository) *adapter.Repo {
 	}
 }
 
-func (es externalService) listUserRepos(username string, ai adapter.AuthInfo, params adapter.Params) ([]*adapter.Repo, adapter.Page, error) {
+func (es externalServicer) listUserRepos(username string, ai adapter.AuthInfo, params adapter.Params) ([]*adapter.Repo, adapter.Page, error) {
 	authUser, err := userFromAuthInfo(ai)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
