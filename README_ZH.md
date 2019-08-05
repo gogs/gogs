@@ -98,6 +98,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
 - 感谢 [DigitalOcean](https://www.digitalocean.com)、[VPSServer](https://www.vpsserver.com/)、[Hosted.nl](https://www.hosted.nl/) 和 [MonoVM](https://monovm.com) 提供服务器赞助。
 - 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
+- 感谢 [Buildkite](https://buildkite.com) 提供免费的开源项目 CI/CD 支持。
 
 ## 贡献成员
 
