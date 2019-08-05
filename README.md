@@ -129,6 +129,7 @@ There are 6 ways to install Gogs:
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
 - Thanks [DigitalOcean](https://www.digitalocean.com), [VPSServer](https://www.vpsserver.com/), [Hosted.nl](https://www.hosted.nl/) and [MonoVM](https://monovm.com) for sponsoring VPS services.
 - Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
+- Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
 ## Contributors
 
