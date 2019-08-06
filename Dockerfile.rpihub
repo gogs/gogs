@@ -30,7 +30,8 @@ RUN chmod +x /usr/sbin/gosu \
     s6 \
     shadow \
     socat \
-    tzdata
+    tzdata \
+    rsync
 
 # Configure LibC Name Service
 COPY docker/nsswitch.conf /etc/nsswitch.conf
