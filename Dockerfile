@@ -20,6 +20,7 @@ RUN chmod +x /usr/sbin/gosu \
     s6 \
     shadow \
     socat \
+    rsync \
     tzdata
 
 ENV GOGS_CUSTOM /data/gogs
