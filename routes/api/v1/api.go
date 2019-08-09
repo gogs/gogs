@@ -24,21 +24,21 @@ import (
 	"github.com/gogs/gogs/routes/api/v1/user"
 )
 
+// repoAssignment extracts information from URL parameters to retrieve the repository,
+// and makes sure the context user has at least the read access to the repository.
 func repoAssignment() macaron.Handler {
 	return func(c *context.APIContext) {
-		userName := c.Params(":username")
-		repoName := c.Params(":reponame")
+		username := c.Params(":username")
+		reponame := c.Params(":reponame")
 
-		var (
-			owner *models.User
-			err   error
-		)
+		var err error
+		var owner *models.User
 
-		// Check if the user is the same as the repository owner.
-		if c.IsLogged && c.User.LowerName == strings.ToLower(userName) {
+		// Check if the context user is the repository owner.
+		if c.IsLogged && c.User.LowerName == strings.ToLower(username) {
 			owner = c.User
 		} else {
-			owner, err = models.GetUserByName(userName)
+			owner, err = models.GetUserByName(username)
 			if err != nil {
 				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
@@ -46,11 +46,11 @@ func repoAssignment() macaron.Handler {
 		}
 		c.Repo.Owner = owner
 
-		repo, err := models.GetRepositoryByName(owner.ID, repoName)
+		r, err := models.GetRepositoryByName(owner.ID, reponame)
 		if err != nil {
 			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
-		} else if err = repo.GetOwner(); err != nil {
+		} else if err = r.GetOwner(); err != nil {
 			c.ServerError("GetOwner", err)
 			return
 		}
@@ -58,9 +58,9 @@ func repoAssignment() macaron.Handler {
 		if c.IsTokenAuth && c.User.IsAdmin {
 			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
-			mode, err := models.AccessLevel(c.UserID(), repo)
+			mode, err := models.UserAccessMode(c.UserID(), r)
 			if err != nil {
-				c.ServerError("AccessLevel", err)
+				c.ServerError("UserAccessMode", err)
 				return
 			}
 			c.Repo.AccessMode = mode
@@ -71,56 +71,11 @@ func repoAssignment() macaron.Handler {
 			return
 		}
 
-		c.Repo.Repository = repo
+		c.Repo.Repository = r
 	}
 }
 
-// Contexter middleware already checks token for user sign in process.
-func reqToken() macaron.Handler {
-	return func(c *context.Context) {
-		if !c.IsTokenAuth {
-			c.Error(http.StatusUnauthorized)
-			return
-		}
-	}
-}
-
-func reqBasicAuth() macaron.Handler {
-	return func(c *context.Context) {
-		if !c.IsBasicAuth {
-			c.Error(http.StatusUnauthorized)
-			return
-		}
-	}
-}
-
-func reqAdmin() macaron.Handler {
-	return func(c *context.Context) {
-		if !c.IsLogged || !c.User.IsAdmin {
-			c.Error(http.StatusForbidden)
-			return
-		}
-	}
-}
-
-func reqRepoWriter() macaron.Handler {
-	return func(c *context.Context) {
-		if !c.Repo.IsWriter() {
-			c.Error(http.StatusForbidden)
-			return
-		}
-	}
-}
-
-func reqRepoAdmin() macaron.Handler {
-	return func(c *context.Context) {
-		if !c.Repo.IsAdmin() {
-			c.Error(http.StatusForbidden)
-			return
-		}
-	}
-}
-
+// orgAssignment extracts information from URL parameters to retrieve the organization or team.
 func orgAssignment(args ...bool) macaron.Handler {
 	var (
 		assignOrg  bool
@@ -154,6 +109,56 @@ func orgAssignment(args ...bool) macaron.Handler {
 	}
 }
 
+// reqToken makes sure the context user is authorized via access token.
+func reqToken() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.IsTokenAuth {
+			c.Error(http.StatusUnauthorized)
+			return
+		}
+	}
+}
+
+// reqBasicAuth makes sure the context user is authorized via HTTP Basic Auth.
+func reqBasicAuth() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.IsBasicAuth {
+			c.Error(http.StatusUnauthorized)
+			return
+		}
+	}
+}
+
+// reqAdmin makes sure the context user is a site admin.
+func reqAdmin() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.IsLogged || !c.User.IsAdmin {
+			c.Error(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+// reqRepoWriter makes sure the context user has at least write access to the repository.
+func reqRepoWriter() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.Repo.IsWriter() {
+			c.Error(http.StatusForbidden)
+			return
+		}
+	}
+}
+
+// reqRepoWriter makes sure the context user has at least admin access to the repository.
+func reqRepoAdmin() macaron.Handler {
+	return func(c *context.Context) {
+		if !c.Repo.IsAdmin() {
+			c.Error(http.StatusForbidden)
+			return
+		}
+	}
+}
+
 func mustEnableIssues(c *context.APIContext) {
 	if !c.Repo.Repository.EnableIssues || c.Repo.Repository.EnableExternalTracker {
 		c.NotFound()
@@ -161,7 +166,7 @@ func mustEnableIssues(c *context.APIContext) {
 	}
 }
 
-// RegisterRoutes registers all v1 APIs routes to web application.
+// RegisterRoutes registers all routes in API v1 to the web application.
 // FIXME: custom form error response
 func RegisterRoutes(m *macaron.Macaron) {
 	bind := binding.Bind
@@ -182,7 +187,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Get("", user.GetInfo)
 
 				m.Group("/tokens", func() {
-					m.Combo("").Get(user.ListAccessTokens).
+					m.Combo("").
+						Get(user.ListAccessTokens).
 						Post(bind(api.CreateAccessTokenOption{}), user.CreateAccessToken)
 				}, reqBasicAuth())
 			})
@@ -202,7 +208,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 		m.Group("/user", func() {
 			m.Get("", user.GetAuthenticatedUser)
-			m.Combo("/emails").Get(user.ListEmails).
+			m.Combo("/emails").
+				Get(user.ListEmails).
 				Post(bind(api.CreateEmailOption{}), user.AddEmail).
 				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
 
@@ -213,9 +220,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 			})
 
 			m.Group("/keys", func() {
-				m.Combo("").Get(user.ListMyPublicKeys).
+				m.Combo("").
+					Get(user.ListMyPublicKeys).
 					Post(bind(api.CreateKeyOption{}), user.CreatePublicKey)
-				m.Combo("/:id").Get(user.GetPublicKey).
+				m.Combo("/:id").
+					Get(user.GetPublicKey).
 					Delete(user.DeletePublicKey)
 			})
 
@@ -225,7 +234,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 		// Repositories
 		m.Get("/users/:username/repos", reqToken(), repo.ListUserRepositories)
 		m.Get("/orgs/:org/repos", reqToken(), repo.ListOrgRepositories)
-		m.Combo("/user/repos", reqToken()).Get(repo.ListMyRepos).
+		m.Combo("/user/repos", reqToken()).
+			Get(repo.ListMyRepos).
 			Post(bind(api.CreateRepoOption{}), repo.Create)
 		m.Post("/org/:org/repos", reqToken(), bind(api.CreateRepoOption{}), repo.CreateOrgRepo)
 
@@ -241,16 +251,22 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 			m.Group("/:username/:reponame", func() {
 				m.Group("/hooks", func() {
-					m.Combo("").Get(repo.ListHooks).
+					m.Combo("").
+						Get(repo.ListHooks).
 						Post(bind(api.CreateHookOption{}), repo.CreateHook)
-					m.Combo("/:id").Patch(bind(api.EditHookOption{}), repo.EditHook).
+					m.Combo("/:id").
+						Patch(bind(api.EditHookOption{}), repo.EditHook).
 						Delete(repo.DeleteHook)
 				}, reqRepoAdmin())
+
 				m.Group("/collaborators", func() {
 					m.Get("", repo.ListCollaborators)
-					m.Combo("/:collaborator").Get(repo.IsCollaborator).Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
+					m.Combo("/:collaborator").
+						Get(repo.IsCollaborator).
+						Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
 						Delete(repo.DeleteCollaborator)
 				}, reqRepoAdmin())
+
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
 				m.Get("/forks", repo.ListForks)
@@ -258,20 +274,24 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("", repo.ListBranches)
 					m.Get("/*", repo.GetBranch)
 				})
-
 				m.Group("/commits", func() {
 					m.Get("/:sha", repo.GetSingleCommit)
 					m.Get("/*", repo.GetReferenceSHA)
 				})
 
 				m.Group("/keys", func() {
-					m.Combo("").Get(repo.ListDeployKeys).
+					m.Combo("").
+						Get(repo.ListDeployKeys).
 						Post(bind(api.CreateKeyOption{}), repo.CreateDeployKey)
-					m.Combo("/:id").Get(repo.GetDeployKey).
+					m.Combo("/:id").
+						Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
 				}, reqRepoAdmin())
+
 				m.Group("/issues", func() {
-					m.Combo("").Get(repo.ListIssues).Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
+					m.Combo("").
+						Get(repo.ListIssues).
+						Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
 					m.Group("/comments", func() {
 						m.Get("", repo.ListRepoIssueComments)
 						m.Combo("/:id").Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment)

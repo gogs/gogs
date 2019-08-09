@@ -6,6 +6,7 @@ package user
 
 import (
 	api "github.com/gogs/go-gogs-client"
+	"net/http"
 
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/models/errors"
@@ -18,11 +19,7 @@ import (
 func GetUserByParamsName(c *context.APIContext, name string) *models.User {
 	user, err := models.GetUserByName(c.Params(name))
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetUserByName", err)
-		}
+		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return nil
 	}
 	return user
@@ -40,7 +37,7 @@ func composePublicKeysAPILink() string {
 func listPublicKeys(c *context.APIContext, uid int64) {
 	keys, err := models.ListPublicKeys(uid)
 	if err != nil {
-		c.Error(500, "ListPublicKeys", err)
+		c.ServerError("ListPublicKeys", err)
 		return
 	}
 
@@ -50,15 +47,13 @@ func listPublicKeys(c *context.APIContext, uid int64) {
 		apiKeys[i] = convert.ToPublicKey(apiLink, keys[i])
 	}
 
-	c.JSON(200, &apiKeys)
+	c.JSONSuccess(&apiKeys)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Public-Keys#list-your-public-keys
 func ListMyPublicKeys(c *context.APIContext) {
 	listPublicKeys(c, c.User.ID)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Public-Keys#list-public-keys-for-a-user
 func ListPublicKeys(c *context.APIContext) {
 	user := GetUserByParams(c)
 	if c.Written() {
@@ -67,20 +62,15 @@ func ListPublicKeys(c *context.APIContext) {
 	listPublicKeys(c, user.ID)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Public-Keys#get-a-single-public-key
 func GetPublicKey(c *context.APIContext) {
 	key, err := models.GetPublicKeyByID(c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrKeyNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetPublicKeyByID", err)
-		}
+		c.NotFoundOrServerError("GetPublicKeyByID", models.IsErrKeyNotExist, err)
 		return
 	}
 
 	apiLink := composePublicKeysAPILink()
-	c.JSON(200, convert.ToPublicKey(apiLink, key))
+	c.JSONSuccess(convert.ToPublicKey(apiLink, key))
 }
 
 // CreateUserPublicKey creates new public key to given user by ID.
@@ -97,24 +87,22 @@ func CreateUserPublicKey(c *context.APIContext, form api.CreateKeyOption, uid in
 		return
 	}
 	apiLink := composePublicKeysAPILink()
-	c.JSON(201, convert.ToPublicKey(apiLink, key))
+	c.JSON(http.StatusCreated, convert.ToPublicKey(apiLink, key))
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Public-Keys#create-a-public-key
 func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
 	CreateUserPublicKey(c, form, c.User.ID)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Public-Keys#delete-a-public-key
 func DeletePublicKey(c *context.APIContext) {
 	if err := models.DeletePublicKey(c.User, c.ParamsInt64(":id")); err != nil {
 		if models.IsErrKeyAccessDenied(err) {
-			c.Error(403, "", "You do not have access to this key")
+			c.Error(http.StatusForbidden, "", "you do not have access to this key")
 		} else {
-			c.Error(500, "DeletePublicKey", err)
+			c.Error(http.StatusInternalServerError, "DeletePublicKey", err)
 		}
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

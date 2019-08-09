@@ -5,6 +5,8 @@
 package user
 
 import (
+	"net/http"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models"
@@ -13,24 +15,22 @@ import (
 	"github.com/gogs/gogs/routes/api/v1/convert"
 )
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Emails#list-email-addresses-for-a-user
 func ListEmails(c *context.APIContext) {
 	emails, err := models.GetEmailAddresses(c.User.ID)
 	if err != nil {
-		c.Error(500, "GetEmailAddresses", err)
+		c.ServerError("GetEmailAddresses", err)
 		return
 	}
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
 		apiEmails[i] = convert.ToEmail(emails[i])
 	}
-	c.JSON(200, &apiEmails)
+	c.JSONSuccess(&apiEmails)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Emails#add-email-addresses
 func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
-		c.Status(422)
+		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -45,9 +45,9 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 
 	if err := models.AddEmailAddresses(emails); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
-			c.Error(422, "", "Email address has been used: "+err.(models.ErrEmailAlreadyUsed).Email)
+			c.Error(http.StatusUnprocessableEntity, "", "email address has been used: "+err.(models.ErrEmailAlreadyUsed).Email)
 		} else {
-			c.Error(500, "AddEmailAddresses", err)
+			c.Error(http.StatusInternalServerError, "AddEmailAddresses", err)
 		}
 		return
 	}
@@ -56,13 +56,12 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	for i := range emails {
 		apiEmails[i] = convert.ToEmail(emails[i])
 	}
-	c.JSON(201, &apiEmails)
+	c.JSON(http.StatusCreated, &apiEmails)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Users-Emails#delete-email-addresses
 func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	if len(form.Emails) == 0 {
-		c.Status(204)
+		c.NoContent()
 		return
 	}
 
@@ -75,8 +74,8 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	}
 
 	if err := models.DeleteEmailAddresses(emails); err != nil {
-		c.Error(500, "DeleteEmailAddresses", err)
+		c.Error(http.StatusInternalServerError, "DeleteEmailAddresses", err)
 		return
 	}
-	c.Status(204)
+	c.NoContent()
 }

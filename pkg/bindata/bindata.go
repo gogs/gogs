@@ -3297,7 +3297,7 @@ func confGitignoreUnrealengine() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/gitignore/UnrealEngine", size: 948, mode: os.FileMode(420), modTime: time.Unix(1550387700, 0)}
+	info := bindataFileInfo{name: "conf/gitignore/UnrealEngine", size: 948, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4437,7 +4437,7 @@ func confLocaleLocale_deDeIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_de-DE.ini", size: 70946, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_de-DE.ini", size: 70946, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4577,7 +4577,7 @@ func confLocaleLocale_glEsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_gl-ES.ini", size: 69688, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_gl-ES.ini", size: 69688, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4597,7 +4597,7 @@ func confLocaleLocale_huHuIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_hu-HU.ini", size: 70953, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_hu-HU.ini", size: 70953, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4617,7 +4617,7 @@ func confLocaleLocale_idIdIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_id-ID.ini", size: 66136, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_id-ID.ini", size: 66136, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4637,7 +4637,7 @@ func confLocaleLocale_itItIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_it-IT.ini", size: 68517, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_it-IT.ini", size: 68517, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4657,7 +4657,7 @@ func confLocaleLocale_jaJpIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_ja-JP.ini", size: 80912, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_ja-JP.ini", size: 80912, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4677,7 +4677,7 @@ func confLocaleLocale_koKrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_ko-KR.ini", size: 71072, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_ko-KR.ini", size: 71072, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4697,7 +4697,7 @@ func confLocaleLocale_lvLvIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_lv-LV.ini", size: 70985, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_lv-LV.ini", size: 70985, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4777,7 +4777,7 @@ func confLocaleLocale_ptPtIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_pt-PT.ini", size: 70206, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_pt-PT.ini", size: 70206, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4797,7 +4797,7 @@ func confLocaleLocale_ruRuIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_ru-RU.ini", size: 101120, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_ru-RU.ini", size: 101120, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4817,7 +4817,7 @@ func confLocaleLocale_skSkIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_sk-SK.ini", size: 70503, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_sk-SK.ini", size: 70503, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4837,7 +4837,7 @@ func confLocaleLocale_srSpIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_sr-SP.ini", size: 93140, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_sr-SP.ini", size: 93140, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4877,7 +4877,7 @@ func confLocaleLocale_trTrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_tr-TR.ini", size: 69699, mode: os.FileMode(420), modTime: time.Unix(1561638673, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_tr-TR.ini", size: 69699, mode: os.FileMode(420), modTime: time.Unix(1564372605, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

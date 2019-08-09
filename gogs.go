@@ -16,17 +16,17 @@ import (
 	"github.com/gogs/gogs/pkg/setting"
 )
 
-const APP_VER = "0.11.90.0801"
+const Version = "0.11.91.0808"
 
 func init() {
-	setting.AppVer = APP_VER
+	setting.AppVer = Version
 }
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "Gogs"
 	app.Usage = "A painless self-hosted Git service"
-	app.Version = APP_VER
+	app.Version = Version
 	app.Commands = []cli.Command{
 		cmd.Web,
 		cmd.Serv,
