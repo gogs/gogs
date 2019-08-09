@@ -5,6 +5,8 @@
 package user
 
 import (
+	"net/http"
+
 	"github.com/Unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"
@@ -27,7 +29,7 @@ func Search(c *context.APIContext) {
 
 	users, _, err := models.SearchUserByName(opts)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"ok":    false,
 			"error": err.Error(),
 		})
@@ -47,7 +49,7 @@ func Search(c *context.APIContext) {
 		}
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"ok":   true,
 		"data": results,
 	})
@@ -57,9 +59,9 @@ func GetInfo(c *context.APIContext) {
 	u, err := models.GetUserByName(c.Params(":username"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			c.Status(404)
+			c.NotFound()
 		} else {
-			c.Error(500, "GetUserByName", err)
+			c.ServerError("GetUserByName", err)
 		}
 		return
 	}
@@ -68,9 +70,9 @@ func GetInfo(c *context.APIContext) {
 	if !c.IsLogged {
 		u.Email = ""
 	}
-	c.JSON(200, u.APIFormat())
+	c.JSONSuccess(u.APIFormat())
 }
 
 func GetAuthenticatedUser(c *context.APIContext) {
-	c.JSON(200, c.User.APIFormat())
+	c.JSONSuccess(c.User.APIFormat())
 }

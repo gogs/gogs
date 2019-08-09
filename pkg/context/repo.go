@@ -160,9 +160,9 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
 		} else {
-			mode, err := models.AccessLevel(c.UserID(), repo)
+			mode, err := models.UserAccessMode(c.UserID(), repo)
 			if err != nil {
-				c.ServerError("AccessLevel", err)
+				c.ServerError("UserAccessMode", err)
 				return
 			}
 			c.Repo.AccessMode = mode

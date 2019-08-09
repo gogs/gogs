@@ -5,16 +5,17 @@
 package misc
 
 import (
+	"net/http"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/pkg/context"
 	"github.com/gogs/gogs/pkg/markup"
 )
 
-// https://github.com/gogs/go-gogs-client/wiki/Miscellaneous#render-an-arbitrary-markdown-document
 func Markdown(c *context.APIContext, form api.MarkdownOption) {
 	if c.HasApiError() {
-		c.Error(422, "", c.GetErrMsg())
+		c.Error(http.StatusUnprocessableEntity, "", c.GetErrMsg())
 		return
 	}
 
@@ -31,11 +32,10 @@ func Markdown(c *context.APIContext, form api.MarkdownOption) {
 	}
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Miscellaneous#render-a-markdown-document-in-raw-mode
 func MarkdownRaw(c *context.APIContext) {
 	body, err := c.Req.Body().Bytes()
 	if err != nil {
-		c.Error(422, "", err)
+		c.Error(http.StatusUnprocessableEntity, "", err)
 		return
 	}
 	c.Write(markup.RawMarkdown(body, ""))

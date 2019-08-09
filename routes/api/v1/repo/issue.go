@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	api "github.com/gogs/go-gogs-client"
@@ -19,13 +20,13 @@ import (
 func listIssues(c *context.APIContext, opts *models.IssuesOptions) {
 	issues, err := models.Issues(opts)
 	if err != nil {
-		c.Error(500, "Issues", err)
+		c.ServerError("Issues", err)
 		return
 	}
 
 	count, err := models.IssuesCount(opts)
 	if err != nil {
-		c.Error(500, "IssuesCount", err)
+		c.ServerError("IssuesCount", err)
 		return
 	}
 
@@ -33,14 +34,14 @@ func listIssues(c *context.APIContext, opts *models.IssuesOptions) {
 	apiIssues := make([]*api.Issue, len(issues))
 	for i := range issues {
 		if err = issues[i].LoadAttributes(); err != nil {
-			c.Error(500, "LoadAttributes", err)
+			c.ServerError("LoadAttributes", err)
 			return
 		}
 		apiIssues[i] = issues[i].APIFormat()
 	}
 
 	c.SetLinkHeader(int(count), setting.UI.IssuePagingNum)
-	c.JSON(200, &apiIssues)
+	c.JSONSuccess(&apiIssues)
 }
 
 func ListUserIssues(c *context.APIContext) {
@@ -66,14 +67,10 @@ func ListIssues(c *context.APIContext) {
 func GetIssue(c *context.APIContext) {
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
-	c.JSON(200, issue.APIFormat())
+	c.JSONSuccess(issue.APIFormat())
 }
 
 func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
@@ -90,9 +87,9 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 			assignee, err := models.GetUserByName(form.Assignee)
 			if err != nil {
 				if errors.IsUserNotExist(err) {
-					c.Error(422, "", fmt.Sprintf("Assignee does not exist: [name: %s]", form.Assignee))
+					c.Error(http.StatusUnprocessableEntity, "", fmt.Sprintf("assignee does not exist: [name: %s]", form.Assignee))
 				} else {
-					c.Error(500, "GetUserByName", err)
+					c.ServerError("GetUserByName", err)
 				}
 				return
 			}
@@ -104,13 +101,13 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 	}
 
 	if err := models.NewIssue(c.Repo.Repository, issue, form.Labels, nil); err != nil {
-		c.Error(500, "NewIssue", err)
+		c.ServerError("NewIssue", err)
 		return
 	}
 
 	if form.Closed {
 		if err := issue.ChangeStatus(c.User, c.Repo.Repository, true); err != nil {
-			c.Error(500, "ChangeStatus", err)
+			c.ServerError("ChangeStatus", err)
 			return
 		}
 	}
@@ -119,25 +116,21 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 	var err error
 	issue, err = models.GetIssueByID(issue.ID)
 	if err != nil {
-		c.Error(500, "GetIssueByID", err)
+		c.ServerError("GetIssueByID", err)
 		return
 	}
-	c.JSON(201, issue.APIFormat())
+	c.JSON(http.StatusCreated, issue.APIFormat())
 }
 
 func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 
 	if !issue.IsPoster(c.User.ID) && !c.Repo.IsWriter() {
-		c.Status(403)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
@@ -156,9 +149,9 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 			assignee, err := models.GetUserByName(*form.Assignee)
 			if err != nil {
 				if errors.IsUserNotExist(err) {
-					c.Error(422, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
+					c.Error(http.StatusUnprocessableEntity, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
 				} else {
-					c.Error(500, "GetUserByName", err)
+					c.ServerError("GetUserByName", err)
 				}
 				return
 			}
@@ -166,7 +159,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		}
 
 		if err = models.UpdateIssueUserByAssignee(issue); err != nil {
-			c.Error(500, "UpdateIssueUserByAssignee", err)
+			c.ServerError("UpdateIssueUserByAssignee", err)
 			return
 		}
 	}
@@ -175,18 +168,18 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
 		if err = models.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
-			c.Error(500, "ChangeMilestoneAssign", err)
+			c.ServerError("ChangeMilestoneAssign", err)
 			return
 		}
 	}
 
 	if err = models.UpdateIssue(issue); err != nil {
-		c.Error(500, "UpdateIssue", err)
+		c.ServerError("UpdateIssue", err)
 		return
 	}
 	if form.State != nil {
 		if err = issue.ChangeStatus(c.User, c.Repo.Repository, api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
-			c.Error(500, "ChangeStatus", err)
+			c.ServerError("ChangeStatus", err)
 			return
 		}
 	}
@@ -194,8 +187,8 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 	// Refetch from database to assign some automatic values
 	issue, err = models.GetIssueByID(issue.ID)
 	if err != nil {
-		c.Error(500, "GetIssueByID", err)
+		c.ServerError("GetIssueByID", err)
 		return
 	}
-	c.JSON(201, issue.APIFormat())
+	c.JSON(http.StatusCreated, issue.APIFormat())
 }

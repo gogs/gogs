@@ -25,8 +25,8 @@ type APIContext struct {
 	Org *APIOrganization
 }
 
-// FIXME: move to github.com/gogs/go-gogs-client
-const DOC_URL = "https://github.com/gogs/docs-api"
+// FIXME: move this constant to github.com/gogs/go-gogs-client
+const DocURL = "https://github.com/gogs/docs-api"
 
 // Error responses error message to client with given message.
 // If status is 500, also it prints error to log.
@@ -44,7 +44,7 @@ func (c *APIContext) Error(status int, title string, obj interface{}) {
 
 	c.JSON(status, map[string]string{
 		"message": message,
-		"url":     DOC_URL,
+		"url":     DocURL,
 	})
 }
 

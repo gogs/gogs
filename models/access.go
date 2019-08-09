@@ -59,7 +59,7 @@ type Access struct {
 	Mode   AccessMode
 }
 
-func accessLevel(e Engine, userID int64, repo *Repository) (AccessMode, error) {
+func userAccessMode(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 	mode := ACCESS_MODE_NONE
 	// Everyone has read access to public repository
 	if !repo.IsPrivate {
@@ -84,14 +84,13 @@ func accessLevel(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 	return access.Mode, nil
 }
 
-// AccessLevel returns the Access a user has to a repository. Will return NoneAccess if the
-// user does not have access.
-func AccessLevel(userID int64, repo *Repository) (AccessMode, error) {
-	return accessLevel(x, userID, repo)
+// UserAccessMode returns the access mode of given user to the repository.
+func UserAccessMode(userID int64, repo *Repository) (AccessMode, error) {
+	return userAccessMode(x, userID, repo)
 }
 
 func hasAccess(e Engine, userID int64, repo *Repository, testMode AccessMode) (bool, error) {
-	mode, err := accessLevel(e, userID, repo)
+	mode, err := userAccessMode(e, userID, repo)
 	return mode >= testMode, err
 }
 
