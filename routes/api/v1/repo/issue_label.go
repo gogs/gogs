@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"net/http"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models"
@@ -15,11 +17,7 @@ import (
 func ListIssueLabels(c *context.APIContext) {
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 
@@ -27,39 +25,30 @@ func ListIssueLabels(c *context.APIContext) {
 	for i := range issue.Labels {
 		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
-	c.JSON(200, &apiLabels)
+	c.JSONSuccess(&apiLabels)
 }
 
 func AddIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 
 	labels, err := models.GetLabelsInRepoByIDs(c.Repo.Repository.ID, form.Labels)
 	if err != nil {
-		c.Error(500, "GetLabelsInRepoByIDs", err)
+		c.ServerError("GetLabelsInRepoByIDs", err)
 		return
 	}
 
 	if err = issue.AddLabels(c.User, labels); err != nil {
-		c.Error(500, "AddLabels", err)
+		c.ServerError("AddLabels", err)
 		return
 	}
 
 	labels, err = models.GetLabelsByIssueID(issue.ID)
 	if err != nil {
-		c.Error(500, "GetLabelsByIssueID", err)
+		c.ServerError("GetLabelsByIssueID", err)
 		return
 	}
 
@@ -67,73 +56,55 @@ func AddIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 	for i := range labels {
 		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
-	c.JSON(200, &apiLabels)
+	c.JSONSuccess(&apiLabels)
 }
 
 func DeleteIssueLabel(c *context.APIContext) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 
 	label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		if models.IsErrLabelNotExist(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "GetLabelInRepoByID", err)
+			c.ServerError("GetLabelInRepoByID", err)
 		}
 		return
 	}
 
 	if err := models.DeleteIssueLabel(issue, label); err != nil {
-		c.Error(500, "DeleteIssueLabel", err)
+		c.ServerError("DeleteIssueLabel", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }
 
 func ReplaceIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 
 	labels, err := models.GetLabelsInRepoByIDs(c.Repo.Repository.ID, form.Labels)
 	if err != nil {
-		c.Error(500, "GetLabelsInRepoByIDs", err)
+		c.ServerError("GetLabelsInRepoByIDs", err)
 		return
 	}
 
 	if err := issue.ReplaceLabels(labels); err != nil {
-		c.Error(500, "ReplaceLabels", err)
+		c.ServerError("ReplaceLabels", err)
 		return
 	}
 
 	labels, err = models.GetLabelsByIssueID(issue.ID)
 	if err != nil {
-		c.Error(500, "GetLabelsByIssueID", err)
+		c.ServerError("GetLabelsByIssueID", err)
 		return
 	}
 
@@ -141,29 +112,20 @@ func ReplaceIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 	for i := range labels {
 		apiLabels[i] = issue.Labels[i].APIFormat()
 	}
-	c.JSON(200, &apiLabels)
+	c.JSONSuccess(&apiLabels)
 }
 
 func ClearIssueLabels(c *context.APIContext) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		if errors.IsIssueNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetIssueByIndex", err)
-		}
+		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
 	}
 
 	if err := issue.ClearLabels(c.User); err != nil {
-		c.Error(500, "ClearLabels", err)
+		c.ServerError("ClearLabels", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

@@ -4,6 +4,7 @@
 package repo
 
 import (
+	"net/http"
 	"time"
 
 	api "github.com/gogs/go-gogs-client"
@@ -18,7 +19,7 @@ func ListIssueComments(c *context.APIContext) {
 		var err error
 		since, err = time.Parse(time.RFC3339, c.Query("since"))
 		if err != nil {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 			return
 		}
 	}
@@ -26,13 +27,13 @@ func ListIssueComments(c *context.APIContext) {
 	// comments,err:=models.GetCommentsByIssueIDSince(, since)
 	issue, err := models.GetRawIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.Error(500, "GetRawIssueByIndex", err)
+		c.ServerError("GetRawIssueByIndex", err)
 		return
 	}
 
 	comments, err := models.GetCommentsByIssueIDSince(issue.ID, since.Unix())
 	if err != nil {
-		c.Error(500, "GetCommentsByIssueIDSince", err)
+		c.ServerError("GetCommentsByIssueIDSince", err)
 		return
 	}
 
@@ -40,7 +41,7 @@ func ListIssueComments(c *context.APIContext) {
 	for i := range comments {
 		apiComments[i] = comments[i].APIFormat()
 	}
-	c.JSON(200, &apiComments)
+	c.JSONSuccess(&apiComments)
 }
 
 func ListRepoIssueComments(c *context.APIContext) {
@@ -49,14 +50,14 @@ func ListRepoIssueComments(c *context.APIContext) {
 		var err error
 		since, err = time.Parse(time.RFC3339, c.Query("since"))
 		if err != nil {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 			return
 		}
 	}
 
 	comments, err := models.GetCommentsByRepoIDSince(c.Repo.Repository.ID, since.Unix())
 	if err != nil {
-		c.Error(500, "GetCommentsByRepoIDSince", err)
+		c.ServerError("GetCommentsByRepoIDSince", err)
 		return
 	}
 
@@ -64,75 +65,67 @@ func ListRepoIssueComments(c *context.APIContext) {
 	for i := range comments {
 		apiComments[i] = comments[i].APIFormat()
 	}
-	c.JSON(200, &apiComments)
+	c.JSONSuccess(&apiComments)
 }
 
 func CreateIssueComment(c *context.APIContext, form api.CreateIssueCommentOption) {
 	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.Error(500, "GetIssueByIndex", err)
+		c.ServerError("GetIssueByIndex", err)
 		return
 	}
 
 	comment, err := models.CreateIssueComment(c.User, c.Repo.Repository, issue, form.Body, nil)
 	if err != nil {
-		c.Error(500, "CreateIssueComment", err)
+		c.ServerError("CreateIssueComment", err)
 		return
 	}
 
-	c.JSON(201, comment.APIFormat())
+	c.JSON(http.StatusCreated, comment.APIFormat())
 }
 
 func EditIssueComment(c *context.APIContext, form api.EditIssueCommentOption) {
 	comment, err := models.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrCommentNotExist(err) {
-			c.Error(404, "GetCommentByID", err)
-		} else {
-			c.Error(500, "GetCommentByID", err)
-		}
+		c.NotFoundOrServerError("GetCommentByID", models.IsErrCommentNotExist, err)
 		return
 	}
 
 	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
-		c.Status(403)
+		c.Status(http.StatusForbidden)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
-		c.Status(204)
+		c.NoContent()
 		return
 	}
 
 	oldContent := comment.Content
 	comment.Content = form.Body
 	if err := models.UpdateComment(c.User, comment, oldContent); err != nil {
-		c.Error(500, "UpdateComment", err)
+		c.ServerError("UpdateComment", err)
 		return
 	}
-	c.JSON(200, comment.APIFormat())
+	c.JSONSuccess(comment.APIFormat())
 }
 
 func DeleteIssueComment(c *context.APIContext) {
 	comment, err := models.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrCommentNotExist(err) {
-			c.Error(404, "GetCommentByID", err)
-		} else {
-			c.Error(500, "GetCommentByID", err)
-		}
+		c.NotFoundOrServerError("GetCommentByID", models.IsErrCommentNotExist, err)
 		return
 	}
 
 	if c.User.ID != comment.PosterID && !c.Repo.IsAdmin() {
-		c.Status(403)
+		c.Status(http.StatusForbidden)
 		return
 	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
-		c.Status(204)
+		c.NoContent()
 		return
 	}
 
 	if err = models.DeleteCommentByID(c.User, comment.ID); err != nil {
-		c.Error(500, "DeleteCommentByID", err)
+		c.ServerError("DeleteCommentByID", err)
 		return
 	}
-	c.Status(204)
+	c.NoContent()
 }

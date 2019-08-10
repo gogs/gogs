@@ -5,6 +5,8 @@
 package admin
 
 import (
+	"net/http"
+
 	log "gopkg.in/clog.v1"
 
 	api "github.com/gogs/go-gogs-client"
@@ -25,9 +27,9 @@ func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, log
 	source, err := models.GetLoginSourceByID(sourceID)
 	if err != nil {
 		if errors.IsLoginSourceNotExist(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "GetLoginSourceByID", err)
+			c.ServerError("GetLoginSourceByID", err)
 		}
 		return
 	}
@@ -37,7 +39,6 @@ func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, log
 	u.LoginName = loginName
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#create-a-new-user
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	u := &models.User{
 		Name:      form.Username,
@@ -58,23 +59,22 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 			models.IsErrEmailAlreadyUsed(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "CreateUser", err)
+			c.ServerError("CreateUser", err)
 		}
 		return
 	}
-	log.Trace("Account created by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account created by admin %q: %s", c.User.Name, u.Name)
 
 	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
 		mailer.SendRegisterNotifyMail(c.Context.Context, models.NewMailerUser(u))
 	}
 
-	c.JSON(201, u.APIFormat())
+	c.JSON(http.StatusCreated, u.APIFormat())
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#edit-an-existing-user
 func EditUser(c *context.APIContext, form api.EditUserOption) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
@@ -90,7 +90,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		u.Passwd = form.Password
 		var err error
 		if u.Salt, err = models.GetUserSalt(); err != nil {
-			c.Error(500, "UpdateUser", err)
+			c.ServerError("GetUserSalt", err)
 			return
 		}
 		u.EncodePasswd()
@@ -119,18 +119,17 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 
 	if err := models.UpdateUser(u); err != nil {
 		if models.IsErrEmailAlreadyUsed(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "UpdateUser", err)
+			c.ServerError("UpdateUser", err)
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account profile updated by admin %q: %s", c.User.Name, u.Name)
 
-	c.JSON(200, u.APIFormat())
+	c.JSONSuccess(u.APIFormat())
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#delete-a-user
 func DeleteUser(c *context.APIContext) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
@@ -140,18 +139,17 @@ func DeleteUser(c *context.APIContext) {
 	if err := models.DeleteUser(u); err != nil {
 		if models.IsErrUserOwnRepos(err) ||
 			models.IsErrUserHasOrgs(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "DeleteUser", err)
+			c.ServerError("DeleteUser", err)
 		}
 		return
 	}
 	log.Trace("Account deleted by admin(%s): %s", c.User.Name, u.Name)
 
-	c.Status(204)
+	c.NoContent()
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Administration-Users#create-a-public-key-for-user
 func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
 	u := user.GetUserByParams(c)
 	if c.Written() {

@@ -12,7 +12,6 @@ import (
 	"github.com/gogs/gogs/routes/api/v1/user"
 )
 
-// https://github.com/gogs/go-gogs-client/wiki/Administration-Repositories#create-a-new-repository
 func CreateRepo(c *context.APIContext, form api.CreateRepoOption) {
 	owner := user.GetUserByParams(c)
 	if c.Written() {
