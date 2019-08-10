@@ -13,11 +13,7 @@ import (
 func GetRepositoryByParams(c *context.APIContext) *models.Repository {
 	repo, err := models.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
 	if err != nil {
-		if errors.IsRepoNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetRepositoryByName", err)
-		}
+		c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 		return nil
 	}
 	return repo
@@ -29,11 +25,11 @@ func AddTeamRepository(c *context.APIContext) {
 		return
 	}
 	if err := c.Org.Team.AddRepository(repo); err != nil {
-		c.Error(500, "AddRepository", err)
+		c.ServerError("AddRepository", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }
 
 func RemoveTeamRepository(c *context.APIContext) {
@@ -42,9 +38,9 @@ func RemoveTeamRepository(c *context.APIContext) {
 		return
 	}
 	if err := c.Org.Team.RemoveRepository(repo.ID); err != nil {
-		c.Error(500, "RemoveRepository", err)
+		c.ServerError("RemoveRepository", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

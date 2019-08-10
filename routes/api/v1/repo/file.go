@@ -12,38 +12,32 @@ import (
 	"github.com/gogs/gogs/routes/repo"
 )
 
-// https://github.com/gogs/go-gogs-client/wiki/Repositories-Contents#download-raw-content
 func GetRawFile(c *context.APIContext) {
 	if !c.Repo.HasAccess() {
-		c.Status(404)
+		c.NotFound()
 		return
 	}
 
 	if c.Repo.Repository.IsBare {
-		c.Status(404)
+		c.NotFound()
 		return
 	}
 
 	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 	if err != nil {
-		if git.IsErrNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetBlobByPath", err)
-		}
+		c.NotFoundOrServerError("GetBlobByPath", git.IsErrNotExist, err)
 		return
 	}
 	if err = repo.ServeBlob(c.Context, blob); err != nil {
-		c.Error(500, "ServeBlob", err)
+		c.ServerError("ServeBlob", err)
 	}
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Repositories-Contents#download-archive
 func GetArchive(c *context.APIContext) {
 	repoPath := models.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
-		c.Error(500, "OpenRepository", err)
+		c.ServerError("OpenRepository", err)
 		return
 	}
 	c.Repo.GitRepo = gitRepo
@@ -54,19 +48,15 @@ func GetArchive(c *context.APIContext) {
 func GetEditorconfig(c *context.APIContext) {
 	ec, err := c.Repo.GetEditorconfig()
 	if err != nil {
-		if git.IsErrNotExist(err) {
-			c.Error(404, "GetEditorconfig", err)
-		} else {
-			c.Error(500, "GetEditorconfig", err)
-		}
+		c.NotFoundOrServerError("GetEditorconfig", git.IsErrNotExist, err)
 		return
 	}
 
 	fileName := c.Params("filename")
 	def := ec.GetDefinitionForFilename(fileName)
 	if def == nil {
-		c.Error(404, "GetDefinitionForFilename", err)
+		c.NotFound()
 		return
 	}
-	c.JSON(200, def)
+	c.JSONSuccess(def)
 }

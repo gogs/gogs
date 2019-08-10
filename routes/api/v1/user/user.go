@@ -58,11 +58,7 @@ func Search(c *context.APIContext) {
 func GetInfo(c *context.APIContext) {
 	u, err := models.GetUserByName(c.Params(":username"))
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.NotFound()
-		} else {
-			c.ServerError("GetUserByName", err)
-		}
+		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return
 	}
 

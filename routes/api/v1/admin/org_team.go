@@ -5,6 +5,8 @@
 package admin
 
 import (
+	"net/http"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models"
@@ -22,14 +24,14 @@ func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {
 	}
 	if err := models.NewTeam(team); err != nil {
 		if models.IsErrTeamAlreadyExist(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "NewTeam", err)
+			c.ServerError("NewTeam", err)
 		}
 		return
 	}
 
-	c.JSON(201, convert.ToTeam(team))
+	c.JSON(http.StatusCreated, convert.ToTeam(team))
 }
 
 func AddTeamMember(c *context.APIContext) {
@@ -38,11 +40,11 @@ func AddTeamMember(c *context.APIContext) {
 		return
 	}
 	if err := c.Org.Team.AddMember(u.ID); err != nil {
-		c.Error(500, "AddMember", err)
+		c.ServerError("AddMember", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }
 
 func RemoveTeamMember(c *context.APIContext) {
@@ -52,9 +54,9 @@ func RemoveTeamMember(c *context.APIContext) {
 	}
 
 	if err := c.Org.Team.RemoveMember(u.ID); err != nil {
-		c.Error(500, "RemoveMember", err)
+		c.ServerError("RemoveMember", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

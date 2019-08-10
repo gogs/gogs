@@ -5,6 +5,8 @@
 package repo
 
 import (
+	"net/http"
+
 	"github.com/Unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"
@@ -16,7 +18,7 @@ import (
 func ListLabels(c *context.APIContext) {
 	labels, err := models.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Error(500, "GetLabelsByRepoID", err)
+		c.ServerError("GetLabelsByRepoID", err)
 		return
 	}
 
@@ -24,7 +26,7 @@ func ListLabels(c *context.APIContext) {
 	for i := range labels {
 		apiLabels[i] = labels[i].APIFormat()
 	}
-	c.JSON(200, &apiLabels)
+	c.JSONSuccess(&apiLabels)
 }
 
 func GetLabel(c *context.APIContext) {
@@ -37,48 +39,30 @@ func GetLabel(c *context.APIContext) {
 		label, err = models.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
 	}
 	if err != nil {
-		if models.IsErrLabelNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetLabelByRepoID", err)
-		}
+		c.NotFoundOrServerError("GetLabel", models.IsErrLabelNotExist, err)
 		return
 	}
 
-	c.JSON(200, label.APIFormat())
+	c.JSONSuccess(label.APIFormat())
 }
 
 func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	label := &models.Label{
 		Name:   form.Name,
 		Color:  form.Color,
 		RepoID: c.Repo.Repository.ID,
 	}
 	if err := models.NewLabels(label); err != nil {
-		c.Error(500, "NewLabel", err)
+		c.ServerError("NewLabel", err)
 		return
 	}
-	c.JSON(201, label.APIFormat())
+	c.JSON(http.StatusCreated, label.APIFormat())
 }
 
 func EditLabel(c *context.APIContext, form api.EditLabelOption) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrLabelNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetLabelByRepoID", err)
-		}
+		c.NotFoundOrServerError("GetLabelOfRepoByID", models.IsErrLabelNotExist, err)
 		return
 	}
 
@@ -89,22 +73,17 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 		label.Color = *form.Color
 	}
 	if err := models.UpdateLabel(label); err != nil {
-		c.Handle(500, "UpdateLabel", err)
+		c.ServerError("UpdateLabel", err)
 		return
 	}
-	c.JSON(200, label.APIFormat())
+	c.JSONSuccess(label.APIFormat())
 }
 
 func DeleteLabel(c *context.APIContext) {
-	if !c.Repo.IsWriter() {
-		c.Status(403)
-		return
-	}
-
 	if err := models.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
-		c.Error(500, "DeleteLabel", err)
+		c.ServerError("DeleteLabel", err)
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

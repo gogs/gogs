@@ -5,6 +5,8 @@
 package org
 
 import (
+	"net/http"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models"
@@ -31,9 +33,9 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		if models.IsErrUserAlreadyExist(err) ||
 			models.IsErrNameReserved(err) ||
 			models.IsErrNamePatternNotAllowed(err) {
-			c.Error(422, "", err)
+			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.Error(500, "CreateOrganization", err)
+			c.ServerError("CreateOrganization", err)
 		}
 		return
 	}
@@ -43,7 +45,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 
 func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
-		c.Error(500, "GetOrganizations", err)
+		c.ServerError("GetOrganizations", err)
 		return
 	}
 
@@ -51,20 +53,17 @@ func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
 	for i := range u.Orgs {
 		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
 	}
-	c.JSON(200, &apiOrgs)
+	c.JSONSuccess(&apiOrgs)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Organizations#list-your-organizations
 func ListMyOrgs(c *context.APIContext) {
 	listUserOrgs(c, c.User, true)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Organizations#create-your-organization
 func CreateMyOrg(c *context.APIContext, apiForm api.CreateOrgOption) {
 	CreateOrgForUser(c, apiForm, c.User)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Organizations#list-user-organizations
 func ListUserOrgs(c *context.APIContext) {
 	u := user.GetUserByParams(c)
 	if c.Written() {
@@ -73,16 +72,14 @@ func ListUserOrgs(c *context.APIContext) {
 	listUserOrgs(c, u, false)
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Organizations#get-an-organization
 func Get(c *context.APIContext) {
-	c.JSON(200, convert.ToOrganization(c.Org.Organization))
+	c.JSONSuccess(convert.ToOrganization(c.Org.Organization))
 }
 
-// https://github.com/gogs/go-gogs-client/wiki/Organizations#edit-an-organization
 func Edit(c *context.APIContext, form api.EditOrgOption) {
 	org := c.Org.Organization
 	if !org.IsOwnedBy(c.User.ID) {
-		c.Status(403)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
@@ -91,9 +88,9 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 	org.Website = form.Website
 	org.Location = form.Location
 	if err := models.UpdateUser(org); err != nil {
-		c.Error(500, "UpdateUser", err)
+		c.ServerError("UpdateUser", err)
 		return
 	}
 
-	c.JSON(200, convert.ToOrganization(org))
+	c.JSONSuccess(convert.ToOrganization(org))
 }

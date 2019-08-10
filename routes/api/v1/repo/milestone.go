@@ -5,6 +5,7 @@
 package repo
 
 import (
+	"net/http"
 	"time"
 
 	api "github.com/gogs/go-gogs-client"
@@ -16,7 +17,7 @@ import (
 func ListMilestones(c *context.APIContext) {
 	milestones, err := models.GetMilestonesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Error(500, "GetMilestonesByRepoID", err)
+		c.ServerError("GetMilestonesByRepoID", err)
 		return
 	}
 
@@ -24,20 +25,16 @@ func ListMilestones(c *context.APIContext) {
 	for i := range milestones {
 		apiMilestones[i] = milestones[i].APIFormat()
 	}
-	c.JSON(200, &apiMilestones)
+	c.JSONSuccess(&apiMilestones)
 }
 
 func GetMilestone(c *context.APIContext) {
 	milestone, err := models.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrMilestoneNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetMilestoneByRepoID", err)
-		}
+		c.NotFoundOrServerError("GetMilestoneByRepoID", models.IsErrMilestoneNotExist, err)
 		return
 	}
-	c.JSON(200, milestone.APIFormat())
+	c.JSONSuccess(milestone.APIFormat())
 }
 
 func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
@@ -54,20 +51,16 @@ func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
 	}
 
 	if err := models.NewMilestone(milestone); err != nil {
-		c.Error(500, "NewMilestone", err)
+		c.ServerError("NewMilestone", err)
 		return
 	}
-	c.JSON(201, milestone.APIFormat())
+	c.JSON(http.StatusCreated, milestone.APIFormat())
 }
 
 func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 	milestone, err := models.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrMilestoneNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetMilestoneByRepoID", err)
-		}
+		c.NotFoundOrServerError("GetMilestoneByRepoID", models.IsErrMilestoneNotExist, err)
 		return
 	}
 
@@ -83,21 +76,21 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 
 	if form.State != nil {
 		if err = milestone.ChangeStatus(api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
-			c.Error(500, "ChangeStatus", err)
+			c.ServerError("ChangeStatus", err)
 			return
 		}
 	} else if err = models.UpdateMilestone(milestone); err != nil {
-		c.Handle(500, "UpdateMilestone", err)
+		c.ServerError("UpdateMilestone", err)
 		return
 	}
 
-	c.JSON(200, milestone.APIFormat())
+	c.JSONSuccess(milestone.APIFormat())
 }
 
 func DeleteMilestone(c *context.APIContext) {
 	if err := models.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
-		c.Error(500, "DeleteMilestoneByRepoID", err)
+		c.ServerError("DeleteMilestoneByRepoID", err)
 		return
 	}
-	c.Status(204)
+	c.NoContent()
 }

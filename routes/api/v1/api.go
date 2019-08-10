@@ -216,7 +216,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 			m.Get("/followers", user.ListMyFollowers)
 			m.Group("/following", func() {
 				m.Get("", user.ListMyFollowing)
-				m.Combo("/:username").Get(user.CheckMyFollowing).Put(user.Follow).Delete(user.Unfollow)
+				m.Combo("/:username").
+					Get(user.CheckMyFollowing).
+					Put(user.Follow).
+					Delete(user.Unfollow)
 			})
 
 			m.Group("/keys", func() {
@@ -228,7 +231,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					Delete(user.DeletePublicKey)
 			})
 
-			m.Combo("/issues").Get(repo.ListUserIssues)
+			m.Get("/issues", repo.ListUserIssues)
 		}, reqToken())
 
 		// Repositories
@@ -294,40 +297,54 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Post(bind(api.CreateIssueOption{}), repo.CreateIssue)
 					m.Group("/comments", func() {
 						m.Get("", repo.ListRepoIssueComments)
-						m.Combo("/:id").Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
+						m.Patch("/:id", bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
 					})
 					m.Group("/:index", func() {
-						m.Combo("").Get(repo.GetIssue).Patch(bind(api.EditIssueOption{}), repo.EditIssue)
+						m.Combo("").
+							Get(repo.GetIssue).
+							Patch(bind(api.EditIssueOption{}), repo.EditIssue)
 
 						m.Group("/comments", func() {
-							m.Combo("").Get(repo.ListIssueComments).Post(bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
-							m.Combo("/:id").Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment).
+							m.Combo("").
+								Get(repo.ListIssueComments).
+								Post(bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
+							m.Combo("/:id").
+								Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment).
 								Delete(repo.DeleteIssueComment)
 						})
 
+						m.Get("/labels", repo.ListIssueLabels)
 						m.Group("/labels", func() {
-							m.Combo("").Get(repo.ListIssueLabels).
+							m.Combo("").
 								Post(bind(api.IssueLabelsOption{}), repo.AddIssueLabels).
 								Put(bind(api.IssueLabelsOption{}), repo.ReplaceIssueLabels).
 								Delete(repo.ClearIssueLabels)
 							m.Delete("/:id", repo.DeleteIssueLabel)
-						})
-
+						}, reqRepoWriter())
 					})
 				}, mustEnableIssues)
+
 				m.Group("/labels", func() {
-					m.Combo("").Get(repo.ListLabels).
-						Post(bind(api.CreateLabelOption{}), repo.CreateLabel)
-					m.Combo("/:id").Get(repo.GetLabel).Patch(bind(api.EditLabelOption{}), repo.EditLabel).
+					m.Get("", repo.ListLabels)
+					m.Get("/:id", repo.GetLabel)
+				})
+				m.Group("/labels", func() {
+					m.Post("", bind(api.CreateLabelOption{}), repo.CreateLabel)
+					m.Combo("/:id").
+						Patch(bind(api.EditLabelOption{}), repo.EditLabel).
 						Delete(repo.DeleteLabel)
+				}, reqRepoWriter())
+
+				m.Group("/milestones", func() {
+					m.Get("", repo.ListMilestones)
+					m.Get("/:id", repo.GetMilestone)
 				})
 				m.Group("/milestones", func() {
-					m.Combo("").Get(repo.ListMilestones).
-						Post(reqRepoWriter(), bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
-					m.Combo("/:id").Get(repo.GetMilestone).
-						Patch(reqRepoWriter(), bind(api.EditMilestoneOption{}), repo.EditMilestone).
-						Delete(reqRepoWriter(), repo.DeleteMilestone)
-				})
+					m.Post("", bind(api.CreateMilestoneOption{}), repo.CreateMilestone)
+					m.Combo("/:id").
+						Patch(bind(api.EditMilestoneOption{}), repo.EditMilestone).
+						Delete(repo.DeleteMilestone)
+				}, reqRepoWriter())
 
 				m.Patch("/issue-tracker", reqRepoWriter(), bind(api.EditIssueTrackerOption{}), repo.IssueTracker)
 				m.Post("/mirror-sync", reqRepoWriter(), repo.MirrorSync)
@@ -338,24 +355,25 @@ func RegisterRoutes(m *macaron.Macaron) {
 		m.Get("/issues", reqToken(), repo.ListUserIssues)
 
 		// Organizations
-		m.Combo("/user/orgs", reqToken()).Get(org.ListMyOrgs).Post(bind(api.CreateOrgOption{}), org.CreateMyOrg)
+		m.Combo("/user/orgs", reqToken()).
+			Get(org.ListMyOrgs).
+			Post(bind(api.CreateOrgOption{}), org.CreateMyOrg)
 
 		m.Get("/users/:username/orgs", org.ListUserOrgs)
 		m.Group("/orgs/:orgname", func() {
-			m.Combo("").Get(org.Get).Patch(bind(api.EditOrgOption{}), org.Edit)
-			m.Combo("/teams").Get(org.ListTeams)
+			m.Combo("").
+				Get(org.Get).
+				Patch(bind(api.EditOrgOption{}), org.Edit)
+			m.Get("/teams", org.ListTeams)
 		}, orgAssignment(true))
-
-		m.Any("/*", func(c *context.Context) {
-			c.NotFound()
-		})
 
 		m.Group("/admin", func() {
 			m.Group("/users", func() {
 				m.Post("", bind(api.CreateUserOption{}), admin.CreateUser)
 
 				m.Group("/:username", func() {
-					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
+					m.Combo("").
+						Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
 					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
 					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
@@ -368,12 +386,21 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Post("", orgAssignment(true), bind(api.CreateTeamOption{}), admin.CreateTeam)
 				})
 			})
+
 			m.Group("/teams", func() {
 				m.Group("/:teamid", func() {
-					m.Combo("/members/:username").Put(admin.AddTeamMember).Delete(admin.RemoveTeamMember)
-					m.Combo("/repos/:reponame").Put(admin.AddTeamRepository).Delete(admin.RemoveTeamRepository)
+					m.Combo("/members/:username").
+						Put(admin.AddTeamMember).
+						Delete(admin.RemoveTeamMember)
+					m.Combo("/repos/:reponame").
+						Put(admin.AddTeamRepository).
+						Delete(admin.RemoveTeamRepository)
 				}, orgAssignment(false, true))
 			})
 		}, reqAdmin())
+
+		m.Any("/*", func(c *context.Context) {
+			c.NotFound()
+		})
 	}, context.APIContexter())
 }
