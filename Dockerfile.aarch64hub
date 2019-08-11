@@ -1,4 +1,4 @@
-FROM arm64v8/alpine:3.8
+FROM arm64v8/alpine:latest
 
 ENV GOGS_CUSTOM /data/gogs
 ENV QEMU_EXECVE 1

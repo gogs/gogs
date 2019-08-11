@@ -1,4 +1,4 @@
-FROM aarch64/alpine:3.5
+FROM arm64v8/alpine:latest
 
 # Install system utils & Gogs runtime dependencies
 ADD https://github.com/tianon/gosu/releases/download/1.9/gosu-arm64 /usr/sbin/gosu
