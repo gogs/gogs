@@ -19,8 +19,8 @@ ln -sfn /data/gogs/data ./data
 # Backward Compatibility with Gogs Container v0.6.15
 ln -sfn /data/git /home/git
 
-# Only chown for the first time, '/data/gogs/conf/app.ini' must exist inside Docker after installation
-if ! test -f /data/gogs/conf/app.ini; then
+# Only chown for the first time, owner of '/data' is 'git' inside Docker after installation
+if [ $(stat -c '%U' /data) != 'git' ]; then
 	chown -R git:git /data /app/gogs ~git/
 fi
 chmod 0755 /data /data/gogs ~git/
