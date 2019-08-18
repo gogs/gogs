@@ -5,9 +5,10 @@
 package srcgraph
 
 import (
-	"github.com/Unknwon/com"
 	"net/http"
 	"time"
+
+	"github.com/Unknwon/com"
 
 	adapter "github.com/sourcegraph/external-service-adapter"
 	log "gopkg.in/clog.v1"
@@ -137,12 +138,12 @@ func (es externalServicer) listUserRepos(username string, ai adapter.AuthInfo, p
 }
 
 func userFromAuthInfo(ai adapter.AuthInfo) (*models.User, error) {
-	u, err := models.UserLogin(ai.Username, ai.Password, -1)
-	if err != nil && !errors.IsUserNotExist(err) {
-		return nil, err
-	}
+	if ai.Method == adapter.AuthBasic {
+		u, err := models.UserLogin(ai.Username, ai.Password, -1)
+		if err != nil {
+			return nil, err
+		}
 
-	if u != nil {
 		if u.IsEnabledTwoFactor() {
 			return nil, errors.New(
 				"User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password." +
@@ -151,7 +152,7 @@ func userFromAuthInfo(ai adapter.AuthInfo) (*models.User, error) {
 		return u, nil
 	}
 
-	t, err := models.GetAccessTokenBySHA(ai.Username)
+	t, err := models.GetAccessTokenBySHA(ai.Token)
 	if err != nil {
 		if models.IsErrAccessTokenEmpty(err) || models.IsErrAccessTokenNotExist(err) {
 			return nil, errors.UserNotExist{}
@@ -160,7 +161,7 @@ func userFromAuthInfo(ai adapter.AuthInfo) (*models.User, error) {
 	}
 	t.Updated = time.Now()
 
-	u, err = models.GetUserByID(t.UID)
+	u, err := models.GetUserByID(t.UID)
 	if err != nil {
 		return nil, err
 	}
