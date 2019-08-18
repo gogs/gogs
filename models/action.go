@@ -5,7 +5,6 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 	"regexp"
@@ -15,17 +14,20 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/git-module"
-	api "github.com/gogits/go-gogs-client"
+	"github.com/gogs/git-module"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 type ActionType int
 
+// Note: To maintain backward compatibility only append to the end of list
 const (
 	ACTION_CREATE_REPO         ActionType = iota + 1 // 1
 	ACTION_RENAME_REPO                               // 2
@@ -42,6 +44,13 @@ const (
 	ACTION_REOPEN_ISSUE                              // 13
 	ACTION_CLOSE_PULL_REQUEST                        // 14
 	ACTION_REOPEN_PULL_REQUEST                       // 15
+	ACTION_CREATE_BRANCH                             // 16
+	ACTION_DELETE_BRANCH                             // 17
+	ACTION_DELETE_TAG                                // 18
+	ACTION_FORK_REPO                                 // 19
+	ACTION_MIRROR_SYNC_PUSH                          // 20
+	ACTION_MIRROR_SYNC_CREATE                        // 21
+	ACTION_MIRROR_SYNC_DELETE                        // 22
 )
 
 var (
@@ -49,36 +58,31 @@ var (
 	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
 	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
 
-	IssueCloseKeywordsPat, IssueReopenKeywordsPat *regexp.Regexp
-	IssueReferenceKeywordsPat                     *regexp.Regexp
+	IssueCloseKeywordsPat     = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
+	IssueReopenKeywordsPat    = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
+	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
 )
 
 func assembleKeywordsPattern(words []string) string {
 	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
 }
 
-func init() {
-	IssueCloseKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
-	IssueReopenKeywordsPat = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
-	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
-}
-
 // Action represents user operation type and other information to repository,
 // it implemented interface base.Actioner so that can be used in template render.
 type Action struct {
-	ID           int64 `xorm:"pk autoincr"`
-	UserID       int64 // Receiver user id.
+	ID           int64
+	UserID       int64 // Receiver user ID
 	OpType       ActionType
-	ActUserID    int64  // Action user id.
-	ActUserName  string // Action user name.
-	ActAvatar    string `xorm:"-"`
-	RepoID       int64
+	ActUserID    int64  // Doer user ID
+	ActUserName  string // Doer user name
+	ActAvatar    string `xorm:"-" json:"-"`
+	RepoID       int64  `xorm:"INDEX"`
 	RepoUserName string
 	RepoName     string
 	RefName      string
 	IsPrivate    bool      `xorm:"NOT NULL DEFAULT false"`
 	Content      string    `xorm:"TEXT"`
-	Created      time.Time `xorm:"-"`
+	Created      time.Time `xorm:"-" json:"-"`
 	CreatedUnix  int64
 }
 
@@ -102,7 +106,7 @@ func (a *Action) GetActUserName() string {
 }
 
 func (a *Action) ShortActUserName() string {
-	return base.EllipsisString(a.ActUserName, 20)
+	return tool.EllipsisString(a.ActUserName, 20)
 }
 
 func (a *Action) GetRepoUserName() string {
@@ -110,7 +114,7 @@ func (a *Action) GetRepoUserName() string {
 }
 
 func (a *Action) ShortRepoUserName() string {
-	return base.EllipsisString(a.RepoUserName, 20)
+	return tool.EllipsisString(a.RepoUserName, 20)
 }
 
 func (a *Action) GetRepoName() string {
@@ -118,7 +122,7 @@ func (a *Action) GetRepoName() string {
 }
 
 func (a *Action) ShortRepoName() string {
-	return base.EllipsisString(a.RepoName, 33)
+	return tool.EllipsisString(a.RepoName, 33)
 }
 
 func (a *Action) GetRepoPath() string {
@@ -130,8 +134,8 @@ func (a *Action) ShortRepoPath() string {
 }
 
 func (a *Action) GetRepoLink() string {
-	if len(setting.AppSubUrl) > 0 {
-		return path.Join(setting.AppSubUrl, a.GetRepoPath())
+	if len(setting.AppSubURL) > 0 {
+		return path.Join(setting.AppSubURL, a.GetRepoPath())
 	}
 	return "/" + a.GetRepoPath()
 }
@@ -172,26 +176,26 @@ func (a *Action) GetIssueContent() string {
 	return issue.Content
 }
 
-func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
-	if err = notifyWatchers(e, &Action{
-		ActUserID:    u.ID,
-		ActUserName:  u.Name,
-		OpType:       ACTION_CREATE_REPO,
+func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
+	opType := ACTION_CREATE_REPO
+	if repo.IsFork {
+		opType = ACTION_FORK_REPO
+	}
+
+	return notifyWatchers(e, &Action{
+		ActUserID:    doer.ID,
+		ActUserName:  doer.Name,
+		OpType:       opType,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
-	}); err != nil {
-		return fmt.Errorf("notify watchers '%d/%d': %v", u.ID, repo.ID, err)
-	}
-
-	log.Trace("action.newRepoAction: %s/%s", u.Name, repo.Name)
-	return err
+	})
 }
 
 // NewRepoAction adds new action for creating repository.
-func NewRepoAction(u *User, repo *Repository) (err error) {
-	return newRepoAction(x, u, repo)
+func NewRepoAction(doer, owner *User, repo *Repository) (err error) {
+	return newRepoAction(x, doer, owner, repo)
 }
 
 func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
@@ -245,24 +249,34 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit {
+func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.PayloadCommit, error) {
 	commits := make([]*api.PayloadCommit, len(pc.Commits))
 	for i, commit := range pc.Commits {
 		authorUsername := ""
 		author, err := GetUserByEmail(commit.AuthorEmail)
 		if err == nil {
 			authorUsername = author.Name
+		} else if !errors.IsUserNotExist(err) {
+			return nil, fmt.Errorf("GetUserByEmail: %v", err)
 		}
+
 		committerUsername := ""
 		committer, err := GetUserByEmail(commit.CommitterEmail)
 		if err == nil {
-			// TODO: check errors other than email not found.
 			committerUsername = committer.Name
+		} else if !errors.IsUserNotExist(err) {
+			return nil, fmt.Errorf("GetUserByEmail: %v", err)
 		}
+
+		fileStatus, err := git.GetCommitFileStatus(repoPath, commit.Sha1)
+		if err != nil {
+			return nil, fmt.Errorf("FileStatus [commit_sha1: %s]: %v", commit.Sha1, err)
+		}
+
 		commits[i] = &api.PayloadCommit{
 			ID:      commit.Sha1,
 			Message: commit.Message,
-			URL:     fmt.Sprintf("%s/commit/%s", repoLink, commit.Sha1),
+			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
 			Author: &api.PayloadUser{
 				Name:     commit.AuthorName,
 				Email:    commit.AuthorEmail,
@@ -273,10 +287,13 @@ func (pc *PushCommits) ToApiPayloadCommits(repoLink string) []*api.PayloadCommit
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,
 			},
+			Added:     fileStatus.Added,
+			Removed:   fileStatus.Removed,
+			Modified:  fileStatus.Modified,
 			Timestamp: commit.Timestamp,
 		}
 	}
-	return commits
+	return commits, nil
 }
 
 // AvatarLink tries to match user in database with e-mail
@@ -286,8 +303,8 @@ func (push *PushCommits) AvatarLink(email string) string {
 	if !ok {
 		u, err := GetUserByEmail(email)
 		if err != nil {
-			push.avatars[email] = base.AvatarLink(email)
-			if !IsErrUserNotExist(err) {
+			push.avatars[email] = tool.AvatarLink(email)
+			if !errors.IsUserNotExist(err) {
 				log.Error(4, "GetUserByEmail: %v", err)
 			}
 		} else {
@@ -324,7 +341,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if IsErrIssueNotExist(err) {
+				if errors.IsIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -335,7 +352,12 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			}
 			refMarked[issue.ID] = true
 
-			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, c.Message)
+			msgLines := strings.Split(c.Message, "\n")
+			shortMsg := msgLines[0]
+			if len(msgLines) > 2 {
+				shortMsg += "..."
+			}
+			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, shortMsg)
 			if err = CreateRefComment(doer, repo, issue, message, c.Sha1); err != nil {
 				return err
 			}
@@ -355,14 +377,13 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			if ref[0] == '#' {
 				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
 			} else if !strings.Contains(ref, "/") {
-				// We don't support User#ID syntax yet
-				// return ErrNotImplemented
+				// FIXME: We don't support User#ID syntax yet
 				continue
 			}
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if IsErrIssueNotExist(err) {
+				if errors.IsIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -402,7 +423,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if IsErrIssueNotExist(err) {
+				if errors.IsIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -453,23 +474,24 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		return fmt.Errorf("UpdateRepository: %v", err)
 	}
 
-	isNewBranch := false
+	isNewRef := opts.OldCommitID == git.EMPTY_SHA
+	isDelRef := opts.NewCommitID == git.EMPTY_SHA
+
 	opType := ACTION_COMMIT_REPO
-	// Check it's tag push or branch.
+	// Check if it's tag push or branch.
 	if strings.HasPrefix(opts.RefFullName, git.TAG_PREFIX) {
 		opType = ACTION_PUSH_TAG
-		opts.Commits = &PushCommits{}
 	} else {
-		// TODO: detect branch deletion
 		// if not the first commit, set the compare URL.
-		if opts.OldCommitID == git.EMPTY_SHA {
-			isNewBranch = true
-		} else {
+		if !isNewRef && !isDelRef {
 			opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
 		}
 
-		if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
-			log.Error(2, "UpdateIssuesCommit: %v", err)
+		// Only update issues via commits when internal issue tracker is enabled
+		if repo.EnableIssues && !repo.EnableExternalTracker {
+			if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
+				log.Error(2, "UpdateIssuesCommit: %v", err)
+			}
 		}
 	}
 
@@ -477,45 +499,69 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		opts.Commits.Commits = opts.Commits.Commits[:setting.UI.FeedMaxCommitNum]
 	}
 
-	data, err := json.Marshal(opts.Commits)
+	data, err := jsoniter.Marshal(opts.Commits)
 	if err != nil {
 		return fmt.Errorf("Marshal: %v", err)
 	}
 
 	refName := git.RefEndName(opts.RefFullName)
-	if err = NotifyWatchers(&Action{
+	action := &Action{
 		ActUserID:    pusher.ID,
 		ActUserName:  pusher.Name,
-		OpType:       opType,
 		Content:      string(data),
 		RepoID:       repo.ID,
 		RepoUserName: repo.MustOwner().Name,
 		RepoName:     repo.Name,
 		RefName:      refName,
 		IsPrivate:    repo.IsPrivate,
-	}); err != nil {
-		return fmt.Errorf("NotifyWatchers: %v", err)
 	}
 
-	defer func() {
-		go HookQueue.Add(repo.ID)
-	}()
-
-	apiPusher := pusher.APIFormat()
 	apiRepo := repo.APIFormat(nil)
+	apiPusher := pusher.APIFormat()
 	switch opType {
 	case ACTION_COMMIT_REPO: // Push
-		compareURL := setting.AppUrl + opts.Commits.CompareURL
-		if isNewBranch {
+		if isDelRef {
+			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
+				Ref:        refName,
+				RefType:    "branch",
+				PusherType: api.PUSHER_TYPE_USER,
+				Repo:       apiRepo,
+				Sender:     apiPusher,
+			}); err != nil {
+				return fmt.Errorf("PrepareWebhooks.(delete branch): %v", err)
+			}
+
+			action.OpType = ACTION_DELETE_BRANCH
+			if err = NotifyWatchers(action); err != nil {
+				return fmt.Errorf("NotifyWatchers.(delete branch): %v", err)
+			}
+
+			// Delete branch doesn't have anything to push or compare
+			return nil
+		}
+
+		compareURL := setting.AppURL + opts.Commits.CompareURL
+		if isNewRef {
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-				Ref:     refName,
-				RefType: "branch",
-				Repo:    apiRepo,
-				Sender:  apiPusher,
+				Ref:           refName,
+				RefType:       "branch",
+				DefaultBranch: repo.DefaultBranch,
+				Repo:          apiRepo,
+				Sender:        apiPusher,
 			}); err != nil {
-				return fmt.Errorf("PrepareWebhooks (new branch): %v", err)
+				return fmt.Errorf("PrepareWebhooks.(new branch): %v", err)
 			}
+
+			action.OpType = ACTION_CREATE_BRANCH
+			if err = NotifyWatchers(action); err != nil {
+				return fmt.Errorf("NotifyWatchers.(new branch): %v", err)
+			}
+		}
+
+		commits, err := opts.Commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
+		if err != nil {
+			return fmt.Errorf("ToApiPayloadCommits: %v", err)
 		}
 
 		if err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
@@ -523,21 +569,53 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			Before:     opts.OldCommitID,
 			After:      opts.NewCommitID,
 			CompareURL: compareURL,
-			Commits:    opts.Commits.ToApiPayloadCommits(repo.HTMLURL()),
+			Commits:    commits,
 			Repo:       apiRepo,
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
 		}); err != nil {
-			return fmt.Errorf("PrepareWebhooks (new commit): %v", err)
+			return fmt.Errorf("PrepareWebhooks.(new commit): %v", err)
 		}
 
-	case ACTION_PUSH_TAG: // Create
-		return PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-			Ref:     refName,
-			RefType: "tag",
-			Repo:    apiRepo,
-			Sender:  apiPusher,
-		})
+		action.OpType = ACTION_COMMIT_REPO
+		if err = NotifyWatchers(action); err != nil {
+			return fmt.Errorf("NotifyWatchers.(new commit): %v", err)
+		}
+
+	case ACTION_PUSH_TAG: // Tag
+		if isDelRef {
+			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
+				Ref:        refName,
+				RefType:    "tag",
+				PusherType: api.PUSHER_TYPE_USER,
+				Repo:       apiRepo,
+				Sender:     apiPusher,
+			}); err != nil {
+				return fmt.Errorf("PrepareWebhooks.(delete tag): %v", err)
+			}
+
+			action.OpType = ACTION_DELETE_TAG
+			if err = NotifyWatchers(action); err != nil {
+				return fmt.Errorf("NotifyWatchers.(delete tag): %v", err)
+			}
+			return nil
+		}
+
+		if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+			Ref:           refName,
+			RefType:       "tag",
+			Sha:           opts.NewCommitID,
+			DefaultBranch: repo.DefaultBranch,
+			Repo:          apiRepo,
+			Sender:        apiPusher,
+		}); err != nil {
+			return fmt.Errorf("PrepareWebhooks.(new tag): %v", err)
+		}
+
+		action.OpType = ACTION_PUSH_TAG
+		if err = NotifyWatchers(action); err != nil {
+			return fmt.Errorf("NotifyWatchers.(new tag): %v", err)
+		}
 	}
 
 	return nil
@@ -591,12 +669,80 @@ func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error 
 	return mergePullRequestAction(x, actUser, repo, pull)
 }
 
+func mirrorSyncAction(opType ActionType, repo *Repository, refName string, data []byte) error {
+	return NotifyWatchers(&Action{
+		ActUserID:    repo.OwnerID,
+		ActUserName:  repo.MustOwner().Name,
+		OpType:       opType,
+		Content:      string(data),
+		RepoID:       repo.ID,
+		RepoUserName: repo.MustOwner().Name,
+		RepoName:     repo.Name,
+		RefName:      refName,
+		IsPrivate:    repo.IsPrivate,
+	})
+}
+
+type MirrorSyncPushActionOptions struct {
+	RefName     string
+	OldCommitID string
+	NewCommitID string
+	Commits     *PushCommits
+}
+
+// MirrorSyncPushAction adds new action for mirror synchronization of pushed commits.
+func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) error {
+	if len(opts.Commits.Commits) > setting.UI.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:setting.UI.FeedMaxCommitNum]
+	}
+
+	apiCommits, err := opts.Commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
+	if err != nil {
+		return fmt.Errorf("ToApiPayloadCommits: %v", err)
+	}
+
+	opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
+	apiPusher := repo.MustOwner().APIFormat()
+	if err := PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
+		Ref:        opts.RefName,
+		Before:     opts.OldCommitID,
+		After:      opts.NewCommitID,
+		CompareURL: setting.AppURL + opts.Commits.CompareURL,
+		Commits:    apiCommits,
+		Repo:       repo.APIFormat(nil),
+		Pusher:     apiPusher,
+		Sender:     apiPusher,
+	}); err != nil {
+		return fmt.Errorf("PrepareWebhooks: %v", err)
+	}
+
+	data, err := jsoniter.Marshal(opts.Commits)
+	if err != nil {
+		return err
+	}
+
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_PUSH, repo, opts.RefName, data)
+}
+
+// MirrorSyncCreateAction adds new action for mirror synchronization of new reference.
+func MirrorSyncCreateAction(repo *Repository, refName string) error {
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_CREATE, repo, refName, nil)
+}
+
+// MirrorSyncCreateAction adds new action for mirror synchronization of delete reference.
+func MirrorSyncDeleteAction(repo *Repository, refName string) error {
+	return mirrorSyncAction(ACTION_MIRROR_SYNC_DELETE, repo, refName, nil)
+}
+
 // GetFeeds returns action list of given user in given context.
 // actorID is the user who's requesting, ctxUserID is the user/org that is requested.
 // actorID can be -1 when isProfile is true or to skip the permission check.
-func GetFeeds(ctxUser *User, actorID, offset int64, isProfile bool) ([]*Action, error) {
-	actions := make([]*Action, 0, 20)
-	sess := x.Limit(20, int(offset)).Desc("id").Where("user_id = ?", ctxUser.ID)
+func GetFeeds(ctxUser *User, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+	actions := make([]*Action, 0, setting.UI.User.NewsFeedPagingNum)
+	sess := x.Limit(setting.UI.User.NewsFeedPagingNum).Where("user_id = ?", ctxUser.ID).Desc("id")
+	if afterID > 0 {
+		sess.And("id < ?", afterID)
+	}
 	if isProfile {
 		sess.And("is_private = ?", false).And("act_user_id = ?", ctxUser.ID)
 	} else if actorID != -1 && ctxUser.IsOrganization() {

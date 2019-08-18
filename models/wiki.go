@@ -15,10 +15,10 @@ import (
 
 	"github.com/Unknwon/com"
 
-	"github.com/gogits/git-module"
+	"github.com/gogs/git-module"
 
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/sync"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/sync"
 )
 
 var wikiWorkingPool = sync.NewExclusivePool()
@@ -33,7 +33,7 @@ func ToWikiPageURL(name string) string {
 // that are not belong to wiki repository.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(urlString)
-	return strings.Replace(strings.TrimLeft(name, "./"), "/", " ", -1)
+	return strings.Replace(strings.TrimLeft(path.Clean("/"+name), "/"), "/", " ", -1)
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.

@@ -1,0 +1,28 @@
+{{template "base/head" .}}
+<div class="user settings security two-factor">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.two_factor_enable_title"}}
+				</h4>
+				<div class="ui attached segment">
+					<div>{{.i18n.Tr "settings.two_factor_scan_qr"}}</div>
+					<img src="{{.QRCode}}" alt="{{.TwoFactorSecret}}">
+					<p>{{.i18n.Tr "settings.two_factor_or_enter_secret"}} <b>{{.TwoFactorSecret}}</b></p>
+					<form class="ui form" method="post">
+						{{.CSRFTokenHTML}}
+						<div class="required inline field">
+							<span>{{.i18n.Tr "settings.two_factor_then_enter_passcode"}}</span>
+							<input class="ui input" name="passcode" autocomplete="off" autofocus required>
+						</div>
+						<button class="ui green button">{{.i18n.Tr "settings.two_factor_verify"}}</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

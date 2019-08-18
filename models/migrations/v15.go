@@ -15,7 +15,7 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
@@ -67,6 +67,8 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 			wikiPath := repoBase + ".wiki.git"
 			log.Trace("[%04d]: %s", idx, repoPath)
 
+			// Note: we should not create hookDir here because update hook file should already exists inside this direcotry,
+			// if this directory does not exist, the current setup is not correct anyway.
 			hookDir := filepath.Join(repoPath, "hooks")
 			customHookDir := filepath.Join(repoPath, "custom_hooks")
 			wikiHookDir := filepath.Join(wikiPath, "hooks")

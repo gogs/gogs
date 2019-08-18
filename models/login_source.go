@@ -2,26 +2,33 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+// FIXME: Put this file into its own package and separate into different files based on login sources.
 package models
 
 import (
 	"crypto/tls"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/smtp"
 	"net/textproto"
+	"os"
+	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Unknwon/com"
 	"github.com/go-macaron/binding"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	log "gopkg.in/clog.v1"
+	"gopkg.in/ini.v1"
 
-	"github.com/gogits/gogs/modules/auth/ldap"
-	"github.com/gogits/gogs/modules/auth/pam"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/auth/github"
+	"github.com/gogs/gogs/pkg/auth/ldap"
+	"github.com/gogs/gogs/pkg/auth/pam"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 type LoginType int
@@ -34,13 +41,15 @@ const (
 	LOGIN_SMTP             // 3
 	LOGIN_PAM              // 4
 	LOGIN_DLDAP            // 5
+	LOGIN_GITHUB           // 6
 )
 
 var LoginNames = map[LoginType]string{
-	LOGIN_LDAP:  "LDAP (via BindDN)",
-	LOGIN_DLDAP: "LDAP (simple auth)", // Via direct bind
-	LOGIN_SMTP:  "SMTP",
-	LOGIN_PAM:   "PAM",
+	LOGIN_LDAP:   "LDAP (via BindDN)",
+	LOGIN_DLDAP:  "LDAP (simple auth)", // Via direct bind
+	LOGIN_SMTP:   "SMTP",
+	LOGIN_PAM:    "PAM",
+	LOGIN_GITHUB: "GitHub",
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
@@ -54,18 +63,19 @@ var (
 	_ core.Conversion = &LDAPConfig{}
 	_ core.Conversion = &SMTPConfig{}
 	_ core.Conversion = &PAMConfig{}
+	_ core.Conversion = &GitHubConfig{}
 )
 
 type LDAPConfig struct {
-	*ldap.Source
+	*ldap.Source `ini:"config"`
 }
 
 func (cfg *LDAPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg)
+	return jsoniter.Unmarshal(bs, &cfg)
 }
 
 func (cfg *LDAPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
@@ -77,42 +87,78 @@ type SMTPConfig struct {
 	Host           string
 	Port           int
 	AllowedDomains string `xorm:"TEXT"`
-	TLS            bool
+	TLS            bool   `ini:"tls"`
 	SkipVerify     bool
 }
 
 func (cfg *SMTPConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, cfg)
+	return jsoniter.Unmarshal(bs, cfg)
 }
 
 func (cfg *SMTPConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
 }
 
 type PAMConfig struct {
-	ServiceName string // pam service (e.g. system-auth)
+	ServiceName string // PAM service (e.g. system-auth)
 }
 
 func (cfg *PAMConfig) FromDB(bs []byte) error {
-	return json.Unmarshal(bs, &cfg)
+	return jsoniter.Unmarshal(bs, &cfg)
 }
 
 func (cfg *PAMConfig) ToDB() ([]byte, error) {
-	return json.Marshal(cfg)
+	return jsoniter.Marshal(cfg)
+}
+
+type GitHubConfig struct {
+	APIEndpoint string // GitHub service (e.g. https://api.github.com/)
+}
+
+func (cfg *GitHubConfig) FromDB(bs []byte) error {
+	return jsoniter.Unmarshal(bs, &cfg)
+}
+
+func (cfg *GitHubConfig) ToDB() ([]byte, error) {
+	return jsoniter.Marshal(cfg)
+}
+
+// AuthSourceFile contains information of an authentication source file.
+type AuthSourceFile struct {
+	abspath string
+	file    *ini.File
+}
+
+// SetGeneral sets new value to the given key in the general (default) section.
+func (f *AuthSourceFile) SetGeneral(name, value string) {
+	f.file.Section("").Key(name).SetValue(value)
+}
+
+// SetConfig sets new values to the "config" section.
+func (f *AuthSourceFile) SetConfig(cfg core.Conversion) error {
+	return f.file.Section("config").ReflectFrom(cfg)
+}
+
+// Save writes updates into file system.
+func (f *AuthSourceFile) Save() error {
+	return f.file.SaveTo(f.abspath)
 }
 
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
-	ID        int64 `xorm:"pk autoincr"`
+	ID        int64
 	Type      LoginType
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
+	IsDefault bool            `xorm:"DEFAULT false"`
 	Cfg       core.Conversion `xorm:"TEXT"`
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
+
+	LocalFile *AuthSourceFile `xorm:"-" json:"-"`
 }
 
 func (s *LoginSource) BeforeInsert() {
@@ -135,16 +181,18 @@ func Cell2Int64(val xorm.Cell) int64 {
 	return (*val).(int64)
 }
 
-func (source *LoginSource) BeforeSet(colName string, val xorm.Cell) {
+func (s *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	switch colName {
 	case "type":
 		switch LoginType(Cell2Int64(val)) {
 		case LOGIN_LDAP, LOGIN_DLDAP:
-			source.Cfg = new(LDAPConfig)
+			s.Cfg = new(LDAPConfig)
 		case LOGIN_SMTP:
-			source.Cfg = new(SMTPConfig)
+			s.Cfg = new(SMTPConfig)
 		case LOGIN_PAM:
-			source.Cfg = new(PAMConfig)
+			s.Cfg = new(PAMConfig)
+		case LOGIN_GITHUB:
+			s.Cfg = new(GitHubConfig)
 		default:
 			panic("unrecognized login source type: " + com.ToStr(*val))
 		}
@@ -160,65 +208,74 @@ func (s *LoginSource) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (source *LoginSource) TypeName() string {
-	return LoginNames[source.Type]
+func (s *LoginSource) TypeName() string {
+	return LoginNames[s.Type]
 }
 
-func (source *LoginSource) IsLDAP() bool {
-	return source.Type == LOGIN_LDAP
+func (s *LoginSource) IsLDAP() bool {
+	return s.Type == LOGIN_LDAP
 }
 
-func (source *LoginSource) IsDLDAP() bool {
-	return source.Type == LOGIN_DLDAP
+func (s *LoginSource) IsDLDAP() bool {
+	return s.Type == LOGIN_DLDAP
 }
 
-func (source *LoginSource) IsSMTP() bool {
-	return source.Type == LOGIN_SMTP
+func (s *LoginSource) IsSMTP() bool {
+	return s.Type == LOGIN_SMTP
 }
 
-func (source *LoginSource) IsPAM() bool {
-	return source.Type == LOGIN_PAM
+func (s *LoginSource) IsPAM() bool {
+	return s.Type == LOGIN_PAM
 }
 
-func (source *LoginSource) HasTLS() bool {
-	return ((source.IsLDAP() || source.IsDLDAP()) &&
-		source.LDAP().SecurityProtocol > ldap.SECURITY_PROTOCOL_UNENCRYPTED) ||
-		source.IsSMTP()
+func (s *LoginSource) IsGitHub() bool {
+	return s.Type == LOGIN_GITHUB
 }
 
-func (source *LoginSource) UseTLS() bool {
-	switch source.Type {
+func (s *LoginSource) HasTLS() bool {
+	return ((s.IsLDAP() || s.IsDLDAP()) &&
+		s.LDAP().SecurityProtocol > ldap.SECURITY_PROTOCOL_UNENCRYPTED) ||
+		s.IsSMTP()
+}
+
+func (s *LoginSource) UseTLS() bool {
+	switch s.Type {
 	case LOGIN_LDAP, LOGIN_DLDAP:
-		return source.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
+		return s.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
 	case LOGIN_SMTP:
-		return source.SMTP().TLS
+		return s.SMTP().TLS
 	}
 
 	return false
 }
 
-func (source *LoginSource) SkipVerify() bool {
-	switch source.Type {
+func (s *LoginSource) SkipVerify() bool {
+	switch s.Type {
 	case LOGIN_LDAP, LOGIN_DLDAP:
-		return source.LDAP().SkipVerify
+		return s.LDAP().SkipVerify
 	case LOGIN_SMTP:
-		return source.SMTP().SkipVerify
+		return s.SMTP().SkipVerify
 	}
 
 	return false
 }
 
-func (source *LoginSource) LDAP() *LDAPConfig {
-	return source.Cfg.(*LDAPConfig)
+func (s *LoginSource) LDAP() *LDAPConfig {
+	return s.Cfg.(*LDAPConfig)
 }
 
-func (source *LoginSource) SMTP() *SMTPConfig {
-	return source.Cfg.(*SMTPConfig)
+func (s *LoginSource) SMTP() *SMTPConfig {
+	return s.Cfg.(*SMTPConfig)
 }
 
-func (source *LoginSource) PAM() *PAMConfig {
-	return source.Cfg.(*PAMConfig)
+func (s *LoginSource) PAM() *PAMConfig {
+	return s.Cfg.(*PAMConfig)
 }
+
+func (s *LoginSource) GitHub() *GitHubConfig {
+	return s.Cfg.(*GitHubConfig)
+}
+
 func CreateLoginSource(source *LoginSource) error {
 	has, err := x.Get(&LoginSource{Name: source.Name})
 	if err != nil {
@@ -228,12 +285,31 @@ func CreateLoginSource(source *LoginSource) error {
 	}
 
 	_, err = x.Insert(source)
-	return err
+	if err != nil {
+		return err
+	} else if source.IsDefault {
+		return ResetNonDefaultLoginSources(source)
+	}
+	return nil
 }
 
+// LoginSources returns all login sources defined.
 func LoginSources() ([]*LoginSource, error) {
-	auths := make([]*LoginSource, 0, 5)
-	return auths, x.Find(&auths)
+	sources := make([]*LoginSource, 0, 2)
+	if err := x.Find(&sources); err != nil {
+		return nil, err
+	}
+
+	return append(sources, localLoginSources.List()...), nil
+}
+
+// ActivatedLoginSources returns login sources that are currently activated.
+func ActivatedLoginSources() ([]*LoginSource, error) {
+	sources := make([]*LoginSource, 0, 2)
+	if err := x.Where("is_actived = ?", true).Find(&sources); err != nil {
+		return nil, fmt.Errorf("find activated login sources: %v", err)
+	}
+	return append(sources, localLoginSources.ActivatedList()...), nil
 }
 
 // GetLoginSourceByID returns login source by given ID.
@@ -243,14 +319,53 @@ func GetLoginSourceByID(id int64) (*LoginSource, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrLoginSourceNotExist{id}
+		return localLoginSources.GetLoginSourceByID(id)
 	}
 	return source, nil
 }
 
-func UpdateSource(source *LoginSource) error {
-	_, err := x.Id(source.ID).AllCols().Update(source)
-	return err
+// ResetNonDefaultLoginSources clean other default source flag
+func ResetNonDefaultLoginSources(source *LoginSource) error {
+	// update changes to DB
+	if _, err := x.NotIn("id", []int64{source.ID}).Cols("is_default").Update(&LoginSource{IsDefault: false}); err != nil {
+		return err
+	}
+	// write changes to local authentications
+	for i := range localLoginSources.sources {
+		if localLoginSources.sources[i].LocalFile != nil && localLoginSources.sources[i].ID != source.ID {
+			localLoginSources.sources[i].LocalFile.SetGeneral("is_default", "false")
+			if err := localLoginSources.sources[i].LocalFile.SetConfig(source.Cfg); err != nil {
+				return fmt.Errorf("LocalFile.SetConfig: %v", err)
+			} else if err = localLoginSources.sources[i].LocalFile.Save(); err != nil {
+				return fmt.Errorf("LocalFile.Save: %v", err)
+			}
+		}
+	}
+	// flush memory so that web page can show the same behaviors
+	localLoginSources.UpdateLoginSource(source)
+	return nil
+}
+
+// UpdateLoginSource updates information of login source to database or local file.
+func UpdateLoginSource(source *LoginSource) error {
+	if source.LocalFile == nil {
+		if _, err := x.Id(source.ID).AllCols().Update(source); err != nil {
+			return err
+		} else {
+			return ResetNonDefaultLoginSources(source)
+		}
+
+	}
+
+	source.LocalFile.SetGeneral("name", source.Name)
+	source.LocalFile.SetGeneral("is_activated", com.ToStr(source.IsActived))
+	source.LocalFile.SetGeneral("is_default", com.ToStr(source.IsDefault))
+	if err := source.LocalFile.SetConfig(source.Cfg); err != nil {
+		return fmt.Errorf("LocalFile.SetConfig: %v", err)
+	} else if err = source.LocalFile.Save(); err != nil {
+		return fmt.Errorf("LocalFile.Save: %v", err)
+	}
+	return ResetNonDefaultLoginSources(source)
 }
 
 func DeleteSource(source *LoginSource) error {
@@ -264,10 +379,155 @@ func DeleteSource(source *LoginSource) error {
 	return err
 }
 
-// CountLoginSources returns number of login sources.
+// CountLoginSources returns total number of login sources.
 func CountLoginSources() int64 {
 	count, _ := x.Count(new(LoginSource))
-	return count
+	return count + int64(localLoginSources.Len())
+}
+
+// LocalLoginSources contains authentication sources configured and loaded from local files.
+// Calling its methods is thread-safe; otherwise, please maintain the mutex accordingly.
+type LocalLoginSources struct {
+	sync.RWMutex
+	sources []*LoginSource
+}
+
+func (s *LocalLoginSources) Len() int {
+	return len(s.sources)
+}
+
+// List returns full clone of login sources.
+func (s *LocalLoginSources) List() []*LoginSource {
+	s.RLock()
+	defer s.RUnlock()
+
+	list := make([]*LoginSource, s.Len())
+	for i := range s.sources {
+		list[i] = &LoginSource{}
+		*list[i] = *s.sources[i]
+	}
+	return list
+}
+
+// ActivatedList returns clone of activated login sources.
+func (s *LocalLoginSources) ActivatedList() []*LoginSource {
+	s.RLock()
+	defer s.RUnlock()
+
+	list := make([]*LoginSource, 0, 2)
+	for i := range s.sources {
+		if !s.sources[i].IsActived {
+			continue
+		}
+		source := &LoginSource{}
+		*source = *s.sources[i]
+		list = append(list, source)
+	}
+	return list
+}
+
+// GetLoginSourceByID returns a clone of login source by given ID.
+func (s *LocalLoginSources) GetLoginSourceByID(id int64) (*LoginSource, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	for i := range s.sources {
+		if s.sources[i].ID == id {
+			source := &LoginSource{}
+			*source = *s.sources[i]
+			return source, nil
+		}
+	}
+
+	return nil, errors.LoginSourceNotExist{id}
+}
+
+// UpdateLoginSource updates in-memory copy of the authentication source.
+func (s *LocalLoginSources) UpdateLoginSource(source *LoginSource) {
+	s.Lock()
+	defer s.Unlock()
+
+	source.Updated = time.Now()
+	for i := range s.sources {
+		if s.sources[i].ID == source.ID {
+			*s.sources[i] = *source
+		} else if source.IsDefault {
+			s.sources[i].IsDefault = false
+		}
+	}
+}
+
+var localLoginSources = &LocalLoginSources{}
+
+// LoadAuthSources loads authentication sources from local files
+// and converts them into login sources.
+func LoadAuthSources() {
+	authdPath := path.Join(setting.CustomPath, "conf/auth.d")
+	if !com.IsDir(authdPath) {
+		return
+	}
+
+	paths, err := com.GetFileListBySuffix(authdPath, ".conf")
+	if err != nil {
+		log.Fatal(2, "Failed to list authentication sources: %v", err)
+	}
+
+	localLoginSources.sources = make([]*LoginSource, 0, len(paths))
+
+	for _, fpath := range paths {
+		authSource, err := ini.Load(fpath)
+		if err != nil {
+			log.Fatal(2, "Failed to load authentication source: %v", err)
+		}
+		authSource.NameMapper = ini.TitleUnderscore
+
+		// Set general attributes
+		s := authSource.Section("")
+		loginSource := &LoginSource{
+			ID:        s.Key("id").MustInt64(),
+			Name:      s.Key("name").String(),
+			IsActived: s.Key("is_activated").MustBool(),
+			IsDefault: s.Key("is_default").MustBool(),
+			LocalFile: &AuthSourceFile{
+				abspath: fpath,
+				file:    authSource,
+			},
+		}
+
+		fi, err := os.Stat(fpath)
+		if err != nil {
+			log.Fatal(2, "Failed to load authentication source: %v", err)
+		}
+		loginSource.Updated = fi.ModTime()
+
+		// Parse authentication source file
+		authType := s.Key("type").String()
+		switch authType {
+		case "ldap_bind_dn":
+			loginSource.Type = LOGIN_LDAP
+			loginSource.Cfg = &LDAPConfig{}
+		case "ldap_simple_auth":
+			loginSource.Type = LOGIN_DLDAP
+			loginSource.Cfg = &LDAPConfig{}
+		case "smtp":
+			loginSource.Type = LOGIN_SMTP
+			loginSource.Cfg = &SMTPConfig{}
+		case "pam":
+			loginSource.Type = LOGIN_PAM
+			loginSource.Cfg = &PAMConfig{}
+		case "github":
+			loginSource.Type = LOGIN_GITHUB
+			loginSource.Cfg = &GitHubConfig{}
+		default:
+			log.Fatal(2, "Failed to load authentication source: unknown type '%s'", authType)
+		}
+
+		if err = authSource.Section("config").MapTo(loginSource.Cfg); err != nil {
+			log.Fatal(2, "Failed to parse authentication source 'config': %v", err)
+		}
+
+		localLoginSources.sources = append(localLoginSources.sources, loginSource)
+	}
 }
 
 // .____     ________      _____ __________
@@ -296,7 +556,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LOGIN_DLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
-		return nil, ErrUserNotExist{0, login}
+		return nil, errors.UserNotExist{0, login}
 	}
 
 	if !autoRegister {
@@ -327,6 +587,16 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 		IsActive:    true,
 		IsAdmin:     isAdmin,
 	}
+
+	ok, err := IsUserExist(0, user.Name)
+	if err != nil {
+		return user, err
+	}
+
+	if ok {
+		return user, UpdateUser(user)
+	}
+
 	return user, CreateUser(user)
 }
 
@@ -394,7 +664,7 @@ func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
 		}
 		return nil
 	}
-	return ErrUnsupportedLoginType
+	return errors.New("Unsupported SMTP authentication method")
 }
 
 // LoginViaSMTP queries if login/password is valid against the SMTP,
@@ -404,9 +674,9 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(login, "@")
 		if idx == -1 {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		} else if !com.IsSliceContainsStr(strings.Split(cfg.AllowedDomains, ","), login[idx+1:]) {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		}
 	}
 
@@ -416,7 +686,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	} else if cfg.Auth == SMTP_LOGIN {
 		auth = &smtpLoginAuth{login, password}
 	} else {
-		return nil, errors.New("Unsupported SMTP auth type")
+		return nil, errors.New("Unsupported SMTP authentication type")
 	}
 
 	if err := SMTPAuth(auth, cfg); err != nil {
@@ -425,7 +695,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		}
 		return nil, err
 	}
@@ -465,7 +735,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, ErrUserNotExist{0, login}
+			return nil, errors.UserNotExist{0, login}
 		}
 		return nil, err
 	}
@@ -487,9 +757,44 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	return user, CreateUser(user)
 }
 
-func ExternalUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
+//________.__  __     ___ ___      ___.
+///  _____/|__|/  |_  /   |   \ __ _\_ |__
+///   \  ___|  \   __\/    ~    \  |  \ __ \
+//\    \_\  \  ||  |  \    Y    /  |  / \_\ \
+//\______  /__||__|   \___|_  /|____/|___  /
+//\/                 \/           \/
+
+func LoginViaGitHub(user *User, login, password string, sourceID int64, cfg *GitHubConfig, autoRegister bool) (*User, error) {
+	fullname, email, url, location, err := github.Authenticate(cfg.APIEndpoint, login, password)
+	if err != nil {
+		if strings.Contains(err.Error(), "401") {
+			return nil, errors.UserNotExist{0, login}
+		}
+		return nil, err
+	}
+
+	if !autoRegister {
+		return user, nil
+	}
+	user = &User{
+		LowerName:   strings.ToLower(login),
+		Name:        login,
+		FullName:    fullname,
+		Email:       email,
+		Website:     url,
+		Passwd:      password,
+		LoginType:   LOGIN_GITHUB,
+		LoginSource: sourceID,
+		LoginName:   login,
+		IsActive:    true,
+		Location:    location,
+	}
+	return user, CreateUser(user)
+}
+
+func remoteUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
-		return nil, ErrLoginSourceNotActived
+		return nil, errors.LoginSourceNotActivated{source.ID}
 	}
 
 	switch source.Type {
@@ -499,13 +804,16 @@ func ExternalUserLogin(user *User, login, password string, source *LoginSource, 
 		return LoginViaSMTP(user, login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
 	case LOGIN_PAM:
 		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	case LOGIN_GITHUB:
+		return LoginViaGitHub(user, login, password, source.ID, source.Cfg.(*GitHubConfig), autoRegister)
 	}
 
-	return nil, ErrUnsupportedLoginType
+	return nil, errors.InvalidLoginSourceType{source.Type}
 }
 
-// UserSignIn validates user name and password.
-func UserSignIn(username, password string) (*User, error) {
+// UserLogin validates user name and password via given login source ID.
+// If the loginSourceID is negative, it will abort login process if user is not found.
+func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 	var user *User
 	if strings.Contains(username, "@") {
 		user = &User{Email: strings.ToLower(username)}
@@ -515,44 +823,44 @@ func UserSignIn(username, password string) (*User, error) {
 
 	hasUser, err := x.Get(user)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get user record: %v", err)
 	}
 
 	if hasUser {
-		switch user.LoginType {
-		case LOGIN_NOTYPE, LOGIN_PLAIN:
+		// Note: This check is unnecessary but to reduce user confusion at login page
+		// and make it more consistent at user's perspective.
+		if loginSourceID >= 0 && user.LoginSource != loginSourceID {
+			return nil, errors.LoginSourceMismatch{loginSourceID, user.LoginSource}
+		}
+
+		// Validate password hash fetched from database for local accounts
+		if user.LoginType == LOGIN_NOTYPE ||
+			user.LoginType == LOGIN_PLAIN {
 			if user.ValidatePassword(password) {
 				return user, nil
 			}
 
-			return nil, ErrUserNotExist{user.ID, user.Name}
-
-		default:
-			var source LoginSource
-			hasSource, err := x.Id(user.LoginSource).Get(&source)
-			if err != nil {
-				return nil, err
-			} else if !hasSource {
-				return nil, ErrLoginSourceNotExist{user.LoginSource}
-			}
-
-			return ExternalUserLogin(user, user.LoginName, password, &source, false)
+			return nil, errors.UserNotExist{user.ID, user.Name}
 		}
+
+		// Remote login to the login source the user is associated with
+		source, err := GetLoginSourceByID(user.LoginSource)
+		if err != nil {
+			return nil, err
+		}
+
+		return remoteUserLogin(user, user.LoginName, password, source, false)
 	}
 
-	sources := make([]*LoginSource, 0, 3)
-	if err = x.UseBool().Find(&sources, &LoginSource{IsActived: true}); err != nil {
+	// Non-local login source is always greater than 0
+	if loginSourceID <= 0 {
+		return nil, errors.UserNotExist{-1, username}
+	}
+
+	source, err := GetLoginSourceByID(loginSourceID)
+	if err != nil {
 		return nil, err
 	}
 
-	for _, source := range sources {
-		authUser, err := ExternalUserLogin(nil, username, password, source, true)
-		if err == nil {
-			return authUser, nil
-		}
-
-		log.Warn("Failed to login '%s' via '%s': %v", username, source.Name, err)
-	}
-
-	return nil, ErrUserNotExist{user.ID, user.Name}
+	return remoteUserLogin(nil, username, password, source, true)
 }

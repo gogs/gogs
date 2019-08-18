@@ -11,8 +11,8 @@
 				<div class="ui attached segment">
 					{{template "admin/base/search" .}}
 				</div>
-				<div class="ui attached table segment">
-					<table class="ui very basic striped table">
+				<div class="ui unstackable attached table segment">
+					<table class="ui unstackable very basic striped table">
 						<thead>
 							<tr>
 								<th>ID</th>
@@ -33,7 +33,7 @@
 									<td>{{.NumMembers}}</td>
 									<td>{{.NumRepos}}</td>
 									<td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
-									<td><a href="{{AppSubUrl}}/org/{{.Name}}/settings"><i class="fa fa-pencil-square-o"></i></a></td>
+									<td><a href="{{AppSubURL}}/org/{{.Name}}/settings"><i class="fa fa-pencil-square-o"></i></a></td>
 								</tr>
 							{{end}}
 						</tbody>

@@ -1,11 +1,11 @@
 version: "{build}"
 skip_tags: true
-clone_folder: c:\gopath\src\github.com\gogits\gogs
+clone_folder: c:\gopath\src\github.com\gogs\gogs
 clone_depth: 1
 
 environment:
   GOPATH: c:\gopath
-  GOVERSION: 1.7
+  GOVERSION: 1.11
 
 build: false
 deploy: false

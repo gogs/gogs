@@ -15,11 +15,11 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/urfave/cli"
 
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 var (
-	CmdImport = cli.Command{
+	Import = cli.Command{
 		Name:  "import",
 		Usage: "Import portable data as local Gogs data",
 		Description: `Allow user import data from other Gogs installations to local instance

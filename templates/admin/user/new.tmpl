@@ -10,7 +10,7 @@
 				</h4>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<!-- Types and name -->
 						<div class="inline required field {{if .Err_LoginType}}error{{end}}">
 							<label>{{.i18n.Tr "admin.users.auth_source"}}</label>

@@ -12,15 +12,15 @@
 				<div class="ui attached segment">
 					<p>{{.i18n.Tr "repo.settings.githook_edit_desc"}}</p>
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						{{with .Hook}}
 							<div class="inline field">
 								<label>{{$.i18n.Tr "repo.settings.githook_name"}}</label>
-								<span>{{.Name}}</span>
+								<span><code>{{.Name}}</code></span>
 							</div>
 							<div class="field">
 								<label for="content">{{$.i18n.Tr "repo.settings.githook_content"}}</label>
-								<textarea id="content" name="content" rows="20" wrap="off" autofocus>{{if .IsActive}}{{.Content}}{{else}}{{.Sample}}{{end}}</textarea>
+								<textarea id="content" name="content" wrap="off" autofocus>{{if .IsActive}}{{.Content}}{{else}}{{.Sample}}{{end}}</textarea>
 							</div>
 
 							<div class="inline field">
@@ -33,4 +33,12 @@
 		</div>
 	</div>
 </div>
+
+<script>
+	CodeMirror.autoLoadMode(CodeMirror.fromTextArea($('#content')[0], {
+		lineNumbers: true,
+		mode: 'shell'
+	}), "shell");
+</script>
+
 {{template "base/footer" .}}

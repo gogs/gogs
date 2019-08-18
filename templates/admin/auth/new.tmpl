@@ -10,7 +10,7 @@
 				</h4>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<!-- Types and name -->
 						<div class="inline required field {{if .Err_Type}}error{{end}}">
 							<label>{{.i18n.Tr "admin.auths.auth_type"}}</label>
@@ -56,8 +56,8 @@
 							<div class="ldap field {{if not (eq .type 2)}}hide{{end}}">
 								<label for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
 								<input id="bind_dn" name="bind_dn" value="{{.bind_dn}}" placeholder="e.g. cn=Search,dc=mydomain,dc=com">
+								<p class="help text blue">{{.i18n.Tr "admin.auths.bind_dn_helper"}}</p>
 							</div>
-							<input class="fake" type="password">
 							<div class="ldap field {{if not (eq .type 2)}}hide{{end}}">
 								<label for="bind_password">{{.i18n.Tr "admin.auths.bind_password"}}</label>
 								<input id="bind_password" name="bind_password" type="password" value="{{.bind_password}}">
@@ -94,6 +94,31 @@
 							<div class="required field">
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{.attribute_mail}}" placeholder="e.g. mail">
+							</div>
+							
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "admin.auths.verify_group_membership"}}</strong></label>
+									<input class="enable-system" type="checkbox" name="group_enabled" data-target="#group_box" {{if .group_enabled}}checked{{end}}>
+								</div>
+							</div>
+							<div class="ui segment field {{if not .group_enabled}}disabled{{end}}" id="group_box">
+								<div class="field">
+									<label for="group_dn">{{.i18n.Tr "admin.auths.group_search_base_dn"}}</label>
+									<input id="group_dn" name="group_dn" value="{{.group_dn}}" placeholder="e.g. ou=group,dc=mydomain,dc=com">
+								</div>
+								<div class="field">
+									<label for="group_filter">{{.i18n.Tr "admin.auths.group_filter"}}</label>
+									<input id="group_filter" name="group_filter" value="{{.group_filter}}" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
+								</div>
+								<div class="field">
+									<label for="group_member_uid">{{.i18n.Tr "admin.auths.group_attribute_contain_user_list"}}</label>
+									<input id="group_member_uid" name="group_member_uid" value="{{.group_member_uid}}" placeholder="e.g. memberUid">
+								</div>
+								<div class="field">
+									<label for="user_uid">{{.i18n.Tr "admin.auths.user_attribute_listed_in_group"}}</label>
+									<input id="user_uid" name="user_uid" value="{{.user_uid}}" placeholder="e.g. uid">
+								</div>
 							</div>
 						</div>
 
@@ -133,6 +158,12 @@
 							<input id="pam_service_name" name="pam_service_name" value="{{.pam_service_name}}" />
 						</div>
 
+						<!-- GitHub -->
+						<div class="github required field {{if not (eq .type 6)}}hide{{end}}">
+							<label for="github_api_endpoint">{{.i18n.Tr "admin.auths.github_api_endpoint"}}</label>
+							<input id="github_api_endpoint" name="github_api_endpoint" value="{{.github_api_endpoint}}" placeholder="e.g. https://api.github.com/" />
+						</div>
+
 						<div class="ldap field">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.attributes_in_bind"}}</strong></label>
@@ -151,10 +182,18 @@
 								<input name="skip_verify" type="checkbox" {{if .skip_verify}}checked{{end}}>
 							</div>
 						</div>
+
 						<div class="inline field">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.activated"}}</strong></label>
 								<input name="is_active" type="checkbox" {{if .is_active}}checked{{end}}>
+							</div>
+						</div>
+            
+						<div class="inline field">
+							<div class="ui checkbox">
+								<label><strong>{{.i18n.Tr "admin.auths.default_auth"}}</strong></label>
+								<input name="is_default" type="checkbox" {{if .is_default}}checked{{end}}>
 							</div>
 						</div>
 
@@ -162,14 +201,6 @@
 							<button class="ui green button">{{.i18n.Tr "admin.auths.new"}}</button>
 						</div>
 					</form>
-				</div>
-
-				<h4 class="ui top attached header">
-					{{.i18n.Tr "admin.auths.tips"}}
-				</h4>
-				<div class="ui attached segment">
-					<h5>GMail Settings:</h5>
-					<p>Host: smtp.gmail.com, Port: 587, Enable TLS Encryption: true</p>
 				</div>
 			</div>
 		</div>

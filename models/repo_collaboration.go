@@ -7,12 +7,14 @@ package models
 import (
 	"fmt"
 
-	api "github.com/gogits/go-gogs-client"
+	log "gopkg.in/clog.v1"
+
+	api "github.com/gogs/go-gogs-client"
 )
 
 // Collaboration represent the relation between an individual and a repository.
 type Collaboration struct {
-	ID     int64      `xorm:"pk autoincr"`
+	ID     int64
 	RepoID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	UserID int64      `xorm:"UNIQUE(s) INDEX NOT NULL"`
 	Mode   AccessMode `xorm:"DEFAULT 2 NOT NULL"`
@@ -31,14 +33,22 @@ func (c *Collaboration) ModeI18nKey() string {
 	}
 }
 
-//IsCollaborator returns true if the user is a collaborator
-func (repo *Repository) IsCollaborator(uid int64) (bool, error) {
+// IsCollaborator returns true if the user is a collaborator of the repository.
+func IsCollaborator(repoID, userID int64) bool {
 	collaboration := &Collaboration{
-		RepoID: repo.ID,
-		UserID: uid,
+		RepoID: repoID,
+		UserID: userID,
 	}
+	has, err := x.Get(collaboration)
+	if err != nil {
+		log.Error(2, "get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		return false
+	}
+	return has
+}
 
-	return x.Get(collaboration)
+func (repo *Repository) IsCollaborator(userID int64) bool {
+	return IsCollaborator(repo.ID, userID)
 }
 
 // AddCollaborator adds new collaboration to a repository with default access mode.
@@ -57,22 +67,15 @@ func (repo *Repository) AddCollaborator(u *User) error {
 	collaboration.Mode = ACCESS_MODE_WRITE
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.InsertOne(collaboration); err != nil {
+	if _, err = sess.Insert(collaboration); err != nil {
 		return err
-	}
-
-	if repo.Owner.IsOrganization() {
-		err = repo.recalculateTeamAccesses(sess, 0)
-	} else {
-		err = repo.recalculateAccesses(sess)
-	}
-	if err != nil {
-		return fmt.Errorf("recalculateAccesses 'team=%v': %v", repo.Owner.IsOrganization(), err)
+	} else if err = repo.recalculateAccesses(sess); err != nil {
+		return fmt.Errorf("recalculateAccesses [repo_id: %v]: %v", repo.ID, err)
 	}
 
 	return sess.Commit()
@@ -148,17 +151,30 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 	}
 	collaboration.Mode = mode
 
+	// If it's an organizational repository, merge with team access level for highest permission
+	if repo.Owner.IsOrganization() {
+		teams, err := GetUserTeams(repo.OwnerID, userID)
+		if err != nil {
+			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", repo.OwnerID, userID, err)
+		}
+		for i := range teams {
+			if mode < teams[i].Authorize {
+				mode = teams[i].Authorize
+			}
+		}
+	}
+
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Id(collaboration.ID).AllCols().Update(collaboration); err != nil {
+	if _, err = sess.ID(collaboration.ID).AllCols().Update(collaboration); err != nil {
 		return fmt.Errorf("update collaboration: %v", err)
 	}
 
-	access := Access{
+	access := &Access{
 		UserID: userID,
 		RepoID: repo.ID,
 	}
@@ -173,21 +189,25 @@ func (repo *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessM
 		_, err = sess.Insert(access)
 	}
 	if err != nil {
-		return fmt.Errorf("update access table: %v", err)
+		return fmt.Errorf("update/insert access table: %v", err)
 	}
 
 	return sess.Commit()
 }
 
 // DeleteCollaboration removes collaboration relation between the user and repository.
-func (repo *Repository) DeleteCollaboration(uid int64) (err error) {
+func DeleteCollaboration(repo *Repository, userID int64) (err error) {
+	if !IsCollaborator(repo.ID, userID) {
+		return nil
+	}
+
 	collaboration := &Collaboration{
 		RepoID: repo.ID,
-		UserID: uid,
+		UserID: userID,
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -199,4 +219,8 @@ func (repo *Repository) DeleteCollaboration(uid int64) (err error) {
 	}
 
 	return sess.Commit()
+}
+
+func (repo *Repository) DeleteCollaboration(userID int64) error {
+	return DeleteCollaboration(repo, userID)
 }

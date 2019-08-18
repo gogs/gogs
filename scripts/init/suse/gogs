@@ -9,6 +9,8 @@
 # Provides:          gogs
 # Required-Start:    $remote_fs
 # Required-Stop:     $remote_fs
+# Should-Start:      mysql postgresql
+# Should-Stop:       mysql postgresql
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: Start gogs at boot time.

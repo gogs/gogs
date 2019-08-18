@@ -54,20 +54,6 @@ func (err ErrUserAlreadyExist) Error() string {
 	return fmt.Sprintf("user already exists [name: %s]", err.Name)
 }
 
-type ErrUserNotExist struct {
-	UID  int64
-	Name string
-}
-
-func IsErrUserNotExist(err error) bool {
-	_, ok := err.(ErrUserNotExist)
-	return ok
-}
-
-func (err ErrUserNotExist) Error() string {
-	return fmt.Sprintf("user does not exist [uid: %d, name: %s]", err.UID, err.Name)
-}
-
 type ErrEmailAlreadyUsed struct {
 	Email string
 }
@@ -105,19 +91,6 @@ func IsErrUserHasOrgs(err error) bool {
 
 func (err ErrUserHasOrgs) Error() string {
 	return fmt.Sprintf("user still has membership of organizations [uid: %d]", err.UID)
-}
-
-type ErrReachLimitOfRepo struct {
-	Limit int
-}
-
-func IsErrReachLimitOfRepo(err error) bool {
-	_, ok := err.(ErrReachLimitOfRepo)
-	return ok
-}
-
-func (err ErrReachLimitOfRepo) Error() string {
-	return fmt.Sprintf("user has reached maximum limit of repositories [limit: %d]", err.Limit)
 }
 
 //  __      __.__ __   .__
@@ -319,21 +292,6 @@ func (err ErrLastOrgOwner) Error() string {
 //  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
 //         \/     \/|__|              \/                       \/
 
-type ErrRepoNotExist struct {
-	ID   int64
-	UID  int64
-	Name string
-}
-
-func IsErrRepoNotExist(err error) bool {
-	_, ok := err.(ErrRepoNotExist)
-	return ok
-}
-
-func (err ErrRepoNotExist) Error() string {
-	return fmt.Sprintf("repository does not exist [id: %d, uid: %d, name: %s]", err.ID, err.UID, err.Name)
-}
-
 type ErrRepoAlreadyExist struct {
 	Uname string
 	Name  string
@@ -428,68 +386,6 @@ func IsErrRepoFileAlreadyExist(err error) bool {
 
 func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
-}
-
-// __________                             .__
-// \______   \____________    ____   ____ |  |__
-//  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
-//  |    |   \ |  | \// __ \|   |  \  \___|   Y  \
-//  |______  / |__|  (____  /___|  /\___  >___|  /
-//         \/             \/     \/     \/     \/
-
-type ErrBranchNotExist struct {
-	Name string
-}
-
-func IsErrBranchNotExist(err error) bool {
-	_, ok := err.(ErrBranchNotExist)
-	return ok
-}
-
-func (err ErrBranchNotExist) Error() string {
-	return fmt.Sprintf("branch does not exist [name: %s]", err.Name)
-}
-
-//  __      __      ___.   .__                   __
-// /  \    /  \ ____\_ |__ |  |__   ____   ____ |  | __
-// \   \/\/   // __ \| __ \|  |  \ /  _ \ /  _ \|  |/ /
-//  \        /\  ___/| \_\ \   Y  (  <_> |  <_> )    <
-//   \__/\  /  \___  >___  /___|  /\____/ \____/|__|_ \
-//        \/       \/    \/     \/                   \/
-
-type ErrWebhookNotExist struct {
-	ID int64
-}
-
-func IsErrWebhookNotExist(err error) bool {
-	_, ok := err.(ErrWebhookNotExist)
-	return ok
-}
-
-func (err ErrWebhookNotExist) Error() string {
-	return fmt.Sprintf("webhook does not exist [id: %d]", err.ID)
-}
-
-// .___
-// |   | ______ ________ __   ____
-// |   |/  ___//  ___/  |  \_/ __ \
-// |   |\___ \ \___ \|  |  /\  ___/
-// |___/____  >____  >____/  \___  >
-//          \/     \/            \/
-
-type ErrIssueNotExist struct {
-	ID     int64
-	RepoID int64
-	Index  int64
-}
-
-func IsErrIssueNotExist(err error) bool {
-	_, ok := err.(ErrIssueNotExist)
-	return ok
-}
-
-func (err ErrIssueNotExist) Error() string {
-	return fmt.Sprintf("issue does not exist [id: %d, repo_id: %d, index: %d]", err.ID, err.RepoID, err.Index)
 }
 
 // __________      .__  .__ __________                                     __
@@ -608,19 +504,6 @@ func (err ErrAttachmentNotExist) Error() string {
 // |    |__(  <_> ) /_/  >  |   |  \  /        (  <_> )  |  /|  | \/\  \__\  ___/
 // |_______ \____/\___  /|__|___|  / /_______  /\____/|____/ |__|    \___  >___  >
 //         \/    /_____/         \/          \/                          \/    \/
-
-type ErrLoginSourceNotExist struct {
-	ID int64
-}
-
-func IsErrLoginSourceNotExist(err error) bool {
-	_, ok := err.(ErrLoginSourceNotExist)
-	return ok
-}
-
-func (err ErrLoginSourceNotExist) Error() string {
-	return fmt.Sprintf("login source does not exist [id: %d]", err.ID)
-}
 
 type ErrLoginSourceAlreadyExist struct {
 	Name string

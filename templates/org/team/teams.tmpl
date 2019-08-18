@@ -16,10 +16,10 @@
 					<div class="ui top attached header">
 						<a class="text black" href="{{$.OrgLink}}/teams/{{.LowerName}}"><strong>{{.Name}}</strong></a>
 						<div class="ui right">
-							{{if .IsMember $.SignedUser.ID}}
-								<a class="ui red small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave?uid={{$.SignedUser.ID}}">{{$.i18n.Tr "org.teams.leave"}}</a>
+							{{if .IsMember $.LoggedUser.ID}}
+								<a class="ui red small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/leave?uid={{$.LoggedUser.ID}}">{{$.i18n.Tr "org.teams.leave"}}</a>
 							{{else if $.IsOrganizationOwner}}
-								<a class="ui blue small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/join?uid={{$.SignedUser.ID}}">{{$.i18n.Tr "org.teams.join"}}</a>
+								<a class="ui blue small button" href="{{$.OrgLink}}/teams/{{.LowerName}}/action/join?uid={{$.LoggedUser.ID}}">{{$.i18n.Tr "org.teams.join"}}</a>
 							{{end}}
 						</div>
 					</div>

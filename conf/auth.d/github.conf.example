@@ -1,0 +1,10 @@
+# This is an example of GitHub authentication
+#
+id           = 105
+type         = github
+name         = GitHub
+is_activated = true
+
+[config]
+api_endpoint = https://api.github.com/
+

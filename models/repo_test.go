@@ -1,11 +1,12 @@
 package models_test
 
 import (
-	. "github.com/gogits/gogs/models"
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 
-	"github.com/gogits/gogs/modules/markdown"
+	. "github.com/smartystreets/goconvey/convey"
+
+	. "github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/pkg/markup"
 )
 
 func TestRepo(t *testing.T) {
@@ -24,7 +25,7 @@ func TestRepo(t *testing.T) {
 			Convey("It should be nil even if other settings are present", func() {
 				repo.EnableExternalTracker = false
 				repo.ExternalTrackerFormat = "http://someurl.com/{user}/{repo}/{issue}"
-				repo.ExternalTrackerStyle = markdown.ISSUE_NAME_STYLE_NUMERIC
+				repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_NUMERIC
 				So(repo.ComposeMetas(), ShouldEqual, map[string]string(nil))
 			})
 		})
@@ -33,17 +34,17 @@ func TestRepo(t *testing.T) {
 			repo.EnableExternalTracker = true
 			Convey("It should default to numeric issue style", func() {
 				metas := repo.ComposeMetas()
-				So(metas["style"], ShouldEqual, markdown.ISSUE_NAME_STYLE_NUMERIC)
+				So(metas["style"], ShouldEqual, markup.ISSUE_NAME_STYLE_NUMERIC)
 			})
 			Convey("It should pass through numeric issue style setting", func() {
-				repo.ExternalTrackerStyle = markdown.ISSUE_NAME_STYLE_NUMERIC
+				repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_NUMERIC
 				metas := repo.ComposeMetas()
-				So(metas["style"], ShouldEqual, markdown.ISSUE_NAME_STYLE_NUMERIC)
+				So(metas["style"], ShouldEqual, markup.ISSUE_NAME_STYLE_NUMERIC)
 			})
 			Convey("It should pass through alphanumeric issue style setting", func() {
-				repo.ExternalTrackerStyle = markdown.ISSUE_NAME_STYLE_ALPHANUMERIC
+				repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_ALPHANUMERIC
 				metas := repo.ComposeMetas()
-				So(metas["style"], ShouldEqual, markdown.ISSUE_NAME_STYLE_ALPHANUMERIC)
+				So(metas["style"], ShouldEqual, markup.ISSUE_NAME_STYLE_ALPHANUMERIC)
 			})
 			Convey("It should contain the user name", func() {
 				metas := repo.ComposeMetas()

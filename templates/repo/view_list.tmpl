@@ -1,16 +1,16 @@
-<table id="repo-files-table" class="ui fixed single line table">
+<table id="repo-files-table" class="ui unstackable fixed single line table">
 	<thead>
 		<tr>
 			<th class="four wide">
 				{{if .LatestCommitUser}}
 					<img class="ui avatar image img-12" src="{{.LatestCommitUser.RelAvatarLink}}" />
-					<a href="{{AppSubUrl}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
+					<a href="{{AppSubURL}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
 				{{else}}
 					<img class="ui avatar image img-12" src="{{AvatarLink .LatestCommit.Author.Email}}" />
 					<strong>{{.LatestCommit.Author.Name}}</strong>
 				{{end}}
-				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LatestCommit.ID}}" rel="nofollow">{{ShortSha .LatestCommit.ID.String}}</a>
-				<span class="grey has-emoji">{{RenderCommitMessage false .LatestCommit.Summary .RepoLink $.Repository.ComposeMetas}}</span>
+				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LatestCommit.ID}}" rel="nofollow">{{ShortSHA1 .LatestCommit.ID.String}}</a>
+				<span class="grey has-emoji">{{RenderCommitMessage false .LatestCommit.Summary .RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
 			</th>
 			<th class="nine wide">
 			</th>
@@ -30,22 +30,26 @@
 				{{if $entry.IsSubModule}}
 					<td>
 						<span class="octicon octicon-file-submodule"></span>
-						{{$refURL := $commit.RefURL AppUrl $.BranchLink}}
+						{{$refURL := $commit.RefURL AppURL $.BranchLink}}
 						{{if $refURL}}
-							<a href="{{$refURL}}">{{$entry.Name}}</a> @ <a href="{{$refURL}}/commit/{{$commit.RefID}}">{{ShortSha $commit.RefID}}</a>
+							<a href="{{$refURL}}">{{$entry.Name}}</a> @ <a href="{{$refURL}}/commit/{{$commit.RefID}}">{{ShortSHA1 $commit.RefID}}</a>
 						{{else}}
-							{{$entry.Name}} @ {{ShortSha $commit.RefID}}
+							{{$entry.Name}} @ {{ShortSHA1 $commit.RefID}}
 						{{end}}
 					</td>
 				{{else}}
 					<td class="name">
-						<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+						{{if $entry.IsLink}}
+							<span class="octicon octicon-file-symlink-file"></span>
+						{{else}}
+							<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+						{{end}}
 						<a href="{{EscapePound $.TreeLink}}/{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
 					</td>
 				{{end}}
 				<td class="message collapsing has-emoji">
-					<a rel="nofollow" class="ui sha label" href="{{$.RepoLink}}/commit/{{$commit.ID}}">{{ShortSha $commit.ID.String}}</a>
-					{{RenderCommitMessage false $commit.Summary $.RepoLink $.Repository.ComposeMetas}}
+					<a rel="nofollow" class="ui sha label" href="{{$.RepoLink}}/commit/{{$commit.ID}}">{{ShortSHA1 $commit.ID.String}}</a>
+					{{RenderCommitMessage false $commit.Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}
 				</td>
 				<td class="text grey right age">{{TimeSince $commit.Committer.When $.Lang}}</td>
 			</tr>

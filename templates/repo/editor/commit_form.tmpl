@@ -1,5 +1,5 @@
 <div class="commit-form-wrapper">
-	<img width="48" height="48" class="ui image commit-avatar" src="{{.SignedUser.RelAvatarLink}}">
+	<img width="48" height="48" class="ui image commit-avatar" src="{{.LoggedUser.RelAvatarLink}}">
 	<div class="commit-form">
 		<h3>{{.i18n.Tr "repo.editor.commit_changes"}}</h3>
 		<div class="field">
@@ -14,7 +14,8 @@
 					<input type="radio" class="js-quick-pull-choice-option" name="commit_choice" value="direct" {{if eq .commit_choice "direct"}}checked{{end}}>
 					<label>
 						<i class="octicon octicon-git-commit" height="16" width="14"></i>
-						{{.i18n.Tr "repo.editor.commit_directly_to_this_branch" .BranchName | Safe}}
+						{{$branchName := .BranchName | Str2HTML}}
+						{{.i18n.Tr "repo.editor.commit_directly_to_this_branch" $branchName | Safe}}
 					</label>
 				</div>
 			</div>

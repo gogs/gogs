@@ -5,12 +5,12 @@
 package migrations
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 )
 
 func ldapUseSSLToSecurityProtocol(x *xorm.Engine) error {
@@ -23,24 +23,24 @@ func ldapUseSSLToSecurityProtocol(x *xorm.Engine) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	for _, result := range results {
 		cfg := map[string]interface{}{}
-		if err = json.Unmarshal(result["cfg"], &cfg); err != nil {
-			return fmt.Errorf("decode JSON config: %v", err)
+		if err = jsoniter.Unmarshal(result["cfg"], &cfg); err != nil {
+			return fmt.Errorf("unmarshal JSON config: %v", err)
 		}
 		if com.ToStr(cfg["UseSSL"]) == "true" {
 			cfg["SecurityProtocol"] = 1 // LDAPS
 		}
 		delete(cfg, "UseSSL")
 
-		data, err := json.Marshal(&cfg)
+		data, err := jsoniter.Marshal(&cfg)
 		if err != nil {
-			return fmt.Errorf("encode JSON config: %v", err)
+			return fmt.Errorf("marshal JSON config: %v", err)
 		}
 
 		if _, err = sess.Exec("UPDATE `login_source` SET `cfg`=? WHERE `id`=?",

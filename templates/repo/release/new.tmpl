@@ -13,7 +13,7 @@
 		</h2>
 		{{template "base/alert" .}}
 		<form class="ui form grid" action="{{.Link}}" method="post">
-			{{.CsrfTokenHtml}}
+			{{.CSRFTokenHTML}}
 			<div class="ui seven wide column target">
 				<div class="inline field {{if .Err_TagName}}error{{end}}">
 					{{if .PageIsEditRelease}}
@@ -48,42 +48,61 @@
 					<label>{{.i18n.Tr "repo.release.content"}}</label>
 					<textarea name="content">{{.content}}</textarea>
 				</div>
+				<div class="field">
+					{{if .attachments}}
+						<table class="ui table">
+							<tbody>
+								{{range .attachments}}
+									<tr>
+										<td>
+											<a target="_blank" rel="noopener noreferrer" href="{{AppSubURL}}/attachments/{{.UUID}}" rel="nofollow">{{.Name}}</a>
+											<a class="ui text red right delete-attachment-button" href="#"><i class="octicon octicon-x" data-uuid="{{.UUID}}"></i></a>
+											<input name="files" type="hidden" value="{{.UUID}}">
+										</td>
+									</tr>
+								{{end}}
+							</tbody>
+						</table>
+					{{end}}
+				</div>
+				{{if .IsAttachmentEnabled}}
+					<div class="files"></div>
+					<div class="ui basic button dropzone" id="dropzone" data-upload-url="{{AppSubURL}}/releases/attachments" data-accepts="{{.AttachmentAllowedTypes}}" data-max-file="{{.AttachmentMaxFiles}}" data-max-size="{{.AttachmentMaxSize}}" data-default-message="{{.i18n.Tr "dropzone.default_message"}}" data-invalid-input-type="{{.i18n.Tr "dropzone.invalid_input_type"}}" data-file-too-big="{{.i18n.Tr "dropzone.file_too_big"}}" data-remove-file="{{.i18n.Tr "dropzone.remove_file"}}"></div>
+				{{end}}
 			</div>
 			<div class="ui container">
+				<div class="prerelease field">
+					<div class="ui checkbox">
+						<input type="checkbox" name="prerelease" {{if .prerelease}}checked{{end}}>
+						<label><strong>{{.i18n.Tr "repo.release.prerelease_desc"}}</strong></label>
+					</div>
+				</div>
+				<span class="help">{{.i18n.Tr "repo.release.prerelease_helper"}}</span>
 				<div class="ui divider"></div>
-				<div class="ui text right">
-					<div class="prerelease field">
-						<div class="ui checkbox">
-							<input type="checkbox" name="prerelease" {{if .prerelease}}checked{{end}}>
-							<label><strong>{{.i18n.Tr "repo.release.prerelease_desc"}}</strong></label>
-						</div>
-					</div>
-					<span class="help">{{.i18n.Tr "repo.release.prerelease_helper"}}</span>
-					<div class="field">
-						<a class="ui blue basic button" href="{{.RepoLink}}/releases">
-							{{.i18n.Tr "repo.release.cancel"}}
-						</a>
-						{{/* Release didn't save as draft at first time is not possible to be draft again because the Git tag had been created. */}}
-						{{if or (not .PageIsEditRelease) .IsDraft}}
-							<input class="ui grey button" type="submit" name="draft" value="{{.i18n.Tr "repo.release.save_draft"}}"/>
-						{{end}}
-						{{if .PageIsEditRelease}}
-							<button class="ui green button">
-								{{if .IsDraft}}
-									{{.i18n.Tr "repo.release.publish"}}
-								{{else}}
-									{{.i18n.Tr "repo.release.edit_release"}}
-								{{end}}
-							</button>
-							<a class="ui red button delete-button" data-url="{{$.RepoLink}}/releases/delete" data-id="{{.ID}}">
-								{{$.i18n.Tr "repo.release.delete_release"}}
-							</a>
-						{{else}}
-							<button class="ui green button">
+				<div class="field">
+					{{if .PageIsEditRelease}}
+						<button class="ui green button">
+							{{if .IsDraft}}
 								{{.i18n.Tr "repo.release.publish"}}
-							</button>
-						{{end}}
-					</div>
+							{{else}}
+								{{.i18n.Tr "repo.release.edit_release"}}
+							{{end}}
+						</button>
+						<a class="ui red button delete-button" data-url="{{$.RepoLink}}/releases/delete" data-id="{{.ID}}">
+							{{$.i18n.Tr "repo.release.delete_release"}}
+						</a>
+					{{else}}
+						<button class="ui green button">
+							{{.i18n.Tr "repo.release.publish"}}
+						</button>
+					{{end}}
+					{{/* Release didn't save as draft at first time is not possible to be draft again because the Git tag had been created. */}}
+					{{if or (not .PageIsEditRelease) .IsDraft}}
+						<input class="ui grey button" type="submit" name="draft" value="{{.i18n.Tr "repo.release.save_draft"}}"/>
+					{{end}}
+					<a class="ui basic button" href="{{.RepoLink}}/releases">
+						{{.i18n.Tr "repo.release.cancel"}}
+					</a>
 				</div>
 			</div>
 		</form>
@@ -102,4 +121,22 @@
 		{{template "base/delete_modal_actions" .}}
 	</div>
 {{end}}
+
+<script>
+	// Delete attachment row
+	$('.delete-attachment-button').click(function (e) {
+		var $row = $(this).parentsUntil('tbody');
+		var $tbody = $row.parentsUntil('table');
+
+		$row.remove();
+
+		// Remove the entire table if this was the last row
+		if ($tbody.children().length == 0) {
+			$tbody.parentsUntil('.field').remove();
+		}
+
+		e.preventDefault();
+	})
+</script>
+
 {{template "base/footer" .}}

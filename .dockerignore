@@ -1,5 +1,3 @@
-.git
-.git/**
 packager
 packager/**
 scripts
@@ -14,6 +12,4 @@ config.codekit
 .editorconfig
 .gitignore
 Dockerfile*
-vendor
-vendor/**
 gogs

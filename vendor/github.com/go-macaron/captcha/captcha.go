@@ -68,7 +68,7 @@ func (c *Captcha) CreateHtml() template.HTML {
 		panic(fmt.Errorf("fail to create captcha: %v", err))
 	}
 	return template.HTML(fmt.Sprintf(`<input type="hidden" name="%s" value="%s">
-	<a class="captcha" href="javascript:">
+	<a class="captcha" href="javascript:" tabindex="-1">
 		<img onclick="this.src=('%s%s%s.png?reload='+(new Date()).getTime())" class="captcha-img" src="%s%s%s.png">
 	</a>`, c.FieldIdName, value, c.SubURL, c.URLPrefix, value, c.SubURL, c.URLPrefix, value))
 }

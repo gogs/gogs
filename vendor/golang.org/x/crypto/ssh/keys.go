@@ -798,8 +798,8 @@ func ParseDSAPrivateKey(der []byte) (*dsa.PrivateKey, error) {
 		P       *big.Int
 		Q       *big.Int
 		G       *big.Int
-		Priv    *big.Int
 		Pub     *big.Int
+		Priv    *big.Int
 	}
 	rest, err := asn1.Unmarshal(der, &k)
 	if err != nil {
@@ -816,9 +816,9 @@ func ParseDSAPrivateKey(der []byte) (*dsa.PrivateKey, error) {
 				Q: k.Q,
 				G: k.G,
 			},
-			Y: k.Priv,
+			Y: k.Pub,
 		},
-		X: k.Pub,
+		X: k.Priv,
 	}, nil
 }
 

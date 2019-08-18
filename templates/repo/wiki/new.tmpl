@@ -11,14 +11,14 @@
 				</div>
 			{{end}}
 		</div>
-		<form class="ui form" action="{{EscapePound .Link}}" method="post">
-			{{.CsrfTokenHtml}}
+		<form class="ui form" action="{{.Link}}" method="post">
+			{{.CSRFTokenHTML}}
 			<input type="hidden" name="old_title" value="{{.old_title}}">
 			<div class="field {{if .Err_Title}}error{{end}}">
 				<input name="title" value="{{.title}}" autofocus required>
 			</div>
 			<div class="field">
-				<textarea id="edit_area" name="content" data-id="wiki-{{.old_title}}" data-url="{{AppSubUrl}}/api/v1/markdown" data-context="{{.RepoLink}}">{{if .PageIsWikiEdit}}{{.content}}{{else}}{{.i18n.Tr "repo.wiki.welcome"}}{{end}}</textarea required>
+				<textarea id="edit_area" name="content" data-id="wiki-{{.old_title}}" data-url="{{AppSubURL}}/api/v1/markdown" data-context="{{.RepoLink}}">{{if .PageIsWikiEdit}}{{.content}}{{else}}{{.i18n.Tr "repo.wiki.welcome"}}{{end}}</textarea required>
 			</div>
 			<div class="field">
 				<input name="message" placeholder="{{.i18n.Tr "repo.wiki.default_commit_message"}}">

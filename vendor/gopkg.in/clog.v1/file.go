@@ -17,6 +17,7 @@ package clog
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,9 +27,8 @@ import (
 )
 
 const (
-	FILE               MODE = "file"
-	SIMPLE_DATE_FORMAT      = "2006-01-02"
-	LOG_PREFIX_LENGTH       = len("2017/02/06 21:20:08 ")
+	SIMPLE_DATE_FORMAT = "2006-01-02"
+	LOG_PREFIX_LENGTH  = len("2017/02/06 21:20:08 ")
 )
 
 // FileRotationConfig represents rotation related configurations for file mode logger.
@@ -58,6 +58,9 @@ type FileConfig struct {
 }
 
 type file struct {
+	// Indicates whether object is been used in standalone mode.
+	standalone bool
+
 	*log.Logger
 	Adapter
 
@@ -75,6 +78,21 @@ func newFile() Logger {
 			quitChan: make(chan struct{}),
 		},
 	}
+}
+
+// NewFileWriter returns an io.Writer for synchronized file logger in standalone mode.
+func NewFileWriter(filename string, cfg FileRotationConfig) (io.Writer, error) {
+	f := &file{
+		standalone: true,
+	}
+	if err := f.Init(FileConfig{
+		Filename:           filename,
+		FileRotationConfig: cfg,
+	}); err != nil {
+		return nil, err
+	}
+
+	return f, nil
 }
 
 func (f *file) Level() LEVEL { return f.level }
@@ -196,7 +214,9 @@ func (f *file) Init(v interface{}) (err error) {
 		f.initRotate()
 	}
 
-	f.msgChan = make(chan *Message, cfg.BufferSize)
+	if !f.standalone {
+		f.msgChan = make(chan *Message, cfg.BufferSize)
+	}
 	return nil
 }
 
@@ -205,11 +225,15 @@ func (f *file) ExchangeChans(errorChan chan<- error) chan *Message {
 	return f.msgChan
 }
 
-func (f *file) write(msg *Message) {
+func (f *file) write(msg *Message) int {
 	f.Logger.Print(msg.Body)
 
+	bytesWrote := len(msg.Body)
+	if !f.standalone {
+		bytesWrote += LOG_PREFIX_LENGTH
+	}
 	if f.rotate.Rotate {
-		f.currentSize += int64(LOG_PREFIX_LENGTH + len(msg.Body))
+		f.currentSize += int64(bytesWrote)
 		f.currentLines++ // TODO: should I care if log message itself contains new lines?
 
 		var (
@@ -243,6 +267,16 @@ func (f *file) write(msg *Message) {
 			f.currentLines = 0
 		}
 	}
+	return bytesWrote
+}
+
+var _ io.Writer = new(file)
+
+// Write implements method of io.Writer interface.
+func (f *file) Write(p []byte) (int, error) {
+	return f.write(&Message{
+		Body: string(p),
+	}), nil
 }
 
 func (f *file) Start() {

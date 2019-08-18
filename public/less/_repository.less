@@ -91,12 +91,13 @@
 		.label.color {
 			border-radius: 3px;
 			margin-left: 15px;
-			padding: 0 8px;
+			padding: 0 10px;
 		}
 		.octicon {
 			float: left;
 			margin-left: -5px;
 			margin-right: -7px;
+			width: 16px;
 		}
 		.menu {
 			max-height: 300px;
@@ -127,11 +128,13 @@
 	#clone-panel {
 		margin-top: -8px;
 		margin-left: 5px;
-		width: 350px;
+		width: auto;
 
 		input {
 			border-radius: 0;
 			padding: 5px 10px;
+			max-width: 190px;
+			width: 190px;
 		}
 
 		.clone.button {
@@ -150,6 +153,36 @@
 		}
 	}
 
+	&.branches:not(.settings) {
+		.ui.list {
+			padding: 0;
+			>.item {
+				margin: 0;
+				line-height: 31px;
+				&:not(:last-child) {
+					border-bottom: 1px solid #DDD;
+				}
+				.column {
+					padding: 5px 15px;
+					.octicon {
+						vertical-align: text-bottom;
+					}
+					code {
+						padding: 4px 0;
+						font-size: 12px;
+					}
+					.ui.text:not(i) {
+						font-size: 12px;
+					}
+					.ui.button {
+						font-size: 12px;
+						padding: 8px 10px;
+					}
+				}
+			}
+		}
+	}
+
 	&.file.list {
 		#repo-desc {
 			font-size: 1.2em;
@@ -165,6 +198,20 @@
 			.ui.button {
 				padding: 8px 10px;
 				font-weight: normal;
+			}
+		}
+		#git-stats {
+			padding: 10px;
+			line-height: 0;
+			.list {
+				width: 100%;
+				.item {
+					margin-left: 0;
+					width: 33.33%;
+					.text b {
+						font-size: 15px;
+					}
+				}
 			}
 		}
 
@@ -209,6 +256,9 @@
 
 		#file-content {
 			.header {
+				.octicon {
+					padding-right: 5px;
+				}
 				.icon {
 					font-size: 1em;
 					margin-top: -2px;
@@ -279,6 +329,10 @@
 					&.nb-heading-cell {
 						margin-top: 0.5em;
 					}
+					
+					img {
+						max-width: 100%;
+					}
 				}
 
 				.nb-raw-cell {
@@ -325,7 +379,7 @@
 						font-size: 14px;
 					}
 					img {
-						max-width: 100%;    
+						max-width: 100%;
 					}
 				  table {
 						border: 1px solid #000;
@@ -358,7 +412,8 @@
 
 			.plain-text {
 				font-size: 14px;
-				padding: 10px 15px;
+				padding: 15px 15px 10px 15px;
+				font-family: Consolas;
 			}
 			.code-view {
 				* {
@@ -369,13 +424,18 @@
 
 				table {
 					width: 100%;
+					tbody {
+						tr {
+							padding: 0 !important;
+						}
+					}
 				}
 				.lines-num {
 					vertical-align: top;
 					text-align: right;
 					color: #999;
 					background: #f5f5f5;
-					width: 1%;
+					width: 42px;
 
 					span {
 						line-height: 20px;
@@ -386,7 +446,8 @@
 				}
 				.lines-num,
 				.lines-code {
-					padding: 0;
+					display: table-cell !important;
+					padding: 0 !important;
 					pre,
 					ol,
 					.hljs {
@@ -579,6 +640,9 @@
 				.avatar {
 					margin-left: 10px;
 					margin-top: 10px;
+				}
+				#commit_description {
+					height: auto;
 				}
 			}
 		}
@@ -784,7 +848,7 @@
 	.label.list {
 		list-style: none;
 		padding-top: 15px;
-		.item {
+		>.item {
 			padding-top: 10px;
 			padding-bottom: 10px;
 			border-bottom: 1px dashed #AAA;
@@ -1005,12 +1069,24 @@
 			.lines-num {
 				border-right: 1px solid #d4d4d5;
 				padding: 0 5px;
+				user-select: none;
+
+				&::before {
+					content: attr(data-line-number);
+				}
+
+				&.lines-num-old, &.lines-num-new {
+					cursor: pointer;
+					&:hover {
+						color: #383636;
+					}
+				}
 			}
 			tbody {
 				tr {
 
 					&.tag-code {
-						td, pre {
+						td {
 							background-color: #F0F0F0 !important;
 							border-color: #D2CECE!important;
 							padding-top: 4px;
@@ -1019,15 +1095,12 @@
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
 					}
-					// &.same-code {
-					// 	td.selected-line, td.selected-line pre {
-					// 		background-color: #ffffdd !important;
-					// 	}
-					// }
+					&.same-code {
+						td.active {
+							background-color: #ffffdd !important;
+						}
+					}
 					&.del-code {
 						// Duplicate here to enforce add code color.
 						td.add-code {
@@ -1039,29 +1112,29 @@
 
 							}
 						}
-						td, pre {
+						td {
 							background-color: #ffecec !important;
 					    border-color: #f1c0c0 !important;
+						}
+						td.active {
+							background-color: #ffffdd !important;
 						}
 
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
 					}
 					&.add-code {
-						td, pre {
+						td {
 							background-color: #eaffea !important;
 							border-color: #c1e9c1 !important;
 						}
 						td.halfwidth {
 							width: 50%;
 						}
-						// td.selected-line, td.selected-line pre {
-						// 	background-color: #ffffdd !important;
-						// }
+						td.active {
+							background-color: #ffffdd !important;
+						}
 					}
 
 					.removed-code {
@@ -1084,6 +1157,11 @@
 		overflow: auto;
 		overflow-x: auto;
 		overflow-y: hidden;
+
+		table {
+			width: 100%;
+			border-spacing: 0;
+		}
 	}
 
 	&.quickstart {
@@ -1128,11 +1206,11 @@
 
 					.tag:not(.icon) {
 						display: block;
-						margin-top: 15px;
+						margin-top: 6px;
 					}
 					.commit {
 						display: block;
-						margin-top: 10px;
+						margin-top: 6px;
 					}
 				}
 				.detail {
@@ -1263,8 +1341,9 @@
 			.ui.sub.header {
 				text-transform: none;
 			}
-			>.markdown {
-				padding: 15px 30px;
+			.markdown {
+				padding-left: 25px;
+				margin-left: -25px;
 
 				h1, h2, h3, h4, h5, h6 {
 					&:first-of-type {
@@ -1303,7 +1382,7 @@
 			}
 		}
 
-		&.branches {
+		&.settings.branches {
 			.protected-branches {
 				.selection.dropdown {
 					width: 300px;
@@ -1326,6 +1405,13 @@
 					margin-left: 20px;
 					display: block;
 				}
+				.whitelist {
+					margin-left: 26px;
+
+					.dropdown img {
+						display: inline-block;
+					}
+				}
 			}
 		}
 
@@ -1335,9 +1421,16 @@
 					padding: 10px !important;
 				}
 			}
+
+			.logo.item img {
+				margin-top: -4px;
+			}
 		}
 
 		&.webhook {
+			.text.desc {
+				margin-top: 5px;
+			}
 			.events {
 				.column {
 					padding-bottom: 0;
@@ -1352,6 +1445,21 @@
 	}
 }
 // End of .repository
+
+// Should apply organization webhooks page
+.webhook .hook.history.list {
+	.right.menu {
+		.redelivery.button {
+			font-size: 12px;
+			margin-top: 6px;
+			height: 30px;
+			.octicon {
+				font: normal normal normal 13px/1 Octicons;
+				width: 12px;
+			}
+		}
+	}
+}
 
 &.user-cards {
 	.list {
@@ -1462,10 +1570,6 @@
 .settings {
 	.content {
 		margin-top: 2px;
-		>.header,
-		.segment {
-			box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
-		}
 	}
 	.key.list {
 		.item:not(:first-child) {

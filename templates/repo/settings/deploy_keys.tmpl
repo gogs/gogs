@@ -45,14 +45,14 @@
 					{{end}}
 				</div>
 				<br>
-				<p>{{.i18n.Tr "repo.settings.deploy_keys_helper" AppSubUrl "/user/settings/ssh" | Safe}}</p>
+				<p>{{.i18n.Tr "repo.settings.deploy_keys_helper" AppSubURL "/user/settings/ssh" | Safe}}</p>
 				<div {{if not .HasError}}class="hide"{{end}} id="add-deploy-key-panel">
 					<h4 class="ui top attached header">
 						{{.i18n.Tr "repo.settings.add_deploy_key"}}
 					</h4>
 					<div class="ui attached segment">
 						<form class="ui form" action="{{.Link}}" method="post">
-							{{.CsrfTokenHtml}}
+							{{.CSRFTokenHTML}}
 							<div class="field">
 								{{.i18n.Tr "repo.settings.deploy_key_desc"}}
 							</div>

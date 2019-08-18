@@ -3,7 +3,7 @@
 	<div class="ui middle very relaxed page grid">
 		<div class="column">
 			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+				{{.CSRFTokenHTML}}
 				<h3 class="ui top attached header">
 					{{.i18n.Tr "new_repo"}}
 				</h3>
@@ -12,16 +12,16 @@
 					<div class="inline required field {{if .Err_Owner}}error{{end}}">
 						<label>{{.i18n.Tr "repo.owner"}}</label>
 						<div class="ui selection owner dropdown">
-							<input type="hidden" id="uid" name="uid" value="{{.ContextUser.ID}}" required>
+							<input type="hidden" id="user_id" name="user_id" value="{{.ContextUser.ID}}" required>
 							<span class="text">
 								<img class="ui mini image" src="{{.ContextUser.RelAvatarLink}}">
 								{{.ContextUser.ShortName 20}}
 							</span>
 							<i class="dropdown icon"></i>
 							<div class="menu">
-								<div class="item" data-value="{{.SignedUser.ID}}">
-									<img class="ui mini image" src="{{.SignedUser.RelAvatarLink}}">
-									{{.SignedUser.ShortName 20}}
+								<div class="item" data-value="{{.LoggedUser.ID}}">
+									<img class="ui mini image" src="{{.LoggedUser.RelAvatarLink}}">
+									{{.LoggedUser.ShortName 20}}
 								</div>
 								{{range .Orgs}}
 									<div class="item" data-value="{{.ID}}">
@@ -52,7 +52,9 @@
 					</div>
 					<div class="inline field {{if .Err_Description}}error{{end}}">
 						<label for="description">{{.i18n.Tr "repo.repo_desc"}}</label>
-						<textarea id="description" name="description">{{.description}}</textarea>
+						<textarea class="autosize" id="description" name="description" rows="3">{{.description}}</textarea>
+						<span class="help">{{.i18n.Tr "repo.repo_description_helper" | Safe}}</span>
+						<span class="help">{{.i18n.Tr "repo.repo_description_length"}}: <span id="descLength"></span></span>
 					</div>
 
 					<div class="ui divider"></div>
@@ -83,7 +85,7 @@
 					</div>
 
 					<div class="inline field">
-						<label>{{.i18n.Tr "repo.readme"}} <a target="_blank" href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-readme-template"><span class="octicon octicon-question"></span></a></label>
+						<label>{{.i18n.Tr "repo.readme"}} <a target="_blank" rel="noopener noreferrer" href="https://github.com/gogits/go-gogs-client/wiki/Repositories#litte-notes-on-readme-template"><span class="octicon octicon-question"></span></a></label>
 						<div class="ui selection dropdown">
 							<input type="hidden" name="readme" value="{{.readme}}">
 							<div class="default text">{{.i18n.Tr "repo.readme_helper"}}</div>
@@ -106,11 +108,12 @@
 						<button class="ui green button">
 							{{.i18n.Tr "repo.create_repo"}}
 						</button>
-						<a class="ui button" href="{{AppSubUrl}}/">{{.i18n.Tr "cancel"}}</a>
+						<a class="ui button" href="{{AppSubURL}}/">{{.i18n.Tr "cancel"}}</a>
 					</div>
 				</div>
 			</form>
 		</div>
 	</div>
 </div>
+
 {{template "base/footer" .}}

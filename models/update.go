@@ -10,9 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	log "gopkg.in/clog.v1"
-
-	git "github.com/gogits/git-module"
+	git "github.com/gogs/git-module"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -29,6 +27,10 @@ func CommitToPushCommit(commit *git.Commit) *PushCommit {
 }
 
 func ListToPushCommits(l *list.List) *PushCommits {
+	if l == nil {
+		return &PushCommits{}
+	}
+
 	commits := make([]*PushCommit, 0)
 	var actEmail string
 	for e := l.Front(); e != nil; e = e.Next() {
@@ -68,12 +70,6 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return fmt.Errorf("Fail to call 'git update-server-info': %v", err)
 	}
 
-	if isDelRef {
-		log.Trace("Reference '%s' has been deleted from '%s/%s' by %s",
-			opts.RefFullName, opts.RepoUserName, opts.RepoName, opts.PusherName)
-		return nil
-	}
-
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		return fmt.Errorf("OpenRepository: %v", err)
@@ -89,7 +85,11 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return fmt.Errorf("GetRepositoryByName: %v", err)
 	}
 
-	// Push tags.
+	if err = repo.UpdateSize(); err != nil {
+		return fmt.Errorf("UpdateSize: %v", err)
+	}
+
+	// Push tags
 	if strings.HasPrefix(opts.RefFullName, git.TAG_PREFIX) {
 		if err := CommitRepoAction(CommitRepoActionOptions{
 			PusherName:  opts.PusherName,
@@ -100,27 +100,30 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 			NewCommitID: opts.NewCommitID,
 			Commits:     &PushCommits{},
 		}); err != nil {
-			return fmt.Errorf("CommitRepoAction (tag): %v", err)
+			return fmt.Errorf("CommitRepoAction.(tag): %v", err)
 		}
 		return nil
 	}
 
-	newCommit, err := gitRepo.GetCommit(opts.NewCommitID)
-	if err != nil {
-		return fmt.Errorf("gitRepo.GetCommit: %v", err)
-	}
-
-	// Push new branch.
 	var l *list.List
-	if isNewRef {
-		l, err = newCommit.CommitsBeforeLimit(10)
+	// Skip read parent commits when delete branch
+	if !isDelRef {
+		// Push new branch
+		newCommit, err := gitRepo.GetCommit(opts.NewCommitID)
 		if err != nil {
-			return fmt.Errorf("newCommit.CommitsBeforeLimit: %v", err)
+			return fmt.Errorf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}
-	} else {
-		l, err = newCommit.CommitsBeforeUntil(opts.OldCommitID)
-		if err != nil {
-			return fmt.Errorf("newCommit.CommitsBeforeUntil: %v", err)
+
+		if isNewRef {
+			l, err = newCommit.CommitsBeforeLimit(10)
+			if err != nil {
+				return fmt.Errorf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
+			}
+		} else {
+			l, err = newCommit.CommitsBeforeUntil(opts.OldCommitID)
+			if err != nil {
+				return fmt.Errorf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
+			}
 		}
 	}
 
@@ -133,7 +136,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		NewCommitID: opts.NewCommitID,
 		Commits:     ListToPushCommits(l),
 	}); err != nil {
-		return fmt.Errorf("CommitRepoAction (branch): %v", err)
+		return fmt.Errorf("CommitRepoAction.(branch): %v", err)
 	}
 	return nil
 }

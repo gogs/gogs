@@ -14,13 +14,13 @@
 			</form>
 		</div>
 	{{else if .IsDiffCompare}}
-		<a href="{{$.CommitRepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSha .BeforeCommitID}}</a> ... <a href="{{$.CommitRepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSha .AfterCommitID}}</a>
+		<a href="{{$.CommitRepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSHA1 .BeforeCommitID}}</a> ... <a href="{{$.CommitRepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSHA1 .AfterCommitID}}</a>
 	{{end}}
 </h4>
 
 {{if .Commits}}
-	<div class="ui attached table segment">
-		<table class="ui very basic striped fixed table single line" id="commits-table">
+<div class="ui unstackable attached table segment">
+		<table id="commits-table" class="ui unstackable very basic striped fixed table single line">
 			<thead>
 				<tr>
 					<th class="four wide">{{.i18n.Tr "repo.commits.author"}}</th>
@@ -34,15 +34,20 @@
 					<tr>
 						<td class="author">
 							{{if .User}}
-								<img class="ui avatar image" src="{{.User.RelAvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubUrl}}/{{.User.Name}}">{{.Author.Name}}</a>
+								<img class="ui avatar image" src="{{.User.RelAvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubURL}}/{{.User.Name}}">{{.Author.Name}}</a>
 							{{else}}
 								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
 							{{end}}
 						</td>
 
-						<td class="message collapsing has-emoji">
-							<a rel="nofollow" class="ui sha label" href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSha .ID.String}}</a>
-							<span {{if gt .ParentCount 1}}class="grey text"{{end}}>{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas}}</span>
+						<td class="message collapsing">
+							{{/* Username or Reponame doesn't present we assume the source repository no longer exists */}}
+							{{if not (and $.Username $.Reponame)}}
+								<span class="ui sha label">{{ShortSHA1 .ID.String}}</span>
+							{{else}}
+								<a rel="nofollow" class="ui sha label" href="{{AppSubURL}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
+							{{end}}
+							<span class="{{if gt .ParentCount 1}}grey text {{end}} has-emoji">{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
 						</td>
 						<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
 					</tr>

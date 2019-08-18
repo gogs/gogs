@@ -7,13 +7,13 @@
 	<footer>
 		<div class="ui container">
 			<div class="ui left">
-				© 2017 Gogs {{if (or .ShowFooterVersion .PageIsAdmin)}}{{.i18n.Tr "version"}}: {{AppVer}}{{end}} {{if ShowFooterTemplateLoadTime}}{{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>{{end}}
+				© {{Year}} Gogs {{if (or .ShowFooterVersion .PageIsAdmin)}}{{.i18n.Tr "version"}}: {{AppVer}}{{end}} {{if ShowFooterTemplateLoadTime}}{{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>{{end}}
 			</div>
 			<div class="ui right links">
 				{{if .ShowFooterBranding}}
-					<a target="_blank" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
-					<a target="_blank" href="https://twitter.com/GogsHQ"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
-					<a target="_blank" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
+					<a target="_blank" rel="noopener noreferrer" href="https://github.com/gogits/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
+					<a target="_blank" rel="noopener noreferrer" href="https://twitter.com/GogsHQ"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
+					<a target="_blank" rel="noopener noreferrer" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
 				{{end}}
 				<div class="ui language bottom floating slide up dropdown link item">
 					<i class="world icon"></i>
@@ -25,7 +25,7 @@
 					</div>
 				</div>
 				<a href="/assets/librejs/librejs.html" style="display:none" data-jslicense="1">Javascript Licenses</a>
-				<a target="_blank" href="https://gogs.io">{{.i18n.Tr "website"}}</a>
+				<a target="_blank" rel="noopener noreferrer" href="https://gogs.io">{{.i18n.Tr "website"}}</a>
 				{{if (or .ShowFooterVersion .PageIsAdmin)}}<span class="version">{{GoVer}}</span>{{end}}
 			</div>
 		</div>
@@ -34,22 +34,26 @@
 
 <!-- Third-party libraries -->
 {{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight-9.6.0/github.css">
-	<script src="{{AppSubUrl}}/plugins/highlight-9.6.0/highlight.pack.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/highlight-9.6.0/github.css">
+	<script src="{{AppSubURL}}/plugins/highlight-9.6.0/highlight.pack.js"></script>
 {{end}}
 {{if .RequireMinicolors}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
-	<script src="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.min.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
+	<script src="{{AppSubURL}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.min.js"></script>
 {{end}}
 {{if .RequireDatetimepicker}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.css">
-	<script src="{{AppSubUrl}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.css">
+	<script src="{{AppSubURL}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
 {{end}}
 {{if .RequireDropzone}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/dropzone-4.2.0/dropzone.css">
-	<script src="{{AppSubUrl}}/plugins/dropzone-4.2.0/dropzone.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.css">
+	<script src="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.js"></script>
 {{end}}
-<script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
-<script src="{{AppSubUrl}}/js/libs/clipboard-1.5.9.min.js"></script>
+{{if .RequireAutosize}}
+	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
+{{end}}
+<script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
+<script src="{{AppSubURL}}/js/libs/clipboard-1.5.9.min.js"></script>
 
+{{template "inject/footer" .}}
 </html>

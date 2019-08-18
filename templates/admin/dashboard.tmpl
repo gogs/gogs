@@ -10,42 +10,42 @@
 				</h4>
 				<div class="ui attached segment">
 					<p>
-						{{.i18n.Tr "admin.dashboard.statistic_info" .Stats.Counter.User .Stats.Counter.Org .Stats.Counter.PublicKey .Stats.Counter.Repo .Stats.Counter.Watch .Stats.Counter.Star .Stats.Counter.Action .Stats.Counter.Access .Stats.Counter.Issue .Stats.Counter.Comment .Stats.Counter.Oauth .Stats.Counter.Follow .Stats.Counter.Mirror .Stats.Counter.Release .Stats.Counter.LoginSource .Stats.Counter.Webhook .Stats.Counter.Milestone .Stats.Counter.Label .Stats.Counter.HookTask .Stats.Counter.Team .Stats.Counter.UpdateTask .Stats.Counter.Attachment | Str2html}}
+						{{.i18n.Tr "admin.dashboard.statistic_info" .Stats.Counter.User .Stats.Counter.Org .Stats.Counter.PublicKey .Stats.Counter.Repo .Stats.Counter.Watch .Stats.Counter.Star .Stats.Counter.Action .Stats.Counter.Access .Stats.Counter.Issue .Stats.Counter.Comment .Stats.Counter.Oauth .Stats.Counter.Follow .Stats.Counter.Mirror .Stats.Counter.Release .Stats.Counter.LoginSource .Stats.Counter.Webhook .Stats.Counter.Milestone .Stats.Counter.Label .Stats.Counter.HookTask .Stats.Counter.Team .Stats.Counter.UpdateTask .Stats.Counter.Attachment | Str2HTML}}
 					</p>
 				</div>
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.dashboard.operations"}}
 				</h4>
-				<div class="ui attached table segment">
-					<table class="ui very basic table">
+				<div class="ui unstackable attached table segment">
+					<table class="ui unstackable very basic table">
 						<tbody>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.delete_inactivate_accounts"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=1">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=1">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.delete_repo_archives"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=2">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=2">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.delete_missing_repos"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=3">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=3">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.git_gc_repos"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=4">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=4">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.resync_all_sshkeys"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=5">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=5">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.resync_all_hooks"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=6">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=6">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 							<tr>
 								<td>{{.i18n.Tr "admin.dashboard.reinit_missing_repos"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubUrl}}/admin?op=7">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
+								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=7">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
 							</tr>
 						</tbody>
 					</table>

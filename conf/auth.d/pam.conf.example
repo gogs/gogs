@@ -1,0 +1,10 @@
+# This is an example of PAM authentication
+#
+id           = 104
+type         = pam
+name         = System Auth
+is_activated = true
+
+[config]
+service_name = system-auth
+

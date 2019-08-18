@@ -5,25 +5,26 @@
 package models
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/go-xorm/xorm"
+
+	"github.com/gogs/gogs/models/errors"
 )
 
 const OWNER_TEAM = "Owners"
 
 // Team represents a organization team.
 type Team struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          int64
 	OrgID       int64 `xorm:"INDEX"`
 	LowerName   string
 	Name        string
 	Description string
 	Authorize   AccessMode
-	Repos       []*Repository `xorm:"-"`
-	Members     []*User       `xorm:"-"`
+	Repos       []*Repository `xorm:"-" json:"-"`
+	Members     []*User       `xorm:"-" json:"-"`
 	NumRepos    int
 	NumMembers  int
 }
@@ -31,7 +32,7 @@ type Team struct {
 func (t *Team) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "num_repos":
-		// LEGACY [0.11]: this is backward compatibility bug fix for https://github.com/gogits/gogs/issues/3671
+		// LEGACY [1.0]: this is backward compatibility bug fix for https://github.com/gogs/gogs/issues/3671
 		if t.NumRepos < 0 {
 			t.NumRepos = 0
 		}
@@ -43,9 +44,14 @@ func (t *Team) IsOwnerTeam() bool {
 	return t.Name == OWNER_TEAM
 }
 
+// HasWriteAccess returns true if team has at least write level access mode.
+func (t *Team) HasWriteAccess() bool {
+	return t.Authorize >= ACCESS_MODE_WRITE
+}
+
 // IsTeamMember returns true if given user is a member of team.
-func (t *Team) IsMember(uid int64) bool {
-	return IsTeamMember(t.OrgID, t.ID, uid)
+func (t *Team) IsMember(userID int64) bool {
+	return IsTeamMember(t.OrgID, t.ID, userID)
 }
 
 func (t *Team) getRepositories(e Engine) (err error) {
@@ -106,7 +112,7 @@ func (t *Team) addRepository(e Engine, repo *Repository) (err error) {
 	}
 
 	t.NumRepos++
-	if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
+	if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
 		return fmt.Errorf("update team: %v", err)
 	}
 
@@ -134,7 +140,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -152,7 +158,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 	}
 
 	t.NumRepos--
-	if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
+	if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
 		return err
 	}
 
@@ -166,15 +172,15 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 	if err = t.getMembers(e); err != nil {
 		return fmt.Errorf("get team members: %v", err)
 	}
-	for _, u := range t.Members {
-		has, err := hasAccess(e, u, repo, ACCESS_MODE_READ)
+	for _, member := range t.Members {
+		has, err := hasAccess(e, member.ID, repo, ACCESS_MODE_READ)
 		if err != nil {
 			return err
 		} else if has {
 			continue
 		}
 
-		if err = watchRepo(e, u.ID, repo.ID, false); err != nil {
+		if err = watchRepo(e, member.ID, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -194,7 +200,7 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -260,39 +266,49 @@ func NewTeam(t *Team) error {
 	return sess.Commit()
 }
 
-func getTeam(e Engine, orgId int64, name string) (*Team, error) {
+func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 	t := &Team{
-		OrgID:     orgId,
+		OrgID:     orgID,
 		LowerName: strings.ToLower(name),
 	}
 	has, err := e.Get(t)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrTeamNotExist
+		return nil, errors.TeamNotExist{0, name}
 	}
 	return t, nil
 }
 
-// GetTeam returns team by given team name and organization.
-func GetTeam(orgId int64, name string) (*Team, error) {
-	return getTeam(x, orgId, name)
+// GetTeamOfOrgByName returns team by given team name and organization.
+func GetTeamOfOrgByName(orgID int64, name string) (*Team, error) {
+	return getTeamOfOrgByName(x, orgID, name)
 }
 
-func getTeamByID(e Engine, teamId int64) (*Team, error) {
+func getTeamByID(e Engine, teamID int64) (*Team, error) {
 	t := new(Team)
-	has, err := e.Id(teamId).Get(t)
+	has, err := e.ID(teamID).Get(t)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrTeamNotExist
+		return nil, errors.TeamNotExist{teamID, ""}
 	}
 	return t, nil
 }
 
 // GetTeamByID returns team by given ID.
-func GetTeamByID(teamId int64) (*Team, error) {
-	return getTeamByID(x, teamId)
+func GetTeamByID(teamID int64) (*Team, error) {
+	return getTeamByID(x, teamID)
+}
+
+func getTeamsByOrgID(e Engine, orgID int64) ([]*Team, error) {
+	teams := make([]*Team, 0, 3)
+	return teams, e.Where("org_id = ?", orgID).Find(&teams)
+}
+
+// GetTeamsByOrgID returns all teams belong to given organization.
+func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
+	return getTeamsByOrgID(x, orgID)
 }
 
 // UpdateTeam updates information of team.
@@ -306,7 +322,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -319,7 +335,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
 	}
 
-	if _, err = sess.Id(t.ID).AllCols().Update(t); err != nil {
+	if _, err = sess.ID(t.ID).AllCols().Update(t); err != nil {
 		return fmt.Errorf("update: %v", err)
 	}
 
@@ -353,7 +369,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -371,7 +387,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Delete team.
-	if _, err = sess.Id(t.ID).Delete(new(Team)); err != nil {
+	if _, err = sess.ID(t.ID).Delete(new(Team)); err != nil {
 		return err
 	}
 	// Update organization number of teams.
@@ -391,7 +407,7 @@ func DeleteTeam(t *Team) error {
 
 // TeamUser represents an team-user relation.
 type TeamUser struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	OrgID  int64 `xorm:"INDEX"`
 	TeamID int64 `xorm:"UNIQUE(s)"`
 	UID    int64 `xorm:"UNIQUE(s)"`
@@ -409,14 +425,14 @@ func IsTeamMember(orgID, teamID, uid int64) bool {
 
 func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	teamUsers := make([]*TeamUser, 0, 10)
-	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id=?", teamID).
+	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id = ?", teamID).
 		Find(&teamUsers); err != nil {
 		return nil, fmt.Errorf("get team-users: %v", err)
 	}
 	members := make([]*User, 0, len(teamUsers))
 	for i := range teamUsers {
 		member := new(User)
-		if _, err = e.Id(teamUsers[i].UID).Get(member); err != nil {
+		if _, err = e.ID(teamUsers[i].UID).Get(member); err != nil {
 			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].UID, err)
 		}
 		members = append(members, member)
@@ -429,39 +445,35 @@ func GetTeamMembers(teamID int64) ([]*User, error) {
 	return getTeamMembers(x, teamID)
 }
 
-func getUserTeams(e Engine, orgId, uid int64) ([]*Team, error) {
-	tus := make([]*TeamUser, 0, 5)
-	if err := e.Where("uid=?", uid).And("org_id=?", orgId).Find(&tus); err != nil {
+func getUserTeams(e Engine, orgID, userID int64) ([]*Team, error) {
+	teamUsers := make([]*TeamUser, 0, 5)
+	if err := e.Where("uid = ?", userID).And("org_id = ?", orgID).Find(&teamUsers); err != nil {
 		return nil, err
 	}
 
-	ts := make([]*Team, len(tus))
-	for i, tu := range tus {
-		t := new(Team)
-		has, err := e.Id(tu.TeamID).Get(t)
-		if err != nil {
-			return nil, err
-		} else if !has {
-			return nil, ErrTeamNotExist
-		}
-		ts[i] = t
+	teamIDs := make([]int64, len(teamUsers)+1)
+	for i := range teamUsers {
+		teamIDs[i] = teamUsers[i].TeamID
 	}
-	return ts, nil
+	teamIDs[len(teamUsers)] = -1
+
+	teams := make([]*Team, 0, len(teamIDs))
+	return teams, e.Where("org_id = ?", orgID).In("id", teamIDs).Find(&teams)
 }
 
 // GetUserTeams returns all teams that user belongs to in given organization.
-func GetUserTeams(orgId, uid int64) ([]*Team, error) {
-	return getUserTeams(x, orgId, uid)
+func GetUserTeams(orgID, userID int64) ([]*Team, error) {
+	return getUserTeams(x, orgID, userID)
 }
 
 // AddTeamMember adds new membership of given team to given organization,
 // the user will have membership to given organization automatically when needed.
-func AddTeamMember(orgID, teamID, uid int64) error {
-	if IsTeamMember(orgID, teamID, uid) {
+func AddTeamMember(orgID, teamID, userID int64) error {
+	if IsTeamMember(orgID, teamID, userID) {
 		return nil
 	}
 
-	if err := AddOrgUser(orgID, uid); err != nil {
+	if err := AddOrgUser(orgID, userID); err != nil {
 		return err
 	}
 
@@ -477,19 +489,19 @@ func AddTeamMember(orgID, teamID, uid int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	tu := &TeamUser{
-		UID:    uid,
+		UID:    userID,
 		OrgID:  orgID,
 		TeamID: teamID,
 	}
 	if _, err = sess.Insert(tu); err != nil {
 		return err
-	} else if _, err = sess.Id(t.ID).Update(t); err != nil {
+	} else if _, err = sess.ID(t.ID).Update(t); err != nil {
 		return err
 	}
 
@@ -502,14 +514,14 @@ func AddTeamMember(orgID, teamID, uid int64) error {
 
 	// We make sure it exists before.
 	ou := new(OrgUser)
-	if _, err = sess.Where("uid = ?", uid).And("org_id = ?", orgID).Get(ou); err != nil {
+	if _, err = sess.Where("uid = ?", userID).And("org_id = ?", orgID).Get(ou); err != nil {
 		return err
 	}
 	ou.NumTeams++
 	if t.IsOwnerTeam() {
 		ou.IsOwner = true
 	}
-	if _, err = sess.Id(ou.ID).AllCols().Update(ou); err != nil {
+	if _, err = sess.ID(ou.ID).AllCols().Update(ou); err != nil {
 		return err
 	}
 
@@ -551,7 +563,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	}
 	if _, err := e.Delete(tu); err != nil {
 		return err
-	} else if _, err = e.Id(t.ID).AllCols().Update(t); err != nil {
+	} else if _, err = e.ID(t.ID).AllCols().Update(t); err != nil {
 		return err
 	}
 
@@ -572,7 +584,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 	if t.IsOwnerTeam() {
 		ou.IsOwner = false
 	}
-	if _, err = e.Id(ou.ID).AllCols().Update(ou); err != nil {
+	if _, err = e.ID(ou.ID).AllCols().Update(ou); err != nil {
 		return err
 	}
 	return nil
@@ -581,7 +593,7 @@ func removeTeamMember(e Engine, orgID, teamID, uid int64) error {
 // RemoveTeamMember removes member from given team of given organization.
 func RemoveTeamMember(orgID, teamID, uid int64) error {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err := sess.Begin(); err != nil {
 		return err
 	}
@@ -600,18 +612,18 @@ func RemoveTeamMember(orgID, teamID, uid int64) error {
 
 // TeamRepo represents an team-repository relation.
 type TeamRepo struct {
-	ID     int64 `xorm:"pk autoincr"`
+	ID     int64
 	OrgID  int64 `xorm:"INDEX"`
 	TeamID int64 `xorm:"UNIQUE(s)"`
 	RepoID int64 `xorm:"UNIQUE(s)"`
 }
 
 func hasTeamRepo(e Engine, orgID, teamID, repoID int64) bool {
-	has, _ := e.Where("org_id=?", orgID).And("team_id=?", teamID).And("repo_id=?", repoID).Get(new(TeamRepo))
+	has, _ := e.Where("org_id = ?", orgID).And("team_id = ?", teamID).And("repo_id = ?", repoID).Get(new(TeamRepo))
 	return has
 }
 
-// HasTeamRepo returns true if given repository belongs to team.
+// HasTeamRepo returns true if given team has access to the repository of the organization.
 func HasTeamRepo(orgID, teamID, repoID int64) bool {
 	return hasTeamRepo(x, orgID, teamID, repoID)
 }
@@ -641,4 +653,14 @@ func removeTeamRepo(e Engine, teamID, repoID int64) error {
 // RemoveTeamRepo deletes repository relation to team.
 func RemoveTeamRepo(teamID, repoID int64) error {
 	return removeTeamRepo(x, teamID, repoID)
+}
+
+// GetTeamsHaveAccessToRepo returns all teams in an organization that have given access level to the repository.
+func GetTeamsHaveAccessToRepo(orgID, repoID int64, mode AccessMode) ([]*Team, error) {
+	teams := make([]*Team, 0, 5)
+	return teams, x.Where("team.authorize >= ?", mode).
+		Join("INNER", "team_repo", "team_repo.team_id = team.id").
+		And("team_repo.org_id = ?", orgID).
+		And("team_repo.repo_id = ?", repoID).
+		Find(&teams)
 }

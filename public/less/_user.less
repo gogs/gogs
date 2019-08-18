@@ -18,8 +18,33 @@
 					margin-top: -10px;
 				}
 			}
+			.item .ui.primary.label {
+				margin-top: -5px;
+			}
 		}
-		.orgs {
+		&.sshkeys,
+		&.applications {
+			.right.floated.button {
+		    padding-top: 1rem;
+		    padding-bottom: 1rem;
+			}
+		}
+		&.security {
+			.two-factor .toggle.button {
+				margin-top: -5px;
+			}
+		}
+		&.repositories .repos {
+			padding: 0;
+			.item {
+				padding: 15px;
+				height: 46px;
+				.button {
+					margin-top: -5px;
+				}
+			}
+		}
+		&.organizations .orgs {
 			&.non-empty {
 				padding: 0;
 			}
@@ -35,6 +60,12 @@
 
 	&.profile {
 		.ui.card {
+			.profile-avatar {
+				height: 287px;
+			}
+			.header {
+				word-break: break-all;
+			}
 			.username {
 				display: block;
 			}

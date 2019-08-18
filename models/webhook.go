@@ -5,22 +5,26 @@
 package models
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/tls"
-	"encoding/json"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/go-xorm/xorm"
+	"github.com/json-iterator/go"
 	gouuid "github.com/satori/go.uuid"
 	log "gopkg.in/clog.v1"
 
-	api "github.com/gogits/go-gogs-client"
+	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/sync"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/httplib"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/sync"
 )
 
 var HookQueue = sync.NewUniqueQueue(setting.Webhook.QueueLength)
@@ -59,9 +63,14 @@ func IsValidHookContentType(name string) bool {
 }
 
 type HookEvents struct {
-	Create      bool `json:"create"`
-	Push        bool `json:"push"`
-	PullRequest bool `json:"pull_request"`
+	Create       bool `json:"create"`
+	Delete       bool `json:"delete"`
+	Fork         bool `json:"fork"`
+	Push         bool `json:"push"`
+	Issues       bool `json:"issues"`
+	PullRequest  bool `json:"pull_request"`
+	IssueComment bool `json:"issue_comment"`
+	Release      bool `json:"release"`
 }
 
 // HookEvent represents events that will delivery hook.
@@ -83,23 +92,23 @@ const (
 
 // Webhook represents a web hook object.
 type Webhook struct {
-	ID           int64 `xorm:"pk autoincr"`
+	ID           int64
 	RepoID       int64
 	OrgID        int64
 	URL          string `xorm:"url TEXT"`
 	ContentType  HookContentType
-	Secret       string `xorm:"TEXT"`
-	Events       string `xorm:"TEXT"`
-	*HookEvent   `xorm:"-"`
-	IsSSL        bool `xorm:"is_ssl"`
+	Secret       string     `xorm:"TEXT"`
+	Events       string     `xorm:"TEXT"`
+	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON here, it breaks old backup archive
+	IsSSL        bool       `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
 	LastStatus   HookStatus // Last delivery status
 
-	Created     time.Time `xorm:"-"`
+	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-"`
+	Updated     time.Time `xorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
@@ -117,8 +126,8 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "events":
 		w.HookEvent = &HookEvent{}
-		if err = json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
-			log.Error(3, "Unmarshal[%d]: %v", w.ID, err)
+		if err = jsoniter.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
+			log.Error(3, "Unmarshal [%d]: %v", w.ID, err)
 		}
 	case "created_unix":
 		w.Created = time.Unix(w.CreatedUnix, 0).Local()
@@ -129,8 +138,8 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 
 func (w *Webhook) GetSlackHook() *SlackMeta {
 	s := &SlackMeta{}
-	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
-		log.Error(4, "webhook.GetSlackHook(%d): %v", w.ID, err)
+	if err := jsoniter.Unmarshal([]byte(w.Meta), s); err != nil {
+		log.Error(2, "GetSlackHook [%d]: %v", w.ID, err)
 	}
 	return s
 }
@@ -142,7 +151,7 @@ func (w *Webhook) History(page int) ([]*HookTask, error) {
 
 // UpdateEvent handles conversion from HookEvent to Events.
 func (w *Webhook) UpdateEvent() error {
-	data, err := json.Marshal(w.HookEvent)
+	data, err := jsoniter.Marshal(w.HookEvent)
 	w.Events = string(data)
 	return err
 }
@@ -153,10 +162,28 @@ func (w *Webhook) HasCreateEvent() bool {
 		(w.ChooseEvents && w.HookEvents.Create)
 }
 
+// HasDeleteEvent returns true if hook enabled delete event.
+func (w *Webhook) HasDeleteEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Delete)
+}
+
+// HasForkEvent returns true if hook enabled fork event.
+func (w *Webhook) HasForkEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Fork)
+}
+
 // HasPushEvent returns true if hook enabled push event.
 func (w *Webhook) HasPushEvent() bool {
 	return w.PushOnly || w.SendEverything ||
 		(w.ChooseEvents && w.HookEvents.Push)
+}
+
+// HasIssuesEvent returns true if hook enabled issues event.
+func (w *Webhook) HasIssuesEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Issues)
 }
 
 // HasPullRequestEvent returns true if hook enabled pull request event.
@@ -165,16 +192,39 @@ func (w *Webhook) HasPullRequestEvent() bool {
 		(w.ChooseEvents && w.HookEvents.PullRequest)
 }
 
+// HasIssueCommentEvent returns true if hook enabled issue comment event.
+func (w *Webhook) HasIssueCommentEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.IssueComment)
+}
+
+// HasReleaseEvent returns true if hook enabled release event.
+func (w *Webhook) HasReleaseEvent() bool {
+	return w.SendEverything ||
+		(w.ChooseEvents && w.HookEvents.Release)
+}
+
+type eventChecker struct {
+	checker func() bool
+	typ     HookEventType
+}
+
 func (w *Webhook) EventsArray() []string {
-	events := make([]string, 0, 3)
-	if w.HasCreateEvent() {
-		events = append(events, "create")
+	events := make([]string, 0, 8)
+	eventCheckers := []eventChecker{
+		{w.HasCreateEvent, HOOK_EVENT_CREATE},
+		{w.HasDeleteEvent, HOOK_EVENT_DELETE},
+		{w.HasForkEvent, HOOK_EVENT_FORK},
+		{w.HasPushEvent, HOOK_EVENT_PUSH},
+		{w.HasIssuesEvent, HOOK_EVENT_ISSUES},
+		{w.HasPullRequestEvent, HOOK_EVENT_PULL_REQUEST},
+		{w.HasIssueCommentEvent, HOOK_EVENT_ISSUE_COMMENT},
+		{w.HasReleaseEvent, HOOK_EVENT_RELEASE},
 	}
-	if w.HasPushEvent() {
-		events = append(events, "push")
-	}
-	if w.HasPullRequestEvent() {
-		events = append(events, "pull_request")
+	for _, c := range eventCheckers {
+		if c.checker() {
+			events = append(events, string(c.typ))
+		}
 	}
 	return events
 }
@@ -192,13 +242,22 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrWebhookNotExist{bean.ID}
+		return nil, errors.WebhookNotExist{bean.ID}
 	}
 	return bean, nil
 }
 
-// GetWebhookByRepoID returns webhook of repository by given ID.
-func GetWebhookByRepoID(repoID, id int64) (*Webhook, error) {
+// GetWebhookByID returns webhook by given ID.
+// Use this function with caution of accessing unauthorized webhook,
+// which means should only be used in non-user interactive functions.
+func GetWebhookByID(id int64) (*Webhook, error) {
+	return getWebhook(&Webhook{
+		ID: id,
+	})
+}
+
+// GetWebhookOfRepoByID returns webhook of repository by given ID.
+func GetWebhookOfRepoByID(repoID, id int64) (*Webhook, error) {
 	return getWebhook(&Webhook{
 		ID:     id,
 		RepoID: repoID,
@@ -213,10 +272,10 @@ func GetWebhookByOrgID(orgID, id int64) (*Webhook, error) {
 	})
 }
 
-// GetActiveWebhooksByRepoID returns all active webhooks of repository.
-func GetActiveWebhooksByRepoID(repoID int64) ([]*Webhook, error) {
+// getActiveWebhooksByRepoID returns all active webhooks of repository.
+func getActiveWebhooksByRepoID(e Engine, repoID int64) ([]*Webhook, error) {
 	webhooks := make([]*Webhook, 0, 5)
-	return webhooks, x.Where("repo_id = ?", repoID).And("is_active = ?", true).Find(&webhooks)
+	return webhooks, e.Where("repo_id = ?", repoID).And("is_active = ?", true).Find(&webhooks)
 }
 
 // GetWebhooksByRepoID returns all webhooks of a repository.
@@ -235,7 +294,7 @@ func UpdateWebhook(w *Webhook) error {
 // ID must be specified and do not assign unnecessary fields.
 func deleteWebhook(bean *Webhook) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -271,10 +330,10 @@ func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 	return ws, err
 }
 
-// GetActiveWebhooksByOrgID returns all active webhooks for an organization.
-func GetActiveWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
-	err = x.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
-	return ws, err
+// getActiveWebhooksByOrgID returns all active webhooks for an organization.
+func getActiveWebhooksByOrgID(e Engine, orgID int64) ([]*Webhook, error) {
+	ws := make([]*Webhook, 0, 3)
+	return ws, e.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
 }
 
 //   ___ ___                __   ___________              __
@@ -290,11 +349,14 @@ const (
 	GOGS HookTaskType = iota + 1
 	SLACK
 	DISCORD
+	DINGTALK
 )
 
 var hookTaskTypes = map[string]HookTaskType{
-	"gogs":  GOGS,
-	"slack": SLACK,
+	"gogs":     GOGS,
+	"slack":    SLACK,
+	"discord":  DISCORD,
+	"dingtalk": DINGTALK,
 }
 
 // ToHookTaskType returns HookTaskType by given name.
@@ -308,6 +370,10 @@ func (t HookTaskType) Name() string {
 		return "gogs"
 	case SLACK:
 		return "slack"
+	case DISCORD:
+		return "discord"
+	case DINGTALK:
+		return "dingtalk"
 	}
 	return ""
 }
@@ -321,9 +387,14 @@ func IsValidHookTaskType(name string) bool {
 type HookEventType string
 
 const (
-	HOOK_EVENT_CREATE       HookEventType = "create"
-	HOOK_EVENT_PUSH         HookEventType = "push"
-	HOOK_EVENT_PULL_REQUEST HookEventType = "pull_request"
+	HOOK_EVENT_CREATE        HookEventType = "create"
+	HOOK_EVENT_DELETE        HookEventType = "delete"
+	HOOK_EVENT_FORK          HookEventType = "fork"
+	HOOK_EVENT_PUSH          HookEventType = "push"
+	HOOK_EVENT_ISSUES        HookEventType = "issues"
+	HOOK_EVENT_PULL_REQUEST  HookEventType = "pull_request"
+	HOOK_EVENT_ISSUE_COMMENT HookEventType = "issue_comment"
+	HOOK_EVENT_RELEASE       HookEventType = "release"
 )
 
 // HookRequest represents hook task request information.
@@ -340,27 +411,28 @@ type HookResponse struct {
 
 // HookTask represents a hook task.
 type HookTask struct {
-	ID              int64 `xorm:"pk autoincr"`
+	ID              int64
 	RepoID          int64 `xorm:"INDEX"`
 	HookID          int64
 	UUID            string
 	Type            HookTaskType
 	URL             string `xorm:"TEXT"`
-	api.Payloader   `xorm:"-"`
+	Signature       string `xorm:"TEXT"`
+	api.Payloader   `xorm:"-" json:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
 	EventType       HookEventType
 	IsSSL           bool
 	IsDelivered     bool
 	Delivered       int64
-	DeliveredString string `xorm:"-"`
+	DeliveredString string `xorm:"-" json:"-"`
 
 	// History info.
 	IsSucceed       bool
 	RequestContent  string        `xorm:"TEXT"`
-	RequestInfo     *HookRequest  `xorm:"-"`
+	RequestInfo     *HookRequest  `xorm:"-" json:"-"`
 	ResponseContent string        `xorm:"TEXT"`
-	ResponseInfo    *HookResponse `xorm:"-"`
+	ResponseInfo    *HookResponse `xorm:"-" json:"-"`
 }
 
 func (t *HookTask) BeforeUpdate() {
@@ -384,7 +456,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.RequestInfo = &HookRequest{}
-		if err = json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
+		if err = jsoniter.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
 			log.Error(3, "Unmarshal[%d]: %v", t.ID, err)
 		}
 
@@ -394,14 +466,14 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 		t.ResponseInfo = &HookResponse{}
-		if err = json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+		if err = jsoniter.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
 			log.Error(3, "Unmarshal [%d]: %v", t.ID, err)
 		}
 	}
 }
 
 func (t *HookTask) MarshalJSON(v interface{}) string {
-	p, err := json.Marshal(v)
+	p, err := jsoniter.Marshal(v)
 	if err != nil {
 		log.Error(3, "Marshal [%d]: %v", t.ID, err)
 	}
@@ -414,17 +486,32 @@ func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 	return tasks, x.Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
 }
 
-// CreateHookTask creates a new hook task,
+// createHookTask creates a new hook task,
 // it handles conversion from Payload to PayloadContent.
-func CreateHookTask(t *HookTask) error {
+func createHookTask(e Engine, t *HookTask) error {
 	data, err := t.Payloader.JSONPayload()
 	if err != nil {
 		return err
 	}
 	t.UUID = gouuid.NewV4().String()
 	t.PayloadContent = string(data)
-	_, err = x.Insert(t)
+	_, err = e.Insert(t)
 	return err
+}
+
+// GetHookTaskOfWebhookByUUID returns hook task of given webhook by UUID.
+func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error) {
+	hookTask := &HookTask{
+		HookID: webhookID,
+		UUID:   uuid,
+	}
+	has, err := x.Get(hookTask)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, errors.HookTaskNotExist{webhookID, uuid}
+	}
+	return hookTask, nil
 }
 
 // UpdateHookTask updates information of hook task.
@@ -433,40 +520,45 @@ func UpdateHookTask(t *HookTask) error {
 	return err
 }
 
-// PrepareWebhooks adds new webhooks to task queue for given payload.
-func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
-	ws, err := GetActiveWebhooksByRepoID(repo.ID)
-	if err != nil {
-		return fmt.Errorf("GetActiveWebhooksByRepoID: %v", err)
-	}
-
-	// check if repo belongs to org and append additional webhooks
-	if repo.MustOwner().IsOrganization() {
-		// get hooks for org
-		orgws, err := GetActiveWebhooksByOrgID(repo.OwnerID)
-		if err != nil {
-			return fmt.Errorf("GetActiveWebhooksByOrgID: %v", err)
-		}
-		ws = append(ws, orgws...)
-	}
-
-	if len(ws) == 0 {
+// prepareHookTasks adds list of webhooks to task queue.
+func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Payloader, webhooks []*Webhook) (err error) {
+	if len(webhooks) == 0 {
 		return nil
 	}
 
 	var payloader api.Payloader
-	for _, w := range ws {
+	for _, w := range webhooks {
 		switch event {
 		case HOOK_EVENT_CREATE:
 			if !w.HasCreateEvent() {
+				continue
+			}
+		case HOOK_EVENT_DELETE:
+			if !w.HasDeleteEvent() {
+				continue
+			}
+		case HOOK_EVENT_FORK:
+			if !w.HasForkEvent() {
 				continue
 			}
 		case HOOK_EVENT_PUSH:
 			if !w.HasPushEvent() {
 				continue
 			}
+		case HOOK_EVENT_ISSUES:
+			if !w.HasIssuesEvent() {
+				continue
+			}
 		case HOOK_EVENT_PULL_REQUEST:
 			if !w.HasPullRequestEvent() {
+				continue
+			}
+		case HOOK_EVENT_ISSUE_COMMENT:
+			if !w.HasIssueCommentEvent() {
+				continue
+			}
+		case HOOK_EVENT_RELEASE:
+			if !w.HasReleaseEvent() {
 				continue
 			}
 		}
@@ -483,25 +575,78 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 			if err != nil {
 				return fmt.Errorf("GetDiscordPayload: %v", err)
 			}
+		case DINGTALK:
+			payloader, err = GetDingtalkPayload(p, event)
+			if err != nil {
+				return fmt.Errorf("GetDingtalkPayload: %v", err)
+			}
 		default:
-			p.SetSecret(w.Secret)
 			payloader = p
 		}
 
-		if err = CreateHookTask(&HookTask{
+		var signature string
+		if len(w.Secret) > 0 {
+			data, err := payloader.JSONPayload()
+			if err != nil {
+				log.Error(2, "prepareWebhooks.JSONPayload: %v", err)
+			}
+			sig := hmac.New(sha256.New, []byte(w.Secret))
+			sig.Write(data)
+			signature = hex.EncodeToString(sig.Sum(nil))
+		}
+
+		if err = createHookTask(e, &HookTask{
 			RepoID:      repo.ID,
 			HookID:      w.ID,
 			Type:        w.HookTaskType,
 			URL:         w.URL,
+			Signature:   signature,
 			Payloader:   payloader,
 			ContentType: w.ContentType,
 			EventType:   event,
 			IsSSL:       w.IsSSL,
 		}); err != nil {
-			return fmt.Errorf("CreateHookTask: %v", err)
+			return fmt.Errorf("createHookTask: %v", err)
 		}
 	}
+
+	// It's safe to fail when the whole function is called during hook execution
+	// because resource released after exit. Also, there is no process started to
+	// consume this input during hook execution.
+	go HookQueue.Add(repo.ID)
 	return nil
+}
+
+func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payloader) error {
+	webhooks, err := getActiveWebhooksByRepoID(e, repo.ID)
+	if err != nil {
+		return fmt.Errorf("getActiveWebhooksByRepoID [%d]: %v", repo.ID, err)
+	}
+
+	// check if repo belongs to org and append additional webhooks
+	if repo.mustOwner(e).IsOrganization() {
+		// get hooks for org
+		orgws, err := getActiveWebhooksByOrgID(e, repo.OwnerID)
+		if err != nil {
+			return fmt.Errorf("getActiveWebhooksByOrgID [%d]: %v", repo.OwnerID, err)
+		}
+		webhooks = append(webhooks, orgws...)
+	}
+	return prepareHookTasks(e, repo, event, p, webhooks)
+}
+
+// PrepareWebhooks adds all active webhooks to task queue.
+func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+	return prepareWebhooks(x, repo, event, p)
+}
+
+// TestWebhook adds the test webhook matches the ID to task queue.
+func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhookID int64) error {
+	webhook, err := GetWebhookOfRepoByID(repo.ID, webhookID)
+	if err != nil {
+		return fmt.Errorf("GetWebhookOfRepoByID [repo_id: %d, id: %d]: %v", repo.ID, webhookID, err)
+	}
+	return prepareHookTasks(x, repo, event, p, []*Webhook{webhook})
 }
 
 func (t *HookTask) deliver() {
@@ -509,7 +654,10 @@ func (t *HookTask) deliver() {
 
 	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
+		Header("X-Github-Delivery", t.UUID).
+		Header("X-Github-Event", string(t.EventType)).
 		Header("X-Gogs-Delivery", t.UUID).
+		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify})
 
@@ -541,9 +689,9 @@ func (t *HookTask) deliver() {
 		}
 
 		// Update webhook last delivery status.
-		w, err := GetWebhookByRepoID(t.RepoID, t.HookID)
+		w, err := GetWebhookByID(t.HookID)
 		if err != nil {
-			log.Error(5, "GetWebhookByID: %v", err)
+			log.Error(3, "GetWebhookByID: %v", err)
 			return
 		}
 		if t.IsSucceed {
@@ -552,7 +700,7 @@ func (t *HookTask) deliver() {
 			w.LastStatus = HOOK_STATUS_FAILED
 		}
 		if err = UpdateWebhook(w); err != nil {
-			log.Error(5, "UpdateWebhook: %v", err)
+			log.Error(3, "UpdateWebhook: %v", err)
 			return
 		}
 	}()
@@ -583,7 +731,7 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	x.Where("is_delivered=?", false).Iterate(new(HookTask),
+	x.Where("is_delivered = ?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			t.deliver()
@@ -604,7 +752,7 @@ func DeliverHooks() {
 		HookQueue.Remove(repoID)
 
 		tasks = make([]*HookTask, 0, 5)
-		if err := x.Where("repo_id=? AND is_delivered=?", repoID, false).Find(&tasks); err != nil {
+		if err := x.Where("repo_id = ?", repoID).And("is_delivered = ?", false).Find(&tasks); err != nil {
 			log.Error(4, "Get repository [%s] hook tasks: %v", repoID, err)
 			continue
 		}

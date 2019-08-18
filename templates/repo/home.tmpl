@@ -3,14 +3,29 @@
 	{{template "repo/header" .}}
 	<div class="ui container">
 		{{template "base/alert" .}}
-		<p id="repo-desc">
-			{{if .Repository.DescriptionHtml}}<span class="description has-emoji">{{.Repository.DescriptionHtml}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
-			<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
-		</p>
+		{{if .PageIsRepoHome}}
+			<p id="repo-desc">
+				{{if .Repository.Description}}<span class="description has-emoji">{{.Repository.Description | NewLine2br | Str2HTML}}</span>{{else}}<span class="no-description text-italic">{{.i18n.Tr "repo.no_desc"}}</span>{{end}}
+				<a class="link" href="{{.Repository.Website}}">{{.Repository.Website}}</a>
+			</p>
+			<div class="ui segment" id="git-stats">
+				<div class="ui two horizontal center link list">
+					<div class="item">
+				  	<a href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}"><span class="ui text black"><i class="octicon octicon-history"></i> <b>{{.CommitsCount}}</b> {{.i18n.Tr "repo.commits"}}</span> </a>
+					</div>
+					<div class="item">
+				  	<a href="{{.RepoLink}}/branches"><span class="ui text black"><i class="octicon octicon-git-branch"></i><b>{{.BrancheCount}}</b> {{.i18n.Tr "repo.git_branches"}}</span> </a>
+					</div>
+					<div class="item">
+				  	<a href="{{.RepoLink}}/releases"><span class="ui text black"><i class="octicon octicon-tag"></i> <b>{{.Repository.NumTags}}</b> {{.i18n.Tr "repo.releases"}}</span> </a>
+					</div>
+				</div>
+			</div>
+		{{end}}
 		<div class="ui secondary menu">
 			{{if .PullRequestCtx.Allowed}}
 				<div class="fitted item">
-					<a href="{{.BaseRepo.Link}}/compare/{{.BaseRepo.DefaultBranch}}...{{.PullRequestCtx.HeadInfo}}">
+					<a href="{{.BaseRepo.Link}}/compare/{{EscapePound .BaseRepo.DefaultBranch}}...{{EscapePound .PullRequestCtx.HeadInfo}}">
 						<button class="ui green small button"><i class="octicon octicon-git-compare"></i></button>
 					</a>
 				</div>
@@ -48,7 +63,7 @@
 					</div>
 				{{end}}
 
-				<!-- Only show colne panel in repository home page -->
+				<!-- Only show clone panel in repository home page -->
 				{{if eq $n 0}}
 					<div class="ui action small input" id="clone-panel">
 						{{if not $.DisableHTTP}}

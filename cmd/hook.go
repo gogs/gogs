@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -18,16 +19,18 @@ import (
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/git-module"
+	"github.com/gogs/git-module"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/setting"
-	http "github.com/gogits/gogs/routers/repo"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/httplib"
+	"github.com/gogs/gogs/pkg/mailer"
+	"github.com/gogs/gogs/pkg/setting"
+	"github.com/gogs/gogs/pkg/template"
 )
 
 var (
-	CmdHook = cli.Command{
+	Hook = cli.Command{
 		Name:        "hook",
 		Usage:       "Delegate commands to corresponding Git hooks",
 		Description: "All sub-commands should only be called by Git",
@@ -67,7 +70,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 	setup(c, "hooks/pre-receive.log", true)
 
-	isWiki := strings.Contains(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+	isWiki := strings.Contains(os.Getenv(models.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -88,10 +91,10 @@ func runHookPreReceive(c *cli.Context) error {
 		branchName := strings.TrimPrefix(string(fields[2]), git.BRANCH_PREFIX)
 
 		// Branch protection
-		repoID := com.StrTo(os.Getenv(http.ENV_REPO_ID)).MustInt64()
+		repoID := com.StrTo(os.Getenv(models.ENV_REPO_ID)).MustInt64()
 		protectBranch, err := models.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
-			if models.IsErrBranchNotExist(err) {
+			if errors.IsErrBranchNotExist(err) {
 				continue
 			}
 			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
@@ -100,8 +103,21 @@ func runHookPreReceive(c *cli.Context) error {
 			continue
 		}
 
+		// Whitelist users can bypass require pull request check
+		bypassRequirePullRequest := false
+
+		// Check if user is in whitelist when enabled
+		userID := com.StrTo(os.Getenv(models.ENV_AUTH_USER_ID)).MustInt64()
+		if protectBranch.EnableWhitelist {
+			if !models.IsUserInProtectBranchWhitelist(repoID, userID, branchName) {
+				fail(fmt.Sprintf("Branch '%s' is protected and you are not in the push whitelist", branchName), "")
+			}
+
+			bypassRequirePullRequest = true
+		}
+
 		// Check if branch allows direct push
-		if protectBranch.RequirePullRequest {
+		if !bypassRequirePullRequest && protectBranch.RequirePullRequest {
 			fail(fmt.Sprintf("Branch '%s' is protected and commits must be merged through pull request", branchName), "")
 		}
 
@@ -111,7 +127,8 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 
 		// Check force push
-		output, err := git.NewCommand("rev-list", oldCommitID, "^"+newCommitID).Run()
+		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
+			RunInDir(models.RepoPath(os.Getenv(models.ENV_REPO_OWNER_NAME), os.Getenv(models.ENV_REPO_NAME)))
 		if err != nil {
 			fail("Internal error", "Fail to detect force push: %v", err)
 		} else if len(output) > 0 {
@@ -119,12 +136,18 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")
+	customHooksPath := filepath.Join(os.Getenv(models.ENV_REPO_CUSTOM_HOOKS_PATH), "pre-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
 
-	hookCmd := exec.Command(customHooksPath)
+	var hookCmd *exec.Cmd
+	if setting.IsWindows {
+		hookCmd = exec.Command("bash.exe", "custom_hooks/pre-receive")
+	} else {
+		hookCmd = exec.Command(customHooksPath)
+	}
+	hookCmd.Dir = models.RepoPath(os.Getenv(models.ENV_REPO_OWNER_NAME), os.Getenv(models.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
@@ -147,12 +170,18 @@ func runHookUpdate(c *cli.Context) error {
 		fail("First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "update")
+	customHooksPath := filepath.Join(os.Getenv(models.ENV_REPO_CUSTOM_HOOKS_PATH), "update")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
 
-	hookCmd := exec.Command(customHooksPath, args...)
+	var hookCmd *exec.Cmd
+	if setting.IsWindows {
+		hookCmd = exec.Command("bash.exe", append([]string{"custom_hooks/update"}, args...)...)
+	} else {
+		hookCmd = exec.Command(customHooksPath, args...)
+	}
+	hookCmd.Dir = models.RepoPath(os.Getenv(models.ENV_REPO_OWNER_NAME), os.Getenv(models.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
@@ -168,7 +197,14 @@ func runHookPostReceive(c *cli.Context) error {
 	}
 	setup(c, "hooks/post-receive.log", true)
 
-	isWiki := strings.Contains(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
+	// Post-receive hook does more than just gather Git information,
+	// so we need to setup additional services for email notifications.
+	setting.NewPostReceiveHookServices()
+	mailer.NewContext()
+	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
+		path.Join(setting.CustomPath, "templates/mail"), template.NewFuncMap())
+
+	isWiki := strings.Contains(os.Getenv(models.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
 	buf := bytes.NewBuffer(nil)
 	scanner := bufio.NewScanner(os.Stdin)
@@ -190,20 +226,20 @@ func runHookPostReceive(c *cli.Context) error {
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
 			RefFullName:  string(fields[2]),
-			PusherID:     com.StrTo(os.Getenv(http.ENV_AUTH_USER_ID)).MustInt64(),
-			PusherName:   os.Getenv(http.ENV_AUTH_USER_NAME),
-			RepoUserName: os.Getenv(http.ENV_REPO_OWNER_NAME),
-			RepoName:     os.Getenv(http.ENV_REPO_NAME),
+			PusherID:     com.StrTo(os.Getenv(models.ENV_AUTH_USER_ID)).MustInt64(),
+			PusherName:   os.Getenv(models.ENV_AUTH_USER_NAME),
+			RepoUserName: os.Getenv(models.ENV_REPO_OWNER_NAME),
+			RepoName:     os.Getenv(models.ENV_REPO_NAME),
 		}
 		if err := models.PushUpdate(options); err != nil {
 			log.Error(2, "PushUpdate: %v", err)
 		}
 
-		// Ask for running deliver hook and test pull request tasks.
+		// Ask for running deliver hook and test pull request tasks
 		reqURL := setting.LocalURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
-			strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX) +
-			"&secret=" + os.Getenv(http.ENV_REPO_OWNER_SALT_MD5) +
-			"&pusher=" + os.Getenv(http.ENV_AUTH_USER_ID)
+			template.EscapePound(strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX)) +
+			"&secret=" + os.Getenv(models.ENV_REPO_OWNER_SALT_MD5) +
+			"&pusher=" + os.Getenv(models.ENV_AUTH_USER_ID)
 		log.Trace("Trigger task: %s", reqURL)
 
 		resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
@@ -219,12 +255,18 @@ func runHookPostReceive(c *cli.Context) error {
 		}
 	}
 
-	customHooksPath := filepath.Join(os.Getenv(http.ENV_REPO_CUSTOM_HOOKS_PATH), "post-receive")
+	customHooksPath := filepath.Join(os.Getenv(models.ENV_REPO_CUSTOM_HOOKS_PATH), "post-receive")
 	if !com.IsFile(customHooksPath) {
 		return nil
 	}
 
-	hookCmd := exec.Command(customHooksPath)
+	var hookCmd *exec.Cmd
+	if setting.IsWindows {
+		hookCmd = exec.Command("bash.exe", "custom_hooks/post-receive")
+	} else {
+		hookCmd = exec.Command(customHooksPath)
+	}
+	hookCmd.Dir = models.RepoPath(os.Getenv(models.ENV_REPO_OWNER_NAME), os.Getenv(models.ENV_REPO_NAME))
 	hookCmd.Stdout = os.Stdout
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr

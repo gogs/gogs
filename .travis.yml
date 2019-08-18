@@ -1,17 +1,15 @@
 language: go
 go:
-  - 1.5.x
-  - 1.6.x
-  - 1.7.x
-  - master
+  - 1.8.x
+  - 1.9.x
+  - 1.10.x
+  - 1.11.x
+  - 1.12.x
 
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libpam-dev
 
-env:
-  - GO15VENDOREXPERIMENT=1
-
-script: 
+script:
   - go build -v -tags "pam"
   - go test -v -cover -race ./...

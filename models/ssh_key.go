@@ -23,9 +23,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/process"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogs/gogs/pkg/process"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 const (
@@ -43,7 +42,7 @@ const (
 
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
-	ID          int64      `xorm:"pk autoincr"`
+	ID          int64
 	OwnerID     int64      `xorm:"INDEX NOT NULL"`
 	Name        string     `xorm:"NOT NULL"`
 	Fingerprint string     `xorm:"NOT NULL"`
@@ -51,12 +50,12 @@ type PublicKey struct {
 	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2"`
 	Type        KeyType    `xorm:"NOT NULL DEFAULT 1"`
 
-	Created           time.Time `xorm:"-"`
+	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-"`
-	HasUsed           bool `xorm:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" json:"-"`
 }
 
 func (k *PublicKey) BeforeInsert() {
@@ -194,11 +193,6 @@ func writeTmpKeyFile(content string) (string, error) {
 
 // SSHKeyGenParsePublicKey extracts key type and length using ssh-keygen.
 func SSHKeyGenParsePublicKey(key string) (string, int, error) {
-	// The ssh-keygen in Windows does not print key type, so no need go further.
-	if setting.IsWindows {
-		return "", 0, nil
-	}
-
 	tmpName, err := writeTmpKeyFile(key)
 	if err != nil {
 		return "", 0, fmt.Errorf("writeTmpKeyFile: %v", err)
@@ -223,7 +217,6 @@ func SSHKeyGenParsePublicKey(key string) (string, int, error) {
 }
 
 // SSHNativeParsePublicKey extracts the key type and length using the golang SSH library.
-// NOTE: ed25519 is not supported.
 func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 	fields := strings.Fields(keyLine)
 	if len(fields) < 2 {
@@ -272,7 +265,7 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 		return "ecdsa", 384, nil
 	case ssh.KeyAlgoECDSA521:
 		return "ecdsa", 521, nil
-	case "ssh-ed25519": // TODO: replace with ssh constant when available
+	case ssh.KeyAlgoED25519:
 		return "ed25519", 256, nil
 	}
 	return "", 0, fmt.Errorf("unsupported key length detection for type: %s", pkey.Type())
@@ -295,8 +288,12 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		return "", errors.New("only a single line with a single key please")
 	}
 
-	// remove any unnecessary whitespace now
+	// Remove any unnecessary whitespace
 	content = strings.TrimSpace(content)
+
+	if !setting.SSH.MinimumKeySizeCheck {
+		return content, nil
+	}
 
 	var (
 		fnName  string
@@ -315,9 +312,6 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	}
 	log.Trace("Key info [native: %v]: %s-%d", setting.SSH.StartBuiltinServer, keyType, length)
 
-	if !setting.SSH.MinimumKeySizeCheck {
-		return content, nil
-	}
 	if minLen, found := setting.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
 		return content, nil
 	} else if found && length < minLen {
@@ -422,7 +416,7 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return nil, err
 	}
@@ -484,7 +478,7 @@ func deletePublicKeys(e *xorm.Session, keyIDs ...int64) error {
 		return nil
 	}
 
-	_, err := e.In("id", strings.Join(base.Int64sToStrings(keyIDs), ",")).Delete(new(PublicKey))
+	_, err := e.In("id", keyIDs).Delete(new(PublicKey))
 	return err
 }
 
@@ -504,7 +498,7 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -517,16 +511,19 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 		return err
 	}
 
-	return RewriteAllPublicKeys()
+	return RewriteAuthorizedKeys()
 }
 
-// RewriteAllPublicKeys removes any authorized key and rewrite all keys from database again.
+// RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
 // Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
 // outsite any session scope independently.
-func RewriteAllPublicKeys() error {
+func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
+	log.Trace("Doing: RewriteAuthorizedKeys")
+
+	os.MkdirAll(setting.SSH.RootPath, os.ModePerm)
 	fpath := filepath.Join(setting.SSH.RootPath, "authorized_keys")
 	tmpPath := fpath + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
@@ -565,19 +562,19 @@ func RewriteAllPublicKeys() error {
 
 // DeployKey represents deploy key information and its relation with repository.
 type DeployKey struct {
-	ID          int64 `xorm:"pk autoincr"`
+	ID          int64
 	KeyID       int64 `xorm:"UNIQUE(s) INDEX"`
 	RepoID      int64 `xorm:"UNIQUE(s) INDEX"`
 	Name        string
 	Fingerprint string
-	Content     string `xorm:"-"`
+	Content     string `xorm:"-" json:"-"`
 
-	Created           time.Time `xorm:"-"`
+	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-"`
-	HasUsed           bool `xorm:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" json:"-"`
 }
 
 func (k *DeployKey) BeforeInsert() {
@@ -667,7 +664,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return nil, err
 	}
@@ -736,7 +733,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		yes, err := HasAccess(doer, repo, ACCESS_MODE_ADMIN)
+		yes, err := HasAccess(doer.ID, repo, ACCESS_MODE_ADMIN)
 		if err != nil {
 			return fmt.Errorf("HasAccess: %v", err)
 		} else if !yes {
@@ -745,12 +742,12 @@ func DeleteDeployKey(doer *User, id int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
-	if _, err = sess.Id(key.ID).Delete(new(DeployKey)); err != nil {
+	if _, err = sess.ID(key.ID).Delete(new(DeployKey)); err != nil {
 		return fmt.Errorf("delete deploy key [%d]: %v", key.ID, err)
 	}
 

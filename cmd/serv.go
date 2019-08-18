@@ -16,9 +16,9 @@ import (
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/setting"
-	http "github.com/gogits/gogs/routers/repo"
+	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 const (
@@ -153,7 +153,7 @@ func runServ(c *cli.Context) error {
 
 	owner, err := models.GetUserByName(ownerName)
 	if err != nil {
-		if models.IsErrUserNotExist(err) {
+		if errors.IsUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
 		}
 		fail("Internal error", "Fail to get repository owner '%s': %v", ownerName, err)
@@ -161,7 +161,7 @@ func runServ(c *cli.Context) error {
 
 	repo, err := models.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
-		if models.IsErrRepoNotExist(err) {
+		if errors.IsRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		fail("Internal error", "Fail to get repository: %v", err)
@@ -199,7 +199,7 @@ func runServ(c *cli.Context) error {
 				fail("Internal error", "Fail to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode, err := models.AccessLevel(user, repo)
+			mode, err := models.UserAccessMode(user.ID, repo)
 			if err != nil {
 				fail("Internal error", "Fail to check access: %v", err)
 			}
@@ -251,7 +251,7 @@ func runServ(c *cli.Context) error {
 		gitCmd = exec.Command(verb, repoFullName)
 	}
 	if requestMode == models.ACCESS_MODE_WRITE {
-		gitCmd.Env = append(os.Environ(), http.ComposeHookEnvs(http.ComposeHookEnvsOptions{
+		gitCmd.Env = append(os.Environ(), models.ComposeHookEnvs(models.ComposeHookEnvsOptions{
 			AuthUser:  user,
 			OwnerName: owner.Name,
 			OwnerSalt: owner.Salt,

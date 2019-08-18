@@ -1,5 +1,5 @@
-<form class="ui comment form grid" action="{{EscapePound .Link}}" method="post">
-	{{.CsrfTokenHtml}}
+<form class="ui comment form grid" action="{{.Link}}" method="post">
+	{{.CSRFTokenHTML}}
 	{{if .Flash}}
 		<div class="sixteen wide column">
 			{{template "base/alert" .}}
@@ -8,8 +8,8 @@
 	<div class="twelve wide column">
 		<div class="ui comments">
 			<div class="comment">
-				<a class="avatar" href="{{.SignedUser.HomeLink}}">
-					<img src="{{.SignedUser.RelAvatarLink}}">
+				<a class="avatar" href="{{.LoggedUser.HomeLink}}">
+					<img src="{{.LoggedUser.RelAvatarLink}}">
 				</a>
 				<div class="ui segment content">
 					<div class="field">

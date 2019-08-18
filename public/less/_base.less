@@ -1,9 +1,21 @@
 @footer-margin: 40px;
 
-body {
-	font-family: "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+body:not(.full-width) {
+	font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
 	background-color: #fff;
 	overflow-y: scroll;
+	overflow-x: auto;
+	min-width: 1020px;
+}
+.ui.container:not(.fluid) {
+	width: 980px !important;
+}
+h1, h2, h3, h4, h5,
+.ui.header,
+.ui.menu,
+.ui.input input,
+.ui.button:not(.label) {
+	font-family: "PingFang SC", 'Hiragino Sans GB', "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
 }
 img {
 	border-radius: 3px;
@@ -21,10 +33,7 @@ pre, code {
 		overflow: auto;
 	}
 	&.wrap {
-		white-space: pre-wrap;       /* CSS 3 */
-//		white-space: -moz-normal;  /* Mozilla, since 1999 */
-//		white-space: -normal;      /* Opera 4-6 */
-//		white-space: -o-normal;    /* Opera 7 */
+		white-space: pre-wrap;
 		word-break: break-word;
 	}
 }
@@ -64,6 +73,7 @@ pre, code {
 	}
 	.top.menu a.item.brand {
 		padding-left: 0;
+    padding-right: 0;
 	}
 	.brand .ui.mini.image {
 		width: 30px;
@@ -133,6 +143,15 @@ pre, code {
 		.ui.button {
 			font-weight: normal;
 		}
+		.box.field {
+			padding-left: 27px;
+		}
+	}
+
+	&.menu,
+	&.vertical.menu,
+	&.segment {
+		box-shadow: none;
 	}
 
 	.text {
@@ -365,8 +384,17 @@ footer {
 .hide {
 	display: none;
 }
+.display {
+	&.inline {
+		display: inline;
+	}
+}
 .center {
 	text-align: center;
+}
+
+.no-padding-left {
+	padding-left: 0 !important;
 }
 
 .generate-img(16);
@@ -409,4 +437,14 @@ footer {
 .hljs {
 	background: inherit !important;
 	padding: 0 !important;
+}
+
+// Reset CSS to prevent UI breaks
+.ui.dropdown .menu>.item>.image,
+.ui.dropdown .menu>.item>img,
+.ui.dropdown>.text>.image,
+.ui.dropdown>.text>img {
+	vertical-align: middle;
+	margin-top: 0;
+    margin-bottom: 0;
 }

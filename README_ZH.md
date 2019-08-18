@@ -1,15 +1,15 @@
-Gogs [![Build Status](https://travis-ci.org/gogits/gogs.svg?branch=master)](https://travis-ci.org/gogits/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master)
+Gogs [![Build Status](https://travis-ci.org/gogs/gogs.svg?branch=master)](https://travis-ci.org/gogs/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master)
 =====================
 
 Gogs 是一款极易搭建的自助 Git 服务。
 
-## 开发目的
+## 项目愿景
 
-Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、Mac OS X、Windows 以及 ARM 平台。
+本项目旨在打造一个以最简便的方式搭建简单、稳定和可扩展的自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、macOS、Windows 以及 ARM 平台。
 
 ## 项目概览
 
-- 有关基本用法和变更日志，请通过 [使用手册](https://gogs.io/docs/intro/) 查看。
+- 有关基本用法和变更日志，请通过 [使用手册](https://gogs.io/docs/intro) 查看。
 - 想要先睹为快？直接去 [在线体验](https://try.gogs.io/gogs/gogs) 。
 - 使用过程中遇到问题？尝试从 [故障排查](https://gogs.io/docs/intro/troubleshooting.html) 页面或 [用户论坛](https://discuss.gogs.io/) 获取帮助。
 - 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](https://gogs.io/docs/features/i18n.html)！
@@ -29,10 +29,11 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - 支持在线编辑仓库文件和 Wiki
 - 支持自定义源的 Gravatar 和 Federated Avatar
 - 支持 Jupyter Notebook
+- 支持两步验证登录
 - 支持邮件服务
 - 支持后台管理面板
-- 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（实验性支持） 数据库
-- 支持多语言本地化（[23 种语言]([more](https://crowdin.com/project/gogs))）
+- 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（通过 MySQL 协议）数据库
+- 支持多语言本地化（[30 种语言]([more](https://crowdin.com/project/gogs))）
 
 ## 硬件要求
 
@@ -49,17 +50,18 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 在安装 Gogs 之前，您需要先安装 [基本环境](https://gogs.io/docs/installation)。
 
-然后，您可以通过以下 5 种方式来安装 Gogs：
+然后，您可以通过以下 6 种方式来安装 Gogs：
 
 - [二进制安装](https://gogs.io/docs/installation/install_from_binary.html)
 - [源码安装](https://gogs.io/docs/installation/install_from_source.html)
 - [包管理安装](https://gogs.io/docs/installation/install_from_packages.html)
-- [采用 Docker 部署](https://github.com/gogits/gogs/tree/master/docker)
+- [采用 Docker 部署](https://github.com/gogs/gogs/tree/master/docker)
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+- [通过基于 Kubernetes 的 Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
 
 ### 使用教程
 
-- [使用 Gogs 搭建自己的 Git 服务器](https://mynook.info/blog/post/host-your-own-git-server-using-gogs)
+- [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/)
 - [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654)
 
 ### 云端部署
@@ -67,11 +69,11 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [OpenShift](https://github.com/tkisme/gogs-openshift)
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
-- [Portal](https://portaldemo.xyz/cloud/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/mbugeia/gogs_ynh)
 - [DPlatform](https://github.com/j8r/DPlatform)
+- [LunaNode](https://github.com/LunaNode/launchgogs)
 
 ## 软件及服务支持
 
@@ -83,6 +85,7 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 - [Kanboard](http://kanboard.net/plugin/gogs-webhook)（项目管理）
 - [BearyChat](https://bearychat.com/)（团队交流）
 - [HiWork](http://www.hiwork.cc/)（团队交流）
+- [GitPitch](https://gitpitch.com/)（Markdown 演示）
 
 ### 产品支持
 
@@ -91,19 +94,17 @@ Gogs 的目标是打造一个最简单、最快速和最轻松的方式搭建自
 
 ## 特别鸣谢
 
-- 基于 [Macaron](https://github.com/go-macaron/macaron) 的路由与中间件机制。
-- 基于 [GoBlog](https://github.com/fuxiaohei/goblog) 修改的系统监视状态。
 - 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
-- 感谢 [DigitalOcean](https://www.digitalocean.com) 提供主站和体验站点的服务器赞助。
-- 感谢 [KeyCDN](https://www.keycdn.com/) 和 [七牛云存储](http://www.qiniu.com/) 提供 CDN 服务赞助。
+- 感谢 [DigitalOcean](https://www.digitalocean.com)、[VPSServer](https://www.vpsserver.com/)、[Hosted.nl](https://www.hosted.nl/) 和 [MonoVM](https://monovm.com) 提供服务器赞助。
+- 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
+- 感谢 [Buildkite](https://buildkite.com) 提供免费的开源项目 CI/CD 支持。
 
 ## 贡献成员
 
-- 前团队成员 [@lunny](https://github.com/lunny)、[@fuxiaohei](https://github.com/fuxiaohei) 和 [@slene](https://github.com/slene)。
-- 您可以通过查看 [贡献者页面](https://github.com/gogits/gogs/graphs/contributors) 获取完整的贡献者列表。
+- 您可以通过查看 [贡献者页面](https://github.com/gogs/gogs/graphs/contributors) 获取 TOP 100 的贡献者列表。
 - 您可以通过查看 [TRANSLATORS](conf/locale/TRANSLATORS) 文件获取公开的翻译人员列表。
 
 ## 授权许可
 
-本项目采用 MIT 开源授权许可证，完整的授权说明已放置在 [LICENSE](https://github.com/gogits/gogs/blob/master/LICENSE) 文件中。
+本项目采用 MIT 开源授权许可证，完整的授权说明已放置在 [LICENSE](https://github.com/gogs/gogs/blob/master/LICENSE) 文件中。

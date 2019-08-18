@@ -10,7 +10,7 @@
 				</h4>
 				<div class="ui attached segment">
 					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+						{{.CSRFTokenHTML}}
 						<input type="hidden" name="id" value="{{.Source.ID}}">
 						<div class="inline field">
 							<label>{{$.i18n.Tr "admin.auths.auth_type"}}</label>
@@ -50,6 +50,7 @@
 								<div class="field">
 									<label for="bind_dn">{{.i18n.Tr "admin.auths.bind_dn"}}</label>
 									<input id="bind_dn" name="bind_dn" value="{{$cfg.BindDN}}" placeholder="e.g. cn=Search,dc=mydomain,dc=com">
+									<p class="help text red">{{.i18n.Tr "admin.auths.bind_dn_helper"}}</p>
 								</div>
 								<input class="fake" type="password">
 								<div class="field">
@@ -91,6 +92,31 @@
 							<div class="required field">
 								<label for="attribute_mail">{{.i18n.Tr "admin.auths.attribute_mail"}}</label>
 								<input id="attribute_mail" name="attribute_mail" value="{{$cfg.AttributeMail}}" placeholder="e.g. mail" required>
+							</div>
+
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "admin.auths.verify_group_membership"}}</strong></label>
+									<input class="enable-system" type="checkbox" name="group_enabled" data-target="#group_box" {{if $cfg.GroupEnabled}}checked{{end}}>
+								</div>
+							</div>
+							<div class="ui segment field {{if not $cfg.GroupEnabled}}disabled{{end}}" id="group_box">
+								<div class="field">
+									<label for="group_dn">{{.i18n.Tr "admin.auths.group_search_base_dn"}}</label>
+									<input id="group_dn" name="group_dn" value="{{$cfg.GroupDN}}" placeholder="e.g. ou=group,dc=mydomain,dc=com">
+								</div>
+								<div class="field">
+									<label for="group_filter">{{.i18n.Tr "admin.auths.group_filter"}}</label>
+									<input id="group_filter" name="group_filter" value="{{$cfg.GroupFilter}}" placeholder="e.g. (|(cn=gogs_users)(cn=admins))">
+								</div>
+								<div class="field">
+									<label for="group_member_uid">{{.i18n.Tr "admin.auths.group_attribute_contain_user_list"}}</label>
+									<input id="group_member_uid" name="group_member_uid" value="{{$cfg.GroupMemberUID}}" placeholder="e.g. memberUid">
+								</div>
+								<div class="field">
+									<label for="user_uid">{{.i18n.Tr "admin.auths.user_attribute_listed_in_group"}}</label>
+									<input id="user_uid" name="user_uid" value="{{$cfg.UserUID}}" placeholder="e.g. uid">
+								</div>
 							</div>
 							{{if .Source.IsLDAP}}
 								<div class="inline field">
@@ -142,6 +168,15 @@
 							</div>
 						{{end}}
 
+						<!-- GitHub -->
+						{{if .Source.IsGitHub}}
+							{{ $cfg:=.Source.GitHub }}
+							<div class="required field">
+								<label for="github_api_endpoint">{{.i18n.Tr "admin.auths.github_api_endpoint"}}</label>
+								<input id="github_api_endpoint" name="github_api_endpoint" value="{{$cfg.APIEndpoint}}" placeholder="e.g. https://api.github.com/" required>
+							</div>
+						{{end}}
+						
 						<div class="inline field {{if not .Source.IsSMTP}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>
@@ -160,10 +195,17 @@
 								<input name="is_active" type="checkbox" {{if .Source.IsActived}}checked{{end}}>
 							</div>
 						</div>
-
+						<div class="inline field">
+							<div class="ui checkbox">
+								<label><strong>{{.i18n.Tr "admin.auths.default_auth"}}</strong></label>
+								<input name="is_default" type="checkbox" {{if .Source.IsDefault}}checked{{end}}>
+							</div>
+						</div>
 						<div class="field">
 							<button class="ui green button">{{.i18n.Tr "admin.auths.update"}}</button>
-							<div class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}">{{.i18n.Tr "admin.auths.delete"}}</div>
+							{{if not .Source.LocalFile}}
+								<div class="ui red button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Source.ID}}">{{.i18n.Tr "admin.auths.delete"}}</div>
+							{{end}}
 						</div>
 					</form>
 				</div>

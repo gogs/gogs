@@ -1,10 +1,11 @@
+// Package pam provides a wrapper for the PAM application API.
 package pam
 
 //#include <security/pam_appl.h>
 //#include <stdlib.h>
 //#cgo CFLAGS: -Wall -std=c99
 //#cgo LDFLAGS: -lpam
-//struct pam_conv *make_pam_conv(void *);
+//void init_pam_conv(struct pam_conv *conv, long c);
 import "C"
 
 import (
@@ -50,31 +51,16 @@ func (f ConversationFunc) RespondPAM(s Style, msg string) (string, error) {
 	return f(s, msg)
 }
 
-// Internal conversation structure
-type conversation struct {
-	handler ConversationHandler
-	conv    *C.struct_pam_conv
-}
-
-// Constructs a new conversation object with a given handler and a newly
-// allocated pam_conv struct that uses this object as its appdata_ptr.
-func newConversation(handler ConversationHandler) (*conversation, C.int) {
-	c := &conversation{}
-	c.handler = handler
-	c.conv = C.make_pam_conv(unsafe.Pointer(c))
-	if c.conv == nil {
-		return nil, C.PAM_BUF_ERR
-	}
-	return c, C.PAM_SUCCESS
-}
-
-// Go-side function for processing a single conversational message. Ultimately
-// this calls the associated ConversationHandler's ResponsePAM callback with data
-// coming in from a C-side call.
+// cbPAMConv is a wrapper for the conversation callback function.
 //export cbPAMConv
-func cbPAMConv(s C.int, msg *C.char, appdata unsafe.Pointer) (*C.char, C.int) {
-	c := (*conversation)(appdata)
-	r, err := c.handler.RespondPAM(Style(s), C.GoString(msg))
+func cbPAMConv(s C.int, msg *C.char, c int) (*C.char, C.int) {
+	var r string
+	var err error
+	v := cbGet(c)
+	switch cb := v.(type) {
+	case ConversationHandler:
+		r, err = cb.RespondPAM(Style(s), C.GoString(msg))
+	}
 	if err != nil {
 		return nil, C.PAM_CONV_ERR
 	}
@@ -84,14 +70,16 @@ func cbPAMConv(s C.int, msg *C.char, appdata unsafe.Pointer) (*C.char, C.int) {
 // Transaction is the application's handle for a PAM transaction.
 type Transaction struct {
 	handle *C.pam_handle_t
-	conv   *conversation
+	conv   *C.struct_pam_conv
 	status C.int
+	c      int
 }
 
-// Finalize a PAM transaction.
+// transactionFinalizer cleans up the PAM handle and deletes the callback
+// function.
 func transactionFinalizer(t *Transaction) {
 	C.pam_end(t.handle, t.status)
-	C.free(unsafe.Pointer(t.conv.conv))
+	cbDelete(t.c)
 }
 
 // Start initiates a new PAM transaction. Service is treated identically to
@@ -100,11 +88,12 @@ func transactionFinalizer(t *Transaction) {
 // All application calls to PAM begin with Start (or StartFunc). The returned
 // transaction provides an interface to the remainder of the API.
 func Start(service, user string, handler ConversationHandler) (*Transaction, error) {
-	t := &Transaction{}
-	t.conv, t.status = newConversation(handler)
-	if t.status != C.PAM_SUCCESS {
-		return nil, t
+	t := &Transaction{
+		conv: &C.struct_pam_conv{},
+		c:    cbAdd(handler),
 	}
+	C.init_pam_conv(t.conv, C.long(t.c))
+	runtime.SetFinalizer(t, transactionFinalizer)
 	s := C.CString(service)
 	defer C.free(unsafe.Pointer(s))
 	var u *C.char
@@ -112,12 +101,10 @@ func Start(service, user string, handler ConversationHandler) (*Transaction, err
 		u = C.CString(user)
 		defer C.free(unsafe.Pointer(u))
 	}
-	t.status = C.pam_start(s, u, t.conv.conv, &t.handle)
+	t.status = C.pam_start(s, u, t.conv, &t.handle)
 	if t.status != C.PAM_SUCCESS {
-		C.free(unsafe.Pointer(t.conv.conv))
 		return nil, t
 	}
-	runtime.SetFinalizer(t, transactionFinalizer)
 	return t, nil
 }
 

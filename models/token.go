@@ -10,22 +10,22 @@ import (
 	"github.com/go-xorm/xorm"
 	gouuid "github.com/satori/go.uuid"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 // AccessToken represents a personal access token.
 type AccessToken struct {
-	ID   int64 `xorm:"pk autoincr"`
+	ID   int64
 	UID  int64 `xorm:"INDEX"`
 	Name string
 	Sha1 string `xorm:"UNIQUE VARCHAR(40)"`
 
-	Created           time.Time `xorm:"-"`
+	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-"`
-	HasUsed           bool `xorm:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" json:"-"`
 }
 
 func (t *AccessToken) BeforeInsert() {
@@ -49,7 +49,7 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
-	t.Sha1 = base.EncodeSha1(gouuid.NewV4().String())
+	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
 	_, err := x.Insert(t)
 	return err
 }

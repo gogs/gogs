@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	_VERSION = "1.0.2"
+	_VERSION = "1.2.0"
 )
 
 // Version returns current version of the package.
@@ -35,6 +35,13 @@ func Version() string {
 type (
 	MODE  string
 	LEVEL int
+)
+
+const (
+	CONSOLE MODE = "console"
+	FILE    MODE = "file"
+	SLACK   MODE = "slack"
+	DISCORD MODE = "discord"
 )
 
 const (

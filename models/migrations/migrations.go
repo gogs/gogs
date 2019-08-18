@@ -13,7 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/base"
+	"github.com/gogs/gogs/pkg/tool"
 )
 
 const _MIN_DB_VER = 10
@@ -42,7 +42,7 @@ func (m *migration) Migrate(x *xorm.Engine) error {
 
 // The version table. Should have only one row with id==1
 type Version struct {
-	ID      int64 `xorm:"pk autoincr"`
+	ID      int64
 	Version int64
 }
 
@@ -60,6 +60,14 @@ var migrations = []Migration{
 	NewMigration("set comment updated with created", setCommentUpdatedWithCreated),
 	// v14 -> v15:v0.9.147
 	NewMigration("generate and migrate Git hooks", generateAndMigrateGitHooks),
+	// v15 -> v16:v0.10.16
+	NewMigration("update repository sizes", updateRepositorySizes),
+	// v16 -> v17:v0.10.31
+	NewMigration("remove invalid protect branch whitelist", removeInvalidProtectBranchWhitelist),
+	// v17 -> v18:v0.11.48
+	NewMigration("store long text in repository description field", updateRepositoryDescriptionField),
+	// v18 -> v19:v0.11.55
+	NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
 }
 
 // Migrate database to current version
@@ -94,14 +102,14 @@ You can migrate your older database using a previous release, then you can upgra
 Please save following instructions to somewhere and start working:
 
 - If you were using below 0.6.0 (e.g. 0.5.x), download last supported archive from following link:
-	https://github.com/gogits/gogs/releases/tag/v0.7.33
+	https://github.com/gogs/gogs/releases/tag/v0.7.33
 - If you were using below 0.7.0 (e.g. 0.6.x), download last supported archive from following link:
-	https://github.com/gogits/gogs/releases/tag/v0.9.141
+	https://github.com/gogs/gogs/releases/tag/v0.9.141
 
 Once finished downloading,
 
 1. Extract the archive and to upgrade steps as usual.
-2. Run it once. To verify, you should see some migration traces. 
+2. Run it once. To verify, you should see some migration traces.
 3. Once it starts web server successfully, stop it.
 4. Now it's time to put back the release archive you originally intent to upgrade.
 5. Enjoy!
@@ -129,13 +137,6 @@ In case you're stilling getting this notice, go through instructions again until
 	return nil
 }
 
-func sessionRelease(sess *xorm.Session) {
-	if !sess.IsCommitedOrRollbacked {
-		sess.Rollback()
-	}
-	sess.Close()
-}
-
 func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	type User struct {
 		ID    int64  `xorm:"pk autoincr"`
@@ -149,19 +150,19 @@ func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
 
 	for _, org := range orgs {
-		if org.Rands, err = base.GetRandomString(10); err != nil {
+		if org.Rands, err = tool.RandomString(10); err != nil {
 			return err
 		}
-		if org.Salt, err = base.GetRandomString(10); err != nil {
+		if org.Salt, err = tool.RandomString(10); err != nil {
 			return err
 		}
-		if _, err = sess.Id(org.ID).Update(org); err != nil {
+		if _, err = sess.ID(org.ID).Update(org); err != nil {
 			return err
 		}
 	}

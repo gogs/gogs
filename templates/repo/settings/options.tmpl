@@ -6,20 +6,22 @@
 			{{template "repo/settings/navbar" .}}
 			<div class="twelve wide column content">
 				{{template "base/alert" .}}
-				<h4 class="ui top attached header">
+				<div class="ui top attached header">
 					{{.i18n.Tr "repo.settings.basic_settings"}}
-				</h4>
+				</div>
 				<div class="ui attached segment">
-					<form class="ui form" action="{{.Link}}" method="post">
-						{{.CsrfTokenHtml}}
+					<form class="ui form" action="{{.Link}}" method="POST">
+						{{.CSRFTokenHTML}}
 						<input type="hidden" name="action" value="update">
 						<div class="required field {{if .Err_RepoName}}error{{end}}">
 							<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}<span class="text red hide" id="repo-name-change-prompt"> {{.i18n.Tr "repo.settings.change_reponame_prompt"}}</span></label>
-							<input id="repo_name" name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" autofocus required>
+							<input id="repo_name" name="repo_name" value="{{.Repository.Name}}" data-repo-name="{{.Repository.Name}}" required>
 						</div>
 						<div class="field {{if .Err_Description}}error{{end}}">
 							<label for="description">{{$.i18n.Tr "repo.repo_desc"}}</label>
-							<textarea id="description" name="description" rows="2">{{.Repository.Description}}</textarea>
+							<textarea class="autosize" id="description" name="description" rows="3">{{.Repository.Description}}</textarea>
+							<p class="help">{{.i18n.Tr "repo.settings.description_desc"}}</p>
+							<p class="help">{{.i18n.Tr "repo.settings.description_length"}}: <span id="descLength"></span></p>
 						</div>
 						<div class="field {{if .Err_Website}}error{{end}}">
 							<label for="website">{{.i18n.Tr "repo.settings.site"}}</label>
@@ -40,15 +42,29 @@
 							<button class="ui green button">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
 						</div>
 					</form>
+
+					<div class="ui divider"></div>
+
+					<form class="ui form" action="{{.Link}}/avatar" method="post" enctype="multipart/form-data">
+						{{.CSRFTokenHTML}}
+						<div class="inline field">
+							<label for="avatar">{{.i18n.Tr "settings.choose_new_avatar"}}</label>
+							<input name="avatar" type="file" >
+						</div>
+						<div class="field">
+							<button class="ui green button">{{$.i18n.Tr "settings.update_avatar"}}</button>
+							<a class="ui red button delete-post" data-request-url="{{.Link}}/avatar/delete" data-done-url="{{.Link}}">{{$.i18n.Tr "settings.delete_current_avatar"}}</a>
+						</div>
+					</form>
 				</div>
 
 				{{if .Repository.IsMirror}}
-					<h4 class="ui top attached header">
+					<div class="ui top attached header">
 						{{.i18n.Tr "repo.settings.mirror_settings"}}
-					</h4>
+					</div>
 					<div class="ui attached segment">
-						<form class="ui form" method="post">
-							{{.CsrfTokenHtml}}
+						<form class="ui form" method="POST">
+							{{.CSRFTokenHTML}}
 							<input type="hidden" name="action" value="mirror">
 							<div class="inline field {{if .Err_EnablePrune}}error{{end}}">
 							  <label>{{.i18n.Tr "repo.mirror_prune"}}</label>
@@ -74,12 +90,12 @@
 
 						<div class="ui divider"></div>
 
-						<form class="ui form" method="post">
-							{{.CsrfTokenHtml}}
+						<form class="ui form" method="POST">
+							{{.CSRFTokenHTML}}
 							<input type="hidden" name="action" value="mirror-sync">
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.mirror_last_synced"}}</label>
-								<span>{{.Mirror.Updated}}</span>
+								<span>{{.Mirror.LastSync}}</span>
 							</div>
 							<div class="field">
 								<button class="ui blue button">{{$.i18n.Tr "repo.settings.sync_mirror"}}</button>
@@ -88,43 +104,50 @@
 					</div>
 				{{end}}
 
-				<h4 class="ui top attached header">
+				<div class="ui top attached header">
 					{{.i18n.Tr "repo.settings.advanced_settings"}}
-				</h4>
+				</div>
 				<div class="ui attached segment">
-					<form class="ui form" method="post">
-						{{.CsrfTokenHtml}}
+					<form class="ui form" method="POST">
+						{{.CSRFTokenHTML}}
 						<input type="hidden" name="action" value="advanced">
 
+						<!-- Wiki -->
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.wiki"}}</label>
 							<div class="ui checkbox">
-								<input class="enable-system" name="enable_wiki" type="checkbox" data-target="#wiki_box" {{if .Repository.EnableWiki}}checked{{end}}>
+								<input class="enable-system" type="checkbox" name="enable_wiki" data-target="#wiki_box" {{if .Repository.EnableWiki}}checked{{end}}>
 								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}</label>
 							</div>
 						</div>
-						<div class="field {{if not .Repository.EnableWiki}}disabled{{end}}" id="wiki_box">
+						<div class="ui segment field {{if not .Repository.EnableWiki}}disabled{{end}}" id="wiki_box">
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="false" data-target="#external_wiki_box" {{if not .Repository.EnableExternalWiki}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="false" data-enable="#internal_wiki_box" data-disable="#external_wiki_box" {{if not .Repository.EnableExternalWiki}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_internal_wiki"}}</label>
 								</div>
 							</div>
+							<div class="box field {{if .Repository.EnableExternalWiki}}disabled{{end}}" id="internal_wiki_box">
+								<div class="ui checkbox">
+									<input name="allow_public_wiki" type="checkbox" {{if .Repository.AllowPublicWiki}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.allow_public_wiki_desc"}}</label>
+								</div>
+							</div>
+
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-target="#external_wiki_box" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-enable="#external_wiki_box" data-disable="#internal_wiki_box" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_external_wiki"}}</label>
 								</div>
 							</div>
-							<div class="field {{if not .Repository.EnableExternalWiki}}disabled{{end}}" id="external_wiki_box">
+							<div class="box field {{if not .Repository.EnableExternalWiki}}disabled{{end}}" id="external_wiki_box">
 								<label for="external_wiki_url">{{.i18n.Tr "repo.settings.external_wiki_url"}}</label>
 								<input id="external_wiki_url" name="external_wiki_url" type="url" value="{{.Repository.ExternalWikiURL}}">
 								<p class="help">{{.i18n.Tr "repo.settings.external_wiki_url_desc"}}</p>
 							</div>
 						</div>
 
-						<div class="ui divider"></div>
-
+						<!-- Issues -->
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.issues"}}</label>
 							<div class="ui checkbox">
@@ -132,20 +155,27 @@
 								<label>{{.i18n.Tr "repo.settings.issues_desc"}}</label>
 							</div>
 						</div>
-						<div class="field {{if not .Repository.EnableIssues}}disabled{{end}}" id="issue_box">
+						<div class="ui segment field {{if not .Repository.EnableIssues}}disabled{{end}}" id="issue_box">
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="false" data-target="#external_issue_box" {{if not .Repository.EnableExternalTracker}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="false" data-enable="#internal_issue_box" data-disable="#external_issue_box" {{if not .Repository.EnableExternalTracker}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_internal_issue_tracker"}}</label>
 								</div>
 							</div>
+							<div class="box field {{if .Repository.EnableExternalTracker}}disabled{{end}}" id="internal_issue_box">
+								<div class="ui checkbox">
+									<input name="allow_public_issues" type="checkbox" {{if .Repository.AllowPublicIssues}}checked{{end}}>
+									<label>{{.i18n.Tr "repo.settings.allow_public_issues_desc"}}</label>
+								</div>
+							</div>
+
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-target="#external_issue_box" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-enable="#external_issue_box" data-disable="#internal_issue_box" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_external_issue_tracker"}}</label>
 								</div>
 							</div>
-							<div class="field {{if not .Repository.EnableExternalTracker}}disabled{{end}}" id="external_issue_box">
+							<div class="box field {{if not .Repository.EnableExternalTracker}}disabled{{end}}" id="external_issue_box">
 								<div class="field">
 									<label for="external_tracker_url">{{.i18n.Tr "repo.settings.external_tracker_url"}}</label>
 									<input id="external_tracker_url" name="external_tracker_url" type="url" value="{{.Repository.ExternalTrackerURL}}">
@@ -154,7 +184,7 @@
 								<div class="field">
 									<label for="tracker_url_format">{{.i18n.Tr "repo.settings.tracker_url_format"}}</label>
 									<input id="tracker_url_format" name="tracker_url_format" type="url" value="{{.Repository.ExternalTrackerFormat}}" placeholder="e.g. https://github.com/{user}/{repo}/issues/{index}">
-									<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2html}}</p>
+									<p class="help">{{.i18n.Tr "repo.settings.tracker_url_format_desc" | Str2HTML}}</p>
 								</div>
 								<div class="inline fields">
 									<label for="issue_style">{{.i18n.Tr "repo.settings.tracker_issue_style"}}</label>
@@ -174,19 +204,31 @@
 							</div>
 						</div>
 
+						<!-- Pull Requests -->
 						{{if .Repository.CanEnablePulls}}
-							<div class="ui divider"></div>
-
 							<div class="inline field">
 								<label>{{.i18n.Tr "repo.pulls"}}</label>
 								<div class="ui checkbox">
-									<input name="enable_pulls" type="checkbox" {{if .Repository.EnablePulls}}checked{{end}}>
+									<input class="enable-system" name="enable_pulls" type="checkbox" data-target="#pull_box" {{if .Repository.EnablePulls}}checked{{end}}>
 									<label>{{.i18n.Tr "repo.settings.pulls_desc"}}</label>
+								</div>
+							</div>
+							<div class="ui segment {{if not .Repository.EnablePulls}}disabled{{end}}" id="pull_box">
+								<div class="field">
+									<div class="ui checkbox">
+										<input name="pulls_ignore_whitespace" type="checkbox" {{if .Repository.PullsIgnoreWhitespace}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.ignore_whitespace"}}</label>
+									</div>
+								</div>
+								<div class="field">
+									<div class="ui checkbox">
+										<input name="pulls_allow_rebase" type="checkbox" {{if .Repository.PullsAllowRebase}}checked{{end}}>
+										<label>{{.i18n.Tr "repo.settings.pulls.allow_rebase_merge"}}</label>
+									</div>
 								</div>
 							</div>
 						{{end}}
 
-						<div class="ui divider"></div>
 						<div class="field">
 							<button class="ui green button">{{$.i18n.Tr "repo.settings.update_settings"}}</button>
 						</div>
@@ -194,9 +236,9 @@
 				</div>
 
 				{{if .IsRepositoryOwner}}
-				<h4 class="ui top attached warning header">
+				<div class="ui top attached warning header">
 					{{.i18n.Tr "repo.settings.danger_zone"}}
-				</h4>
+				</div>
 				<div class="ui attached warning table danger segment">
 					{{if .Repository.IsMirror}}
 					<div class="item">
@@ -263,8 +305,8 @@
 			<div class="ui warning message text left">
 				{{.i18n.Tr "repo.settings.convert_notices_1" | Safe}}
 			</div>
-			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+			<form class="ui form" action="{{.Link}}" method="POST">
+				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="convert">
 				<div class="field">
 					<label>
@@ -295,8 +337,8 @@
 				{{.i18n.Tr "repo.settings.transfer_notices_1" | Safe}} <br>
 				{{.i18n.Tr "repo.settings.transfer_notices_2" | Safe}}
 			</div>
-			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+			<form class="ui form" action="{{.Link}}" method="POST">
+				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="transfer">
 				<div class="field">
 					<label>
@@ -306,11 +348,11 @@
 				</div>
 				<div class="required field">
 					<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
-					<input id="repo_name" name="repo_name" required>
+					<input id="repo_name" name="repo_name" autocomplete="off" required>
 				</div>
 				<div class="required field">
 					<label for="new_owner_name">{{.i18n.Tr "repo.settings.transfer_owner"}}</label>
-					<input id="new_owner_name" name="new_owner_name" required>
+					<input id="new_owner_name" name="new_owner_name" autocomplete="off" required>
 				</div>
 
 				<div class="text right actions">
@@ -333,8 +375,8 @@
 				{{.i18n.Tr "repo.settings.delete_notices_fork_1" | Safe}}
 				{{end}}
 			</div>
-			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+			<form class="ui form" action="{{.Link}}" method="POST">
+				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete">
 				<div class="field">
 					<label>
@@ -344,7 +386,7 @@
 				</div>
 				<div class="required field">
 					<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
-					<input id="repo_name" name="repo_name" required>
+					<input id="repo_name" name="repo_name" autocomplete="off" required>
 				</div>
 
 				<div class="text right actions">
@@ -365,8 +407,8 @@
 				{{.i18n.Tr "repo.settings.delete_notices_1" | Safe}}<br>
 				{{.i18n.Tr "repo.settings.wiki_delete_notices_1" .Repository.Name | Safe}}
 			</div>
-			<form class="ui form" action="{{.Link}}" method="post">
-				{{.CsrfTokenHtml}}
+			<form class="ui form" action="{{.Link}}" method="POST">
+				{{.CSRFTokenHTML}}
 				<input type="hidden" name="action" value="delete-wiki">
 				<div class="field">
 					<label>
@@ -376,7 +418,7 @@
 				</div>
 				<div class="required field">
 					<label for="repo_name">{{.i18n.Tr "repo.repo_name"}}</label>
-					<input id="repo_name" name="repo_name" required>
+					<input id="repo_name" name="repo_name" autocomplete="off" required>
 				</div>
 
 				<div class="text right actions">

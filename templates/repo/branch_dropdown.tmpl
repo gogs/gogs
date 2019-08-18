@@ -4,7 +4,7 @@
 			<span class="text">
 				<i class="octicon octicon-git-branch"></i>
 				{{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
-				<strong>{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSha .BranchName}}{{end}}</strong>
+				<strong>{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSHA1 .BranchName}}{{end}}</strong>
 			</span>
 			<i class="dropdown icon"></i>
 		</div>
@@ -18,12 +18,12 @@
 					<div class="two column row">
 						<a class="reference column" href="#" data-target="#branch-list">
 							<span class="text {{if not .IsViewTag}}black{{end}}">
-								<i class="octicon octicon-git-branch"></i> {{.i18n.Tr "repo.branches"}}
+								{{.i18n.Tr "repo.branches"}}
 							</span>
 						</a>
 						<a class="reference column" href="#" data-target="#tag-list">
 							<span class="text {{if .IsViewTag}}black{{end}}">
-								<i class="reference tags icon"></i> {{.i18n.Tr "repo.tags"}}
+								{{.i18n.Tr "repo.tags"}}
 							</span>
 						</a>
 					</div>

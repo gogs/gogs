@@ -10,9 +10,9 @@ import (
 	"github.com/Unknwon/com"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogits/gogs/modules/mailer"
-	"github.com/gogits/gogs/modules/markdown"
-	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogs/gogs/pkg/mailer"
+	"github.com/gogs/gogs/pkg/markup"
+	"github.com/gogs/gogs/pkg/setting"
 )
 
 func (issue *Issue) MailSubject() string {
@@ -91,18 +91,30 @@ func NewMailerIssue(issue *Issue) mailer.Issue {
 }
 
 // mailIssueCommentToParticipants can be used for both new issue creation and comment.
+// This functions sends two list of emails:
+// 1. Repository watchers, users who participated in comments and the assignee.
+// 2. Users who are not in 1. but get mentioned in current issue/comment.
 func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string) error {
 	if !setting.Service.EnableNotifyMail {
 		return nil
 	}
 
-	// Mail wahtcers.
 	watchers, err := GetWatchers(issue.RepoID)
 	if err != nil {
-		return fmt.Errorf("GetWatchers [%d]: %v", issue.RepoID, err)
+		return fmt.Errorf("GetWatchers [repo_id: %d]: %v", issue.RepoID, err)
+	}
+	participants, err := GetParticipantsByIssueID(issue.ID)
+	if err != nil {
+		return fmt.Errorf("GetParticipantsByIssueID [issue_id: %d]: %v", issue.ID, err)
 	}
 
-	tos := make([]string, 0, len(watchers)) // List of email addresses.
+	// In case the issue poster is not watching the repository,
+	// even if we have duplicated in watchers, can be safely filtered out.
+	if issue.PosterID != doer.ID {
+		participants = append(participants, issue.Poster)
+	}
+
+	tos := make([]string, 0, len(watchers)) // List of email addresses
 	names := make([]string, 0, len(watchers))
 	for i := range watchers {
 		if watchers[i].UserID == doer.ID {
@@ -120,6 +132,22 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		tos = append(tos, to.Email)
 		names = append(names, to.Name)
 	}
+	for i := range participants {
+		if participants[i].ID == doer.ID {
+			continue
+		} else if com.IsSliceContainsStr(names, participants[i].Name) {
+			continue
+		}
+
+		tos = append(tos, participants[i].Email)
+		names = append(names, participants[i].Name)
+	}
+	if issue.Assignee != nil && issue.Assignee.ID != doer.ID {
+		if !com.IsSliceContainsStr(names, issue.Assignee.Name) {
+			tos = append(tos, issue.Assignee.Email)
+			names = append(names, issue.Assignee.Name)
+		}
+	}
 	mailer.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
 
 	// Mail mentioned people and exclude watchers.
@@ -133,20 +161,19 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		tos = append(tos, mentions[i])
 	}
 	mailer.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), GetUserEmailsByNames(tos))
-
 	return nil
 }
 
 // MailParticipants sends new issue thread created emails to repository watchers
 // and mentioned people.
 func (issue *Issue) MailParticipants() (err error) {
-	mentions := markdown.FindAllMentions(issue.Content)
+	mentions := markup.FindAllMentions(issue.Content)
 	if err = updateIssueMentions(x, issue.ID, mentions); err != nil {
 		return fmt.Errorf("UpdateIssueMentions [%d]: %v", issue.ID, err)
 	}
 
 	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {
-		log.Error(4, "mailIssueCommentToParticipants: %v", err)
+		log.Error(2, "mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil
