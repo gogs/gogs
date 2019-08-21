@@ -125,7 +125,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 		if err != nil {
 			return fmt.Errorf("GetUserByID [%d]: %v", watchers[i].UserID, err)
 		}
-		if to.IsOrganization() {
+		if to.IsOrganization() || !to.IsActive {
 			continue
 		}
 
