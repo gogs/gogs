@@ -235,7 +235,17 @@ func Action(c *context.Context) {
 	case "watch":
 		err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unwatch":
-		err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
+		if userName := c.Query("user_name"); userName != "" {
+			if c.User.IsAdmin {
+				var user *models.User
+				if user, err = models.GetUserByName(userName); err != nil {
+					break
+				}
+				err = models.WatchRepo(user.ID, c.Repo.Repository.ID, false)
+			}
+		} else {
+			err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
+		}
 	case "star":
 		err = models.StarRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unstar":

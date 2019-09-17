@@ -19,6 +19,15 @@
 						<span class="octicon octicon-clock"></span> {{$.i18n.Tr "user.join_on"}} {{DateFmtShort .Created}}
 					{{end}}
 				</div>
+
+        {{if $.IsAdmin}}
+          <form class="display inline" action="{{$.RepoLink}}/action/unwatch?user_name={{.Name}}&redirect_to={{$.Link}}" method="POST">
+ 				    {{$.CSRFTokenHTML}}
+						<div class="ui labeled button" tabindex="0">
+						  <button class="ui red small button">{{$.i18n.Tr "repo.unwatch"}}</button>
+						</div>
+					</form>
+   			{{end}}
 			</li>
 		{{end}}
 	</ul>
