@@ -269,7 +269,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 			log.Error(2, "LDAP: Group search failed: %v", err)
 			return "", "", "", "", false, false
 		} else if len(srg.Entries) < 1 {
-			log.Error(2, "LDAP: Group search failed: 0 entries")
+			log.Trace("LDAP: Group search returned no entries")
 			return "", "", "", "", false, false
 		}
 
@@ -310,7 +310,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 		if err != nil {
 			log.Error(2, "LDAP: Admin search failed: %v", err)
 		} else if len(sr.Entries) < 1 {
-			log.Error(2, "LDAP: Admin search failed: 0 entries")
+			log.Trace("LDAP: Admin search returned no entries")
 		} else {
 			isAdmin = true
 		}
