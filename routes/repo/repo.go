@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/Unknwon/com"
@@ -235,14 +236,13 @@ func Action(c *context.Context) {
 	case "watch":
 		err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unwatch":
-		if userName := c.Query("user_name"); userName != "" {
-			if c.User.IsAdmin {
-				var user *models.User
-				if user, err = models.GetUserByName(userName); err != nil {
-					break
-				}
-				err = models.WatchRepo(user.ID, c.Repo.Repository.ID, false)
+		if userID := c.Query("user_id"); userID != "" {
+			var uID int64
+			uID, err = strconv.ParseInt(userID, 10, 64)
+			if err != nil {
+				break
 			}
+			err = models.WatchRepo(uID, c.Repo.Repository.ID, false)
 		} else {
 			err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
 		}
