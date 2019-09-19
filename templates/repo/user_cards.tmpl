@@ -21,8 +21,9 @@
 				</div>
 
         {{if $.IsAdmin}}
-          <form class="display inline" action="{{$.RepoLink}}/action/unwatch?user_name={{.Name}}&redirect_to={{$.Link}}" method="POST">
+          <form class="display inline" action="{{$.RepoLink}}/action/unwatch?redirect_to={{$.Link}}" method="POST">
  				    {{$.CSRFTokenHTML}}
+ 				    <input type="hidden" name="user_id" value="{{.ID}}">
 						<div class="ui labeled button" tabindex="0">
 						  <button class="ui red small button">{{$.i18n.Tr "repo.unwatch"}}</button>
 						</div>
