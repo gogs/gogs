@@ -237,12 +237,14 @@ func Action(c *context.Context) {
 		err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unwatch":
 		if userID := c.Query("user_id"); userID != "" {
-			var uID int64
-			uID, err = strconv.ParseInt(userID, 10, 64)
-			if err != nil {
-				break
+			if c.User.IsAdmin {
+				var uID int64
+				uID, err = strconv.ParseInt(userID, 10, 64)
+				if err != nil {
+					break
+				}
+				err = models.WatchRepo(uID, c.Repo.Repository.ID, false)
 			}
-			err = models.WatchRepo(uID, c.Repo.Repository.ID, false)
 		} else {
 			err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
 		}
