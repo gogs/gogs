@@ -1,0 +1,102 @@
+#!/bin/sh
+
+### Custom user script for gogs
+### First param is:
+###  "start" (call at start entware),
+###  "stop" (call before stop entware),
+###
+### Note the additional requirements for gogs on ddwrt: shadow user, group, sudo, daemonize
+
+PIDFILE="/opt/var/run/gogs.pid"
+USER="gogs"
+GOROOT="/opt/bin/go"
+GOPATH="/opt/go"
+
+ENABLED=yes
+PROC="gogs"
+DESC=$PROC
+PREARGS="/opt/bin/sudo -u $USER /opt/bin/daemonize"
+GOGSBIN="$GOPATH/src/github.com/gogs/gogs/gogs"
+ARGS="web"
+
+ansi_red="\033[1;31m";
+ansi_white="\033[1;37m";
+ansi_green="\033[1;32m";
+ansi_yellow="\033[1;33m";
+ansi_blue="\033[1;34m";
+ansi_bell="\007";
+ansi_blink="\033[5m";
+ansi_std="\033[m";
+ansi_rev="\033[7m";
+ansi_ul="\033[4m";
+
+case "$1" in
+start)
+        # start gogs web
+        if [ -f "$PIDFILE" ]
+	then
+                echo "$DESC is already running ...`pidof $PROC`"
+        else
+                echo -e -n "$ansi_white Starting $DESC... $ansi_std"
+                export GOROOT=$GOROOT
+                export GOPATH=$GOPATH
+                export PATH=$PATH:$GOROOT/bin
+
+                $PREARGS $GOGSBIN $ARGS > /dev/null 2>&1 &
+
+                COUNTER=0
+                LIMIT=10
+                while [ -z "`pidof $PROC`" -a "$COUNTER" -le "$LIMIT" ]; do
+                        sleep 1;
+                        COUNTER=`expr $COUNTER + 1`
+                done
+
+                if [ -z "`pidof $PROC`" ]
+		then
+                        echo -e "            $ansi_red failed. $ansi_std"
+                        logger "Failed to start $DESC from $CALLER."
+                        return 255
+                else
+                        echo -e "            $ansi_green done. $ansi_std"
+                        logger "Started $DESC from $CALLER."
+                        echo `pidof $PROC` > "$PIDFILE"
+                        return 0
+                fi
+        fi
+        ;;
+stop)
+        echo -e -n "$ansi_white Shutting down $PROC... $ansi_std"
+        killall $PROC 2>/dev/null
+        if [ -f "$PIDFILE" ]
+        then 
+		rm "$PIDFILE"
+	fi
+        COUNTER=0
+        LIMIT=10
+        while [ -n "`pidof $PROC`" -a "$COUNTER" -le "$LIMIT" ]; do
+                sleep 1;
+                COUNTER=`expr $COUNTER + 1`
+        done
+        ;;
+
+kill)
+            echo -e -n "$ansi_white Killing $PROC... $ansi_std"
+            killall -9 $PROC 2>/dev/null
+        ;;
+status | check)
+    echo -e -n "$ansi_white Checking $DESC... "
+    if [ -n "`pidof $PROC`" ]
+    then
+        echo -e "            $ansi_green alive. $ansi_std";
+        return 0
+    else
+        echo -e "            $ansi_red dead. $ansi_std";
+        return 1
+    fi
+
+    ;;
+*)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+        ;;
+esac
