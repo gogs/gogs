@@ -63,7 +63,7 @@ func ListFollowing(c *context.APIContext) {
 
 func checkUserFollowing(c *context.APIContext, u *models.User, followID int64) {
 	if u.IsFollowing(followID) {
-		c.NotFound()
+		c.NoContent()
 	} else {
 		c.NotFound()
 	}
