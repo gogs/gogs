@@ -33,7 +33,11 @@ func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) 
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
-		c.ServerError("NewAccessToken", err)
+		if models.IsErrAccessTokenNameAlreadyExist(err) {
+			c.Error(http.StatusUnprocessableEntity, "", err)
+		} else {
+			c.ServerError("NewAccessToken", err)
+		}
 		return
 	}
 	c.JSON(http.StatusCreated, &api.AccessToken{t.Name, t.Sha1})

@@ -253,6 +253,19 @@ func (err ErrAccessTokenNotExist) Error() string {
 	return fmt.Sprintf("access token does not exist [sha: %s]", err.SHA)
 }
 
+type ErrAccessTokenNameAlreadyExist struct {
+	Name string
+}
+
+func IsErrAccessTokenNameAlreadyExist(err error) bool {
+	_, ok := err.(ErrAccessTokenNameAlreadyExist)
+	return ok
+}
+
+func (err ErrAccessTokenNameAlreadyExist) Error() string {
+	return fmt.Sprintf("access token already exist [name: %s]", err.Name)
+}
+
 type ErrAccessTokenEmpty struct {
 }
 

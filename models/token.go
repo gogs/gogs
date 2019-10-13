@@ -5,6 +5,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-xorm/xorm"
@@ -47,10 +48,25 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+func isAccessTokenNameExist(uid int64, name string) (bool, error) {
+	tokens, err := ListAccessTokensByName(uid, name)
+	if err != nil {
+		return false, err
+	}
+	return len(tokens) > 0, nil
+}
+
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
 	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
-	_, err := x.Insert(t)
+	has, err := isAccessTokenNameExist(t.UID, t.Name)
+	if err != nil {
+		return fmt.Errorf("IsAccessTokenNameExists: %v", err)
+	} else if has {
+		return ErrAccessTokenNameAlreadyExist{t.Name}
+	}
+
+	_, err = x.Insert(t)
 	return err
 }
 
@@ -67,6 +83,12 @@ func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 		return nil, ErrAccessTokenNotExist{sha}
 	}
 	return t, nil
+}
+
+// ListAccessTokensByName returns a list of access tokens belongs to given user with name.
+func ListAccessTokensByName(uid int64, name string) ([]*AccessToken, error) {
+	tokens := make([]*AccessToken, 0, 5)
+	return tokens, x.Where("uid=?", uid).And("name=?", name).Desc("id").Find(&tokens)
 }
 
 // ListAccessTokens returns a list of access tokens belongs to given user.
