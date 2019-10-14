@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/go-xorm/xorm"
-	gouuid "github.com/satori/go.uuid"
-
+	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/tool"
+	gouuid "github.com/satori/go.uuid"
 )
 
 // AccessToken represents a personal access token.
@@ -63,7 +63,7 @@ func NewAccessToken(t *AccessToken) error {
 	if err != nil {
 		return fmt.Errorf("IsAccessTokenNameExists: %v", err)
 	} else if has {
-		return ErrAccessTokenNameAlreadyExist{t.Name}
+		return errors.AccessTokenNameAlreadyExist{t.Name}
 	}
 
 	_, err = x.Insert(t)
