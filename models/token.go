@@ -49,11 +49,7 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 }
 
 func isAccessTokenNameExist(uid int64, name string) (bool, error) {
-	tokens, err := ListAccessTokensByName(uid, name)
-	if err != nil {
-		return false, err
-	}
-	return len(tokens) > 0, nil
+    return x.Where("uid=?", uid).And("name=?", name).Get(&AccessToken{})
 }
 
 // NewAccessToken creates new access token.
@@ -83,12 +79,6 @@ func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
 		return nil, ErrAccessTokenNotExist{sha}
 	}
 	return t, nil
-}
-
-// ListAccessTokensByName returns a list of access tokens belongs to given user with name.
-func ListAccessTokensByName(uid int64, name string) ([]*AccessToken, error) {
-	tokens := make([]*AccessToken, 0, 5)
-	return tokens, x.Where("uid=?", uid).And("name=?", name).Desc("id").Find(&tokens)
 }
 
 // ListAccessTokens returns a list of access tokens belongs to given user.
