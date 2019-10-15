@@ -10,6 +10,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"github.com/gogs/gogs/models"
+	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/context"
 )
 
@@ -33,7 +34,11 @@ func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) 
 		Name: form.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
-		c.ServerError("NewAccessToken", err)
+		if errors.IsAccessTokenNameAlreadyExist(err) {
+			c.Error(http.StatusUnprocessableEntity, "", err)
+		} else {
+			c.ServerError("NewAccessToken", err)
+		}
 		return
 	}
 	c.JSON(http.StatusCreated, &api.AccessToken{t.Name, t.Sha1})

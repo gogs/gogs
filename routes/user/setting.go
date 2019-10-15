@@ -607,7 +607,12 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 		Name: f.Name,
 	}
 	if err := models.NewAccessToken(t); err != nil {
-		c.ServerError("NewAccessToken", err)
+		if errors.IsAccessTokenNameAlreadyExist(err) {
+			c.Flash.Error(c.Tr("settings.token_name_exists"))
+			c.SubURLRedirect("/user/settings/applications")
+		} else {
+			c.ServerError("NewAccessToken", err)
+		}
 		return
 	}
 

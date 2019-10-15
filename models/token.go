@@ -5,12 +5,13 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/go-xorm/xorm"
-	gouuid "github.com/satori/go.uuid"
-
+	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/tool"
+	gouuid "github.com/satori/go.uuid"
 )
 
 // AccessToken represents a personal access token.
@@ -47,10 +48,21 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+func isAccessTokenNameExist(uid int64, name string) (bool, error) {
+    return x.Where("uid=?", uid).And("name=?", name).Get(&AccessToken{})
+}
+
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
 	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
-	_, err := x.Insert(t)
+	has, err := isAccessTokenNameExist(t.UID, t.Name)
+	if err != nil {
+		return fmt.Errorf("IsAccessTokenNameExists: %v", err)
+	} else if has {
+		return errors.AccessTokenNameAlreadyExist{t.Name}
+	}
+
+	_, err = x.Insert(t)
 	return err
 }
 
