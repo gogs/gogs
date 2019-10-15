@@ -33,16 +33,14 @@ govet:
 	$(GOVET) models pkg routes
 
 build: $(GENERATED)
-	go install $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)'
-	cp '$(GOPATH)/bin/gogs' .
+	go build $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)' -o gogs
 
 build-dev: $(GENERATED) govet
-	go install $(BUILD_FLAGS) -tags '$(TAGS)'
+	go build $(BUILD_FLAGS) -tags '$(TAGS)' -o gogs
 	cp '$(GOPATH)/bin/gogs' .
 
 build-dev-race: $(GENERATED) govet
-	go install $(BUILD_FLAGS) -race -tags '$(TAGS)'
-	cp '$(GOPATH)/bin/gogs' .
+	go build $(BUILD_FLAGS) -race -tags '$(TAGS)' -o gogs
 
 pack:
 	rm -rf $(RELEASE_GOGS)
