@@ -5,7 +5,6 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/go-xorm/xorm"
@@ -48,16 +47,15 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func isAccessTokenNameExist(uid int64, name string) (bool, error) {
-    return x.Where("uid=?", uid).And("name=?", name).Get(&AccessToken{})
-}
-
 // NewAccessToken creates new access token.
 func NewAccessToken(t *AccessToken) error {
 	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
-	has, err := isAccessTokenNameExist(t.UID, t.Name)
+	has, err := x.Get(&AccessToken{
+		UID:  t.UID,
+		Name: t.Name,
+	})
 	if err != nil {
-		return fmt.Errorf("IsAccessTokenNameExists: %v", err)
+		return err
 	} else if has {
 		return errors.AccessTokenNameAlreadyExist{t.Name}
 	}
