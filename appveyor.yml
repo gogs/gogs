@@ -5,7 +5,7 @@ clone_depth: 1
 
 environment:
   GOPATH: c:\gopath
-  GOVERSION: 1.11
+  GOVERSION: 1.13
 
 build: false
 deploy: false
