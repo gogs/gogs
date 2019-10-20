@@ -5,7 +5,9 @@
 package repo
 
 import (
+	"fmt"
 	"io"
+	"net/http"
 	"path"
 
 	"github.com/gogs/git-module"
@@ -22,6 +24,12 @@ func ServeData(c *context.Context, name string, reader io.Reader) error {
 		buf = buf[:n]
 	}
 
+	commit, err := c.Repo.Commit.GetCommitByPath(c.Repo.TreePath)
+	if err != nil {
+		return fmt.Errorf("GetCommitByPath: %v", err)
+	}
+	c.Resp.Header().Set("Last-Modified", commit.Committer.When.Format(http.TimeFormat))
+
 	if !tool.IsTextFile(buf) {
 		if !tool.IsImageFile(buf) {
 			c.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
@@ -31,7 +39,7 @@ func ServeData(c *context.Context, name string, reader io.Reader) error {
 		c.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 	c.Resp.Write(buf)
-	_, err := io.Copy(c.Resp, reader)
+	_, err = io.Copy(c.Resp, reader)
 	return err
 }
 
