@@ -5,7 +5,7 @@
 package repo
 
 import (
-	log "gopkg.in/clog.v1"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -26,10 +26,9 @@ func ServeData(c *context.Context, name string, reader io.Reader) error {
 
 	commit, err := c.Repo.Commit.GetCommitByPath(c.Repo.TreePath)
 	if err != nil {
-		log.Error(2, "GetCommitByPath: %v", err)
-	} else {
-		c.Resp.Header().Set("Last-Modified", commit.Committer.When.Format(http.TimeFormat))
+		return fmt.Errorf("GetCommitByPath: %v", err)
 	}
+	c.Resp.Header().Set("Last-Modified", commit.Committer.When.Format(http.TimeFormat))
 
 	if !tool.IsTextFile(buf) {
 		if !tool.IsImageFile(buf) {
