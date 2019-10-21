@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/go-xorm/core"
-	"github.com/go-xorm/xorm"
+	"xorm.io/core"
+	"xorm.io/xorm"
 	"github.com/json-iterator/go"
 	_ "github.com/lib/pq"
+	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models/migrations"
@@ -31,7 +31,7 @@ import (
 // Engine represents a XORM engine or session.
 type Engine interface {
 	Delete(interface{}) (int64, error)
-	Exec(string, ...interface{}) (sql.Result, error)
+	Exec(...interface{}) (sql.Result, error)
 	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
 	ID(interface{}) *xorm.Session

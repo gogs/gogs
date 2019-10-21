@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/git-module"

@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 

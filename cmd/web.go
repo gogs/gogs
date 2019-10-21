@@ -15,7 +15,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/captcha"

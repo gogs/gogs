@@ -7,7 +7,7 @@ package migrations
 import (
 	"fmt"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 
 	"github.com/gogs/gogs/pkg/setting"
 )

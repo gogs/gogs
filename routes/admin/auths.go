@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/core"
+	"github.com/unknwon/com"
+	"xorm.io/core"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models"

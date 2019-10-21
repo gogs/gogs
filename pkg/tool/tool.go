@@ -18,8 +18,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Unknwon/com"
-	"github.com/Unknwon/i18n"
+	"github.com/unknwon/com"
+	"github.com/unknwon/i18n"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/chardet"

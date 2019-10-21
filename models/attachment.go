@@ -12,7 +12,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 	gouuid "github.com/satori/go.uuid"
 
 	"github.com/gogs/gogs/pkg/setting"

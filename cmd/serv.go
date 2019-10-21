@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 

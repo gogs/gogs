@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Unknwon/paginater"
+	"github.com/unknwon/paginater"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 

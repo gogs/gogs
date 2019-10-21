@@ -5,7 +5,7 @@
 package admin
 
 import (
-	"github.com/Unknwon/paginater"
+	"github.com/unknwon/paginater"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models"

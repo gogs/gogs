@@ -13,7 +13,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	log "gopkg.in/clog.v1"

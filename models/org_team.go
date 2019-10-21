@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 
 	"github.com/gogs/gogs/models/errors"
 )

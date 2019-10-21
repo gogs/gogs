@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-xorm/builder"
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 )
 
 var (

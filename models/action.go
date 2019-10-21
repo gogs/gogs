@@ -12,8 +12,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/xorm"
+	"github.com/unknwon/com"
+	"xorm.io/xorm"
 	"github.com/json-iterator/go"
 	log "gopkg.in/clog.v1"
 

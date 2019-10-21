@@ -16,13 +16,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Unknwon/com"
 	"github.com/go-macaron/binding"
-	"github.com/go-xorm/core"
-	"github.com/go-xorm/xorm"
 	"github.com/json-iterator/go"
+	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
+	"xorm.io/core"
+	"xorm.io/xorm"
 
 	"github.com/gogs/gogs/models/errors"
 	"github.com/gogs/gogs/pkg/auth/github"

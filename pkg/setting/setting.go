@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"

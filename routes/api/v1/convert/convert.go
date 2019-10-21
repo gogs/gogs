@@ -7,7 +7,7 @@ package convert
 import (
 	"fmt"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"

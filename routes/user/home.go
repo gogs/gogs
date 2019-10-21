@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/Unknwon/com"
-	"github.com/Unknwon/paginater"
+	"github.com/unknwon/com"
+	"github.com/unknwon/paginater"
 
 	"github.com/gogs/gogs/models"
 	"github.com/gogs/gogs/models/errors"

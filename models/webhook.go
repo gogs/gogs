@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 	"github.com/json-iterator/go"
 	gouuid "github.com/satori/go.uuid"
 	log "gopkg.in/clog.v1"

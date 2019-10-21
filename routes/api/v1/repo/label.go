@@ -7,7 +7,7 @@ package repo
 import (
 	"net/http"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"
 

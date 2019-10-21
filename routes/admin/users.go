@@ -7,7 +7,7 @@ package admin
 import (
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/gogs/models"

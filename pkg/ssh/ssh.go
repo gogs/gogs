@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
 

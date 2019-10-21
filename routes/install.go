@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/xorm"
+	"github.com/unknwon/com"
+	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"

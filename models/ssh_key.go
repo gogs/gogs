@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/xorm"
+	"github.com/unknwon/com"
+	"xorm.io/xorm"
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
 

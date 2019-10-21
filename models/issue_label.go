@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 
 	api "github.com/gogs/go-gogs-client"
 

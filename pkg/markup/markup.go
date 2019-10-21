@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	"golang.org/x/net/html"
 
 	"github.com/gogs/gogs/pkg/setting"

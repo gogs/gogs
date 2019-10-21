@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/cae/zip"
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/xorm"
+	"github.com/unknwon/cae/zip"
+	"github.com/unknwon/com"
+	"xorm.io/xorm"
 	"github.com/mcuadros/go-version"
 	"github.com/nfnt/resize"
 	log "gopkg.in/clog.v1"

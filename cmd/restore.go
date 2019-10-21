@@ -8,8 +8,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/Unknwon/cae/zip"
-	"github.com/Unknwon/com"
+	"github.com/unknwon/cae/zip"
+	"github.com/unknwon/com"
 	"github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
