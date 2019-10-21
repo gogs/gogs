@@ -11,4 +11,5 @@ build: false
 deploy: false
 
 install:
+  - go env
   - go build -v
