@@ -11,11 +11,4 @@ build: false
 deploy: false
 
 install:
-  - go get -v ./...
   - go build -v
-
-notifications:
-  - provider: Email
-    to:
-      - u@gogs.io
-    on_build_success: false
