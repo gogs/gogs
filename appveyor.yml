@@ -11,6 +11,7 @@ build: false
 deploy: false
 
 install:
+  - go get -v ./...
   - go build -v
 
 notifications:
