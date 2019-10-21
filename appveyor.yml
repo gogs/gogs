@@ -1,10 +1,10 @@
 version: "{build}"
 skip_tags: true
-clone_folder: c:\gopath\src\github.com\gogs\gogs
+clone_folder: c:\gogs.io\gogs
 clone_depth: 1
 
 environment:
-  GOPATH: c:\gopath
+  GO111MODULE: on
   GOVERSION: 1.13
 
 build: false
