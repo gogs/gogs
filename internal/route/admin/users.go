@@ -5,7 +5,6 @@
 package admin
 
 import (
-	route2 "gogs.io/gogs/internal/route"
 	"strings"
 
 	"github.com/unknwon/com"
@@ -15,6 +14,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -29,7 +29,7 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	route2.RenderUserSearch(c, &route2.UserSearchOptions{
+	route.RenderUserSearch(c, &route.UserSearchOptions{
 		Type:     db.USER_TYPE_INDIVIDUAL,
 		Counter:  db.CountUsers,
 		Ranger:   db.Users,

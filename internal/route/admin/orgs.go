@@ -7,7 +7,7 @@ package admin
 import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	route2 "gogs.io/gogs/internal/route"
+	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -20,7 +20,7 @@ func Organizations(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminOrganizations"] = true
 
-	route2.RenderUserSearch(c, &route2.UserSearchOptions{
+	route.RenderUserSearch(c, &route.UserSearchOptions{
 		Type:     db.USER_TYPE_ORGANIZATION,
 		Counter:  db.CountOrganizations,
 		Ranger:   db.Organizations,
