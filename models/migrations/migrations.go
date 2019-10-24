@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/xorm"
+	"github.com/unknwon/com"
+	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogs/gogs/pkg/tool"
+	"gogs.io/gogs/pkg/tool"
 )
 
 const _MIN_DB_VER = 10
@@ -102,9 +102,9 @@ You can migrate your older database using a previous release, then you can upgra
 Please save following instructions to somewhere and start working:
 
 - If you were using below 0.6.0 (e.g. 0.5.x), download last supported archive from following link:
-	https://github.com/gogs/gogs/releases/tag/v0.7.33
+	https://gogs.io/gogs/releases/tag/v0.7.33
 - If you were using below 0.7.0 (e.g. 0.6.x), download last supported archive from following link:
-	https://github.com/gogs/gogs/releases/tag/v0.9.141
+	https://gogs.io/gogs/releases/tag/v0.9.141
 
 Once finished downloading,
 

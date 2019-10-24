@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 
-	"github.com/gogs/gogs/models/errors"
+	"gogs.io/gogs/models/errors"
 )
 
 const OWNER_TEAM = "Owners"
@@ -32,7 +32,7 @@ type Team struct {
 func (t *Team) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "num_repos":
-		// LEGACY [1.0]: this is backward compatibility bug fix for https://github.com/gogs/gogs/issues/3671
+		// LEGACY [1.0]: this is backward compatibility bug fix for https://gogs.io/gogs/issues/3671
 		if t.NumRepos < 0 {
 			t.NumRepos = 0
 		}

@@ -5,12 +5,12 @@
 package routes
 
 import (
-	"github.com/Unknwon/paginater"
+	"github.com/unknwon/paginater"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/routes/user"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/routes/user"
 )
 
 const (

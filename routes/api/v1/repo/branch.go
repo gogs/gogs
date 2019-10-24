@@ -7,9 +7,9 @@ package repo
 import (
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/routes/api/v1/convert"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/routes/api/v1/convert"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#get-branch

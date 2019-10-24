@@ -12,18 +12,18 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Unknwon/paginater"
+	"github.com/unknwon/paginater"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/git-module"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/markup"
-	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/pkg/template"
-	"github.com/gogs/gogs/pkg/template/highlight"
-	"github.com/gogs/gogs/pkg/tool"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/markup"
+	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/template"
+	"gogs.io/gogs/pkg/template/highlight"
+	"gogs.io/gogs/pkg/tool"
 )
 
 const (

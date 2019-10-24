@@ -9,8 +9,8 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/markup"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/markup"
 )
 
 func Markdown(c *context.APIContext, form api.MarkdownOption) {

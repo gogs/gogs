@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/git-module"
 
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/setting"
 )
 
 func updateRepositorySizes(x *xorm.Engine) (err error) {

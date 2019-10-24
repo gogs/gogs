@@ -7,9 +7,9 @@ package repo
 import (
 	"github.com/gogs/git-module"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/routes/repo"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/routes/repo"
 )
 
 func GetRawFile(c *context.APIContext) {

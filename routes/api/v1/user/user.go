@@ -7,14 +7,14 @@ package user
 import (
 	"net/http"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/markup"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/markup"
 )
 
 func Search(c *context.APIContext) {

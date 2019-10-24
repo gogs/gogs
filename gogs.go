@@ -1,4 +1,4 @@
-// +build go1.8
+// +build go1.11
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
@@ -12,11 +12,11 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/gogs/gogs/cmd"
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/cmd"
+	"gogs.io/gogs/pkg/setting"
 )
 
-const Version = "0.11.95.1020"
+const Version = "0.11.95.1023"
 
 func init() {
 	setting.AppVer = Version
