@@ -38,4 +38,4 @@ after_install: ./packager/hooks/postinst
 # Can be updated after CentOS 6 support is dropped, otherwise fails with
 # `fatal: bad config file line 2 in /home/pkgr/.gitconfig` because of
 # https://github.com/heroku/heroku-buildpack-go/blob/f96ebebfa7605fd3916521e42ab050c81c9b947a/lib/common.sh#L238
-buildpack: https://github.com/heroku/heroku-buildpack-go.git#v134
+buildpack: https://github.com/heroku/heroku-buildpack-go.git#v130
