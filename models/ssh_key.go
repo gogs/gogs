@@ -23,8 +23,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/pkg/process"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/process"
+	"gogs.io/gogs/internal/setting"
 )
 
 const (

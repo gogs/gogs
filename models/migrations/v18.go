@@ -9,7 +9,7 @@ import (
 
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/setting"
 )
 
 func updateRepositoryDescriptionField(x *xorm.Engine) error {

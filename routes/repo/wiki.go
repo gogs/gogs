@@ -12,9 +12,9 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/form"
-	"gogs.io/gogs/pkg/markup"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/markup"
 )
 
 const (

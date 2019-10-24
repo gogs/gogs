@@ -7,7 +7,7 @@ package admin
 import (
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/routes/api/v1/org"
 	"gogs.io/gogs/routes/api/v1/user"
 )

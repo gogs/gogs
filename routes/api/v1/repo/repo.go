@@ -15,9 +15,9 @@ import (
 
 	"gogs.io/gogs/models"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/form"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/routes/api/v1/convert"
 )
 

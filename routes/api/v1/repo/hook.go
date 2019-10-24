@@ -12,7 +12,7 @@ import (
 
 	"gogs.io/gogs/models"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/routes/api/v1/convert"
 )
 

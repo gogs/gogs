@@ -1,9 +1,9 @@
-LDFLAGS += -X "github.com/gogs/gogs/pkg/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
-LDFLAGS += -X "github.com/gogs/gogs/pkg/setting.BuildGitHash=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
+LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildGitHash=$(shell git rev-parse HEAD)"
 
 DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
-GENERATED  := pkg/bindata/bindata.go public/css/gogs.css
+GENERATED  := internal/bindata/bindata.go public/css/gogs.css
 
 OS := $(shell uname)
 
@@ -51,9 +51,9 @@ pack:
 
 release: build pack
 
-bindata: pkg/bindata/bindata.go
+bindata: internal/bindata/bindata.go
 
-pkg/bindata/bindata.go: $(DATA_FILES)
+internal/bindata/bindata.go: $(DATA_FILES)
 	go-bindata -o=$@ -ignore="\\.DS_Store|README.md|TRANSLATORS|auth.d" -pkg=bindata conf/...
 
 less: public/css/gogs.css

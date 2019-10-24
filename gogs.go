@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gogs.io/gogs/cmd"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/setting"
 )
 
 const Version = "0.11.95.1023"

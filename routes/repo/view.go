@@ -18,12 +18,12 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/markup"
-	"gogs.io/gogs/pkg/setting"
-	"gogs.io/gogs/pkg/template"
-	"gogs.io/gogs/pkg/template/highlight"
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/internal/template/highlight"
+	"gogs.io/gogs/internal/tool"
 )
 
 const (

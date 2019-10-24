@@ -14,7 +14,7 @@ import (
 	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/tool"
 )
 
 type NoticeType int

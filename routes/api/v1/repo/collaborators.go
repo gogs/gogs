@@ -9,7 +9,7 @@ import (
 
 	"gogs.io/gogs/models"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/internal/context"
 )
 
 func ListCollaborators(c *context.APIContext) {

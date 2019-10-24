@@ -12,7 +12,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/tool"
 )
 
 type Branch struct {

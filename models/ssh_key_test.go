@@ -11,7 +11,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/setting"
 )
 
 func init() {

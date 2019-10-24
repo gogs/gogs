@@ -8,7 +8,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/routes/repo"
 )
 

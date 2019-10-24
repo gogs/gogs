@@ -25,10 +25,10 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/auth/github"
-	"gogs.io/gogs/pkg/auth/ldap"
-	"gogs.io/gogs/pkg/auth/pam"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/auth/github"
+	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/setting"
 )
 
 type LoginType int

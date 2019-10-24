@@ -12,8 +12,8 @@ import (
 
 	"gogs.io/gogs/models"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/form"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/form"
 )
 
 const (

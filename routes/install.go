@@ -20,16 +20,16 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/cron"
-	"gogs.io/gogs/pkg/form"
-	"gogs.io/gogs/pkg/mailer"
-	"gogs.io/gogs/pkg/markup"
-	"gogs.io/gogs/pkg/setting"
-	"gogs.io/gogs/pkg/ssh"
-	"gogs.io/gogs/pkg/template/highlight"
-	"gogs.io/gogs/pkg/tool"
-	"gogs.io/gogs/pkg/user"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/cron"
+	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/ssh"
+	"gogs.io/gogs/internal/template/highlight"
+	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/user"
 )
 
 const (

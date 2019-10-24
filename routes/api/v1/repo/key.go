@@ -10,8 +10,8 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/routes/api/v1/convert"
 )
 

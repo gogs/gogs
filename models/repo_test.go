@@ -6,7 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	. "gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/markup"
+	"gogs.io/gogs/internal/markup"
 )
 
 func TestRepo(t *testing.T) {

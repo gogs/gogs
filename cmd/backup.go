@@ -18,7 +18,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/setting"
 )
 
 var Backup = cli.Command{

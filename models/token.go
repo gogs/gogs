@@ -9,7 +9,7 @@ import (
 
 	"xorm.io/xorm"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/tool"
 	gouuid "github.com/satori/go.uuid"
 )
 

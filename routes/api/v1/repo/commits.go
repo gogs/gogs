@@ -14,8 +14,8 @@ import (
 
 	"gogs.io/gogs/models"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/setting"
 )
 
 func GetSingleCommit(c *context.APIContext) {

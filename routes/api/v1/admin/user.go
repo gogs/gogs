@@ -13,9 +13,9 @@ import (
 
 	"gogs.io/gogs/models"
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/mailer"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/routes/api/v1/user"
 )
 

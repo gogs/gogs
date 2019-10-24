@@ -15,12 +15,12 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/cron"
-	"gogs.io/gogs/pkg/mailer"
-	"gogs.io/gogs/pkg/process"
-	"gogs.io/gogs/pkg/setting"
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/cron"
+	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/process"
+	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/tool"
 )
 
 const (

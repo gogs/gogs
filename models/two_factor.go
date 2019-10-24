@@ -16,8 +16,8 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"gogs.io/gogs/models/errors"
-	"gogs.io/gogs/pkg/setting"
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/tool"
 )
 
 // TwoFactor represents a two-factor authentication token.

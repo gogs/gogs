@@ -13,8 +13,8 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/tool"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/tool"
 )
 
 const (

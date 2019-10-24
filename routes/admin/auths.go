@@ -14,10 +14,10 @@ import (
 	log "gopkg.in/clog.v1"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/auth/ldap"
-	"gogs.io/gogs/pkg/context"
-	"gogs.io/gogs/pkg/form"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/setting"
 )
 
 const (

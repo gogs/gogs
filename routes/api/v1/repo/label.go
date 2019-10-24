@@ -12,7 +12,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/internal/context"
 )
 
 func ListLabels(c *context.APIContext) {

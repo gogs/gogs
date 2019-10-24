@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gogs.io/gogs/models"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/setting"
 )
 
 var (
