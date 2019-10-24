@@ -20,8 +20,8 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
@@ -37,7 +37,7 @@ type Context struct {
 	Session session.Store
 
 	Link        string // Current request URL
-	User        *models.User
+	User        *db.User
 	IsLogged    bool
 	IsBasicAuth bool
 	IsTokenAuth bool
@@ -252,13 +252,13 @@ func Contexter() macaron.Handler {
 			repoName := c.Params(":reponame")
 			branchName := "master"
 
-			owner, err := models.GetUserByName(ownerName)
+			owner, err := db.GetUserByName(ownerName)
 			if err != nil {
 				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
 			}
 
-			repo, err := models.GetRepositoryByName(owner.ID, repoName)
+			repo, err := db.GetRepositoryByName(owner.ID, repoName)
 			if err == nil && len(repo.DefaultBranch) > 0 {
 				branchName = repo.DefaultBranch
 			}
@@ -280,7 +280,7 @@ func Contexter() macaron.Handler {
 </html>
 `, map[string]string{
 				"GoGetImport":    path.Join(setting.HostAddress, setting.AppSubURL, repo.FullName()),
-				"CloneLink":      models.ComposeHTTPSCloneURL(ownerName, repoName),
+				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
 				"InsecureFlag":   insecureFlag,

@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 const (
@@ -43,7 +43,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("UserProfile")
 	c.Data["Owner"] = puser
 
-	orgs, err := models.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
+	orgs, err := db.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
 	if err != nil {
 		c.ServerError("GetOrgsByUserIDDesc", err)
 		return
@@ -66,7 +66,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 		}
 
 		showPrivate := c.IsLogged && (puser.ID == c.User.ID || c.User.IsAdmin)
-		c.Data["Repos"], err = models.GetUserRepositories(&models.UserRepoOptions{
+		c.Data["Repos"], err = db.GetUserRepositories(&db.UserRepoOptions{
 			UserID:   puser.ID,
 			Private:  showPrivate,
 			Page:     page,
@@ -77,7 +77,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 			return
 		}
 
-		count := models.CountUserRepositories(puser.ID, showPrivate)
+		count := db.CountUserRepositories(puser.ID, showPrivate)
 		c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
 	}
 
@@ -108,9 +108,9 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	var err error
 	switch c.Params(":action") {
 	case "follow":
-		err = models.FollowUser(c.UserID(), puser.ID)
+		err = db.FollowUser(c.UserID(), puser.ID)
 	case "unfollow":
-		err = models.UnfollowUser(c.UserID(), puser.ID)
+		err = db.UnfollowUser(c.UserID(), puser.ID)
 	}
 
 	if err != nil {

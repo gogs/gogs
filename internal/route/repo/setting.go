@@ -14,8 +14,8 @@ import (
 	"github.com/gogs/git-module"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
@@ -61,15 +61,15 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		// Check if repository name has been changed.
 		if repo.LowerName != strings.ToLower(newRepoName) {
 			isNameChanged = true
-			if err := models.ChangeRepositoryName(c.Repo.Owner, repo.Name, newRepoName); err != nil {
+			if err := db.ChangeRepositoryName(c.Repo.Owner, repo.Name, newRepoName); err != nil {
 				c.FormErr("RepoName")
 				switch {
-				case models.IsErrRepoAlreadyExist(err):
+				case db.IsErrRepoAlreadyExist(err):
 					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
-				case models.IsErrNameReserved(err):
-					c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), SETTINGS_OPTIONS, &f)
-				case models.IsErrNamePatternNotAllowed(err):
-					c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f)
+				case db.IsErrNameReserved(err):
+					c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), SETTINGS_OPTIONS, &f)
+				case db.IsErrNamePatternNotAllowed(err):
+					c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f)
 				default:
 					c.ServerError("ChangeRepositoryName", err)
 				}
@@ -92,14 +92,14 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 
 		visibilityChanged := repo.IsPrivate != f.Private
 		repo.IsPrivate = f.Private
-		if err := models.UpdateRepository(repo, visibilityChanged); err != nil {
+		if err := db.UpdateRepository(repo, visibilityChanged); err != nil {
 			c.ServerError("UpdateRepository", err)
 			return
 		}
 		log.Trace("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
-			if err := models.RenameRepoAction(c.User, oldRepoName, repo); err != nil {
+			if err := db.RenameRepoAction(c.User, oldRepoName, repo); err != nil {
 				log.Error(2, "RenameRepoAction: %v", err)
 			}
 		}
@@ -117,7 +117,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			c.Repo.Mirror.EnablePrune = f.EnablePrune
 			c.Repo.Mirror.Interval = f.Interval
 			c.Repo.Mirror.NextSync = time.Now().Add(time.Duration(f.Interval) * time.Hour)
-			if err := models.UpdateMirror(c.Repo.Mirror); err != nil {
+			if err := db.UpdateMirror(c.Repo.Mirror); err != nil {
 				c.ServerError("UpdateMirror", err)
 				return
 			}
@@ -136,7 +136,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 
-		go models.MirrorQueue.Add(repo.ID)
+		go db.MirrorQueue.Add(repo.ID)
 		c.Flash.Info(c.Tr("repo.settings.mirror_sync_in_progress"))
 		c.Redirect(repo.Link() + "/settings")
 
@@ -155,7 +155,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repo.PullsIgnoreWhitespace = f.PullsIgnoreWhitespace
 		repo.PullsAllowRebase = f.PullsAllowRebase
 
-		if err := models.UpdateRepository(repo, false); err != nil {
+		if err := db.UpdateRepository(repo, false); err != nil {
 			c.ServerError("UpdateRepository", err)
 			return
 		}
@@ -187,10 +187,10 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 		repo.IsMirror = false
 
-		if _, err := models.CleanUpMigrateInfo(repo); err != nil {
+		if _, err := db.CleanUpMigrateInfo(repo); err != nil {
 			c.ServerError("CleanUpMigrateInfo", err)
 			return
-		} else if err = models.DeleteMirrorByRepoID(c.Repo.Repository.ID); err != nil {
+		} else if err = db.DeleteMirrorByRepoID(c.Repo.Repository.ID); err != nil {
 			c.ServerError("DeleteMirrorByRepoID", err)
 			return
 		}
@@ -216,7 +216,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		newOwner := c.Query("new_owner_name")
-		isExist, err := models.IsUserExist(0, newOwner)
+		isExist, err := db.IsUserExist(0, newOwner)
 		if err != nil {
 			c.ServerError("IsUserExist", err)
 			return
@@ -225,8 +225,8 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			return
 		}
 
-		if err = models.TransferOwnership(c.User, newOwner, repo); err != nil {
-			if models.IsErrRepoAlreadyExist(err) {
+		if err = db.TransferOwnership(c.User, newOwner, repo); err != nil {
+			if db.IsErrRepoAlreadyExist(err) {
 				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
 				c.ServerError("TransferOwnership", err)
@@ -254,7 +254,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 			}
 		}
 
-		if err := models.DeleteRepository(c.Repo.Owner.ID, repo.ID); err != nil {
+		if err := db.DeleteRepository(c.Repo.Owner.ID, repo.ID); err != nil {
 			c.ServerError("DeleteRepository", err)
 			return
 		}
@@ -284,7 +284,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository wiki deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		repo.EnableWiki = false
-		if err := models.UpdateRepository(repo, false); err != nil {
+		if err := db.UpdateRepository(repo, false); err != nil {
 			c.ServerError("UpdateRepository", err)
 			return
 		}
@@ -321,7 +321,7 @@ func SettingsDeleteAvatar(c *context.Context) {
 }
 
 // FIXME: limit upload size
-func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repository) error {
+func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *db.Repository) error {
 	ctxRepo.UseCustomAvatar = true
 	if f.Avatar != nil {
 		r, err := f.Avatar.Open()
@@ -347,7 +347,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *models.Repo
 		}
 	}
 
-	if err := models.UpdateRepository(ctxRepo, false); err != nil {
+	if err := db.UpdateRepository(ctxRepo, false); err != nil {
 		return fmt.Errorf("update repository: %v", err)
 	}
 
@@ -375,7 +375,7 @@ func SettingsCollaborationPost(c *context.Context) {
 		return
 	}
 
-	u, err := models.GetUserByName(name)
+	u, err := db.GetUserByName(name)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Flash.Error(c.Tr("form.user_not_exist"))
@@ -399,7 +399,7 @@ func SettingsCollaborationPost(c *context.Context) {
 	}
 
 	if setting.Service.EnableNotifyMail {
-		mailer.SendCollaboratorMail(models.NewMailerUser(u), models.NewMailerUser(c.User), models.NewMailerRepo(c.Repo.Repository))
+		mailer.SendCollaboratorMail(db.NewMailerUser(u), db.NewMailerUser(c.User), db.NewMailerRepo(c.Repo.Repository))
 	}
 
 	c.Flash.Success(c.Tr("repo.settings.add_collaborator_success"))
@@ -409,7 +409,7 @@ func SettingsCollaborationPost(c *context.Context) {
 func ChangeCollaborationAccessMode(c *context.Context) {
 	if err := c.Repo.Repository.ChangeCollaborationAccessMode(
 		c.QueryInt64("uid"),
-		models.AccessMode(c.QueryInt("mode"))); err != nil {
+		db.AccessMode(c.QueryInt("mode"))); err != nil {
 		log.Error(2, "ChangeCollaborationAccessMode: %v", err)
 		return
 	}
@@ -439,7 +439,7 @@ func SettingsBranches(c *context.Context) {
 		return
 	}
 
-	protectBranches, err := models.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
+	protectBranches, err := db.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Handle(500, "GetProtectBranchesByRepoID", err)
 		return
@@ -474,7 +474,7 @@ func UpdateDefaultBranch(c *context.Context) {
 		}
 	}
 
-	if err := models.UpdateRepository(c.Repo.Repository, false); err != nil {
+	if err := db.UpdateRepository(c.Repo.Repository, false); err != nil {
 		c.Handle(500, "UpdateRepository", err)
 		return
 	}
@@ -493,7 +493,7 @@ func SettingsProtectedBranch(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.protected_branches") + " - " + branch
 	c.Data["PageIsSettingsBranches"] = true
 
-	protectBranch, err := models.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branch)
+	protectBranch, err := db.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branch)
 	if err != nil {
 		if !errors.IsErrBranchNotExist(err) {
 			c.Handle(500, "GetProtectBranchOfRepoByName", err)
@@ -501,7 +501,7 @@ func SettingsProtectedBranch(c *context.Context) {
 		}
 
 		// No options found, create defaults.
-		protectBranch = &models.ProtectBranch{
+		protectBranch = &db.ProtectBranch{
 			Name: branch,
 		}
 	}
@@ -515,7 +515,7 @@ func SettingsProtectedBranch(c *context.Context) {
 		c.Data["Users"] = users
 		c.Data["whitelist_users"] = protectBranch.WhitelistUserIDs
 
-		teams, err := c.Repo.Owner.TeamsHaveAccessToRepo(c.Repo.Repository.ID, models.ACCESS_MODE_WRITE)
+		teams, err := c.Repo.Owner.TeamsHaveAccessToRepo(c.Repo.Repository.ID, db.ACCESS_MODE_WRITE)
 		if err != nil {
 			c.Handle(500, "Repo.Owner.TeamsHaveAccessToRepo", err)
 			return
@@ -535,7 +535,7 @@ func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
 		return
 	}
 
-	protectBranch, err := models.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branch)
+	protectBranch, err := db.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branch)
 	if err != nil {
 		if !errors.IsErrBranchNotExist(err) {
 			c.Handle(500, "GetProtectBranchOfRepoByName", err)
@@ -543,7 +543,7 @@ func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
 		}
 
 		// No options found, create defaults.
-		protectBranch = &models.ProtectBranch{
+		protectBranch = &db.ProtectBranch{
 			RepoID: c.Repo.Repository.ID,
 			Name:   branch,
 		}
@@ -553,9 +553,9 @@ func SettingsProtectedBranchPost(c *context.Context, f form.ProtectBranch) {
 	protectBranch.RequirePullRequest = f.RequirePullRequest
 	protectBranch.EnableWhitelist = f.EnableWhitelist
 	if c.Repo.Owner.IsOrganization() {
-		err = models.UpdateOrgProtectBranch(c.Repo.Repository, protectBranch, f.WhitelistUsers, f.WhitelistTeams)
+		err = db.UpdateOrgProtectBranch(c.Repo.Repository, protectBranch, f.WhitelistUsers, f.WhitelistTeams)
 	} else {
-		err = models.UpdateProtectBranch(protectBranch)
+		err = db.UpdateProtectBranch(protectBranch)
 	}
 	if err != nil {
 		c.Handle(500, "UpdateOrgProtectBranch/UpdateProtectBranch", err)
@@ -622,7 +622,7 @@ func SettingsDeployKeys(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.deploy_keys")
 	c.Data["PageIsSettingsKeys"] = true
 
-	keys, err := models.ListDeployKeys(c.Repo.Repository.ID)
+	keys, err := db.ListDeployKeys(c.Repo.Repository.ID)
 	if err != nil {
 		c.Handle(500, "ListDeployKeys", err)
 		return
@@ -636,7 +636,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Data["Title"] = c.Tr("repo.settings.deploy_keys")
 	c.Data["PageIsSettingsKeys"] = true
 
-	keys, err := models.ListDeployKeys(c.Repo.Repository.ID)
+	keys, err := db.ListDeployKeys(c.Repo.Repository.ID)
 	if err != nil {
 		c.Handle(500, "ListDeployKeys", err)
 		return
@@ -648,9 +648,9 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		return
 	}
 
-	content, err := models.CheckPublicKeyString(f.Content)
+	content, err := db.CheckPublicKeyString(f.Content)
 	if err != nil {
-		if models.IsErrKeyUnableVerify(err) {
+		if db.IsErrKeyUnableVerify(err) {
 			c.Flash.Info(c.Tr("form.unable_verify_ssh_key"))
 		} else {
 			c.Data["HasError"] = true
@@ -661,14 +661,14 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 		}
 	}
 
-	key, err := models.AddDeployKey(c.Repo.Repository.ID, f.Title, content)
+	key, err := db.AddDeployKey(c.Repo.Repository.ID, f.Title, content)
 	if err != nil {
 		c.Data["HasError"] = true
 		switch {
-		case models.IsErrKeyAlreadyExist(err):
+		case db.IsErrKeyAlreadyExist(err):
 			c.Data["Err_Content"] = true
 			c.RenderWithErr(c.Tr("repo.settings.key_been_used"), SETTINGS_DEPLOY_KEYS, &f)
-		case models.IsErrKeyNameAlreadyUsed(err):
+		case db.IsErrKeyNameAlreadyUsed(err):
 			c.Data["Err_Title"] = true
 			c.RenderWithErr(c.Tr("repo.settings.key_name_used"), SETTINGS_DEPLOY_KEYS, &f)
 		default:
@@ -683,7 +683,7 @@ func SettingsDeployKeysPost(c *context.Context, f form.AddSSHKey) {
 }
 
 func DeleteDeployKey(c *context.Context) {
-	if err := models.DeleteDeployKey(c.User, c.QueryInt64("id")); err != nil {
+	if err := db.DeleteDeployKey(c.User, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteDeployKey: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.settings.deploy_key_deletion_success"))

@@ -9,13 +9,13 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 )
 
 func ListAccessTokens(c *context.APIContext) {
-	tokens, err := models.ListAccessTokens(c.User.ID)
+	tokens, err := db.ListAccessTokens(c.User.ID)
 	if err != nil {
 		c.ServerError("ListAccessTokens", err)
 		return
@@ -29,11 +29,11 @@ func ListAccessTokens(c *context.APIContext) {
 }
 
 func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) {
-	t := &models.AccessToken{
+	t := &db.AccessToken{
 		UID:  c.User.ID,
 		Name: form.Name,
 	}
-	if err := models.NewAccessToken(t); err != nil {
+	if err := db.NewAccessToken(t); err != nil {
 		if errors.IsAccessTokenNameAlreadyExist(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {

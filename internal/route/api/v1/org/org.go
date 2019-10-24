@@ -12,27 +12,27 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
-func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *models.User) {
+func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *db.User) {
 	if c.Written() {
 		return
 	}
 
-	org := &models.User{
+	org := &db.User{
 		Name:        apiForm.UserName,
 		FullName:    apiForm.FullName,
 		Description: apiForm.Description,
 		Website:     apiForm.Website,
 		Location:    apiForm.Location,
 		IsActive:    true,
-		Type:        models.USER_TYPE_ORGANIZATION,
+		Type:        db.USER_TYPE_ORGANIZATION,
 	}
-	if err := models.CreateOrganization(org, user); err != nil {
-		if models.IsErrUserAlreadyExist(err) ||
-			models.IsErrNameReserved(err) ||
-			models.IsErrNamePatternNotAllowed(err) {
+	if err := db.CreateOrganization(org, user); err != nil {
+		if db.IsErrUserAlreadyExist(err) ||
+			db.IsErrNameReserved(err) ||
+			db.IsErrNamePatternNotAllowed(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
 			c.ServerError("CreateOrganization", err)
@@ -43,7 +43,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 	c.JSON(201, convert2.ToOrganization(org))
 }
 
-func listUserOrgs(c *context.APIContext, u *models.User, all bool) {
+func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
 		c.ServerError("GetOrganizations", err)
 		return
@@ -87,7 +87,7 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 	org.Description = form.Description
 	org.Website = form.Website
 	org.Location = form.Location
-	if err := models.UpdateUser(org); err != nil {
+	if err := db.UpdateUser(org); err != nil {
 		c.ServerError("UpdateUser", err)
 		return
 	}

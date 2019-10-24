@@ -10,8 +10,8 @@ import (
 	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 )
@@ -70,8 +70,8 @@ func TeamsAction(c *context.Context) {
 			return
 		}
 		uname := c.Query("uname")
-		var u *models.User
-		u, err = models.GetUserByName(uname)
+		var u *db.User
+		u, err = db.GetUserByName(uname)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))
@@ -87,7 +87,7 @@ func TeamsAction(c *context.Context) {
 	}
 
 	if err != nil {
-		if models.IsErrLastOrgOwner(err) {
+		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
 			log.Error(3, "Action(%s): %v", c.Params(":action"), err)
@@ -117,8 +117,8 @@ func TeamsRepoAction(c *context.Context) {
 	switch c.Params(":action") {
 	case "add":
 		repoName := path.Base(c.Query("repo_name"))
-		var repo *models.Repository
-		repo, err = models.GetRepositoryByName(c.Org.Organization.ID, repoName)
+		var repo *db.Repository
+		repo, err = db.GetRepositoryByName(c.Org.Organization.ID, repoName)
 		if err != nil {
 			if errors.IsRepoNotExist(err) {
 				c.Flash.Error(c.Tr("org.teams.add_nonexistent_repo"))
@@ -145,7 +145,7 @@ func NewTeam(c *context.Context) {
 	c.Data["Title"] = c.Org.Organization.FullName
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["PageIsOrgTeamsNew"] = true
-	c.Data["Team"] = &models.Team{}
+	c.Data["Team"] = &db.Team{}
 	c.HTML(200, TEAM_NEW)
 }
 
@@ -154,11 +154,11 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["PageIsOrgTeamsNew"] = true
 
-	t := &models.Team{
+	t := &db.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        f.TeamName,
 		Description: f.Description,
-		Authorize:   models.ParseAccessMode(f.Permission),
+		Authorize:   db.ParseAccessMode(f.Permission),
 	}
 	c.Data["Team"] = t
 
@@ -167,13 +167,13 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		return
 	}
 
-	if err := models.NewTeam(t); err != nil {
+	if err := db.NewTeam(t); err != nil {
 		c.Data["Err_TeamName"] = true
 		switch {
-		case models.IsErrTeamAlreadyExist(err):
+		case db.IsErrTeamAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
-		case models.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(models.ErrNameReserved).Name), TEAM_NEW, &f)
+		case db.IsErrNameReserved(err):
+			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(db.ErrNameReserved).Name), TEAM_NEW, &f)
 		default:
 			c.Handle(500, "NewTeam", err)
 		}
@@ -225,14 +225,14 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 	isAuthChanged := false
 	if !t.IsOwnerTeam() {
 		// Validate permission level.
-		var auth models.AccessMode
+		var auth db.AccessMode
 		switch f.Permission {
 		case "read":
-			auth = models.ACCESS_MODE_READ
+			auth = db.ACCESS_MODE_READ
 		case "write":
-			auth = models.ACCESS_MODE_WRITE
+			auth = db.ACCESS_MODE_WRITE
 		case "admin":
-			auth = models.ACCESS_MODE_ADMIN
+			auth = db.ACCESS_MODE_ADMIN
 		default:
 			c.Error(401)
 			return
@@ -245,10 +245,10 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		}
 	}
 	t.Description = f.Description
-	if err := models.UpdateTeam(t, isAuthChanged); err != nil {
+	if err := db.UpdateTeam(t, isAuthChanged); err != nil {
 		c.Data["Err_TeamName"] = true
 		switch {
-		case models.IsErrTeamAlreadyExist(err):
+		case db.IsErrTeamAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
 		default:
 			c.Handle(500, "UpdateTeam", err)
@@ -259,7 +259,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 }
 
 func DeleteTeam(c *context.Context) {
-	if err := models.DeleteTeam(c.Org.Team); err != nil {
+	if err := db.DeleteTeam(c.Org.Team); err != nil {
 		c.Flash.Error("DeleteTeam: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("org.teams.delete_team_success"))

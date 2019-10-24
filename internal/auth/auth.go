@@ -13,8 +13,8 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
@@ -26,7 +26,7 @@ func IsAPIPath(url string) bool {
 // SignedInID returns the id of signed in user, along with one bool value which indicates whether user uses token
 // authentication.
 func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
-	if !models.HasEngine {
+	if !db.HasEngine {
 		return 0, false
 	}
 
@@ -49,15 +49,15 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := models.GetAccessTokenBySHA(tokenSHA)
+			t, err := db.GetAccessTokenBySHA(tokenSHA)
 			if err != nil {
-				if !models.IsErrAccessTokenNotExist(err) && !models.IsErrAccessTokenEmpty(err) {
+				if !db.IsErrAccessTokenNotExist(err) && !db.IsErrAccessTokenEmpty(err) {
 					log.Error(2, "GetAccessTokenBySHA: %v", err)
 				}
 				return 0, false
 			}
 			t.Updated = time.Now()
-			if err = models.UpdateAccessToken(t); err != nil {
+			if err = db.UpdateAccessToken(t); err != nil {
 				log.Error(2, "UpdateAccessToken: %v", err)
 			}
 			return t.UID, true
@@ -69,7 +69,7 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
-		if _, err := models.GetUserByID(id); err != nil {
+		if _, err := db.GetUserByID(id); err != nil {
 			if !errors.IsUserNotExist(err) {
 				log.Error(2, "GetUserByID: %v", err)
 			}
@@ -82,8 +82,8 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 
 // SignedInUser returns the user object of signed in user, along with two bool values,
 // which indicate whether user uses HTTP Basic Authentication or token authentication respectively.
-func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *models.User, isBasicAuth bool, isTokenAuth bool) {
-	if !models.HasEngine {
+func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasicAuth bool, isTokenAuth bool) {
+	if !db.HasEngine {
 		return nil, false, false
 	}
 
@@ -93,7 +93,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *models.User, isB
 		if setting.Service.EnableReverseProxyAuth {
 			webAuthUser := ctx.Req.Header.Get(setting.ReverseProxyAuthUser)
 			if len(webAuthUser) > 0 {
-				u, err := models.GetUserByName(webAuthUser)
+				u, err := db.GetUserByName(webAuthUser)
 				if err != nil {
 					if !errors.IsUserNotExist(err) {
 						log.Error(2, "GetUserByName: %v", err)
@@ -102,13 +102,13 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *models.User, isB
 
 					// Check if enabled auto-registration.
 					if setting.Service.EnableReverseProxyAutoRegister {
-						u := &models.User{
+						u := &db.User{
 							Name:     webAuthUser,
 							Email:    gouuid.NewV4().String() + "@localhost",
 							Passwd:   webAuthUser,
 							IsActive: true,
 						}
-						if err = models.CreateUser(u); err != nil {
+						if err = db.CreateUser(u); err != nil {
 							// FIXME: should I create a system notice?
 							log.Error(2, "CreateUser: %v", err)
 							return nil, false, false
@@ -128,7 +128,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *models.User, isB
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := models.UserLogin(uname, passwd, -1)
+				u, err := db.UserLogin(uname, passwd, -1)
 				if err != nil {
 					if !errors.IsUserNotExist(err) {
 						log.Error(2, "UserLogin: %v", err)
@@ -142,7 +142,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *models.User, isB
 		return nil, false, false
 	}
 
-	u, err := models.GetUserByID(uid)
+	u, err := db.GetUserByID(uid)
 	if err != nil {
 		log.Error(2, "GetUserByID: %v", err)
 		return nil, false, false

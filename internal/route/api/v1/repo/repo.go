@@ -17,12 +17,12 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 func Search(c *context.APIContext) {
-	opts := &models.SearchRepoOptions{
+	opts := &db.SearchRepoOptions{
 		Keyword:  path.Base(c.Query("q")),
 		OwnerID:  c.QueryInt64("uid"),
 		PageSize: convert2.ToCorrectPageSize(c.QueryInt("limit")),
@@ -34,7 +34,7 @@ func Search(c *context.APIContext) {
 		if c.User.ID == opts.OwnerID {
 			opts.Private = true
 		} else {
-			u, err := models.GetUserByID(opts.OwnerID)
+			u, err := db.GetUserByID(opts.OwnerID)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, map[string]interface{}{
 					"ok":    false,
@@ -49,7 +49,7 @@ func Search(c *context.APIContext) {
 		}
 	}
 
-	repos, count, err := models.SearchRepositoryByName(opts)
+	repos, count, err := db.SearchRepositoryByName(opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"ok":    false,
@@ -58,7 +58,7 @@ func Search(c *context.APIContext) {
 		return
 	}
 
-	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"ok":    false,
 			"error": err.Error(),
@@ -79,7 +79,7 @@ func Search(c *context.APIContext) {
 }
 
 func listUserRepositories(c *context.APIContext, username string) {
-	user, err := models.GetUserByName(username)
+	user, err := db.GetUserByName(username)
 	if err != nil {
 		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return
@@ -87,11 +87,11 @@ func listUserRepositories(c *context.APIContext, username string) {
 
 	// Only list public repositories if user requests someone else's repository list,
 	// or an organization isn't a member of.
-	var ownRepos []*models.Repository
+	var ownRepos []*db.Repository
 	if user.IsOrganization() {
 		ownRepos, _, err = user.GetUserRepositories(c.User.ID, 1, user.NumRepos)
 	} else {
-		ownRepos, err = models.GetUserRepositories(&models.UserRepoOptions{
+		ownRepos, err = db.GetUserRepositories(&db.UserRepoOptions{
 			UserID:   user.ID,
 			Private:  c.User.ID == user.ID,
 			Page:     1,
@@ -103,7 +103,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
-	if err = models.RepositoryList(ownRepos).LoadAttributes(); err != nil {
+	if err = db.RepositoryList(ownRepos).LoadAttributes(); err != nil {
 		c.ServerError("LoadAttributes(ownRepos)", err)
 		return
 	}
@@ -133,8 +133,8 @@ func listUserRepositories(c *context.APIContext, username string) {
 	i := numOwnRepos
 	for repo, access := range accessibleRepos {
 		repos[i] = repo.APIFormat(&api.Permission{
-			Admin: access >= models.ACCESS_MODE_ADMIN,
-			Push:  access >= models.ACCESS_MODE_WRITE,
+			Admin: access >= db.ACCESS_MODE_ADMIN,
+			Push:  access >= db.ACCESS_MODE_WRITE,
 			Pull:  true,
 		})
 		i++
@@ -155,8 +155,8 @@ func ListOrgRepositories(c *context.APIContext) {
 	listUserRepositories(c, c.Params(":org"))
 }
 
-func CreateUserRepo(c *context.APIContext, owner *models.User, opt api.CreateRepoOption) {
-	repo, err := models.CreateRepository(c.User, owner, models.CreateRepoOptions{
+func CreateUserRepo(c *context.APIContext, owner *db.User, opt api.CreateRepoOption) {
+	repo, err := db.CreateRepository(c.User, owner, db.CreateRepoOptions{
 		Name:        opt.Name,
 		Description: opt.Description,
 		Gitignores:  opt.Gitignores,
@@ -166,13 +166,13 @@ func CreateUserRepo(c *context.APIContext, owner *models.User, opt api.CreateRep
 		AutoInit:    opt.AutoInit,
 	})
 	if err != nil {
-		if models.IsErrRepoAlreadyExist(err) ||
-			models.IsErrNameReserved(err) ||
-			models.IsErrNamePatternNotAllowed(err) {
+		if db.IsErrRepoAlreadyExist(err) ||
+			db.IsErrNameReserved(err) ||
+			db.IsErrNamePatternNotAllowed(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
 			if repo != nil {
-				if err = models.DeleteRepository(c.User.ID, repo.ID); err != nil {
+				if err = db.DeleteRepository(c.User.ID, repo.ID); err != nil {
 					log.Error(2, "DeleteRepository: %v", err)
 				}
 			}
@@ -194,7 +194,7 @@ func Create(c *context.APIContext, opt api.CreateRepoOption) {
 }
 
 func CreateOrgRepo(c *context.APIContext, opt api.CreateRepoOption) {
-	org, err := models.GetOrgByName(c.Params(":org"))
+	org, err := db.GetOrgByName(c.Params(":org"))
 	if err != nil {
 		c.NotFoundOrServerError("GetOrgByName", errors.IsUserNotExist, err)
 		return
@@ -212,7 +212,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	// Not equal means context user is an organization,
 	// or is another user/organization if current user is admin.
 	if f.Uid != ctxUser.ID {
-		org, err := models.GetUserByID(f.Uid)
+		org, err := db.GetUserByID(f.Uid)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
 				c.Error(http.StatusUnprocessableEntity, "", err)
@@ -242,8 +242,8 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 
 	remoteAddr, err := f.ParseRemoteAddr(c.User)
 	if err != nil {
-		if models.IsErrInvalidCloneAddr(err) {
-			addrErr := err.(models.ErrInvalidCloneAddr)
+		if db.IsErrInvalidCloneAddr(err) {
+			addrErr := err.(db.ErrInvalidCloneAddr)
 			switch {
 			case addrErr.IsURLError:
 				c.Error(http.StatusUnprocessableEntity, "", err)
@@ -260,7 +260,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := models.MigrateRepository(c.User, ctxUser, models.MigrateRepoOptions{
+	repo, err := db.MigrateRepository(c.User, ctxUser, db.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || setting.Repository.ForcePrivate,
@@ -269,7 +269,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	})
 	if err != nil {
 		if repo != nil {
-			if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+			if errDelete := db.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
 				log.Error(2, "DeleteRepository: %v", errDelete)
 			}
 		}
@@ -277,7 +277,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 		if errors.IsReachLimitOfRepo(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
-			c.ServerError("MigrateRepository", errors.New(models.HandleMirrorCredentials(err.Error(), true)))
+			c.ServerError("MigrateRepository", errors.New(db.HandleMirrorCredentials(err.Error(), true)))
 		}
 		return
 	}
@@ -287,8 +287,8 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 }
 
 // FIXME: inject in the handler chain
-func parseOwnerAndRepo(c *context.APIContext) (*models.User, *models.Repository) {
-	owner, err := models.GetUserByName(c.Params(":username"))
+func parseOwnerAndRepo(c *context.APIContext) (*db.User, *db.Repository) {
+	owner, err := db.GetUserByName(c.Params(":username"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
@@ -298,7 +298,7 @@ func parseOwnerAndRepo(c *context.APIContext) (*models.User, *models.Repository)
 		return nil, nil
 	}
 
-	repo, err := models.GetRepositoryByName(owner.ID, c.Params(":reponame"))
+	repo, err := db.GetRepositoryByName(owner.ID, c.Params(":reponame"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 		return nil, nil
@@ -331,7 +331,7 @@ func Delete(c *context.APIContext) {
 		return
 	}
 
-	if err := models.DeleteRepository(owner.ID, repo.ID); err != nil {
+	if err := db.DeleteRepository(owner.ID, repo.ID); err != nil {
 		c.ServerError("DeleteRepository", err)
 		return
 	}
@@ -385,7 +385,7 @@ func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
 		repo.ExternalTrackerStyle = *form.TrackerIssueStyle
 	}
 
-	if err := models.UpdateRepository(repo, false); err != nil {
+	if err := db.UpdateRepository(repo, false); err != nil {
 		c.ServerError("UpdateRepository", err)
 		return
 	}
@@ -402,6 +402,6 @@ func MirrorSync(c *context.APIContext) {
 		return
 	}
 
-	go models.MirrorQueue.Add(repo.ID)
+	go db.MirrorQueue.Add(repo.ID)
 	c.Status(http.StatusAccepted)
 }

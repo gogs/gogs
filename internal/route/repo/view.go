@@ -17,7 +17,7 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
@@ -114,7 +114,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		}
 	}
 	c.Data["LatestCommit"] = latestCommit
-	c.Data["LatestCommitUser"] = models.ValidateCommitWithEmail(latestCommit)
+	c.Data["LatestCommitUser"] = db.ValidateCommitWithEmail(latestCommit)
 
 	if c.Repo.CanEnableEditor() {
 		c.Data["CanAddFile"] = true
@@ -318,12 +318,12 @@ func Home(c *context.Context) {
 	c.HTML(200, HOME)
 }
 
-func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*models.User, error), tpl string) {
+func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*db.User, error), tpl string) {
 	page := c.QueryInt("page")
 	if page <= 0 {
 		page = 1
 	}
-	pager := paginater.New(total, models.ItemsPerPage, page, 5)
+	pager := paginater.New(total, db.ItemsPerPage, page, 5)
 	c.Data["Page"] = pager
 
 	items, err := getter(pager.Current())

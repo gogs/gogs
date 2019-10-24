@@ -16,8 +16,8 @@ import (
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -76,14 +76,14 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 		return
 	}
 
-	models.LoadConfigs()
+	db.LoadConfigs()
 
 	if setting.UseSQLite3 {
 		workDir, _ := setting.WorkDir()
 		os.Chdir(workDir)
 	}
 
-	if err := models.SetEngine(); err != nil {
+	if err := db.SetEngine(); err != nil {
 		fail("Internal error", "SetEngine: %v", err)
 	}
 }
@@ -96,29 +96,29 @@ func parseSSHCmd(cmd string) (string, string) {
 	return ss[0], strings.Replace(ss[1], "'/", "'", 1)
 }
 
-func checkDeployKey(key *models.PublicKey, repo *models.Repository) {
+func checkDeployKey(key *db.PublicKey, repo *db.Repository) {
 	// Check if this deploy key belongs to current repository.
-	if !models.HasDeployKey(key.ID, repo.ID) {
+	if !db.HasDeployKey(key.ID, repo.ID) {
 		fail("Key access denied", "Deploy key access denied: [key_id: %d, repo_id: %d]", key.ID, repo.ID)
 	}
 
 	// Update deploy key activity.
-	deployKey, err := models.GetDeployKeyByRepo(key.ID, repo.ID)
+	deployKey, err := db.GetDeployKeyByRepo(key.ID, repo.ID)
 	if err != nil {
 		fail("Internal error", "GetDeployKey: %v", err)
 	}
 
 	deployKey.Updated = time.Now()
-	if err = models.UpdateDeployKey(deployKey); err != nil {
+	if err = db.UpdateDeployKey(deployKey); err != nil {
 		fail("Internal error", "UpdateDeployKey: %v", err)
 	}
 }
 
 var (
-	allowedCommands = map[string]models.AccessMode{
-		"git-upload-pack":    models.ACCESS_MODE_READ,
-		"git-upload-archive": models.ACCESS_MODE_READ,
-		"git-receive-pack":   models.ACCESS_MODE_WRITE,
+	allowedCommands = map[string]db.AccessMode{
+		"git-upload-pack":    db.ACCESS_MODE_READ,
+		"git-upload-archive": db.ACCESS_MODE_READ,
+		"git-receive-pack":   db.ACCESS_MODE_WRITE,
 	}
 )
 
@@ -151,7 +151,7 @@ func runServ(c *cli.Context) error {
 	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
 	repoName = strings.TrimSuffix(repoName, ".wiki")
 
-	owner, err := models.GetUserByName(ownerName)
+	owner, err := db.GetUserByName(ownerName)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
@@ -159,7 +159,7 @@ func runServ(c *cli.Context) error {
 		fail("Internal error", "Fail to get repository owner '%s': %v", ownerName, err)
 	}
 
-	repo, err := models.GetRepositoryByName(owner.ID, repoName)
+	repo, err := db.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
 		if errors.IsRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
@@ -174,19 +174,19 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Prohibit push to mirror repositories.
-	if requestMode > models.ACCESS_MODE_READ && repo.IsMirror {
+	if requestMode > db.ACCESS_MODE_READ && repo.IsMirror {
 		fail("Mirror repository is read-only", "")
 	}
 
 	// Allow anonymous (user is nil) clone for public repositories.
-	var user *models.User
+	var user *db.User
 
-	key, err := models.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
+	key, err := db.GetPublicKeyByID(com.StrTo(strings.TrimPrefix(c.Args()[0], "key-")).MustInt64())
 	if err != nil {
 		fail("Invalid key ID", "Invalid key ID '%s': %v", c.Args()[0], err)
 	}
 
-	if requestMode == models.ACCESS_MODE_WRITE || repo.IsPrivate {
+	if requestMode == db.ACCESS_MODE_WRITE || repo.IsPrivate {
 		// Check deploy key or user key.
 		if key.IsDeployKey() {
 			if key.Mode < requestMode {
@@ -194,19 +194,19 @@ func runServ(c *cli.Context) error {
 			}
 			checkDeployKey(key, repo)
 		} else {
-			user, err = models.GetUserByKeyID(key.ID)
+			user, err = db.GetUserByKeyID(key.ID)
 			if err != nil {
 				fail("Internal error", "Fail to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode, err := models.UserAccessMode(user.ID, repo)
+			mode, err := db.UserAccessMode(user.ID, repo)
 			if err != nil {
 				fail("Internal error", "Fail to check access: %v", err)
 			}
 
 			if mode < requestMode {
 				clientMessage := _ACCESS_DENIED_MESSAGE
-				if mode >= models.ACCESS_MODE_READ {
+				if mode >= db.ACCESS_MODE_READ {
 					clientMessage = "You do not have sufficient authorization for this action"
 				}
 				fail(clientMessage,
@@ -227,13 +227,13 @@ func runServ(c *cli.Context) error {
 
 	// Update user key activity.
 	if key.ID > 0 {
-		key, err := models.GetPublicKeyByID(key.ID)
+		key, err := db.GetPublicKeyByID(key.ID)
 		if err != nil {
 			fail("Internal error", "GetPublicKeyByID: %v", err)
 		}
 
 		key.Updated = time.Now()
-		if err = models.UpdatePublicKey(key); err != nil {
+		if err = db.UpdatePublicKey(key); err != nil {
 			fail("Internal error", "UpdatePublicKey: %v", err)
 		}
 	}
@@ -250,8 +250,8 @@ func runServ(c *cli.Context) error {
 	} else {
 		gitCmd = exec.Command(verb, repoFullName)
 	}
-	if requestMode == models.ACCESS_MODE_WRITE {
-		gitCmd.Env = append(os.Environ(), models.ComposeHookEnvs(models.ComposeHookEnvsOptions{
+	if requestMode == db.ACCESS_MODE_WRITE {
+		gitCmd.Env = append(os.Environ(), db.ComposeHookEnvs(db.ComposeHookEnvsOptions{
 			AuthUser:  user,
 			OwnerName: owner.Name,
 			OwnerSalt: owner.Salt,

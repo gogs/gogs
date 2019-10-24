@@ -10,7 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 const (
@@ -53,7 +53,7 @@ func ExploreRepos(c *context.Context) {
 	}
 
 	keyword := c.Query("q")
-	repos, count, err := models.SearchRepositoryByName(&models.SearchRepoOptions{
+	repos, count, err := db.SearchRepositoryByName(&db.SearchRepoOptions{
 		Keyword:  keyword,
 		UserID:   c.UserID(),
 		OrderBy:  "updated_unix DESC",
@@ -68,7 +68,7 @@ func ExploreRepos(c *context.Context) {
 	c.Data["Total"] = count
 	c.Data["Page"] = paginater.New(int(count), setting.UI.ExplorePagingNum, page, 5)
 
-	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.ServerError("RepositoryList.LoadAttributes", err)
 		return
 	}
@@ -78,9 +78,9 @@ func ExploreRepos(c *context.Context) {
 }
 
 type UserSearchOptions struct {
-	Type     models.UserType
+	Type     db.UserType
 	Counter  func() int64
-	Ranger   func(int, int) ([]*models.User, error)
+	Ranger   func(int, int) ([]*db.User, error)
 	PageSize int
 	OrderBy  string
 	TplName  string
@@ -93,7 +93,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	}
 
 	var (
-		users []*models.User
+		users []*db.User
 		count int64
 		err   error
 	)
@@ -107,7 +107,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 		}
 		count = opts.Counter()
 	} else {
-		users, count, err = models.SearchUserByName(&models.SearchUserOptions{
+		users, count, err = db.SearchUserByName(&db.SearchUserOptions{
 			Keyword:  keyword,
 			Type:     opts.Type,
 			OrderBy:  opts.OrderBy,
@@ -133,9 +133,9 @@ func ExploreUsers(c *context.Context) {
 	c.Data["PageIsExploreUsers"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     models.USER_TYPE_INDIVIDUAL,
-		Counter:  models.CountUsers,
-		Ranger:   models.Users,
+		Type:     db.USER_TYPE_INDIVIDUAL,
+		Counter:  db.CountUsers,
+		Ranger:   db.Users,
 		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
@@ -148,9 +148,9 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     models.USER_TYPE_ORGANIZATION,
-		Counter:  models.CountOrganizations,
-		Ranger:   models.Organizations,
+		Type:     db.USER_TYPE_ORGANIZATION,
+		Counter:  db.CountOrganizations,
+		Ranger:   db.Organizations,
 		PageSize: setting.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_ORGANIZATIONS,

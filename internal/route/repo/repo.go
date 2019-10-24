@@ -15,8 +15,8 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
@@ -34,8 +34,8 @@ func MustBeNotBare(c *context.Context) {
 	}
 }
 
-func checkContextUser(c *context.Context, uid int64) *models.User {
-	orgs, err := models.GetOwnedOrgsByUserIDDesc(c.User.ID, "updated_unix")
+func checkContextUser(c *context.Context, uid int64) *db.User {
+	orgs, err := db.GetOwnedOrgsByUserIDDesc(c.User.ID, "updated_unix")
 	if err != nil {
 		c.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
 		return nil
@@ -47,7 +47,7 @@ func checkContextUser(c *context.Context, uid int64) *models.User {
 		return c.User
 	}
 
-	org, err := models.GetUserByID(uid)
+	org, err := db.GetUserByID(uid)
 	if errors.IsUserNotExist(err) {
 		return c.User
 	}
@@ -70,9 +70,9 @@ func Create(c *context.Context) {
 	c.RequireAutosize()
 
 	// Give default value for template to render.
-	c.Data["Gitignores"] = models.Gitignores
-	c.Data["Licenses"] = models.Licenses
-	c.Data["Readmes"] = models.Readmes
+	c.Data["Gitignores"] = db.Gitignores
+	c.Data["Licenses"] = db.Licenses
+	c.Data["Readmes"] = db.Readmes
 	c.Data["readme"] = "Default"
 	c.Data["private"] = c.User.LastRepoVisibility
 	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
@@ -86,19 +86,19 @@ func Create(c *context.Context) {
 	c.HTML(200, CREATE)
 }
 
-func handleCreateError(c *context.Context, owner *models.User, err error, name, tpl string, form interface{}) {
+func handleCreateError(c *context.Context, owner *db.User, err error, name, tpl string, form interface{}) {
 	switch {
 	case errors.IsReachLimitOfRepo(err):
 		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
-	case models.IsErrRepoAlreadyExist(err):
+	case db.IsErrRepoAlreadyExist(err):
 		c.Data["Err_RepoName"] = true
 		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tpl, form)
-	case models.IsErrNameReserved(err):
+	case db.IsErrNameReserved(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), tpl, form)
-	case models.IsErrNamePatternNotAllowed(err):
+		c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), tpl, form)
+	case db.IsErrNamePatternNotAllowed(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), tpl, form)
 	default:
 		c.Handle(500, name, err)
 	}
@@ -107,9 +107,9 @@ func handleCreateError(c *context.Context, owner *models.User, err error, name, 
 func CreatePost(c *context.Context, f form.CreateRepo) {
 	c.Data["Title"] = c.Tr("new_repo")
 
-	c.Data["Gitignores"] = models.Gitignores
-	c.Data["Licenses"] = models.Licenses
-	c.Data["Readmes"] = models.Readmes
+	c.Data["Gitignores"] = db.Gitignores
+	c.Data["Licenses"] = db.Licenses
+	c.Data["Readmes"] = db.Readmes
 
 	ctxUser := checkContextUser(c, f.UserID)
 	if c.Written() {
@@ -122,7 +122,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err := models.CreateRepository(c.User, ctxUser, models.CreateRepoOptions{
+	repo, err := db.CreateRepository(c.User, ctxUser, db.CreateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		Gitignores:  f.Gitignores,
@@ -138,7 +138,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+		if errDelete := db.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -177,9 +177,9 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 
 	remoteAddr, err := f.ParseRemoteAddr(c.User)
 	if err != nil {
-		if models.IsErrInvalidCloneAddr(err) {
+		if db.IsErrInvalidCloneAddr(err) {
 			c.Data["Err_CloneAddr"] = true
-			addrErr := err.(models.ErrInvalidCloneAddr)
+			addrErr := err.(db.ErrInvalidCloneAddr)
 			switch {
 			case addrErr.IsURLError:
 				c.RenderWithErr(c.Tr("form.url_error"), MIGRATE, &f)
@@ -196,7 +196,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	repo, err := models.MigrateRepository(c.User, ctxUser, models.MigrateRepoOptions{
+	repo, err := db.MigrateRepository(c.User, ctxUser, db.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || setting.Repository.ForcePrivate,
@@ -210,7 +210,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+		if errDelete := db.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -218,11 +218,11 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	if strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		c.Data["Err_Auth"] = true
-		c.RenderWithErr(c.Tr("form.auth_failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		c.RenderWithErr(c.Tr("form.auth_failed", db.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
 		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		c.Data["Err_CloneAddr"] = true
-		c.RenderWithErr(c.Tr("repo.migrate.failed", models.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+		c.RenderWithErr(c.Tr("repo.migrate.failed", db.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
 		return
 	}
 
@@ -233,19 +233,19 @@ func Action(c *context.Context) {
 	var err error
 	switch c.Params(":action") {
 	case "watch":
-		err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
+		err = db.WatchRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unwatch":
 		if userID := c.QueryInt64("user_id"); userID != 0 {
 			if c.User.IsAdmin {
-				err = models.WatchRepo(userID, c.Repo.Repository.ID, false)
+				err = db.WatchRepo(userID, c.Repo.Repository.ID, false)
 			}
 		} else {
-			err = models.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
+			err = db.WatchRepo(c.User.ID, c.Repo.Repository.ID, false)
 		}
 	case "star":
-		err = models.StarRepo(c.User.ID, c.Repo.Repository.ID, true)
+		err = db.StarRepo(c.User.ID, c.Repo.Repository.ID, true)
 	case "unstar":
-		err = models.StarRepo(c.User.ID, c.Repo.Repository.ID, false)
+		err = db.StarRepo(c.User.ID, c.Repo.Repository.ID, false)
 	case "desc": // FIXME: this is not used
 		if !c.Repo.IsOwner() {
 			c.NotFound()
@@ -254,7 +254,7 @@ func Action(c *context.Context) {
 
 		c.Repo.Repository.Description = c.Query("desc")
 		c.Repo.Repository.Website = c.Query("site")
-		err = models.UpdateRepository(c.Repo.Repository, false)
+		err = db.UpdateRepository(c.Repo.Repository, false)
 	}
 
 	if err != nil {

@@ -17,7 +17,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -48,8 +48,8 @@ func runBackup(c *cli.Context) error {
 		setting.CustomConf = c.String("config")
 	}
 	setting.NewContext()
-	models.LoadConfigs()
-	models.SetEngine()
+	db.LoadConfigs()
+	db.SetEngine()
 
 	tmpDir := c.String("tempdir")
 	if !com.IsExist(tmpDir) {
@@ -84,7 +84,7 @@ func runBackup(c *cli.Context) error {
 
 	// Database
 	dbDir := path.Join(rootDir, "db")
-	if err = models.DumpDatabase(dbDir); err != nil {
+	if err = db.DumpDatabase(dbDir); err != nil {
 		log.Fatal(0, "Fail to dump database: %v", err)
 	}
 	if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/db", dbDir); err != nil {

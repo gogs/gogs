@@ -15,7 +15,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -91,12 +91,12 @@ func runRestore(c *cli.Context) error {
 		setting.CustomConf = configFile
 	}
 	setting.NewContext()
-	models.LoadConfigs()
-	models.SetEngine()
+	db.LoadConfigs()
+	db.SetEngine()
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = models.ImportDatabase(dbDir, c.Bool("verbose")); err != nil {
+	if err = db.ImportDatabase(dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal(0, "Failed to import database: %v", err)
 	}
 

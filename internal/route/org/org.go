@@ -7,7 +7,7 @@ package org
 import (
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
@@ -30,21 +30,21 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		return
 	}
 
-	org := &models.User{
+	org := &db.User{
 		Name:     f.OrgName,
 		IsActive: true,
-		Type:     models.USER_TYPE_ORGANIZATION,
+		Type:     db.USER_TYPE_ORGANIZATION,
 	}
 
-	if err := models.CreateOrganization(org, c.User); err != nil {
+	if err := db.CreateOrganization(org, c.User); err != nil {
 		c.Data["Err_OrgName"] = true
 		switch {
-		case models.IsErrUserAlreadyExist(err):
+		case db.IsErrUserAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
-		case models.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.name_reserved", err.(models.ErrNameReserved).Name), CREATE, &f)
-		case models.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), CREATE, &f)
+		case db.IsErrNameReserved(err):
+			c.RenderWithErr(c.Tr("org.form.name_reserved", err.(db.ErrNameReserved).Name), CREATE, &f)
+		case db.IsErrNamePatternNotAllowed(err):
+			c.RenderWithErr(c.Tr("org.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), CREATE, &f)
 		default:
 			c.Handle(500, "CreateOrganization", err)
 		}

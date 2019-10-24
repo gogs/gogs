@@ -14,26 +14,26 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/setting"
 )
 
 type PullRequest struct {
-	BaseRepo *models.Repository
+	BaseRepo *db.Repository
 	Allowed  bool
 	SameRepo bool
 	HeadInfo string // [<user>:]<branch>
 }
 
 type Repository struct {
-	AccessMode   models.AccessMode
+	AccessMode   db.AccessMode
 	IsWatching   bool
 	IsViewBranch bool
 	IsViewTag    bool
 	IsViewCommit bool
-	Repository   *models.Repository
-	Owner        *models.User
+	Repository   *db.Repository
+	Owner        *db.User
 	Commit       *git.Commit
 	Tag          *git.Tag
 	GitRepo      *git.Repository
@@ -42,31 +42,31 @@ type Repository struct {
 	TreePath     string
 	CommitID     string
 	RepoLink     string
-	CloneLink    models.CloneLink
+	CloneLink    db.CloneLink
 	CommitsCount int64
-	Mirror       *models.Mirror
+	Mirror       *db.Mirror
 
 	PullRequest *PullRequest
 }
 
 // IsOwner returns true if current user is the owner of repository.
 func (r *Repository) IsOwner() bool {
-	return r.AccessMode >= models.ACCESS_MODE_OWNER
+	return r.AccessMode >= db.ACCESS_MODE_OWNER
 }
 
 // IsAdmin returns true if current user has admin or higher access of repository.
 func (r *Repository) IsAdmin() bool {
-	return r.AccessMode >= models.ACCESS_MODE_ADMIN
+	return r.AccessMode >= db.ACCESS_MODE_ADMIN
 }
 
 // IsWriter returns true if current user has write or higher access of repository.
 func (r *Repository) IsWriter() bool {
-	return r.AccessMode >= models.ACCESS_MODE_WRITE
+	return r.AccessMode >= db.ACCESS_MODE_WRITE
 }
 
 // HasAccess returns true if the current user has at least read access for this repository
 func (r *Repository) HasAccess() bool {
-	return r.AccessMode >= models.ACCESS_MODE_READ
+	return r.AccessMode >= db.ACCESS_MODE_READ
 }
 
 // CanEnableEditor returns true if repository is editable and user has proper access level.
@@ -110,7 +110,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 func RepoAssignment(pages ...bool) macaron.Handler {
 	return func(c *Context) {
 		var (
-			owner        *models.User
+			owner        *db.User
 			err          error
 			isIssuesPage bool
 			isWikiPage   bool
@@ -134,7 +134,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.LowerName == strings.ToLower(ownerName) {
 			owner = c.User
 		} else {
-			owner, err = models.GetUserByName(ownerName)
+			owner, err = db.GetUserByName(ownerName)
 			if err != nil {
 				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
@@ -143,7 +143,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Repo.Owner = owner
 		c.Data["Username"] = c.Repo.Owner.Name
 
-		repo, err := models.GetRepositoryByName(owner.ID, repoName)
+		repo, err := db.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
@@ -158,9 +158,9 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		// Admin has super access.
 		if c.IsLogged && c.User.IsAdmin {
-			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
+			c.Repo.AccessMode = db.ACCESS_MODE_OWNER
 		} else {
-			mode, err := models.UserAccessMode(c.UserID(), repo)
+			mode, err := db.UserAccessMode(c.UserID(), repo)
 			if err != nil {
 				c.ServerError("UserAccessMode", err)
 				return
@@ -169,7 +169,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		// Check access
-		if c.Repo.AccessMode == models.ACCESS_MODE_NONE {
+		if c.Repo.AccessMode == db.ACCESS_MODE_NONE {
 			// Redirect to any accessible page if not yet on it
 			if repo.IsPartialPublic() &&
 				(!(isIssuesPage || isWikiPage) ||
@@ -199,7 +199,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		if repo.IsMirror {
-			c.Repo.Mirror, err = models.GetMirrorByRepoID(repo.ID)
+			c.Repo.Mirror, err = db.GetMirrorByRepoID(repo.ID)
 			if err != nil {
 				c.ServerError("GetMirror", err)
 				return
@@ -209,7 +209,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			c.Data["Mirror"] = c.Repo.Mirror
 		}
 
-		gitRepo, err := git.OpenRepository(models.RepoPath(ownerName, repoName))
+		gitRepo, err := git.OpenRepository(db.RepoPath(ownerName, repoName))
 		if err != nil {
 			c.ServerError(fmt.Sprintf("RepoAssignment Invalid repo '%s'", c.Repo.Repository.RepoPath()), err)
 			return
@@ -237,8 +237,8 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
 		if c.IsLogged {
-			c.Data["IsWatchingRepo"] = models.IsWatching(c.User.ID, repo.ID)
-			c.Data["IsStaringRepo"] = models.IsStaring(c.User.ID, repo.ID)
+			c.Data["IsWatchingRepo"] = db.IsWatching(c.User.ID, repo.ID)
+			c.Data["IsStaringRepo"] = db.IsStaring(c.User.ID, repo.ID)
 		}
 
 		// repo is bare and display enable
@@ -286,7 +286,7 @@ func RepoRef() macaron.Handler {
 
 		// For API calls.
 		if c.Repo.GitRepo == nil {
-			repoPath := models.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
+			repoPath := db.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
 			c.Repo.GitRepo, err = git.OpenRepository(repoPath)
 			if err != nil {
 				c.Handle(500, "RepoRef Invalid repo "+repoPath, err)

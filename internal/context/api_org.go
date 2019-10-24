@@ -5,10 +5,10 @@
 package context
 
 import (
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 type APIOrganization struct {
-	Organization *models.User
-	Team         *models.Team
+	Organization *db.User
+	Team         *db.Team
 }

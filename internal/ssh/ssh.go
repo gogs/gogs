@@ -18,7 +18,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -154,7 +154,7 @@ func Listen(host string, port int, ciphers []string) {
 			Ciphers: ciphers,
 		},
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			pkey, err := models.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
+			pkey, err := db.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {
 				log.Error(3, "SearchPublicKeyByContent: %v", err)
 				return nil, err

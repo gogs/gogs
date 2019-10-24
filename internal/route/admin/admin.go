@@ -14,7 +14,7 @@ import (
 	"github.com/json-iterator/go"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/mailer"
@@ -139,25 +139,25 @@ func Dashboard(c *context.Context) {
 		switch AdminOperation(op) {
 		case CLEAN_INACTIVATE_USER:
 			success = c.Tr("admin.dashboard.delete_inactivate_accounts_success")
-			err = models.DeleteInactivateUsers()
+			err = db.DeleteInactivateUsers()
 		case CLEAN_REPO_ARCHIVES:
 			success = c.Tr("admin.dashboard.delete_repo_archives_success")
-			err = models.DeleteRepositoryArchives()
+			err = db.DeleteRepositoryArchives()
 		case CLEAN_MISSING_REPOS:
 			success = c.Tr("admin.dashboard.delete_missing_repos_success")
-			err = models.DeleteMissingRepositories()
+			err = db.DeleteMissingRepositories()
 		case GIT_GC_REPOS:
 			success = c.Tr("admin.dashboard.git_gc_repos_success")
-			err = models.GitGcRepos()
+			err = db.GitGcRepos()
 		case SYNC_SSH_AUTHORIZED_KEY:
 			success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
-			err = models.RewriteAuthorizedKeys()
+			err = db.RewriteAuthorizedKeys()
 		case SYNC_REPOSITORY_HOOKS:
 			success = c.Tr("admin.dashboard.resync_all_hooks_success")
-			err = models.SyncRepositoryHooks()
+			err = db.SyncRepositoryHooks()
 		case REINIT_MISSING_REPOSITORY:
 			success = c.Tr("admin.dashboard.reinit_missing_repos_success")
-			err = models.ReinitMissingRepositories()
+			err = db.ReinitMissingRepositories()
 		}
 
 		if err != nil {
@@ -169,7 +169,7 @@ func Dashboard(c *context.Context) {
 		return
 	}
 
-	c.Data["Stats"] = models.GetStatistic()
+	c.Data["Stats"] = db.GetStatistic()
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
@@ -210,7 +210,7 @@ func Config(c *context.Context) {
 	c.Data["Repository"] = setting.Repository
 	c.Data["HTTP"] = setting.HTTP
 
-	c.Data["DbCfg"] = models.DbCfg
+	c.Data["DbCfg"] = db.DbCfg
 	c.Data["Service"] = setting.Service
 	c.Data["Webhook"] = setting.Webhook
 

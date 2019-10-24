@@ -9,7 +9,7 @@ import (
 	"github.com/unknwon/paginater"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 )
@@ -23,14 +23,14 @@ func Notices(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminNotices"] = true
 
-	total := models.CountNotices()
+	total := db.CountNotices()
 	page := c.QueryInt("page")
 	if page <= 1 {
 		page = 1
 	}
 	c.Data["Page"] = paginater.New(int(total), setting.UI.Admin.NoticePagingNum, page, 5)
 
-	notices, err := models.Notices(page, setting.UI.Admin.NoticePagingNum)
+	notices, err := db.Notices(page, setting.UI.Admin.NoticePagingNum)
 	if err != nil {
 		c.Handle(500, "Notices", err)
 		return
@@ -51,7 +51,7 @@ func DeleteNotices(c *context.Context) {
 		}
 	}
 
-	if err := models.DeleteNoticesByIDs(ids); err != nil {
+	if err := db.DeleteNoticesByIDs(ids); err != nil {
 		c.Flash.Error("DeleteNoticesByIDs: " + err.Error())
 		c.Status(500)
 	} else {
@@ -61,7 +61,7 @@ func DeleteNotices(c *context.Context) {
 }
 
 func EmptyNotices(c *context.Context) {
-	if err := models.DeleteNotices(0, 0); err != nil {
+	if err := db.DeleteNotices(0, 0); err != nil {
 		c.Handle(500, "DeleteNotices", err)
 		return
 	}

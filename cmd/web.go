@@ -43,7 +43,7 @@ import (
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 var Web = cli.Command{
@@ -97,14 +97,14 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
-			Prefix:      models.USER_AVATAR_URL_PREFIX,
+			Prefix:      db.USER_AVATAR_URL_PREFIX,
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Static(
 		setting.RepositoryAvatarUploadPath,
 		macaron.StaticOptions{
-			Prefix:      models.REPO_AVATAR_URL_PREFIX,
+			Prefix:      db.REPO_AVATAR_URL_PREFIX,
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
@@ -156,7 +156,7 @@ func newMacaron() *macaron.Macaron {
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
 			&toolbox.HealthCheckFuncDesc{
 				Desc: "Database connection",
-				Func: models.Ping,
+				Func: db.Ping,
 			},
 		},
 	}))
@@ -311,9 +311,9 @@ func runWeb(c *cli.Context) error {
 		}, context.InjectParamsUser())
 
 		m.Get("/attachments/:uuid", func(c *context.Context) {
-			attach, err := models.GetAttachmentByUUID(c.Params(":uuid"))
+			attach, err := db.GetAttachmentByUUID(c.Params(":uuid"))
 			if err != nil {
-				c.NotFoundOrServerError("GetAttachmentByUUID", models.IsErrAttachmentNotExist, err)
+				c.NotFoundOrServerError("GetAttachmentByUUID", db.IsErrAttachmentNotExist, err)
 				return
 			} else if !com.IsFile(attach.LocalPath()) {
 				c.NotFound()

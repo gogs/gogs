@@ -12,8 +12,8 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 )
@@ -38,7 +38,7 @@ func GetSingleCommit(c *context.APIContext) {
 
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
-	author, err := models.GetUserByEmail(commit.Author.Email)
+	author, err := db.GetUserByEmail(commit.Author.Email)
 	if err != nil && !errors.IsUserNotExist(err) {
 		c.ServerError("Get user by author email", err)
 		return
@@ -49,7 +49,7 @@ func GetSingleCommit(c *context.APIContext) {
 	if commit.Committer.Email == commit.Author.Email {
 		apiCommitter = apiAuthor
 	} else {
-		committer, err := models.GetUserByEmail(commit.Committer.Email)
+		committer, err := db.GetUserByEmail(commit.Committer.Email)
 		if err != nil && !errors.IsUserNotExist(err) {
 			c.ServerError("Get user by committer email", err)
 			return

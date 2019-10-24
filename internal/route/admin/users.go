@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 const (
@@ -30,9 +30,9 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route2.RenderUserSearch(c, &route2.UserSearchOptions{
-		Type:     models.USER_TYPE_INDIVIDUAL,
-		Counter:  models.CountUsers,
-		Ranger:   models.Users,
+		Type:     db.USER_TYPE_INDIVIDUAL,
+		Counter:  db.CountUsers,
+		Ranger:   db.Users,
 		PageSize: setting.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := models.LoginSources()
+	sources, err := db.LoginSources()
 	if err != nil {
 		c.Handle(500, "LoginSources", err)
 		return
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := models.LoginSources()
+	sources, err := db.LoginSources()
 	if err != nil {
 		c.Handle(500, "LoginSources", err)
 		return
@@ -76,37 +76,37 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		return
 	}
 
-	u := &models.User{
+	u := &db.User{
 		Name:      f.UserName,
 		Email:     f.Email,
 		Passwd:    f.Password,
 		IsActive:  true,
-		LoginType: models.LOGIN_PLAIN,
+		LoginType: db.LOGIN_PLAIN,
 	}
 
 	if len(f.LoginType) > 0 {
 		fields := strings.Split(f.LoginType, "-")
 		if len(fields) == 2 {
-			u.LoginType = models.LoginType(com.StrTo(fields[0]).MustInt())
+			u.LoginType = db.LoginType(com.StrTo(fields[0]).MustInt())
 			u.LoginSource = com.StrTo(fields[1]).MustInt64()
 			u.LoginName = f.LoginName
 		}
 	}
 
-	if err := models.CreateUser(u); err != nil {
+	if err := db.CreateUser(u); err != nil {
 		switch {
-		case models.IsErrUserAlreadyExist(err):
+		case db.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
 			c.RenderWithErr(c.Tr("form.username_been_taken"), USER_NEW, &f)
-		case models.IsErrEmailAlreadyUsed(err):
+		case db.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
-		case models.IsErrNameReserved(err):
+		case db.IsErrNameReserved(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), USER_NEW, &f)
-		case models.IsErrNamePatternNotAllowed(err):
+			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(db.ErrNameReserved).Name), USER_NEW, &f)
+		case db.IsErrNamePatternNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f)
 		default:
 			c.Handle(500, "CreateUser", err)
 		}
@@ -116,15 +116,15 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 
 	// Send email notification.
 	if f.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(c.Context, models.NewMailerUser(u))
+		mailer.SendRegisterNotifyMail(c.Context, db.NewMailerUser(u))
 	}
 
 	c.Flash.Success(c.Tr("admin.users.new_success", u.Name))
 	c.Redirect(setting.AppSubURL + "/admin/users/" + com.ToStr(u.ID))
 }
 
-func prepareUserInfo(c *context.Context) *models.User {
-	u, err := models.GetUserByID(c.ParamsInt64(":userid"))
+func prepareUserInfo(c *context.Context) *db.User {
+	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Handle(500, "GetUserByID", err)
 		return nil
@@ -132,16 +132,16 @@ func prepareUserInfo(c *context.Context) *models.User {
 	c.Data["User"] = u
 
 	if u.LoginSource > 0 {
-		c.Data["LoginSource"], err = models.GetLoginSourceByID(u.LoginSource)
+		c.Data["LoginSource"], err = db.GetLoginSourceByID(u.LoginSource)
 		if err != nil {
 			c.Handle(500, "GetLoginSourceByID", err)
 			return nil
 		}
 	} else {
-		c.Data["LoginSource"] = &models.LoginSource{}
+		c.Data["LoginSource"] = &db.LoginSource{}
 	}
 
-	sources, err := models.LoginSources()
+	sources, err := db.LoginSources()
 	if err != nil {
 		c.Handle(500, "LoginSources", err)
 		return nil
@@ -183,7 +183,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 
 	fields := strings.Split(f.LoginType, "-")
 	if len(fields) == 2 {
-		loginType := models.LoginType(com.StrTo(fields[0]).MustInt())
+		loginType := db.LoginType(com.StrTo(fields[0]).MustInt())
 		loginSource := com.StrTo(fields[1]).MustInt64()
 
 		if u.LoginSource != loginSource {
@@ -195,7 +195,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	if len(f.Password) > 0 {
 		u.Passwd = f.Password
 		var err error
-		if u.Salt, err = models.GetUserSalt(); err != nil {
+		if u.Salt, err = db.GetUserSalt(); err != nil {
 			c.Handle(500, "UpdateUser", err)
 			return
 		}
@@ -214,8 +214,8 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	u.AllowImportLocal = f.AllowImportLocal
 	u.ProhibitLogin = f.ProhibitLogin
 
-	if err := models.UpdateUser(u); err != nil {
-		if models.IsErrEmailAlreadyUsed(err) {
+	if err := db.UpdateUser(u); err != nil {
+		if db.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
 		} else {
@@ -230,20 +230,20 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := models.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Handle(500, "GetUserByID", err)
 		return
 	}
 
-	if err = models.DeleteUser(u); err != nil {
+	if err = db.DeleteUser(u); err != nil {
 		switch {
-		case models.IsErrUserOwnRepos(err):
+		case db.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
 			c.JSON(200, map[string]interface{}{
 				"redirect": setting.AppSubURL + "/admin/users/" + c.Params(":userid"),
 			})
-		case models.IsErrUserHasOrgs(err):
+		case db.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
 			c.JSON(200, map[string]interface{}{
 				"redirect": setting.AppSubURL + "/admin/users/" + c.Params(":userid"),

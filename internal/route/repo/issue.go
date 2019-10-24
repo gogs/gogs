@@ -23,8 +23,8 @@ import (
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 const (
@@ -78,7 +78,7 @@ func MustAllowPulls(c *context.Context) {
 }
 
 func RetrieveLabels(c *context.Context) {
-	labels, err := models.GetLabelsByRepoID(c.Repo.Repository.ID)
+	labels, err := db.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Handle(500, "RetrieveLabels.GetLabels", err)
 		return
@@ -126,16 +126,16 @@ func issues(c *context.Context, isPullList bool) {
 		assigneeID = c.QueryInt64("assignee")
 		posterID   int64
 	)
-	filterMode := models.FILTER_MODE_YOUR_REPOS
+	filterMode := db.FILTER_MODE_YOUR_REPOS
 	switch viewType {
 	case "assigned":
-		filterMode = models.FILTER_MODE_ASSIGN
+		filterMode = db.FILTER_MODE_ASSIGN
 		assigneeID = c.User.ID
 	case "created_by":
-		filterMode = models.FILTER_MODE_CREATE
+		filterMode = db.FILTER_MODE_CREATE
 		posterID = c.User.ID
 	case "mentioned":
-		filterMode = models.FILTER_MODE_MENTION
+		filterMode = db.FILTER_MODE_MENTION
 	}
 
 	var uid int64 = -1
@@ -147,7 +147,7 @@ func issues(c *context.Context, isPullList bool) {
 	selectLabels := c.Query("labels")
 	milestoneID := c.QueryInt64("milestone")
 	isShowClosed := c.Query("state") == "closed"
-	issueStats := models.GetIssueStats(&models.IssueStatsOptions{
+	issueStats := db.GetIssueStats(&db.IssueStatsOptions{
 		RepoID:      repo.ID,
 		UserID:      uid,
 		Labels:      selectLabels,
@@ -171,7 +171,7 @@ func issues(c *context.Context, isPullList bool) {
 	pager := paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 	c.Data["Page"] = pager
 
-	issues, err := models.Issues(&models.IssuesOptions{
+	issues, err := db.Issues(&db.IssuesOptions{
 		UserID:      uid,
 		AssigneeID:  assigneeID,
 		RepoID:      repo.ID,
@@ -179,7 +179,7 @@ func issues(c *context.Context, isPullList bool) {
 		MilestoneID: milestoneID,
 		Page:        pager.Current(),
 		IsClosed:    isShowClosed,
-		IsMention:   filterMode == models.FILTER_MODE_MENTION,
+		IsMention:   filterMode == db.FILTER_MODE_MENTION,
 		IsPull:      isPullList,
 		Labels:      selectLabels,
 		SortType:    sortType,
@@ -190,7 +190,7 @@ func issues(c *context.Context, isPullList bool) {
 	}
 
 	// Get issue-user relations.
-	pairs, err := models.GetIssueUsers(repo.ID, posterID, isShowClosed)
+	pairs, err := db.GetIssueUsers(repo.ID, posterID, isShowClosed)
 	if err != nil {
 		c.Handle(500, "GetIssueUsers", err)
 		return
@@ -204,7 +204,7 @@ func issues(c *context.Context, isPullList bool) {
 		}
 
 		// Check read status.
-		idx := models.PairsContains(pairs, issues[i].ID, c.User.ID)
+		idx := db.PairsContains(pairs, issues[i].ID, c.User.ID)
 		if idx > -1 {
 			issues[i].IsRead = pairs[idx].IsRead
 		} else {
@@ -214,7 +214,7 @@ func issues(c *context.Context, isPullList bool) {
 	c.Data["Issues"] = issues
 
 	// Get milestones.
-	c.Data["Milestones"], err = models.GetMilestonesByRepoID(repo.ID)
+	c.Data["Milestones"], err = db.GetMilestonesByRepoID(repo.ID)
 	if err != nil {
 		c.Handle(500, "GetAllRepoMilestones", err)
 		return
@@ -263,14 +263,14 @@ func renderAttachmentSettings(c *context.Context) {
 	c.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
 }
 
-func RetrieveRepoMilestonesAndAssignees(c *context.Context, repo *models.Repository) {
+func RetrieveRepoMilestonesAndAssignees(c *context.Context, repo *db.Repository) {
 	var err error
-	c.Data["OpenMilestones"], err = models.GetMilestones(repo.ID, -1, false)
+	c.Data["OpenMilestones"], err = db.GetMilestones(repo.ID, -1, false)
 	if err != nil {
 		c.Handle(500, "GetMilestones", err)
 		return
 	}
-	c.Data["ClosedMilestones"], err = models.GetMilestones(repo.ID, -1, true)
+	c.Data["ClosedMilestones"], err = db.GetMilestones(repo.ID, -1, true)
 	if err != nil {
 		c.Handle(500, "GetMilestones", err)
 		return
@@ -283,12 +283,12 @@ func RetrieveRepoMilestonesAndAssignees(c *context.Context, repo *models.Reposit
 	}
 }
 
-func RetrieveRepoMetas(c *context.Context, repo *models.Repository) []*models.Label {
+func RetrieveRepoMetas(c *context.Context, repo *db.Repository) []*db.Label {
 	if !c.Repo.IsWriter() {
 		return nil
 	}
 
-	labels, err := models.GetLabelsByRepoID(repo.ID)
+	labels, err := db.GetLabelsByRepoID(repo.ID)
 	if err != nil {
 		c.Handle(500, "GetLabelsByRepoID", err)
 		return nil
@@ -434,7 +434,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 		attachments = f.Files
 	}
 
-	issue := &models.Issue{
+	issue := &db.Issue{
 		RepoID:      c.Repo.Repository.ID,
 		Title:       f.Title,
 		PosterID:    c.User.ID,
@@ -443,7 +443,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 		AssigneeID:  assigneeID,
 		Content:     f.Content,
 	}
-	if err := models.NewIssue(c.Repo.Repository, issue, labelIDs, attachments); err != nil {
+	if err := db.NewIssue(c.Repo.Repository, issue, labelIDs, attachments); err != nil {
 		c.Handle(500, "NewIssue", err)
 		return
 	}
@@ -481,7 +481,7 @@ func uploadAttachment(c *context.Context, allowedTypes []string) {
 		return
 	}
 
-	attach, err := models.NewAttachment(header.Filename, buf, file)
+	attach, err := db.NewAttachment(header.Filename, buf, file)
 	if err != nil {
 		c.Error(500, fmt.Sprintf("NewAttachment: %v", err))
 		return
@@ -513,7 +513,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 		return
 	}
 
-	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, index)
+	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, index)
 	if err != nil {
 		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
@@ -567,7 +567,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	for i := range issue.Labels {
 		labelIDMark[issue.Labels[i].ID] = true
 	}
-	labels, err := models.GetLabelsByRepoID(repo.ID)
+	labels, err := db.GetLabelsByRepoID(repo.ID)
 	if err != nil {
 		c.Handle(500, "GetLabelsByRepoID", err)
 		return
@@ -599,17 +599,17 @@ func viewIssue(c *context.Context, isPullList bool) {
 	}
 
 	var (
-		tag          models.CommentTag
+		tag          db.CommentTag
 		ok           bool
-		marked       = make(map[int64]models.CommentTag)
-		comment      *models.Comment
-		participants = make([]*models.User, 1, 10)
+		marked       = make(map[int64]db.CommentTag)
+		comment      *db.Comment
+		participants = make([]*db.User, 1, 10)
 	)
 
 	// Render comments and and fetch participants.
 	participants[0] = issue.Poster
 	for _, comment = range issue.Comments {
-		if comment.Type == models.COMMENT_TYPE_COMMENT {
+		if comment.Type == db.COMMENT_TYPE_COMMENT {
 			comment.RenderedContent = string(markup.Markdown(comment.Content, c.Repo.RepoLink, c.Repo.Repository.ComposeMetas()))
 
 			// Check tag.
@@ -621,11 +621,11 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 			if repo.IsOwnedBy(comment.PosterID) ||
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
-				comment.ShowTag = models.COMMENT_TAG_OWNER
+				comment.ShowTag = db.COMMENT_TAG_OWNER
 			} else if comment.Poster.IsWriterOfRepo(repo) {
-				comment.ShowTag = models.COMMENT_TAG_WRITER
+				comment.ShowTag = db.COMMENT_TAG_WRITER
 			} else if comment.PosterID == issue.PosterID {
-				comment.ShowTag = models.COMMENT_TAG_POSTER
+				comment.ShowTag = db.COMMENT_TAG_POSTER
 			}
 
 			marked[comment.PosterID] = comment.ShowTag
@@ -646,7 +646,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	if issue.IsPull && issue.PullRequest.HasMerged {
 		pull := issue.PullRequest
 		branchProtected := false
-		protectBranch, err := models.GetProtectBranchOfRepoByName(pull.BaseRepoID, pull.HeadBranch)
+		protectBranch, err := db.GetProtectBranchOfRepoByName(pull.BaseRepoID, pull.HeadBranch)
 		if err != nil {
 			if !errors.IsErrBranchNotExist(err) {
 				c.ServerError("GetProtectBranchOfRepoByName", err)
@@ -680,8 +680,8 @@ func ViewPull(c *context.Context) {
 	viewIssue(c, true)
 }
 
-func getActionIssue(c *context.Context) *models.Issue {
-	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func getActionIssue(c *context.Context) *db.Issue {
+	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return nil
@@ -758,9 +758,9 @@ func UpdateIssueLabel(c *context.Context) {
 		}
 	} else {
 		isAttach := c.Query("action") == "attach"
-		label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id"))
+		label, err := db.GetLabelOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id"))
 		if err != nil {
-			if models.IsErrLabelNotExist(err) {
+			if db.IsErrLabelNotExist(err) {
 				c.Error(404, "GetLabelByID")
 			} else {
 				c.Handle(500, "GetLabelByID", err)
@@ -803,7 +803,7 @@ func UpdateIssueMilestone(c *context.Context) {
 
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneID = milestoneID
-	if err := models.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
+	if err := db.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
 		c.Handle(500, "ChangeMilestoneAssign", err)
 		return
 	}
@@ -855,7 +855,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 	}
 
 	var err error
-	var comment *models.Comment
+	var comment *db.Comment
 	defer func() {
 		// Check if issue admin/poster changes the status of issue.
 		if (c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))) &&
@@ -863,13 +863,13 @@ func NewComment(c *context.Context, f form.CreateComment) {
 			!(issue.IsPull && issue.PullRequest.HasMerged) {
 
 			// Duplication and conflict check should apply to reopen pull request.
-			var pr *models.PullRequest
+			var pr *db.PullRequest
 
 			if f.Status == "reopen" && issue.IsPull {
 				pull := issue.PullRequest
-				pr, err = models.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
+				pr, err = db.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 				if err != nil {
-					if !models.IsErrPullRequestNotExist(err) {
+					if !db.IsErrPullRequestNotExist(err) {
 						c.ServerError("GetUnmergedPullRequest", err)
 						return
 					}
@@ -914,7 +914,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 		return
 	}
 
-	comment, err = models.CreateIssueComment(c.User, c.Repo.Repository, issue, f.Content, attachments)
+	comment, err = db.CreateIssueComment(c.User, c.Repo.Repository, issue, f.Content, attachments)
 	if err != nil {
 		c.ServerError("CreateIssueComment", err)
 		return
@@ -924,16 +924,16 @@ func NewComment(c *context.Context, f form.CreateComment) {
 }
 
 func UpdateCommentContent(c *context.Context) {
-	comment, err := models.GetCommentByID(c.ParamsInt64(":id"))
+	comment, err := db.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetCommentByID", models.IsErrCommentNotExist, err)
+		c.NotFoundOrServerError("GetCommentByID", db.IsErrCommentNotExist, err)
 		return
 	}
 
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.Error(404)
 		return
-	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != db.COMMENT_TYPE_COMMENT {
 		c.Error(204)
 		return
 	}
@@ -946,7 +946,7 @@ func UpdateCommentContent(c *context.Context) {
 		})
 		return
 	}
-	if err = models.UpdateComment(c.User, comment, oldContent); err != nil {
+	if err = db.UpdateComment(c.User, comment, oldContent); err != nil {
 		c.Handle(500, "UpdateComment", err)
 		return
 	}
@@ -957,21 +957,21 @@ func UpdateCommentContent(c *context.Context) {
 }
 
 func DeleteComment(c *context.Context) {
-	comment, err := models.GetCommentByID(c.ParamsInt64(":id"))
+	comment, err := db.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetCommentByID", models.IsErrCommentNotExist, err)
+		c.NotFoundOrServerError("GetCommentByID", db.IsErrCommentNotExist, err)
 		return
 	}
 
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
 		c.Error(404)
 		return
-	} else if comment.Type != models.COMMENT_TYPE_COMMENT {
+	} else if comment.Type != db.COMMENT_TYPE_COMMENT {
 		c.Error(204)
 		return
 	}
 
-	if err = models.DeleteCommentByID(c.User, comment.ID); err != nil {
+	if err = db.DeleteCommentByID(c.User, comment.ID); err != nil {
 		c.Handle(500, "DeleteCommentByID", err)
 		return
 	}
@@ -984,7 +984,7 @@ func Labels(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsLabels"] = true
 	c.Data["RequireMinicolors"] = true
-	c.Data["LabelTemplates"] = models.LabelTemplates
+	c.Data["LabelTemplates"] = db.LabelTemplates
 	c.HTML(200, LABELS)
 }
 
@@ -993,22 +993,22 @@ func InitializeLabels(c *context.Context, f form.InitializeLabels) {
 		c.Redirect(c.Repo.RepoLink + "/labels")
 		return
 	}
-	list, err := models.GetLabelTemplateFile(f.TemplateName)
+	list, err := db.GetLabelTemplateFile(f.TemplateName)
 	if err != nil {
 		c.Flash.Error(c.Tr("repo.issues.label_templates.fail_to_load_file", f.TemplateName, err))
 		c.Redirect(c.Repo.RepoLink + "/labels")
 		return
 	}
 
-	labels := make([]*models.Label, len(list))
+	labels := make([]*db.Label, len(list))
 	for i := 0; i < len(list); i++ {
-		labels[i] = &models.Label{
+		labels[i] = &db.Label{
 			RepoID: c.Repo.Repository.ID,
 			Name:   list[i][0],
 			Color:  list[i][1],
 		}
 	}
-	if err := models.NewLabels(labels...); err != nil {
+	if err := db.NewLabels(labels...); err != nil {
 		c.Handle(500, "NewLabels", err)
 		return
 	}
@@ -1025,12 +1025,12 @@ func NewLabel(c *context.Context, f form.CreateLabel) {
 		return
 	}
 
-	l := &models.Label{
+	l := &db.Label{
 		RepoID: c.Repo.Repository.ID,
 		Name:   f.Title,
 		Color:  f.Color,
 	}
-	if err := models.NewLabels(l); err != nil {
+	if err := db.NewLabels(l); err != nil {
 		c.Handle(500, "NewLabel", err)
 		return
 	}
@@ -1038,10 +1038,10 @@ func NewLabel(c *context.Context, f form.CreateLabel) {
 }
 
 func UpdateLabel(c *context.Context, f form.CreateLabel) {
-	l, err := models.GetLabelByID(f.ID)
+	l, err := db.GetLabelByID(f.ID)
 	if err != nil {
 		switch {
-		case models.IsErrLabelNotExist(err):
+		case db.IsErrLabelNotExist(err):
 			c.Error(404)
 		default:
 			c.Handle(500, "UpdateLabel", err)
@@ -1051,7 +1051,7 @@ func UpdateLabel(c *context.Context, f form.CreateLabel) {
 
 	l.Name = f.Title
 	l.Color = f.Color
-	if err := models.UpdateLabel(l); err != nil {
+	if err := db.UpdateLabel(l); err != nil {
 		c.Handle(500, "UpdateLabel", err)
 		return
 	}
@@ -1059,7 +1059,7 @@ func UpdateLabel(c *context.Context, f form.CreateLabel) {
 }
 
 func DeleteLabel(c *context.Context) {
-	if err := models.DeleteLabel(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
+	if err := db.DeleteLabel(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteLabel: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.issues.label_deletion_success"))
@@ -1077,7 +1077,7 @@ func Milestones(c *context.Context) {
 	c.Data["PageIsMilestones"] = true
 
 	isShowClosed := c.Query("state") == "closed"
-	openCount, closedCount := models.MilestoneStats(c.Repo.Repository.ID)
+	openCount, closedCount := db.MilestoneStats(c.Repo.Repository.ID)
 	c.Data["OpenCount"] = openCount
 	c.Data["ClosedCount"] = closedCount
 
@@ -1094,7 +1094,7 @@ func Milestones(c *context.Context) {
 	}
 	c.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
 
-	miles, err := models.GetMilestones(c.Repo.Repository.ID, page, isShowClosed)
+	miles, err := db.GetMilestones(c.Repo.Repository.ID, page, isShowClosed)
 	if err != nil {
 		c.Handle(500, "GetMilestones", err)
 		return
@@ -1150,7 +1150,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 		return
 	}
 
-	if err = models.NewMilestone(&models.Milestone{
+	if err = db.NewMilestone(&db.Milestone{
 		RepoID:   c.Repo.Repository.ID,
 		Name:     f.Title,
 		Content:  f.Content,
@@ -1171,9 +1171,9 @@ func EditMilestone(c *context.Context) {
 	c.Data["RequireDatetimepicker"] = true
 	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
 
-	m, err := models.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrMilestoneNotExist(err) {
+		if db.IsErrMilestoneNotExist(err) {
 			c.Handle(404, "", nil)
 		} else {
 			c.Handle(500, "GetMilestoneByRepoID", err)
@@ -1210,9 +1210,9 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 		return
 	}
 
-	m, err := models.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrMilestoneNotExist(err) {
+		if db.IsErrMilestoneNotExist(err) {
 			c.Handle(404, "", nil)
 		} else {
 			c.Handle(500, "GetMilestoneByRepoID", err)
@@ -1222,7 +1222,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	m.Name = f.Title
 	m.Content = f.Content
 	m.Deadline = deadline
-	if err = models.UpdateMilestone(m); err != nil {
+	if err = db.UpdateMilestone(m); err != nil {
 		c.Handle(500, "UpdateMilestone", err)
 		return
 	}
@@ -1232,9 +1232,9 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 }
 
 func ChangeMilestonStatus(c *context.Context) {
-	m, err := models.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrMilestoneNotExist(err) {
+		if db.IsErrMilestoneNotExist(err) {
 			c.Handle(404, "", err)
 		} else {
 			c.Handle(500, "GetMilestoneByRepoID", err)
@@ -1245,7 +1245,7 @@ func ChangeMilestonStatus(c *context.Context) {
 	switch c.Params(":action") {
 	case "open":
 		if m.IsClosed {
-			if err = models.ChangeMilestoneStatus(m, false); err != nil {
+			if err = db.ChangeMilestoneStatus(m, false); err != nil {
 				c.Handle(500, "ChangeMilestoneStatus", err)
 				return
 			}
@@ -1254,7 +1254,7 @@ func ChangeMilestonStatus(c *context.Context) {
 	case "close":
 		if !m.IsClosed {
 			m.ClosedDate = time.Now()
-			if err = models.ChangeMilestoneStatus(m, true); err != nil {
+			if err = db.ChangeMilestoneStatus(m, true); err != nil {
 				c.Handle(500, "ChangeMilestoneStatus", err)
 				return
 			}
@@ -1266,7 +1266,7 @@ func ChangeMilestonStatus(c *context.Context) {
 }
 
 func DeleteMilestone(c *context.Context) {
-	if err := models.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
+	if err := db.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteMilestoneByRepoID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.milestones.deletion_success"))

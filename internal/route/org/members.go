@@ -8,8 +8,8 @@ import (
 	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 )
@@ -48,27 +48,27 @@ func MembersAction(c *context.Context) {
 			c.Error(404)
 			return
 		}
-		err = models.ChangeOrgUserStatus(org.ID, uid, false)
+		err = db.ChangeOrgUserStatus(org.ID, uid, false)
 	case "public":
 		if c.User.ID != uid && !c.Org.IsOwner {
 			c.Error(404)
 			return
 		}
-		err = models.ChangeOrgUserStatus(org.ID, uid, true)
+		err = db.ChangeOrgUserStatus(org.ID, uid, true)
 	case "remove":
 		if !c.Org.IsOwner {
 			c.Error(404)
 			return
 		}
 		err = org.RemoveMember(uid)
-		if models.IsErrLastOrgOwner(err) {
+		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
 		}
 	case "leave":
 		err = org.RemoveMember(c.User.ID)
-		if models.IsErrLastOrgOwner(err) {
+		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
@@ -98,7 +98,7 @@ func Invitation(c *context.Context) {
 
 	if c.Req.Method == "POST" {
 		uname := c.Query("uname")
-		u, err := models.GetUserByName(uname)
+		u, err := db.GetUserByName(uname)
 		if err != nil {
 			if errors.IsUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))

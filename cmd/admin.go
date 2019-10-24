@@ -11,7 +11,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -50,7 +50,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-inactive-users",
 		Usage: "Delete all inactive accounts",
 		Action: adminDashboardOperation(
-			models.DeleteInactivateUsers,
+			db.DeleteInactivateUsers,
 			"All inactivate accounts have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -62,7 +62,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-repository-archives",
 		Usage: "Delete all repositories archives",
 		Action: adminDashboardOperation(
-			models.DeleteRepositoryArchives,
+			db.DeleteRepositoryArchives,
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -74,7 +74,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-missing-repositories",
 		Usage: "Delete all repository records that lost Git files",
 		Action: adminDashboardOperation(
-			models.DeleteMissingRepositories,
+			db.DeleteMissingRepositories,
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
@@ -86,7 +86,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "collect-garbage",
 		Usage: "Do garbage collection on repositories",
 		Action: adminDashboardOperation(
-			models.GitGcRepos,
+			db.GitGcRepos,
 			"All repositories have done garbage collection successfully",
 		),
 		Flags: []cli.Flag{
@@ -98,7 +98,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "rewrite-authorized-keys",
 		Usage: "Rewrite '.ssh/authorized_keys' file (caution: non-Gogs keys will be lost)",
 		Action: adminDashboardOperation(
-			models.RewriteAuthorizedKeys,
+			db.RewriteAuthorizedKeys,
 			"All public keys have been rewritten successfully",
 		),
 		Flags: []cli.Flag{
@@ -110,7 +110,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "resync-hooks",
 		Usage: "Resync pre-receive, update and post-receive hooks",
 		Action: adminDashboardOperation(
-			models.SyncRepositoryHooks,
+			db.SyncRepositoryHooks,
 			"All repositories' pre-receive, update and post-receive hooks have been resynced successfully",
 		),
 		Flags: []cli.Flag{
@@ -122,7 +122,7 @@ to make automatic initialization process more smoothly`,
 		Name:  "reinit-missing-repositories",
 		Usage: "Reinitialize all repository records that lost Git files",
 		Action: adminDashboardOperation(
-			models.ReinitMissingRepositories,
+			db.ReinitMissingRepositories,
 			"All repository records that lost Git files have been reinitialized successfully",
 		),
 		Flags: []cli.Flag{
@@ -145,10 +145,10 @@ func runCreateUser(c *cli.Context) error {
 	}
 
 	setting.NewContext()
-	models.LoadConfigs()
-	models.SetEngine()
+	db.LoadConfigs()
+	db.SetEngine()
 
-	if err := models.CreateUser(&models.User{
+	if err := db.CreateUser(&db.User{
 		Name:     c.String("name"),
 		Email:    c.String("email"),
 		Passwd:   c.String("password"),
@@ -169,8 +169,8 @@ func adminDashboardOperation(operation func() error, successMessage string) func
 		}
 
 		setting.NewContext()
-		models.LoadConfigs()
-		models.SetEngine()
+		db.LoadConfigs()
+		db.SetEngine()
 
 		if err := operation(); err != nil {
 			functionName := runtime.FuncForPC(reflect.ValueOf(operation).Pointer()).Name()

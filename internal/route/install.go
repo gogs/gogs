@@ -19,7 +19,7 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/form"
@@ -56,28 +56,28 @@ func GlobalInit() {
 	setting.NewContext()
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
-	models.LoadConfigs()
+	db.LoadConfigs()
 	NewServices()
 
 	if setting.InstallLock {
 		highlight.NewContext()
 		markup.NewSanitizer()
-		if err := models.NewEngine(); err != nil {
+		if err := db.NewEngine(); err != nil {
 			log.Fatal(2, "Fail to initialize ORM engine: %v", err)
 		}
-		models.HasEngine = true
+		db.HasEngine = true
 
-		models.LoadAuthSources()
-		models.LoadRepoConfig()
-		models.NewRepoContext()
+		db.LoadAuthSources()
+		db.LoadRepoConfig()
+		db.NewRepoContext()
 
 		// Booting long running goroutines.
 		cron.NewContext()
-		models.InitSyncMirrors()
-		models.InitDeliverHooks()
-		models.InitTestPullRequests()
+		db.InitSyncMirrors()
+		db.InitDeliverHooks()
+		db.InitTestPullRequests()
 	}
-	if models.EnableSQLite3 {
+	if db.EnableSQLite3 {
 		log.Info("SQLite3 Supported")
 	}
 	if setting.SupportMiniWinService {
@@ -96,7 +96,7 @@ func GlobalInit() {
 	}
 
 	if setting.SSH.RewriteAuthorizedKeysAtStart {
-		if err := models.RewriteAuthorizedKeys(); err != nil {
+		if err := db.RewriteAuthorizedKeys(); err != nil {
 			log.Warn("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
@@ -112,7 +112,7 @@ func InstallInit(c *context.Context) {
 	c.PageIs("Install")
 
 	dbOpts := []string{"MySQL", "PostgreSQL", "MSSQL"}
-	if models.EnableSQLite3 {
+	if db.EnableSQLite3 {
 		dbOpts = append(dbOpts, "SQLite3")
 	}
 	c.Data["DbOptions"] = dbOpts
@@ -122,19 +122,19 @@ func Install(c *context.Context) {
 	f := form.Install{}
 
 	// Database settings
-	f.DbHost = models.DbCfg.Host
-	f.DbUser = models.DbCfg.User
-	f.DbName = models.DbCfg.Name
-	f.DbPath = models.DbCfg.Path
+	f.DbHost = db.DbCfg.Host
+	f.DbUser = db.DbCfg.User
+	f.DbName = db.DbCfg.Name
+	f.DbPath = db.DbCfg.Path
 
 	c.Data["CurDbOption"] = "MySQL"
-	switch models.DbCfg.Type {
+	switch db.DbCfg.Type {
 	case "postgres":
 		c.Data["CurDbOption"] = "PostgreSQL"
 	case "mssql":
 		c.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
-		if models.EnableSQLite3 {
+		if db.EnableSQLite3 {
 			c.Data["CurDbOption"] = "SQLite3"
 		}
 	}
@@ -204,15 +204,15 @@ func InstallPost(c *context.Context, f form.Install) {
 	// Pass basic check, now test configuration.
 	// Test database setting.
 	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "MSSQL": "mssql", "SQLite3": "sqlite3", "TiDB": "tidb"}
-	models.DbCfg.Type = dbTypes[f.DbType]
-	models.DbCfg.Host = f.DbHost
-	models.DbCfg.User = f.DbUser
-	models.DbCfg.Passwd = f.DbPasswd
-	models.DbCfg.Name = f.DbName
-	models.DbCfg.SSLMode = f.SSLMode
-	models.DbCfg.Path = f.DbPath
+	db.DbCfg.Type = dbTypes[f.DbType]
+	db.DbCfg.Host = f.DbHost
+	db.DbCfg.User = f.DbUser
+	db.DbCfg.Passwd = f.DbPasswd
+	db.DbCfg.Name = f.DbName
+	db.DbCfg.SSLMode = f.SSLMode
+	db.DbCfg.Path = f.DbPath
 
-	if models.DbCfg.Type == "sqlite3" && len(models.DbCfg.Path) == 0 {
+	if db.DbCfg.Type == "sqlite3" && len(db.DbCfg.Path) == 0 {
 		c.FormErr("DbPath")
 		c.RenderWithErr(c.Tr("install.err_empty_db_path"), INSTALL, &f)
 		return
@@ -220,7 +220,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Set test engine.
 	var x *xorm.Engine
-	if err := models.NewTestEngine(x); err != nil {
+	if err := db.NewTestEngine(x); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			c.FormErr("DbType")
 			c.RenderWithErr(c.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &f)
@@ -302,13 +302,13 @@ func InstallPost(c *context.Context, f form.Install) {
 			log.Error(2, "Fail to load custom conf '%s': %v", setting.CustomConf, err)
 		}
 	}
-	cfg.Section("database").Key("DB_TYPE").SetValue(models.DbCfg.Type)
-	cfg.Section("database").Key("HOST").SetValue(models.DbCfg.Host)
-	cfg.Section("database").Key("NAME").SetValue(models.DbCfg.Name)
-	cfg.Section("database").Key("USER").SetValue(models.DbCfg.User)
-	cfg.Section("database").Key("PASSWD").SetValue(models.DbCfg.Passwd)
-	cfg.Section("database").Key("SSL_MODE").SetValue(models.DbCfg.SSLMode)
-	cfg.Section("database").Key("PATH").SetValue(models.DbCfg.Path)
+	cfg.Section("database").Key("DB_TYPE").SetValue(db.DbCfg.Type)
+	cfg.Section("database").Key("HOST").SetValue(db.DbCfg.Host)
+	cfg.Section("database").Key("NAME").SetValue(db.DbCfg.Name)
+	cfg.Section("database").Key("USER").SetValue(db.DbCfg.User)
+	cfg.Section("database").Key("PASSWD").SetValue(db.DbCfg.Passwd)
+	cfg.Section("database").Key("SSL_MODE").SetValue(db.DbCfg.SSLMode)
+	cfg.Section("database").Key("PATH").SetValue(db.DbCfg.Path)
 
 	cfg.Section("").Key("APP_NAME").SetValue(f.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(f.RepoRootPath)
@@ -374,22 +374,22 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Create admin account
 	if len(f.AdminName) > 0 {
-		u := &models.User{
+		u := &db.User{
 			Name:     f.AdminName,
 			Email:    f.AdminEmail,
 			Passwd:   f.AdminPasswd,
 			IsAdmin:  true,
 			IsActive: true,
 		}
-		if err := models.CreateUser(u); err != nil {
-			if !models.IsErrUserAlreadyExist(err) {
+		if err := db.CreateUser(u); err != nil {
+			if !db.IsErrUserAlreadyExist(err) {
 				setting.InstallLock = false
 				c.FormErr("AdminName", "AdminEmail")
 				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
 				return
 			}
 			log.Info("Admin account already exist")
-			u, _ = models.GetUserByName(u.Name)
+			u, _ = db.GetUserByName(u.Name)
 		}
 
 		// Auto-login for admin

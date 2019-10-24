@@ -12,7 +12,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 func composeDeployKeysAPILink(repoPath string) string {
@@ -21,7 +21,7 @@ func composeDeployKeysAPILink(repoPath string) string {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys
 func ListDeployKeys(c *context.APIContext) {
-	keys, err := models.ListDeployKeys(c.Repo.Repository.ID)
+	keys, err := db.ListDeployKeys(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(500, "ListDeployKeys", err)
 		return
@@ -42,9 +42,9 @@ func ListDeployKeys(c *context.APIContext) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#get-a-deploy-key
 func GetDeployKey(c *context.APIContext) {
-	key, err := models.GetDeployKeyByID(c.ParamsInt64(":id"))
+	key, err := db.GetDeployKeyByID(c.ParamsInt64(":id"))
 	if err != nil {
-		if models.IsErrDeployKeyNotExist(err) {
+		if db.IsErrDeployKeyNotExist(err) {
 			c.Status(404)
 		} else {
 			c.Error(500, "GetDeployKeyByID", err)
@@ -62,7 +62,7 @@ func GetDeployKey(c *context.APIContext) {
 }
 
 func HandleCheckKeyStringError(c *context.APIContext, err error) {
-	if models.IsErrKeyUnableVerify(err) {
+	if db.IsErrKeyUnableVerify(err) {
 		c.Error(422, "", "Unable to verify key content")
 	} else {
 		c.Error(422, "", fmt.Errorf("Invalid key content: %v", err))
@@ -71,9 +71,9 @@ func HandleCheckKeyStringError(c *context.APIContext, err error) {
 
 func HandleAddKeyError(c *context.APIContext, err error) {
 	switch {
-	case models.IsErrKeyAlreadyExist(err):
+	case db.IsErrKeyAlreadyExist(err):
 		c.Error(422, "", "Key content has been used as non-deploy key")
-	case models.IsErrKeyNameAlreadyUsed(err):
+	case db.IsErrKeyNameAlreadyUsed(err):
 		c.Error(422, "", "Key title has been used")
 	default:
 		c.Error(500, "AddKey", err)
@@ -82,13 +82,13 @@ func HandleAddKeyError(c *context.APIContext, err error) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#add-a-new-deploy-key
 func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
-	content, err := models.CheckPublicKeyString(form.Key)
+	content, err := db.CheckPublicKeyString(form.Key)
 	if err != nil {
 		HandleCheckKeyStringError(c, err)
 		return
 	}
 
-	key, err := models.AddDeployKey(c.Repo.Repository.ID, form.Title, content)
+	key, err := db.AddDeployKey(c.Repo.Repository.ID, form.Title, content)
 	if err != nil {
 		HandleAddKeyError(c, err)
 		return
@@ -101,8 +101,8 @@ func CreateDeployKey(c *context.APIContext, form api.CreateKeyOption) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#remove-a-deploy-key
 func DeleteDeploykey(c *context.APIContext) {
-	if err := models.DeleteDeployKey(c.User, c.ParamsInt64(":id")); err != nil {
-		if models.IsErrKeyAccessDenied(err) {
+	if err := db.DeleteDeployKey(c.User, c.ParamsInt64(":id")); err != nil {
+		if db.IsErrKeyAccessDenied(err) {
 			c.Error(403, "", "You do not have access to this key")
 		} else {
 			c.Error(500, "DeleteDeployKey", err)

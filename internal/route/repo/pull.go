@@ -18,8 +18,8 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 const (
@@ -39,8 +39,8 @@ var (
 	}
 )
 
-func parseBaseRepository(c *context.Context) *models.Repository {
-	baseRepo, err := models.GetRepositoryByID(c.ParamsInt64(":repoid"))
+func parseBaseRepository(c *context.Context) *db.Repository {
+	baseRepo, err := db.GetRepositoryByID(c.ParamsInt64(":repoid"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
 		return nil
@@ -101,7 +101,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, has, err := models.HasForkedRepo(ctxUser.ID, baseRepo.ID)
+	repo, has, err := db.HasForkedRepo(ctxUser.ID, baseRepo.ID)
 	if err != nil {
 		c.ServerError("HasForkedRepo", err)
 		return
@@ -122,18 +122,18 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err = models.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
+	repo, err = db.ForkRepository(c.User, ctxUser, baseRepo, f.RepoName, f.Description)
 	if err != nil {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case errors.IsReachLimitOfRepo(err):
 			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", c.User.RepoCreationNum()), FORK, &f)
-		case models.IsErrRepoAlreadyExist(err):
+		case db.IsErrRepoAlreadyExist(err):
 			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
-		case models.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(models.ErrNameReserved).Name), FORK, &f)
-		case models.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), FORK, &f)
+		case db.IsErrNameReserved(err):
+			c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), FORK, &f)
+		case db.IsErrNamePatternNotAllowed(err):
+			c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), FORK, &f)
 		default:
 			c.ServerError("ForkPost", err)
 		}
@@ -144,8 +144,8 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 	c.Redirect(repo.Link())
 }
 
-func checkPullInfo(c *context.Context) *models.Issue {
-	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+func checkPullInfo(c *context.Context) *db.Issue {
+	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return nil
@@ -169,7 +169,7 @@ func checkPullInfo(c *context.Context) *models.Issue {
 	return issue
 }
 
-func PrepareMergedViewPullInfo(c *context.Context, issue *models.Issue) {
+func PrepareMergedViewPullInfo(c *context.Context, issue *db.Issue) {
 	pull := issue.PullRequest
 	c.Data["HasMerged"] = true
 	c.Data["HeadTarget"] = issue.PullRequest.HeadUserName + "/" + pull.HeadBranch
@@ -188,7 +188,7 @@ func PrepareMergedViewPullInfo(c *context.Context, issue *models.Issue) {
 	}
 }
 
-func PrepareViewPullInfo(c *context.Context, issue *models.Issue) *git.PullRequestInfo {
+func PrepareViewPullInfo(c *context.Context, issue *db.Issue) *git.PullRequestInfo {
 	repo := c.Repo.Repository
 	pull := issue.PullRequest
 
@@ -216,7 +216,7 @@ func PrepareViewPullInfo(c *context.Context, issue *models.Issue) *git.PullReque
 		return nil
 	}
 
-	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(repo.Owner.Name, repo.Name),
+	prInfo, err := headGitRepo.GetPullRequestInfo(db.RepoPath(repo.Owner.Name, repo.Name),
 		pull.BaseBranch, pull.HeadBranch)
 	if err != nil {
 		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
@@ -283,7 +283,7 @@ func ViewPullCommits(c *context.Context) {
 		commits = prInfo.Commits
 	}
 
-	commits = models.ValidateCommitsWithEmails(commits)
+	commits = db.ValidateCommitsWithEmails(commits)
 	c.Data["Commits"] = commits
 	c.Data["CommitsCount"] = commits.Len()
 
@@ -326,7 +326,7 @@ func ViewPullFiles(c *context.Context) {
 			return
 		}
 
-		headRepoPath := models.RepoPath(pull.HeadUserName, pull.HeadRepo.Name)
+		headRepoPath := db.RepoPath(pull.HeadUserName, pull.HeadRepo.Name)
 
 		headGitRepo, err := git.OpenRepository(headRepoPath)
 		if err != nil {
@@ -346,7 +346,7 @@ func ViewPullFiles(c *context.Context) {
 		gitRepo = headGitRepo
 	}
 
-	diff, err := models.GetDiffRange(diffRepoPath,
+	diff, err := db.GetDiffRange(diffRepoPath,
 		startCommitID, endCommitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
@@ -395,9 +395,9 @@ func MergePullRequest(c *context.Context) {
 		return
 	}
 
-	pr, err := models.GetPullRequestByIssueID(issue.ID)
+	pr, err := db.GetPullRequestByIssueID(issue.ID)
 	if err != nil {
-		c.NotFoundOrServerError("GetPullRequestByIssueID", models.IsErrPullRequestNotExist, err)
+		c.NotFoundOrServerError("GetPullRequestByIssueID", db.IsErrPullRequestNotExist, err)
 		return
 	}
 
@@ -408,7 +408,7 @@ func MergePullRequest(c *context.Context) {
 
 	pr.Issue = issue
 	pr.Issue.Repo = c.Repo.Repository
-	if err = pr.Merge(c.User, c.Repo.GitRepo, models.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
+	if err = pr.Merge(c.User, c.Repo.GitRepo, db.MergeStyle(c.Query("merge_style")), c.Query("commit_description")); err != nil {
 		c.ServerError("Merge", err)
 		return
 	}
@@ -417,7 +417,7 @@ func MergePullRequest(c *context.Context) {
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + com.ToStr(pr.Index))
 }
 
-func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *git.Repository, *git.PullRequestInfo, string, string) {
+func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Repository, *git.PullRequestInfo, string, string) {
 	baseRepo := c.Repo.Repository
 
 	// Get compared branches information
@@ -435,7 +435,7 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 	c.Data["BaseBranch"] = baseBranch
 
 	var (
-		headUser   *models.User
+		headUser   *db.User
 		headBranch string
 		isSameRepo bool
 		err        error
@@ -449,7 +449,7 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 		headBranch = headInfos[0]
 
 	} else if len(headInfos) == 2 {
-		headUser, err = models.GetUserByName(headInfos[0])
+		headUser, err = db.GetUserByName(headInfos[0])
 		if err != nil {
 			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return nil, nil, nil, nil, "", ""
@@ -472,7 +472,7 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 	}
 
 	var (
-		headRepo    *models.Repository
+		headRepo    *db.Repository
 		headGitRepo *git.Repository
 	)
 
@@ -480,7 +480,7 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 	// no need to check the fork relation.
 	if !isSameRepo {
 		var has bool
-		headRepo, has, err = models.HasForkedRepo(headUser.ID, baseRepo.ID)
+		headRepo, has, err = db.HasForkedRepo(headUser.ID, baseRepo.ID)
 		if err != nil {
 			c.ServerError("HasForkedRepo", err)
 			return nil, nil, nil, nil, "", ""
@@ -490,7 +490,7 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 			return nil, nil, nil, nil, "", ""
 		}
 
-		headGitRepo, err = git.OpenRepository(models.RepoPath(headUser.Name, headRepo.Name))
+		headGitRepo, err = git.OpenRepository(db.RepoPath(headUser.Name, headRepo.Name))
 		if err != nil {
 			c.ServerError("OpenRepository", err)
 			return nil, nil, nil, nil, "", ""
@@ -519,7 +519,7 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 	}
 	c.Data["HeadBranches"] = headBranches
 
-	prInfo, err := headGitRepo.GetPullRequestInfo(models.RepoPath(baseRepo.Owner.Name, baseRepo.Name), baseBranch, headBranch)
+	prInfo, err := headGitRepo.GetPullRequestInfo(db.RepoPath(baseRepo.Owner.Name, baseRepo.Name), baseBranch, headBranch)
 	if err != nil {
 		if git.IsErrNoMergeBase(err) {
 			c.Data["IsNoMergeBase"] = true
@@ -536,8 +536,8 @@ func ParseCompareInfo(c *context.Context) (*models.User, *models.Repository, *gi
 
 func PrepareCompareDiff(
 	c *context.Context,
-	headUser *models.User,
-	headRepo *models.Repository,
+	headUser *db.User,
+	headRepo *db.Repository,
 	headGitRepo *git.Repository,
 	prInfo *git.PullRequestInfo,
 	baseBranch, headBranch string) bool {
@@ -562,7 +562,7 @@ func PrepareCompareDiff(
 		return true
 	}
 
-	diff, err := models.GetDiffRange(models.RepoPath(headUser.Name, headRepo.Name),
+	diff, err := db.GetDiffRange(db.RepoPath(headUser.Name, headRepo.Name),
 		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
@@ -578,7 +578,7 @@ func PrepareCompareDiff(
 		return false
 	}
 
-	prInfo.Commits = models.ValidateCommitsWithEmails(prInfo.Commits)
+	prInfo.Commits = db.ValidateCommitsWithEmails(prInfo.Commits)
 	c.Data["Commits"] = prInfo.Commits
 	c.Data["CommitCount"] = prInfo.Commits.Len()
 	c.Data["Username"] = headUser.Name
@@ -605,9 +605,9 @@ func CompareAndPullRequest(c *context.Context) {
 		return
 	}
 
-	pr, err := models.GetUnmergedPullRequest(headRepo.ID, c.Repo.Repository.ID, headBranch, baseBranch)
+	pr, err := db.GetUnmergedPullRequest(headRepo.ID, c.Repo.Repository.ID, headBranch, baseBranch)
 	if err != nil {
-		if !models.IsErrPullRequestNotExist(err) {
+		if !db.IsErrPullRequestNotExist(err) {
 			c.ServerError("GetUnmergedPullRequest", err)
 			return
 		}
@@ -686,7 +686,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	pullIssue := &models.Issue{
+	pullIssue := &db.Issue{
 		RepoID:      repo.ID,
 		Index:       repo.NextIssueIndex(),
 		Title:       f.Title,
@@ -697,7 +697,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		IsPull:      true,
 		Content:     f.Content,
 	}
-	pullRequest := &models.PullRequest{
+	pullRequest := &db.PullRequest{
 		HeadRepoID:   headRepo.ID,
 		BaseRepoID:   repo.ID,
 		HeadUserName: headUser.Name,
@@ -706,11 +706,11 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		HeadRepo:     headRepo,
 		BaseRepo:     repo,
 		MergeBase:    prInfo.MergeBase,
-		Type:         models.PULL_REQUEST_GOGS,
+		Type:         db.PULL_REQUEST_GOGS,
 	}
 	// FIXME: check error in the case two people send pull request at almost same time, give nice error prompt
 	// instead of 500.
-	if err := models.NewPullRequest(repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
+	if err := db.NewPullRequest(repo, pullIssue, labelIDs, attachments, pullRequest, patch); err != nil {
 		c.ServerError("NewPullRequest", err)
 		return
 	} else if err := pullRequest.PushToBaseRepo(); err != nil {
@@ -722,14 +722,14 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + com.ToStr(pullIssue.Index))
 }
 
-func parseOwnerAndRepo(c *context.Context) (*models.User, *models.Repository) {
-	owner, err := models.GetUserByName(c.Params(":username"))
+func parseOwnerAndRepo(c *context.Context) (*db.User, *db.Repository) {
+	owner, err := db.GetUserByName(c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return nil, nil
 	}
 
-	repo, err := models.GetRepositoryByName(owner.ID, c.Params(":reponame"))
+	repo, err := db.GetRepositoryByName(owner.ID, c.Params(":reponame"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 		return nil, nil
@@ -757,7 +757,7 @@ func TriggerTask(c *context.Context) {
 		return
 	}
 
-	pusher, err := models.GetUserByID(pusherID)
+	pusher, err := db.GetUserByID(pusherID)
 	if err != nil {
 		c.NotFoundOrServerError("GetUserByID", errors.IsUserNotExist, err)
 		return
@@ -765,7 +765,7 @@ func TriggerTask(c *context.Context) {
 
 	log.Trace("TriggerTask '%s/%s' by '%s'", repo.Name, branch, pusher.Name)
 
-	go models.HookQueue.Add(repo.ID)
-	go models.AddTestPullRequestTask(pusher, repo.ID, branch, true)
+	go db.HookQueue.Add(repo.ID)
+	go db.AddTestPullRequestTask(pusher, repo.ID, branch, true)
 	c.Status(202)
 }

@@ -14,8 +14,8 @@ import (
 	git "github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
@@ -34,7 +34,7 @@ func Webhooks(c *context.Context) {
 	c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://github.com/gogs/go-gogs-client/wiki/Repositories-Webhooks")
 	c.Data["Types"] = setting.Webhook.Types
 
-	ws, err := models.GetWebhooksByRepoID(c.Repo.Repository.ID)
+	ws, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Handle(500, "GetWebhooksByRepoID", err)
 		return
@@ -87,7 +87,7 @@ func WebhooksNew(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.add_webhook")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
@@ -104,12 +104,12 @@ func WebhooksNew(c *context.Context) {
 	c.HTML(200, orCtx.NewTemplate)
 }
 
-func ParseHookEvent(f form.Webhook) *models.HookEvent {
-	return &models.HookEvent{
+func ParseHookEvent(f form.Webhook) *db.HookEvent {
+	return &db.HookEvent{
 		PushOnly:       f.PushOnly(),
 		SendEverything: f.SendEverything(),
 		ChooseEvents:   f.ChooseEvents(),
-		HookEvents: models.HookEvents{
+		HookEvents: db.HookEvents{
 			Create:       f.Create,
 			Delete:       f.Delete,
 			Fork:         f.Fork,
@@ -126,7 +126,7 @@ func WebHooksNewPost(c *context.Context, f form.NewWebhook) {
 	c.Data["Title"] = c.Tr("repo.settings.add_webhook")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
 	c.Data["HookType"] = "gogs"
 
 	orCtx, err := getOrgRepoCtx(c)
@@ -141,25 +141,25 @@ func WebHooksNewPost(c *context.Context, f form.NewWebhook) {
 		return
 	}
 
-	contentType := models.JSON
-	if models.HookContentType(f.ContentType) == models.FORM {
-		contentType = models.FORM
+	contentType := db.JSON
+	if db.HookContentType(f.ContentType) == db.FORM {
+		contentType = db.FORM
 	}
 
-	w := &models.Webhook{
+	w := &db.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
 		ContentType:  contentType,
 		Secret:       f.Secret,
 		HookEvent:    ParseHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: models.GOGS,
+		HookTaskType: db.GOGS,
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.CreateWebhook(w); err != nil {
+	} else if err := db.CreateWebhook(w); err != nil {
 		c.Handle(500, "CreateWebhook", err)
 		return
 	}
@@ -172,7 +172,7 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 	c.Data["Title"] = c.Tr("repo.settings")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
@@ -185,7 +185,7 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&db.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -196,20 +196,20 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 		return
 	}
 
-	w := &models.Webhook{
+	w := &db.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
-		ContentType:  models.JSON,
+		ContentType:  db.JSON,
 		HookEvent:    ParseHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: models.SLACK,
+		HookTaskType: db.SLACK,
 		Meta:         string(meta),
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.CreateWebhook(w); err != nil {
+	} else if err := db.CreateWebhook(w); err != nil {
 		c.Handle(500, "CreateWebhook", err)
 		return
 	}
@@ -223,7 +223,7 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 	c.Data["Title"] = c.Tr("repo.settings")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
@@ -236,7 +236,7 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&db.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
@@ -246,20 +246,20 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 		return
 	}
 
-	w := &models.Webhook{
+	w := &db.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
-		ContentType:  models.JSON,
+		ContentType:  db.JSON,
 		HookEvent:    ParseHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: models.DISCORD,
+		HookTaskType: db.DISCORD,
 		Meta:         string(meta),
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.CreateWebhook(w); err != nil {
+	} else if err := db.CreateWebhook(w); err != nil {
 		c.Handle(500, "CreateWebhook", err)
 		return
 	}
@@ -272,7 +272,7 @@ func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
 	c.Data["Title"] = c.Tr("repo.settings")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = models.Webhook{HookEvent: &models.HookEvent{}}
+	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
@@ -285,19 +285,19 @@ func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
 		return
 	}
 
-	w := &models.Webhook{
+	w := &db.Webhook{
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
-		ContentType:  models.JSON,
+		ContentType:  db.JSON,
 		HookEvent:    ParseHookEvent(f.Webhook),
 		IsActive:     f.Active,
-		HookTaskType: models.DINGTALK,
+		HookTaskType: db.DINGTALK,
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.CreateWebhook(w); err != nil {
+	} else if err := db.CreateWebhook(w); err != nil {
 		c.Handle(500, "CreateWebhook", err)
 		return
 	}
@@ -306,7 +306,7 @@ func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
 	c.Redirect(orCtx.Link + "/settings/hooks")
 }
 
-func checkWebhook(c *context.Context) (*OrgRepoCtx, *models.Webhook) {
+func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
 	c.Data["RequireHighlightJS"] = true
 
 	orCtx, err := getOrgRepoCtx(c)
@@ -316,11 +316,11 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	}
 	c.Data["BaseLink"] = orCtx.Link
 
-	var w *models.Webhook
+	var w *db.Webhook
 	if orCtx.RepoID > 0 {
-		w, err = models.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+		w, err = db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	} else {
-		w, err = models.GetWebhookByOrgID(c.Org.Organization.ID, c.ParamsInt64(":id"))
+		w, err = db.GetWebhookByOrgID(c.Org.Organization.ID, c.ParamsInt64(":id"))
 	}
 	if err != nil {
 		c.NotFoundOrServerError("GetWebhookOfRepoByID/GetWebhookByOrgID", errors.IsWebhookNotExist, err)
@@ -328,13 +328,13 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *models.Webhook) {
 	}
 
 	switch w.HookTaskType {
-	case models.SLACK:
+	case db.SLACK:
 		c.Data["SlackHook"] = w.GetSlackHook()
 		c.Data["HookType"] = "slack"
-	case models.DISCORD:
+	case db.DISCORD:
 		c.Data["SlackHook"] = w.GetSlackHook()
 		c.Data["HookType"] = "discord"
-	case models.DINGTALK:
+	case db.DINGTALK:
 		c.Data["HookType"] = "dingtalk"
 	default:
 		c.Data["HookType"] = "gogs"
@@ -377,9 +377,9 @@ func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
 		return
 	}
 
-	contentType := models.JSON
-	if models.HookContentType(f.ContentType) == models.FORM {
-		contentType = models.FORM
+	contentType := db.JSON
+	if db.HookContentType(f.ContentType) == db.FORM {
+		contentType = db.FORM
 	}
 
 	w.URL = f.PayloadURL
@@ -390,7 +390,7 @@ func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.UpdateWebhook(w); err != nil {
+	} else if err := db.UpdateWebhook(w); err != nil {
 		c.Handle(500, "WebHooksEditPost", err)
 		return
 	}
@@ -415,7 +415,7 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&db.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -433,7 +433,7 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.UpdateWebhook(w); err != nil {
+	} else if err := db.UpdateWebhook(w); err != nil {
 		c.Handle(500, "UpdateWebhook", err)
 		return
 	}
@@ -459,7 +459,7 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 		return
 	}
 
-	meta, err := jsoniter.Marshal(&models.SlackMeta{
+	meta, err := jsoniter.Marshal(&db.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
@@ -476,7 +476,7 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.UpdateWebhook(w); err != nil {
+	} else if err := db.UpdateWebhook(w); err != nil {
 		c.Handle(500, "UpdateWebhook", err)
 		return
 	}
@@ -507,7 +507,7 @@ func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
 	if err := w.UpdateEvent(); err != nil {
 		c.Handle(500, "UpdateEvent", err)
 		return
-	} else if err := models.UpdateWebhook(w); err != nil {
+	} else if err := db.UpdateWebhook(w); err != nil {
 		c.Handle(500, "UpdateWebhook", err)
 		return
 	}
@@ -522,7 +522,7 @@ func TestWebhook(c *context.Context) {
 	// Grab latest commit or fake one if it's empty repository.
 	commit := c.Repo.Commit
 	if commit == nil {
-		ghost := models.NewGhostUser()
+		ghost := db.NewGhostUser()
 		commit = &git.Commit{
 			ID:            git.MustIDFromString(git.EMPTY_SHA),
 			Author:        ghost.NewGitSig(),
@@ -533,7 +533,7 @@ func TestWebhook(c *context.Context) {
 		committerUsername = ghost.Name
 	} else {
 		// Try to match email with a real user.
-		author, err := models.GetUserByEmail(commit.Author.Email)
+		author, err := db.GetUserByEmail(commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
 		} else if !errors.IsUserNotExist(err) {
@@ -541,7 +541,7 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		committer, err := models.GetUserByEmail(commit.Committer.Email)
+		committer, err := db.GetUserByEmail(commit.Committer.Email)
 		if err == nil {
 			committerUsername = committer.Name
 		} else if !errors.IsUserNotExist(err) {
@@ -585,7 +585,7 @@ func TestWebhook(c *context.Context) {
 		Pusher: apiUser,
 		Sender: apiUser,
 	}
-	if err := models.TestWebhook(c.Repo.Repository, models.HOOK_EVENT_PUSH, p, c.ParamsInt64("id")); err != nil {
+	if err := db.TestWebhook(c.Repo.Repository, db.HOOK_EVENT_PUSH, p, c.ParamsInt64("id")); err != nil {
 		c.Handle(500, "TestWebhook", err)
 	} else {
 		c.Flash.Info(c.Tr("repo.settings.webhook.test_delivery_success"))
@@ -594,30 +594,30 @@ func TestWebhook(c *context.Context) {
 }
 
 func RedeliveryWebhook(c *context.Context) {
-	webhook, err := models.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	webhook, err := db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		c.NotFoundOrServerError("GetWebhookOfRepoByID/GetWebhookByOrgID", errors.IsWebhookNotExist, err)
 		return
 	}
 
-	hookTask, err := models.GetHookTaskOfWebhookByUUID(webhook.ID, c.Query("uuid"))
+	hookTask, err := db.GetHookTaskOfWebhookByUUID(webhook.ID, c.Query("uuid"))
 	if err != nil {
 		c.NotFoundOrServerError("GetHookTaskOfWebhookByUUID/GetWebhookByOrgID", errors.IsHookTaskNotExist, err)
 		return
 	}
 
 	hookTask.IsDelivered = false
-	if err = models.UpdateHookTask(hookTask); err != nil {
+	if err = db.UpdateHookTask(hookTask); err != nil {
 		c.Handle(500, "UpdateHookTask", err)
 	} else {
-		go models.HookQueue.Add(c.Repo.Repository.ID)
+		go db.HookQueue.Add(c.Repo.Repository.ID)
 		c.Flash.Info(c.Tr("repo.settings.webhook.redelivery_success", hookTask.UUID))
 		c.Status(200)
 	}
 }
 
 func DeleteWebhook(c *context.Context) {
-	if err := models.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
+	if err := db.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteWebhookByRepoID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))

@@ -8,7 +8,7 @@ import (
 	"github.com/unknwon/paginater"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 )
@@ -28,21 +28,21 @@ func Repos(c *context.Context) {
 	}
 
 	var (
-		repos []*models.Repository
+		repos []*db.Repository
 		count int64
 		err   error
 	)
 
 	keyword := c.Query("q")
 	if len(keyword) == 0 {
-		repos, err = models.Repositories(page, setting.UI.Admin.RepoPagingNum)
+		repos, err = db.Repositories(page, setting.UI.Admin.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "Repositories", err)
 			return
 		}
-		count = models.CountRepositories(true)
+		count = db.CountRepositories(true)
 	} else {
-		repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
+		repos, count, err = db.SearchRepositoryByName(&db.SearchRepoOptions{
 			Keyword:  keyword,
 			OrderBy:  "id ASC",
 			Private:  true,
@@ -58,7 +58,7 @@ func Repos(c *context.Context) {
 	c.Data["Total"] = count
 	c.Data["Page"] = paginater.New(int(count), setting.UI.Admin.RepoPagingNum, page, 5)
 
-	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.Handle(500, "LoadAttributes", err)
 		return
 	}
@@ -68,13 +68,13 @@ func Repos(c *context.Context) {
 }
 
 func DeleteRepo(c *context.Context) {
-	repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
+	repo, err := db.GetRepositoryByID(c.QueryInt64("id"))
 	if err != nil {
 		c.Handle(500, "GetRepositoryByID", err)
 		return
 	}
 
-	if err := models.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
+	if err := db.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
 		c.Handle(500, "DeleteRepository", err)
 		return
 	}

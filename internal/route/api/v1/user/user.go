@@ -11,23 +11,23 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/markup"
 )
 
 func Search(c *context.APIContext) {
-	opts := &models.SearchUserOptions{
+	opts := &db.SearchUserOptions{
 		Keyword:  c.Query("q"),
-		Type:     models.USER_TYPE_INDIVIDUAL,
+		Type:     db.USER_TYPE_INDIVIDUAL,
 		PageSize: com.StrTo(c.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {
 		opts.PageSize = 10
 	}
 
-	users, _, err := models.SearchUserByName(opts)
+	users, _, err := db.SearchUserByName(opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"ok":    false,
@@ -56,7 +56,7 @@ func Search(c *context.APIContext) {
 }
 
 func GetInfo(c *context.APIContext) {
-	u, err := models.GetUserByName(c.Params(":username"))
+	u, err := db.GetUserByName(c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 		return

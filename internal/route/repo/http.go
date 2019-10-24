@@ -20,8 +20,8 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
@@ -33,7 +33,7 @@ type HTTPContext struct {
 	OwnerSalt string
 	RepoID    int64
 	RepoName  string
-	AuthUser  *models.User
+	AuthUser  *db.User
 }
 
 // askCredentials responses HTTP header and status which informs client to provide credentials.
@@ -64,13 +64,13 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := models.GetUserByName(ownerName)
+		owner, err := db.GetUserByName(ownerName)
 		if err != nil {
 			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return
 		}
 
-		repo, err := models.GetRepositoryByName(owner.ID, repoName)
+		repo, err := db.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
@@ -112,7 +112,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := models.UserLogin(authUsername, authPassword, -1)
+		authUser, err := db.UserLogin(authUsername, authPassword, -1)
 		if err != nil && !errors.IsUserNotExist(err) {
 			c.Handle(http.StatusInternalServerError, "UserLogin", err)
 			return
@@ -120,9 +120,9 @@ func HTTPContexter() macaron.Handler {
 
 		// If username and password combination failed, try again using username as a token.
 		if authUser == nil {
-			token, err := models.GetAccessTokenBySHA(authUsername)
+			token, err := db.GetAccessTokenBySHA(authUsername)
 			if err != nil {
-				if models.IsErrAccessTokenEmpty(err) || models.IsErrAccessTokenNotExist(err) {
+				if db.IsErrAccessTokenEmpty(err) || db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
 				} else {
 					c.Handle(http.StatusInternalServerError, "GetAccessTokenBySHA", err)
@@ -132,7 +132,7 @@ func HTTPContexter() macaron.Handler {
 			token.Updated = time.Now()
 			// TODO: verify or update token.Updated in database
 
-			authUser, err = models.GetUserByID(token.UID)
+			authUser, err = db.GetUserByID(token.UID)
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
@@ -147,11 +147,11 @@ Please create and use personal access token on user settings page`)
 
 		log.Trace("HTTPGit - Authenticated user: %s", authUser.Name)
 
-		mode := models.ACCESS_MODE_WRITE
+		mode := db.ACCESS_MODE_WRITE
 		if isPull {
-			mode = models.ACCESS_MODE_READ
+			mode = db.ACCESS_MODE_READ
 		}
-		has, err := models.HasAccess(authUser.ID, repo, mode)
+		has, err := db.HasAccess(authUser.ID, repo, mode)
 		if err != nil {
 			c.Handle(http.StatusInternalServerError, "HasAccess", err)
 			return
@@ -182,7 +182,7 @@ type serviceHandler struct {
 	dir  string
 	file string
 
-	authUser  *models.User
+	authUser  *db.User
 	ownerName string
 	ownerSalt string
 	repoID    int64
@@ -244,7 +244,7 @@ func serviceRPC(h serviceHandler, service string) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("git", service, "--stateless-rpc", h.dir)
 	if service == "receive-pack" {
-		cmd.Env = append(os.Environ(), models.ComposeHookEnvs(models.ComposeHookEnvsOptions{
+		cmd.Env = append(os.Environ(), db.ComposeHookEnvs(db.ComposeHookEnvsOptions{
 			AuthUser:  h.authUser,
 			OwnerName: h.ownerName,
 			OwnerSalt: h.ownerSalt,

@@ -7,20 +7,20 @@ package context
 import (
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 // ParamsUser is the wrapper type of the target user defined by URL parameter, namely ':username'.
 type ParamsUser struct {
-	*models.User
+	*db.User
 }
 
 // InjectParamsUser returns a handler that retrieves target user based on URL parameter ':username',
 // and injects it as *ParamsUser.
 func InjectParamsUser() macaron.Handler {
 	return func(c *Context) {
-		user, err := models.GetUserByName(c.Params(":username"))
+		user, err := db.GetUserByName(c.Params(":username"))
 		if err != nil {
 			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 			return

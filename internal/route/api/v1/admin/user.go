@@ -15,16 +15,16 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
-func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, loginName string) {
+func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginName string) {
 	if sourceID == 0 {
 		return
 	}
 
-	source, err := models.GetLoginSourceByID(sourceID)
+	source, err := db.GetLoginSourceByID(sourceID)
 	if err != nil {
 		if errors.IsLoginSourceNotExist(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
@@ -40,13 +40,13 @@ func parseLoginSource(c *context.APIContext, u *models.User, sourceID int64, log
 }
 
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
-	u := &models.User{
+	u := &db.User{
 		Name:      form.Username,
 		FullName:  form.FullName,
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
-		LoginType: models.LOGIN_PLAIN,
+		LoginType: db.LOGIN_PLAIN,
 	}
 
 	parseLoginSource(c, u, form.SourceID, form.LoginName)
@@ -54,11 +54,11 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		return
 	}
 
-	if err := models.CreateUser(u); err != nil {
-		if models.IsErrUserAlreadyExist(err) ||
-			models.IsErrEmailAlreadyUsed(err) ||
-			models.IsErrNameReserved(err) ||
-			models.IsErrNamePatternNotAllowed(err) {
+	if err := db.CreateUser(u); err != nil {
+		if db.IsErrUserAlreadyExist(err) ||
+			db.IsErrEmailAlreadyUsed(err) ||
+			db.IsErrNameReserved(err) ||
+			db.IsErrNamePatternNotAllowed(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
 			c.ServerError("CreateUser", err)
@@ -69,7 +69,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 
 	// Send email notification.
 	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(c.Context.Context, models.NewMailerUser(u))
+		mailer.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(u))
 	}
 
 	c.JSON(http.StatusCreated, u.APIFormat())
@@ -89,7 +89,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 	if len(form.Password) > 0 {
 		u.Passwd = form.Password
 		var err error
-		if u.Salt, err = models.GetUserSalt(); err != nil {
+		if u.Salt, err = db.GetUserSalt(); err != nil {
 			c.ServerError("GetUserSalt", err)
 			return
 		}
@@ -117,8 +117,8 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		u.MaxRepoCreation = *form.MaxRepoCreation
 	}
 
-	if err := models.UpdateUser(u); err != nil {
-		if models.IsErrEmailAlreadyUsed(err) {
+	if err := db.UpdateUser(u); err != nil {
+		if db.IsErrEmailAlreadyUsed(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
 			c.ServerError("UpdateUser", err)
@@ -136,9 +136,9 @@ func DeleteUser(c *context.APIContext) {
 		return
 	}
 
-	if err := models.DeleteUser(u); err != nil {
-		if models.IsErrUserOwnRepos(err) ||
-			models.IsErrUserHasOrgs(err) {
+	if err := db.DeleteUser(u); err != nil {
+		if db.IsErrUserOwnRepos(err) ||
+			db.IsErrUserHasOrgs(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
 			c.ServerError("DeleteUser", err)

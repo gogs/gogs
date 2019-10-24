@@ -8,10 +8,10 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
-func responseApiUsers(c *context.APIContext, users []*models.User) {
+func responseApiUsers(c *context.APIContext, users []*db.User) {
 	apiUsers := make([]*api.User, len(users))
 	for i := range users {
 		apiUsers[i] = users[i].APIFormat()
@@ -19,7 +19,7 @@ func responseApiUsers(c *context.APIContext, users []*models.User) {
 	c.JSONSuccess(&apiUsers)
 }
 
-func listUserFollowers(c *context.APIContext, u *models.User) {
+func listUserFollowers(c *context.APIContext, u *db.User) {
 	users, err := u.GetFollowers(c.QueryInt("page"))
 	if err != nil {
 		c.ServerError("GetUserFollowers", err)
@@ -40,7 +40,7 @@ func ListFollowers(c *context.APIContext) {
 	listUserFollowers(c, u)
 }
 
-func listUserFollowing(c *context.APIContext, u *models.User) {
+func listUserFollowing(c *context.APIContext, u *db.User) {
 	users, err := u.GetFollowing(c.QueryInt("page"))
 	if err != nil {
 		c.ServerError("GetFollowing", err)
@@ -61,7 +61,7 @@ func ListFollowing(c *context.APIContext) {
 	listUserFollowing(c, u)
 }
 
-func checkUserFollowing(c *context.APIContext, u *models.User, followID int64) {
+func checkUserFollowing(c *context.APIContext, u *db.User, followID int64) {
 	if u.IsFollowing(followID) {
 		c.NoContent()
 	} else {
@@ -94,7 +94,7 @@ func Follow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := models.FollowUser(c.User.ID, target.ID); err != nil {
+	if err := db.FollowUser(c.User.ID, target.ID); err != nil {
 		c.ServerError("FollowUser", err)
 		return
 	}
@@ -106,7 +106,7 @@ func Unfollow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := models.UnfollowUser(c.User.ID, target.ID); err != nil {
+	if err := db.UnfollowUser(c.User.ID, target.ID); err != nil {
 		c.ServerError("UnfollowUser", err)
 		return
 	}

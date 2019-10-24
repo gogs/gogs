@@ -19,8 +19,8 @@ import (
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 const (
@@ -267,7 +267,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UpdateRepoFile(c.User, models.UpdateRepoFileOptions{
+	if err := c.Repo.Repository.UpdateRepoFile(c.User, db.UpdateRepoFileOptions{
 		LastCommitID: lastCommit,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -375,7 +375,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.DeleteRepoFile(c.User, models.DeleteRepoFileOptions{
+	if err := c.Repo.Repository.DeleteRepoFile(c.User, db.DeleteRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -494,7 +494,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UploadRepoFiles(c.User, models.UploadRepoFileOptions{
+	if err := c.Repo.Repository.UploadRepoFiles(c.User, db.UploadRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -546,7 +546,7 @@ func UploadFileToServer(c *context.Context) {
 		}
 	}
 
-	upload, err := models.NewUpload(header.Filename, buf, file)
+	upload, err := db.NewUpload(header.Filename, buf, file)
 	if err != nil {
 		c.Error(http.StatusInternalServerError, fmt.Sprintf("NewUpload: %v", err))
 		return
@@ -564,7 +564,7 @@ func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
 		return
 	}
 
-	if err := models.DeleteUploadByUUID(f.File); err != nil {
+	if err := db.DeleteUploadByUUID(f.File); err != nil {
 		c.Error(500, fmt.Sprintf("DeleteUploadByUUID: %v", err))
 		return
 	}

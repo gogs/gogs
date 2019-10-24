@@ -11,20 +11,20 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 )
 
-func listIssues(c *context.APIContext, opts *models.IssuesOptions) {
-	issues, err := models.Issues(opts)
+func listIssues(c *context.APIContext, opts *db.IssuesOptions) {
+	issues, err := db.Issues(opts)
 	if err != nil {
 		c.ServerError("Issues", err)
 		return
 	}
 
-	count, err := models.IssuesCount(opts)
+	count, err := db.IssuesCount(opts)
 	if err != nil {
 		c.ServerError("IssuesCount", err)
 		return
@@ -45,7 +45,7 @@ func listIssues(c *context.APIContext, opts *models.IssuesOptions) {
 }
 
 func ListUserIssues(c *context.APIContext) {
-	opts := models.IssuesOptions{
+	opts := db.IssuesOptions{
 		AssigneeID: c.User.ID,
 		Page:       c.QueryInt("page"),
 		IsClosed:   api.StateType(c.Query("state")) == api.STATE_CLOSED,
@@ -55,7 +55,7 @@ func ListUserIssues(c *context.APIContext) {
 }
 
 func ListIssues(c *context.APIContext) {
-	opts := models.IssuesOptions{
+	opts := db.IssuesOptions{
 		RepoID:   c.Repo.Repository.ID,
 		Page:     c.QueryInt("page"),
 		IsClosed: api.StateType(c.Query("state")) == api.STATE_CLOSED,
@@ -65,7 +65,7 @@ func ListIssues(c *context.APIContext) {
 }
 
 func GetIssue(c *context.APIContext) {
-	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
@@ -74,7 +74,7 @@ func GetIssue(c *context.APIContext) {
 }
 
 func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
-	issue := &models.Issue{
+	issue := &db.Issue{
 		RepoID:   c.Repo.Repository.ID,
 		Title:    form.Title,
 		PosterID: c.User.ID,
@@ -84,7 +84,7 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 
 	if c.Repo.IsWriter() {
 		if len(form.Assignee) > 0 {
-			assignee, err := models.GetUserByName(form.Assignee)
+			assignee, err := db.GetUserByName(form.Assignee)
 			if err != nil {
 				if errors.IsUserNotExist(err) {
 					c.Error(http.StatusUnprocessableEntity, "", fmt.Sprintf("assignee does not exist: [name: %s]", form.Assignee))
@@ -100,7 +100,7 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 		form.Labels = nil
 	}
 
-	if err := models.NewIssue(c.Repo.Repository, issue, form.Labels, nil); err != nil {
+	if err := db.NewIssue(c.Repo.Repository, issue, form.Labels, nil); err != nil {
 		c.ServerError("NewIssue", err)
 		return
 	}
@@ -114,7 +114,7 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 
 	// Refetch from database to assign some automatic values
 	var err error
-	issue, err = models.GetIssueByID(issue.ID)
+	issue, err = db.GetIssueByID(issue.ID)
 	if err != nil {
 		c.ServerError("GetIssueByID", err)
 		return
@@ -123,7 +123,7 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 }
 
 func EditIssue(c *context.APIContext, form api.EditIssueOption) {
-	issue, err := models.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
+	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
 		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
 		return
@@ -146,7 +146,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		if len(*form.Assignee) == 0 {
 			issue.AssigneeID = 0
 		} else {
-			assignee, err := models.GetUserByName(*form.Assignee)
+			assignee, err := db.GetUserByName(*form.Assignee)
 			if err != nil {
 				if errors.IsUserNotExist(err) {
 					c.Error(http.StatusUnprocessableEntity, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
@@ -158,7 +158,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 			issue.AssigneeID = assignee.ID
 		}
 
-		if err = models.UpdateIssueUserByAssignee(issue); err != nil {
+		if err = db.UpdateIssueUserByAssignee(issue); err != nil {
 			c.ServerError("UpdateIssueUserByAssignee", err)
 			return
 		}
@@ -167,13 +167,13 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		issue.MilestoneID != *form.Milestone {
 		oldMilestoneID := issue.MilestoneID
 		issue.MilestoneID = *form.Milestone
-		if err = models.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
+		if err = db.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
 			c.ServerError("ChangeMilestoneAssign", err)
 			return
 		}
 	}
 
-	if err = models.UpdateIssue(issue); err != nil {
+	if err = db.UpdateIssue(issue); err != nil {
 		c.ServerError("UpdateIssue", err)
 		return
 	}
@@ -185,7 +185,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 	}
 
 	// Refetch from database to assign some automatic values
-	issue, err = models.GetIssueByID(issue.ID)
+	issue, err = db.GetIssueByID(issue.ID)
 	if err != nil {
 		c.ServerError("GetIssueByID", err)
 		return

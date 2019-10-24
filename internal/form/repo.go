@@ -12,7 +12,7 @@ import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -56,7 +56,7 @@ func (f *MigrateRepo) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 // and returns composed URL with needed username and password.
 // It also checks if given user has permission when remote address
 // is actually a local path.
-func (f MigrateRepo) ParseRemoteAddr(user *models.User) (string, error) {
+func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 	remoteAddr := strings.TrimSpace(f.CloneAddr)
 
 	// Remote address can be HTTP/HTTPS/Git URL or local path.
@@ -65,16 +65,16 @@ func (f MigrateRepo) ParseRemoteAddr(user *models.User) (string, error) {
 		strings.HasPrefix(remoteAddr, "git://") {
 		u, err := url.Parse(remoteAddr)
 		if err != nil {
-			return "", models.ErrInvalidCloneAddr{IsURLError: true}
+			return "", db.ErrInvalidCloneAddr{IsURLError: true}
 		}
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
 		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
-		return "", models.ErrInvalidCloneAddr{IsPermissionDenied: true}
+		return "", db.ErrInvalidCloneAddr{IsPermissionDenied: true}
 	} else if !com.IsDir(remoteAddr) {
-		return "", models.ErrInvalidCloneAddr{IsInvalidPath: true}
+		return "", db.ErrInvalidCloneAddr{IsInvalidPath: true}
 	}
 
 	return remoteAddr, nil

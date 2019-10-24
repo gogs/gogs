@@ -11,8 +11,8 @@ import (
 	"github.com/go-macaron/captcha"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
@@ -32,7 +32,7 @@ const (
 
 // AutoLogin reads cookie and try to auto-login.
 func AutoLogin(c *context.Context) (bool, error) {
-	if !models.HasEngine {
+	if !db.HasEngine {
 		return false, nil
 	}
 
@@ -51,7 +51,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 		}
 	}()
 
-	u, err := models.GetUserByName(uname)
+	u, err := db.GetUserByName(uname)
 	if err != nil {
 		if !errors.IsUserNotExist(err) {
 			return false, fmt.Errorf("GetUserByName: %v", err)
@@ -101,7 +101,7 @@ func Login(c *context.Context) {
 	}
 
 	// Display normal login page
-	loginSources, err := models.ActivatedLoginSources()
+	loginSources, err := db.ActivatedLoginSources()
 	if err != nil {
 		c.ServerError("ActivatedLoginSources", err)
 		return
@@ -117,7 +117,7 @@ func Login(c *context.Context) {
 	c.Success(LOGIN)
 }
 
-func afterLogin(c *context.Context, u *models.User, remember bool) {
+func afterLogin(c *context.Context, u *db.User, remember bool) {
 	if remember {
 		days := 86400 * setting.LoginRememberDays
 		c.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubURL, "", setting.CookieSecure, true)
@@ -148,7 +148,7 @@ func afterLogin(c *context.Context, u *models.User, remember bool) {
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	loginSources, err := models.ActivatedLoginSources()
+	loginSources, err := db.ActivatedLoginSources()
 	if err != nil {
 		c.ServerError("ActivatedLoginSources", err)
 		return
@@ -160,7 +160,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := models.UserLogin(f.UserName, f.Password, f.LoginSource)
+	u, err := db.UserLogin(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
 		switch err.(type) {
 		case errors.UserNotExist:
@@ -209,7 +209,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	t, err := models.GetTwoFactorByUserID(userID)
+	t, err := db.GetTwoFactorByUserID(userID)
 	if err != nil {
 		c.ServerError("GetTwoFactorByUserID", err)
 		return
@@ -226,7 +226,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	u, err := models.GetUserByID(userID)
+	u, err := db.GetUserByID(userID)
 	if err != nil {
 		c.ServerError("GetUserByID", err)
 		return
@@ -262,7 +262,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	if err := models.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
+	if err := db.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
 		if errors.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.SubURLRedirect("/user/login/two_factor_recovery_code")
@@ -272,7 +272,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 		return
 	}
 
-	u, err := models.GetUserByID(userID)
+	u, err := db.GetUserByID(userID)
 	if err != nil {
 		c.ServerError("GetUserByID", err)
 		return
@@ -330,26 +330,26 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	u := &models.User{
+	u := &db.User{
 		Name:     f.UserName,
 		Email:    f.Email,
 		Passwd:   f.Password,
 		IsActive: !setting.Service.RegisterEmailConfirm,
 	}
-	if err := models.CreateUser(u); err != nil {
+	if err := db.CreateUser(u); err != nil {
 		switch {
-		case models.IsErrUserAlreadyExist(err):
+		case db.IsErrUserAlreadyExist(err):
 			c.FormErr("UserName")
 			c.RenderWithErr(c.Tr("form.username_been_taken"), SIGNUP, &f)
-		case models.IsErrEmailAlreadyUsed(err):
+		case db.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
 			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
-		case models.IsErrNameReserved(err):
+		case db.IsErrNameReserved(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(models.ErrNameReserved).Name), SIGNUP, &f)
-		case models.IsErrNamePatternNotAllowed(err):
+			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(db.ErrNameReserved).Name), SIGNUP, &f)
+		case db.IsErrNamePatternNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(models.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
 		default:
 			c.ServerError("CreateUser", err)
 		}
@@ -358,10 +358,10 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	log.Trace("Account created: %s", u.Name)
 
 	// Auto-set admin for the only user.
-	if models.CountUsers() == 1 {
+	if db.CountUsers() == 1 {
 		u.IsAdmin = true
 		u.IsActive = true
-		if err := models.UpdateUser(u); err != nil {
+		if err := db.UpdateUser(u); err != nil {
 			c.ServerError("UpdateUser", err)
 			return
 		}
@@ -369,7 +369,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 	// Send confirmation email, no need for social account.
 	if setting.Service.RegisterEmailConfirm && u.ID > 1 {
-		mailer.SendActivateAccountMail(c.Context, models.NewMailerUser(u))
+		mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email
 		c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
@@ -398,7 +398,7 @@ func Activate(c *context.Context) {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-				mailer.SendActivateAccountMail(c.Context, models.NewMailerUser(c.User))
+				mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
 
 				if err := c.Cache.Put(c.User.MailResendCacheKey(), 1, 180); err != nil {
 					log.Error(2, "Failed to put cache key 'mail resend': %v", err)
@@ -412,14 +412,14 @@ func Activate(c *context.Context) {
 	}
 
 	// Verify code.
-	if user := models.VerifyUserActiveCode(code); user != nil {
+	if user := db.VerifyUserActiveCode(code); user != nil {
 		user.IsActive = true
 		var err error
-		if user.Rands, err = models.GetUserSalt(); err != nil {
+		if user.Rands, err = db.GetUserSalt(); err != nil {
 			c.ServerError("GetUserSalt", err)
 			return
 		}
-		if err := models.UpdateUser(user); err != nil {
+		if err := db.UpdateUser(user); err != nil {
 			c.ServerError("UpdateUser", err)
 			return
 		}
@@ -441,7 +441,7 @@ func ActivateEmail(c *context.Context) {
 	email_string := c.Query("email")
 
 	// Verify code.
-	if email := models.VerifyActiveEmailCode(code, email_string); email != nil {
+	if email := db.VerifyActiveEmailCode(code, email_string); email != nil {
 		if err := email.Activate(); err != nil {
 			c.ServerError("ActivateEmail", err)
 		}
@@ -479,7 +479,7 @@ func ForgotPasswdPost(c *context.Context) {
 	email := c.Query("email")
 	c.Data["Email"] = email
 
-	u, err := models.GetUserByEmail(email)
+	u, err := db.GetUserByEmail(email)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
@@ -504,7 +504,7 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	mailer.SendResetPasswordMail(c.Context, models.NewMailerUser(u))
+	mailer.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
 	if err = c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
 		log.Error(2, "Failed to put cache key 'mail resend': %v", err)
 	}
@@ -537,7 +537,7 @@ func ResetPasswdPost(c *context.Context) {
 	}
 	c.Data["Code"] = code
 
-	if u := models.VerifyUserActiveCode(code); u != nil {
+	if u := db.VerifyUserActiveCode(code); u != nil {
 		// Validate password length.
 		passwd := c.Query("password")
 		if len(passwd) < 6 {
@@ -549,16 +549,16 @@ func ResetPasswdPost(c *context.Context) {
 
 		u.Passwd = passwd
 		var err error
-		if u.Rands, err = models.GetUserSalt(); err != nil {
+		if u.Rands, err = db.GetUserSalt(); err != nil {
 			c.ServerError("GetUserSalt", err)
 			return
 		}
-		if u.Salt, err = models.GetUserSalt(); err != nil {
+		if u.Salt, err = db.GetUserSalt(); err != nil {
 			c.ServerError("GetUserSalt", err)
 			return
 		}
 		u.EncodePasswd()
-		if err := models.UpdateUser(u); err != nil {
+		if err := db.UpdateUser(u); err != nil {
 			c.ServerError("UpdateUser", err)
 			return
 		}

@@ -7,8 +7,8 @@ package repo
 import (
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 )
 
@@ -27,7 +27,7 @@ func ListCollaborators(c *context.APIContext) {
 }
 
 func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
-	collaborator, err := models.GetUserByName(c.Params(":collaborator"))
+	collaborator, err := db.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Error(422, "", err)
@@ -43,7 +43,7 @@ func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 	}
 
 	if form.Permission != nil {
-		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, models.ParseAccessMode(*form.Permission)); err != nil {
+		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, db.ParseAccessMode(*form.Permission)); err != nil {
 			c.Error(500, "ChangeCollaborationAccessMode", err)
 			return
 		}
@@ -53,7 +53,7 @@ func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 }
 
 func IsCollaborator(c *context.APIContext) {
-	collaborator, err := models.GetUserByName(c.Params(":collaborator"))
+	collaborator, err := db.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Error(422, "", err)
@@ -71,7 +71,7 @@ func IsCollaborator(c *context.APIContext) {
 }
 
 func DeleteCollaborator(c *context.APIContext) {
-	collaborator, err := models.GetUserByName(c.Params(":collaborator"))
+	collaborator, err := db.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Error(422, "", err)

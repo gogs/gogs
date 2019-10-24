@@ -8,7 +8,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	route2 "gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 const (
@@ -21,9 +21,9 @@ func Organizations(c *context.Context) {
 	c.Data["PageIsAdminOrganizations"] = true
 
 	route2.RenderUserSearch(c, &route2.UserSearchOptions{
-		Type:     models.USER_TYPE_ORGANIZATION,
-		Counter:  models.CountOrganizations,
-		Ranger:   models.Organizations,
+		Type:     db.USER_TYPE_ORGANIZATION,
+		Counter:  db.CountOrganizations,
+		Ranger:   db.Organizations,
 		PageSize: setting.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  ORGS,

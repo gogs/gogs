@@ -20,8 +20,8 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,
@@ -32,13 +32,13 @@ func repoAssignment() macaron.Handler {
 		reponame := c.Params(":reponame")
 
 		var err error
-		var owner *models.User
+		var owner *db.User
 
 		// Check if the context user is the repository owner.
 		if c.IsLogged && c.User.LowerName == strings.ToLower(username) {
 			owner = c.User
 		} else {
-			owner, err = models.GetUserByName(username)
+			owner, err = db.GetUserByName(username)
 			if err != nil {
 				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
@@ -46,7 +46,7 @@ func repoAssignment() macaron.Handler {
 		}
 		c.Repo.Owner = owner
 
-		r, err := models.GetRepositoryByName(owner.ID, reponame)
+		r, err := db.GetRepositoryByName(owner.ID, reponame)
 		if err != nil {
 			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 			return
@@ -56,9 +56,9 @@ func repoAssignment() macaron.Handler {
 		}
 
 		if c.IsTokenAuth && c.User.IsAdmin {
-			c.Repo.AccessMode = models.ACCESS_MODE_OWNER
+			c.Repo.AccessMode = db.ACCESS_MODE_OWNER
 		} else {
-			mode, err := models.UserAccessMode(c.UserID(), r)
+			mode, err := db.UserAccessMode(c.UserID(), r)
 			if err != nil {
 				c.ServerError("UserAccessMode", err)
 				return
@@ -92,7 +92,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 
 		var err error
 		if assignOrg {
-			c.Org.Organization, err = models.GetUserByName(c.Params(":orgname"))
+			c.Org.Organization, err = db.GetUserByName(c.Params(":orgname"))
 			if err != nil {
 				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
 				return
@@ -100,7 +100,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 		}
 
 		if assignTeam {
-			c.Org.Team, err = models.GetTeamByID(c.ParamsInt64(":teamid"))
+			c.Org.Team, err = db.GetTeamByID(c.ParamsInt64(":teamid"))
 			if err != nil {
 				c.NotFoundOrServerError("GetTeamByID", errors.IsTeamNotExist, err)
 				return

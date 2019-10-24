@@ -12,7 +12,7 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/tool"
 )
@@ -35,7 +35,7 @@ func loadBranches(c *context.Context) []*Branch {
 		return nil
 	}
 
-	protectBranches, err := models.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
+	protectBranches, err := db.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Handle(500, "GetProtectBranchesByRepoID", err)
 		return nil
@@ -142,14 +142,14 @@ func DeleteBranchPost(c *context.Context) {
 		return
 	}
 
-	if err := models.PrepareWebhooks(c.Repo.Repository, models.HOOK_EVENT_DELETE, &api.DeletePayload{
+	if err := db.PrepareWebhooks(c.Repo.Repository, db.HOOK_EVENT_DELETE, &api.DeletePayload{
 		Ref:        branchName,
 		RefType:    "branch",
 		PusherType: api.PUSHER_TYPE_USER,
 		Repo:       c.Repo.Repository.APIFormat(nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {
-		log.Error(2, "Failed to prepare webhooks for %q: %v", models.HOOK_EVENT_DELETE, err)
+		log.Error(2, "Failed to prepare webhooks for %q: %v", db.HOOK_EVENT_DELETE, err)
 		return
 	}
 }

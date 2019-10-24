@@ -9,7 +9,7 @@ import (
 	repo2 "gogs.io/gogs/internal/route/repo"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 func GetRawFile(c *context.APIContext) {
@@ -34,7 +34,7 @@ func GetRawFile(c *context.APIContext) {
 }
 
 func GetArchive(c *context.APIContext) {
-	repoPath := models.RepoPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.OpenRepository(repoPath)
 	if err != nil {
 		c.ServerError("OpenRepository", err)

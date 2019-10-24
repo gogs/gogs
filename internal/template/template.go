@@ -21,7 +21,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
@@ -284,8 +284,8 @@ func ActionIcon(opType int) string {
 	}
 }
 
-func ActionContent2Commits(act Actioner) *models.PushCommits {
-	push := models.NewPushCommits()
+func ActionContent2Commits(act Actioner) *db.PushCommits {
+	push := db.NewPushCommits()
 	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
 		log.Error(4, "Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
 	}

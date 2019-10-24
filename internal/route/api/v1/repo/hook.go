@@ -12,13 +12,13 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
 func ListHooks(c *context.APIContext) {
-	hooks, err := models.GetWebhooksByRepoID(c.Repo.Repository.ID)
+	hooks, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.Error(500, "GetWebhooksByRepoID", err)
 		return
@@ -33,7 +33,7 @@ func ListHooks(c *context.APIContext) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
 func CreateHook(c *context.APIContext, form api.CreateHookOption) {
-	if !models.IsValidHookTaskType(form.Type) {
+	if !db.IsValidHookTaskType(form.Type) {
 		c.Error(422, "", "Invalid hook type")
 		return
 	}
@@ -43,7 +43,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 			return
 		}
 	}
-	if !models.IsValidHookContentType(form.Config["content_type"]) {
+	if !db.IsValidHookContentType(form.Config["content_type"]) {
 		c.Error(422, "", "Invalid content type")
 		return
 	}
@@ -51,34 +51,34 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	if len(form.Events) == 0 {
 		form.Events = []string{"push"}
 	}
-	w := &models.Webhook{
+	w := &db.Webhook{
 		RepoID:      c.Repo.Repository.ID,
 		URL:         form.Config["url"],
-		ContentType: models.ToHookContentType(form.Config["content_type"]),
+		ContentType: db.ToHookContentType(form.Config["content_type"]),
 		Secret:      form.Config["secret"],
-		HookEvent: &models.HookEvent{
+		HookEvent: &db.HookEvent{
 			ChooseEvents: true,
-			HookEvents: models.HookEvents{
-				Create:       com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE)),
-				Delete:       com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_DELETE)),
-				Fork:         com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_FORK)),
-				Push:         com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH)),
-				Issues:       com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUES)),
-				IssueComment: com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUE_COMMENT)),
-				PullRequest:  com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST)),
-				Release:      com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_RELEASE)),
+			HookEvents: db.HookEvents{
+				Create:       com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_CREATE)),
+				Delete:       com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_DELETE)),
+				Fork:         com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_FORK)),
+				Push:         com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_PUSH)),
+				Issues:       com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_ISSUES)),
+				IssueComment: com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_ISSUE_COMMENT)),
+				PullRequest:  com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_PULL_REQUEST)),
+				Release:      com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_RELEASE)),
 			},
 		},
 		IsActive:     form.Active,
-		HookTaskType: models.ToHookTaskType(form.Type),
+		HookTaskType: db.ToHookTaskType(form.Type),
 	}
-	if w.HookTaskType == models.SLACK {
+	if w.HookTaskType == db.SLACK {
 		channel, ok := form.Config["channel"]
 		if !ok {
 			c.Error(422, "", "Missing config option: channel")
 			return
 		}
-		meta, err := jsoniter.Marshal(&models.SlackMeta{
+		meta, err := jsoniter.Marshal(&db.SlackMeta{
 			Channel:  channel,
 			Username: form.Config["username"],
 			IconURL:  form.Config["icon_url"],
@@ -94,7 +94,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	if err := w.UpdateEvent(); err != nil {
 		c.Error(500, "UpdateEvent", err)
 		return
-	} else if err := models.CreateWebhook(w); err != nil {
+	} else if err := db.CreateWebhook(w); err != nil {
 		c.Error(500, "CreateWebhook", err)
 		return
 	}
@@ -104,7 +104,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
 func EditHook(c *context.APIContext, form api.EditHookOption) {
-	w, err := models.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	w, err := db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		if errors.IsWebhookNotExist(err) {
 			c.Status(404)
@@ -119,16 +119,16 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 			w.URL = url
 		}
 		if ct, ok := form.Config["content_type"]; ok {
-			if !models.IsValidHookContentType(ct) {
+			if !db.IsValidHookContentType(ct) {
 				c.Error(422, "", "Invalid content type")
 				return
 			}
-			w.ContentType = models.ToHookContentType(ct)
+			w.ContentType = db.ToHookContentType(ct)
 		}
 
-		if w.HookTaskType == models.SLACK {
+		if w.HookTaskType == db.SLACK {
 			if channel, ok := form.Config["channel"]; ok {
-				meta, err := jsoniter.Marshal(&models.SlackMeta{
+				meta, err := jsoniter.Marshal(&db.SlackMeta{
 					Channel:  channel,
 					Username: form.Config["username"],
 					IconURL:  form.Config["icon_url"],
@@ -150,14 +150,14 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 	w.PushOnly = false
 	w.SendEverything = false
 	w.ChooseEvents = true
-	w.Create = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_CREATE))
-	w.Delete = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_DELETE))
-	w.Fork = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_FORK))
-	w.Push = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PUSH))
-	w.Issues = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUES))
-	w.IssueComment = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_ISSUE_COMMENT))
-	w.PullRequest = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_PULL_REQUEST))
-	w.Release = com.IsSliceContainsStr(form.Events, string(models.HOOK_EVENT_RELEASE))
+	w.Create = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_CREATE))
+	w.Delete = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_DELETE))
+	w.Fork = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_FORK))
+	w.Push = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_PUSH))
+	w.Issues = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_ISSUES))
+	w.IssueComment = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_ISSUE_COMMENT))
+	w.PullRequest = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_PULL_REQUEST))
+	w.Release = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_RELEASE))
 	if err = w.UpdateEvent(); err != nil {
 		c.Error(500, "UpdateEvent", err)
 		return
@@ -167,7 +167,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 		w.IsActive = *form.Active
 	}
 
-	if err := models.UpdateWebhook(w); err != nil {
+	if err := db.UpdateWebhook(w); err != nil {
 		c.Error(500, "UpdateWebhook", err)
 		return
 	}
@@ -176,7 +176,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 }
 
 func DeleteHook(c *context.APIContext) {
-	if err := models.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+	if err := db.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
 		c.Error(500, "DeleteWebhookByRepoID", err)
 		return
 	}

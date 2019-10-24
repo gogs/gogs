@@ -12,18 +12,18 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {
-	team := &models.Team{
+	team := &db.Team{
 		OrgID:       c.Org.Organization.ID,
 		Name:        form.Name,
 		Description: form.Description,
-		Authorize:   models.ParseAccessMode(form.Permission),
+		Authorize:   db.ParseAccessMode(form.Permission),
 	}
-	if err := models.NewTeam(team); err != nil {
-		if models.IsErrTeamAlreadyExist(err) {
+	if err := db.NewTeam(team); err != nil {
+		if db.IsErrTeamAlreadyExist(err) {
 			c.Error(http.StatusUnprocessableEntity, "", err)
 		} else {
 			c.ServerError("NewTeam", err)

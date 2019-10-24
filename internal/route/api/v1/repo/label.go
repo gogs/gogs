@@ -11,12 +11,12 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 )
 
 func ListLabels(c *context.APIContext) {
-	labels, err := models.GetLabelsByRepoID(c.Repo.Repository.ID)
+	labels, err := db.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
 		c.ServerError("GetLabelsByRepoID", err)
 		return
@@ -30,16 +30,16 @@ func ListLabels(c *context.APIContext) {
 }
 
 func GetLabel(c *context.APIContext) {
-	var label *models.Label
+	var label *db.Label
 	var err error
 	idStr := c.Params(":id")
 	if id := com.StrTo(idStr).MustInt64(); id > 0 {
-		label, err = models.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
+		label, err = db.GetLabelOfRepoByID(c.Repo.Repository.ID, id)
 	} else {
-		label, err = models.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
+		label, err = db.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
 	}
 	if err != nil {
-		c.NotFoundOrServerError("GetLabel", models.IsErrLabelNotExist, err)
+		c.NotFoundOrServerError("GetLabel", db.IsErrLabelNotExist, err)
 		return
 	}
 
@@ -47,12 +47,12 @@ func GetLabel(c *context.APIContext) {
 }
 
 func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
-	label := &models.Label{
+	label := &db.Label{
 		Name:   form.Name,
 		Color:  form.Color,
 		RepoID: c.Repo.Repository.ID,
 	}
-	if err := models.NewLabels(label); err != nil {
+	if err := db.NewLabels(label); err != nil {
 		c.ServerError("NewLabel", err)
 		return
 	}
@@ -60,9 +60,9 @@ func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
 }
 
 func EditLabel(c *context.APIContext, form api.EditLabelOption) {
-	label, err := models.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
+	label, err := db.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetLabelOfRepoByID", models.IsErrLabelNotExist, err)
+		c.NotFoundOrServerError("GetLabelOfRepoByID", db.IsErrLabelNotExist, err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 	if form.Color != nil {
 		label.Color = *form.Color
 	}
-	if err := models.UpdateLabel(label); err != nil {
+	if err := db.UpdateLabel(label); err != nil {
 		c.ServerError("UpdateLabel", err)
 		return
 	}
@@ -80,7 +80,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 }
 
 func DeleteLabel(c *context.APIContext) {
-	if err := models.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
+	if err := db.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
 		c.ServerError("DeleteLabel", err)
 		return
 	}

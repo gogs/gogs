@@ -13,7 +13,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 )
 
 const (
@@ -69,7 +69,7 @@ func renderCommits(c *context.Context, filename string) {
 		return
 	}
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	commits = models.ValidateCommitsWithEmails(commits)
+	commits = db.ValidateCommitsWithEmails(commits)
 	c.Data["Commits"] = commits
 
 	if page > 1 {
@@ -106,7 +106,7 @@ func SearchCommits(c *context.Context) {
 		return
 	}
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	commits = models.ValidateCommitsWithEmails(commits)
+	commits = db.ValidateCommitsWithEmails(commits)
 	c.Data["Commits"] = commits
 
 	c.Data["Keyword"] = keyword
@@ -134,7 +134,7 @@ func Diff(c *context.Context) {
 		return
 	}
 
-	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
+	diff, err := db.GetDiffCommit(db.RepoPath(userName, repoName),
 		commitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
@@ -164,7 +164,7 @@ func Diff(c *context.Context) {
 	c.Data["Reponame"] = repoName
 	c.Data["IsImageFile"] = commit.IsImageFile
 	c.Data["Commit"] = commit
-	c.Data["Author"] = models.ValidateCommitWithEmail(commit)
+	c.Data["Author"] = db.ValidateCommitWithEmail(commit)
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
@@ -178,7 +178,7 @@ func Diff(c *context.Context) {
 
 func RawDiff(c *context.Context) {
 	if err := git.GetRawDiff(
-		models.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name),
+		db.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name),
 		c.Params(":sha"),
 		git.RawDiffType(c.Params(":ext")),
 		c.Resp,
@@ -201,7 +201,7 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
-	diff, err := models.GetDiffRange(models.RepoPath(userName, repoName), beforeCommitID,
+	diff, err := db.GetDiffRange(db.RepoPath(userName, repoName), beforeCommitID,
 		afterCommitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
 	if err != nil {
@@ -214,7 +214,7 @@ func CompareDiff(c *context.Context) {
 		c.Handle(500, "CommitsBeforeUntil", err)
 		return
 	}
-	commits = models.ValidateCommitsWithEmails(commits)
+	commits = db.ValidateCommitsWithEmails(commits)
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["CommitRepoLink"] = c.Repo.RepoLink

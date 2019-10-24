@@ -18,8 +18,8 @@ import (
 	"github.com/pquerna/otp/totp"
 	log "gopkg.in/clog.v1"
 
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
@@ -69,17 +69,17 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	if c.User.IsLocal() {
 		// Check if username characters have been changed
 		if c.User.LowerName != strings.ToLower(f.Name) {
-			if err := models.ChangeUserName(c.User, f.Name); err != nil {
+			if err := db.ChangeUserName(c.User, f.Name); err != nil {
 				c.FormErr("Name")
 				var msg string
 				switch {
-				case models.IsErrUserAlreadyExist(err):
+				case db.IsErrUserAlreadyExist(err):
 					msg = c.Tr("form.username_been_taken")
-				case models.IsErrEmailAlreadyUsed(err):
+				case db.IsErrEmailAlreadyUsed(err):
 					msg = c.Tr("form.email_been_used")
-				case models.IsErrNameReserved(err):
+				case db.IsErrNameReserved(err):
 					msg = c.Tr("form.name_reserved")
-				case models.IsErrNamePatternNotAllowed(err):
+				case db.IsErrNamePatternNotAllowed(err):
 					msg = c.Tr("form.name_pattern_not_allowed")
 				default:
 					c.ServerError("ChangeUserName", err)
@@ -102,7 +102,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	c.User.Email = f.Email
 	c.User.Website = f.Website
 	c.User.Location = f.Location
-	if err := models.UpdateUser(c.User); err != nil {
+	if err := db.UpdateUser(c.User); err != nil {
 		c.ServerError("UpdateUser", err)
 		return
 	}
@@ -112,7 +112,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 }
 
 // FIXME: limit upload size
-func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User) error {
+func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
 		ctxUser.Avatar = tool.MD5(f.Gravatar)
@@ -146,7 +146,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *models.User
 		}
 	}
 
-	if err := models.UpdateUser(ctxUser); err != nil {
+	if err := db.UpdateUser(ctxUser); err != nil {
 		return fmt.Errorf("update user: %v", err)
 	}
 
@@ -199,12 +199,12 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	} else {
 		c.User.Passwd = f.Password
 		var err error
-		if c.User.Salt, err = models.GetUserSalt(); err != nil {
+		if c.User.Salt, err = db.GetUserSalt(); err != nil {
 			c.ServerError("GetUserSalt", err)
 			return
 		}
 		c.User.EncodePasswd()
-		if err := models.UpdateUser(c.User); err != nil {
+		if err := db.UpdateUser(c.User); err != nil {
 			c.ServerError("UpdateUser", err)
 			return
 		}
@@ -218,7 +218,7 @@ func SettingsEmails(c *context.Context) {
 	c.Title("settings.emails")
 	c.PageIs("SettingsEmails")
 
-	emails, err := models.GetEmailAddresses(c.User.ID)
+	emails, err := db.GetEmailAddresses(c.User.ID)
 	if err != nil {
 		c.ServerError("GetEmailAddresses", err)
 		return
@@ -234,7 +234,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Make emailaddress primary.
 	if c.Query("_method") == "PRIMARY" {
-		if err := models.MakeEmailPrimary(&models.EmailAddress{ID: c.QueryInt64("id")}); err != nil {
+		if err := db.MakeEmailPrimary(&db.EmailAddress{ID: c.QueryInt64("id")}); err != nil {
 			c.ServerError("MakeEmailPrimary", err)
 			return
 		}
@@ -244,7 +244,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	// Add Email address.
-	emails, err := models.GetEmailAddresses(c.User.ID)
+	emails, err := db.GetEmailAddresses(c.User.ID)
 	if err != nil {
 		c.ServerError("GetEmailAddresses", err)
 		return
@@ -256,13 +256,13 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 		return
 	}
 
-	email := &models.EmailAddress{
+	email := &db.EmailAddress{
 		UID:         c.User.ID,
 		Email:       f.Email,
 		IsActivated: !setting.Service.RegisterEmailConfirm,
 	}
-	if err := models.AddEmailAddress(email); err != nil {
-		if models.IsErrEmailAlreadyUsed(err) {
+	if err := db.AddEmailAddress(email); err != nil {
+		if db.IsErrEmailAlreadyUsed(err) {
 			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
 		} else {
 			c.ServerError("AddEmailAddress", err)
@@ -272,7 +272,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Send confirmation email
 	if setting.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmailMail(c.Context, models.NewMailerUser(c.User), email.Email)
+		mailer.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), email.Email)
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
 			log.Error(2, "Set cache 'MailResendLimit' failed: %v", err)
@@ -286,7 +286,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 }
 
 func DeleteEmail(c *context.Context) {
-	if err := models.DeleteEmailAddress(&models.EmailAddress{
+	if err := db.DeleteEmailAddress(&db.EmailAddress{
 		ID:  c.QueryInt64("id"),
 		UID: c.User.ID,
 	}); err != nil {
@@ -304,7 +304,7 @@ func SettingsSSHKeys(c *context.Context) {
 	c.Title("settings.ssh_keys")
 	c.PageIs("SettingsSSHKeys")
 
-	keys, err := models.ListPublicKeys(c.User.ID)
+	keys, err := db.ListPublicKeys(c.User.ID)
 	if err != nil {
 		c.ServerError("ListPublicKeys", err)
 		return
@@ -318,7 +318,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 	c.Title("settings.ssh_keys")
 	c.PageIs("SettingsSSHKeys")
 
-	keys, err := models.ListPublicKeys(c.User.ID)
+	keys, err := db.ListPublicKeys(c.User.ID)
 	if err != nil {
 		c.ServerError("ListPublicKeys", err)
 		return
@@ -330,9 +330,9 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		return
 	}
 
-	content, err := models.CheckPublicKeyString(f.Content)
+	content, err := db.CheckPublicKeyString(f.Content)
 	if err != nil {
-		if models.IsErrKeyUnableVerify(err) {
+		if db.IsErrKeyUnableVerify(err) {
 			c.Flash.Info(c.Tr("form.unable_verify_ssh_key"))
 		} else {
 			c.Flash.Error(c.Tr("form.invalid_ssh_key", err.Error()))
@@ -341,13 +341,13 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 		}
 	}
 
-	if _, err = models.AddPublicKey(c.User.ID, f.Title, content); err != nil {
+	if _, err = db.AddPublicKey(c.User.ID, f.Title, content); err != nil {
 		c.Data["HasError"] = true
 		switch {
-		case models.IsErrKeyAlreadyExist(err):
+		case db.IsErrKeyAlreadyExist(err):
 			c.FormErr("Content")
 			c.RenderWithErr(c.Tr("settings.ssh_key_been_used"), SETTINGS_SSH_KEYS, &f)
-		case models.IsErrKeyNameAlreadyUsed(err):
+		case db.IsErrKeyNameAlreadyUsed(err):
 			c.FormErr("Title")
 			c.RenderWithErr(c.Tr("settings.ssh_key_name_used"), SETTINGS_SSH_KEYS, &f)
 		default:
@@ -361,7 +361,7 @@ func SettingsSSHKeysPost(c *context.Context, f form.AddSSHKey) {
 }
 
 func DeleteSSHKey(c *context.Context) {
-	if err := models.DeletePublicKey(c.User, c.QueryInt64("id")); err != nil {
+	if err := db.DeletePublicKey(c.User, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeletePublicKey: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("settings.ssh_key_deletion_success"))
@@ -376,7 +376,7 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := models.GetTwoFactorByUserID(c.UserID())
+	t, err := db.GetTwoFactorByUserID(c.UserID())
 	if err != nil && !errors.IsTwoFactorNotFound(err) {
 		c.ServerError("GetTwoFactorByUserID", err)
 		return
@@ -444,7 +444,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := models.NewTwoFactor(c.UserID(), secret); err != nil {
+	if err := db.NewTwoFactor(c.UserID(), secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.SubURLRedirect("/user/settings/security/two_factor_enable")
 		return
@@ -465,7 +465,7 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 	c.Title("settings.two_factor_recovery_codes_title")
 	c.PageIs("SettingsSecurity")
 
-	recoveryCodes, err := models.GetRecoveryCodesByUserID(c.UserID())
+	recoveryCodes, err := db.GetRecoveryCodesByUserID(c.UserID())
 	if err != nil {
 		c.ServerError("GetRecoveryCodesByUserID", err)
 		return
@@ -481,7 +481,7 @@ func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
 		return
 	}
 
-	if err := models.RegenerateRecoveryCodes(c.UserID()); err != nil {
+	if err := db.RegenerateRecoveryCodes(c.UserID()); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_regenerate_recovery_codes_error", err))
 	} else {
 		c.Flash.Success(c.Tr("settings.two_factor_regenerate_recovery_codes_success"))
@@ -496,7 +496,7 @@ func SettingsTwoFactorDisable(c *context.Context) {
 		return
 	}
 
-	if err := models.DeleteTwoFactor(c.UserID()); err != nil {
+	if err := db.DeleteTwoFactor(c.UserID()); err != nil {
 		c.ServerError("DeleteTwoFactor", err)
 		return
 	}
@@ -511,12 +511,12 @@ func SettingsRepos(c *context.Context) {
 	c.Title("settings.repos")
 	c.PageIs("SettingsRepositories")
 
-	repos, err := models.GetUserAndCollaborativeRepositories(c.User.ID)
+	repos, err := db.GetUserAndCollaborativeRepositories(c.User.ID)
 	if err != nil {
 		c.ServerError("GetUserAndCollaborativeRepositories", err)
 		return
 	}
-	if err = models.RepositoryList(repos).LoadAttributes(); err != nil {
+	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.ServerError("LoadAttributes", err)
 		return
 	}
@@ -526,7 +526,7 @@ func SettingsRepos(c *context.Context) {
 }
 
 func SettingsLeaveRepo(c *context.Context) {
-	repo, err := models.GetRepositoryByID(c.QueryInt64("id"))
+	repo, err := db.GetRepositoryByID(c.QueryInt64("id"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByID", errors.IsRepoNotExist, err)
 		return
@@ -547,7 +547,7 @@ func SettingsOrganizations(c *context.Context) {
 	c.Title("settings.orgs")
 	c.PageIs("SettingsOrganizations")
 
-	orgs, err := models.GetOrgsByUserID(c.User.ID, true)
+	orgs, err := db.GetOrgsByUserID(c.User.ID, true)
 	if err != nil {
 		c.ServerError("GetOrgsByUserID", err)
 		return
@@ -558,8 +558,8 @@ func SettingsOrganizations(c *context.Context) {
 }
 
 func SettingsLeaveOrganization(c *context.Context) {
-	if err := models.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
-		if models.IsErrLastOrgOwner(err) {
+	if err := db.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
+		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
 			c.ServerError("RemoveOrgUser", err)
@@ -576,7 +576,7 @@ func SettingsApplications(c *context.Context) {
 	c.Title("settings.applications")
 	c.PageIs("SettingsApplications")
 
-	tokens, err := models.ListAccessTokens(c.User.ID)
+	tokens, err := db.ListAccessTokens(c.User.ID)
 	if err != nil {
 		c.ServerError("ListAccessTokens", err)
 		return
@@ -591,7 +591,7 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 	c.PageIs("SettingsApplications")
 
 	if c.HasError() {
-		tokens, err := models.ListAccessTokens(c.User.ID)
+		tokens, err := db.ListAccessTokens(c.User.ID)
 		if err != nil {
 			c.ServerError("ListAccessTokens", err)
 			return
@@ -602,11 +602,11 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 		return
 	}
 
-	t := &models.AccessToken{
+	t := &db.AccessToken{
 		UID:  c.User.ID,
 		Name: f.Name,
 	}
-	if err := models.NewAccessToken(t); err != nil {
+	if err := db.NewAccessToken(t); err != nil {
 		if errors.IsAccessTokenNameAlreadyExist(err) {
 			c.Flash.Error(c.Tr("settings.token_name_exists"))
 			c.SubURLRedirect("/user/settings/applications")
@@ -622,7 +622,7 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 }
 
 func SettingsDeleteApplication(c *context.Context) {
-	if err := models.DeleteAccessTokenOfUserByID(c.User.ID, c.QueryInt64("id")); err != nil {
+	if err := db.DeleteAccessTokenOfUserByID(c.User.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("settings.delete_token_success"))
@@ -638,7 +638,7 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := models.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if errors.IsUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
@@ -647,12 +647,12 @@ func SettingsDelete(c *context.Context) {
 			return
 		}
 
-		if err := models.DeleteUser(c.User); err != nil {
+		if err := db.DeleteUser(c.User); err != nil {
 			switch {
-			case models.IsErrUserOwnRepos(err):
+			case db.IsErrUserOwnRepos(err):
 				c.Flash.Error(c.Tr("form.still_own_repo"))
 				c.Redirect(setting.AppSubURL + "/user/settings/delete")
-			case models.IsErrUserHasOrgs(err):
+			case db.IsErrUserHasOrgs(err):
 				c.Flash.Error(c.Tr("form.still_has_org"))
 				c.Redirect(setting.AppSubURL + "/user/settings/delete")
 			default:

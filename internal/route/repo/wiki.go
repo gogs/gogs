@@ -11,7 +11,7 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/models"
+	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
@@ -67,7 +67,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 				name := strings.TrimSuffix(entries[i].Name(), ".md")
 				pages = append(pages, PageMeta{
 					Name: name,
-					URL:  models.ToWikiPageURL(name),
+					URL:  db.ToWikiPageURL(name),
 				})
 			}
 		}
@@ -80,7 +80,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 	}
 	c.Data["PageURL"] = pageURL
 
-	pageName := models.ToWikiPageName(pageURL)
+	pageName := db.ToWikiPageName(pageURL)
 	c.Data["old_title"] = pageName
 	c.Data["Title"] = pageName
 	c.Data["title"] = pageName
@@ -175,7 +175,7 @@ func WikiPages(c *context.Context) {
 			name := strings.TrimSuffix(entries[i].Name(), ".md")
 			pages = append(pages, PageMeta{
 				Name:    name,
-				URL:     models.ToWikiPageURL(name),
+				URL:     db.ToWikiPageURL(name),
 				Updated: commit.Author.When,
 			})
 		}
@@ -208,7 +208,7 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	}
 
 	if err := c.Repo.Repository.AddWikiPage(c.User, f.Title, f.Content, f.Message); err != nil {
-		if models.IsErrWikiAlreadyExist(err) {
+		if db.IsErrWikiAlreadyExist(err) {
 			c.Data["Err_Title"] = true
 			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
 		} else {
@@ -217,7 +217,7 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 		return
 	}
 
-	c.Redirect(c.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
+	c.Redirect(c.Repo.RepoLink + "/wiki/" + db.ToWikiPageURL(db.ToWikiPageName(f.Title)))
 }
 
 func EditWiki(c *context.Context) {
@@ -253,7 +253,7 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 		return
 	}
 
-	c.Redirect(c.Repo.RepoLink + "/wiki/" + models.ToWikiPageURL(models.ToWikiPageName(f.Title)))
+	c.Redirect(c.Repo.RepoLink + "/wiki/" + db.ToWikiPageURL(db.ToWikiPageName(f.Title)))
 }
 
 func DeleteWikiPagePost(c *context.Context) {
@@ -262,7 +262,7 @@ func DeleteWikiPagePost(c *context.Context) {
 		pageURL = "Home"
 	}
 
-	pageName := models.ToWikiPageName(pageURL)
+	pageName := db.ToWikiPageName(pageURL)
 	if err := c.Repo.Repository.DeleteWikiPage(c.User, pageName); err != nil {
 		c.Handle(500, "DeleteWikiPage", err)
 		return

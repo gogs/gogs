@@ -5,13 +5,13 @@
 package admin
 
 import (
-	"gogs.io/gogs/models"
-	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/db"
+	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
 )
 
-func GetRepositoryByParams(c *context.APIContext) *models.Repository {
-	repo, err := models.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
+func GetRepositoryByParams(c *context.APIContext) *db.Repository {
+	repo, err := db.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
 		return nil
