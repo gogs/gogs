@@ -37,13 +37,13 @@ import (
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
-	"gogs.io/gogs/routes"
-	"gogs.io/gogs/routes/admin"
-	apiv1 "gogs.io/gogs/routes/api/v1"
-	"gogs.io/gogs/routes/dev"
-	"gogs.io/gogs/routes/org"
-	"gogs.io/gogs/routes/repo"
-	"gogs.io/gogs/routes/user"
+	"gogs.io/gogs/route"
+	"gogs.io/gogs/route/admin"
+	apiv1 "gogs.io/gogs/route/api/v1"
+	"gogs.io/gogs/route/dev"
+	"gogs.io/gogs/route/org"
+	"gogs.io/gogs/route/repo"
+	"gogs.io/gogs/route/user"
 )
 
 var Web = cli.Command{
@@ -168,7 +168,7 @@ func runWeb(c *cli.Context) error {
 	if c.IsSet("config") {
 		setting.CustomConf = c.String("config")
 	}
-	routes.GlobalInit()
+	route.GlobalInit()
 	checkVersion()
 
 	m := newMacaron()
@@ -182,20 +182,20 @@ func runWeb(c *cli.Context) error {
 
 	m.SetAutoHead(true)
 
-	// FIXME: not all routes need go through same middlewares.
+	// FIXME: not all route need go through same middlewares.
 	// Especially some AJAX requests, we can reduce middleware number to improve performance.
 	// Routers.
-	m.Get("/", ignSignIn, routes.Home)
+	m.Get("/", ignSignIn, route.Home)
 	m.Group("/explore", func() {
 		m.Get("", func(c *context.Context) {
 			c.Redirect(setting.AppSubURL + "/explore/repos")
 		})
-		m.Get("/repos", routes.ExploreRepos)
-		m.Get("/users", routes.ExploreUsers)
-		m.Get("/organizations", routes.ExploreOrganizations)
+		m.Get("/repos", route.ExploreRepos)
+		m.Get("/users", route.ExploreUsers)
+		m.Get("/organizations", route.ExploreOrganizations)
 	}, ignSignIn)
-	m.Combo("/install", routes.InstallInit).Get(routes.Install).
-		Post(bindIgnErr(form.Install{}), routes.InstallPost)
+	m.Combo("/install", route.InstallInit).Get(route.Install).
+		Post(bindIgnErr(form.Install{}), route.InstallPost)
 	m.Get("/^:type(issues|pulls)$", reqSignIn, user.Issues)
 
 	// ***** START: User *****
@@ -644,7 +644,7 @@ func runWeb(c *cli.Context) error {
 			m.Head("/tasks/trigger", repo.TriggerTask)
 		})
 		// Use the regexp to match the repository name
-		// Duplicated routes to enable different ways of accessing same set of URLs,
+		// Duplicated route to enable different ways of accessing same set of URLs,
 		// e.g. with or without ".git" suffix.
 		m.Group("/:reponame([\\d\\w-_\\.]+\\.git$)", func() {
 			m.Get("", ignSignIn, context.RepoAssignment(), context.RepoRef(), repo.Home)
@@ -682,7 +682,7 @@ func runWeb(c *cli.Context) error {
 	})
 
 	// Not found handler.
-	m.NotFound(routes.NotFound)
+	m.NotFound(route.NotFound)
 
 	// Flag for port number in case first time run conflict.
 	if c.IsSet("port") {
