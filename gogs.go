@@ -12,11 +12,11 @@ import (
 
 	"github.com/urfave/cli"
 
-	"gogs.io/gogs/cmd"
-	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/internal/cmd"
+	"gogs.io/gogs/internal/setting"
 )
 
-const Version = "0.11.95.1023"
+const Version = "0.11.95.1024"
 
 func init() {
 	setting.AppVer = Version
