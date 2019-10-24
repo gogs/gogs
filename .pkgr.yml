@@ -20,7 +20,7 @@ targets:
 #      - mercurial
 #  ubuntu-18.04:
 #    <<: *debian
-  centos-7: &el
+  centos-7:
     build_dependencies:
       - pam-devel
       # required for go buildpack
@@ -29,8 +29,7 @@ targets:
       - pam
       - git
 before:
-  - mv packager/Procfile .
+  - mv .packager/Procfile .
 after:
   - mv bin/gogs gogs
-after_install: ./packager/hooks/postinst
-buildpack: https://github.com/heroku/heroku-buildpack-go.git#v126
+after_install: ./.packager/hooks/postinst
