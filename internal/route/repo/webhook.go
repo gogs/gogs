@@ -8,15 +8,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/unknwon/com"
 	"github.com/json-iterator/go"
+	"github.com/unknwon/com"
 
 	git "github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/db"
-	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
 )

@@ -9,7 +9,7 @@ import (
 	convert2 "gogs.io/gogs/internal/route/api/v1/convert"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#get-branch

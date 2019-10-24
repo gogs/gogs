@@ -9,7 +9,7 @@ import (
 	repo2 "gogs.io/gogs/internal/route/repo"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 )
 
 func GetRawFile(c *context.APIContext) {

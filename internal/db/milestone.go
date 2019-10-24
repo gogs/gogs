@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
+	"xorm.io/xorm"
 
 	api "github.com/gogs/go-gogs-client"
 

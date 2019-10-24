@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/unknwon/com"
 	"github.com/gogs/git-module"
+	"github.com/unknwon/com"
 
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/tool"
 )
 

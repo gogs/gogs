@@ -11,9 +11,9 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/db"
 )
 
 const (

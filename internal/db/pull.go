@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
+	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/sync"

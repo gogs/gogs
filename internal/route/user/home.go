@@ -11,9 +11,9 @@ import (
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 
-	"gogs.io/gogs/db"
-	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/setting"
 )
 

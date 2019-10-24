@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 )
 
 // EmailAdresses is the list of all email addresses of a user. Can contain the

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
+	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/tool"
 )

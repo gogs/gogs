@@ -10,12 +10,12 @@ import (
 	"strings"
 
 	"github.com/unknwon/com"
-	"xorm.io/core"
 	log "gopkg.in/clog.v1"
+	"xorm.io/core"
 
-	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/setting"
 )

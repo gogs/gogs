@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
 	"github.com/json-iterator/go"
+	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/setting"

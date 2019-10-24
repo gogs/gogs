@@ -8,14 +8,14 @@ import (
 	"os"
 	"path"
 
+	"github.com/mcuadros/go-version"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
-	"github.com/mcuadros/go-version"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
-	"gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
 )
 

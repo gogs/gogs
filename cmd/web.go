@@ -32,6 +32,7 @@ import (
 
 	"gogs.io/gogs/internal/bindata"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route"
@@ -43,7 +44,6 @@ import (
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
-	"gogs.io/gogs/db"
 )
 
 var Web = cli.Command{

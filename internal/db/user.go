@@ -20,17 +20,17 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/unknwon/com"
-	"xorm.io/xorm"
 	"github.com/nfnt/resize"
+	"github.com/unknwon/com"
 	"golang.org/x/crypto/pbkdf2"
 	log "gopkg.in/clog.v1"
+	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/db/errors"
 	"gogs.io/gogs/internal/avatar"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )

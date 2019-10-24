@@ -10,8 +10,8 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 )
 
 func ListMilestones(c *context.APIContext) {

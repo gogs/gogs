@@ -21,7 +21,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
-	"gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"

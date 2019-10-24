@@ -9,8 +9,8 @@ import (
 	user2 "gogs.io/gogs/internal/route/user"
 
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/db"
 )
 
 const (

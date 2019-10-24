@@ -5,8 +5,8 @@
 package dev
 
 import (
-	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
 )
 

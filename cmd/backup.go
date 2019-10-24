@@ -17,7 +17,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
-	"gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
 )
 

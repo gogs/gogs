@@ -5,15 +5,15 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	. "gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
 )
 
 func TestRepo(t *testing.T) {
 	Convey("The metas map", t, func() {
-		var repo = new(Repository)
+		var repo = new(db.Repository)
 		repo.Name = "testrepo"
-		repo.Owner = new(User)
+		repo.Owner = new(db.User)
 		repo.Owner.Name = "testuser"
 		repo.ExternalTrackerFormat = "https://someurl.com/{user}/{repo}/{issue}"
 

@@ -12,7 +12,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 )
 
 func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {

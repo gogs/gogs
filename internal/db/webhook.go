@@ -14,14 +14,14 @@ import (
 	"strings"
 	"time"
 
-	"xorm.io/xorm"
 	"github.com/json-iterator/go"
 	gouuid "github.com/satori/go.uuid"
 	log "gopkg.in/clog.v1"
+	"xorm.io/xorm"
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/sync"

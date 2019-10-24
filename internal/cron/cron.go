@@ -11,7 +11,7 @@ import (
 
 	"github.com/gogs/cron"
 
-	"gogs.io/gogs/db"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
 )
 

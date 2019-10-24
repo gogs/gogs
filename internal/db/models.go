@@ -24,7 +24,7 @@ import (
 	"xorm.io/core"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/db/migrations"
+	"gogs.io/gogs/internal/db/migrations"
 	"gogs.io/gogs/internal/setting"
 )
 

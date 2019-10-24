@@ -11,9 +11,9 @@ import (
 	"net/http"
 
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/db"
-	"gogs.io/gogs/db/errors"
 )
 
 func GetUserByParamsName(c *context.APIContext, name string) *db.User {

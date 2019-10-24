@@ -12,8 +12,8 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/db"
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/db/errors"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks

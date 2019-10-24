@@ -9,8 +9,8 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/db"
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/setting"
 )
 

@@ -12,16 +12,16 @@ import (
 	"strings"
 
 	"github.com/unknwon/com"
-	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
+	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/db"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/markup"

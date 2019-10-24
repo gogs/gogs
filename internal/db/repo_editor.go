@@ -16,12 +16,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
 	gouuid "github.com/satori/go.uuid"
+	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"

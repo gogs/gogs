@@ -7,10 +7,11 @@ package db
 import (
 	"time"
 
-	"xorm.io/xorm"
-	"gogs.io/gogs/db/errors"
-	"gogs.io/gogs/internal/tool"
 	gouuid "github.com/satori/go.uuid"
+	"xorm.io/xorm"
+
+	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/tool"
 )
 
 // AccessToken represents a personal access token.

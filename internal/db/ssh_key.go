@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	"xorm.io/xorm"
 	"golang.org/x/crypto/ssh"
 	log "gopkg.in/clog.v1"
+	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/setting"

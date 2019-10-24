@@ -10,7 +10,7 @@ import (
 
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/db/errors"
+	"gogs.io/gogs/internal/db/errors"
 )
 
 const OWNER_TEAM = "Owners"

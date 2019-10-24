@@ -12,8 +12,8 @@ import (
 	"path"
 	"time"
 
-	"xorm.io/xorm"
 	gouuid "github.com/satori/go.uuid"
+	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/setting"
 )
