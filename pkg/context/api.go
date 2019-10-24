@@ -13,7 +13,7 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/setting"
 )
 
 type APIContext struct {

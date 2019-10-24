@@ -16,8 +16,8 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/process"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/process"
 )
 
 // Release represents a release of repository.

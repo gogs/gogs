@@ -15,7 +15,7 @@ import (
 	"xorm.io/xorm"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/setting"
 )
 
 func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {

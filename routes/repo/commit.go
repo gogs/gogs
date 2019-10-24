@@ -10,10 +10,10 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/pkg/tool"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/tool"
 )
 
 const (

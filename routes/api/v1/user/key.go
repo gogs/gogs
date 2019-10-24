@@ -8,12 +8,12 @@ import (
 	api "github.com/gogs/go-gogs-client"
 	"net/http"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/routes/api/v1/convert"
-	"github.com/gogs/gogs/routes/api/v1/repo"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/routes/api/v1/convert"
+	"gogs.io/gogs/routes/api/v1/repo"
 )
 
 func GetUserByParamsName(c *context.APIContext, name string) *models.User {

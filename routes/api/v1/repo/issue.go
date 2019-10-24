@@ -11,10 +11,10 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/setting"
 )
 
 func listIssues(c *context.APIContext, opts *models.IssuesOptions) {

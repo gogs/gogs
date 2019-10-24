@@ -24,8 +24,8 @@ import (
 	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogs/gogs/models/migrations"
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/models/migrations"
+	"gogs.io/gogs/pkg/setting"
 )
 
 // Engine represents a XORM engine or session.
@@ -202,7 +202,7 @@ func SetEngine() (err error) {
 	}
 
 	// To prevent mystery "MySQL: invalid connection" error,
-	// see https://github.com/gogs/gogs/issues/5532.
+	// see https://gogs.io/gogs/issues/5532.
 	x.SetMaxIdleConns(0)
 	x.SetConnMaxLifetime(time.Second)
 

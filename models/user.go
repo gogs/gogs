@@ -29,10 +29,10 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/avatar"
-	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/pkg/tool"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/avatar"
+	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/tool"
 )
 
 // USER_AVATAR_URL_PREFIX is used to identify a URL is to access user avatar.

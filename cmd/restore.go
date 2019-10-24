@@ -15,8 +15,8 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/pkg/setting"
 )
 
 var Restore = cli.Command{

@@ -1,4 +1,4 @@
-module github.com/gogs/gogs
+module gogs.io/gogs
 
 go 1.13
 
