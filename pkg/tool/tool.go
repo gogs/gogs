@@ -18,13 +18,13 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/Unknwon/com"
-	"github.com/Unknwon/i18n"
+	"github.com/unknwon/com"
+	"github.com/unknwon/i18n"
 	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/chardet"
 
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/setting"
 )
 
 // MD5Bytes encodes string to MD5 bytes.

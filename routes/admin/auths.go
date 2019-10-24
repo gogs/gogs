@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/core"
+	"github.com/unknwon/com"
+	"xorm.io/core"
 	log "gopkg.in/clog.v1"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/pkg/auth/ldap"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/form"
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/pkg/auth/ldap"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/form"
+	"gogs.io/gogs/pkg/setting"
 )
 
 const (

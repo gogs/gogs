@@ -14,9 +14,9 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/setting"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/setting"
 )
 
 type PullRequest struct {

@@ -13,15 +13,15 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models"
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/context"
-	"github.com/gogs/gogs/pkg/form"
-	"github.com/gogs/gogs/routes/api/v1/admin"
-	"github.com/gogs/gogs/routes/api/v1/misc"
-	"github.com/gogs/gogs/routes/api/v1/org"
-	"github.com/gogs/gogs/routes/api/v1/repo"
-	"github.com/gogs/gogs/routes/api/v1/user"
+	"gogs.io/gogs/models"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/context"
+	"gogs.io/gogs/pkg/form"
+	"gogs.io/gogs/routes/api/v1/admin"
+	"gogs.io/gogs/routes/api/v1/misc"
+	"gogs.io/gogs/routes/api/v1/org"
+	"gogs.io/gogs/routes/api/v1/repo"
+	"gogs.io/gogs/routes/api/v1/user"
 )
 
 // repoAssignment extracts information from URL parameters to retrieve the repository,

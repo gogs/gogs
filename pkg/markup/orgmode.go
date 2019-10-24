@@ -5,12 +5,11 @@
 package markup
 
 import (
+	"bytes"
 	"path/filepath"
 	"strings"
 
-	log "gopkg.in/clog.v1"
-
-	"github.com/chaseadamsio/goorgeous"
+	"github.com/niklasfasching/go-org/org"
 )
 
 var orgModeExtensions = []string{".org"}
@@ -28,14 +27,11 @@ func IsOrgModeFile(name string) bool {
 
 // RawOrgMode renders content in Org-mode syntax to HTML without handling special links.
 func RawOrgMode(body []byte, urlPrefix string) (result []byte) {
-	// TODO: remove recover code once the third-party package is stable
-	defer func() {
-		if err := recover(); err != nil {
-			result = body
-			log.Warn("PANIC (RawOrgMode): %v", err)
-		}
-	}()
-	return goorgeous.OrgCommon(body)
+	html, err := org.New().Silent().Parse(bytes.NewReader(body), urlPrefix).Write(org.NewHTMLWriter())
+	if err != nil {
+		return []byte(err.Error())
+	}
+	return []byte(html)
 }
 
 // OrgMode takes a string or []byte and renders to HTML in Org-mode syntax with special links.

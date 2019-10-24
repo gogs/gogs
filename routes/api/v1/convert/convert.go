@@ -7,12 +7,12 @@ package convert
 import (
 	"fmt"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"github.com/gogs/gogs/models"
+	"gogs.io/gogs/models"
 )
 
 func ToEmail(email *models.EmailAddress) *api.Email {

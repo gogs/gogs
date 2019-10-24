@@ -16,15 +16,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	gouuid "github.com/satori/go.uuid"
 
 	"github.com/gogs/git-module"
 
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/process"
-	"github.com/gogs/gogs/pkg/setting"
-	"github.com/gogs/gogs/pkg/tool"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/process"
+	"gogs.io/gogs/pkg/setting"
+	"gogs.io/gogs/pkg/tool"
 )
 
 const (
@@ -484,7 +484,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 			continue
 		}
 
-		// Prevent copying files into .git directory, see https://github.com/gogs/gogs/issues/5558.
+		// Prevent copying files into .git directory, see https://gogs.io/gogs/issues/5558.
 		if isRepositoryGitPath(upload.Name) {
 			continue
 		}

@@ -7,9 +7,9 @@ package models
 import (
 	"time"
 
-	"github.com/go-xorm/xorm"
-	"github.com/gogs/gogs/models/errors"
-	"github.com/gogs/gogs/pkg/tool"
+	"xorm.io/xorm"
+	"gogs.io/gogs/models/errors"
+	"gogs.io/gogs/pkg/tool"
 	gouuid "github.com/satori/go.uuid"
 )
 

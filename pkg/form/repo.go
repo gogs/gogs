@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
-	"github.com/gogs/gogs/models"
+	"gogs.io/gogs/models"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
