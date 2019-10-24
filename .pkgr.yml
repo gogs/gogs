@@ -9,6 +9,8 @@ targets:
     <<: *debian
   debian-10:
     <<: *debian
+  debian-11:
+    <<: *debian
   ubuntu-14.04:
     <<: *debian
   ubuntu-16.04:
@@ -18,7 +20,7 @@ targets:
       - mercurial
   ubuntu-18.04:
     <<: *debian
-  centos-6: &el
+  centos-7:
     build_dependencies:
       - pam-devel
       # required for go buildpack
@@ -26,14 +28,8 @@ targets:
     dependencies:
       - pam
       - git
-  centos-7:
-    <<: *el
 before:
-  - mv packager/Procfile .
+  - mv .packager/Procfile .
 after:
   - mv bin/gogs gogs
-after_install: ./packager/hooks/postinst
-# Can be updated after CentOS 6 support is dropped, otherwise fails with
-# `fatal: bad config file line 2 in /home/pkgr/.gitconfig` because of
-# https://github.com/heroku/heroku-buildpack-go/blob/f96ebebfa7605fd3916521e42ab050c81c9b947a/lib/common.sh#L238
-buildpack: https://github.com/heroku/heroku-buildpack-go.git#v76
+after_install: ./.packager/hooks/postinst
