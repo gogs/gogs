@@ -7,11 +7,12 @@ environment:
   GO111MODULE: on
   GOPROXY: "https://proxy.golang.org,direct"
 
-stack: go 1.13.3
+stack: go 1.13
 
 build: false
 deploy: false
 
 install:
+  - go version
   - go env
   - go build -v
