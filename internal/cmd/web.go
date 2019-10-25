@@ -7,6 +7,7 @@ package cmd
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -322,16 +323,16 @@ func runWeb(c *cli.Context) error {
 
 			fr, err := os.Open(attach.LocalPath())
 			if err != nil {
-				c.Handle(500, "Open", err)
+				c.ServerError("open attachment file", err)
 				return
 			}
 			defer fr.Close()
 
 			c.Header().Set("Cache-Control", "public,max-age=86400")
-			fmt.Println("attach.Name:", attach.Name)
 			c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
-			if err = repo.ServeData(c, attach.Name, fr); err != nil {
-				c.Handle(500, "ServeData", err)
+
+			if _, err = io.Copy(c.Resp, fr); err != nil {
+				c.ServerError("copy from file to response", err)
 				return
 			}
 		})

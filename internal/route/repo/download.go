@@ -17,9 +17,9 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-func ServeData(c *context.Context, name string, reader io.Reader) error {
+func serveData(c *context.Context, name string, r io.Reader) error {
 	buf := make([]byte, 1024)
-	n, _ := reader.Read(buf)
+	n, _ := r.Read(buf)
 	if n >= 0 {
 		buf = buf[:n]
 	}
@@ -38,8 +38,11 @@ func ServeData(c *context.Context, name string, reader io.Reader) error {
 	} else if !setting.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
 		c.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
-	c.Resp.Write(buf)
-	_, err = io.Copy(c.Resp, reader)
+
+	if _, err := c.Resp.Write(buf); err != nil {
+		return fmt.Errorf("write buffer to response: %v", err)
+	}
+	_, err = io.Copy(c.Resp, r)
 	return err
 }
 
@@ -49,7 +52,7 @@ func ServeBlob(c *context.Context, blob *git.Blob) error {
 		return err
 	}
 
-	return ServeData(c, path.Base(c.Repo.TreePath), dataRc)
+	return serveData(c, path.Base(c.Repo.TreePath), dataRc)
 }
 
 func SingleDownload(c *context.Context) {

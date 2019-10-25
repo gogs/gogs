@@ -167,13 +167,13 @@ func (c *Context) RenderWithErr(msg, tpl string, f interface{}) {
 }
 
 // Handle handles and logs error by given status.
-func (c *Context) Handle(status int, title string, err error) {
+func (c *Context) Handle(status int, msg string, err error) {
 	switch status {
 	case http.StatusNotFound:
 		c.Data["Title"] = "Page Not Found"
 	case http.StatusInternalServerError:
 		c.Data["Title"] = "Internal Server Error"
-		log.Error(3, "%s: %v", title, err)
+		log.Error(3, "%s: %v", msg, err)
 		if !setting.ProdMode || (c.IsLogged && c.User.IsAdmin) {
 			c.Data["ErrorMsg"] = err
 		}
@@ -187,23 +187,23 @@ func (c *Context) NotFound() {
 }
 
 // ServerError renders the 500 page.
-func (c *Context) ServerError(title string, err error) {
-	c.Handle(http.StatusInternalServerError, title, err)
+func (c *Context) ServerError(msg string, err error) {
+	c.Handle(http.StatusInternalServerError, msg, err)
 }
 
 // NotFoundOrServerError use error check function to determine if the error
 // is about not found. It responses with 404 status code for not found error,
 // or error context description for logging purpose of 500 server error.
-func (c *Context) NotFoundOrServerError(title string, errck func(error) bool, err error) {
+func (c *Context) NotFoundOrServerError(msg string, errck func(error) bool, err error) {
 	if errck(err) {
 		c.NotFound()
 		return
 	}
-	c.ServerError(title, err)
+	c.ServerError(msg, err)
 }
 
-func (c *Context) HandleText(status int, title string) {
-	c.PlainText(status, []byte(title))
+func (c *Context) HandleText(status int, msg string) {
+	c.PlainText(status, []byte(msg))
 }
 
 func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
