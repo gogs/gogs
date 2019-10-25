@@ -1,25 +1,25 @@
 targets:
-  # debian-8: &debian
-  #   build_dependencies:
-  #     - libpam0g-dev
-  #   dependencies:
-  #     - libpam0g
-  #     - git
-  # debian-9:
-  #   <<: *debian
-  # debian-10:
-  #   <<: *debian
-  # debian-11:
-  #   <<: *debian
-  # ubuntu-14.04:
-  #   <<: *debian
-  # ubuntu-16.04:
-  #   <<: *debian
-  #   build_dependencies:
-  #     - bzr
-  #     - mercurial
-  # ubuntu-18.04:
-  #   <<: *debian
+  debian-8: &debian
+    build_dependencies:
+      - libpam0g-dev
+    dependencies:
+      - libpam0g
+      - git
+  debian-9:
+    <<: *debian
+  debian-10:
+    <<: *debian
+  debian-11:
+    <<: *debian
+  ubuntu-14.04:
+    <<: *debian
+  ubuntu-16.04:
+    <<: *debian
+    build_dependencies:
+      - bzr
+      - mercurial
+  ubuntu-18.04:
+    <<: *debian
   centos-7:
     build_dependencies:
       - pam-devel
@@ -33,3 +33,4 @@ before:
 after:
   - mv bin/gogs gogs
 after_install: ./.packager/hooks/postinst
+buildpack: https://github.com/heroku/heroku-buildpack-go.git#v126
