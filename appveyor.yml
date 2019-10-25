@@ -5,7 +5,8 @@ clone_depth: 1
 
 environment:
   GO111MODULE: on
-  GOVERSION: 1.13
+  GOPROXY: "https://proxy.golang.org,direct"
+  GOVERSION: 1.13.3
 
 build: false
 deploy: false
