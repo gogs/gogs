@@ -15,7 +15,7 @@ Gogs [![Build Status](https://travis-ci.org/gogs/gogs.svg?branch=master)](https:
 
 1. **YOU MUST READ [Contributing Code](https://github.com/gogs/gogs/wiki/Contributing-Code) BEFORE STARTING TO WORK ON A PULL REQUEST**.
 2. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-3. The demo site [try.gogs.io](https://try.gogs.io) is running under `develop` branch.
+3. The demo site [try.gogs.io](https://try.gogs.io) is running under `master` branch.
 4. If you think there are vulnerabilities in the project, please talk privately to **u@gogs.io**, and the name you want to be credited as. Thanks!
 5. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogs/go-gogs-client/wiki).
 6. If your team/company is using Gogs and would like to put your logo on [our website](https://gogs.io), contact us by any means.
