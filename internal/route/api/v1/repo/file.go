@@ -6,10 +6,10 @@ package repo
 
 import (
 	"github.com/gogs/git-module"
-	repo2 "gogs.io/gogs/internal/route/repo"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/route/repo"
 )
 
 func GetRawFile(c *context.APIContext) {
@@ -28,7 +28,7 @@ func GetRawFile(c *context.APIContext) {
 		c.NotFoundOrServerError("GetBlobByPath", git.IsErrNotExist, err)
 		return
 	}
-	if err = repo2.ServeBlob(c.Context, blob); err != nil {
+	if err = repo.ServeBlob(c.Context, blob); err != nil {
 		c.ServerError("ServeBlob", err)
 	}
 }
@@ -42,7 +42,7 @@ func GetArchive(c *context.APIContext) {
 	}
 	c.Repo.GitRepo = gitRepo
 
-	repo2.Download(c.Context)
+	repo.Download(c.Context)
 }
 
 func GetEditorconfig(c *context.APIContext) {
