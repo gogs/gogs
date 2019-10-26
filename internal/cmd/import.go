@@ -7,6 +7,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,14 +44,14 @@ without manually hacking the data files`,
 
 func runImportLocale(c *cli.Context) error {
 	if !c.IsSet("source") {
-		return fmt.Errorf("Source directory is not specified")
+		return errors.New("source directory is not specified")
 	} else if !c.IsSet("target") {
-		return fmt.Errorf("Target directory is not specified")
+		return errors.New("target directory is not specified")
 	}
 	if !com.IsDir(c.String("source")) {
-		return fmt.Errorf("Source directory does not exist or is not a directory")
+		return fmt.Errorf("source directory %q does not exist or is not a directory", c.String("source"))
 	} else if !com.IsDir(c.String("target")) {
-		return fmt.Errorf("Target directory does not exist or is not a directory")
+		return fmt.Errorf("target directory %q does not exist or is not a directory", c.String("target"))
 	}
 
 	if c.IsSet("config") {
