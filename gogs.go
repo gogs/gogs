@@ -11,12 +11,13 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
+	log "gopkg.in/clog.v1"
 
 	"gogs.io/gogs/internal/cmd"
 	"gogs.io/gogs/internal/setting"
 )
 
-const Version = "0.11.96.1024"
+const Version = "0.11.96.1026"
 
 func init() {
 	setting.AppVer = Version
@@ -37,5 +38,7 @@ func main() {
 		cmd.Backup,
 		cmd.Restore,
 	}
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(2, "Failed to run: %v", err)
+	}
 }
