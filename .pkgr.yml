@@ -23,7 +23,7 @@ targets:
   centos-7:
     build_dependencies:
       - pam-devel
-      # required for go buildpack
+      # required for Go buildpack
       - perl-Digest-SHA
     dependencies:
       - pam
