@@ -1338,7 +1338,8 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
 		return fmt.Errorf("rename repository directory: %v", err)
 	}
-	RemoveAllWithNotice("Delete repository local copy", repo.LocalCopyPath())
+
+	deleteRepoLocalCopy(repo)
 
 	// Rename remote wiki repository to new path and delete local copy.
 	wikiPath := WikiPath(owner.Name, repo.Name)
@@ -1350,6 +1351,12 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	}
 
 	return sess.Commit()
+}
+
+func deleteRepoLocalCopy(repo *Repository) {
+	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
+	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
+	RemoveAllWithNotice("Delete repository local copy", repo.LocalCopyPath())
 }
 
 // ChangeRepositoryName changes all corresponding setting from old repository name to new one.
@@ -1385,7 +1392,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 	}
 
-	RemoveAllWithNotice("Delete repository local copy", repo.LocalCopyPath())
+	deleteRepoLocalCopy(repo)
 	return nil
 }
 
