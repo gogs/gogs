@@ -675,7 +675,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		return nil
 	}); err != nil {
-		return fmt.Errorf("Delete repository wiki local copy: %v", err)
+		return fmt.Errorf("delete repository and wiki local copy: %v", err)
 	}
 
 	// Rename or create user base directory
