@@ -1,6 +1,8 @@
 # Docker for Gogs
 
-Visit [Docker Cloud](https://cloud.docker.com/swarm/gogs/repository/docker/gogs/gogs) / [Docker Store](https://store.docker.com/community/images/gogs/gogs) see all available images and tags.
+![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge) ![Docker image size](https://img.shields.io/microbadger/image-size/gogs/gogs?logo=docker&style=for-the-badge)
+
+Visit [Docker Cloud](https://cloud.docker.com/u/gogs/repository/docker/gogs/gogs) see all available images and tags.
 
 ## Usage
 
