@@ -1,5 +1,4 @@
-Gogs [![Build Status](https://travis-ci.org/gogs/gogs.svg?branch=master)](https://travis-ci.org/gogs/gogs) [![Build status](https://ci.appveyor.com/api/projects/status/b9uu5ejl933e2wlt/branch/master?svg=true)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master)
-=====================
+# Gogs
 
 Gogs 是一款极易搭建的自助 Git 服务。
 
