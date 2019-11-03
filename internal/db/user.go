@@ -667,13 +667,15 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return fmt.Errorf("ChangeUsernameInPullRequests: %v", err)
 	}
 
-	// Delete all local copies of repository wiki that user owns.
+	// Delete all local copies of repositories and wikis the user owns.
 	if err = x.Where("owner_id=?", u.ID).Iterate(new(Repository), func(idx int, bean interface{}) error {
 		repo := bean.(*Repository)
+		deleteRepoLocalCopy(repo)
+		// TODO: By the same reasoning, shouldn't we also sync access to the local wiki path?
 		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
 		return nil
 	}); err != nil {
-		return fmt.Errorf("Delete repository wiki local copy: %v", err)
+		return fmt.Errorf("delete repository and wiki local copy: %v", err)
 	}
 
 	// Rename or create user base directory
