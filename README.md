@@ -1,6 +1,6 @@
 # Gogs
 
-[![Build status](https://img.shields.io/travis/gogs/gogs/master.svg?style=for-the-badge&logo=travis)](https://travis-ci.org/gogs/gogs) [![Build status](https://img.shields.io/appveyor/ci/Unknwon/gogs?logo=appveyor&style=for-the-badge)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master) ![![Docker Cloud build status](https://img.shields.io/docker/cloud/build/gogs/gogs?logo=docker&style=for-the-badge)](https://cloud.docker.com/u/gogs/repository/docker/gogs/gogs) [![Discord](https://img.shields.io/discord/382595433060499458.svg?style=for-the-badge&logo=discord)](https://discord.gg/9aqdHU7) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
+[![Build status](https://img.shields.io/travis/gogs/gogs/master.svg?style=for-the-badge&logo=travis)](https://travis-ci.org/gogs/gogs) [![Build status](https://img.shields.io/appveyor/ci/Unknwon/gogs?logo=appveyor&style=for-the-badge)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master) [![Discord](https://img.shields.io/discord/382595433060499458.svg?style=for-the-badge&logo=discord)](https://discord.gg/9aqdHU7) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
 
 ![](https://github.com/gogs/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
