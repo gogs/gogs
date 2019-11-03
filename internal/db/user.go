@@ -667,7 +667,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return fmt.Errorf("ChangeUsernameInPullRequests: %v", err)
 	}
 
-	// Delete all local copies of repository wiki that user owns.
+	// Delete all local copies of repositories and wikis the user owns.
 	if err = x.Where("owner_id=?", u.ID).Iterate(new(Repository), func(idx int, bean interface{}) error {
 		repo := bean.(*Repository)
 		deleteRepoLocalCopy(repo)
