@@ -82,6 +82,8 @@ github.com/gogs/go-gogs-client v0.0.0-20190710002546-4c3c18947c15 h1:tgEyCCe4+o8
 github.com/gogs/go-gogs-client v0.0.0-20190710002546-4c3c18947c15/go.mod h1:fR6z1Ie6rtF7kl/vBYMfgD5/G5B1blui7z426/sj2DU=
 github.com/gogs/go-libravatar v0.0.0-20161120025154-cd1abbd55d09 h1:UdOSIHZpkYcajRbfebBYzFDsL3SuqObH3bvKYBqgKmI=
 github.com/gogs/go-libravatar v0.0.0-20161120025154-cd1abbd55d09/go.mod h1:Zas3BtO88pk1cwUfEYlvnl/CRwh0ybDxRWSwRjG8I3w=
+github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0 h1:K02vod+sn3M1OOkdqi2tPxN2+xESK4qyITVQ3JkGEv4=
+github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0/go.mod h1:Zas3BtO88pk1cwUfEYlvnl/CRwh0ybDxRWSwRjG8I3w=
 github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a h1:8DZwxETOVWIinYxDK+i6L+rMb7eGATGaakD6ZucfHVk=
 github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a/go.mod h1:TUIZ+29jodWQ8Gk6Pvtg4E09aMsc3C/VLZiVYfUhWQU=
 github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe h1:lXe2qZdvpiX5WZkZR4hgp4KJVfY3nMkvmwbVkpv1rVY=
