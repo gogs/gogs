@@ -59,6 +59,10 @@ var (
 		".swift":  true,
 		".ts":     true,
 		".vb":     true,
+		".r":      true,
+		".sas":    true,
+		".tex":    true,
+		".yaml":   true,
 	}
 
 	// Extensions that are not same as highlight classes.
