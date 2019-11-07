@@ -2066,6 +2066,9 @@ footer .ui.language .menu {
 .repository .filter.dropdown .menu {
   margin-top: 1px!important;
 }
+.repository.diff .commit-message pre {
+  white-space: pre-wrap;
+}
 .repository.commits .header .ui.right .search input {
   font-weight: normal;
   padding: 5px 10px;
