@@ -9,7 +9,9 @@
 				<a class="ui floated right blue tiny button" href="{{EscapePound .SourcePath}}">
 					{{.i18n.Tr "repo.diff.browse_source"}}
 				</a>
-				{{RenderCommitMessage true .Commit.Message $.RepoLink $.Repository.ComposeMetas | Str2HTML}}
+				<div class="commit-message">
+					{{RenderCommitMessage true .Commit.Message $.RepoLink $.Repository.ComposeMetas | Str2HTML}}
+				</div>
 			</div>
 			<div class="ui attached info segment">
 				{{if .Author}}
