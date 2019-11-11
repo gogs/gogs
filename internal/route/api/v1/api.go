@@ -12,7 +12,6 @@ import (
 	user2 "gogs.io/gogs/internal/route/api/v1/user"
 	"net/http"
 	"strings"
-
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
@@ -347,6 +346,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				}, reqRepoWriter())
 
 				m.Patch("/issue-tracker", reqRepoWriter(), bind(api.EditIssueTrackerOption{}), repo2.IssueTracker)
+				m.Post("/wiki", reqRepoWriter(), bind(api.EditWikiOption{}), repo2.Wiki)
 				m.Post("/mirror-sync", reqRepoWriter(), repo2.MirrorSync)
 				m.Get("/editorconfig/:filename", context.RepoRef(), repo2.GetEditorconfig)
 			}, repoAssignment())
