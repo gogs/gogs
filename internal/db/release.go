@@ -155,6 +155,7 @@ func (r *Release) preparePublishWebhooks() {
 		Release:    r.APIFormat(),
 		Repository: r.Repo.APIFormat(nil),
 		Sender:     r.Publisher.APIFormat(),
+		Attachments:r.Attachments,
 	}); err != nil {
 		log.Error(2, "PrepareWebhooks: %v", err)
 	}
