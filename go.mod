@@ -19,7 +19,7 @@ require (
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
 	github.com/gogs/git-module v0.8.1
-	github.com/gogs/go-gogs-client v0.0.0-20190710002546-4c3c18947c15
+	github.com/gogs/go-gogs-client v0.0.0-20191116173748-7ec4fd4f4907
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
 	github.com/google/go-github v17.0.0+incompatible
