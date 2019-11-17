@@ -179,14 +179,21 @@ func escapeMirrorCredentials(addr string) string {
 
 // SaveAddress writes new address to Git repository config.
 func (m *Mirror) SaveAddress(addr string) error {
-	configPath := m.Repo.GitConfigPath()
-	cfg, err := ini.Load(configPath)
+	repoPath := m.Repo.RepoPath()
+
+	err := git.RemoveRemote(repoPath, "origin")
 	if err != nil {
-		return fmt.Errorf("Load: %v", err)
+		return fmt.Errorf("remove remote 'origin': %v", err)
 	}
 
-	cfg.Section(`remote "origin"`).Key("url").SetValue(escapeMirrorCredentials(addr))
-	return cfg.SaveToIndent(configPath, "\t")
+	err = git.AddRemote(repoPath, "origin", addr, git.AddRemoteOptions{
+		Mirror: true,
+	})
+	if err != nil {
+		return fmt.Errorf("add remote 'origin': %v", err)
+	}
+
+	return nil
 }
 
 const GIT_SHORT_EMPTY_SHA = "0000000"
