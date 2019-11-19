@@ -122,7 +122,7 @@ There are 6 ways to install Gogs:
 ### Product Support
 
 - [Synology](https://www.synology.com) (Docker)
-- [One Space](http://www.onespace.cc) (App Store)
+- [Syncloud](https://syncloud.org/) (App Store)
 
 ## Acknowledgments
 

@@ -89,7 +89,7 @@ Gogs 是一款极易搭建的自助 Git 服务。
 ### 产品支持
 
 - [Synology](https://www.synology.com)（Docker）
-- [One Space](http://www.onespace.cc)（应用商店）
+- [Syncloud](https://syncloud.org/)（应用商店）
 
 ## 特别鸣谢
 
