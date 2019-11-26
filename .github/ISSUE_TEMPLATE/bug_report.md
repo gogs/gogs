@@ -21,7 +21,7 @@ The issue will be closed without any explanation if it does not satisfy any of f
 -->
 
 **Describe the bug**
-<!-- A clear and concise description of what the bug is. -->
+<!-- A clear and concise description of what the bug is -->
 
 **Gogs version or commit**
 <!-- The version number or the commit SHA of the Gogs instance you use -->
@@ -46,16 +46,17 @@ Steps to reproduce the behavior:
 3. Scroll down to '....'
 4. See error
 
-<!-- Use [x] to check the box -->
-Can you reproduce the bug at https://try.gogs.io:
-    - [ ] Yes: <!-- provide example URL -->
-    - [ ] No: <!-- explain why below -->
+**Can you reproduce the bug at https://try.gogs.io?**
+<!-- If yes, please provide the example URL; if no, please explain why -->
 
 **Expected behavior**
-<!-- A clear and concise description of what you expected to happen. -->
+<!-- A clear and concise description of what you expected to happen -->
+
+**Actual behavior**
+<!-- A clear and concise description of what you see instead -->
 
 **Screenshots**
-<!-- If applicable, add screenshots to help explain your problem. -->
+<!-- If applicable, add screenshots to help explain your problem -->
 
 **Additional context**
 <!-- Please include any error logs found in `log/gogs.log` -->
