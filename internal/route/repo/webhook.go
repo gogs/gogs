@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/unknwon/com"
 
 	git "github.com/gogs/git-module"
@@ -31,7 +31,7 @@ func Webhooks(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.hooks")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["BaseLink"] = c.Repo.RepoLink
-	c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://github.com/gogs/go-gogs-client/wiki/Repositories-Webhooks")
+	c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://github.com/gogs/docs-api/blob/master/Repositories/Webhooks.md")
 	c.Data["Types"] = setting.Webhook.Types
 
 	ws, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
