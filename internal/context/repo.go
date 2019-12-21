@@ -9,9 +9,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 	"gopkg.in/macaron.v1"
 
+	"github.com/editorconfig/editorconfig-core-go/v2"
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/db"
