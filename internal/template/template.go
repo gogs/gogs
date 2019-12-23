@@ -117,7 +117,7 @@ func NewFuncMap() []template.FuncMap {
 		"TabSizeClass": func(ec *editorconfig.Editorconfig, filename string) string {
 			if ec != nil {
 				def, err := ec.GetDefinitionForFilename(filename)
-				if err != nil && def.TabWidth > 0 {
+				if err == nil && def.TabWidth > 0 {
 					return fmt.Sprintf("tab-size-%d", def.TabWidth)
 				}
 			}
