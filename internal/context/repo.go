@@ -10,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
-	"github.com/gogs/git-module"
 	"gopkg.in/macaron.v1"
+	
+	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
