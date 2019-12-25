@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/editorconfig/editorconfig-core-go/v2"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/transform"
 	log "gopkg.in/clog.v1"
-	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
@@ -116,8 +116,8 @@ func NewFuncMap() []template.FuncMap {
 		},
 		"TabSizeClass": func(ec *editorconfig.Editorconfig, filename string) string {
 			if ec != nil {
-				def := ec.GetDefinitionForFilename(filename)
-				if def.TabWidth > 0 {
+				def, err := ec.GetDefinitionForFilename(filename)
+				if err == nil && def.TabWidth > 0 {
 					return fmt.Sprintf("tab-size-%d", def.TabWidth)
 				}
 			}
