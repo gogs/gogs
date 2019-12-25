@@ -11,7 +11,7 @@ import (
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	"gopkg.in/macaron.v1"
-	
+
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/db"
