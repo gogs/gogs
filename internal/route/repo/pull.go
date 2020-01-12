@@ -652,8 +652,6 @@ func CompareAndPullRequest(c *context.Context) {
 		customTitle := c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY].(string)
 		r := strings.NewReplacer("{{headBranch}}", headBranch,"{{baseBranch}}", baseBranch)
 		c.Data["title"] = r.Replace(customTitle)
-	} else {
-		fmt.Sprintf("Merge %s into %s", headBranch, baseBranch)
 	}
 
 	c.Success(COMPARE_PULL)
