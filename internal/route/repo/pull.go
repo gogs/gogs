@@ -8,7 +8,6 @@ import (
 	"container/list"
 	"path"
 	"strings"
-	"fmt"
 	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
