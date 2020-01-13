@@ -99,16 +99,15 @@ func (r *Repository) GetEditorconfig() (*editorconfig.Editorconfig, error) {
 
 // MakeURL gets string or url.URL as argument and returns URL prepended with repository URL
 func (r *Repository) MakeURL(location interface{}) string {
-	switch location.(type) {
+	switch location := location.(type) {
 	case string:
 		tempURL := url.URL{
-			Path: r.RepoLink + "/" + location.(string),
+			Path: r.RepoLink + "/" + location,
 		}
 		return tempURL.String()
 	case url.URL:
-		tempURL := location.(url.URL)
-		tempURL.Path = r.RepoLink + "/" + tempURL.Path
-		return tempURL.String()
+		location.Path = r.RepoLink + "/" + location.Path
+		return location.String()
 	default:
 		return r.RepoLink
 	}
