@@ -1,9 +1,9 @@
 pipeline {
   agent any
   stages {
-    stage('') {
+    stage('Git Pull') {
       steps {
-        echo 'Start Build New Version'
+        echo 'Start pull'
       }
     }
 
