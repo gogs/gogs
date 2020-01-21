@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/go-xorm/builder"
+	"xorm.io/builder"
 	"xorm.io/xorm"
 )
 
@@ -511,8 +511,9 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	}
 	repos := make([]*Repository, 0, pageSize)
 	if err = x.Where("owner_id = ?", org.ID).
-		And("is_private = ?", false).
-		Or(builder.In("id", teamRepoIDs)).
+		And(builder.Or(
+			builder.Expr("is_private = ?", false),
+			builder.In("id", teamRepoIDs))).
 		Desc("updated_unix").
 		Limit(pageSize, (page-1)*pageSize).
 		Find(&repos); err != nil {
@@ -520,8 +521,9 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	}
 
 	repoCount, err := x.Where("owner_id = ?", org.ID).
-		And("is_private = ?", false).
-		Or(builder.In("id", teamRepoIDs)).
+		And(builder.Or(
+			builder.Expr("is_private = ?", false),
+			builder.In("id", teamRepoIDs))).
 		Count(new(Repository))
 	if err != nil {
 		return nil, 0, fmt.Errorf("count user repositories: %v", err)
