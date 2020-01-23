@@ -851,7 +851,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 
 	if c.HasError() {
 		c.Flash.Error(c.Data["ErrorMsg"].(string))
-		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d"", issue.Index)))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 		return
 	}
 
