@@ -448,7 +448,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	log.Trace("Issue created: %d/%d", c.Repo.Repository.ID, issue.ID)
-	c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("%s/%d", "issues", issue.Index)))
+	c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 }
 
 func uploadAttachment(c *context.Context, allowedTypes []string) {
@@ -521,10 +521,10 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 	// Make sure type and URL matches.
 	if !isPullList && issue.IsPull {
-		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("%s/%d", "pulls", issue.Index)))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("pulls/%d", issue.Index)))
 		return
 	} else if isPullList && !issue.IsPull {
-		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("%s/%d", "issues", issue.Index)))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 		return
 	}
 
@@ -851,7 +851,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 
 	if c.HasError() {
 		c.Flash.Error(c.Data["ErrorMsg"].(string))
-		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("%s/%d", "issues", issue.Index)))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d"", issue.Index)))
 		return
 	}
 
