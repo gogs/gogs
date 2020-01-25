@@ -97,7 +97,7 @@ func (r *Repository) GetEditorconfig() (*editorconfig.Editorconfig, error) {
 	return editorconfig.ParseBytes(data)
 }
 
-// MakeURL accepts a string or url.URL as argument and returns URL prepended with repository URL.
+// MakeURL accepts a string or url.URL as argument and returns escaped URL prepended with repository URL.
 func (r *Repository) MakeURL(location interface{}) string {
 	switch location := location.(type) {
 	case string:
