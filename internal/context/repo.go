@@ -7,6 +7,7 @@ package context
 import (
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
@@ -94,6 +95,22 @@ func (r *Repository) GetEditorconfig() (*editorconfig.Editorconfig, error) {
 		return nil, err
 	}
 	return editorconfig.ParseBytes(data)
+}
+
+// MakeURL accepts a string or url.URL as argument and returns escaped URL prepended with repository URL.
+func (r *Repository) MakeURL(location interface{}) string {
+	switch location := location.(type) {
+	case string:
+		tempURL := url.URL{
+			Path: r.RepoLink + "/" + location,
+		}
+		return tempURL.String()
+	case url.URL:
+		location.Path = r.RepoLink + "/" + location.Path
+		return location.String()
+	default:
+		panic("location type must be either string or url.URL")
+	}
 }
 
 // PullRequestURL returns URL for composing a pull request.
