@@ -20,16 +20,18 @@ func Markdown(c *context.APIContext, form api.MarkdownOption) {
 	}
 
 	if len(form.Text) == 0 {
-		c.Write([]byte(""))
+		_, _ = c.Write([]byte(""))
 		return
 	}
 
+	var md []byte
 	switch form.Mode {
 	case "gfm":
-		c.Write(markup.Markdown([]byte(form.Text), form.Context, nil))
+		md = markup.Markdown([]byte(form.Text), form.Context, nil)
 	default:
-		c.Write(markup.RawMarkdown([]byte(form.Text), ""))
+		md = markup.SanitizeBytes(markup.RawMarkdown([]byte(form.Text), ""))
 	}
+	_, _ = c.Write(md)
 }
 
 func MarkdownRaw(c *context.APIContext) {
@@ -38,5 +40,5 @@ func MarkdownRaw(c *context.APIContext) {
 		c.Error(http.StatusUnprocessableEntity, "", err)
 		return
 	}
-	c.Write(markup.RawMarkdown(body, ""))
+	_, _ = c.Write(markup.SanitizeBytes(markup.RawMarkdown(body, "")))
 }

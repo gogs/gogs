@@ -157,8 +157,7 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
 	}
 
-	body = blackfriday.Markdown(body, renderer, extensions)
-	return body
+	return blackfriday.Markdown(body, renderer, extensions)
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
