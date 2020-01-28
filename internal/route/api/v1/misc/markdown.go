@@ -24,14 +24,7 @@ func Markdown(c *context.APIContext, form api.MarkdownOption) {
 		return
 	}
 
-	var md []byte
-	switch form.Mode {
-	case "gfm":
-		md = markup.Markdown([]byte(form.Text), form.Context, nil)
-	default:
-		md = markup.SanitizeBytes(markup.RawMarkdown([]byte(form.Text), ""))
-	}
-	_, _ = c.Write(md)
+	_, _ = c.Write(markup.Markdown([]byte(form.Text), form.Context, nil))
 }
 
 func MarkdownRaw(c *context.APIContext) {
