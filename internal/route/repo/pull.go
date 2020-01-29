@@ -37,9 +37,7 @@ var (
 		".gogs/PULL_REQUEST.md",
 		".github/PULL_REQUEST.md",
 	}
-)
 
-var (
 	PullRequestTitleTemplateCandidates = []string{
 		"PULL_REQUEST_TITLE.md",
 		".gogs/PULL_REQUEST_TITLE.md",
