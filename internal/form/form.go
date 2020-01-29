@@ -7,17 +7,18 @@ package form
 import (
 	"fmt"
 	"reflect"
-	"regexp"
 	"strings"
 
-	"github.com/unknwon/com"
 	"github.com/go-macaron/binding"
+	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
+
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 const ERR_ALPHA_DASH_DOT_SLASH = "AlphaDashDotSlashError"
 
-var AlphaDashDotSlashPattern = regexp.MustCompile("[^\\d\\w-_\\./]")
+var AlphaDashDotSlashPattern = lazyregexp.New("[^\\d\\w-_\\./]")
 
 func init() {
 	binding.SetNameMapper(com.ToSnakeCase)
