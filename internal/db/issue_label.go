@@ -7,7 +7,6 @@ package db
 import (
 	"fmt"
 	"html/template"
-	"gogs.io/gogs/internal/lazyregexp"
 	"strconv"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
 

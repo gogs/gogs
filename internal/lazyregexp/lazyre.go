@@ -21,7 +21,7 @@ type Regexp struct {
 	rx   *regexp.Regexp
 }
 
-func (r *Regexp) re() *regexp.Regexp {
+func (r *Regexp) Regexp() *regexp.Regexp {
 	r.once.Do(r.build)
 	return r.rx
 }
@@ -31,64 +31,72 @@ func (r *Regexp) build() {
 	r.str = ""
 }
 
+func (r *Regexp) Find(b []byte) []byte {
+	return r.Regexp().Find(b)
+}
+
 func (r *Regexp) FindSubmatch(s []byte) [][]byte {
-	return r.re().FindSubmatch(s)
+	return r.Regexp().FindSubmatch(s)
 }
 
 func (r *Regexp) FindStringSubmatch(s string) []string {
-	return r.re().FindStringSubmatch(s)
+	return r.Regexp().FindStringSubmatch(s)
 }
 
 func (r *Regexp) FindStringSubmatchIndex(s string) []int {
-	return r.re().FindStringSubmatchIndex(s)
+	return r.Regexp().FindStringSubmatchIndex(s)
 }
 
 func (r *Regexp) ReplaceAllString(src, repl string) string {
-	return r.re().ReplaceAllString(src, repl)
+	return r.Regexp().ReplaceAllString(src, repl)
 }
 
 func (r *Regexp) FindString(s string) string {
-	return r.re().FindString(s)
+	return r.Regexp().FindString(s)
+}
+
+func (r *Regexp) FindAll(b []byte, n int) [][]byte {
+	return r.Regexp().FindAll(b, n)
 }
 
 func (r *Regexp) FindAllString(s string, n int) []string {
-	return r.re().FindAllString(s, n)
+	return r.Regexp().FindAllString(s, n)
 }
 
 func (r *Regexp) MatchString(s string) bool {
-	return r.re().MatchString(s)
+	return r.Regexp().MatchString(s)
 }
 
 func (r *Regexp) SubexpNames() []string {
-	return r.re().SubexpNames()
+	return r.Regexp().SubexpNames()
 }
 
 func (r *Regexp) FindAllStringSubmatch(s string, n int) [][]string {
-	return r.re().FindAllStringSubmatch(s, n)
+	return r.Regexp().FindAllStringSubmatch(s, n)
 }
 
 func (r *Regexp) Split(s string, n int) []string {
-	return r.re().Split(s, n)
+	return r.Regexp().Split(s, n)
 }
 
 func (r *Regexp) ReplaceAllLiteralString(src, repl string) string {
-	return r.re().ReplaceAllLiteralString(src, repl)
+	return r.Regexp().ReplaceAllLiteralString(src, repl)
 }
 
 func (r *Regexp) FindAllIndex(b []byte, n int) [][]int {
-	return r.re().FindAllIndex(b, n)
+	return r.Regexp().FindAllIndex(b, n)
 }
 
 func (r *Regexp) Match(b []byte) bool {
-	return r.re().Match(b)
+	return r.Regexp().Match(b)
 }
 
 func (r *Regexp) ReplaceAllStringFunc(src string, repl func(string) string) string {
-	return r.re().ReplaceAllStringFunc(src, repl)
+	return r.Regexp().ReplaceAllStringFunc(src, repl)
 }
 
 func (r *Regexp) ReplaceAll(src, repl []byte) []byte {
-	return r.re().ReplaceAll(src, repl)
+	return r.Regexp().ReplaceAll(src, repl)
 }
 
 var inTest = len(os.Args) > 0 && strings.HasSuffix(strings.TrimSuffix(os.Args[0], ".exe"), ".test")
@@ -100,7 +108,7 @@ func New(str string) *Regexp {
 	lr := &Regexp{str: str}
 	if inTest {
 		// In tests, always compile the regexps early.
-		lr.re()
+		lr.Regexp()
 	}
 	return lr
 }

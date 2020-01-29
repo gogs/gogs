@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"gogs.io/gogs/internal/lazyregexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
@@ -346,7 +346,7 @@ func getIdxFile(h serviceHandler) {
 }
 
 var routes = []struct {
-	reg     *regexp.Regexp
+	re      *lazyregexp.Regexp
 	method  string
 	handler func(serviceHandler)
 }{
@@ -379,7 +379,7 @@ func getGitRepoPath(dir string) (string, error) {
 func HTTP(c *HTTPContext) {
 	for _, route := range routes {
 		reqPath := strings.ToLower(c.Req.URL.Path)
-		m := route.reg.FindStringSubmatch(reqPath)
+		m := route.re.FindStringSubmatch(reqPath)
 		if m == nil {
 			continue
 		}

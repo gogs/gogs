@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 
 	"github.com/unknwon/com"
 	"golang.org/x/net/html"
 
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )

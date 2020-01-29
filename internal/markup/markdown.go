@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 
 	"github.com/russross/blackfriday"
 
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )

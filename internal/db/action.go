@@ -7,7 +7,6 @@ package db
 import (
 	"fmt"
 	"path"
-	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 	"time"
 	"unicode"
@@ -21,6 +20,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )

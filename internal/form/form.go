@@ -7,12 +7,13 @@ package form
 import (
 	"fmt"
 	"reflect"
-	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 
-	"github.com/unknwon/com"
 	"github.com/go-macaron/binding"
+	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
+
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 const ERR_ALPHA_DASH_DOT_SLASH = "AlphaDashDotSlashError"
