@@ -8,7 +8,7 @@ import (
 	"container/list"
 	"path"
 	"strings"
-	
+
 	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 
