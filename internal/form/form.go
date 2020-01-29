@@ -7,7 +7,7 @@ package form
 import (
 	"fmt"
 	"reflect"
-	"regexp"
+	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 
 	"github.com/unknwon/com"
@@ -17,7 +17,7 @@ import (
 
 const ERR_ALPHA_DASH_DOT_SLASH = "AlphaDashDotSlashError"
 
-var AlphaDashDotSlashPattern = regexp.MustCompile("[^\\d\\w-_\\./]")
+var AlphaDashDotSlashPattern = lazyregexp.New("[^\\d\\w-_\\./]")
 
 func init() {
 	binding.SetNameMapper(com.ToSnakeCase)

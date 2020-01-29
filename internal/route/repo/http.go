@@ -12,7 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
+	"gogs.io/gogs/internal/lazyregexp"
 	"strconv"
 	"strings"
 	"time"
@@ -350,17 +350,17 @@ var routes = []struct {
 	method  string
 	handler func(serviceHandler)
 }{
-	{regexp.MustCompile("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
-	{regexp.MustCompile("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
-	{regexp.MustCompile("(.*?)/info/refs$"), "GET", getInfoRefs},
-	{regexp.MustCompile("(.*?)/HEAD$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/info/alternates$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
-	{regexp.MustCompile("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
-	{regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
-	{regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
+	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
+	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
+	{lazyregexp.New("(.*?)/info/refs$"), "GET", getInfoRefs},
+	{lazyregexp.New("(.*?)/HEAD$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/info/alternates$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
+	{lazyregexp.New("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
+	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
+	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
 }
 
 func getGitRepoPath(dir string) (string, error) {

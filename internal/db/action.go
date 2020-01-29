@@ -7,7 +7,7 @@ package db
 import (
 	"fmt"
 	"path"
-	"regexp"
+	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 	"time"
 	"unicode"
@@ -58,9 +58,9 @@ var (
 	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
 	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
 
-	IssueCloseKeywordsPat     = regexp.MustCompile(assembleKeywordsPattern(IssueCloseKeywords))
-	IssueReopenKeywordsPat    = regexp.MustCompile(assembleKeywordsPattern(IssueReopenKeywords))
-	IssueReferenceKeywordsPat = regexp.MustCompile(`(?i)(?:)(^| )\S+`)
+	IssueCloseKeywordsPat     = lazyregexp.New(assembleKeywordsPattern(IssueCloseKeywords))
+	IssueReopenKeywordsPat    = lazyregexp.New(assembleKeywordsPattern(IssueReopenKeywords))
+	IssueReferenceKeywordsPat = lazyregexp.New(`(?i)(?:)(^| )\S+`)
 )
 
 func assembleKeywordsPattern(words []string) string {

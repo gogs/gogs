@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"regexp"
+	"gogs.io/gogs/internal/lazyregexp"
 	"strings"
 
 	"github.com/russross/blackfriday"
@@ -35,7 +35,7 @@ type MarkdownRenderer struct {
 	urlPrefix string
 }
 
-var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://|^mailto:`)
+var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
 
 // isLink reports whether link fits valid format.
 func isLink(link []byte) bool {

@@ -5,7 +5,7 @@
 package markup
 
 import (
-	"regexp"
+	"gogs.io/gogs/internal/lazyregexp"
 	"sync"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -30,10 +30,10 @@ var sanitizer = &Sanitizer{
 func NewSanitizer() {
 	sanitizer.init.Do(func() {
 		// We only want to allow HighlightJS specific classes for code blocks
-		sanitizer.policy.AllowAttrs("class").Matching(regexp.MustCompile(`^language-\w+$`)).OnElements("code")
+		sanitizer.policy.AllowAttrs("class").Matching(lazyregexp.New(`^language-\w+$`)).OnElements("code")
 
 		// Checkboxes
-		sanitizer.policy.AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input")
+		sanitizer.policy.AllowAttrs("type").Matching(lazyregexp.New(`^checkbox$`)).OnElements("input")
 		sanitizer.policy.AllowAttrs("checked", "disabled").OnElements("input")
 
 		// Data URLs
