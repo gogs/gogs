@@ -6,5 +6,5 @@ public/css/themes/* linguist-vendored
 public/css/github.min.css linguist-vendored
 public/css/semantic-2.4.2.min.css linguist-vendored
 public/js/libs/* linguist-vendored
-public/js/jquery-1.12.4.min.js linguist-vendored
+public/js/jquery-3.4.1.min.js linguist-vendored
 public/js/semantic-2.4.2.min.js linguist-vendored
