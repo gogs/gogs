@@ -1258,7 +1258,7 @@ $(document).ready(function () {
     }
 
     // Clipboard JS
-    var clipboard = new Clipboard('.clipboard');
+    var clipboard = new ClipboardJS('.clipboard');
     clipboard.on('success', function (e) {
         e.clearSelection();
 
