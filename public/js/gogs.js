@@ -1203,11 +1203,6 @@ $(document).ready(function () {
         $($(this).data('target')).slideToggle(100);
     });
 
-    // Highlight JS
-    if (typeof hljs != 'undefined') {
-        hljs.initHighlightingOnLoad();
-    }
-
     // Dropzone
     var $dropzone = $('#dropzone');
     if ($dropzone.length > 0) {

@@ -34,8 +34,9 @@
 
 <!-- Third-party libraries -->
 {{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubURL}}/plugins/highlight-9.16.2/github.css">
-	<script src="{{AppSubURL}}/plugins/highlight-9.16.2/highlight.pack.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/highlight-9.18.0/github.css">
+	<script src="{{AppSubURL}}/plugins/highlight-9.18.0/highlight.pack.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
 {{end}}
 {{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubURL}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
