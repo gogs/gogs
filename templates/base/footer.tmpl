@@ -46,8 +46,9 @@
 	<script src="{{AppSubURL}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
 {{end}}
 {{if .RequireDropzone}}
-	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.css">
-	<script src="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-5.5.0/dropzone.min.css">
+	<script src="{{AppSubURL}}/plugins/dropzone-5.5.0/dropzone.min.js"></script>
+	<script>Dropzone.autoDiscover = false</script>
 {{end}}
 {{if .RequireAutosize}}
 	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
