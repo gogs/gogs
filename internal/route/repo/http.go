@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
@@ -346,21 +346,21 @@ func getIdxFile(h serviceHandler) {
 }
 
 var routes = []struct {
-	reg     *regexp.Regexp
+	re      *lazyregexp.Regexp
 	method  string
 	handler func(serviceHandler)
 }{
-	{regexp.MustCompile("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
-	{regexp.MustCompile("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
-	{regexp.MustCompile("(.*?)/info/refs$"), "GET", getInfoRefs},
-	{regexp.MustCompile("(.*?)/HEAD$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/info/alternates$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
-	{regexp.MustCompile("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
-	{regexp.MustCompile("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
-	{regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
-	{regexp.MustCompile("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
+	{lazyregexp.New("(.*?)/git-upload-pack$"), "POST", serviceUploadPack},
+	{lazyregexp.New("(.*?)/git-receive-pack$"), "POST", serviceReceivePack},
+	{lazyregexp.New("(.*?)/info/refs$"), "GET", getInfoRefs},
+	{lazyregexp.New("(.*?)/HEAD$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/info/alternates$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/info/http-alternates$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/info/packs$"), "GET", getInfoPacks},
+	{lazyregexp.New("(.*?)/objects/info/[^/]*$"), "GET", getTextFile},
+	{lazyregexp.New("(.*?)/objects/[0-9a-f]{2}/[0-9a-f]{38}$"), "GET", getLooseObject},
+	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.pack$"), "GET", getPackFile},
+	{lazyregexp.New("(.*?)/objects/pack/pack-[0-9a-f]{40}\\.idx$"), "GET", getIdxFile},
 }
 
 func getGitRepoPath(dir string) (string, error) {
@@ -379,7 +379,7 @@ func getGitRepoPath(dir string) (string, error) {
 func HTTP(c *HTTPContext) {
 	for _, route := range routes {
 		reqPath := strings.ToLower(c.Req.URL.Path)
-		m := route.reg.FindStringSubmatch(reqPath)
+		m := route.re.FindStringSubmatch(reqPath)
 		if m == nil {
 			continue
 		}

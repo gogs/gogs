@@ -34,8 +34,9 @@
 
 <!-- Third-party libraries -->
 {{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubURL}}/plugins/highlight-9.16.2/github.css">
-	<script src="{{AppSubURL}}/plugins/highlight-9.16.2/highlight.pack.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/highlight-9.18.0/github.css">
+	<script src="{{AppSubURL}}/plugins/highlight-9.18.0/highlight.pack.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
 {{end}}
 {{if .RequireMinicolors}}
 	<link rel="stylesheet" href="{{AppSubURL}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
@@ -46,14 +47,15 @@
 	<script src="{{AppSubURL}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
 {{end}}
 {{if .RequireDropzone}}
-	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.css">
-	<script src="{{AppSubURL}}/plugins/dropzone-4.2.0/dropzone.js"></script>
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-5.5.0/dropzone.min.css">
+	<script src="{{AppSubURL}}/plugins/dropzone-5.5.0/dropzone.min.js"></script>
+	<script>Dropzone.autoDiscover = false</script>
 {{end}}
 {{if .RequireAutosize}}
 	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
 {{end}}
 <script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
-<script src="{{AppSubURL}}/js/libs/clipboard-1.5.9.min.js"></script>
+<script src="{{AppSubURL}}/js/libs/clipboard-2.0.4.min.js"></script>
 
 {{template "inject/footer" .}}
 </html>

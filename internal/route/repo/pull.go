@@ -29,6 +29,7 @@ const (
 	PULL_FILES   = "repo/pulls/files"
 
 	PULL_REQUEST_TEMPLATE_KEY = "PullRequestTemplate"
+	PULL_REQUEST_TITLE_TEMPLATE_KEY = "PullRequestTitleTemplate"
 )
 
 var (
@@ -36,6 +37,12 @@ var (
 		"PULL_REQUEST.md",
 		".gogs/PULL_REQUEST.md",
 		".github/PULL_REQUEST.md",
+	}
+
+	PullRequestTitleTemplateCandidates = []string{
+		"PULL_REQUEST_TITLE.md",
+		".gogs/PULL_REQUEST_TITLE.md",
+		".github/PULL_REQUEST_TITLE.md",
 	}
 )
 
@@ -637,6 +644,14 @@ func CompareAndPullRequest(c *context.Context) {
 	}
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
+	setTemplateIfExists(c, PULL_REQUEST_TITLE_TEMPLATE_KEY, PullRequestTitleTemplateCandidates)
+
+	if c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY] != nil {
+		customTitle := c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY].(string)
+		r := strings.NewReplacer("{{headBranch}}", headBranch,"{{baseBranch}}", baseBranch)
+		c.Data["title"] = r.Replace(customTitle)
+	}
+
 	c.Success(COMPARE_PULL)
 }
 

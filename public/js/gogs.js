@@ -1203,17 +1203,9 @@ $(document).ready(function () {
         $($(this).data('target')).slideToggle(100);
     });
 
-    // Highlight JS
-    if (typeof hljs != 'undefined') {
-        hljs.initHighlightingOnLoad();
-    }
-
     // Dropzone
     var $dropzone = $('#dropzone');
     if ($dropzone.length > 0) {
-        // Disable auto discover for all elements:
-        Dropzone.autoDiscover = false;
-
         var filenameDict = {};
         $dropzone.dropzone({
             url: $dropzone.data('upload-url'),
@@ -1258,7 +1250,7 @@ $(document).ready(function () {
     }
 
     // Clipboard JS
-    var clipboard = new Clipboard('.clipboard');
+    var clipboard = new ClipboardJS('.clipboard');
     clipboard.on('success', function (e) {
         e.clearSelection();
 

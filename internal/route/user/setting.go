@@ -75,8 +75,6 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				switch {
 				case db.IsErrUserAlreadyExist(err):
 					msg = c.Tr("form.username_been_taken")
-				case db.IsErrEmailAlreadyUsed(err):
-					msg = c.Tr("form.email_been_used")
 				case db.IsErrNameReserved(err):
 					msg = c.Tr("form.name_reserved")
 				case db.IsErrNamePatternNotAllowed(err):
@@ -103,6 +101,11 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	c.User.Website = f.Website
 	c.User.Location = f.Location
 	if err := db.UpdateUser(c.User); err != nil {
+		if db.IsErrEmailAlreadyUsed(err) {
+			msg := c.Tr("form.email_been_used")
+			c.RenderWithErr(msg, SETTINGS_PROFILE, &f)
+			return
+		}
 		c.ServerError("UpdateUser", err)
 		return
 	}

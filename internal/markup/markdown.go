@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/russross/blackfriday"
 
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
@@ -35,7 +35,7 @@ type MarkdownRenderer struct {
 	urlPrefix string
 }
 
-var validLinksPattern = regexp.MustCompile(`^[a-z][\w-]+://|^mailto:`)
+var validLinksPattern = lazyregexp.New(`^[a-z][\w-]+://|^mailto:`)
 
 // isLink reports whether link fits valid format.
 func isLink(link []byte) bool {
@@ -157,8 +157,7 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
 	}
 
-	body = blackfriday.Markdown(body, renderer, extensions)
-	return body
+	return blackfriday.Markdown(body, renderer, extensions)
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
