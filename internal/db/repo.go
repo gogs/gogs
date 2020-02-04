@@ -105,19 +105,19 @@ func NewRepoContext() {
 
 	// Check Git installation.
 	if _, err := exec.LookPath("git"); err != nil {
-		log.Fatal(4, "Fail to test 'git' command: %v (forgotten install?)", err)
+		log.Fatal(2, "Failed to test 'git' command: %v (forgotten install?)", err)
 	}
 
 	// Check Git version.
 	var err error
 	setting.Git.Version, err = git.BinVersion()
 	if err != nil {
-		log.Fatal(4, "Fail to get Git version: %v", err)
+		log.Fatal(2, "Failed to get Git version: %v", err)
 	}
 
 	log.Info("Git Version: %s", setting.Git.Version)
-	if version.Compare("1.7.1", setting.Git.Version, ">") {
-		log.Fatal(4, "Gogs requires Git version greater or equal to 1.7.1")
+	if version.Compare("1.8.3", setting.Git.Version, ">") {
+		log.Fatal(2, "Gogs requires Git version greater or equal to 1.8.3")
 	}
 	git.HookDir = "custom_hooks"
 	git.HookSampleDir = "hooks"
