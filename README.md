@@ -23,7 +23,7 @@
 
 ## Vision
 
-The Gogs (`/gɔgs/`) project aims to build a simple, stable and extensible self-hosted Git service that can be setup in the most painless way. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, macOS, Windows and ARM.
+The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-hosted Git service that can be setup in the most painless way. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, macOS, Windows and ARM.
 
 ## Overview
 
@@ -126,7 +126,7 @@ There are 6 ways to install Gogs:
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
-- Thanks [DigitalOcean](https://www.digitalocean.com), [VPSServer](https://www.vpsserver.com/), [Hosted.nl](https://www.hosted.nl/) and [MonoVM](https://monovm.com) for sponsoring VPS services.
+- Thanks [DigitalOcean](https://www.digitalocean.com), [VPSServer](https://www.vpsserver.com/), [Hosted.nl](https://www.hosted.nl/), [MonoVM](https://monovm.com) and [BitLaunch](https://bitlaunch.io) for sponsoring VPS services.
 - Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
