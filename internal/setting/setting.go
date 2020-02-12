@@ -27,7 +27,7 @@ import (
 
 	"github.com/gogs/go-libravatar"
 
-	"gogs.io/gogs/internal/bindata"
+	"gogs.io/gogs/internal/assets"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/user"
 )
@@ -416,7 +416,7 @@ func NewContext() {
 
 	Cfg, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, bindata.MustAsset("conf/app.ini"))
+	}, assets.MustAsset("conf/app.ini"))
 	if err != nil {
 		log.Fatal(2, "Fail to parse 'conf/app.ini': %v", err)
 	}

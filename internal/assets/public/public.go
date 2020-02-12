@@ -1,0 +1,3 @@
+package public
+
+//go:generate go-bindata -nomemcopy -pkg=public -ignore="\\.DS_Store|less" -fs -prefix=../../../public -debug=false -o=public_gen.go ../../../public/...

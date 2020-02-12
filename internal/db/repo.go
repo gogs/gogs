@@ -23,6 +23,7 @@ import (
 	"github.com/nfnt/resize"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
+
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"xorm.io/xorm"
@@ -30,8 +31,8 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/assets"
 	"gogs.io/gogs/internal/avatar"
-	"gogs.io/gogs/internal/bindata"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/process"
@@ -56,7 +57,7 @@ func LoadRepoConfig() {
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
 	for i, t := range types {
-		files, err := bindata.AssetDir("conf/" + t)
+		files, err := assets.AssetDir("conf/" + t)
 		if err != nil {
 			log.Fatal(4, "Fail to get %s files: %v", t, err)
 		}
@@ -932,7 +933,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	if com.IsFile(customPath) {
 		return ioutil.ReadFile(customPath)
 	}
-	return bindata.Asset(relPath)
+	return assets.Asset(relPath)
 }
 
 func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {

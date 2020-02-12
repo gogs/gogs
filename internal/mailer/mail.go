@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 
+	"gogs.io/gogs/internal/assets/templates"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
@@ -17,15 +18,15 @@ import (
 )
 
 const (
-	MAIL_AUTH_ACTIVATE        = "auth/activate"
-	MAIL_AUTH_ACTIVATE_EMAIL  = "auth/activate_email"
-	MAIL_AUTH_RESET_PASSWORD  = "auth/reset_passwd"
-	MAIL_AUTH_REGISTER_NOTIFY = "auth/register_notify"
+	MAIL_AUTH_ACTIVATE        = "mail/auth/activate"
+	MAIL_AUTH_ACTIVATE_EMAIL  = "mail/auth/activate_email"
+	MAIL_AUTH_RESET_PASSWORD  = "mail/auth/reset_passwd"
+	MAIL_AUTH_REGISTER_NOTIFY = "mail/auth/register_notify"
 
-	MAIL_ISSUE_COMMENT = "issue/comment"
-	MAIL_ISSUE_MENTION = "issue/mention"
+	MAIL_ISSUE_COMMENT = "mail/issue/comment"
+	MAIL_ISSUE_MENTION = "mail/issue/mention"
 
-	MAIL_NOTIFY_COLLABORATOR = "notify/collaborator"
+	MAIL_NOTIFY_COLLABORATOR = "mail/notify/collaborator"
 )
 
 type MailRender interface {
@@ -36,10 +37,8 @@ var mailRender MailRender
 
 func InitMailRender(dir, appendDir string, funcMap []template.FuncMap) {
 	opt := &macaron.RenderOptions{
-		Directory:         dir,
-		AppendDirectories: []string{appendDir},
 		Funcs:             funcMap,
-		Extensions:        []string{".tmpl", ".html"},
+		TemplateFileSystem: templates.NewTemplateFileSystem([]string{appendDir}, []string{".tmpl", ".html"}, false),
 	}
 	ts := macaron.NewTemplateSet()
 	ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)

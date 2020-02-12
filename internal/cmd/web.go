@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -31,7 +30,9 @@ import (
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/bindata"
+	"gogs.io/gogs/internal/assets"
+	"gogs.io/gogs/internal/assets/public"
+	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
@@ -61,8 +62,7 @@ and it takes care of all the other things for you`,
 
 // checkVersion checks if binary matches the version of templates files.
 func checkVersion() {
-	// Templates.
-	data, err := ioutil.ReadFile(setting.StaticRootPath + "/templates/.VERSION")
+	data, err := templates.Asset(".VERSION")
 	if err != nil {
 		log.Fatal(2, "Fail to read 'templates/.VERSION': %v", err)
 	}
@@ -93,6 +93,7 @@ func newMacaron() *macaron.Macaron {
 		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: setting.DisableRouterLog,
+			FileSystem: public.AssetFile(),
 		},
 	))
 	m.Use(macaron.Static(
@@ -111,22 +112,23 @@ func newMacaron() *macaron.Macaron {
 	))
 
 	funcMap := template.NewFuncMap()
+	appendDirs := []string{path.Join(setting.CustomPath, "templates")}
+	exts := []string{".tmpl", ".html"}
 	m.Use(macaron.Renderer(macaron.RenderOptions{
-		Directory:         path.Join(setting.StaticRootPath, "templates"),
-		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
 		Funcs:             funcMap,
 		IndentJSON:        macaron.Env != macaron.PROD,
+		TemplateFileSystem: templates.NewTemplateFileSystem(appendDirs, exts, false),
 	}))
-	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
-		path.Join(setting.CustomPath, "templates/mail"), funcMap)
+	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates"),
+		path.Join(setting.CustomPath, "templates"), funcMap)
 
-	localeNames, err := bindata.AssetDir("conf/locale")
+	localeNames, err := assets.AssetDir("conf/locale")
 	if err != nil {
 		log.Fatal(4, "Fail to list locale files: %v", err)
 	}
 	localFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localFiles[name] = bindata.MustAsset("conf/locale/" + name)
+		localFiles[name] = assets.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          setting.AppSubURL,
