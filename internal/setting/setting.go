@@ -321,6 +321,7 @@ var (
 	CustomPath   string // Custom directory path
 	CustomConf   string
 	ProdMode     bool
+	EnableAssets bool
 	RunUser      string
 	IsWindows    bool
 	HasRobotsTxt bool
@@ -593,6 +594,7 @@ func NewContext() {
 	}
 
 	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
+	EnableAssets = Cfg.Section("").Key("ENABLE_ASSETS").MustBool(true)
 
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")

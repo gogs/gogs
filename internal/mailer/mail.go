@@ -36,9 +36,18 @@ type MailRender interface {
 var mailRender MailRender
 
 func InitMailRender(dir, appendDir string, funcMap []template.FuncMap) {
+	var tfs macaron.TemplateFileSystem
+	appendDirs := []string{appendDir}
+	exts := []string{".tmpl", ".html"}
+	if setting.EnableAssets {
+		tfs = templates.NewTemplateFileSystem(appendDirs, exts, false)
+	}
 	opt := &macaron.RenderOptions{
+		Directory:         dir,
+		AppendDirectories: appendDirs,
 		Funcs:             funcMap,
-		TemplateFileSystem: templates.NewTemplateFileSystem([]string{appendDir}, []string{".tmpl", ".html"}, false),
+		Extensions:        exts,
+		TemplateFileSystem: tfs,
 	}
 	ts := macaron.NewTemplateSet()
 	ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)

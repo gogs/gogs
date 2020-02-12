@@ -11,7 +11,7 @@ import (
 	"gopkg.in/macaron.v1"
 )
 
-//go:generate go-bindata -nomemcopy -pkg=templates -prefix=../../../templates -debug=false -o=templates_gen.go ../../../templates/...
+//go:generate go-bindata -nomemcopy -ignore="\\.DS_Store" -pkg=templates -prefix=../../../templates -debug=false -o=templates_gen.go ../../../templates/...
 
 // tplFileSystem implements TemplateFileSystem interface.
 type tplFileSystem struct {

@@ -89,13 +89,19 @@ func newMacaron() *macaron.Macaron {
 	if setting.Protocol == setting.SCHEME_FCGI {
 		m.SetURLPrefix(setting.AppSubURL)
 	}
+
+	var httpFs http.FileSystem
+	if setting.EnableAssets {
+		httpFs = public.AssetFile()
+	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: setting.DisableRouterLog,
-			FileSystem: public.AssetFile(),
+			FileSystem: httpFs,
 		},
 	))
+
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
@@ -111,13 +117,19 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
-	funcMap := template.NewFuncMap()
+	var tfs macaron.TemplateFileSystem
 	appendDirs := []string{path.Join(setting.CustomPath, "templates")}
 	exts := []string{".tmpl", ".html"}
+	funcMap := template.NewFuncMap()
+	if setting.EnableAssets {
+		tfs = templates.NewTemplateFileSystem(appendDirs, exts, false)
+	}
 	m.Use(macaron.Renderer(macaron.RenderOptions{
+		Directory:         path.Join(setting.StaticRootPath, "templates"),
+		AppendDirectories: appendDirs,
 		Funcs:             funcMap,
 		IndentJSON:        macaron.Env != macaron.PROD,
-		TemplateFileSystem: templates.NewTemplateFileSystem(appendDirs, exts, false),
+		TemplateFileSystem: tfs,
 	}))
 	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates"),
 		path.Join(setting.CustomPath, "templates"), funcMap)
