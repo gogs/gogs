@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -201,8 +200,6 @@ func runHookPostReceive(c *cli.Context) error {
 	// so we need to setup additional services for email notifications.
 	setting.NewPostReceiveHookServices()
 	mailer.NewContext()
-	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
-		path.Join(setting.CustomPath, "templates/mail"), template.NewFuncMap())
 
 	isWiki := strings.Contains(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 

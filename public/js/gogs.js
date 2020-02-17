@@ -40,7 +40,6 @@ function initEditPreviewTab($form) {
             var $this = $(this);
             $.post($this.data('url'), {
                 "_csrf": csrf,
-                "mode": "gfm",
                 "context": $this.data('context'),
                 "text": $form.find('.tab.segment[data-tab="' + $tabMenu.data('write') + '"] textarea').val()
             },

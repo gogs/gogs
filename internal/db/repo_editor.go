@@ -22,6 +22,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
@@ -165,7 +166,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 	// Ignore move step if it's a new file under a directory.
 	// Otherwise, move the file when name changed.
-	if com.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
+	if osutil.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
 		if err = git.MoveFile(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return fmt.Errorf("git mv %q %q: %v", opts.OldTreeName, opts.NewTreeName, err)
 		}
@@ -402,7 +403,7 @@ func DeleteUploads(uploads ...*Upload) (err error) {
 
 	for _, upload := range uploads {
 		localPath := upload.LocalPath()
-		if !com.IsFile(localPath) {
+		if !osutil.IsFile(localPath) {
 			continue
 		}
 
@@ -480,7 +481,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 	// Copy uploaded files into repository
 	for _, upload := range uploads {
 		tmpPath := upload.LocalPath()
-		if !com.IsFile(tmpPath) {
+		if !osutil.IsFile(tmpPath) {
 			continue
 		}
 

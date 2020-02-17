@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -24,18 +23,18 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
-	"github.com/mcuadros/go-version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/bindata"
+	"gogs.io/gogs/internal/assets/conf"
+	"gogs.io/gogs/internal/assets/public"
+	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
@@ -59,23 +58,6 @@ and it takes care of all the other things for you`,
 	},
 }
 
-// checkVersion checks if binary matches the version of templates files.
-func checkVersion() {
-	// Templates.
-	data, err := ioutil.ReadFile(setting.StaticRootPath + "/templates/.VERSION")
-	if err != nil {
-		log.Fatal(2, "Fail to read 'templates/.VERSION': %v", err)
-	}
-	tplVer := strings.TrimSpace(string(data))
-	if tplVer != setting.AppVer {
-		if version.Compare(tplVer, setting.AppVer, ">") {
-			log.Fatal(2, "Binary version is lower than template file version, did you forget to recompile Gogs?")
-		} else {
-			log.Fatal(2, "Binary version is higher than template file version, did you forget to update template files?")
-		}
-	}
-}
-
 // newMacaron initializes Macaron instance.
 func newMacaron() *macaron.Macaron {
 	m := macaron.New()
@@ -89,12 +71,26 @@ func newMacaron() *macaron.Macaron {
 	if setting.Protocol == setting.SCHEME_FCGI {
 		m.SetURLPrefix(setting.AppSubURL)
 	}
+
+	// Register custom middleware first to make it possible to override files under "public".
 	m.Use(macaron.Static(
-		path.Join(setting.StaticRootPath, "public"),
+		path.Join(setting.CustomPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: setting.DisableRouterLog,
 		},
 	))
+	var publicFs http.FileSystem
+	if !setting.LoadAssetsFromDisk {
+		publicFs = public.NewFileSystem()
+	}
+	m.Use(macaron.Static(
+		path.Join(setting.StaticRootPath, "public"),
+		macaron.StaticOptions{
+			SkipLogging: setting.DisableRouterLog,
+			FileSystem:  publicFs,
+		},
+	))
+
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
@@ -110,23 +106,24 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
-	funcMap := template.NewFuncMap()
-	m.Use(macaron.Renderer(macaron.RenderOptions{
+	renderOpt := macaron.RenderOptions{
 		Directory:         path.Join(setting.StaticRootPath, "templates"),
 		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
-		Funcs:             funcMap,
+		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
-	}))
-	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
-		path.Join(setting.CustomPath, "templates/mail"), funcMap)
+	}
+	if !setting.LoadAssetsFromDisk {
+		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
+	}
+	m.Use(macaron.Renderer(renderOpt))
 
-	localeNames, err := bindata.AssetDir("conf/locale")
+	localeNames, err := conf.AssetDir("conf/locale")
 	if err != nil {
 		log.Fatal(4, "Fail to list locale files: %v", err)
 	}
 	localFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localFiles[name] = bindata.MustAsset("conf/locale/" + name)
+		localFiles[name] = conf.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          setting.AppSubURL,
@@ -170,7 +167,6 @@ func runWeb(c *cli.Context) error {
 		setting.CustomConf = c.String("config")
 	}
 	route.GlobalInit()
-	checkVersion()
 
 	m := newMacaron()
 
@@ -697,7 +693,7 @@ func runWeb(c *cli.Context) error {
 	} else {
 		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
 	}
-	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubURL)
+	log.Info("Listen on %v://%s%s", setting.Protocol, listenAddr, setting.AppSubURL)
 
 	var err error
 	switch setting.Protocol {

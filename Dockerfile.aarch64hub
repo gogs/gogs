@@ -24,8 +24,6 @@ RUN chmod +x /usr/sbin/gosu \
 
 
 COPY docker /app/gogs/docker
-COPY templates /app/gogs/templates
-COPY public /app/gogs/public
 WORKDIR /app/gogs/build
 COPY . .
 

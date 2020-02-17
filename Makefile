@@ -1,9 +1,12 @@
 LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
-LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildGitHash=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildCommit=$(shell git rev-parse HEAD)"
 
-DATA_FILES := $(shell find conf | sed 's/ /\\ /g')
+CONF_FILES := $(shell find conf | sed 's/ /\\ /g')
+TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
+PUBLIC_FILES := $(shell find public | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
-GENERATED  := internal/bindata/bindata.go public/css/gogs.css
+ASSETS_GENERATED := internal/assets/conf/conf_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go
+GENERATED := $(ASSETS_GENERATED) public/css/gogs.css
 
 OS := $(shell uname)
 
@@ -15,7 +18,7 @@ RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 GOVET = go tool vet -composites=false -methods=false -structtags=false
 
-.PHONY: build pack release bindata clean
+.PHONY: build pack release generate clean
 
 .IGNORE: public/css/gogs.css
 
@@ -45,16 +48,27 @@ build-dev-race: $(GENERATED) govet
 pack:
 	rm -rf $(RELEASE_GOGS)
 	mkdir -p $(RELEASE_GOGS)
-	cp -r gogs LICENSE README.md README_ZH.md templates public scripts $(RELEASE_GOGS)
-	rm -rf $(RELEASE_GOGS)/public/config.codekit $(RELEASE_GOGS)/public/less
+	cp -r gogs LICENSE README.md README_ZH.md scripts $(RELEASE_GOGS)
 	cd $(RELEASE_ROOT) && zip -r gogs.$(NOW).zip "gogs"
 
 release: build pack
 
-bindata: internal/bindata/bindata.go
+generate: $(ASSETS_GENERATED)
 
-internal/bindata/bindata.go: $(DATA_FILES)
-	go-bindata -o=$@ -ignore="\\.DS_Store|README.md|TRANSLATORS|auth.d" -pkg=bindata conf/...
+internal/assets/conf/conf_gen.go: $(CONF_FILES)
+	-rm -f $@
+	go generate internal/assets/conf/conf.go
+	gofmt -s -w $@
+
+internal/assets/templates/templates_gen.go: $(TEMPLATES_FILES)
+	-rm -f $@
+	go generate internal/assets/templates/templates.go
+	gofmt -s -w $@
+
+internal/assets/public/public_gen.go: $(PUBLIC_FILES)
+	-rm -f $@
+	go generate internal/assets/public/public.go
+	gofmt -s -w $@
 
 less: public/css/gogs.css
 

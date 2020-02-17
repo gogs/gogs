@@ -7,11 +7,15 @@ package mailer
 import (
 	"fmt"
 	"html/template"
+	"path"
+	"sync"
+	"time"
 
 	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
 )
@@ -28,30 +32,49 @@ const (
 	MAIL_NOTIFY_COLLABORATOR = "notify/collaborator"
 )
 
-type MailRender interface {
-	HTMLString(string, interface{}, ...macaron.HTMLOptions) (string, error)
-}
+var (
+	tplRender     *macaron.TplRender
+	tplRenderOnce sync.Once
+)
 
-var mailRender MailRender
+// render renders a mail template with given data.
+func render(tpl string, data map[string]interface{}) (string, error) {
+	tplRenderOnce.Do(func() {
+		opt := &macaron.RenderOptions{
+			Directory:         path.Join(setting.StaticRootPath, "templates/mail"),
+			AppendDirectories: []string{path.Join(setting.CustomPath, "templates/mail")},
+			Funcs: []template.FuncMap{map[string]interface{}{
+				"AppName": func() string {
+					return setting.AppName
+				},
+				"AppURL": func() string {
+					return setting.AppURL
+				},
+				"Year": func() int {
+					return time.Now().Year()
+				},
+				"Str2HTML": func(raw string) template.HTML {
+					return template.HTML(markup.Sanitize(raw))
+				},
+			}},
+		}
+		if !setting.LoadAssetsFromDisk {
+			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
+		}
 
-func InitMailRender(dir, appendDir string, funcMap []template.FuncMap) {
-	opt := &macaron.RenderOptions{
-		Directory:         dir,
-		AppendDirectories: []string{appendDir},
-		Funcs:             funcMap,
-		Extensions:        []string{".tmpl", ".html"},
-	}
-	ts := macaron.NewTemplateSet()
-	ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)
+		ts := macaron.NewTemplateSet()
+		ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)
+		tplRender = &macaron.TplRender{
+			TemplateSet: ts,
+			Opt:         opt,
+		}
+	})
 
-	mailRender = &macaron.TplRender{
-		TemplateSet: ts,
-		Opt:         opt,
-	}
+	return tplRender.HTMLString(tpl, data)
 }
 
 func SendTestMail(email string) error {
-	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!").Message)
+	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!").Message)
 }
 
 /*
@@ -85,9 +108,9 @@ func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 		"ResetPwdCodeLives": setting.Service.ResetPwdCodeLives / 60,
 		"Code":              code,
 	}
-	body, err := mailRender.HTMLString(string(tpl), data)
+	body, err := render(tpl, data)
 	if err != nil {
-		log.Error(2, "HTMLString: %v", err)
+		log.Error(2, "render: %v", err)
 		return
 	}
 
@@ -113,7 +136,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 		"Code":            u.GenerateEmailActivateCode(email),
 		"Email":           email,
 	}
-	body, err := mailRender.HTMLString(string(MAIL_AUTH_ACTIVATE_EMAIL), data)
+	body, err := render(MAIL_AUTH_ACTIVATE_EMAIL, data)
 	if err != nil {
 		log.Error(3, "HTMLString: %v", err)
 		return
@@ -130,7 +153,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) {
 	data := map[string]interface{}{
 		"Username": u.DisplayName(),
 	}
-	body, err := mailRender.HTMLString(string(MAIL_AUTH_REGISTER_NOTIFY), data)
+	body, err := render(MAIL_AUTH_REGISTER_NOTIFY, data)
 	if err != nil {
 		log.Error(3, "HTMLString: %v", err)
 		return
@@ -151,7 +174,7 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 		"RepoName": repo.FullName(),
 		"Link":     repo.HTMLURL(),
 	}
-	body, err := mailRender.HTMLString(string(MAIL_NOTIFY_COLLABORATOR), data)
+	body, err := render(MAIL_NOTIFY_COLLABORATOR, data)
 	if err != nil {
 		log.Error(3, "HTMLString: %v", err)
 		return
@@ -176,7 +199,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	body := string(markup.Markdown([]byte(issue.Content()), repo.HTMLURL(), repo.ComposeMetas()))
 	data := composeTplData(subject, body, issue.HTMLURL())
 	data["Doer"] = doer
-	content, err := mailRender.HTMLString(tplName, data)
+	content, err := render(tplName, data)
 	if err != nil {
 		log.Error(3, "HTMLString (%s): %v", tplName, err)
 	}
