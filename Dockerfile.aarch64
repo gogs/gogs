@@ -22,8 +22,6 @@ ENV GOGS_CUSTOM /data/gogs
 # Configure LibC Name Service
 COPY docker/nsswitch.conf /etc/nsswitch.conf
 COPY docker /app/gogs/docker
-COPY templates /app/gogs/templates
-COPY public /app/gogs/public
 
 WORKDIR /app/gogs/build
 COPY . .

@@ -36,8 +36,6 @@ RUN chmod +x /usr/sbin/gosu \
 # Configure LibC Name Service
 COPY docker/nsswitch.conf /etc/nsswitch.conf
 COPY docker /app/gogs/docker
-COPY templates /app/gogs/templates
-COPY public /app/gogs/public
 
 WORKDIR /app/gogs/build
 COPY . .

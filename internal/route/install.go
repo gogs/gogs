@@ -43,7 +43,7 @@ func checkRunMode() {
 	} else {
 		git.Debug = true
 	}
-	log.Info("Run Mode: %s", strings.Title(macaron.Env))
+	log.Info("Run mode: %s", strings.Title(macaron.Env))
 }
 
 func NewServices() {
@@ -78,10 +78,13 @@ func GlobalInit() {
 		db.InitTestPullRequests()
 	}
 	if db.EnableSQLite3 {
-		log.Info("SQLite3 Supported")
+		log.Info("SQLite3 is supported")
 	}
 	if setting.SupportMiniWinService {
-		log.Info("Builtin Windows Service Supported")
+		log.Info("Builtin Windows Service is supported")
+	}
+	if setting.LoadAssetsFromDisk {
+		log.Info("Assets are loaded from disk")
 	}
 	checkRunMode()
 
