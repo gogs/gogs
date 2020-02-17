@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"html/template"
 
-	"gogs.io/gogs/internal/assets/templates"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
 )
