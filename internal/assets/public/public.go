@@ -9,8 +9,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+
+	"gogs.io/gogs/internal/assets"
 )
 
 //go:generate go-bindata -nomemcopy -pkg=public -ignore="\\.DS_Store|less" -prefix=../../../public -debug=false -o=public_gen.go ../../../public/...
@@ -19,115 +20,124 @@ import (
 	This file is a modified version of https://github.com/go-bindata/go-bindata/pull/18.
 */
 
-type fakeDirInfo struct {
+type fileInfo struct {
 	name string
 	size int64
 }
 
-func (fi fakeDirInfo) Name() string {
-	return fi.name
+func (d fileInfo) Name() string {
+	return d.name
 }
 
-func (fi fakeDirInfo) Size() int64 {
-	return fi.size
+func (d fileInfo) Size() int64 {
+	return d.size
 }
 
-func (fi fakeDirInfo) Mode() os.FileMode {
-	return os.FileMode(2147484068) // equal os.FileMode(0644)|os.ModeDir
+func (d fileInfo) Mode() os.FileMode {
+	return os.FileMode(0644) | os.ModeDir
 }
 
-func (fi fakeDirInfo) ModTime() time.Time {
+func (d fileInfo) ModTime() time.Time {
 	return time.Time{}
 }
 
 // IsDir return file whether a directory
-func (fi *fakeDirInfo) IsDir() bool {
+func (d *fileInfo) IsDir() bool {
 	return true
 }
 
-func (fi fakeDirInfo) Sys() interface{} {
+func (d fileInfo) Sys() interface{} {
 	return nil
 }
 
-type assetFile struct {
+// file implements the http.File interface.
+type file struct {
+	name string
 	*bytes.Reader
-	name            string
-	childInfos      []os.FileInfo
-	childInfoOffset int
+
+	children       []os.FileInfo
+	childrenOffset int
 }
 
-// Close no need do anything
-func (f *assetFile) Close() error {
+func (f *file) Close() error {
 	return nil
 }
 
-// Readdir read dir's children file info
-func (f *assetFile) Readdir(count int) ([]os.FileInfo, error) {
-	if len(f.childInfos) == 0 {
+// ⚠️ WARNING: This method is not concurrent-safe.
+func (f *file) Readdir(count int) ([]os.FileInfo, error) {
+	if len(f.children) == 0 {
 		return nil, os.ErrNotExist
 	}
 
 	if count <= 0 {
-		return f.childInfos, nil
+		return f.children, nil
 	}
 
-	if f.childInfoOffset+count > len(f.childInfos) {
-		count = len(f.childInfos) - f.childInfoOffset
+	if f.childrenOffset+count > len(f.children) {
+		count = len(f.children) - f.childrenOffset
 	}
-	offset := f.childInfoOffset
-	f.childInfoOffset += count
-	return f.childInfos[offset : offset+count], nil
+	offset := f.childrenOffset
+	f.childrenOffset += count
+	return f.children[offset : offset+count], nil
 }
 
-// Stat read file info from asset item
-func (f *assetFile) Stat() (os.FileInfo, error) {
-	childCount := len(f.childInfos)
+func (f *file) Stat() (os.FileInfo, error) {
+	childCount := len(f.children)
 	if childCount != 0 {
-		return &fakeDirInfo{name: f.name, size: int64(childCount)}, nil
+		return &fileInfo{
+			name: f.name,
+			size: int64(childCount),
+		}, nil
 	}
 	return AssetInfo(f.name)
 }
 
-type assetOperator struct{}
+// fileSystem implements the http.FileSystem interface.
+type fileSystem struct{}
 
-// Open implement http.FileSystem interface
-func (f *assetOperator) Open(name string) (http.File, error) {
+func (f *fileSystem) Open(name string) (http.File, error) {
 	if len(name) > 0 && name[0] == '/' {
 		name = name[1:]
 	}
 
-	var err error
-	content, err := Asset(name)
-	if err == nil {
-		return &assetFile{name: name, Reader: bytes.NewReader(content)}, nil
+	// Attempt to get it as a file
+	p, err := Asset(name)
+	if err != nil && !assets.IsErrNotFound(err) {
+		return nil, err
+	} else if err == nil {
+		return &file{
+			name:   name,
+			Reader: bytes.NewReader(p),
+		}, nil
 	}
 
-	// maybe it's directory so get children's file info from the path
-	children, err := AssetDir(name)
-	if err == nil {
-		childInfos := make([]os.FileInfo, 0, len(children))
-		for _, child := range children {
-			childPath := filepath.Join(name, child)
-			info, err := AssetInfo(childPath)
-			if err == nil {
-				childInfos = append(childInfos, info)
-			} else { // not find asset info from Assets so child is a directory
-				childInfos = append(childInfos, &fakeDirInfo{name: childPath})
-			}
-		}
-		return &assetFile{name: name, childInfos: childInfos}, nil
-	} else {
-		// If the error is not found, return an error that will
-		// result in a 404 error. Otherwise the server returns
-		// a 500 error for files not found.
-		if strings.Contains(err.Error(), "not found") {
-			return nil, os.ErrNotExist
-		}
+	// Attempt to get it as a directory
+	paths, err := AssetDir(name)
+	if err != nil && !assets.IsErrNotFound(err) {
 		return nil, err
 	}
+
+	infos := make([]os.FileInfo, len(paths))
+	for i, path := range paths {
+		path = filepath.Join(name, path)
+		info, err := AssetInfo(path)
+		if err != nil {
+			if !assets.IsErrNotFound(err) {
+				return nil, err
+			}
+			// Not found as a file, assume it's a directory.
+			infos[i] = &fileInfo{name: path}
+		} else {
+			infos[i] = info
+		}
+	}
+	return &file{
+		name:     name,
+		children: infos,
+	}, nil
 }
 
 // FileSystem return a http.FileSystem instance that data backend by asset
 func FileSystem() http.FileSystem {
-	return &assetOperator{}
+	return &fileSystem{}
 }
