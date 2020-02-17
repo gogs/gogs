@@ -6,13 +6,11 @@ package mailer
 
 import (
 	"fmt"
-	"html/template"
 
 	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
 )
@@ -35,28 +33,18 @@ type MailRender interface {
 
 var mailRender MailRender
 
-func InitMailRender(dir, appendDir string, funcMap []template.FuncMap) {
-	var tfs macaron.TemplateFileSystem
-	if !setting.LoadAssetsFromDisk {
-		tfs = templates.NewTemplateFileSystem()
-	}
-	opt := &macaron.RenderOptions{
-		Directory:          dir,
-		AppendDirectories:  []string{appendDir},
-		Funcs:              funcMap,
-		TemplateFileSystem: tfs,
-	}
+func InitMailRender(opt macaron.RenderOptions) {
 	ts := macaron.NewTemplateSet()
-	ts.Set(macaron.DEFAULT_TPL_SET_NAME, opt)
+	ts.Set(macaron.DEFAULT_TPL_SET_NAME, &opt)
 
 	mailRender = &macaron.TplRender{
 		TemplateSet: ts,
-		Opt:         opt,
+		Opt:         &opt,
 	}
 }
 
 func SendTestMail(email string) error {
-	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email!", "Gogs Test Email!").Message)
+	return gomail.Send(&Sender{}, NewMessage([]string{email}, "Gogs Test Email", "Hello 👋, greeting from Gogs!").Message)
 }
 
 /*

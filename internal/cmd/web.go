@@ -99,20 +99,19 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
-	funcMap := template.NewFuncMap()
 	var tplFs macaron.TemplateFileSystem
 	if !setting.LoadAssetsFromDisk {
 		tplFs = templates.NewTemplateFileSystem()
 	}
-	m.Use(macaron.Renderer(macaron.RenderOptions{
+	renderOpt := macaron.RenderOptions{
 		Directory:          path.Join(setting.StaticRootPath, "templates"),
 		AppendDirectories:  []string{path.Join(setting.CustomPath, "templates")},
-		Funcs:              funcMap,
+		Funcs:              template.NewFuncMap(),
 		IndentJSON:         macaron.Env != macaron.PROD,
 		TemplateFileSystem: tplFs,
-	}))
-	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates"),
-		path.Join(setting.CustomPath, "templates"), funcMap)
+	}
+	m.Use(macaron.Renderer(renderOpt))
+	mailer.InitMailRender(renderOpt)
 
 	localeNames, err := conf.AssetDir("conf/locale")
 	if err != nil {

@@ -74,6 +74,7 @@ var (
 	CertFile             string
 	KeyFile              string
 	TLSMinVersion        string
+	LoadAssetsFromDisk   bool
 	StaticRootPath       string
 	EnableGzip           bool
 	LandingPageURL       LandingPage
@@ -317,14 +318,13 @@ var (
 	SupportMiniWinService      bool
 
 	// Global setting objects
-	Cfg                *ini.File
-	CustomPath         string // Custom directory path
-	CustomConf         string
-	ProdMode           bool
-	LoadAssetsFromDisk bool
-	RunUser            string
-	IsWindows          bool
-	HasRobotsTxt       bool
+	Cfg          *ini.File
+	CustomPath   string // Custom directory path
+	CustomConf   string
+	ProdMode     bool
+	RunUser      string
+	IsWindows    bool
+	HasRobotsTxt bool
 )
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
@@ -490,6 +490,7 @@ func NewContext() {
 	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HTTPPort + "/")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
+	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
 	AppDataPath = sec.Key("APP_DATA_PATH").MustString("data")
 	EnableGzip = sec.Key("ENABLE_GZIP").MustBool()
@@ -594,7 +595,6 @@ func NewContext() {
 	}
 
 	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
-	LoadAssetsFromDisk = Cfg.Section("").Key("LOAD_ASSETS_FROM_DISK").MustBool(false)
 
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")
