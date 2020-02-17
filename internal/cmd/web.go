@@ -35,7 +35,6 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route"
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
@@ -73,6 +72,13 @@ func newMacaron() *macaron.Macaron {
 		m.SetURLPrefix(setting.AppSubURL)
 	}
 
+	// Register custom middleware first to make it possible to override files under "public".
+	m.Use(macaron.Static(
+		path.Join(setting.CustomPath, "public"),
+		macaron.StaticOptions{
+			SkipLogging: setting.DisableRouterLog,
+		},
+	))
 	var publicFs http.FileSystem
 	if !setting.LoadAssetsFromDisk {
 		publicFs = public.NewFileSystem()
@@ -84,6 +90,7 @@ func newMacaron() *macaron.Macaron {
 			FileSystem:  publicFs,
 		},
 	))
+
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
@@ -99,19 +106,16 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
-	var tplFs macaron.TemplateFileSystem
-	if !setting.LoadAssetsFromDisk {
-		tplFs = templates.NewTemplateFileSystem()
-	}
 	renderOpt := macaron.RenderOptions{
-		Directory:          path.Join(setting.StaticRootPath, "templates"),
-		AppendDirectories:  []string{path.Join(setting.CustomPath, "templates")},
-		Funcs:              template.NewFuncMap(),
-		IndentJSON:         macaron.Env != macaron.PROD,
-		TemplateFileSystem: tplFs,
+		Directory:         path.Join(setting.StaticRootPath, "templates"),
+		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
+		Funcs:             template.FuncMap(),
+		IndentJSON:        macaron.Env != macaron.PROD,
+	}
+	if !setting.LoadAssetsFromDisk {
+		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
 	}
 	m.Use(macaron.Renderer(renderOpt))
-	mailer.InitMailRender(renderOpt)
 
 	localeNames, err := conf.AssetDir("conf/locale")
 	if err != nil {

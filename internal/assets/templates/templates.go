@@ -8,10 +8,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path"
 	"strings"
 
 	"gopkg.in/macaron.v1"
+
+	"gogs.io/gogs/internal/osutil"
 )
 
 //go:generate go-bindata -nomemcopy -ignore="\\.DS_Store" -pkg=templates -prefix=../../../templates -debug=false -o=templates_gen.go ../../../templates/...
@@ -34,22 +37,37 @@ func (fs *fileSystem) Get(name string) (io.Reader, error) {
 	return nil, fmt.Errorf("file %q not found", name)
 }
 
-// NewTemplateFileSystem returns a macaron.TemplateFileSystem instance backed by embedded assets.
-func NewTemplateFileSystem() macaron.TemplateFileSystem {
-	names := AssetNames()
-	fs := &fileSystem{
-		files: make([]macaron.TemplateFile, len(names)),
+// NewTemplateFileSystem returns a macaron.TemplateFileSystem instance for embedded assets.
+// The argument "dir" can be used to serve subset of embedded assets. Template file
+// found under the "customDir" on disk has higher precedence over embedded assets.
+func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
+	if dir != "" && !strings.HasSuffix(dir, "/") {
+		dir += "/"
 	}
 
-	for i, name := range names {
-		p, err := Asset(name)
+	var files []macaron.TemplateFile
+	names := AssetNames()
+	for _, name := range names {
+		if !strings.HasPrefix(name, dir) {
+			continue
+		}
+
+		// Check if corresponding custom file exists
+		var err error
+		var data []byte
+		fpath := path.Join(customDir, name)
+		if osutil.IsFile(fpath) {
+			data, err = ioutil.ReadFile(fpath)
+		} else {
+			data, err = Asset(name)
+		}
 		if err != nil {
 			panic(err)
 		}
 
 		ext := path.Ext(name)
 		name = strings.TrimSuffix(name, ext)
-		fs.files[i] = macaron.NewTplFile(name, p, ext)
+		files = append(files, macaron.NewTplFile(name, data, ext))
 	}
-	return fs
+	return &fileSystem{files: files}
 }

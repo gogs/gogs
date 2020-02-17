@@ -34,6 +34,7 @@ import (
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/sync"
@@ -929,7 +930,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 
 	// Use custom file when available.
 	customPath := path.Join(setting.CustomPath, relPath)
-	if com.IsFile(customPath) {
+	if osutil.IsFile(customPath) {
 		return ioutil.ReadFile(customPath)
 	}
 	return conf.Asset(relPath)
