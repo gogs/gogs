@@ -73,18 +73,17 @@ func newMacaron() *macaron.Macaron {
 		m.SetURLPrefix(setting.AppSubURL)
 	}
 
-	var httpFs http.FileSystem
+	var publicFileSystem http.FileSystem
 	if !setting.LoadAssetsFromDisk {
-		httpFs = public.FileSystem()
+		publicFileSystem = public.FileSystem()
 	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: setting.DisableRouterLog,
-			FileSystem: httpFs,
+			FileSystem:  publicFileSystem,
 		},
 	))
-
 	m.Use(macaron.Static(
 		setting.AvatarUploadPath,
 		macaron.StaticOptions{
@@ -100,19 +99,19 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
-	var tfs macaron.TemplateFileSystem
 	appendDirs := []string{path.Join(setting.CustomPath, "templates")}
 	exts := []string{".tmpl", ".html"}
 	funcMap := template.NewFuncMap()
+	var templateFileSystem macaron.TemplateFileSystem
 	if !setting.LoadAssetsFromDisk {
-		tfs = templates.NewTemplateFileSystem(appendDirs, exts, false)
+		templateFileSystem = templates.NewTemplateFileSystem(appendDirs, exts, false)
 	}
 	m.Use(macaron.Renderer(macaron.RenderOptions{
-		Directory:         path.Join(setting.StaticRootPath, "templates"),
-		AppendDirectories: appendDirs,
-		Funcs:             funcMap,
-		IndentJSON:        macaron.Env != macaron.PROD,
-		TemplateFileSystem: tfs,
+		Directory:          path.Join(setting.StaticRootPath, "templates"),
+		AppendDirectories:  appendDirs,
+		Funcs:              funcMap,
+		IndentJSON:         macaron.Env != macaron.PROD,
+		TemplateFileSystem: templateFileSystem,
 	}))
 	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates"),
 		path.Join(setting.CustomPath, "templates"), funcMap)
@@ -693,7 +692,7 @@ func runWeb(c *cli.Context) error {
 	} else {
 		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
 	}
-	log.Info("Listen: %v://%s%s", setting.Protocol, listenAddr, setting.AppSubURL)
+	log.Info("Listen on %v://%s%s", setting.Protocol, listenAddr, setting.AppSubURL)
 
 	var err error
 	switch setting.Protocol {

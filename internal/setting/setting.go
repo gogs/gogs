@@ -50,8 +50,8 @@ const (
 
 var (
 	// Build information should only be set by -ldflags.
-	BuildTime    string
-	BuildGitHash string
+	BuildTime   string
+	BuildCommit string
 
 	// App settings
 	AppVer         string
@@ -317,14 +317,14 @@ var (
 	SupportMiniWinService      bool
 
 	// Global setting objects
-	Cfg          *ini.File
-	CustomPath   string // Custom directory path
-	CustomConf   string
-	ProdMode     bool
+	Cfg                *ini.File
+	CustomPath         string // Custom directory path
+	CustomConf         string
+	ProdMode           bool
 	LoadAssetsFromDisk bool
-	RunUser      string
-	IsWindows    bool
-	HasRobotsTxt bool
+	RunUser            string
+	IsWindows          bool
+	HasRobotsTxt       bool
 )
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
@@ -731,8 +731,8 @@ func newService() {
 
 func newLogService() {
 	if len(BuildTime) > 0 {
-		log.Trace("Build Time: %s", BuildTime)
-		log.Trace("Build Git Hash: %s", BuildGitHash)
+		log.Trace("Build time: %s", BuildTime)
+		log.Trace("Build commit: %s", BuildCommit)
 	}
 
 	// Because we always create a console logger as primary logger before all settings are loaded,
@@ -811,7 +811,7 @@ func newLogService() {
 		}
 
 		log.New(log.MODE(mode), LogConfigs[i])
-		log.Trace("Log Mode: %s (%s)", strings.Title(mode), strings.Title(name))
+		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(name))
 	}
 
 	// Make sure everyone gets version info printed.
@@ -832,7 +832,7 @@ func newCacheService() {
 		log.Fatal(2, "Unknown cache adapter: %s", CacheAdapter)
 	}
 
-	log.Info("Cache Service Enabled")
+	log.Info("Cache service is enabled")
 }
 
 func newSessionService() {
@@ -846,7 +846,7 @@ func newSessionService() {
 	SessionConfig.Maxlifetime = Cfg.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)
 	CSRFCookieName = Cfg.Section("session").Key("CSRF_COOKIE_NAME").MustString("_csrf")
 
-	log.Info("Session Service Enabled")
+	log.Info("Session service is enabled")
 }
 
 // Mailer represents mail service.
