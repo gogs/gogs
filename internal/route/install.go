@@ -83,8 +83,8 @@ func GlobalInit() {
 	if setting.SupportMiniWinService {
 		log.Info("Builtin Windows Service Supported")
 	}
-	if setting.EnableAssets {
-		log.Info("Embedded Assets Enabled")
+	if setting.LoadAssetsFromDisk {
+		log.Info("Load Templates and Public Assets From Disk")
 	}
 	checkRunMode()
 

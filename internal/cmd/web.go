@@ -23,14 +23,13 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/go-macaron/toolbox"
-	"github.com/mcuadros/go-version"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/assets"
+	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/assets/public"
 	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/context"
@@ -60,22 +59,6 @@ and it takes care of all the other things for you`,
 	},
 }
 
-// checkVersion checks if binary matches the version of templates files.
-func checkVersion() {
-	data, err := templates.Asset(".VERSION")
-	if err != nil {
-		log.Fatal(2, "Fail to read 'templates/.VERSION': %v", err)
-	}
-	tplVer := strings.TrimSpace(string(data))
-	if tplVer != setting.AppVer {
-		if version.Compare(tplVer, setting.AppVer, ">") {
-			log.Fatal(2, "Binary version is lower than template file version, did you forget to recompile Gogs?")
-		} else {
-			log.Fatal(2, "Binary version is higher than template file version, did you forget to update template files?")
-		}
-	}
-}
-
 // newMacaron initializes Macaron instance.
 func newMacaron() *macaron.Macaron {
 	m := macaron.New()
@@ -91,8 +74,8 @@ func newMacaron() *macaron.Macaron {
 	}
 
 	var httpFs http.FileSystem
-	if setting.EnableAssets {
-		httpFs = public.AssetFile()
+	if !setting.LoadAssetsFromDisk {
+		httpFs = public.FileSystem()
 	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
@@ -121,7 +104,7 @@ func newMacaron() *macaron.Macaron {
 	appendDirs := []string{path.Join(setting.CustomPath, "templates")}
 	exts := []string{".tmpl", ".html"}
 	funcMap := template.NewFuncMap()
-	if setting.EnableAssets {
+	if !setting.LoadAssetsFromDisk {
 		tfs = templates.NewTemplateFileSystem(appendDirs, exts, false)
 	}
 	m.Use(macaron.Renderer(macaron.RenderOptions{
@@ -134,13 +117,13 @@ func newMacaron() *macaron.Macaron {
 	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates"),
 		path.Join(setting.CustomPath, "templates"), funcMap)
 
-	localeNames, err := assets.AssetDir("conf/locale")
+	localeNames, err := conf.AssetDir("conf/locale")
 	if err != nil {
 		log.Fatal(4, "Fail to list locale files: %v", err)
 	}
 	localFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localFiles[name] = assets.MustAsset("conf/locale/" + name)
+		localFiles[name] = conf.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          setting.AppSubURL,
@@ -184,7 +167,6 @@ func runWeb(c *cli.Context) error {
 		setting.CustomConf = c.String("config")
 	}
 	route.GlobalInit()
-	checkVersion()
 
 	m := newMacaron()
 

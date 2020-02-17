@@ -1,3 +1,0 @@
-package assets
-
-//go:generate go-bindata -nomemcopy -pkg=assets -ignore="\\.DS_Store|README.md|TRANSLATORS|auth.d" -prefix=../../ -debug=false -o=assets_gen.go ../../conf/...

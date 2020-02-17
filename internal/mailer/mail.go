@@ -39,7 +39,7 @@ func InitMailRender(dir, appendDir string, funcMap []template.FuncMap) {
 	var tfs macaron.TemplateFileSystem
 	appendDirs := []string{appendDir}
 	exts := []string{".tmpl", ".html"}
-	if setting.EnableAssets {
+	if !setting.LoadAssetsFromDisk {
 		tfs = templates.NewTemplateFileSystem(appendDirs, exts, false)
 	}
 	opt := &macaron.RenderOptions{

@@ -16,18 +16,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/mcuadros/go-version"
+	"github.com/unknwon/com"
 	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 
 	"github.com/gogs/go-libravatar"
 
-	"gogs.io/gogs/internal/assets"
+	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/user"
 )
@@ -321,7 +321,7 @@ var (
 	CustomPath   string // Custom directory path
 	CustomConf   string
 	ProdMode     bool
-	EnableAssets bool
+	LoadAssetsFromDisk bool
 	RunUser      string
 	IsWindows    bool
 	HasRobotsTxt bool
@@ -417,7 +417,7 @@ func NewContext() {
 
 	Cfg, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, assets.MustAsset("conf/app.ini"))
+	}, conf.MustAsset("conf/app.ini"))
 	if err != nil {
 		log.Fatal(2, "Fail to parse 'conf/app.ini': %v", err)
 	}
@@ -594,7 +594,7 @@ func NewContext() {
 	}
 
 	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
-	EnableAssets = Cfg.Section("").Key("ENABLE_ASSETS").MustBool(true)
+	LoadAssetsFromDisk = Cfg.Section("").Key("LOAD_ASSETS_FROM_DISK").MustBool(false)
 
 	// Determine and create root git repository path.
 	sec = Cfg.Section("repository")

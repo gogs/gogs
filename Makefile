@@ -1,11 +1,12 @@
 LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
 LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildGitHash=$(shell git rev-parse HEAD)"
 
-ASSETS_FILES := $(shell find conf | sed 's/ /\\ /g')
+CONF_FILES := $(shell find conf | sed 's/ /\\ /g')
 TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
 PUBLIC_FILES := $(shell find public | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
-GENERATED  := internal/assets/assets_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go public/css/gogs.css
+ASSETS_GENERATED := internal/assets/conf/conf_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go
+GENERATED := $(ASSETS_GENERATED) public/css/gogs.css
 
 OS := $(shell uname)
 
@@ -52,11 +53,11 @@ pack:
 
 release: build pack
 
-generate: internal/assets/assets_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go
+generate: $(ASSETS_GENERATED)
 
-internal/assets/assets_gen.go: $(ASSETS_FILES)
+internal/assets/conf/conf_gen.go: $(CONF_FILES)
 	-rm -f $@
-	go generate internal/assets/assets.go
+	go generate internal/assets/conf/conf.go
 	gofmt -s -w $@
 
 internal/assets/templates/templates_gen.go: $(TEMPLATES_FILES)
