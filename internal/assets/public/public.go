@@ -1,3 +1,7 @@
+// Copyright 2020 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package public
 
 import (
@@ -10,6 +14,10 @@ import (
 )
 
 //go:generate go-bindata -nomemcopy -pkg=public -ignore="\\.DS_Store|less" -prefix=../../../public -debug=false -o=public_gen.go ../../../public/...
+
+/*
+	This file is a modified version of https://github.com/go-bindata/go-bindata/pull/18.
+*/
 
 type fakeDirInfo struct {
 	name string
