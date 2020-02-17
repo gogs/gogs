@@ -75,7 +75,7 @@ func newMacaron() *macaron.Macaron {
 
 	var publicFileSystem http.FileSystem
 	if !setting.LoadAssetsFromDisk {
-		publicFileSystem = public.FileSystem()
+		publicFileSystem = public.NewFileSystem()
 	}
 	m.Use(macaron.Static(
 		path.Join(setting.StaticRootPath, "public"),
@@ -99,19 +99,17 @@ func newMacaron() *macaron.Macaron {
 		},
 	))
 
-	appendDirs := []string{path.Join(setting.CustomPath, "templates")}
-	exts := []string{".tmpl", ".html"}
 	funcMap := template.NewFuncMap()
-	var templateFileSystem macaron.TemplateFileSystem
+	var tplFileSystem macaron.TemplateFileSystem
 	if !setting.LoadAssetsFromDisk {
-		templateFileSystem = templates.NewTemplateFileSystem(appendDirs, exts, false)
+		tplFileSystem = templates.NewTemplateFileSystem()
 	}
 	m.Use(macaron.Renderer(macaron.RenderOptions{
 		Directory:          path.Join(setting.StaticRootPath, "templates"),
-		AppendDirectories:  appendDirs,
+		AppendDirectories:  []string{path.Join(setting.CustomPath, "templates")},
 		Funcs:              funcMap,
 		IndentJSON:         macaron.Env != macaron.PROD,
-		TemplateFileSystem: templateFileSystem,
+		TemplateFileSystem: tplFileSystem,
 	}))
 	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates"),
 		path.Join(setting.CustomPath, "templates"), funcMap)

@@ -137,7 +137,7 @@ func (f *fileSystem) Open(name string) (http.File, error) {
 	}, nil
 }
 
-// FileSystem return a http.FileSystem instance that data backend by asset
-func FileSystem() http.FileSystem {
+// NewFileSystem returns an http.FileSystem instance backed by embedded assets.
+func NewFileSystem() http.FileSystem {
 	return &fileSystem{}
 }
