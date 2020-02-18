@@ -43,6 +43,7 @@ func render(tpl string, data map[string]interface{}) (string, error) {
 		opt := &macaron.RenderOptions{
 			Directory:         path.Join(setting.StaticRootPath, "templates/mail"),
 			AppendDirectories: []string{path.Join(setting.CustomPath, "templates/mail")},
+			Extensions:        []string{".tmpl", ".html"},
 			Funcs: []template.FuncMap{map[string]interface{}{
 				"AppName": func() string {
 					return setting.AppName
