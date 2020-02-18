@@ -12,9 +12,8 @@
 
 ### ⚠️ Important notes ⚠️
 
-1. Due to testing purpose, data of [try.gogs.io](https://try.gogs.io) was reset in **Jan 28, 2015** and will reset multiple times after. Please do **NOT** put your important data on the site.
-2. The demo site [try.gogs.io](https://try.gogs.io) is running `master` branch.
-3. If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogs/go-gogs-client/wiki).
+- The demo site [try.gogs.io](https://try.gogs.io) is running `master` branch. Please do **NOT** put your important data on the site.
+- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogs/go-gogs-client/wiki).
 
 [简体中文](README_ZH.md)
 
