@@ -906,18 +906,18 @@ func newMailService() {
 	if HookMode {
 		return
 	}
-	log.Info("Mail Service Enabled")
+	log.Info("Mail service is enabled")
 }
 
 func newRegisterMailService() {
 	if !Cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").MustBool() {
 		return
 	} else if MailService == nil {
-		log.Warn("Register Mail Service: Mail Service is not enabled")
+		log.Warn("Email confirmation is not enabled due to the mail service is not available")
 		return
 	}
 	Service.RegisterEmailConfirm = true
-	log.Info("Register Mail Service Enabled")
+	log.Info("Email confirmation is enabled")
 }
 
 // newNotifyMailService initializes notification email service options from configuration.
@@ -926,7 +926,7 @@ func newNotifyMailService() {
 	if !Cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
 		return
 	} else if MailService == nil {
-		log.Warn("Notify Mail Service: Mail Service is not enabled")
+		log.Warn("Email notification is not enabled due to the mail service is not available")
 		return
 	}
 	Service.EnableNotifyMail = true
@@ -934,7 +934,7 @@ func newNotifyMailService() {
 	if HookMode {
 		return
 	}
-	log.Info("Notify Mail Service Enabled")
+	log.Info("Email notification is enabled")
 }
 
 func NewService() {

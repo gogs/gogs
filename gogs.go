@@ -17,7 +17,7 @@ import (
 	"gogs.io/gogs/internal/setting"
 )
 
-const Version = "0.11.97.1209"
+const Version = "0.12.0+dev"
 
 func init() {
 	setting.AppVer = Version
