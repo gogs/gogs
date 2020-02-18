@@ -6,12 +6,13 @@ Gogs 是一款极易搭建的自助 Git 服务。
 
 Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、稳定和可扩展的自助 Git 服务。使用 Go 语言开发使得 Gogs 能够通过独立的二进制分发，并且支持 Go 语言支持的 **所有平台**，包括 Linux、macOS、Windows 以及 ARM 平台。
 
-## 项目概览
+## 概览
 
-- 有关基本用法和变更日志，请通过 [使用手册](https://gogs.io/docs/intro) 查看。
-- 想要先睹为快？直接去 [在线体验](https://try.gogs.io/gogs/gogs) 。
-- 使用过程中遇到问题？尝试从 [故障排查](https://gogs.io/docs/intro/troubleshooting.html) 页面或 [用户论坛](https://discuss.gogs.io/) 获取帮助。
-- 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](https://gogs.io/docs/features/i18n.html)！
+- 请移步[官网](https://gogs.io)查看用户使用文档
+- 请通过 [CHANGELOG.md](CHANGELOG.md) 文件查看各个版本的变更历史
+- 想要先睹为快？直接去[在线体验](https://try.gogs.io/gogs/gogs)吧！
+- 使用过程中遇到问题？尝试[故障排查](https://gogs.io/docs/intro/troubleshooting.html)或者前往[用户论坛](https://discuss.gogs.io/)获取帮助
+- 希望帮助多国语言的翻译吗？请查看[本地化文档](https://gogs.io/docs/features/i18n.html)
 
 ## 主要特性
 
@@ -54,11 +55,6 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 - [通过 Vagrant 安装](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 - [通过基于 Kubernetes 的 Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
 
-### 使用教程
-
-- [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/)
-- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654)
-
 ### 云端部署
 
 - [OpenShift](https://github.com/tkisme/gogs-openshift)
@@ -70,20 +66,20 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 - [DPlatform](https://github.com/j8r/DPlatform)
 - [LunaNode](https://github.com/LunaNode/launchgogs)
 
-## 软件及服务支持
+### 使用教程
 
-- [Drone](https://github.com/drone/drone)（CI）
-- [Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/Gogs+Webhook+Plugin)（CI）
+- [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/)
+- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654)
+
+## 软件、服务以及产品支持
+
 - [Fabric8](http://fabric8.io/)（DevOps）
+- [Jenkins](https://plugins.jenkins.io/gogs-webhook/)（CI）
 - [Taiga](https://taiga.io/)（项目管理）
-- [Puppet](https://forge.puppetlabs.com/Siteminds/gogs)（IT）
-- [Kanboard](http://kanboard.net/plugin/gogs-webhook)（项目管理）
+- [Puppet](https://forge.puppet.com/Siteminds/gogs)（IT）
+- [Kanboard](https://github.com/kanboard/plugin-gogs-webhook)（项目管理）
 - [BearyChat](https://bearychat.com/)（团队交流）
-- [HiWork](http://www.hiwork.cc/)（团队交流）
 - [GitPitch](https://gitpitch.com/)（Markdown 演示）
-
-### 产品支持
-
 - [Synology](https://www.synology.com)（Docker）
 - [Syncloud](https://syncloud.org/)（应用商店）
 
