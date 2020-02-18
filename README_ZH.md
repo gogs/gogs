@@ -13,26 +13,22 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 - 使用过程中遇到问题？尝试从 [故障排查](https://gogs.io/docs/intro/troubleshooting.html) 页面或 [用户论坛](https://discuss.gogs.io/) 获取帮助。
 - 希望帮助多国语言界面的翻译吗？请立即访问 [详情页面](https://gogs.io/docs/features/i18n.html)！
 
-## 功能特性
+## 主要特性
 
-- 支持活动时间线
-- 支持 SSH 以及 HTTP/HTTPS 协议
-- 支持 SMTP、LDAP 和反向代理的用户认证
-- 支持反向代理子路径
-- 支持用户、组织和仓库管理系统
-- 支持添加和删除仓库协作者
-- 支持仓库和组织级别 Web 钩子（包括 Slack 和 Discord 集成）
-- 支持仓库 Git 钩子和部署密钥
-- 支持仓库工单（Issue）、合并请求（Pull Request）、Wiki 和保护分支
-- 支持迁移和镜像仓库以及它的 Wiki
-- 支持在线编辑仓库文件和 Wiki
-- 支持自定义源的 Gravatar 和 Federated Avatar
-- 支持 Jupyter Notebook
-- 支持两步验证登录
-- 支持邮件服务
-- 支持后台管理面板
-- 支持 MySQL、PostgreSQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)（通过 MySQL 协议）数据库
-- 支持多语言本地化（[30 种语言]([more](https://crowdin.com/project/gogs))）
+- 控制面板、用户页面以及活动时间线
+- 通过 SSH、HTTP 和 HTTPS 协议操作仓库
+- 管理用户、组织和仓库
+- 仓库和组织级 Webhook，包括 Slack、Discord 和钉钉
+- 仓库 Git 钩子和部署密钥
+- 仓库工单（Issue）、合并请求（Pull Request）、Wiki、保护分支和多人协作
+- 从其它代码平台迁移和镜像仓库以及 Wiki
+- 在线编辑仓库文件和 Wiki
+- Jupyter Notebook 和 PDF 的渲染
+- 通过 SMTP、LDAP、反向代理、GitHub.com 和 GitHub 企业版进行用户认证
+- 开启两步验证（2FA）登录
+- 自定义 HTML 模板、静态文件和许多其它组件
+- 多样的数据库后端，包括 PostgreSQL、MySQL、SQLite3、MSSQL 和 [TiDB](https://github.com/pingcap/tidb)
+- 超过[30 种语言](https://crowdin.com/project/gogs)的本地化
 
 ## 硬件要求
 

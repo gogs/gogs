@@ -116,7 +116,7 @@ func NewRepoContext() {
 		log.Fatal(2, "Failed to get Git version: %v", err)
 	}
 
-	log.Info("Git Version: %s", setting.Git.Version)
+	log.Info("Git version: %s", setting.Git.Version)
 	if version.Compare("1.8.3", setting.Git.Version, ">") {
 		log.Fatal(2, "Gogs requires Git version greater or equal to 1.8.3")
 	}

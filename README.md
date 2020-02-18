@@ -32,24 +32,19 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## Features
 
-- Activity timeline
-- SSH and HTTP/HTTPS protocols
-- SMTP/LDAP/Reverse proxy authentication
-- Reverse proxy with sub-path
-- Account/Organization/Repository management
-- Add/Remove repository collaborators
-- Repository/Organization webhooks (including Slack and Discord)
-- Repository Git hooks/deploy keys
-- Repository issues, pull requests, wiki and protected branches
-- Migrate and mirror repository and its wiki
-- Web editor for repository files and wiki
-- Jupyter Notebook
-- Two-factor authentication
-- Gravatar and Federated avatar with custom source
-- Mail service
-- Administration panel
-- Supports MySQL, PostgreSQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb) (via MySQL protocol)
-- Multi-language support ([30 languages](https://crowdin.com/project/gogs))
+- User dashboard, user profile and activity timeline.
+- Access repositories via SSH, HTTP and HTTPS protocols.
+- User, organization and repository management.
+- Repository and organization webhooks, including Slack, Discord and Dingtalk.
+- Repository Git hooks and deploy keys.
+- Repository issues, pull requests, wiki, protected branches and collaboration.
+- Migrate and mirror repositories with wiki from other code hosts.
+- Web editor for quick editing repository files and wiki.
+- Jupyter Notebook and PDF rendering.
+- Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
+- Customize HTML templates, static files and many others.
+- Rich database backend, including PostgreSQL, MySQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb).
+- Have localization over [30 languages](https://crowdin.com/project/gogs).
 
 ## Hardware Requirements
 
