@@ -65,6 +65,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 			panic(err)
 		}
 
+		name = strings.TrimPrefix(name, dir)
 		ext := path.Ext(name)
 		name = strings.TrimSuffix(name, ext)
 		files = append(files, macaron.NewTplFile(name, data, ext))
