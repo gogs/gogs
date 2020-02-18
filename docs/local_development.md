@@ -2,7 +2,7 @@
 
 > This document is driven from https://docs.sourcegraph.com/dev/local_development.
 
-Gogs is developed in [Go](https://golang.org/), please take [A Tour of Go](https://tour.golang.org/) if you haven't done so!
+Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https://tour.golang.org/) if you haven't done so!
 
 ## Outline
 
@@ -47,6 +47,14 @@ Gogs has the following dependencies:
     brew services start postgresql
     ```
 
+4.  Ensure `psql`, the PostgreSQL command line client, is on your `$PATH`.
+    Homebrew does not put it there by default. Homebrew gives you the command to run to insert `psql` in your path in the "Caveats" section of `brew info postgresql`. Alternatively, you can use the command below. It might need to be adjusted depending on your Homebrew prefix (`/usr/local` below) and shell (bash below).
+
+    ```bash
+    hash psql || { echo 'export PATH="/usr/local/opt/postgresql/bin:$PATH"' >> ~/.bash_profile }
+    source ~/.bash_profile
+    ```
+
 ### Ubuntu
 
 1. Update repositories:
@@ -66,14 +74,6 @@ Gogs has the following dependencies:
 
     ```bash
     sudo systemctl enable postgresql
-    ```
-
-4.  Ensure `psql`, the PostgreSQL command line client, is on your `$PATH`.
-    Homebrew does not put it there by default. Homebrew gives you the command to run to insert `psql` in your path in the "Caveats" section of `brew info postgresql`. Alternatively, you can use the command below. It might need to be adjusted depending on your Homebrew prefix (`/usr/local` below) and shell (bash below).
-
-    ```bash
-    hash psql || { echo 'export PATH="/usr/local/opt/postgresql/bin:$PATH"' >> ~/.bash_profile }
-    source ~/.bash_profile
     ```
 
 ## Step 2: Initialize your database
@@ -132,7 +132,18 @@ SSL_MODE = disable
 make web
 ```
 
+You would have to re-run this command after changing Go files, or any file under `conf/`, `template/` and `public/` directories.
+
 ## Other nice things
+
+### Load HTML templates and static files from disk
+
+When you are actively working on HTML templates and static files during development, you may want to enable the following configuration to avoid recompiling and restarting Gogs every time you make a change to files under `template/` and `public/` directories:
+
+```ini
+[server]
+LOAD_ASSETS_FROM_DISK = true
+```
 
 ### Offline development
 
