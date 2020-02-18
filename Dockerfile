@@ -7,7 +7,7 @@ RUN apk --no-cache --no-progress add --virtual \
 
 WORKDIR /go/src/github.com/gogs/gogs
 COPY . .
-RUN make build TAGS="sqlite cert pam"
+RUN make build-no-gen TAGS="sqlite cert pam"
 
 FROM alpine:3.10
 ADD https://github.com/tianon/gosu/releases/download/1.10/gosu-amd64 /usr/sbin/gosu
