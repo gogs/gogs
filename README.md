@@ -4,8 +4,6 @@
 
 ![](https://github.com/gogs/gogs/blob/master/public/img/gogs-large-resize.png?raw=true)
 
-##### Current tip version: [`.VERSION`](templates/.VERSION) (see [Releases](https://github.com/gogs/gogs/releases) for binary versions)
-
 | Web | UI  | Preview  |
 |:-------------:|:-------:|:-------:|
 |![Dashboard](https://gogs.io/img/screenshots/1.png)|![Repository](https://gogs.io/img/screenshots/2.png)|![Editor](https://gogs.io/img/screenshots/3.png)|
