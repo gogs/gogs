@@ -4,7 +4,7 @@ LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildCommit=$(shell git rev-parse H
 CONF_FILES := $(shell find conf | sed 's/ /\\ /g')
 TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
 PUBLIC_FILES := $(shell find public | sed 's/ /\\ /g')
-LESS_FILES := $(wildcard public/less/gogs.less public/less/_*.less)
+LESS_FILES := $(wildcard public/less/*.less)
 ASSETS_GENERATED := internal/assets/conf/conf_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go
 GENERATED := $(ASSETS_GENERATED) public/css/gogs.css
 
@@ -69,7 +69,7 @@ internal/assets/public/public_gen.go: $(PUBLIC_FILES)
 less: public/css/gogs.css
 
 public/css/gogs.css: $(LESS_FILES)
-	@type lessc >/dev/null 2>&1 && lessc $< >$@ || echo "lessc command not found, skipped."
+	@type lessc >/dev/null 2>&1 && lessc --source-map "public/less/gogs.less" $@ || echo "lessc command not found or failed"
 
 clean:
 	go clean -i ./...
