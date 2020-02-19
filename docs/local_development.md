@@ -24,6 +24,7 @@ Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
 - [Go](https://golang.org/doc/install) (v1.11 or higher)
+- [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [GNU Make](https://www.gnu.org/software/make/)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
@@ -35,19 +36,20 @@ Gogs has the following dependencies:
 ### macOS
 
 1. Install [Homebrew](https://brew.sh/).
-2. Install dependencies:
+1. Install dependencies:
 
     ```bash
-    brew install go postgresql git go-bindata
+    brew install go postgresql git go-bindata npm
+    npm install -g less
     ```
 
-3. Configure PostgreSQL to start automatically:
+1. Configure PostgreSQL to start automatically:
 
     ```bash
     brew services start postgresql
     ```
 
-4.  Ensure `psql`, the PostgreSQL command line client, is on your `$PATH`.
+1.  Ensure `psql`, the PostgreSQL command line client, is on your `$PATH`.
     Homebrew does not put it there by default. Homebrew gives you the command to run to insert `psql` in your path in the "Caveats" section of `brew info postgresql`. Alternatively, you can use the command below. It might need to be adjusted depending on your Homebrew prefix (`/usr/local` below) and shell (bash below).
 
     ```bash
@@ -57,20 +59,27 @@ Gogs has the following dependencies:
 
 ### Ubuntu
 
+1. Add package repositories:
+
+    ```bash
+    curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+    ```
+
 1. Update repositories:
 
     ```bash
     sudo apt-get update
     ```
 
-2. Install dependencies:
+1. Install dependencies:
 
     ```bash
-    sudo apt install -y make git-all postgresql postgresql-contrib golang-go
+    sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     go get -u github.com/kevinburke/go-bindata/...
+    npm install -g less
     ```
 
-3. Configure startup services:
+1. Configure startup services:
 
     ```bash
     sudo systemctl enable postgresql
