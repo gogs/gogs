@@ -12,8 +12,6 @@
 					<dl class="dl-horizontal admin-dl-horizontal">
 						<dt>{{.i18n.Tr "admin.config.app_name"}}</dt>
 						<dd>{{AppName}}</dd>
-						<dt>{{.i18n.Tr "admin.config.app_ver"}}</dt>
-						<dd>{{AppVer}}</dd>
 						<dt>{{.i18n.Tr "admin.config.app_url"}}</dt>
 						<dd>{{.AppURL}}</dd>
 						<dt>{{.i18n.Tr "admin.config.domain"}}</dt>
@@ -267,8 +265,6 @@
 				</h4>
 				<div class="ui attached table segment">
 					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.git_version"}}</dt>
-						<dd>{{.GitVersion}}</dd>
 						<dt>{{.i18n.Tr "admin.config.git_disable_diff_highlight"}}</dt>
 						<dd><i class="fa fa{{if .Git.DisableDiffHighlight}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.git_max_diff_lines"}}</dt>

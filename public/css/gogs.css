@@ -3142,11 +3142,14 @@ footer .ui.language .menu {
 .admin .table.segment:not(.select) td:first-of-type {
   padding-left: 15px !important;
 }
+.admin code {
+  color: #db2828;
+}
 .admin.user .email {
   max-width: 200px;
 }
 .admin dl.admin-dl-horizontal {
-  padding: 20px;
+  padding: 10px 15px;
   margin: 0;
 }
 .admin dl.admin-dl-horizontal dd {
@@ -3170,9 +3173,6 @@ footer .ui.language .menu {
 .admin.config pre {
   background-color: #f7f7f7;
   padding: 5px;
-}
-.admin.config code {
-  color: #db2828;
 }
 .admin.config .log-config table tbody tr td:first-child {
   width: 100px;
@@ -3234,3 +3234,4 @@ footer .ui.language .menu {
 .ui.user.list .item .description a:hover {
   text-decoration: underline;
 }
+/*# sourceMappingURL=gogs.css.map */

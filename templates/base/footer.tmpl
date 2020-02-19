@@ -7,9 +7,14 @@
 	<footer>
 		<div class="ui container">
 			<div class="ui left">
-				© {{Year}} Gogs {{if (or .ShowFooterVersion .PageIsAdmin)}}{{.i18n.Tr "version"}}: {{AppVer}}{{end}} {{if ShowFooterTemplateLoadTime}}{{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>{{end}}
+				© {{Year}} Gogs
 			</div>
 			<div class="ui right links">
+				{{if ShowFooterTemplateLoadTime}}
+					<span>
+						{{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
+					</span>
+				{{end}}
 				{{if .ShowFooterBranding}}
 					<a target="_blank" rel="noopener noreferrer" href="https://github.com/gogs/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
 					<a target="_blank" rel="noopener noreferrer" href="https://twitter.com/GogsHQ"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
@@ -26,7 +31,6 @@
 				</div>
 				<a href="/assets/librejs/librejs.html" style="display:none" data-jslicense="1">Javascript Licenses</a>
 				<a target="_blank" rel="noopener noreferrer" href="https://gogs.io">{{.i18n.Tr "website"}}</a>
-				{{if (or .ShowFooterVersion .PageIsAdmin)}}<span class="version">{{GoVer}}</span>{{end}}
 			</div>
 		</div>
 	</footer>
