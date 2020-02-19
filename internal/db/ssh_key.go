@@ -20,7 +20,7 @@ import (
 
 	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/process"
@@ -341,7 +341,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 
 		// .ssh directory should have mode 700, and authorized_keys file should have mode 600.
 		if fi.Mode().Perm() > 0600 {
-			log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
+			log.Error("authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
 			if err = f.Chmod(0600); err != nil {
 				return err
 			}

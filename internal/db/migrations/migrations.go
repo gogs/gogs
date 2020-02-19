@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/tool"
@@ -93,7 +93,7 @@ func Migrate(x *xorm.Engine) error {
 
 	v := currentVersion.Version
 	if _MIN_DB_VER > v {
-		log.Fatal(0, `
+		log.Fatal(`
 Hi there, thank you for using Gogs for so long!
 However, Gogs has stopped supporting auto-migration from your previously installed version.
 But the good news is, it's very easy to fix this problem!

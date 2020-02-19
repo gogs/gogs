@@ -17,8 +17,8 @@ import (
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/db"
@@ -173,7 +173,7 @@ func (c *Context) Handle(status int, msg string, err error) {
 		c.Data["Title"] = "Page Not Found"
 	case http.StatusInternalServerError:
 		c.Data["Title"] = "Internal Server Error"
-		log.Error(3, "%s: %v", msg, err)
+		log.Error("%s: %v", msg, err)
 		if !setting.ProdMode || (c.IsLogged && c.User.IsAdmin) {
 			c.Data["ErrorMsg"] = err
 		}

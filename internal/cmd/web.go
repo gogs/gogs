@@ -26,8 +26,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/assets/public"
@@ -119,7 +119,7 @@ func newMacaron() *macaron.Macaron {
 
 	localeNames, err := conf.AssetDir("conf/locale")
 	if err != nil {
-		log.Fatal(4, "Fail to list locale files: %v", err)
+		log.Fatal("Failed to list locale files: %v", err)
 	}
 	localFiles := make(map[string][]byte)
 	for _, name := range localeNames {
@@ -741,15 +741,15 @@ func runWeb(c *cli.Context) error {
 		// FIXME: add proper implementation of signal capture on all protocols
 		// execute this on SIGTERM or SIGINT: listener.Close()
 		if err = os.Chmod(listenAddr, os.FileMode(setting.UnixSocketPermission)); err != nil {
-			log.Fatal(4, "Failed to set permission of unix socket: %v", err)
+			log.Fatal("Failed to set permission of unix socket: %v", err)
 		}
 		err = http.Serve(listener, m)
 	default:
-		log.Fatal(4, "Invalid protocol: %s", setting.Protocol)
+		log.Fatal("Invalid protocol: %s", setting.Protocol)
 	}
 
 	if err != nil {
-		log.Fatal(4, "Failed to start server: %v", err)
+		log.Fatal("Failed to start server: %v", err)
 	}
 
 	return nil

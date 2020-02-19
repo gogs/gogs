@@ -144,7 +144,7 @@ func runCreateUser(c *cli.Context) error {
 		setting.CustomConf = c.String("config")
 	}
 
-	setting.NewContext()
+	setting.Init()
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -168,7 +168,7 @@ func adminDashboardOperation(operation func() error, successMessage string) func
 			setting.CustomConf = c.String("config")
 		}
 
-		setting.NewContext()
+		setting.Init()
 		db.LoadConfigs()
 		db.SetEngine()
 

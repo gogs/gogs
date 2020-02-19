@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/jaytaylor/html2text"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/setting"
 )
@@ -43,7 +43,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	if setting.MailService.UsePlainText || setting.MailService.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
-			log.Error(2, "html2text.FromString: %v", err)
+			log.Error("html2text.FromString: %v", err)
 		} else {
 			contentType = "text/plain"
 			body = plainBody
@@ -209,7 +209,7 @@ func processMailQueue() {
 		case msg := <-mailQueue:
 			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
 			if err := gomail.Send(sender, msg.Message); err != nil {
-				log.Error(3, "Fail to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+				log.Error("Failed to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
 			} else {
 				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
 			}

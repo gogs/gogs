@@ -7,7 +7,7 @@ package admin
 import (
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"

@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	setting.NewContext()
+	setting.Init()
 }
 
 func Test_SSHParsePublicKey(t *testing.T) {

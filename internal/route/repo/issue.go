@@ -15,7 +15,7 @@ import (
 
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -891,7 +891,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 				c.Flash.Info(c.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
 			} else {
 				if err = issue.ChangeStatus(c.User, c.Repo.Repository, f.Status == "close"); err != nil {
-					log.Error(2, "ChangeStatus: %v", err)
+					log.Error("ChangeStatus: %v", err)
 				} else {
 					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}

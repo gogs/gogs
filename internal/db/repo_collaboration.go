@@ -7,7 +7,7 @@ package db
 import (
 	"fmt"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	api "github.com/gogs/go-gogs-client"
 )
@@ -41,7 +41,7 @@ func IsCollaborator(repoID, userID int64) bool {
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
-		log.Error(2, "get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
+		log.Error("get collaboration [repo_id: %d, user_id: %d]: %v", repoID, userID, err)
 		return false
 	}
 	return has

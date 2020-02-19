@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -90,7 +90,7 @@ func TeamsAction(c *context.Context) {
 		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
-			log.Error(3, "Action(%s): %v", c.Params(":action"), err)
+			log.Error("Action(%s): %v", c.Params(":action"), err)
 			c.JSON(200, map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
@@ -134,7 +134,7 @@ func TeamsRepoAction(c *context.Context) {
 	}
 
 	if err != nil {
-		log.Error(3, "Action(%s): '%s' %v", c.Params(":action"), c.Org.Team.Name, err)
+		log.Error("Action(%s): '%s' %v", c.Params(":action"), c.Org.Team.Name, err)
 		c.Handle(500, "TeamsRepoAction", err)
 		return
 	}

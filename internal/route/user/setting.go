@@ -16,7 +16,7 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -144,7 +144,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) er
 		// generate a random one when needed.
 		if ctxUser.UseCustomAvatar && !com.IsFile(ctxUser.CustomAvatarPath()) {
 			if err := ctxUser.GenerateRandomAvatar(); err != nil {
-				log.Error(2, "generate random avatar [%d]: %v", ctxUser.ID, err)
+				log.Error("generate random avatar [%d]: %v", ctxUser.ID, err)
 			}
 		}
 	}
@@ -278,7 +278,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 		mailer.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), email.Email)
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
-			log.Error(2, "Set cache 'MailResendLimit' failed: %v", err)
+			log.Error("Set cache 'MailResendLimit' failed: %v", err)
 		}
 		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
 	} else {

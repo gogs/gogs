@@ -58,7 +58,7 @@ func runImportLocale(c *cli.Context) error {
 		setting.CustomConf = c.String("config")
 	}
 
-	setting.NewContext()
+	setting.Init()
 
 	now := time.Now()
 

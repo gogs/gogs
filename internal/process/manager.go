@@ -12,11 +12,11 @@ import (
 	"sync"
 	"time"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 )
 
 var (
-	ErrExecTimeout = errors.New("Process execution timeout")
+	ErrExecTimeout = errors.New("process execution timeout")
 )
 
 const DEFAULT_TIMEOUT = 60 * time.Second
@@ -101,7 +101,7 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 	select {
 	case <-time.After(timeout):
 		if errKill := Kill(pid); errKill != nil {
-			log.Error(2, "Fail to kill timeout process [pid: %d, desc: %s]: %v", pid, desc, errKill)
+			log.Error("Failed to kill timeout process [pid: %d, desc: %s]: %v", pid, desc, errKill)
 		}
 		<-done
 		return "", ErrExecTimeout.Error(), ErrExecTimeout

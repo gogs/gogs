@@ -9,7 +9,7 @@ import (
 	"net/url"
 
 	"github.com/go-macaron/captcha"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -239,7 +239,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 	if err = c.Cache.Put(u.TwoFactorCacheKey(passcode), 1, 60); err != nil {
-		log.Error(2, "Failed to put cache 'two factor passcode': %v", err)
+		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
@@ -376,7 +376,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		c.Success(ACTIVATE)
 
 		if err := c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
-			log.Error(2, "Failed to put cache key 'mail resend': %v", err)
+			log.Error("Failed to put cache key 'mail resend': %v", err)
 		}
 		return
 	}
@@ -401,7 +401,7 @@ func Activate(c *context.Context) {
 				mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
 
 				if err := c.Cache.Put(c.User.MailResendCacheKey(), 1, 180); err != nil {
-					log.Error(2, "Failed to put cache key 'mail resend': %v", err)
+					log.Error("Failed to put cache key 'mail resend': %v", err)
 				}
 			}
 		} else {
@@ -506,7 +506,7 @@ func ForgotPasswdPost(c *context.Context) {
 
 	mailer.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
 	if err = c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
-		log.Error(2, "Failed to put cache key 'mail resend': %v", err)
+		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 
 	c.Data["Hours"] = setting.Service.ActiveCodeLives / 60

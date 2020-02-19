@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	log "gopkg.in/clog.v1"
 	"gopkg.in/gomail.v2"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/markup"
@@ -111,7 +111,7 @@ func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 	}
 	body, err := render(tpl, data)
 	if err != nil {
-		log.Error(2, "render: %v", err)
+		log.Error("render: %v", err)
 		return
 	}
 
@@ -139,7 +139,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 	}
 	body, err := render(MAIL_AUTH_ACTIVATE_EMAIL, data)
 	if err != nil {
-		log.Error(3, "HTMLString: %v", err)
+		log.Error("HTMLString: %v", err)
 		return
 	}
 
@@ -156,7 +156,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) {
 	}
 	body, err := render(MAIL_AUTH_REGISTER_NOTIFY, data)
 	if err != nil {
-		log.Error(3, "HTMLString: %v", err)
+		log.Error("HTMLString: %v", err)
 		return
 	}
 
@@ -177,7 +177,7 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 	}
 	body, err := render(MAIL_NOTIFY_COLLABORATOR, data)
 	if err != nil {
-		log.Error(3, "HTMLString: %v", err)
+		log.Error("HTMLString: %v", err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	data["Doer"] = doer
 	content, err := render(tplName, data)
 	if err != nil {
-		log.Error(3, "HTMLString (%s): %v", tplName, err)
+		log.Error("HTMLString (%s): %v", tplName, err)
 	}
 	from := gomail.NewMessage().FormatAddress(setting.MailService.FromEmail, doer.DisplayName())
 	msg := NewMessageFrom(tos, from, subject, content)

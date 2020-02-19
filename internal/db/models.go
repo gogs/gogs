@@ -20,7 +20,7 @@ import (
 	"github.com/json-iterator/go"
 	_ "github.com/lib/pq"
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
@@ -370,20 +370,20 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 
 			meta := make(map[string]interface{})
 			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
-				log.Error(2, "Failed to unmarshal to map: %v", err)
+				log.Error("Failed to unmarshal to map: %v", err)
 			}
 
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
 				if _, err = x.Exec("UPDATE "+rawTableName+" SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
-					log.Error(2, "Failed to reset 'created_unix': %v", err)
+					log.Error("Failed to reset 'created_unix': %v", err)
 				}
 			}
 
 			switch rawTableName {
 			case "milestone":
 				if _, err = x.Exec("UPDATE "+rawTableName+" SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta["DeadlineUnix"], meta["ClosedDateUnix"], meta["ID"]); err != nil {
-					log.Error(2, "Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
+					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
 				}
 			}
 		}

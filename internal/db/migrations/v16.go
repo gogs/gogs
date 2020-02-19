@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
-	log "gopkg.in/clog.v1"
 
 	"github.com/gogs/git-module"
 

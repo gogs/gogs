@@ -9,7 +9,7 @@ import (
 	"path"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/setting"
@@ -26,14 +26,14 @@ func (c *Context) renderNoticeBanner() {
 
 	f, err := os.Open(fpath)
 	if err != nil {
-		log.Error(2, "Failed to open file %q: %v", fpath, err)
+		log.Error("Failed to open file %q: %v", fpath, err)
 		return
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		log.Error(2, "Failed to stat file %q: %v", fpath, err)
+		log.Error("Failed to stat file %q: %v", fpath, err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (c *Context) renderNoticeBanner() {
 	buf := make([]byte, maxSize)
 	n, err := f.Read(buf)
 	if err != nil {
-		log.Error(2, "Failed to read file %q: %v", fpath, err)
+		log.Error("Failed to read file %q: %v", fpath, err)
 		return
 	}
 	buf = buf[:n]

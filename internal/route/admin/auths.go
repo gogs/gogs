@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 
 	"gogs.io/gogs/internal/auth/ldap"

@@ -16,7 +16,7 @@ import (
 
 	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/setting"
@@ -39,7 +39,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 
 		ch, reqs, err := newChan.Accept()
 		if err != nil {
-			log.Error(3, "Error accepting channel: %v", err)
+			log.Error("Error accepting channel: %v", err)
 			continue
 		}
 
@@ -57,7 +57,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					args[0] = strings.TrimLeft(args[0], "\x04")
 					_, _, err := com.ExecCmdBytes("env", args[0]+"="+args[1])
 					if err != nil {
-						log.Error(3, "env: %v", err)
+						log.Error("env: %v", err)
 						return
 					}
 				case "exec":
@@ -71,23 +71,23 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 
 					stdout, err := cmd.StdoutPipe()
 					if err != nil {
-						log.Error(3, "SSH: StdoutPipe: %v", err)
+						log.Error("SSH: StdoutPipe: %v", err)
 						return
 					}
 					stderr, err := cmd.StderrPipe()
 					if err != nil {
-						log.Error(3, "SSH: StderrPipe: %v", err)
+						log.Error("SSH: StderrPipe: %v", err)
 						return
 					}
 					input, err := cmd.StdinPipe()
 					if err != nil {
-						log.Error(3, "SSH: StdinPipe: %v", err)
+						log.Error("SSH: StdinPipe: %v", err)
 						return
 					}
 
 					// FIXME: check timeout
 					if err = cmd.Start(); err != nil {
-						log.Error(3, "SSH: Start: %v", err)
+						log.Error("SSH: Start: %v", err)
 						return
 					}
 
@@ -97,7 +97,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					io.Copy(ch.Stderr(), stderr)
 
 					if err = cmd.Wait(); err != nil {
-						log.Error(3, "SSH: Wait: %v", err)
+						log.Error("SSH: Wait: %v", err)
 						return
 					}
 
@@ -113,13 +113,13 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 func listen(config *ssh.ServerConfig, host string, port int) {
 	listener, err := net.Listen("tcp", host+":"+com.ToStr(port))
 	if err != nil {
-		log.Fatal(4, "Fail to start SSH server: %v", err)
+		log.Fatal("Failed to start SSH server: %v", err)
 	}
 	for {
 		// Once a ServerConfig has been configured, connections can be accepted.
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Error(3, "SSH: Error accepting incoming connection: %v", err)
+			log.Error("SSH: Error accepting incoming connection: %v", err)
 			continue
 		}
 
@@ -134,7 +134,7 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 				if err == io.EOF {
 					log.Warn("SSH: Handshaking was terminated: %v", err)
 				} else {
-					log.Error(3, "SSH: Error on handshaking: %v", err)
+					log.Error("SSH: Error on handshaking: %v", err)
 				}
 				return
 			}
@@ -156,7 +156,7 @@ func Listen(host string, port int, ciphers []string) {
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			pkey, err := db.SearchPublicKeyByContent(strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 			if err != nil {
-				log.Error(3, "SearchPublicKeyByContent: %v", err)
+				log.Error("SearchPublicKeyByContent: %v", err)
 				return nil, err
 			}
 			return &ssh.Permissions{Extensions: map[string]string{"key-id": com.ToStr(pkey.ID)}}, nil
@@ -168,18 +168,18 @@ func Listen(host string, port int, ciphers []string) {
 		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
 		_, stderr, err := com.ExecCmd(setting.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")
 		if err != nil {
-			panic(fmt.Sprintf("Fail to generate private key: %v - %s", err, stderr))
+			panic(fmt.Sprintf("Failed to generate private key: %v - %s", err, stderr))
 		}
 		log.Trace("SSH: New private key is generateed: %s", keyPath)
 	}
 
 	privateBytes, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		panic("SSH: Fail to load private key: " + err.Error())
+		panic("SSH: Failed to load private key: " + err.Error())
 	}
 	private, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		panic("SSH: Fail to parse private key: " + err.Error())
+		panic("SSH: Failed to parse private key: " + err.Error())
 	}
 	config.AddHostKey(private)
 

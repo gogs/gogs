@@ -5,15 +5,15 @@
 package org
 
 import (
-	user2 "gogs.io/gogs/internal/route/user"
 	"strings"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -89,7 +89,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 func SettingsAvatar(c *context.Context, f form.Avatar) {
 	f.Source = form.AVATAR_LOCAL
-	if err := user2.UpdateAvatarSetting(c, f, c.Org.Organization); err != nil {
+	if err := user.UpdateAvatarSetting(c, f, c.Org.Organization); err != nil {
 		c.Flash.Error(err.Error())
 	} else {
 		c.Flash.Success(c.Tr("org.settings.update_avatar_success"))

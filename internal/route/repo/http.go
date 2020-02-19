@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -235,7 +235,7 @@ func serviceRPC(h serviceHandler, service string) {
 	if h.r.Header.Get("Content-Encoding") == "gzip" {
 		reqBody, err = gzip.NewReader(reqBody)
 		if err != nil {
-			log.Error(2, "HTTP.Get: fail to create gzip reader: %v", err)
+			log.Error("HTTP.Get: fail to create gzip reader: %v", err)
 			h.w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -258,7 +258,7 @@ func serviceRPC(h serviceHandler, service string) {
 	cmd.Stderr = &stderr
 	cmd.Stdin = reqBody
 	if err = cmd.Run(); err != nil {
-		log.Error(2, "HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
+		log.Error("HTTP.serviceRPC: fail to serve RPC '%s': %v - %s", service, err, stderr.String())
 		h.w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -286,7 +286,7 @@ func gitCommand(dir string, args ...string) []byte {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		log.Error(2, fmt.Sprintf("Git: %v - %s", err, out))
+		log.Error(fmt.Sprintf("Git: %v - %s", err, out))
 	}
 	return out
 }

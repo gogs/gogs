@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	api "github.com/gogs/go-gogs-client"
@@ -336,7 +336,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error(2, "LoadIssue: %v", err)
+			log.Error("LoadIssue: %v", err)
 			return
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -356,7 +356,7 @@ func ChangeMilestoneAssign(doer *User, issue *Issue, oldMilestoneID int64) (err 
 		})
 	}
 	if err != nil {
-		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil

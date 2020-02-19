@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/markup"
@@ -173,7 +173,7 @@ func (issue *Issue) MailParticipants() (err error) {
 	}
 
 	if err = mailIssueCommentToParticipants(issue, issue.Poster, mentions); err != nil {
-		log.Error(2, "mailIssueCommentToParticipants: %v", err)
+		log.Error("mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil
