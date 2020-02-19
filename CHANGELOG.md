@@ -31,6 +31,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
+- Configuration option `[other] SHOW_FOOTER_VERSION`
+
 ---
 
 **Older change logs can be found on [GitHub](https://github.com/gogs/gogs/releases?after=v0.12.0).**
