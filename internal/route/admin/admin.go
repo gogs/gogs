@@ -29,9 +29,8 @@ const (
 	MONITOR   = "admin/monitor"
 )
 
-var (
-	startTime = time.Now()
-)
+// initTime is the time when the application was initialized.
+var initTime = time.Now()
 
 var sysStatus struct {
 	Uptime       string
@@ -75,7 +74,7 @@ var sysStatus struct {
 }
 
 func updateSystemStatus() {
-	sysStatus.Uptime = tool.TimeSincePro(startTime)
+	sysStatus.Uptime = tool.TimeSincePro(initTime)
 
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
@@ -126,9 +125,9 @@ const (
 )
 
 func Dashboard(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.dashboard")
-	c.Data["PageIsAdmin"] = true
-	c.Data["PageIsAdminDashboard"] = true
+	c.Title("admin.dashboard")
+	c.PageIs("Admin")
+	c.PageIs("AdminDashboard")
 
 	// Run operation.
 	op, _ := com.StrTo(c.Query("op")).Int()
@@ -165,15 +164,20 @@ func Dashboard(c *context.Context) {
 		} else {
 			c.Flash.Success(success)
 		}
-		c.Redirect(setting.AppSubURL + "/admin")
+		c.SubURLRedirect("/admin")
 		return
 	}
+
+	c.Data["GitVersion"] = setting.Git.Version
+	c.Data["GoVersion"] = runtime.Version()
+	c.Data["BuildTime"] = setting.BuildTime
+	c.Data["BuildCommit"] = setting.BuildCommit
 
 	c.Data["Stats"] = db.GetStatistic()
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
-	c.HTML(200, DASHBOARD)
+	c.Success(DASHBOARD)
 }
 
 func SendTestMail(c *context.Context) {
@@ -229,7 +233,6 @@ func Config(c *context.Context) {
 	c.Data["DisableGravatar"] = setting.DisableGravatar
 	c.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
 
-	c.Data["GitVersion"] = setting.Git.Version
 	c.Data["Git"] = setting.Git
 
 	type logger struct {

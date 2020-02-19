@@ -20,7 +20,7 @@ import (
 const Version = "0.12.0+dev"
 
 func init() {
-	setting.AppVer = Version
+	setting.AppVersion = Version
 }
 
 func main() {

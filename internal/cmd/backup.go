@@ -66,7 +66,7 @@ func runBackup(c *cli.Context) error {
 	metadata := ini.Empty()
 	metadata.Section("").Key("VERSION").SetValue(com.ToStr(_CURRENT_BACKUP_FORMAT_VERSION))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
-	metadata.Section("").Key("GOGS_VERSION").SetValue(setting.AppVer)
+	metadata.Section("").Key("GOGS_VERSION").SetValue(setting.AppVersion)
 	if err = metadata.SaveTo(metaFile); err != nil {
 		log.Fatal(0, "Fail to save metadata '%s': %v", metaFile, err)
 	}

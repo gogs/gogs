@@ -10,7 +10,6 @@ import (
 	"html/template"
 	"mime"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -37,9 +36,6 @@ var (
 func FuncMap() []template.FuncMap {
 	funcMapOnce.Do(func() {
 		funcMap = []template.FuncMap{map[string]interface{}{
-			"GoVer": func() string {
-				return strings.Title(runtime.Version())
-			},
 			"Year": func() int {
 				return time.Now().Year()
 			},
@@ -56,7 +52,7 @@ func FuncMap() []template.FuncMap {
 				return setting.AppURL
 			},
 			"AppVer": func() string {
-				return setting.AppVer
+				return setting.AppVersion
 			},
 			"AppDomain": func() string {
 				return setting.Domain

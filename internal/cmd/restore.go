@@ -68,8 +68,8 @@ func runRestore(c *cli.Context) error {
 		log.Fatal(0, "Failed to load metadata '%s': %v", metaFile, err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
-	if version.Compare(setting.AppVer, backupVersion, "<") {
-		log.Fatal(0, "Current Gogs version is lower than backup version: %s < %s", setting.AppVer, backupVersion)
+	if version.Compare(setting.AppVersion, backupVersion, "<") {
+		log.Fatal(0, "Current Gogs version is lower than backup version: %s < %s", setting.AppVersion, backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {

@@ -6,6 +6,30 @@
 			<div class="twelve wide column content">
 				{{template "base/alert" .}}
 				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.dashboard.build_info"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.dashboard.app_ver"}}</dt>
+						<dd>{{AppVer}}</dd>
+						<dt>{{.i18n.Tr "admin.dashboard.git_version"}}</dt>
+						<dd>{{.GitVersion}}</dd>
+						<dt>{{.i18n.Tr "admin.dashboard.go_version"}}</dt>
+						<dd>{{.GoVersion}}</dd>
+						<dt>{{.i18n.Tr "admin.dashboard.build_time"}}</dt>
+						<dd>{{.BuildTime}}</dd>
+						<dt>{{.i18n.Tr "admin.dashboard.build_commit"}}</dt>
+						<dd>
+							{{if .BuildCommit}}
+								<a target="_blank" href="https://github.com/gogs/gogs/commit/{{.BuildCommit}}">{{.BuildCommit}} <i class="fa fa-external-link" aria-hidden="true"></i></a>
+							{{else}}
+								N/A
+							{{end}}
+						</dd>
+					</dl>
+				</div>
+
+				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.dashboard.statistic"}}
 				</h4>
 				<div class="ui attached segment">
@@ -13,6 +37,7 @@
 						{{.i18n.Tr "admin.dashboard.statistic_info" .Stats.Counter.User .Stats.Counter.Org .Stats.Counter.PublicKey .Stats.Counter.Repo .Stats.Counter.Watch .Stats.Counter.Star .Stats.Counter.Action .Stats.Counter.Access .Stats.Counter.Issue .Stats.Counter.Comment .Stats.Counter.Oauth .Stats.Counter.Follow .Stats.Counter.Mirror .Stats.Counter.Release .Stats.Counter.LoginSource .Stats.Counter.Webhook .Stats.Counter.Milestone .Stats.Counter.Label .Stats.Counter.HookTask .Stats.Counter.Team .Stats.Counter.UpdateTask .Stats.Counter.Attachment | Str2HTML}}
 					</p>
 				</div>
+
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.dashboard.operations"}}
 				</h4>
