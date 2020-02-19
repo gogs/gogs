@@ -11,7 +11,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cmd"
 	"gogs.io/gogs/internal/setting"
@@ -39,6 +39,6 @@ func main() {
 		cmd.Restore,
 	}
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(2, "Failed to run: %v", err)
+		log.Fatal("Failed to start application: %v", err)
 	}
 }

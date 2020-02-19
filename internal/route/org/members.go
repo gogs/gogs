@@ -6,7 +6,7 @@ package org
 
 import (
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -76,7 +76,7 @@ func MembersAction(c *context.Context) {
 	}
 
 	if err != nil {
-		log.Error(4, "Action(%s): %v", c.Params(":action"), err)
+		log.Error("Action(%s): %v", c.Params(":action"), err)
 		c.JSON(200, map[string]interface{}{
 			"ok":  false,
 			"err": err.Error(),

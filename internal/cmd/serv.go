@@ -14,7 +14,7 @@ import (
 
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
@@ -42,7 +42,7 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 		if !setting.ProdMode {
 			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
 		}
-		log.Fatal(3, logMessage, args...)
+		log.Fatal(logMessage, args...)
 	}
 
 	os.Exit(1)
@@ -55,13 +55,14 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 		setting.CustomConf = c.GlobalString("config")
 	}
 
-	setting.NewContext()
+	setting.Init()
 
-	level := log.TRACE
+	level := log.LevelTrace
 	if setting.ProdMode {
-		level = log.ERROR
+		level = log.LevelError
 	}
-	log.New(log.FILE, log.FileConfig{
+
+	err := log.NewFile(log.FileConfig{
 		Level:    level,
 		Filename: filepath.Join(setting.LogRootPath, logPath),
 		FileRotationConfig: log.FileRotationConfig{
@@ -70,7 +71,11 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 			MaxDays: 3,
 		},
 	})
-	log.Delete(log.CONSOLE) // Remove primary logger
+	if err != nil {
+		log.Fatal("Failed to init file logger: %v", err)
+		return
+	}
+	log.Remove(log.DefaultConsoleName) // Remove the primary logger
 
 	if !connectDB {
 		return
@@ -156,7 +161,7 @@ func runServ(c *cli.Context) error {
 		if errors.IsUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
 		}
-		fail("Internal error", "Fail to get repository owner '%s': %v", ownerName, err)
+		fail("Internal error", "Failed to get repository owner '%s': %v", ownerName, err)
 	}
 
 	repo, err := db.GetRepositoryByName(owner.ID, repoName)
@@ -164,7 +169,7 @@ func runServ(c *cli.Context) error {
 		if errors.IsRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
-		fail("Internal error", "Fail to get repository: %v", err)
+		fail("Internal error", "Failed to get repository: %v", err)
 	}
 	repo.Owner = owner
 
@@ -196,12 +201,12 @@ func runServ(c *cli.Context) error {
 		} else {
 			user, err = db.GetUserByKeyID(key.ID)
 			if err != nil {
-				fail("Internal error", "Fail to get user by key ID '%d': %v", key.ID, err)
+				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
 			mode, err := db.UserAccessMode(user.ID, repo)
 			if err != nil {
-				fail("Internal error", "Fail to check access: %v", err)
+				fail("Internal error", "Failed to check access: %v", err)
 			}
 
 			if mode < requestMode {
@@ -265,7 +270,7 @@ func runServ(c *cli.Context) error {
 	gitCmd.Stdin = os.Stdin
 	gitCmd.Stderr = os.Stderr
 	if err = gitCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute git command: %v", err)
+		fail("Internal error", "Failed to execute git command: %v", err)
 	}
 
 	return nil

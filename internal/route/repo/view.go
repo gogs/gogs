@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 
@@ -176,7 +176,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			var fileContent string
 			if err, content := template.ToUTF8WithErr(buf); err != nil {
 				if err != nil {
-					log.Error(4, "ToUTF8WithErr: %s", err)
+					log.Error("ToUTF8WithErr: %s", err)
 				}
 				fileContent = string(buf)
 			} else {
@@ -186,7 +186,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			var output bytes.Buffer
 			lines := strings.Split(fileContent, "\n")
 			// Remove blank line at the end of file
-			if len(lines) > 0 && len(lines[len(lines)-1])==0 {
+			if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
 				lines = lines[:len(lines)-1]
 			}
 			for index, line := range lines {

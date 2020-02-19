@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/tool"
@@ -75,7 +75,7 @@ func RemoveAllWithNotice(title, path string) {
 		desc := fmt.Sprintf("%s [%s]: %v", title, path, err)
 		log.Warn(desc)
 		if err = CreateRepositoryNotice(desc); err != nil {
-			log.Error(2, "CreateRepositoryNotice: %v", err)
+			log.Error("CreateRepositoryNotice: %v", err)
 		}
 	}
 }

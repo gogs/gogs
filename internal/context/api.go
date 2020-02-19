@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/setting"
 )
@@ -39,7 +39,7 @@ func (c *APIContext) Error(status int, title string, obj interface{}) {
 	}
 
 	if status == http.StatusInternalServerError {
-		log.Error(3, "%s: %s", title, message)
+		log.Error("%s: %s", title, message)
 	}
 
 	c.JSON(status, map[string]string{

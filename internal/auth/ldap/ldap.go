@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"strings"
 
-	log "gopkg.in/clog.v1"
 	"gopkg.in/ldap.v2"
+	log "unknwon.dev/clog/v2"
 )
 
 type SecurityProtocol int
@@ -130,7 +130,7 @@ func (ls *Source) findUserDN(l *ldap.Conn, name string) (string, bool) {
 
 	userDN := sr.Entries[0].DN
 	if userDN == "" {
-		log.Error(2, "LDAP: Search was successful, but found no DN!")
+		log.Error("LDAP: Search was successful, but found no DN!")
 		return "", false
 	}
 
@@ -183,7 +183,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 	}
 	l, err := dial(ls)
 	if err != nil {
-		log.Error(2, "LDAP connect failed for '%s': %v", ls.Host, err)
+		log.Error("LDAP connect failed for '%s': %v", ls.Host, err)
 		return "", "", "", "", false, false
 	}
 	defer l.Close()
@@ -229,7 +229,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 	sr, err := l.Search(search)
 	if err != nil {
-		log.Error(2, "LDAP: User search failed: %v", err)
+		log.Error("LDAP: User search failed: %v", err)
 		return "", "", "", "", false, false
 	} else if len(sr.Entries) < 1 {
 		if directBind {
@@ -266,7 +266,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 		srg, err := l.Search(groupSearch)
 		if err != nil {
-			log.Error(2, "LDAP: Group search failed: %v", err)
+			log.Error("LDAP: Group search failed: %v", err)
 			return "", "", "", "", false, false
 		} else if len(srg.Entries) < 1 {
 			log.Trace("LDAP: Group search returned no entries")
@@ -308,7 +308,7 @@ func (ls *Source) SearchEntry(name, passwd string, directBind bool) (string, str
 
 		sr, err = l.Search(search)
 		if err != nil {
-			log.Error(2, "LDAP: Admin search failed: %v", err)
+			log.Error("LDAP: Admin search failed: %v", err)
 		} else if len(sr.Entries) < 1 {
 			log.Trace("LDAP: Admin search returned no entries")
 		} else {

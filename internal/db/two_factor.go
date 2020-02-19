@@ -12,7 +12,7 @@ import (
 
 	"github.com/pquerna/otp/totp"
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/db/errors"
@@ -58,7 +58,7 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 func IsUserEnabledTwoFactor(userID int64) bool {
 	has, err := x.Where("user_id = ?", userID).Get(new(TwoFactor))
 	if err != nil {
-		log.Error(2, "IsUserEnabledTwoFactor [user_id: %d]: %v", userID, err)
+		log.Error("IsUserEnabledTwoFactor [user_id: %d]: %v", userID, err)
 	}
 	return has
 }

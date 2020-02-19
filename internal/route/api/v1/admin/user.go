@@ -5,10 +5,9 @@
 package admin
 
 import (
-	user2 "gogs.io/gogs/internal/route/api/v1/user"
 	"net/http"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	api "github.com/gogs/go-gogs-client"
 
@@ -16,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/route/api/v1/user"
 	"gogs.io/gogs/internal/setting"
 )
 
@@ -76,7 +76,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 }
 
 func EditUser(c *context.APIContext, form api.EditUserOption) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -131,7 +131,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 }
 
 func DeleteUser(c *context.APIContext) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -151,9 +151,9 @@ func DeleteUser(c *context.APIContext) {
 }
 
 func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
-	user2.CreateUserPublicKey(c, form, u.ID)
+	user.CreateUserPublicKey(c, form, u.ID)
 }
