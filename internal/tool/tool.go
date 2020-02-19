@@ -20,7 +20,7 @@ import (
 
 	"github.com/unknwon/com"
 	"github.com/unknwon/i18n"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/chardet"
 

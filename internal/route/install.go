@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
@@ -46,24 +46,25 @@ func checkRunMode() {
 	log.Info("Run mode: %s", strings.Title(macaron.Env))
 }
 
-func NewServices() {
-	setting.NewServices()
-	mailer.NewContext()
-}
-
 // GlobalInit is for global configuration reload-able.
 func GlobalInit() {
-	setting.NewContext()
+	setting.Init()
+	setting.InitLogging()
+	log.Info("%s %s", setting.AppName, setting.AppVersion)
 	log.Trace("Custom path: %s", setting.CustomPath)
 	log.Trace("Log path: %s", setting.LogRootPath)
+	log.Trace("Build time: %s", setting.BuildTime)
+	log.Trace("Build commit: %s", setting.BuildCommit)
+
 	db.LoadConfigs()
-	NewServices()
+	setting.NewServices()
+	mailer.NewContext()
 
 	if setting.InstallLock {
 		highlight.NewContext()
 		markup.NewSanitizer()
 		if err := db.NewEngine(); err != nil {
-			log.Fatal(2, "Fail to initialize ORM engine: %v", err)
+			log.Fatal("Failed to initialize ORM engine: %v", err)
 		}
 		db.HasEngine = true
 
@@ -302,7 +303,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	if com.IsFile(setting.CustomConf) {
 		// Keeps custom settings if there is already something.
 		if err := cfg.Append(setting.CustomConf); err != nil {
-			log.Error(2, "Fail to load custom conf '%s': %v", setting.CustomConf, err)
+			log.Error("Failed to load custom conf '%s': %v", setting.CustomConf, err)
 		}
 	}
 	cfg.Section("database").Key("DB_TYPE").SetValue(db.DbCfg.Type)

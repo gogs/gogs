@@ -7,7 +7,7 @@ package db
 import (
 	"fmt"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/db/errors"
 )
@@ -111,7 +111,7 @@ func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 		repo, err := GetRepositoryByID(access.RepoID)
 		if err != nil {
 			if errors.IsRepoNotExist(err) {
-				log.Error(2, "GetRepositoryByID: %v", err)
+				log.Error("GetRepositoryByID: %v", err)
 				continue
 			}
 			return nil, err

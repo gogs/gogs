@@ -67,7 +67,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	gitUpdate := exec.Command("git", "update-server-info")
 	gitUpdate.Dir = repoPath
 	if err = gitUpdate.Run(); err != nil {
-		return fmt.Errorf("Fail to call 'git update-server-info': %v", err)
+		return fmt.Errorf("run 'git update-server-info': %v", err)
 	}
 
 	gitRepo, err := git.OpenRepository(repoPath)

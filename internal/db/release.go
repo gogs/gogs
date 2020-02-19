@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
@@ -156,7 +156,7 @@ func (r *Release) preparePublishWebhooks() {
 		Repository: r.Repo.APIFormat(nil),
 		Sender:     r.Publisher.APIFormat(),
 	}); err != nil {
-		log.Error(2, "PrepareWebhooks: %v", err)
+		log.Error("PrepareWebhooks: %v", err)
 	}
 }
 

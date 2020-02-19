@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	api "github.com/gogs/go-gogs-client"
@@ -231,7 +231,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error(2, "LoadIssue: %v", err)
+			log.Error("LoadIssue: %v", err)
 			return
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -251,7 +251,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 		})
 	}
 	if err != nil {
-		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 }
 
@@ -346,7 +346,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 	if issue.IsPull {
 		err = issue.PullRequest.LoadIssue()
 		if err != nil {
-			log.Error(2, "LoadIssue: %v", err)
+			log.Error("LoadIssue: %v", err)
 			return
 		}
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_PULL_REQUEST, &api.PullRequestPayload{
@@ -366,7 +366,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 		})
 	}
 	if err != nil {
-		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -503,7 +503,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		err = PrepareWebhooks(repo, HOOK_EVENT_ISSUES, apiIssues)
 	}
 	if err != nil {
-		log.Error(2, "PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
+		log.Error("PrepareWebhooks [is_pull: %v, is_closed: %v]: %v", issue.IsPull, isClosed, err)
 	}
 
 	return nil
@@ -545,7 +545,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 		})
 	}
 	if err != nil {
-		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -587,7 +587,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 		})
 	}
 	if err != nil {
-		log.Error(2, "PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
+		log.Error("PrepareWebhooks [is_pull: %v]: %v", issue.IsPull, err)
 	}
 
 	return nil
@@ -601,7 +601,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 
 	issue.Assignee, err = GetUserByID(issue.AssigneeID)
 	if err != nil && !errors.IsUserNotExist(err) {
-		log.Error(4, "GetUserByID [assignee_id: %v]: %v", issue.AssigneeID, err)
+		log.Error("GetUserByID [assignee_id: %v]: %v", issue.AssigneeID, err)
 		return nil
 	}
 
@@ -636,7 +636,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		err = PrepareWebhooks(issue.Repo, HOOK_EVENT_ISSUES, apiIssues)
 	}
 	if err != nil {
-		log.Error(4, "PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
+		log.Error("PrepareWebhooks [is_pull: %v, remove_assignee: %v]: %v", issue.IsPull, isRemoveAssignee, err)
 	}
 
 	return nil
@@ -777,10 +777,10 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate,
 	}); err != nil {
-		log.Error(2, "NotifyWatchers: %v", err)
+		log.Error("NotifyWatchers: %v", err)
 	}
 	if err = issue.MailParticipants(); err != nil {
-		log.Error(2, "MailParticipants: %v", err)
+		log.Error("MailParticipants: %v", err)
 	}
 
 	if err = PrepareWebhooks(repo, HOOK_EVENT_ISSUES, &api.IssuesPayload{
@@ -790,7 +790,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		Repository: repo.APIFormat(nil),
 		Sender:     issue.Poster.APIFormat(),
 	}); err != nil {
-		log.Error(2, "PrepareWebhooks: %v", err)
+		log.Error("PrepareWebhooks: %v", err)
 	}
 
 	return nil

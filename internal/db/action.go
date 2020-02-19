@@ -13,7 +13,7 @@ import (
 
 	"github.com/json-iterator/go"
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
@@ -160,7 +160,7 @@ func (a *Action) GetIssueTitle() string {
 	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error(4, "GetIssueByIndex: %v", err)
+		log.Error("GetIssueByIndex: %v", err)
 		return "500 when get issue"
 	}
 	return issue.Title
@@ -170,7 +170,7 @@ func (a *Action) GetIssueContent() string {
 	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error(4, "GetIssueByIndex: %v", err)
+		log.Error("GetIssueByIndex: %v", err)
 		return "500 when get issue"
 	}
 	return issue.Content
@@ -305,7 +305,7 @@ func (push *PushCommits) AvatarLink(email string) string {
 		if err != nil {
 			push.avatars[email] = tool.AvatarLink(email)
 			if !errors.IsUserNotExist(err) {
-				log.Error(4, "GetUserByEmail: %v", err)
+				log.Error("GetUserByEmail: %v", err)
 			}
 		} else {
 			push.avatars[email] = u.RelAvatarLink()
@@ -490,7 +490,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		// Only update issues via commits when internal issue tracker is enabled
 		if repo.EnableIssues && !repo.EnableExternalTracker {
 			if err = UpdateIssuesCommit(pusher, repo, opts.Commits.Commits); err != nil {
-				log.Error(2, "UpdateIssuesCommit: %v", err)
+				log.Error("UpdateIssuesCommit: %v", err)
 			}
 		}
 	}

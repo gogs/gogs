@@ -16,7 +16,7 @@ import (
 
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 
@@ -129,7 +129,7 @@ func runHookPreReceive(c *cli.Context) error {
 		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
 			RunInDir(db.RepoPath(os.Getenv(db.ENV_REPO_OWNER_NAME), os.Getenv(db.ENV_REPO_NAME)))
 		if err != nil {
-			fail("Internal error", "Fail to detect force push: %v", err)
+			fail("Internal error", "Failed to detect force push: %v", err)
 		} else if len(output) > 0 {
 			fail(fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
 		}
@@ -151,7 +151,7 @@ func runHookPreReceive(c *cli.Context) error {
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute custom pre-receive hook: %v", err)
+		fail("Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
@@ -185,7 +185,7 @@ func runHookUpdate(c *cli.Context) error {
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute custom pre-receive hook: %v", err)
+		fail("Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
@@ -229,7 +229,7 @@ func runHookPostReceive(c *cli.Context) error {
 			RepoName:     os.Getenv(db.ENV_REPO_NAME),
 		}
 		if err := db.PushUpdate(options); err != nil {
-			log.Error(2, "PushUpdate: %v", err)
+			log.Error("PushUpdate: %v", err)
 		}
 
 		// Ask for running deliver hook and test pull request tasks
@@ -245,10 +245,10 @@ func runHookPostReceive(c *cli.Context) error {
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
-				log.Error(2, "Fail to trigger task: not 2xx response code")
+				log.Error("Failed to trigger task: not 2xx response code")
 			}
 		} else {
-			log.Error(2, "Fail to trigger task: %v", err)
+			log.Error("Failed to trigger task: %v", err)
 		}
 	}
 
@@ -268,7 +268,7 @@ func runHookPostReceive(c *cli.Context) error {
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute custom post-receive hook: %v", err)
+		fail("Internal error", "Failed to execute custom post-receive hook: %v", err)
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 
@@ -28,7 +28,7 @@ const (
 	PULL_COMMITS = "repo/pulls/commits"
 	PULL_FILES   = "repo/pulls/files"
 
-	PULL_REQUEST_TEMPLATE_KEY = "PullRequestTemplate"
+	PULL_REQUEST_TEMPLATE_KEY       = "PullRequestTemplate"
 	PULL_REQUEST_TITLE_TEMPLATE_KEY = "PullRequestTitleTemplate"
 )
 
@@ -648,7 +648,7 @@ func CompareAndPullRequest(c *context.Context) {
 
 	if c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY] != nil {
 		customTitle := c.Data[PULL_REQUEST_TITLE_TEMPLATE_KEY].(string)
-		r := strings.NewReplacer("{{headBranch}}", headBranch,"{{baseBranch}}", baseBranch)
+		r := strings.NewReplacer("{{headBranch}}", headBranch, "{{baseBranch}}", baseBranch)
 		c.Data["title"] = r.Replace(customTitle)
 	}
 
