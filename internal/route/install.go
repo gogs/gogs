@@ -84,7 +84,7 @@ func GlobalInit() {
 		log.Info("Builtin Windows Service is supported")
 	}
 	if setting.LoadAssetsFromDisk {
-		log.Info("Assets are loaded from disk")
+		log.Trace("Assets are loaded from disk")
 	}
 	checkRunMode()
 
