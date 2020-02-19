@@ -313,7 +313,6 @@ var (
 
 	// Other settings
 	ShowFooterBranding         bool
-	ShowFooterVersion          bool
 	ShowFooterTemplateLoadTime bool
 	SupportMiniWinService      bool
 
@@ -698,7 +697,6 @@ func NewContext() {
 	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
 
 	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
-	ShowFooterVersion = Cfg.Section("other").Key("SHOW_FOOTER_VERSION").MustBool()
 	ShowFooterTemplateLoadTime = Cfg.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
