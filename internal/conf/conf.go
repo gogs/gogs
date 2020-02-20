@@ -30,6 +30,29 @@ import (
 	"gogs.io/gogs/internal/user"
 )
 
+func init() {
+	// Initialize the primary logger until logging service is up.
+	err := log.NewConsole()
+	if err != nil {
+		panic("init console logger: " + err.Error())
+	}
+}
+
+// Asset is a wrapper for getting conf assets.
+func Asset(name string) ([]byte, error) {
+	return conf.Asset(name)
+}
+
+// AssetDir is a wrapper for getting conf assets.
+func AssetDir(name string) ([]string, error) {
+	return conf.AssetDir(name)
+}
+
+// MustAsset is a wrapper for getting conf assets.
+func MustAsset(name string) []byte {
+	return conf.MustAsset(name)
+}
+
 type Scheme string
 
 const (
@@ -320,29 +343,6 @@ var (
 	RunUser      string
 	HasRobotsTxt bool
 )
-
-func init() {
-	// Initialize the primary logger until logging service is up.
-	err := log.NewConsole()
-	if err != nil {
-		panic("init console logger: " + err.Error())
-	}
-}
-
-// Asset is a wrapper for getting conf assets.
-func Asset(name string) ([]byte, error) {
-	return conf.Asset(name)
-}
-
-// AssetDir is a wrapper for getting conf assets.
-func AssetDir(name string) ([]string, error) {
-	return conf.AssetDir(name)
-}
-
-// MustAsset is a wrapper for getting conf assets.
-func MustAsset(name string) []byte {
-	return conf.MustAsset(name)
-}
 
 // TODO
 

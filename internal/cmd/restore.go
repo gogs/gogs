@@ -15,8 +15,8 @@ import (
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/db"
 )
 
 var Restore = cli.Command{
@@ -114,7 +114,7 @@ func runRestore(c *cli.Context) error {
 
 	// Data files
 	if !c.Bool("database-only") {
-		os.MkdirAll(conf.AppDataPath, os.ModePerm)
+		_ = os.MkdirAll(conf.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			// Skip if backup archive does not have corresponding data
 			srcPath := path.Join(archivePath, "data", dir)

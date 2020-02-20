@@ -19,13 +19,13 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
@@ -368,7 +368,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
-	os.MkdirAll(filepath.Dir(conf.CustomConf), os.ModePerm)
+	_ = os.MkdirAll(filepath.Dir(conf.CustomConf), os.ModePerm)
 	if err := cfg.SaveTo(conf.CustomConf); err != nil {
 		c.RenderWithErr(c.Tr("install.save_config_failed", err), INSTALL, &f)
 		return
