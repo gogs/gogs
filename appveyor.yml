@@ -13,4 +13,4 @@ deploy: false
 install:
   - go version
   - go env
-  - go build -v
+  - go build -tags "minwinsvc" -v
