@@ -344,6 +344,14 @@ func Init(customConf string) error {
 	return nil
 }
 
+// MustInit panics if configuration initialization failed.
+func MustInit(customConf string) {
+	err := Init(customConf)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // TODO
 
 type Scheme string

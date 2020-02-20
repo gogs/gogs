@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	conf.Init()
+	conf.MustInit("")
 }
 
 func Test_SSHParsePublicKey(t *testing.T) {
