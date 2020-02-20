@@ -688,7 +688,7 @@ func runWeb(c *cli.Context) error {
 
 	var listenAddr string
 	if conf.Protocol == conf.SCHEME_UNIX_SOCKET {
-		listenAddr = fmt.Sprintf("%s", conf.HTTPAddr)
+		listenAddr = conf.HTTPAddr
 	} else {
 		listenAddr = fmt.Sprintf("%s:%s", conf.HTTPAddr, conf.HTTPPort)
 	}

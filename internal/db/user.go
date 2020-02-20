@@ -30,8 +30,8 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/avatar"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -341,7 +341,7 @@ func (u *User) UploadAvatar(data []byte) error {
 		return fmt.Errorf("decode image: %v", err)
 	}
 
-	os.MkdirAll(conf.AvatarUploadPath, os.ModePerm)
+	_ = os.MkdirAll(conf.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
 		return fmt.Errorf("create custom avatar directory: %v", err)

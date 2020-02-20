@@ -327,7 +327,7 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 		return fmt.Errorf("decode image: %v", err)
 	}
 
-	os.MkdirAll(conf.RepositoryAvatarUploadPath, os.ModePerm)
+	_ = os.MkdirAll(conf.RepositoryAvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(repo.CustomAvatarPath())
 	if err != nil {
 		return fmt.Errorf("create custom avatar directory: %v", err)

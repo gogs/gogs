@@ -16,9 +16,9 @@ import (
 	"github.com/urfave/cli"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -84,7 +84,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 	db.LoadConfigs()
 
 	if conf.UseSQLite3 {
-		os.Chdir(conf.WorkDir())
+		_ = os.Chdir(conf.WorkDir())
 	}
 
 	if err := db.SetEngine(); err != nil {

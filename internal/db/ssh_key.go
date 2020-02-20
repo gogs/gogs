@@ -23,8 +23,8 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/process"
 )
 
 const (
@@ -84,7 +84,7 @@ func (k *PublicKey) OmitEmail() string {
 
 // AuthorizedString returns formatted public key string for authorized_keys file.
 func (k *PublicKey) AuthorizedString() string {
-	return fmt.Sprintf(_TPL_PUBLICK_KEY, conf.AppPath, k.ID, conf.CustomConf, k.Content)
+	return fmt.Sprintf(_TPL_PUBLICK_KEY, conf.AppPath(), k.ID, conf.CustomConf, k.Content)
 }
 
 // IsDeployKey returns true if the public key is used as deploy key.
@@ -375,7 +375,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
 	tmpPath := strings.Replace(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
 		"id_rsa.pub"), "\\", "/", -1)
-	os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
+	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
@@ -523,7 +523,7 @@ func RewriteAuthorizedKeys() error {
 
 	log.Trace("Doing: RewriteAuthorizedKeys")
 
-	os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
+	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
 	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
 	tmpPath := fpath + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
@@ -536,7 +536,7 @@ func RewriteAuthorizedKeys() error {
 		_, err = f.WriteString((bean.(*PublicKey)).AuthorizedString())
 		return err
 	})
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return err
 	}
