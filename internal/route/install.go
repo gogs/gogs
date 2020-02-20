@@ -81,7 +81,7 @@ func GlobalInit() {
 	if db.EnableSQLite3 {
 		log.Info("SQLite3 is supported")
 	}
-	if setting.SupportMiniWinService {
+	if setting.SupportWindowsService() {
 		log.Info("Builtin Windows Service is supported")
 	}
 	if setting.LoadAssetsFromDisk {
