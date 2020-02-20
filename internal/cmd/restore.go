@@ -7,8 +7,10 @@ package cmd
 import (
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/mcuadros/go-version"
+	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
@@ -82,15 +84,21 @@ func runRestore(c *cli.Context) error {
 
 	// If config file is not present in backup, user must set this file via flag.
 	// Otherwise, it's optional to set config file flag.
-	configFile := path.Join(archivePath, "custom/conf/app.ini")
+	configFile := filepath.Join(archivePath, "custom", "conf", "app.ini")
+	var customConf string
 	if c.IsSet("config") {
-		conf.CustomConf = c.String("config")
+		customConf = c.String("config")
 	} else if !com.IsExist(configFile) {
 		log.Fatal("'--config' is not specified and custom config file is not found in backup")
 	} else {
-		conf.CustomConf = configFile
+		customConf = configFile
 	}
-	conf.Init()
+
+	err = conf.Init(customConf)
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
+	}
+
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -102,12 +110,12 @@ func runRestore(c *cli.Context) error {
 
 	// Custom files
 	if !c.Bool("database-only") {
-		if com.IsExist(conf.CustomPath) {
-			if err = os.Rename(conf.CustomPath, conf.CustomPath+".bak"); err != nil {
+		if com.IsExist(conf.CustomDir()) {
+			if err = os.Rename(conf.CustomDir(), conf.CustomDir()+".bak"); err != nil {
 				log.Fatal("Failed to backup current 'custom': %v", err)
 			}
 		}
-		if err = os.Rename(path.Join(archivePath, "custom"), conf.CustomPath); err != nil {
+		if err = os.Rename(path.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
 			log.Fatal("Failed to import 'custom': %v", err)
 		}
 	}

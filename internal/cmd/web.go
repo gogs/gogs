@@ -13,6 +13,7 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-macaron/binding"
@@ -73,7 +74,7 @@ func newMacaron() *macaron.Macaron {
 
 	// Register custom middleware first to make it possible to override files under "public".
 	m.Use(macaron.Static(
-		path.Join(conf.CustomPath, "public"),
+		filepath.Join(conf.CustomDir(), "public"),
 		macaron.StaticOptions{
 			SkipLogging: conf.DisableRouterLog,
 		},
@@ -83,6 +84,7 @@ func newMacaron() *macaron.Macaron {
 		publicFs = public.NewFileSystem()
 	}
 	m.Use(macaron.Static(
+		// NOTE: Embedded assets use Unix-style path separator.
 		path.Join(conf.StaticRootPath, "public"),
 		macaron.StaticOptions{
 			SkipLogging: conf.DisableRouterLog,
@@ -106,8 +108,9 @@ func newMacaron() *macaron.Macaron {
 	))
 
 	renderOpt := macaron.RenderOptions{
+		// NOTE: Embedded assets use Unix-style path separator.
 		Directory:         path.Join(conf.StaticRootPath, "templates"),
-		AppendDirectories: []string{path.Join(conf.CustomPath, "templates")},
+		AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates")},
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
@@ -120,14 +123,14 @@ func newMacaron() *macaron.Macaron {
 	if err != nil {
 		log.Fatal("Failed to list locale files: %v", err)
 	}
-	localFiles := make(map[string][]byte)
+	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localFiles[name] = conf.MustAsset("conf/locale/" + name)
+		localeFiles[name] = conf.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.AppSubURL,
-		Files:           localFiles,
-		CustomDirectory: path.Join(conf.CustomPath, "conf/locale"),
+		Files:           localeFiles,
+		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
 		Langs:           conf.Langs,
 		Names:           conf.Names,
 		DefaultLang:     "en-US",
@@ -162,10 +165,10 @@ func newMacaron() *macaron.Macaron {
 }
 
 func runWeb(c *cli.Context) error {
-	if c.IsSet("config") {
-		conf.CustomConf = c.String("config")
+	err := route.GlobalInit(c.String("config"))
+	if err != nil {
+		log.Fatal("Failed to initialize application: %v", err)
 	}
-	route.GlobalInit()
 
 	m := newMacaron()
 
@@ -671,7 +674,7 @@ func runWeb(c *cli.Context) error {
 	// robots.txt
 	m.Get("/robots.txt", func(c *context.Context) {
 		if conf.HasRobotsTxt {
-			c.ServeFileContent(path.Join(conf.CustomPath, "robots.txt"))
+			c.ServeFileContent(filepath.Join(conf.CustomDir(), "robots.txt"))
 		} else {
 			c.NotFound()
 		}
@@ -694,7 +697,6 @@ func runWeb(c *cli.Context) error {
 	}
 	log.Info("Listen on %v://%s%s", conf.Protocol, listenAddr, conf.AppSubURL)
 
-	var err error
 	switch conf.Protocol {
 	case conf.SCHEME_HTTP:
 		err = http.ListenAndServe(listenAddr, m)

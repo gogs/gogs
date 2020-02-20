@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
@@ -26,6 +27,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
@@ -37,7 +39,7 @@ const (
 )
 
 func checkRunMode() {
-	if conf.ProdMode {
+	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
 	} else {
@@ -47,11 +49,17 @@ func checkRunMode() {
 }
 
 // GlobalInit is for global configuration reload-able.
-func GlobalInit() {
-	conf.Init()
+func GlobalInit(customConf string) error {
+	err := conf.Init(customConf)
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
+	}
+
 	conf.InitLogging()
-	log.Info("%s %s", conf.AppName, conf.AppVersion)
-	log.Trace("Custom path: %s", conf.CustomPath)
+	log.Info("%s %s", conf.App.BrandName, conf.AppVersion)
+	log.Trace("Work directory: %s", conf.WorkDir())
+	log.Trace("Custom path: %s", conf.CustomDir())
+	log.Trace("Custom config: %s", conf.CustomConf)
 	log.Trace("Log path: %s", conf.LogRootPath)
 	log.Trace("Build time: %s", conf.BuildTime)
 	log.Trace("Build commit: %s", conf.BuildCommit)
@@ -81,7 +89,7 @@ func GlobalInit() {
 	if db.EnableSQLite3 {
 		log.Info("SQLite3 is supported")
 	}
-	if conf.SupportWindowsService() {
+	if conf.HasMinWinSvc {
 		log.Info("Builtin Windows Service is supported")
 	}
 	if conf.LoadAssetsFromDisk {
@@ -90,7 +98,7 @@ func GlobalInit() {
 	checkRunMode()
 
 	if !conf.InstallLock {
-		return
+		return nil
 	}
 
 	if conf.SSH.StartBuiltinServer {
@@ -104,6 +112,8 @@ func GlobalInit() {
 			log.Warn("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
+
+	return nil
 }
 
 func InstallInit(c *context.Context) {
@@ -144,15 +154,15 @@ func Install(c *context.Context) {
 	}
 
 	// Application general settings
-	f.AppName = conf.AppName
+	f.AppName = conf.App.BrandName
 	f.RepoRootPath = conf.RepoRootPath
 
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
-	if conf.IsWindowsRuntime() && conf.RunUser == "git" {
+	if conf.IsWindowsRuntime() && conf.App.RunUser == "git" {
 		f.RunUser = user.CurrentUsername()
 	} else {
-		f.RunUser = conf.RunUser
+		f.RunUser = conf.App.RunUser
 	}
 
 	f.Domain = conf.Domain
@@ -300,10 +310,10 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Save settings.
 	cfg := ini.Empty()
-	if com.IsFile(conf.CustomConf) {
+	if osutil.IsFile(conf.CustomConf) {
 		// Keeps custom settings if there is already something.
 		if err := cfg.Append(conf.CustomConf); err != nil {
-			log.Error("Failed to load custom conf '%s': %v", conf.CustomConf, err)
+			log.Error("Failed to load custom conf %q: %v", conf.CustomConf, err)
 		}
 	}
 	cfg.Section("database").Key("DB_TYPE").SetValue(db.DbCfg.Type)
@@ -374,7 +384,12 @@ func InstallPost(c *context.Context, f form.Install) {
 		return
 	}
 
-	GlobalInit()
+	// NOTE: We reuse the current value because this handler does not have access to CLI flags.
+	err = GlobalInit(conf.CustomConf)
+	if err != nil {
+		c.RenderWithErr(c.Tr("install.init_failed", err), INSTALL, &f)
+		return
+	}
 
 	// Create admin account
 	if len(f.AdminName) > 0 {

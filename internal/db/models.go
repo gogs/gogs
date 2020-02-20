@@ -24,8 +24,8 @@ import (
 	"xorm.io/core"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/db/migrations"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/db/migrations"
 )
 
 // Engine represents a XORM engine or session.
@@ -206,7 +206,7 @@ func SetEngine() (err error) {
 	x.SetMaxIdleConns(0)
 	x.SetConnMaxLifetime(time.Second)
 
-	if conf.ProdMode {
+	if conf.IsProdMode() {
 		x.SetLogger(xorm.NewSimpleLogger3(logger, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
 	} else {
 		x.SetLogger(xorm.NewSimpleLogger(logger))

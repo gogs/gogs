@@ -14,12 +14,12 @@ import (
 	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -201,7 +201,7 @@ func Config(c *context.Context) {
 	c.Data["Domain"] = conf.Domain
 	c.Data["OfflineMode"] = conf.OfflineMode
 	c.Data["DisableRouterLog"] = conf.DisableRouterLog
-	c.Data["RunUser"] = conf.RunUser
+	c.Data["RunUser"] = conf.App.RunUser
 	c.Data["RunMode"] = strings.Title(macaron.Env)
 	c.Data["StaticRootPath"] = conf.StaticRootPath
 	c.Data["LogRootPath"] = conf.LogRootPath

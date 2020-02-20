@@ -21,9 +21,9 @@ import (
 	"golang.org/x/text/transform"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -43,7 +43,7 @@ func FuncMap() []template.FuncMap {
 				return strings.HasPrefix(conf.AppURL, "https")
 			},
 			"AppName": func() string {
-				return conf.AppName
+				return conf.App.BrandName
 			},
 			"AppSubURL": func() string {
 				return conf.AppSubURL

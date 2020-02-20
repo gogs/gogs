@@ -39,7 +39,7 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 
 	if len(logMessage) > 0 {
-		if !conf.ProdMode {
+		if !conf.IsProdMode() {
 			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
 		}
 		log.Fatal(logMessage, args...)
@@ -49,20 +49,24 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 }
 
 func setup(c *cli.Context, logPath string, connectDB bool) {
+	var customConf string
 	if c.IsSet("config") {
-		conf.CustomConf = c.String("config")
+		customConf = c.String("config")
 	} else if c.GlobalIsSet("config") {
-		conf.CustomConf = c.GlobalString("config")
+		customConf = c.GlobalString("config")
 	}
 
-	conf.Init()
+	err := conf.Init(customConf)
+	if err != nil {
+		fail("Internal error", "Failed to init configuration: %v", err)
+	}
 
 	level := log.LevelTrace
-	if conf.ProdMode {
+	if conf.IsProdMode() {
 		level = log.LevelError
 	}
 
-	err := log.NewFile(log.FileConfig{
+	err = log.NewFile(log.FileConfig{
 		Level:    level,
 		Filename: filepath.Join(conf.LogRootPath, logPath),
 		FileRotationConfig: log.FileRotationConfig{
@@ -72,8 +76,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 		},
 	})
 	if err != nil {
-		log.Fatal("Failed to init file logger: %v", err)
-		return
+		fail("Internal error", "Failed to init file logger: %v", err)
 	}
 	log.Remove(log.DefaultConsoleName) // Remove the primary logger
 
@@ -88,7 +91,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 	}
 
 	if err := db.SetEngine(); err != nil {
-		fail("Internal error", "SetEngine: %v", err)
+		fail("Internal error", "Failed to set database engine: %v", err)
 	}
 }
 

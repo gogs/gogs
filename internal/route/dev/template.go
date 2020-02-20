@@ -5,14 +5,14 @@
 package dev
 
 import (
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/conf"
 )
 
 func TemplatePreview(c *context.Context) {
 	c.Data["User"] = db.User{Name: "Unknown"}
-	c.Data["AppName"] = conf.AppName
+	c.Data["AppName"] = conf.App.BrandName
 	c.Data["AppVersion"] = conf.AppVersion
 	c.Data["AppURL"] = conf.AppURL
 	c.Data["Code"] = "2014031910370000009fff6782aadb2162b4a997acb69d4400888e0b9274657374"

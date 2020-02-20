@@ -11,5 +11,5 @@ import (
 )
 
 func init() {
-	hasMinWinSvc = true
+	HasMinWinSvc = true
 }

@@ -18,8 +18,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/db"
 )
 
 func cleanCommand(cmd string) string {

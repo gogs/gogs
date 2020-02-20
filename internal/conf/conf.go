@@ -19,13 +19,14 @@ import (
 	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/mcuadros/go-version"
-	"github.com/unknwon/com"
+	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/go-libravatar"
 
 	"gogs.io/gogs/internal/assets/conf"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/user"
 )
@@ -53,6 +54,298 @@ func MustAsset(name string) []byte {
 	return conf.MustAsset(name)
 }
 
+// File is the configuration object.
+var File *ini.File
+
+// Init initializes configuration from conf assets and given custom configuration file.
+// If `customConf` is empty, it falls back to default location, i.e. "<WORK DIR>/custom".
+// It is OK to call this function multiple times with desired `customConf`, but it is not
+// concurrent safe.
+//
+// ⚠️ WARNING: Do not print anything in this function other than wanrings.
+func Init(customConf string) error {
+	var err error
+	File, err = ini.LoadSources(ini.LoadOptions{
+		IgnoreInlineComment: true,
+	}, conf.MustAsset("conf/app.ini"))
+	if err != nil {
+		return errors.Wrap(err, "parse 'conf/app.ini'")
+	}
+	File.NameMapper = ini.SnackCase
+
+	customConf, err = filepath.Abs(customConf)
+	if err != nil {
+		return errors.Wrap(err, "get absolute path")
+	}
+	if customConf == "" {
+		customConf = filepath.Join(CustomDir(), "conf/app.ini")
+	}
+	CustomConf = customConf
+
+	if osutil.IsFile(customConf) {
+		if err = File.Append(customConf); err != nil {
+			return errors.Wrapf(err, "append %q", customConf)
+		}
+	} else {
+		log.Warn("Custom config %q not found. Ignore this warning if you're running for the first time", customConf)
+	}
+
+	if err = File.Section(ini.DefaultSection).MapTo(&App); err != nil {
+		return errors.Wrap(err, "mapping default section")
+	}
+
+	// TODO
+
+	sec := File.Section("server")
+	AppURL = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
+	if AppURL[len(AppURL)-1] != '/' {
+		AppURL += "/"
+	}
+
+	// Check if has app suburl.
+	url, err := url.Parse(AppURL)
+	if err != nil {
+		log.Fatal("Failed to parse ROOT_URL %q: %s", AppURL, err)
+	}
+	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
+	// This value is empty if site does not have sub-url.
+	AppSubURL = strings.TrimSuffix(url.Path, "/")
+	AppSubURLDepth = strings.Count(AppSubURL, "/")
+	HostAddress = url.Host
+
+	Protocol = SCHEME_HTTP
+	if sec.Key("PROTOCOL").String() == "https" {
+		Protocol = SCHEME_HTTPS
+		CertFile = sec.Key("CERT_FILE").String()
+		KeyFile = sec.Key("KEY_FILE").String()
+		TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
+	} else if sec.Key("PROTOCOL").String() == "fcgi" {
+		Protocol = SCHEME_FCGI
+	} else if sec.Key("PROTOCOL").String() == "unix" {
+		Protocol = SCHEME_UNIX_SOCKET
+		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
+		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
+		if err != nil || UnixSocketPermissionParsed > 0777 {
+			log.Fatal("Failed to parse unixSocketPermission %q: %v", UnixSocketPermissionRaw, err)
+		}
+		UnixSocketPermission = uint32(UnixSocketPermissionParsed)
+	}
+	Domain = sec.Key("DOMAIN").MustString("localhost")
+	HTTPAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
+	HTTPPort = sec.Key("HTTP_PORT").MustString("3000")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HTTPPort + "/")
+	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
+	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
+	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
+	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(WorkDir()) // TODO: We need separate TemplatesRootPath
+	AppDataPath = sec.Key("APP_DATA_PATH").MustString("data")
+	EnableGzip = sec.Key("ENABLE_GZIP").MustBool()
+
+	switch sec.Key("LANDING_PAGE").MustString("home") {
+	case "explore":
+		LandingPageURL = LANDING_PAGE_EXPLORE
+	default:
+		LandingPageURL = LANDING_PAGE_HOME
+	}
+
+	SSH.RootPath = path.Join(HomeDir(), ".ssh")
+	SSH.RewriteAuthorizedKeysAtStart = sec.Key("REWRITE_AUTHORIZED_KEYS_AT_START").MustBool()
+	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
+	SSH.KeyTestPath = os.TempDir()
+	if err = File.Section("server").MapTo(&SSH); err != nil {
+		log.Fatal("Failed to map SSH settings: %v", err)
+	}
+	if SSH.Disabled {
+		SSH.StartBuiltinServer = false
+		SSH.MinimumKeySizeCheck = false
+	}
+
+	if !SSH.Disabled && !SSH.StartBuiltinServer {
+		if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
+			log.Fatal("Failed to create '%s': %v", SSH.RootPath, err)
+		} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
+			log.Fatal("Failed to create '%s': %v", SSH.KeyTestPath, err)
+		}
+	}
+
+	if SSH.StartBuiltinServer {
+		SSH.RewriteAuthorizedKeysAtStart = false
+	}
+
+	// Check if server is eligible for minimum key size check when user choose to enable.
+	// Windows server and OpenSSH version lower than 5.1 (https://gogs.io/gogs/issues/4507)
+	// are forced to be disabled because the "ssh-keygen" in Windows does not print key type.
+	if SSH.MinimumKeySizeCheck &&
+		(IsWindowsRuntime() || version.Compare(getOpenSSHVersion(), "5.1", "<")) {
+		SSH.MinimumKeySizeCheck = false
+		log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+1. Windows server
+2. OpenSSH version is lower than 5.1`)
+	}
+
+	if SSH.MinimumKeySizeCheck {
+		SSH.MinimumKeySizes = map[string]int{}
+		for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
+			if key.MustInt() != -1 {
+				SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
+			}
+		}
+	}
+
+	sec = File.Section("security")
+	InstallLock = sec.Key("INSTALL_LOCK").MustBool()
+	SecretKey = sec.Key("SECRET_KEY").String()
+	LoginRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
+	CookieUserName = sec.Key("COOKIE_USERNAME").String()
+	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
+	CookieSecure = sec.Key("COOKIE_SECURE").MustBool(false)
+	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
+	EnableLoginStatusCookie = sec.Key("ENABLE_LOGIN_STATUS_COOKIE").MustBool(false)
+	LoginStatusCookieName = sec.Key("LOGIN_STATUS_COOKIE_NAME").MustString("login_status")
+
+	// Does not check run user when the install lock is off.
+	if InstallLock {
+		currentUser, match := IsRunUserMatchCurrentUser(App.RunUser)
+		if !match {
+			log.Fatal("The user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
+		}
+	}
+
+	sec = File.Section("attachment")
+	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))
+	if !filepath.IsAbs(AttachmentPath) {
+		AttachmentPath = path.Join(workDir, AttachmentPath)
+	}
+	AttachmentAllowedTypes = strings.Replace(sec.Key("ALLOWED_TYPES").MustString("image/jpeg,image/png"), "|", ",", -1)
+	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(4)
+	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(5)
+	AttachmentEnabled = sec.Key("ENABLED").MustBool(true)
+
+	TimeFormat = map[string]string{
+		"ANSIC":       time.ANSIC,
+		"UnixDate":    time.UnixDate,
+		"RubyDate":    time.RubyDate,
+		"RFC822":      time.RFC822,
+		"RFC822Z":     time.RFC822Z,
+		"RFC850":      time.RFC850,
+		"RFC1123":     time.RFC1123,
+		"RFC1123Z":    time.RFC1123Z,
+		"RFC3339":     time.RFC3339,
+		"RFC3339Nano": time.RFC3339Nano,
+		"Kitchen":     time.Kitchen,
+		"Stamp":       time.Stamp,
+		"StampMilli":  time.StampMilli,
+		"StampMicro":  time.StampMicro,
+		"StampNano":   time.StampNano,
+	}[File.Section("time").Key("FORMAT").MustString("RFC1123")]
+
+	// Determine and create root git repository path.
+	sec = File.Section("repository")
+	RepoRootPath = sec.Key("ROOT").MustString(filepath.Join(HomeDir(), "gogs-repositories"))
+	if !filepath.IsAbs(RepoRootPath) {
+		RepoRootPath = path.Join(workDir, RepoRootPath)
+	} else {
+		RepoRootPath = path.Clean(RepoRootPath)
+	}
+	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
+	if err = File.Section("repository").MapTo(&Repository); err != nil {
+		log.Fatal("Failed to map Repository settings: %v", err)
+	} else if err = File.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
+		log.Fatal("Failed to map Repository.Editor settings: %v", err)
+	} else if err = File.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
+		log.Fatal("Failed to map Repository.Upload settings: %v", err)
+	}
+
+	if !filepath.IsAbs(Repository.Upload.TempPath) {
+		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
+	}
+
+	sec = File.Section("picture")
+	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
+	if !filepath.IsAbs(AvatarUploadPath) {
+		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
+	}
+	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "repo-avatars"))
+	if !filepath.IsAbs(RepositoryAvatarUploadPath) {
+		RepositoryAvatarUploadPath = path.Join(workDir, RepositoryAvatarUploadPath)
+	}
+	switch source := sec.Key("GRAVATAR_SOURCE").MustString("gravatar"); source {
+	case "duoshuo":
+		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
+	case "gravatar":
+		GravatarSource = "https://secure.gravatar.com/avatar/"
+	case "libravatar":
+		GravatarSource = "https://seccdn.libravatar.org/avatar/"
+	default:
+		GravatarSource = source
+	}
+	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
+	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool(true)
+	if OfflineMode {
+		DisableGravatar = true
+		EnableFederatedAvatar = false
+	}
+	if DisableGravatar {
+		EnableFederatedAvatar = false
+	}
+
+	if EnableFederatedAvatar {
+		LibravatarService = libravatar.New()
+		parts := strings.Split(GravatarSource, "/")
+		if len(parts) >= 3 {
+			if parts[0] == "https:" {
+				LibravatarService.SetUseHTTPS(true)
+				LibravatarService.SetSecureFallbackHost(parts[2])
+			} else {
+				LibravatarService.SetUseHTTPS(false)
+				LibravatarService.SetFallbackHost(parts[2])
+			}
+		}
+	}
+
+	if err = File.Section("http").MapTo(&HTTP); err != nil {
+		log.Fatal("Failed to map HTTP settings: %v", err)
+	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {
+		log.Fatal("Failed to map Webhook settings: %v", err)
+	} else if err = File.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
+		log.Fatal("Failed to map Release.Attachment settings: %v", err)
+	} else if err = File.Section("markdown").MapTo(&Markdown); err != nil {
+		log.Fatal("Failed to map Markdown settings: %v", err)
+	} else if err = File.Section("smartypants").MapTo(&Smartypants); err != nil {
+		log.Fatal("Failed to map Smartypants settings: %v", err)
+	} else if err = File.Section("admin").MapTo(&Admin); err != nil {
+		log.Fatal("Failed to map Admin settings: %v", err)
+	} else if err = File.Section("cron").MapTo(&Cron); err != nil {
+		log.Fatal("Failed to map Cron settings: %v", err)
+	} else if err = File.Section("git").MapTo(&Git); err != nil {
+		log.Fatal("Failed to map Git settings: %v", err)
+	} else if err = File.Section("mirror").MapTo(&Mirror); err != nil {
+		log.Fatal("Failed to map Mirror settings: %v", err)
+	} else if err = File.Section("api").MapTo(&API); err != nil {
+		log.Fatal("Failed to map API settings: %v", err)
+	} else if err = File.Section("ui").MapTo(&UI); err != nil {
+		log.Fatal("Failed to map UI settings: %v", err)
+	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
+		log.Fatal("Failed to map Prometheus settings: %v", err)
+	}
+
+	if Mirror.DefaultInterval <= 0 {
+		Mirror.DefaultInterval = 24
+	}
+
+	Langs = File.Section("i18n").Key("LANGS").Strings(",")
+	Names = File.Section("i18n").Key("NAMES").Strings(",")
+	dateLangs = File.Section("i18n.datelang").KeysHash()
+
+	ShowFooterBranding = File.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
+	ShowFooterTemplateLoadTime = File.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
+
+	HasRobotsTxt = osutil.IsFile(path.Join(CustomDir(), "robots.txt"))
+	return nil
+}
+
+// TODO
+
 type Scheme string
 
 const (
@@ -76,7 +369,6 @@ var (
 
 	// App settings
 	AppVersion     string
-	AppName        string
 	AppURL         string
 	AppSubURL      string
 	AppSubURLDepth int // Number of slashes
@@ -336,15 +628,8 @@ var (
 	ShowFooterTemplateLoadTime bool
 
 	// Global setting objects
-	File         *ini.File
-	CustomPath   string // Custom directory path
-	CustomConf   string
-	ProdMode     bool
-	RunUser      string
 	HasRobotsTxt bool
 )
-
-// TODO
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
 func DateLang(lang string) string {
@@ -353,12 +638,6 @@ func DateLang(lang string) string {
 		return name
 	}
 	return "en"
-}
-
-func forcePathSeparator(path string) {
-	if strings.Contains(path, "\\") {
-		log.Fatal("Do not use '\\' or '\\\\' in paths, please use '/' in all places")
-	}
 }
 
 // IsRunUserMatchCurrentUser returns false if configured run user does not match
@@ -389,324 +668,10 @@ func getOpenSSHVersion() string {
 	return version
 }
 
-// Init initializes configuration by loading from sources.
-// ⚠️ WARNING: Do not print anything in this function other than wanrings or errors.
-func Init() {
-	var err error
-	File, err = ini.LoadSources(ini.LoadOptions{
-		IgnoreInlineComment: true,
-	}, conf.MustAsset("conf/app.ini"))
-	if err != nil {
-		log.Fatal("Failed to parse 'conf/app.ini': %v", err)
-		return
-	}
-
-	CustomPath = os.Getenv("GOGS_CUSTOM")
-	if len(CustomPath) == 0 {
-		CustomPath = WorkDir() + "/custom"
-	}
-
-	if len(CustomConf) == 0 {
-		CustomConf = CustomPath + "/conf/app.ini"
-	}
-
-	if com.IsFile(CustomConf) {
-		if err = File.Append(CustomConf); err != nil {
-			log.Fatal("Failed to load custom conf %q: %v", CustomConf, err)
-			return
-		}
-	} else {
-		log.Warn("Custom config '%s' not found, ignore this warning if you're running the first time", CustomConf)
-	}
-	File.NameMapper = ini.SnackCase
-
-	homeDir, err := com.HomeDir()
-	if err != nil {
-		log.Fatal("Failed to get home directory: %v", err)
-		return
-	}
-	homeDir = strings.Replace(homeDir, "\\", "/", -1)
-
-	LogRootPath = File.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
-	forcePathSeparator(LogRootPath)
-
-	sec := File.Section("server")
-	AppName = File.Section("").Key("APP_NAME").MustString("Gogs")
-	AppURL = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
-	if AppURL[len(AppURL)-1] != '/' {
-		AppURL += "/"
-	}
-
-	// Check if has app suburl.
-	url, err := url.Parse(AppURL)
-	if err != nil {
-		log.Fatal("Failed to parse ROOT_URL %q: %s", AppURL, err)
-		return
-	}
-	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
-	// This value is empty if site does not have sub-url.
-	AppSubURL = strings.TrimSuffix(url.Path, "/")
-	AppSubURLDepth = strings.Count(AppSubURL, "/")
-	HostAddress = url.Host
-
-	Protocol = SCHEME_HTTP
-	if sec.Key("PROTOCOL").String() == "https" {
-		Protocol = SCHEME_HTTPS
-		CertFile = sec.Key("CERT_FILE").String()
-		KeyFile = sec.Key("KEY_FILE").String()
-		TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
-	} else if sec.Key("PROTOCOL").String() == "fcgi" {
-		Protocol = SCHEME_FCGI
-	} else if sec.Key("PROTOCOL").String() == "unix" {
-		Protocol = SCHEME_UNIX_SOCKET
-		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
-		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
-		if err != nil || UnixSocketPermissionParsed > 0777 {
-			log.Fatal("Failed to parse unixSocketPermission %q: %v", UnixSocketPermissionRaw, err)
-			return
-		}
-		UnixSocketPermission = uint32(UnixSocketPermissionParsed)
-	}
-	Domain = sec.Key("DOMAIN").MustString("localhost")
-	HTTPAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
-	HTTPPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HTTPPort + "/")
-	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
-	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
-	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
-	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(workDir)
-	AppDataPath = sec.Key("APP_DATA_PATH").MustString("data")
-	EnableGzip = sec.Key("ENABLE_GZIP").MustBool()
-
-	switch sec.Key("LANDING_PAGE").MustString("home") {
-	case "explore":
-		LandingPageURL = LANDING_PAGE_EXPLORE
-	default:
-		LandingPageURL = LANDING_PAGE_HOME
-	}
-
-	SSH.RootPath = path.Join(homeDir, ".ssh")
-	SSH.RewriteAuthorizedKeysAtStart = sec.Key("REWRITE_AUTHORIZED_KEYS_AT_START").MustBool()
-	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
-	SSH.KeyTestPath = os.TempDir()
-	if err = File.Section("server").MapTo(&SSH); err != nil {
-		log.Fatal("Failed to map SSH settings: %v", err)
-		return
-	}
-	if SSH.Disabled {
-		SSH.StartBuiltinServer = false
-		SSH.MinimumKeySizeCheck = false
-	}
-
-	if !SSH.Disabled && !SSH.StartBuiltinServer {
-		if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
-			log.Fatal("Failed to create '%s': %v", SSH.RootPath, err)
-			return
-		} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
-			log.Fatal("Failed to create '%s': %v", SSH.KeyTestPath, err)
-			return
-		}
-	}
-
-	if SSH.StartBuiltinServer {
-		SSH.RewriteAuthorizedKeysAtStart = false
-	}
-
-	// Check if server is eligible for minimum key size check when user choose to enable.
-	// Windows server and OpenSSH version lower than 5.1 (https://gogs.io/gogs/issues/4507)
-	// are forced to be disabled because the "ssh-keygen" in Windows does not print key type.
-	if SSH.MinimumKeySizeCheck &&
-		(IsWindowsRuntime() || version.Compare(getOpenSSHVersion(), "5.1", "<")) {
-		SSH.MinimumKeySizeCheck = false
-		log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
-1. Windows server
-2. OpenSSH version is lower than 5.1`)
-	}
-
-	if SSH.MinimumKeySizeCheck {
-		SSH.MinimumKeySizes = map[string]int{}
-		for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
-			if key.MustInt() != -1 {
-				SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
-			}
-		}
-	}
-
-	sec = File.Section("security")
-	InstallLock = sec.Key("INSTALL_LOCK").MustBool()
-	SecretKey = sec.Key("SECRET_KEY").String()
-	LoginRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
-	CookieUserName = sec.Key("COOKIE_USERNAME").String()
-	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
-	CookieSecure = sec.Key("COOKIE_SECURE").MustBool(false)
-	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
-	EnableLoginStatusCookie = sec.Key("ENABLE_LOGIN_STATUS_COOKIE").MustBool(false)
-	LoginStatusCookieName = sec.Key("LOGIN_STATUS_COOKIE_NAME").MustString("login_status")
-
-	sec = File.Section("attachment")
-	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))
-	if !filepath.IsAbs(AttachmentPath) {
-		AttachmentPath = path.Join(workDir, AttachmentPath)
-	}
-	AttachmentAllowedTypes = strings.Replace(sec.Key("ALLOWED_TYPES").MustString("image/jpeg,image/png"), "|", ",", -1)
-	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(4)
-	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(5)
-	AttachmentEnabled = sec.Key("ENABLED").MustBool(true)
-
-	TimeFormat = map[string]string{
-		"ANSIC":       time.ANSIC,
-		"UnixDate":    time.UnixDate,
-		"RubyDate":    time.RubyDate,
-		"RFC822":      time.RFC822,
-		"RFC822Z":     time.RFC822Z,
-		"RFC850":      time.RFC850,
-		"RFC1123":     time.RFC1123,
-		"RFC1123Z":    time.RFC1123Z,
-		"RFC3339":     time.RFC3339,
-		"RFC3339Nano": time.RFC3339Nano,
-		"Kitchen":     time.Kitchen,
-		"Stamp":       time.Stamp,
-		"StampMilli":  time.StampMilli,
-		"StampMicro":  time.StampMicro,
-		"StampNano":   time.StampNano,
-	}[File.Section("time").Key("FORMAT").MustString("RFC1123")]
-
-	RunUser = File.Section("").Key("RUN_USER").String()
-	// Does not check run user when the install lock is off.
-	if InstallLock {
-		currentUser, match := IsRunUserMatchCurrentUser(RunUser)
-		if !match {
-			log.Fatal("The user configured to run Gogs is %q, but the current user is %q", RunUser, currentUser)
-			return
-		}
-	}
-
-	ProdMode = File.Section("").Key("RUN_MODE").String() == "prod"
-
-	// Determine and create root git repository path.
-	sec = File.Section("repository")
-	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
-	forcePathSeparator(RepoRootPath)
-	if !filepath.IsAbs(RepoRootPath) {
-		RepoRootPath = path.Join(workDir, RepoRootPath)
-	} else {
-		RepoRootPath = path.Clean(RepoRootPath)
-	}
-	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	if err = File.Section("repository").MapTo(&Repository); err != nil {
-		log.Fatal("Failed to map Repository settings: %v", err)
-		return
-	} else if err = File.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
-		log.Fatal("Failed to map Repository.Editor settings: %v", err)
-		return
-	} else if err = File.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
-		log.Fatal("Failed to map Repository.Upload settings: %v", err)
-		return
-	}
-
-	if !filepath.IsAbs(Repository.Upload.TempPath) {
-		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
-	}
-
-	sec = File.Section("picture")
-	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
-	forcePathSeparator(AvatarUploadPath)
-	if !filepath.IsAbs(AvatarUploadPath) {
-		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
-	}
-	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "repo-avatars"))
-	forcePathSeparator(RepositoryAvatarUploadPath)
-	if !filepath.IsAbs(RepositoryAvatarUploadPath) {
-		RepositoryAvatarUploadPath = path.Join(workDir, RepositoryAvatarUploadPath)
-	}
-	switch source := sec.Key("GRAVATAR_SOURCE").MustString("gravatar"); source {
-	case "duoshuo":
-		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
-	case "gravatar":
-		GravatarSource = "https://secure.gravatar.com/avatar/"
-	case "libravatar":
-		GravatarSource = "https://seccdn.libravatar.org/avatar/"
-	default:
-		GravatarSource = source
-	}
-	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
-	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool(true)
-	if OfflineMode {
-		DisableGravatar = true
-		EnableFederatedAvatar = false
-	}
-	if DisableGravatar {
-		EnableFederatedAvatar = false
-	}
-
-	if EnableFederatedAvatar {
-		LibravatarService = libravatar.New()
-		parts := strings.Split(GravatarSource, "/")
-		if len(parts) >= 3 {
-			if parts[0] == "https:" {
-				LibravatarService.SetUseHTTPS(true)
-				LibravatarService.SetSecureFallbackHost(parts[2])
-			} else {
-				LibravatarService.SetUseHTTPS(false)
-				LibravatarService.SetFallbackHost(parts[2])
-			}
-		}
-	}
-
-	if err = File.Section("http").MapTo(&HTTP); err != nil {
-		log.Fatal("Failed to map HTTP settings: %v", err)
-		return
-	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {
-		log.Fatal("Failed to map Webhook settings: %v", err)
-		return
-	} else if err = File.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
-		log.Fatal("Failed to map Release.Attachment settings: %v", err)
-		return
-	} else if err = File.Section("markdown").MapTo(&Markdown); err != nil {
-		log.Fatal("Failed to map Markdown settings: %v", err)
-		return
-	} else if err = File.Section("smartypants").MapTo(&Smartypants); err != nil {
-		log.Fatal("Failed to map Smartypants settings: %v", err)
-		return
-	} else if err = File.Section("admin").MapTo(&Admin); err != nil {
-		log.Fatal("Failed to map Admin settings: %v", err)
-		return
-	} else if err = File.Section("cron").MapTo(&Cron); err != nil {
-		log.Fatal("Failed to map Cron settings: %v", err)
-		return
-	} else if err = File.Section("git").MapTo(&Git); err != nil {
-		log.Fatal("Failed to map Git settings: %v", err)
-		return
-	} else if err = File.Section("mirror").MapTo(&Mirror); err != nil {
-		log.Fatal("Failed to map Mirror settings: %v", err)
-		return
-	} else if err = File.Section("api").MapTo(&API); err != nil {
-		log.Fatal("Failed to map API settings: %v", err)
-		return
-	} else if err = File.Section("ui").MapTo(&UI); err != nil {
-		log.Fatal("Failed to map UI settings: %v", err)
-		return
-	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
-		log.Fatal("Failed to map Prometheus settings: %v", err)
-		return
-	}
-
-	if Mirror.DefaultInterval <= 0 {
-		Mirror.DefaultInterval = 24
-	}
-
-	Langs = File.Section("i18n").Key("LANGS").Strings(",")
-	Names = File.Section("i18n").Key("NAMES").Strings(",")
-	dateLangs = File.Section("i18n.datelang").KeysHash()
-
-	ShowFooterBranding = File.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
-	ShowFooterTemplateLoadTime = File.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
-
-	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
-}
-
 // InitLogging initializes the logging service of the application.
 func InitLogging() {
+	LogRootPath = File.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
+
 	// Because we always create a console logger as the primary logger at init time,
 	// we need to remove it in case the user doesn't configure to use it after the
 	// logging service is initalized.
@@ -898,7 +863,7 @@ func newMailService() {
 
 	MailService = &Mailer{
 		QueueLength:     sec.Key("SEND_BUFFER_LEN").MustInt(100),
-		SubjectPrefix:   sec.Key("SUBJECT_PREFIX").MustString("[" + AppName + "] "),
+		SubjectPrefix:   sec.Key("SUBJECT_PREFIX").MustString("[" + App.BrandName + "] "),
 		Host:            sec.Key("HOST").String(),
 		User:            sec.Key("USER").String(),
 		Passwd:          sec.Key("PASSWD").String(),

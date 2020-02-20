@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -16,8 +17,8 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/assets/templates"
-	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/markup"
 )
 
 const (
@@ -41,12 +42,13 @@ var (
 func render(tpl string, data map[string]interface{}) (string, error) {
 	tplRenderOnce.Do(func() {
 		opt := &macaron.RenderOptions{
-			Directory:         path.Join(conf.StaticRootPath, "templates/mail"),
-			AppendDirectories: []string{path.Join(conf.CustomPath, "templates/mail")},
+			// NOTE: Embedded assets use Unix-style path separator.
+			Directory:         path.Join(conf.StaticRootPath, "templates", "mail"),
+			AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates", "mail")},
 			Extensions:        []string{".tmpl", ".html"},
 			Funcs: []template.FuncMap{map[string]interface{}{
 				"AppName": func() string {
-					return conf.AppName
+					return conf.App.BrandName
 				},
 				"AppURL": func() string {
 					return conf.AppURL

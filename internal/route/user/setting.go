@@ -18,12 +18,12 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -406,7 +406,7 @@ func SettingsTwoFactorEnable(c *context.Context) {
 	}
 	if key == nil {
 		key, err = totp.Generate(totp.GenerateOpts{
-			Issuer:      conf.AppName,
+			Issuer:      conf.App.BrandName,
 			AccountName: c.User.Email,
 		})
 		if err != nil {

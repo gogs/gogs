@@ -60,7 +60,7 @@ func LoadRepoConfig() {
 		if err != nil {
 			log.Fatal("Failed to get %s files: %v", t, err)
 		}
-		customPath := path.Join(conf.CustomPath, "conf", t)
+		customPath := filepath.Join(conf.CustomDir(), "conf", t)
 		if com.IsDir(customPath) {
 			customFiles, err := com.StatDir(customPath)
 			if err != nil {
@@ -696,9 +696,9 @@ func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
 	repo.Owner = repo.MustOwner()
 	cl := new(CloneLink)
 	if conf.SSH.Port != 22 {
-		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", conf.RunUser, conf.SSH.Domain, conf.SSH.Port, repo.Owner.Name, repoName)
+		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", conf.App.RunUser, conf.SSH.Domain, conf.SSH.Port, repo.Owner.Name, repoName)
 	} else {
-		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.RunUser, conf.SSH.Domain, repo.Owner.Name, repoName)
+		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.App.RunUser, conf.SSH.Domain, repo.Owner.Name, repoName)
 	}
 	cl.HTTPS = ComposeHTTPSCloneURL(repo.Owner.Name, repoName)
 	return cl
@@ -857,7 +857,7 @@ func createDelegateHooks(repoPath string) (err error) {
 	for _, name := range git.HookNames {
 		hookPath := filepath.Join(repoPath, "hooks", name)
 		if err = ioutil.WriteFile(hookPath,
-			[]byte(fmt.Sprintf(hooksTpls[name], conf.ScriptType, conf.AppPath, conf.CustomConf)),
+			[]byte(fmt.Sprintf(hooksTpls[name], conf.ScriptType, conf.AppPath(), conf.CustomConf)),
 			os.ModePerm); err != nil {
 			return fmt.Errorf("create delegate hook '%s': %v", hookPath, err)
 		}
@@ -928,7 +928,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	relPath := path.Join("conf", tp, strings.TrimLeft(path.Clean("/"+name), "/"))
 
 	// Use custom file when available.
-	customPath := path.Join(conf.CustomPath, relPath)
+	customPath := filepath.Join(conf.CustomDir(), relPath)
 	if osutil.IsFile(customPath) {
 		return ioutil.ReadFile(customPath)
 	}

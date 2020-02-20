@@ -21,10 +21,10 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -174,7 +174,7 @@ func (c *Context) Handle(status int, msg string, err error) {
 	case http.StatusInternalServerError:
 		c.Data["Title"] = "Internal Server Error"
 		log.Error("%s: %v", msg, err)
-		if !conf.ProdMode || (c.IsLogged && c.User.IsAdmin) {
+		if !conf.IsProdMode() || (c.IsLogged && c.User.IsAdmin) {
 			c.Data["ErrorMsg"] = err
 		}
 	}

@@ -13,16 +13,16 @@ import (
 	"sync"
 )
 
-var hasMinWinSvc bool
-
-// SupportWindowsService returns true if the application is built with Windows Service support.
-func SupportWindowsService() bool {
-	return hasMinWinSvc
-}
+// ℹ️ README: This file contains configuration values that require computation to be useful.
 
 // IsWindowsRuntime returns true if the current runtime in Windows.
 func IsWindowsRuntime() bool {
 	return runtime.GOOS == "windows"
+}
+
+// IsProdMode returns true if the application is running in production mode.
+func IsProdMode() bool {
+	return strings.EqualFold(App.RunMode, "prod")
 }
 
 var (
@@ -43,8 +43,6 @@ func AppPath() string {
 		if err != nil {
 			panic("get absolute executable path: " + err.Error())
 		}
-
-		appPath = strings.ReplaceAll(appPath, "\\", "/")
 	})
 
 	return appPath
@@ -56,7 +54,7 @@ var (
 )
 
 // WorkDir returns the absolute path of work directory. It reads the value of envrionment
-// variable GOGS_WORK_DIR when set. Otherwise, it uses the directory where the application's
+// variable GOGS_WORK_DIR. When not set, it uses the directory where the application's
 // binary is located.
 func WorkDir() string {
 	workDirOnce.Do(func() {
@@ -65,15 +63,54 @@ func WorkDir() string {
 			return
 		}
 
-		// NOTE: We don't use filepath.Dir here because it does not handle cases
-		// where path starts with two "/" in Windows, e.g. "//psf/Home/..."
-		appPath := AppPath()
-		i := strings.LastIndex(appPath, "/")
-		if i == -1 {
-			panic("unreachable")
-		}
-		workDir = appPath[:i]
+		workDir = filepath.Dir(AppPath())
 	})
 
 	return workDir
+}
+
+var (
+	customDir     string
+	customDirOnce sync.Once
+)
+
+// CustomDir returns the absolute path of the custom directory that contains local overrides.
+// It reads the value of envrionment variable GOGS_CUSTOM. When not set, it uses the work
+// directory returned by WorkDir fucntion.
+func CustomDir() string {
+	customDirOnce.Do(func() {
+		customDir = os.Getenv("GOGS_CUSTOM")
+		if customDir != "" {
+			return
+		}
+
+		customDir = filepath.Join(WorkDir(), "custom")
+	})
+
+	return customDir
+}
+
+var (
+	homeDir     string
+	homeDirOnce sync.Once
+)
+
+// HomeDir returns the home directory by reading environment variables. It may return empty
+// string when environment variables are not set.
+func HomeDir() string {
+	homeDirOnce.Do(func() {
+		if !IsWindowsRuntime() {
+			homeDir = os.Getenv("HOME")
+			return
+		}
+
+		homeDir = os.Getenv("USERPROFILE")
+		if homeDir != "" {
+			return
+		}
+
+		homeDir = os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+	})
+
+	return homeDir
 }

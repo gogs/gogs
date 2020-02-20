@@ -7,12 +7,12 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 
@@ -54,11 +54,10 @@ func runImportLocale(c *cli.Context) error {
 		return fmt.Errorf("target directory %q does not exist or is not a directory", c.String("target"))
 	}
 
-	if c.IsSet("config") {
-		conf.CustomConf = c.String("config")
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
 	}
-
-	conf.Init()
 
 	now := time.Now()
 

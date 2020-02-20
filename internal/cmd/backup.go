@@ -11,14 +11,15 @@ import (
 	"path"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/db"
 )
 
 var Backup = cli.Command{
@@ -44,10 +45,12 @@ const _ARCHIVE_ROOT_DIR = "gogs-backup"
 
 func runBackup(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
-	if c.IsSet("config") {
-		conf.CustomConf = c.String("config")
+
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
 	}
-	conf.Init()
+
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -93,7 +96,7 @@ func runBackup(c *cli.Context) error {
 
 	// Custom files
 	if !c.Bool("database-only") {
-		if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/custom", conf.CustomPath); err != nil {
+		if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/custom", conf.CustomDir()); err != nil {
 			log.Fatal("Failed to include 'custom': %v", err)
 		}
 	}
