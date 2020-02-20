@@ -20,7 +20,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
@@ -47,7 +47,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 	entries.Sort()
 
-	c.Data["Files"], err = entries.GetCommitsInfoWithCustomConcurrency(c.Repo.Commit, c.Repo.TreePath, setting.Repository.CommitsFetchConcurrency)
+	c.Data["Files"], err = entries.GetCommitsInfoWithCustomConcurrency(c.Repo.Commit, c.Repo.TreePath, conf.Repository.CommitsFetchConcurrency)
 	if err != nil {
 		c.ServerError("GetCommitsInfoWithCustomConcurrency", err)
 		return
@@ -118,7 +118,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 	if c.Repo.CanEnableEditor() {
 		c.Data["CanAddFile"] = true
-		c.Data["CanUploadFile"] = setting.Repository.Upload.Enabled
+		c.Data["CanUploadFile"] = conf.Repository.Upload.Enabled
 	}
 }
 
@@ -152,7 +152,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	canEnableEditor := c.Repo.CanEnableEditor()
 	switch {
 	case isTextFile:
-		if blob.Size() >= setting.UI.MaxDisplayFileSize {
+		if blob.Size() >= conf.UI.MaxDisplayFileSize {
 			c.Data["IsFileTooLarge"] = true
 			break
 		}

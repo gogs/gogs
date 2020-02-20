@@ -10,7 +10,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 // Sanitizer is a protection wrapper of *bluemonday.Policy which does not allow
@@ -40,7 +40,7 @@ func NewSanitizer() {
 		sanitizer.policy.AllowURLSchemes("data")
 
 		// Custom URL-Schemes
-		sanitizer.policy.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
+		sanitizer.policy.AllowURLSchemes(conf.Markdown.CustomURLSchemes...)
 	})
 }
 

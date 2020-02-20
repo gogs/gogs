@@ -18,7 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -39,7 +39,7 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 
 	if len(logMessage) > 0 {
-		if !setting.ProdMode {
+		if !conf.ProdMode {
 			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
 		}
 		log.Fatal(logMessage, args...)
@@ -50,21 +50,21 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 
 func setup(c *cli.Context, logPath string, connectDB bool) {
 	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+		conf.CustomConf = c.String("config")
 	} else if c.GlobalIsSet("config") {
-		setting.CustomConf = c.GlobalString("config")
+		conf.CustomConf = c.GlobalString("config")
 	}
 
-	setting.Init()
+	conf.Init()
 
 	level := log.LevelTrace
-	if setting.ProdMode {
+	if conf.ProdMode {
 		level = log.LevelError
 	}
 
 	err := log.NewFile(log.FileConfig{
 		Level:    level,
-		Filename: filepath.Join(setting.LogRootPath, logPath),
+		Filename: filepath.Join(conf.LogRootPath, logPath),
 		FileRotationConfig: log.FileRotationConfig{
 			Rotate:  true,
 			Daily:   true,
@@ -83,9 +83,8 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 
 	db.LoadConfigs()
 
-	if setting.UseSQLite3 {
-		workDir, _ := setting.WorkDir()
-		os.Chdir(workDir)
+	if conf.UseSQLite3 {
+		os.Chdir(conf.WorkDir())
 	}
 
 	if err := db.SetEngine(); err != nil {
@@ -130,7 +129,7 @@ var (
 func runServ(c *cli.Context) error {
 	setup(c, "serv.log", true)
 
-	if setting.SSH.Disabled {
+	if conf.SSH.Disabled {
 		println("Gogs: SSH has been disabled")
 		return nil
 	}
@@ -220,12 +219,12 @@ func runServ(c *cli.Context) error {
 			}
 		}
 	} else {
-		setting.NewService()
+		conf.NewService()
 		// Check if the key can access to the repository in case of it is a deploy key (a deploy keys != user key).
 		// A deploy key doesn't represent a signed in user, so in a site with Service.RequireSignInView activated
 		// we should give read access only in repositories where this deploy key is in use. In other case, a server
 		// or system using an active deploy key can get read access to all the repositories in a Gogs service.
-		if key.IsDeployKey() && setting.Service.RequireSignInView {
+		if key.IsDeployKey() && conf.Service.RequireSignInView {
 			checkDeployKey(key, repo)
 		}
 	}
@@ -244,7 +243,7 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Special handle for Windows.
-	if setting.IsWindows {
+	if conf.IsWindowsRuntime() {
 		verb = strings.Replace(verb, "-", " ", 1)
 	}
 
@@ -265,7 +264,7 @@ func runServ(c *cli.Context) error {
 			RepoPath:  repo.RepoPath(),
 		})...)
 	}
-	gitCmd.Dir = setting.RepoRootPath
+	gitCmd.Dir = conf.RepoRootPath
 	gitCmd.Stdout = os.Stdout
 	gitCmd.Stdin = os.Stdin
 	gitCmd.Stderr = os.Stderr

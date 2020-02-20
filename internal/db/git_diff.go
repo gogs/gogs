@@ -17,7 +17,7 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
 )
@@ -69,7 +69,7 @@ func init() {
 
 // ComputedInlineDiffFor computes inline diff for the given line.
 func (diffSection *DiffSection) ComputedInlineDiffFor(diffLine *git.DiffLine) template.HTML {
-	if setting.Git.DisableDiffHighlight {
+	if conf.Git.DisableDiffHighlight {
 		return template.HTML(html.EscapeString(diffLine.Content[1:]))
 	}
 	var (

@@ -13,7 +13,7 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 // Milestone represents a milestone of repository.
@@ -157,10 +157,10 @@ func GetMilestonesByRepoID(repoID int64) ([]*Milestone, error) {
 
 // GetMilestones returns a list of milestones of given repository and status.
 func GetMilestones(repoID int64, page int, isClosed bool) ([]*Milestone, error) {
-	miles := make([]*Milestone, 0, setting.UI.IssuePagingNum)
+	miles := make([]*Milestone, 0, conf.UI.IssuePagingNum)
 	sess := x.Where("repo_id = ? AND is_closed = ?", repoID, isClosed)
 	if page > 0 {
-		sess = sess.Limit(setting.UI.IssuePagingNum, (page-1)*setting.UI.IssuePagingNum)
+		sess = sess.Limit(conf.UI.IssuePagingNum, (page-1)*conf.UI.IssuePagingNum)
 	}
 	return miles, sess.Find(&miles)
 }

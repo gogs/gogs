@@ -11,7 +11,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -87,7 +87,7 @@ func MembersAction(c *context.Context) {
 	if c.Params(":action") != "leave" {
 		c.Redirect(c.Org.OrgLink + "/members")
 	} else {
-		c.Redirect(setting.AppSubURL + "/")
+		c.Redirect(conf.AppSubURL + "/")
 	}
 }
 

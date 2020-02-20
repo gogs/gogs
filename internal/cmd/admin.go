@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var (
@@ -141,10 +141,10 @@ func runCreateUser(c *cli.Context) error {
 	}
 
 	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+		conf.CustomConf = c.String("config")
 	}
 
-	setting.Init()
+	conf.Init()
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -165,10 +165,10 @@ func runCreateUser(c *cli.Context) error {
 func adminDashboardOperation(operation func() error, successMessage string) func(*cli.Context) error {
 	return func(c *cli.Context) error {
 		if c.IsSet("config") {
-			setting.CustomConf = c.String("config")
+			conf.CustomConf = c.String("config")
 		}
 
-		setting.Init()
+		conf.Init()
 		db.LoadConfigs()
 		db.SetEngine()
 

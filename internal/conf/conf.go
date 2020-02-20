@@ -2,16 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package setting
+package conf
 
 import (
 	"net/mail"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -59,7 +57,6 @@ var (
 	AppURL         string
 	AppSubURL      string
 	AppSubURLDepth int // Number of slashes
-	AppPath        string
 	AppDataPath    string
 	HostAddress    string // AppURL without protocol and slashes
 
@@ -316,14 +313,38 @@ var (
 	ShowFooterTemplateLoadTime bool
 
 	// Global setting objects
-	Cfg          *ini.File
+	File         *ini.File
 	CustomPath   string // Custom directory path
 	CustomConf   string
 	ProdMode     bool
 	RunUser      string
-	IsWindows    bool
 	HasRobotsTxt bool
 )
+
+func init() {
+	// Initialize the primary logger until logging service is up.
+	err := log.NewConsole()
+	if err != nil {
+		panic("init console logger: " + err.Error())
+	}
+}
+
+// Asset is a wrapper for getting conf assets.
+func Asset(name string) ([]byte, error) {
+	return conf.Asset(name)
+}
+
+// AssetDir is a wrapper for getting conf assets.
+func AssetDir(name string) ([]string, error) {
+	return conf.AssetDir(name)
+}
+
+// MustAsset is a wrapper for getting conf assets.
+func MustAsset(name string) []byte {
+	return conf.MustAsset(name)
+}
+
+// TODO
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
 func DateLang(lang string) string {
@@ -332,47 +353,6 @@ func DateLang(lang string) string {
 		return name
 	}
 	return "en"
-}
-
-// execPath returns the executable path.
-func execPath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", err
-	}
-	return filepath.Abs(file)
-}
-
-func init() {
-	IsWindows = runtime.GOOS == "windows"
-
-	err := log.NewConsole()
-	if err != nil {
-		panic("init console logger: " + err.Error())
-	}
-
-	AppPath, err = execPath()
-	if err != nil {
-		log.Fatal("Failed to get executable path: %v", err)
-	}
-
-	// NOTE: we don't use path.Dir here because it does not handle case
-	// which path starts with two "/" in Windows: "//psf/Home/..."
-	AppPath = strings.Replace(AppPath, "\\", "/", -1)
-}
-
-// WorkDir returns absolute path of work directory.
-func WorkDir() (string, error) {
-	wd := os.Getenv("GOGS_WORK_DIR")
-	if len(wd) > 0 {
-		return wd, nil
-	}
-
-	i := strings.LastIndex(AppPath, "/")
-	if i == -1 {
-		return AppPath, nil
-	}
-	return AppPath[:i], nil
 }
 
 func forcePathSeparator(path string) {
@@ -386,7 +366,7 @@ func forcePathSeparator(path string) {
 // This check is ignored under Windows since SSH remote login is not the main
 // method to login on Windows.
 func IsRunUserMatchCurrentUser(runUser string) (string, bool) {
-	if IsWindows {
+	if IsWindowsRuntime() {
 		return "", true
 	}
 
@@ -412,13 +392,8 @@ func getOpenSSHVersion() string {
 // Init initializes configuration by loading from sources.
 // ⚠️ WARNING: Do not print anything in this function other than wanrings or errors.
 func Init() {
-	workDir, err := WorkDir()
-	if err != nil {
-		log.Fatal("Failed to get work directory: %v", err)
-		return
-	}
-
-	Cfg, err = ini.LoadSources(ini.LoadOptions{
+	var err error
+	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
 	}, conf.MustAsset("conf/app.ini"))
 	if err != nil {
@@ -428,7 +403,7 @@ func Init() {
 
 	CustomPath = os.Getenv("GOGS_CUSTOM")
 	if len(CustomPath) == 0 {
-		CustomPath = workDir + "/custom"
+		CustomPath = WorkDir() + "/custom"
 	}
 
 	if len(CustomConf) == 0 {
@@ -436,14 +411,14 @@ func Init() {
 	}
 
 	if com.IsFile(CustomConf) {
-		if err = Cfg.Append(CustomConf); err != nil {
+		if err = File.Append(CustomConf); err != nil {
 			log.Fatal("Failed to load custom conf %q: %v", CustomConf, err)
 			return
 		}
 	} else {
 		log.Warn("Custom config '%s' not found, ignore this warning if you're running the first time", CustomConf)
 	}
-	Cfg.NameMapper = ini.SnackCase
+	File.NameMapper = ini.SnackCase
 
 	homeDir, err := com.HomeDir()
 	if err != nil {
@@ -452,11 +427,11 @@ func Init() {
 	}
 	homeDir = strings.Replace(homeDir, "\\", "/", -1)
 
-	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
+	LogRootPath = File.Section("log").Key("ROOT_PATH").MustString(path.Join(workDir, "log"))
 	forcePathSeparator(LogRootPath)
 
-	sec := Cfg.Section("server")
-	AppName = Cfg.Section("").Key("APP_NAME").MustString("Gogs")
+	sec := File.Section("server")
+	AppName = File.Section("").Key("APP_NAME").MustString("Gogs")
 	AppURL = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
 	if AppURL[len(AppURL)-1] != '/' {
 		AppURL += "/"
@@ -514,7 +489,7 @@ func Init() {
 	SSH.RewriteAuthorizedKeysAtStart = sec.Key("REWRITE_AUTHORIZED_KEYS_AT_START").MustBool()
 	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
 	SSH.KeyTestPath = os.TempDir()
-	if err = Cfg.Section("server").MapTo(&SSH); err != nil {
+	if err = File.Section("server").MapTo(&SSH); err != nil {
 		log.Fatal("Failed to map SSH settings: %v", err)
 		return
 	}
@@ -541,7 +516,7 @@ func Init() {
 	// Windows server and OpenSSH version lower than 5.1 (https://gogs.io/gogs/issues/4507)
 	// are forced to be disabled because the "ssh-keygen" in Windows does not print key type.
 	if SSH.MinimumKeySizeCheck &&
-		(IsWindows || version.Compare(getOpenSSHVersion(), "5.1", "<")) {
+		(IsWindowsRuntime() || version.Compare(getOpenSSHVersion(), "5.1", "<")) {
 		SSH.MinimumKeySizeCheck = false
 		log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
 1. Windows server
@@ -550,14 +525,14 @@ func Init() {
 
 	if SSH.MinimumKeySizeCheck {
 		SSH.MinimumKeySizes = map[string]int{}
-		for _, key := range Cfg.Section("ssh.minimum_key_sizes").Keys() {
+		for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
 			if key.MustInt() != -1 {
 				SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
 			}
 		}
 	}
 
-	sec = Cfg.Section("security")
+	sec = File.Section("security")
 	InstallLock = sec.Key("INSTALL_LOCK").MustBool()
 	SecretKey = sec.Key("SECRET_KEY").String()
 	LoginRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
@@ -568,7 +543,7 @@ func Init() {
 	EnableLoginStatusCookie = sec.Key("ENABLE_LOGIN_STATUS_COOKIE").MustBool(false)
 	LoginStatusCookieName = sec.Key("LOGIN_STATUS_COOKIE_NAME").MustString("login_status")
 
-	sec = Cfg.Section("attachment")
+	sec = File.Section("attachment")
 	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))
 	if !filepath.IsAbs(AttachmentPath) {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
@@ -594,9 +569,9 @@ func Init() {
 		"StampMilli":  time.StampMilli,
 		"StampMicro":  time.StampMicro,
 		"StampNano":   time.StampNano,
-	}[Cfg.Section("time").Key("FORMAT").MustString("RFC1123")]
+	}[File.Section("time").Key("FORMAT").MustString("RFC1123")]
 
-	RunUser = Cfg.Section("").Key("RUN_USER").String()
+	RunUser = File.Section("").Key("RUN_USER").String()
 	// Does not check run user when the install lock is off.
 	if InstallLock {
 		currentUser, match := IsRunUserMatchCurrentUser(RunUser)
@@ -606,10 +581,10 @@ func Init() {
 		}
 	}
 
-	ProdMode = Cfg.Section("").Key("RUN_MODE").String() == "prod"
+	ProdMode = File.Section("").Key("RUN_MODE").String() == "prod"
 
 	// Determine and create root git repository path.
-	sec = Cfg.Section("repository")
+	sec = File.Section("repository")
 	RepoRootPath = sec.Key("ROOT").MustString(path.Join(homeDir, "gogs-repositories"))
 	forcePathSeparator(RepoRootPath)
 	if !filepath.IsAbs(RepoRootPath) {
@@ -618,13 +593,13 @@ func Init() {
 		RepoRootPath = path.Clean(RepoRootPath)
 	}
 	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	if err = Cfg.Section("repository").MapTo(&Repository); err != nil {
+	if err = File.Section("repository").MapTo(&Repository); err != nil {
 		log.Fatal("Failed to map Repository settings: %v", err)
 		return
-	} else if err = Cfg.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
+	} else if err = File.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
 		log.Fatal("Failed to map Repository.Editor settings: %v", err)
 		return
-	} else if err = Cfg.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
+	} else if err = File.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
 		log.Fatal("Failed to map Repository.Upload settings: %v", err)
 		return
 	}
@@ -633,7 +608,7 @@ func Init() {
 		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
 	}
 
-	sec = Cfg.Section("picture")
+	sec = File.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
 	forcePathSeparator(AvatarUploadPath)
 	if !filepath.IsAbs(AvatarUploadPath) {
@@ -678,40 +653,40 @@ func Init() {
 		}
 	}
 
-	if err = Cfg.Section("http").MapTo(&HTTP); err != nil {
+	if err = File.Section("http").MapTo(&HTTP); err != nil {
 		log.Fatal("Failed to map HTTP settings: %v", err)
 		return
-	} else if err = Cfg.Section("webhook").MapTo(&Webhook); err != nil {
+	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {
 		log.Fatal("Failed to map Webhook settings: %v", err)
 		return
-	} else if err = Cfg.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
+	} else if err = File.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
 		log.Fatal("Failed to map Release.Attachment settings: %v", err)
 		return
-	} else if err = Cfg.Section("markdown").MapTo(&Markdown); err != nil {
+	} else if err = File.Section("markdown").MapTo(&Markdown); err != nil {
 		log.Fatal("Failed to map Markdown settings: %v", err)
 		return
-	} else if err = Cfg.Section("smartypants").MapTo(&Smartypants); err != nil {
+	} else if err = File.Section("smartypants").MapTo(&Smartypants); err != nil {
 		log.Fatal("Failed to map Smartypants settings: %v", err)
 		return
-	} else if err = Cfg.Section("admin").MapTo(&Admin); err != nil {
+	} else if err = File.Section("admin").MapTo(&Admin); err != nil {
 		log.Fatal("Failed to map Admin settings: %v", err)
 		return
-	} else if err = Cfg.Section("cron").MapTo(&Cron); err != nil {
+	} else if err = File.Section("cron").MapTo(&Cron); err != nil {
 		log.Fatal("Failed to map Cron settings: %v", err)
 		return
-	} else if err = Cfg.Section("git").MapTo(&Git); err != nil {
+	} else if err = File.Section("git").MapTo(&Git); err != nil {
 		log.Fatal("Failed to map Git settings: %v", err)
 		return
-	} else if err = Cfg.Section("mirror").MapTo(&Mirror); err != nil {
+	} else if err = File.Section("mirror").MapTo(&Mirror); err != nil {
 		log.Fatal("Failed to map Mirror settings: %v", err)
 		return
-	} else if err = Cfg.Section("api").MapTo(&API); err != nil {
+	} else if err = File.Section("api").MapTo(&API); err != nil {
 		log.Fatal("Failed to map API settings: %v", err)
 		return
-	} else if err = Cfg.Section("ui").MapTo(&UI); err != nil {
+	} else if err = File.Section("ui").MapTo(&UI); err != nil {
 		log.Fatal("Failed to map UI settings: %v", err)
 		return
-	} else if err = Cfg.Section("prometheus").MapTo(&Prometheus); err != nil {
+	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
 		log.Fatal("Failed to map Prometheus settings: %v", err)
 		return
 	}
@@ -720,25 +695,25 @@ func Init() {
 		Mirror.DefaultInterval = 24
 	}
 
-	Langs = Cfg.Section("i18n").Key("LANGS").Strings(",")
-	Names = Cfg.Section("i18n").Key("NAMES").Strings(",")
-	dateLangs = Cfg.Section("i18n.datelang").KeysHash()
+	Langs = File.Section("i18n").Key("LANGS").Strings(",")
+	Names = File.Section("i18n").Key("NAMES").Strings(",")
+	dateLangs = File.Section("i18n.datelang").KeysHash()
 
-	ShowFooterBranding = Cfg.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
-	ShowFooterTemplateLoadTime = Cfg.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
+	ShowFooterBranding = File.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
+	ShowFooterTemplateLoadTime = File.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
 
 	HasRobotsTxt = com.IsFile(path.Join(CustomPath, "robots.txt"))
 }
 
-// InitLogging initializes the logging infrastructure of the application.
+// InitLogging initializes the logging service of the application.
 func InitLogging() {
 	// Because we always create a console logger as the primary logger at init time,
 	// we need to remove it in case the user doesn't configure to use it after the
-	// logging infrastructure is initalized.
+	// logging service is initalized.
 	hasConsole := false
 
 	// Iterate over [log.*] sections to initialize individual logger.
-	LogModes = strings.Split(Cfg.Section("log").Key("MODE").MustString("console"), ",")
+	LogModes = strings.Split(File.Section("log").Key("MODE").MustString("console"), ",")
 	LogConfigs = make([]interface{}, len(LogModes))
 	levelMappings := map[string]log.Level{
 		"trace": log.LevelTrace,
@@ -755,7 +730,7 @@ func InitLogging() {
 	for i, mode := range LogModes {
 		mode = strings.ToLower(strings.TrimSpace(mode))
 		secName := "log." + mode
-		sec, err := Cfg.GetSection(secName)
+		sec, err := File.GetSection(secName)
 		if err != nil {
 			log.Fatal("Missing configuration section [%s] for %q logger", secName, mode)
 			return
@@ -852,7 +827,7 @@ var Service struct {
 }
 
 func newService() {
-	sec := Cfg.Section("service")
+	sec := File.Section("service")
 	Service.ActiveCodeLives = sec.Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
 	Service.ResetPwdCodeLives = sec.Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
 	Service.DisableRegistration = sec.Key("DISABLE_REGISTRATION").MustBool()
@@ -864,12 +839,12 @@ func newService() {
 }
 
 func newCacheService() {
-	CacheAdapter = Cfg.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
+	CacheAdapter = File.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	switch CacheAdapter {
 	case "memory":
-		CacheInterval = Cfg.Section("cache").Key("INTERVAL").MustInt(60)
+		CacheInterval = File.Section("cache").Key("INTERVAL").MustInt(60)
 	case "redis", "memcache":
-		CacheConn = strings.Trim(Cfg.Section("cache").Key("HOST").String(), "\" ")
+		CacheConn = strings.Trim(File.Section("cache").Key("HOST").String(), "\" ")
 	default:
 		log.Fatal("Unrecognized cache adapter %q", CacheAdapter)
 		return
@@ -879,15 +854,15 @@ func newCacheService() {
 }
 
 func newSessionService() {
-	SessionConfig.Provider = Cfg.Section("session").Key("PROVIDER").In("memory",
+	SessionConfig.Provider = File.Section("session").Key("PROVIDER").In("memory",
 		[]string{"memory", "file", "redis", "mysql"})
-	SessionConfig.ProviderConfig = strings.Trim(Cfg.Section("session").Key("PROVIDER_CONFIG").String(), "\" ")
-	SessionConfig.CookieName = Cfg.Section("session").Key("COOKIE_NAME").MustString("i_like_gogs")
+	SessionConfig.ProviderConfig = strings.Trim(File.Section("session").Key("PROVIDER_CONFIG").String(), "\" ")
+	SessionConfig.CookieName = File.Section("session").Key("COOKIE_NAME").MustString("i_like_gogs")
 	SessionConfig.CookiePath = AppSubURL
-	SessionConfig.Secure = Cfg.Section("session").Key("COOKIE_SECURE").MustBool()
-	SessionConfig.Gclifetime = Cfg.Section("session").Key("GC_INTERVAL_TIME").MustInt64(3600)
-	SessionConfig.Maxlifetime = Cfg.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)
-	CSRFCookieName = Cfg.Section("session").Key("CSRF_COOKIE_NAME").MustString("_csrf")
+	SessionConfig.Secure = File.Section("session").Key("COOKIE_SECURE").MustBool()
+	SessionConfig.Gclifetime = File.Section("session").Key("GC_INTERVAL_TIME").MustInt64(3600)
+	SessionConfig.Maxlifetime = File.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)
+	CSRFCookieName = File.Section("session").Key("CSRF_COOKIE_NAME").MustString("_csrf")
 
 	log.Trace("Session service is enabled")
 }
@@ -916,7 +891,7 @@ var (
 // newMailService initializes mail service options from configuration.
 // No non-error log will be printed in hook mode.
 func newMailService() {
-	sec := Cfg.Section("mailer")
+	sec := File.Section("mailer")
 	if !sec.Key("ENABLED").MustBool() {
 		return
 	}
@@ -954,7 +929,7 @@ func newMailService() {
 }
 
 func newRegisterMailService() {
-	if !Cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").MustBool() {
+	if !File.Section("service").Key("REGISTER_EMAIL_CONFIRM").MustBool() {
 		return
 	} else if MailService == nil {
 		log.Warn("Email confirmation is not enabled due to the mail service is not available")
@@ -967,7 +942,7 @@ func newRegisterMailService() {
 // newNotifyMailService initializes notification email service options from configuration.
 // No non-error log will be printed in hook mode.
 func newNotifyMailService() {
-	if !Cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
+	if !File.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
 		return
 	} else if MailService == nil {
 		log.Warn("Email notification is not enabled due to the mail service is not available")

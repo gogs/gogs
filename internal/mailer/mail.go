@@ -17,7 +17,7 @@ import (
 
 	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -41,15 +41,15 @@ var (
 func render(tpl string, data map[string]interface{}) (string, error) {
 	tplRenderOnce.Do(func() {
 		opt := &macaron.RenderOptions{
-			Directory:         path.Join(setting.StaticRootPath, "templates/mail"),
-			AppendDirectories: []string{path.Join(setting.CustomPath, "templates/mail")},
+			Directory:         path.Join(conf.StaticRootPath, "templates/mail"),
+			AppendDirectories: []string{path.Join(conf.CustomPath, "templates/mail")},
 			Extensions:        []string{".tmpl", ".html"},
 			Funcs: []template.FuncMap{map[string]interface{}{
 				"AppName": func() string {
-					return setting.AppName
+					return conf.AppName
 				},
 				"AppURL": func() string {
-					return setting.AppURL
+					return conf.AppURL
 				},
 				"Year": func() int {
 					return time.Now().Year()
@@ -59,7 +59,7 @@ func render(tpl string, data map[string]interface{}) (string, error) {
 				},
 			}},
 		}
-		if !setting.LoadAssetsFromDisk {
+		if !conf.LoadAssetsFromDisk {
 			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
 		}
 
@@ -105,8 +105,8 @@ type Issue interface {
 func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
-		"ActiveCodeLives":   setting.Service.ActiveCodeLives / 60,
-		"ResetPwdCodeLives": setting.Service.ResetPwdCodeLives / 60,
+		"ActiveCodeLives":   conf.Service.ActiveCodeLives / 60,
+		"ResetPwdCodeLives": conf.Service.ResetPwdCodeLives / 60,
 		"Code":              code,
 	}
 	body, err := render(tpl, data)
@@ -133,7 +133,7 @@ func SendResetPasswordMail(c *macaron.Context, u User) {
 func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 	data := map[string]interface{}{
 		"Username":        u.DisplayName(),
-		"ActiveCodeLives": setting.Service.ActiveCodeLives / 60,
+		"ActiveCodeLives": conf.Service.ActiveCodeLives / 60,
 		"Code":            u.GenerateEmailActivateCode(email),
 		"Email":           email,
 	}
@@ -204,7 +204,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := gomail.NewMessage().FormatAddress(setting.MailService.FromEmail, doer.DisplayName())
+	from := gomail.NewMessage().FormatAddress(conf.MailService.FromEmail, doer.DisplayName())
 	msg := NewMessageFrom(tos, from, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg

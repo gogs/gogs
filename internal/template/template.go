@@ -23,7 +23,7 @@ import (
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -40,28 +40,28 @@ func FuncMap() []template.FuncMap {
 				return time.Now().Year()
 			},
 			"UseHTTPS": func() bool {
-				return strings.HasPrefix(setting.AppURL, "https")
+				return strings.HasPrefix(conf.AppURL, "https")
 			},
 			"AppName": func() string {
-				return setting.AppName
+				return conf.AppName
 			},
 			"AppSubURL": func() string {
-				return setting.AppSubURL
+				return conf.AppSubURL
 			},
 			"AppURL": func() string {
-				return setting.AppURL
+				return conf.AppURL
 			},
 			"AppVer": func() string {
-				return setting.AppVersion
+				return conf.AppVersion
 			},
 			"AppDomain": func() string {
-				return setting.Domain
+				return conf.Domain
 			},
 			"DisableGravatar": func() bool {
-				return setting.DisableGravatar
+				return conf.DisableGravatar
 			},
 			"ShowFooterTemplateLoadTime": func() bool {
-				return setting.ShowFooterTemplateLoadTime
+				return conf.ShowFooterTemplateLoadTime
 			},
 			"LoadTimes": func(startTime time.Time) string {
 				return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"
@@ -111,7 +111,7 @@ func FuncMap() []template.FuncMap {
 			"EscapePound":           EscapePound,
 			"RenderCommitMessage":   RenderCommitMessage,
 			"ThemeColorMetaTag": func() string {
-				return setting.UI.ThemeColorMetaTag
+				return conf.UI.ThemeColorMetaTag
 			},
 			"FilenameIsImage": func(filename string) bool {
 				mimeType := mime.TypeByExtension(filepath.Ext(filename))

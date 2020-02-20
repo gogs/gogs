@@ -16,7 +16,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
@@ -32,14 +32,14 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 	var (
 		hookNames = []string{"pre-receive", "update", "post-receive"}
 		hookTpls  = []string{
-			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n", setting.ScriptType, setting.AppPath, setting.CustomConf),
-			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n", setting.ScriptType, setting.AppPath, setting.CustomConf),
-			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n", setting.ScriptType, setting.AppPath, setting.CustomConf),
+			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n", conf.ScriptType, conf.AppPath, conf.CustomConf),
+			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n", conf.ScriptType, conf.AppPath, conf.CustomConf),
+			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n", conf.ScriptType, conf.AppPath, conf.CustomConf),
 		}
 	)
 
 	// Cleanup old update.log and http.log files.
-	filepath.Walk(setting.LogRootPath, func(path string, info os.FileInfo, err error) error {
+	filepath.Walk(conf.LogRootPath, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() &&
 			(strings.HasPrefix(filepath.Base(path), "update.log") ||
 				strings.HasPrefix(filepath.Base(path), "http.log")) {
@@ -63,7 +63,7 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 				return nil
 			}
 
-			repoBase := filepath.Join(setting.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name))
+			repoBase := filepath.Join(conf.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name))
 			repoPath := repoBase + ".git"
 			wikiPath := repoBase + ".wiki.git"
 			log.Trace("[%04d]: %s", idx, repoPath)

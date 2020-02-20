@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/user"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -63,7 +63,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 			return
 		}
 		// reset c.org.OrgLink with new name
-		c.Org.OrgLink = setting.AppSubURL + "/org/" + f.Name
+		c.Org.OrgLink = conf.AppSubURL + "/org/" + f.Name
 		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
 	// In case it's just a case change.
@@ -130,7 +130,7 @@ func SettingsDelete(c *context.Context) {
 			}
 		} else {
 			log.Trace("Organization deleted: %s", org.Name)
-			c.Redirect(setting.AppSubURL + "/")
+			c.Redirect(conf.AppSubURL + "/")
 		}
 		return
 	}
@@ -143,7 +143,7 @@ func Webhooks(c *context.Context) {
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["BaseLink"] = c.Org.OrgLink
 	c.Data["Description"] = c.Tr("org.settings.hooks_desc")
-	c.Data["Types"] = setting.Webhook.Types
+	c.Data["Types"] = conf.Webhook.Types
 
 	ws, err := db.GetWebhooksByOrgID(c.Org.Organization.ID)
 	if err != nil {

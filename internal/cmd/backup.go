@@ -18,7 +18,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var Backup = cli.Command{
@@ -45,9 +45,9 @@ const _ARCHIVE_ROOT_DIR = "gogs-backup"
 func runBackup(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
 	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+		conf.CustomConf = c.String("config")
 	}
-	setting.Init()
+	conf.Init()
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -66,7 +66,7 @@ func runBackup(c *cli.Context) error {
 	metadata := ini.Empty()
 	metadata.Section("").Key("VERSION").SetValue(com.ToStr(_CURRENT_BACKUP_FORMAT_VERSION))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
-	metadata.Section("").Key("GOGS_VERSION").SetValue(setting.AppVersion)
+	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.AppVersion)
 	if err = metadata.SaveTo(metaFile); err != nil {
 		log.Fatal("Failed to save metadata '%s': %v", metaFile, err)
 	}
@@ -93,7 +93,7 @@ func runBackup(c *cli.Context) error {
 
 	// Custom files
 	if !c.Bool("database-only") {
-		if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/custom", setting.CustomPath); err != nil {
+		if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/custom", conf.CustomPath); err != nil {
 			log.Fatal("Failed to include 'custom': %v", err)
 		}
 	}
@@ -101,7 +101,7 @@ func runBackup(c *cli.Context) error {
 	// Data files
 	if !c.Bool("database-only") {
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
-			dirPath := path.Join(setting.AppDataPath, dir)
+			dirPath := path.Join(conf.AppDataPath, dir)
 			if !com.IsDir(dirPath) {
 				continue
 			}
@@ -115,8 +115,8 @@ func runBackup(c *cli.Context) error {
 	// Repositories
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") {
 		reposDump := path.Join(rootDir, "repositories.zip")
-		log.Info("Dumping repositories in '%s'", setting.RepoRootPath)
-		if err = zip.PackTo(setting.RepoRootPath, reposDump, true); err != nil {
+		log.Info("Dumping repositories in '%s'", conf.RepoRootPath)
+		if err = zip.PackTo(conf.RepoRootPath, reposDump, true); err != nil {
 			log.Fatal("Failed to dump repositories: %v", err)
 		}
 		log.Info("Repositories dumped to: %s", reposDump)

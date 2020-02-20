@@ -16,7 +16,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var Restore = cli.Command{
@@ -68,8 +68,8 @@ func runRestore(c *cli.Context) error {
 		log.Fatal("Failed to load metadata '%s': %v", metaFile, err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
-	if version.Compare(setting.AppVersion, backupVersion, "<") {
-		log.Fatal("Current Gogs version is lower than backup version: %s < %s", setting.AppVersion, backupVersion)
+	if version.Compare(conf.AppVersion, backupVersion, "<") {
+		log.Fatal("Current Gogs version is lower than backup version: %s < %s", conf.AppVersion, backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {
@@ -84,13 +84,13 @@ func runRestore(c *cli.Context) error {
 	// Otherwise, it's optional to set config file flag.
 	configFile := path.Join(archivePath, "custom/conf/app.ini")
 	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+		conf.CustomConf = c.String("config")
 	} else if !com.IsExist(configFile) {
 		log.Fatal("'--config' is not specified and custom config file is not found in backup")
 	} else {
-		setting.CustomConf = configFile
+		conf.CustomConf = configFile
 	}
-	setting.Init()
+	conf.Init()
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -102,19 +102,19 @@ func runRestore(c *cli.Context) error {
 
 	// Custom files
 	if !c.Bool("database-only") {
-		if com.IsExist(setting.CustomPath) {
-			if err = os.Rename(setting.CustomPath, setting.CustomPath+".bak"); err != nil {
+		if com.IsExist(conf.CustomPath) {
+			if err = os.Rename(conf.CustomPath, conf.CustomPath+".bak"); err != nil {
 				log.Fatal("Failed to backup current 'custom': %v", err)
 			}
 		}
-		if err = os.Rename(path.Join(archivePath, "custom"), setting.CustomPath); err != nil {
+		if err = os.Rename(path.Join(archivePath, "custom"), conf.CustomPath); err != nil {
 			log.Fatal("Failed to import 'custom': %v", err)
 		}
 	}
 
 	// Data files
 	if !c.Bool("database-only") {
-		os.MkdirAll(setting.AppDataPath, os.ModePerm)
+		os.MkdirAll(conf.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			// Skip if backup archive does not have corresponding data
 			srcPath := path.Join(archivePath, "data", dir)
@@ -122,7 +122,7 @@ func runRestore(c *cli.Context) error {
 				continue
 			}
 
-			dirPath := path.Join(setting.AppDataPath, dir)
+			dirPath := path.Join(conf.AppDataPath, dir)
 			if com.IsExist(dirPath) {
 				if err = os.Rename(dirPath, dirPath+".bak"); err != nil {
 					log.Fatal("Failed to backup current 'data': %v", err)
@@ -137,7 +137,7 @@ func runRestore(c *cli.Context) error {
 	// Repositories
 	reposPath := path.Join(archivePath, "repositories.zip")
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") && com.IsExist(reposPath) {
-		if err := zip.ExtractTo(reposPath, path.Dir(setting.RepoRootPath)); err != nil {
+		if err := zip.ExtractTo(reposPath, path.Dir(conf.RepoRootPath)); err != nil {
 			log.Fatal("Failed to extract 'repositories.zip': %v", err)
 		}
 	}

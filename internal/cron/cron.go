@@ -12,7 +12,7 @@ import (
 	"github.com/gogs/cron"
 
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var c = cron.New()
@@ -22,45 +22,45 @@ func NewContext() {
 		entry *cron.Entry
 		err   error
 	)
-	if setting.Cron.UpdateMirror.Enabled {
-		entry, err = c.AddFunc("Update mirrors", setting.Cron.UpdateMirror.Schedule, db.MirrorUpdate)
+	if conf.Cron.UpdateMirror.Enabled {
+		entry, err = c.AddFunc("Update mirrors", conf.Cron.UpdateMirror.Schedule, db.MirrorUpdate)
 		if err != nil {
 			log.Fatal("Cron.(update mirrors): %v", err)
 		}
-		if setting.Cron.UpdateMirror.RunAtStart {
+		if conf.Cron.UpdateMirror.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
 			go db.MirrorUpdate()
 		}
 	}
-	if setting.Cron.RepoHealthCheck.Enabled {
-		entry, err = c.AddFunc("Repository health check", setting.Cron.RepoHealthCheck.Schedule, db.GitFsck)
+	if conf.Cron.RepoHealthCheck.Enabled {
+		entry, err = c.AddFunc("Repository health check", conf.Cron.RepoHealthCheck.Schedule, db.GitFsck)
 		if err != nil {
 			log.Fatal("Cron.(repository health check): %v", err)
 		}
-		if setting.Cron.RepoHealthCheck.RunAtStart {
+		if conf.Cron.RepoHealthCheck.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
 			go db.GitFsck()
 		}
 	}
-	if setting.Cron.CheckRepoStats.Enabled {
-		entry, err = c.AddFunc("Check repository statistics", setting.Cron.CheckRepoStats.Schedule, db.CheckRepoStats)
+	if conf.Cron.CheckRepoStats.Enabled {
+		entry, err = c.AddFunc("Check repository statistics", conf.Cron.CheckRepoStats.Schedule, db.CheckRepoStats)
 		if err != nil {
 			log.Fatal("Cron.(check repository statistics): %v", err)
 		}
-		if setting.Cron.CheckRepoStats.RunAtStart {
+		if conf.Cron.CheckRepoStats.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
 			go db.CheckRepoStats()
 		}
 	}
-	if setting.Cron.RepoArchiveCleanup.Enabled {
-		entry, err = c.AddFunc("Repository archive cleanup", setting.Cron.RepoArchiveCleanup.Schedule, db.DeleteOldRepositoryArchives)
+	if conf.Cron.RepoArchiveCleanup.Enabled {
+		entry, err = c.AddFunc("Repository archive cleanup", conf.Cron.RepoArchiveCleanup.Schedule, db.DeleteOldRepositoryArchives)
 		if err != nil {
 			log.Fatal("Cron.(repository archive cleanup): %v", err)
 		}
-		if setting.Cron.RepoArchiveCleanup.RunAtStart {
+		if conf.Cron.RepoArchiveCleanup.RunAtStart {
 			entry.Prev = time.Now()
 			entry.ExecTimes++
 			go db.DeleteOldRepositoryArchives()

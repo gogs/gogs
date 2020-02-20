@@ -8,7 +8,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/route"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -24,7 +24,7 @@ func Organizations(c *context.Context) {
 		Type:     db.USER_TYPE_ORGANIZATION,
 		Counter:  db.CountOrganizations,
 		Ranger:   db.Organizations,
-		PageSize: setting.UI.Admin.OrgPagingNum,
+		PageSize: conf.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  ORGS,
 	})

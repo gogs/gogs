@@ -12,11 +12,11 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func composeDeployKeysAPILink(repoPath string) string {
-	return setting.AppURL + "api/v1/repos/" + repoPath + "/keys/"
+	return conf.AppURL + "api/v1/repos/" + repoPath + "/keys/"
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories-Deploy-Keys#list-deploy-keys

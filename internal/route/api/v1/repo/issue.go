@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func listIssues(c *context.APIContext, opts *db.IssuesOptions) {
@@ -40,7 +40,7 @@ func listIssues(c *context.APIContext, opts *db.IssuesOptions) {
 		apiIssues[i] = issues[i].APIFormat()
 	}
 
-	c.SetLinkHeader(int(count), setting.UI.IssuePagingNum)
+	c.SetLinkHeader(int(count), conf.UI.IssuePagingNum)
 	c.JSONSuccess(&apiIssues)
 }
 

@@ -12,7 +12,7 @@ import (
 
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func (issue *Issue) MailSubject() string {
@@ -95,7 +95,7 @@ func NewMailerIssue(issue *Issue) mailer.Issue {
 // 1. Repository watchers, users who participated in comments and the assignee.
 // 2. Users who are not in 1. but get mentioned in current issue/comment.
 func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string) error {
-	if !setting.Service.EnableNotifyMail {
+	if !conf.Service.EnableNotifyMail {
 		return nil
 	}
 

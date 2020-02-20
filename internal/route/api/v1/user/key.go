@@ -13,7 +13,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func GetUserByParamsName(c *context.APIContext, name string) *db.User {
@@ -31,7 +31,7 @@ func GetUserByParams(c *context.APIContext) *db.User {
 }
 
 func composePublicKeysAPILink() string {
-	return setting.AppURL + "api/v1/user/keys/"
+	return conf.AppURL + "api/v1/user/keys/"
 }
 
 func listPublicKeys(c *context.APIContext, uid int64) {

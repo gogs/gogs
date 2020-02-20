@@ -23,7 +23,7 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -262,7 +262,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	email := &db.EmailAddress{
 		UID:         c.User.ID,
 		Email:       f.Email,
-		IsActivated: !setting.Service.RegisterEmailConfirm,
+		IsActivated: !conf.Service.RegisterEmailConfirm,
 	}
 	if err := db.AddEmailAddress(email); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
@@ -274,13 +274,13 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	// Send confirmation email
-	if setting.Service.RegisterEmailConfirm {
+	if conf.Service.RegisterEmailConfirm {
 		mailer.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), email.Email)
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
 			log.Error("Set cache 'MailResendLimit' failed: %v", err)
 		}
-		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", email.Email, setting.Service.ActiveCodeLives/60))
+		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", email.Email, conf.Service.ActiveCodeLives/60))
 	} else {
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
@@ -299,7 +299,7 @@ func DeleteEmail(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.email_deletion_success"))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/email",
+		"redirect": conf.AppSubURL + "/user/settings/email",
 	})
 }
 
@@ -371,7 +371,7 @@ func DeleteSSHKey(c *context.Context) {
 	}
 
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/ssh",
+		"redirect": conf.AppSubURL + "/user/settings/ssh",
 	})
 }
 
@@ -406,7 +406,7 @@ func SettingsTwoFactorEnable(c *context.Context) {
 	}
 	if key == nil {
 		key, err = totp.Generate(totp.GenerateOpts{
-			Issuer:      setting.AppName,
+			Issuer:      conf.AppName,
 			AccountName: c.User.Email,
 		})
 		if err != nil {
@@ -506,7 +506,7 @@ func SettingsTwoFactorDisable(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.two_factor_disable_success"))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/security",
+		"redirect": conf.AppSubURL + "/user/settings/security",
 	})
 }
 
@@ -542,7 +542,7 @@ func SettingsLeaveRepo(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.repos.leave_success", repo.FullName()))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/repositories",
+		"redirect": conf.AppSubURL + "/user/settings/repositories",
 	})
 }
 
@@ -571,7 +571,7 @@ func SettingsLeaveOrganization(c *context.Context) {
 	}
 
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/organizations",
+		"redirect": conf.AppSubURL + "/user/settings/organizations",
 	})
 }
 
@@ -632,7 +632,7 @@ func SettingsDeleteApplication(c *context.Context) {
 	}
 
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/user/settings/applications",
+		"redirect": conf.AppSubURL + "/user/settings/applications",
 	})
 }
 
@@ -654,16 +654,16 @@ func SettingsDelete(c *context.Context) {
 			switch {
 			case db.IsErrUserOwnRepos(err):
 				c.Flash.Error(c.Tr("form.still_own_repo"))
-				c.Redirect(setting.AppSubURL + "/user/settings/delete")
+				c.Redirect(conf.AppSubURL + "/user/settings/delete")
 			case db.IsErrUserHasOrgs(err):
 				c.Flash.Error(c.Tr("form.still_has_org"))
-				c.Redirect(setting.AppSubURL + "/user/settings/delete")
+				c.Redirect(conf.AppSubURL + "/user/settings/delete")
 			default:
 				c.ServerError("DeleteUser", err)
 			}
 		} else {
 			log.Trace("Account deleted: %s", c.User.Name)
-			c.Redirect(setting.AppSubURL + "/")
+			c.Redirect(conf.AppSubURL + "/")
 		}
 		return
 	}

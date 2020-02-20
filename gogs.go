@@ -14,13 +14,13 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cmd"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const Version = "0.12.0+dev"
 
 func init() {
-	setting.AppVersion = Version
+	conf.AppVersion = Version
 }
 
 func main() {

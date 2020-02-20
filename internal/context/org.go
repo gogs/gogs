@@ -11,7 +11,7 @@ import (
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 type Organization struct {
@@ -91,7 +91,7 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 	c.Data["IsOrganizationOwner"] = c.Org.IsOwner
 	c.Data["IsOrganizationMember"] = c.Org.IsMember
 
-	c.Org.OrgLink = setting.AppSubURL + "/org/" + org.Name
+	c.Org.OrgLink = conf.AppSubURL + "/org/" + org.Name
 	c.Data["OrgLink"] = c.Org.OrgLink
 
 	// Team.

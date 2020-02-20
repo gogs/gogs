@@ -24,7 +24,7 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -95,7 +95,7 @@ func (repo *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 // checkoutNewBranch checks out to a new branch from the a branch name.
 func checkoutNewBranch(repoPath, localPath, oldBranch, newBranch string) error {
 	if err := git.Checkout(localPath, git.CheckoutOptions{
-		Timeout:   time.Duration(setting.Git.Timeout.Pull) * time.Second,
+		Timeout:   time.Duration(conf.Git.Timeout.Pull) * time.Second,
 		Branch:    newBranch,
 		OldBranch: oldBranch,
 	}); err != nil {
@@ -231,7 +231,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", repo.RepoPath()), cmd)
 	defer process.Remove(pid)
 
-	diff, err = ParsePatch(setting.Git.MaxGitDiffLines, setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles, stdout)
+	diff, err = ParsePatch(conf.Git.MaxGitDiffLines, conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles, stdout)
 	if err != nil {
 		return nil, fmt.Errorf("parse path: %v", err)
 	}
@@ -318,7 +318,7 @@ type Upload struct {
 
 // UploadLocalPath returns where uploads is stored in local file system based on given UUID.
 func UploadLocalPath(uuid string) string {
-	return path.Join(setting.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
+	return path.Join(conf.Repository.Upload.TempPath, uuid[0:1], uuid[1:2], uuid)
 }
 
 // LocalPath returns where uploads are temporarily stored in local file system.
