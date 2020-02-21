@@ -6,6 +6,7 @@ package conf
 
 import (
 	"net/url"
+	"os"
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
@@ -41,12 +42,16 @@ var (
 		HTTPAddr    string `ini:"HTTP_ADDR"`
 		HTTPPort    string `ini:"HTTP_PORT"`
 
+		UnixSocketPermission string
+
 		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
 		RootURL string `ini:"ROOT_URL"`
 
-		URL          *url.URL `ini:"-"` // Parsed URL object of ExternalURL.
-		Subpath      string   `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
-		SubpathDepth int      `ini:"-"` // The number of slashes found in the Subpath.
+		// Derived from other static values
+		URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
+		Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
+		SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
+		UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
 	}
 )
 

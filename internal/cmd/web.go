@@ -701,6 +701,7 @@ func runWeb(c *cli.Context) error {
 	switch conf.Server.Protocol {
 	case "http":
 		err = http.ListenAndServe(listenAddr, m)
+
 	case "https":
 		var tlsMinVersion uint16
 		switch conf.TLSMinVersion {
@@ -729,23 +730,29 @@ func runWeb(c *cli.Context) error {
 			},
 		}, Handler: m}
 		err = server.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
+
 	case "fcgi":
 		err = fcgi.Serve(nil, m)
+
 	case "unix":
-		os.Remove(listenAddr)
+		err = os.Remove(listenAddr)
+		if err != nil {
+			log.Fatal("Failed to remove existing Unix domain socket: %v", err)
+		}
 
 		var listener *net.UnixListener
-		listener, err = net.ListenUnix("unix", &net.UnixAddr{listenAddr, "unix"})
+		listener, err = net.ListenUnix("unix", &net.UnixAddr{Name: listenAddr, Net: "unix"})
 		if err != nil {
-			break // Handle error after switch
+			log.Fatal("Failed to listen on Unix networks: %v", err)
 		}
 
 		// FIXME: add proper implementation of signal capture on all protocols
 		// execute this on SIGTERM or SIGINT: listener.Close()
-		if err = os.Chmod(listenAddr, os.FileMode(conf.UnixSocketPermission)); err != nil {
-			log.Fatal("Failed to set permission of unix socket: %v", err)
+		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
+			log.Fatal("Failed to change permission of Unix domain socket: %v", err)
 		}
 		err = http.Serve(listener, m)
+
 	default:
 		log.Fatal("Unexpected server protocol: %s", conf.Server.Protocol)
 	}

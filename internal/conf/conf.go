@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,32 +94,38 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping default section")
 	}
 
+	// ********************
+	// ----- [server] -----
+	// ********************
+
 	if err = File.Section("server").MapTo(&Server); err != nil {
 		return errors.Wrap(err, "mapping [server] section")
 	}
 
-	// Post processing server settings
 	if !strings.HasSuffix(Server.ExternalURL, "/") {
 		Server.ExternalURL += "/"
 	}
 	Server.URL, err = url.Parse(Server.ExternalURL)
 	if err != nil {
-		log.Fatal("Failed to parse '[server] EXTERNAL_URL' %q: %s", Server.ExternalURL, err)
+		return errors.Wrapf(err, "parse '[server] EXTERNAL_URL' %q", err)
 	}
 
 	// Subpath should start with '/' and end without '/', i.e. '/{subpath}'.
 	Server.Subpath = strings.TrimRight(Server.URL.Path, "/")
 	Server.SubpathDepth = strings.Count(Server.Subpath, "/")
 
+	unixSocketMode, err := strconv.ParseUint(Server.UnixSocketPermission, 8, 32)
+	if err != nil {
+		return errors.Wrapf(err, "parse '[server] UNIX_SOCKET_PERMISSION' %q", Server.UnixSocketPermission)
+	}
+	if unixSocketMode > 0777 {
+		unixSocketMode = 0666
+	}
+	Server.UnixSocketMode = os.FileMode(unixSocketMode)
+
 	// CertFile = sec.Key("CERT_FILE").String()
 	// KeyFile = sec.Key("KEY_FILE").String()
 	// TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
-	// UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
-	// UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
-	// if err != nil || UnixSocketPermissionParsed > 0777 {
-	// 	log.Fatal("Failed to parse unixSocketPermission %q: %v", UnixSocketPermissionRaw, err)
-	// }
-	// UnixSocketPermission = uint32(UnixSocketPermissionParsed)
 
 	transferDeprecated()
 
@@ -359,17 +366,16 @@ var (
 	AppDataPath string
 
 	// Server settings
-	LocalURL             string
-	OfflineMode          bool
-	DisableRouterLog     bool
-	CertFile             string
-	KeyFile              string
-	TLSMinVersion        string
-	LoadAssetsFromDisk   bool
-	StaticRootPath       string
-	EnableGzip           bool
-	LandingPageURL       LandingPage
-	UnixSocketPermission uint32
+	LocalURL           string
+	OfflineMode        bool
+	DisableRouterLog   bool
+	CertFile           string
+	KeyFile            string
+	TLSMinVersion      string
+	LoadAssetsFromDisk bool
+	StaticRootPath     string
+	EnableGzip         bool
+	LandingPageURL     LandingPage
 
 	HTTP struct {
 		AccessControlAllowOrigin string
