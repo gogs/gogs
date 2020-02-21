@@ -34,7 +34,7 @@ var (
 		AppName string
 	}
 
-	// Server settings: [server]
+	// Server settings
 	Server struct {
 		ExternalURL          string `ini:"EXTERNAL_URL"`
 		Domain               string
@@ -42,8 +42,7 @@ var (
 		HTTPAddr             string `ini:"HTTP_ADDR"`
 		HTTPPort             string `ini:"HTTP_PORT"`
 		UnixSocketPermission string
-
-		LocalRootURL string `ini:"LOCAL_ROOT_URL"`
+		LocalRootURL         string `ini:"LOCAL_ROOT_URL"`
 
 		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
 		RootURL string `ini:"ROOT_URL"`
@@ -53,6 +52,23 @@ var (
 		Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
 		SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
 		UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
+	}
+
+	// SSH settings
+	SSH struct {
+		Disabled                     bool           `ini:"DISABLE_SSH"`
+		Domain                       string         `ini:"SSH_DOMAIN"`
+		Port                         int            `ini:"SSH_PORT"`
+		RootPath                     string         `ini:"SSH_ROOT_PATH"`
+		KeygenPath                   string         `ini:"SSH_KEYGEN_PATH"`
+		KeyTestPath                  string         `ini:"SSH_KEY_TEST_PATH"`
+		StartBuiltinServer           bool           `ini:"START_SSH_SERVER"`
+		ListenHost                   string         `ini:"SSH_LISTEN_HOST"`
+		ListenPort                   int            `ini:"SSH_LISTEN_PORT"`
+		ServerCiphers                []string       `ini:"SSH_SERVER_CIPHERS"`
+		MinimumKeySizeCheck          bool           `ini:"MINIMUM_KEY_SIZE_CHECK"`
+		MinimumKeySizes              map[string]int `ini:"-"` // Load from [ssh.minimum_key_sizes]
+		RewriteAuthorizedKeysAtStart bool           `ini:"REWRITE_AUTHORIZED_KEYS_AT_START"`
 	}
 )
 

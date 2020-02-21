@@ -27,7 +27,6 @@ import (
 
 	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/user"
 )
 
@@ -94,9 +93,9 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping default section")
 	}
 
-	// ********************
-	// ----- [server] -----
-	// ********************
+	// ***************************
+	// ----- Server settings -----
+	// ***************************
 
 	if err = File.Section("server").MapTo(&Server); err != nil {
 		return errors.Wrap(err, "mapping [server] section")
@@ -123,6 +122,53 @@ func Init(customConf string) error {
 	}
 	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
+	// ************************
+	// ----- SSH settings -----
+	// ************************
+
+	if err = File.Section("server").MapTo(&SSH); err != nil {
+		return errors.Wrap(err, "mapping SSH settings from [server] section")
+	}
+
+	if !SSH.Disabled {
+		if !SSH.StartBuiltinServer {
+			SSH.RootPath = filepath.Join(HomeDir(), ".ssh")
+			SSH.KeyTestPath = os.TempDir()
+
+			if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
+				return errors.Wrap(err, "create SSH root directory")
+			} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
+				return errors.Wrap(err, "create SSH key test directory")
+			}
+		} else {
+			SSH.RewriteAuthorizedKeysAtStart = false
+		}
+
+		// Check if server is eligible for minimum key size check when user choose to enable.
+		// Windows server and OpenSSH version lower than 5.1 are forced to be disabled because
+		// the "ssh-keygen" in Windows does not print key type.
+		// See https://github.com/gogs/gogs/issues/4507.
+		if SSH.MinimumKeySizeCheck {
+			sshVersion, err := openSSHVersion()
+			if err != nil {
+				return errors.Wrap(err, "get OpenSSH version")
+			}
+
+			if IsWindowsRuntime() || version.Compare(sshVersion, "5.1", "<") {
+				log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+	1. Windows server
+	2. OpenSSH version is lower than 5.1`)
+			} else {
+				SSH.MinimumKeySizes = map[string]int{}
+				for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
+					if key.MustInt() != -1 {
+						SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
+					}
+				}
+			}
+		}
+	}
+
 	// CertFile = sec.Key("CERT_FILE").String()
 	// KeyFile = sec.Key("KEY_FILE").String()
 	// TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
@@ -144,50 +190,6 @@ func Init(customConf string) error {
 		LandingPageURL = LANDING_PAGE_EXPLORE
 	default:
 		LandingPageURL = LANDING_PAGE_HOME
-	}
-
-	SSH.RootPath = path.Join(HomeDir(), ".ssh")
-	SSH.RewriteAuthorizedKeysAtStart = sec.Key("REWRITE_AUTHORIZED_KEYS_AT_START").MustBool()
-	SSH.ServerCiphers = sec.Key("SSH_SERVER_CIPHERS").Strings(",")
-	SSH.KeyTestPath = os.TempDir()
-	if err = File.Section("server").MapTo(&SSH); err != nil {
-		log.Fatal("Failed to map SSH settings: %v", err)
-	}
-	if SSH.Disabled {
-		SSH.StartBuiltinServer = false
-		SSH.MinimumKeySizeCheck = false
-	}
-
-	if !SSH.Disabled && !SSH.StartBuiltinServer {
-		if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
-			log.Fatal("Failed to create '%s': %v", SSH.RootPath, err)
-		} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
-			log.Fatal("Failed to create '%s': %v", SSH.KeyTestPath, err)
-		}
-	}
-
-	if SSH.StartBuiltinServer {
-		SSH.RewriteAuthorizedKeysAtStart = false
-	}
-
-	// Check if server is eligible for minimum key size check when user choose to enable.
-	// Windows server and OpenSSH version lower than 5.1 (https://gogs.io/gogs/issues/4507)
-	// are forced to be disabled because the "ssh-keygen" in Windows does not print key type.
-	if SSH.MinimumKeySizeCheck &&
-		(IsWindowsRuntime() || version.Compare(getOpenSSHVersion(), "5.1", "<")) {
-		SSH.MinimumKeySizeCheck = false
-		log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
-1. Windows server
-2. OpenSSH version is lower than 5.1`)
-	}
-
-	if SSH.MinimumKeySizeCheck {
-		SSH.MinimumKeySizes = map[string]int{}
-		for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
-			if key.MustInt() != -1 {
-				SSH.MinimumKeySizes[strings.ToLower(key.Name())] = key.MustInt()
-			}
-		}
 	}
 
 	sec = File.Section("security")
@@ -377,22 +379,6 @@ var (
 
 	HTTP struct {
 		AccessControlAllowOrigin string
-	}
-
-	SSH struct {
-		Disabled                     bool           `ini:"DISABLE_SSH"`
-		StartBuiltinServer           bool           `ini:"START_SSH_SERVER"`
-		Domain                       string         `ini:"SSH_DOMAIN"`
-		Port                         int            `ini:"SSH_PORT"`
-		ListenHost                   string         `ini:"SSH_LISTEN_HOST"`
-		ListenPort                   int            `ini:"SSH_LISTEN_PORT"`
-		RootPath                     string         `ini:"SSH_ROOT_PATH"`
-		RewriteAuthorizedKeysAtStart bool           `ini:"REWRITE_AUTHORIZED_KEYS_AT_START"`
-		ServerCiphers                []string       `ini:"SSH_SERVER_CIPHERS"`
-		KeyTestPath                  string         `ini:"SSH_KEY_TEST_PATH"`
-		KeygenPath                   string         `ini:"SSH_KEYGEN_PATH"`
-		MinimumKeySizeCheck          bool           `ini:"MINIMUM_KEY_SIZE_CHECK"`
-		MinimumKeySizes              map[string]int `ini:"-"`
 	}
 
 	// Security settings
@@ -634,21 +620,6 @@ func IsRunUserMatchCurrentUser(runUser string) (string, bool) {
 
 	currentUser := user.CurrentUsername()
 	return currentUser, runUser == currentUser
-}
-
-// getOpenSSHVersion parses and returns string representation of OpenSSH version
-// returned by command "ssh -V".
-func getOpenSSHVersion() string {
-	// NOTE: Somehow the version is printed to stderr.
-	_, stderr, err := process.Exec("setting.getOpenSSHVersion", "ssh", "-V")
-	if err != nil {
-		log.Fatal("Failed to get OpenSSH version: %v - %s", err, stderr)
-	}
-
-	// Trim unused information: https://github.com/gogs/gogs/issues/4507#issuecomment-305150441
-	version := strings.TrimRight(strings.Fields(stderr)[0], ",1234567890")
-	version = strings.TrimSuffix(strings.TrimPrefix(version, "OpenSSH_"), "p")
-	return version
 }
 
 // InitLogging initializes the logging service of the application.
