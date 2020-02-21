@@ -36,13 +36,14 @@ var (
 
 	// Server settings: [server]
 	Server struct {
-		ExternalURL string `ini:"EXTERNAL_URL"`
-		Domain      string
-		Protocol    string
-		HTTPAddr    string `ini:"HTTP_ADDR"`
-		HTTPPort    string `ini:"HTTP_PORT"`
-
+		ExternalURL          string `ini:"EXTERNAL_URL"`
+		Domain               string
+		Protocol             string
+		HTTPAddr             string `ini:"HTTP_ADDR"`
+		HTTPPort             string `ini:"HTTP_PORT"`
 		UnixSocketPermission string
+
+		LocalRootURL string `ini:"LOCAL_ROOT_URL"`
 
 		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
 		RootURL string `ini:"ROOT_URL"`

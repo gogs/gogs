@@ -132,7 +132,6 @@ func Init(customConf string) error {
 	// TODO
 
 	sec := File.Section("server")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").String()
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
@@ -366,7 +365,6 @@ var (
 	AppDataPath string
 
 	// Server settings
-	LocalURL           string
 	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile           string

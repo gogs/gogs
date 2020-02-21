@@ -20,11 +20,11 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -233,7 +233,7 @@ func runHookPostReceive(c *cli.Context) error {
 		}
 
 		// Ask for running deliver hook and test pull request tasks
-		reqURL := conf.LocalURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
+		reqURL := conf.Server.LocalRootURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
 			template.EscapePound(strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX)) +
 			"&secret=" + os.Getenv(db.ENV_REPO_OWNER_SALT_MD5) +
 			"&pusher=" + os.Getenv(db.ENV_AUTH_USER_ID)
