@@ -68,8 +68,8 @@ func newMacaron() *macaron.Macaron {
 	if conf.EnableGzip {
 		m.Use(gzip.Gziper())
 	}
-	if conf.Protocol == conf.SCHEME_FCGI {
-		m.SetURLPrefix(conf.AppSubURL)
+	if conf.Server.Protocol == "fcgi" {
+		m.SetURLPrefix(conf.Server.Subpath)
 	}
 
 	// Register custom middleware first to make it possible to override files under "public".
@@ -128,7 +128,7 @@ func newMacaron() *macaron.Macaron {
 		localeFiles[name] = conf.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
-		SubURL:          conf.AppSubURL,
+		SubURL:          conf.Server.Subpath,
 		Files:           localeFiles,
 		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
 		Langs:           conf.Langs,
@@ -142,7 +142,7 @@ func newMacaron() *macaron.Macaron {
 		Interval:      conf.CacheInterval,
 	}))
 	m.Use(captcha.Captchaer(captcha.Options{
-		SubURL: conf.AppSubURL,
+		SubURL: conf.Server.Subpath,
 	}))
 	m.Use(session.Sessioner(conf.SessionConfig))
 	m.Use(csrf.Csrfer(csrf.Options{
@@ -150,7 +150,7 @@ func newMacaron() *macaron.Macaron {
 		Cookie:     conf.CSRFCookieName,
 		SetCookie:  true,
 		Header:     "X-Csrf-Token",
-		CookiePath: conf.AppSubURL,
+		CookiePath: conf.Server.Subpath,
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
@@ -187,7 +187,7 @@ func runWeb(c *cli.Context) error {
 	m.Get("/", ignSignIn, route.Home)
 	m.Group("/explore", func() {
 		m.Get("", func(c *context.Context) {
-			c.Redirect(conf.AppSubURL + "/explore/repos")
+			c.Redirect(conf.Server.Subpath + "/explore/repos")
 		})
 		m.Get("/repos", route.ExploreRepos)
 		m.Get("/users", route.ExploreUsers)
@@ -685,22 +685,23 @@ func runWeb(c *cli.Context) error {
 
 	// Flag for port number in case first time run conflict.
 	if c.IsSet("port") {
-		conf.AppURL = strings.Replace(conf.AppURL, conf.HTTPPort, c.String("port"), 1)
-		conf.HTTPPort = c.String("port")
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, conf.Server.URL.Port(), c.String("port"), 1)
+		conf.Server.ExternalURL = conf.Server.URL.String()
+		conf.Server.HTTPPort = c.String("port")
 	}
 
 	var listenAddr string
-	if conf.Protocol == conf.SCHEME_UNIX_SOCKET {
-		listenAddr = conf.HTTPAddr
+	if conf.Server.Protocol == "unix" {
+		listenAddr = conf.Server.HTTPAddr
 	} else {
-		listenAddr = fmt.Sprintf("%s:%s", conf.HTTPAddr, conf.HTTPPort)
+		listenAddr = fmt.Sprintf("%s:%s", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 	}
-	log.Info("Listen on %v://%s%s", conf.Protocol, listenAddr, conf.AppSubURL)
+	log.Info("Listen on %v://%s%s", conf.Server.Protocol, listenAddr, conf.Server.Subpath)
 
-	switch conf.Protocol {
-	case conf.SCHEME_HTTP:
+	switch conf.Server.Protocol {
+	case "http":
 		err = http.ListenAndServe(listenAddr, m)
-	case conf.SCHEME_HTTPS:
+	case "https":
 		var tlsMinVersion uint16
 		switch conf.TLSMinVersion {
 		case "SSL30":
@@ -728,9 +729,9 @@ func runWeb(c *cli.Context) error {
 			},
 		}, Handler: m}
 		err = server.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
-	case conf.SCHEME_FCGI:
+	case "fcgi":
 		err = fcgi.Serve(nil, m)
-	case conf.SCHEME_UNIX_SOCKET:
+	case "unix":
 		os.Remove(listenAddr)
 
 		var listener *net.UnixListener
@@ -746,7 +747,7 @@ func runWeb(c *cli.Context) error {
 		}
 		err = http.Serve(listener, m)
 	default:
-		log.Fatal("Invalid protocol: %s", conf.Protocol)
+		log.Fatal("Unexpected server protocol: %s", conf.Server.Protocol)
 	}
 
 	if err != nil {

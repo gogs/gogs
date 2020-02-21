@@ -151,9 +151,9 @@ func (c *Context) Redirect(location string, status ...int) {
 }
 
 // SubURLRedirect responses redirection wtih given location and status.
-// It prepends setting.AppSubURL to the location string.
+// It prepends setting.Server.Subpath to the location string.
 func (c *Context) SubURLRedirect(location string, status ...int) {
-	c.Redirect(conf.AppSubURL+location, status...)
+	c.Redirect(conf.Server.Subpath+location, status...)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
@@ -233,7 +233,7 @@ func Contexter() macaron.Handler {
 			csrf:    x,
 			Flash:   f,
 			Session: sess,
-			Link:    conf.AppSubURL + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Link:    conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
@@ -263,9 +263,9 @@ func Contexter() macaron.Handler {
 				branchName = repo.DefaultBranch
 			}
 
-			prefix := conf.AppURL + path.Join(ownerName, repoName, "src", branchName)
+			prefix := conf.Server.ExternalURL + path.Join(ownerName, repoName, "src", branchName)
 			insecureFlag := ""
-			if !strings.HasPrefix(conf.AppURL, "https://") {
+			if !strings.HasPrefix(conf.Server.ExternalURL, "https://") {
 				insecureFlag = "--insecure "
 			}
 			c.PlainText(http.StatusOK, []byte(com.Expand(`<!doctype html>
@@ -279,7 +279,7 @@ func Contexter() macaron.Handler {
 	</body>
 </html>
 `, map[string]string{
-				"GoGetImport":    path.Join(conf.HostAddress, conf.AppSubURL, repo.FullName()),
+				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, repo.FullName()),
 				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",

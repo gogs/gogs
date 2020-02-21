@@ -8,9 +8,9 @@ import (
 	"github.com/unknwon/paginater"
 	user2 "gogs.io/gogs/internal/route/user"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -34,7 +34,7 @@ func Home(c *context.Context) {
 	// Check auto-login.
 	uname := c.GetCookie(conf.CookieUserName)
 	if len(uname) != 0 {
-		c.Redirect(conf.AppSubURL + "/user/login")
+		c.Redirect(conf.Server.Subpath + "/user/login")
 		return
 	}
 

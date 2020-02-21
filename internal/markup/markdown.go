@@ -13,8 +13,8 @@ import (
 
 	"github.com/russross/blackfriday"
 
-	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -63,7 +63,7 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 
 	// Since this method could only possibly serve one link at a time,
 	// we do not need to find all.
-	if bytes.HasPrefix(link, []byte(conf.AppURL)) {
+	if bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
 		m := CommitPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
@@ -86,14 +86,14 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			}
 
 			index := string(m[i+7 : j])
-			fullRepoURL := conf.AppURL + strings.TrimPrefix(r.urlPrefix, "/")
+			fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(r.urlPrefix, "/")
 			var link string
 			if strings.HasPrefix(string(m), fullRepoURL) {
 				// Use a short issue reference if the URL refers to this repository
 				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
 			} else {
 				// Use a cross-repository issue reference if the URL refers to a different repository
-				repo := string(m[len(conf.AppURL) : i-1])
+				repo := string(m[len(conf.Server.ExternalURL) : i-1])
 				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
 			}
 			out.WriteString(link)

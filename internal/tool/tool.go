@@ -202,7 +202,7 @@ func AvatarLink(email string) (url string) {
 		url = conf.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
 	if len(url) == 0 {
-		url = conf.AppSubURL + "/img/avatar_default.png"
+		url = conf.Server.Subpath + "/img/avatar_default.png"
 	}
 	return url
 }

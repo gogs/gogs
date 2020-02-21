@@ -184,18 +184,18 @@ func (u *User) CanImportLocal() bool {
 // DashboardLink returns the user dashboard page link.
 func (u *User) DashboardLink() string {
 	if u.IsOrganization() {
-		return conf.AppSubURL + "/org/" + u.Name + "/dashboard/"
+		return conf.Server.Subpath + "/org/" + u.Name + "/dashboard/"
 	}
-	return conf.AppSubURL + "/"
+	return conf.Server.Subpath + "/"
 }
 
 // HomeLink returns the user or organization home page link.
 func (u *User) HomeLink() string {
-	return conf.AppSubURL + "/" + u.Name
+	return conf.Server.Subpath + "/" + u.Name
 }
 
 func (u *User) HTMLURL() string {
-	return conf.AppURL + u.Name
+	return conf.Server.ExternalURL + u.Name
 }
 
 // GenerateEmailActivateCode generates an activate code based on user information and given e-mail.
@@ -251,7 +251,7 @@ func (u *User) GenerateRandomAvatar() error {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func (u *User) RelAvatarLink() string {
-	defaultImgUrl := conf.AppSubURL + "/img/avatar_default.png"
+	defaultImgUrl := conf.Server.Subpath + "/img/avatar_default.png"
 	if u.ID == -1 {
 		return defaultImgUrl
 	}
@@ -261,7 +261,7 @@ func (u *User) RelAvatarLink() string {
 		if !com.IsExist(u.CustomAvatarPath()) {
 			return defaultImgUrl
 		}
-		return fmt.Sprintf("%s/%s/%d", conf.AppSubURL, USER_AVATAR_URL_PREFIX, u.ID)
+		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, USER_AVATAR_URL_PREFIX, u.ID)
 	case conf.DisableGravatar, conf.OfflineMode:
 		if !com.IsExist(u.CustomAvatarPath()) {
 			if err := u.GenerateRandomAvatar(); err != nil {
@@ -269,7 +269,7 @@ func (u *User) RelAvatarLink() string {
 			}
 		}
 
-		return fmt.Sprintf("%s/%s/%d", conf.AppSubURL, USER_AVATAR_URL_PREFIX, u.ID)
+		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, USER_AVATAR_URL_PREFIX, u.ID)
 	}
 	return tool.AvatarLink(u.AvatarEmail)
 }
@@ -278,7 +278,7 @@ func (u *User) RelAvatarLink() string {
 func (u *User) AvatarLink() string {
 	link := u.RelAvatarLink()
 	if link[0] == '/' && link[1] != '/' {
-		return conf.AppURL + strings.TrimPrefix(link, conf.AppSubURL)[1:]
+		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
 	}
 	return link
 }

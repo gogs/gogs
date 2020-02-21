@@ -21,9 +21,9 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/httplib"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -99,7 +99,7 @@ type Webhook struct {
 	ContentType  HookContentType
 	Secret       string     `xorm:"TEXT"`
 	Events       string     `xorm:"TEXT"`
-	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON here, it breaks old backup archive
+	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON (i.e. json:"-") here, it breaks old backup archive
 	IsSSL        bool       `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType

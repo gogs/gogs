@@ -11,10 +11,10 @@ import (
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -420,5 +420,5 @@ func Email2User(c *context.Context) {
 		c.NotFoundOrServerError("GetUserByEmail", errors.IsUserNotExist, err)
 		return
 	}
-	c.Redirect(conf.AppSubURL + "/user/" + u.Name)
+	c.Redirect(conf.Server.Subpath + "/user/" + u.Name)
 }

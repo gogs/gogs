@@ -10,12 +10,12 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -120,7 +120,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	}
 
 	c.Flash.Success(c.Tr("admin.users.new_success", u.Name))
-	c.Redirect(conf.AppSubURL + "/admin/users/" + com.ToStr(u.ID))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + com.ToStr(u.ID))
 }
 
 func prepareUserInfo(c *context.Context) *db.User {
@@ -226,7 +226,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
-	c.Redirect(conf.AppSubURL + "/admin/users/" + c.Params(":userid"))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
 }
 
 func DeleteUser(c *context.Context) {
@@ -241,12 +241,12 @@ func DeleteUser(c *context.Context) {
 		case db.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
 			c.JSON(200, map[string]interface{}{
-				"redirect": conf.AppSubURL + "/admin/users/" + c.Params(":userid"),
+				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		case db.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
 			c.JSON(200, map[string]interface{}{
-				"redirect": conf.AppSubURL + "/admin/users/" + c.Params(":userid"),
+				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		default:
 			c.Handle(500, "DeleteUser", err)
@@ -257,6 +257,6 @@ func DeleteUser(c *context.Context) {
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
 	c.JSON(200, map[string]interface{}{
-		"redirect": conf.AppSubURL + "/admin/users",
+		"redirect": conf.Server.Subpath + "/admin/users",
 	})
 }

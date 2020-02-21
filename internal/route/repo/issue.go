@@ -17,12 +17,12 @@ import (
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -116,8 +116,8 @@ func issues(c *context.Context, isPullList bool) {
 
 	// Must sign in to see issues about you.
 	if viewType != "all" && !c.IsLogged {
-		c.SetCookie("redirect_to", "/"+url.QueryEscape(conf.AppSubURL+c.Req.RequestURI), 0, conf.AppSubURL)
-		c.Redirect(conf.AppSubURL + "/user/login")
+		c.SetCookie("redirect_to", "/"+url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+		c.Redirect(conf.Server.Subpath + "/user/login")
 		return
 	}
 
@@ -669,7 +669,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	c.Data["NumParticipants"] = len(participants)
 	c.Data["Issue"] = issue
 	c.Data["IsIssueOwner"] = c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))
-	c.Data["SignInLink"] = conf.AppSubURL + "/user/login?redirect_to=" + c.Data["Link"].(string)
+	c.Data["SignInLink"] = conf.Server.Subpath + "/user/login?redirect_to=" + c.Data["Link"].(string)
 	c.HTML(200, ISSUE_VIEW)
 }
 

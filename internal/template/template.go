@@ -40,22 +40,22 @@ func FuncMap() []template.FuncMap {
 				return time.Now().Year()
 			},
 			"UseHTTPS": func() bool {
-				return strings.HasPrefix(conf.AppURL, "https")
+				return conf.Server.URL.Scheme == "https"
 			},
 			"AppName": func() string {
 				return conf.App.BrandName
 			},
 			"AppSubURL": func() string {
-				return conf.AppSubURL
+				return conf.Server.Subpath
 			},
 			"AppURL": func() string {
-				return conf.AppURL
+				return conf.Server.ExternalURL
 			},
 			"AppVer": func() string {
 				return conf.AppVersion
 			},
 			"AppDomain": func() string {
-				return conf.Domain
+				return conf.Server.Domain
 			},
 			"DisableGravatar": func() bool {
 				return conf.DisableGravatar

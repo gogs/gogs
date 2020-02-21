@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -59,8 +58,8 @@ var File *ini.File
 
 // Init initializes configuration from conf assets and given custom configuration file.
 // If `customConf` is empty, it falls back to default location, i.e. "<WORK DIR>/custom".
-// It is OK to call this function multiple times with desired `customConf`, but it is not
-// concurrent safe.
+// It is safe to call this function multiple times with desired `customConf`, but it is
+// not concurrent safe.
 //
 // ⚠️ WARNING: Do not print anything in this function other than wanrings.
 func Init(customConf string) error {
@@ -94,46 +93,39 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping default section")
 	}
 
+	if err = File.Section("server").MapTo(&Server); err != nil {
+		return errors.Wrap(err, "mapping [server] section")
+	}
+
+	// Post processing server settings
+	if !strings.HasSuffix(Server.ExternalURL, "/") {
+		Server.ExternalURL += "/"
+	}
+	Server.URL, err = url.Parse(Server.ExternalURL)
+	if err != nil {
+		log.Fatal("Failed to parse '[server] EXTERNAL_URL' %q: %s", Server.ExternalURL, err)
+	}
+
+	// Subpath should start with '/' and end without '/', i.e. '/{subpath}'.
+	Server.Subpath = strings.TrimRight(Server.URL.Path, "/")
+	Server.SubpathDepth = strings.Count(Server.Subpath, "/")
+
+	// CertFile = sec.Key("CERT_FILE").String()
+	// KeyFile = sec.Key("KEY_FILE").String()
+	// TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
+	// UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
+	// UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
+	// if err != nil || UnixSocketPermissionParsed > 0777 {
+	// 	log.Fatal("Failed to parse unixSocketPermission %q: %v", UnixSocketPermissionRaw, err)
+	// }
+	// UnixSocketPermission = uint32(UnixSocketPermissionParsed)
+
+	transferDeprecated()
+
 	// TODO
 
 	sec := File.Section("server")
-	AppURL = sec.Key("ROOT_URL").MustString("http://localhost:3000/")
-	if AppURL[len(AppURL)-1] != '/' {
-		AppURL += "/"
-	}
-
-	// Check if has app suburl.
-	url, err := url.Parse(AppURL)
-	if err != nil {
-		log.Fatal("Failed to parse ROOT_URL %q: %s", AppURL, err)
-	}
-	// Suburl should start with '/' and end without '/', such as '/{subpath}'.
-	// This value is empty if site does not have sub-url.
-	AppSubURL = strings.TrimSuffix(url.Path, "/")
-	AppSubURLDepth = strings.Count(AppSubURL, "/")
-	HostAddress = url.Host
-
-	Protocol = SCHEME_HTTP
-	if sec.Key("PROTOCOL").String() == "https" {
-		Protocol = SCHEME_HTTPS
-		CertFile = sec.Key("CERT_FILE").String()
-		KeyFile = sec.Key("KEY_FILE").String()
-		TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
-	} else if sec.Key("PROTOCOL").String() == "fcgi" {
-		Protocol = SCHEME_FCGI
-	} else if sec.Key("PROTOCOL").String() == "unix" {
-		Protocol = SCHEME_UNIX_SOCKET
-		UnixSocketPermissionRaw := sec.Key("UNIX_SOCKET_PERMISSION").MustString("666")
-		UnixSocketPermissionParsed, err := strconv.ParseUint(UnixSocketPermissionRaw, 8, 32)
-		if err != nil || UnixSocketPermissionParsed > 0777 {
-			log.Fatal("Failed to parse unixSocketPermission %q: %v", UnixSocketPermissionRaw, err)
-		}
-		UnixSocketPermission = uint32(UnixSocketPermissionParsed)
-	}
-	Domain = sec.Key("DOMAIN").MustString("localhost")
-	HTTPAddr = sec.Key("HTTP_ADDR").MustString("0.0.0.0")
-	HTTPPort = sec.Key("HTTP_PORT").MustString("3000")
-	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(string(Protocol) + "://localhost:" + HTTPPort + "/")
+	LocalURL = sec.Key("LOCAL_ROOT_URL").String()
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
@@ -354,15 +346,6 @@ func MustInit(customConf string) {
 
 // TODO
 
-type Scheme string
-
-const (
-	SCHEME_HTTP        Scheme = "http"
-	SCHEME_HTTPS       Scheme = "https"
-	SCHEME_FCGI        Scheme = "fcgi"
-	SCHEME_UNIX_SOCKET Scheme = "unix"
-)
-
 type LandingPage string
 
 const (
@@ -371,23 +354,11 @@ const (
 )
 
 var (
-	// Build information should only be set by -ldflags.
-	BuildTime   string
-	BuildCommit string
-
 	// App settings
-	AppVersion     string
-	AppURL         string
-	AppSubURL      string
-	AppSubURLDepth int // Number of slashes
-	AppDataPath    string
-	HostAddress    string // AppURL without protocol and slashes
+	AppVersion  string
+	AppDataPath string
 
 	// Server settings
-	Protocol             Scheme
-	Domain               string
-	HTTPAddr             string
-	HTTPPort             string
 	LocalURL             string
 	OfflineMode          bool
 	DisableRouterLog     bool
@@ -831,7 +802,7 @@ func newSessionService() {
 		[]string{"memory", "file", "redis", "mysql"})
 	SessionConfig.ProviderConfig = strings.Trim(File.Section("session").Key("PROVIDER_CONFIG").String(), "\" ")
 	SessionConfig.CookieName = File.Section("session").Key("COOKIE_NAME").MustString("i_like_gogs")
-	SessionConfig.CookiePath = AppSubURL
+	SessionConfig.CookiePath = Server.Subpath
 	SessionConfig.Secure = File.Section("session").Key("COOKIE_SECURE").MustBool()
 	SessionConfig.Gclifetime = File.Section("session").Key("GC_INTERVAL_TIME").MustInt64(3600)
 	SessionConfig.Maxlifetime = File.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)

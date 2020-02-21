@@ -51,7 +51,7 @@ func render(tpl string, data map[string]interface{}) (string, error) {
 					return conf.App.BrandName
 				},
 				"AppURL": func() string {
-					return conf.AppURL
+					return conf.Server.ExternalURL
 				},
 				"Year": func() int {
 					return time.Now().Year()

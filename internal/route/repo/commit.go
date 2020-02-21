@@ -10,9 +10,9 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -168,11 +168,11 @@ func Diff(c *context.Context) {
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	c.Data["SourcePath"] = conf.AppSubURL + "/" + path.Join(userName, repoName, "src", commitID)
+	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", commitID)
 	if commit.ParentCount() > 0 {
-		c.Data["BeforeSourcePath"] = conf.AppSubURL + "/" + path.Join(userName, repoName, "src", parents[0])
+		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
-	c.Data["RawPath"] = conf.AppSubURL + "/" + path.Join(userName, repoName, "raw", commitID)
+	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", commitID)
 	c.Success(DIFF)
 }
 
@@ -229,8 +229,8 @@ func CompareDiff(c *context.Context) {
 	c.Data["Commit"] = commit
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	c.Data["SourcePath"] = conf.AppSubURL + "/" + path.Join(userName, repoName, "src", afterCommitID)
-	c.Data["BeforeSourcePath"] = conf.AppSubURL + "/" + path.Join(userName, repoName, "src", beforeCommitID)
-	c.Data["RawPath"] = conf.AppSubURL + "/" + path.Join(userName, repoName, "raw", afterCommitID)
+	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", afterCommitID)
+	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", beforeCommitID)
+	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", afterCommitID)
 	c.HTML(200, DIFF)
 }

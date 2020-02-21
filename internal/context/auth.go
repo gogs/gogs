@@ -28,7 +28,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(c *Context) {
 		// Cannot view any page before installation.
 		if !conf.InstallLock {
-			c.Redirect(conf.AppSubURL + "/install")
+			c.Redirect(conf.Server.Subpath + "/install")
 			return
 		}
 
@@ -41,13 +41,13 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		// Check non-logged users landing page.
 		if !c.IsLogged && c.Req.RequestURI == "/" && conf.LandingPageURL != conf.LANDING_PAGE_HOME {
-			c.Redirect(conf.AppSubURL + string(conf.LandingPageURL))
+			c.Redirect(conf.Server.Subpath + string(conf.LandingPageURL))
 			return
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
 		if options.SignOutRequired && c.IsLogged && c.Req.RequestURI != "/" {
-			c.Redirect(conf.AppSubURL + "/")
+			c.Redirect(conf.Server.Subpath + "/")
 			return
 		}
 
@@ -68,8 +68,8 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 					return
 				}
 
-				c.SetCookie("redirect_to", url.QueryEscape(conf.AppSubURL+c.Req.RequestURI), 0, conf.AppSubURL)
-				c.Redirect(conf.AppSubURL + "/user/login")
+				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+				c.Redirect(conf.Server.Subpath + "/user/login")
 				return
 			} else if !c.User.IsActive && conf.Service.RegisterEmailConfirm {
 				c.Data["Title"] = c.Tr("auth.active_your_account")
@@ -81,8 +81,8 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		// Redirect to log in page if auto-signin info is provided and has not signed in.
 		if !options.SignOutRequired && !c.IsLogged && !auth.IsAPIPath(c.Req.URL.Path) &&
 			len(c.GetCookie(conf.CookieUserName)) > 0 {
-			c.SetCookie("redirect_to", url.QueryEscape(conf.AppSubURL+c.Req.RequestURI), 0, conf.AppSubURL)
-			c.Redirect(conf.AppSubURL + "/user/login")
+			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+			c.Redirect(conf.Server.Subpath + "/user/login")
 			return
 		}
 

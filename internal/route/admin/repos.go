@@ -8,9 +8,9 @@ import (
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -82,6 +82,6 @@ func DeleteRepo(c *context.Context) {
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
 	c.JSON(200, map[string]interface{}{
-		"redirect": conf.AppSubURL + "/admin/repos?page=" + c.Query("page"),
+		"redirect": conf.Server.Subpath + "/admin/repos?page=" + c.Query("page"),
 	})
 }

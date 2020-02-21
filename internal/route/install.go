@@ -165,11 +165,11 @@ func Install(c *context.Context) {
 		f.RunUser = conf.App.RunUser
 	}
 
-	f.Domain = conf.Domain
+	f.Domain = conf.Server.Domain
 	f.SSHPort = conf.SSH.Port
 	f.UseBuiltinSSHServer = conf.SSH.StartBuiltinServer
-	f.HTTPPort = conf.HTTPPort
-	f.AppUrl = conf.AppURL
+	f.HTTPPort = conf.Server.HTTPPort
+	f.AppUrl = conf.Server.ExternalURL
 	f.LogRootPath = conf.LogRootPath
 
 	// E-mail service settings

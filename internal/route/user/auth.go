@@ -11,12 +11,12 @@ import (
 	"github.com/go-macaron/captcha"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -45,9 +45,9 @@ func AutoLogin(c *context.Context) (bool, error) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			c.SetCookie(conf.CookieUserName, "", -1, conf.AppSubURL)
-			c.SetCookie(conf.CookieRememberName, "", -1, conf.AppSubURL)
-			c.SetCookie(conf.LoginStatusCookieName, "", -1, conf.AppSubURL)
+			c.SetCookie(conf.CookieUserName, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.CookieRememberName, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.LoginStatusCookieName, "", -1, conf.Server.Subpath)
 		}
 	}()
 
@@ -66,9 +66,9 @@ func AutoLogin(c *context.Context) (bool, error) {
 	isSucceed = true
 	c.Session.Set("uid", u.ID)
 	c.Session.Set("uname", u.Name)
-	c.SetCookie(conf.CSRFCookieName, "", -1, conf.AppSubURL)
+	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.EnableLoginStatusCookie {
-		c.SetCookie(conf.LoginStatusCookieName, "true", 0, conf.AppSubURL)
+		c.SetCookie(conf.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 	return true, nil
 }
@@ -85,7 +85,7 @@ func Login(c *context.Context) {
 
 	redirectTo := c.Query("redirect_to")
 	if len(redirectTo) > 0 {
-		c.SetCookie("redirect_to", redirectTo, 0, conf.AppSubURL)
+		c.SetCookie("redirect_to", redirectTo, 0, conf.Server.Subpath)
 	} else {
 		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
 	}
@@ -96,7 +96,7 @@ func Login(c *context.Context) {
 		} else {
 			c.SubURLRedirect("/")
 		}
-		c.SetCookie("redirect_to", "", -1, conf.AppSubURL)
+		c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
 		return
 	}
 
@@ -120,8 +120,8 @@ func Login(c *context.Context) {
 func afterLogin(c *context.Context, u *db.User, remember bool) {
 	if remember {
 		days := 86400 * conf.LoginRememberDays
-		c.SetCookie(conf.CookieUserName, u.Name, days, conf.AppSubURL, "", conf.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.CookieRememberName, u.Name, days, conf.AppSubURL, "", conf.CookieSecure, true)
+		c.SetCookie(conf.CookieUserName, u.Name, days, conf.Server.Subpath, "", conf.CookieSecure, true)
+		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.CookieSecure, true)
 	}
 
 	c.Session.Set("uid", u.ID)
@@ -130,13 +130,13 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 	c.Session.Delete("twoFactorUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
-	c.SetCookie(conf.CSRFCookieName, "", -1, conf.AppSubURL)
+	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.EnableLoginStatusCookie {
-		c.SetCookie(conf.LoginStatusCookieName, "true", 0, conf.AppSubURL)
+		c.SetCookie(conf.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
-	c.SetCookie("redirect_to", "", -1, conf.AppSubURL)
+	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
 	if tool.IsSameSiteURLPath(redirectTo) {
 		c.Redirect(redirectTo)
 		return
@@ -283,9 +283,9 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 func SignOut(c *context.Context) {
 	c.Session.Flush()
 	c.Session.Destory(c.Context)
-	c.SetCookie(conf.CookieUserName, "", -1, conf.AppSubURL)
-	c.SetCookie(conf.CookieRememberName, "", -1, conf.AppSubURL)
-	c.SetCookie(conf.CSRFCookieName, "", -1, conf.AppSubURL)
+	c.SetCookie(conf.CookieUserName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.CookieRememberName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
 	c.SubURLRedirect("/")
 }
 

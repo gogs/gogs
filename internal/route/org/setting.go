@@ -9,12 +9,12 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/user"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -63,7 +63,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 			return
 		}
 		// reset c.org.OrgLink with new name
-		c.Org.OrgLink = conf.AppSubURL + "/org/" + f.Name
+		c.Org.OrgLink = conf.Server.Subpath + "/org/" + f.Name
 		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
 	// In case it's just a case change.
@@ -130,7 +130,7 @@ func SettingsDelete(c *context.Context) {
 			}
 		} else {
 			log.Trace("Organization deleted: %s", org.Name)
-			c.Redirect(conf.AppSubURL + "/")
+			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return
 	}

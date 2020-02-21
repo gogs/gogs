@@ -299,7 +299,7 @@ func DeleteEmail(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.email_deletion_success"))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.AppSubURL + "/user/settings/email",
+		"redirect": conf.Server.Subpath + "/user/settings/email",
 	})
 }
 
@@ -371,7 +371,7 @@ func DeleteSSHKey(c *context.Context) {
 	}
 
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.AppSubURL + "/user/settings/ssh",
+		"redirect": conf.Server.Subpath + "/user/settings/ssh",
 	})
 }
 
@@ -506,7 +506,7 @@ func SettingsTwoFactorDisable(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.two_factor_disable_success"))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.AppSubURL + "/user/settings/security",
+		"redirect": conf.Server.Subpath + "/user/settings/security",
 	})
 }
 
@@ -542,7 +542,7 @@ func SettingsLeaveRepo(c *context.Context) {
 
 	c.Flash.Success(c.Tr("settings.repos.leave_success", repo.FullName()))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.AppSubURL + "/user/settings/repositories",
+		"redirect": conf.Server.Subpath + "/user/settings/repositories",
 	})
 }
 
@@ -571,7 +571,7 @@ func SettingsLeaveOrganization(c *context.Context) {
 	}
 
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.AppSubURL + "/user/settings/organizations",
+		"redirect": conf.Server.Subpath + "/user/settings/organizations",
 	})
 }
 
@@ -632,7 +632,7 @@ func SettingsDeleteApplication(c *context.Context) {
 	}
 
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": conf.AppSubURL + "/user/settings/applications",
+		"redirect": conf.Server.Subpath + "/user/settings/applications",
 	})
 }
 
@@ -654,16 +654,16 @@ func SettingsDelete(c *context.Context) {
 			switch {
 			case db.IsErrUserOwnRepos(err):
 				c.Flash.Error(c.Tr("form.still_own_repo"))
-				c.Redirect(conf.AppSubURL + "/user/settings/delete")
+				c.Redirect(conf.Server.Subpath + "/user/settings/delete")
 			case db.IsErrUserHasOrgs(err):
 				c.Flash.Error(c.Tr("form.still_has_org"))
-				c.Redirect(conf.AppSubURL + "/user/settings/delete")
+				c.Redirect(conf.Server.Subpath + "/user/settings/delete")
 			default:
 				c.ServerError("DeleteUser", err)
 			}
 		} else {
 			log.Trace("Account deleted: %s", c.User.Name)
-			c.Redirect(conf.AppSubURL + "/")
+			c.Redirect(conf.Server.Subpath + "/")
 		}
 		return
 	}

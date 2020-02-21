@@ -81,11 +81,11 @@ test:
 	go test -cover -race ./...
 
 fixme:
-	grep -rnw "FIXME" cmd routers models pkg
+	grep -rnw "FIXME" internal
 
 todo:
-	grep -rnw "TODO" cmd routers models pkg
+	grep -rnw "TODO" internal
 
 # Legacy code should be remove by the time of release
 legacy:
-	grep -rnw "LEGACY" cmd routes models pkg
+	grep -rnw "\(LEGACY\|DEPRECATED\)" internal

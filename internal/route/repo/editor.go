@@ -14,12 +14,12 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/pathutil"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
@@ -113,7 +113,7 @@ func editFile(c *context.Context, isNewFile bool) {
 	c.Data["MarkdownFileExts"] = strings.Join(conf.Markdown.FileExtensions, ",")
 	c.Data["LineWrapExtensions"] = strings.Join(conf.Repository.Editor.LineWrapExtensions, ",")
 	c.Data["PreviewableFileModes"] = strings.Join(conf.Repository.Editor.PreviewableFileModes, ",")
-	c.Data["EditorconfigURLPrefix"] = fmt.Sprintf("%s/api/v1/repos/%s/editorconfig/", conf.AppSubURL, c.Repo.Repository.FullName())
+	c.Data["EditorconfigURLPrefix"] = fmt.Sprintf("%s/api/v1/repos/%s/editorconfig/", conf.Server.Subpath, c.Repo.Repository.FullName())
 
 	c.Success(EDIT_FILE)
 }

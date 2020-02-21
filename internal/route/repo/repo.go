@@ -15,11 +15,11 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -133,7 +133,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 	})
 	if err == nil {
 		log.Trace("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
-		c.Redirect(conf.AppSubURL + "/" + ctxUser.Name + "/" + repo.Name)
+		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
@@ -205,7 +205,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	})
 	if err == nil {
 		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
-		c.Redirect(conf.AppSubURL + "/" + ctxUser.Name + "/" + f.RepoName)
+		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 		return
 	}
 

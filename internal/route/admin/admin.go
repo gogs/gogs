@@ -189,7 +189,7 @@ func SendTestMail(c *context.Context) {
 		c.Flash.Info(c.Tr("admin.config.test_mail_sent", email))
 	}
 
-	c.Redirect(conf.AppSubURL + "/admin/config")
+	c.Redirect(conf.Server.Subpath + "/admin/config")
 }
 
 func Config(c *context.Context) {
@@ -197,8 +197,8 @@ func Config(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminConfig"] = true
 
-	c.Data["AppURL"] = conf.AppURL
-	c.Data["Domain"] = conf.Domain
+	c.Data["AppURL"] = conf.Server.ExternalURL
+	c.Data["Domain"] = conf.Server.Domain
 	c.Data["OfflineMode"] = conf.OfflineMode
 	c.Data["DisableRouterLog"] = conf.DisableRouterLog
 	c.Data["RunUser"] = conf.App.RunUser

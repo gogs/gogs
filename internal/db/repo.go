@@ -291,7 +291,7 @@ func (repo *Repository) FullName() string {
 }
 
 func (repo *Repository) HTMLURL() string {
-	return conf.AppURL + repo.FullName()
+	return conf.Server.ExternalURL + repo.FullName()
 }
 
 // CustomAvatarPath returns repository custom avatar file path.
@@ -307,14 +307,14 @@ func (repo *Repository) RelAvatarLink() string {
 	if !com.IsExist(repo.CustomAvatarPath()) {
 		return defaultImgUrl
 	}
-	return fmt.Sprintf("%s/%s/%d", conf.AppSubURL, REPO_AVATAR_URL_PREFIX, repo.ID)
+	return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, REPO_AVATAR_URL_PREFIX, repo.ID)
 }
 
 // AvatarLink returns repository avatar absolute link.
 func (repo *Repository) AvatarLink() string {
 	link := repo.RelAvatarLink()
 	if link[0] == '/' && link[1] != '/' {
-		return conf.AppURL + strings.TrimPrefix(link, conf.AppSubURL)[1:]
+		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
 	}
 	return link
 }
@@ -545,7 +545,7 @@ func (repo *Repository) RelLink() string {
 }
 
 func (repo *Repository) Link() string {
-	return conf.AppSubURL + "/" + repo.FullName()
+	return conf.Server.Subpath + "/" + repo.FullName()
 }
 
 func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
@@ -684,7 +684,7 @@ type CloneLink struct {
 
 // ComposeHTTPSCloneURL returns HTTPS clone URL based on given owner and repository name.
 func ComposeHTTPSCloneURL(owner, repo string) string {
-	return fmt.Sprintf("%s%s/%s.git", conf.AppURL, owner, repo)
+	return fmt.Sprintf("%s%s/%s.git", conf.Server.ExternalURL, owner, repo)
 }
 
 func (repo *Repository) cloneLink(isWiki bool) *CloneLink {

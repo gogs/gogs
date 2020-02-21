@@ -19,9 +19,9 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -134,8 +134,8 @@ func (a *Action) ShortRepoPath() string {
 }
 
 func (a *Action) GetRepoLink() string {
-	if len(conf.AppSubURL) > 0 {
-		return path.Join(conf.AppSubURL, a.GetRepoPath())
+	if conf.Server.Subpath != "" {
+		return path.Join(conf.Server.Subpath, a.GetRepoPath())
 	}
 	return "/" + a.GetRepoPath()
 }
@@ -540,7 +540,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return nil
 		}
 
-		compareURL := conf.AppURL + opts.Commits.CompareURL
+		compareURL := conf.Server.ExternalURL + opts.Commits.CompareURL
 		if isNewRef {
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
@@ -707,7 +707,7 @@ func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) er
 		Ref:        opts.RefName,
 		Before:     opts.OldCommitID,
 		After:      opts.NewCommitID,
-		CompareURL: conf.AppURL + opts.Commits.CompareURL,
+		CompareURL: conf.Server.ExternalURL + opts.Commits.CompareURL,
 		Commits:    apiCommits,
 		Repo:       repo.APIFormat(nil),
 		Pusher:     apiPusher,
