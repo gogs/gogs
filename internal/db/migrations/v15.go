@@ -32,9 +32,9 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 	var (
 		hookNames = []string{"pre-receive", "update", "post-receive"}
 		hookTpls  = []string{
-			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n", conf.ScriptType, conf.AppPath(), conf.CustomConf),
-			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n", conf.ScriptType, conf.AppPath(), conf.CustomConf),
-			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n", conf.ScriptType, conf.AppPath(), conf.CustomConf),
+			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n", conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
+			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n", conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
+			fmt.Sprintf("#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n", conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf),
 		}
 	)
 
@@ -63,7 +63,7 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 				return nil
 			}
 
-			repoBase := filepath.Join(conf.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name))
+			repoBase := filepath.Join(conf.Repository.Root, strings.ToLower(user.Name), strings.ToLower(repo.Name))
 			repoPath := repoBase + ".git"
 			wikiPath := repoBase + ".wiki.git"
 			log.Trace("[%04d]: %s", idx, repoPath)

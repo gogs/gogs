@@ -60,7 +60,7 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 				continue
 			}
 
-			repoPath := filepath.Join(conf.RepoRootPath, strings.ToLower(user.Name), strings.ToLower(repo.Name)) + ".git"
+			repoPath := filepath.Join(conf.Repository.Root, strings.ToLower(user.Name), strings.ToLower(repo.Name)) + ".git"
 			countObject, err := git.GetRepoSize(repoPath)
 			if err != nil {
 				log.Warn("GetRepoSize: %v", err)
