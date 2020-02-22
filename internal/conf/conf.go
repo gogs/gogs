@@ -174,8 +174,6 @@ func Init(customConf string) error {
 	// TODO
 
 	sec := File.Section("server")
-	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(WorkDir()) // TODO: We need separate TemplatesRootPath
-
 	switch sec.Key("LANDING_PAGE").MustString("home") {
 	case "explore":
 		LandingPageURL = LANDING_PAGE_EXPLORE
@@ -354,7 +352,6 @@ const (
 
 var (
 	// Server settings
-	StaticRootPath string
 	LandingPageURL LandingPage
 
 	HTTP struct {

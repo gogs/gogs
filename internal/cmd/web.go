@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -84,8 +83,7 @@ func newMacaron() *macaron.Macaron {
 		publicFs = public.NewFileSystem()
 	}
 	m.Use(macaron.Static(
-		// NOTE: Embedded assets use Unix-style path separator.
-		path.Join(conf.StaticRootPath, "public"),
+		filepath.Join(conf.WorkDir(), "public"),
 		macaron.StaticOptions{
 			SkipLogging: conf.Server.DisableRouterLog,
 			FileSystem:  publicFs,
@@ -108,8 +106,7 @@ func newMacaron() *macaron.Macaron {
 	))
 
 	renderOpt := macaron.RenderOptions{
-		// NOTE: Embedded assets use Unix-style path separator.
-		Directory:         path.Join(conf.StaticRootPath, "templates"),
+		Directory:         filepath.Join(conf.WorkDir(), "templates"),
 		AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates")},
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,

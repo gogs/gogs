@@ -203,7 +203,6 @@ func Config(c *context.Context) {
 	c.Data["DisableRouterLog"] = conf.Server.DisableRouterLog
 	c.Data["RunUser"] = conf.App.RunUser
 	c.Data["RunMode"] = strings.Title(macaron.Env)
-	c.Data["StaticRootPath"] = conf.StaticRootPath
 	c.Data["LogRootPath"] = conf.LogRootPath
 	c.Data["ReverseProxyAuthUser"] = conf.ReverseProxyAuthUser
 

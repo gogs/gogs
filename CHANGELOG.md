@@ -35,6 +35,7 @@ All notable changes to Gogs are documented in this file.
 ### Removed
 
 - Configuration option `[other] SHOW_FOOTER_VERSION`
+- Configuration option `[server] STATIC_ROOT_PATH`
 
 ---
 

@@ -7,7 +7,6 @@ package mailer
 import (
 	"fmt"
 	"html/template"
-	"path"
 	"path/filepath"
 	"sync"
 	"time"
@@ -42,8 +41,7 @@ var (
 func render(tpl string, data map[string]interface{}) (string, error) {
 	tplRenderOnce.Do(func() {
 		opt := &macaron.RenderOptions{
-			// NOTE: Embedded assets use Unix-style path separator.
-			Directory:         path.Join(conf.StaticRootPath, "templates", "mail"),
+			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
 			AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates", "mail")},
 			Extensions:        []string{".tmpl", ".html"},
 			Funcs: []template.FuncMap{map[string]interface{}{
