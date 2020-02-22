@@ -67,8 +67,6 @@
 
 						<dt>{{.i18n.Tr "admin.config.log_file_root_path"}}</dt>
 						<dd><code>{{.LogRootPath}}</code></dd>
-						<dt>{{.i18n.Tr "admin.config.reverse_auth_user"}}</dt>
-						<dd><code>{{.ReverseProxyAuthUser}}</code></dd>
 					</dl>
 				</div>
 
@@ -179,6 +177,29 @@
 						<dd>{{.Database.SSLMode}} {{.i18n.Tr "admin.config.db.ssl_mode_helper"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.db.path"}}</dt>
 						<dd><code>{{.Database.Path}}</code> {{.i18n.Tr "admin.config.db.path_helper"}}</dd>
+					</dl>
+				</div>
+
+				{{/* Security settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.security_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.security.login_remember_days"}}</dt>
+						<dd>{{.Security.LoginRememberDays}}</dd>
+						<dt>{{.i18n.Tr "admin.config.security.cookie_remember_name"}}</dt>
+						<dd>{{.Security.CookieRememberName}}</dd>
+						<dt>{{.i18n.Tr "admin.config.security.cookie_username"}}</dt>
+						<dd>{{.Security.CookieUsername}}</dd>
+						<dt>{{.i18n.Tr "admin.config.security.cookie_secure"}}</dt>
+						<dd><i class="fa fa{{if .Security.CookieSecure}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.security.reverse_proxy_auth_user"}}</dt>
+						<dd>{{.Security.ReverseProxyAuthenticationUser}}</dd>
+						<dt>{{.i18n.Tr "admin.config.security.enable_login_status_cookie"}}</dt>
+						<dd><i class="fa fa{{if .Security.EnableLoginStatusCookie}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.security.login_status_cookie_name"}}</dt>
+						<dd>{{.Security.LoginStatusCookieName}}</dd>
 					</dl>
 				</div>
 

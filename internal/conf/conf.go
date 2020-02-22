@@ -5,6 +5,7 @@
 package conf
 
 import (
+	"fmt"
 	"net/mail"
 	"net/url"
 	"os"
@@ -27,7 +28,6 @@ import (
 
 	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/user"
 )
 
 func init() {
@@ -192,30 +192,27 @@ func Init(customConf string) error {
 	}
 	Database.Path = ensureAbs(Database.Path)
 
+	// *******************************
+	// ----- Security settings -----
+	// *******************************
+
+	if err = File.Section("security").MapTo(&Security); err != nil {
+		return errors.Wrap(err, "mapping [security] section")
+	}
+
+	// Check run user when the install is locked.
+	if Security.InstallLock {
+		currentUser, match := CheckRunUser(App.RunUser)
+		if !match {
+			return fmt.Errorf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
+		}
+	}
+
 	handleDeprecated()
 
 	// TODO
 
-	sec := File.Section("security")
-	InstallLock = sec.Key("INSTALL_LOCK").MustBool()
-	SecretKey = sec.Key("SECRET_KEY").String()
-	LoginRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
-	CookieUserName = sec.Key("COOKIE_USERNAME").String()
-	CookieRememberName = sec.Key("COOKIE_REMEMBER_NAME").String()
-	CookieSecure = sec.Key("COOKIE_SECURE").MustBool(false)
-	ReverseProxyAuthUser = sec.Key("REVERSE_PROXY_AUTHENTICATION_USER").MustString("X-WEBAUTH-USER")
-	EnableLoginStatusCookie = sec.Key("ENABLE_LOGIN_STATUS_COOKIE").MustBool(false)
-	LoginStatusCookieName = sec.Key("LOGIN_STATUS_COOKIE_NAME").MustString("login_status")
-
-	// Does not check run user when the install lock is off.
-	if InstallLock {
-		currentUser, match := IsRunUserMatchCurrentUser(App.RunUser)
-		if !match {
-			log.Fatal("The user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
-		}
-	}
-
-	sec = File.Section("attachment")
+	sec := File.Section("attachment")
 	AttachmentPath = sec.Key("PATH").MustString(filepath.Join(Server.AppDataPath, "attachments"))
 	if !filepath.IsAbs(AttachmentPath) {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
@@ -341,17 +338,6 @@ var (
 	HTTP struct {
 		AccessControlAllowOrigin string
 	}
-
-	// Security settings
-	InstallLock             bool
-	SecretKey               string
-	LoginRememberDays       int
-	CookieUserName          string
-	CookieRememberName      string
-	CookieSecure            bool
-	ReverseProxyAuthUser    string
-	EnableLoginStatusCookie bool
-	LoginStatusCookieName   string
 
 	// Database settings
 	UseSQLite3    bool
@@ -539,19 +525,6 @@ func DateLang(lang string) string {
 	return "en"
 }
 
-// IsRunUserMatchCurrentUser returns false if configured run user does not match
-// actual user that runs the app. The first return value is the actual user name.
-// This check is ignored under Windows since SSH remote login is not the main
-// method to login on Windows.
-func IsRunUserMatchCurrentUser(runUser string) (string, bool) {
-	if IsWindowsRuntime() {
-		return "", true
-	}
-
-	currentUser := user.CurrentUsername()
-	return currentUser, runUser == currentUser
-}
-
 // InitLogging initializes the logging service of the application.
 func InitLogging() {
 	LogRootPath = File.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
@@ -585,7 +558,7 @@ func InitLogging() {
 			return
 		}
 
-		level := levelMappings[sec.Key("LEVEL").MustString("trace")]
+		level := levelMappings[strings.ToLower(sec.Key("LEVEL").MustString("trace"))]
 		buffer := sec.Key("BUFFER_LEN").MustInt64(100)
 		c := new(config)
 		switch mode {

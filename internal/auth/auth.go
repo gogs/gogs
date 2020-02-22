@@ -13,9 +13,9 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -91,7 +91,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 
 	if uid <= 0 {
 		if conf.Service.EnableReverseProxyAuth {
-			webAuthUser := ctx.Req.Header.Get(conf.ReverseProxyAuthUser)
+			webAuthUser := ctx.Req.Header.Get(conf.Security.ReverseProxyAuthenticationUser)
 			if len(webAuthUser) > 0 {
 				u, err := db.GetUserByName(webAuthUser)
 				if err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -33,4 +34,16 @@ func ensureAbs(path string) string {
 		return path
 	}
 	return filepath.Join(WorkDir(), path)
+}
+
+// CheckRunUser returns false if configured run user does not match actual user that
+// runs the app. The first return value is the actual user name. This check is ignored
+// under Windows since SSH remote login is not the main method to login on Windows.
+func CheckRunUser(runUser string) (string, bool) {
+	if IsWindowsRuntime() {
+		return "", true
+	}
+
+	currentUser := osutil.CurrentUsername()
+	return currentUser, runUser == currentUser
 }
