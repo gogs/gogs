@@ -16,3 +16,13 @@ func IsFile(path string) bool {
 	}
 	return !f.IsDir()
 }
+
+// CurrentUsername returns the current system user via environment variables.
+func CurrentUsername() string {
+	curUserName := os.Getenv("USER")
+	if len(curUserName) > 0 {
+		return curUserName
+	}
+
+	return os.Getenv("USERNAME")
+}

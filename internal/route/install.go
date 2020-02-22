@@ -31,7 +31,6 @@ import (
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/user"
 )
 
 const (
@@ -67,7 +66,7 @@ func GlobalInit(customConf string) error {
 	conf.NewServices()
 	mailer.NewContext()
 
-	if conf.InstallLock {
+	if conf.Security.InstallLock {
 		highlight.NewContext()
 		markup.NewSanitizer()
 		if err := db.NewEngine(); err != nil {
@@ -96,7 +95,7 @@ func GlobalInit(customConf string) error {
 	}
 	checkRunMode()
 
-	if !conf.InstallLock {
+	if !conf.Security.InstallLock {
 		return nil
 	}
 
@@ -116,7 +115,7 @@ func GlobalInit(customConf string) error {
 }
 
 func InstallInit(c *context.Context) {
-	if conf.InstallLock {
+	if conf.Security.InstallLock {
 		c.NotFound()
 		return
 	}
@@ -159,7 +158,7 @@ func Install(c *context.Context) {
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
 	if conf.IsWindowsRuntime() && conf.App.RunUser == "git" {
-		f.RunUser = user.CurrentUsername()
+		f.RunUser = osutil.CurrentUsername()
 	} else {
 		f.RunUser = conf.App.RunUser
 	}
@@ -265,7 +264,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		return
 	}
 
-	currentUser, match := conf.IsRunUserMatchCurrentUser(f.RunUser)
+	currentUser, match := conf.CheckRunUser(f.RunUser)
 	if !match {
 		c.FormErr("RunUser")
 		c.RenderWithErr(c.Tr("install.run_user_not_match", f.RunUser, currentUser), INSTALL, &f)
@@ -406,7 +405,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		}
 		if err := db.CreateUser(u); err != nil {
 			if !db.IsErrUserAlreadyExist(err) {
-				conf.InstallLock = false
+				conf.Security.InstallLock = false
 				c.FormErr("AdminName", "AdminEmail")
 				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
 				return

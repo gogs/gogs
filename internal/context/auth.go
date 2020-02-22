@@ -27,7 +27,7 @@ type ToggleOptions struct {
 func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(c *Context) {
 		// Cannot view any page before installation.
-		if !conf.InstallLock {
+		if !conf.Security.InstallLock {
 			c.Redirect(conf.Server.Subpath + "/install")
 			return
 		}
@@ -80,7 +80,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		// Redirect to log in page if auto-signin info is provided and has not signed in.
 		if !options.SignOutRequired && !c.IsLogged && !auth.IsAPIPath(c.Req.URL.Path) &&
-			len(c.GetCookie(conf.CookieUserName)) > 0 {
+			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
 			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 			c.Redirect(conf.Server.Subpath + "/user/login")
 			return

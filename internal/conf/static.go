@@ -139,6 +139,19 @@ var (
 		// Deprecated: Use Password instead, will be removed in 0.13.
 		Passwd string
 	}
+
+	// Security settings
+	Security struct {
+		InstallLock                    bool
+		SecretKey                      string
+		LoginRememberDays              int
+		CookieRememberName             string
+		CookieUsername                 string
+		CookieSecure                   bool
+		ReverseProxyAuthenticationUser string
+		EnableLoginStatusCookie        bool
+		LoginStatusCookieName          string
+	}
 )
 
 // handleDeprecated transfers deprecated values to the new ones when set.

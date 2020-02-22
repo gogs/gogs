@@ -36,7 +36,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	uname := c.GetCookie(conf.CookieUserName)
+	uname := c.GetCookie(conf.Security.CookieUsername)
 	if len(uname) == 0 {
 		return false, nil
 	}
@@ -45,9 +45,9 @@ func AutoLogin(c *context.Context) (bool, error) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			c.SetCookie(conf.CookieUserName, "", -1, conf.Server.Subpath)
-			c.SetCookie(conf.CookieRememberName, "", -1, conf.Server.Subpath)
-			c.SetCookie(conf.LoginStatusCookieName, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.Security.LoginStatusCookieName, "", -1, conf.Server.Subpath)
 		}
 	}()
 
@@ -59,7 +59,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Passwd, conf.CookieRememberName); !ok || val != u.Name {
+	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName); !ok || val != u.Name {
 		return false, nil
 	}
 
@@ -67,8 +67,8 @@ func AutoLogin(c *context.Context) (bool, error) {
 	c.Session.Set("uid", u.ID)
 	c.Session.Set("uname", u.Name)
 	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
-	if conf.EnableLoginStatusCookie {
-		c.SetCookie(conf.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
+	if conf.Security.EnableLoginStatusCookie {
+		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 	return true, nil
 }
@@ -119,9 +119,9 @@ func Login(c *context.Context) {
 
 func afterLogin(c *context.Context, u *db.User, remember bool) {
 	if remember {
-		days := 86400 * conf.LoginRememberDays
-		c.SetCookie(conf.CookieUserName, u.Name, days, conf.Server.Subpath, "", conf.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.CookieSecure, true)
+		days := 86400 * conf.Security.LoginRememberDays
+		c.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
+		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
 	}
 
 	c.Session.Set("uid", u.ID)
@@ -131,8 +131,8 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
-	if conf.EnableLoginStatusCookie {
-		c.SetCookie(conf.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
+	if conf.Security.EnableLoginStatusCookie {
+		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
@@ -283,8 +283,8 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 func SignOut(c *context.Context) {
 	c.Session.Flush()
 	c.Session.Destory(c.Context)
-	c.SetCookie(conf.CookieUserName, "", -1, conf.Server.Subpath)
-	c.SetCookie(conf.CookieRememberName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
 	c.SubURLRedirect("/")
 }

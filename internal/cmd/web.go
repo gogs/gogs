@@ -143,7 +143,7 @@ func newMacaron() *macaron.Macaron {
 	}))
 	m.Use(session.Sessioner(conf.SessionConfig))
 	m.Use(csrf.Csrfer(csrf.Options{
-		Secret:     conf.SecretKey,
+		Secret:     conf.Security.SecretKey,
 		Cookie:     conf.CSRFCookieName,
 		SetCookie:  true,
 		Header:     "X-Csrf-Token",
