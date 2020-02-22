@@ -199,13 +199,11 @@ func Config(c *context.Context) {
 	c.Data["App"] = conf.App
 	c.Data["Server"] = conf.Server
 	c.Data["SSH"] = conf.SSH
+	c.Data["Repository"] = conf.Repository
 
 	c.Data["LogRootPath"] = conf.LogRootPath
 	c.Data["ReverseProxyAuthUser"] = conf.ReverseProxyAuthUser
 
-	c.Data["RepoRootPath"] = conf.RepoRootPath
-	c.Data["ScriptType"] = conf.ScriptType
-	c.Data["Repository"] = conf.Repository
 	c.Data["HTTP"] = conf.HTTP
 
 	c.Data["DbCfg"] = db.DbCfg

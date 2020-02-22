@@ -62,9 +62,9 @@ func DetectEncoding(content []byte) (string, error) {
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
-	if result.Charset != "UTF-8" && len(conf.Repository.AnsiCharset) > 0 {
-		log.Trace("Using default AnsiCharset: %s", conf.Repository.AnsiCharset)
-		return conf.Repository.AnsiCharset, err
+	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
+		log.Trace("Using default ANSICharset: %s", conf.Repository.ANSICharset)
+		return conf.Repository.ANSICharset, err
 	}
 
 	log.Trace("Detected encoding: %s", result.Charset)

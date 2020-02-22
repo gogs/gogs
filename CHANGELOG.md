@@ -37,6 +37,8 @@ All notable changes to Gogs are documented in this file.
 
 - Configuration option `[other] SHOW_FOOTER_VERSION`
 - Configuration option `[server] STATIC_ROOT_PATH`
+- Configuration option `[repository] MIRROR_QUEUE_LENGTH`
+- Configuration option `[repository] PULL_REQUEST_QUEUE_LENGTH`
 
 ---
 

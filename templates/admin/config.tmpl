@@ -5,6 +5,8 @@
 			{{template "admin/navbar" .}}
 			<div class="twelve wide column content">
 				{{template "base/alert" .}}
+
+				{{/*	Server settings	*/}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.server_config"}}
 				</h4>
@@ -70,6 +72,7 @@
 					</dl>
 				</div>
 
+				{{/*	SSH settings	*/}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.ssh_config"}}
 				</h4>
@@ -109,28 +112,52 @@
 					</dl>
 				</div>
 
-				<!-- Repository Configuration -->
+				{{/*	Repository settings	*/}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.repo_config"}}
 				</h4>
 				<div class="ui attached table segment">
 					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.repo_root_path"}}</dt>
-						<dd><code>{{.RepoRootPath}}</code></dd>
-						<dt>{{.i18n.Tr "admin.config.script_type"}}</dt>
-						<dd>{{.ScriptType}}</dd>
-						<dt>{{.i18n.Tr "admin.config.repo_force_private"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.repo.root_path"}}</dt>
+						<dd><code>{{.Repository.Root}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.script_type"}}</dt>
+						<dd><code>{{.Repository.ScriptType}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.ansi_chatset"}}</dt>
+						<dd>{{if .Repository.ANSICharset}}{{.Repository.AnsiCharset}}{{else}}{{.i18n.Tr "admin.config.not_set"}}{{end}}</dd>
+						<dt>{{.i18n.Tr "admin.config.repo.force_private"}}</dt>
 						<dd><i class="fa fa{{if .Repository.ForcePrivate}}-check{{end}}-square-o"></i></dd>
-						<dt>{{.i18n.Tr "admin.config.max_creation_limit"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.repo.max_creation_limit"}}</dt>
 						<dd>{{.Repository.MaxCreationLimit}}</dd>
-						<dt>{{.i18n.Tr "admin.config.preferred_licenses"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.repo.preferred_licenses"}}</dt>
 						<dd>{{Join .Repository.PreferredLicenses ", "}}</dd>
-						<dt>{{.i18n.Tr "admin.config.disable_http_git"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.repo.disable_http_git"}}</dt>
 						<dd><i class="fa fa{{if .Repository.DisableHTTPGit}}-check{{end}}-square-o"></i></dd>
-						<dt>{{.i18n.Tr "admin.config.enable_local_path_migration"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.repo.enable_local_path_migration"}}</dt>
 						<dd><i class="fa fa{{if .Repository.EnableLocalPathMigration}}-check{{end}}-square-o"></i></dd>
-						<dt>{{.i18n.Tr "admin.config.commits_fetch_concurrency"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.repo.enable_raw_file_render_mode"}}</dt>
+						<dd><i class="fa fa{{if .Repository.EnableRawFileRenderMode}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.commits_fetch_concurrency"}}</dt>
 						<dd>{{.Repository.CommitsFetchConcurrency}}</dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.repo.editor.line_wrap_extensions"}}</dt>
+						<dd><code>{{.Repository.Editor.LineWrapExtensions}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.editor.previewable_file_modes"}}</dt>
+						<dd><code>{{.Repository.Editor.PreviewableFileModes}}</code></dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.repo.upload.enabled"}}</dt>
+						<dd><i class="fa fa{{if .Repository.Upload.Enabled}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.upload.temp_path"}}</dt>
+						<dd><code>{{.Repository.Upload.TempPath}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.upload.allowed_types"}}</dt>
+						<dd><code>{{.Repository.Upload.AllowedTypes}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.repo.upload.file_max_size"}}</dt>
+						<dd>{{.Repository.Upload.FileMaxSize}} MB</dd>
+						<dt>{{.i18n.Tr "admin.config.repo.upload.max_files"}}</dt>
+						<dd>{{.Repository.Upload.MaxFiles}}</dd>
 					</dl>
 				</div>
 

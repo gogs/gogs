@@ -100,6 +100,7 @@ func Init(customConf string) error {
 	if err = File.Section("server").MapTo(&Server); err != nil {
 		return errors.Wrap(err, "mapping [server] section")
 	}
+	Server.AppDataPath = ensureAbs(Server.AppDataPath)
 
 	if !strings.HasSuffix(Server.ExternalURL, "/") {
 		Server.ExternalURL += "/"
@@ -122,22 +123,19 @@ func Init(customConf string) error {
 	}
 	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
-	if !filepath.IsAbs(Server.AppDataPath) {
-		Server.AppDataPath = filepath.Join(WorkDir(), Server.AppDataPath)
-	}
-
 	// ************************
 	// ----- SSH settings -----
 	// ************************
 
+	SSH.RootPath = filepath.Join(HomeDir(), ".ssh")
+	SSH.KeyTestPath = os.TempDir()
 	if err = File.Section("server").MapTo(&SSH); err != nil {
 		return errors.Wrap(err, "mapping SSH settings from [server] section")
 	}
+	SSH.RootPath = ensureAbs(SSH.RootPath)
+	SSH.KeyTestPath = ensureAbs(SSH.KeyTestPath)
 
 	if !SSH.Disabled {
-		SSH.RootPath = filepath.Join(HomeDir(), ".ssh")
-		SSH.KeyTestPath = os.TempDir()
-
 		if !SSH.StartBuiltinServer {
 			if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
 				return errors.Wrap(err, "create SSH root directory")
@@ -173,7 +171,18 @@ func Init(customConf string) error {
 		}
 	}
 
-	transferDeprecated()
+	// *******************************
+	// ----- Repository settings -----
+	// *******************************
+
+	Repository.Root = filepath.Join(HomeDir(), "gogs-repositories")
+	if err = File.Section("repository").MapTo(&Repository); err != nil {
+		return errors.Wrap(err, "mapping [repository] section")
+	}
+	Repository.Root = ensureAbs(Repository.Root)
+	Repository.Upload.TempPath = ensureAbs(Repository.Upload.TempPath)
+
+	handleDeprecated()
 
 	// TODO
 
@@ -223,27 +232,6 @@ func Init(customConf string) error {
 		"StampMicro":  time.StampMicro,
 		"StampNano":   time.StampNano,
 	}[File.Section("time").Key("FORMAT").MustString("RFC1123")]
-
-	// Determine and create root git repository path.
-	sec = File.Section("repository")
-	RepoRootPath = sec.Key("ROOT").MustString(filepath.Join(HomeDir(), "gogs-repositories"))
-	if !filepath.IsAbs(RepoRootPath) {
-		RepoRootPath = path.Join(workDir, RepoRootPath)
-	} else {
-		RepoRootPath = path.Clean(RepoRootPath)
-	}
-	ScriptType = sec.Key("SCRIPT_TYPE").MustString("bash")
-	if err = File.Section("repository").MapTo(&Repository); err != nil {
-		log.Fatal("Failed to map Repository settings: %v", err)
-	} else if err = File.Section("repository.editor").MapTo(&Repository.Editor); err != nil {
-		log.Fatal("Failed to map Repository.Editor settings: %v", err)
-	} else if err = File.Section("repository.upload").MapTo(&Repository.Upload); err != nil {
-		log.Fatal("Failed to map Repository.Upload settings: %v", err)
-	}
-
-	if !filepath.IsAbs(Repository.Upload.TempPath) {
-		Repository.Upload.TempPath = path.Join(workDir, Repository.Upload.TempPath)
-	}
 
 	sec = File.Section("picture")
 	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(filepath.Join(Server.AppDataPath, "avatars"))
@@ -360,37 +348,6 @@ var (
 	UseMySQL      bool
 	UsePostgreSQL bool
 	UseMSSQL      bool
-
-	// Repository settings
-	Repository struct {
-		AnsiCharset              string
-		ForcePrivate             bool
-		MaxCreationLimit         int
-		MirrorQueueLength        int
-		PullRequestQueueLength   int
-		PreferredLicenses        []string
-		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
-		EnableLocalPathMigration bool
-		CommitsFetchConcurrency  int
-		EnableRawFileRenderMode  bool
-
-		// Repository editor settings
-		Editor struct {
-			LineWrapExtensions   []string
-			PreviewableFileModes []string
-		} `ini:"-"`
-
-		// Repository upload settings
-		Upload struct {
-			Enabled      bool
-			TempPath     string
-			AllowedTypes []string `delim:"|"`
-			FileMaxSize  int64
-			MaxFiles     int
-		} `ini:"-"`
-	}
-	RepoRootPath string
-	ScriptType   string
 
 	// Webhook settings
 	Webhook struct {

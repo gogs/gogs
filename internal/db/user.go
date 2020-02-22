@@ -877,7 +877,7 @@ func DeleteInactivateUsers() (err error) {
 
 // UserPath returns the path absolute path of user repositories.
 func UserPath(userName string) string {
-	return filepath.Join(conf.RepoRootPath, strings.ToLower(userName))
+	return filepath.Join(conf.Repository.Root, strings.ToLower(userName))
 }
 
 func GetUserByKeyID(keyID int64) (*User, error) {
