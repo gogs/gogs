@@ -19,6 +19,7 @@ All notable changes to Gogs are documented in this file.
 - Build tag for running as Windows Service has been changed from `miniwinsvc` to `minwinsvc`.
 - Configuration option `APP_NAME` is deprecated and will end support in 0.13.0, please start using `BRAND_NAME`.
 - Configuration option `[server] ROOT_URL` is deprecated and will end support in 0.13.0, please start using `[server] EXTERNAL_URL`.
+- Configuration option `[server] LANDING_PAGE` is deprecated and will end support in 0.13.0, please start using `[server] LANDING_URL`.
 
 ### Fixed
 

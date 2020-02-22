@@ -173,15 +173,7 @@ func Init(customConf string) error {
 
 	// TODO
 
-	sec := File.Section("server")
-	switch sec.Key("LANDING_PAGE").MustString("home") {
-	case "explore":
-		LandingPageURL = LANDING_PAGE_EXPLORE
-	default:
-		LandingPageURL = LANDING_PAGE_HOME
-	}
-
-	sec = File.Section("security")
+	sec := File.Section("security")
 	InstallLock = sec.Key("INSTALL_LOCK").MustBool()
 	SecretKey = sec.Key("SECRET_KEY").String()
 	LoginRememberDays = sec.Key("LOGIN_REMEMBER_DAYS").MustInt()
@@ -343,17 +335,7 @@ func MustInit(customConf string) {
 
 // TODO
 
-type LandingPage string
-
-const (
-	LANDING_PAGE_HOME    LandingPage = "/"
-	LANDING_PAGE_EXPLORE LandingPage = "/explore"
-)
-
 var (
-	// Server settings
-	LandingPageURL LandingPage
-
 	HTTP struct {
 		AccessControlAllowOrigin string
 	}

@@ -57,6 +57,8 @@ var (
 		AppDataPath        string
 		LoadAssetsFromDisk bool
 
+		LandingURL string `ini:"LANDING_URL"`
+
 		// Derived from other static values
 		URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
 		Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
@@ -65,6 +67,8 @@ var (
 
 		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
 		RootURL string `ini:"ROOT_URL"`
+		// Deprecated: Use LandingURL instead, will be removed in 0.13.
+		LangdingPage string `ini:"LANDING_PAGE"`
 	}
 
 	// SSH settings
@@ -95,5 +99,9 @@ func transferDeprecated() {
 	if Server.RootURL != "" {
 		Server.ExternalURL = Server.RootURL
 		Server.RootURL = ""
+	}
+	if Server.LangdingPage == "explore" {
+		Server.LandingURL = "/explore"
+		Server.LangdingPage = ""
 	}
 }
