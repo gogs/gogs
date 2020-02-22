@@ -16,7 +16,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -47,7 +47,7 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("DecodeString: %v", err)
 	}
-	decryptSecret, err := com.AESGCMDecrypt(tool.MD5Bytes(setting.SecretKey), secret)
+	decryptSecret, err := com.AESGCMDecrypt(tool.MD5Bytes(conf.SecretKey), secret)
 	if err != nil {
 		return false, fmt.Errorf("AESGCMDecrypt: %v", err)
 	}
@@ -85,7 +85,7 @@ func NewTwoFactor(userID int64, secret string) error {
 	}
 
 	// Encrypt secret
-	encryptSecret, err := com.AESGCMEncrypt(tool.MD5Bytes(setting.SecretKey), []byte(secret))
+	encryptSecret, err := com.AESGCMEncrypt(tool.MD5Bytes(conf.SecretKey), []byte(secret))
 	if err != nil {
 		return fmt.Errorf("AESGCMEncrypt: %v", err)
 	}

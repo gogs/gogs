@@ -13,7 +13,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -70,7 +70,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 			UserID:   puser.ID,
 			Private:  showPrivate,
 			Page:     page,
-			PageSize: setting.UI.User.RepoPagingNum,
+			PageSize: conf.UI.User.RepoPagingNum,
 		})
 		if err != nil {
 			c.ServerError("GetRepositories", err)
@@ -78,7 +78,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 		}
 
 		count := db.CountUserRepositories(puser.ID, showPrivate)
-		c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
+		c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 	}
 
 	c.Success(PROFILE)

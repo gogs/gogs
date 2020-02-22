@@ -7,10 +7,10 @@ package org
 import (
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -52,5 +52,5 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 	}
 	log.Trace("Organization created: %s", org.Name)
 
-	c.Redirect(setting.AppSubURL + "/org/" + f.OrgName + "/dashboard")
+	c.Redirect(conf.Server.Subpath + "/org/" + f.OrgName + "/dashboard")
 }

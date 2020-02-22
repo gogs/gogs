@@ -8,9 +8,9 @@ import (
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -35,7 +35,7 @@ func Repos(c *context.Context) {
 
 	keyword := c.Query("q")
 	if len(keyword) == 0 {
-		repos, err = db.Repositories(page, setting.UI.Admin.RepoPagingNum)
+		repos, err = db.Repositories(page, conf.UI.Admin.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "Repositories", err)
 			return
@@ -47,7 +47,7 @@ func Repos(c *context.Context) {
 			OrderBy:  "id ASC",
 			Private:  true,
 			Page:     page,
-			PageSize: setting.UI.Admin.RepoPagingNum,
+			PageSize: conf.UI.Admin.RepoPagingNum,
 		})
 		if err != nil {
 			c.Handle(500, "SearchRepositoryByName", err)
@@ -56,7 +56,7 @@ func Repos(c *context.Context) {
 	}
 	c.Data["Keyword"] = keyword
 	c.Data["Total"] = count
-	c.Data["Page"] = paginater.New(int(count), setting.UI.Admin.RepoPagingNum, page, 5)
+	c.Data["Page"] = paginater.New(int(count), conf.UI.Admin.RepoPagingNum, page, 5)
 
 	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.Handle(500, "LoadAttributes", err)
@@ -82,6 +82,6 @@ func DeleteRepo(c *context.Context) {
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
 	c.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubURL + "/admin/repos?page=" + c.Query("page"),
+		"redirect": conf.Server.Subpath + "/admin/repos?page=" + c.Query("page"),
 	})
 }

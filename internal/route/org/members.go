@@ -8,10 +8,10 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -87,7 +87,7 @@ func MembersAction(c *context.Context) {
 	if c.Params(":action") != "leave" {
 		c.Redirect(c.Org.OrgLink + "/members")
 	} else {
-		c.Redirect(setting.AppSubURL + "/")
+		c.Redirect(conf.Server.Subpath + "/")
 	}
 }
 

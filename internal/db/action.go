@@ -19,9 +19,9 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -134,8 +134,8 @@ func (a *Action) ShortRepoPath() string {
 }
 
 func (a *Action) GetRepoLink() string {
-	if len(setting.AppSubURL) > 0 {
-		return path.Join(setting.AppSubURL, a.GetRepoPath())
+	if conf.Server.Subpath != "" {
+		return path.Join(conf.Server.Subpath, a.GetRepoPath())
 	}
 	return "/" + a.GetRepoPath()
 }
@@ -495,8 +495,8 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		}
 	}
 
-	if len(opts.Commits.Commits) > setting.UI.FeedMaxCommitNum {
-		opts.Commits.Commits = opts.Commits.Commits[:setting.UI.FeedMaxCommitNum]
+	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
 	data, err := jsoniter.Marshal(opts.Commits)
@@ -540,7 +540,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return nil
 		}
 
-		compareURL := setting.AppURL + opts.Commits.CompareURL
+		compareURL := conf.Server.ExternalURL + opts.Commits.CompareURL
 		if isNewRef {
 			compareURL = ""
 			if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
@@ -692,8 +692,8 @@ type MirrorSyncPushActionOptions struct {
 
 // MirrorSyncPushAction adds new action for mirror synchronization of pushed commits.
 func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) error {
-	if len(opts.Commits.Commits) > setting.UI.FeedMaxCommitNum {
-		opts.Commits.Commits = opts.Commits.Commits[:setting.UI.FeedMaxCommitNum]
+	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
 	apiCommits, err := opts.Commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
@@ -707,7 +707,7 @@ func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) er
 		Ref:        opts.RefName,
 		Before:     opts.OldCommitID,
 		After:      opts.NewCommitID,
-		CompareURL: setting.AppURL + opts.Commits.CompareURL,
+		CompareURL: conf.Server.ExternalURL + opts.Commits.CompareURL,
 		Commits:    apiCommits,
 		Repo:       repo.APIFormat(nil),
 		Pusher:     apiPusher,
@@ -738,8 +738,8 @@ func MirrorSyncDeleteAction(repo *Repository, refName string) error {
 // actorID is the user who's requesting, ctxUserID is the user/org that is requested.
 // actorID can be -1 when isProfile is true or to skip the permission check.
 func GetFeeds(ctxUser *User, actorID, afterID int64, isProfile bool) ([]*Action, error) {
-	actions := make([]*Action, 0, setting.UI.User.NewsFeedPagingNum)
-	sess := x.Limit(setting.UI.User.NewsFeedPagingNum).Where("user_id = ?", ctxUser.ID).Desc("id")
+	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
+	sess := x.Limit(conf.UI.User.NewsFeedPagingNum).Where("user_id = ?", ctxUser.ID).Desc("id")
 	if afterID > 0 {
 		sess.And("id < ?", afterID)
 	}

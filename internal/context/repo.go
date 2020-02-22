@@ -17,7 +17,7 @@ import (
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 type PullRequest struct {
@@ -248,8 +248,8 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["IsRepositoryAdmin"] = c.Repo.IsAdmin()
 		c.Data["IsRepositoryWriter"] = c.Repo.IsWriter()
 
-		c.Data["DisableSSH"] = setting.SSH.Disabled
-		c.Data["DisableHTTP"] = setting.Repository.DisableHTTPGit
+		c.Data["DisableSSH"] = conf.SSH.Disabled
+		c.Data["DisableHTTP"] = conf.Repository.DisableHTTPGit
 		c.Data["CloneLink"] = repo.CloneLink()
 		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
 

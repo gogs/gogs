@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
@@ -19,13 +20,14 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/ssh"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
@@ -37,7 +39,7 @@ const (
 )
 
 func checkRunMode() {
-	if setting.ProdMode {
+	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
 	} else {
@@ -47,20 +49,26 @@ func checkRunMode() {
 }
 
 // GlobalInit is for global configuration reload-able.
-func GlobalInit() {
-	setting.Init()
-	setting.InitLogging()
-	log.Info("%s %s", setting.AppName, setting.AppVersion)
-	log.Trace("Custom path: %s", setting.CustomPath)
-	log.Trace("Log path: %s", setting.LogRootPath)
-	log.Trace("Build time: %s", setting.BuildTime)
-	log.Trace("Build commit: %s", setting.BuildCommit)
+func GlobalInit(customConf string) error {
+	err := conf.Init(customConf)
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
+	}
+
+	conf.InitLogging()
+	log.Info("%s %s", conf.App.BrandName, conf.App.Version)
+	log.Trace("Work directory: %s", conf.WorkDir())
+	log.Trace("Custom path: %s", conf.CustomDir())
+	log.Trace("Custom config: %s", conf.CustomConf)
+	log.Trace("Log path: %s", conf.LogRootPath)
+	log.Trace("Build time: %s", conf.BuildTime)
+	log.Trace("Build commit: %s", conf.BuildCommit)
 
 	db.LoadConfigs()
-	setting.NewServices()
+	conf.NewServices()
 	mailer.NewContext()
 
-	if setting.InstallLock {
+	if conf.InstallLock {
 		highlight.NewContext()
 		markup.NewSanitizer()
 		if err := db.NewEngine(); err != nil {
@@ -81,33 +89,35 @@ func GlobalInit() {
 	if db.EnableSQLite3 {
 		log.Info("SQLite3 is supported")
 	}
-	if setting.SupportWindowsService() {
+	if conf.HasMinWinSvc {
 		log.Info("Builtin Windows Service is supported")
 	}
-	if setting.LoadAssetsFromDisk {
+	if conf.Server.LoadAssetsFromDisk {
 		log.Trace("Assets are loaded from disk")
 	}
 	checkRunMode()
 
-	if !setting.InstallLock {
-		return
+	if !conf.InstallLock {
+		return nil
 	}
 
-	if setting.SSH.StartBuiltinServer {
-		ssh.Listen(setting.SSH.ListenHost, setting.SSH.ListenPort, setting.SSH.ServerCiphers)
-		log.Info("SSH server started on %s:%v", setting.SSH.ListenHost, setting.SSH.ListenPort)
-		log.Trace("SSH server cipher list: %v", setting.SSH.ServerCiphers)
+	if conf.SSH.StartBuiltinServer {
+		ssh.Listen(conf.SSH.ListenHost, conf.SSH.ListenPort, conf.SSH.ServerCiphers)
+		log.Info("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
+		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
 	}
 
-	if setting.SSH.RewriteAuthorizedKeysAtStart {
+	if conf.SSH.RewriteAuthorizedKeysAtStart {
 		if err := db.RewriteAuthorizedKeys(); err != nil {
 			log.Warn("Failed to rewrite authorized_keys file: %v", err)
 		}
 	}
+
+	return nil
 }
 
 func InstallInit(c *context.Context) {
-	if setting.InstallLock {
+	if conf.InstallLock {
 		c.NotFound()
 		return
 	}
@@ -144,40 +154,40 @@ func Install(c *context.Context) {
 	}
 
 	// Application general settings
-	f.AppName = setting.AppName
-	f.RepoRootPath = setting.RepoRootPath
+	f.AppName = conf.App.BrandName
+	f.RepoRootPath = conf.RepoRootPath
 
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.
-	if setting.IsWindows && setting.RunUser == "git" {
+	if conf.IsWindowsRuntime() && conf.App.RunUser == "git" {
 		f.RunUser = user.CurrentUsername()
 	} else {
-		f.RunUser = setting.RunUser
+		f.RunUser = conf.App.RunUser
 	}
 
-	f.Domain = setting.Domain
-	f.SSHPort = setting.SSH.Port
-	f.UseBuiltinSSHServer = setting.SSH.StartBuiltinServer
-	f.HTTPPort = setting.HTTPPort
-	f.AppUrl = setting.AppURL
-	f.LogRootPath = setting.LogRootPath
+	f.Domain = conf.Server.Domain
+	f.SSHPort = conf.SSH.Port
+	f.UseBuiltinSSHServer = conf.SSH.StartBuiltinServer
+	f.HTTPPort = conf.Server.HTTPPort
+	f.AppUrl = conf.Server.ExternalURL
+	f.LogRootPath = conf.LogRootPath
 
 	// E-mail service settings
-	if setting.MailService != nil {
-		f.SMTPHost = setting.MailService.Host
-		f.SMTPFrom = setting.MailService.From
-		f.SMTPUser = setting.MailService.User
+	if conf.MailService != nil {
+		f.SMTPHost = conf.MailService.Host
+		f.SMTPFrom = conf.MailService.From
+		f.SMTPUser = conf.MailService.User
 	}
-	f.RegisterConfirm = setting.Service.RegisterEmailConfirm
-	f.MailNotify = setting.Service.EnableNotifyMail
+	f.RegisterConfirm = conf.Service.RegisterEmailConfirm
+	f.MailNotify = conf.Service.EnableNotifyMail
 
 	// Server and other services settings
-	f.OfflineMode = setting.OfflineMode
-	f.DisableGravatar = setting.DisableGravatar
-	f.EnableFederatedAvatar = setting.EnableFederatedAvatar
-	f.DisableRegistration = setting.Service.DisableRegistration
-	f.EnableCaptcha = setting.Service.EnableCaptcha
-	f.RequireSignInView = setting.Service.RequireSignInView
+	f.OfflineMode = conf.Server.OfflineMode
+	f.DisableGravatar = conf.DisableGravatar
+	f.EnableFederatedAvatar = conf.EnableFederatedAvatar
+	f.DisableRegistration = conf.Service.DisableRegistration
+	f.EnableCaptcha = conf.Service.EnableCaptcha
+	f.RequireSignInView = conf.Service.RequireSignInView
 
 	form.Assign(f, c.Data)
 	c.Success(INSTALL)
@@ -251,7 +261,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		return
 	}
 
-	currentUser, match := setting.IsRunUserMatchCurrentUser(f.RunUser)
+	currentUser, match := conf.IsRunUserMatchCurrentUser(f.RunUser)
 	if !match {
 		c.FormErr("RunUser")
 		c.RenderWithErr(c.Tr("install.run_user_not_match", f.RunUser, currentUser), INSTALL, &f)
@@ -300,10 +310,10 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Save settings.
 	cfg := ini.Empty()
-	if com.IsFile(setting.CustomConf) {
+	if osutil.IsFile(conf.CustomConf) {
 		// Keeps custom settings if there is already something.
-		if err := cfg.Append(setting.CustomConf); err != nil {
-			log.Error("Failed to load custom conf '%s': %v", setting.CustomConf, err)
+		if err := cfg.Append(conf.CustomConf); err != nil {
+			log.Error("Failed to load custom conf %q: %v", conf.CustomConf, err)
 		}
 	}
 	cfg.Section("database").Key("DB_TYPE").SetValue(db.DbCfg.Type)
@@ -368,13 +378,18 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 	cfg.Section("security").Key("SECRET_KEY").SetValue(secretKey)
 
-	os.MkdirAll(filepath.Dir(setting.CustomConf), os.ModePerm)
-	if err := cfg.SaveTo(setting.CustomConf); err != nil {
+	_ = os.MkdirAll(filepath.Dir(conf.CustomConf), os.ModePerm)
+	if err := cfg.SaveTo(conf.CustomConf); err != nil {
 		c.RenderWithErr(c.Tr("install.save_config_failed", err), INSTALL, &f)
 		return
 	}
 
-	GlobalInit()
+	// NOTE: We reuse the current value because this handler does not have access to CLI flags.
+	err = GlobalInit(conf.CustomConf)
+	if err != nil {
+		c.RenderWithErr(c.Tr("install.init_failed", err), INSTALL, &f)
+		return
+	}
 
 	// Create admin account
 	if len(f.AdminName) > 0 {
@@ -387,7 +402,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		}
 		if err := db.CreateUser(u); err != nil {
 			if !db.IsErrUserAlreadyExist(err) {
-				setting.InstallLock = false
+				conf.InstallLock = false
 				c.FormErr("AdminName", "AdminEmail")
 				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
 				return

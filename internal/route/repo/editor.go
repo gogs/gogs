@@ -14,12 +14,12 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/pathutil"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
@@ -110,10 +110,10 @@ func editFile(c *context.Context, isNewFile bool) {
 	c.Data["commit_choice"] = "direct"
 	c.Data["new_branch_name"] = ""
 	c.Data["last_commit"] = c.Repo.Commit.ID
-	c.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
-	c.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
-	c.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
-	c.Data["EditorconfigURLPrefix"] = fmt.Sprintf("%s/api/v1/repos/%s/editorconfig/", setting.AppSubURL, c.Repo.Repository.FullName())
+	c.Data["MarkdownFileExts"] = strings.Join(conf.Markdown.FileExtensions, ",")
+	c.Data["LineWrapExtensions"] = strings.Join(conf.Repository.Editor.LineWrapExtensions, ",")
+	c.Data["PreviewableFileModes"] = strings.Join(conf.Repository.Editor.PreviewableFileModes, ",")
+	c.Data["EditorconfigURLPrefix"] = fmt.Sprintf("%s/api/v1/repos/%s/editorconfig/", conf.Server.Subpath, c.Repo.Repository.FullName())
 
 	c.Success(EDIT_FILE)
 }
@@ -156,9 +156,9 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	c.Data["commit_choice"] = f.CommitChoice
 	c.Data["new_branch_name"] = branchName
 	c.Data["last_commit"] = f.LastCommit
-	c.Data["MarkdownFileExts"] = strings.Join(setting.Markdown.FileExtensions, ",")
-	c.Data["LineWrapExtensions"] = strings.Join(setting.Repository.Editor.LineWrapExtensions, ",")
-	c.Data["PreviewableFileModes"] = strings.Join(setting.Repository.Editor.PreviewableFileModes, ",")
+	c.Data["MarkdownFileExts"] = strings.Join(conf.Markdown.FileExtensions, ",")
+	c.Data["LineWrapExtensions"] = strings.Join(conf.Repository.Editor.LineWrapExtensions, ",")
+	c.Data["PreviewableFileModes"] = strings.Join(conf.Repository.Editor.PreviewableFileModes, ",")
 
 	if c.HasError() {
 		c.Success(EDIT_FILE)
@@ -400,9 +400,9 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 
 func renderUploadSettings(c *context.Context) {
 	c.RequireDropzone()
-	c.Data["UploadAllowedTypes"] = strings.Join(setting.Repository.Upload.AllowedTypes, ",")
-	c.Data["UploadMaxSize"] = setting.Repository.Upload.FileMaxSize
-	c.Data["UploadMaxFiles"] = setting.Repository.Upload.MaxFiles
+	c.Data["UploadAllowedTypes"] = strings.Join(conf.Repository.Upload.AllowedTypes, ",")
+	c.Data["UploadMaxSize"] = conf.Repository.Upload.FileMaxSize
+	c.Data["UploadMaxFiles"] = conf.Repository.Upload.MaxFiles
 }
 
 func UploadFile(c *context.Context) {
@@ -533,9 +533,9 @@ func UploadFileToServer(c *context.Context) {
 	}
 	fileType := http.DetectContentType(buf)
 
-	if len(setting.Repository.Upload.AllowedTypes) > 0 {
+	if len(conf.Repository.Upload.AllowedTypes) > 0 {
 		allowed := false
-		for _, t := range setting.Repository.Upload.AllowedTypes {
+		for _, t := range conf.Repository.Upload.AllowedTypes {
 			t := strings.Trim(t, " ")
 			if t == "*/*" || t == fileType {
 				allowed = true

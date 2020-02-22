@@ -10,12 +10,12 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -33,7 +33,7 @@ func Users(c *context.Context) {
 		Type:     db.USER_TYPE_INDIVIDUAL,
 		Counter:  db.CountUsers,
 		Ranger:   db.Users,
-		PageSize: setting.UI.Admin.UserPagingNum,
+		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
 	})
@@ -53,7 +53,7 @@ func NewUser(c *context.Context) {
 	}
 	c.Data["Sources"] = sources
 
-	c.Data["CanSendEmail"] = setting.MailService != nil
+	c.Data["CanSendEmail"] = conf.MailService != nil
 	c.HTML(200, USER_NEW)
 }
 
@@ -69,7 +69,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	}
 	c.Data["Sources"] = sources
 
-	c.Data["CanSendEmail"] = setting.MailService != nil
+	c.Data["CanSendEmail"] = conf.MailService != nil
 
 	if c.HasError() {
 		c.HTML(200, USER_NEW)
@@ -115,12 +115,12 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	log.Trace("Account created by admin (%s): %s", c.User.Name, u.Name)
 
 	// Send email notification.
-	if f.SendNotify && setting.MailService != nil {
+	if f.SendNotify && conf.MailService != nil {
 		mailer.SendRegisterNotifyMail(c.Context, db.NewMailerUser(u))
 	}
 
 	c.Flash.Success(c.Tr("admin.users.new_success", u.Name))
-	c.Redirect(setting.AppSubURL + "/admin/users/" + com.ToStr(u.ID))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + com.ToStr(u.ID))
 }
 
 func prepareUserInfo(c *context.Context) *db.User {
@@ -155,7 +155,7 @@ func EditUser(c *context.Context) {
 	c.Data["Title"] = c.Tr("admin.users.edit_account")
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
-	c.Data["EnableLocalPathMigration"] = setting.Repository.EnableLocalPathMigration
+	c.Data["EnableLocalPathMigration"] = conf.Repository.EnableLocalPathMigration
 
 	prepareUserInfo(c)
 	if c.Written() {
@@ -169,7 +169,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	c.Data["Title"] = c.Tr("admin.users.edit_account")
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
-	c.Data["EnableLocalPathMigration"] = setting.Repository.EnableLocalPathMigration
+	c.Data["EnableLocalPathMigration"] = conf.Repository.EnableLocalPathMigration
 
 	u := prepareUserInfo(c)
 	if c.Written() {
@@ -226,7 +226,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
-	c.Redirect(setting.AppSubURL + "/admin/users/" + c.Params(":userid"))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
 }
 
 func DeleteUser(c *context.Context) {
@@ -241,12 +241,12 @@ func DeleteUser(c *context.Context) {
 		case db.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
 			c.JSON(200, map[string]interface{}{
-				"redirect": setting.AppSubURL + "/admin/users/" + c.Params(":userid"),
+				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		case db.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
 			c.JSON(200, map[string]interface{}{
-				"redirect": setting.AppSubURL + "/admin/users/" + c.Params(":userid"),
+				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		default:
 			c.Handle(500, "DeleteUser", err)
@@ -257,6 +257,6 @@ func DeleteUser(c *context.Context) {
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
 	c.JSON(200, map[string]interface{}{
-		"redirect": setting.AppSubURL + "/admin/users",
+		"redirect": conf.Server.Subpath + "/admin/users",
 	})
 }

@@ -17,6 +17,9 @@ All notable changes to Gogs are documented in this file.
 - All assets are now embedded into binary and served from memory by default. Set `[server] LOAD_ASSETS_FROM_DISK = true` to load them from disk. [#5920](https://github.com/gogs/gogs/pull/5920)
 - Application and Go versions are removed from page footer and only show in the admin dashboard.
 - Build tag for running as Windows Service has been changed from `miniwinsvc` to `minwinsvc`.
+- Configuration option `APP_NAME` is deprecated and will end support in 0.13.0, please start using `BRAND_NAME`.
+- Configuration option `[server] ROOT_URL` is deprecated and will end support in 0.13.0, please start using `[server] EXTERNAL_URL`.
+- Configuration option `[server] LANDING_PAGE` is deprecated and will end support in 0.13.0, please start using `[server] LANDING_URL`.
 
 ### Fixed
 
@@ -33,6 +36,7 @@ All notable changes to Gogs are documented in this file.
 ### Removed
 
 - Configuration option `[other] SHOW_FOOTER_VERSION`
+- Configuration option `[server] STATIC_ROOT_PATH`
 
 ---
 

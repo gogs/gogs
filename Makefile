@@ -1,5 +1,5 @@
-LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
-LDFLAGS += -X "gogs.io/gogs/internal/setting.BuildCommit=$(shell git rev-parse HEAD)"
+LDFLAGS += -X "gogs.io/gogs/internal/conf.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
+LDFLAGS += -X "gogs.io/gogs/internal/conf.BuildCommit=$(shell git rev-parse HEAD)"
 
 CONF_FILES := $(shell find conf | sed 's/ /\\ /g')
 TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
@@ -81,11 +81,11 @@ test:
 	go test -cover -race ./...
 
 fixme:
-	grep -rnw "FIXME" cmd routers models pkg
+	grep -rnw "FIXME" internal
 
 todo:
-	grep -rnw "TODO" cmd routers models pkg
+	grep -rnw "TODO" internal
 
 # Legacy code should be remove by the time of release
 legacy:
-	grep -rnw "LEGACY" cmd routes models pkg
+	grep -rnw "\(LEGACY\|DEPRECATED\)" internal

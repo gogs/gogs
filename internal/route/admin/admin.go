@@ -14,12 +14,12 @@ import (
 	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -168,10 +168,10 @@ func Dashboard(c *context.Context) {
 		return
 	}
 
-	c.Data["GitVersion"] = setting.Git.Version
+	c.Data["GitVersion"] = conf.Git.Version
 	c.Data["GoVersion"] = runtime.Version()
-	c.Data["BuildTime"] = setting.BuildTime
-	c.Data["BuildCommit"] = setting.BuildCommit
+	c.Data["BuildTime"] = conf.BuildTime
+	c.Data["BuildCommit"] = conf.BuildCommit
 
 	c.Data["Stats"] = db.GetStatistic()
 	// FIXME: update periodically
@@ -189,7 +189,7 @@ func SendTestMail(c *context.Context) {
 		c.Flash.Info(c.Tr("admin.config.test_mail_sent", email))
 	}
 
-	c.Redirect(setting.AppSubURL + "/admin/config")
+	c.Redirect(conf.Server.Subpath + "/admin/config")
 }
 
 func Config(c *context.Context) {
@@ -197,54 +197,53 @@ func Config(c *context.Context) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminConfig"] = true
 
-	c.Data["AppURL"] = setting.AppURL
-	c.Data["Domain"] = setting.Domain
-	c.Data["OfflineMode"] = setting.OfflineMode
-	c.Data["DisableRouterLog"] = setting.DisableRouterLog
-	c.Data["RunUser"] = setting.RunUser
+	c.Data["AppURL"] = conf.Server.ExternalURL
+	c.Data["Domain"] = conf.Server.Domain
+	c.Data["OfflineMode"] = conf.Server.OfflineMode
+	c.Data["DisableRouterLog"] = conf.Server.DisableRouterLog
+	c.Data["RunUser"] = conf.App.RunUser
 	c.Data["RunMode"] = strings.Title(macaron.Env)
-	c.Data["StaticRootPath"] = setting.StaticRootPath
-	c.Data["LogRootPath"] = setting.LogRootPath
-	c.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
+	c.Data["LogRootPath"] = conf.LogRootPath
+	c.Data["ReverseProxyAuthUser"] = conf.ReverseProxyAuthUser
 
-	c.Data["SSH"] = setting.SSH
+	c.Data["SSH"] = conf.SSH
 
-	c.Data["RepoRootPath"] = setting.RepoRootPath
-	c.Data["ScriptType"] = setting.ScriptType
-	c.Data["Repository"] = setting.Repository
-	c.Data["HTTP"] = setting.HTTP
+	c.Data["RepoRootPath"] = conf.RepoRootPath
+	c.Data["ScriptType"] = conf.ScriptType
+	c.Data["Repository"] = conf.Repository
+	c.Data["HTTP"] = conf.HTTP
 
 	c.Data["DbCfg"] = db.DbCfg
-	c.Data["Service"] = setting.Service
-	c.Data["Webhook"] = setting.Webhook
+	c.Data["Service"] = conf.Service
+	c.Data["Webhook"] = conf.Webhook
 
 	c.Data["MailerEnabled"] = false
-	if setting.MailService != nil {
+	if conf.MailService != nil {
 		c.Data["MailerEnabled"] = true
-		c.Data["Mailer"] = setting.MailService
+		c.Data["Mailer"] = conf.MailService
 	}
 
-	c.Data["CacheAdapter"] = setting.CacheAdapter
-	c.Data["CacheInterval"] = setting.CacheInterval
-	c.Data["CacheConn"] = setting.CacheConn
+	c.Data["CacheAdapter"] = conf.CacheAdapter
+	c.Data["CacheInterval"] = conf.CacheInterval
+	c.Data["CacheConn"] = conf.CacheConn
 
-	c.Data["SessionConfig"] = setting.SessionConfig
+	c.Data["SessionConfig"] = conf.SessionConfig
 
-	c.Data["DisableGravatar"] = setting.DisableGravatar
-	c.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
+	c.Data["DisableGravatar"] = conf.DisableGravatar
+	c.Data["EnableFederatedAvatar"] = conf.EnableFederatedAvatar
 
-	c.Data["Git"] = setting.Git
+	c.Data["Git"] = conf.Git
 
 	type logger struct {
 		Mode, Config string
 	}
-	loggers := make([]*logger, len(setting.LogModes))
-	for i := range setting.LogModes {
+	loggers := make([]*logger, len(conf.LogModes))
+	for i := range conf.LogModes {
 		loggers[i] = &logger{
-			Mode: strings.Title(setting.LogModes[i]),
+			Mode: strings.Title(conf.LogModes[i]),
 		}
 
-		result, _ := jsoniter.MarshalIndent(setting.LogConfigs[i], "", "  ")
+		result, _ := jsoniter.MarshalIndent(conf.LogConfigs[i], "", "  ")
 		loggers[i].Config = string(result)
 	}
 	c.Data["Loggers"] = loggers

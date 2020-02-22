@@ -1,6 +1,6 @@
 module gogs.io/gogs
 
-go 1.13
+go 1.12
 
 require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
@@ -39,6 +39,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/niklasfasching/go-org v0.1.6
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/pquerna/otp v1.2.0
 	github.com/prometheus/client_golang v1.2.1
 	github.com/russross/blackfriday v1.5.2

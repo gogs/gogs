@@ -9,10 +9,11 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
 )
 
 var (
@@ -133,18 +134,18 @@ to make automatic initialization process more smoothly`,
 
 func runCreateUser(c *cli.Context) error {
 	if !c.IsSet("name") {
-		return fmt.Errorf("Username is not specified")
+		return errors.New("Username is not specified")
 	} else if !c.IsSet("password") {
-		return fmt.Errorf("Password is not specified")
+		return errors.New("Password is not specified")
 	} else if !c.IsSet("email") {
-		return fmt.Errorf("Email is not specified")
+		return errors.New("Email is not specified")
 	}
 
-	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
 	}
 
-	setting.Init()
 	db.LoadConfigs()
 	db.SetEngine()
 
@@ -164,11 +165,11 @@ func runCreateUser(c *cli.Context) error {
 
 func adminDashboardOperation(operation func() error, successMessage string) func(*cli.Context) error {
 	return func(c *cli.Context) error {
-		if c.IsSet("config") {
-			setting.CustomConf = c.String("config")
+		err := conf.Init(c.String("config"))
+		if err != nil {
+			return errors.Wrap(err, "init configuration")
 		}
 
-		setting.Init()
 		db.LoadConfigs()
 		db.SetEngine()
 

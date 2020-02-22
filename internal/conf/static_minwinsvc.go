@@ -4,12 +4,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package setting
+package conf
 
 import (
 	_ "github.com/gogs/minwinsvc"
 )
 
 func init() {
-	supportWindowsService = true
+	HasMinWinSvc = true
 }

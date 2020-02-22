@@ -11,10 +11,10 @@ import (
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -110,7 +110,7 @@ func Dashboard(c *context.Context) {
 
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
-		collaborateRepos, err := c.User.GetAccessibleRepositories(setting.UI.User.RepoPagingNum)
+		collaborateRepos, err := c.User.GetAccessibleRepositories(conf.UI.User.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "GetAccessibleRepositories", err)
 			return
@@ -125,7 +125,7 @@ func Dashboard(c *context.Context) {
 	var repos, mirrors []*db.Repository
 	var repoCount int64
 	if ctxUser.IsOrganization() {
-		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, setting.UI.User.RepoPagingNum)
+		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, conf.UI.User.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "GetUserRepositories", err)
 			return
@@ -137,7 +137,7 @@ func Dashboard(c *context.Context) {
 			return
 		}
 	} else {
-		if err = ctxUser.GetRepositories(1, setting.UI.User.RepoPagingNum); err != nil {
+		if err = ctxUser.GetRepositories(1, conf.UI.User.RepoPagingNum); err != nil {
 			c.Handle(500, "GetRepositories", err)
 			return
 		}
@@ -152,7 +152,7 @@ func Dashboard(c *context.Context) {
 	}
 	c.Data["Repos"] = repos
 	c.Data["RepoCount"] = repoCount
-	c.Data["MaxShowRepoNum"] = setting.UI.User.RepoPagingNum
+	c.Data["MaxShowRepoNum"] = conf.UI.User.RepoPagingNum
 
 	if err := db.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
 		c.Handle(500, "MirrorRepositoryList.LoadAttributes", err)
@@ -328,7 +328,7 @@ func Issues(c *context.Context) {
 
 	c.Data["Issues"] = issues
 	c.Data["Repos"] = showRepos
-	c.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
+	c.Data["Page"] = paginater.New(total, conf.UI.IssuePagingNum, page, 5)
 	c.Data["IssueStats"] = issueStats
 	c.Data["ViewType"] = string(filterMode)
 	c.Data["SortType"] = sortType
@@ -380,7 +380,7 @@ func showOrgProfile(c *context.Context) {
 		err   error
 	)
 	if c.IsLogged && !c.User.IsAdmin {
-		repos, count, err = org.GetUserRepositories(c.User.ID, page, setting.UI.User.RepoPagingNum)
+		repos, count, err = org.GetUserRepositories(c.User.ID, page, conf.UI.User.RepoPagingNum)
 		if err != nil {
 			c.Handle(500, "GetUserRepositories", err)
 			return
@@ -392,7 +392,7 @@ func showOrgProfile(c *context.Context) {
 			UserID:   org.ID,
 			Private:  showPrivate,
 			Page:     page,
-			PageSize: setting.UI.User.RepoPagingNum,
+			PageSize: conf.UI.User.RepoPagingNum,
 		})
 		if err != nil {
 			c.Handle(500, "GetRepositories", err)
@@ -401,7 +401,7 @@ func showOrgProfile(c *context.Context) {
 		c.Data["Repos"] = repos
 		count = db.CountUserRepositories(org.ID, showPrivate)
 	}
-	c.Data["Page"] = paginater.New(int(count), setting.UI.User.RepoPagingNum, page, 5)
+	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 
 	if err := org.GetMembers(); err != nil {
 		c.Handle(500, "GetMembers", err)
@@ -420,5 +420,5 @@ func Email2User(c *context.Context) {
 		c.NotFoundOrServerError("GetUserByEmail", errors.IsUserNotExist, err)
 		return
 	}
-	c.Redirect(setting.AppSubURL + "/user/" + u.Name)
+	c.Redirect(conf.Server.Subpath + "/user/" + u.Name)
 }

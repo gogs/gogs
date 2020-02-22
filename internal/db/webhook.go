@@ -21,13 +21,13 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/httplib"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/sync"
 )
 
-var HookQueue = sync.NewUniqueQueue(setting.Webhook.QueueLength)
+var HookQueue = sync.NewUniqueQueue(conf.Webhook.QueueLength)
 
 type HookContentType int
 
@@ -99,7 +99,7 @@ type Webhook struct {
 	ContentType  HookContentType
 	Secret       string     `xorm:"TEXT"`
 	Events       string     `xorm:"TEXT"`
-	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON here, it breaks old backup archive
+	*HookEvent   `xorm:"-"` // LEGACY [1.0]: Cannot ignore JSON (i.e. json:"-") here, it breaks old backup archive
 	IsSSL        bool       `xorm:"is_ssl"`
 	IsActive     bool
 	HookTaskType HookTaskType
@@ -482,8 +482,8 @@ func (t *HookTask) MarshalJSON(v interface{}) string {
 
 // HookTasks returns a list of hook tasks by given conditions.
 func HookTasks(hookID int64, page int) ([]*HookTask, error) {
-	tasks := make([]*HookTask, 0, setting.Webhook.PagingNum)
-	return tasks, x.Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
+	tasks := make([]*HookTask, 0, conf.Webhook.PagingNum)
+	return tasks, x.Limit(conf.Webhook.PagingNum, (page-1)*conf.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
 }
 
 // createHookTask creates a new hook task,
@@ -652,14 +652,14 @@ func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhook
 func (t *HookTask) deliver() {
 	t.IsDelivered = true
 
-	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
+	timeout := time.Duration(conf.Webhook.DeliverTimeout) * time.Second
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
 		Header("X-Github-Delivery", t.UUID).
 		Header("X-Github-Event", string(t.EventType)).
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
-		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify})
+		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: conf.Webhook.SkipTLSVerify})
 
 	switch t.ContentType {
 	case JSON:

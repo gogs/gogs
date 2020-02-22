@@ -13,7 +13,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -35,7 +35,7 @@ func serveData(c *context.Context, name string, r io.Reader) error {
 			c.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
 			c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
-	} else if !setting.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
+	} else if !conf.Repository.EnableRawFileRenderMode || !c.QueryBool("render") {
 		c.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 

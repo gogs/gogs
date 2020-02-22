@@ -10,8 +10,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"gogs.io/gogs/internal/conf"
 	. "gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
 )
 
 func Test_IsReadmeFile(t *testing.T) {
@@ -62,7 +62,7 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 			urlPrefix                   = "/prefix"
 			metas     map[string]string = nil
 		)
-		setting.AppSubURLDepth = 0
+		conf.Server.SubpathDepth = 0
 
 		Convey("To the internal issue tracker", func() {
 			Convey("It should not render anything when there are no mentions", func() {

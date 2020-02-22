@@ -14,11 +14,11 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -354,8 +354,8 @@ func ViewPullFiles(c *context.Context) {
 	}
 
 	diff, err := db.GetDiffRange(diffRepoPath,
-		startCommitID, endCommitID, setting.Git.MaxGitDiffLines,
-		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
+		startCommitID, endCommitID, conf.Git.MaxGitDiffLines,
+		conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles)
 	if err != nil {
 		c.ServerError("GetDiffRange", err)
 		return
@@ -383,9 +383,9 @@ func ViewPullFiles(c *context.Context) {
 		c.Data["Reponame"] = pull.HeadRepo.Name
 
 		headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
-		c.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", endCommitID)
-		c.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", startCommitID)
-		c.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(headTarget, "raw", endCommitID)
+		c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", endCommitID)
+		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", startCommitID)
+		c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", endCommitID)
 	}
 
 	c.Data["RequireHighlightJS"] = true
@@ -570,8 +570,8 @@ func PrepareCompareDiff(
 	}
 
 	diff, err := db.GetDiffRange(db.RepoPath(headUser.Name, headRepo.Name),
-		prInfo.MergeBase, headCommitID, setting.Git.MaxGitDiffLines,
-		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
+		prInfo.MergeBase, headCommitID, conf.Git.MaxGitDiffLines,
+		conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles)
 	if err != nil {
 		c.ServerError("GetDiffRange", err)
 		return false
@@ -593,9 +593,9 @@ func PrepareCompareDiff(
 	c.Data["IsImageFile"] = headCommit.IsImageFile
 
 	headTarget := path.Join(headUser.Name, repo.Name)
-	c.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", headCommitID)
-	c.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
-	c.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(headTarget, "raw", headCommitID)
+	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", headCommitID)
+	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", prInfo.MergeBase)
+	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", headCommitID)
 	return false
 }
 
@@ -677,7 +677,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	if setting.AttachmentEnabled {
+	if conf.AttachmentEnabled {
 		attachments = f.Files
 	}
 
