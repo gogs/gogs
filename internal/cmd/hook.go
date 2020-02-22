@@ -34,7 +34,7 @@ var (
 		Usage:       "Delegate commands to corresponding Git hooks",
 		Description: "All sub-commands should only be called by Git",
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 		Subcommands: []cli.Command{
 			subcmdHookPreReceive,

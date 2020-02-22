@@ -37,7 +37,7 @@ without manually hacking the data files`,
 		Flags: []cli.Flag{
 			stringFlag("source", "", "Source directory that stores new locale files"),
 			stringFlag("target", "", "Target directory that stores old locale files"),
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 )

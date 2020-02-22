@@ -31,7 +31,7 @@ which can be used for migrating Gogs to another server. The output format is mea
 portable among all supported database engines.`,
 	Action: runBackup,
 	Flags: []cli.Flag{
-		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+		stringFlag("config, c", "", "Custom configuration file path"),
 		boolFlag("verbose, v", "Show process details"),
 		stringFlag("tempdir, t", os.TempDir(), "Temporary directory path"),
 		stringFlag("target", "./", "Target directory path to save backup archive"),
