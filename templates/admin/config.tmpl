@@ -10,23 +10,56 @@
 				</h4>
 				<div class="ui attached table segment">
 					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.app_name"}}</dt>
-						<dd>{{AppName}}</dd>
-						<dt>{{.i18n.Tr "admin.config.app_url"}}</dt>
-						<dd>{{.AppURL}}</dd>
-						<dt>{{.i18n.Tr "admin.config.domain"}}</dt>
-						<dd>{{.Domain}}</dd>
-						<dt>{{.i18n.Tr "admin.config.offline_mode"}}</dt>
-						<dd><i class="fa fa{{if .OfflineMode}}-check{{end}}-square-o"></i></dd>
-						<dt>{{.i18n.Tr "admin.config.disable_router_log"}}</dt>
-						<dd><i class="fa fa{{if .DisableRouterLog}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.brand_name"}}</dt>
+						<dd>{{.App.BrandName}}</dd>
+						<dt>{{.i18n.Tr "admin.config.run_user"}}</dt>
+						<dd>{{.App.RunUser}}</dd>
+						<dt>{{.i18n.Tr "admin.config.run_mode"}}</dt>
+						<dd>{{.App.RunMode}}</dd>
 
 						<div class="ui divider"></div>
 
-						<dt>{{.i18n.Tr "admin.config.run_user"}}</dt>
-						<dd>{{.RunUser}}</dd>
-						<dt>{{.i18n.Tr "admin.config.run_mode"}}</dt>
-						<dd>{{.RunMode}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.external_url"}}</dt>
+						<dd>{{.Server.ExternalURL}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.domain"}}</dt>
+						<dd>{{.Server.Domain}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.protocol"}}</dt>
+						<dd>{{.Server.Protocol}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.http_addr"}}</dt>
+						<dd>{{.Server.HTTPAddr}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.http_port"}}</dt>
+						<dd>{{.Server.HTTPPort}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.cert_file"}}</dt>
+						<dd><code>{{.Server.CertFile}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.server.key_file"}}</dt>
+						<dd><code>{{.Server.KeyFile}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.server.tls_min_version"}}</dt>
+						<dd>{{.Server.TLSMinVersion}}</dd>
+						<dt>{{.i18n.Tr "admin.config.server.unix_socket_permission"}}</dt>
+						<dd><code>{{.Server.UnixSocketPermission}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.server.local_root_url"}}</dt>
+						<dd>{{.Server.LocalRootURL}}</dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.server.offline_mode"}}</dt>
+						<dd><i class="fa fa{{if .Server.OfflineMode}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.server.disable_router_log"}}</dt>
+						<dd><i class="fa fa{{if .Server.DisableRouterLog}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.server.enable_gzip"}}</dt>
+						<dd><i class="fa fa{{if .Server.EnableGzip}}-check{{end}}-square-o"></i></dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.server.app_data_path"}}</dt>
+						<dd><code>{{.Server.AppDataPath}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.server.load_assets_from_disk"}}</dt>
+						<dd><i class="fa fa{{if .Server.LoadAssetsFromDisk}}-check{{end}}-square-o"></i></dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.server.landing_url"}}</dt>
+						<dd><code>{{.Server.LandingURL}}</code></dd>
 
 						<div class="ui divider"></div>
 
@@ -42,34 +75,36 @@
 				</h4>
 				<div class="ui attached table segment">
 					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.ssh_enabled"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.ssh.enabled"}}</dt>
 						<dd><i class="fa fa{{if not .SSH.Disabled}}-check{{end}}-square-o"></i></dd>
 						{{if not .SSH.Disabled}}
-							<dt>{{.i18n.Tr "admin.config.ssh_start_builtin_server"}}</dt>
-							<dd><i class="fa fa{{if .SSH.StartBuiltinServer}}-check{{end}}-square-o"></i></dd>
-							<dt>{{.i18n.Tr "admin.config.ssh_domain"}}</dt>
+							<dt>{{.i18n.Tr "admin.config.ssh.domain"}}</dt>
 							<dd>{{.SSH.Domain}}</dd>
-							<dt>{{.i18n.Tr "admin.config.ssh_port"}}</dt>
+							<dt>{{.i18n.Tr "admin.config.ssh.port"}}</dt>
 							<dd>{{.SSH.Port}}</dd>
-							<dt>{{.i18n.Tr "admin.config.ssh_listen_port"}}</dt>
-							<dd>{{.SSH.ListenPort}}</dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.root_path"}}</dt>
+							<dd><code>{{.SSH.RootPath}}</code></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.keygen_path"}}</dt>
+							<dd><code>{{.SSH.KeygenPath}}</code></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.key_test_path"}}</dt>
+							<dd><code>{{.SSH.KeyTestPath}}</code></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.minimum_key_size_check"}}</dt>
+							<dd><i class="fa fa{{if .SSH.MinimumKeySizeCheck}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.minimum_key_sizes"}}</dt>
+							<dd><code>{{.SSH.MinimumKeySizes}}</code></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.rewrite_authorized_keys_at_start"}}</dt>
+							<dd><i class="fa fa{{if .SSH.RewriteAuthorizedKeysAtStart}}-check{{end}}-square-o"></i></dd>
 
-							{{if not .SSH.StartBuiltinServer}}
-								<dt>{{.i18n.Tr "admin.config.ssh_root_path"}}</dt>
-								<dd>{{.SSH.RootPath}}</dd>
-								<dt>{{.i18n.Tr "admin.config.ssh_rewrite_authorized_keys_at_start"}}</dt>
-								<dd><i class="fa fa{{if .SSH.RewriteAuthorizedKeysAtStart}}-check{{end}}-square-o"></i></dd>
-								<dt>{{.i18n.Tr "admin.config.ssh_key_test_path"}}</dt>
-								<dd>{{.SSH.KeyTestPath}}</dd>
-								<dt>{{.i18n.Tr "admin.config.ssh_keygen_path"}}</dt>
-								<dd>{{.SSH.KeygenPath}}</dd>
-								<dt>{{.i18n.Tr "admin.config.ssh_minimum_key_size_check"}}</dt>
-								<dd><i class="fa fa{{if .SSH.MinimumKeySizeCheck}}-check{{end}}-square-o"></i></dd>
-								{{if .SSH.MinimumKeySizeCheck}}
-								<dt>{{.i18n.Tr "admin.config.ssh_minimum_key_sizes"}}</dt>
-								<dd>{{.SSH.MinimumKeySizes}}</dd>
-								{{end}}
-							{{end}}
+							<div class="ui divider"></div>
+
+							<dt>{{.i18n.Tr "admin.config.ssh.start_builtin_server"}}</dt>
+							<dd><i class="fa fa{{if .SSH.StartBuiltinServer}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.listen_host"}}</dt>
+							<dd>{{.SSH.ListenHost}}</dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.listen_port"}}</dt>
+							<dd>{{.SSH.ListenPort}}</dd>
+							<dt>{{.i18n.Tr "admin.config.ssh.server_ciphers"}}</dt>
+							<dd><code>{{.SSH.ServerCiphers}}</code></dd>
 						{{end}}
 					</dl>
 				</div>

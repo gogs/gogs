@@ -23,6 +23,8 @@ var (
 // CustomConf returns the absolute path of custom configuration file that is used.
 var CustomConf string
 
+// ⚠️ WARNING: After changing the following section, do not forget to update template of
+// "/admin/config" page as well.
 var (
 	// Application settings
 	App struct {
@@ -73,19 +75,20 @@ var (
 
 	// SSH settings
 	SSH struct {
-		Disabled                     bool           `ini:"DISABLE_SSH"`
-		Domain                       string         `ini:"SSH_DOMAIN"`
-		Port                         int            `ini:"SSH_PORT"`
-		RootPath                     string         `ini:"SSH_ROOT_PATH"`
-		KeygenPath                   string         `ini:"SSH_KEYGEN_PATH"`
-		KeyTestPath                  string         `ini:"SSH_KEY_TEST_PATH"`
-		StartBuiltinServer           bool           `ini:"START_SSH_SERVER"`
-		ListenHost                   string         `ini:"SSH_LISTEN_HOST"`
-		ListenPort                   int            `ini:"SSH_LISTEN_PORT"`
-		ServerCiphers                []string       `ini:"SSH_SERVER_CIPHERS"`
-		MinimumKeySizeCheck          bool           `ini:"MINIMUM_KEY_SIZE_CHECK"`
+		Disabled                     bool   `ini:"DISABLE_SSH"`
+		Domain                       string `ini:"SSH_DOMAIN"`
+		Port                         int    `ini:"SSH_PORT"`
+		RootPath                     string `ini:"SSH_ROOT_PATH"`
+		KeygenPath                   string `ini:"SSH_KEYGEN_PATH"`
+		KeyTestPath                  string `ini:"SSH_KEY_TEST_PATH"`
+		MinimumKeySizeCheck          bool
 		MinimumKeySizes              map[string]int `ini:"-"` // Load from [ssh.minimum_key_sizes]
-		RewriteAuthorizedKeysAtStart bool           `ini:"REWRITE_AUTHORIZED_KEYS_AT_START"`
+		RewriteAuthorizedKeysAtStart bool
+
+		StartBuiltinServer bool     `ini:"START_SSH_SERVER"`
+		ListenHost         string   `ini:"SSH_LISTEN_HOST"`
+		ListenPort         int      `ini:"SSH_LISTEN_PORT"`
+		ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
 	}
 )
 
