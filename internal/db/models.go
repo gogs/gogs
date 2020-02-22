@@ -49,10 +49,6 @@ var (
 	tables    []interface{}
 	HasEngine bool
 
-	DbCfg struct {
-		Type, Host, Name, User, Passwd, Path, SSLMode string
-	}
-
 	EnableSQLite3 bool
 )
 
@@ -72,29 +68,6 @@ func init() {
 	for _, name := range gonicNames {
 		core.LintGonicMapper[name] = true
 	}
-}
-
-func LoadConfigs() {
-	sec := conf.File.Section("database")
-	DbCfg.Type = sec.Key("DB_TYPE").String()
-	switch DbCfg.Type {
-	case "sqlite3":
-		conf.UseSQLite3 = true
-	case "mysql":
-		conf.UseMySQL = true
-	case "postgres":
-		conf.UsePostgreSQL = true
-	case "mssql":
-		conf.UseMSSQL = true
-	}
-	DbCfg.Host = sec.Key("HOST").String()
-	DbCfg.Name = sec.Key("NAME").String()
-	DbCfg.User = sec.Key("USER").String()
-	if len(DbCfg.Passwd) == 0 {
-		DbCfg.Passwd = sec.Key("PASSWD").String()
-	}
-	DbCfg.SSLMode = sec.Key("SSL_MODE").String()
-	DbCfg.Path = sec.Key("PATH").MustString("data/gogs.db")
 }
 
 // parsePostgreSQLHostPort parses given input in various forms defined in
@@ -127,46 +100,55 @@ func parseMSSQLHostPort(info string) (string, string) {
 }
 
 func getEngine() (*xorm.Engine, error) {
-	connStr := ""
-	var Param string = "?"
-	if strings.Contains(DbCfg.Name, Param) {
+	Param := "?"
+	if strings.Contains(conf.Database.Name, Param) {
 		Param = "&"
 	}
-	switch DbCfg.Type {
+
+	connStr := ""
+	switch conf.Database.Type {
 	case "mysql":
-		if DbCfg.Host[0] == '/' { // looks like a unix socket
+		conf.UseMySQL = true
+		if conf.Database.Host[0] == '/' { // looks like a unix socket
 			connStr = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8mb4&parseTime=true",
-				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
+				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
 		} else {
 			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
-				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
+				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
 		}
 		var engineParams = map[string]string{"rowFormat": "DYNAMIC"}
-		return xorm.NewEngineWithParams(DbCfg.Type, connStr, engineParams)
+		return xorm.NewEngineWithParams(conf.Database.Type, connStr, engineParams)
+
 	case "postgres":
-		host, port := parsePostgreSQLHostPort(DbCfg.Host)
+		conf.UsePostgreSQL = true
+		host, port := parsePostgreSQLHostPort(conf.Database.Host)
 		if host[0] == '/' { // looks like a unix socket
 			connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
-				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), port, DbCfg.Name, Param, DbCfg.SSLMode, host)
+				url.QueryEscape(conf.Database.User), url.QueryEscape(conf.Database.Password), port, conf.Database.Name, Param, conf.Database.SSLMode, host)
 		} else {
 			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
-				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), host, port, DbCfg.Name, Param, DbCfg.SSLMode)
+				url.QueryEscape(conf.Database.User), url.QueryEscape(conf.Database.Password), host, port, conf.Database.Name, Param, conf.Database.SSLMode)
 		}
+
 	case "mssql":
-		host, port := parseMSSQLHostPort(DbCfg.Host)
-		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, DbCfg.Name, DbCfg.User, DbCfg.Passwd)
+		conf.UseMSSQL = true
+		host, port := parseMSSQLHostPort(conf.Database.Host)
+		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Passwd)
+
 	case "sqlite3":
 		if !EnableSQLite3 {
 			return nil, errors.New("this binary version does not build support for SQLite3")
 		}
-		if err := os.MkdirAll(path.Dir(DbCfg.Path), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {
 			return nil, fmt.Errorf("create directories: %v", err)
 		}
-		connStr = "file:" + DbCfg.Path + "?cache=shared&mode=rwc"
+		conf.UseSQLite3 = true
+		connStr = "file:" + conf.Database.Path + "?cache=shared&mode=rwc"
+
 	default:
-		return nil, fmt.Errorf("unknown database type: %s", DbCfg.Type)
+		return nil, fmt.Errorf("unknown database type: %s", conf.Database.Type)
 	}
-	return xorm.NewEngine(DbCfg.Type, connStr)
+	return xorm.NewEngine(conf.Database.Type, connStr)
 }
 
 func NewTestEngine(x *xorm.Engine) (err error) {

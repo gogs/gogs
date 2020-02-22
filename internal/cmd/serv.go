@@ -84,8 +84,6 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 		return
 	}
 
-	db.LoadConfigs()
-
 	if conf.UseSQLite3 {
 		_ = os.Chdir(conf.WorkDir())
 	}

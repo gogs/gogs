@@ -146,7 +146,6 @@ func runCreateUser(c *cli.Context) error {
 		return errors.Wrap(err, "init configuration")
 	}
 
-	db.LoadConfigs()
 	db.SetEngine()
 
 	if err := db.CreateUser(&db.User{
@@ -170,7 +169,6 @@ func adminDashboardOperation(operation func() error, successMessage string) func
 			return errors.Wrap(err, "init configuration")
 		}
 
-		db.LoadConfigs()
 		db.SetEngine()
 
 		if err := operation(); err != nil {

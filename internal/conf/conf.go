@@ -182,6 +182,15 @@ func Init(customConf string) error {
 	Repository.Root = ensureAbs(Repository.Root)
 	Repository.Upload.TempPath = ensureAbs(Repository.Upload.TempPath)
 
+	// *******************************
+	// ----- Database settings -----
+	// *******************************
+
+	if err = File.Section("database").MapTo(&Database); err != nil {
+		return errors.Wrap(err, "mapping [database] section")
+	}
+	Database.Path = ensureAbs(Database.Path)
+
 	handleDeprecated()
 
 	// TODO

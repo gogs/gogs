@@ -52,7 +52,6 @@ func runBackup(c *cli.Context) error {
 		return errors.Wrap(err, "init configuration")
 	}
 
-	db.LoadConfigs()
 	db.SetEngine()
 
 	tmpDir := c.String("tempdir")

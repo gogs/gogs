@@ -64,7 +64,6 @@ func GlobalInit(customConf string) error {
 	log.Trace("Build time: %s", conf.BuildTime)
 	log.Trace("Build commit: %s", conf.BuildCommit)
 
-	db.LoadConfigs()
 	conf.NewServices()
 	mailer.NewContext()
 
@@ -136,15 +135,15 @@ func Install(c *context.Context) {
 	f := form.Install{}
 
 	// Database settings
-	f.DbHost = db.DbCfg.Host
-	f.DbUser = db.DbCfg.User
-	f.DbName = db.DbCfg.Name
-	f.DbPath = db.DbCfg.Path
+	f.DbHost = conf.Database.Host
+	f.DbUser = conf.Database.User
+	f.DbName = conf.Database.Name
+	f.DbPath = conf.Database.Path
 
-	c.Data["CurDbOption"] = "MySQL"
-	switch db.DbCfg.Type {
-	case "postgres":
-		c.Data["CurDbOption"] = "PostgreSQL"
+	c.Data["CurDbOption"] = "PostgreSQL"
+	switch conf.Database.Type {
+	case "mysql":
+		c.Data["CurDbOption"] = "MySQL"
 	case "mssql":
 		c.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
@@ -217,16 +216,21 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Pass basic check, now test configuration.
 	// Test database setting.
-	dbTypes := map[string]string{"MySQL": "mysql", "PostgreSQL": "postgres", "MSSQL": "mssql", "SQLite3": "sqlite3", "TiDB": "tidb"}
-	db.DbCfg.Type = dbTypes[f.DbType]
-	db.DbCfg.Host = f.DbHost
-	db.DbCfg.User = f.DbUser
-	db.DbCfg.Passwd = f.DbPasswd
-	db.DbCfg.Name = f.DbName
-	db.DbCfg.SSLMode = f.SSLMode
-	db.DbCfg.Path = f.DbPath
+	dbTypes := map[string]string{
+		"PostgreSQL": "postgres",
+		"MySQL":      "mysql",
+		"MSSQL":      "mssql",
+		"SQLite3":    "sqlite3",
+	}
+	conf.Database.Type = dbTypes[f.DbType]
+	conf.Database.Host = f.DbHost
+	conf.Database.User = f.DbUser
+	conf.Database.Password = f.DbPasswd
+	conf.Database.Name = f.DbName
+	conf.Database.SSLMode = f.SSLMode
+	conf.Database.Path = f.DbPath
 
-	if db.DbCfg.Type == "sqlite3" && len(db.DbCfg.Path) == 0 {
+	if conf.Database.Type == "sqlite3" && len(conf.Database.Path) == 0 {
 		c.FormErr("DbPath")
 		c.RenderWithErr(c.Tr("install.err_empty_db_path"), INSTALL, &f)
 		return
@@ -316,20 +320,20 @@ func InstallPost(c *context.Context, f form.Install) {
 			log.Error("Failed to load custom conf %q: %v", conf.CustomConf, err)
 		}
 	}
-	cfg.Section("database").Key("DB_TYPE").SetValue(db.DbCfg.Type)
-	cfg.Section("database").Key("HOST").SetValue(db.DbCfg.Host)
-	cfg.Section("database").Key("NAME").SetValue(db.DbCfg.Name)
-	cfg.Section("database").Key("USER").SetValue(db.DbCfg.User)
-	cfg.Section("database").Key("PASSWD").SetValue(db.DbCfg.Passwd)
-	cfg.Section("database").Key("SSL_MODE").SetValue(db.DbCfg.SSLMode)
-	cfg.Section("database").Key("PATH").SetValue(db.DbCfg.Path)
+	cfg.Section("database").Key("TYPE").SetValue(conf.Database.Type)
+	cfg.Section("database").Key("HOST").SetValue(conf.Database.Host)
+	cfg.Section("database").Key("NAME").SetValue(conf.Database.Name)
+	cfg.Section("database").Key("USER").SetValue(conf.Database.User)
+	cfg.Section("database").Key("PASSWORD").SetValue(conf.Database.Password)
+	cfg.Section("database").Key("SSL_MODE").SetValue(conf.Database.SSLMode)
+	cfg.Section("database").Key("PATH").SetValue(conf.Database.Path)
 
-	cfg.Section("").Key("APP_NAME").SetValue(f.AppName)
+	cfg.Section("").Key("BRAND_NAME").SetValue(f.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(f.RepoRootPath)
 	cfg.Section("").Key("RUN_USER").SetValue(f.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(f.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(f.HTTPPort)
-	cfg.Section("server").Key("ROOT_URL").SetValue(f.AppUrl)
+	cfg.Section("server").Key("EXTERNAL_URL").SetValue(f.AppUrl)
 
 	if f.SSHPort == 0 {
 		cfg.Section("server").Key("DISABLE_SSH").SetValue("true")
