@@ -52,7 +52,7 @@ func FuncMap() []template.FuncMap {
 				return conf.Server.ExternalURL
 			},
 			"AppVer": func() string {
-				return conf.AppVersion
+				return conf.App.Version
 			},
 			"AppDomain": func() string {
 				return conf.Server.Domain

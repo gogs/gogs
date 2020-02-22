@@ -14,18 +14,21 @@ import (
 // HasMinWinSvc is whether the application is built with Windows Service support.
 var HasMinWinSvc bool
 
-// CustomConf returns the absolute path of custom configuration file that is used.
-var CustomConf string
-
 // Build information should only be set by -ldflags.
 var (
 	BuildTime   string
 	BuildCommit string
 )
 
+// CustomConf returns the absolute path of custom configuration file that is used.
+var CustomConf string
+
 var (
 	// Application settings
 	App struct {
+		// ⚠️ WARNING: Should only be set by gogs.go.
+		Version string `ini:"-"`
+
 		BrandName string
 		RunUser   string
 		RunMode   string

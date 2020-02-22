@@ -353,9 +353,6 @@ const (
 )
 
 var (
-	// App settings
-	AppVersion string
-
 	// Server settings
 	StaticRootPath string
 	LandingPageURL LandingPage
