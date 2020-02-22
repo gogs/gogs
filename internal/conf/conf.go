@@ -122,6 +122,10 @@ func Init(customConf string) error {
 	}
 	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
+	if !filepath.IsAbs(Server.AppDataPath) {
+		Server.AppDataPath = filepath.Join(WorkDir(), Server.AppDataPath)
+	}
+
 	// ************************
 	// ----- SSH settings -----
 	// ************************
@@ -131,10 +135,10 @@ func Init(customConf string) error {
 	}
 
 	if !SSH.Disabled {
-		if !SSH.StartBuiltinServer {
-			SSH.RootPath = filepath.Join(HomeDir(), ".ssh")
-			SSH.KeyTestPath = os.TempDir()
+		SSH.RootPath = filepath.Join(HomeDir(), ".ssh")
+		SSH.KeyTestPath = os.TempDir()
 
+		if !SSH.StartBuiltinServer {
 			if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
 				return errors.Wrap(err, "create SSH root directory")
 			} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {

@@ -12,7 +12,6 @@ import (
 
 	"github.com/json-iterator/go"
 	"github.com/unknwon/com"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -193,20 +192,16 @@ func SendTestMail(c *context.Context) {
 }
 
 func Config(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.config")
-	c.Data["PageIsAdmin"] = true
-	c.Data["PageIsAdminConfig"] = true
+	c.Title("admin.config")
+	c.PageIs("Admin")
+	c.PageIs("AdminConfig")
 
-	c.Data["AppURL"] = conf.Server.ExternalURL
-	c.Data["Domain"] = conf.Server.Domain
-	c.Data["OfflineMode"] = conf.Server.OfflineMode
-	c.Data["DisableRouterLog"] = conf.Server.DisableRouterLog
-	c.Data["RunUser"] = conf.App.RunUser
-	c.Data["RunMode"] = strings.Title(macaron.Env)
+	c.Data["App"] = conf.App
+	c.Data["Server"] = conf.Server
+	c.Data["SSH"] = conf.SSH
+
 	c.Data["LogRootPath"] = conf.LogRootPath
 	c.Data["ReverseProxyAuthUser"] = conf.ReverseProxyAuthUser
-
-	c.Data["SSH"] = conf.SSH
 
 	c.Data["RepoRootPath"] = conf.RepoRootPath
 	c.Data["ScriptType"] = conf.ScriptType
