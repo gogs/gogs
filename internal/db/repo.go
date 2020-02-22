@@ -857,7 +857,7 @@ func createDelegateHooks(repoPath string) (err error) {
 	for _, name := range git.HookNames {
 		hookPath := filepath.Join(repoPath, "hooks", name)
 		if err = ioutil.WriteFile(hookPath,
-			[]byte(fmt.Sprintf(hooksTpls[name], conf.ScriptType, conf.AppPath(), conf.CustomConf)),
+			[]byte(fmt.Sprintf(hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf)),
 			os.ModePerm); err != nil {
 			return fmt.Errorf("create delegate hook '%s': %v", hookPath, err)
 		}

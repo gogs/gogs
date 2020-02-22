@@ -267,7 +267,7 @@ func runServ(c *cli.Context) error {
 			RepoPath:  repo.RepoPath(),
 		})...)
 	}
-	gitCmd.Dir = conf.RepoRootPath
+	gitCmd.Dir = conf.Repository.Root
 	gitCmd.Stdout = os.Stdout
 	gitCmd.Stdin = os.Stdin
 	gitCmd.Stderr = os.Stderr

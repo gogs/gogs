@@ -155,7 +155,7 @@ func Install(c *context.Context) {
 
 	// Application general settings
 	f.AppName = conf.App.BrandName
-	f.RepoRootPath = conf.RepoRootPath
+	f.RepoRootPath = conf.Repository.Root
 
 	// Note(unknwon): it's hard for Windows users change a running user,
 	// 	so just use current one if config says default.

@@ -12,9 +12,13 @@ import (
 // ℹ️ README: This file contains static values that should only be set at initialization time.
 
 // HasMinWinSvc is whether the application is built with Windows Service support.
+//
+// ⚠️ WARNING: should only be set by "static_minwinsvc.go".
 var HasMinWinSvc bool
 
-// Build information should only be set by -ldflags.
+// Build time and commit information.
+//
+// ⚠️ WARNING: should only be set by -ldflags.
 var (
 	BuildTime   string
 	BuildCommit string
@@ -28,7 +32,7 @@ var CustomConf string
 var (
 	// Application settings
 	App struct {
-		// ⚠️ WARNING: Should only be set by gogs.go.
+		// ⚠️ WARNING: Should only be set by main package (i.e. "gogs.go").
 		Version string `ini:"-"`
 
 		BrandName string
@@ -90,10 +94,39 @@ var (
 		ListenPort         int      `ini:"SSH_LISTEN_PORT"`
 		ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
 	}
+
+	// Repository settings
+	Repository struct {
+		Root                     string
+		ScriptType               string
+		ANSICharset              string `ini:"ANSI_CHARSET"`
+		ForcePrivate             bool
+		MaxCreationLimit         int
+		PreferredLicenses        []string
+		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
+		EnableLocalPathMigration bool
+		EnableRawFileRenderMode  bool
+		CommitsFetchConcurrency  int
+
+		// Repository editor settings
+		Editor struct {
+			LineWrapExtensions   []string
+			PreviewableFileModes []string
+		} `ini:"repository.editor"`
+
+		// Repository upload settings
+		Upload struct {
+			Enabled      bool
+			TempPath     string
+			AllowedTypes []string `delim:"|"`
+			FileMaxSize  int64
+			MaxFiles     int
+		} `ini:"repository.upload"`
+	}
 )
 
-// transferDeprecated transfers deprecated values to the new ones when set.
-func transferDeprecated() {
+// handleDeprecated transfers deprecated values to the new ones when set.
+func handleDeprecated() {
 	if App.AppName != "" {
 		App.BrandName = App.AppName
 		App.AppName = ""

@@ -119,8 +119,8 @@ func runBackup(c *cli.Context) error {
 	// Repositories
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
-		log.Info("Dumping repositories in '%s'", conf.RepoRootPath)
-		if err = zip.PackTo(conf.RepoRootPath, reposDump, true); err != nil {
+		log.Info("Dumping repositories in %q", conf.Repository.Root)
+		if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
 			log.Fatal("Failed to dump repositories: %v", err)
 		}
 		log.Info("Repositories dumped to: %s", reposDump)

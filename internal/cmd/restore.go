@@ -145,7 +145,7 @@ func runRestore(c *cli.Context) error {
 	// Repositories
 	reposPath := filepath.Join(archivePath, "repositories.zip")
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") && com.IsExist(reposPath) {
-		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.RepoRootPath)); err != nil {
+		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.Repository.Root)); err != nil {
 			log.Fatal("Failed to extract 'repositories.zip': %v", err)
 		}
 	}

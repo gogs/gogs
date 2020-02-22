@@ -5,6 +5,7 @@
 package conf
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -24,4 +25,12 @@ func openSSHVersion() (string, error) {
 	v := strings.TrimRight(strings.Fields(stderr)[0], ",1234567890")
 	v = strings.TrimSuffix(strings.TrimPrefix(v, "OpenSSH_"), "p")
 	return v, nil
+}
+
+// ensureAbs prepends the WorkDir to the given path if it is not an absolute path.
+func ensureAbs(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(WorkDir(), path)
 }

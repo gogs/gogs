@@ -19,11 +19,11 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -368,7 +368,7 @@ func getGitRepoPath(dir string) (string, error) {
 		dir += ".git"
 	}
 
-	filename := path.Join(conf.RepoRootPath, dir)
+	filename := path.Join(conf.Repository.Root, dir)
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return "", err
 	}
