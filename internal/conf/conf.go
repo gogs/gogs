@@ -169,20 +169,12 @@ func Init(customConf string) error {
 		}
 	}
 
-	// CertFile = sec.Key("CERT_FILE").String()
-	// KeyFile = sec.Key("KEY_FILE").String()
-	// TLSMinVersion = sec.Key("TLS_MIN_VERSION").String()
-
 	transferDeprecated()
 
 	// TODO
 
 	sec := File.Section("server")
-	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
-	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(WorkDir()) // TODO: We need separate TemplatesRootPath
-	AppDataPath = sec.Key("APP_DATA_PATH").MustString("data")
-	EnableGzip = sec.Key("ENABLE_GZIP").MustBool()
 
 	switch sec.Key("LANDING_PAGE").MustString("home") {
 	case "explore":
@@ -211,7 +203,7 @@ func Init(customConf string) error {
 	}
 
 	sec = File.Section("attachment")
-	AttachmentPath = sec.Key("PATH").MustString(path.Join(AppDataPath, "attachments"))
+	AttachmentPath = sec.Key("PATH").MustString(filepath.Join(Server.AppDataPath, "attachments"))
 	if !filepath.IsAbs(AttachmentPath) {
 		AttachmentPath = path.Join(workDir, AttachmentPath)
 	}
@@ -260,11 +252,11 @@ func Init(customConf string) error {
 	}
 
 	sec = File.Section("picture")
-	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "avatars"))
+	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(filepath.Join(Server.AppDataPath, "avatars"))
 	if !filepath.IsAbs(AvatarUploadPath) {
 		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
 	}
-	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(path.Join(AppDataPath, "repo-avatars"))
+	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(filepath.Join(Server.AppDataPath, "repo-avatars"))
 	if !filepath.IsAbs(RepositoryAvatarUploadPath) {
 		RepositoryAvatarUploadPath = path.Join(workDir, RepositoryAvatarUploadPath)
 	}
@@ -362,18 +354,11 @@ const (
 
 var (
 	// App settings
-	AppVersion  string
-	AppDataPath string
+	AppVersion string
 
 	// Server settings
-	DisableRouterLog   bool
-	CertFile           string
-	KeyFile            string
-	TLSMinVersion      string
-	LoadAssetsFromDisk bool
-	StaticRootPath     string
-	EnableGzip         bool
-	LandingPageURL     LandingPage
+	StaticRootPath string
+	LandingPageURL LandingPage
 
 	HTTP struct {
 		AccessControlAllowOrigin string

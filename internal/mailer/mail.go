@@ -61,7 +61,7 @@ func render(tpl string, data map[string]interface{}) (string, error) {
 				},
 			}},
 		}
-		if !conf.LoadAssetsFromDisk {
+		if !conf.Server.LoadAssetsFromDisk {
 			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
 		}
 

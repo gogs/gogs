@@ -144,7 +144,7 @@ func NewRepoContext() {
 		log.Fatal("Failed to execute 'git config --global core.quotepath false': %v - %s", err, stderr)
 	}
 
-	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(conf.AppDataPath, "tmp"))
+	RemoveAllWithNotice("Clean up repository temporary data", filepath.Join(conf.Server.AppDataPath, "tmp"))
 }
 
 // Repository contains information of a repository.
@@ -592,7 +592,7 @@ func (repo *Repository) NextIssueIndex() int64 {
 }
 
 func (repo *Repository) LocalCopyPath() string {
-	return path.Join(conf.AppDataPath, "tmp/local-repo", com.ToStr(repo.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-repo", com.ToStr(repo.ID))
 }
 
 // UpdateLocalCopy fetches latest changes of given branch from repoPath to localPath.

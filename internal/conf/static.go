@@ -41,19 +41,27 @@ var (
 		Protocol             string
 		HTTPAddr             string `ini:"HTTP_ADDR"`
 		HTTPPort             string `ini:"HTTP_PORT"`
+		CertFile             string
+		KeyFile              string
+		TLSMinVersion        string `ini:"TLS_MIN_VERSION"`
 		UnixSocketPermission string
 		LocalRootURL         string `ini:"LOCAL_ROOT_URL"`
 
-		OfflineMode bool
+		OfflineMode      bool
+		DisableRouterLog bool
+		EnableGzip       bool
 
-		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
-		RootURL string `ini:"ROOT_URL"`
+		AppDataPath        string
+		LoadAssetsFromDisk bool
 
 		// Derived from other static values
 		URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
 		Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
 		SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
 		UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
+
+		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
+		RootURL string `ini:"ROOT_URL"`
 	}
 
 	// SSH settings

@@ -61,11 +61,11 @@ and it takes care of all the other things for you`,
 // newMacaron initializes Macaron instance.
 func newMacaron() *macaron.Macaron {
 	m := macaron.New()
-	if !conf.DisableRouterLog {
+	if !conf.Server.DisableRouterLog {
 		m.Use(macaron.Logger())
 	}
 	m.Use(macaron.Recovery())
-	if conf.EnableGzip {
+	if conf.Server.EnableGzip {
 		m.Use(gzip.Gziper())
 	}
 	if conf.Server.Protocol == "fcgi" {
@@ -76,18 +76,18 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		filepath.Join(conf.CustomDir(), "public"),
 		macaron.StaticOptions{
-			SkipLogging: conf.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 	var publicFs http.FileSystem
-	if !conf.LoadAssetsFromDisk {
+	if !conf.Server.LoadAssetsFromDisk {
 		publicFs = public.NewFileSystem()
 	}
 	m.Use(macaron.Static(
 		// NOTE: Embedded assets use Unix-style path separator.
 		path.Join(conf.StaticRootPath, "public"),
 		macaron.StaticOptions{
-			SkipLogging: conf.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 			FileSystem:  publicFs,
 		},
 	))
@@ -96,14 +96,14 @@ func newMacaron() *macaron.Macaron {
 		conf.AvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      db.USER_AVATAR_URL_PREFIX,
-			SkipLogging: conf.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Static(
 		conf.RepositoryAvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      db.REPO_AVATAR_URL_PREFIX,
-			SkipLogging: conf.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 
@@ -114,7 +114,7 @@ func newMacaron() *macaron.Macaron {
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
-	if !conf.LoadAssetsFromDisk {
+	if !conf.Server.LoadAssetsFromDisk {
 		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
 	}
 	m.Use(macaron.Renderer(renderOpt))
@@ -703,33 +703,33 @@ func runWeb(c *cli.Context) error {
 		err = http.ListenAndServe(listenAddr, m)
 
 	case "https":
-		var tlsMinVersion uint16
-		switch conf.TLSMinVersion {
-		case "SSL30":
-			tlsMinVersion = tls.VersionSSL30
+		tlsMinVersion := tls.VersionTLS12
+		switch conf.Server.TLSMinVersion {
+		case "TLS13":
+			tlsMinVersion = tls.VersionTLS13
 		case "TLS12":
 			tlsMinVersion = tls.VersionTLS12
 		case "TLS11":
 			tlsMinVersion = tls.VersionTLS11
 		case "TLS10":
-			fallthrough
-		default:
 			tlsMinVersion = tls.VersionTLS10
 		}
-		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{
-			MinVersion:               tlsMinVersion,
-			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
-			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-			},
-		}, Handler: m}
-		err = server.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
+		server := &http.Server{
+			Addr: listenAddr,
+			TLSConfig: &tls.Config{
+				MinVersion:               uint16(tlsMinVersion),
+				CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
+				PreferServerCipherSuites: true,
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				},
+			}, Handler: m}
+		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
 
 	case "fcgi":
 		err = fcgi.Serve(nil, m)

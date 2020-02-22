@@ -92,7 +92,7 @@ func GlobalInit(customConf string) error {
 	if conf.HasMinWinSvc {
 		log.Info("Builtin Windows Service is supported")
 	}
-	if conf.LoadAssetsFromDisk {
+	if conf.Server.LoadAssetsFromDisk {
 		log.Trace("Assets are loaded from disk")
 	}
 	checkRunMode()

@@ -163,7 +163,7 @@ func Listen(host string, port int, ciphers []string) {
 		},
 	}
 
-	keyPath := filepath.Join(conf.AppDataPath, "ssh/gogs.rsa")
+	keyPath := filepath.Join(conf.Server.AppDataPath, "ssh", "gogs.rsa")
 	if !com.IsExist(keyPath) {
 		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
 		_, stderr, err := com.ExecCmd(conf.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")

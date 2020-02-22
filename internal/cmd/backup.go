@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -74,7 +75,7 @@ func runBackup(c *cli.Context) error {
 		log.Fatal("Failed to save metadata '%s': %v", metaFile, err)
 	}
 
-	archiveName := path.Join(c.String("target"), c.String("archive-name"))
+	archiveName := filepath.Join(c.String("target"), c.String("archive-name"))
 	log.Info("Packing backup files to: %s", archiveName)
 
 	z, err := zip.Create(archiveName)
@@ -86,7 +87,7 @@ func runBackup(c *cli.Context) error {
 	}
 
 	// Database
-	dbDir := path.Join(rootDir, "db")
+	dbDir := filepath.Join(rootDir, "db")
 	if err = db.DumpDatabase(dbDir); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
@@ -104,7 +105,7 @@ func runBackup(c *cli.Context) error {
 	// Data files
 	if !c.Bool("database-only") {
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
-			dirPath := path.Join(conf.AppDataPath, dir)
+			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if !com.IsDir(dirPath) {
 				continue
 			}
@@ -117,7 +118,7 @@ func runBackup(c *cli.Context) error {
 
 	// Repositories
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") {
-		reposDump := path.Join(rootDir, "repositories.zip")
+		reposDump := filepath.Join(rootDir, "repositories.zip")
 		log.Info("Dumping repositories in '%s'", conf.RepoRootPath)
 		if err = zip.PackTo(conf.RepoRootPath, reposDump, true); err != nil {
 			log.Fatal("Failed to dump repositories: %v", err)

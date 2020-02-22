@@ -61,7 +61,7 @@ func runRestore(c *cli.Context) error {
 	defer os.RemoveAll(archivePath)
 
 	// Check backup version
-	metaFile := path.Join(archivePath, "metadata.ini")
+	metaFile := filepath.Join(archivePath, "metadata.ini")
 	if !com.IsExist(metaFile) {
 		log.Fatal("File 'metadata.ini' is missing")
 	}
@@ -115,22 +115,22 @@ func runRestore(c *cli.Context) error {
 				log.Fatal("Failed to backup current 'custom': %v", err)
 			}
 		}
-		if err = os.Rename(path.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
+		if err = os.Rename(filepath.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
 			log.Fatal("Failed to import 'custom': %v", err)
 		}
 	}
 
 	// Data files
 	if !c.Bool("database-only") {
-		_ = os.MkdirAll(conf.AppDataPath, os.ModePerm)
+		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			// Skip if backup archive does not have corresponding data
-			srcPath := path.Join(archivePath, "data", dir)
+			srcPath := filepath.Join(archivePath, "data", dir)
 			if !com.IsDir(srcPath) {
 				continue
 			}
 
-			dirPath := path.Join(conf.AppDataPath, dir)
+			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if com.IsExist(dirPath) {
 				if err = os.Rename(dirPath, dirPath+".bak"); err != nil {
 					log.Fatal("Failed to backup current 'data': %v", err)
@@ -143,9 +143,9 @@ func runRestore(c *cli.Context) error {
 	}
 
 	// Repositories
-	reposPath := path.Join(archivePath, "repositories.zip")
+	reposPath := filepath.Join(archivePath, "repositories.zip")
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") && com.IsExist(reposPath) {
-		if err := zip.ExtractTo(reposPath, path.Dir(conf.RepoRootPath)); err != nil {
+		if err := zip.ExtractTo(reposPath, filepath.Dir(conf.RepoRootPath)); err != nil {
 			log.Fatal("Failed to extract 'repositories.zip': %v", err)
 		}
 	}

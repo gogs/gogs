@@ -71,7 +71,7 @@ func (repo *Repository) InitWiki() error {
 }
 
 func (repo *Repository) LocalWikiPath() string {
-	return path.Join(conf.AppDataPath, "tmp/local-wiki", com.ToStr(repo.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", com.ToStr(repo.ID))
 }
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
