@@ -2,7 +2,7 @@
 
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge) ![Docker image size](https://img.shields.io/microbadger/image-size/gogs/gogs?logo=docker&style=for-the-badge)
 
-Visit [Docker Hub](https://hub.docker.com/repository/docker/gogs) see all available images and tags.
+Visit [Docker Hub](https://hub.docker.com/orgs/gogs/repositories) see all available images and tags.
 
 ## Usage
 

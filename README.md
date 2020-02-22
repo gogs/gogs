@@ -1,4 +1,4 @@
-# <img src="public/img/favicon.png" width="45" align="left">Gogs - A painless self-hosted Git service
+# <img src="https://github.com/gogs/gogs/raw/master/public/img/favicon.png" width="45" align="left">Gogs - A painless self-hosted Git service
 
 [![Build status](https://img.shields.io/travis/gogs/gogs/master.svg?style=for-the-badge&logo=travis)](https://travis-ci.org/gogs/gogs) [![Build status](https://img.shields.io/appveyor/ci/Unknwon/gogs?logo=appveyor&style=for-the-badge)](https://ci.appveyor.com/project/Unknwon/gogs/branch/master) [![Discord](https://img.shields.io/discord/382595433060499458.svg?style=for-the-badge&logo=discord)](https://discord.gg/9aqdHU7) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
 
