@@ -6,7 +6,7 @@
 			<div class="twelve wide column content">
 				{{template "base/alert" .}}
 
-				{{/*	Server settings	*/}}
+				{{/* Server settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.server_config"}}
 				</h4>
@@ -72,7 +72,7 @@
 					</dl>
 				</div>
 
-				{{/*	SSH settings	*/}}
+				{{/* SSH settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.ssh_config"}}
 				</h4>
@@ -112,7 +112,7 @@
 					</dl>
 				</div>
 
-				{{/*	Repository settings	*/}}
+				{{/* Repository settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.repo_config"}}
 				</h4>
@@ -161,6 +161,27 @@
 					</dl>
 				</div>
 
+				{{/* Database settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.db_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.db.type"}}</dt>
+						<dd>{{.Database.Type}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.host"}}</dt>
+						<dd>{{.Database.Host}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.name"}}</dt>
+						<dd>{{.Database.Name}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.user"}}</dt>
+						<dd>{{.Database.User}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.ssl_mode"}}</dt>
+						<dd>{{.Database.SSLMode}} {{.i18n.Tr "admin.config.db.ssl_mode_helper"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.path"}}</dt>
+						<dd><code>{{.Database.Path}}</code> {{.i18n.Tr "admin.config.db.path_helper"}}</dd>
+					</dl>
+				</div>
+
 				<!-- HTTP Configuration -->
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.http_config"}}
@@ -175,27 +196,6 @@
 								<i>{{.i18n.Tr "admin.config.not_set"}}</i>
 							{{end}}
 						</dd>
-					</dl>
-				</div>
-
-				<!-- Database Configuration -->
-				<h4 class="ui top attached header">
-					{{.i18n.Tr "admin.config.db_config"}}
-				</h4>
-				<div class="ui attached table segment">
-					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.db_type"}}</dt>
-						<dd>{{.DbCfg.Type}}</dd>
-						<dt>{{.i18n.Tr "admin.config.db_host"}}</dt>
-						<dd>{{.DbCfg.Host}}</dd>
-						<dt>{{.i18n.Tr "admin.config.db_name"}}</dt>
-						<dd>{{.DbCfg.Name}}</dd>
-						<dt>{{.i18n.Tr "admin.config.db_user"}}</dt>
-						<dd>{{.DbCfg.User}}</dd>
-						<dt>{{.i18n.Tr "admin.config.db_ssl_mode"}}</dt>
-						<dd>{{.DbCfg.SSLMode}} {{.i18n.Tr "admin.config.db_ssl_mode_helper"}}</dd>
-						<dt>{{.i18n.Tr "admin.config.db_path"}}</dt>
-						<dd>{{.DbCfg.Path}} {{.i18n.Tr "admin.config.db_path_helper"}}</dd>
 					</dl>
 				</div>
 

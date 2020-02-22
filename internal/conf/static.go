@@ -123,6 +123,22 @@ var (
 			MaxFiles     int
 		} `ini:"repository.upload"`
 	}
+
+	// Database settings
+	Database struct {
+		Type     string
+		Host     string
+		Name     string
+		User     string
+		Password string
+		SSLMode  string `ini:"SSL_MODE"`
+		Path     string
+
+		// Deprecated: Use Type instead, will be removed in 0.13.
+		DbType string
+		// Deprecated: Use Password instead, will be removed in 0.13.
+		Passwd string
+	}
 )
 
 // handleDeprecated transfers deprecated values to the new ones when set.
@@ -139,5 +155,14 @@ func handleDeprecated() {
 	if Server.LangdingPage == "explore" {
 		Server.LandingURL = "/explore"
 		Server.LangdingPage = ""
+	}
+
+	if Database.DbType != "" {
+		Database.Type = Database.DbType
+		Database.DbType = ""
+	}
+	if Database.Passwd != "" {
+		Database.Password = Database.Passwd
+		Database.Passwd = ""
 	}
 }
