@@ -72,12 +72,13 @@ func Init(customConf string) error {
 	}
 	File.NameMapper = ini.SnackCase
 
-	customConf, err = filepath.Abs(customConf)
-	if err != nil {
-		return errors.Wrap(err, "get absolute path")
-	}
 	if customConf == "" {
-		customConf = filepath.Join(CustomDir(), "conf/app.ini")
+		customConf = filepath.Join(CustomDir(), "conf", "app.ini")
+	} else {
+		customConf, err = filepath.Abs(customConf)
+		if err != nil {
+			return errors.Wrap(err, "get absolute path")
+		}
 	}
 	CustomConf = customConf
 

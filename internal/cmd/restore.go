@@ -32,7 +32,7 @@ If corresponding files or database tables are not presented in the archive, they
 be skipped and remain unchanged.`,
 	Action: runRestore,
 	Flags: []cli.Flag{
-		stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+		stringFlag("config, c", "", "Custom configuration file path"),
 		boolFlag("verbose, v", "Show process details"),
 		stringFlag("tempdir, t", os.TempDir(), "Temporary directory path"),
 		stringFlag("from", "", "Path to backup archive"),
