@@ -16,7 +16,7 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route/api/v1/user"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginName string) {
@@ -68,7 +68,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	log.Trace("Account created by admin %q: %s", c.User.Name, u.Name)
 
 	// Send email notification.
-	if form.SendNotify && setting.MailService != nil {
+	if form.SendNotify && conf.MailService != nil {
 		mailer.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(u))
 	}
 

@@ -23,7 +23,7 @@ Gogs is built and runs as a single binary and meant to be cross platform. Theref
 Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
-- [Go](https://golang.org/doc/install) (v1.11 or higher)
+- [Go](https://golang.org/doc/install) (v1.12 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [GNU Make](https://www.gnu.org/software/make/)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):

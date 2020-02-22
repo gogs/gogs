@@ -13,7 +13,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/auth"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -27,8 +27,8 @@ type ToggleOptions struct {
 func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(c *Context) {
 		// Cannot view any page before installation.
-		if !setting.InstallLock {
-			c.Redirect(setting.AppSubURL + "/install")
+		if !conf.InstallLock {
+			c.Redirect(conf.Server.Subpath + "/install")
 			return
 		}
 
@@ -40,14 +40,14 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		}
 
 		// Check non-logged users landing page.
-		if !c.IsLogged && c.Req.RequestURI == "/" && setting.LandingPageURL != setting.LANDING_PAGE_HOME {
-			c.Redirect(setting.AppSubURL + string(setting.LandingPageURL))
+		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
+			c.Redirect(conf.Server.LandingURL)
 			return
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
 		if options.SignOutRequired && c.IsLogged && c.Req.RequestURI != "/" {
-			c.Redirect(setting.AppSubURL + "/")
+			c.Redirect(conf.Server.Subpath + "/")
 			return
 		}
 
@@ -68,10 +68,10 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 					return
 				}
 
-				c.SetCookie("redirect_to", url.QueryEscape(setting.AppSubURL+c.Req.RequestURI), 0, setting.AppSubURL)
-				c.Redirect(setting.AppSubURL + "/user/login")
+				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+				c.Redirect(conf.Server.Subpath + "/user/login")
 				return
-			} else if !c.User.IsActive && setting.Service.RegisterEmailConfirm {
+			} else if !c.User.IsActive && conf.Service.RegisterEmailConfirm {
 				c.Data["Title"] = c.Tr("auth.active_your_account")
 				c.HTML(200, "user/auth/activate")
 				return
@@ -80,9 +80,9 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		// Redirect to log in page if auto-signin info is provided and has not signed in.
 		if !options.SignOutRequired && !c.IsLogged && !auth.IsAPIPath(c.Req.URL.Path) &&
-			len(c.GetCookie(setting.CookieUserName)) > 0 {
-			c.SetCookie("redirect_to", url.QueryEscape(setting.AppSubURL+c.Req.RequestURI), 0, setting.AppSubURL)
-			c.Redirect(setting.AppSubURL + "/user/login")
+			len(c.GetCookie(conf.CookieUserName)) > 0 {
+			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+			c.Redirect(conf.Server.Subpath + "/user/login")
 			return
 		}
 

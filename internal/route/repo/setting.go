@@ -14,12 +14,12 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -196,7 +196,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 		log.Trace("Repository converted from mirror to regular: %s/%s", c.Repo.Owner.Name, repo.Name)
 		c.Flash.Success(c.Tr("repo.settings.convert_succeed"))
-		c.Redirect(setting.AppSubURL + "/" + c.Repo.Owner.Name + "/" + repo.Name)
+		c.Redirect(conf.Server.Subpath + "/" + c.Repo.Owner.Name + "/" + repo.Name)
 
 	case "transfer":
 		if !c.Repo.IsOwner() {
@@ -235,7 +235,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 		log.Trace("Repository transfered: %s/%s -> %s", c.Repo.Owner.Name, repo.Name, newOwner)
 		c.Flash.Success(c.Tr("repo.settings.transfer_succeed"))
-		c.Redirect(setting.AppSubURL + "/" + newOwner + "/" + repo.Name)
+		c.Redirect(conf.Server.Subpath + "/" + newOwner + "/" + repo.Name)
 
 	case "delete":
 		if !c.Repo.IsOwner() {
@@ -371,7 +371,7 @@ func SettingsCollaboration(c *context.Context) {
 func SettingsCollaborationPost(c *context.Context) {
 	name := strings.ToLower(c.Query("collaborator"))
 	if len(name) == 0 || c.Repo.Owner.LowerName == name {
-		c.Redirect(setting.AppSubURL + c.Req.URL.Path)
+		c.Redirect(conf.Server.Subpath + c.Req.URL.Path)
 		return
 	}
 
@@ -379,7 +379,7 @@ func SettingsCollaborationPost(c *context.Context) {
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Flash.Error(c.Tr("form.user_not_exist"))
-			c.Redirect(setting.AppSubURL + c.Req.URL.Path)
+			c.Redirect(conf.Server.Subpath + c.Req.URL.Path)
 		} else {
 			c.Handle(500, "GetUserByName", err)
 		}
@@ -389,7 +389,7 @@ func SettingsCollaborationPost(c *context.Context) {
 	// Organization is not allowed to be added as a collaborator
 	if u.IsOrganization() {
 		c.Flash.Error(c.Tr("repo.settings.org_not_allowed_to_be_collaborator"))
-		c.Redirect(setting.AppSubURL + c.Req.URL.Path)
+		c.Redirect(conf.Server.Subpath + c.Req.URL.Path)
 		return
 	}
 
@@ -398,12 +398,12 @@ func SettingsCollaborationPost(c *context.Context) {
 		return
 	}
 
-	if setting.Service.EnableNotifyMail {
+	if conf.Service.EnableNotifyMail {
 		mailer.SendCollaboratorMail(db.NewMailerUser(u), db.NewMailerUser(c.User), db.NewMailerRepo(c.Repo.Repository))
 	}
 
 	c.Flash.Success(c.Tr("repo.settings.add_collaborator_success"))
-	c.Redirect(setting.AppSubURL + c.Req.URL.Path)
+	c.Redirect(conf.Server.Subpath + c.Req.URL.Path)
 }
 
 func ChangeCollaborationAccessMode(c *context.Context) {

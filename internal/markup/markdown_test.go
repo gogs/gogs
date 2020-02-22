@@ -12,12 +12,12 @@ import (
 	"github.com/russross/blackfriday"
 	. "github.com/smartystreets/goconvey/convey"
 
+	"gogs.io/gogs/internal/conf"
 	. "gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
 )
 
 func Test_IsMarkdownFile(t *testing.T) {
-	setting.Markdown.FileExtensions = strings.Split(".md,.markdown,.mdown,.mkd", ",")
+	conf.Markdown.FileExtensions = strings.Split(".md,.markdown,.mdown,.mkd", ",")
 	Convey("Detect Markdown file extension", t, func() {
 		testCases := []struct {
 			ext   string
@@ -40,7 +40,7 @@ func Test_IsMarkdownFile(t *testing.T) {
 
 func Test_Markdown(t *testing.T) {
 	Convey("Rendering an issue URL", t, func() {
-		setting.AppURL = "http://localhost:3000/"
+		conf.Server.ExternalURL = "http://localhost:3000/"
 		htmlFlags := 0
 		htmlFlags |= blackfriday.HTML_SKIP_STYLE
 		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
@@ -82,7 +82,7 @@ func Test_Markdown(t *testing.T) {
 	})
 
 	Convey("Rendering a commit URL", t, func() {
-		setting.AppURL = "http://localhost:3000/"
+		conf.Server.ExternalURL = "http://localhost:3000/"
 		htmlFlags := 0
 		htmlFlags |= blackfriday.HTML_SKIP_STYLE
 		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS

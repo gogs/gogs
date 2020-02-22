@@ -24,7 +24,7 @@ import (
 
 	"github.com/gogs/chardet"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 // MD5Bytes encodes string to MD5 bytes.
@@ -62,9 +62,9 @@ func DetectEncoding(content []byte) (string, error) {
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
-	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
-		log.Trace("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
-		return setting.Repository.AnsiCharset, err
+	if result.Charset != "UTF-8" && len(conf.Repository.AnsiCharset) > 0 {
+		log.Trace("Using default AnsiCharset: %s", conf.Repository.AnsiCharset)
+		return conf.Repository.AnsiCharset, err
 	}
 
 	log.Trace("Detected encoding: %s", result.Charset)
@@ -170,7 +170,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 	// create sha1 encode string
 	sh := sha1.New()
-	sh.Write([]byte(data + setting.SecretKey + startStr + endStr + com.ToStr(minutes)))
+	_, _ = sh.Write([]byte(data + conf.SecretKey + startStr + endStr + com.ToStr(minutes)))
 	encoded := hex.EncodeToString(sh.Sum(nil))
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
@@ -190,19 +190,19 @@ func HashEmail(email string) string {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func AvatarLink(email string) (url string) {
-	if setting.EnableFederatedAvatar && setting.LibravatarService != nil &&
+	if conf.EnableFederatedAvatar && conf.LibravatarService != nil &&
 		strings.Contains(email, "@") {
 		var err error
-		url, err = setting.LibravatarService.FromEmail(email)
+		url, err = conf.LibravatarService.FromEmail(email)
 		if err != nil {
 			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
-	if len(url) == 0 && !setting.DisableGravatar {
-		url = setting.GravatarSource + HashEmail(email) + "?d=identicon"
+	if len(url) == 0 && !conf.DisableGravatar {
+		url = conf.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
 	if len(url) == 0 {
-		url = setting.AppSubURL + "/img/avatar_default.png"
+		url = conf.Server.Subpath + "/img/avatar_default.png"
 	}
 	return url
 }
@@ -360,7 +360,7 @@ func RawTimeSince(t time.Time, lang string) string {
 
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(t time.Time, lang string) template.HTML {
-	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(setting.TimeFormat), timeSince(t, lang)))
+	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(conf.TimeFormat), timeSince(t, lang)))
 }
 
 // Subtract deals with subtraction of all types of number.

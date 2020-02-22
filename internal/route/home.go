@@ -8,9 +8,9 @@ import (
 	"github.com/unknwon/paginater"
 	user2 "gogs.io/gogs/internal/route/user"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 
 func Home(c *context.Context) {
 	if c.IsLogged {
-		if !c.User.IsActive && setting.Service.RegisterEmailConfirm {
+		if !c.User.IsActive && conf.Service.RegisterEmailConfirm {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
 			c.Success(user2.ACTIVATE)
 		} else {
@@ -32,9 +32,9 @@ func Home(c *context.Context) {
 	}
 
 	// Check auto-login.
-	uname := c.GetCookie(setting.CookieUserName)
+	uname := c.GetCookie(conf.CookieUserName)
 	if len(uname) != 0 {
-		c.Redirect(setting.AppSubURL + "/user/login")
+		c.Redirect(conf.Server.Subpath + "/user/login")
 		return
 	}
 
@@ -58,7 +58,7 @@ func ExploreRepos(c *context.Context) {
 		UserID:   c.UserID(),
 		OrderBy:  "updated_unix DESC",
 		Page:     page,
-		PageSize: setting.UI.ExplorePagingNum,
+		PageSize: conf.UI.ExplorePagingNum,
 	})
 	if err != nil {
 		c.ServerError("SearchRepositoryByName", err)
@@ -66,7 +66,7 @@ func ExploreRepos(c *context.Context) {
 	}
 	c.Data["Keyword"] = keyword
 	c.Data["Total"] = count
-	c.Data["Page"] = paginater.New(int(count), setting.UI.ExplorePagingNum, page, 5)
+	c.Data["Page"] = paginater.New(int(count), conf.UI.ExplorePagingNum, page, 5)
 
 	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
 		c.ServerError("RepositoryList.LoadAttributes", err)
@@ -136,7 +136,7 @@ func ExploreUsers(c *context.Context) {
 		Type:     db.USER_TYPE_INDIVIDUAL,
 		Counter:  db.CountUsers,
 		Ranger:   db.Users,
-		PageSize: setting.UI.ExplorePagingNum,
+		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
 	})
@@ -151,7 +151,7 @@ func ExploreOrganizations(c *context.Context) {
 		Type:     db.USER_TYPE_ORGANIZATION,
 		Counter:  db.CountOrganizations,
 		Ranger:   db.Organizations,
-		PageSize: setting.UI.ExplorePagingNum,
+		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_ORGANIZATIONS,
 	})

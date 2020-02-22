@@ -14,7 +14,7 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 type DiscordEmbedFooterObject struct {
@@ -78,7 +78,7 @@ func getDiscordCreatePayload(p *api.CreatePayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppURL + p.Sender.UserName,
+			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -95,7 +95,7 @@ func getDiscordDeletePayload(p *api.DeletePayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppURL + p.Sender.UserName,
+			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -112,7 +112,7 @@ func getDiscordForkPayload(p *api.ForkPayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppURL + p.Sender.UserName,
+			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,
@@ -160,7 +160,7 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 		AvatarURL: slack.IconURL,
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppURL + p.Sender.UserName,
+			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Color:       int(color),
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
@@ -361,7 +361,7 @@ func getDiscordReleasePayload(p *api.ReleasePayload) (*DiscordPayload, error) {
 	return &DiscordPayload{
 		Embeds: []*DiscordEmbedObject{{
 			Description: content,
-			URL:         setting.AppURL + p.Sender.UserName,
+			URL:         conf.Server.ExternalURL + p.Sender.UserName,
 			Author: &DiscordEmbedAuthorObject{
 				Name:    p.Sender.UserName,
 				IconURL: p.Sender.AvatarUrl,

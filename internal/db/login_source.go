@@ -11,7 +11,7 @@ import (
 	"net/smtp"
 	"net/textproto"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -27,8 +27,8 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
 )
 
 type LoginType int
@@ -462,7 +462,7 @@ var localLoginSources = &LocalLoginSources{}
 // LoadAuthSources loads authentication sources from local files
 // and converts them into login sources.
 func LoadAuthSources() {
-	authdPath := path.Join(setting.CustomPath, "conf/auth.d")
+	authdPath := filepath.Join(conf.CustomDir(), "conf", "auth.d")
 	if !com.IsDir(authdPath) {
 		return
 	}

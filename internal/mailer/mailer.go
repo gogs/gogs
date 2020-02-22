@@ -18,7 +18,7 @@ import (
 	"gopkg.in/gomail.v2"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 type Message struct {
@@ -34,13 +34,13 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
-	msg.SetHeader("Subject", setting.MailService.SubjectPrefix+subject)
+	msg.SetHeader("Subject", conf.MailService.SubjectPrefix+subject)
 	msg.SetDateHeader("Date", time.Now())
 
 	contentType := "text/html"
 	body := htmlBody
 	switchedToPlaintext := false
-	if setting.MailService.UsePlainText || setting.MailService.AddPlainTextAlt {
+	if conf.MailService.UsePlainText || conf.MailService.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
 			log.Error("html2text.FromString: %v", err)
@@ -51,7 +51,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 		}
 	}
 	msg.SetBody(contentType, body)
-	if switchedToPlaintext && setting.MailService.AddPlainTextAlt && !setting.MailService.UsePlainText {
+	if switchedToPlaintext && conf.MailService.AddPlainTextAlt && !conf.MailService.UsePlainText {
 		// The AddAlternative method name is confusing - adding html as an "alternative" will actually cause mail
 		// clients to show it as first priority, and the text "main body" is the 2nd priority fallback.
 		// See: https://godoc.org/gopkg.in/gomail.v2#Message.AddAlternative
@@ -65,7 +65,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 
 // NewMessage creates new mail message object with default From header.
 func NewMessage(to []string, subject, body string) *Message {
-	return NewMessageFrom(to, setting.MailService.From, subject, body)
+	return NewMessageFrom(to, conf.MailService.From, subject, body)
 }
 
 type loginAuth struct {
@@ -99,7 +99,7 @@ type Sender struct {
 }
 
 func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
-	opts := setting.MailService
+	opts := conf.MailService
 
 	host, port, err := net.SplitHostPort(opts.Host)
 	if err != nil {
@@ -225,11 +225,11 @@ func NewContext() {
 	// Need to check if mailQueue is nil because in during reinstall (user had installed
 	// before but swithed install lock off), this function will be called again
 	// while mail queue is already processing tasks, and produces a race condition.
-	if setting.MailService == nil || mailQueue != nil {
+	if conf.MailService == nil || mailQueue != nil {
 		return
 	}
 
-	mailQueue = make(chan *Message, setting.MailService.QueueLength)
+	mailQueue = make(chan *Message, conf.MailService.QueueLength)
 	go processMailQueue()
 }
 
@@ -239,7 +239,7 @@ func NewContext() {
 func Send(msg *Message) {
 	mailQueue <- msg
 
-	if setting.HookMode {
+	if conf.HookMode {
 		<-msg.confirmChan
 		return
 	}

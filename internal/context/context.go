@@ -21,10 +21,10 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -151,9 +151,9 @@ func (c *Context) Redirect(location string, status ...int) {
 }
 
 // SubURLRedirect responses redirection wtih given location and status.
-// It prepends setting.AppSubURL to the location string.
+// It prepends setting.Server.Subpath to the location string.
 func (c *Context) SubURLRedirect(location string, status ...int) {
-	c.Redirect(setting.AppSubURL+location, status...)
+	c.Redirect(conf.Server.Subpath+location, status...)
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
@@ -174,7 +174,7 @@ func (c *Context) Handle(status int, msg string, err error) {
 	case http.StatusInternalServerError:
 		c.Data["Title"] = "Internal Server Error"
 		log.Error("%s: %v", msg, err)
-		if !setting.ProdMode || (c.IsLogged && c.User.IsAdmin) {
+		if !conf.IsProdMode() || (c.IsLogged && c.User.IsAdmin) {
 			c.Data["ErrorMsg"] = err
 		}
 	}
@@ -233,7 +233,7 @@ func Contexter() macaron.Handler {
 			csrf:    x,
 			Flash:   f,
 			Session: sess,
-			Link:    setting.AppSubURL + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
+			Link:    conf.Server.Subpath + strings.TrimSuffix(ctx.Req.URL.Path, "/"),
 			Repo: &Repository{
 				PullRequest: &PullRequest{},
 			},
@@ -263,9 +263,9 @@ func Contexter() macaron.Handler {
 				branchName = repo.DefaultBranch
 			}
 
-			prefix := setting.AppURL + path.Join(ownerName, repoName, "src", branchName)
+			prefix := conf.Server.ExternalURL + path.Join(ownerName, repoName, "src", branchName)
 			insecureFlag := ""
-			if !strings.HasPrefix(setting.AppURL, "https://") {
+			if !strings.HasPrefix(conf.Server.ExternalURL, "https://") {
 				insecureFlag = "--insecure "
 			}
 			c.PlainText(http.StatusOK, []byte(com.Expand(`<!doctype html>
@@ -279,7 +279,7 @@ func Contexter() macaron.Handler {
 	</body>
 </html>
 `, map[string]string{
-				"GoGetImport":    path.Join(setting.HostAddress, setting.AppSubURL, repo.FullName()),
+				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, repo.FullName()),
 				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
@@ -288,8 +288,8 @@ func Contexter() macaron.Handler {
 			return
 		}
 
-		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
-			c.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
+			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
 			c.Header().Set("'Access-Control-Allow-Credentials' ", "true")
 			c.Header().Set("Access-Control-Max-Age", "3600")
 			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
@@ -312,7 +312,7 @@ func Contexter() macaron.Handler {
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
 		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
-			if err := c.Req.ParseMultipartForm(setting.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
+			if err := c.Req.ParseMultipartForm(conf.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
 				c.ServerError("ParseMultipartForm", err)
 				return
 			}
@@ -323,8 +323,8 @@ func Contexter() macaron.Handler {
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
-		c.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
-		c.Data["ShowFooterBranding"] = setting.ShowFooterBranding
+		c.Data["ShowRegistrationButton"] = conf.Service.ShowRegistrationButton
+		c.Data["ShowFooterBranding"] = conf.ShowFooterBranding
 
 		c.renderNoticeBanner()
 

@@ -17,12 +17,12 @@ import (
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -116,8 +116,8 @@ func issues(c *context.Context, isPullList bool) {
 
 	// Must sign in to see issues about you.
 	if viewType != "all" && !c.IsLogged {
-		c.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubURL+c.Req.RequestURI), 0, setting.AppSubURL)
-		c.Redirect(setting.AppSubURL + "/user/login")
+		c.SetCookie("redirect_to", "/"+url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+		c.Redirect(conf.Server.Subpath + "/user/login")
 		return
 	}
 
@@ -167,7 +167,7 @@ func issues(c *context.Context, isPullList bool) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	pager := paginater.New(total, setting.UI.IssuePagingNum, page, 5)
+	pager := paginater.New(total, conf.UI.IssuePagingNum, page, 5)
 	c.Data["Page"] = pager
 
 	issues, err := db.Issues(&db.IssuesOptions{
@@ -256,10 +256,10 @@ func Pulls(c *context.Context) {
 
 func renderAttachmentSettings(c *context.Context) {
 	c.Data["RequireDropzone"] = true
-	c.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
-	c.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
-	c.Data["AttachmentMaxSize"] = setting.AttachmentMaxSize
-	c.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
+	c.Data["IsAttachmentEnabled"] = conf.AttachmentEnabled
+	c.Data["AttachmentAllowedTypes"] = conf.AttachmentAllowedTypes
+	c.Data["AttachmentMaxSize"] = conf.AttachmentMaxSize
+	c.Data["AttachmentMaxFiles"] = conf.AttachmentMaxFiles
 }
 
 func RetrieveRepoMilestonesAndAssignees(c *context.Context, repo *db.Repository) {
@@ -429,7 +429,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	var attachments []string
-	if setting.AttachmentEnabled {
+	if conf.AttachmentEnabled {
 		attachments = f.Files
 	}
 
@@ -493,12 +493,12 @@ func uploadAttachment(c *context.Context, allowedTypes []string) {
 }
 
 func UploadIssueAttachment(c *context.Context) {
-	if !setting.AttachmentEnabled {
+	if !conf.AttachmentEnabled {
 		c.NotFound()
 		return
 	}
 
-	uploadAttachment(c, strings.Split(setting.AttachmentAllowedTypes, ","))
+	uploadAttachment(c, strings.Split(conf.AttachmentAllowedTypes, ","))
 }
 
 func viewIssue(c *context.Context, isPullList bool) {
@@ -669,7 +669,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	c.Data["NumParticipants"] = len(participants)
 	c.Data["Issue"] = issue
 	c.Data["IsIssueOwner"] = c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))
-	c.Data["SignInLink"] = setting.AppSubURL + "/user/login?redirect_to=" + c.Data["Link"].(string)
+	c.Data["SignInLink"] = conf.Server.Subpath + "/user/login?redirect_to=" + c.Data["Link"].(string)
 	c.HTML(200, ISSUE_VIEW)
 }
 
@@ -845,7 +845,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 	}
 
 	var attachments []string
-	if setting.AttachmentEnabled {
+	if conf.AttachmentEnabled {
 		attachments = f.Files
 	}
 
@@ -1098,7 +1098,7 @@ func Milestones(c *context.Context) {
 	} else {
 		total = int(closedCount)
 	}
-	c.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
+	c.Data["Page"] = paginater.New(total, conf.UI.IssuePagingNum, page, 5)
 
 	miles, err := db.GetMilestones(c.Repo.Repository.ID, page, isShowClosed)
 	if err != nil {
@@ -1130,7 +1130,7 @@ func NewMilestone(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
 	c.HTML(200, MILESTONE_NEW)
 }
 
@@ -1139,7 +1139,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
 
 	if c.HasError() {
 		c.HTML(200, MILESTONE_NEW)
@@ -1175,7 +1175,7 @@ func EditMilestone(c *context.Context) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
 
 	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
@@ -1199,7 +1199,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
 
 	if c.HasError() {
 		c.HTML(200, MILESTONE_NEW)

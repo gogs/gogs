@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,14 +19,14 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/sync"
 )
 
-var PullRequestQueue = sync.NewUniqueQueue(setting.Repository.PullRequestQueueLength)
+var PullRequestQueue = sync.NewUniqueQueue(conf.Repository.PullRequestQueueLength)
 
 type PullRequestType int
 
@@ -218,9 +219,9 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 
 	// Create temporary directory to store temporary copy of the base repository,
 	// and clean it up when operation finished regardless of succeed or not.
-	tmpBasePath := path.Join(setting.AppDataPath, "tmp/repos", com.ToStr(time.Now().Nanosecond())+".git")
-	os.MkdirAll(path.Dir(tmpBasePath), os.ModePerm)
-	defer os.RemoveAll(path.Dir(tmpBasePath))
+	tmpBasePath := filepath.Join(conf.Server.AppDataPath, "tmp", "repos", com.ToStr(time.Now().Nanosecond())+".git")
+	os.MkdirAll(filepath.Dir(tmpBasePath), os.ModePerm)
+	defer os.RemoveAll(filepath.Dir(tmpBasePath))
 
 	// Clone the base repository to the defined temporary directory,
 	// and checks out to base branch directly.
@@ -378,7 +379,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		Ref:        git.BRANCH_PREFIX + pr.BaseBranch,
 		Before:     pr.MergeBase,
 		After:      mergeCommit.ID.String(),
-		CompareURL: setting.AppURL + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
+		CompareURL: conf.Server.ExternalURL + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
 		Commits:    commits,
 		Repo:       pr.BaseRepo.APIFormat(nil),
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),

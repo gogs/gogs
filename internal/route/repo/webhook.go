@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -32,7 +32,7 @@ func Webhooks(c *context.Context) {
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["BaseLink"] = c.Repo.RepoLink
 	c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://github.com/gogs/docs-api/blob/master/Repositories/Webhooks.md")
-	c.Data["Types"] = setting.Webhook.Types
+	c.Data["Types"] = conf.Webhook.Types
 
 	ws, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
@@ -76,7 +76,7 @@ func getOrgRepoCtx(c *context.Context) (*OrgRepoCtx, error) {
 
 func checkHookType(c *context.Context) string {
 	hookType := strings.ToLower(c.Params(":type"))
-	if !com.IsSliceContainsStr(setting.Webhook.Types, hookType) {
+	if !com.IsSliceContainsStr(conf.Webhook.Types, hookType) {
 		c.Handle(404, "checkHookType", nil)
 		return ""
 	}

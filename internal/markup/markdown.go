@@ -13,15 +13,15 @@ import (
 
 	"github.com/russross/blackfriday"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
 // IsMarkdownFile reports whether name looks like a Markdown file based on its extension.
 func IsMarkdownFile(name string) bool {
 	extension := strings.ToLower(filepath.Ext(name))
-	for _, ext := range setting.Markdown.FileExtensions {
+	for _, ext := range conf.Markdown.FileExtensions {
 		if strings.ToLower(ext) == extension {
 			return true
 		}
@@ -63,7 +63,7 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 
 	// Since this method could only possibly serve one link at a time,
 	// we do not need to find all.
-	if bytes.HasPrefix(link, []byte(setting.AppURL)) {
+	if bytes.HasPrefix(link, []byte(conf.Server.ExternalURL)) {
 		m := CommitPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
@@ -86,14 +86,14 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 			}
 
 			index := string(m[i+7 : j])
-			fullRepoURL := setting.AppURL + strings.TrimPrefix(r.urlPrefix, "/")
+			fullRepoURL := conf.Server.ExternalURL + strings.TrimPrefix(r.urlPrefix, "/")
 			var link string
 			if strings.HasPrefix(string(m), fullRepoURL) {
 				// Use a short issue reference if the URL refers to this repository
 				link = fmt.Sprintf(`<a href="%s">#%s</a>`, m, index)
 			} else {
 				// Use a cross-repository issue reference if the URL refers to a different repository
-				repo := string(m[len(setting.AppURL) : i-1])
+				repo := string(m[len(conf.Server.ExternalURL) : i-1])
 				link = fmt.Sprintf(`<a href="%s">%s#%s</a>`, m, repo, index)
 			}
 			out.WriteString(link)
@@ -122,18 +122,18 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 	htmlFlags |= blackfriday.HTML_SKIP_STYLE
 	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
 
-	if setting.Smartypants.Enabled {
+	if conf.Smartypants.Enabled {
 		htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-		if setting.Smartypants.Fractions {
+		if conf.Smartypants.Fractions {
 			htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
 		}
-		if setting.Smartypants.Dashes {
+		if conf.Smartypants.Dashes {
 			htmlFlags |= blackfriday.HTML_SMARTYPANTS_DASHES
 		}
-		if setting.Smartypants.LatexDashes {
+		if conf.Smartypants.LatexDashes {
 			htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
 		}
-		if setting.Smartypants.AngledQuotes {
+		if conf.Smartypants.AngledQuotes {
 			htmlFlags |= blackfriday.HTML_SMARTYPANTS_ANGLED_QUOTES
 		}
 	}
@@ -153,7 +153,7 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
 	extensions |= blackfriday.EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK
 
-	if setting.Markdown.EnableHardLineBreak {
+	if conf.Markdown.EnableHardLineBreak {
 		extensions |= blackfriday.EXTENSION_HARD_LINE_BREAK
 	}
 

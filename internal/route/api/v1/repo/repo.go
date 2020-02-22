@@ -18,7 +18,7 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/api/v1/convert"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 func Search(c *context.APIContext) {
@@ -263,7 +263,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	repo, err := db.MigrateRepository(c.User, ctxUser, db.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
-		IsPrivate:   f.Private || setting.Repository.ForcePrivate,
+		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
 		IsMirror:    f.Mirror,
 		RemoteAddr:  remoteAddr,
 	})

@@ -12,10 +12,10 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
 )
 
 func GetSingleCommit(c *context.APIContext) {
@@ -70,12 +70,12 @@ func GetSingleCommit(c *context.APIContext) {
 
 	c.JSONSuccess(&api.Commit{
 		CommitMeta: &api.CommitMeta{
-			URL: setting.AppURL + c.Link[1:],
+			URL: conf.Server.ExternalURL + c.Link[1:],
 			SHA: commit.ID.String(),
 		},
 		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID.String(),
 		RepoCommit: &api.RepoCommit{
-			URL: setting.AppURL + c.Link[1:],
+			URL: conf.Server.ExternalURL + c.Link[1:],
 			Author: &api.CommitUser{
 				Name:  commit.Author.Name,
 				Email: commit.Author.Email,

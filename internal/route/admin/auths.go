@@ -14,10 +14,10 @@ import (
 	"xorm.io/core"
 
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -175,7 +175,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	log.Trace("Authentication created by admin(%s): %s", c.User.Name, f.Name)
 
 	c.Flash.Success(c.Tr("admin.auths.new_success", f.Name))
-	c.Redirect(setting.AppSubURL + "/admin/auths")
+	c.Redirect(conf.Server.Subpath + "/admin/auths")
 }
 
 func EditAuthSource(c *context.Context) {
@@ -248,7 +248,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	log.Trace("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
-	c.Redirect(setting.AppSubURL + "/admin/auths/" + com.ToStr(f.ID))
+	c.Redirect(conf.Server.Subpath + "/admin/auths/" + com.ToStr(f.ID))
 }
 
 func DeleteAuthSource(c *context.Context) {
@@ -265,7 +265,7 @@ func DeleteAuthSource(c *context.Context) {
 			c.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
 		c.JSONSuccess(map[string]interface{}{
-			"redirect": setting.AppSubURL + "/admin/auths/" + c.Params(":authid"),
+			"redirect": conf.Server.Subpath + "/admin/auths/" + c.Params(":authid"),
 		})
 		return
 	}
@@ -273,6 +273,6 @@ func DeleteAuthSource(c *context.Context) {
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/admin/auths",
+		"redirect": conf.Server.Subpath + "/admin/auths",
 	})
 }

@@ -15,11 +15,11 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -75,7 +75,7 @@ func Create(c *context.Context) {
 	c.Data["Readmes"] = db.Readmes
 	c.Data["readme"] = "Default"
 	c.Data["private"] = c.User.LastRepoVisibility
-	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
+	c.Data["IsForcedPrivate"] = conf.Repository.ForcePrivate
 
 	ctxUser := checkContextUser(c, c.QueryInt64("org"))
 	if c.Written() {
@@ -128,12 +128,12 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		Gitignores:  f.Gitignores,
 		License:     f.License,
 		Readme:      f.Readme,
-		IsPrivate:   f.Private || setting.Repository.ForcePrivate,
+		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
 		AutoInit:    f.AutoInit,
 	})
 	if err == nil {
 		log.Trace("Repository created [%d]: %s/%s", repo.ID, ctxUser.Name, repo.Name)
-		c.Redirect(setting.AppSubURL + "/" + ctxUser.Name + "/" + repo.Name)
+		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
@@ -149,7 +149,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 func Migrate(c *context.Context) {
 	c.Data["Title"] = c.Tr("new_migrate")
 	c.Data["private"] = c.User.LastRepoVisibility
-	c.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
+	c.Data["IsForcedPrivate"] = conf.Repository.ForcePrivate
 	c.Data["mirror"] = c.Query("mirror") == "1"
 
 	ctxUser := checkContextUser(c, c.QueryInt64("org"))
@@ -199,13 +199,13 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	repo, err := db.MigrateRepository(c.User, ctxUser, db.MigrateRepoOptions{
 		Name:        f.RepoName,
 		Description: f.Description,
-		IsPrivate:   f.Private || setting.Repository.ForcePrivate,
+		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
 		IsMirror:    f.Mirror,
 		RemoteAddr:  remoteAddr,
 	})
 	if err == nil {
 		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
-		c.Redirect(setting.AppSubURL + "/" + ctxUser.Name + "/" + f.RepoName)
+		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
 		return
 	}
 

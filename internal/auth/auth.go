@@ -15,7 +15,7 @@ import (
 
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -90,8 +90,8 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 	uid, isTokenAuth := SignedInID(ctx, sess)
 
 	if uid <= 0 {
-		if setting.Service.EnableReverseProxyAuth {
-			webAuthUser := ctx.Req.Header.Get(setting.ReverseProxyAuthUser)
+		if conf.Service.EnableReverseProxyAuth {
+			webAuthUser := ctx.Req.Header.Get(conf.ReverseProxyAuthUser)
 			if len(webAuthUser) > 0 {
 				u, err := db.GetUserByName(webAuthUser)
 				if err != nil {
@@ -101,7 +101,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 					}
 
 					// Check if enabled auto-registration.
-					if setting.Service.EnableReverseProxyAutoRegister {
+					if conf.Service.EnableReverseProxyAutoRegister {
 						u := &db.User{
 							Name:     webAuthUser,
 							Email:    gouuid.NewV4().String() + "@localhost",

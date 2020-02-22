@@ -18,8 +18,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
 )
 
 func cleanCommand(cmd string) string {
@@ -64,9 +64,9 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					cmdName := strings.TrimLeft(payload, "'()")
 					log.Trace("SSH: Payload: %v", cmdName)
 
-					args := []string{"serv", "key-" + keyID, "--config=" + setting.CustomConf}
+					args := []string{"serv", "key-" + keyID, "--config=" + conf.CustomConf}
 					log.Trace("SSH: Arguments: %v", args)
-					cmd := exec.Command(setting.AppPath, args...)
+					cmd := exec.Command(conf.AppPath(), args...)
 					cmd.Env = append(os.Environ(), "SSH_ORIGINAL_COMMAND="+cmdName)
 
 					stdout, err := cmd.StdoutPipe()
@@ -163,10 +163,10 @@ func Listen(host string, port int, ciphers []string) {
 		},
 	}
 
-	keyPath := filepath.Join(setting.AppDataPath, "ssh/gogs.rsa")
+	keyPath := filepath.Join(conf.Server.AppDataPath, "ssh", "gogs.rsa")
 	if !com.IsExist(keyPath) {
 		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
-		_, stderr, err := com.ExecCmd(setting.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")
+		_, stderr, err := com.ExecCmd(conf.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")
 		if err != nil {
 			panic(fmt.Sprintf("Failed to generate private key: %v - %s", err, stderr))
 		}

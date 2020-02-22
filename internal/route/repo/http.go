@@ -23,7 +23,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -44,9 +44,9 @@ func askCredentials(c *context.Context, status int, text string) {
 
 func HTTPContexter() macaron.Handler {
 	return func(c *context.Context) {
-		if len(setting.HTTP.AccessControlAllowOrigin) > 0 {
+		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
-			c.Resp.Header().Set("Access-Control-Allow-Origin", setting.HTTP.AccessControlAllowOrigin)
+			c.Resp.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
 			c.Resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
 
 			// Handle preflight OPTIONS request
@@ -77,7 +77,7 @@ func HTTPContexter() macaron.Handler {
 		}
 
 		// Authentication is not required for pulling from public repositories.
-		if isPull && !repo.IsPrivate && !setting.Service.RequireSignInView {
+		if isPull && !repo.IsPrivate && !conf.Service.RequireSignInView {
 			c.Map(&HTTPContext{
 				Context: c,
 			})
@@ -368,7 +368,7 @@ func getGitRepoPath(dir string) (string, error) {
 		dir += ".git"
 	}
 
-	filename := path.Join(setting.RepoRootPath, dir)
+	filename := path.Join(conf.RepoRootPath, dir)
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return "", err
 	}
@@ -387,7 +387,7 @@ func HTTP(c *HTTPContext) {
 		// We perform check here because route matched in cmd/web.go is wider than needed,
 		// but we only want to output this message only if user is really trying to access
 		// Git HTTP endpoints.
-		if setting.Repository.DisableHTTPGit {
+		if conf.Repository.DisableHTTPGit {
 			c.HandleText(http.StatusForbidden, "Interacting with repositories by HTTP protocol is not disabled")
 			return
 		}

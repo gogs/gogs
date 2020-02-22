@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-macaron/binding"
@@ -29,9 +29,9 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/assets/public"
 	"gogs.io/gogs/internal/assets/templates"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
@@ -42,7 +42,6 @@ import (
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -61,58 +60,58 @@ and it takes care of all the other things for you`,
 // newMacaron initializes Macaron instance.
 func newMacaron() *macaron.Macaron {
 	m := macaron.New()
-	if !setting.DisableRouterLog {
+	if !conf.Server.DisableRouterLog {
 		m.Use(macaron.Logger())
 	}
 	m.Use(macaron.Recovery())
-	if setting.EnableGzip {
+	if conf.Server.EnableGzip {
 		m.Use(gzip.Gziper())
 	}
-	if setting.Protocol == setting.SCHEME_FCGI {
-		m.SetURLPrefix(setting.AppSubURL)
+	if conf.Server.Protocol == "fcgi" {
+		m.SetURLPrefix(conf.Server.Subpath)
 	}
 
 	// Register custom middleware first to make it possible to override files under "public".
 	m.Use(macaron.Static(
-		path.Join(setting.CustomPath, "public"),
+		filepath.Join(conf.CustomDir(), "public"),
 		macaron.StaticOptions{
-			SkipLogging: setting.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 	var publicFs http.FileSystem
-	if !setting.LoadAssetsFromDisk {
+	if !conf.Server.LoadAssetsFromDisk {
 		publicFs = public.NewFileSystem()
 	}
 	m.Use(macaron.Static(
-		path.Join(setting.StaticRootPath, "public"),
+		filepath.Join(conf.WorkDir(), "public"),
 		macaron.StaticOptions{
-			SkipLogging: setting.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 			FileSystem:  publicFs,
 		},
 	))
 
 	m.Use(macaron.Static(
-		setting.AvatarUploadPath,
+		conf.AvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      db.USER_AVATAR_URL_PREFIX,
-			SkipLogging: setting.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Static(
-		setting.RepositoryAvatarUploadPath,
+		conf.RepositoryAvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      db.REPO_AVATAR_URL_PREFIX,
-			SkipLogging: setting.DisableRouterLog,
+			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 
 	renderOpt := macaron.RenderOptions{
-		Directory:         path.Join(setting.StaticRootPath, "templates"),
-		AppendDirectories: []string{path.Join(setting.CustomPath, "templates")},
+		Directory:         filepath.Join(conf.WorkDir(), "templates"),
+		AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates")},
 		Funcs:             template.FuncMap(),
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
-	if !setting.LoadAssetsFromDisk {
+	if !conf.Server.LoadAssetsFromDisk {
 		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
 	}
 	m.Use(macaron.Renderer(renderOpt))
@@ -121,34 +120,34 @@ func newMacaron() *macaron.Macaron {
 	if err != nil {
 		log.Fatal("Failed to list locale files: %v", err)
 	}
-	localFiles := make(map[string][]byte)
+	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localFiles[name] = conf.MustAsset("conf/locale/" + name)
+		localeFiles[name] = conf.MustAsset("conf/locale/" + name)
 	}
 	m.Use(i18n.I18n(i18n.Options{
-		SubURL:          setting.AppSubURL,
-		Files:           localFiles,
-		CustomDirectory: path.Join(setting.CustomPath, "conf/locale"),
-		Langs:           setting.Langs,
-		Names:           setting.Names,
+		SubURL:          conf.Server.Subpath,
+		Files:           localeFiles,
+		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
+		Langs:           conf.Langs,
+		Names:           conf.Names,
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
 	m.Use(cache.Cacher(cache.Options{
-		Adapter:       setting.CacheAdapter,
-		AdapterConfig: setting.CacheConn,
-		Interval:      setting.CacheInterval,
+		Adapter:       conf.CacheAdapter,
+		AdapterConfig: conf.CacheConn,
+		Interval:      conf.CacheInterval,
 	}))
 	m.Use(captcha.Captchaer(captcha.Options{
-		SubURL: setting.AppSubURL,
+		SubURL: conf.Server.Subpath,
 	}))
-	m.Use(session.Sessioner(setting.SessionConfig))
+	m.Use(session.Sessioner(conf.SessionConfig))
 	m.Use(csrf.Csrfer(csrf.Options{
-		Secret:     setting.SecretKey,
-		Cookie:     setting.CSRFCookieName,
+		Secret:     conf.SecretKey,
+		Cookie:     conf.CSRFCookieName,
 		SetCookie:  true,
 		Header:     "X-Csrf-Token",
-		CookiePath: setting.AppSubURL,
+		CookiePath: conf.Server.Subpath,
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
@@ -163,15 +162,15 @@ func newMacaron() *macaron.Macaron {
 }
 
 func runWeb(c *cli.Context) error {
-	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+	err := route.GlobalInit(c.String("config"))
+	if err != nil {
+		log.Fatal("Failed to initialize application: %v", err)
 	}
-	route.GlobalInit()
 
 	m := newMacaron()
 
 	reqSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: true})
-	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: setting.Service.RequireSignInView})
+	ignSignIn := context.Toggle(&context.ToggleOptions{SignInRequired: conf.Service.RequireSignInView})
 	ignSignInAndCsrf := context.Toggle(&context.ToggleOptions{DisableCSRF: true})
 	reqSignOut := context.Toggle(&context.ToggleOptions{SignOutRequired: true})
 
@@ -185,7 +184,7 @@ func runWeb(c *cli.Context) error {
 	m.Get("/", ignSignIn, route.Home)
 	m.Group("/explore", func() {
 		m.Get("", func(c *context.Context) {
-			c.Redirect(setting.AppSubURL + "/explore/repos")
+			c.Redirect(conf.Server.Subpath + "/explore/repos")
 		})
 		m.Get("/repos", route.ExploreRepos)
 		m.Get("/users", route.ExploreUsers)
@@ -570,7 +569,7 @@ func runWeb(c *cli.Context) error {
 				m.Post("/upload-file", repo.UploadFileToServer)
 				m.Post("/upload-remove", bindIgnErr(form.RemoveUploadFile{}), repo.RemoveUploadFileFromServer)
 			}, func(c *context.Context) {
-				if !setting.Repository.Upload.Enabled {
+				if !conf.Repository.Upload.Enabled {
 					c.NotFound()
 					return
 				}
@@ -658,21 +657,21 @@ func runWeb(c *cli.Context) error {
 	}, ignSignIn)
 
 	m.Group("/-", func() {
-		if setting.Prometheus.Enabled {
+		if conf.Prometheus.Enabled {
 			m.Get("/metrics", func(c *context.Context) {
-				if !setting.Prometheus.EnableBasicAuth {
+				if !conf.Prometheus.EnableBasicAuth {
 					return
 				}
 
-				c.RequireBasicAuth(setting.Prometheus.BasicAuthUsername, setting.Prometheus.BasicAuthPassword)
+				c.RequireBasicAuth(conf.Prometheus.BasicAuthUsername, conf.Prometheus.BasicAuthPassword)
 			}, promhttp.Handler())
 		}
 	})
 
 	// robots.txt
 	m.Get("/robots.txt", func(c *context.Context) {
-		if setting.HasRobotsTxt {
-			c.ServeFileContent(path.Join(setting.CustomPath, "robots.txt"))
+		if conf.HasRobotsTxt {
+			c.ServeFileContent(filepath.Join(conf.CustomDir(), "robots.txt"))
 		} else {
 			c.NotFound()
 		}
@@ -683,69 +682,76 @@ func runWeb(c *cli.Context) error {
 
 	// Flag for port number in case first time run conflict.
 	if c.IsSet("port") {
-		setting.AppURL = strings.Replace(setting.AppURL, setting.HTTPPort, c.String("port"), 1)
-		setting.HTTPPort = c.String("port")
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, conf.Server.URL.Port(), c.String("port"), 1)
+		conf.Server.ExternalURL = conf.Server.URL.String()
+		conf.Server.HTTPPort = c.String("port")
 	}
 
 	var listenAddr string
-	if setting.Protocol == setting.SCHEME_UNIX_SOCKET {
-		listenAddr = fmt.Sprintf("%s", setting.HTTPAddr)
+	if conf.Server.Protocol == "unix" {
+		listenAddr = conf.Server.HTTPAddr
 	} else {
-		listenAddr = fmt.Sprintf("%s:%s", setting.HTTPAddr, setting.HTTPPort)
+		listenAddr = fmt.Sprintf("%s:%s", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 	}
-	log.Info("Listen on %v://%s%s", setting.Protocol, listenAddr, setting.AppSubURL)
+	log.Info("Listen on %v://%s%s", conf.Server.Protocol, listenAddr, conf.Server.Subpath)
 
-	var err error
-	switch setting.Protocol {
-	case setting.SCHEME_HTTP:
+	switch conf.Server.Protocol {
+	case "http":
 		err = http.ListenAndServe(listenAddr, m)
-	case setting.SCHEME_HTTPS:
-		var tlsMinVersion uint16
-		switch setting.TLSMinVersion {
-		case "SSL30":
-			tlsMinVersion = tls.VersionSSL30
+
+	case "https":
+		tlsMinVersion := tls.VersionTLS12
+		switch conf.Server.TLSMinVersion {
+		case "TLS13":
+			tlsMinVersion = tls.VersionTLS13
 		case "TLS12":
 			tlsMinVersion = tls.VersionTLS12
 		case "TLS11":
 			tlsMinVersion = tls.VersionTLS11
 		case "TLS10":
-			fallthrough
-		default:
 			tlsMinVersion = tls.VersionTLS10
 		}
-		server := &http.Server{Addr: listenAddr, TLSConfig: &tls.Config{
-			MinVersion:               tlsMinVersion,
-			CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
-			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-			},
-		}, Handler: m}
-		err = server.ListenAndServeTLS(setting.CertFile, setting.KeyFile)
-	case setting.SCHEME_FCGI:
+		server := &http.Server{
+			Addr: listenAddr,
+			TLSConfig: &tls.Config{
+				MinVersion:               uint16(tlsMinVersion),
+				CurvePreferences:         []tls.CurveID{tls.X25519, tls.CurveP256, tls.CurveP384, tls.CurveP521},
+				PreferServerCipherSuites: true,
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				},
+			}, Handler: m}
+		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
+
+	case "fcgi":
 		err = fcgi.Serve(nil, m)
-	case setting.SCHEME_UNIX_SOCKET:
-		os.Remove(listenAddr)
+
+	case "unix":
+		err = os.Remove(listenAddr)
+		if err != nil {
+			log.Fatal("Failed to remove existing Unix domain socket: %v", err)
+		}
 
 		var listener *net.UnixListener
-		listener, err = net.ListenUnix("unix", &net.UnixAddr{listenAddr, "unix"})
+		listener, err = net.ListenUnix("unix", &net.UnixAddr{Name: listenAddr, Net: "unix"})
 		if err != nil {
-			break // Handle error after switch
+			log.Fatal("Failed to listen on Unix networks: %v", err)
 		}
 
 		// FIXME: add proper implementation of signal capture on all protocols
 		// execute this on SIGTERM or SIGINT: listener.Close()
-		if err = os.Chmod(listenAddr, os.FileMode(setting.UnixSocketPermission)); err != nil {
-			log.Fatal("Failed to set permission of unix socket: %v", err)
+		if err = os.Chmod(listenAddr, conf.Server.UnixSocketMode); err != nil {
+			log.Fatal("Failed to change permission of Unix domain socket: %v", err)
 		}
 		err = http.Serve(listener, m)
+
 	default:
-		log.Fatal("Invalid protocol: %s", setting.Protocol)
+		log.Fatal("Unexpected server protocol: %s", conf.Server.Protocol)
 	}
 
 	if err != nil {

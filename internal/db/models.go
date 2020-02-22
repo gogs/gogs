@@ -24,8 +24,8 @@ import (
 	"xorm.io/core"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/migrations"
-	"gogs.io/gogs/internal/setting"
 )
 
 // Engine represents a XORM engine or session.
@@ -75,17 +75,17 @@ func init() {
 }
 
 func LoadConfigs() {
-	sec := setting.Cfg.Section("database")
+	sec := conf.File.Section("database")
 	DbCfg.Type = sec.Key("DB_TYPE").String()
 	switch DbCfg.Type {
 	case "sqlite3":
-		setting.UseSQLite3 = true
+		conf.UseSQLite3 = true
 	case "mysql":
-		setting.UseMySQL = true
+		conf.UseMySQL = true
 	case "postgres":
-		setting.UsePostgreSQL = true
+		conf.UsePostgreSQL = true
 	case "mssql":
-		setting.UseMSSQL = true
+		conf.UseMSSQL = true
 	}
 	DbCfg.Host = sec.Key("HOST").String()
 	DbCfg.Name = sec.Key("NAME").String()
@@ -189,8 +189,8 @@ func SetEngine() (err error) {
 
 	// WARNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
-	sec := setting.Cfg.Section("log.xorm")
-	logger, err := log.NewFileWriter(path.Join(setting.LogRootPath, "xorm.log"),
+	sec := conf.File.Section("log.xorm")
+	logger, err := log.NewFileWriter(path.Join(conf.LogRootPath, "xorm.log"),
 		log.FileRotationConfig{
 			Rotate:  sec.Key("ROTATE").MustBool(true),
 			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
@@ -206,7 +206,7 @@ func SetEngine() (err error) {
 	x.SetMaxIdleConns(0)
 	x.SetConnMaxLifetime(time.Second)
 
-	if setting.ProdMode {
+	if conf.IsProdMode() {
 		x.SetLogger(xorm.NewSimpleLogger3(logger, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
 	} else {
 		x.SetLogger(xorm.NewSimpleLogger(logger))
@@ -389,7 +389,7 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 		}
 
 		// PostgreSQL needs manually reset table sequence for auto increment keys
-		if setting.UsePostgreSQL {
+		if conf.UsePostgreSQL {
 			rawTableName := snakeMapper.Obj2Table(tableName)
 			seqName := rawTableName + "_id_seq"
 			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {

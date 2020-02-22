@@ -7,16 +7,16 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var (
@@ -54,11 +54,10 @@ func runImportLocale(c *cli.Context) error {
 		return fmt.Errorf("target directory %q does not exist or is not a directory", c.String("target"))
 	}
 
-	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
 	}
-
-	setting.Init()
 
 	now := time.Now()
 
@@ -67,7 +66,7 @@ func runImportLocale(c *cli.Context) error {
 	escapedQuotes := []byte(`\"`)
 	regularQuotes := []byte(`"`)
 	// Cut out en-US.
-	for _, lang := range setting.Langs[1:] {
+	for _, lang := range conf.Langs[1:] {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		source := filepath.Join(c.String("source"), name)
 		target := filepath.Join(c.String("target"), name)
