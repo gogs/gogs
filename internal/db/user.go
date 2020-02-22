@@ -262,7 +262,7 @@ func (u *User) RelAvatarLink() string {
 			return defaultImgUrl
 		}
 		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, USER_AVATAR_URL_PREFIX, u.ID)
-	case conf.DisableGravatar, conf.OfflineMode:
+	case conf.DisableGravatar:
 		if !com.IsExist(u.CustomAvatarPath()) {
 			if err := u.GenerateRandomAvatar(); err != nil {
 				log.Error("GenerateRandomAvatar: %v", err)

@@ -178,7 +178,6 @@ func Init(customConf string) error {
 	// TODO
 
 	sec := File.Section("server")
-	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	LoadAssetsFromDisk = sec.Key("LOAD_ASSETS_FROM_DISK").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(WorkDir()) // TODO: We need separate TemplatesRootPath
@@ -281,7 +280,7 @@ func Init(customConf string) error {
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
 	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool(true)
-	if OfflineMode {
+	if Server.OfflineMode {
 		DisableGravatar = true
 		EnableFederatedAvatar = false
 	}
@@ -367,7 +366,6 @@ var (
 	AppDataPath string
 
 	// Server settings
-	OfflineMode        bool
 	DisableRouterLog   bool
 	CertFile           string
 	KeyFile            string

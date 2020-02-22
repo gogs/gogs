@@ -199,7 +199,7 @@ func Config(c *context.Context) {
 
 	c.Data["AppURL"] = conf.Server.ExternalURL
 	c.Data["Domain"] = conf.Server.Domain
-	c.Data["OfflineMode"] = conf.OfflineMode
+	c.Data["OfflineMode"] = conf.Server.OfflineMode
 	c.Data["DisableRouterLog"] = conf.DisableRouterLog
 	c.Data["RunUser"] = conf.App.RunUser
 	c.Data["RunMode"] = strings.Title(macaron.Env)

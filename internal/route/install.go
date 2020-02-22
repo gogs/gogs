@@ -182,7 +182,7 @@ func Install(c *context.Context) {
 	f.MailNotify = conf.Service.EnableNotifyMail
 
 	// Server and other services settings
-	f.OfflineMode = conf.OfflineMode
+	f.OfflineMode = conf.Server.OfflineMode
 	f.DisableGravatar = conf.DisableGravatar
 	f.EnableFederatedAvatar = conf.EnableFederatedAvatar
 	f.DisableRegistration = conf.Service.DisableRegistration

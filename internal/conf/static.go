@@ -44,6 +44,8 @@ var (
 		UnixSocketPermission string
 		LocalRootURL         string `ini:"LOCAL_ROOT_URL"`
 
+		OfflineMode bool
+
 		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
 		RootURL string `ini:"ROOT_URL"`
 
