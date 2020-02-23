@@ -4,18 +4,13 @@
 
 ![Repository](https://gogs.io/img/screenshots/2.png)
 
-### ⚠️ Important notes ⚠️
-
-- The demo site [try.gogs.io](https://try.gogs.io) is running `master` branch. Please do **NOT** put your important data on the site.
-- If you're interested in using APIs, we have experimental support with [documentation](https://github.com/gogs/go-gogs-client/wiki).
-
 [简体中文](README_ZH.md)
 
-## Vision
+## 🔮 Vision
 
 The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-hosted Git service that can be setup in the most painless way. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, macOS, Windows and ARM.
 
-## Overview
+## 📡 Overview
 
 - Please visit [our home page](https://gogs.io) for user documentation.
 - Please refer to [CHANGELOG.md](CHANGELOG.md) for list of changes in each releases.
@@ -23,8 +18,9 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Having trouble? Help yourself with [troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or ask questions on [user forum](https://discuss.gogs.io/).
 - Want to help with localization? Check out the [localization documentation](https://gogs.io/docs/features/i18n.html).
 - Ready to get hands dirty? Read [our guide](docs/local_development.md) to set up your development environment.
+- Hmm... What about APIs? We have experimental support with [documentation](https://github.com/gogs/docs-api).
 
-## Features
+## 💌 Features
 
 - User dashboard, user profile and activity timeline.
 - Access repositories via SSH, HTTP and HTTPS protocols.
@@ -40,18 +36,18 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Rich database backend, including PostgreSQL, MySQL, SQLite3, MSSQL and [TiDB](https://github.com/pingcap/tidb).
 - Have localization over [30 languages](https://crowdin.com/project/gogs).
 
-## Hardware requirements
+## 💾 Hardware requirements
 
 - A Raspberry Pi or $5 Digital Ocean Droplet is more than enough to get you started. Some even use 64MB RAM Docker [CaaS](https://blog.docker.com/2016/02/containers-as-a-service-caas/).
 - 2 CPU cores and 512MB RAM would be the baseline for teamwork.
 - Increase CPU cores when your team size gets significantly larger, memory footprint remains low.
 
-## Browser support
+## 💻 Browser support
 
 - Please see [Semantic UI](https://github.com/Semantic-Org/Semantic-UI#browser-support) for specific versions of supported browsers.
 - The smallest resolution officially supported is **1024*768**, however the UI may still look right in smaller resolutions, but no promises or fixes.
 
-## Installation
+## 📜 Installation
 
 Make sure you install the [prerequisites](https://gogs.io/docs/installation) first.
 
@@ -87,7 +83,7 @@ There are 6 ways to install Gogs:
 - [Cloudflare Full SSL with Gogs using NGINX](http://www.listekconsulting.com/articles/cloudflare-full-ssl-with-gogs-go-git-service-using-nginx/)
 - [How to install Gogs on a Linux Server (DigitalOcean)](https://www.youtube.com/watch?v=deSfX0gqefE)
 
-## Software, service and product support
+## 📦 Software, service and product support
 
 - [Fabric8](http://fabric8.io/) (DevOps)
 - [Jenkins](https://plugins.jenkins.io/gogs-webhook/) (CI)
@@ -99,7 +95,7 @@ There are 6 ways to install Gogs:
 - [Synology](https://www.synology.com) (Docker)
 - [Syncloud](https://syncloud.org/) (App Store)
 
-## Acknowledgments
+## 🙇‍♂️ Acknowledgments
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
@@ -107,7 +103,7 @@ There are 6 ways to install Gogs:
 - Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
-## Contributors
+## 👋 Contributors
 
 - See [contributors page](https://github.com/gogs/gogs/graphs/contributors) for top 100 contributors.
 - See [TRANSLATORS](conf/locale/TRANSLATORS) for public list of translators.
