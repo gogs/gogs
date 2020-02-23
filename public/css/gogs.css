@@ -692,6 +692,9 @@ footer .ui.language .menu {
   max-width: 100%;
   box-sizing: border-box;
 }
+.markdown:not(code) img[align=left] {
+  margin-right: 10px;
+}
 .markdown:not(code) .emoji {
   max-width: none;
 }
