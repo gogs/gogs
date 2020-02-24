@@ -23,7 +23,7 @@ Gogs is built and runs as a single binary and meant to be cross platform. Theref
 Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
-- [Go](https://golang.org/doc/install) (v1.12 or higher)
+- [Go](https://golang.org/doc/install) (v1.13 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [GNU Make](https://www.gnu.org/software/make/)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
@@ -75,8 +75,9 @@ Gogs has the following dependencies:
 
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
-    go get -u github.com/kevinburke/go-bindata/...
     npm install -g less
+    # Watch out, it is not github.com/go-bindata/go-bindata!
+    go get -u github.com/kevinburke/go-bindata/...
     ```
 
 1. Configure startup services:
@@ -120,6 +121,8 @@ Generally, you don't need a full clone, so set `--depth` to `10`:
 ```bash
 git clone --depth 10 https://github.com/gogs/gogs.git
 ```
+
+**NOTE** The repository has Go Modules enabled, please clone to somewhere outside of your `$GOPATH`.
 
 ## Step 4: Configure database settings
 
