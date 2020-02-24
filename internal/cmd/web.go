@@ -683,7 +683,7 @@ func runWeb(c *cli.Context) error {
 
 	// Flag for port number in case first time run conflict.
 	if c.IsSet("port") {
-		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, conf.Server.URL.Port(), c.String("port"), 1)
+		conf.Server.URL.Host = strings.Replace(conf.Server.URL.Host, ":"+conf.Server.URL.Port(), ":"+c.String("port"), 1)
 		conf.Server.ExternalURL = conf.Server.URL.String()
 		conf.Server.HTTPPort = c.String("port")
 	}
