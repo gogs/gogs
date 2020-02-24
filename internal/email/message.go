@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package mailer
+package email
 
 import (
 	"crypto/tls"
@@ -34,13 +34,13 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 	msg := gomail.NewMessage()
 	msg.SetHeader("From", from)
 	msg.SetHeader("To", to...)
-	msg.SetHeader("Subject", conf.MailService.SubjectPrefix+subject)
+	msg.SetHeader("Subject", conf.Email.SubjectPrefix+subject)
 	msg.SetDateHeader("Date", time.Now())
 
 	contentType := "text/html"
 	body := htmlBody
 	switchedToPlaintext := false
-	if conf.MailService.UsePlainText || conf.MailService.AddPlainTextAlt {
+	if conf.Email.UsePlainText || conf.Email.AddPlainTextAlt {
 		plainBody, err := html2text.FromString(htmlBody)
 		if err != nil {
 			log.Error("html2text.FromString: %v", err)
@@ -51,7 +51,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 		}
 	}
 	msg.SetBody(contentType, body)
-	if switchedToPlaintext && conf.MailService.AddPlainTextAlt && !conf.MailService.UsePlainText {
+	if switchedToPlaintext && conf.Email.AddPlainTextAlt && !conf.Email.UsePlainText {
 		// The AddAlternative method name is confusing - adding html as an "alternative" will actually cause mail
 		// clients to show it as first priority, and the text "main body" is the 2nd priority fallback.
 		// See: https://godoc.org/gopkg.in/gomail.v2#Message.AddAlternative
@@ -65,7 +65,7 @@ func NewMessageFrom(to []string, from, subject, htmlBody string) *Message {
 
 // NewMessage creates new mail message object with default From header.
 func NewMessage(to []string, subject, body string) *Message {
-	return NewMessageFrom(to, conf.MailService.From, subject, body)
+	return NewMessageFrom(to, conf.Email.From, subject, body)
 }
 
 type loginAuth struct {
@@ -99,7 +99,7 @@ type Sender struct {
 }
 
 func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
-	opts := conf.MailService
+	opts := conf.Email
 
 	host, port, err := net.SplitHostPort(opts.Host)
 	if err != nil {
@@ -137,8 +137,8 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		return fmt.Errorf("NewClient: %v", err)
 	}
 
-	if !opts.DisableHelo {
-		hostname := opts.HeloHostname
+	if !opts.DisableHELO {
+		hostname := opts.HELOHostname
 		if len(hostname) == 0 {
 			hostname, err = os.Hostname()
 			if err != nil {
@@ -164,12 +164,12 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 		var auth smtp.Auth
 
 		if strings.Contains(options, "CRAM-MD5") {
-			auth = smtp.CRAMMD5Auth(opts.User, opts.Passwd)
+			auth = smtp.CRAMMD5Auth(opts.User, opts.Password)
 		} else if strings.Contains(options, "PLAIN") {
-			auth = smtp.PlainAuth("", opts.User, opts.Passwd, host)
+			auth = smtp.PlainAuth("", opts.User, opts.Password, host)
 		} else if strings.Contains(options, "LOGIN") {
 			// Patch for AUTH LOGIN
-			auth = LoginAuth(opts.User, opts.Passwd)
+			auth = LoginAuth(opts.User, opts.Password)
 		}
 
 		if auth != nil {
@@ -225,11 +225,11 @@ func NewContext() {
 	// Need to check if mailQueue is nil because in during reinstall (user had installed
 	// before but swithed install lock off), this function will be called again
 	// while mail queue is already processing tasks, and produces a race condition.
-	if conf.MailService == nil || mailQueue != nil {
+	if !conf.Email.Enabled || mailQueue != nil {
 		return
 	}
 
-	mailQueue = make(chan *Message, conf.MailService.QueueLength)
+	mailQueue = make(chan *Message, 1000)
 	go processMailQueue()
 }
 

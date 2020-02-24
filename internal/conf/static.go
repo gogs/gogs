@@ -152,6 +152,33 @@ var (
 		EnableLoginStatusCookie        bool
 		LoginStatusCookieName          string
 	}
+
+	// Email settings
+	Email struct {
+		Enabled       bool
+		SubjectPrefix string
+		Host          string
+		From          string
+		User          string
+		Password      string
+
+		DisableHELO  bool   `ini:"DISABLE_HELO"`
+		HELOHostname string `ini:"HELO_HOSTNAME"`
+
+		SkipVerify     bool
+		UseCertificate bool
+		CertFile       string
+		KeyFile        string
+
+		UsePlainText    bool
+		AddPlainTextAlt bool
+
+		// Derived from other static values
+		FromEmail string `ini:"-"` // Parsed email address of From without person's name.
+
+		// Deprecated: Use Password instead, will be removed in 0.13.
+		Passwd string
+	}
 )
 
 // handleDeprecated transfers deprecated values to the new ones when set.
@@ -177,5 +204,10 @@ func handleDeprecated() {
 	if Database.Passwd != "" {
 		Database.Password = Database.Passwd
 		Database.Passwd = ""
+	}
+
+	if Email.Passwd != "" {
+		Email.Password = Email.Passwd
+		Email.Passwd = ""
 	}
 }

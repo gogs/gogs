@@ -22,8 +22,8 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -259,12 +259,12 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 		return
 	}
 
-	email := &db.EmailAddress{
+	emailAddr := &db.EmailAddress{
 		UID:         c.User.ID,
 		Email:       f.Email,
 		IsActivated: !conf.Service.RegisterEmailConfirm,
 	}
-	if err := db.AddEmailAddress(email); err != nil {
+	if err := db.AddEmailAddress(emailAddr); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
 			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
 		} else {
@@ -275,12 +275,12 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Send confirmation email
 	if conf.Service.RegisterEmailConfirm {
-		mailer.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), email.Email)
+		email.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), emailAddr.Email)
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
 			log.Error("Set cache 'MailResendLimit' failed: %v", err)
 		}
-		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", email.Email, conf.Service.ActiveCodeLives/60))
+		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", emailAddr.Email, conf.Service.ActiveCodeLives/60))
 	} else {
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}

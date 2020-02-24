@@ -208,6 +208,30 @@ func Init(customConf string) error {
 		}
 	}
 
+	// **************************
+	// ----- Email settings -----
+	// **************************
+
+	if err = File.Section("email").MapTo(&Email); err != nil {
+		return errors.Wrap(err, "mapping [email] section")
+	}
+	// LEGACY [0.13]: In case there are values with old section name.
+	if err = File.Section("mailer").MapTo(&Email); err != nil {
+		return errors.Wrap(err, "mapping [mailer] section")
+	}
+
+	if Email.Enabled {
+		if Email.From == "" {
+			Email.From = Email.User
+		}
+
+		parsed, err := mail.ParseAddress(Email.From)
+		if err != nil {
+			return errors.Wrapf(err, "parse mail address %q", Email.From)
+		}
+		Email.FromEmail = parsed.Address
+	}
+
 	handleDeprecated()
 
 	// TODO
@@ -689,71 +713,10 @@ func newSessionService() {
 	log.Trace("Session service is enabled")
 }
 
-// Mailer represents mail service.
-type Mailer struct {
-	QueueLength       int
-	SubjectPrefix     string
-	Host              string
-	From              string
-	FromEmail         string
-	User, Passwd      string
-	DisableHelo       bool
-	HeloHostname      string
-	SkipVerify        bool
-	UseCertificate    bool
-	CertFile, KeyFile string
-	UsePlainText      bool
-	AddPlainTextAlt   bool
-}
-
-var (
-	MailService *Mailer
-)
-
-// newMailService initializes mail service options from configuration.
-// No non-error log will be printed in hook mode.
-func newMailService() {
-	sec := File.Section("mailer")
-	if !sec.Key("ENABLED").MustBool() {
-		return
-	}
-
-	MailService = &Mailer{
-		QueueLength:     sec.Key("SEND_BUFFER_LEN").MustInt(100),
-		SubjectPrefix:   sec.Key("SUBJECT_PREFIX").MustString("[" + App.BrandName + "] "),
-		Host:            sec.Key("HOST").String(),
-		User:            sec.Key("USER").String(),
-		Passwd:          sec.Key("PASSWD").String(),
-		DisableHelo:     sec.Key("DISABLE_HELO").MustBool(),
-		HeloHostname:    sec.Key("HELO_HOSTNAME").String(),
-		SkipVerify:      sec.Key("SKIP_VERIFY").MustBool(),
-		UseCertificate:  sec.Key("USE_CERTIFICATE").MustBool(),
-		CertFile:        sec.Key("CERT_FILE").String(),
-		KeyFile:         sec.Key("KEY_FILE").String(),
-		UsePlainText:    sec.Key("USE_PLAIN_TEXT").MustBool(),
-		AddPlainTextAlt: sec.Key("ADD_PLAIN_TEXT_ALT").MustBool(),
-	}
-	MailService.From = sec.Key("FROM").MustString(MailService.User)
-
-	if len(MailService.From) > 0 {
-		parsed, err := mail.ParseAddress(MailService.From)
-		if err != nil {
-			log.Fatal("Failed to parse value %q for '[mailer] FROM': %v", MailService.From, err)
-			return
-		}
-		MailService.FromEmail = parsed.Address
-	}
-
-	if HookMode {
-		return
-	}
-	log.Trace("Mail service is enabled")
-}
-
 func newRegisterMailService() {
 	if !File.Section("service").Key("REGISTER_EMAIL_CONFIRM").MustBool() {
 		return
-	} else if MailService == nil {
+	} else if !Email.Enabled {
 		log.Warn("Email confirmation is not enabled due to the mail service is not available")
 		return
 	}
@@ -766,7 +729,7 @@ func newRegisterMailService() {
 func newNotifyMailService() {
 	if !File.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
 		return
-	} else if MailService == nil {
+	} else if !Email.Enabled {
 		log.Warn("Email notification is not enabled due to the mail service is not available")
 		return
 	}
@@ -786,7 +749,6 @@ func NewServices() {
 	newService()
 	newCacheService()
 	newSessionService()
-	newMailService()
 	newRegisterMailService()
 	newNotifyMailService()
 }
@@ -799,6 +761,5 @@ var HookMode bool
 func NewPostReceiveHookServices() {
 	HookMode = true
 	newService()
-	newMailService()
 	newNotifyMailService()
 }
