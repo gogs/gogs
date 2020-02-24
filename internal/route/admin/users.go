@@ -13,8 +13,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/route"
 )
 
@@ -53,7 +53,7 @@ func NewUser(c *context.Context) {
 	}
 	c.Data["Sources"] = sources
 
-	c.Data["CanSendEmail"] = conf.MailService != nil
+	c.Data["CanSendEmail"] = conf.Email.Enabled
 	c.HTML(200, USER_NEW)
 }
 
@@ -69,7 +69,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	}
 	c.Data["Sources"] = sources
 
-	c.Data["CanSendEmail"] = conf.MailService != nil
+	c.Data["CanSendEmail"] = conf.Email.Enabled
 
 	if c.HasError() {
 		c.HTML(200, USER_NEW)
@@ -115,8 +115,8 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	log.Trace("Account created by admin (%s): %s", c.User.Name, u.Name)
 
 	// Send email notification.
-	if f.SendNotify && conf.MailService != nil {
-		mailer.SendRegisterNotifyMail(c.Context, db.NewMailerUser(u))
+	if f.SendNotify && conf.Email.Enabled {
+		email.SendRegisterNotifyMail(c.Context, db.NewMailerUser(u))
 	}
 
 	c.Flash.Success(c.Tr("admin.users.new_success", u.Name))

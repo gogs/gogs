@@ -19,7 +19,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -399,7 +399,7 @@ func SettingsCollaborationPost(c *context.Context) {
 	}
 
 	if conf.Service.EnableNotifyMail {
-		mailer.SendCollaboratorMail(db.NewMailerUser(u), db.NewMailerUser(c.User), db.NewMailerRepo(c.Repo.Repository))
+		email.SendCollaboratorMail(db.NewMailerUser(u), db.NewMailerUser(c.User), db.NewMailerRepo(c.Repo.Repository))
 	}
 
 	c.Flash.Success(c.Tr("repo.settings.add_collaborator_success"))

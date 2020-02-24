@@ -17,7 +17,7 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
 )
@@ -180,12 +180,12 @@ func Dashboard(c *context.Context) {
 }
 
 func SendTestMail(c *context.Context) {
-	email := c.Query("email")
+	emailAddr := c.Query("email")
 	// Send a test email to the user's email address and redirect back to Config
-	if err := mailer.SendTestMail(email); err != nil {
-		c.Flash.Error(c.Tr("admin.config.test_mail_failed", email, err))
+	if err := email.SendTestMail(emailAddr); err != nil {
+		c.Flash.Error(c.Tr("admin.config.email.test_mail_failed", emailAddr, err))
 	} else {
-		c.Flash.Info(c.Tr("admin.config.test_mail_sent", email))
+		c.Flash.Info(c.Tr("admin.config.email.test_mail_sent", emailAddr))
 	}
 
 	c.Redirect(conf.Server.Subpath + "/admin/config")
@@ -202,6 +202,7 @@ func Config(c *context.Context) {
 	c.Data["Repository"] = conf.Repository
 	c.Data["Database"] = conf.Database
 	c.Data["Security"] = conf.Security
+	c.Data["Email"] = conf.Email
 
 	c.Data["LogRootPath"] = conf.LogRootPath
 
@@ -209,12 +210,6 @@ func Config(c *context.Context) {
 
 	c.Data["Service"] = conf.Service
 	c.Data["Webhook"] = conf.Webhook
-
-	c.Data["MailerEnabled"] = false
-	if conf.MailService != nil {
-		c.Data["MailerEnabled"] = true
-		c.Data["Mailer"] = conf.MailService
-	}
 
 	c.Data["CacheAdapter"] = conf.CacheAdapter
 	c.Data["CacheInterval"] = conf.CacheInterval

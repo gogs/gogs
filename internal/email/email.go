@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package mailer
+package email
 
 import (
 	"fmt"
@@ -204,7 +204,7 @@ func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string
 	if err != nil {
 		log.Error("HTMLString (%s): %v", tplName, err)
 	}
-	from := gomail.NewMessage().FormatAddress(conf.MailService.FromEmail, doer.DisplayName())
+	from := gomail.NewMessage().FormatAddress(conf.Email.FromEmail, doer.DisplayName())
 	msg := NewMessageFrom(tos, from, subject, content)
 	msg.Info = fmt.Sprintf("Subject: %s, %s", subject, info)
 	return msg

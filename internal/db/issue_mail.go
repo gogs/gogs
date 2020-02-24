@@ -10,7 +10,7 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/conf"
 )
@@ -44,7 +44,7 @@ func (this mailerUser) GenerateEmailActivateCode(email string) string {
 	return this.user.GenerateEmailActivateCode(email)
 }
 
-func NewMailerUser(u *User) mailer.User {
+func NewMailerUser(u *User) email.User {
 	return mailerUser{u}
 }
 
@@ -65,7 +65,7 @@ func (this mailerRepo) ComposeMetas() map[string]string {
 	return this.repo.ComposeMetas()
 }
 
-func NewMailerRepo(repo *Repository) mailer.Repository {
+func NewMailerRepo(repo *Repository) email.Repository {
 	return mailerRepo{repo}
 }
 
@@ -86,7 +86,7 @@ func (this mailerIssue) HTMLURL() string {
 	return this.issue.HTMLURL()
 }
 
-func NewMailerIssue(issue *Issue) mailer.Issue {
+func NewMailerIssue(issue *Issue) email.Issue {
 	return mailerIssue{issue}
 }
 
@@ -148,7 +148,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 			names = append(names, issue.Assignee.Name)
 		}
 	}
-	mailer.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
+	email.SendIssueCommentMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), tos)
 
 	// Mail mentioned people and exclude watchers.
 	names = append(names, doer.Name)
@@ -160,7 +160,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 
 		tos = append(tos, mentions[i])
 	}
-	mailer.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), GetUserEmailsByNames(tos))
+	email.SendIssueMentionMail(NewMailerIssue(issue), NewMailerRepo(issue.Repo), NewMailerUser(doer), GetUserEmailsByNames(tos))
 	return nil
 }
 
