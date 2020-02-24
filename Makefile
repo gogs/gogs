@@ -71,11 +71,8 @@ less: public/css/gogs.css
 public/css/gogs.css: $(LESS_FILES)
 	@type lessc >/dev/null 2>&1 && lessc --source-map "public/less/gogs.less" $@ || echo "lessc command not found or failed"
 
-clean:
-	go clean -i ./...
-
-clean-mac: clean
-	find . -name ".DS_Store" -print0 | xargs -0 rm
+clean-mac:
+	find . -name "*.DS_Store" -type f -delete
 
 test:
 	go test -cover -race ./...

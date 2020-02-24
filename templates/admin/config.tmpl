@@ -203,6 +203,64 @@
 					</dl>
 				</div>
 
+				{{/* Email settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.email_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.email.enabled"}}</dt>
+						<dd><i class="fa fa{{if .Email.Enabled}}-check{{end}}-square-o"></i></dd>
+						{{if .Email.Enabled}}
+							<dt>{{.i18n.Tr "admin.config.email.subject_prefix"}}</dt>
+							<dd><code>{{.Email.SubjectPrefix}}</code></dd>
+							<dt>{{.i18n.Tr "admin.config.email.host"}}</dt>
+							<dd>{{.Email.Host}}</dd>
+							<dt>{{.i18n.Tr "admin.config.email.from"}}</dt>
+							<dd>{{.Email.From}}</dd>
+							<dt>{{.i18n.Tr "admin.config.email.user"}}</dt>
+							<dd>{{.Email.User}}</dd>
+
+							<div class="ui divider"></div>
+
+							<dt>{{.i18n.Tr "admin.config.email.disable_helo"}}</dt>
+							<dd><i class="fa fa{{if .Email.DisableHELO}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.email.helo_hostname"}}</dt>
+							<dd>{{if .Email.HELOHostname}}{{.Email.HELOHostname}}{{else}}{{.i18n.Tr "admin.config.not_set"}}{{end}}</dd>
+
+							<div class="ui divider"></div>
+
+							<dt>{{.i18n.Tr "admin.config.email.skip_verify"}}</dt>
+							<dd><i class="fa fa{{if .Email.SkipVerify}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.email.use_certificate"}}</dt>
+							<dd><i class="fa fa{{if .Email.UseCertificate}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.email.cert_file"}}</dt>
+							<dd><code>{{.Email.CertFile}}</code></dd>
+							<dt>{{.i18n.Tr "admin.config.email.key_file"}}</dt>
+							<dd><code>{{.Email.KeyFile}}</code></dd>
+
+							<div class="ui divider"></div>
+
+							<dt>{{.i18n.Tr "admin.config.email.use_plain_text"}}</dt>
+							<dd><i class="fa fa{{if .Email.UsePlainText}}-check{{end}}-square-o"></i></dd>
+							<dt>{{.i18n.Tr "admin.config.email.add_plain_text_alt"}}</dt>
+							<dd><i class="fa fa{{if .Email.AddPlainTextAlt}}-check{{end}}-square-o"></i></dd>
+
+							<div class="ui divider"></div>
+
+							<form class="ui form" action="{{AppSubURL}}/admin/config/test_mail" method="post">
+								{{.CSRFTokenHTML}}
+								<div class="inline field ui left">
+									<div class="ui input">
+										<input type="email" name="email" required>
+									</div>
+								</div>
+								<button class="ui green button" id="test-mail-btn">{{.i18n.Tr "admin.config.email.send_test_mail"}}</button>
+							</form>
+						{{end}}
+					</dl>
+				</div>
+
 				<!-- HTTP Configuration -->
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.http_config"}}
@@ -258,35 +316,6 @@
 						<dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.skip_tls_verify"}}</dt>
 						<dd><i class="fa fa{{if .Webhook.SkipTLSVerify}}-check{{end}}-square-o"></i></dd>
-					</dl>
-				</div>
-
-				<h4 class="ui top attached header">
-					{{.i18n.Tr "admin.config.mailer_config"}}
-				</h4>
-				<div class="ui attached table segment">
-					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.mailer_enabled"}}</dt>
-						<dd><i class="fa fa{{if .MailerEnabled}}-check{{end}}-square-o"></i></dd>
-						{{if .MailerEnabled}}
-							<dt>{{.i18n.Tr "admin.config.mailer_subject_prefix"}}</dt>
-							<dd><code>{{.Mailer.SubjectPrefix}}</code></dd>
-							<dt>{{.i18n.Tr "admin.config.mailer_disable_helo"}}</dt>
-							<dd><i class="fa fa{{if .Mailer.DisableHelo}}-check{{end}}-square-o"></i></dd>
-							<dt>{{.i18n.Tr "admin.config.mailer_host"}}</dt>
-							<dd>{{.Mailer.Host}}</dd>
-							<dt>{{.i18n.Tr "admin.config.mailer_user"}}</dt>
-							<dd>{{if .Mailer.User}}{{.Mailer.User}}{{else}}(empty){{end}}</dd><br>
-							<form class="ui form" action="{{AppSubURL}}/admin/config/test_mail" method="post">
-								{{.CSRFTokenHTML}}
-								<div class="inline field ui left">
-									<div class="ui input">
-										<input type="email" name="email" required>
-									</div>
-								</div>
-								<button class="ui green button" id="test-mail-btn">{{.i18n.Tr "admin.config.send_test_mail"}}</button>
-							</form>
-						{{end}}
 					</dl>
 				</div>
 

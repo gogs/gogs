@@ -15,8 +15,8 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -369,7 +369,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 	// Send confirmation email, no need for social account.
 	if conf.Service.RegisterEmailConfirm && u.ID > 1 {
-		mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
+		email.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email
 		c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
@@ -398,7 +398,7 @@ func Activate(c *context.Context) {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
-				mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
+				email.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
 
 				if err := c.Cache.Put(c.User.MailResendCacheKey(), 1, 180); err != nil {
 					log.Error("Failed to put cache key 'mail resend': %v", err)
@@ -457,7 +457,7 @@ func ActivateEmail(c *context.Context) {
 func ForgotPasswd(c *context.Context) {
 	c.Title("auth.forgot_password")
 
-	if conf.MailService == nil {
+	if !conf.Email.Enabled {
 		c.Data["IsResetDisable"] = true
 		c.Success(FORGOT_PASSWORD)
 		return
@@ -470,16 +470,16 @@ func ForgotPasswd(c *context.Context) {
 func ForgotPasswdPost(c *context.Context) {
 	c.Title("auth.forgot_password")
 
-	if conf.MailService == nil {
+	if !conf.Email.Enabled {
 		c.Status(403)
 		return
 	}
 	c.Data["IsResetRequest"] = true
 
-	email := c.Query("email")
-	c.Data["Email"] = email
+	emailAddr := c.Query("email")
+	c.Data["Email"] = emailAddr
 
-	u, err := db.GetUserByEmail(email)
+	u, err := db.GetUserByEmail(emailAddr)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
 			c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
@@ -504,7 +504,7 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	mailer.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
+	email.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
 	if err = c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
