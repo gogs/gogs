@@ -74,6 +74,5 @@ func GetRepoGitTree(c *context.APIContext) {
 		URL:  fmt.Sprintf(templateURL+"/%s", c.Params(":sha")),
 		Tree: children,
 	}
-
 	c.JSONSuccess(results)
 }
