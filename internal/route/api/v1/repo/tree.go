@@ -6,7 +6,6 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
 )
 
 type repoGitTree struct {
@@ -25,7 +24,6 @@ type repoGitTreeEntry struct {
 }
 
 func GetRepoGitTree(c *context.APIContext) {
-	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitTree, err := c.Repo.GitRepo.GetTree(c.Params(":sha"))
 	if err != nil {
 		c.NotFoundOrServerError("GetRepoGitTree", git.IsErrNotExist, err)
@@ -63,7 +61,7 @@ func GetRepoGitTree(c *context.APIContext) {
 			mode = ""
 		}
 		children = append(children, &repoGitTreeEntry{
-			Path: repoPath,
+			Path: entry.Name(),
 			Mode: mode,
 			Type: string(entry.Type),
 			Size: entry.Size(),
