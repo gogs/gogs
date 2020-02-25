@@ -28,18 +28,17 @@ func GetRepoGitTree(c *context.APIContext) {
 	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitTree, err := c.Repo.GitRepo.GetTree(c.Params(":sha"))
 	if err != nil {
-		c.NotFoundOrServerError("GetRepoTree", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetRepoGitTree", git.IsErrNotExist, err)
 		return
 	}
 	entries, err := gitTree.ListEntries()
 	if err != nil {
-		c.ServerError("GetRepoTree", err)
+		c.ServerError("GetRepoGitTree", err)
 		return
 	}
-	var children []*repoGitTreeEntry
-	var mode string
-	templateURL := `%s/repos/%s/%s/git/trees`
-	templateURL = fmt.Sprintf(templateURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+
+	templateURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+
 	if entries == nil {
 		c.JSONSuccess(&repoGitTree{
 			Sha: c.Params(":sha"),
@@ -47,6 +46,9 @@ func GetRepoGitTree(c *context.APIContext) {
 		})
 		return
 	}
+
+	var children []*repoGitTreeEntry
+	var mode string
 
 	for _, entry := range entries {
 		switch entry.Type {
