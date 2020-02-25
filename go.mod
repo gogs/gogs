@@ -35,8 +35,6 @@ require (
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
 	github.com/microcosm-cc/bluemonday v1.0.2
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/msteinert/pam v0.0.0-20190215180659-f29b9f28d6f9
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/niklasfasching/go-org v0.1.6
