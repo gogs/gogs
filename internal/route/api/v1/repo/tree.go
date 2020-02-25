@@ -9,13 +9,13 @@ import (
 	"gogs.io/gogs/internal/db"
 )
 
-type repoGitTreeResponse struct {
-	Sha  string         `json:"sha"`
-	URL  string         `json:"url"`
-	Tree []*repoGitTree `json:"tree"`
+type repoGitTree struct {
+	Sha  string              `json:"sha"`
+	URL  string              `json:"url"`
+	Tree []*repoGitTreeEntry `json:"tree"`
 }
 
-type repoGitTree struct {
+type repoGitTreeEntry struct {
 	Path string `json:"path"`
 	Mode string `json:"mode"`
 	Type string `json:"type"`
@@ -36,17 +36,18 @@ func GetRepoGitTree(c *context.APIContext) {
 		c.ServerError("GetRepoTree", err)
 		return
 	}
-	var children []*repoGitTree
+	var children []*repoGitTreeEntry
 	var mode string
 	templateURL := `%s/repos/%s/%s/git/trees`
 	templateURL = fmt.Sprintf(templateURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"))
 	if entries == nil {
-		res := &repoGitTreeResponse{
+		c.JSONSuccess(&repoGitTree{
 			Sha: c.Params(":sha"),
 			URL: fmt.Sprintf(templateURL+"/%s", c.Params(":sha")),
-		}
-		c.JSONSuccess(res)
+		})
+		return
 	}
+
 	for _, entry := range entries {
 		switch entry.Type {
 		case git.ObjectCommit:
@@ -60,7 +61,7 @@ func GetRepoGitTree(c *context.APIContext) {
 		default:
 			mode = ""
 		}
-		children = append(children, &repoGitTree{
+		children = append(children, &repoGitTreeEntry{
 			Path: repoPath,
 			Mode: mode,
 			Type: string(entry.Type),
@@ -69,10 +70,9 @@ func GetRepoGitTree(c *context.APIContext) {
 			URL:  fmt.Sprintf(templateURL+"/%s", entry.ID.String()),
 		})
 	}
-	results := &repoGitTreeResponse{
+	c.JSONSuccess(&repoGitTree{
 		Sha:  c.Params(":sha"),
 		URL:  fmt.Sprintf(templateURL+"/%s", c.Params(":sha")),
 		Tree: children,
-	}
-	c.JSONSuccess(results)
+	})
 }
