@@ -18,7 +18,7 @@ type repoGitTreeEntry struct {
 	Path string `json:"path"`
 	Mode string `json:"mode"`
 	Type string `json:"type"`
-	Size int64  `json:"size,omitempty"`
+	Size int64  `json:"size"`
 	Sha  string `json:"sha"`
 	URL  string `json:"url"`
 }
