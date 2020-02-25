@@ -47,10 +47,9 @@ func GetRepoGitTree(c *context.APIContext) {
 		return
 	}
 
-	var children []*repoGitTreeEntry
-	var mode string
-
+	children := make([]*repoGitTreeEntry, 0, len(entries))
 	for _, entry := range entries {
+		var mode string
 		switch entry.Type {
 		case git.ObjectCommit:
 			mode = "160000"
