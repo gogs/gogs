@@ -39,7 +39,7 @@ func GetRepoGitTree(c *context.APIContext) {
 
 	templateURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
 
-	if entries == nil {
+	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{
 			Sha: c.Params(":sha"),
 			URL: fmt.Sprintf(templateURL+"/%s", c.Params(":sha")),
