@@ -292,9 +292,9 @@ func SignOut(c *context.Context) {
 func SignUp(c *context.Context) {
 	c.Title("sign_up")
 
-	c.Data["EnableCaptcha"] = conf.Service.EnableCaptcha
+	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
 
-	if conf.Service.DisableRegistration {
+	if conf.Auth.DisableRegistration {
 		c.Data["DisableRegistration"] = true
 		c.Success(SIGNUP)
 		return
@@ -306,9 +306,9 @@ func SignUp(c *context.Context) {
 func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	c.Title("sign_up")
 
-	c.Data["EnableCaptcha"] = conf.Service.EnableCaptcha
+	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
 
-	if conf.Service.DisableRegistration {
+	if conf.Auth.DisableRegistration {
 		c.Status(403)
 		return
 	}
@@ -318,7 +318,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	if conf.Service.EnableCaptcha && !cpt.VerifyReq(c.Req) {
+	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
 		c.FormErr("Captcha")
 		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f)
 		return
@@ -334,7 +334,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		Name:     f.UserName,
 		Email:    f.Email,
 		Passwd:   f.Password,
-		IsActive: !conf.Service.RegisterEmailConfirm,
+		IsActive: !conf.Auth.RequireEmailConfirmation,
 	}
 	if err := db.CreateUser(u); err != nil {
 		switch {
@@ -368,11 +368,11 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	}
 
 	// Send confirmation email, no need for social account.
-	if conf.Service.RegisterEmailConfirm && u.ID > 1 {
+	if conf.Auth.RegisterEmailConfirm && u.ID > 1 {
 		email.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email
-		c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
+		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 		c.Success(ACTIVATE)
 
 		if err := c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
@@ -393,11 +393,11 @@ func Activate(c *context.Context) {
 			return
 		}
 		// Resend confirmation email.
-		if conf.Service.RegisterEmailConfirm {
+		if conf.Auth.RequireEmailConfirmation {
 			if c.Cache.IsExist(c.User.MailResendCacheKey()) {
 				c.Data["ResendLimited"] = true
 			} else {
-				c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
+				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 				email.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
 
 				if err := c.Cache.Put(c.User.MailResendCacheKey(), 1, 180); err != nil {
@@ -482,7 +482,7 @@ func ForgotPasswdPost(c *context.Context) {
 	u, err := db.GetUserByEmail(emailAddr)
 	if err != nil {
 		if errors.IsUserNotExist(err) {
-			c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
+			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 			c.Data["IsResetSent"] = true
 			c.Success(FORGOT_PASSWORD)
 			return
@@ -509,7 +509,7 @@ func ForgotPasswdPost(c *context.Context) {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 
-	c.Data["Hours"] = conf.Service.ActiveCodeLives / 60
+	c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 	c.Data["IsResetSent"] = true
 	c.Success(FORGOT_PASSWORD)
 }

@@ -77,7 +77,7 @@ func HTTPContexter() macaron.Handler {
 		}
 
 		// Authentication is not required for pulling from public repositories.
-		if isPull && !repo.IsPrivate && !conf.Service.RequireSignInView {
+		if isPull && !repo.IsPrivate && !conf.Auth.RequireSigninView {
 			c.Map(&HTTPContext{
 				Context: c,
 			})
