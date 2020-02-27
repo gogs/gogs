@@ -61,6 +61,8 @@ var File *ini.File
 // It is safe to call this function multiple times with desired `customConf`, but it is
 // not concurrent safe.
 //
+// NOTE: The order of loading configuration sections matters as one may depend on another.
+//
 // ⚠️ WARNING: Do not print anything in this function other than wanrings.
 func Init(customConf string) error {
 	var err error
@@ -230,6 +232,26 @@ func Init(customConf string) error {
 			return errors.Wrapf(err, "parse mail address %q", Email.From)
 		}
 		Email.FromEmail = parsed.Address
+	}
+
+	// ***********************************
+	// ----- Authentication settings -----
+	// ***********************************
+
+	if err = File.Section("auth").MapTo(&Auth); err != nil {
+		return errors.Wrap(err, "mapping [auth] section")
+	}
+	// LEGACY [0.13]: In case there are values with old section name.
+	if err = File.Section("service").MapTo(&Auth); err != nil {
+		return errors.Wrap(err, "mapping [service] section")
+	}
+
+	// ***********************************
+	// ----- User settings -----
+	// ***********************************
+
+	if err = File.Section("user").MapTo(&User); err != nil {
+		return errors.Wrap(err, "mapping [user] section")
 	}
 
 	handleDeprecated()
@@ -659,31 +681,6 @@ func InitLogging() {
 	}
 }
 
-var Service struct {
-	ActiveCodeLives                int
-	ResetPwdCodeLives              int
-	RegisterEmailConfirm           bool
-	DisableRegistration            bool
-	ShowRegistrationButton         bool
-	RequireSignInView              bool
-	EnableNotifyMail               bool
-	EnableReverseProxyAuth         bool
-	EnableReverseProxyAutoRegister bool
-	EnableCaptcha                  bool
-}
-
-func newService() {
-	sec := File.Section("service")
-	Service.ActiveCodeLives = sec.Key("ACTIVE_CODE_LIVE_MINUTES").MustInt(180)
-	Service.ResetPwdCodeLives = sec.Key("RESET_PASSWD_CODE_LIVE_MINUTES").MustInt(180)
-	Service.DisableRegistration = sec.Key("DISABLE_REGISTRATION").MustBool()
-	Service.ShowRegistrationButton = sec.Key("SHOW_REGISTRATION_BUTTON").MustBool(!Service.DisableRegistration)
-	Service.RequireSignInView = sec.Key("REQUIRE_SIGNIN_VIEW").MustBool()
-	Service.EnableReverseProxyAuth = sec.Key("ENABLE_REVERSE_PROXY_AUTHENTICATION").MustBool()
-	Service.EnableReverseProxyAutoRegister = sec.Key("ENABLE_REVERSE_PROXY_AUTO_REGISTRATION").MustBool()
-	Service.EnableCaptcha = sec.Key("ENABLE_CAPTCHA").MustBool()
-}
-
 func newCacheService() {
 	CacheAdapter = File.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
 	switch CacheAdapter {
@@ -713,53 +710,11 @@ func newSessionService() {
 	log.Trace("Session service is enabled")
 }
 
-func newRegisterMailService() {
-	if !File.Section("service").Key("REGISTER_EMAIL_CONFIRM").MustBool() {
-		return
-	} else if !Email.Enabled {
-		log.Warn("Email confirmation is not enabled due to the mail service is not available")
-		return
-	}
-	Service.RegisterEmailConfirm = true
-	log.Trace("Email confirmation is enabled")
-}
-
-// newNotifyMailService initializes notification email service options from configuration.
-// No non-error log will be printed in hook mode.
-func newNotifyMailService() {
-	if !File.Section("service").Key("ENABLE_NOTIFY_MAIL").MustBool() {
-		return
-	} else if !Email.Enabled {
-		log.Warn("Email notification is not enabled due to the mail service is not available")
-		return
-	}
-	Service.EnableNotifyMail = true
-
-	if HookMode {
-		return
-	}
-	log.Trace("Email notification is enabled")
-}
-
-func NewService() {
-	newService()
-}
-
 func NewServices() {
-	newService()
 	newCacheService()
 	newSessionService()
-	newRegisterMailService()
-	newNotifyMailService()
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.
+// All operations should be done synchronously to prevent program exits before finishing.
 var HookMode bool
-
-// NewPostReceiveHookServices initializes all services that are needed by
-// Git server-side post-receive hook callback.
-func NewPostReceiveHookServices() {
-	HookMode = true
-	newService()
-	newNotifyMailService()
-}

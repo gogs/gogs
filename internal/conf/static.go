@@ -142,15 +142,17 @@ var (
 
 	// Security settings
 	Security struct {
-		InstallLock                    bool
-		SecretKey                      string
-		LoginRememberDays              int
-		CookieRememberName             string
-		CookieUsername                 string
-		CookieSecure                   bool
+		InstallLock             bool
+		SecretKey               string
+		LoginRememberDays       int
+		CookieRememberName      string
+		CookieUsername          string
+		CookieSecure            bool
+		EnableLoginStatusCookie bool
+		LoginStatusCookieName   string
+
+		// Deprecated: Use Auth.ReverseProxyAuthenticationHeader instead, will be removed in 0.13.
 		ReverseProxyAuthenticationUser string
-		EnableLoginStatusCookie        bool
-		LoginStatusCookieName          string
 	}
 
 	// Email settings
@@ -178,6 +180,36 @@ var (
 
 		// Deprecated: Use Password instead, will be removed in 0.13.
 		Passwd string
+	}
+
+	// Authentication settings
+	Auth struct {
+		ActivateCodeLives         int
+		ResetPasswordCodeLives    int
+		RequireEmailConfirmation  bool
+		RequireSigninView         bool
+		DisableRegistration       bool
+		EnableRegistrationCaptcha bool
+
+		EnableReverseProxyAuthentication   bool
+		EnableReverseProxyAutoRegistration bool
+		ReverseProxyAuthenticationHeader   string
+
+		// Deprecated: Use ActivateCodeLives instead, will be removed in 0.13.
+		ActiveCodeLiveMinutes int
+		// Deprecated: Use ResetPasswordCodeLives instead, will be removed in 0.13.
+		ResetPasswdCodeLiveMinutes int
+		// Deprecated: Use RequireEmailConfirmation instead, will be removed in 0.13.
+		RegisterEmailConfirm bool
+		// Deprecated: Use EnableRegistrationCaptcha instead, will be removed in 0.13.
+		EnableCaptcha bool
+		// Deprecated: Use User.EnableEmailNotification instead, will be removed in 0.13.
+		EnableNotifyMail bool
+	}
+
+	// User settings
+	User struct {
+		EnableEmailNotification bool
 	}
 )
 
@@ -209,5 +241,31 @@ func handleDeprecated() {
 	if Email.Passwd != "" {
 		Email.Password = Email.Passwd
 		Email.Passwd = ""
+	}
+
+	if Auth.ActiveCodeLiveMinutes > 0 {
+		Auth.ActivateCodeLives = Auth.ActiveCodeLiveMinutes
+		Auth.ActiveCodeLiveMinutes = 0
+	}
+	if Auth.ResetPasswdCodeLiveMinutes > 0 {
+		Auth.ResetPasswordCodeLives = Auth.ResetPasswdCodeLiveMinutes
+		Auth.ResetPasswdCodeLiveMinutes = 0
+	}
+	if Auth.RegisterEmailConfirm {
+		Auth.RequireEmailConfirmation = true
+		Auth.RegisterEmailConfirm = false
+	}
+	if Auth.EnableCaptcha {
+		Auth.EnableRegistrationCaptcha = true
+		Auth.EnableCaptcha = false
+	}
+	if Security.ReverseProxyAuthenticationUser != "" {
+		Auth.ReverseProxyAuthenticationHeader = Security.ReverseProxyAuthenticationUser
+		Security.ReverseProxyAuthenticationUser = ""
+	}
+
+	if Auth.EnableNotifyMail {
+		User.EnableEmailNotification = true
+		Auth.EnableNotifyMail = false
 	}
 }

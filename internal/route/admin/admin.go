@@ -203,12 +203,13 @@ func Config(c *context.Context) {
 	c.Data["Database"] = conf.Database
 	c.Data["Security"] = conf.Security
 	c.Data["Email"] = conf.Email
+	c.Data["Auth"] = conf.Auth
+	c.Data["User"] = conf.User
 
 	c.Data["LogRootPath"] = conf.LogRootPath
 
 	c.Data["HTTP"] = conf.HTTP
 
-	c.Data["Service"] = conf.Service
 	c.Data["Webhook"] = conf.Webhook
 
 	c.Data["CacheAdapter"] = conf.CacheAdapter

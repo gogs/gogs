@@ -105,8 +105,8 @@ type Issue interface {
 func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
-		"ActiveCodeLives":   conf.Service.ActiveCodeLives / 60,
-		"ResetPwdCodeLives": conf.Service.ResetPwdCodeLives / 60,
+		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
+		"ResetPwdCodeLives": conf.Auth.ResetPasswordCodeLives / 60,
 		"Code":              code,
 	}
 	body, err := render(tpl, data)
@@ -133,7 +133,7 @@ func SendResetPasswordMail(c *macaron.Context, u User) {
 func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 	data := map[string]interface{}{
 		"Username":        u.DisplayName(),
-		"ActiveCodeLives": conf.Service.ActiveCodeLives / 60,
+		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
 		"Code":            u.GenerateEmailActivateCode(email),
 		"Email":           email,
 	}

@@ -262,7 +262,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	emailAddr := &db.EmailAddress{
 		UID:         c.User.ID,
 		Email:       f.Email,
-		IsActivated: !conf.Service.RegisterEmailConfirm,
+		IsActivated: !conf.Auth.RequireEmailConfirmation,
 	}
 	if err := db.AddEmailAddress(emailAddr); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
@@ -274,13 +274,13 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	// Send confirmation email
-	if conf.Service.RegisterEmailConfirm {
+	if conf.Auth.RequireEmailConfirmation {
 		email.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), emailAddr.Email)
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
 			log.Error("Set cache 'MailResendLimit' failed: %v", err)
 		}
-		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", emailAddr.Email, conf.Service.ActiveCodeLives/60))
+		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", emailAddr.Email, conf.Auth.ActivateCodeLives/60))
 	} else {
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}

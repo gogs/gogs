@@ -90,7 +90,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 	uid, isTokenAuth := SignedInID(ctx, sess)
 
 	if uid <= 0 {
-		if conf.Service.EnableReverseProxyAuth {
+		if conf.Auth.EnableReverseProxyAuthentication {
 			webAuthUser := ctx.Req.Header.Get(conf.Security.ReverseProxyAuthenticationUser)
 			if len(webAuthUser) > 0 {
 				u, err := db.GetUserByName(webAuthUser)
@@ -101,7 +101,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 					}
 
 					// Check if enabled auto-registration.
-					if conf.Service.EnableReverseProxyAutoRegister {
+					if conf.Auth.EnableReverseProxyAutoRegistration {
 						u := &db.User{
 							Name:     webAuthUser,
 							Email:    gouuid.NewV4().String() + "@localhost",
