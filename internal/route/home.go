@@ -22,7 +22,7 @@ const (
 
 func Home(c *context.Context) {
 	if c.IsLogged {
-		if !c.User.IsActive && conf.Service.RegisterEmailConfirm {
+		if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
 			c.Success(user2.ACTIVATE)
 		} else {

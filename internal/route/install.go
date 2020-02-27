@@ -180,16 +180,16 @@ func Install(c *context.Context) {
 		f.SMTPFrom = conf.Email.From
 		f.SMTPUser = conf.Email.User
 	}
-	f.RegisterConfirm = conf.Service.RegisterEmailConfirm
-	f.MailNotify = conf.Service.EnableNotifyMail
+	f.RegisterConfirm = conf.Auth.RequireEmailConfirmation
+	f.MailNotify = conf.User.EnableEmailNotification
 
 	// Server and other services settings
 	f.OfflineMode = conf.Server.OfflineMode
 	f.DisableGravatar = conf.DisableGravatar
 	f.EnableFederatedAvatar = conf.EnableFederatedAvatar
-	f.DisableRegistration = conf.Service.DisableRegistration
-	f.EnableCaptcha = conf.Service.EnableCaptcha
-	f.RequireSignInView = conf.Service.RequireSignInView
+	f.DisableRegistration = conf.Auth.DisableRegistration
+	f.EnableCaptcha = conf.Auth.EnableRegistrationCaptcha
+	f.RequireSignInView = conf.Auth.RequireSigninView
 
 	form.Assign(f, c.Data)
 	c.Success(INSTALL)

@@ -323,7 +323,7 @@ func Contexter() macaron.Handler {
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
-		c.Data["ShowRegistrationButton"] = conf.Service.ShowRegistrationButton
+		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
 		c.Data["ShowFooterBranding"] = conf.ShowFooterBranding
 
 		c.renderNoticeBanner()

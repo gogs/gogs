@@ -16,8 +16,8 @@ func TemplatePreview(c *context.Context) {
 	c.Data["AppVersion"] = conf.App.Version
 	c.Data["AppURL"] = conf.Server.ExternalURL
 	c.Data["Code"] = "2014031910370000009fff6782aadb2162b4a997acb69d4400888e0b9274657374"
-	c.Data["ActiveCodeLives"] = conf.Service.ActiveCodeLives / 60
-	c.Data["ResetPwdCodeLives"] = conf.Service.ResetPwdCodeLives / 60
+	c.Data["ActiveCodeLives"] = conf.Auth.ActivateCodeLives / 60
+	c.Data["ResetPwdCodeLives"] = conf.Auth.ResetPasswordCodeLives / 60
 	c.Data["CurDbValue"] = ""
 
 	c.HTML(200, (c.Params("*")))

@@ -18,8 +18,8 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -398,7 +398,7 @@ func SettingsCollaborationPost(c *context.Context) {
 		return
 	}
 
-	if conf.Service.EnableNotifyMail {
+	if conf.User.EnableEmailNotification {
 		email.SendCollaboratorMail(db.NewMailerUser(u), db.NewMailerUser(c.User), db.NewMailerRepo(c.Repo.Repository))
 	}
 

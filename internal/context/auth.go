@@ -71,7 +71,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
 				c.Redirect(conf.Server.Subpath + "/user/login")
 				return
-			} else if !c.User.IsActive && conf.Service.RegisterEmailConfirm {
+			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 				c.Data["Title"] = c.Tr("auth.active_your_account")
 				c.HTML(200, "user/auth/activate")
 				return
