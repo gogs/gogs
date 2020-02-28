@@ -17,7 +17,6 @@ import (
 
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
-	"github.com/go-macaron/session"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/mcuadros/go-version"
 	"github.com/pkg/errors"
@@ -254,6 +253,14 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [user] section")
 	}
 
+	// ***********************************
+	// ----- Session settings -----
+	// ***********************************
+
+	if err = File.Section("session").MapTo(&Session); err != nil {
+		return errors.Wrap(err, "mapping [session] section")
+	}
+
 	handleDeprecated()
 
 	// TODO
@@ -459,10 +466,6 @@ var (
 	CacheAdapter  string
 	CacheInterval int
 	CacheConn     string
-
-	// Session settings
-	SessionConfig  session.Options
-	CSRFCookieName string
 
 	// Cron tasks
 	Cron struct {
@@ -696,23 +699,8 @@ func newCacheService() {
 	log.Trace("Cache service is enabled")
 }
 
-func newSessionService() {
-	SessionConfig.Provider = File.Section("session").Key("PROVIDER").In("memory",
-		[]string{"memory", "file", "redis", "mysql"})
-	SessionConfig.ProviderConfig = strings.Trim(File.Section("session").Key("PROVIDER_CONFIG").String(), "\" ")
-	SessionConfig.CookieName = File.Section("session").Key("COOKIE_NAME").MustString("i_like_gogs")
-	SessionConfig.CookiePath = Server.Subpath
-	SessionConfig.Secure = File.Section("session").Key("COOKIE_SECURE").MustBool()
-	SessionConfig.Gclifetime = File.Section("session").Key("GC_INTERVAL_TIME").MustInt64(3600)
-	SessionConfig.Maxlifetime = File.Section("session").Key("SESSION_LIFE_TIME").MustInt64(86400)
-	CSRFCookieName = File.Section("session").Key("CSRF_COOKIE_NAME").MustString("_csrf")
-
-	log.Trace("Session service is enabled")
-}
-
 func NewServices() {
 	newCacheService()
-	newSessionService()
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.

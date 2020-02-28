@@ -289,7 +289,6 @@
 					</dl>
 				</div>
 
-
 				{{/* User settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.user_config"}}
@@ -298,6 +297,29 @@
 					<dl class="dl-horizontal admin-dl-horizontal">
 						<dt>{{.i18n.Tr "admin.config.user.enable_email_notify"}}</dt>
 						<dd><i class="fa fa{{if .User.EnableEmailNotification}}-check{{end}}-square-o"></i></dd>
+					</dl>
+				</div>
+
+				{{/* Session settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.session_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.session_provider"}}</dt>
+						<dd>{{.Session.Provider}}</dd>
+						<dt>{{.i18n.Tr "admin.config.session.provider_config"}}</dt>
+						<dd><code>{{.Session.ProviderConfig}}</code></dd>
+						<dt>{{.i18n.Tr "admin.config.session.cookie_name"}}</dt>
+						<dd>{{.Session.CookieName}}</dd>
+						<dt>{{.i18n.Tr "admin.config.session.https_only"}}</dt>
+						<dd><i class="fa fa{{if .Session.CookieSecure}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.session.gc_interval"}}</dt>
+						<dd>{{.Session.GCInterval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.session.max_life_time"}}</dt>
+						<dd>{{.Session.MaxLifeTime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.session.csrf_cookie_name"}}</dt>
+						<dd>{{.Session.CSRFCookieName}}</dd>
 					</dl>
 				</div>
 
@@ -345,28 +367,6 @@
 						<dt>{{.i18n.Tr "admin.config.cache_conn"}}</dt>
 						<dd><code>{{.CacheConn}}</code></dd>
 						{{end}}
-					</dl>
-				</div>
-
-				<h4 class="ui top attached header">
-					{{.i18n.Tr "admin.config.session_config"}}
-				</h4>
-				<div class="ui attached table segment">
-					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.session_provider"}}</dt>
-						<dd>{{.SessionConfig.Provider}}</dd>
-						<dt>{{.i18n.Tr "admin.config.provider_config"}}</dt>
-						<dd><code>{{.SessionConfig.ProviderConfig}}</code></dd>
-						<dt>{{.i18n.Tr "admin.config.cookie_name"}}</dt>
-						<dd>{{.SessionConfig.CookieName}}</dd>
-						<dt>{{.i18n.Tr "admin.config.gc_interval_time"}}</dt>
-						<dd>{{.SessionConfig.Gclifetime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
-						<dt>{{.i18n.Tr "admin.config.session_life_time"}}</dt>
-						<dd>{{.SessionConfig.Maxlifetime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
-						<dt>{{.i18n.Tr "admin.config.https_only"}}</dt>
-						<dd><i class="fa fa{{if .SessionConfig.Secure}}-check{{end}}-square-o"></i></dd>
-						<dt>{{.i18n.Tr "admin.config.cookie_life_time"}}</dt>
-						<dd>{{.SessionConfig.CookieLifeTime}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 					</dl>
 				</div>
 
