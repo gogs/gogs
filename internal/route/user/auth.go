@@ -66,7 +66,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 	isSucceed = true
 	c.Session.Set("uid", u.ID)
 	c.Session.Set("uname", u.Name)
-	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
 		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
@@ -130,7 +130,7 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 	c.Session.Delete("twoFactorUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
-	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
 		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
@@ -285,7 +285,7 @@ func SignOut(c *context.Context) {
 	c.Session.Destory(c.Context)
 	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
-	c.SetCookie(conf.CSRFCookieName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	c.SubURLRedirect("/")
 }
 

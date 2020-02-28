@@ -211,6 +211,22 @@ var (
 	User struct {
 		EnableEmailNotification bool
 	}
+
+	// Session settings
+	Session struct {
+		Provider       string
+		ProviderConfig string
+		CookieName     string
+		CookieSecure   bool
+		GCInterval     int64 `ini:"GC_INTERVAL"`
+		MaxLifeTime    int64
+		CSRFCookieName string `ini:"CSRF_COOKIE_NAME"`
+
+		// Deprecated: Use GCInterval instead, will be removed in 0.13.
+		GCIntervalTime int64 `ini:"GC_INTERVAL_TIME"`
+		// Deprecated: Use MaxLifeTime instead, will be removed in 0.13.
+		SessionLifeTime int64
+	}
 )
 
 // handleDeprecated transfers deprecated values to the new ones when set.
@@ -267,5 +283,14 @@ func handleDeprecated() {
 	if Auth.EnableNotifyMail {
 		User.EnableEmailNotification = true
 		Auth.EnableNotifyMail = false
+	}
+
+	if Session.GCIntervalTime > 0 {
+		Session.GCInterval = Session.GCIntervalTime
+		Session.GCIntervalTime = 0
+	}
+	if Session.SessionLifeTime > 0 {
+		Session.MaxLifeTime = Session.SessionLifeTime
+		Session.SessionLifeTime = 0
 	}
 }

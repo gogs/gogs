@@ -142,10 +142,18 @@ func newMacaron() *macaron.Macaron {
 	m.Use(captcha.Captchaer(captcha.Options{
 		SubURL: conf.Server.Subpath,
 	}))
-	m.Use(session.Sessioner(conf.SessionConfig))
+	m.Use(session.Sessioner(session.Options{
+		Provider:       conf.Session.Provider,
+		ProviderConfig: conf.Session.ProviderConfig,
+		CookieName:     conf.Session.CookieName,
+		CookiePath:     conf.Server.Subpath,
+		Gclifetime:     conf.Session.GCInterval,
+		Maxlifetime:    conf.Session.MaxLifeTime,
+		Secure:         conf.Session.CookieSecure,
+	}))
 	m.Use(csrf.Csrfer(csrf.Options{
 		Secret:     conf.Security.SecretKey,
-		Cookie:     conf.CSRFCookieName,
+		Cookie:     conf.Session.CSRFCookieName,
 		SetCookie:  true,
 		Header:     "X-Csrf-Token",
 		CookiePath: conf.Server.Subpath,

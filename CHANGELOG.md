@@ -30,6 +30,8 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is deprecated and will end support in 0.13.0, please start using `[auth] RESET_PASSWORD_CODE_LIVES`.
 - Configuration option `[auth] ENABLE_CAPTCHA` is deprecated and will end support in 0.13.0, please start using `[auth] ENABLE_REGISTRATION_CAPTCHA`.
 - Configuration option `[auth] ENABLE_NOTIFY_MAIL` is deprecated and will end support in 0.13.0, please start using `[user] ENABLE_EMAIL_NOTIFICATION`.
+- Configuration option `[session] GC_INTERVAL_TIME` is deprecated and will end support in 0.13.0, please start using `[session] GC_INTERVAL`.
+- Configuration option `[session] SESSION_LIFE_TIME` is deprecated and will end support in 0.13.0, please start using `[session] MAX_LIFE_TIME`.
 
 ### Fixed
 
@@ -49,6 +51,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] STATIC_ROOT_PATH`
 - Configuration option `[repository] MIRROR_QUEUE_LENGTH`
 - Configuration option `[repository] PULL_REQUEST_QUEUE_LENGTH`
+- Configuration option `[session] ENABLE_SET_COOKIE`
 
 ---
 

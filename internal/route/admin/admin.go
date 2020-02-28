@@ -205,6 +205,7 @@ func Config(c *context.Context) {
 	c.Data["Email"] = conf.Email
 	c.Data["Auth"] = conf.Auth
 	c.Data["User"] = conf.User
+	c.Data["Session"] = conf.Session
 
 	c.Data["LogRootPath"] = conf.LogRootPath
 
@@ -215,8 +216,6 @@ func Config(c *context.Context) {
 	c.Data["CacheAdapter"] = conf.CacheAdapter
 	c.Data["CacheInterval"] = conf.CacheInterval
 	c.Data["CacheConn"] = conf.CacheConn
-
-	c.Data["SessionConfig"] = conf.SessionConfig
 
 	c.Data["DisableGravatar"] = conf.DisableGravatar
 	c.Data["EnableFederatedAvatar"] = conf.EnableFederatedAvatar
