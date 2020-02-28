@@ -1,4 +1,4 @@
-// +build go1.12
+// +build go1.13
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
