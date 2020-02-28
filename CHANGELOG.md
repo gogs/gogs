@@ -14,6 +14,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- The required Go version to compile source code changed to 1.13.
 - All assets are now embedded into binary and served from memory by default. Set `[server] LOAD_ASSETS_FROM_DISK = true` to load them from disk. [#5920](https://github.com/gogs/gogs/pull/5920)
 - Application and Go versions are removed from page footer and only show in the admin dashboard.
 - Build tag for running as Windows Service has been changed from `miniwinsvc` to `minwinsvc`.
