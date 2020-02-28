@@ -425,7 +425,7 @@ function initRepository() {
             if (confirm($this.data('locale'))) {
                 $.post($this.data('url'), {
                     "_csrf": csrf
-                }).success(function () {
+                }).done(function () {
                     $('#' + $this.data('comment-id')).remove();
                 });
             }
@@ -1310,7 +1310,7 @@ $(document).ready(function () {
                 $.post($this.data('url'), {
                     "_csrf": csrf,
                     "id": $this.data("id")
-                }).success(function (data) {
+                }).done(function (data) {
                     window.location.href = data.redirect;
                 });
             }
