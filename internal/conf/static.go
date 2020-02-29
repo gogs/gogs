@@ -234,6 +234,11 @@ var (
 		Interval int
 		Host     string
 	}
+
+	// HTTP settings
+	HTTP struct {
+		AccessControlAllowOrigin string
+	}
 )
 
 // handleDeprecated transfers deprecated values to the new ones when set.

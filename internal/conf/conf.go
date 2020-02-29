@@ -269,6 +269,14 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [cache] section")
 	}
 
+	// **************************
+	// ----- HTTP settings -----
+	// **************************
+
+	if err = File.Section("http").MapTo(&HTTP); err != nil {
+		return errors.Wrap(err, "mapping [http] section")
+	}
+
 	handleDeprecated()
 
 	// TODO
@@ -344,9 +352,7 @@ func Init(customConf string) error {
 		}
 	}
 
-	if err = File.Section("http").MapTo(&HTTP); err != nil {
-		log.Fatal("Failed to map HTTP settings: %v", err)
-	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {
+	if err = File.Section("webhook").MapTo(&Webhook); err != nil {
 		log.Fatal("Failed to map Webhook settings: %v", err)
 	} else if err = File.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
 		log.Fatal("Failed to map Release.Attachment settings: %v", err)
@@ -396,10 +402,6 @@ func MustInit(customConf string) {
 // TODO
 
 var (
-	HTTP struct {
-		AccessControlAllowOrigin string
-	}
-
 	// Database settings
 	UseSQLite3    bool
 	UseMySQL      bool

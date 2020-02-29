@@ -121,7 +121,13 @@
 						<dt>{{.i18n.Tr "admin.config.repo.script_type"}}</dt>
 						<dd><code>{{.Repository.ScriptType}}</code></dd>
 						<dt>{{.i18n.Tr "admin.config.repo.ansi_chatset"}}</dt>
-						<dd>{{if .Repository.ANSICharset}}{{.Repository.AnsiCharset}}{{else}}{{.i18n.Tr "admin.config.not_set"}}{{end}}</dd>
+						<dd>
+							{{if .Repository.ANSICharset}}
+								{{.Repository.AnsiCharset}}
+							{{else}}
+								<i>{{.i18n.Tr "admin.config.not_set"}}</i>
+							{{end}}
+						</dd>
 						<dt>{{.i18n.Tr "admin.config.repo.force_private"}}</dt>
 						<dd><i class="fa fa{{if .Repository.ForcePrivate}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.repo.max_creation_limit"}}</dt>
@@ -224,7 +230,13 @@
 							<dt>{{.i18n.Tr "admin.config.email.disable_helo"}}</dt>
 							<dd><i class="fa fa{{if .Email.DisableHELO}}-check{{end}}-square-o"></i></dd>
 							<dt>{{.i18n.Tr "admin.config.email.helo_hostname"}}</dt>
-							<dd>{{if .Email.HELOHostname}}{{.Email.HELOHostname}}{{else}}{{.i18n.Tr "admin.config.not_set"}}{{end}}</dd>
+							<dd>
+								{{if .Email.HELOHostname}}
+									{{.Email.HELOHostname}}
+								{{else}}
+									<i>{{.i18n.Tr "admin.config.not_set"}}</i>
+								{{end}}
+							</dd>
 
 							<div class="ui divider"></div>
 
@@ -334,17 +346,23 @@
 						<dt>{{.i18n.Tr "admin.config.cache.interval"}}</dt>
 						<dd>{{.Cache.Interval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.cache.host"}}</dt>
-						<dd>{{if .CacheConn}}<code>{{.CacheConn}}</code>{{else}}{{.i18n.Tr "admin.config.not_set"}}{{end}}</dd>
+						<dd>
+							{{if .CacheConn}}
+								<code>{{.CacheConn}}</code>
+							{{else}}
+								<i>{{.i18n.Tr "admin.config.not_set"}}</i>
+							{{end}}
+						</dd>
 					</dl>
 				</div>
 
-				<!-- HTTP Configuration -->
+				{{/* HTTP settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.http_config"}}
 				</h4>
 				<div class="ui attached table segment">
 					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.http_access_control_allow_origin"}}</dt>
+						<dt>{{.i18n.Tr "admin.config.http.access_control_allow_origin"}}</dt>
 						<dd>
 							{{if .HTTP.AccessControlAllowOrigin}}
 								<code>{{.HTTP.AccessControlAllowOrigin}}</code>

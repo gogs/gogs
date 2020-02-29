@@ -207,10 +207,9 @@ func Config(c *context.Context) {
 	c.Data["User"] = conf.User
 	c.Data["Session"] = conf.Session
 	c.Data["Cache"] = conf.Cache
+	c.Data["HTTP"] = conf.HTTP
 
 	c.Data["LogRootPath"] = conf.LogRootPath
-
-	c.Data["HTTP"] = conf.HTTP
 
 	c.Data["Webhook"] = conf.Webhook
 
