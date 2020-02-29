@@ -14,3 +14,4 @@ install:
   - go version
   - go env
   - go build -tags "minwinsvc" -v
+  - go test -v -race -cover
