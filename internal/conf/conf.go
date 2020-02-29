@@ -184,18 +184,18 @@ func Init(customConf string) error {
 	Repository.Root = ensureAbs(Repository.Root)
 	Repository.Upload.TempPath = ensureAbs(Repository.Upload.TempPath)
 
-	// *******************************
+	// *****************************
 	// ----- Database settings -----
-	// *******************************
+	// *****************************
 
 	if err = File.Section("database").MapTo(&Database); err != nil {
 		return errors.Wrap(err, "mapping [database] section")
 	}
 	Database.Path = ensureAbs(Database.Path)
 
-	// *******************************
+	// *****************************
 	// ----- Security settings -----
-	// *******************************
+	// *****************************
 
 	if err = File.Section("security").MapTo(&Security); err != nil {
 		return errors.Wrap(err, "mapping [security] section")
@@ -245,20 +245,28 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [service] section")
 	}
 
-	// ***********************************
+	// *************************
 	// ----- User settings -----
-	// ***********************************
+	// *************************
 
 	if err = File.Section("user").MapTo(&User); err != nil {
 		return errors.Wrap(err, "mapping [user] section")
 	}
 
-	// ***********************************
+	// ****************************
 	// ----- Session settings -----
-	// ***********************************
+	// ****************************
 
 	if err = File.Section("session").MapTo(&Session); err != nil {
 		return errors.Wrap(err, "mapping [session] section")
+	}
+
+	// **************************
+	// ----- Cache settings -----
+	// **************************
+
+	if err = File.Section("cache").MapTo(&Cache); err != nil {
+		return errors.Wrap(err, "mapping [cache] section")
 	}
 
 	handleDeprecated()
@@ -461,11 +469,6 @@ var (
 
 	// Time settings
 	TimeFormat string
-
-	// Cache settings
-	CacheAdapter  string
-	CacheInterval int
-	CacheConn     string
 
 	// Cron tasks
 	Cron struct {
@@ -682,25 +685,6 @@ func InitLogging() {
 	if !hasConsole {
 		log.Remove(log.DefaultConsoleName)
 	}
-}
-
-func newCacheService() {
-	CacheAdapter = File.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
-	switch CacheAdapter {
-	case "memory":
-		CacheInterval = File.Section("cache").Key("INTERVAL").MustInt(60)
-	case "redis", "memcache":
-		CacheConn = strings.Trim(File.Section("cache").Key("HOST").String(), "\" ")
-	default:
-		log.Fatal("Unrecognized cache adapter %q", CacheAdapter)
-		return
-	}
-
-	log.Trace("Cache service is enabled")
-}
-
-func NewServices() {
-	newCacheService()
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.

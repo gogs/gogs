@@ -227,6 +227,13 @@ var (
 		// Deprecated: Use MaxLifeTime instead, will be removed in 0.13.
 		SessionLifeTime int64
 	}
+
+	// Cache settings
+	Cache struct {
+		Adapter  string
+		Interval int
+		Host     string
+	}
 )
 
 // handleDeprecated transfers deprecated values to the new ones when set.

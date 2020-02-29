@@ -323,6 +323,21 @@
 					</dl>
 				</div>
 
+				{{/* Cache settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.cache_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.cache.adapter"}}</dt>
+						<dd>{{.Cache.Adapter}}</dd>
+						<dt>{{.i18n.Tr "admin.config.cache.interval"}}</dt>
+						<dd>{{.Cache.Interval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
+						<dt>{{.i18n.Tr "admin.config.cache.host"}}</dt>
+						<dd>{{if .CacheConn}}<code>{{.CacheConn}}</code>{{else}}{{.i18n.Tr "admin.config.not_set"}}{{end}}</dd>
+					</dl>
+				</div>
+
 				<!-- HTTP Configuration -->
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.http_config"}}
@@ -351,22 +366,6 @@
 						<dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.skip_tls_verify"}}</dt>
 						<dd><i class="fa fa{{if .Webhook.SkipTLSVerify}}-check{{end}}-square-o"></i></dd>
-					</dl>
-				</div>
-
-				<h4 class="ui top attached header">
-					{{.i18n.Tr "admin.config.cache_config"}}
-				</h4>
-				<div class="ui attached table segment">
-					<dl class="dl-horizontal admin-dl-horizontal">
-						<dt>{{.i18n.Tr "admin.config.cache_adapter"}}</dt>
-						<dd>{{.CacheAdapter}}</dd>
-						<dt>{{.i18n.Tr "admin.config.cache_interval"}}</dt>
-						<dd>{{.CacheInterval}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
-						{{if .CacheConn}}
-						<dt>{{.i18n.Tr "admin.config.cache_conn"}}</dt>
-						<dd><code>{{.CacheConn}}</code></dd>
-						{{end}}
 					</dl>
 				</div>
 

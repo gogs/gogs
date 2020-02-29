@@ -67,7 +67,6 @@ func GlobalInit(customConf string) error {
 		log.Trace("Email service is enabled")
 	}
 
-	conf.NewServices()
 	email.NewContext()
 
 	if conf.Security.InstallLock {

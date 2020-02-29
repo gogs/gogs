@@ -206,16 +206,13 @@ func Config(c *context.Context) {
 	c.Data["Auth"] = conf.Auth
 	c.Data["User"] = conf.User
 	c.Data["Session"] = conf.Session
+	c.Data["Cache"] = conf.Cache
 
 	c.Data["LogRootPath"] = conf.LogRootPath
 
 	c.Data["HTTP"] = conf.HTTP
 
 	c.Data["Webhook"] = conf.Webhook
-
-	c.Data["CacheAdapter"] = conf.CacheAdapter
-	c.Data["CacheInterval"] = conf.CacheInterval
-	c.Data["CacheConn"] = conf.CacheConn
 
 	c.Data["DisableGravatar"] = conf.DisableGravatar
 	c.Data["EnableFederatedAvatar"] = conf.EnableFederatedAvatar
