@@ -5,6 +5,7 @@
 package conf
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ MODE = file
 
 	f, err := ini.Load([]byte(`
 [log]
-ROOT_PATH = /tmp
+ROOT_PATH = log
 MODE = console, file, slack, discord
 BUFFER_LEN = 50
 LEVEL = trace
@@ -86,7 +87,7 @@ USERNAME = yoyo
 	}
 
 	logConf := &logConf{
-		RootPath: "/tmp",
+		RootPath: filepath.Join(WorkDir(), "log"),
 		Modes: []string{
 			log.DefaultConsoleName,
 			log.DefaultFileName,
@@ -103,7 +104,7 @@ USERNAME = yoyo
 				Buffer: 50,
 				Config: log.FileConfig{
 					Level:    log.LevelInfo,
-					Filename: "/tmp/gogs.log",
+					Filename: filepath.Join(WorkDir(), "log", "gogs.log"),
 					FileRotationConfig: log.FileRotationConfig{
 						Rotate:   true,
 						Daily:    true,

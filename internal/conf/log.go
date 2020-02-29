@@ -33,9 +33,10 @@ var Log *logConf
 // we need to remove it in case the user doesn't configure to use it after the logging
 // service is initalized.
 func initLogConf(cfg *ini.File) (_ *logConf, hasConsole bool, _ error) {
+	rootPath := cfg.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
 	modes := strings.Split(cfg.Section("log").Key("MODE").MustString("console"), ",")
 	lc := &logConf{
-		RootPath: cfg.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log")),
+		RootPath: ensureAbs(rootPath),
 		Modes:    make([]string, 0, len(modes)),
 		Configs:  make([]*loggerConf, 0, len(modes)),
 	}
@@ -72,12 +73,6 @@ func initLogConf(cfg *ini.File) (_ *logConf, hasConsole bool, _ error) {
 
 		case log.DefaultFileName:
 			logPath := filepath.Join(lc.RootPath, "gogs.log")
-			logDir := filepath.Dir(logPath)
-			err = os.MkdirAll(logDir, os.ModePerm)
-			if err != nil {
-				return nil, hasConsole, errors.Wrapf(err, "create log directory %q", logDir)
-			}
-
 			c = &loggerConf{
 				Buffer: buffer,
 				Config: log.FileConfig{
@@ -128,6 +123,11 @@ func InitLogging() {
 	logConf, hasConsole, err := initLogConf(File)
 	if err != nil {
 		log.Fatal("Failed to init logging configuration: %v", err)
+	}
+
+	err = os.MkdirAll(logConf.RootPath, os.ModePerm)
+	if err != nil {
+		log.Fatal("Failed to create log directory: %v", err)
 	}
 
 	for i, mode := range logConf.Modes {
