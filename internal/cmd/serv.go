@@ -68,7 +68,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 
 	err = log.NewFile(log.FileConfig{
 		Level:    level,
-		Filename: filepath.Join(conf.LogRootPath, logPath),
+		Filename: filepath.Join(conf.Log.RootPath, logPath),
 		FileRotationConfig: log.FileRotationConfig{
 			Rotate:  true,
 			Daily:   true,

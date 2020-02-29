@@ -44,7 +44,7 @@ func (a *Attachment) AfterSet(colName string, _ xorm.Cell) {
 
 // AttachmentLocalPath returns where attachment is stored in local file system based on given UUID.
 func AttachmentLocalPath(uuid string) string {
-	return path.Join(conf.AttachmentPath, uuid[0:1], uuid[1:2], uuid)
+	return path.Join(conf.Attachment.Path, uuid[0:1], uuid[1:2], uuid)
 }
 
 // LocalPath returns where attachment is stored in local file system.

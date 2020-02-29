@@ -312,7 +312,7 @@ func Contexter() macaron.Handler {
 
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
 		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
-			if err := c.Req.ParseMultipartForm(conf.AttachmentMaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
+			if err := c.Req.ParseMultipartForm(conf.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
 				c.ServerError("ParseMultipartForm", err)
 				return
 			}
@@ -324,7 +324,7 @@ func Contexter() macaron.Handler {
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
 		c.Data["ShowRegistrationButton"] = !conf.Auth.DisableRegistration
-		c.Data["ShowFooterBranding"] = conf.ShowFooterBranding
+		c.Data["ShowFooterBranding"] = conf.Other.ShowFooterBranding
 
 		c.renderNoticeBanner()
 

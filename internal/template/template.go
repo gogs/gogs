@@ -58,10 +58,10 @@ func FuncMap() []template.FuncMap {
 				return conf.Server.Domain
 			},
 			"DisableGravatar": func() bool {
-				return conf.DisableGravatar
+				return conf.Picture.DisableGravatar
 			},
 			"ShowFooterTemplateLoadTime": func() bool {
-				return conf.ShowFooterTemplateLoadTime
+				return conf.Other.ShowFooterTemplateLoadTime
 			},
 			"LoadTimes": func(startTime time.Time) string {
 				return fmt.Sprint(time.Since(startTime).Nanoseconds()/1e6) + "ms"

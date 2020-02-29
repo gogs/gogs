@@ -296,7 +296,7 @@ func (repo *Repository) HTMLURL() string {
 
 // CustomAvatarPath returns repository custom avatar file path.
 func (repo *Repository) CustomAvatarPath() string {
-	return filepath.Join(conf.RepositoryAvatarUploadPath, com.ToStr(repo.ID))
+	return filepath.Join(conf.Picture.RepositoryAvatarUploadPath, com.ToStr(repo.ID))
 }
 
 // RelAvatarLink returns relative avatar link to the site domain,
@@ -327,7 +327,7 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 		return fmt.Errorf("decode image: %v", err)
 	}
 
-	_ = os.MkdirAll(conf.RepositoryAvatarUploadPath, os.ModePerm)
+	_ = os.MkdirAll(conf.Picture.RepositoryAvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(repo.CustomAvatarPath())
 	if err != nil {
 		return fmt.Errorf("create custom avatar directory: %v", err)

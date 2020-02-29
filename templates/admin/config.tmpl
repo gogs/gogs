@@ -62,11 +62,6 @@
 
 						<dt>{{.i18n.Tr "admin.config.server.landing_url"}}</dt>
 						<dd><code>{{.Server.LandingURL}}</code></dd>
-
-						<div class="ui divider"></div>
-
-						<dt>{{.i18n.Tr "admin.config.log_file_root_path"}}</dt>
-						<dd><code>{{.LogRootPath}}</code></dd>
 					</dl>
 				</div>
 
@@ -432,7 +427,14 @@
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.log_config"}}
 				</h4>
-				<div class="ui attached log-config segment">
+				<div class="ui attached log-config table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.log_file_root_path"}}</dt>
+						<dd><code>{{.LogRootPath}}</code></dd>
+					</dl>
+
+					<div class="ui divider"></div>
+
 					<table class="ui very basic table">
 						{{range .Loggers}}
 							<tr>
