@@ -30,7 +30,7 @@ func InitLogging() {
 
 	// Iterate over [log.*] sections to initialize individual logger.
 	Log.Modes = strings.Split(File.Section("log").Key("MODE").MustString("console"), ",")
-	Log.Configs = make([]interface{}, len(Log.Modes))
+	Log.Configs = make([]interface{}, 0, len(Log.Modes))
 	levelMappings := map[string]log.Level{
 		"trace": log.LevelTrace,
 		"info":  log.LevelInfo,
@@ -43,7 +43,7 @@ func InitLogging() {
 		Buffer int64
 		Config interface{}
 	}
-	for i, mode := range Log.Modes {
+	for _, mode := range Log.Modes {
 		mode = strings.ToLower(strings.TrimSpace(mode))
 		secName := "log." + mode
 		sec, err := File.GetSection(secName)
@@ -54,7 +54,7 @@ func InitLogging() {
 
 		level := levelMappings[strings.ToLower(sec.Key("LEVEL").MustString("trace"))]
 		buffer := sec.Key("BUFFER_LEN").MustInt64(100)
-		c := new(config)
+		var c *config
 		switch mode {
 		case log.DefaultConsoleName:
 			hasConsole = true
@@ -110,6 +110,7 @@ func InitLogging() {
 					Username: sec.Key("USERNAME").String(),
 				},
 			}
+			err = log.NewDiscord(c.Buffer, c.Config)
 
 		default:
 			continue
@@ -119,8 +120,8 @@ func InitLogging() {
 			log.Fatal("Failed to init %s logger: %v", mode, err)
 			return
 		}
-		Log.Configs[i] = c
 
+		Log.Configs = append(Log.Configs, c)
 		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(strings.ToLower(level.String())))
 	}
 
