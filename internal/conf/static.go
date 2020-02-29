@@ -16,12 +16,12 @@ import (
 
 // HasMinWinSvc is whether the application is built with Windows Service support.
 //
-// ⚠️ WARNING: should only be set by "static_minwinsvc.go".
+// ⚠️ WARNING: should only be set by "internal/conf/static_minwinsvc.go".
 var HasMinWinSvc bool
 
 // Build time and commit information.
 //
-// ⚠️ WARNING: should only be set by -ldflags.
+// ⚠️ WARNING: should only be set by "-ldflags".
 var (
 	BuildTime   string
 	BuildCommit string
@@ -35,7 +35,7 @@ var CustomConf string
 var (
 	// Application settings
 	App struct {
-		// ⚠️ WARNING: Should only be set by main package (i.e. "gogs.go").
+		// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
 		Version string `ini:"-"`
 
 		BrandName string
@@ -288,7 +288,7 @@ var (
 	}
 
 	// I18n settings
-	I18n *i18n
+	I18n *i18nConf
 
 	// Webhook settings
 	Webhook struct {
@@ -349,7 +349,9 @@ var (
 
 	// Git settings
 	Git struct {
-		Version                  string `ini:"-"`
+		// ⚠️ WARNING: Should only be set by "internal/db/repo.go".
+		Version string `ini:"-"`
+
 		DisableDiffHighlight     bool
 		MaxGitDiffLines          int
 		MaxGitDiffLineCharacters int
@@ -408,15 +410,15 @@ var (
 	HasRobotsTxt bool
 )
 
-type i18n struct {
-	Langs     []string `delim:","`
-	Names     []string `delim:","`
-	dateLangs map[string]string
+type i18nConf struct {
+	Langs     []string          `delim:","`
+	Names     []string          `delim:","`
+	dateLangs map[string]string `ini:"-"`
 }
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
-func (i *i18n) DateLang(lang string) string {
-	name, ok := i.dateLangs[lang]
+func (c *i18nConf) DateLang(lang string) string {
+	name, ok := c.dateLangs[lang]
 	if ok {
 		return name
 	}
