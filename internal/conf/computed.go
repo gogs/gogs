@@ -99,8 +99,8 @@ var (
 // string when environment variables are not set.
 func HomeDir() string {
 	homeDirOnce.Do(func() {
-		if !IsWindowsRuntime() {
-			homeDir = os.Getenv("HOME")
+		homeDir = os.Getenv("HOME")
+		if homeDir != "" {
 			return
 		}
 
