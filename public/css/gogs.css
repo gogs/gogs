@@ -3180,6 +3180,10 @@ footer .ui.language .menu {
 .admin.config .log-config table tbody tr td:first-child {
   width: 100px;
 }
+.admin.config .log-config table tbody tr td:last-child pre {
+  width: 600px;
+  overflow-y: auto;
+}
 .explore {
   padding-top: 15px;
   padding-bottom: 80px;
