@@ -7,6 +7,9 @@ package conf
 import (
 	"net/url"
 	"os"
+	"time"
+
+	"github.com/gogs/go-libravatar"
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
@@ -227,7 +230,198 @@ var (
 		// Deprecated: Use MaxLifeTime instead, will be removed in 0.13.
 		SessionLifeTime int64
 	}
+
+	// Cache settings
+	Cache struct {
+		Adapter  string
+		Interval int
+		Host     string
+	}
+
+	// HTTP settings
+	HTTP struct {
+		AccessControlAllowOrigin string
+	}
+
+	// Attachment settings
+	Attachment struct {
+		Enabled      bool
+		Path         string
+		AllowedTypes []string `delim:"|"`
+		MaxSize      int64
+		MaxFiles     int
+	}
+
+	// Release settigns
+	Release struct {
+		Attachment struct {
+			Enabled      bool
+			AllowedTypes []string `delim:"|"`
+			MaxSize      int64
+			MaxFiles     int
+		} `ini:"release.attachment"`
+	}
+
+	// Time settings
+	Time struct {
+		Format string
+
+		// Derived from other static values
+		FormatLayout string `ini:"-"` // Actual layout of the Format.
+	}
+
+	// Picture settings
+	Picture struct {
+		AvatarUploadPath           string
+		RepositoryAvatarUploadPath string
+		GravatarSource             string
+		DisableGravatar            bool
+		EnableFederatedAvatar      bool
+
+		// Derived from other static values
+		LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
+	}
+
+	// Mirror settings
+	Mirror struct {
+		DefaultInterval int
+	}
+
+	// I18n settings
+	I18n *i18n
+
+	// Webhook settings
+	Webhook struct {
+		Types          []string
+		QueueLength    int
+		DeliverTimeout int
+		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
+		PagingNum      int
+	}
+
+	// Markdown sttings
+	Markdown struct {
+		EnableHardLineBreak bool
+		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
+		FileExtensions      []string
+	}
+
+	// Smartypants settings
+	Smartypants struct {
+		Enabled      bool
+		Fractions    bool
+		Dashes       bool
+		LatexDashes  bool
+		AngledQuotes bool
+	}
+
+	// Admin settings
+	Admin struct {
+		DisableRegularOrgCreation bool
+	}
+
+	// Cron tasks
+	Cron struct {
+		UpdateMirror struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+		} `ini:"cron.update_mirrors"`
+		RepoHealthCheck struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+			Timeout    time.Duration
+			Args       []string `delim:" "`
+		} `ini:"cron.repo_health_check"`
+		CheckRepoStats struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+		} `ini:"cron.check_repo_stats"`
+		RepoArchiveCleanup struct {
+			Enabled    bool
+			RunAtStart bool
+			Schedule   string
+			OlderThan  time.Duration
+		} `ini:"cron.repo_archive_cleanup"`
+	}
+
+	// Git settings
+	Git struct {
+		Version                  string `ini:"-"`
+		DisableDiffHighlight     bool
+		MaxGitDiffLines          int
+		MaxGitDiffLineCharacters int
+		MaxGitDiffFiles          int
+		GCArgs                   []string `ini:"GC_ARGS" delim:" "`
+		Timeout                  struct {
+			Migrate int
+			Mirror  int
+			Clone   int
+			Pull    int
+			GC      int `ini:"GC"`
+		} `ini:"git.timeout"`
+	}
+
+	// API settings
+	API struct {
+		MaxResponseItems int
+	}
+
+	// UI settings
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum     int
+			NewsFeedPagingNum int
+			CommitsPagingNum  int
+		} `ini:"ui.user"`
+	}
+
+	// Prometheus settings
+	Prometheus struct {
+		Enabled           bool
+		EnableBasicAuth   bool
+		BasicAuthUsername string
+		BasicAuthPassword string
+	}
+
+	// Other settings
+	Other struct {
+		ShowFooterBranding         bool
+		ShowFooterTemplateLoadTime bool
+	}
+
+	// Global setting
+	HasRobotsTxt bool
 )
+
+type i18n struct {
+	Langs     []string `delim:","`
+	Names     []string `delim:","`
+	dateLangs map[string]string
+}
+
+// DateLang transforms standard language locale name to corresponding value in datetime plugin.
+func (i *i18n) DateLang(lang string) string {
+	name, ok := i.dateLangs[lang]
+	if ok {
+		return name
+	}
+	return "en"
+}
 
 // handleDeprecated transfers deprecated values to the new ones when set.
 func handleDeprecated() {
@@ -294,3 +488,15 @@ func handleDeprecated() {
 		Session.SessionLifeTime = 0
 	}
 }
+
+// HookMode indicates whether program starts as Git server-side hook callback.
+// All operations should be done synchronously to prevent program exits before finishing.
+var HookMode bool
+
+// Indicates which database backend is currently being used.
+var (
+	UseSQLite3    bool
+	UseMySQL      bool
+	UsePostgreSQL bool
+	UseMSSQL      bool
+)

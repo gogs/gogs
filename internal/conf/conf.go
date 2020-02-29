@@ -9,7 +9,6 @@ import (
 	"net/mail"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -18,12 +17,11 @@ import (
 	_ "github.com/go-macaron/cache/memcache"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
+	"github.com/gogs/go-libravatar"
 	"github.com/mcuadros/go-version"
 	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
-
-	"github.com/gogs/go-libravatar"
 
 	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/osutil"
@@ -184,18 +182,18 @@ func Init(customConf string) error {
 	Repository.Root = ensureAbs(Repository.Root)
 	Repository.Upload.TempPath = ensureAbs(Repository.Upload.TempPath)
 
-	// *******************************
+	// *****************************
 	// ----- Database settings -----
-	// *******************************
+	// *****************************
 
 	if err = File.Section("database").MapTo(&Database); err != nil {
 		return errors.Wrap(err, "mapping [database] section")
 	}
 	Database.Path = ensureAbs(Database.Path)
 
-	// *******************************
+	// *****************************
 	// ----- Security settings -----
-	// *******************************
+	// *****************************
 
 	if err = File.Section("security").MapTo(&Security); err != nil {
 		return errors.Wrap(err, "mapping [security] section")
@@ -245,37 +243,40 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [service] section")
 	}
 
-	// ***********************************
+	// *************************
 	// ----- User settings -----
-	// ***********************************
+	// *************************
 
 	if err = File.Section("user").MapTo(&User); err != nil {
 		return errors.Wrap(err, "mapping [user] section")
 	}
 
-	// ***********************************
+	// ****************************
 	// ----- Session settings -----
-	// ***********************************
+	// ****************************
 
 	if err = File.Section("session").MapTo(&Session); err != nil {
 		return errors.Wrap(err, "mapping [session] section")
 	}
 
-	handleDeprecated()
+	// *******************************
+	// ----- Attachment settings -----
+	// *******************************
 
-	// TODO
-
-	sec := File.Section("attachment")
-	AttachmentPath = sec.Key("PATH").MustString(filepath.Join(Server.AppDataPath, "attachments"))
-	if !filepath.IsAbs(AttachmentPath) {
-		AttachmentPath = path.Join(workDir, AttachmentPath)
+	if err = File.Section("attachment").MapTo(&Attachment); err != nil {
+		return errors.Wrap(err, "mapping [attachment] section")
 	}
-	AttachmentAllowedTypes = strings.Replace(sec.Key("ALLOWED_TYPES").MustString("image/jpeg,image/png"), "|", ",", -1)
-	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(4)
-	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(5)
-	AttachmentEnabled = sec.Key("ENABLED").MustBool(true)
+	Attachment.Path = ensureAbs(Attachment.Path)
 
-	TimeFormat = map[string]string{
+	// *************************
+	// ----- Time settings -----
+	// *************************
+
+	if err = File.Section("time").MapTo(&Time); err != nil {
+		return errors.Wrap(err, "mapping [time] section")
+	}
+
+	Time.FormatLayout = map[string]string{
 		"ANSIC":       time.ANSIC,
 		"UnixDate":    time.UnixDate,
 		"RubyDate":    time.RubyDate,
@@ -291,89 +292,104 @@ func Init(customConf string) error {
 		"StampMilli":  time.StampMilli,
 		"StampMicro":  time.StampMicro,
 		"StampNano":   time.StampNano,
-	}[File.Section("time").Key("FORMAT").MustString("RFC1123")]
+	}[Time.Format]
+	if Time.FormatLayout == "" {
+		return fmt.Errorf("unrecognized '[time] FORMAT': %s", Time.Format)
+	}
 
-	sec = File.Section("picture")
-	AvatarUploadPath = sec.Key("AVATAR_UPLOAD_PATH").MustString(filepath.Join(Server.AppDataPath, "avatars"))
-	if !filepath.IsAbs(AvatarUploadPath) {
-		AvatarUploadPath = path.Join(workDir, AvatarUploadPath)
+	// ****************************
+	// ----- Picture settings -----
+	// ****************************
+
+	if err = File.Section("picture").MapTo(&Picture); err != nil {
+		return errors.Wrap(err, "mapping [picture] section")
 	}
-	RepositoryAvatarUploadPath = sec.Key("REPOSITORY_AVATAR_UPLOAD_PATH").MustString(filepath.Join(Server.AppDataPath, "repo-avatars"))
-	if !filepath.IsAbs(RepositoryAvatarUploadPath) {
-		RepositoryAvatarUploadPath = path.Join(workDir, RepositoryAvatarUploadPath)
-	}
-	switch source := sec.Key("GRAVATAR_SOURCE").MustString("gravatar"); source {
-	case "duoshuo":
-		GravatarSource = "http://gravatar.duoshuo.com/avatar/"
+	Picture.AvatarUploadPath = ensureAbs(Picture.AvatarUploadPath)
+	Picture.RepositoryAvatarUploadPath = ensureAbs(Picture.RepositoryAvatarUploadPath)
+
+	switch Picture.GravatarSource {
 	case "gravatar":
-		GravatarSource = "https://secure.gravatar.com/avatar/"
+		Picture.GravatarSource = "https://secure.gravatar.com/avatar/"
 	case "libravatar":
-		GravatarSource = "https://seccdn.libravatar.org/avatar/"
-	default:
-		GravatarSource = source
-	}
-	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
-	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool(true)
-	if Server.OfflineMode {
-		DisableGravatar = true
-		EnableFederatedAvatar = false
-	}
-	if DisableGravatar {
-		EnableFederatedAvatar = false
+		Picture.GravatarSource = "https://seccdn.libravatar.org/avatar/"
 	}
 
-	if EnableFederatedAvatar {
-		LibravatarService = libravatar.New()
-		parts := strings.Split(GravatarSource, "/")
-		if len(parts) >= 3 {
-			if parts[0] == "https:" {
-				LibravatarService.SetUseHTTPS(true)
-				LibravatarService.SetSecureFallbackHost(parts[2])
-			} else {
-				LibravatarService.SetUseHTTPS(false)
-				LibravatarService.SetFallbackHost(parts[2])
-			}
+	if Server.OfflineMode {
+		Picture.DisableGravatar = true
+		Picture.EnableFederatedAvatar = false
+	}
+	if Picture.DisableGravatar {
+		Picture.EnableFederatedAvatar = false
+	}
+	if Picture.EnableFederatedAvatar {
+		gravatarURL, err := url.Parse(Picture.GravatarSource)
+		if err != nil {
+			return errors.Wrapf(err, "parse Gravatar source %q", Picture.GravatarSource)
+		}
+
+		Picture.LibravatarService = libravatar.New()
+		if gravatarURL.Scheme == "https" {
+			Picture.LibravatarService.SetUseHTTPS(true)
+			Picture.LibravatarService.SetSecureFallbackHost(gravatarURL.Host)
+		} else {
+			Picture.LibravatarService.SetUseHTTPS(false)
+			Picture.LibravatarService.SetFallbackHost(gravatarURL.Host)
 		}
 	}
 
-	if err = File.Section("http").MapTo(&HTTP); err != nil {
-		log.Fatal("Failed to map HTTP settings: %v", err)
-	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {
-		log.Fatal("Failed to map Webhook settings: %v", err)
-	} else if err = File.Section("release.attachment").MapTo(&Release.Attachment); err != nil {
-		log.Fatal("Failed to map Release.Attachment settings: %v", err)
-	} else if err = File.Section("markdown").MapTo(&Markdown); err != nil {
-		log.Fatal("Failed to map Markdown settings: %v", err)
-	} else if err = File.Section("smartypants").MapTo(&Smartypants); err != nil {
-		log.Fatal("Failed to map Smartypants settings: %v", err)
-	} else if err = File.Section("admin").MapTo(&Admin); err != nil {
-		log.Fatal("Failed to map Admin settings: %v", err)
-	} else if err = File.Section("cron").MapTo(&Cron); err != nil {
-		log.Fatal("Failed to map Cron settings: %v", err)
-	} else if err = File.Section("git").MapTo(&Git); err != nil {
-		log.Fatal("Failed to map Git settings: %v", err)
-	} else if err = File.Section("mirror").MapTo(&Mirror); err != nil {
-		log.Fatal("Failed to map Mirror settings: %v", err)
-	} else if err = File.Section("api").MapTo(&API); err != nil {
-		log.Fatal("Failed to map API settings: %v", err)
-	} else if err = File.Section("ui").MapTo(&UI); err != nil {
-		log.Fatal("Failed to map UI settings: %v", err)
-	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
-		log.Fatal("Failed to map Prometheus settings: %v", err)
+	// ***************************
+	// ----- Mirror settings -----
+	// ***************************
+
+	if err = File.Section("mirror").MapTo(&Mirror); err != nil {
+		return errors.Wrap(err, "mapping [mirror] section")
 	}
 
 	if Mirror.DefaultInterval <= 0 {
-		Mirror.DefaultInterval = 24
+		Mirror.DefaultInterval = 8
 	}
 
-	Langs = File.Section("i18n").Key("LANGS").Strings(",")
-	Names = File.Section("i18n").Key("NAMES").Strings(",")
-	dateLangs = File.Section("i18n.datelang").KeysHash()
+	// *************************
+	// ----- I18n settings -----
+	// *************************
 
-	ShowFooterBranding = File.Section("other").Key("SHOW_FOOTER_BRANDING").MustBool()
-	ShowFooterTemplateLoadTime = File.Section("other").Key("SHOW_FOOTER_TEMPLATE_LOAD_TIME").MustBool()
+	I18n = new(i18n)
+	if err = File.Section("i18n").MapTo(I18n); err != nil {
+		return errors.Wrap(err, "mapping [i18n] section")
+	}
+	I18n.dateLangs = File.Section("i18n.datelang").KeysHash()
 
-	HasRobotsTxt = osutil.IsFile(path.Join(CustomDir(), "robots.txt"))
+	handleDeprecated()
+
+	if err = File.Section("cache").MapTo(&Cache); err != nil {
+		return errors.Wrap(err, "mapping [cache] section")
+	} else if err = File.Section("http").MapTo(&HTTP); err != nil {
+		return errors.Wrap(err, "mapping [http] section")
+	} else if err = File.Section("release").MapTo(&Release); err != nil {
+		return errors.Wrap(err, "mapping [release] section")
+	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {
+		return errors.Wrap(err, "mapping [webhook] section")
+	} else if err = File.Section("markdown").MapTo(&Markdown); err != nil {
+		return errors.Wrap(err, "mapping [markdown] section")
+	} else if err = File.Section("smartypants").MapTo(&Smartypants); err != nil {
+		return errors.Wrap(err, "mapping [smartypants] section")
+	} else if err = File.Section("admin").MapTo(&Admin); err != nil {
+		return errors.Wrap(err, "mapping [admin] section")
+	} else if err = File.Section("cron").MapTo(&Cron); err != nil {
+		return errors.Wrap(err, "mapping [cron] section")
+	} else if err = File.Section("git").MapTo(&Git); err != nil {
+		return errors.Wrap(err, "mapping [git] section")
+	} else if err = File.Section("api").MapTo(&API); err != nil {
+		return errors.Wrap(err, "mapping [api] section")
+	} else if err = File.Section("ui").MapTo(&UI); err != nil {
+		return errors.Wrap(err, "mapping [ui] section")
+	} else if err = File.Section("prometheus").MapTo(&Prometheus); err != nil {
+		return errors.Wrap(err, "mapping [prometheus] section")
+	} else if err = File.Section("other").MapTo(&Other); err != nil {
+		return errors.Wrap(err, "mapping [other] section")
+	}
+
+	HasRobotsTxt = osutil.IsFile(filepath.Join(CustomDir(), "robots.txt"))
 	return nil
 }
 
@@ -384,325 +400,3 @@ func MustInit(customConf string) {
 		panic(err)
 	}
 }
-
-// TODO
-
-var (
-	HTTP struct {
-		AccessControlAllowOrigin string
-	}
-
-	// Database settings
-	UseSQLite3    bool
-	UseMySQL      bool
-	UsePostgreSQL bool
-	UseMSSQL      bool
-
-	// Webhook settings
-	Webhook struct {
-		Types          []string
-		QueueLength    int
-		DeliverTimeout int
-		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
-		PagingNum      int
-	}
-
-	// Release settigns
-	Release struct {
-		Attachment struct {
-			Enabled      bool
-			TempPath     string
-			AllowedTypes []string `delim:"|"`
-			MaxSize      int64
-			MaxFiles     int
-		} `ini:"-"`
-	}
-
-	// Markdown sttings
-	Markdown struct {
-		EnableHardLineBreak bool
-		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
-		FileExtensions      []string
-	}
-
-	// Smartypants settings
-	Smartypants struct {
-		Enabled      bool
-		Fractions    bool
-		Dashes       bool
-		LatexDashes  bool
-		AngledQuotes bool
-	}
-
-	// Admin settings
-	Admin struct {
-		DisableRegularOrgCreation bool
-	}
-
-	// Picture settings
-	AvatarUploadPath           string
-	RepositoryAvatarUploadPath string
-	GravatarSource             string
-	DisableGravatar            bool
-	EnableFederatedAvatar      bool
-	LibravatarService          *libravatar.Libravatar
-
-	// Log settings
-	LogRootPath string
-	LogModes    []string
-	LogConfigs  []interface{}
-
-	// Attachment settings
-	AttachmentPath         string
-	AttachmentAllowedTypes string
-	AttachmentMaxSize      int64
-	AttachmentMaxFiles     int
-	AttachmentEnabled      bool
-
-	// Time settings
-	TimeFormat string
-
-	// Cache settings
-	CacheAdapter  string
-	CacheInterval int
-	CacheConn     string
-
-	// Cron tasks
-	Cron struct {
-		UpdateMirror struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-		} `ini:"cron.update_mirrors"`
-		RepoHealthCheck struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-			Timeout    time.Duration
-			Args       []string `delim:" "`
-		} `ini:"cron.repo_health_check"`
-		CheckRepoStats struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-		} `ini:"cron.check_repo_stats"`
-		RepoArchiveCleanup struct {
-			Enabled    bool
-			RunAtStart bool
-			Schedule   string
-			OlderThan  time.Duration
-		} `ini:"cron.repo_archive_cleanup"`
-	}
-
-	// Git settings
-	Git struct {
-		Version                  string `ini:"-"`
-		DisableDiffHighlight     bool
-		MaxGitDiffLines          int
-		MaxGitDiffLineCharacters int
-		MaxGitDiffFiles          int
-		GCArgs                   []string `ini:"GC_ARGS" delim:" "`
-		Timeout                  struct {
-			Migrate int
-			Mirror  int
-			Clone   int
-			Pull    int
-			GC      int `ini:"GC"`
-		} `ini:"git.timeout"`
-	}
-
-	// Mirror settings
-	Mirror struct {
-		DefaultInterval int
-	}
-
-	// API settings
-	API struct {
-		MaxResponseItems int
-	}
-
-	// UI settings
-	UI struct {
-		ExplorePagingNum   int
-		IssuePagingNum     int
-		FeedMaxCommitNum   int
-		ThemeColorMetaTag  string
-		MaxDisplayFileSize int64
-
-		Admin struct {
-			UserPagingNum   int
-			RepoPagingNum   int
-			NoticePagingNum int
-			OrgPagingNum    int
-		} `ini:"ui.admin"`
-		User struct {
-			RepoPagingNum     int
-			NewsFeedPagingNum int
-			CommitsPagingNum  int
-		} `ini:"ui.user"`
-	}
-
-	// Prometheus settings
-	Prometheus struct {
-		Enabled           bool
-		EnableBasicAuth   bool
-		BasicAuthUsername string
-		BasicAuthPassword string
-	}
-
-	// I18n settings
-	Langs     []string
-	Names     []string
-	dateLangs map[string]string
-
-	// Highlight settings are loaded in modules/template/hightlight.go
-
-	// Other settings
-	ShowFooterBranding         bool
-	ShowFooterTemplateLoadTime bool
-
-	// Global setting objects
-	HasRobotsTxt bool
-)
-
-// DateLang transforms standard language locale name to corresponding value in datetime plugin.
-func DateLang(lang string) string {
-	name, ok := dateLangs[lang]
-	if ok {
-		return name
-	}
-	return "en"
-}
-
-// InitLogging initializes the logging service of the application.
-func InitLogging() {
-	LogRootPath = File.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
-
-	// Because we always create a console logger as the primary logger at init time,
-	// we need to remove it in case the user doesn't configure to use it after the
-	// logging service is initalized.
-	hasConsole := false
-
-	// Iterate over [log.*] sections to initialize individual logger.
-	LogModes = strings.Split(File.Section("log").Key("MODE").MustString("console"), ",")
-	LogConfigs = make([]interface{}, len(LogModes))
-	levelMappings := map[string]log.Level{
-		"trace": log.LevelTrace,
-		"info":  log.LevelInfo,
-		"warn":  log.LevelWarn,
-		"error": log.LevelError,
-		"fatal": log.LevelFatal,
-	}
-
-	type config struct {
-		Buffer int64
-		Config interface{}
-	}
-	for i, mode := range LogModes {
-		mode = strings.ToLower(strings.TrimSpace(mode))
-		secName := "log." + mode
-		sec, err := File.GetSection(secName)
-		if err != nil {
-			log.Fatal("Missing configuration section [%s] for %q logger", secName, mode)
-			return
-		}
-
-		level := levelMappings[strings.ToLower(sec.Key("LEVEL").MustString("trace"))]
-		buffer := sec.Key("BUFFER_LEN").MustInt64(100)
-		c := new(config)
-		switch mode {
-		case log.DefaultConsoleName:
-			hasConsole = true
-			c = &config{
-				Buffer: buffer,
-				Config: log.ConsoleConfig{
-					Level: level,
-				},
-			}
-			err = log.NewConsole(c.Buffer, c.Config)
-
-		case log.DefaultFileName:
-			logPath := filepath.Join(LogRootPath, "gogs.log")
-			logDir := filepath.Dir(logPath)
-			err = os.MkdirAll(logDir, os.ModePerm)
-			if err != nil {
-				log.Fatal("Failed to create log directory %q: %v", logDir, err)
-				return
-			}
-
-			c = &config{
-				Buffer: buffer,
-				Config: log.FileConfig{
-					Level:    level,
-					Filename: logPath,
-					FileRotationConfig: log.FileRotationConfig{
-						Rotate:   sec.Key("LOG_ROTATE").MustBool(true),
-						Daily:    sec.Key("DAILY_ROTATE").MustBool(true),
-						MaxSize:  1 << uint(sec.Key("MAX_SIZE_SHIFT").MustInt(28)),
-						MaxLines: sec.Key("MAX_LINES").MustInt64(1000000),
-						MaxDays:  sec.Key("MAX_DAYS").MustInt64(7),
-					},
-				},
-			}
-			err = log.NewFile(c.Buffer, c.Config)
-
-		case log.DefaultSlackName:
-			c = &config{
-				Buffer: buffer,
-				Config: log.SlackConfig{
-					Level: level,
-					URL:   sec.Key("URL").String(),
-				},
-			}
-			err = log.NewSlack(c.Buffer, c.Config)
-
-		case log.DefaultDiscordName:
-			c = &config{
-				Buffer: buffer,
-				Config: log.DiscordConfig{
-					Level:    level,
-					URL:      sec.Key("URL").String(),
-					Username: sec.Key("USERNAME").String(),
-				},
-			}
-
-		default:
-			continue
-		}
-
-		if err != nil {
-			log.Fatal("Failed to init %s logger: %v", mode, err)
-			return
-		}
-		LogConfigs[i] = c
-
-		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(strings.ToLower(level.String())))
-	}
-
-	if !hasConsole {
-		log.Remove(log.DefaultConsoleName)
-	}
-}
-
-func newCacheService() {
-	CacheAdapter = File.Section("cache").Key("ADAPTER").In("memory", []string{"memory", "redis", "memcache"})
-	switch CacheAdapter {
-	case "memory":
-		CacheInterval = File.Section("cache").Key("INTERVAL").MustInt(60)
-	case "redis", "memcache":
-		CacheConn = strings.Trim(File.Section("cache").Key("HOST").String(), "\" ")
-	default:
-		log.Fatal("Unrecognized cache adapter %q", CacheAdapter)
-		return
-	}
-
-	log.Trace("Cache service is enabled")
-}
-
-func NewServices() {
-	newCacheService()
-}
-
-// HookMode indicates whether program starts as Git server-side hook callback.
-// All operations should be done synchronously to prevent program exits before finishing.
-var HookMode bool

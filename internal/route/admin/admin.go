@@ -206,37 +206,36 @@ func Config(c *context.Context) {
 	c.Data["Auth"] = conf.Auth
 	c.Data["User"] = conf.User
 	c.Data["Session"] = conf.Session
-
-	c.Data["LogRootPath"] = conf.LogRootPath
-
+	c.Data["Cache"] = conf.Cache
 	c.Data["HTTP"] = conf.HTTP
 
+	// TODO
+	c.Data["Attachment"] = conf.Attachment
+	c.Data["Release"] = conf.Release
+	c.Data["Time"] = conf.Time
+	c.Data["Picture"] = conf.Picture
+	c.Data["Mirror"] = conf.Mirror
+
+	// ???
 	c.Data["Webhook"] = conf.Webhook
-
-	c.Data["CacheAdapter"] = conf.CacheAdapter
-	c.Data["CacheInterval"] = conf.CacheInterval
-	c.Data["CacheConn"] = conf.CacheConn
-
-	c.Data["DisableGravatar"] = conf.DisableGravatar
-	c.Data["EnableFederatedAvatar"] = conf.EnableFederatedAvatar
-
 	c.Data["Git"] = conf.Git
 
+	c.Data["LogRootPath"] = conf.Log.RootPath
 	type logger struct {
 		Mode, Config string
 	}
-	loggers := make([]*logger, len(conf.LogModes))
-	for i := range conf.LogModes {
+	loggers := make([]*logger, len(conf.Log.Modes))
+	for i := range conf.Log.Modes {
 		loggers[i] = &logger{
-			Mode: strings.Title(conf.LogModes[i]),
+			Mode: strings.Title(conf.Log.Modes[i]),
 		}
 
-		result, _ := jsoniter.MarshalIndent(conf.LogConfigs[i], "", "  ")
+		result, _ := jsoniter.MarshalIndent(conf.Log.Configs[i], "", "  ")
 		loggers[i].Config = string(result)
 	}
 	c.Data["Loggers"] = loggers
 
-	c.HTML(200, CONFIG)
+	c.Success(CONFIG)
 }
 
 func Monitor(c *context.Context) {

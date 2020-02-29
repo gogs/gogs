@@ -66,7 +66,7 @@ func runImportLocale(c *cli.Context) error {
 	escapedQuotes := []byte(`\"`)
 	regularQuotes := []byte(`"`)
 	// Cut out en-US.
-	for _, lang := range conf.Langs[1:] {
+	for _, lang := range conf.I18n.Langs[1:] {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		source := filepath.Join(c.String("source"), name)
 		target := filepath.Join(c.String("target"), name)

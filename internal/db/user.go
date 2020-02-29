@@ -216,7 +216,7 @@ func (u *User) GenerateActivateCode() string {
 
 // CustomAvatarPath returns user custom avatar file path.
 func (u *User) CustomAvatarPath() string {
-	return filepath.Join(conf.AvatarUploadPath, com.ToStr(u.ID))
+	return filepath.Join(conf.Picture.AvatarUploadPath, com.ToStr(u.ID))
 }
 
 // GenerateRandomAvatar generates a random avatar for user.
@@ -262,7 +262,7 @@ func (u *User) RelAvatarLink() string {
 			return defaultImgUrl
 		}
 		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, USER_AVATAR_URL_PREFIX, u.ID)
-	case conf.DisableGravatar:
+	case conf.Picture.DisableGravatar:
 		if !com.IsExist(u.CustomAvatarPath()) {
 			if err := u.GenerateRandomAvatar(); err != nil {
 				log.Error("GenerateRandomAvatar: %v", err)
@@ -341,7 +341,7 @@ func (u *User) UploadAvatar(data []byte) error {
 		return fmt.Errorf("decode image: %v", err)
 	}
 
-	_ = os.MkdirAll(conf.AvatarUploadPath, os.ModePerm)
+	_ = os.MkdirAll(conf.Picture.AvatarUploadPath, os.ModePerm)
 	fw, err := os.Create(u.CustomAvatarPath())
 	if err != nil {
 		return fmt.Errorf("create custom avatar directory: %v", err)

@@ -256,10 +256,10 @@ func Pulls(c *context.Context) {
 
 func renderAttachmentSettings(c *context.Context) {
 	c.Data["RequireDropzone"] = true
-	c.Data["IsAttachmentEnabled"] = conf.AttachmentEnabled
-	c.Data["AttachmentAllowedTypes"] = conf.AttachmentAllowedTypes
-	c.Data["AttachmentMaxSize"] = conf.AttachmentMaxSize
-	c.Data["AttachmentMaxFiles"] = conf.AttachmentMaxFiles
+	c.Data["IsAttachmentEnabled"] = conf.Attachment.Enabled
+	c.Data["AttachmentAllowedTypes"] = conf.Attachment.AllowedTypes
+	c.Data["AttachmentMaxSize"] = conf.Attachment.MaxSize
+	c.Data["AttachmentMaxFiles"] = conf.Attachment.MaxFiles
 }
 
 func RetrieveRepoMilestonesAndAssignees(c *context.Context, repo *db.Repository) {
@@ -429,7 +429,7 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	var attachments []string
-	if conf.AttachmentEnabled {
+	if conf.Attachment.Enabled {
 		attachments = f.Files
 	}
 
@@ -493,12 +493,12 @@ func uploadAttachment(c *context.Context, allowedTypes []string) {
 }
 
 func UploadIssueAttachment(c *context.Context) {
-	if !conf.AttachmentEnabled {
+	if !conf.Attachment.Enabled {
 		c.NotFound()
 		return
 	}
 
-	uploadAttachment(c, strings.Split(conf.AttachmentAllowedTypes, ","))
+	uploadAttachment(c, conf.Attachment.AllowedTypes)
 }
 
 func viewIssue(c *context.Context, isPullList bool) {
@@ -845,7 +845,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 	}
 
 	var attachments []string
-	if conf.AttachmentEnabled {
+	if conf.Attachment.Enabled {
 		attachments = f.Files
 	}
 
@@ -1130,7 +1130,7 @@ func NewMilestone(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 	c.HTML(200, MILESTONE_NEW)
 }
 
@@ -1139,7 +1139,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	if c.HasError() {
 		c.HTML(200, MILESTONE_NEW)
@@ -1175,7 +1175,7 @@ func EditMilestone(c *context.Context) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
@@ -1199,7 +1199,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = conf.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	if c.HasError() {
 		c.HTML(200, MILESTONE_NEW)

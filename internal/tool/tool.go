@@ -190,16 +190,16 @@ func HashEmail(email string) string {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func AvatarLink(email string) (url string) {
-	if conf.EnableFederatedAvatar && conf.LibravatarService != nil &&
+	if conf.Picture.EnableFederatedAvatar && conf.Picture.LibravatarService != nil &&
 		strings.Contains(email, "@") {
 		var err error
-		url, err = conf.LibravatarService.FromEmail(email)
+		url, err = conf.Picture.LibravatarService.FromEmail(email)
 		if err != nil {
 			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
-	if len(url) == 0 && !conf.DisableGravatar {
-		url = conf.GravatarSource + HashEmail(email) + "?d=identicon"
+	if len(url) == 0 && !conf.Picture.DisableGravatar {
+		url = conf.Picture.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
 	if len(url) == 0 {
 		url = conf.Server.Subpath + "/img/avatar_default.png"
@@ -360,7 +360,7 @@ func RawTimeSince(t time.Time, lang string) string {
 
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(t time.Time, lang string) template.HTML {
-	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(conf.TimeFormat), timeSince(t, lang)))
+	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(conf.Time.FormatLayout), timeSince(t, lang)))
 }
 
 // Subtract deals with subtraction of all types of number.

@@ -92,14 +92,14 @@ func newMacaron() *macaron.Macaron {
 	))
 
 	m.Use(macaron.Static(
-		conf.AvatarUploadPath,
+		conf.Picture.AvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      db.USER_AVATAR_URL_PREFIX,
 			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
 	m.Use(macaron.Static(
-		conf.RepositoryAvatarUploadPath,
+		conf.Picture.RepositoryAvatarUploadPath,
 		macaron.StaticOptions{
 			Prefix:      db.REPO_AVATAR_URL_PREFIX,
 			SkipLogging: conf.Server.DisableRouterLog,
@@ -129,15 +129,15 @@ func newMacaron() *macaron.Macaron {
 		SubURL:          conf.Server.Subpath,
 		Files:           localeFiles,
 		CustomDirectory: filepath.Join(conf.CustomDir(), "conf", "locale"),
-		Langs:           conf.Langs,
-		Names:           conf.Names,
+		Langs:           conf.I18n.Langs,
+		Names:           conf.I18n.Names,
 		DefaultLang:     "en-US",
 		Redirect:        true,
 	}))
 	m.Use(cache.Cacher(cache.Options{
-		Adapter:       conf.CacheAdapter,
-		AdapterConfig: conf.CacheConn,
-		Interval:      conf.CacheInterval,
+		Adapter:       conf.Cache.Adapter,
+		AdapterConfig: conf.Cache.Host,
+		Interval:      conf.Cache.Interval,
 	}))
 	m.Use(captcha.Captchaer(captcha.Options{
 		SubURL: conf.Server.Subpath,

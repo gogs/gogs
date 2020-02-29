@@ -39,7 +39,7 @@ func generateAndMigrateGitHooks(x *xorm.Engine) (err error) {
 	)
 
 	// Cleanup old update.log and http.log files.
-	_ = filepath.Walk(conf.LogRootPath, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(conf.Log.RootPath, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() &&
 			(strings.HasPrefix(filepath.Base(path), "update.log") ||
 				strings.HasPrefix(filepath.Base(path), "http.log")) {
