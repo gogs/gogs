@@ -16,8 +16,14 @@ import (
 )
 
 func TestInit(t *testing.T) {
+	if IsWindowsRuntime() {
+		return
+	}
+
+	ini.PrettyFormat = false
 	defer func() {
 		assert.Nil(t, Init(""))
+		ini.PrettyFormat = true
 	}()
 
 	assert.Nil(t, Init(filepath.Join("testdata", "custom.ini")))
@@ -31,6 +37,19 @@ func TestInit(t *testing.T) {
 	}{
 		{"", &App},
 		{"server", &Server},
+		{"server", &SSH},
+		{"repository", &Repository},
+		{"database", &Database},
+		{"security", &Security},
+		{"email", &Email},
+		{"auth", &Auth},
+		{"user", &User},
+		{"session", &Session},
+		{"attachment", &Attachment},
+		{"time", &Time},
+		{"picture", &Picture},
+		{"mirror", &Mirror},
+		{"i18n", &I18n},
 	} {
 		err := cfg.Section(v.section).ReflectFrom(v.config)
 		if err != nil {

@@ -411,9 +411,9 @@ var (
 )
 
 type i18nConf struct {
-	Langs     []string `delim:","`
-	Names     []string `delim:","`
-	dateLangs map[string]string
+	Langs     []string          `delim:","`
+	Names     []string          `delim:","`
+	dateLangs map[string]string `ini:"-"`
 }
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
