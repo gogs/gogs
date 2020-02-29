@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/assert"
 )
 
 var updateRegex = flag.String("update", "", "Update testdata of tests matching the given regex")
@@ -42,9 +42,7 @@ func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
 		t.Fatalf("read golden file %q: %s", path, err)
 	}
 
-	if diff := cmp.Diff(string(golden), string(data)); diff != "" {
-		t.Fatal(diff)
-	}
+	assert.Equal(t, string(golden), string(data))
 }
 
 func marshal(t testing.TB, v interface{}) []byte {
