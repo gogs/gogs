@@ -1282,7 +1282,7 @@ $(document).ready(function () {
             headers: {
                 'X-AJAX': "true"
             }
-        }).success(function (data, status, request) {
+        }).done(function (data, status, request) {
             $(data).insertBefore($this);
 
             // Update new URL or remove self if no more feeds
