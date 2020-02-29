@@ -293,7 +293,6 @@ var (
 	// Webhook settings
 	Webhook struct {
 		Types          []string
-		QueueLength    int
 		DeliverTimeout int
 		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
 		PagingNum      int

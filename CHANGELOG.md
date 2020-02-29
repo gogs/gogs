@@ -53,6 +53,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[repository] PULL_REQUEST_QUEUE_LENGTH`
 - Configuration option `[session] ENABLE_SET_COOKIE`
 - Configuration option `[release.attachment] PATH`
+- Configuration option `[webhook] QUEUE_LENGTH`
 
 ---
 

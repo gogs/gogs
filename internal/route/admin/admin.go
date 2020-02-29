@@ -207,16 +207,11 @@ func Config(c *context.Context) {
 	c.Data["User"] = conf.User
 	c.Data["Session"] = conf.Session
 	c.Data["Cache"] = conf.Cache
-	c.Data["HTTP"] = conf.HTTP
-
-	// TODO
 	c.Data["Attachment"] = conf.Attachment
 	c.Data["Release"] = conf.Release
-	c.Data["Time"] = conf.Time
 	c.Data["Picture"] = conf.Picture
+	c.Data["HTTP"] = conf.HTTP
 	c.Data["Mirror"] = conf.Mirror
-
-	// ???
 	c.Data["Webhook"] = conf.Webhook
 	c.Data["Git"] = conf.Git
 
