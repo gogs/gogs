@@ -11,6 +11,10 @@ build: false
 deploy: false
 
 install:
+  - set PATH=C:\msys64\mingw64\bin;%PATH% # Fix "gcc" not found: https://github.com/appveyor/ci/issues/2613
   - go version
   - go env
   - go build -tags "minwinsvc" -v
+
+test_script:
+  - go test -v -race -cover ./...
