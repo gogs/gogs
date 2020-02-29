@@ -59,7 +59,7 @@ func GlobalInit(customConf string) error {
 	log.Trace("Work directory: %s", conf.WorkDir())
 	log.Trace("Custom path: %s", conf.CustomDir())
 	log.Trace("Custom config: %s", conf.CustomConf)
-	log.Trace("Log path: %s", conf.LogRootPath)
+	log.Trace("Log path: %s", conf.Log.RootPath)
 	log.Trace("Build time: %s", conf.BuildTime)
 	log.Trace("Build commit: %s", conf.BuildCommit)
 
@@ -67,7 +67,6 @@ func GlobalInit(customConf string) error {
 		log.Trace("Email service is enabled")
 	}
 
-	conf.NewServices()
 	email.NewContext()
 
 	if conf.Security.InstallLock {
@@ -172,7 +171,7 @@ func Install(c *context.Context) {
 	f.UseBuiltinSSHServer = conf.SSH.StartBuiltinServer
 	f.HTTPPort = conf.Server.HTTPPort
 	f.AppUrl = conf.Server.ExternalURL
-	f.LogRootPath = conf.LogRootPath
+	f.LogRootPath = conf.Log.RootPath
 
 	// E-mail service settings
 	if conf.Email.Enabled {
@@ -185,8 +184,8 @@ func Install(c *context.Context) {
 
 	// Server and other services settings
 	f.OfflineMode = conf.Server.OfflineMode
-	f.DisableGravatar = conf.DisableGravatar
-	f.EnableFederatedAvatar = conf.EnableFederatedAvatar
+	f.DisableGravatar = conf.Picture.DisableGravatar
+	f.EnableFederatedAvatar = conf.Picture.EnableFederatedAvatar
 	f.DisableRegistration = conf.Auth.DisableRegistration
 	f.EnableCaptcha = conf.Auth.EnableRegistrationCaptcha
 	f.RequireSignInView = conf.Auth.RequireSigninView
