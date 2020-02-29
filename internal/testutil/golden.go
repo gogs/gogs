@@ -54,7 +54,7 @@ func marshal(t testing.TB, v interface{}) []byte {
 	case []byte:
 		return v2
 	default:
-		data, err := json.MarshalIndent(v, " ", " ")
+		data, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {
 			t.Fatal(err)
 		}

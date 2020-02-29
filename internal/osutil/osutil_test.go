@@ -55,3 +55,8 @@ func TestIsExist(t *testing.T) {
 		})
 	}
 }
+
+func TestCurrentUsername(t *testing.T) {
+	// Make sure it does not blow up
+	CurrentUsername()
+}

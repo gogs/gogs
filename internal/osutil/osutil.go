@@ -25,9 +25,9 @@ func IsExist(path string) bool {
 
 // CurrentUsername returns the current system user via environment variables.
 func CurrentUsername() string {
-	curUserName := os.Getenv("USER")
-	if len(curUserName) > 0 {
-		return curUserName
+	username := os.Getenv("USER")
+	if len(username) > 0 {
+		return username
 	}
 
 	return os.Getenv("USERNAME")
