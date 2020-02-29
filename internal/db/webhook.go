@@ -27,7 +27,7 @@ import (
 	"gogs.io/gogs/internal/sync"
 )
 
-var HookQueue = sync.NewUniqueQueue(conf.Webhook.QueueLength)
+var HookQueue = sync.NewUniqueQueue(1000)
 
 type HookContentType int
 
