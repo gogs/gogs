@@ -353,7 +353,7 @@ func Init(customConf string) error {
 	// ----- I18n settings -----
 	// *************************
 
-	I18n = new(i18n)
+	I18n = new(i18nConf)
 	if err = File.Section("i18n").MapTo(I18n); err != nil {
 		return errors.Wrap(err, "mapping [i18n] section")
 	}

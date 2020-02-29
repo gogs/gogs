@@ -288,7 +288,7 @@ var (
 	}
 
 	// I18n settings
-	I18n *i18n
+	I18n *i18nConf
 
 	// Webhook settings
 	Webhook struct {
@@ -410,15 +410,15 @@ var (
 	HasRobotsTxt bool
 )
 
-type i18n struct {
+type i18nConf struct {
 	Langs     []string `delim:","`
 	Names     []string `delim:","`
 	dateLangs map[string]string
 }
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
-func (s *i18n) DateLang(lang string) string {
-	name, ok := s.dateLangs[lang]
+func (c *i18nConf) DateLang(lang string) string {
+	name, ok := c.dateLangs[lang]
 	if ok {
 		return name
 	}

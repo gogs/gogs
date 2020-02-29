@@ -11,7 +11,7 @@ import (
 )
 
 func Test_i18n_DateLang(t *testing.T) {
-	s := &i18n{
+	c := &i18nConf{
 		dateLangs: map[string]string{
 			"en-US": "en",
 			"zh-CN": "zh",
@@ -29,7 +29,7 @@ func Test_i18n_DateLang(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.want, s.DateLang(test.lang))
+			assert.Equal(t, test.want, c.DateLang(test.lang))
 		})
 	}
 }
