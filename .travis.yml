@@ -14,4 +14,7 @@ before_install:
 
 script:
   - go build -v -tags "pam"
-  - go test -v -cover -race ./...
+  - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
