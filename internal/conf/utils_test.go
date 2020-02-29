@@ -36,6 +36,7 @@ func Test_cleanUpOpenSSHVersion(t *testing.T) {
 
 func Test_ensureAbs(t *testing.T) {
 	wd := WorkDir()
+
 	tests := []struct {
 		path string
 		want string
