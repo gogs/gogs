@@ -24,6 +24,7 @@ func Test_i18n_DateLang(t *testing.T) {
 	}{
 		{lang: "en-US", want: "en"},
 		{lang: "zh-CN", want: "zh"},
+
 		{lang: "jp-JP", want: "en"},
 	}
 	for _, test := range tests {
