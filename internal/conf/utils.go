@@ -14,6 +14,13 @@ import (
 	"gogs.io/gogs/internal/process"
 )
 
+// cleanUpOpenSSHVersion cleans up the raw output of "ssh -V" and returns a clean version string.
+func cleanUpOpenSSHVersion(raw string) string {
+	v := strings.TrimRight(strings.Fields(raw)[0], ",1234567890")
+	v = strings.TrimSuffix(strings.TrimPrefix(v, "OpenSSH_"), "p")
+	return v
+}
+
 // openSSHVersion returns string representation of OpenSSH version via command "ssh -V".
 func openSSHVersion() (string, error) {
 	// NOTE: Somehow the version is printed to stderr.
@@ -22,10 +29,7 @@ func openSSHVersion() (string, error) {
 		return "", errors.Wrap(err, stderr)
 	}
 
-	// Trim unused information, see https://github.com/gogs/gogs/issues/4507#issuecomment-305150441.
-	v := strings.TrimRight(strings.Fields(stderr)[0], ",1234567890")
-	v = strings.TrimSuffix(strings.TrimPrefix(v, "OpenSSH_"), "p")
-	return v, nil
+	return cleanUpOpenSSHVersion(stderr), nil
 }
 
 // ensureAbs prepends the WorkDir to the given path if it is not an absolute path.
