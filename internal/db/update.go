@@ -26,21 +26,16 @@ func CommitToPushCommit(commit *git.Commit) *PushCommit {
 	}
 }
 
-func ListToPushCommits(l *list.List) *PushCommits {
-	if l == nil {
+func CommitsToPushCommits(commits []*git.Commit) *PushCommits {
+	if len(commits) == 0 {
 		return &PushCommits{}
 	}
 
-	commits := make([]*PushCommit, 0)
-	var actEmail string
-	for e := l.Front(); e != nil; e = e.Next() {
-		commit := e.Value.(*git.Commit)
-		if actEmail == "" {
-			actEmail = commit.Committer.Email
-		}
-		commits = append(commits, CommitToPushCommit(commit))
+	pcs := make([]*PushCommit, len(commits))
+	for i := range commits {
+		pcs[i] = CommitToPushCommit(commits[i])
 	}
-	return &PushCommits{l.Len(), commits, "", nil}
+	return &PushCommits{len(pcs), pcs, "", nil}
 }
 
 type PushUpdateOptions struct {
@@ -134,7 +129,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		RefFullName: opts.RefFullName,
 		OldCommitID: opts.OldCommitID,
 		NewCommitID: opts.NewCommitID,
-		Commits:     ListToPushCommits(l),
+		Commits:     CommitsToPushCommits(l),
 	}); err != nil {
 		return fmt.Errorf("CommitRepoAction.(branch): %v", err)
 	}

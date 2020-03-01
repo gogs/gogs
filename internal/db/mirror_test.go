@@ -24,9 +24,9 @@ From https://try.gogs.io/unknwon/upsteam
  - [deleted]         (none)     -> bugfix
 `,
 				[]*mirrorSyncResult{
-					{"develop", GIT_SHORT_EMPTY_SHA, ""},
+					{"develop", GitShortEmptyID, ""},
 					{"master", "b0bb24f", "1d85a4f"},
-					{"bugfix", "", GIT_SHORT_EMPTY_SHA},
+					{"bugfix", "", GitShortEmptyID},
 				},
 			},
 		}

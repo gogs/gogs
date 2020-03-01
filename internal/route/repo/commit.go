@@ -138,7 +138,7 @@ func Diff(c *context.Context) {
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 	)
 	if err != nil {
-		c.NotFoundOrServerError("get diff commit", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("get repository diff", git.IsErrNotExist, err)
 		return
 	}
 

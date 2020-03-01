@@ -5,7 +5,6 @@
 package db
 
 import (
-	"container/list"
 	"fmt"
 	"net/url"
 	"strings"
@@ -181,14 +180,12 @@ func escapeMirrorCredentials(addr string) string {
 func (m *Mirror) SaveAddress(addr string) error {
 	repoPath := m.Repo.RepoPath()
 
-	err := git.RemoveRemote(repoPath, "origin")
+	err := git.RepoRemoveRemote(repoPath, "origin")
 	if err != nil {
 		return fmt.Errorf("remove remote 'origin': %v", err)
 	}
 
-	err = git.AddRemote(repoPath, "origin", addr, git.AddRemoteOptions{
-		Mirror: true,
-	})
+	err = git.RepoAddRemote(repoPath, "origin", addr, git.AddRemoteOptions{MirrorFetch: true})
 	if err != nil {
 		return fmt.Errorf("add remote 'origin': %v", err)
 	}
@@ -196,7 +193,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 	return nil
 }
 
-const GIT_SHORT_EMPTY_SHA = "0000000"
+const GitShortEmptyID = "0000000"
 
 // mirrorSyncResult contains information of a updated reference.
 // If the oldCommitID is "0000000", it means a new reference, the value of newCommitID is empty.
@@ -223,12 +220,12 @@ func parseRemoteUpdateOutput(output string) []*mirrorSyncResult {
 		case strings.HasPrefix(lines[i], " * "): // New reference
 			results = append(results, &mirrorSyncResult{
 				refName:     refName,
-				oldCommitID: GIT_SHORT_EMPTY_SHA,
+				oldCommitID: GitShortEmptyID,
 			})
 		case strings.HasPrefix(lines[i], " - "): // Delete reference
 			results = append(results, &mirrorSyncResult{
 				refName:     refName,
-				newCommitID: GIT_SHORT_EMPTY_SHA,
+				newCommitID: GitShortEmptyID,
 			})
 		case strings.HasPrefix(lines[i], "   "): // New commits of a reference
 			delimIdx := strings.Index(lines[i][3:], " ")
@@ -262,10 +259,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 
 	// Do a fast-fail testing against on repository URL to ensure it is accessible under
 	// good condition to prevent long blocking on URL resolution without syncing anything.
-	if !git.IsRepoURLAccessible(git.NetworkOptions{
-		URL:     m.RawAddress(),
-		Timeout: 10 * time.Second,
-	}) {
+	if !git.IsURLAccessible(time.Minute, m.RawAddress()) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
 		if err := CreateRepositoryNotice(desc); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
@@ -393,15 +387,14 @@ func SyncMirrors() {
 		// - Create "Mirror Sync" webhook event
 		// - Create mirror sync (create, push and delete) events and trigger the "mirror sync" webhooks
 
-		var gitRepo *git.Repository
 		if len(results) == 0 {
 			log.Trace("SyncMirrors [repo_id: %d]: no commits fetched", m.RepoID)
-		} else {
-			gitRepo, err = git.OpenRepository(m.Repo.RepoPath())
-			if err != nil {
-				log.Error("OpenRepository [%d]: %v", m.RepoID, err)
-				continue
-			}
+		}
+
+		gitRepo, err := git.Open(m.Repo.RepoPath())
+		if err != nil {
+			log.Error("Failed to open repository [repo_id: %d]: %v", m.RepoID, err)
+			continue
 		}
 
 		for _, result := range results {
@@ -411,7 +404,7 @@ func SyncMirrors() {
 			}
 
 			// Delete reference
-			if result.newCommitID == GIT_SHORT_EMPTY_SHA {
+			if strings.HasPrefix(result.newCommitID, GitShortEmptyID) {
 				if err = MirrorSyncDeleteAction(m.Repo, result.refName); err != nil {
 					log.Error("MirrorSyncDeleteAction [repo_id: %d]: %v", m.RepoID, err)
 				}
@@ -420,7 +413,7 @@ func SyncMirrors() {
 
 			// New reference
 			isNewRef := false
-			if result.oldCommitID == GIT_SHORT_EMPTY_SHA {
+			if strings.HasPrefix(result.oldCommitID, GitShortEmptyID) {
 				if err = MirrorSyncCreateAction(m.Repo, result.refName); err != nil {
 					log.Error("MirrorSyncCreateAction [repo_id: %d]: %v", m.RepoID, err)
 					continue
@@ -429,49 +422,57 @@ func SyncMirrors() {
 			}
 
 			// Push commits
-			var commits *list.List
+			var commits []*git.Commit
 			var oldCommitID string
 			var newCommitID string
 			if !isNewRef {
-				oldCommitID, err = git.GetFullCommitID(gitRepo.Path, result.oldCommitID)
+				oldCommitID, err = gitRepo.RevParse(result.oldCommitID)
 				if err != nil {
-					log.Error("GetFullCommitID [%d]: %v", m.RepoID, err)
+					log.Error("Failed to parse revision [repo_id: %d, old_commit_id: %s]: %v", m.RepoID, result.oldCommitID, err)
 					continue
 				}
-				newCommitID, err = git.GetFullCommitID(gitRepo.Path, result.newCommitID)
+				newCommitID, err = gitRepo.RevParse(result.newCommitID)
 				if err != nil {
-					log.Error("GetFullCommitID [%d]: %v", m.RepoID, err)
+					log.Error("Failed to parse revision [repo_id: %d, new_commit_id: %s]: %v", m.RepoID, result.newCommitID, err)
 					continue
 				}
-				commits, err = gitRepo.CommitsBetweenIDs(newCommitID, oldCommitID)
+				commits, err = gitRepo.RevList([]string{oldCommitID + "..." + newCommitID})
 				if err != nil {
-					log.Error("CommitsBetweenIDs [repo_id: %d, new_commit_id: %s, old_commit_id: %s]: %v", m.RepoID, newCommitID, oldCommitID, err)
+					log.Error("Failed to list commits [repo_id: %d, old_commit_id: %s, new_commit_id: %s]: %v", m.RepoID, oldCommitID, newCommitID, err)
 					continue
 				}
 			} else {
-				refNewCommitID, err := gitRepo.GetBranchCommitID(result.refName)
+				refNewCommitID, err := gitRepo.ShowRefVerify(git.RefsHeads + result.refName)
 				if err != nil {
-					log.Error("GetFullCommitID [%d]: %v", m.RepoID, err)
+					log.Error("Failed to get reference commit ID [repo_id: %d, ref_name: %s]: %v", m.RepoID, result.refName, err)
 					continue
 				}
-				if newCommit, err := gitRepo.GetCommit(refNewCommitID); err != nil {
-					log.Error("GetCommit [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommitID, err)
+
+				refNewCommit, err := gitRepo.CatFileCommit(refNewCommitID)
+				if err != nil {
+					log.Error("Failed to get commit [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommitID, err)
 					continue
-				} else {
-					// TODO: Get the commits for the new ref until the closest ancestor branch like Github does
-					commits, err = newCommit.CommitsBeforeLimit(10)
-					if err != nil {
-						log.Error("CommitsBeforeLimit [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommitID, err)
-					}
-					oldCommitID = git.EMPTY_SHA
-					newCommitID = refNewCommitID
 				}
+
+				// TODO: Get the commits for the new ref until the closest ancestor branch like Github does
+				commits, err = refNewCommit.Ancestors(git.LogOptions{MaxCount: 9})
+				if err != nil {
+					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommitID, err)
+					continue
+				}
+
+				// Put the latest commit in front of ancestors
+				commits = append([]*git.Commit{refNewCommit}, commits...)
+
+				oldCommitID = git.EmptyID
+				newCommitID = refNewCommitID
 			}
+
 			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{
 				RefName:     result.refName,
 				OldCommitID: oldCommitID,
 				NewCommitID: newCommitID,
-				Commits:     ListToPushCommits(commits),
+				Commits:     CommitsToPushCommits(commits),
 			}); err != nil {
 				log.Error("MirrorSyncPushAction [repo_id: %d]: %v", m.RepoID, err)
 				continue
@@ -485,15 +486,15 @@ func SyncMirrors() {
 
 		// Get latest commit date and compare to current repository updated time,
 		// update if latest commit date is newer.
-		commitDate, err := git.GetLatestCommitDate(m.Repo.RepoPath(), "")
+		latestCommitTime, err := gitRepo.LatestCommitTime()
 		if err != nil {
 			log.Error("GetLatestCommitDate [%d]: %v", m.RepoID, err)
 			continue
-		} else if commitDate.Before(m.Repo.Updated) {
+		} else if !latestCommitTime.After(m.Repo.Updated) {
 			continue
 		}
 
-		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", commitDate.Unix(), m.RepoID); err != nil {
+		if _, err = x.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", latestCommitTime.Unix(), m.RepoID); err != nil {
 			log.Error("Update 'repository.updated_unix' [%d]: %v", m.RepoID, err)
 			continue
 		}

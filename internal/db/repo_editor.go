@@ -233,7 +233,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 
 	diff, err = ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
 	if err != nil {
-		return nil, fmt.Errorf("parse path: %v", err)
+		return nil, fmt.Errorf("parse diff: %v", err)
 	}
 
 	if err = cmd.Wait(); err != nil {
