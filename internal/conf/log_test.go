@@ -23,7 +23,7 @@ MODE = console
 			t.Fatal(err)
 		}
 
-		got, hasConsole, err := initLogConf(f)
+		got, hasConsole, err := initLogConf(f, false)
 		assert.NotNil(t, err)
 		assert.Equal(t, `missing configuration section [log.console] for "console" logger`, err.Error())
 		assert.False(t, hasConsole)
@@ -41,7 +41,7 @@ MODE = file
 			t.Fatal(err)
 		}
 
-		got, hasConsole, err := initLogConf(f)
+		got, hasConsole, err := initLogConf(f, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +81,7 @@ USERNAME = yoyo
 		t.Fatal(err)
 	}
 
-	got, hasConsole, err := initLogConf(f)
+	got, hasConsole, err := initLogConf(f, false)
 	if err != nil {
 		t.Fatal(err)
 	}
