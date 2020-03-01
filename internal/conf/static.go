@@ -492,6 +492,8 @@ func handleDeprecated() {
 
 // HookMode indicates whether program starts as Git server-side hook callback.
 // All operations should be done synchronously to prevent program exits before finishing.
+//
+// ⚠️ WARNING: Should only be set by "internal/cmd/serv.go".
 var HookMode bool
 
 // Indicates which database backend is currently being used.

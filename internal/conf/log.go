@@ -28,12 +28,19 @@ type logConf struct {
 // Log settings
 var Log *logConf
 
-// initLogConf returns parsed logging configuration from given INI file.
+// initLogConf returns parsed logging configuration from given INI file. When the
+// argument "hookMode" is true, it only initializes the root path for log files.
 // NOTE: Because we always create a console logger as the primary logger at init time,
 // we need to remove it in case the user doesn't configure to use it after the logging
 // service is initalized.
-func initLogConf(cfg *ini.File) (_ *logConf, hasConsole bool, _ error) {
+func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ error) {
 	rootPath := cfg.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
+	if hookMode {
+		return &logConf{
+			RootPath: ensureAbs(rootPath),
+		}, false, nil
+	}
+
 	modes := strings.Split(cfg.Section("log").Key("MODE").MustString("console"), ",")
 	lc := &logConf{
 		RootPath: ensureAbs(rootPath),
@@ -118,11 +125,23 @@ func initLogConf(cfg *ini.File) (_ *logConf, hasConsole bool, _ error) {
 	return lc, hasConsole, nil
 }
 
-// InitLogging initializes the logging service of the application.
-func InitLogging() {
-	logConf, hasConsole, err := initLogConf(File)
+// InitLogging initializes the logging service of the application. When the
+// argument "hookMode" is true, it only initializes the root path for log files
+// without creating any logger.
+func InitLogging(hookMode bool) {
+	logConf, hasConsole, err := initLogConf(File, hookMode)
 	if err != nil {
 		log.Fatal("Failed to init logging configuration: %v", err)
+	}
+	defer func() {
+		if !hasConsole {
+			log.Remove(log.DefaultConsoleName)
+		}
+		Log = logConf
+	}()
+
+	if hookMode {
+		return
 	}
 
 	err = os.MkdirAll(logConf.RootPath, os.ModePerm)
@@ -158,10 +177,4 @@ func InitLogging() {
 		}
 		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(strings.ToLower(level.String())))
 	}
-
-	if !hasConsole {
-		log.Remove(log.DefaultConsoleName)
-	}
-
-	Log = logConf
 }
