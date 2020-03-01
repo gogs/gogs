@@ -203,18 +203,14 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 func processMailQueue() {
 	sender := &Sender{}
-
-	for {
-		select {
-		case msg := <-mailQueue:
-			log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
-			if err := gomail.Send(sender, msg.Message); err != nil {
-				log.Error("Failed to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
-			} else {
-				log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
-			}
-			msg.confirmChan <- struct{}{}
+	for msg := range mailQueue {
+		log.Trace("New e-mail sending request %s: %s", msg.GetHeader("To"), msg.Info)
+		if err := gomail.Send(sender, msg.Message); err != nil {
+			log.Error("Failed to send emails %s: %s - %v", msg.GetHeader("To"), msg.Info, err)
+		} else {
+			log.Trace("E-mails sent %s: %s", msg.GetHeader("To"), msg.Info)
 		}
+		msg.confirmChan <- struct{}{}
 	}
 }
 

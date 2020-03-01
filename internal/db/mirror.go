@@ -316,7 +316,7 @@ func getMirrorByRepoID(e Engine, repoID int64) (*Mirror, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.MirrorNotExist{repoID}
+		return nil, errors.MirrorNotExist{RepoID: repoID}
 	}
 	return m, nil
 }

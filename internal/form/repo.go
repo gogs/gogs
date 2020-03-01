@@ -340,7 +340,7 @@ func (f *NewWiki) Validate(ctx *macaron.Context, errs binding.Errors) binding.Er
 type EditRepoFile struct {
 	TreePath      string `binding:"Required;MaxSize(500)"`
 	Content       string `binding:"Required"`
-	CommitSummary string `binding:"MaxSize(100)`
+	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDotSlash;MaxSize(100)"`
@@ -372,8 +372,8 @@ func (f *EditPreviewDiff) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //
 
 type UploadRepoFile struct {
-	TreePath      string `binding:MaxSize(500)"`
-	CommitSummary string `binding:"MaxSize(100)`
+	TreePath      string `binding:"MaxSize(500)"`
+	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
@@ -404,7 +404,7 @@ func (f *RemoveUploadFile) Validate(ctx *macaron.Context, errs binding.Errors) b
 //         \/     \/          \/          \/
 
 type DeleteRepoFile struct {
-	CommitSummary string `binding:"MaxSize(100)`
+	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`

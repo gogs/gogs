@@ -23,7 +23,7 @@ func ListAccessTokens(c *context.APIContext) {
 
 	apiTokens := make([]*api.AccessToken, len(tokens))
 	for i := range tokens {
-		apiTokens[i] = &api.AccessToken{tokens[i].Name, tokens[i].Sha1}
+		apiTokens[i] = &api.AccessToken{Name: tokens[i].Name, Sha1: tokens[i].Sha1}
 	}
 	c.JSONSuccess(&apiTokens)
 }
@@ -41,5 +41,5 @@ func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) 
 		}
 		return
 	}
-	c.JSON(http.StatusCreated, &api.AccessToken{t.Name, t.Sha1})
+	c.JSON(http.StatusCreated, &api.AccessToken{Name: t.Name, Sha1: t.Sha1})
 }

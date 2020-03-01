@@ -18,24 +18,18 @@ func assertEqual(t *testing.T, s1 string, s2 template.HTML) {
 	}
 }
 
-func assertLineEqual(t *testing.T, d1 *git.DiffLine, d2 *git.DiffLine) {
-	if d1 != d2 {
-		t.Errorf("%v should be equal %v", d1, d2)
-	}
-}
-
 func Test_diffToHTML(t *testing.T) {
 	assertEqual(t, "+foo <span class=\"added-code\">bar</span> biz", diffToHTML([]dmp.Diff{
-		dmp.Diff{dmp.DiffEqual, "foo "},
-		dmp.Diff{dmp.DiffInsert, "bar"},
-		dmp.Diff{dmp.DiffDelete, " baz"},
-		dmp.Diff{dmp.DiffEqual, " biz"},
-	}, git.DIFF_LINE_ADD))
+		{Type: dmp.DiffEqual, Text: "foo "},
+		{Type: dmp.DiffInsert, Text: "bar"},
+		{Type: dmp.DiffDelete, Text: " baz"},
+		{Type: dmp.DiffEqual, Text: " biz"},
+	}, git.DiffLineAdd))
 
 	assertEqual(t, "-foo <span class=\"removed-code\">bar</span> biz", diffToHTML([]dmp.Diff{
-		dmp.Diff{dmp.DiffEqual, "foo "},
-		dmp.Diff{dmp.DiffDelete, "bar"},
-		dmp.Diff{dmp.DiffInsert, " baz"},
-		dmp.Diff{dmp.DiffEqual, " biz"},
-	}, git.DIFF_LINE_DEL))
+		{Type: dmp.DiffEqual, Text: "foo "},
+		{Type: dmp.DiffDelete, Text: "bar"},
+		{Type: dmp.DiffInsert, Text: " baz"},
+		{Type: dmp.DiffEqual, Text: " biz"},
+	}, git.DiffLineDel))
 }

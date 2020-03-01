@@ -118,7 +118,7 @@ func GetTwoFactorByUserID(userID int64) (*TwoFactor, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.TwoFactorNotFound{userID}
+		return nil, errors.TwoFactorNotFound{UserID: userID}
 	}
 
 	return t, nil
@@ -189,7 +189,7 @@ func UseRecoveryCode(userID int64, code string) error {
 	if err != nil {
 		return fmt.Errorf("get unused code: %v", err)
 	} else if !has {
-		return errors.TwoFactorRecoveryCodeNotFound{code}
+		return errors.TwoFactorRecoveryCodeNotFound{Code: code}
 	}
 
 	recoveryCode.IsUsed = true

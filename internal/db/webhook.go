@@ -242,7 +242,7 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.WebhookNotExist{bean.ID}
+		return nil, errors.WebhookNotExist{ID: bean.ID}
 	}
 	return bean, nil
 }
@@ -509,7 +509,7 @@ func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.HookTaskNotExist{webhookID, uuid}
+		return nil, errors.HookTaskNotExist{HookID: webhookID, UUID: uuid}
 	}
 	return hookTask, nil
 }

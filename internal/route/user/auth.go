@@ -438,10 +438,10 @@ func Activate(c *context.Context) {
 
 func ActivateEmail(c *context.Context) {
 	code := c.Query("code")
-	email_string := c.Query("email")
+	emailAddr := c.Query("email")
 
 	// Verify code.
-	if email := db.VerifyActiveEmailCode(code, email_string); email != nil {
+	if email := db.VerifyActiveEmailCode(code, emailAddr); email != nil {
 		if err := email.Activate(); err != nil {
 			c.ServerError("ActivateEmail", err)
 		}
@@ -451,7 +451,6 @@ func ActivateEmail(c *context.Context) {
 	}
 
 	c.SubURLRedirect("/user/settings/email")
-	return
 }
 
 func ForgotPasswd(c *context.Context) {

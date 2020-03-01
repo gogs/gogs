@@ -1106,7 +1106,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository, err error) {
 	if !owner.CanCreateRepo() {
-		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+		return nil, errors.ReachLimitOfRepo{Limit: owner.RepoCreationNum()}
 	}
 
 	repo := &Repository{
@@ -1486,7 +1486,7 @@ func DeleteRepository(uid, repoID int64) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return errors.RepoNotExist{repoID, uid, ""}
+		return errors.RepoNotExist{ID: repoID, UserID: uid}
 	}
 
 	// In case is a organization.
@@ -1603,7 +1603,7 @@ func DeleteRepository(uid, repoID int64) error {
 func GetRepositoryByRef(ref string) (*Repository, error) {
 	n := strings.IndexByte(ref, byte('/'))
 	if n < 2 {
-		return nil, errors.InvalidRepoReference{ref}
+		return nil, errors.InvalidRepoReference{Ref: ref}
 	}
 
 	userName, repoName := ref[:n], ref[n+1:]
@@ -1625,7 +1625,7 @@ func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.RepoNotExist{0, ownerID, name}
+		return nil, errors.RepoNotExist{UserID: ownerID, Name: name}
 	}
 	return repo, repo.LoadAttributes()
 }
@@ -1636,7 +1636,7 @@ func getRepositoryByID(e Engine, id int64) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.RepoNotExist{id, 0, ""}
+		return nil, errors.RepoNotExist{ID: id}
 	}
 	return repo, repo.loadAttributes(e)
 }
@@ -2356,7 +2356,7 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 // ForkRepository creates a fork of target repository under another user domain.
 func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
 	if !owner.CanCreateRepo() {
-		return nil, errors.ReachLimitOfRepo{owner.RepoCreationNum()}
+		return nil, errors.ReachLimitOfRepo{Limit: owner.RepoCreationNum()}
 	}
 
 	repo := &Repository{
@@ -2390,14 +2390,14 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		fmt.Sprintf("ForkRepository 'git clone': %s/%s", owner.Name, repo.Name),
 		"git", "clone", "--bare", baseRepo.RepoPath(), repoPath)
 	if err != nil {
-		return nil, fmt.Errorf("git clone: %v", stderr)
+		return nil, fmt.Errorf("git clone: %v - %s", err, stderr)
 	}
 
 	_, stderr, err = process.ExecDir(-1,
 		repoPath, fmt.Sprintf("ForkRepository 'git update-server-info': %s", repoPath),
 		"git", "update-server-info")
 	if err != nil {
-		return nil, fmt.Errorf("git update-server-info: %v", err)
+		return nil, fmt.Errorf("git update-server-info: %v - %s", err, stderr)
 	}
 
 	if err = createDelegateHooks(repoPath); err != nil {
