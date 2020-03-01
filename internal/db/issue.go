@@ -15,8 +15,8 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -801,7 +801,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 func GetIssueByRef(ref string) (*Issue, error) {
 	n := strings.IndexByte(ref, byte('#'))
 	if n == -1 {
-		return nil, errors.InvalidIssueReference{ref}
+		return nil, errors.InvalidIssueReference{Ref: ref}
 	}
 
 	index := com.StrTo(ref[n+1:]).MustInt64()
@@ -832,7 +832,7 @@ func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.IssueNotExist{0, repoID, index}
+		return nil, errors.IssueNotExist{RepoID: repoID, Index: index}
 	}
 	return issue, nil
 }
@@ -852,7 +852,7 @@ func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.IssueNotExist{id, 0, 0}
+		return nil, errors.IssueNotExist{ID: id}
 	}
 	return issue, nil
 }

@@ -46,7 +46,7 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 
 func (repo *Repository) GetBranch(br string) (*Branch, error) {
 	if !git.IsBranchExist(repo.RepoPath(), br) {
-		return nil, errors.ErrBranchNotExist{br}
+		return nil, errors.ErrBranchNotExist{Name: br}
 	}
 	return &Branch{
 		RepoPath: repo.RepoPath(),
@@ -102,7 +102,7 @@ func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, er
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.ErrBranchNotExist{name}
+		return nil, errors.ErrBranchNotExist{Name: name}
 	}
 	return protectBranch, nil
 }

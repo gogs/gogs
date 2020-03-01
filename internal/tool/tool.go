@@ -367,37 +367,37 @@ func TimeSince(t time.Time, lang string) template.HTML {
 func Subtract(left interface{}, right interface{}) interface{} {
 	var rleft, rright int64
 	var fleft, fright float64
-	var isInt bool = true
-	switch left.(type) {
+	var isInt = true
+	switch left := left.(type) {
 	case int:
-		rleft = int64(left.(int))
+		rleft = int64(left)
 	case int8:
-		rleft = int64(left.(int8))
+		rleft = int64(left)
 	case int16:
-		rleft = int64(left.(int16))
+		rleft = int64(left)
 	case int32:
-		rleft = int64(left.(int32))
+		rleft = int64(left)
 	case int64:
-		rleft = left.(int64)
+		rleft = left
 	case float32:
-		fleft = float64(left.(float32))
+		fleft = float64(left)
 		isInt = false
 	case float64:
-		fleft = left.(float64)
+		fleft = left
 		isInt = false
 	}
 
-	switch right.(type) {
+	switch right := right.(type) {
 	case int:
-		rright = int64(right.(int))
+		rright = int64(right)
 	case int8:
-		rright = int64(right.(int8))
+		rright = int64(right)
 	case int16:
-		rright = int64(right.(int16))
+		rright = int64(right)
 	case int32:
-		rright = int64(right.(int32))
+		rright = int64(right)
 	case int64:
-		rright = right.(int64)
+		rright = right
 	case float32:
 		fright = float64(left.(float32))
 		isInt = false

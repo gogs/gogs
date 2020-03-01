@@ -184,38 +184,6 @@ func ToUTF8WithErr(content []byte) (error, string) {
 	return err, result
 }
 
-// FIXME: Unused function
-func ToUTF8(content string) string {
-	_, res := ToUTF8WithErr([]byte(content))
-	return res
-}
-
-// Replaces all prefixes 'old' in 's' with 'new'.
-// FIXME: Unused function
-func ReplaceLeft(s, old, new string) string {
-	old_len, new_len, i, n := len(old), len(new), 0, 0
-	for ; i < len(s) && strings.HasPrefix(s[i:], old); n += 1 {
-		i += old_len
-	}
-
-	// simple optimization
-	if n == 0 {
-		return s
-	}
-
-	// allocating space for the new string
-	newLen := n*new_len + len(s[i:])
-	replacement := make([]byte, newLen, newLen)
-
-	j := 0
-	for ; j < n*new_len; j += new_len {
-		copy(replacement[j:j+new_len], new)
-	}
-
-	copy(replacement[j:], s[i:])
-	return string(replacement)
-}
-
 // RenderCommitMessage renders commit message with special links.
 func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) string {
 	cleanMsg := template.HTMLEscapeString(msg)

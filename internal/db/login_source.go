@@ -439,7 +439,7 @@ func (s *LocalLoginSources) GetLoginSourceByID(id int64) (*LoginSource, error) {
 		}
 	}
 
-	return nil, errors.LoginSourceNotExist{id}
+	return nil, errors.LoginSourceNotExist{ID: id}
 }
 
 // UpdateLoginSource updates in-memory copy of the authentication source.
@@ -556,7 +556,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LOGIN_DLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
-		return nil, errors.UserNotExist{0, login}
+		return nil, errors.UserNotExist{Name: login}
 	}
 
 	if !autoRegister {
@@ -674,9 +674,9 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(login, "@")
 		if idx == -1 {
-			return nil, errors.UserNotExist{0, login}
+			return nil, errors.UserNotExist{Name: login}
 		} else if !com.IsSliceContainsStr(strings.Split(cfg.AllowedDomains, ","), login[idx+1:]) {
-			return nil, errors.UserNotExist{0, login}
+			return nil, errors.UserNotExist{Name: login}
 		}
 	}
 
@@ -794,7 +794,7 @@ func LoginViaGitHub(user *User, login, password string, sourceID int64, cfg *Git
 
 func remoteUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
 	if !source.IsActived {
-		return nil, errors.LoginSourceNotActivated{source.ID}
+		return nil, errors.LoginSourceNotActivated{SourceID: source.ID}
 	}
 
 	switch source.Type {
@@ -808,7 +808,7 @@ func remoteUserLogin(user *User, login, password string, source *LoginSource, au
 		return LoginViaGitHub(user, login, password, source.ID, source.Cfg.(*GitHubConfig), autoRegister)
 	}
 
-	return nil, errors.InvalidLoginSourceType{source.Type}
+	return nil, errors.InvalidLoginSourceType{Type: source.Type}
 }
 
 // UserLogin validates user name and password via given login source ID.
@@ -830,7 +830,7 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 		// Note: This check is unnecessary but to reduce user confusion at login page
 		// and make it more consistent at user's perspective.
 		if loginSourceID >= 0 && user.LoginSource != loginSourceID {
-			return nil, errors.LoginSourceMismatch{loginSourceID, user.LoginSource}
+			return nil, errors.LoginSourceMismatch{Expect: loginSourceID, Actual: user.LoginSource}
 		}
 
 		// Validate password hash fetched from database for local accounts

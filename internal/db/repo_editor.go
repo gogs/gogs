@@ -21,10 +21,10 @@ import (
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -136,7 +136,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
 		if git.IsBranchExist(repoPath, opts.NewBranch) {
-			return errors.BranchAlreadyExists{opts.NewBranch}
+			return errors.BranchAlreadyExists{Name: opts.NewBranch}
 		}
 
 		// Otherwise, delete branch from local copy in case out of sync
