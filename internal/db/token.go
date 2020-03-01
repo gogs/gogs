@@ -58,7 +58,7 @@ func NewAccessToken(t *AccessToken) error {
 	if err != nil {
 		return err
 	} else if has {
-		return errors.AccessTokenNameAlreadyExist{t.Name}
+		return errors.AccessTokenNameAlreadyExist{Name: t.Name}
 	}
 
 	_, err = x.Insert(t)

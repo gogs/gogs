@@ -13,12 +13,12 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/api/v1/convert"
-	"gogs.io/gogs/internal/conf"
 )
 
 func Search(c *context.APIContext) {
@@ -112,7 +112,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 	if c.User.ID != user.ID {
 		repos := make([]*api.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = ownRepos[i].APIFormat(&api.Permission{true, true, true})
+			repos[i] = ownRepos[i].APIFormat(&api.Permission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -127,7 +127,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 	numOwnRepos := len(ownRepos)
 	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
-		repos[i] = ownRepos[i].APIFormat(&api.Permission{true, true, true})
+		repos[i] = ownRepos[i].APIFormat(&api.Permission{Admin: true, Push: true, Pull: true})
 	}
 
 	i := numOwnRepos
@@ -181,7 +181,7 @@ func CreateUserRepo(c *context.APIContext, owner *db.User, opt api.CreateRepoOpt
 		return
 	}
 
-	c.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
+	c.JSON(201, repo.APIFormat(&api.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 func Create(c *context.APIContext, opt api.CreateRepoOption) {
@@ -283,7 +283,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, repo.APIFormat(&api.Permission{true, true, true}))
+	c.JSON(201, repo.APIFormat(&api.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
