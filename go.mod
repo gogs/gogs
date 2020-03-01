@@ -70,5 +70,5 @@ require (
 	xorm.io/xorm v0.8.0
 )
 
-// +heroku goVersion go1.13.8
+// +heroku goVersion go1.13
 // +heroku install ./
