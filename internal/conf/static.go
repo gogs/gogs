@@ -351,12 +351,12 @@ var (
 		// ⚠️ WARNING: Should only be set by "internal/db/repo.go".
 		Version string `ini:"-"`
 
-		DisableDiffHighlight     bool
-		MaxGitDiffLines          int
-		MaxGitDiffLineCharacters int
-		MaxGitDiffFiles          int
-		GCArgs                   []string `ini:"GC_ARGS" delim:" "`
-		Timeout                  struct {
+		DisableDiffHighlight bool
+		MaxDiffFiles         int      `ini:"MAX_GIT_DIFF_FILES"`
+		MaxDiffLines         int      `ini:"MAX_GIT_DIFF_LINES"`
+		MaxDiffLineChars     int      `ini:"MAX_GIT_DIFF_LINE_CHARACTERS"`
+		GCArgs               []string `ini:"GC_ARGS" delim:" "`
+		Timeout              struct {
 			Migrate int
 			Mirror  int
 			Clone   int

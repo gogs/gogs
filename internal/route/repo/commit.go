@@ -134,9 +134,9 @@ func Diff(c *context.Context) {
 		return
 	}
 
-	diff, err := db.GetDiffCommit(db.RepoPath(userName, repoName),
-		commitID, conf.Git.MaxGitDiffLines,
-		conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles)
+	diff, err := db.RepoDiff(c.Repo.GitRepo,
+		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+	)
 	if err != nil {
 		c.NotFoundOrServerError("get diff commit", git.IsErrNotExist, err)
 		return
@@ -201,11 +201,12 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
-	diff, err := db.GetDiffRange(db.RepoPath(userName, repoName), beforeCommitID,
-		afterCommitID, conf.Git.MaxGitDiffLines,
-		conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles)
+	diff, err := db.RepoDiff(c.Repo.GitRepo,
+		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		git.DiffOptions{Base: beforeCommitID},
+	)
 	if err != nil {
-		c.Handle(404, "GetDiffRange", err)
+		c.ServerError("get repository diff", err)
 		return
 	}
 

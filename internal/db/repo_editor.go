@@ -231,7 +231,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", repo.RepoPath()), cmd)
 	defer process.Remove(pid)
 
-	diff, err = ParsePatch(conf.Git.MaxGitDiffLines, conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles, stdout)
+	diff, err = ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
 	if err != nil {
 		return nil, fmt.Errorf("parse path: %v", err)
 	}

@@ -80,15 +80,15 @@ func (diffSection *DiffSection) ComputedInlineDiffFor(diffLine *git.DiffLine) te
 
 	// try to find equivalent diff line. ignore, otherwise
 	switch diffLine.Type {
-	case git.DIFF_LINE_ADD:
-		compareDiffLine = diffSection.Line(git.DIFF_LINE_DEL, diffLine.RightIdx)
+	case git.DiffLineAdd:
+		compareDiffLine = diffSection.Line(git.DiffLineDelete, diffLine.RightLine)
 		if compareDiffLine == nil {
 			return template.HTML(html.EscapeString(diffLine.Content))
 		}
 		diff1 = compareDiffLine.Content
 		diff2 = diffLine.Content
-	case git.DIFF_LINE_DEL:
-		compareDiffLine = diffSection.Line(git.DIFF_LINE_ADD, diffLine.LeftIdx)
+	case git.DiffLineDelete:
+		compareDiffLine = diffSection.Line(git.DiffLineAdd, diffLine.LeftLine)
 		if compareDiffLine == nil {
 			return template.HTML(html.EscapeString(diffLine.Content))
 		}
@@ -118,29 +118,29 @@ type Diff struct {
 	Files []*DiffFile
 }
 
-func NewDiff(gitDiff *git.Diff) *Diff {
-	diff := &Diff{
-		Diff:  gitDiff,
-		Files: make([]*DiffFile, gitDiff.NumFiles()),
+func NewDiff(oldDiff *git.Diff) *Diff {
+	newDiff := &Diff{
+		Diff:  oldDiff,
+		Files: make([]*DiffFile, oldDiff.NumFiles()),
 	}
 
 	// FIXME: detect encoding while parsing.
 	var buf bytes.Buffer
-	for i := range gitDiff.Files {
+	for i := range oldDiff.Files {
 		buf.Reset()
 
-		diff.Files[i] = &DiffFile{
-			DiffFile: gitDiff.Files[i],
-			Sections: make([]*DiffSection, gitDiff.Files[i].NumSections()),
+		newDiff.Files[i] = &DiffFile{
+			DiffFile: oldDiff.Files[i],
+			Sections: make([]*DiffSection, oldDiff.Files[i].NumSections()),
 		}
 
-		for j := range gitDiff.Files[i].Sections {
-			diff.Files[i].Sections[j] = &DiffSection{
-				DiffSection: gitDiff.Files[i].Sections[j],
+		for j := range oldDiff.Files[i].Sections {
+			newDiff.Files[i].Sections[j] = &DiffSection{
+				DiffSection: oldDiff.Files[i].Sections[j],
 			}
 
-			for k := range diff.Files[i].Sections[j].Lines {
-				buf.WriteString(diff.Files[i].Sections[j].Lines[k].Content)
+			for k := range newDiff.Files[i].Sections[j].Lines {
+				buf.WriteString(newDiff.Files[i].Sections[j].Lines[k].Content)
 				buf.WriteString("\n")
 			}
 		}
@@ -150,10 +150,10 @@ func NewDiff(gitDiff *git.Diff) *Diff {
 			encoding, _ := charset.Lookup(charsetLabel)
 			if encoding != nil {
 				d := encoding.NewDecoder()
-				for j := range diff.Files[i].Sections {
-					for k := range diff.Files[i].Sections[j].Lines {
-						if c, _, err := transform.String(d, diff.Files[i].Sections[j].Lines[k].Content); err == nil {
-							diff.Files[i].Sections[j].Lines[k].Content = c
+				for j := range newDiff.Files[i].Sections {
+					for k := range newDiff.Files[i].Sections[j].Lines {
+						if c, _, err := transform.String(d, newDiff.Files[i].Sections[j].Lines[k].Content); err == nil {
+							newDiff.Files[i].Sections[j].Lines[k].Content = c
 						}
 					}
 				}
@@ -161,34 +161,24 @@ func NewDiff(gitDiff *git.Diff) *Diff {
 		}
 	}
 
-	return diff
+	return newDiff
 }
 
-func ParsePatch(maxLines, maxLineCharacteres, maxFiles int, reader io.Reader) (*Diff, error) {
-	done := make(chan error)
-	var gitDiff *git.Diff
-	go func() {
-		gitDiff = git.ParsePatch(done, maxLines, maxLineCharacteres, maxFiles, reader)
-	}()
+func ParseDiff(r io.Reader, maxFiles, maxFileLines, maxLineChars int) (*Diff, error) {
+	done := make(chan git.SteamParseDiffResult)
+	go git.StreamParseDiff(r, done, maxFiles, maxFileLines, maxLineChars)
 
-	if err := <-done; err != nil {
-		return nil, fmt.Errorf("ParsePatch: %v", err)
+	result := <-done
+	if result.Err != nil {
+		return nil, fmt.Errorf("stream parse diff: %v", result.Err)
 	}
-	return NewDiff(gitDiff), nil
+	return NewDiff(result.Diff), nil
 }
 
-func GetDiffRange(repoPath, beforeCommitID, afterCommitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
-	gitDiff, err := git.GetDiffRange(repoPath, beforeCommitID, afterCommitID, maxLines, maxLineCharacteres, maxFiles)
+func RepoDiff(gitRepo *git.Repository, rev string, maxFiles, maxFileLines, maxLineChars int, opts ...git.DiffOptions) (*Diff, error) {
+	gitDiff, err := gitRepo.Diff(rev, maxFiles, maxFileLines, maxLineChars, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("GetDiffRange: %v", err)
-	}
-	return NewDiff(gitDiff), nil
-}
-
-func GetDiffCommit(repoPath, commitID string, maxLines, maxLineCharacteres, maxFiles int) (*Diff, error) {
-	gitDiff, err := git.GetDiffCommit(repoPath, commitID, maxLines, maxLineCharacteres, maxFiles)
-	if err != nil {
-		return nil, fmt.Errorf("GetDiffCommit: %v", err)
+		return nil, fmt.Errorf("get diff: %v", err)
 	}
 	return NewDiff(gitDiff), nil
 }

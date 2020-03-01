@@ -308,7 +308,7 @@ func ViewPullFiles(c *context.Context) {
 	pull := issue.PullRequest
 
 	var (
-		diffRepoPath  string
+		diffGitRepo   *git.Repository
 		startCommitID string
 		endCommitID   string
 		gitRepo       *git.Repository
@@ -320,7 +320,7 @@ func ViewPullFiles(c *context.Context) {
 			return
 		}
 
-		diffRepoPath = c.Repo.GitRepo.Path
+		diffGitRepo = c.Repo.GitRepo
 		startCommitID = pull.MergeBase
 		endCommitID = pull.MergedCommitID
 		gitRepo = c.Repo.GitRepo
@@ -347,17 +347,18 @@ func ViewPullFiles(c *context.Context) {
 			return
 		}
 
-		diffRepoPath = headRepoPath
+		diffGitRepo = headGitRepo
 		startCommitID = prInfo.MergeBase
 		endCommitID = headCommitID
 		gitRepo = headGitRepo
 	}
 
-	diff, err := db.GetDiffRange(diffRepoPath,
-		startCommitID, endCommitID, conf.Git.MaxGitDiffLines,
-		conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles)
+	diff, err := db.RepoDiff(diffGitRepo,
+		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		git.DiffOptions{Base: startCommitID},
+	)
 	if err != nil {
-		c.ServerError("GetDiffRange", err)
+		c.ServerError("get repository diff", err)
 		return
 	}
 	c.Data["Diff"] = diff
@@ -569,11 +570,12 @@ func PrepareCompareDiff(
 		return true
 	}
 
-	diff, err := db.GetDiffRange(db.RepoPath(headUser.Name, headRepo.Name),
-		prInfo.MergeBase, headCommitID, conf.Git.MaxGitDiffLines,
-		conf.Git.MaxGitDiffLineCharacters, conf.Git.MaxGitDiffFiles)
+	diff, err := db.RepoDiff(headGitRepo,
+		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		git.DiffOptions{Base: prInfo.MergeBase},
+	)
 	if err != nil {
-		c.ServerError("GetDiffRange", err)
+		c.ServerError("get repository diff", err)
 		return false
 	}
 	c.Data["Diff"] = diff
