@@ -37,19 +37,19 @@ func diffToHTML(diffs []diffmatchpatch.Diff, lineType git.DiffLineType) template
 
 	// Reproduce signs which are cutted for inline diff before.
 	switch lineType {
-	case git.DIFF_LINE_ADD:
+	case git.DiffLineAdd:
 		buf.WriteByte('+')
-	case git.DIFF_LINE_DEL:
+	case git.DiffLineDelete:
 		buf.WriteByte('-')
 	}
 
 	for i := range diffs {
 		switch {
-		case diffs[i].Type == diffmatchpatch.DiffInsert && lineType == git.DIFF_LINE_ADD:
+		case diffs[i].Type == diffmatchpatch.DiffInsert && lineType == git.DiffLineAdd:
 			buf.Write(addedCodePrefix)
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 			buf.Write(codeTagSuffix)
-		case diffs[i].Type == diffmatchpatch.DiffDelete && lineType == git.DIFF_LINE_DEL:
+		case diffs[i].Type == diffmatchpatch.DiffDelete && lineType == git.DiffLineDelete:
 			buf.Write(removedCodePrefix)
 			buf.WriteString(html.EscapeString(diffs[i].Text))
 			buf.Write(codeTagSuffix)

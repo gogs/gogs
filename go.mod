@@ -70,4 +70,6 @@ require (
 	xorm.io/xorm v0.8.0
 )
 
+replace github.com/gogs/git-module => /Users/unknwon/Engineering/Gogs/git-module
+
 // +heroku goVersion go1.13beta1
