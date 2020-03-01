@@ -54,7 +54,7 @@ func GlobalInit(customConf string) error {
 		return errors.Wrap(err, "init configuration")
 	}
 
-	conf.InitLogging()
+	conf.InitLogging(false)
 	log.Info("%s %s", conf.App.BrandName, conf.App.Version)
 	log.Trace("Work directory: %s", conf.WorkDir())
 	log.Trace("Custom path: %s", conf.CustomDir())

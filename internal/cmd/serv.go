@@ -49,6 +49,8 @@ func fail(userMessage, logMessage string, args ...interface{}) {
 }
 
 func setup(c *cli.Context, logPath string, connectDB bool) {
+	conf.HookMode = true
+
 	var customConf string
 	if c.IsSet("config") {
 		customConf = c.String("config")
@@ -60,6 +62,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 	if err != nil {
 		fail("Internal error", "Failed to init configuration: %v", err)
 	}
+	conf.InitLogging(true)
 
 	level := log.LevelTrace
 	if conf.IsProdMode() {
