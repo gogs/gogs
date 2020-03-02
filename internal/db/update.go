@@ -5,24 +5,23 @@
 package db
 
 import (
-	"container/list"
 	"fmt"
 	"os/exec"
 	"strings"
 
-	git "github.com/gogs/git-module"
+	"github.com/gogs/git-module"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
 func CommitToPushCommit(commit *git.Commit) *PushCommit {
 	return &PushCommit{
-		Sha1:           commit.ID.String(),
+		Sha1:           commit.ID().String(),
 		Message:        commit.Message(),
-		AuthorEmail:    commit.Author.Email,
-		AuthorName:     commit.Author.Name,
-		CommitterEmail: commit.Committer.Email,
-		CommitterName:  commit.Committer.Name,
-		Timestamp:      commit.Committer.When,
+		AuthorEmail:    commit.Author().Email,
+		AuthorName:     commit.Author().Name,
+		CommitterEmail: commit.Committer().Email,
+		CommitterName:  commit.Committer().Name,
+		Timestamp:      commit.Committer().When,
 	}
 }
 
@@ -51,10 +50,10 @@ type PushUpdateOptions struct {
 // PushUpdate must be called for any push actions in order to
 // generates necessary push action history feeds.
 func PushUpdate(opts PushUpdateOptions) (err error) {
-	isNewRef := opts.OldCommitID == git.EMPTY_SHA
-	isDelRef := opts.NewCommitID == git.EMPTY_SHA
+	isNewRef := strings.HasPrefix(opts.OldCommitID, git.EmptyID)
+	isDelRef := strings.HasPrefix(opts.NewCommitID, git.EmptyID)
 	if isNewRef && isDelRef {
-		return fmt.Errorf("Old and new revisions are both %s", git.EMPTY_SHA)
+		return fmt.Errorf("both old and new revisions are %s", git.EmptyID)
 	}
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
@@ -65,9 +64,9 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return fmt.Errorf("run 'git update-server-info': %v", err)
 	}
 
-	gitRepo, err := git.OpenRepository(repoPath)
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
-		return fmt.Errorf("OpenRepository: %v", err)
+		return fmt.Errorf("open repository: %v", err)
 	}
 
 	owner, err := GetUserByName(opts.RepoUserName)
@@ -85,7 +84,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	}
 
 	// Push tags
-	if strings.HasPrefix(opts.RefFullName, git.TAG_PREFIX) {
+	if strings.HasPrefix(opts.RefFullName, git.RefsTags) {
 		if err := CommitRepoAction(CommitRepoActionOptions{
 			PusherName:  opts.PusherName,
 			RepoOwnerID: owner.ID,
@@ -100,22 +99,23 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		return nil
 	}
 
-	var l *list.List
+	var commits []*git.Commit
 	// Skip read parent commits when delete branch
 	if !isDelRef {
 		// Push new branch
-		newCommit, err := gitRepo.GetCommit(opts.NewCommitID)
+		newCommit, err := gitRepo.CatFileCommit(opts.NewCommitID)
 		if err != nil {
 			return fmt.Errorf("GetCommit [commit_id: %s]: %v", opts.NewCommitID, err)
 		}
 
 		if isNewRef {
-			l, err = newCommit.CommitsBeforeLimit(10)
+			commits, err = newCommit.Ancestors(git.LogOptions{MaxCount: 9})
 			if err != nil {
 				return fmt.Errorf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}
+			commits = append([]*git.Commit{newCommit}, commits...)
 		} else {
-			l, err = newCommit.CommitsBeforeUntil(opts.OldCommitID)
+			commits, err = newCommit.CommitsAfter(opts.OldCommitID)
 			if err != nil {
 				return fmt.Errorf("CommitsBeforeUntil [commit_id: %s]: %v", opts.OldCommitID, err)
 			}
@@ -129,7 +129,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		RefFullName: opts.RefFullName,
 		OldCommitID: opts.OldCommitID,
 		NewCommitID: opts.NewCommitID,
-		Commits:     CommitsToPushCommits(l),
+		Commits:     CommitsToPushCommits(commits),
 	}); err != nil {
 		return fmt.Errorf("CommitRepoAction.(branch): %v", err)
 	}
