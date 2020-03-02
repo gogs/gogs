@@ -24,28 +24,28 @@ type Branch struct {
 }
 
 func GetBranchesByPath(path string) ([]*Branch, error) {
-	gitRepo, err := git.OpenRepository(path)
+	gitRepo, err := git.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open repository: %v", err)
 	}
 
-	brs, err := gitRepo.GetBranches()
+	heads, err := gitRepo.ShowRef(git.ShowRefOptions{Heads: true})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list heads")
 	}
 
-	branches := make([]*Branch, len(brs))
-	for i := range brs {
+	branches := make([]*Branch, len(heads))
+	for i := range heads {
 		branches[i] = &Branch{
 			RepoPath: path,
-			Name:     brs[i],
+			Name:     git.RefShortName(heads[i].Refspec),
 		}
 	}
 	return branches, nil
 }
 
 func (repo *Repository) GetBranch(br string) (*Branch, error) {
-	if !git.IsBranchExist(repo.RepoPath(), br) {
+	if !git.RepoHasReference(repo.RepoPath(), git.RefsHeads+br) {
 		return nil, errors.ErrBranchNotExist{Name: br}
 	}
 	return &Branch{
@@ -59,11 +59,11 @@ func (repo *Repository) GetBranches() ([]*Branch, error) {
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {
-	gitRepo, err := git.OpenRepository(br.RepoPath)
+	gitRepo, err := git.Open(br.RepoPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open repository: %v", err)
 	}
-	return gitRepo.GetBranchCommit(br.Name)
+	return gitRepo.CatFileCommit(git.RefsHeads + br.Name)
 }
 
 type ProtectBranchWhitelist struct {
