@@ -41,6 +41,7 @@ func checkRunMode() {
 	if conf.IsProdMode() {
 		macaron.Env = macaron.PROD
 		macaron.ColorLog = false
+		git.Debug = false
 	} else {
 		git.Debug = true
 	}
