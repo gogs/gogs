@@ -126,17 +126,15 @@ func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ e
 }
 
 // InitLogging initializes the logging service of the application. When the
-// argument "hookMode" is true, it only initializes the root path for log files
-// without creating any logger.
+// "hookMode" is true, it only initializes the root path for log files without
+// creating any logger. It will also not remove the primary logger in "hookMode"
+// and is up to the caller to decide when to remove it.
 func InitLogging(hookMode bool) {
 	logConf, hasConsole, err := initLogConf(File, hookMode)
 	if err != nil {
 		log.Fatal("Failed to init logging configuration: %v", err)
 	}
 	defer func() {
-		if !hasConsole {
-			log.Remove(log.DefaultConsoleName)
-		}
 		Log = logConf
 	}()
 
@@ -176,5 +174,12 @@ func InitLogging(hookMode bool) {
 			return
 		}
 		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(strings.ToLower(level.String())))
+	}
+
+	// ⚠️ WARNING: It is only safe to remove the primary logger until
+	// there are other loggers that are initialized. Otherwise, the
+	// application will print errors to nowhere.
+	if !hasConsole {
+		log.Remove(log.DefaultConsoleName)
 	}
 }
