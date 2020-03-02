@@ -119,7 +119,7 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
 	if !r.IsDraft {
-		if !gitRepo.HasReference(git.RefsTags + r.TagName) {
+		if !gitRepo.HasTag(r.TagName) {
 			commit, err := gitRepo.CatFileCommit(git.RefsHeads + r.Target)
 			if err != nil {
 				return fmt.Errorf("get branch commit: %v", err)

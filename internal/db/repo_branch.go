@@ -44,13 +44,13 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 	return branches, nil
 }
 
-func (repo *Repository) GetBranch(br string) (*Branch, error) {
-	if !git.RepoHasReference(repo.RepoPath(), git.RefsHeads+br) {
-		return nil, errors.ErrBranchNotExist{Name: br}
+func (repo *Repository) GetBranch(name string) (*Branch, error) {
+	if !git.RepoHasBranch(repo.RepoPath(), name) {
+		return nil, errors.ErrBranchNotExist{Name: name}
 	}
 	return &Branch{
 		RepoPath: repo.RepoPath(),
-		Name:     br,
+		Name:     name,
 	}, nil
 }
 
