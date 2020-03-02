@@ -119,27 +119,27 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
 	if !r.IsDraft {
-		if !gitRepo.IsTagExist(r.TagName) {
-			commit, err := gitRepo.GetBranchCommit(r.Target)
+		if !gitRepo.HasReference(git.RefsTags + r.TagName) {
+			commit, err := gitRepo.CatFileCommit(git.RefsHeads + r.Target)
 			if err != nil {
-				return fmt.Errorf("GetBranchCommit: %v", err)
+				return fmt.Errorf("get branch commit: %v", err)
 			}
 
 			// Trim '--' prefix to prevent command line argument vulnerability.
 			r.TagName = strings.TrimPrefix(r.TagName, "--")
-			if err = gitRepo.CreateTag(r.TagName, commit.ID.String()); err != nil {
+			if err = gitRepo.CreateTag(r.TagName, commit.ID().String()); err != nil {
 				if strings.Contains(err.Error(), "is not a valid tag name") {
 					return ErrInvalidTagName{r.TagName}
 				}
 				return err
 			}
 		} else {
-			commit, err := gitRepo.GetTagCommit(r.TagName)
+			commit, err := gitRepo.CatFileCommit(git.RefsTags + r.TagName)
 			if err != nil {
-				return fmt.Errorf("GetTagCommit: %v", err)
+				return fmt.Errorf("get tag commit: %v", err)
 			}
 
-			r.Sha1 = commit.ID.String()
+			r.Sha1 = commit.ID().String()
 			r.NumCommits, err = commit.CommitsCount()
 			if err != nil {
 				return fmt.Errorf("CommitsCount: %v", err)
