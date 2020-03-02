@@ -6,32 +6,25 @@ package repo
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"path"
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/tool"
 )
 
-func serveData(c *context.Context, name string, r io.Reader) error {
-	buf := make([]byte, 1024)
-	n, _ := r.Read(buf)
-	if n >= 0 {
-		buf = buf[:n]
-	}
-
-	commit, err := c.Repo.Commit.GetCommitByPath(c.Repo.TreePath)
+func serveData(c *context.Context, name string, data []byte) error {
+	commit, err := c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 	if err != nil {
 		return fmt.Errorf("GetCommitByPath: %v", err)
 	}
-	c.Resp.Header().Set("Last-Modified", commit.Committer.When.Format(http.TimeFormat))
+	c.Resp.Header().Set("Last-Modified", commit.Committer().When.Format(http.TimeFormat))
 
-	if !tool.IsTextFile(buf) {
-		if !tool.IsImageFile(buf) {
+	if !tool.IsTextFile(data) {
+		if !tool.IsImageFile(data) {
 			c.Resp.Header().Set("Content-Disposition", "attachment; filename=\""+name+"\"")
 			c.Resp.Header().Set("Content-Transfer-Encoding", "binary")
 		}
@@ -39,26 +32,26 @@ func serveData(c *context.Context, name string, r io.Reader) error {
 		c.Resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	}
 
-	if _, err := c.Resp.Write(buf); err != nil {
+	if _, err := c.Resp.Write(data); err != nil {
 		return fmt.Errorf("write buffer to response: %v", err)
 	}
-	_, err = io.Copy(c.Resp, r)
-	return err
+	return nil
 }
 
 func ServeBlob(c *context.Context, blob *git.Blob) error {
-	dataRc, err := blob.Data()
+	p, err := blob.Bytes()
 	if err != nil {
 		return err
 	}
 
-	return serveData(c, path.Base(c.Repo.TreePath), dataRc)
+	return serveData(c, path.Base(c.Repo.TreePath), p)
 }
 
 func SingleDownload(c *context.Context) {
-	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		if git.IsErrNotExist(err) {
+		// TODO: Use gitutil package
+		if err == git.ErrRevisionNotExist {
 			c.Handle(404, "GetBlobByPath", nil)
 		} else {
 			c.Handle(500, "GetBlobByPath", err)

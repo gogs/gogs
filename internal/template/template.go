@@ -5,7 +5,6 @@
 package template
 
 import (
-	"container/list"
 	"fmt"
 	"html/template"
 	"mime"
@@ -86,7 +85,6 @@ func FuncMap() []template.FuncMap {
 			"DateFmtShort": func(t time.Time) string {
 				return t.Format("Jan 02, 2006")
 			},
-			"List": List,
 			"SubStr": func(str string, start, length int) string {
 				if len(str) == 0 {
 					return ""
@@ -142,19 +140,6 @@ func Str2HTML(raw string) template.HTML {
 // NewLine2br simply replaces "\n" to "<br>".
 func NewLine2br(raw string) string {
 	return strings.Replace(raw, "\n", "<br>", -1)
-}
-
-func List(l *list.List) chan interface{} {
-	e := l.Front()
-	c := make(chan interface{})
-	go func() {
-		for e != nil {
-			c <- e.Value
-			e = e.Next()
-		}
-		close(c)
-	}()
-	return c
 }
 
 func Sha1(str string) string {

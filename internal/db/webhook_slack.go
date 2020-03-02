@@ -72,7 +72,7 @@ func SlackLinkFormatter(url string, text string) string {
 
 // getSlackCreatePayload composes Slack payload for create new branch or tag.
 func getSlackCreatePayload(p *api.CreatePayload) (*SlackPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
@@ -83,7 +83,7 @@ func getSlackCreatePayload(p *api.CreatePayload) (*SlackPayload, error) {
 
 // getSlackDeletePayload composes Slack payload for delete a branch or tag.
 func getSlackDeletePayload(p *api.DeletePayload) (*SlackPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	text := fmt.Sprintf("[%s:%s] %s deleted by %s", repoLink, refName, p.RefType, p.Sender.UserName)
 	return &SlackPayload{
@@ -104,7 +104,7 @@ func getSlackForkPayload(p *api.ForkPayload) (*SlackPayload, error) {
 func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
 	// n new commits
 	var (
-		branchName   = git.RefEndName(p.Ref)
+		branchName   = git.RefShortName(p.Ref)
 		commitDesc   string
 		commitString string
 	)

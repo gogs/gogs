@@ -6,13 +6,12 @@ package repo
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
@@ -303,30 +302,23 @@ func RetrieveRepoMetas(c *context.Context, repo *db.Repository) []*db.Label {
 }
 
 func getFileContentFromDefaultBranch(c *context.Context, filename string) (string, bool) {
-	var r io.Reader
-	var bytes []byte
-
 	if c.Repo.Commit == nil {
 		var err error
-		c.Repo.Commit, err = c.Repo.GitRepo.GetBranchCommit(c.Repo.Repository.DefaultBranch)
+		c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(git.RefsHeads + c.Repo.Repository.DefaultBranch)
 		if err != nil {
 			return "", false
 		}
 	}
 
-	entry, err := c.Repo.Commit.GetTreeEntryByPath(filename)
+	entry, err := c.Repo.Commit.TreeEntry(filename)
 	if err != nil {
 		return "", false
 	}
-	r, err = entry.Blob().Data()
+	p, err := entry.Blob().Bytes()
 	if err != nil {
 		return "", false
 	}
-	bytes, err = ioutil.ReadAll(r)
-	if err != nil {
-		return "", false
-	}
-	return string(bytes), true
+	return string(p), true
 }
 
 func setTemplateIfExists(c *context.Context, ctxDataKey string, possibleFiles []string) {
@@ -656,7 +648,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 		}
 
 		c.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
-			c.Repo.IsWriter() && c.Repo.GitRepo.IsBranchExist(pull.HeadBranch) &&
+			c.Repo.IsWriter() && c.Repo.GitRepo.HasBranch(pull.HeadBranch) &&
 			!branchProtected
 
 		c.Data["DeleteBranchLink"] = c.Repo.MakeURL(url.URL{

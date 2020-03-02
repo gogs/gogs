@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"container/list"
 	"path"
 
 	"github.com/gogs/git-module"
@@ -33,13 +32,8 @@ func RefCommits(c *context.Context) {
 	}
 }
 
-func RenderIssueLinks(oldCommits *list.List, repoLink string) *list.List {
-	newCommits := list.New()
-	for e := oldCommits.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*git.Commit)
-		newCommits.PushBack(c)
-	}
-	return newCommits
+func RenderIssueLinks(oldCommits []*git.Commit, repoLink string) []*git.Commit {
+	return oldCommits
 }
 
 func renderCommits(c *context.Context, filename string) {
@@ -53,30 +47,23 @@ func renderCommits(c *context.Context, filename string) {
 	}
 	pageSize := c.QueryInt("pageSize")
 	if pageSize < 1 {
-		pageSize = git.DefaultCommitsPageSize
+		pageSize = conf.UI.User.CommitsPagingNum
 	}
 
-	// Both 'git log branchName' and 'git log commitID' work.
-	var err error
-	var commits *list.List
-	if len(filename) == 0 {
-		commits, err = c.Repo.Commit.CommitsByRangeSize(page, pageSize)
-	} else {
-		commits, err = c.Repo.GitRepo.CommitsByFileAndRangeSize(c.Repo.BranchName, filename, page, pageSize)
-	}
+	commits, err := c.Repo.Commit.CommitsByPage(page, pageSize, git.CommitsByPageOptions{Path: filename})
 	if err != nil {
 		c.Handle(500, "CommitsByRangeSize/CommitsByFileAndRangeSize", err)
 		return
 	}
+
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	commits = db.ValidateCommitsWithEmails(commits)
-	c.Data["Commits"] = commits
+	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
 
 	if page > 1 {
 		c.Data["HasPrevious"] = true
 		c.Data["PreviousPage"] = page - 1
 	}
-	if commits.Len() == pageSize {
+	if len(commits) == pageSize {
 		c.Data["HasNext"] = true
 		c.Data["NextPage"] = page + 1
 	}
@@ -105,9 +92,9 @@ func SearchCommits(c *context.Context) {
 		c.Handle(500, "SearchCommits", err)
 		return
 	}
+
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	commits = db.ValidateCommitsWithEmails(commits)
-	c.Data["Commits"] = commits
+	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
 
 	c.Data["Keyword"] = keyword
 	c.Data["Username"] = c.Repo.Owner.Name
@@ -128,9 +115,10 @@ func Diff(c *context.Context) {
 	repoName := c.Repo.Repository.Name
 	commitID := c.Params(":sha")
 
-	commit, err := c.Repo.GitRepo.GetCommit(commitID)
+	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
 	if err != nil {
-		c.NotFoundOrServerError("get commit by ID", git.IsErrNotExist, err)
+		// TODO: Move checker to gitutil package
+		c.NotFoundOrServerError("get commit by ID", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 
@@ -138,12 +126,12 @@ func Diff(c *context.Context) {
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 	)
 	if err != nil {
-		c.NotFoundOrServerError("get repository diff", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("get repository diff", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 
-	parents := make([]string, commit.ParentCount())
-	for i := 0; i < commit.ParentCount(); i++ {
+	parents := make([]string, commit.ParentsCount())
+	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, err := commit.ParentID(i)
 		parents[i] = sha.String()
 		if err != nil {
@@ -169,7 +157,7 @@ func Diff(c *context.Context) {
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", commitID)
-	if commit.ParentCount() > 0 {
+	if commit.ParentsCount() > 0 {
 		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", parents[0])
 	}
 	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", commitID)
@@ -177,13 +165,12 @@ func Diff(c *context.Context) {
 }
 
 func RawDiff(c *context.Context) {
-	if err := git.GetRawDiff(
-		db.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name),
+	if err := c.Repo.GitRepo.RawDiff(
 		c.Params(":sha"),
-		git.RawDiffType(c.Params(":ext")),
+		git.RawDiffFormat(c.Params(":ext")),
 		c.Resp,
 	); err != nil {
-		c.NotFoundOrServerError("GetRawDiff", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetRawDiff", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 }
@@ -195,7 +182,7 @@ func CompareDiff(c *context.Context) {
 	beforeCommitID := c.Params(":before")
 	afterCommitID := c.Params(":after")
 
-	commit, err := c.Repo.GitRepo.GetCommit(afterCommitID)
+	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
 	if err != nil {
 		c.Handle(404, "GetCommit", err)
 		return
@@ -210,17 +197,16 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
-	commits, err := commit.CommitsBeforeUntil(beforeCommitID)
+	commits, err := commit.CommitsAfter(beforeCommitID)
 	if err != nil {
 		c.Handle(500, "CommitsBeforeUntil", err)
 		return
 	}
-	commits = db.ValidateCommitsWithEmails(commits)
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["CommitRepoLink"] = c.Repo.RepoLink
-	c.Data["Commits"] = commits
-	c.Data["CommitsCount"] = commits.Len()
+	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["CommitsCount"] = len(commits)
 	c.Data["BeforeCommitID"] = beforeCommitID
 	c.Data["AfterCommitID"] = afterCommitID
 	c.Data["Username"] = userName

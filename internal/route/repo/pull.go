@@ -5,7 +5,6 @@
 package repo
 
 import (
-	"container/list"
 	"path"
 	"strings"
 
@@ -208,7 +207,7 @@ func PrepareViewPullInfo(c *context.Context, issue *db.Issue) *git.PullRequestIn
 	)
 
 	if pull.HeadRepo != nil {
-		headGitRepo, err = git.OpenRepository(pull.HeadRepo.RepoPath())
+		headGitRepo, err = git.Open(pull.HeadRepo.RepoPath())
 		if err != nil {
 			c.ServerError("OpenRepository", err)
 			return nil
@@ -257,18 +256,18 @@ func ViewPullCommits(c *context.Context) {
 		c.Data["Reponame"] = pull.HeadRepo.Name
 	}
 
-	var commits *list.List
+	var commits []*git.Commit
 	if pull.HasMerged {
 		PrepareMergedViewPullInfo(c, issue)
 		if c.Written() {
 			return
 		}
-		startCommit, err := c.Repo.GitRepo.GetCommit(pull.MergeBase)
+		startCommit, err := c.Repo.GitRepo.CatFileCommit(pull.MergeBase)
 		if err != nil {
 			c.ServerError("Repo.GitRepo.GetCommit", err)
 			return
 		}
-		endCommit, err := c.Repo.GitRepo.GetCommit(pull.MergedCommitID)
+		endCommit, err := c.Repo.GitRepo.CatFileCommit(pull.MergedCommitID)
 		if err != nil {
 			c.ServerError("Repo.GitRepo.GetCommit", err)
 			return
@@ -290,9 +289,8 @@ func ViewPullCommits(c *context.Context) {
 		commits = prInfo.Commits
 	}
 
-	commits = db.ValidateCommitsWithEmails(commits)
-	c.Data["Commits"] = commits
-	c.Data["CommitsCount"] = commits.Len()
+	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["CommitsCount"] = len(commits)
 
 	c.Success(PULL_COMMITS)
 }
@@ -335,13 +333,13 @@ func ViewPullFiles(c *context.Context) {
 
 		headRepoPath := db.RepoPath(pull.HeadUserName, pull.HeadRepo.Name)
 
-		headGitRepo, err := git.OpenRepository(headRepoPath)
+		headGitRepo, err := git.Open(headRepoPath)
 		if err != nil {
 			c.ServerError("OpenRepository", err)
 			return
 		}
 
-		headCommitID, err := headGitRepo.GetBranchCommitID(pull.HeadBranch)
+		headCommitID, err := headGitRepo.ShowRefVerify(git.RefsHeads + pull.HeadBranch)
 		if err != nil {
 			c.ServerError("GetBranchCommitID", err)
 			return
@@ -364,7 +362,7 @@ func ViewPullFiles(c *context.Context) {
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
-	commit, err := gitRepo.GetCommit(endCommitID)
+	commit, err := gitRepo.CatFileCommit(endCommitID)
 	if err != nil {
 		c.ServerError("GetCommit", err)
 		return
@@ -474,7 +472,7 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 	c.Repo.PullRequest.SameRepo = isSameRepo
 
 	// Check if base branch is valid.
-	if !c.Repo.GitRepo.IsBranchExist(baseBranch) {
+	if !c.Repo.GitRepo.HasBranch(baseBranch) {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
@@ -498,7 +496,7 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 			return nil, nil, nil, nil, "", ""
 		}
 
-		headGitRepo, err = git.OpenRepository(db.RepoPath(headUser.Name, headRepo.Name))
+		headGitRepo, err = git.Open(db.RepoPath(headUser.Name, headRepo.Name))
 		if err != nil {
 			c.ServerError("OpenRepository", err)
 			return nil, nil, nil, nil, "", ""
@@ -515,12 +513,13 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 	}
 
 	// Check if head branch is valid.
-	if !headGitRepo.IsBranchExist(headBranch) {
+	if !headGitRepo.HasBranch(headBranch) {
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
 	}
 
-	headBranches, err := headGitRepo.GetBranches()
+	// FIXME: This breaks template
+	headBranches, err := headGitRepo.ShowRef(git.ShowRefOptions{Heads: true})
 	if err != nil {
 		c.ServerError("GetBranches", err)
 		return nil, nil, nil, nil, "", ""
@@ -558,7 +557,7 @@ func PrepareCompareDiff(
 	// Get diff information.
 	c.Data["CommitRepoLink"] = headRepo.Link()
 
-	headCommitID, err := headGitRepo.GetBranchCommitID(headBranch)
+	headCommitID, err := headGitRepo.ShowRefVerify(git.RefsHeads + headBranch)
 	if err != nil {
 		c.ServerError("GetBranchCommitID", err)
 		return false
@@ -581,7 +580,7 @@ func PrepareCompareDiff(
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 
-	headCommit, err := headGitRepo.GetCommit(headCommitID)
+	headCommit, err := headGitRepo.CatFileCommit(headCommitID)
 	if err != nil {
 		c.ServerError("GetCommit", err)
 		return false
@@ -697,7 +696,7 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 		return
 	}
 
-	patch, err := headGitRepo.GetPatch(prInfo.MergeBase, headBranch)
+	patch, err := headGitRepo.DiffBinary(prInfo.MergeBase, headBranch)
 	if err != nil {
 		c.ServerError("GetPatch", err)
 		return
