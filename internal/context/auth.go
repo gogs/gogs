@@ -41,7 +41,7 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 
 		// Check non-logged users landing page.
 		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
-			c.Redirect(conf.Server.LandingURL)
+			c.SubURLRedirect(conf.Server.LandingURL)
 			return
 		}
 
