@@ -45,7 +45,7 @@ const (
 	templateHTMLLLink = "%s/repos/%s/%s/tree/%s"
 )
 
-func GetPathContents(c *context.APIContext) {
+func GetContents(c *context.APIContext) {
 	treeEntry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
 	if err != nil {
 		c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
