@@ -93,17 +93,17 @@ func GetContents(c *context.APIContext) {
 	} else if treeEntry.Type == "blob" {
 		blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 		if err != nil {
-			c.ServerError("ErrorGetBlobByPath", err)
+			c.ServerError("GetBlobByPath", err)
 			return
 		}
 		b, err := blob.Data()
 		if err != nil {
-			c.ServerError("BlobDataError", err)
+			c.ServerError("Data", err)
 			return
 		}
 		buf, err := ioutil.ReadAll(b)
 		if err != nil {
-			c.ServerError("ContentReadError", err)
+			c.ServerError("ReadAll", err)
 			return
 		}
 		contents.Content = base64.StdEncoding.EncodeToString(buf)
@@ -115,13 +115,13 @@ func GetContents(c *context.APIContext) {
 	// treeEntry is a directory
 	dirTree, err := c.Repo.GitRepo.GetTree(treeEntry.ID.String())
 	if err != nil {
-		c.NotFoundOrServerError("GetGitDirTree", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetTree", git.IsErrNotExist, err)
 		return
 	}
 
 	entries, err := dirTree.ListEntries()
 	if err != nil {
-		c.NotFoundOrServerError("ListDirTreeEntries", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("ListEntries", git.IsErrNotExist, err)
 		return
 	}
 
