@@ -6,25 +6,26 @@ import (
 	"net/url"
 
 	"github.com/gogs/git-module"
+
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db/errors"
 )
 
-type GitRepoContent struct {
+type repoContents struct {
 	Type            string `json:"type"`
 	Target          string `json:"target,omitempty"`
+	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
+	Encoding        string `json:"encoding,omitempty"`
 	Size            int64  `json:"size"`
 	Name            string `json:"name"`
 	Path            string `json:"path"`
+	Content         string `json:"content,omitempty"`
 	Sha             string `json:"sha"`
 	URL             string `json:"url"`
 	GitURL          string `json:"git_url"`
 	HTMLURL         string `json:"html_url"`
 	DownloadURL     string `json:"download_url"`
 	Links           Links  `json:"_links"`
-	Content         string `json:"content,omitempty"`
-	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
-	Encoding        string `json:"encoding,omitempty"`
 }
 
 type Links struct {
@@ -44,17 +45,18 @@ const (
 	templateHTMLLLink = "%s/repos/%s/%s/tree/%s"
 )
 
-func GetPathContents(c *context.APIContext) {
+func GetContents(c *context.APIContext) {
 	treeEntry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
 	if err != nil {
 		c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
+		return
 	}
 
 	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
 	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
-	selfurl := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
+	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
 
-	gr := &GitRepoContent{
+	gr := &repoContents{
 		DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
 		Size:        treeEntry.Size(),
 		Name:        treeEntry.Name(),
@@ -62,10 +64,10 @@ func GetPathContents(c *context.APIContext) {
 		Sha:         treeEntry.ID.String(),
 		Links: Links{
 			Git:  gitURL,
-			Self: selfurl,
+			Self: selfURL,
 			HTML: htmlURL,
 		},
-		URL:     selfurl,
+		URL:     selfURL,
 		GitURL:  gitURL,
 		HTMLURL: htmlURL,
 	}
@@ -155,8 +157,8 @@ func getBase64EncodedBlob(c *context.APIContext) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf), nil
 }
 
-func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*GitRepoContent, error) {
-	var results = make([]*GitRepoContent, 0, len(entries))
+func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoContents, error) {
+	var results = make([]*repoContents, 0, len(entries))
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{})
 	}
@@ -177,7 +179,7 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*GitRep
 			contentType = "blob"
 		}
 
-		results = append(results, &GitRepoContent{
+		results = append(results, &repoContents{
 			DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
 			Type:        contentType,
 			Size:        entry.Size(),
