@@ -10,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-type repoContents struct {
+type repoContent struct {
 	Type            string `json:"type"`
 	Target          string `json:"target,omitempty"`
 	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
@@ -39,6 +39,8 @@ func GetContents(c *context.APIContext) {
 		c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
 		return
 	}
+	username := c.Params(":username")
+	reponame := c.Params(":reponame")
 
 	// TODO: figure out the best way to do this
 	// :base-url/:username/:project/raw/:refs/:path
@@ -50,11 +52,11 @@ func GetContents(c *context.APIContext) {
 	// :baseurl/repos/:username/:project/tree/:sha
 	templateHTMLLLink := "%s/repos/%s/%s/tree/%s"
 
-	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
-	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
-	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
+	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, username, reponame, treeEntry.ID.String())
+	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, treeEntry.ID.String())
+	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, username, reponame, c.Repo.TreePath)
 
-	contents := &repoContents{
+	contents := &repoContent{
 		Size:        treeEntry.Size(),
 		Name:        treeEntry.Name(),
 		Path:        c.Repo.TreePath,
@@ -62,7 +64,7 @@ func GetContents(c *context.APIContext) {
 		URL:         selfURL,
 		GitURL:      gitURL,
 		HTMLURL:     htmlURL,
-		DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
+		DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, username, reponame, c.Repo.TreePath),
 		Links: Links{
 			Git:  gitURL,
 			Self: selfURL,
@@ -83,8 +85,7 @@ func GetContents(c *context.APIContext) {
 			return
 		}
 		host := parsedURL.Host
-		submoduleURL := fmt.Sprintf("git://%s/%s/%s.git", host, c.Params(":name"), c.Params(":reponame"))
-		contents.SubmoduleGitURL = submoduleURL
+		contents.SubmoduleGitURL = fmt.Sprintf("git://%s/%s/%s.git", host, username, reponame)
 		c.JSONSuccess(contents)
 		return
 
@@ -134,18 +135,16 @@ func GetContents(c *context.APIContext) {
 		return
 	}
 
-	var results = make([]*repoContents, 0, len(entries))
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{})
 		return
 	}
 
+	var results = make([]*repoContent, 0, len(entries))
 	for _, entry := range entries {
-
-		gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), entry.ID.String())
-		htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), entry.ID.String())
-		selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
-
+		gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, username, reponame, entry.ID.String())
+		htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, entry.ID.String())
+		selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, username, reponame, c.Repo.TreePath)
 		var contentType string
 		if entry.IsDir() {
 			contentType = "dir"
@@ -156,7 +155,7 @@ func GetContents(c *context.APIContext) {
 		} else {
 			contentType = "file"
 		}
-		results = append(results, &repoContents{
+		results = append(results, &repoContent{
 			Type:        contentType,
 			Size:        entry.Size(),
 			Name:        entry.Name(),
@@ -165,7 +164,7 @@ func GetContents(c *context.APIContext) {
 			URL:         selfURL,
 			GitURL:      gitURL,
 			HTMLURL:     htmlURL,
-			DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
+			DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, username, reponame, c.Repo.TreePath),
 			Links: Links{
 				Git:  gitURL,
 				Self: selfURL,
