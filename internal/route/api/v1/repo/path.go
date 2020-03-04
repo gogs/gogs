@@ -53,7 +53,7 @@ func GetPathContents(c *context.APIContext) {
 
 	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
 	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
-	selfurl := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
+	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
 
 	gr := &GitRepoContent{
 		DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
