@@ -3,6 +3,7 @@ package repo
 import (
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 
 	"github.com/gogs/git-module"
@@ -101,20 +102,15 @@ func GetContents(c *context.APIContext) {
 			c.ServerError("ErrorGetBlobByPath", err)
 			return
 		}
-		buf := make([]byte, 1024)
 		b, err := blob.Data()
 		if err != nil {
 			c.ServerError("BlobDataError", err)
 			return
 		}
-		n, err := b.Read(buf)
-
+		buf, err := ioutil.ReadAll(b)
 		if err != nil {
 			c.ServerError("ContentReadError", err)
 			return
-		}
-		if n >= 0 {
-			buf = buf[:n]
 		}
 		contents.Content = base64.StdEncoding.EncodeToString(buf)
 		contents.Type = "file"
@@ -136,7 +132,7 @@ func GetContents(c *context.APIContext) {
 	}
 
 	if len(entries) == 0 {
-		c.JSONSuccess(&repoGitTree{})
+		c.JSONSuccess([]string{})
 		return
 	}
 
