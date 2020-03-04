@@ -175,7 +175,7 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoCo
 
 		gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), entry.ID.String())
 		htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), entry.ID.String())
-		selfurl := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
+		selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
 
 		var contentType string
 		if entry.IsDir() {
@@ -197,10 +197,10 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoCo
 			Sha:         entry.ID.String(),
 			Links: Links{
 				Git:  gitURL,
-				Self: selfurl,
+				Self: selfURL,
 				HTML: htmlURL,
 			},
-			URL:     selfurl,
+			URL:     selfURL,
 			GitURL:  gitURL,
 			HTMLURL: htmlURL,
 		})
