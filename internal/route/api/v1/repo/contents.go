@@ -55,86 +55,82 @@ func GetContents(c *context.APIContext) {
 	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
 	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath)
 
-	gr := &repoContents{
-		DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
+	contents := &repoContents{
 		Size:        treeEntry.Size(),
 		Name:        treeEntry.Name(),
 		Path:        c.Repo.TreePath,
 		Sha:         treeEntry.ID.String(),
+		URL:         selfURL,
+		GitURL:      gitURL,
+		HTMLURL:     htmlURL,
+		DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
 		Links: Links{
 			Git:  gitURL,
 			Self: selfURL,
 			HTML: htmlURL,
 		},
-		URL:     selfURL,
-		GitURL:  gitURL,
-		HTMLURL: htmlURL,
 	}
+
 	// A tree entry can only be one of the following types:
 	// 1. Tree (Directory)
 	// 2. SubModule
 	// 3. SymLink
 	// 4. Blob
 	if treeEntry.IsSubModule() {
-		gr.Type = "submodule"
+		contents.Type = "submodule"
 		parsedURL, err := url.Parse(c.BaseURL)
 		if err != nil {
 			c.ServerError("ErrorURLParse", err)
 		}
 		host := parsedURL.Host
 		submoduleURL := fmt.Sprintf("git://%s/%s/%s.git", host, c.Params(":name"), c.Params(":reponame"))
-		gr.SubmoduleGitURL = submoduleURL
-		c.JSONSuccess(gr)
+		contents.SubmoduleGitURL = submoduleURL
+		c.JSONSuccess(contents)
 		return
 
 	} else if treeEntry.IsLink() {
-		gr.Type = "symlink"
-		gr.Target = c.Repo.TreePath
-		c.JSONSuccess(gr)
+		contents.Type = "symlink"
+		contents.Target = c.Repo.TreePath
+		c.JSONSuccess(contents)
 		return
 
-	} else if gr.Type == "blob" { // tree entry is a blob
-		gr.Type = "blob"
+	} else if contents.Type == "blob" {
+		contents.Type = "file"
 		b, err := getBase64EncodedBlob(c)
-
 		if err != nil {
 			c.ServerError("GetBlobContent", err)
 			return
 		}
-
-		gr.Content = b
-		c.JSONSuccess(gr)
-		return
-	} else { // treeEntry is a directory
-		dirTree, err := c.Repo.GitRepo.GetTree(treeEntry.ID.String())
-		if err != nil {
-			c.NotFoundOrServerError("GetGitDirTree", git.IsErrNotExist, err)
-			return
-		}
-
-		entries, err := dirTree.ListEntries()
-		if err != nil {
-			c.NotFoundOrServerError("ListDirTreeEntries", git.IsErrNotExist, err)
-			return
-		}
-
-		results, err := AppendDirTreeEntries(entries, c)
-
-		if err != nil {
-			c.NotFoundOrServerError("AppendDirTreeEntries", git.IsErrNotExist, err)
-			return
-
-		}
-		c.JSONSuccess(results)
+		contents.Content = b
+		c.JSONSuccess(contents)
 		return
 	}
+
+	// treeEntry is a directory
+	dirTree, err := c.Repo.GitRepo.GetTree(treeEntry.ID.String())
+	if err != nil {
+		c.NotFoundOrServerError("GetGitDirTree", git.IsErrNotExist, err)
+		return
+	}
+
+	entries, err := dirTree.ListEntries()
+	if err != nil {
+		c.NotFoundOrServerError("ListDirTreeEntries", git.IsErrNotExist, err)
+		return
+	}
+
+	results, err := AppendDirTreeEntries(entries, c)
+
+	if err != nil {
+		c.NotFoundOrServerError("AppendDirTreeEntries", git.IsErrNotExist, err)
+		return
+
+	}
+	c.JSONSuccess(results)
+	return
 }
 
 func getBase64EncodedBlob(c *context.APIContext) (string, error) {
-	if c.Repo.Repository.IsBare {
-		return "", errors.New("RepositoryIsBare")
-	}
-
 	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 	if err != nil {
 		return "", errors.New("ErrorGetBlobByPath")
@@ -179,30 +175,30 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoCo
 
 		var contentType string
 		if entry.IsDir() {
-			contentType = "tree"
+			contentType = "dir"
 		} else if entry.IsSubModule() {
 			contentType = "submodule"
 		} else if entry.IsLink() {
 			contentType = "symlink"
 		} else {
-			contentType = "blob"
+			contentType = "file"
 		}
 
 		results = append(results, &repoContents{
-			DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
 			Type:        contentType,
 			Size:        entry.Size(),
 			Name:        entry.Name(),
 			Path:        c.Repo.TreePath,
 			Sha:         entry.ID.String(),
+			URL:         selfURL,
+			GitURL:      gitURL,
+			HTMLURL:     htmlURL,
+			DownloadURL: fmt.Sprintf(templateDownloadURL, c.BaseURL, c.Params(":username"), c.Params(":reponame"), c.Repo.TreePath),
 			Links: Links{
 				Git:  gitURL,
 				Self: selfURL,
 				HTML: htmlURL,
 			},
-			URL:     selfURL,
-			GitURL:  gitURL,
-			HTMLURL: htmlURL,
 		})
 	}
 	return results, nil
