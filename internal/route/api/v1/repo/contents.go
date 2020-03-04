@@ -75,7 +75,37 @@ func GetContents(c *context.APIContext) {
 	// 2. SubModule
 	// 3. SymLink
 	// 4. Blob
-	if treeEntry.IsDir() {
+	if treeEntry.IsSubModule() {
+		gr.Type = "submodule"
+		parsedURL, err := url.Parse(c.BaseURL)
+		if err != nil {
+			c.ServerError("ErrorURLParse", err)
+		}
+		host := parsedURL.Host
+		submoduleURL := fmt.Sprintf("git://%s/%s/%s.git", host, c.Params(":name"), c.Params(":reponame"))
+		gr.SubmoduleGitURL = submoduleURL
+		c.JSONSuccess(gr)
+		return
+
+	} else if treeEntry.IsLink() {
+		gr.Type = "symlink"
+		gr.Target = c.Repo.TreePath
+		c.JSONSuccess(gr)
+		return
+
+	} else if gr.Type == "blob" { // tree entry is a blob
+		gr.Type = "blob"
+		b, err := getBase64EncodedBlob(c)
+
+		if err != nil {
+			c.ServerError("GetBlobContent", err)
+			return
+		}
+
+		gr.Content = b
+		c.JSONSuccess(gr)
+		return
+	} else { // treeEntry is a directory
 		dirTree, err := c.Repo.GitRepo.GetTree(treeEntry.ID.String())
 		if err != nil {
 			c.NotFoundOrServerError("GetGitDirTree", git.IsErrNotExist, err)
@@ -96,37 +126,6 @@ func GetContents(c *context.APIContext) {
 
 		}
 		c.JSONSuccess(results)
-		return
-
-	} else if treeEntry.IsSubModule() {
-		gr.Type = "submodule"
-		parsedURL, err := url.Parse(c.BaseURL)
-		if err != nil {
-			c.ServerError("ErrorURLParse", err)
-		}
-		host := parsedURL.Host
-		submoduleURL := fmt.Sprintf("git://%s/%s/%s.git", host, c.Params(":name"), c.Params(":reponame"))
-		gr.SubmoduleGitURL = submoduleURL
-		c.JSONSuccess(gr)
-		return
-
-	} else if treeEntry.IsLink() {
-		gr.Type = "symlink"
-		gr.Target = c.Repo.TreePath
-		c.JSONSuccess(gr)
-		return
-
-	} else { // tree entry is a blob
-		gr.Type = "blob"
-		b, err := getBase64EncodedBlob(c)
-
-		if err != nil {
-			c.ServerError("GetBlobContent", err)
-			return
-		}
-
-		gr.Content = b
-		c.JSONSuccess(gr)
 		return
 	}
 }
