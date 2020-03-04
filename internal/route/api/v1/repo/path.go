@@ -11,21 +11,21 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 )
 
-type GitRepoContent struct {
+type repoContents struct {
 	Type            string `json:"type"`
 	Target          string `json:"target,omitempty"`
+	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
+	Encoding        string `json:"encoding,omitempty"`
 	Size            int64  `json:"size"`
 	Name            string `json:"name"`
 	Path            string `json:"path"`
+	Content         string `json:"content,omitempty"`
 	Sha             string `json:"sha"`
 	URL             string `json:"url"`
 	GitURL          string `json:"git_url"`
 	HTMLURL         string `json:"html_url"`
 	DownloadURL     string `json:"download_url"`
 	Links           Links  `json:"_links"`
-	Content         string `json:"content,omitempty"`
-	SubmoduleGitURL string `json:"submodule_git_url,omitempty"`
-	Encoding        string `json:"encoding,omitempty"`
 }
 
 type Links struct {
