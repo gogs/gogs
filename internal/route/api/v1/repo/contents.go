@@ -79,14 +79,8 @@ func GetContents(c *context.APIContext) {
 	// 3. SymLink
 	// 4. Blob
 	if treeEntry.IsSubModule() {
+		// TODO: submoduleURL is not set as current git-module doesn't handle it properly
 		contents.Type = "submodule"
-		parsedURL, err := url.Parse(c.BaseURL)
-		if err != nil {
-			c.ServerError("ErrorURLParse", err)
-			return
-		}
-		host := parsedURL.Host
-		contents.SubmoduleGitURL = fmt.Sprintf("git://%s/%s/%s.git", host, username, reponame)
 		c.JSONSuccess(contents)
 		return
 
@@ -145,6 +139,7 @@ func GetContents(c *context.APIContext) {
 		if entry.IsDir() {
 			contentType = "dir"
 		} else if entry.IsSubModule() {
+			// TODO: submoduleURL is not set as current git-module doesn't handle it properly
 			contentType = "submodule"
 		} else if entry.IsLink() {
 			contentType = "symlink"
