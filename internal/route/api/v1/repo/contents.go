@@ -80,6 +80,7 @@ func GetContents(c *context.APIContext) {
 		parsedURL, err := url.Parse(c.BaseURL)
 		if err != nil {
 			c.ServerError("ErrorURLParse", err)
+			return
 		}
 		host := parsedURL.Host
 		submoduleURL := fmt.Sprintf("git://%s/%s/%s.git", host, c.Params(":name"), c.Params(":reponame"))
@@ -93,10 +94,11 @@ func GetContents(c *context.APIContext) {
 		c.JSONSuccess(contents)
 		return
 
-	} else if contents.Type == "blob" {
+	} else if treeEntry.Type == "blob" {
 		blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 		if err != nil {
 			c.ServerError("ErrorGetBlobByPath", err)
+			return
 		}
 		buf := make([]byte, 1024)
 		b, err := blob.Data()
