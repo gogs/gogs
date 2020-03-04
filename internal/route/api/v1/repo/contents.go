@@ -34,23 +34,22 @@ type Links struct {
 	HTML string `json:"html"`
 }
 
-const (
-	// :base-url/:username/:project/raw/:refs/:path
-	templateDownloadURL = "%s/%s/%s/raw/%s"
-	// :base-url/repos/:username/:project/contents/:path
-	templateSelfLink = "%s/repos/%s/%s/contents/%s"
-	// :baseurl/repos/:username/:project/git/trees/:sha
-	templateGitURLLink = "%s/repos/%s/%s/trees/%s"
-	// :baseurl/repos/:username/:project/tree/:sha
-	templateHTMLLLink = "%s/repos/%s/%s/tree/%s"
-)
-
 func GetContents(c *context.APIContext) {
 	treeEntry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
 	if err != nil {
 		c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
 		return
 	}
+
+	// TODO: figure out the best way to do this
+	// :base-url/:username/:project/raw/:refs/:path
+	templateDownloadURL := "%s/%s/%s/raw/%s"
+	// :base-url/repos/:username/:project/contents/:path
+	templateSelfLink := "%s/repos/%s/%s/contents/%s"
+	// :baseurl/repos/:username/:project/git/trees/:sha
+	templateGitURLLink := "%s/repos/%s/%s/trees/%s"
+	// :baseurl/repos/:username/:project/tree/:sha
+	templateHTMLLLink := "%s/repos/%s/%s/tree/%s"
 
 	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
 	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
@@ -162,6 +161,17 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoCo
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{})
 	}
+
+	// TODO: figure out the best way to do this
+	// :base-url/:username/:project/raw/:refs/:path
+	templateDownloadURL := "%s/%s/%s/raw/%s"
+	// :base-url/repos/:username/:project/contents/:path
+	templateSelfLink := "%s/repos/%s/%s/contents/%s"
+	// :baseurl/repos/:username/:project/git/trees/:sha
+	templateGitURLLink := "%s/repos/%s/%s/trees/%s"
+	// :baseurl/repos/:username/:project/tree/:sha
+	templateHTMLLLink := "%s/repos/%s/%s/tree/%s"
+
 	for _, entry := range entries {
 
 		gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), entry.ID.String())
