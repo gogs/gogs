@@ -8,7 +8,6 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 type repoContents struct {
@@ -95,13 +94,27 @@ func GetContents(c *context.APIContext) {
 		return
 
 	} else if contents.Type == "blob" {
-		contents.Type = "file"
-		b, err := getBase64EncodedBlob(c)
+		blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
 		if err != nil {
-			c.ServerError("GetBlobContent", err)
+			c.ServerError("ErrorGetBlobByPath", err)
+		}
+		buf := make([]byte, 1024)
+		b, err := blob.Data()
+		if err != nil {
+			c.ServerError("BlobDataError", err)
 			return
 		}
-		contents.Content = b
+		n, err := b.Read(buf)
+
+		if err != nil {
+			c.ServerError("ContentReadError", err)
+			return
+		}
+		if n >= 0 {
+			buf = buf[:n]
+		}
+		contents.Content = base64.StdEncoding.EncodeToString(buf)
+		contents.Type = "file"
 		c.JSONSuccess(contents)
 		return
 	}
@@ -119,53 +132,11 @@ func GetContents(c *context.APIContext) {
 		return
 	}
 
-	results, err := AppendDirTreeEntries(entries, c)
-
-	if err != nil {
-		c.NotFoundOrServerError("AppendDirTreeEntries", git.IsErrNotExist, err)
-		return
-
-	}
-	c.JSONSuccess(results)
-	return
-}
-
-func getBase64EncodedBlob(c *context.APIContext) (string, error) {
-	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
-	if err != nil {
-		return "", errors.New("ErrorGetBlobByPath")
-	}
-	buf := make([]byte, 1024)
-	b, err := blob.Data()
-	if err != nil {
-		return "", err
-	}
-	n, err := b.Read(buf)
-
-	if err != nil {
-		return "", err
-	}
-	if n >= 0 {
-		buf = buf[:n]
-	}
-	return base64.StdEncoding.EncodeToString(buf), nil
-}
-
-func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoContents, error) {
 	var results = make([]*repoContents, 0, len(entries))
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{})
+		return
 	}
-
-	// TODO: figure out the best way to do this
-	// :base-url/:username/:project/raw/:refs/:path
-	templateDownloadURL := "%s/%s/%s/raw/%s"
-	// :base-url/repos/:username/:project/contents/:path
-	templateSelfLink := "%s/repos/%s/%s/contents/%s"
-	// :baseurl/repos/:username/:project/git/trees/:sha
-	templateGitURLLink := "%s/repos/%s/%s/trees/%s"
-	// :baseurl/repos/:username/:project/tree/:sha
-	templateHTMLLLink := "%s/repos/%s/%s/tree/%s"
 
 	for _, entry := range entries {
 
@@ -183,7 +154,6 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoCo
 		} else {
 			contentType = "file"
 		}
-
 		results = append(results, &repoContents{
 			Type:        contentType,
 			Size:        entry.Size(),
@@ -201,5 +171,5 @@ func AppendDirTreeEntries(entries git.Entries, c *context.APIContext) ([]*repoCo
 			},
 		})
 	}
-	return results, nil
+	c.JSONSuccess(results)
 }
