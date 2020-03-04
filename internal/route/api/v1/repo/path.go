@@ -49,6 +49,7 @@ func GetContents(c *context.APIContext) {
 	treeEntry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
 	if err != nil {
 		c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
+		return
 	}
 
 	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, c.Params(":username"), c.Params(":reponame"), treeEntry.ID.String())
