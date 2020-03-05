@@ -28,12 +28,12 @@ type repoGitTreeEntry struct {
 }
 
 func GetRepoGitTree(c *context.APIContext) {
-	gitTree, err := c.Repo.GitRepo.GetTree(c.Params(":sha"))
+	gitTree, err := c.Repo.GitRepo.LsTree(c.Params(":sha"))
 	if err != nil {
-		c.NotFoundOrServerError("GetRepoGitTree", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetRepoGitTree", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
-	entries, err := gitTree.ListEntries()
+	entries, err := gitTree.Entries()
 	if err != nil {
 		c.ServerError("GetRepoGitTree", err)
 		return
@@ -52,7 +52,7 @@ func GetRepoGitTree(c *context.APIContext) {
 	children := make([]*repoGitTreeEntry, 0, len(entries))
 	for _, entry := range entries {
 		var mode string
-		switch entry.Type {
+		switch entry.Type() {
 		case git.ObjectCommit:
 			mode = "160000"
 		case git.ObjectTree:
@@ -67,10 +67,10 @@ func GetRepoGitTree(c *context.APIContext) {
 		children = append(children, &repoGitTreeEntry{
 			Path: entry.Name(),
 			Mode: mode,
-			Type: string(entry.Type),
+			Type: string(entry.Type()),
 			Size: entry.Size(),
-			Sha:  entry.ID.String(),
-			URL:  fmt.Sprintf(templateURL+"/%s", entry.ID.String()),
+			Sha:  entry.ID().String(),
+			URL:  fmt.Sprintf(templateURL+"/%s", entry.ID().String()),
 		})
 	}
 	c.JSONSuccess(&repoGitTree{

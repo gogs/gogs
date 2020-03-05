@@ -10,11 +10,14 @@ import (
 
 	log "unknwon.dev/clog/v2"
 
+	"github.com/gogs/git-module"
+
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -26,8 +29,8 @@ const (
 func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *db.Release, countCache map[string]int64) error {
 	// Get count if not exists
 	if _, ok := countCache[release.Target]; !ok {
-		if repoCtx.GitRepo.IsBranchExist(release.Target) {
-			commit, err := repoCtx.GitRepo.GetBranchCommit(release.Target)
+		if repoCtx.GitRepo.HasBranch(release.Target) {
+			commit, err := repoCtx.GitRepo.CatFileCommit(git.RefsHeads + release.Target)
 			if err != nil {
 				return fmt.Errorf("GetBranchCommit: %v", err)
 			}
@@ -49,7 +52,7 @@ func Releases(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 	c.Data["PageIsReleaseList"] = true
 
-	tagsResult, err := c.Repo.GitRepo.GetTagsAfter(c.Query("after"), 10)
+	tagsResult, err := gitutil.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
 	if err != nil {
 		c.Handle(500, fmt.Sprintf("GetTags '%s'", c.Repo.Repository.RepoPath()), err)
 		return
@@ -89,7 +92,7 @@ func Releases(c *context.Context) {
 
 		// No published release matches this tag
 		if results[i] == nil {
-			commit, err := c.Repo.GitRepo.GetTagCommit(rawTag)
+			commit, err := c.Repo.GitRepo.CatFileCommit(git.RefsTags + rawTag)
 			if err != nil {
 				c.Handle(500, "GetTagCommit", err)
 				return
@@ -98,7 +101,7 @@ func Releases(c *context.Context) {
 			results[i] = &db.Release{
 				Title:   rawTag,
 				TagName: rawTag,
-				Sha1:    commit.ID.String(),
+				Sha1:    commit.ID().String(),
 			}
 
 			results[i].NumCommits, err = commit.CommitsCount()
@@ -175,22 +178,22 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		return
 	}
 
-	if !c.Repo.GitRepo.IsBranchExist(f.Target) {
+	if !c.Repo.GitRepo.HasBranch(f.Target) {
 		c.RenderWithErr(c.Tr("form.target_branch_not_exist"), RELEASE_NEW, &f)
 		return
 	}
 
 	// Use current time if tag not yet exist, otherwise get time from Git
 	var tagCreatedUnix int64
-	tag, err := c.Repo.GitRepo.GetTag(f.TagName)
+	tag, err := c.Repo.GitRepo.Tag(git.RefsTags + f.TagName)
 	if err == nil {
 		commit, err := tag.Commit()
 		if err == nil {
-			tagCreatedUnix = commit.Author.When.Unix()
+			tagCreatedUnix = commit.Author().When.Unix()
 		}
 	}
 
-	commit, err := c.Repo.GitRepo.GetBranchCommit(f.Target)
+	commit, err := c.Repo.GitRepo.CatFileCommit(git.RefsHeads + f.Target)
 	if err != nil {
 		c.Handle(500, "GetBranchCommit", err)
 		return
@@ -213,7 +216,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		Title:        f.Title,
 		TagName:      f.TagName,
 		Target:       f.Target,
-		Sha1:         commit.ID.String(),
+		Sha1:         commit.ID().String(),
 		NumCommits:   commitsCount,
 		Note:         f.Content,
 		IsDraft:      len(f.Draft) > 0,

@@ -23,9 +23,9 @@ func GetRawFile(c *context.APIContext) {
 		return
 	}
 
-	blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("GetBlobByPath", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetBlobByPath", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 	if err = repo.ServeBlob(c.Context, blob); err != nil {
@@ -35,7 +35,7 @@ func GetRawFile(c *context.APIContext) {
 
 func GetArchive(c *context.APIContext) {
 	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
-	gitRepo, err := git.OpenRepository(repoPath)
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.ServerError("OpenRepository", err)
 		return
@@ -48,7 +48,7 @@ func GetArchive(c *context.APIContext) {
 func GetEditorconfig(c *context.APIContext) {
 	ec, err := c.Repo.GetEditorconfig()
 	if err != nil {
-		c.NotFoundOrServerError("GetEditorconfig", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetEditorconfig", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 

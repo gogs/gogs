@@ -8,19 +8,19 @@ import (
 	"bytes"
 	"fmt"
 	gotemplate "html/template"
-	"io/ioutil"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
 	"gogs.io/gogs/internal/tool"
@@ -34,20 +34,24 @@ const (
 )
 
 func renderDirectory(c *context.Context, treeLink string) {
-	tree, err := c.Repo.Commit.SubTree(c.Repo.TreePath)
+	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("Repo.Commit.SubTree", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("Repo.Commit.SubTree", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 
-	entries, err := tree.ListEntries()
+	entries, err := tree.Entries()
 	if err != nil {
 		c.ServerError("ListEntries", err)
 		return
 	}
 	entries.Sort()
 
-	c.Data["Files"], err = entries.GetCommitsInfoWithCustomConcurrency(c.Repo.Commit, c.Repo.TreePath, conf.Repository.CommitsFetchConcurrency)
+	c.Data["Files"], err = entries.CommitsInfo(c.Repo.Commit, git.CommitsInfoOptions{
+		Path:           c.Repo.TreePath,
+		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
+		Timeout:        5 * time.Minute,
+	})
 	if err != nil {
 		c.ServerError("GetCommitsInfoWithCustomConcurrency", err)
 		return
@@ -55,7 +59,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 	var readmeFile *git.Blob
 	for _, entry := range entries {
-		if entry.IsDir() || !markup.IsReadmeFile(entry.Name()) {
+		if entry.IsTree() || !markup.IsReadmeFile(entry.Name()) {
 			continue
 		}
 
@@ -69,37 +73,30 @@ func renderDirectory(c *context.Context, treeLink string) {
 		c.Data["ReadmeInList"] = true
 		c.Data["ReadmeExist"] = true
 
-		dataRc, err := readmeFile.Data()
+		p, err := readmeFile.Bytes()
 		if err != nil {
 			c.ServerError("readmeFile.Data", err)
 			return
 		}
 
-		buf := make([]byte, 1024)
-		n, _ := dataRc.Read(buf)
-		buf = buf[:n]
-
-		isTextFile := tool.IsTextFile(buf)
+		isTextFile := tool.IsTextFile(p)
 		c.Data["IsTextFile"] = isTextFile
 		c.Data["FileName"] = readmeFile.Name()
 		if isTextFile {
-			d, _ := ioutil.ReadAll(dataRc)
-			buf = append(buf, d...)
-
 			switch markup.Detect(readmeFile.Name()) {
 			case markup.MARKDOWN:
 				c.Data["IsMarkdown"] = true
-				buf = markup.Markdown(buf, treeLink, c.Repo.Repository.ComposeMetas())
+				p = markup.Markdown(p, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.ORG_MODE:
 				c.Data["IsMarkdown"] = true
-				buf = markup.OrgMode(buf, treeLink, c.Repo.Repository.ComposeMetas())
+				p = markup.OrgMode(p, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
-				buf = bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1)
+				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
 			}
-			c.Data["FileContent"] = string(buf)
+			c.Data["FileContent"] = string(p)
 		}
 	}
 
@@ -107,7 +104,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	// or of directory if not in root directory.
 	latestCommit := c.Repo.Commit
 	if len(c.Repo.TreePath) > 0 {
-		latestCommit, err = c.Repo.Commit.GetCommitByPath(c.Repo.TreePath)
+		latestCommit, err = c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 		if err != nil {
 			c.ServerError("GetCommitByPath", err)
 			return
@@ -126,7 +123,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	c.Data["IsViewFile"] = true
 
 	blob := entry.Blob()
-	dataRc, err := blob.Data()
+	p, err := blob.Bytes()
 	if err != nil {
 		c.Handle(500, "Data", err)
 		return
@@ -137,11 +134,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
 	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
 
-	buf := make([]byte, 1024)
-	n, _ := dataRc.Read(buf)
-	buf = buf[:n]
-
-	isTextFile := tool.IsTextFile(buf)
+	isTextFile := tool.IsTextFile(p)
 	c.Data["IsTextFile"] = isTextFile
 
 	// Assume file is not editable first.
@@ -159,26 +152,23 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 		c.Data["ReadmeExist"] = markup.IsReadmeFile(blob.Name())
 
-		d, _ := ioutil.ReadAll(dataRc)
-		buf = append(buf, d...)
-
 		switch markup.Detect(blob.Name()) {
 		case markup.MARKDOWN:
 			c.Data["IsMarkdown"] = true
-			c.Data["FileContent"] = string(markup.Markdown(buf, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
+			c.Data["FileContent"] = string(markup.Markdown(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
 		case markup.ORG_MODE:
 			c.Data["IsMarkdown"] = true
-			c.Data["FileContent"] = string(markup.OrgMode(buf, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
+			c.Data["FileContent"] = string(markup.OrgMode(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
 		case markup.IPYTHON_NOTEBOOK:
 			c.Data["IsIPythonNotebook"] = true
 		default:
 			// Building code view blocks with line number on server side.
 			var fileContent string
-			if err, content := template.ToUTF8WithErr(buf); err != nil {
+			if err, content := template.ToUTF8WithErr(p); err != nil {
 				if err != nil {
 					log.Error("ToUTF8WithErr: %s", err)
 				}
-				fileContent = string(buf)
+				fileContent = string(p)
 			} else {
 				fileContent = content
 			}
@@ -210,11 +200,11 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			c.Data["EditFileTooltip"] = c.Tr("repo.editor.fork_before_edit")
 		}
 
-	case tool.IsPDFFile(buf):
+	case tool.IsPDFFile(p):
 		c.Data["IsPDFFile"] = true
-	case tool.IsVideoFile(buf):
+	case tool.IsVideoFile(p):
 		c.Data["IsVideoFile"] = true
-	case tool.IsImageFile(buf):
+	case tool.IsImageFile(p):
 		c.Data["IsImageFile"] = true
 	}
 
@@ -230,7 +220,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.GetEditorconfig()
-	if err != nil && !git.IsErrNotExist(err) {
+	if err != nil && err != git.ErrRevisionNotExist {
 		log.Trace("setEditorconfigIfExists.GetEditorconfig [%d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
@@ -277,13 +267,13 @@ func Home(c *context.Context) {
 	c.Data["PageIsRepoHome"] = isRootDir
 
 	// Get current entry user currently looking at.
-	entry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
+	entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 
-	if entry.IsDir() {
+	if entry.IsTree() {
 		renderDirectory(c, treeLink)
 	} else {
 		renderFile(c, entry, treeLink, rawLink)

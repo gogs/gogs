@@ -25,20 +25,20 @@ func GetSingleCommit(c *context.APIContext) {
 		return
 	}
 
-	gitRepo, err := git.OpenRepository(c.Repo.Repository.RepoPath())
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
 		c.ServerError("OpenRepository", err)
 		return
 	}
-	commit, err := gitRepo.GetCommit(c.Params(":sha"))
+	commit, err := gitRepo.CatFileCommit(c.Params(":sha"))
 	if err != nil {
-		c.NotFoundOrServerError("GetCommit", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("GetCommit", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
-	author, err := db.GetUserByEmail(commit.Author.Email)
+	author, err := db.GetUserByEmail(commit.Author().Email)
 	if err != nil && !errors.IsUserNotExist(err) {
 		c.ServerError("Get user by author email", err)
 		return
@@ -46,10 +46,10 @@ func GetSingleCommit(c *context.APIContext) {
 		apiAuthor = author.APIFormat()
 	}
 	// Save one query if the author is also the committer
-	if commit.Committer.Email == commit.Author.Email {
+	if commit.Committer().Email == commit.Author().Email {
 		apiCommitter = apiAuthor
 	} else {
-		committer, err := db.GetUserByEmail(commit.Committer.Email)
+		committer, err := db.GetUserByEmail(commit.Committer().Email)
 		if err != nil && !errors.IsUserNotExist(err) {
 			c.ServerError("Get user by committer email", err)
 			return
@@ -59,8 +59,8 @@ func GetSingleCommit(c *context.APIContext) {
 	}
 
 	// Retrieve parent(s) of the commit
-	apiParents := make([]*api.CommitMeta, commit.ParentCount())
-	for i := 0; i < commit.ParentCount(); i++ {
+	apiParents := make([]*api.CommitMeta, commit.ParentsCount())
+	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, _ := commit.ParentID(i)
 		apiParents[i] = &api.CommitMeta{
 			URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/commits/" + sha.String(),
@@ -71,25 +71,25 @@ func GetSingleCommit(c *context.APIContext) {
 	c.JSONSuccess(&api.Commit{
 		CommitMeta: &api.CommitMeta{
 			URL: conf.Server.ExternalURL + c.Link[1:],
-			SHA: commit.ID.String(),
+			SHA: commit.ID().String(),
 		},
-		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID.String(),
+		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID().String(),
 		RepoCommit: &api.RepoCommit{
 			URL: conf.Server.ExternalURL + c.Link[1:],
 			Author: &api.CommitUser{
-				Name:  commit.Author.Name,
-				Email: commit.Author.Email,
-				Date:  commit.Author.When.Format(time.RFC3339),
+				Name:  commit.Author().Name,
+				Email: commit.Author().Email,
+				Date:  commit.Author().When.Format(time.RFC3339),
 			},
 			Committer: &api.CommitUser{
-				Name:  commit.Committer.Name,
-				Email: commit.Committer.Email,
-				Date:  commit.Committer.When.Format(time.RFC3339),
+				Name:  commit.Committer().Name,
+				Email: commit.Committer().Email,
+				Date:  commit.Committer().When.Format(time.RFC3339),
 			},
 			Message: commit.Summary(),
 			Tree: &api.CommitMeta{
-				URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/tree/" + commit.ID.String(),
-				SHA: commit.ID.String(),
+				URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/tree/" + commit.ID().String(),
+				SHA: commit.ID().String(),
 			},
 		},
 		Author:    apiAuthor,
@@ -99,7 +99,7 @@ func GetSingleCommit(c *context.APIContext) {
 }
 
 func GetReferenceSHA(c *context.APIContext) {
-	gitRepo, err := git.OpenRepository(c.Repo.Repository.RepoPath())
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
 		c.ServerError("OpenRepository", err)
 		return
@@ -107,16 +107,16 @@ func GetReferenceSHA(c *context.APIContext) {
 
 	ref := c.Params("*")
 	refType := 0 // 0-undetermined, 1-branch, 2-tag
-	if strings.HasPrefix(ref, git.BRANCH_PREFIX) {
-		ref = strings.TrimPrefix(ref, git.BRANCH_PREFIX)
+	if strings.HasPrefix(ref, git.RefsHeads) {
+		ref = strings.TrimPrefix(ref, git.RefsHeads)
 		refType = 1
-	} else if strings.HasPrefix(ref, git.TAG_PREFIX) {
-		ref = strings.TrimPrefix(ref, git.TAG_PREFIX)
+	} else if strings.HasPrefix(ref, git.RefsTags) {
+		ref = strings.TrimPrefix(ref, git.RefsTags)
 		refType = 2
 	} else {
-		if gitRepo.IsBranchExist(ref) {
+		if gitRepo.HasBranch(ref) {
 			refType = 1
-		} else if gitRepo.IsTagExist(ref) {
+		} else if gitRepo.HasTag(ref) {
 			refType = 2
 		} else {
 			c.NotFound()
@@ -126,12 +126,12 @@ func GetReferenceSHA(c *context.APIContext) {
 
 	var sha string
 	if refType == 1 {
-		sha, err = gitRepo.GetBranchCommitID(ref)
+		sha, err = gitRepo.ShowRefVerify(git.RefsHeads + ref)
 	} else if refType == 2 {
-		sha, err = gitRepo.GetTagCommitID(ref)
+		sha, err = gitRepo.ShowRefVerify(git.RefsTags + ref)
 	}
 	if err != nil {
-		c.NotFoundOrServerError("get reference commit ID", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("get reference commit ID", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 	c.PlainText(http.StatusOK, []byte(sha))

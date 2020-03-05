@@ -87,7 +87,7 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 		oldCommitID := string(fields[0])
 		newCommitID := string(fields[1])
-		branchName := strings.TrimPrefix(string(fields[2]), git.BRANCH_PREFIX)
+		branchName := strings.TrimPrefix(string(fields[2]), git.RefsHeads)
 
 		// Branch protection
 		repoID := com.StrTo(os.Getenv(db.ENV_REPO_ID)).MustInt64()
@@ -121,7 +121,7 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 
 		// check and deletion
-		if newCommitID == git.EMPTY_SHA {
+		if newCommitID == git.EmptyID {
 			fail(fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 
@@ -233,7 +233,7 @@ func runHookPostReceive(c *cli.Context) error {
 
 		// Ask for running deliver hook and test pull request tasks
 		reqURL := conf.Server.LocalRootURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
-			template.EscapePound(strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX)) +
+			template.EscapePound(strings.TrimPrefix(options.RefFullName, git.RefsHeads)) +
 			"&secret=" + os.Getenv(db.ENV_REPO_OWNER_SALT_MD5) +
 			"&pusher=" + os.Getenv(db.ENV_AUTH_USER_ID)
 		log.Trace("Trigger task: %s", reqURL)
