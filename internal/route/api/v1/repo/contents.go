@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 
 	"github.com/gogs/git-module"
 
@@ -86,7 +85,22 @@ func GetContents(c *context.APIContext) {
 
 	} else if treeEntry.IsLink() {
 		contents.Type = "symlink"
-		contents.Target = c.Repo.TreePath
+		blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+		if err != nil {
+			c.ServerError("GetBlobByPath", err)
+			return
+		}
+		b, err := blob.Data()
+		if err != nil {
+			c.ServerError("Data", err)
+			return
+		}
+		buf, err := ioutil.ReadAll(b)
+		if err != nil {
+			c.ServerError("ReadAll", err)
+			return
+		}
+		contents.Target = string(buf)
 		c.JSONSuccess(contents)
 		return
 
@@ -143,6 +157,22 @@ func GetContents(c *context.APIContext) {
 			contentType = "submodule"
 		} else if entry.IsLink() {
 			contentType = "symlink"
+			blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+			if err != nil {
+				c.ServerError("GetBlobByPath", err)
+				return
+			}
+			b, err := blob.Data()
+			if err != nil {
+				c.ServerError("Data", err)
+				return
+			}
+			buf, err := ioutil.ReadAll(b)
+			if err != nil {
+				c.ServerError("ReadAll", err)
+				return
+			}
+			contents.Target = string(buf)
 		} else {
 			contentType = "file"
 		}
