@@ -1,3 +1,7 @@
+// Copyright 2020 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package repo
 
 import (
@@ -56,6 +60,7 @@ func GetContents(c *context.APIContext) {
 	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, treeEntry.ID.String())
 	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, username, reponame, c.Repo.TreePath)
 
+	// TODO(unknwon): Make a treeEntryToRepoContent helper.
 	contents := &repoContent{
 		Size:        treeEntry.Size(),
 		Name:        treeEntry.Name(),
@@ -73,12 +78,12 @@ func GetContents(c *context.APIContext) {
 	}
 
 	// A tree entry can only be one of the following types:
-	// 1. Tree (Directory)
-	// 2. SubModule
-	// 3. SymLink
-	// 4. Blob
+	//   1. Tree (directory)
+	//   2. SubModule
+	//   3. SymLink
+	//   4. Blob (file)
 	if treeEntry.IsSubModule() {
-		// TODO: submoduleURL is not set as current git-module doesn't handle it properly
+		// TODO(unknwon): submoduleURL is not set as current git-module doesn't handle it properly
 		contents.Type = "submodule"
 		c.JSONSuccess(contents)
 		return
@@ -153,7 +158,7 @@ func GetContents(c *context.APIContext) {
 		if entry.IsDir() {
 			contentType = "dir"
 		} else if entry.IsSubModule() {
-			// TODO: submoduleURL is not set as current git-module doesn't handle it properly
+			// TODO(unknwon): submoduleURL is not set as current git-module doesn't handle it properly
 			contentType = "submodule"
 		} else if entry.IsLink() {
 			contentType = "symlink"
@@ -176,6 +181,7 @@ func GetContents(c *context.APIContext) {
 		} else {
 			contentType = "file"
 		}
+
 		results = append(results, &repoContent{
 			Type:        contentType,
 			Size:        entry.Size(),
