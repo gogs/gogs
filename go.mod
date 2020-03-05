@@ -72,4 +72,5 @@ require (
 
 replace github.com/gogs/git-module => /Users/unknwon/Engineering/Gogs/git-module
 
-// +heroku goVersion go1.13beta1
+// +heroku goVersion go1.13
+// +heroku install ./

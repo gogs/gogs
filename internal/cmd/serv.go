@@ -35,20 +35,25 @@ var Serv = cli.Command{
 	},
 }
 
-func fail(userMessage, logMessage string, args ...interface{}) {
+// fail prints user message to the Git client (i.e. os.Stderr) and
+// logs error message on the server side. When not in "prod" mode,
+// error message is also printed to the client for easier debugging.
+func fail(userMessage, errMessage string, args ...interface{}) {
 	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 
-	if len(logMessage) > 0 {
+	if len(errMessage) > 0 {
 		if !conf.IsProdMode() {
-			fmt.Fprintf(os.Stderr, logMessage+"\n", args...)
+			fmt.Fprintf(os.Stderr, errMessage+"\n", args...)
 		}
-		log.Fatal(logMessage, args...)
+		log.Error(errMessage, args...)
 	}
 
 	os.Exit(1)
 }
 
 func setup(c *cli.Context, logPath string, connectDB bool) {
+	conf.HookMode = true
+
 	var customConf string
 	if c.IsSet("config") {
 		customConf = c.String("config")
@@ -60,6 +65,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 	if err != nil {
 		fail("Internal error", "Failed to init configuration: %v", err)
 	}
+	conf.InitLogging(true)
 
 	level := log.LevelTrace
 	if conf.IsProdMode() {
