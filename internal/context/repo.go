@@ -256,21 +256,21 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		c.Data["TagName"] = c.Repo.TagName
-		heads, err := c.Repo.GitRepo.ShowRef(git.ShowRefOptions{Heads: true})
+		branches, err := c.Repo.GitRepo.Branches()
 		if err != nil {
-			c.ServerError("GetBranches", err)
+			c.ServerError("get branches", err)
 			return
 		}
-		c.Data["Branches"] = heads
-		c.Data["BrancheCount"] = len(heads)
+		c.Data["Branches"] = branches
+		c.Data["BrancheCount"] = len(branches)
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
 		if len(c.Repo.BranchName) == 0 {
 			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
 				c.Repo.BranchName = c.Repo.Repository.DefaultBranch
-			} else if len(heads) > 0 {
-				c.Repo.BranchName = git.RefShortName(heads[0].Refspec)
+			} else if len(branches) > 0 {
+				c.Repo.BranchName = branches[0]
 			}
 		}
 		c.Data["BranchName"] = c.Repo.BranchName

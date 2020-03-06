@@ -521,10 +521,9 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 		return nil, nil, nil, nil, "", ""
 	}
 
-	// FIXME: This breaks template
-	headBranches, err := headGitRepo.ShowRef(git.ShowRefOptions{Heads: true})
+	headBranches, err := headGitRepo.Branches()
 	if err != nil {
-		c.ServerError("GetBranches", err)
+		c.ServerError("get branches", err)
 		return nil, nil, nil, nil, "", ""
 	}
 	c.Data["HeadBranches"] = headBranches

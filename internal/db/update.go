@@ -40,7 +40,7 @@ func CommitsToPushCommits(commits []*git.Commit) *PushCommits {
 type PushUpdateOptions struct {
 	OldCommitID  string
 	NewCommitID  string
-	RefFullName  string
+	RefFullName  string // TODO(unknwon): Rename to FullRefspec
 	PusherID     int64
 	PusherName   string
 	RepoUserName string
