@@ -298,21 +298,21 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pay
 
 // AvatarLink tries to match user in database with e-mail
 // in order to show custom avatar, and falls back to general avatar link.
-func (pc *PushCommits) AvatarLink(email string) string {
-	_, ok := pc.avatars[email]
+func (pcs *PushCommits) AvatarLink(email string) string {
+	_, ok := pcs.avatars[email]
 	if !ok {
 		u, err := GetUserByEmail(email)
 		if err != nil {
-			pc.avatars[email] = tool.AvatarLink(email)
+			pcs.avatars[email] = tool.AvatarLink(email)
 			if !errors.IsUserNotExist(err) {
 				log.Error("GetUserByEmail: %v", err)
 			}
 		} else {
-			pc.avatars[email] = u.RelAvatarLink()
+			pcs.avatars[email] = u.RelAvatarLink()
 		}
 	}
 
-	return pc.avatars[email]
+	return pcs.avatars[email]
 }
 
 // UpdateIssuesCommit checks if issues are manipulated by commit message.
