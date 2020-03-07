@@ -63,7 +63,7 @@ func (repo *Repository) InitWiki() error {
 	}
 
 	if err := git.Init(repo.WikiPath(), git.InitOptions{Bare: true}); err != nil {
-		return fmt.Errorf("InitRepository: %v", err)
+		return fmt.Errorf("init repository: %v", err)
 	} else if err = createDelegateHooks(repo.WikiPath()); err != nil {
 		return fmt.Errorf("createDelegateHooks: %v", err)
 	}
@@ -126,11 +126,11 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 		message = "Update page '" + title + "'"
 	}
 	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("AddChanges: %v", err)
+		return fmt.Errorf("add all changes: %v", err)
 	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), message); err != nil {
-		return fmt.Errorf("CommitChanges: %v", err)
+		return fmt.Errorf("commit changes: %v", err)
 	} else if err = git.RepoPush(localPath, "origin", "master"); err != nil {
-		return fmt.Errorf("Push: %v", err)
+		return fmt.Errorf("push: %v", err)
 	}
 
 	return nil
@@ -162,11 +162,11 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 	message := "Delete page '" + title + "'"
 
 	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
-		return fmt.Errorf("AddChanges: %v", err)
+		return fmt.Errorf("add all changes: %v", err)
 	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), message); err != nil {
-		return fmt.Errorf("CommitChanges: %v", err)
+		return fmt.Errorf("commit changes: %v", err)
 	} else if err = git.RepoPush(localPath, "origin", "master"); err != nil {
-		return fmt.Errorf("Push: %v", err)
+		return fmt.Errorf("push: %v", err)
 	}
 
 	return nil
