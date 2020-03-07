@@ -120,7 +120,7 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
 	if !r.IsDraft {
 		if !gitRepo.HasTag(r.TagName) {
-			commit, err := gitRepo.CatFileCommit(git.RefsHeads + r.Target)
+			commit, err := gitRepo.BranchCommit(r.Target)
 			if err != nil {
 				return fmt.Errorf("get branch commit: %v", err)
 			}
@@ -134,7 +134,7 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 				return err
 			}
 		} else {
-			commit, err := gitRepo.CatFileCommit(git.RefsTags + r.TagName)
+			commit, err := gitRepo.TagCommit(r.TagName)
 			if err != nil {
 				return fmt.Errorf("get tag commit: %v", err)
 			}
@@ -142,7 +142,7 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 			r.Sha1 = commit.ID().String()
 			r.NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("CommitsCount: %v", err)
+				return fmt.Errorf("count commits: %v", err)
 			}
 		}
 	}
