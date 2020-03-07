@@ -29,16 +29,16 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 		return nil, fmt.Errorf("open repository: %v", err)
 	}
 
-	heads, err := gitRepo.ShowRef(git.ShowRefOptions{Heads: true})
+	names, err := gitRepo.Branches()
 	if err != nil {
-		return nil, fmt.Errorf("list heads")
+		return nil, fmt.Errorf("list branches")
 	}
 
-	branches := make([]*Branch, len(heads))
-	for i := range heads {
+	branches := make([]*Branch, len(names))
+	for i := range names {
 		branches[i] = &Branch{
 			RepoPath: path,
-			Name:     git.RefShortName(heads[i].Refspec),
+			Name:     names[i],
 		}
 	}
 	return branches, nil
@@ -63,7 +63,7 @@ func (br *Branch) GetCommit() (*git.Commit, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open repository: %v", err)
 	}
-	return gitRepo.CatFileCommit(git.RefsHeads + br.Name)
+	return gitRepo.BranchCommit(br.Name)
 }
 
 type ProtectBranchWhitelist struct {
