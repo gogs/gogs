@@ -37,6 +37,9 @@ var (
 func FuncMap() []template.FuncMap {
 	funcMapOnce.Do(func() {
 		funcMap = []template.FuncMap{map[string]interface{}{
+			"BuildCommit": func() string {
+				return conf.BuildCommit
+			},
 			"Year": func() int {
 				return time.Now().Year()
 			},
@@ -106,7 +109,6 @@ func FuncMap() []template.FuncMap {
 			"DiffLineTypeToStr":     DiffLineTypeToStr,
 			"Sha1":                  Sha1,
 			"ShortSHA1":             tool.ShortSHA1,
-			"MD5":                   tool.MD5,
 			"ActionContent2Commits": ActionContent2Commits,
 			"EscapePound":           EscapePound,
 			"RenderCommitMessage":   RenderCommitMessage,

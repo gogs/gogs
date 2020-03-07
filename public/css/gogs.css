@@ -23,14 +23,14 @@ h5,
 .ui.menu,
 .ui.input input,
 .ui.button:not(.label) {
-  font-family: "PingFang SC", 'Hiragino Sans GB', "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
 }
 img {
   border-radius: 3px;
 }
 pre,
 code {
-  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
 }
 pre.raw,
 code.raw {
@@ -75,7 +75,7 @@ code.wrap {
 }
 .following.bar.light {
   background-color: white;
-  border-bottom: 1px solid #DDDDDD;
+  border-bottom: 1px solid #dddddd;
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.04);
 }
 .following.bar .column .menu {
@@ -156,7 +156,7 @@ code.wrap {
   color: #d95c5c !important;
 }
 .ui .text.red a:hover {
-  color: #E67777 !important;
+  color: #e67777 !important;
 }
 .ui .text.blue {
   color: #428bca !important;
@@ -192,7 +192,7 @@ code.wrap {
   color: #6e5494 !important;
 }
 .ui .text.yellow {
-  color: #FBBD08 !important;
+  color: #fbbd08 !important;
 }
 .ui .text.gold {
   color: #a1882b !important;
@@ -235,11 +235,11 @@ code.wrap {
   vertical-align: middle;
 }
 .ui .warning.header {
-  background-color: #F9EDBE !important;
-  border-color: #F0C36D;
+  background-color: #f9edbe !important;
+  border-color: #f0c36d;
 }
 .ui .warning.segment {
-  border-color: #F0C36D;
+  border-color: #f0c36d;
 }
 .ui .info.segment {
   border: 1px solid #c5d5dd;
@@ -2168,6 +2168,7 @@ footer .ui.language .menu {
 }
 .repository .diff-file-box .code-diff .lines-num::before {
   content: attr(data-line-number);
+  font: Consolas, Liberation Mono, Menlo, monospace;
 }
 .repository .diff-file-box .code-diff .lines-num.lines-num-old,
 .repository .diff-file-box .code-diff .lines-num.lines-num-new {

@@ -23,6 +23,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
@@ -197,7 +198,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 }
 
 // GetDiffPreview produces and returns diff result of a file which is not yet committed.
-func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *Diff, err error) {
+func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *gitutil.Diff, err error) {
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -230,7 +231,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 	pid := process.Add(fmt.Sprintf("GetDiffPreview [repo_path: %s]", repo.RepoPath()), cmd)
 	defer process.Remove(pid)
 
-	diff, err = ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
+	diff, err = gitutil.ParseDiff(stdout, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars)
 	if err != nil {
 		return nil, fmt.Errorf("parse diff: %v", err)
 	}

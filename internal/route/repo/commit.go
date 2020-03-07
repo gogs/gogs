@@ -12,6 +12,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -122,7 +123,7 @@ func Diff(c *context.Context) {
 		return
 	}
 
-	diff, err := db.RepoDiff(c.Repo.GitRepo,
+	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 	)
 	if err != nil {
@@ -188,7 +189,7 @@ func CompareDiff(c *context.Context) {
 		return
 	}
 
-	diff, err := db.RepoDiff(c.Repo.GitRepo,
+	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: beforeCommitID},
 	)
