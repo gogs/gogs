@@ -46,9 +46,9 @@ func GetArchive(c *context.APIContext) {
 }
 
 func GetEditorconfig(c *context.APIContext) {
-	ec, err := c.Repo.GetEditorconfig()
+	ec, err := c.Repo.Editorconfig()
 	if err != nil {
-		c.NotFoundOrServerError("GetEditorconfig", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("Editorconfig", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
 		return
 	}
 

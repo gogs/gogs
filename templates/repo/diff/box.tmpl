@@ -40,12 +40,12 @@
 					{{$.i18n.Tr "repo.diff.file_suppressed"}}
 					<div class="diff-counter count ui left">
 						{{if not $file.IsRenamed}}
-							<span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+							<span class="add" data-line="{{.NumAdditions}}">+ {{.NumAdditions}}</span>
 							<span class="bar">
 								<span class="pull-left add"></span>
 								<span class="pull-left del"></span>
 							</span>
-							<span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+							<span class="del" data-line="{{.NumDeletions}}">- {{.NumDeletions}}</span>
 						{{end}}
 					</div>
 					<span class="file">{{$file.Name}}</span>

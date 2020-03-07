@@ -11,13 +11,14 @@ import (
 	"strings"
 
 	"github.com/editorconfig/editorconfig-core-go/v2"
+	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	dberrors "gogs.io/gogs/internal/db/errors"
 )
 
 type PullRequest struct {
@@ -75,20 +76,21 @@ func (r *Repository) CanEnableEditor() bool {
 	return r.Repository.CanEnableEditor() && r.IsViewBranch && r.IsWriter() && !r.Repository.IsBranchRequirePullRequest(r.BranchName)
 }
 
-// GetEditorconfig returns the .editorconfig definition if found in the
-// HEAD of the default repo branch.
-func (r *Repository) GetEditorconfig() (*editorconfig.Editorconfig, error) {
-	commit, err := r.GitRepo.CatFileCommit(git.RefsHeads + r.Repository.DefaultBranch)
+// Editorconfig returns the ".editorconfig" definition if found in the HEAD of the default branch.
+func (r *Repository) Editorconfig() (*editorconfig.Editorconfig, error) {
+	commit, err := r.GitRepo.BranchCommit(r.Repository.DefaultBranch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get branch commit")
 	}
-	treeEntry, err := commit.TreeEntry(".editorconfig")
+
+	entry, err := commit.TreeEntry(".editorconfig")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get .editorconfig")
 	}
-	p, err := treeEntry.Blob().Bytes()
+
+	p, err := entry.Blob().Bytes()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "read .editorconfig")
 	}
 	return editorconfig.Parse(bytes.NewReader(p))
 }
@@ -145,7 +147,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		} else {
 			owner, err = db.GetUserByName(ownerName)
 			if err != nil {
-				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+				c.NotFoundOrServerError("GetUserByName", dberrors.IsUserNotExist, err)
 				return
 			}
 		}
@@ -154,7 +156,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		repo, err := db.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
+			c.NotFoundOrServerError("GetRepositoryByName", dberrors.IsRepoNotExist, err)
 			return
 		}
 
@@ -220,14 +222,14 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		gitRepo, err := git.Open(db.RepoPath(ownerName, repoName))
 		if err != nil {
-			c.ServerError(fmt.Sprintf("RepoAssignment Invalid repo '%s'", c.Repo.Repository.RepoPath()), err)
+			c.ServerError("open repository", err)
 			return
 		}
 		c.Repo.GitRepo = gitRepo
 
 		tags, err := c.Repo.GitRepo.Tags()
 		if err != nil {
-			c.ServerError(fmt.Sprintf("GetTags '%s'", c.Repo.Repository.RepoPath()), err)
+			c.ServerError("get tags", err)
 			return
 		}
 		c.Data["Tags"] = tags
@@ -307,16 +309,16 @@ func RepoRef() macaron.Handler {
 		if len(c.Params("*")) == 0 {
 			refName = c.Repo.Repository.DefaultBranch
 			if !c.Repo.GitRepo.HasBranch(refName) {
-				heads, err := c.Repo.GitRepo.ShowRef(git.ShowRefOptions{Heads: true})
+				branches, err := c.Repo.GitRepo.Branches()
 				if err != nil {
-					c.Handle(500, "GetBranches", err)
+					c.ServerError("get branches", err)
 					return
 				}
-				refName = git.RefShortName(heads[0].Refspec)
+				refName = branches[0]
 			}
-			c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(git.RefsHeads + refName)
+			c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
 			if err != nil {
-				c.Handle(500, "GetBranchCommit", err)
+				c.ServerError("get branch commit", err)
 				return
 			}
 			c.Repo.CommitID = c.Repo.Commit.ID().String()
@@ -345,18 +347,18 @@ func RepoRef() macaron.Handler {
 			if c.Repo.GitRepo.HasBranch(refName) {
 				c.Repo.IsViewBranch = true
 
-				c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(git.RefsHeads + refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
 				if err != nil {
-					c.Handle(500, "GetBranchCommit", err)
+					c.ServerError("get branch commit", err)
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID().String()
 
 			} else if c.Repo.GitRepo.HasTag(refName) {
 				c.Repo.IsViewTag = true
-				c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(git.RefsTags + refName)
+				c.Repo.Commit, err = c.Repo.GitRepo.TagCommit(refName)
 				if err != nil {
-					c.Handle(500, "GetTagCommit", err)
+					c.ServerError("get tag commit", err)
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID().String()

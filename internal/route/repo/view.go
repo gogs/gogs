@@ -219,9 +219,9 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 }
 
 func setEditorconfigIfExists(c *context.Context) {
-	ec, err := c.Repo.GetEditorconfig()
+	ec, err := c.Repo.Editorconfig()
 	if err != nil && err != git.ErrRevisionNotExist {
-		log.Trace("setEditorconfigIfExists.GetEditorconfig [%d]: %v", c.Repo.Repository.ID, err)
+		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
 	c.Data["Editorconfig"] = ec
