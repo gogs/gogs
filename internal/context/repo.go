@@ -80,7 +80,7 @@ func (r *Repository) CanEnableEditor() bool {
 func (r *Repository) Editorconfig() (*editorconfig.Editorconfig, error) {
 	commit, err := r.GitRepo.BranchCommit(r.Repository.DefaultBranch)
 	if err != nil {
-		return nil, errors.Wrap(err, "get branch commit")
+		return nil, errors.Wrapf(err, "get commit of branch %q ", r.Repository.DefaultBranch)
 	}
 
 	entry, err := commit.TreeEntry(".editorconfig")

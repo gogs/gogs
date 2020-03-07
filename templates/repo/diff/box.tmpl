@@ -80,7 +80,7 @@
 				<div class="ui unstackable attached table segment">
 					{{if not $file.IsRenamed}}
 						{{$isImage := (call $.IsImageFile $file.Name)}}
-						{{if and $isImage}}
+						{{if $isImage}}
 							<div class="center">
 								<img src="{{$.RawPath}}/{{EscapePound .Name}}">
 							</div>

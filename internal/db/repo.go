@@ -806,10 +806,11 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		if err != nil {
 			return repo, fmt.Errorf("open repository: %v", err)
 		}
-		repo.DefaultBranch, err = gitRepo.SymbolicRef()
+		refspec, err := gitRepo.SymbolicRef()
 		if err != nil {
 			return repo, fmt.Errorf("get HEAD branch: %v", err)
 		}
+		repo.DefaultBranch = git.RefShortName(refspec)
 
 		if err = repo.UpdateSize(); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)

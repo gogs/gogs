@@ -24,6 +24,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
 )
@@ -128,6 +129,7 @@ func FuncMap() []template.FuncMap {
 				}
 				return "tab-size-8"
 			},
+			"InferSubmoduleURL": gitutil.InferSubmoduleURL,
 		}}
 	})
 	return funcMap
