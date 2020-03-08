@@ -357,7 +357,7 @@ func SyncMirrors() {
 			}
 
 			// Delete reference
-			if strings.HasPrefix(result.newCommitID, gitShortEmptyID) {
+			if result.newCommitID == gitShortEmptyID {
 				if err = MirrorSyncDeleteAction(m.Repo, result.refName); err != nil {
 					log.Error("MirrorSyncDeleteAction [repo_id: %d]: %v", m.RepoID, err)
 				}
@@ -366,7 +366,7 @@ func SyncMirrors() {
 
 			// New reference
 			isNewRef := false
-			if strings.HasPrefix(result.oldCommitID, gitShortEmptyID) {
+			if result.oldCommitID == gitShortEmptyID {
 				if err = MirrorSyncCreateAction(m.Repo, result.refName); err != nil {
 					log.Error("MirrorSyncCreateAction [repo_id: %d]: %v", m.RepoID, err)
 					continue
@@ -414,10 +414,6 @@ func SyncMirrors() {
 
 				oldCommitID = git.EmptyID
 				newCommitID = refNewCommit.ID().String()
-
-			} else {
-				// TODO(unknwon): Support tag.
-				continue
 			}
 
 			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{
