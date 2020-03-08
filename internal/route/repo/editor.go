@@ -10,15 +10,15 @@ import (
 	"path"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
 	"github.com/gogs/git-module"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
@@ -57,7 +57,7 @@ func editFile(c *context.Context, isNewFile bool) {
 	if !isNewFile {
 		entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 		if err != nil {
-			c.NotFoundOrServerError("GetTreeEntryByPath", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+			c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
 			return
 		}
 
@@ -178,7 +178,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		newTreePath = path.Join(newTreePath, part)
 		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
 		if err != nil {
-			if err == git.ErrRevisionNotExist {
+			if gitutil.IsErrRevisionNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}
@@ -208,7 +208,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	if !isNewFile {
 		_, err := c.Repo.Commit.TreeEntry(oldTreePath)
 		if err != nil {
-			if err == git.ErrRevisionNotExist {
+			if gitutil.IsErrRevisionNotExist(err) {
 				c.FormErr("TreePath")
 				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), EDIT_FILE, &f)
 			} else {
@@ -236,7 +236,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		// We have a new filename (rename or completely new file) so we need to make sure it doesn't already exist, can't clobber.
 		entry, err := c.Repo.Commit.TreeEntry(f.TreePath)
 		if err != nil {
-			if err != git.ErrRevisionNotExist {
+			if !gitutil.IsErrRevisionNotExist(err) {
 				c.ServerError("GetTreeEntryByPath", err)
 				return
 			}
@@ -464,7 +464,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		newTreePath = path.Join(newTreePath, part)
 		entry, err := c.Repo.Commit.TreeEntry(newTreePath)
 		if err != nil {
-			if err == git.ErrRevisionNotExist {
+			if gitutil.IsErrRevisionNotExist(err) {
 				// Means there is no item with that name, so we're good
 				break
 			}
