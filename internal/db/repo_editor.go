@@ -94,19 +94,15 @@ func (repo *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 	return discardLocalRepoBranchChanges(repo.LocalCopyPath(), branch)
 }
 
-// checkoutNewBranch checks out to a new branch from the a branch name.
-func checkoutNewBranch(localPath, baseBranch, newBranch string) error {
-	if err := git.RepoCheckout(localPath, newBranch, git.CheckoutOptions{
-		BaseBranch: baseBranch,
+// CheckoutNewBranch checks out to a new branch from the a branch name.
+func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
+	if err := git.RepoCheckout(repo.LocalCopyPath(), newBranch, git.CheckoutOptions{
+		BaseBranch: oldBranch,
 		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
-		return fmt.Errorf("checkout [base_branch: %s, new_branch: %s]: %v", baseBranch, newBranch, err)
+		return fmt.Errorf("checkout [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 	return nil
-}
-
-func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	return checkoutNewBranch(repo.LocalCopyPath(), oldBranch, newBranch)
 }
 
 type UpdateRepoFileOptions struct {
