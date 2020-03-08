@@ -221,7 +221,7 @@ func runHookPostReceive(c *cli.Context) error {
 		options := db.PushUpdateOptions{
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
-			RefFullName:  string(fields[2]),
+			FullRefspec:  string(fields[2]),
 			PusherID:     com.StrTo(os.Getenv(db.ENV_AUTH_USER_ID)).MustInt64(),
 			PusherName:   os.Getenv(db.ENV_AUTH_USER_NAME),
 			RepoUserName: os.Getenv(db.ENV_REPO_OWNER_NAME),
@@ -233,7 +233,7 @@ func runHookPostReceive(c *cli.Context) error {
 
 		// Ask for running deliver hook and test pull request tasks
 		q := make(url.Values)
-		q.Add("branch", git.RefShortName(options.RefFullName))
+		q.Add("branch", git.RefShortName(options.FullRefspec))
 		q.Add("secret", os.Getenv(db.ENV_REPO_OWNER_SALT_MD5))
 		q.Add("pusher", os.Getenv(db.ENV_AUTH_USER_ID))
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())

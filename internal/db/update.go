@@ -40,7 +40,7 @@ func CommitsToPushCommits(commits []*git.Commit) *PushCommits {
 type PushUpdateOptions struct {
 	OldCommitID  string
 	NewCommitID  string
-	RefFullName  string // TODO(unknwon): Rename to FullRefspec
+	FullRefspec  string
 	PusherID     int64
 	PusherName   string
 	RepoUserName string
@@ -53,7 +53,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	isNewRef := strings.HasPrefix(opts.OldCommitID, git.EmptyID)
 	isDelRef := strings.HasPrefix(opts.NewCommitID, git.EmptyID)
 	if isNewRef && isDelRef {
-		return fmt.Errorf("both old and new revisions are %s", git.EmptyID)
+		return fmt.Errorf("both old and new revisions are %q", git.EmptyID)
 	}
 
 	repoPath := RepoPath(opts.RepoUserName, opts.RepoName)
@@ -84,12 +84,12 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	}
 
 	// Push tags
-	if strings.HasPrefix(opts.RefFullName, git.RefsTags) {
+	if strings.HasPrefix(opts.FullRefspec, git.RefsTags) {
 		if err := CommitRepoAction(CommitRepoActionOptions{
 			PusherName:  opts.PusherName,
 			RepoOwnerID: owner.ID,
 			RepoName:    repo.Name,
-			RefFullName: opts.RefFullName,
+			RefFullName: opts.FullRefspec,
 			OldCommitID: opts.OldCommitID,
 			NewCommitID: opts.NewCommitID,
 			Commits:     &PushCommits{},
@@ -126,7 +126,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		PusherName:  opts.PusherName,
 		RepoOwnerID: owner.ID,
 		RepoName:    repo.Name,
-		RefFullName: opts.RefFullName,
+		RefFullName: opts.FullRefspec,
 		OldCommitID: opts.OldCommitID,
 		NewCommitID: opts.NewCommitID,
 		Commits:     CommitsToPushCommits(commits),
