@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
@@ -304,7 +303,7 @@ func RetrieveRepoMetas(c *context.Context, repo *db.Repository) []*db.Label {
 func getFileContentFromDefaultBranch(c *context.Context, filename string) (string, bool) {
 	if c.Repo.Commit == nil {
 		var err error
-		c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(git.RefsHeads + c.Repo.Repository.DefaultBranch)
+		c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Repo.Repository.DefaultBranch)
 		if err != nil {
 			return "", false
 		}
