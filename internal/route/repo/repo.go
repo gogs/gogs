@@ -309,15 +309,15 @@ func Download(c *context.Context) {
 	)
 	gitRepo := c.Repo.GitRepo
 	if gitRepo.HasBranch(refName) {
-		commit, err = gitRepo.CatFileCommit(git.RefsHeads + refName)
+		commit, err = gitRepo.BranchCommit(refName)
 		if err != nil {
-			c.Handle(500, "GetBranchCommit", err)
+			c.ServerError("get branch commit", err)
 			return
 		}
 	} else if gitRepo.HasTag(refName) {
-		commit, err = gitRepo.CatFileCommit(git.RefsTags + refName)
+		commit, err = gitRepo.TagCommit(refName)
 		if err != nil {
-			c.Handle(500, "GetTagCommit", err)
+			c.ServerError("get tag commit", err)
 			return
 		}
 	} else if len(refName) >= 7 && len(refName) <= 40 {
@@ -334,7 +334,7 @@ func Download(c *context.Context) {
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
-			c.Handle(500, "Download -> CreateArchive "+archivePath, err)
+			c.ServerError("creates archive", err)
 			return
 		}
 	}
