@@ -33,6 +33,7 @@ func RefCommits(c *context.Context) {
 	}
 }
 
+// TODO(unknwon)
 func RenderIssueLinks(oldCommits []*git.Commit, repoLink string) []*git.Commit {
 	return oldCommits
 }
@@ -53,7 +54,7 @@ func renderCommits(c *context.Context, filename string) {
 
 	commits, err := c.Repo.Commit.CommitsByPage(page, pageSize, git.CommitsByPageOptions{Path: filename})
 	if err != nil {
-		c.Handle(500, "CommitsByRangeSize/CommitsByFileAndRangeSize", err)
+		c.ServerError("paging commits", err)
 		return
 	}
 
@@ -90,7 +91,7 @@ func SearchCommits(c *context.Context) {
 
 	commits, err := c.Repo.Commit.SearchCommits(keyword)
 	if err != nil {
-		c.Handle(500, "SearchCommits", err)
+		c.ServerError("SearchCommits", err)
 		return
 	}
 
@@ -127,7 +128,7 @@ func Diff(c *context.Context) {
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 	)
 	if err != nil {
-		c.NotFoundOrServerError("get repository diff", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("get diff", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
@@ -171,7 +172,7 @@ func RawDiff(c *context.Context) {
 		git.RawDiffFormat(c.Params(":ext")),
 		c.Resp,
 	); err != nil {
-		c.NotFoundOrServerError("GetRawDiff", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("get raw diff", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 }
@@ -194,13 +195,13 @@ func CompareDiff(c *context.Context) {
 		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {
-		c.ServerError("get repository diff", err)
+		c.ServerError("get diff", err)
 		return
 	}
 
 	commits, err := commit.CommitsAfter(beforeCommitID)
 	if err != nil {
-		c.Handle(500, "CommitsBeforeUntil", err)
+		c.ServerError("get commits after", err)
 		return
 	}
 

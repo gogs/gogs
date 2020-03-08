@@ -56,7 +56,7 @@ func GetEditorconfig(c *context.APIContext) {
 	fileName := c.Params("filename")
 	def, err := ec.GetDefinitionForFilename(fileName)
 	if err != nil {
-		c.ServerError("get fefinition for filename", err)
+		c.ServerError("get definition for filename", err)
 		return
 	}
 	if def == nil {
