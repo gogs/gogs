@@ -28,7 +28,7 @@ func Test_diffsToHTML(t *testing.T) {
 				{Type: dmp.DiffEqual, Text: " biz"},
 			},
 			lineType: git.DiffLineAdd,
-			expHTML:  template.HTML(`+ foo <span class="added-code">bar</span> biz`),
+			expHTML:  template.HTML(`+foo <span class="added-code">bar</span> biz`),
 		},
 		{
 			diffs: []dmp.Diff{
@@ -38,7 +38,7 @@ func Test_diffsToHTML(t *testing.T) {
 				{Type: dmp.DiffEqual, Text: " biz"},
 			},
 			lineType: git.DiffLineDelete,
-			expHTML:  template.HTML(`- foo <span class="removed-code">bar</span> biz`),
+			expHTML:  template.HTML(`-foo <span class="removed-code">bar</span> biz`),
 		},
 	}
 	for _, test := range tests {
