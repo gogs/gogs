@@ -9,6 +9,7 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/route/repo"
 )
 
@@ -25,7 +26,7 @@ func GetRawFile(c *context.APIContext) {
 
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("GetBlobByPath", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("get blob", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 	if err = repo.ServeBlob(c.Context, blob); err != nil {
@@ -37,7 +38,7 @@ func GetArchive(c *context.APIContext) {
 	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
-		c.ServerError("OpenRepository", err)
+		c.ServerError("open repository", err)
 		return
 	}
 	c.Repo.GitRepo = gitRepo
@@ -48,14 +49,14 @@ func GetArchive(c *context.APIContext) {
 func GetEditorconfig(c *context.APIContext) {
 	ec, err := c.Repo.Editorconfig()
 	if err != nil {
-		c.NotFoundOrServerError("Editorconfig", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("get .editorconfig", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
 	fileName := c.Params("filename")
 	def, err := ec.GetDefinitionForFilename(fileName)
 	if err != nil {
-		c.ServerError("GetDefinitionForFilename", err)
+		c.ServerError("get fefinition for filename", err)
 		return
 	}
 	if def == nil {
