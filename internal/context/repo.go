@@ -321,7 +321,7 @@ func RepoRef() macaron.Handler {
 				c.ServerError("get branch commit", err)
 				return
 			}
-			c.Repo.CommitID = c.Repo.Commit.ID().String()
+			c.Repo.CommitID = c.Repo.Commit.ID.String()
 			c.Repo.IsViewBranch = true
 
 		} else {
@@ -352,7 +352,7 @@ func RepoRef() macaron.Handler {
 					c.ServerError("get branch commit", err)
 					return
 				}
-				c.Repo.CommitID = c.Repo.Commit.ID().String()
+				c.Repo.CommitID = c.Repo.Commit.ID.String()
 
 			} else if c.Repo.GitRepo.HasTag(refName) {
 				c.Repo.IsViewTag = true
@@ -361,7 +361,7 @@ func RepoRef() macaron.Handler {
 					c.ServerError("get tag commit", err)
 					return
 				}
-				c.Repo.CommitID = c.Repo.Commit.ID().String()
+				c.Repo.CommitID = c.Repo.Commit.ID.String()
 			} else if len(refName) == 40 {
 				c.Repo.IsViewCommit = true
 				c.Repo.CommitID = refName

@@ -405,7 +405,7 @@ func SyncMirrors() {
 				// TODO(unknwon): Get the commits for the new ref until the closest ancestor branch like GitHub does.
 				commits, err = refNewCommit.Ancestors(git.LogOptions{MaxCount: 9})
 				if err != nil {
-					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID(), err)
+					log.Error("Failed to get ancestors [repo_id: %d, commit_id: %s]: %v", m.RepoID, refNewCommit.ID, err)
 					continue
 				}
 
@@ -413,7 +413,7 @@ func SyncMirrors() {
 				commits = append([]*git.Commit{refNewCommit}, commits...)
 
 				oldCommitID = git.EmptyID
-				newCommitID = refNewCommit.ID().String()
+				newCommitID = refNewCommit.ID.String()
 			}
 
 			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{

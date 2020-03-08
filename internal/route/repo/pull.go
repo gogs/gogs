@@ -275,7 +275,7 @@ func ViewPullCommits(c *context.Context) {
 			c.ServerError("Repo.GitRepo.GetCommit", err)
 			return
 		}
-		commits, err = c.Repo.GitRepo.RevList([]string{startCommit.ID().String() + "..." + endCommit.ID().String()})
+		commits, err = c.Repo.GitRepo.RevList([]string{startCommit.ID.String() + "..." + endCommit.ID.String()})
 		if err != nil {
 			c.ServerError("Repo.GitRepo.CommitsBetween", err)
 			return

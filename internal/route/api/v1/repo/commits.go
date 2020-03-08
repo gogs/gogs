@@ -39,7 +39,7 @@ func GetSingleCommit(c *context.APIContext) {
 
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
-	author, err := db.GetUserByEmail(commit.Author().Email)
+	author, err := db.GetUserByEmail(commit.Author.Email)
 	if err != nil && !errors.IsUserNotExist(err) {
 		c.ServerError("Get user by author email", err)
 		return
@@ -47,10 +47,10 @@ func GetSingleCommit(c *context.APIContext) {
 		apiAuthor = author.APIFormat()
 	}
 	// Save one query if the author is also the committer
-	if commit.Committer().Email == commit.Author().Email {
+	if commit.Committer.Email == commit.Author.Email {
 		apiCommitter = apiAuthor
 	} else {
-		committer, err := db.GetUserByEmail(commit.Committer().Email)
+		committer, err := db.GetUserByEmail(commit.Committer.Email)
 		if err != nil && !errors.IsUserNotExist(err) {
 			c.ServerError("Get user by committer email", err)
 			return
@@ -72,25 +72,25 @@ func GetSingleCommit(c *context.APIContext) {
 	c.JSONSuccess(&api.Commit{
 		CommitMeta: &api.CommitMeta{
 			URL: conf.Server.ExternalURL + c.Link[1:],
-			SHA: commit.ID().String(),
+			SHA: commit.ID.String(),
 		},
-		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID().String(),
+		HTMLURL: c.Repo.Repository.HTMLURL() + "/commits/" + commit.ID.String(),
 		RepoCommit: &api.RepoCommit{
 			URL: conf.Server.ExternalURL + c.Link[1:],
 			Author: &api.CommitUser{
-				Name:  commit.Author().Name,
-				Email: commit.Author().Email,
-				Date:  commit.Author().When.Format(time.RFC3339),
+				Name:  commit.Author.Name,
+				Email: commit.Author.Email,
+				Date:  commit.Author.When.Format(time.RFC3339),
 			},
 			Committer: &api.CommitUser{
-				Name:  commit.Committer().Name,
-				Email: commit.Committer().Email,
-				Date:  commit.Committer().When.Format(time.RFC3339),
+				Name:  commit.Committer.Name,
+				Email: commit.Committer.Email,
+				Date:  commit.Committer.When.Format(time.RFC3339),
 			},
 			Message: commit.Summary(),
 			Tree: &api.CommitMeta{
-				URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/tree/" + commit.ID().String(),
-				SHA: commit.ID().String(),
+				URL: c.BaseURL + "/repos/" + c.Repo.Repository.FullName() + "/tree/" + commit.ID.String(),
+				SHA: commit.ID.String(),
 			},
 		},
 		Author:    apiAuthor,

@@ -541,13 +541,13 @@ func TestWebhook(c *context.Context) {
 		nameStatus = &git.NameStatus{}
 
 	} else {
-		commitID = c.Repo.Commit.ID().String()
-		commitMessage = c.Repo.Commit.Message()
-		author = c.Repo.Commit.Author()
-		committer = c.Repo.Commit.Committer()
+		commitID = c.Repo.Commit.ID.String()
+		commitMessage = c.Repo.Commit.Message
+		author = c.Repo.Commit.Author
+		committer = c.Repo.Commit.Committer
 
 		// Try to match email with a real user.
-		author, err := db.GetUserByEmail(c.Repo.Commit.Author().Email)
+		author, err := db.GetUserByEmail(c.Repo.Commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
 		} else if !errors.IsUserNotExist(err) {
@@ -555,9 +555,9 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		committer, err := db.GetUserByEmail(c.Repo.Commit.Committer().Email)
+		user, err := db.GetUserByEmail(c.Repo.Commit.Committer.Email)
 		if err == nil {
-			committerUsername = committer.Name
+			committerUsername = user.Name
 		} else if !errors.IsUserNotExist(err) {
 			c.Handle(500, "GetUserByEmail.(committer)", err)
 			return

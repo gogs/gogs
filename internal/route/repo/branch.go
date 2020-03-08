@@ -82,9 +82,9 @@ func Branches(c *context.Context) {
 		switch {
 		case branches[i].Name == c.Repo.BranchName:
 			c.Data["DefaultBranch"] = branches[i]
-		case branches[i].Commit.Committer().When.Add(30 * 24 * time.Hour).After(now): // 30 days
+		case branches[i].Commit.Committer.When.Add(30 * 24 * time.Hour).After(now): // 30 days
 			activeBranches = append(activeBranches, branches[i])
-		case branches[i].Commit.Committer().When.Add(3 * 30 * 24 * time.Hour).Before(now): // 90 days
+		case branches[i].Commit.Committer.When.Add(3 * 30 * 24 * time.Hour).Before(now): // 90 days
 			staleBranches = append(staleBranches, branches[i])
 		}
 	}

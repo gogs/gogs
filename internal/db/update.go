@@ -15,13 +15,13 @@ import (
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
 func CommitToPushCommit(commit *git.Commit) *PushCommit {
 	return &PushCommit{
-		Sha1:           commit.ID().String(),
-		Message:        commit.Message(),
-		AuthorEmail:    commit.Author().Email,
-		AuthorName:     commit.Author().Name,
-		CommitterEmail: commit.Committer().Email,
-		CommitterName:  commit.Committer().Name,
-		Timestamp:      commit.Committer().When,
+		Sha1:           commit.ID.String(),
+		Message:        commit.Message,
+		AuthorEmail:    commit.Author.Email,
+		AuthorName:     commit.Author.Name,
+		CommitterEmail: commit.Committer.Email,
+		CommitterName:  commit.Committer.Name,
+		Timestamp:      commit.Committer.When,
 	}
 }
 
@@ -111,7 +111,7 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		if isNewRef {
 			commits, err = newCommit.Ancestors(git.LogOptions{MaxCount: 9})
 			if err != nil {
-				return fmt.Errorf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID(), err)
+				return fmt.Errorf("CommitsBeforeLimit [commit_id: %s]: %v", newCommit.ID, err)
 			}
 			commits = append([]*git.Commit{newCommit}, commits...)
 		} else {

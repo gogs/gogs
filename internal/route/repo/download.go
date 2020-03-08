@@ -21,7 +21,7 @@ func serveData(c *context.Context, name string, data []byte) error {
 	if err != nil {
 		return fmt.Errorf("GetCommitByPath: %v", err)
 	}
-	c.Resp.Header().Set("Last-Modified", commit.Committer().When.Format(http.TimeFormat))
+	c.Resp.Header().Set("Last-Modified", commit.Committer.When.Format(http.TimeFormat))
 
 	if !tool.IsTextFile(data) {
 		if !tool.IsImageFile(data) {

@@ -101,7 +101,7 @@ func Releases(c *context.Context) {
 			results[i] = &db.Release{
 				Title:   rawTag,
 				TagName: rawTag,
-				Sha1:    commit.ID().String(),
+				Sha1:    commit.ID.String(),
 			}
 
 			results[i].NumCommits, err = commit.CommitsCount()
@@ -189,7 +189,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	if err == nil {
 		commit, err := tag.Commit()
 		if err == nil {
-			tagCreatedUnix = commit.Author().When.Unix()
+			tagCreatedUnix = commit.Author.When.Unix()
 		}
 	}
 
@@ -216,7 +216,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		Title:        f.Title,
 		TagName:      f.TagName,
 		Target:       f.Target,
-		Sha1:         commit.ID().String(),
+		Sha1:         commit.ID.String(),
 		NumCommits:   commitsCount,
 		Note:         f.Content,
 		IsDraft:      len(f.Draft) > 0,

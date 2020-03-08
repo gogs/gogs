@@ -128,7 +128,7 @@ func Wiki(c *context.Context) {
 		c.Handle(500, "GetCommitByPath", err)
 		return
 	}
-	c.Data["Author"] = commits[0].Author()
+	c.Data["Author"] = commits[0].Author
 
 	c.HTML(200, WIKI_VIEW)
 }
@@ -170,7 +170,7 @@ func WikiPages(c *context.Context) {
 			pages = append(pages, PageMeta{
 				Name:    name,
 				URL:     db.ToWikiPageURL(name),
-				Updated: commits[0].Author().When,
+				Updated: commits[0].Author.When,
 			})
 		}
 	}

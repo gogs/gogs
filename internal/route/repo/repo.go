@@ -331,7 +331,7 @@ func Download(c *context.Context) {
 		return
 	}
 
-	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID().String())+ext)
+	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
 			c.Handle(500, "Download -> CreateArchive "+archivePath, err)

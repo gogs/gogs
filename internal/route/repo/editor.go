@@ -103,7 +103,7 @@ func editFile(c *context.Context, isNewFile bool) {
 	c.Data["commit_message"] = ""
 	c.Data["commit_choice"] = "direct"
 	c.Data["new_branch_name"] = ""
-	c.Data["last_commit"] = c.Repo.Commit.ID()
+	c.Data["last_commit"] = c.Repo.Commit.ID
 	c.Data["MarkdownFileExts"] = strings.Join(conf.Markdown.FileExtensions, ",")
 	c.Data["LineWrapExtensions"] = strings.Join(conf.Repository.Editor.LineWrapExtensions, ",")
 	c.Data["PreviewableFileModes"] = strings.Join(conf.Repository.Editor.PreviewableFileModes, ",")
@@ -130,7 +130,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	branchName := oldBranchName
 	oldTreePath := c.Repo.TreePath
 	lastCommit := f.LastCommit
-	f.LastCommit = c.Repo.Commit.ID().String()
+	f.LastCommit = c.Repo.Commit.ID.String()
 
 	if f.IsNewBrnach() {
 		branchName = f.NewBranchName

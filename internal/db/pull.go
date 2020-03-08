@@ -377,7 +377,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	p := &api.PushPayload{
 		Ref:        git.RefsHeads + pr.BaseBranch,
 		Before:     pr.MergeBase,
-		After:      mergeCommit.ID().String(),
+		After:      mergeCommit.ID.String(),
 		CompareURL: conf.Server.ExternalURL + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
 		Commits:    pcs,
 		Repo:       pr.BaseRepo.APIFormat(nil),

@@ -11,6 +11,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/gitutil"
 )
 
 type repoContent struct {
@@ -39,7 +40,7 @@ type Links struct {
 func GetContents(c *context.APIContext) {
 	treeEntry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("GetTreeEntryByPath", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 	username := c.Params(":username")
