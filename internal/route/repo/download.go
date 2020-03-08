@@ -13,13 +13,14 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/tool"
 )
 
 func serveData(c *context.Context, name string, data []byte) error {
 	commit, err := c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 	if err != nil {
-		return fmt.Errorf("GetCommitByPath: %v", err)
+		return fmt.Errorf("get commit by path %q: %v", c.Repo.TreePath, err)
 	}
 	c.Resp.Header().Set("Last-Modified", commit.Committer.When.Format(http.TimeFormat))
 
@@ -50,15 +51,12 @@ func ServeBlob(c *context.Context, blob *git.Blob) error {
 func SingleDownload(c *context.Context) {
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		// TODO: Use gitutil package
-		if err == git.ErrRevisionNotExist {
-			c.Handle(404, "GetBlobByPath", nil)
-		} else {
-			c.Handle(500, "GetBlobByPath", err)
-		}
+		c.NotFoundOrServerError("get blob", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
+
 	if err = ServeBlob(c, blob); err != nil {
-		c.Handle(500, "ServeBlob", err)
+		c.ServerError("serve blob", err)
+		return
 	}
 }
