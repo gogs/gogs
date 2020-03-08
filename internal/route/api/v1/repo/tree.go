@@ -31,12 +31,12 @@ type repoGitTreeEntry struct {
 func GetRepoGitTree(c *context.APIContext) {
 	gitTree, err := c.Repo.GitRepo.LsTree(c.Params(":sha"))
 	if err != nil {
-		c.NotFoundOrServerError("GetRepoGitTree", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("get tree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 	entries, err := gitTree.Entries()
 	if err != nil {
-		c.ServerError("GetRepoGitTree", err)
+		c.ServerError("list entries", err)
 		return
 	}
 

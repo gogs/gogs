@@ -5,85 +5,91 @@
 package gitutil
 
 import (
-	"fmt"
-
-	"github.com/gogs/git-module"
+	"github.com/pkg/errors"
 )
 
-type TagsResult struct {
-	// Indicates whether results include the latest tag.
-	HasLatest bool
-	// If results do not include the latest tag, a indicator 'after' to go back.
-	PreviousAfter string
-	// Indicates whether results include the oldest tag.
-	ReachEnd bool
-	// List of returned tags.
+// TagsPage contains a list of tags and pagination information.
+type TagsPage struct {
+	// List of tags in the current page.
 	Tags []string
+	// Whether the results include the latest tag.
+	HasLatest bool
+	// When results do not include the latest tag, an indicator of 'after' to go back.
+	PreviousAfter string
+	// Whether there are more tags in the next page.
+	HasNext bool
 }
 
-// ListTagsAfter returns list of tags 'after' (exlusive) given tag.
-func ListTagsAfter(repoPath, after string, limit int) (*TagsResult, error) {
-	allTags, err := git.RepoTags(repoPath)
+func (moduler) ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error) {
+	all, err := Module.RepoTags(repoPath)
 	if err != nil {
-		return nil, fmt.Errorf("GetTags: %v", err)
+		return nil, errors.Wrap(err, "get tags")
 	}
+	total := len(all)
 
 	if limit < 0 {
 		limit = 0
 	}
 
-	numAllTags := len(allTags)
-	if len(after) == 0 && limit == 0 {
-		return &TagsResult{
+	// Returns everything when no filter and no limit
+	if after == "" && limit == 0 {
+		return &TagsPage{
+			Tags:      all,
 			HasLatest: true,
-			ReachEnd:  true,
-			Tags:      allTags,
-		}, nil
-	} else if len(after) == 0 && limit > 0 {
-		endIdx := limit
-		if limit >= numAllTags {
-			endIdx = numAllTags
-		}
-		return &TagsResult{
-			HasLatest: true,
-			ReachEnd:  limit >= numAllTags,
-			Tags:      allTags[:endIdx],
 		}, nil
 	}
 
-	previousAfter := ""
-	hasMatch := false
-	tags := make([]string, 0, len(allTags))
-	for i := range allTags {
-		if hasMatch {
-			tags = allTags[i:]
-			break
+	// No filter but has a limit, returns first X tags
+	if after == "" && limit > 0 {
+		endIdx := limit
+		if limit > total {
+			endIdx = total
 		}
-		if allTags[i] == after {
-			hasMatch = true
-			if limit > 0 && i-limit >= 0 {
-				previousAfter = allTags[i-limit]
-			}
+		return &TagsPage{
+			Tags:      all[:endIdx],
+			HasLatest: true,
+			HasNext:   limit < total,
+		}, nil
+	}
+
+	// Loop over all tags see if we can find the filter
+	previousAfter := ""
+	found := false
+	tags := make([]string, 0, len(all))
+	for i := range all {
+		if all[i] != after {
 			continue
 		}
+
+		found = true
+		if limit > 0 && i-limit >= 0 {
+			previousAfter = all[i-limit]
+		}
+
+		// In case filter is the oldest one
+		if i+1 < total {
+			tags = all[i+1:]
+		}
+		break
 	}
 
-	if !hasMatch {
-		tags = allTags
+	if !found {
+		tags = all
 	}
 
 	// If all tags after match is equal to the limit, it reaches the oldest tag as well.
 	if limit == 0 || len(tags) <= limit {
-		return &TagsResult{
-			HasLatest:     !hasMatch,
-			PreviousAfter: previousAfter,
-			ReachEnd:      true,
+		return &TagsPage{
 			Tags:          tags,
+			HasLatest:     !found,
+			PreviousAfter: previousAfter,
 		}, nil
 	}
-	return &TagsResult{
-		HasLatest:     !hasMatch,
-		PreviousAfter: previousAfter,
+
+	return &TagsPage{
 		Tags:          tags[:limit],
+		HasLatest:     !found,
+		PreviousAfter: previousAfter,
+		HasNext:       true,
 	}, nil
 }

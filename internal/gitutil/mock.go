@@ -14,6 +14,7 @@ type MockModuleStore struct {
 	RepoLog          func(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error)
 	RepoMergeBase    func(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error)
 	RepoRemoveRemote func(repoPath, name string, opts ...git.RemoveRemoteOptions) error
+	RepoTags         func(repoPath string, opts ...git.TagsOptions) ([]string, error)
 }
 
 // MockModule holds mock implementation of each method for Modulers interface.

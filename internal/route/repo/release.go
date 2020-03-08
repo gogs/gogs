@@ -51,13 +51,13 @@ func Releases(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 	c.Data["PageIsReleaseList"] = true
 
-	tagsResult, err := gitutil.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
+	tagsPage, err := gitutil.Module.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
 	if err != nil {
 		c.ServerError("get tags", err)
 		return
 	}
 
-	releases, err := db.GetPublishedReleasesByRepoID(c.Repo.Repository.ID, tagsResult.Tags...)
+	releases, err := db.GetPublishedReleasesByRepoID(c.Repo.Repository.ID, tagsPage.Tags...)
 	if err != nil {
 		c.Handle(500, "GetPublishedReleasesByRepoID", err)
 		return
@@ -66,8 +66,8 @@ func Releases(c *context.Context) {
 	// Temproray cache commits count of used branches to speed up.
 	countCache := make(map[string]int64)
 
-	results := make([]*db.Release, len(tagsResult.Tags))
-	for i, rawTag := range tagsResult.Tags {
+	results := make([]*db.Release, len(tagsPage.Tags))
+	for i, rawTag := range tagsPage.Tags {
 		for j, r := range releases {
 			if r == nil || r.TagName != rawTag {
 				continue
@@ -115,7 +115,7 @@ func Releases(c *context.Context) {
 
 	// Only show drafts if user is viewing the latest page
 	var drafts []*db.Release
-	if tagsResult.HasLatest {
+	if tagsPage.HasLatest {
 		drafts, err = db.GetDraftReleasesByRepoID(c.Repo.Repository.ID)
 		if err != nil {
 			c.Handle(500, "GetDraftReleasesByRepoID", err)
@@ -142,9 +142,9 @@ func Releases(c *context.Context) {
 	}
 
 	c.Data["Releases"] = results
-	c.Data["HasPrevious"] = !tagsResult.HasLatest
-	c.Data["ReachEnd"] = tagsResult.ReachEnd
-	c.Data["PreviousAfter"] = tagsResult.PreviousAfter
+	c.Data["HasPrevious"] = !tagsPage.HasLatest
+	c.Data["ReachEnd"] = !tagsPage.HasNext
+	c.Data["PreviousAfter"] = tagsPage.PreviousAfter
 	if len(results) > 0 {
 		c.Data["NextAfter"] = results[len(results)-1].TagName
 	}

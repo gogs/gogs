@@ -124,13 +124,13 @@ func GetContents(c *context.APIContext) {
 	// treeEntry is a directory
 	dirTree, err := c.Repo.GitRepo.LsTree(treeEntry.ID().String())
 	if err != nil {
-		c.NotFoundOrServerError("GetTree", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("get tree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
 	entries, err := dirTree.Entries()
 	if err != nil {
-		c.NotFoundOrServerError("ListEntries", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("list entries", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 

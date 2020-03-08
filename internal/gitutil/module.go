@@ -23,8 +23,10 @@ type Moduler interface {
 	// RepoMergeBase returns merge base between base and head revisions of the repository
 	// in given path.
 	RepoMergeBase(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error)
-	// RemoveRemote removes a remote from the repository in given path.
+	// RepoRemoveRemote removes a remote from the repository in given path.
 	RepoRemoveRemote(repoPath, name string, opts ...git.RemoveRemoteOptions) error
+	// RepoTags returns a list of tags of the repository in given path.
+	RepoTags(repoPath string, opts ...git.TagsOptions) ([]string, error)
 
 	Utiler
 }
@@ -35,6 +37,8 @@ type Moduler interface {
 type Utiler interface {
 	// GetPullRequestMeta gathers pull request metadata based on given head and base information.
 	PullRequestMeta(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error)
+	// ListTagsAfter returns a list of tags "after" (exlusive) given tag.
+	ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error)
 }
 
 // moduler is holds real implementation.
@@ -73,6 +77,13 @@ func (moduler) RepoRemoveRemote(repoPath, name string, opts ...git.RemoveRemoteO
 		return MockModule.RepoRemoveRemote(repoPath, name, opts...)
 	}
 	return git.RepoRemoveRemote(repoPath, name, opts...)
+}
+
+func (moduler) RepoTags(repoPath string, opts ...git.TagsOptions) ([]string, error) {
+	if MockModule.RepoTags != nil {
+		return MockModule.RepoTags(repoPath, opts...)
+	}
+	return git.RepoTags(repoPath, opts...)
 }
 
 // Module is a mockable interface for Git operations.
