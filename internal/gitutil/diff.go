@@ -84,7 +84,6 @@ func diffsToHTML(diffs []diffmatchpatch.Diff, lineType git.DiffLineType) templat
 	case git.DiffLineDelete:
 		buf.WriteByte('-')
 	}
-	buf.WriteByte(' ')
 
 	const (
 		addedCodePrefix   = `<span class="added-code">`
