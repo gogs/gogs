@@ -1883,7 +1883,7 @@ func ReinitMissingRepositories() error {
 		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
 		if err := git.Init(repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
 			if err2 := CreateRepositoryNotice(fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
-				return fmt.Errorf("CreateRepositoryNotice: %v", err)
+				return fmt.Errorf("create repository notice: %v", err)
 			}
 		}
 	}
@@ -2453,21 +2453,16 @@ func (repo *Repository) CreateNewBranch(oldBranch, newBranch string) (err error)
 	localPath := repo.LocalCopyPath()
 
 	if err = discardLocalRepoBranchChanges(localPath, oldBranch); err != nil {
-		return fmt.Errorf("discardLocalRepoChanges: %v", err)
+		return fmt.Errorf("discard changes in local copy [path: %s, branch: %s]: %v", localPath, oldBranch, err)
 	} else if err = repo.UpdateLocalCopyBranch(oldBranch); err != nil {
-		return fmt.Errorf("UpdateLocalCopyBranch: %v", err)
+		return fmt.Errorf("update branch for local copy [path: %s, branch: %s]: %v", localPath, oldBranch, err)
 	}
 
 	if err = repo.CheckoutNewBranch(oldBranch, newBranch); err != nil {
-		return fmt.Errorf("CreateNewBranch: %v", err)
+		return fmt.Errorf("create new branch [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 
-	gitRepo, err := git.Open(localPath)
-	if err != nil {
-		return fmt.Errorf("open repository: %v", err)
-	}
-
-	if err = gitRepo.Push("origin", newBranch); err != nil {
+	if err = git.RepoPush(localPath, "origin", newBranch); err != nil {
 		return fmt.Errorf("push [branch: %s]: %v", newBranch, err)
 	}
 

@@ -81,7 +81,7 @@ func (m *Mirror) readAddress() {
 		m.Repo.GitConfigPath(),
 	)
 	if err != nil {
-		log.Error("LoadSources: %v", err)
+		log.Error("load config: %v", err)
 		return
 	}
 	m.address = cfg.Section("remote \"origin\"").Key("url").Value()
