@@ -16,3 +16,8 @@ func TestIsErrRevisionNotExist(t *testing.T) {
 	assert.True(t, IsErrRevisionNotExist(git.ErrRevisionNotExist))
 	assert.False(t, IsErrRevisionNotExist(os.ErrNotExist))
 }
+
+func TestIsErrNoMergeBase(t *testing.T) {
+	assert.True(t, IsErrNoMergeBase(git.ErrNoMergeBase))
+	assert.False(t, IsErrNoMergeBase(os.ErrNotExist))
+}

@@ -12,3 +12,8 @@ import (
 func IsErrRevisionNotExist(err error) bool {
 	return err == git.ErrRevisionNotExist
 }
+
+// IsErrNoMergeBase returns true if the error is git.ErrNoMergeBase.
+func IsErrNoMergeBase(err error) bool {
+	return err == git.ErrNoMergeBase
+}
