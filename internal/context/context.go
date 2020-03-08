@@ -46,9 +46,14 @@ type Context struct {
 	Org  *Organization
 }
 
-// Title sets "Title" field in template data.
+// RawTitle sets the "Title" field in template data.
+func (c *Context) RawTitle(title string) {
+	c.Data["Title"] = title
+}
+
+// Title localizes the "Title" field in template data.
 func (c *Context) Title(locale string) {
-	c.Data["Title"] = c.Tr(locale)
+	c.RawTitle(c.Tr(locale))
 }
 
 // PageIs sets "PageIsxxx" field in template data.

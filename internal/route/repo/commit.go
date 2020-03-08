@@ -119,7 +119,6 @@ func Diff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
 	if err != nil {
-		// TODO: Move checker to gitutil package
 		c.NotFoundOrServerError("get commit by ID", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
@@ -135,11 +134,11 @@ func Diff(c *context.Context) {
 	parents := make([]string, commit.ParentsCount())
 	for i := 0; i < commit.ParentsCount(); i++ {
 		sha, err := commit.ParentID(i)
-		parents[i] = sha.String()
 		if err != nil {
 			c.NotFound()
 			return
 		}
+		parents[i] = sha.String()
 	}
 
 	setEditorconfigIfExists(c)
@@ -147,7 +146,7 @@ func Diff(c *context.Context) {
 		return
 	}
 
-	c.Title(commit.Summary() + " · " + tool.ShortSHA1(commitID))
+	c.RawTitle(commit.Summary() + " · " + tool.ShortSHA1(commitID))
 	c.Data["CommitID"] = commitID
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["Username"] = userName
