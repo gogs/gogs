@@ -7,11 +7,9 @@ package repo
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-
-	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/gitutil"
 )
 
 type repoContent struct {
@@ -38,9 +36,9 @@ type Links struct {
 }
 
 func GetContents(c *context.APIContext) {
-	treeEntry, err := c.Repo.Commit.GetTreeEntryByPath(c.Repo.TreePath)
+	treeEntry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("GetTreeEntryByPath", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 	username := c.Params(":username")
@@ -56,8 +54,8 @@ func GetContents(c *context.APIContext) {
 	// :baseurl/repos/:username/:project/tree/:sha
 	templateHTMLLLink := "%s/repos/%s/%s/tree/%s"
 
-	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, username, reponame, treeEntry.ID.String())
-	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, treeEntry.ID.String())
+	gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, username, reponame, treeEntry.ID().String())
+	htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, treeEntry.ID().String())
 	selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, username, reponame, c.Repo.TreePath)
 
 	// TODO(unknwon): Make a treeEntryToRepoContent helper.
@@ -65,7 +63,7 @@ func GetContents(c *context.APIContext) {
 		Size:        treeEntry.Size(),
 		Name:        treeEntry.Name(),
 		Path:        c.Repo.TreePath,
-		Sha:         treeEntry.ID.String(),
+		Sha:         treeEntry.ID().String(),
 		URL:         selfURL,
 		GitURL:      gitURL,
 		HTMLURL:     htmlURL,
@@ -82,65 +80,57 @@ func GetContents(c *context.APIContext) {
 	//   2. SubModule
 	//   3. SymLink
 	//   4. Blob (file)
-	if treeEntry.IsSubModule() {
+	if treeEntry.IsCommit() {
 		// TODO(unknwon): submoduleURL is not set as current git-module doesn't handle it properly
 		contents.Type = "submodule"
 		c.JSONSuccess(contents)
 		return
 
-	} else if treeEntry.IsLink() {
+	} else if treeEntry.IsSymlink() {
 		contents.Type = "symlink"
-		blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+		blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 		if err != nil {
 			c.ServerError("GetBlobByPath", err)
 			return
 		}
-		b, err := blob.Data()
+		p, err := blob.Bytes()
 		if err != nil {
 			c.ServerError("Data", err)
 			return
 		}
-		buf, err := ioutil.ReadAll(b)
-		if err != nil {
-			c.ServerError("ReadAll", err)
-			return
-		}
-		contents.Target = string(buf)
+		contents.Target = string(p)
 		c.JSONSuccess(contents)
 		return
 
-	} else if treeEntry.Type == "blob" {
-		blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+	} else if treeEntry.IsBlob() {
+		blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 		if err != nil {
 			c.ServerError("GetBlobByPath", err)
 			return
 		}
-		b, err := blob.Data()
+		p, err := blob.Bytes()
 		if err != nil {
 			c.ServerError("Data", err)
 			return
 		}
-		buf, err := ioutil.ReadAll(b)
-		if err != nil {
-			c.ServerError("ReadAll", err)
-			return
-		}
-		contents.Content = base64.StdEncoding.EncodeToString(buf)
+		contents.Content = base64.StdEncoding.EncodeToString(p)
 		contents.Type = "file"
 		c.JSONSuccess(contents)
 		return
 	}
 
+	// TODO: treeEntry.IsExec()
+
 	// treeEntry is a directory
-	dirTree, err := c.Repo.GitRepo.GetTree(treeEntry.ID.String())
+	dirTree, err := c.Repo.GitRepo.LsTree(treeEntry.ID().String())
 	if err != nil {
-		c.NotFoundOrServerError("GetTree", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("get tree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
-	entries, err := dirTree.ListEntries()
+	entries, err := dirTree.Entries()
 	if err != nil {
-		c.NotFoundOrServerError("ListEntries", git.IsErrNotExist, err)
+		c.NotFoundOrServerError("list entries", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
@@ -151,33 +141,28 @@ func GetContents(c *context.APIContext) {
 
 	var results = make([]*repoContent, 0, len(entries))
 	for _, entry := range entries {
-		gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, username, reponame, entry.ID.String())
-		htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, entry.ID.String())
+		gitURL := fmt.Sprintf(templateGitURLLink, c.BaseURL, username, reponame, entry.ID().String())
+		htmlURL := fmt.Sprintf(templateHTMLLLink, c.BaseURL, username, reponame, entry.ID().String())
 		selfURL := fmt.Sprintf(templateSelfLink, c.BaseURL, username, reponame, c.Repo.TreePath)
 		var contentType string
-		if entry.IsDir() {
+		if entry.IsTree() {
 			contentType = "dir"
-		} else if entry.IsSubModule() {
+		} else if entry.IsCommit() {
 			// TODO(unknwon): submoduleURL is not set as current git-module doesn't handle it properly
 			contentType = "submodule"
-		} else if entry.IsLink() {
+		} else if entry.IsSymlink() {
 			contentType = "symlink"
-			blob, err := c.Repo.Commit.GetBlobByPath(c.Repo.TreePath)
+			blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 			if err != nil {
 				c.ServerError("GetBlobByPath", err)
 				return
 			}
-			b, err := blob.Data()
+			p, err := blob.Bytes()
 			if err != nil {
 				c.ServerError("Data", err)
 				return
 			}
-			buf, err := ioutil.ReadAll(b)
-			if err != nil {
-				c.ServerError("ReadAll", err)
-				return
-			}
-			contents.Target = string(buf)
+			contents.Target = string(p)
 		} else {
 			contentType = "file"
 		}
@@ -187,7 +172,7 @@ func GetContents(c *context.APIContext) {
 			Size:        entry.Size(),
 			Name:        entry.Name(),
 			Path:        c.Repo.TreePath,
-			Sha:         entry.ID.String(),
+			Sha:         entry.ID().String(),
 			URL:         selfURL,
 			GitURL:      gitURL,
 			HTMLURL:     htmlURL,

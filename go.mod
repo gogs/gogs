@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20191001013358-cfbb681360f0
-	github.com/editorconfig/editorconfig-core-go/v2 v2.2.1
+	github.com/editorconfig/editorconfig-core-go/v2 v2.3.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.0.1
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
@@ -18,10 +18,11 @@ require (
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
-	github.com/gogs/git-module v0.8.3
+	github.com/gogs/git-module v1.0.0
 	github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
+	github.com/google/go-cmp v0.3.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/issue9/identicon v1.0.1
@@ -61,7 +62,7 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	gopkg.in/ini.v1 v1.52.0
+	gopkg.in/ini.v1 v1.53.0
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/macaron.v1 v1.3.4
 	unknwon.dev/clog/v2 v2.1.2

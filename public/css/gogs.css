@@ -5,7 +5,7 @@
   background-size: contain;
 }
 body:not(.full-width) {
-  font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+  font-family: "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
   background-color: #fff;
   overflow-y: scroll;
   overflow-x: auto;
@@ -23,14 +23,14 @@ h5,
 .ui.menu,
 .ui.input input,
 .ui.button:not(.label) {
-  font-family: "PingFang SC", 'Hiragino Sans GB', "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
+  font-family: "Helvetica Neue", "Microsoft YaHei", Arial, Helvetica, sans-serif !important;
 }
 img {
   border-radius: 3px;
 }
 pre,
 code {
-  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
 }
 pre.raw,
 code.raw {
@@ -75,7 +75,7 @@ code.wrap {
 }
 .following.bar.light {
   background-color: white;
-  border-bottom: 1px solid #DDDDDD;
+  border-bottom: 1px solid #dddddd;
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.04);
 }
 .following.bar .column .menu {
@@ -156,7 +156,7 @@ code.wrap {
   color: #d95c5c !important;
 }
 .ui .text.red a:hover {
-  color: #E67777 !important;
+  color: #e67777 !important;
 }
 .ui .text.blue {
   color: #428bca !important;
@@ -192,7 +192,7 @@ code.wrap {
   color: #6e5494 !important;
 }
 .ui .text.yellow {
-  color: #FBBD08 !important;
+  color: #fbbd08 !important;
 }
 .ui .text.gold {
   color: #a1882b !important;
@@ -235,11 +235,11 @@ code.wrap {
   vertical-align: middle;
 }
 .ui .warning.header {
-  background-color: #F9EDBE !important;
-  border-color: #F0C36D;
+  background-color: #f9edbe !important;
+  border-color: #f0c36d;
 }
 .ui .warning.segment {
-  border-color: #F0C36D;
+  border-color: #f0c36d;
 }
 .ui .info.segment {
   border: 1px solid #c5d5dd;
@@ -270,7 +270,7 @@ code.wrap {
   margin-left: 25px;
 }
 .ui .sha.label {
-  font-family: Consolas, Menlo, Monaco, "Lucida Console", monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
   font-size: 13px;
   padding: 6px 10px 4px 10px;
   font-weight: normal;
@@ -1185,7 +1185,7 @@ footer .ui.language .menu {
   overflow-x: auto;
 }
 .repository .metas .ui.list .hide {
-  display: none!important;
+  display: none !important;
 }
 .repository .metas .ui.list .item {
   padding: 0px;
@@ -1204,7 +1204,7 @@ footer .ui.language .menu {
   color: #000;
 }
 .repository .header-wrapper {
-  background-color: #FAFAFA;
+  background-color: #fafafa;
   margin-top: -15px;
   padding-top: 15px;
 }
@@ -1228,8 +1228,8 @@ footer .ui.language .menu {
 .repository .filter.menu .menu {
   max-height: 300px;
   overflow-x: auto;
-  right: 0!important;
-  left: auto!important;
+  right: 0 !important;
+  left: auto !important;
 }
 .repository .filter.menu .dropdown.item {
   margin: 1px;
@@ -1268,8 +1268,8 @@ footer .ui.language .menu {
   padding: 0 10px;
 }
 .repository #clone-panel .dropdown .menu {
-  right: 0!important;
-  left: auto!important;
+  right: 0 !important;
+  left: auto !important;
 }
 .repository.branches:not(.settings) .ui.list {
   padding: 0;
@@ -1279,7 +1279,7 @@ footer .ui.language .menu {
   line-height: 31px;
 }
 .repository.branches:not(.settings) .ui.list > .item:not(:last-child) {
-  border-bottom: 1px solid #DDD;
+  border-bottom: 1px solid #ddd;
 }
 .repository.branches:not(.settings) .ui.list > .item .column {
   padding: 5px 15px;
@@ -1355,7 +1355,7 @@ footer .ui.language .menu {
   padding-bottom: 8px;
 }
 .repository.file.list #repo-files-table tr:hover {
-  background-color: #ffffEE;
+  background-color: #ffffee;
 }
 .repository.file.list #file-content .header .octicon {
   padding-right: 5px;
@@ -1414,7 +1414,7 @@ footer .ui.language .menu {
   padding: 0.1em 0.5em;
 }
 .repository.file.list #file-content #ipython-notebook .nb-stderr {
-  background-color: #FAA;
+  background-color: #faa;
 }
 .repository.file.list #file-content #ipython-notebook .nb-cell + .nb-cell {
   margin-top: 0.5em;
@@ -1431,7 +1431,7 @@ footer .ui.language .menu {
 .repository.file.list #file-content #ipython-notebook .nb-raw-cell {
   white-space: pre-wrap;
   background-color: #f5f2f0;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
   padding: 1em;
   margin: 0.5em 0;
 }
@@ -1497,7 +1497,7 @@ footer .ui.language .menu {
 }
 .repository.file.list #file-content .code-view * {
   font-size: 12px;
-  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
   line-height: 20px;
 }
 .repository.file.list #file-content .code-view table {
@@ -1542,6 +1542,7 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view .lines-code .hljs li {
   display: inline-block;
   width: 100%;
+  padding-left: 5px;
 }
 .repository.file.list #file-content .code-view .lines-num pre li.active,
 .repository.file.list #file-content .code-view .lines-code pre li.active,
@@ -1550,14 +1551,6 @@ footer .ui.language .menu {
 .repository.file.list #file-content .code-view .lines-num .hljs li.active,
 .repository.file.list #file-content .code-view .lines-code .hljs li.active {
   background: #ffffdd;
-}
-.repository.file.list #file-content .code-view .lines-num pre li:before,
-.repository.file.list #file-content .code-view .lines-code pre li:before,
-.repository.file.list #file-content .code-view .lines-num ol li:before,
-.repository.file.list #file-content .code-view .lines-code ol li:before,
-.repository.file.list #file-content .code-view .lines-num .hljs li:before,
-.repository.file.list #file-content .code-view .lines-code .hljs li:before {
-  content: ' ';
 }
 .repository.file.list .sidebar {
   padding-left: 0;
@@ -1606,7 +1599,7 @@ footer .ui.language .menu {
   pointer-events: none;
 }
 .repository.file.editor .commit-form-wrapper .commit-form:before {
-  border-right-color: #D4D4D5;
+  border-right-color: #d4d4d5;
   border-width: 9px;
   margin-top: -9px;
 }
@@ -1621,7 +1614,7 @@ footer .ui.language .menu {
 .repository.file.editor .commit-form-wrapper .commit-form .quick-pull-choice .branch-name {
   display: inline-block;
   padding: 3px 6px;
-  font: 12px Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font: 12px Consolas, Liberation Mono, Menlo, monospace;
   color: rgba(0, 0, 0, 0.65);
   background-color: rgba(209, 227, 237, 0.45);
   border-radius: 3px;
@@ -1641,7 +1634,7 @@ footer .ui.language .menu {
   color: #b0c4ce;
 }
 .repository.options #interval {
-  width: 100px!important;
+  width: 100px !important;
   min-width: 100px;
 }
 .repository.options .danger .item {
@@ -1668,7 +1661,7 @@ footer .ui.language .menu {
   pointer-events: none;
 }
 .repository.new.issue .comment.form .content:before {
-  border-right-color: #D4D4D5;
+  border-right-color: #d4d4d5;
   border-width: 9px;
   margin-top: -9px;
 }
@@ -1691,7 +1684,7 @@ footer .ui.language .menu {
   overflow-x: auto;
 }
 .repository.view.issue .title {
-  padding-bottom: 0!important;
+  padding-bottom: 0 !important;
 }
 .repository.view.issue .title h1 {
   font-weight: 300;
@@ -1720,7 +1713,7 @@ footer .ui.language .menu {
   margin-top: 10px;
 }
 .repository.view.issue .pull-desc code {
-  color: #0166E6;
+  color: #0166e6;
 }
 .repository.view.issue .pull.tabular.menu {
   margin-bottom: 10px;
@@ -1801,7 +1794,7 @@ footer .ui.language .menu {
   pointer-events: none;
 }
 .repository.view.issue .comment-list .comment .content .header:before {
-  border-right-color: #D4D4D5;
+  border-right-color: #d4d4d5;
   border-width: 9px;
   margin-top: -9px;
 }
@@ -1827,7 +1820,7 @@ footer .ui.language .menu {
 }
 .repository.view.issue .comment-list .comment .content > .bottom.segment .ui.images::after {
   clear: both;
-  content: ' ';
+  content: " ";
   display: block;
 }
 .repository.view.issue .comment-list .comment .content > .bottom.segment a {
@@ -1842,7 +1835,7 @@ footer .ui.language .menu {
   background-color: #fff;
 }
 .repository.view.issue .comment-list .comment .content > .bottom.segment a:before {
-  content: ' ';
+  content: " ";
   display: inline-block;
   height: 100%;
   vertical-align: middle;
@@ -1870,7 +1863,7 @@ footer .ui.language .menu {
 }
 .repository.view.issue .comment-list .comment .ui.form textarea {
   height: 200px;
-  font-family: "Consolas", monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
 }
 .repository.view.issue .comment-list .comment .edit.buttons {
   margin-top: 10px;
@@ -1937,7 +1930,7 @@ footer .ui.language .menu {
   pointer-events: none;
 }
 .repository .comment.form .content .form:before {
-  border-right-color: #D4D4D5;
+  border-right-color: #d4d4d5;
   border-width: 9px;
   margin-top: -9px;
 }
@@ -1956,7 +1949,7 @@ footer .ui.language .menu {
 }
 .repository .comment.form .content textarea {
   height: 200px;
-  font-family: "Consolas", monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
 }
 .repository .label.list {
   list-style: none;
@@ -1965,7 +1958,7 @@ footer .ui.language .menu {
 .repository .label.list > .item {
   padding-top: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed #AAA;
+  border-bottom: 1px dashed #aaa;
 }
 .repository .label.list > .item a {
   font-size: 15px;
@@ -1989,7 +1982,7 @@ footer .ui.language .menu {
 .repository .milestone.list > .item {
   padding-top: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed #AAA;
+  border-bottom: 1px dashed #aaa;
 }
 .repository .milestone.list > .item > a {
   padding-top: 5px;
@@ -2054,7 +2047,7 @@ footer .ui.language .menu {
   pointer-events: none;
 }
 .repository.compare.pull .comment.form .content:before {
-  border-right-color: #D4D4D5;
+  border-right-color: #d4d4d5;
   border-width: 9px;
   margin-top: -9px;
 }
@@ -2067,7 +2060,7 @@ footer .ui.language .menu {
   border-right-color: #fff;
 }
 .repository .filter.dropdown .menu {
-  margin-top: 1px!important;
+  margin-top: 1px !important;
 }
 .repository.diff .commit-message pre {
   white-space: pre-wrap;
@@ -2100,7 +2093,7 @@ footer .ui.language .menu {
   list-style: none;
   padding-bottom: 4px;
   margin-bottom: 4px;
-  border-bottom: 1px dashed #DDD;
+  border-bottom: 1px dashed #ddd;
   padding-left: 6px;
 }
 .repository .diff-detail-box span.status {
@@ -2146,7 +2139,7 @@ footer .ui.language .menu {
 }
 .repository .diff-file-box .file-body.file-code .lines-num {
   text-align: right;
-  color: #A7A7A7;
+  color: #a7a7a7;
   background: #fafafa;
   width: 1%;
 }
@@ -2155,7 +2148,7 @@ footer .ui.language .menu {
   text-align: center;
 }
 .repository .diff-file-box .file-body.file-code .lines-num-old {
-  border-right: 1px solid #DDD;
+  border-right: 1px solid #ddd;
 }
 .repository .diff-file-box .code-diff {
   font-size: 12px;
@@ -2175,6 +2168,7 @@ footer .ui.language .menu {
 }
 .repository .diff-file-box .code-diff .lines-num::before {
   content: attr(data-line-number);
+  font: Consolas, Liberation Mono, Menlo, monospace;
 }
 .repository .diff-file-box .code-diff .lines-num.lines-num-old,
 .repository .diff-file-box .code-diff .lines-num.lines-num-new {
@@ -2185,8 +2179,8 @@ footer .ui.language .menu {
   color: #383636;
 }
 .repository .diff-file-box .code-diff tbody tr.tag-code td {
-  background-color: #F0F0F0 !important;
-  border-color: #D2CECE !important;
+  background-color: #f0f0f0 !important;
+  border-color: #d2cece !important;
   padding-top: 4px;
   padding-bottom: 4px;
 }
@@ -2261,7 +2255,7 @@ footer .ui.language .menu {
   font-size: 1.2em;
 }
 .repository.release #release-list {
-  border-top: 1px solid #DDD;
+  border-top: 1px solid #ddd;
   margin-top: 20px;
   padding-top: 15px;
 }
@@ -2286,7 +2280,7 @@ footer .ui.language .menu {
   margin-top: 6px;
 }
 .repository.release #release-list > li .detail {
-  border-left: 1px solid #DDD;
+  border-left: 1px solid #ddd;
 }
 .repository.release #release-list > li .detail .author img {
   margin-bottom: -3px;
@@ -2319,7 +2313,7 @@ footer .ui.language .menu {
   left: -5px;
   top: 40px;
   border-radius: 6px;
-  border: 1px solid #FFF;
+  border: 1px solid #fff;
 }
 .repository.new.release .target {
   min-width: 500px;
@@ -2348,7 +2342,7 @@ footer .ui.language .menu {
 .repository.forks .list .item {
   padding-top: 10px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #DDD;
+  border-bottom: 1px solid #ddd;
 }
 .repository.forks .list .item .ui.avatar {
   float: left;
@@ -2365,7 +2359,7 @@ footer .ui.language .menu {
   font-size: 48px;
 }
 .repository.wiki.new .CodeMirror .CodeMirror-code {
-  font-family: "Consolas", monospace;
+  font-family: Consolas, Liberation Mono, Menlo, monospace;
 }
 .repository.wiki.new .CodeMirror .CodeMirror-code .cm-comment {
   background: inherit;
@@ -2399,7 +2393,7 @@ footer .ui.language .menu {
   line-height: 2em;
 }
 .repository.settings.collaboration .collaborator.list > .item:not(:last-child) {
-  border-bottom: 1px solid #DDD;
+  border-bottom: 1px solid #ddd;
 }
 .repository.settings.collaboration #repo-collab-form #search-user-box .results {
   left: 7px;
@@ -2491,7 +2485,7 @@ footer .ui.language .menu {
 #search-repo-box .results .item,
 #search-user-box .results .item {
   padding: 10px 15px;
-  border-bottom: 1px solid #DDD;
+  border-bottom: 1px solid #ddd;
   cursor: pointer;
 }
 #search-repo-box .results .item:hover,
@@ -2510,7 +2504,7 @@ footer .ui.language .menu {
 .issue.list > .item {
   padding-top: 15px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed #AAA;
+  border-bottom: 1px dashed #aaa;
 }
 .issue.list > .item .title {
   color: #444;
@@ -2546,8 +2540,8 @@ footer .ui.language .menu {
 .ui.form .dropzone {
   width: 100%;
   margin-bottom: 10px;
-  border: 2px dashed #0087F7;
-  box-shadow: none!important;
+  border: 2px dashed #0087f7;
+  box-shadow: none !important;
 }
 .ui.form .dropzone .dz-error-message {
   top: 140px;
@@ -2688,7 +2682,7 @@ footer .ui.language .menu {
   pointer-events: none;
 }
 #avatar-arrow:before {
-  border-right-color: #D4D4D5;
+  border-right-color: #d4d4d5;
   border-width: 9px;
   margin-top: -9px;
 }
@@ -2699,7 +2693,7 @@ footer .ui.language .menu {
 }
 #transfer-repo-modal .ui.message,
 #delete-repo-modal .ui.message {
-  width: 100%!important;
+  width: 100% !important;
 }
 .tab-size-1 {
   tab-size: 1 !important;

@@ -23,35 +23,28 @@
 				<td colspan="3"><i class="octicon octicon-mail-reply"></i><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
 			</tr>
 		{{end}}
-		{{range $item := .Files}}
-			{{$entry := index $item 0}}
-			{{$commit := index $item 1}}
+		{{range .Files}}
 			<tr>
-				{{if $entry.IsSubModule}}
+				{{if .Submodule}}
 					<td>
 						<span class="octicon octicon-file-submodule"></span>
-						{{$refURL := $commit.RefURL AppURL $.BranchLink}}
-						{{if $refURL}}
-							<a href="{{$refURL}}">{{$entry.Name}}</a> @ <a href="{{$refURL}}/commit/{{$commit.RefID}}">{{ShortSHA1 $commit.RefID}}</a>
-						{{else}}
-							{{$entry.Name}} @ {{ShortSHA1 $commit.RefID}}
-						{{end}}
+						<a href="{{InferSubmoduleURL .Submodule}}">{{.Entry.Name}} @ {{ShortSHA1 .Submodule.Commit}}</a>
 					</td>
 				{{else}}
 					<td class="name">
-						{{if $entry.IsLink}}
+						{{if .Entry.IsSymlink}}
 							<span class="octicon octicon-file-symlink-file"></span>
 						{{else}}
-							<span class="octicon octicon-file-{{if or $entry.IsDir}}directory{{else}}text{{end}}"></span>
+							<span class="octicon octicon-file-{{if or .Entry.IsTree}}directory{{else}}text{{end}}"></span>
 						{{end}}
-						<a href="{{EscapePound $.TreeLink}}/{{EscapePound $entry.Name}}">{{$entry.Name}}</a>
+						<a href="{{EscapePound $.TreeLink}}/{{EscapePound .Entry.Name}}">{{.Entry.Name}}</a>
 					</td>
 				{{end}}
 				<td class="message collapsing has-emoji">
-					<a rel="nofollow" class="ui sha label" href="{{$.RepoLink}}/commit/{{$commit.ID}}">{{ShortSHA1 $commit.ID.String}}</a>
-					{{RenderCommitMessage false $commit.Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}
+					<a rel="nofollow" class="ui sha label" href="{{$.RepoLink}}/commit/{{.Commit.ID}}">{{ShortSHA1 .Commit.ID.String}}</a>
+					{{RenderCommitMessage false .Commit.Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}
 				</td>
-				<td class="text grey right age">{{TimeSince $commit.Committer.When $.Lang}}</td>
+				<td class="text grey right age">{{TimeSince .Commit.Committer.When $.Lang}}</td>
 			</tr>
 		{{end}}
 	</tbody>

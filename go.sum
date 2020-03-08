@@ -41,6 +41,8 @@ github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/editorconfig/editorconfig-core-go/v2 v2.2.1 h1:jY5PCRQf4V0oqpim/Ympl6MwHcb9+nBHEnHOPXqNZ/A=
 github.com/editorconfig/editorconfig-core-go/v2 v2.2.1/go.mod h1:6XDmqAZsQu8ikS+onLRJfLZvTP3RWTVT8ROX6qcdkio=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.0 h1:QD1YB/rbntMEQIKM42kQOaqGdS13UvGsl9c8m/nFNWY=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.0/go.mod h1:RNdPfKd9PliYEUZ3r+GxbDsSHNnEluC1wdkQJc3jD4k=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
@@ -82,6 +84,10 @@ github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14 h1:yXtpJr/LV6PFu4nTLgfjQ
 github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14/go.mod h1:jPoNZLWDAqA5N3G5amEoiNbhVrmM+ZQEcnQvNQ2KaZk=
 github.com/gogs/git-module v0.8.3 h1:9f8oxSs9OACWrGBYMVnnQNzyTcVN+zzcBM7CXnbmezw=
 github.com/gogs/git-module v0.8.3/go.mod h1:aj4tcm7DxaszJWpZLZIRL6gfPXyguAHiE1PDfAAPrCw=
+github.com/gogs/git-module v1.0.0-beta.4 h1:5CyCvTfrb2n5LRpHcNIaFnywHDkM/NxSZVP6t4tpTXI=
+github.com/gogs/git-module v1.0.0-beta.4/go.mod h1:oN37FFStFjdnTJXsSbhIHKJXh2YeDsEcXPATVz/oeuQ=
+github.com/gogs/git-module v1.0.0 h1:iOlCZ5kPc3RjnWRxdziL5hjCaosYyZw/Lf2odzR/kjw=
+github.com/gogs/git-module v1.0.0/go.mod h1:oN37FFStFjdnTJXsSbhIHKJXh2YeDsEcXPATVz/oeuQ=
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4 h1:C7NryI/RQhsIWwC2bHN601P1wJKeuQ6U/UCOYTn3Cic=
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4/go.mod h1:fR6z1Ie6rtF7kl/vBYMfgD5/G5B1blui7z426/sj2DU=
 github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0 h1:K02vod+sn3M1OOkdqi2tPxN2+xESK4qyITVQ3JkGEv4=
@@ -305,6 +311,7 @@ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
@@ -363,8 +370,11 @@ gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df h1:n7WqCuqOuCbNr617RXOY0AW
 gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df/go.mod h1:LRQQ+SO6ZHR7tOkpBDuZnXENFzX8qRjMDMyPD6BRkCw=
 gopkg.in/ini.v1 v1.42.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/ini.v1 v1.46.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
+gopkg.in/ini.v1 v1.51.1/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/ini.v1 v1.52.0 h1:j+Lt/M1oPPejkniCg1TkWE2J3Eh1oZTsHSXzMTzUXn4=
 gopkg.in/ini.v1 v1.52.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
+gopkg.in/ini.v1 v1.53.0 h1:c7ruDvTQi0MUTFuNpDRXLSjs7xT4TerM1icIg4uKWRg=
+gopkg.in/ini.v1 v1.53.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/ldap.v2 v2.5.1 h1:wiu0okdNfjlBzg6UWvd1Hn8Y+Ux17/u/4nlk4CQr6tU=
 gopkg.in/ldap.v2 v2.5.1/go.mod h1:oI0cpe/D7HRtBQl8aTg+ZmzFUAvu4lsv3eLXMLGFxWk=
 gopkg.in/macaron.v1 v1.3.4 h1:HvIscOwxhFhx3swWM/979wh2QMYyuXrNmrF9l+j3HZs=
@@ -375,6 +385,8 @@ gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWD
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 gopkg.in/yaml.v2 v2.2.2 h1:ZCJp+EgiOT7lHqUV2J862kp8Qj64Jo6az82+3Td9dZw=
 gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
+gopkg.in/yaml.v2 v2.2.7 h1:VUgggvou5XRW9mHwD/yXxIYSMtY0zoKQf/v226p2nyo=
+gopkg.in/yaml.v2 v2.2.7/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
 honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190106161140-3f1c8253044a/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=

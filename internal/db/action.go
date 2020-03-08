@@ -268,9 +268,9 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pay
 			return nil, fmt.Errorf("GetUserByEmail: %v", err)
 		}
 
-		fileStatus, err := git.GetCommitFileStatus(repoPath, commit.Sha1)
+		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
 		if err != nil {
-			return nil, fmt.Errorf("FileStatus [commit_sha1: %s]: %v", commit.Sha1, err)
+			return nil, fmt.Errorf("show name status [commit_sha1: %s]: %v", commit.Sha1, err)
 		}
 
 		commits[i] = &api.PayloadCommit{
@@ -287,9 +287,9 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pay
 				Email:    commit.CommitterEmail,
 				UserName: committerUsername,
 			},
-			Added:     fileStatus.Added,
-			Removed:   fileStatus.Removed,
-			Modified:  fileStatus.Modified,
+			Added:     nameStatus.Added,
+			Removed:   nameStatus.Removed,
+			Modified:  nameStatus.Modified,
 			Timestamp: commit.Timestamp,
 		}
 	}
@@ -298,21 +298,21 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pay
 
 // AvatarLink tries to match user in database with e-mail
 // in order to show custom avatar, and falls back to general avatar link.
-func (push *PushCommits) AvatarLink(email string) string {
-	_, ok := push.avatars[email]
+func (pcs *PushCommits) AvatarLink(email string) string {
+	_, ok := pcs.avatars[email]
 	if !ok {
 		u, err := GetUserByEmail(email)
 		if err != nil {
-			push.avatars[email] = tool.AvatarLink(email)
+			pcs.avatars[email] = tool.AvatarLink(email)
 			if !errors.IsUserNotExist(err) {
 				log.Error("GetUserByEmail: %v", err)
 			}
 		} else {
-			push.avatars[email] = u.RelAvatarLink()
+			pcs.avatars[email] = u.RelAvatarLink()
 		}
 	}
 
-	return push.avatars[email]
+	return pcs.avatars[email]
 }
 
 // UpdateIssuesCommit checks if issues are manipulated by commit message.
@@ -474,12 +474,12 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		return fmt.Errorf("UpdateRepository: %v", err)
 	}
 
-	isNewRef := opts.OldCommitID == git.EMPTY_SHA
-	isDelRef := opts.NewCommitID == git.EMPTY_SHA
+	isNewRef := opts.OldCommitID == git.EmptyID
+	isDelRef := opts.NewCommitID == git.EmptyID
 
 	opType := ACTION_COMMIT_REPO
 	// Check if it's tag push or branch.
-	if strings.HasPrefix(opts.RefFullName, git.TAG_PREFIX) {
+	if strings.HasPrefix(opts.RefFullName, git.RefsTags) {
 		opType = ACTION_PUSH_TAG
 	} else {
 		// if not the first commit, set the compare URL.
@@ -504,7 +504,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		return fmt.Errorf("Marshal: %v", err)
 	}
 
-	refName := git.RefEndName(opts.RefFullName)
+	refName := git.RefShortName(opts.RefFullName)
 	action := &Action{
 		ActUserID:    pusher.ID,
 		ActUserName:  pusher.Name,

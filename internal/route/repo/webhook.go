@@ -14,11 +14,11 @@ import (
 	git "github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (
@@ -517,23 +517,37 @@ func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
 }
 
 func TestWebhook(c *context.Context) {
-	var authorUsername, committerUsername string
+
+	var (
+		commitID          string
+		commitMessage     string
+		author            *git.Signature
+		committer         *git.Signature
+		authorUsername    string
+		committerUsername string
+		nameStatus        *git.NameStatus
+	)
 
 	// Grab latest commit or fake one if it's empty repository.
-	commit := c.Repo.Commit
-	if commit == nil {
+
+	if c.Repo.Commit == nil {
+		commitID = git.EmptyID
+		commitMessage = "This is a fake commit"
 		ghost := db.NewGhostUser()
-		commit = &git.Commit{
-			ID:            git.MustIDFromString(git.EMPTY_SHA),
-			Author:        ghost.NewGitSig(),
-			Committer:     ghost.NewGitSig(),
-			CommitMessage: "This is a fake commit",
-		}
+		author = ghost.NewGitSig()
+		committer = ghost.NewGitSig()
 		authorUsername = ghost.Name
 		committerUsername = ghost.Name
+		nameStatus = &git.NameStatus{}
+
 	} else {
+		commitID = c.Repo.Commit.ID.String()
+		commitMessage = c.Repo.Commit.Message
+		author = c.Repo.Commit.Author
+		committer = c.Repo.Commit.Committer
+
 		// Try to match email with a real user.
-		author, err := db.GetUserByEmail(commit.Author.Email)
+		author, err := db.GetUserByEmail(c.Repo.Commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
 		} else if !errors.IsUserNotExist(err) {
@@ -541,44 +555,44 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		committer, err := db.GetUserByEmail(commit.Committer.Email)
+		user, err := db.GetUserByEmail(c.Repo.Commit.Committer.Email)
 		if err == nil {
-			committerUsername = committer.Name
+			committerUsername = user.Name
 		} else if !errors.IsUserNotExist(err) {
 			c.Handle(500, "GetUserByEmail.(committer)", err)
 			return
 		}
-	}
 
-	fileStatus, err := commit.FileStatus()
-	if err != nil {
-		c.Handle(500, "FileStatus", err)
-		return
+		nameStatus, err = c.Repo.Commit.ShowNameStatus()
+		if err != nil {
+			c.Handle(500, "FileStatus", err)
+			return
+		}
 	}
 
 	apiUser := c.User.APIFormat()
 	p := &api.PushPayload{
-		Ref:    git.BRANCH_PREFIX + c.Repo.Repository.DefaultBranch,
-		Before: commit.ID.String(),
-		After:  commit.ID.String(),
+		Ref:    git.RefsHeads + c.Repo.Repository.DefaultBranch,
+		Before: commitID,
+		After:  commitID,
 		Commits: []*api.PayloadCommit{
 			{
-				ID:      commit.ID.String(),
-				Message: commit.Message(),
-				URL:     c.Repo.Repository.HTMLURL() + "/commit/" + commit.ID.String(),
+				ID:      commitID,
+				Message: commitMessage,
+				URL:     c.Repo.Repository.HTMLURL() + "/commit/" + commitID,
 				Author: &api.PayloadUser{
-					Name:     commit.Author.Name,
-					Email:    commit.Author.Email,
+					Name:     author.Name,
+					Email:    author.Email,
 					UserName: authorUsername,
 				},
 				Committer: &api.PayloadUser{
-					Name:     commit.Committer.Name,
-					Email:    commit.Committer.Email,
+					Name:     committer.Name,
+					Email:    committer.Email,
 					UserName: committerUsername,
 				},
-				Added:    fileStatus.Added,
-				Removed:  fileStatus.Removed,
-				Modified: fileStatus.Modified,
+				Added:    nameStatus.Added,
+				Removed:  nameStatus.Removed,
+				Modified: nameStatus.Modified,
 			},
 		},
 		Repo:   c.Repo.Repository.APIFormat(nil),

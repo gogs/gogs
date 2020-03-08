@@ -60,7 +60,7 @@
 
 	<!-- Stylesheet -->
 	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.4.2.min.css">
-	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.css?v={{MD5 AppVer}}">
+	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.css?v={{BuildCommit}}">
 	<noscript>
 		<style>
 			.dropdown:hover > .menu { display: block; }
@@ -70,7 +70,7 @@
 
 	<!-- JavaScript -->
 	<script src="{{AppSubURL}}/js/semantic-2.4.2.min.js"></script>
-	<script src="{{AppSubURL}}/js/gogs.js?v={{MD5 AppVer}}"></script>
+	<script src="{{AppSubURL}}/js/gogs.js?v={{BuildCommit}}"></script>
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 

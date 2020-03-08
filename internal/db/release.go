@@ -119,10 +119,10 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
 	if !r.IsDraft {
-		if !gitRepo.IsTagExist(r.TagName) {
-			commit, err := gitRepo.GetBranchCommit(r.Target)
+		if !gitRepo.HasTag(r.TagName) {
+			commit, err := gitRepo.BranchCommit(r.Target)
 			if err != nil {
-				return fmt.Errorf("GetBranchCommit: %v", err)
+				return fmt.Errorf("get branch commit: %v", err)
 			}
 
 			// Trim '--' prefix to prevent command line argument vulnerability.
@@ -134,15 +134,15 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 				return err
 			}
 		} else {
-			commit, err := gitRepo.GetTagCommit(r.TagName)
+			commit, err := gitRepo.TagCommit(r.TagName)
 			if err != nil {
-				return fmt.Errorf("GetTagCommit: %v", err)
+				return fmt.Errorf("get tag commit: %v", err)
 			}
 
 			r.Sha1 = commit.ID.String()
 			r.NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("CommitsCount: %v", err)
+				return fmt.Errorf("count commits: %v", err)
 			}
 		}
 	}

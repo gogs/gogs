@@ -119,9 +119,6 @@ func NewRepoContext() {
 	if version.Compare("1.8.3", conf.Git.Version, ">") {
 		log.Fatal("Gogs requires Git version greater or equal to 1.8.3")
 	}
-	git.HookDir = "custom_hooks"
-	git.HookSampleDir = "hooks"
-	git.DefaultCommitsPageSize = conf.UI.User.CommitsPagingNum
 
 	// Git requires setting user.name and user.email in order to commit changes.
 	for configKey, defaultValue := range map[string]string{"user.name": "Gogs", "user.email": "gogs@fake.local"} {
@@ -420,9 +417,9 @@ func (repo *Repository) mustOwner(e Engine) *User {
 }
 
 func (repo *Repository) UpdateSize() error {
-	countObject, err := git.GetRepoSize(repo.RepoPath())
+	countObject, err := git.RepoCountObjects(repo.RepoPath())
 	if err != nil {
-		return fmt.Errorf("GetRepoSize: %v", err)
+		return fmt.Errorf("count repository objects: %v", err)
 	}
 
 	repo.Size = countObject.Size + countObject.SizePack
@@ -602,33 +599,41 @@ func (repo *Repository) LocalCopyPath() string {
 // assume subsequent operations are against target branch when caller has confidence
 // about no race condition.
 func UpdateLocalCopyBranch(repoPath, localPath, branch string, isWiki bool) (err error) {
-	if !com.IsExist(localPath) {
+	if !osutil.IsExist(localPath) {
 		// Checkout to a specific branch fails when wiki is an empty repository.
 		if isWiki {
 			branch = ""
 		}
-		if err = git.Clone(repoPath, localPath, git.CloneRepoOptions{
-			Timeout: time.Duration(conf.Git.Timeout.Clone) * time.Second,
+		if err = git.Clone(repoPath, localPath, git.CloneOptions{
 			Branch:  branch,
+			Timeout: time.Duration(conf.Git.Timeout.Clone) * time.Second,
 		}); err != nil {
-			return fmt.Errorf("git clone %s: %v", branch, err)
+			return fmt.Errorf("git clone [branch: %s]: %v", branch, err)
 		}
-	} else {
-		if err = git.Fetch(localPath, git.FetchRemoteOptions{
-			Prune: true,
-		}); err != nil {
-			return fmt.Errorf("git fetch: %v", err)
-		}
-		if err = git.Checkout(localPath, git.CheckoutOptions{
-			Branch: branch,
-		}); err != nil {
-			return fmt.Errorf("git checkout %s: %v", branch, err)
-		}
+		return nil
+	}
 
-		// Reset to align with remote in case of force push.
-		if err = git.ResetHEAD(localPath, true, "origin/"+branch); err != nil {
-			return fmt.Errorf("git reset --hard origin/%s: %v", branch, err)
-		}
+	gitRepo, err := git.Open(localPath)
+	if err != nil {
+		return fmt.Errorf("open repository: %v", err)
+	}
+
+	if err = gitRepo.Fetch(git.FetchOptions{
+		Prune: true,
+	}); err != nil {
+		return fmt.Errorf("fetch: %v", err)
+	}
+
+	if err = gitRepo.Checkout(branch); err != nil {
+		return fmt.Errorf("checkout [branch: %s]: %v", branch, err)
+	}
+
+	// Reset to align with remote in case of force push.
+	rev := "origin/" + branch
+	if err = gitRepo.Reset(rev, git.ResetOptions{
+		Hard: true,
+	}); err != nil {
+		return fmt.Errorf("reset [revision: %s]: %v", rev, err)
 	}
 	return nil
 }
@@ -729,9 +734,7 @@ func wikiRemoteURL(remote string) string {
 	remote = strings.TrimSuffix(remote, ".git")
 	for _, suffix := range commonWikiURLSuffixes {
 		wikiURL := remote + suffix
-		if git.IsRepoURLAccessible(git.NetworkOptions{
-			URL: wikiURL,
-		}) {
+		if git.IsURLAccessible(time.Minute, wikiURL) {
 			return wikiURL
 		}
 	}
@@ -766,23 +769,23 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
 
 	RemoveAllWithNotice("Repository path erase before creation", repoPath)
-	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneRepoOptions{
+	if err = git.Clone(opts.RemoteAddr, repoPath, git.CloneOptions{
 		Mirror:  true,
 		Quiet:   true,
 		Timeout: migrateTimeout,
 	}); err != nil {
-		return repo, fmt.Errorf("Clone: %v", err)
+		return repo, fmt.Errorf("clone: %v", err)
 	}
 
 	wikiRemotePath := wikiRemoteURL(opts.RemoteAddr)
 	if len(wikiRemotePath) > 0 {
 		RemoveAllWithNotice("Repository wiki path erase before creation", wikiPath)
-		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneRepoOptions{
+		if err = git.Clone(wikiRemotePath, wikiPath, git.CloneOptions{
 			Mirror:  true,
 			Quiet:   true,
 			Timeout: migrateTimeout,
 		}); err != nil {
-			log.Trace("Failed to clone wiki: %v", err)
+			log.Error("Failed to clone wiki: %v", err)
 			RemoveAllWithNotice("Delete repository wiki for initialization failure", wikiPath)
 		}
 	}
@@ -799,17 +802,15 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 
 	if !repo.IsBare {
 		// Try to get HEAD branch and set it as default branch.
-		gitRepo, err := git.OpenRepository(repoPath)
+		gitRepo, err := git.Open(repoPath)
 		if err != nil {
-			return repo, fmt.Errorf("OpenRepository: %v", err)
+			return repo, fmt.Errorf("open repository: %v", err)
 		}
-		headBranch, err := gitRepo.GetHEADBranch()
+		refspec, err := gitRepo.SymbolicRef()
 		if err != nil {
-			return repo, fmt.Errorf("GetHEADBranch: %v", err)
+			return repo, fmt.Errorf("get HEAD branch: %v", err)
 		}
-		if headBranch != nil {
-			repo.DefaultBranch = headBranch.Name
-		}
+		repo.DefaultBranch = git.RefShortName(refspec)
 
 		if err = repo.UpdateSize(); err != nil {
 			log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
@@ -847,15 +848,15 @@ func cleanUpMigrateGitConfig(configPath string) error {
 	return nil
 }
 
-var hooksTpls = map[string]string{
+var hooksTpls = map[git.HookName]string{
 	"pre-receive":  "#!/usr/bin/env %s\n\"%s\" hook --config='%s' pre-receive\n",
 	"update":       "#!/usr/bin/env %s\n\"%s\" hook --config='%s' update $1 $2 $3\n",
 	"post-receive": "#!/usr/bin/env %s\n\"%s\" hook --config='%s' post-receive\n",
 }
 
 func createDelegateHooks(repoPath string) (err error) {
-	for _, name := range git.HookNames {
-		hookPath := filepath.Join(repoPath, "hooks", name)
+	for _, name := range git.ServerSideHooks {
+		hookPath := filepath.Join(repoPath, "hooks", string(name))
 		if err = ioutil.WriteFile(hookPath,
 			[]byte(fmt.Sprintf(hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf)),
 			os.ModePerm); err != nil {
@@ -1005,8 +1006,8 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 	}
 
 	// Init bare new repository.
-	if err = git.InitRepository(repoPath, true); err != nil {
-		return fmt.Errorf("InitRepository: %v", err)
+	if err = git.Init(repoPath, git.InitOptions{Bare: true}); err != nil {
+		return fmt.Errorf("init repository: %v", err)
 	} else if err = createDelegateHooks(repoPath); err != nil {
 		return fmt.Errorf("createDelegateHooks: %v", err)
 	}
@@ -1880,9 +1881,9 @@ func ReinitMissingRepositories() error {
 
 	for _, repo := range repos {
 		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
-		if err := git.InitRepository(repo.RepoPath(), true); err != nil {
-			if err2 := CreateRepositoryNotice(fmt.Sprintf("InitRepository [%d]: %v", repo.ID, err)); err2 != nil {
-				return fmt.Errorf("CreateRepositoryNotice: %v", err)
+		if err := git.Init(repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
+			if err2 := CreateRepositoryNotice(fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
+				return fmt.Errorf("create repository notice: %v", err)
 			}
 		}
 	}
@@ -1930,7 +1931,11 @@ func GitFsck() {
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			if err := git.Fsck(repoPath, conf.Cron.RepoHealthCheck.Timeout, conf.Cron.RepoHealthCheck.Args...); err != nil {
+			err := git.RepoFsck(repoPath, git.FsckOptions{
+				Args:    conf.Cron.RepoHealthCheck.Args,
+				Timeout: conf.Cron.RepoHealthCheck.Timeout,
+			})
+			if err != nil {
 				desc := fmt.Sprintf("Failed to perform health check on repository '%s': %v", repoPath, err)
 				log.Warn(desc)
 				if err = CreateRepositoryNotice(desc); err != nil {
@@ -2441,24 +2446,24 @@ func (repo *Repository) GetForks() ([]*Repository, error) {
 //         \/             \/     \/     \/     \/
 //
 
-func (repo *Repository) CreateNewBranch(doer *User, oldBranchName, branchName string) (err error) {
+func (repo *Repository) CreateNewBranch(oldBranch, newBranch string) (err error) {
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
 	localPath := repo.LocalCopyPath()
 
-	if err = discardLocalRepoBranchChanges(localPath, oldBranchName); err != nil {
-		return fmt.Errorf("discardLocalRepoChanges: %v", err)
-	} else if err = repo.UpdateLocalCopyBranch(oldBranchName); err != nil {
-		return fmt.Errorf("UpdateLocalCopyBranch: %v", err)
+	if err = discardLocalRepoBranchChanges(localPath, oldBranch); err != nil {
+		return fmt.Errorf("discard changes in local copy [path: %s, branch: %s]: %v", localPath, oldBranch, err)
+	} else if err = repo.UpdateLocalCopyBranch(oldBranch); err != nil {
+		return fmt.Errorf("update branch for local copy [path: %s, branch: %s]: %v", localPath, oldBranch, err)
 	}
 
-	if err = repo.CheckoutNewBranch(oldBranchName, branchName); err != nil {
-		return fmt.Errorf("CreateNewBranch: %v", err)
+	if err = repo.CheckoutNewBranch(oldBranch, newBranch); err != nil {
+		return fmt.Errorf("create new branch [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 
-	if err = git.Push(localPath, "origin", branchName); err != nil {
-		return fmt.Errorf("Push: %v", err)
+	if err = git.RepoPush(localPath, "origin", newBranch); err != nil {
+		return fmt.Errorf("push [branch: %s]: %v", newBranch, err)
 	}
 
 	return nil
