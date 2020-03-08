@@ -8,9 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	log "unknwon.dev/clog/v2"
-
 	"github.com/gogs/git-module"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -30,13 +29,13 @@ func calReleaseNumCommitsBehind(repoCtx *context.Repository, release *db.Release
 	// Get count if not exists
 	if _, ok := countCache[release.Target]; !ok {
 		if repoCtx.GitRepo.HasBranch(release.Target) {
-			commit, err := repoCtx.GitRepo.CatFileCommit(git.RefsHeads + release.Target)
+			commit, err := repoCtx.GitRepo.BranchCommit(release.Target)
 			if err != nil {
-				return fmt.Errorf("GetBranchCommit: %v", err)
+				return fmt.Errorf("get branch commit: %v", err)
 			}
 			countCache[release.Target], err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("CommitsCount: %v", err)
+				return fmt.Errorf("count commits: %v", err)
 			}
 		} else {
 			// Use NumCommits of the newest release on that target
@@ -54,7 +53,7 @@ func Releases(c *context.Context) {
 
 	tagsResult, err := gitutil.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
 	if err != nil {
-		c.Handle(500, fmt.Sprintf("GetTags '%s'", c.Repo.Repository.RepoPath()), err)
+		c.ServerError("get tags", err)
 		return
 	}
 
@@ -92,9 +91,9 @@ func Releases(c *context.Context) {
 
 		// No published release matches this tag
 		if results[i] == nil {
-			commit, err := c.Repo.GitRepo.CatFileCommit(git.RefsTags + rawTag)
+			commit, err := c.Repo.GitRepo.TagCommit(rawTag)
 			if err != nil {
-				c.Handle(500, "GetTagCommit", err)
+				c.Handle(500, "get tag commit", err)
 				return
 			}
 
@@ -106,7 +105,7 @@ func Releases(c *context.Context) {
 
 			results[i].NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				c.Handle(500, "CommitsCount", err)
+				c.ServerError("count commits", err)
 				return
 			}
 			results[i].NumCommitsBehind = c.Repo.CommitsCount - results[i].NumCommits
@@ -193,15 +192,15 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		}
 	}
 
-	commit, err := c.Repo.GitRepo.CatFileCommit(git.RefsHeads + f.Target)
+	commit, err := c.Repo.GitRepo.BranchCommit(f.Target)
 	if err != nil {
-		c.Handle(500, "GetBranchCommit", err)
+		c.ServerError("get branch commit", err)
 		return
 	}
 
 	commitsCount, err := commit.CommitsCount()
 	if err != nil {
-		c.Handle(500, "CommitsCount", err)
+		c.ServerError("count commits", err)
 		return
 	}
 
