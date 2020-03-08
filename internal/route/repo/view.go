@@ -12,15 +12,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogs/git-module"
 	"github.com/pkg/errors"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
@@ -37,7 +37,7 @@ const (
 func renderDirectory(c *context.Context, treeLink string) {
 	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("Repo.Commit.SubTree", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("Repo.Commit.SubTree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
@@ -270,7 +270,7 @@ func Home(c *context.Context) {
 	// Get current entry user currently looking at.
 	entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 

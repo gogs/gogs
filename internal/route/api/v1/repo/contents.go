@@ -8,8 +8,6 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/gogs/git-module"
-
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/gitutil"
 )
@@ -126,13 +124,13 @@ func GetContents(c *context.APIContext) {
 	// treeEntry is a directory
 	dirTree, err := c.Repo.GitRepo.LsTree(treeEntry.ID().String())
 	if err != nil {
-		c.NotFoundOrServerError("GetTree", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("GetTree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
 	entries, err := dirTree.Entries()
 	if err != nil {
-		c.NotFoundOrServerError("ListEntries", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("ListEntries", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 

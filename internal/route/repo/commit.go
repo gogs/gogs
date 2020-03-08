@@ -119,7 +119,7 @@ func Diff(c *context.Context) {
 	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
 	if err != nil {
 		// TODO: Move checker to gitutil package
-		c.NotFoundOrServerError("get commit by ID", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("get commit by ID", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
@@ -127,7 +127,7 @@ func Diff(c *context.Context) {
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 	)
 	if err != nil {
-		c.NotFoundOrServerError("get repository diff", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("get repository diff", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
@@ -171,7 +171,7 @@ func RawDiff(c *context.Context) {
 		git.RawDiffFormat(c.Params(":ext")),
 		c.Resp,
 	); err != nil {
-		c.NotFoundOrServerError("GetRawDiff", func(err error) bool { return err == git.ErrRevisionNotExist }, err)
+		c.NotFoundOrServerError("GetRawDiff", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 }

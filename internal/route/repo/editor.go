@@ -10,7 +10,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/gogs/git-module"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
