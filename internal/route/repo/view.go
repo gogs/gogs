@@ -37,13 +37,13 @@ const (
 func renderDirectory(c *context.Context, treeLink string) {
 	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("Repo.Commit.SubTree", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("get subtree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
 	entries, err := tree.Entries()
 	if err != nil {
-		c.ServerError("ListEntries", err)
+		c.ServerError("list entries", err)
 		return
 	}
 	entries.Sort()
@@ -54,7 +54,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		Timeout:        5 * time.Minute,
 	})
 	if err != nil {
-		c.ServerError("GetCommitsInfoWithCustomConcurrency", err)
+		c.ServerError("get commits info", err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 			continue
 		}
 
-		// TODO: collect all possible README files and show with priority.
+		// TODO(unknwon): collect all possible README files and show with priority.
 		readmeFile = entry.Blob()
 		break
 	}
@@ -107,7 +107,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	if len(c.Repo.TreePath) > 0 {
 		latestCommit, err = c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 		if err != nil {
-			c.ServerError("GetCommitByPath", err)
+			c.ServerError("get commit by path", err)
 			return
 		}
 	}
@@ -221,7 +221,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig()
-	if err != nil && errors.Cause(err) != git.ErrRevisionNotExist {
+	if err != nil && gitutil.IsErrRevisionNotExist(errors.Cause(err)) {
 		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
@@ -270,7 +270,7 @@ func Home(c *context.Context) {
 	// Get current entry user currently looking at.
 	entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("Repo.Commit.GetTreeEntryByPath", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
 
