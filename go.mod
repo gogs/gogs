@@ -1,6 +1,6 @@
 module gogs.io/gogs
 
-go 1.12
+go 1.13
 
 require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
