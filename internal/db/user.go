@@ -6,7 +6,6 @@ package db
 
 import (
 	"bytes"
-	"container/list"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
@@ -977,28 +976,22 @@ func ValidateCommitWithEmail(c *git.Commit) *User {
 }
 
 // ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
-func ValidateCommitsWithEmails(oldCommits *list.List) *list.List {
-	var (
-		u          *User
-		emails     = map[string]*User{}
-		newCommits = list.New()
-		e          = oldCommits.Front()
-	)
-	for e != nil {
-		c := e.Value.(*git.Commit)
-
-		if v, ok := emails[c.Author.Email]; !ok {
-			u, _ = GetUserByEmail(c.Author.Email)
-			emails[c.Author.Email] = u
+func ValidateCommitsWithEmails(oldCommits []*git.Commit) []*UserCommit {
+	emails := make(map[string]*User)
+	newCommits := make([]*UserCommit, len(oldCommits))
+	for i := range oldCommits {
+		var u *User
+		if v, ok := emails[oldCommits[i].Author.Email]; !ok {
+			u, _ = GetUserByEmail(oldCommits[i].Author.Email)
+			emails[oldCommits[i].Author.Email] = u
 		} else {
 			u = v
 		}
 
-		newCommits.PushBack(UserCommit{
+		newCommits[i] = &UserCommit{
 			User:   u,
-			Commit: c,
-		})
-		e = e.Next()
+			Commit: oldCommits[i],
+		}
 	}
 	return newCommits
 }

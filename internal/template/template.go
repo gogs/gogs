@@ -5,7 +5,6 @@
 package template
 
 import (
-	"container/list"
 	"fmt"
 	"html/template"
 	"mime"
@@ -21,8 +20,11 @@ import (
 	"golang.org/x/text/transform"
 	log "unknwon.dev/clog/v2"
 
+	"github.com/gogs/git-module"
+
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
 )
@@ -36,6 +38,9 @@ var (
 func FuncMap() []template.FuncMap {
 	funcMapOnce.Do(func() {
 		funcMap = []template.FuncMap{map[string]interface{}{
+			"BuildCommit": func() string {
+				return conf.BuildCommit
+			},
 			"Year": func() int {
 				return time.Now().Year()
 			},
@@ -86,7 +91,6 @@ func FuncMap() []template.FuncMap {
 			"DateFmtShort": func(t time.Time) string {
 				return t.Format("Jan 02, 2006")
 			},
-			"List": List,
 			"SubStr": func(str string, start, length int) string {
 				if len(str) == 0 {
 					return ""
@@ -102,11 +106,10 @@ func FuncMap() []template.FuncMap {
 			},
 			"Join":                  strings.Join,
 			"EllipsisString":        tool.EllipsisString,
-			"DiffTypeToStr":         DiffTypeToStr,
+			"DiffFileTypeToStr":     DiffFileTypeToStr,
 			"DiffLineTypeToStr":     DiffLineTypeToStr,
 			"Sha1":                  Sha1,
 			"ShortSHA1":             tool.ShortSHA1,
-			"MD5":                   tool.MD5,
 			"ActionContent2Commits": ActionContent2Commits,
 			"EscapePound":           EscapePound,
 			"RenderCommitMessage":   RenderCommitMessage,
@@ -126,6 +129,7 @@ func FuncMap() []template.FuncMap {
 				}
 				return "tab-size-8"
 			},
+			"InferSubmoduleURL": gitutil.InferSubmoduleURL,
 		}}
 	})
 	return funcMap
@@ -142,19 +146,6 @@ func Str2HTML(raw string) template.HTML {
 // NewLine2br simply replaces "\n" to "<br>".
 func NewLine2br(raw string) string {
 	return strings.Replace(raw, "\n", "<br>", -1)
-}
-
-func List(l *list.List) chan interface{} {
-	e := l.Front()
-	c := make(chan interface{})
-	go func() {
-		for e != nil {
-			c <- e.Value
-			e = e.Next()
-		}
-		close(c)
-	}()
-	return c
 }
 
 func Sha1(str string) string {
@@ -269,20 +260,22 @@ func EscapePound(str string) string {
 	return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(str)
 }
 
-func DiffTypeToStr(diffType int) string {
-	diffTypes := map[int]string{
-		1: "add", 2: "modify", 3: "del", 4: "rename",
-	}
-	return diffTypes[diffType]
+func DiffFileTypeToStr(typ git.DiffFileType) string {
+	return map[git.DiffFileType]string{
+		git.DiffFileAdd:    "add",
+		git.DiffFileChange: "modify",
+		git.DiffFileDelete: "del",
+		git.DiffFileRename: "rename",
+	}[typ]
 }
 
-func DiffLineTypeToStr(diffType int) string {
-	switch diffType {
-	case 2:
+func DiffLineTypeToStr(typ git.DiffLineType) string {
+	switch typ {
+	case git.DiffLineAdd:
 		return "add"
-	case 3:
+	case git.DiffLineDelete:
 		return "del"
-	case 4:
+	case git.DiffLineSection:
 		return "tag"
 	}
 	return "same"

@@ -86,7 +86,7 @@ func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *Dingtalk
 }
 
 func getDingtalkCreatePayload(p *api.CreatePayload) (*DingtalkPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
 	actionCard := NewDingtalkActionCard("View "+refType, p.Repo.HTMLURL+"/src/"+refName)
@@ -99,7 +99,7 @@ func getDingtalkCreatePayload(p *api.CreatePayload) (*DingtalkPayload, error) {
 }
 
 func getDingtalkDeletePayload(p *api.DeletePayload) (*DingtalkPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
 	actionCard := NewDingtalkActionCard("View Repo", p.Repo.HTMLURL)
@@ -122,7 +122,7 @@ func getDingtalkForkPayload(p *api.ForkPayload) (*DingtalkPayload, error) {
 }
 
 func getDingtalkPushPayload(p *api.PushPayload) (*DingtalkPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 
 	pusher := p.Pusher.FullName
 	if pusher == "" {

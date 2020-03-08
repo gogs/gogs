@@ -4,7 +4,7 @@
 	<div class="diff-detail-box diff-box">
 		<div>
 			<i class="fa fa-retweet"></i>
-			{{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAddition .Diff.TotalDeletion | Str2HTML}}
+			{{.i18n.Tr "repo.diff.stats_desc" .Diff.NumFiles .Diff.TotalAdditions .Diff.TotalDeletions | Str2HTML}}
 			<div class="ui right">
 				<a class="ui tiny basic toggle button" href="?style={{if .IsSplitStyle}}unified{{else}}split{{end}}">{{ if .IsSplitStyle }}{{.i18n.Tr "repo.diff.show_unified_view"}}{{else}}{{.i18n.Tr "repo.diff.show_split_view"}}{{end}}</a>
 				<a class="ui tiny basic toggle button" data-target="#diff-files">{{.i18n.Tr "repo.diff.show_diff_stats"}}</a>
@@ -14,19 +14,19 @@
 			{{range .Diff.Files}}
 				<li>
 					<div class="diff-counter count pull-right">
-						{{if not .IsBin}}
-							<span class="add" data-line="{{.Addition}}">{{.Addition}}</span>
+						{{if not .IsBinary}}
+							<span class="add" data-line="{{.NumAdditions}}">{{.NumAdditions}}</span>
 							<span class="bar">
 								<span class="pull-left add"></span>
 								<span class="pull-left del"></span>
 							</span>
-							<span class="del" data-line="{{.Deletion}}">{{.Deletion}}</span>
+							<span class="del" data-line="{{.NumDeletions}}">{{.NumDeletions}}</span>
 						{{else}}
 							<span>{{$.i18n.Tr "repo.diff.bin"}}</span>
 						{{end}}
 					</div>
 					<!-- todo finish all file status, now modify, add, delete and rename -->
-					<span class="status {{DiffTypeToStr .GetType}} poping up" data-content="{{DiffTypeToStr .GetType}}" data-variation="inverted tiny" data-position="right center">&nbsp;</span>
+					<span class="status {{DiffFileTypeToStr .Type}} poping up" data-content="{{DiffFileTypeToStr .Type}}" data-variation="inverted tiny" data-position="right center">&nbsp;</span>
 					<a class="file" href="#diff-{{.Index}}">{{.Name}}</a>
 				</li>
 			{{end}}
@@ -40,12 +40,12 @@
 					{{$.i18n.Tr "repo.diff.file_suppressed"}}
 					<div class="diff-counter count ui left">
 						{{if not $file.IsRenamed}}
-							<span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+							<span class="add" data-line="{{.NumAdditions}}">+ {{.NumAdditions}}</span>
 							<span class="bar">
 								<span class="pull-left add"></span>
 								<span class="pull-left del"></span>
 							</span>
-							<span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+							<span class="del" data-line="{{.NumDeletions}}">- {{.NumDeletions}}</span>
 						{{end}}
 					</div>
 					<span class="file">{{$file.Name}}</span>
@@ -55,15 +55,15 @@
 			<div class="diff-file-box diff-box file-content {{TabSizeClass $.Editorconfig $file.Name}}" id="diff-{{.Index}}">
 				<h4 class="ui top attached normal header">
 					<div class="diff-counter count ui left">
-						{{if $file.IsBin}}
+						{{if $file.IsBinary}}
 							{{$.i18n.Tr "repo.diff.bin"}}
 						{{else if not $file.IsRenamed}}
-							<span class="add" data-line="{{.Addition}}">+ {{.Addition}}</span>
+							<span class="add" data-line="{{.NumAdditions}}">+ {{.NumAdditions}}</span>
 							<span class="bar">
 								<span class="pull-left add"></span>
 								<span class="pull-left del"></span>
 							</span>
-							<span class="del" data-line="{{.Deletion}}">- {{.Deletion}}</span>
+							<span class="del" data-line="{{.NumDeletions}}">- {{.NumDeletions}}</span>
 						{{end}}
 					</div>
 					<span class="file">{{if $file.IsRenamed}}{{$file.OldName}} &rarr; {{end}}{{$file.Name}}</span>
@@ -80,7 +80,7 @@
 				<div class="ui unstackable attached table segment">
 					{{if not $file.IsRenamed}}
 						{{$isImage := (call $.IsImageFile $file.Name)}}
-						{{if and $isImage}}
+						{{if $isImage}}
 							<div class="center">
 								<img src="{{$.RawPath}}/{{EscapePound .Name}}">
 							</div>
@@ -92,22 +92,22 @@
 											{{$highlightClass := $file.HighlightClass}}
 											{{range $j, $section := $file.Sections}}
 												{{range $k, $line := $section.Lines}}
-													<tr class="{{DiffLineTypeToStr .GetType}}-code nl-{{$k}} ol-{{$k}}">
-														{{if eq .GetType 4}}
+													<tr class="{{DiffLineTypeToStr .Type}}-code nl-{{$k}} ol-{{$k}}">
+														{{if eq .Type 4}}
 															<td class="lines-num"></td>
 															<td colspan="3"  class="lines-code">
 																<pre><code class="{{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{$section.ComputedInlineDiffFor $line}}</code></pre>
 															</td>
 														{{else}}
-															<td class="lines-num lines-num-old" {{if $line.LeftIdx}} id="diff-{{Sha1 $file.Index}}L{{$line.LeftIdx}}" data-line-number="{{$line.LeftIdx}}"{{end}}>
+															<td class="lines-num lines-num-old" {{if $line.LeftLine}} id="diff-{{Sha1 $file.Index}}L{{$line.LeftLine}}" data-line-number="{{$line.LeftLine}}"{{end}}>
 															</td>
 															<td class="lines-code halfwidth">
-																<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.LeftIdx}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
+																<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.LeftLine}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
 															</td>
-															<td class="lines-num lines-num-new" {{if $line.RightIdx}} id="diff-{{Sha1 $file.Index}}R{{$line.RightIdx}}" data-line-number="{{$line.RightIdx}}"{{end}}>
+															<td class="lines-num lines-num-new" {{if $line.RightLine}} id="diff-{{Sha1 $file.Index}}R{{$line.RightLine}}" data-line-number="{{$line.RightLine}}"{{end}}>
 															</td>
 															<td class="lines-code halfwidth">
-																<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.RightIdx}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
+																<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.RightLine}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
 															</td>
 														{{end}}
 													</tr>

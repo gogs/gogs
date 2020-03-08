@@ -43,7 +43,7 @@ func ToCommit(c *git.Commit) *api.PayloadCommit {
 	}
 	return &api.PayloadCommit{
 		ID:      c.ID.String(),
-		Message: c.Message(),
+		Message: c.Message,
 		URL:     "Not implemented",
 		Author: &api.PayloadUser{
 			Name:     c.Author.Name,

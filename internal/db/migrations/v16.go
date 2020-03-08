@@ -18,7 +18,7 @@ import (
 )
 
 func updateRepositorySizes(x *xorm.Engine) (err error) {
-	log.Info("This migration could take up to minutes, please be patient.")
+	log.Info("[migrations.v16] This migration could take up to minutes, please be patient.")
 	type Repository struct {
 		ID      int64
 		OwnerID int64
@@ -41,7 +41,7 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 			Find(&repos); err != nil {
 			return fmt.Errorf("select repos [offset: %d]: %v", offset, err)
 		}
-		log.Trace("Select [offset: %d, repos: %d]", offset, len(repos))
+		log.Trace("[migrations.v16] Select [offset: %d, repos: %d]", offset, len(repos))
 		if len(repos) == 0 {
 			break
 		}
@@ -60,10 +60,10 @@ func updateRepositorySizes(x *xorm.Engine) (err error) {
 				continue
 			}
 
-			repoPath := filepath.Join(conf.Repository.Root, strings.ToLower(user.Name), strings.ToLower(repo.Name)) + ".git"
-			countObject, err := git.GetRepoSize(repoPath)
+			repoPath := strings.ToLower(filepath.Join(conf.Repository.Root, user.Name, repo.Name)) + ".git"
+			countObject, err := git.RepoCountObjects(repoPath)
 			if err != nil {
-				log.Warn("GetRepoSize: %v", err)
+				log.Warn("[migrations.v16] Count repository objects: %v", err)
 				continue
 			}
 
