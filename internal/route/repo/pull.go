@@ -226,7 +226,7 @@ func PrepareViewPullInfo(c *context.Context, issue *db.Issue) *gitutil.PullReque
 	}
 
 	baseRepoPath := db.RepoPath(repo.Owner.Name, repo.Name)
-	prMeta, err := gitutil.GetPullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
+	prMeta, err := gitutil.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, pull.HeadBranch, pull.BaseBranch)
 	if err != nil {
 		if strings.Contains(err.Error(), "fatal: Not a valid object name") {
 			c.Data["IsPullReuqestBroken"] = true
@@ -529,7 +529,7 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 	c.Data["HeadBranches"] = headBranches
 
 	baseRepoPath := db.RepoPath(baseRepo.Owner.Name, baseRepo.Name)
-	prMeta, err := gitutil.GetPullRequestMeta(headGitRepo.Path(), baseRepoPath, headBranch, baseBranch)
+	prMeta, err := gitutil.Module.PullRequestMeta(headGitRepo.Path(), baseRepoPath, headBranch, baseBranch)
 	if err != nil {
 		if err == git.ErrNoMergeBase {
 			c.Data["IsNoMergeBase"] = true

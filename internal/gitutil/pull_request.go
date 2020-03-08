@@ -10,57 +10,60 @@ import (
 	"time"
 
 	"github.com/gogs/git-module"
+	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 )
 
+// PullRequestMeta contains metadata for a pull request.
 type PullRequestMeta struct {
+	// The merge base of the pull request.
 	MergeBase string
-	Commits   []*git.Commit
-	NumFiles  int
+	// The commits that are requested to be merged.
+	Commits []*git.Commit
+	// The number of files changed.
+	NumFiles int
 }
 
-func GetPullRequestMeta(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
-	var remoteBranch string
+func (moduler) PullRequestMeta(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
+	tmpRemoteBranch := baseBranch
 
-	// We don't need a temporary remote for same repository.
+	// We need to create a temporary remote when the pull request is sent from a forked repository.
 	if headPath != basePath {
-		// Add a temporary remote
 		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
-		err := git.RepoAddRemote(headPath, tmpRemote, basePath, git.AddRemoteOptions{Fetch: true})
+		err := Module.RepoAddRemote(headPath, tmpRemote, basePath, git.AddRemoteOptions{Fetch: true})
 		if err != nil {
-			return nil, fmt.Errorf("AddRemote: %v", err)
+			return nil, fmt.Errorf("add remote: %v", err)
 		}
 		defer func() {
-			err := git.RepoRemoveRemote(headPath, tmpRemote)
+			err := Module.RepoRemoveRemote(headPath, tmpRemote)
 			if err != nil {
 				log.Error("Failed to remove remote %q [path: %s]: %v", tmpRemote, headPath, err)
 				return
 			}
 		}()
 
-		remoteBranch = "remotes/" + tmpRemote + "/" + baseBranch
-	} else {
-		remoteBranch = baseBranch
+		tmpRemoteBranch = "remotes/" + tmpRemote + "/" + baseBranch
 	}
 
-	var err error
-	prMeta := new(PullRequestMeta)
-	prMeta.MergeBase, err = git.RepoMergeBase(headPath, remoteBranch, headBranch)
+	mergeBase, err := Module.RepoMergeBase(headPath, tmpRemoteBranch, headBranch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get merge base")
 	}
 
-	prMeta.Commits, err = git.RepoLog(headPath, prMeta.MergeBase+"..."+headBranch)
+	commits, err := Module.RepoLog(headPath, mergeBase+"..."+headBranch)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get commits")
 	}
 
-	// Count number of changed files.
-	names, err := git.RepoDiffNameOnly(headPath, remoteBranch, headBranch, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+	// Count number of changed files
+	names, err := Module.RepoDiffNameOnly(headPath, tmpRemoteBranch, headBranch, git.DiffNameOnlyOptions{NeedsMergeBase: true})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get changed files")
 	}
-	prMeta.NumFiles = len(names)
 
-	return prMeta, nil
+	return &PullRequestMeta{
+		MergeBase: mergeBase,
+		Commits:   commits,
+		NumFiles:  len(names),
+	}, nil
 }
