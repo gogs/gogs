@@ -394,10 +394,11 @@ func SyncMirrors() {
 					log.Error("Failed to list commits [repo_id: %d, old_commit_id: %s, new_commit_id: %s]: %v", m.RepoID, oldCommitID, newCommitID, err)
 					continue
 				}
-			} else {
+
+			} else if gitRepo.HasBranch(result.refName) {
 				refNewCommit, err := gitRepo.BranchCommit(result.refName)
 				if err != nil {
-					log.Error("Failed to get reference commit [repo_id: %d, ref_name: %s]: %v", m.RepoID, result.refName, err)
+					log.Error("Failed to get branch commit [repo_id: %d, branch: %s]: %v", m.RepoID, result.refName, err)
 					continue
 				}
 
@@ -413,6 +414,10 @@ func SyncMirrors() {
 
 				oldCommitID = git.EmptyID
 				newCommitID = refNewCommit.ID().String()
+
+			} else {
+				// TODO(unknwon): Support tag.
+				continue
 			}
 
 			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{
