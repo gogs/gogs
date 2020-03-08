@@ -568,7 +568,7 @@ func SettingsGitHooks(c *context.Context) {
 	c.Data["Title"] = c.Tr("repo.settings.githooks")
 	c.Data["PageIsSettingsGitHooks"] = true
 
-	hooks, err := c.Repo.GitRepo.Hooks("custom")
+	hooks, err := c.Repo.GitRepo.Hooks("custom_hooks")
 	if err != nil {
 		c.Handle(500, "Hooks", err)
 		return
@@ -584,7 +584,7 @@ func SettingsGitHooksEdit(c *context.Context) {
 	c.Data["RequireSimpleMDE"] = true
 
 	name := c.Params(":name")
-	hook, err := c.Repo.GitRepo.Hook("custom", git.HookName(name))
+	hook, err := c.Repo.GitRepo.Hook("custom_hooks", git.HookName(name))
 	if err != nil {
 		if err == os.ErrNotExist {
 			c.Handle(404, "GetHook", err)
@@ -599,7 +599,7 @@ func SettingsGitHooksEdit(c *context.Context) {
 
 func SettingsGitHooksEditPost(c *context.Context) {
 	name := c.Params(":name")
-	hook, err := c.Repo.GitRepo.Hook("custom", git.HookName(name))
+	hook, err := c.Repo.GitRepo.Hook("custom_hooks", git.HookName(name))
 	if err != nil {
 		if err == os.ErrNotExist {
 			c.Handle(404, "GetHook", err)

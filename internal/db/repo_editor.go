@@ -59,7 +59,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 		ENV_REPO_OWNER_SALT_MD5 + "=" + tool.MD5(opts.OwnerSalt),
 		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
 		ENV_REPO_NAME + "=" + opts.RepoName,
-		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + path.Join(opts.RepoPath, "custom_hooks"),
+		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),
 	}
 	return envs
 }

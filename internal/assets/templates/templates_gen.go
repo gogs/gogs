@@ -94,8 +94,8 @@
 // ../../../templates/repo/settings/branches.tmpl (2.175kB)
 // ../../../templates/repo/settings/collaboration.tmpl (2.85kB)
 // ../../../templates/repo/settings/deploy_keys.tmpl (3.661kB)
-// ../../../templates/repo/settings/githook_edit.tmpl (1.371kB)
-// ../../../templates/repo/settings/githooks.tmpl (974B)
+// ../../../templates/repo/settings/githook_edit.tmpl (1.329kB)
+// ../../../templates/repo/settings/githooks.tmpl (978B)
 // ../../../templates/repo/settings/navbar.tmpl (1.124kB)
 // ../../../templates/repo/settings/options.tmpl (18.43kB)
 // ../../../templates/repo/settings/protected_branch.tmpl (3.64kB)
@@ -2097,7 +2097,7 @@ func repoSettingsDeploy_keysTmpl() (*asset, error) {
 	return a, nil
 }
 
-var _repoSettingsGithook_editTmpl = "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x54\x4f\x6b\xdc\x3e\x10\x3d\xcb\x9f\x42\xe8\x17\xd8\x04\x82\xfd\x2b\xe4\x50\x52\xaf\x21\x04\x4a\x0a\x49\x0e\xcd\xde\x4a\x09\x5a\x6b\xbc\x16\x2b\x6b\x8c\x34\xde\x4d\x31\xfe\xee\x45\xfe\x97\x4d\x76\x69\xda\x93\x67\x46\x33\x6f\xde\x9b\x91\xd5\xb6\x04\x55\x6d\x24\x01\x17\x6b\xe9\x21\x29\x41\x2a\xc1\xe3\xae\x8b\x52\xa5\x77\x3c\x37\xd2\xfb\xa5\x70\x50\xa3\xd7\x84\xee\x17\xf7\x40\xa4\xed\xc6\x73\x50\x9a\xf8\x46\x53\x89\xb8\x15\x59\xc4\x0e\xa1\x42\x7e\x0f\x05\x6e\x00\x63\x87\x68\x8d\xe6\x39\x5a\x92\xda\x82\x0b\x95\xef\x0f\x37\x4e\xab\x3e\x7e\x8c\x39\x75\x4f\xac\xdc\xad\xe5\x04\xfe\x16\x81\xf6\x60\x76\xc0\xf7\x5a\x01\xcf\xd1\x34\x95\xed\xdb\x81\xa5\x01\x94\x1d\x89\x96\x06\x1c\xcd\x58\x2c\x2d\xaf\x0e\xd8\x10\xd6\x5c\x12\xc9\xbc\x04\xc5\x47\x4d\x03\x0e\x6b\xdb\x58\x7f\xfa\x6c\xe3\x95\x1b\xe8\xc5\x13\xbd\x78\x9c\x8b\x17\x13\x64\x52\x5e\x0d\x45\xef\xb4\xce\xc8\x1e\x36\xd5\x2b\x45\x96\xd6\xd9\x87\xe8\xcf\x61\x05\xcf\x0a\x7c\x2e\xba\x2e\x4d\xea\xa9\xb4\x40\x57\x1d\xb4\x08\xae\xe0\x32\x27\x8d\x76\x29\xda\x36\xbe\xd7\x76\xdb\x75\x82\x57\x40\x25\xaa\xa5\xa8\xd1\xcf\x7d\x83\xa6\xdb\xa7\xef\x5f\x57\xb8\x05\x7b\xb7\x7a\xb8\x1f\x05\x84\x83\xbd\xa6\x92\xc7\x77\x88\xdb\x39\xf8\x46\x8e\xb6\x46\x5b\xe0\x85\x06\xa3\x66\x3c\xc6\x52\x23\xd7\x60\xb2\xb6\x3d\xfb\x48\x8f\x95\x15\xf4\x52\x86\x8a\x57\x04\x5f\x4b\x9b\xa5\x39\x2a\x08\x53\x79\x94\x15\x84\xac\xde\x4f\x93\xfe\x70\xe6\x93\x28\xbd\xcb\x4e\xb1\x3b\x4d\x2b\x4c\x67\x29\xe6\xfb\xf1\x17\x24\xa7\xdc\x53\x3c\x09\x5e\x48\x3a\x90\x5c\xab\x57\x50\x1e\x64\x1d\xb8\x7b\x27\xeb\xa5\xc0\xa2\x10\x5c\x36\x84\x05\xe6\x8d\xcf\xda\x56\x17\x3c\xfe\xe6\x6f\x72\xd2\x3b\xe8\xba\xb0\x86\xa1\x20\xd8\x60\xfc\x10\x7b\x92\x55\x6d\x7a\x13\xac\x0a\x0c\xa6\x8e\xef\x07\xf0\x2f\xfb\x59\x37\x44\x68\xdf\xfc\x80\x00\x96\x0f\xe1\x3f\xce\xa4\xa9\x95\x24\x78\x9e\x5e\x81\x40\x68\xa8\x3a\xbd\x8f\x91\xf5\x78\x4d\x93\x70\x31\xc7\x9f\x62\xce\x9a\xad\xc9\x18\xbf\x93\xac\xd4\xe7\x4e\xd7\x94\x45\xec\x16\x15\x3c\x68\xe7\xd0\xc5\x61\x8c\xf7\x28\xd5\x03\x2a\x38\x3f\x88\x17\x0e\xab\x15\xbc\xd0\x8d\x03\x79\x7e\x76\xbe\xf8\x6f\xdc\xc1\xe2\xe2\xc7\xff\x3f\x2f\x79\x1b\x31\x16\x26\xf2\xd8\x54\x6b\x70\xfe\x9a\x93\x6b\xe0\x32\x62\xac\x42\x05\xd7\x7c\xe1\x4b\x30\x66\x11\xb1\xee\xe2\x92\x8b\xde\x11\x17\x5f\xa2\x34\x99\x28\x44\x47\x0f\x49\x81\x48\xd3\x93\xf7\x3b\x00\x00\xff\xff\xa1\x74\x8f\x0b\x5b\x05\x00\x00"
+var _repoSettingsGithook_editTmpl = "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x94\x94\x41\x6b\xdc\x30\x10\x85\xcf\xf2\xaf\x10\x6a\x60\x13\x08\x76\x0b\x39\x94\xd4\x6b\x28\x81\x92\x43\x92\x43\xbb\xb7\x52\x82\xd6\x1a\xaf\xc5\xda\x1a\x23\x8d\x77\x53\x8c\xff\x7b\x91\x6d\x39\x4e\xb2\x34\xed\x69\x2d\x69\xe6\xd3\x7b\x6f\xc7\xee\x3a\x82\xba\xa9\x24\x01\x17\x5b\xe9\x20\x29\x41\x2a\xc1\xe3\xbe\x8f\x52\xa5\x0f\x3c\xaf\xa4\x73\x6b\x61\xa1\x41\xa7\x09\xed\x6f\xee\x80\x48\x9b\x9d\xe3\xa0\x34\xf1\x9d\xa6\x12\x71\x2f\xb2\x88\x2d\x51\xbe\x7e\x40\x81\x1d\x61\x6c\x49\x6b\x35\xcf\xd1\x90\xd4\x06\xac\xef\x7c\x7d\xb8\xb3\x5a\x0d\xfb\x6f\x99\xe1\xf6\xc4\xc8\xc3\x56\x06\xf8\x4b\x02\x1d\xa1\x3a\x00\x3f\x6a\x05\x3c\xc7\xaa\xad\xcd\x70\x1d\x18\x1a\xa1\xec\x8d\x69\x59\x81\xa5\x99\xc5\xd2\xf2\x6a\xa1\x86\xb0\xe1\x92\x48\xe6\x25\x28\x3e\x79\x1a\x39\xac\xeb\x62\xfd\xe9\xb3\x89\x37\x76\x94\x17\x07\x79\xf1\x94\x8b\x13\x01\x99\x94\x57\x63\xd3\x2b\xaf\x33\xd9\xc1\xae\x7e\x96\xc8\xd2\x26\x7b\x97\xfe\xe8\xff\x82\x47\x05\x2e\x17\x7d\x9f\x26\x4d\x68\x2d\xd0\xd6\x8b\x2b\xfc\x52\x70\x99\x93\x46\xb3\x16\x5d\x17\xdf\x69\xb3\xef\x7b\xc1\x6b\xa0\x12\xd5\x5a\x34\xe8\xe6\x7b\xbd\xa7\x9b\x1f\xdf\xbf\x6d\x70\x0f\xe6\x76\x73\x7f\x37\x19\xf0\x07\x47\x4d\x25\x8f\x6f\x11\xf7\xf3\xe6\x0b\x3b\xda\x54\xda\x00\x2f\x34\x54\x6a\xe6\x31\x96\x56\x72\x0b\x55\xd6\x75\x67\xef\xf9\x31\xb2\x86\xc1\xca\xd8\xf1\x4c\x70\x8d\x34\x59\x9a\xa3\x02\x9f\xca\x83\xac\xc1\x57\x0d\xeb\x34\x19\x0e\x67\x3d\x89\xd2\x87\xec\x94\xba\xd3\xb2\x7c\x3a\x6b\x31\xcf\xc7\x3f\x88\x0c\xb5\xa7\x74\x12\x3c\x91\xb4\x20\xb9\x56\xcf\x50\xee\x6d\x2d\x96\x47\x2b\x9b\xb5\xc0\xa2\x10\x5c\xb6\x84\x05\xe6\xad\xf3\xb6\x6e\xc6\x02\xcf\x0d\x9c\xd7\xb6\xfe\x27\xf5\x6d\x4b\x84\xe6\xc5\x6b\x05\x60\xf8\xb8\xfd\x57\xa7\x6d\xa3\x24\xc1\x63\x78\xb7\xbd\xa0\xb1\xeb\x74\xca\x5d\x07\x46\x85\x89\x48\x13\x3f\x6e\xd3\xa8\xcf\x55\xf3\x53\x78\x98\x7e\x83\xad\xd4\xe5\x56\x37\x94\x45\xec\x06\x15\xdc\x6b\x6b\xd1\xc6\x3e\x9c\x3b\x94\xea\x1e\x15\x9c\x2f\xf6\x0b\x8b\xf5\x06\x9e\xe8\xab\x05\x79\x7e\x76\xbe\xfa\x30\x25\xbb\xba\xf8\xf9\xf1\xd7\x25\xef\x22\xc6\x7c\x22\x0f\x6d\xbd\x05\xeb\xae\x39\xd9\x16\x2e\x23\xc6\x6a\x54\x70\xcd\x57\xae\x84\xaa\x5a\x45\xac\xbf\xb8\xe4\x62\x58\x88\x8b\x2f\x51\x9a\x04\x09\xd1\x9b\xcf\x43\x81\x48\xe1\x43\xf6\x27\x00\x00\xff\xff\x07\x43\x10\x99\x31\x05\x00\x00"
 
 func repoSettingsGithook_editTmplBytes() ([]byte, error) {
 	return bindataRead(
@@ -2112,12 +2112,12 @@ func repoSettingsGithook_editTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "repo/settings/githook_edit.tmpl", size: 1371, mode: os.FileMode(0644), modTime: time.Unix(1571173927, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x64, 0xe0, 0x17, 0x75, 0xad, 0x45, 0xda, 0x69, 0x76, 0xb9, 0x6c, 0xd9, 0xbe, 0x90, 0x18, 0xb4, 0x50, 0x3, 0x24, 0xc6, 0xc0, 0x66, 0xb7, 0xc4, 0x59, 0x9d, 0xef, 0x84, 0x6d, 0x7e, 0x7b, 0x54}}
+	info := bindataFileInfo{name: "repo/settings/githook_edit.tmpl", size: 1329, mode: os.FileMode(0644), modTime: time.Unix(1583655999, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xf0, 0xeb, 0x95, 0x30, 0x68, 0x11, 0xd0, 0x90, 0xf0, 0xa9, 0x96, 0x9d, 0xe1, 0x87, 0x21, 0x81, 0xcc, 0x5a, 0x89, 0xbb, 0xb2, 0x20, 0xd3, 0x57, 0x40, 0x35, 0x19, 0x3d, 0x3b, 0x89, 0xf7, 0x10}}
 	return a, nil
 }
 
-var _repoSettingsGithooksTmpl = "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x93\xcf\x8e\x9c\x30\x0c\xc6\xcf\xcc\x53\x58\xa8\xd7\x01\xb5\xda\x43\x0f\x2c\x52\x6f\x5b\x69\xdb\x43\xbb\xf7\xca\x03\x06\xac\x0d\x09\x4a\x3c\x6c\x57\x69\xde\xbd\xe2\x5f\x66\x86\x91\xaa\x9e\x62\xb0\xfd\xfb\x3e\x9b\xe0\xbd\x50\x3f\x28\x14\x82\xf4\x84\x8e\xf2\x8e\xb0\x4e\x21\x0b\xe1\x50\xd4\x3c\x42\xa5\xd0\xb9\xc7\xd4\xd2\x60\x1c\x8b\xb1\xef\xe0\x48\x84\x75\xeb\xa0\x65\xe9\x8c\x79\x75\x69\x79\x48\xae\x31\x53\xed\x8c\x21\xbb\x80\x92\x6b\xd2\x99\xa1\x32\x5a\x90\x35\xd9\xa9\x73\x9f\x6c\x2d\xd7\xf3\xfb\x7b\xe6\xa6\x9c\x6b\x1c\x4f\xb8\xc1\x6f\x09\xf2\x46\x6a\x24\x78\xe3\x9a\xa0\x32\xea\xdc\xeb\x59\x8e\xb4\x2c\xd0\xe4\x6e\x60\x54\x64\x25\xb2\x92\xa2\x7b\xb8\x72\x23\x66\x00\x14\xc1\xaa\xa3\x1a\xd6\x99\x16\x4e\xe2\x7d\xc6\x1f\x3f\xeb\xec\xc5\x2e\xf6\xb2\xcd\x5e\x16\x17\xb3\x21\xf3\xee\x61\x69\xda\xcd\x1a\xc9\x82\x27\x45\xe0\xa8\xed\x2f\x46\xf7\xc5\x13\x12\x14\xbb\x98\xbf\x29\x60\xa1\x3e\x26\xfe\xc3\xdb\xaf\x9a\x5c\x95\xc2\x1f\xf8\x29\xf6\xd3\xd3\xcb\xb7\xe7\xd5\xeb\xe4\xb6\xe6\x71\x23\x79\x6f\x51\xb7\x04\xd9\xd3\xd4\x14\x6b\xfe\x21\x9d\x14\x6e\x40\x1d\x3f\x07\xfd\x16\xf0\x9e\x1b\xc8\xbe\xba\x2f\x95\xf0\x48\x21\xb4\x96\x48\x7b\x4f\xca\x2d\x0f\xef\xde\x93\xae\x43\x48\xcb\x82\xb7\x46\x53\x09\x57\x46\xc3\x7a\x1e\x07\xcb\x3d\x4f\xed\xc7\xda\x48\x5a\x16\x39\x97\x45\x3e\x29\xed\x84\x4b\xef\xb3\xef\xd8\x53\x08\x77\x69\xbc\x31\x75\x52\x67\x82\x33\x83\xe5\xb6\x93\x14\x3a\x4b\xcd\x63\xea\xfd\x87\xec\x07\x0d\xe6\x99\xf5\x6b\x08\x97\x0b\x37\xaf\x2c\x6f\x59\xf2\x88\xbf\x36\xdb\x20\x34\x78\x1c\x48\x57\xac\x36\x6f\x18\x95\x77\x0b\x9d\x47\x3d\xec\x33\x97\x30\x46\x5b\xb0\x9e\xeb\x71\x77\x7f\x1b\x63\x64\xfb\xd3\xfe\x06\x00\x00\xff\xff\x78\x2e\xcb\x77\xce\x03\x00\x00"
+var _repoSettingsGithooksTmpl = "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x8c\x93\xcf\x8e\x9c\x30\x0c\xc6\xcf\xcc\x53\x58\xa8\xd7\x01\xb5\xda\x43\x0f\x2c\xe7\xad\xb4\xed\xa1\xbb\xf7\xca\x03\x06\xac\x0d\x09\x4a\x3c\x6c\x57\x69\xde\xbd\xe2\x5f\x66\x86\x91\xaa\x9e\x62\xb0\xfd\xfb\x3e\x9b\xe0\xbd\x50\x3f\x28\x14\x82\xf4\x84\x8e\xf2\x8e\xb0\x4e\x21\x0b\xe1\x50\xd4\x3c\x42\xa5\xd0\xb9\xc7\xd4\xd2\x60\x1c\x8b\xb1\x1f\xe0\x48\x84\x75\xeb\xa0\x65\xe9\x8c\x79\x73\x69\x79\x48\xae\x31\x53\xed\x8c\x21\xbb\x80\x92\x6b\xd2\x99\xa1\x32\x5a\x90\x35\xd9\xa9\x73\x9f\x6c\x2d\xd7\xf3\xfb\x7b\xe6\xa6\x9c\x6b\x1c\x4f\xb8\xc1\x6f\x09\xf2\x4e\x6a\x24\x78\xe7\x9a\xa0\x32\xea\xdc\xeb\x59\x8e\xb4\x2c\xd0\xe4\x6e\x60\x54\x64\x25\xb2\x92\xa2\x7b\xb8\x72\x23\x66\x00\x14\xc1\xaa\xa3\x1a\xd6\x99\x16\x4e\xe2\x7d\xc6\x9f\xbf\xea\xec\xd5\x2e\xf6\xb2\xcd\x5e\x16\x17\xb3\x21\xf3\xee\x61\x69\xda\xcd\x1a\xc9\x82\x27\x45\xe0\xa8\xed\x2f\x46\xf7\xc5\x13\x12\x14\xbb\x98\xbf\x29\x60\xa1\x3e\x26\xfe\xc3\xdb\xaf\x9a\x5c\x95\xc2\x1f\x78\x11\xfb\xe5\xe9\xf5\xfb\xf3\xea\x75\x72\x5b\xf3\xb8\x91\xbc\xb7\xa8\x5b\x82\xec\x69\x6a\x8a\x35\xff\x90\x4e\x0a\x37\xa0\x8e\x9f\x83\x7e\x0b\x78\xcf\x0d\x68\x23\x90\x7d\x73\x2f\xd8\x0f\x8a\x42\x68\x2d\x91\xf6\x9e\x94\x5b\x1e\x3e\xbc\x27\x5d\x87\x90\x96\x05\x6f\xcd\xa6\x12\xae\x8c\x86\xf5\x3c\x0e\x96\x7b\x16\x1e\xe9\x58\x1b\x49\xcb\x22\xe7\xb2\xc8\x27\xb5\x9d\x78\xe9\x7d\xf6\x03\x7b\x0a\xe1\x2e\x8d\x37\xc6\x4e\xea\x4c\x70\x66\xb0\xdc\x76\x92\x42\x67\xa9\x79\x4c\xbd\xff\x94\xfd\xa4\xc1\x3c\xb3\x7e\x0b\xe1\x72\xe9\xe6\xb5\xe5\x2d\x4b\x1e\xf1\xd7\x66\x1b\x84\x06\x8f\x03\xe9\x8a\xd5\xe6\x0d\xa3\xf2\x6e\xa9\xf3\xa8\x87\x7d\xe6\x12\xc6\x68\x0b\xd6\x73\x3d\xee\xee\x70\x63\x8c\x6c\x7f\xdb\xdf\x00\x00\x00\xff\xff\xa0\x64\xc6\xfc\xd2\x03\x00\x00"
 
 func repoSettingsGithooksTmplBytes() ([]byte, error) {
 	return bindataRead(
@@ -2132,8 +2132,8 @@ func repoSettingsGithooksTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "repo/settings/githooks.tmpl", size: 974, mode: os.FileMode(0644), modTime: time.Unix(1571173927, 0)}
-	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xd, 0x7e, 0xb3, 0x3a, 0x9, 0x7, 0x6b, 0x9f, 0x39, 0xe9, 0xa8, 0x94, 0x66, 0x51, 0x89, 0xfd, 0xb3, 0x53, 0x43, 0xbf, 0x13, 0x29, 0x43, 0xf4, 0x0, 0xb8, 0x37, 0xf5, 0x48, 0x1d, 0xbd, 0x1d}}
+	info := bindataFileInfo{name: "repo/settings/githooks.tmpl", size: 978, mode: os.FileMode(0644), modTime: time.Unix(1583655758, 0)}
+	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x70, 0xd8, 0xac, 0xb7, 0x71, 0x44, 0xa5, 0xe7, 0xc2, 0x68, 0x9f, 0xf7, 0xb0, 0xaa, 0xb6, 0x73, 0xe1, 0x7, 0xb2, 0x6e, 0xa6, 0xff, 0x4, 0xdc, 0xb8, 0xf5, 0x12, 0x2d, 0xb0, 0x29, 0xcb, 0x77}}
 	return a, nil
 }
 
@@ -3459,218 +3459,218 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"admin": &bintree{nil, map[string]*bintree{
-		"auth": &bintree{nil, map[string]*bintree{
-			"edit.tmpl": &bintree{adminAuthEditTmpl, map[string]*bintree{}},
-			"list.tmpl": &bintree{adminAuthListTmpl, map[string]*bintree{}},
-			"new.tmpl":  &bintree{adminAuthNewTmpl, map[string]*bintree{}},
+	"admin": {nil, map[string]*bintree{
+		"auth": {nil, map[string]*bintree{
+			"edit.tmpl": {adminAuthEditTmpl, map[string]*bintree{}},
+			"list.tmpl": {adminAuthListTmpl, map[string]*bintree{}},
+			"new.tmpl":  {adminAuthNewTmpl, map[string]*bintree{}},
 		}},
-		"base": &bintree{nil, map[string]*bintree{
-			"page.tmpl":   &bintree{adminBasePageTmpl, map[string]*bintree{}},
-			"search.tmpl": &bintree{adminBaseSearchTmpl, map[string]*bintree{}},
+		"base": {nil, map[string]*bintree{
+			"page.tmpl":   {adminBasePageTmpl, map[string]*bintree{}},
+			"search.tmpl": {adminBaseSearchTmpl, map[string]*bintree{}},
 		}},
-		"config.tmpl":    &bintree{adminConfigTmpl, map[string]*bintree{}},
-		"dashboard.tmpl": &bintree{adminDashboardTmpl, map[string]*bintree{}},
-		"monitor.tmpl":   &bintree{adminMonitorTmpl, map[string]*bintree{}},
-		"navbar.tmpl":    &bintree{adminNavbarTmpl, map[string]*bintree{}},
-		"notice.tmpl":    &bintree{adminNoticeTmpl, map[string]*bintree{}},
-		"org": &bintree{nil, map[string]*bintree{
-			"list.tmpl": &bintree{adminOrgListTmpl, map[string]*bintree{}},
+		"config.tmpl":    {adminConfigTmpl, map[string]*bintree{}},
+		"dashboard.tmpl": {adminDashboardTmpl, map[string]*bintree{}},
+		"monitor.tmpl":   {adminMonitorTmpl, map[string]*bintree{}},
+		"navbar.tmpl":    {adminNavbarTmpl, map[string]*bintree{}},
+		"notice.tmpl":    {adminNoticeTmpl, map[string]*bintree{}},
+		"org": {nil, map[string]*bintree{
+			"list.tmpl": {adminOrgListTmpl, map[string]*bintree{}},
 		}},
-		"repo": &bintree{nil, map[string]*bintree{
-			"list.tmpl": &bintree{adminRepoListTmpl, map[string]*bintree{}},
+		"repo": {nil, map[string]*bintree{
+			"list.tmpl": {adminRepoListTmpl, map[string]*bintree{}},
 		}},
-		"user": &bintree{nil, map[string]*bintree{
-			"edit.tmpl": &bintree{adminUserEditTmpl, map[string]*bintree{}},
-			"list.tmpl": &bintree{adminUserListTmpl, map[string]*bintree{}},
-			"new.tmpl":  &bintree{adminUserNewTmpl, map[string]*bintree{}},
-		}},
-	}},
-	"base": &bintree{nil, map[string]*bintree{
-		"alert.tmpl":                &bintree{baseAlertTmpl, map[string]*bintree{}},
-		"delete_modal_actions.tmpl": &bintree{baseDelete_modal_actionsTmpl, map[string]*bintree{}},
-		"footer.tmpl":               &bintree{baseFooterTmpl, map[string]*bintree{}},
-		"head.tmpl":                 &bintree{baseHeadTmpl, map[string]*bintree{}},
-	}},
-	"explore": &bintree{nil, map[string]*bintree{
-		"navbar.tmpl":        &bintree{exploreNavbarTmpl, map[string]*bintree{}},
-		"organizations.tmpl": &bintree{exploreOrganizationsTmpl, map[string]*bintree{}},
-		"page.tmpl":          &bintree{explorePageTmpl, map[string]*bintree{}},
-		"repo_list.tmpl":     &bintree{exploreRepo_listTmpl, map[string]*bintree{}},
-		"repos.tmpl":         &bintree{exploreReposTmpl, map[string]*bintree{}},
-		"search.tmpl":        &bintree{exploreSearchTmpl, map[string]*bintree{}},
-		"users.tmpl":         &bintree{exploreUsersTmpl, map[string]*bintree{}},
-	}},
-	"home.tmpl": &bintree{homeTmpl, map[string]*bintree{}},
-	"inject": &bintree{nil, map[string]*bintree{
-		"footer.tmpl": &bintree{injectFooterTmpl, map[string]*bintree{}},
-		"head.tmpl":   &bintree{injectHeadTmpl, map[string]*bintree{}},
-	}},
-	"install.tmpl": &bintree{installTmpl, map[string]*bintree{}},
-	"mail": &bintree{nil, map[string]*bintree{
-		"auth": &bintree{nil, map[string]*bintree{
-			"activate.tmpl":        &bintree{mailAuthActivateTmpl, map[string]*bintree{}},
-			"activate_email.tmpl":  &bintree{mailAuthActivate_emailTmpl, map[string]*bintree{}},
-			"register_notify.tmpl": &bintree{mailAuthRegister_notifyTmpl, map[string]*bintree{}},
-			"reset_passwd.tmpl":    &bintree{mailAuthReset_passwdTmpl, map[string]*bintree{}},
-		}},
-		"issue": &bintree{nil, map[string]*bintree{
-			"comment.tmpl": &bintree{mailIssueCommentTmpl, map[string]*bintree{}},
-			"mention.tmpl": &bintree{mailIssueMentionTmpl, map[string]*bintree{}},
-		}},
-		"notify": &bintree{nil, map[string]*bintree{
-			"collaborator.tmpl": &bintree{mailNotifyCollaboratorTmpl, map[string]*bintree{}},
+		"user": {nil, map[string]*bintree{
+			"edit.tmpl": {adminUserEditTmpl, map[string]*bintree{}},
+			"list.tmpl": {adminUserListTmpl, map[string]*bintree{}},
+			"new.tmpl":  {adminUserNewTmpl, map[string]*bintree{}},
 		}},
 	}},
-	"org": &bintree{nil, map[string]*bintree{
-		"create.tmpl": &bintree{orgCreateTmpl, map[string]*bintree{}},
-		"header.tmpl": &bintree{orgHeaderTmpl, map[string]*bintree{}},
-		"home.tmpl":   &bintree{orgHomeTmpl, map[string]*bintree{}},
-		"member": &bintree{nil, map[string]*bintree{
-			"invite.tmpl":  &bintree{orgMemberInviteTmpl, map[string]*bintree{}},
-			"members.tmpl": &bintree{orgMemberMembersTmpl, map[string]*bintree{}},
+	"base": {nil, map[string]*bintree{
+		"alert.tmpl":                {baseAlertTmpl, map[string]*bintree{}},
+		"delete_modal_actions.tmpl": {baseDelete_modal_actionsTmpl, map[string]*bintree{}},
+		"footer.tmpl":               {baseFooterTmpl, map[string]*bintree{}},
+		"head.tmpl":                 {baseHeadTmpl, map[string]*bintree{}},
+	}},
+	"explore": {nil, map[string]*bintree{
+		"navbar.tmpl":        {exploreNavbarTmpl, map[string]*bintree{}},
+		"organizations.tmpl": {exploreOrganizationsTmpl, map[string]*bintree{}},
+		"page.tmpl":          {explorePageTmpl, map[string]*bintree{}},
+		"repo_list.tmpl":     {exploreRepo_listTmpl, map[string]*bintree{}},
+		"repos.tmpl":         {exploreReposTmpl, map[string]*bintree{}},
+		"search.tmpl":        {exploreSearchTmpl, map[string]*bintree{}},
+		"users.tmpl":         {exploreUsersTmpl, map[string]*bintree{}},
+	}},
+	"home.tmpl": {homeTmpl, map[string]*bintree{}},
+	"inject": {nil, map[string]*bintree{
+		"footer.tmpl": {injectFooterTmpl, map[string]*bintree{}},
+		"head.tmpl":   {injectHeadTmpl, map[string]*bintree{}},
+	}},
+	"install.tmpl": {installTmpl, map[string]*bintree{}},
+	"mail": {nil, map[string]*bintree{
+		"auth": {nil, map[string]*bintree{
+			"activate.tmpl":        {mailAuthActivateTmpl, map[string]*bintree{}},
+			"activate_email.tmpl":  {mailAuthActivate_emailTmpl, map[string]*bintree{}},
+			"register_notify.tmpl": {mailAuthRegister_notifyTmpl, map[string]*bintree{}},
+			"reset_passwd.tmpl":    {mailAuthReset_passwdTmpl, map[string]*bintree{}},
 		}},
-		"settings": &bintree{nil, map[string]*bintree{
-			"delete.tmpl":      &bintree{orgSettingsDeleteTmpl, map[string]*bintree{}},
-			"navbar.tmpl":      &bintree{orgSettingsNavbarTmpl, map[string]*bintree{}},
-			"options.tmpl":     &bintree{orgSettingsOptionsTmpl, map[string]*bintree{}},
-			"webhook_new.tmpl": &bintree{orgSettingsWebhook_newTmpl, map[string]*bintree{}},
-			"webhooks.tmpl":    &bintree{orgSettingsWebhooksTmpl, map[string]*bintree{}},
+		"issue": {nil, map[string]*bintree{
+			"comment.tmpl": {mailIssueCommentTmpl, map[string]*bintree{}},
+			"mention.tmpl": {mailIssueMentionTmpl, map[string]*bintree{}},
 		}},
-		"team": &bintree{nil, map[string]*bintree{
-			"members.tmpl":      &bintree{orgTeamMembersTmpl, map[string]*bintree{}},
-			"new.tmpl":          &bintree{orgTeamNewTmpl, map[string]*bintree{}},
-			"repositories.tmpl": &bintree{orgTeamRepositoriesTmpl, map[string]*bintree{}},
-			"sidebar.tmpl":      &bintree{orgTeamSidebarTmpl, map[string]*bintree{}},
-			"teams.tmpl":        &bintree{orgTeamTeamsTmpl, map[string]*bintree{}},
+		"notify": {nil, map[string]*bintree{
+			"collaborator.tmpl": {mailNotifyCollaboratorTmpl, map[string]*bintree{}},
 		}},
 	}},
-	"repo": &bintree{nil, map[string]*bintree{
-		"bare.tmpl":            &bintree{repoBareTmpl, map[string]*bintree{}},
-		"branch_dropdown.tmpl": &bintree{repoBranch_dropdownTmpl, map[string]*bintree{}},
-		"branches": &bintree{nil, map[string]*bintree{
-			"all.tmpl":      &bintree{repoBranchesAllTmpl, map[string]*bintree{}},
-			"navbar.tmpl":   &bintree{repoBranchesNavbarTmpl, map[string]*bintree{}},
-			"overview.tmpl": &bintree{repoBranchesOverviewTmpl, map[string]*bintree{}},
+	"org": {nil, map[string]*bintree{
+		"create.tmpl": {orgCreateTmpl, map[string]*bintree{}},
+		"header.tmpl": {orgHeaderTmpl, map[string]*bintree{}},
+		"home.tmpl":   {orgHomeTmpl, map[string]*bintree{}},
+		"member": {nil, map[string]*bintree{
+			"invite.tmpl":  {orgMemberInviteTmpl, map[string]*bintree{}},
+			"members.tmpl": {orgMemberMembersTmpl, map[string]*bintree{}},
 		}},
-		"commits.tmpl":       &bintree{repoCommitsTmpl, map[string]*bintree{}},
-		"commits_table.tmpl": &bintree{repoCommits_tableTmpl, map[string]*bintree{}},
-		"create.tmpl":        &bintree{repoCreateTmpl, map[string]*bintree{}},
-		"diff": &bintree{nil, map[string]*bintree{
-			"box.tmpl":             &bintree{repoDiffBoxTmpl, map[string]*bintree{}},
-			"page.tmpl":            &bintree{repoDiffPageTmpl, map[string]*bintree{}},
-			"section_unified.tmpl": &bintree{repoDiffSection_unifiedTmpl, map[string]*bintree{}},
+		"settings": {nil, map[string]*bintree{
+			"delete.tmpl":      {orgSettingsDeleteTmpl, map[string]*bintree{}},
+			"navbar.tmpl":      {orgSettingsNavbarTmpl, map[string]*bintree{}},
+			"options.tmpl":     {orgSettingsOptionsTmpl, map[string]*bintree{}},
+			"webhook_new.tmpl": {orgSettingsWebhook_newTmpl, map[string]*bintree{}},
+			"webhooks.tmpl":    {orgSettingsWebhooksTmpl, map[string]*bintree{}},
 		}},
-		"editor": &bintree{nil, map[string]*bintree{
-			"commit_form.tmpl":  &bintree{repoEditorCommit_formTmpl, map[string]*bintree{}},
-			"delete.tmpl":       &bintree{repoEditorDeleteTmpl, map[string]*bintree{}},
-			"diff_preview.tmpl": &bintree{repoEditorDiff_previewTmpl, map[string]*bintree{}},
-			"edit.tmpl":         &bintree{repoEditorEditTmpl, map[string]*bintree{}},
-			"upload.tmpl":       &bintree{repoEditorUploadTmpl, map[string]*bintree{}},
+		"team": {nil, map[string]*bintree{
+			"members.tmpl":      {orgTeamMembersTmpl, map[string]*bintree{}},
+			"new.tmpl":          {orgTeamNewTmpl, map[string]*bintree{}},
+			"repositories.tmpl": {orgTeamRepositoriesTmpl, map[string]*bintree{}},
+			"sidebar.tmpl":      {orgTeamSidebarTmpl, map[string]*bintree{}},
+			"teams.tmpl":        {orgTeamTeamsTmpl, map[string]*bintree{}},
 		}},
-		"forks.tmpl":  &bintree{repoForksTmpl, map[string]*bintree{}},
-		"header.tmpl": &bintree{repoHeaderTmpl, map[string]*bintree{}},
-		"home.tmpl":   &bintree{repoHomeTmpl, map[string]*bintree{}},
-		"issue": &bintree{nil, map[string]*bintree{
-			"comment_tab.tmpl":     &bintree{repoIssueComment_tabTmpl, map[string]*bintree{}},
-			"label_precolors.tmpl": &bintree{repoIssueLabel_precolorsTmpl, map[string]*bintree{}},
-			"labels.tmpl":          &bintree{repoIssueLabelsTmpl, map[string]*bintree{}},
-			"list.tmpl":            &bintree{repoIssueListTmpl, map[string]*bintree{}},
-			"milestone_new.tmpl":   &bintree{repoIssueMilestone_newTmpl, map[string]*bintree{}},
-			"milestones.tmpl":      &bintree{repoIssueMilestonesTmpl, map[string]*bintree{}},
-			"navbar.tmpl":          &bintree{repoIssueNavbarTmpl, map[string]*bintree{}},
-			"new.tmpl":             &bintree{repoIssueNewTmpl, map[string]*bintree{}},
-			"new_form.tmpl":        &bintree{repoIssueNew_formTmpl, map[string]*bintree{}},
-			"view.tmpl":            &bintree{repoIssueViewTmpl, map[string]*bintree{}},
-			"view_content.tmpl":    &bintree{repoIssueView_contentTmpl, map[string]*bintree{}},
-			"view_title.tmpl":      &bintree{repoIssueView_titleTmpl, map[string]*bintree{}},
+	}},
+	"repo": {nil, map[string]*bintree{
+		"bare.tmpl":            {repoBareTmpl, map[string]*bintree{}},
+		"branch_dropdown.tmpl": {repoBranch_dropdownTmpl, map[string]*bintree{}},
+		"branches": {nil, map[string]*bintree{
+			"all.tmpl":      {repoBranchesAllTmpl, map[string]*bintree{}},
+			"navbar.tmpl":   {repoBranchesNavbarTmpl, map[string]*bintree{}},
+			"overview.tmpl": {repoBranchesOverviewTmpl, map[string]*bintree{}},
 		}},
-		"migrate.tmpl": &bintree{repoMigrateTmpl, map[string]*bintree{}},
-		"pulls": &bintree{nil, map[string]*bintree{
-			"commits.tmpl":  &bintree{repoPullsCommitsTmpl, map[string]*bintree{}},
-			"compare.tmpl":  &bintree{repoPullsCompareTmpl, map[string]*bintree{}},
-			"files.tmpl":    &bintree{repoPullsFilesTmpl, map[string]*bintree{}},
-			"fork.tmpl":     &bintree{repoPullsForkTmpl, map[string]*bintree{}},
-			"tab_menu.tmpl": &bintree{repoPullsTab_menuTmpl, map[string]*bintree{}},
+		"commits.tmpl":       {repoCommitsTmpl, map[string]*bintree{}},
+		"commits_table.tmpl": {repoCommits_tableTmpl, map[string]*bintree{}},
+		"create.tmpl":        {repoCreateTmpl, map[string]*bintree{}},
+		"diff": {nil, map[string]*bintree{
+			"box.tmpl":             {repoDiffBoxTmpl, map[string]*bintree{}},
+			"page.tmpl":            {repoDiffPageTmpl, map[string]*bintree{}},
+			"section_unified.tmpl": {repoDiffSection_unifiedTmpl, map[string]*bintree{}},
 		}},
-		"release": &bintree{nil, map[string]*bintree{
-			"list.tmpl": &bintree{repoReleaseListTmpl, map[string]*bintree{}},
-			"new.tmpl":  &bintree{repoReleaseNewTmpl, map[string]*bintree{}},
+		"editor": {nil, map[string]*bintree{
+			"commit_form.tmpl":  {repoEditorCommit_formTmpl, map[string]*bintree{}},
+			"delete.tmpl":       {repoEditorDeleteTmpl, map[string]*bintree{}},
+			"diff_preview.tmpl": {repoEditorDiff_previewTmpl, map[string]*bintree{}},
+			"edit.tmpl":         {repoEditorEditTmpl, map[string]*bintree{}},
+			"upload.tmpl":       {repoEditorUploadTmpl, map[string]*bintree{}},
 		}},
-		"settings": &bintree{nil, map[string]*bintree{
-			"branches.tmpl":         &bintree{repoSettingsBranchesTmpl, map[string]*bintree{}},
-			"collaboration.tmpl":    &bintree{repoSettingsCollaborationTmpl, map[string]*bintree{}},
-			"deploy_keys.tmpl":      &bintree{repoSettingsDeploy_keysTmpl, map[string]*bintree{}},
-			"githook_edit.tmpl":     &bintree{repoSettingsGithook_editTmpl, map[string]*bintree{}},
-			"githooks.tmpl":         &bintree{repoSettingsGithooksTmpl, map[string]*bintree{}},
-			"navbar.tmpl":           &bintree{repoSettingsNavbarTmpl, map[string]*bintree{}},
-			"options.tmpl":          &bintree{repoSettingsOptionsTmpl, map[string]*bintree{}},
-			"protected_branch.tmpl": &bintree{repoSettingsProtected_branchTmpl, map[string]*bintree{}},
-			"webhook": &bintree{nil, map[string]*bintree{
-				"base.tmpl":         &bintree{repoSettingsWebhookBaseTmpl, map[string]*bintree{}},
-				"delete_modal.tmpl": &bintree{repoSettingsWebhookDelete_modalTmpl, map[string]*bintree{}},
-				"dingtalk.tmpl":     &bintree{repoSettingsWebhookDingtalkTmpl, map[string]*bintree{}},
-				"discord.tmpl":      &bintree{repoSettingsWebhookDiscordTmpl, map[string]*bintree{}},
-				"gogs.tmpl":         &bintree{repoSettingsWebhookGogsTmpl, map[string]*bintree{}},
-				"history.tmpl":      &bintree{repoSettingsWebhookHistoryTmpl, map[string]*bintree{}},
-				"list.tmpl":         &bintree{repoSettingsWebhookListTmpl, map[string]*bintree{}},
-				"new.tmpl":          &bintree{repoSettingsWebhookNewTmpl, map[string]*bintree{}},
-				"settings.tmpl":     &bintree{repoSettingsWebhookSettingsTmpl, map[string]*bintree{}},
-				"slack.tmpl":        &bintree{repoSettingsWebhookSlackTmpl, map[string]*bintree{}},
+		"forks.tmpl":  {repoForksTmpl, map[string]*bintree{}},
+		"header.tmpl": {repoHeaderTmpl, map[string]*bintree{}},
+		"home.tmpl":   {repoHomeTmpl, map[string]*bintree{}},
+		"issue": {nil, map[string]*bintree{
+			"comment_tab.tmpl":     {repoIssueComment_tabTmpl, map[string]*bintree{}},
+			"label_precolors.tmpl": {repoIssueLabel_precolorsTmpl, map[string]*bintree{}},
+			"labels.tmpl":          {repoIssueLabelsTmpl, map[string]*bintree{}},
+			"list.tmpl":            {repoIssueListTmpl, map[string]*bintree{}},
+			"milestone_new.tmpl":   {repoIssueMilestone_newTmpl, map[string]*bintree{}},
+			"milestones.tmpl":      {repoIssueMilestonesTmpl, map[string]*bintree{}},
+			"navbar.tmpl":          {repoIssueNavbarTmpl, map[string]*bintree{}},
+			"new.tmpl":             {repoIssueNewTmpl, map[string]*bintree{}},
+			"new_form.tmpl":        {repoIssueNew_formTmpl, map[string]*bintree{}},
+			"view.tmpl":            {repoIssueViewTmpl, map[string]*bintree{}},
+			"view_content.tmpl":    {repoIssueView_contentTmpl, map[string]*bintree{}},
+			"view_title.tmpl":      {repoIssueView_titleTmpl, map[string]*bintree{}},
+		}},
+		"migrate.tmpl": {repoMigrateTmpl, map[string]*bintree{}},
+		"pulls": {nil, map[string]*bintree{
+			"commits.tmpl":  {repoPullsCommitsTmpl, map[string]*bintree{}},
+			"compare.tmpl":  {repoPullsCompareTmpl, map[string]*bintree{}},
+			"files.tmpl":    {repoPullsFilesTmpl, map[string]*bintree{}},
+			"fork.tmpl":     {repoPullsForkTmpl, map[string]*bintree{}},
+			"tab_menu.tmpl": {repoPullsTab_menuTmpl, map[string]*bintree{}},
+		}},
+		"release": {nil, map[string]*bintree{
+			"list.tmpl": {repoReleaseListTmpl, map[string]*bintree{}},
+			"new.tmpl":  {repoReleaseNewTmpl, map[string]*bintree{}},
+		}},
+		"settings": {nil, map[string]*bintree{
+			"branches.tmpl":         {repoSettingsBranchesTmpl, map[string]*bintree{}},
+			"collaboration.tmpl":    {repoSettingsCollaborationTmpl, map[string]*bintree{}},
+			"deploy_keys.tmpl":      {repoSettingsDeploy_keysTmpl, map[string]*bintree{}},
+			"githook_edit.tmpl":     {repoSettingsGithook_editTmpl, map[string]*bintree{}},
+			"githooks.tmpl":         {repoSettingsGithooksTmpl, map[string]*bintree{}},
+			"navbar.tmpl":           {repoSettingsNavbarTmpl, map[string]*bintree{}},
+			"options.tmpl":          {repoSettingsOptionsTmpl, map[string]*bintree{}},
+			"protected_branch.tmpl": {repoSettingsProtected_branchTmpl, map[string]*bintree{}},
+			"webhook": {nil, map[string]*bintree{
+				"base.tmpl":         {repoSettingsWebhookBaseTmpl, map[string]*bintree{}},
+				"delete_modal.tmpl": {repoSettingsWebhookDelete_modalTmpl, map[string]*bintree{}},
+				"dingtalk.tmpl":     {repoSettingsWebhookDingtalkTmpl, map[string]*bintree{}},
+				"discord.tmpl":      {repoSettingsWebhookDiscordTmpl, map[string]*bintree{}},
+				"gogs.tmpl":         {repoSettingsWebhookGogsTmpl, map[string]*bintree{}},
+				"history.tmpl":      {repoSettingsWebhookHistoryTmpl, map[string]*bintree{}},
+				"list.tmpl":         {repoSettingsWebhookListTmpl, map[string]*bintree{}},
+				"new.tmpl":          {repoSettingsWebhookNewTmpl, map[string]*bintree{}},
+				"settings.tmpl":     {repoSettingsWebhookSettingsTmpl, map[string]*bintree{}},
+				"slack.tmpl":        {repoSettingsWebhookSlackTmpl, map[string]*bintree{}},
 			}},
 		}},
-		"user_cards.tmpl": &bintree{repoUser_cardsTmpl, map[string]*bintree{}},
-		"view_file.tmpl":  &bintree{repoView_fileTmpl, map[string]*bintree{}},
-		"view_list.tmpl":  &bintree{repoView_listTmpl, map[string]*bintree{}},
-		"watchers.tmpl":   &bintree{repoWatchersTmpl, map[string]*bintree{}},
-		"wiki": &bintree{nil, map[string]*bintree{
-			"new.tmpl":   &bintree{repoWikiNewTmpl, map[string]*bintree{}},
-			"pages.tmpl": &bintree{repoWikiPagesTmpl, map[string]*bintree{}},
-			"start.tmpl": &bintree{repoWikiStartTmpl, map[string]*bintree{}},
-			"view.tmpl":  &bintree{repoWikiViewTmpl, map[string]*bintree{}},
+		"user_cards.tmpl": {repoUser_cardsTmpl, map[string]*bintree{}},
+		"view_file.tmpl":  {repoView_fileTmpl, map[string]*bintree{}},
+		"view_list.tmpl":  {repoView_listTmpl, map[string]*bintree{}},
+		"watchers.tmpl":   {repoWatchersTmpl, map[string]*bintree{}},
+		"wiki": {nil, map[string]*bintree{
+			"new.tmpl":   {repoWikiNewTmpl, map[string]*bintree{}},
+			"pages.tmpl": {repoWikiPagesTmpl, map[string]*bintree{}},
+			"start.tmpl": {repoWikiStartTmpl, map[string]*bintree{}},
+			"view.tmpl":  {repoWikiViewTmpl, map[string]*bintree{}},
 		}},
 	}},
-	"status": &bintree{nil, map[string]*bintree{
-		"404.tmpl": &bintree{status404Tmpl, map[string]*bintree{}},
-		"500.tmpl": &bintree{status500Tmpl, map[string]*bintree{}},
+	"status": {nil, map[string]*bintree{
+		"404.tmpl": {status404Tmpl, map[string]*bintree{}},
+		"500.tmpl": {status500Tmpl, map[string]*bintree{}},
 	}},
-	"user": &bintree{nil, map[string]*bintree{
-		"auth": &bintree{nil, map[string]*bintree{
-			"activate.tmpl":                 &bintree{userAuthActivateTmpl, map[string]*bintree{}},
-			"forgot_passwd.tmpl":            &bintree{userAuthForgot_passwdTmpl, map[string]*bintree{}},
-			"login.tmpl":                    &bintree{userAuthLoginTmpl, map[string]*bintree{}},
-			"prohibit_login.tmpl":           &bintree{userAuthProhibit_loginTmpl, map[string]*bintree{}},
-			"reset_passwd.tmpl":             &bintree{userAuthReset_passwdTmpl, map[string]*bintree{}},
-			"signup.tmpl":                   &bintree{userAuthSignupTmpl, map[string]*bintree{}},
-			"two_factor.tmpl":               &bintree{userAuthTwo_factorTmpl, map[string]*bintree{}},
-			"two_factor_recovery_code.tmpl": &bintree{userAuthTwo_factor_recovery_codeTmpl, map[string]*bintree{}},
+	"user": {nil, map[string]*bintree{
+		"auth": {nil, map[string]*bintree{
+			"activate.tmpl":                 {userAuthActivateTmpl, map[string]*bintree{}},
+			"forgot_passwd.tmpl":            {userAuthForgot_passwdTmpl, map[string]*bintree{}},
+			"login.tmpl":                    {userAuthLoginTmpl, map[string]*bintree{}},
+			"prohibit_login.tmpl":           {userAuthProhibit_loginTmpl, map[string]*bintree{}},
+			"reset_passwd.tmpl":             {userAuthReset_passwdTmpl, map[string]*bintree{}},
+			"signup.tmpl":                   {userAuthSignupTmpl, map[string]*bintree{}},
+			"two_factor.tmpl":               {userAuthTwo_factorTmpl, map[string]*bintree{}},
+			"two_factor_recovery_code.tmpl": {userAuthTwo_factor_recovery_codeTmpl, map[string]*bintree{}},
 		}},
-		"dashboard": &bintree{nil, map[string]*bintree{
-			"dashboard.tmpl": &bintree{userDashboardDashboardTmpl, map[string]*bintree{}},
-			"feeds.tmpl":     &bintree{userDashboardFeedsTmpl, map[string]*bintree{}},
-			"issues.tmpl":    &bintree{userDashboardIssuesTmpl, map[string]*bintree{}},
-			"navbar.tmpl":    &bintree{userDashboardNavbarTmpl, map[string]*bintree{}},
+		"dashboard": {nil, map[string]*bintree{
+			"dashboard.tmpl": {userDashboardDashboardTmpl, map[string]*bintree{}},
+			"feeds.tmpl":     {userDashboardFeedsTmpl, map[string]*bintree{}},
+			"issues.tmpl":    {userDashboardIssuesTmpl, map[string]*bintree{}},
+			"navbar.tmpl":    {userDashboardNavbarTmpl, map[string]*bintree{}},
 		}},
-		"meta": &bintree{nil, map[string]*bintree{
-			"followers.tmpl": &bintree{userMetaFollowersTmpl, map[string]*bintree{}},
-			"header.tmpl":    &bintree{userMetaHeaderTmpl, map[string]*bintree{}},
-			"stars.tmpl":     &bintree{userMetaStarsTmpl, map[string]*bintree{}},
+		"meta": {nil, map[string]*bintree{
+			"followers.tmpl": {userMetaFollowersTmpl, map[string]*bintree{}},
+			"header.tmpl":    {userMetaHeaderTmpl, map[string]*bintree{}},
+			"stars.tmpl":     {userMetaStarsTmpl, map[string]*bintree{}},
 		}},
-		"profile.tmpl": &bintree{userProfileTmpl, map[string]*bintree{}},
-		"settings": &bintree{nil, map[string]*bintree{
-			"applications.tmpl":              &bintree{userSettingsApplicationsTmpl, map[string]*bintree{}},
-			"avatar.tmpl":                    &bintree{userSettingsAvatarTmpl, map[string]*bintree{}},
-			"delete.tmpl":                    &bintree{userSettingsDeleteTmpl, map[string]*bintree{}},
-			"email.tmpl":                     &bintree{userSettingsEmailTmpl, map[string]*bintree{}},
-			"navbar.tmpl":                    &bintree{userSettingsNavbarTmpl, map[string]*bintree{}},
-			"organizations.tmpl":             &bintree{userSettingsOrganizationsTmpl, map[string]*bintree{}},
-			"password.tmpl":                  &bintree{userSettingsPasswordTmpl, map[string]*bintree{}},
-			"profile.tmpl":                   &bintree{userSettingsProfileTmpl, map[string]*bintree{}},
-			"repositories.tmpl":              &bintree{userSettingsRepositoriesTmpl, map[string]*bintree{}},
-			"security.tmpl":                  &bintree{userSettingsSecurityTmpl, map[string]*bintree{}},
-			"sshkeys.tmpl":                   &bintree{userSettingsSshkeysTmpl, map[string]*bintree{}},
-			"two_factor_enable.tmpl":         &bintree{userSettingsTwo_factor_enableTmpl, map[string]*bintree{}},
-			"two_factor_recovery_codes.tmpl": &bintree{userSettingsTwo_factor_recovery_codesTmpl, map[string]*bintree{}},
+		"profile.tmpl": {userProfileTmpl, map[string]*bintree{}},
+		"settings": {nil, map[string]*bintree{
+			"applications.tmpl":              {userSettingsApplicationsTmpl, map[string]*bintree{}},
+			"avatar.tmpl":                    {userSettingsAvatarTmpl, map[string]*bintree{}},
+			"delete.tmpl":                    {userSettingsDeleteTmpl, map[string]*bintree{}},
+			"email.tmpl":                     {userSettingsEmailTmpl, map[string]*bintree{}},
+			"navbar.tmpl":                    {userSettingsNavbarTmpl, map[string]*bintree{}},
+			"organizations.tmpl":             {userSettingsOrganizationsTmpl, map[string]*bintree{}},
+			"password.tmpl":                  {userSettingsPasswordTmpl, map[string]*bintree{}},
+			"profile.tmpl":                   {userSettingsProfileTmpl, map[string]*bintree{}},
+			"repositories.tmpl":              {userSettingsRepositoriesTmpl, map[string]*bintree{}},
+			"security.tmpl":                  {userSettingsSecurityTmpl, map[string]*bintree{}},
+			"sshkeys.tmpl":                   {userSettingsSshkeysTmpl, map[string]*bintree{}},
+			"two_factor_enable.tmpl":         {userSettingsTwo_factor_enableTmpl, map[string]*bintree{}},
+			"two_factor_recovery_codes.tmpl": {userSettingsTwo_factor_recovery_codesTmpl, map[string]*bintree{}},
 		}},
 	}},
 }}
