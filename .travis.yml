@@ -13,6 +13,7 @@ before_install:
   - sudo apt-get install -y libpam-dev
 
 script:
+  - go vet ./...
   - go build -v -tags "pam"
   - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
