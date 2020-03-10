@@ -13,39 +13,46 @@ import (
 	"gogs.io/gogs/internal/gitutil"
 )
 
-type repoGitTree struct {
-	Sha  string              `json:"sha"`
-	URL  string              `json:"url"`
-	Tree []*repoGitTreeEntry `json:"tree"`
-}
-
-type repoGitTreeEntry struct {
-	Path string `json:"path"`
-	Mode string `json:"mode"`
-	Type string `json:"type"`
-	Size int64  `json:"size"`
-	Sha  string `json:"sha"`
-	URL  string `json:"url"`
-}
-
 func GetRepoGitTree(c *context.APIContext) {
-	gitTree, err := c.Repo.GitRepo.LsTree(c.Params(":sha"))
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	if err != nil {
+		c.ServerError("open repository", err)
+		return
+	}
+
+	sha := c.Params(":sha")
+	tree, err := gitRepo.LsTree(sha)
 	if err != nil {
 		c.NotFoundOrServerError("get tree", gitutil.IsErrRevisionNotExist, err)
 		return
 	}
-	entries, err := gitTree.Entries()
+
+	entries, err := tree.Entries()
 	if err != nil {
 		c.ServerError("list entries", err)
 		return
 	}
 
-	templateURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
+	type repoGitTreeEntry struct {
+		Path string `json:"path"`
+		Mode string `json:"mode"`
+		Type string `json:"type"`
+		Size int64  `json:"size"`
+		Sha  string `json:"sha"`
+		URL  string `json:"url"`
+	}
+	type repoGitTree struct {
+		Sha  string              `json:"sha"`
+		URL  string              `json:"url"`
+		Tree []*repoGitTreeEntry `json:"tree"`
+	}
+
+	treesURL := fmt.Sprintf("%s/repos/%s/%s/git/trees", c.BaseURL, c.Params(":username"), c.Params(":reponame"))
 
 	if len(entries) == 0 {
 		c.JSONSuccess(&repoGitTree{
-			Sha: c.Params(":sha"),
-			URL: fmt.Sprintf(templateURL+"/%s", c.Params(":sha")),
+			Sha: sha,
+			URL: fmt.Sprintf(treesURL+"/%s", sha),
 		})
 		return
 	}
@@ -63,7 +70,7 @@ func GetRepoGitTree(c *context.APIContext) {
 		case git.ObjectTag:
 			mode = "100644"
 		default:
-			mode = ""
+			panic("unreachable")
 		}
 		children = append(children, &repoGitTreeEntry{
 			Path: entry.Name(),
@@ -71,12 +78,12 @@ func GetRepoGitTree(c *context.APIContext) {
 			Type: string(entry.Type()),
 			Size: entry.Size(),
 			Sha:  entry.ID().String(),
-			URL:  fmt.Sprintf(templateURL+"/%s", entry.ID().String()),
+			URL:  fmt.Sprintf(treesURL+"/%s", entry.ID().String()),
 		})
 	}
 	c.JSONSuccess(&repoGitTree{
 		Sha:  c.Params(":sha"),
-		URL:  fmt.Sprintf(templateURL+"/%s", c.Params(":sha")),
+		URL:  fmt.Sprintf(treesURL+"/%s", sha),
 		Tree: children,
 	})
 }
