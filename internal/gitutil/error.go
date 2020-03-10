@@ -17,3 +17,8 @@ func IsErrRevisionNotExist(err error) bool {
 func IsErrNoMergeBase(err error) bool {
 	return err == git.ErrNoMergeBase
 }
+
+// IsErrSubmoduleNotExist returns true if the error is git.ErrSubmoduleNotExist.
+func IsErrSubmoduleNotExist(err error) bool {
+	return err == git.ErrSubmoduleNotExist
+}

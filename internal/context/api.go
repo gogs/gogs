@@ -39,7 +39,7 @@ func (c *APIContext) Error(status int, title string, obj interface{}) {
 	}
 
 	if status == http.StatusInternalServerError {
-		log.Error("%s: %s", title, message)
+		log.ErrorDepth(5, "%s: %s", title, message)
 	}
 
 	c.JSON(status, map[string]string{
@@ -61,6 +61,11 @@ func (c *APIContext) NotFound() {
 // ServerError renders the 500 response.
 func (c *APIContext) ServerError(title string, err error) {
 	c.Error(http.StatusInternalServerError, title, err)
+}
+
+// Errorf renders the 500 response with formatted message.
+func (c *APIContext) Errorf(err error, format string, args ...interface{}) {
+	c.Error(http.StatusInternalServerError, fmt.Sprintf(format, args...), err)
 }
 
 // NotFoundOrServerError use error check function to determine if the error
