@@ -1,20 +1,18 @@
-os: linux
 language: go
+os: linux
+dist: xenial
 go:
   - 1.13.x
   - 1.14.x
 go_import_path: gogs.io/gogs
-
 env:
   - GO111MODULE=on
-
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libpam-dev
-
 script:
+  - go vet ./...
   - go build -v -tags "pam"
   - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-
 after_success:
   - bash <(curl -s https://codecov.io/bash)

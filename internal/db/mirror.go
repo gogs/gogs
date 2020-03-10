@@ -39,7 +39,7 @@ type Mirror struct {
 	NextSync     time.Time `xorm:"-" json:"-"`
 	NextSyncUnix int64     `xorm:"next_update_unix"`
 
-	address string `xorm:"-" json:"-"`
+	address string `xorm:"-"`
 }
 
 func (m *Mirror) BeforeInsert() {

@@ -31,10 +31,6 @@ dist: release
 web: build
 	./gogs web
 
-govet:
-	$(GOVET) gogs.go
-	$(GOVET) models pkg routes
-
 build: $(GENERATED)
 	go build $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)' -trimpath -o gogs
 

@@ -437,10 +437,10 @@ type HookTask struct {
 
 func (t *HookTask) BeforeUpdate() {
 	if t.RequestInfo != nil {
-		t.RequestContent = t.MarshalJSON(t.RequestInfo)
+		t.RequestContent = t.ToJSON(t.RequestInfo)
 	}
 	if t.ResponseInfo != nil {
-		t.ResponseContent = t.MarshalJSON(t.ResponseInfo)
+		t.ResponseContent = t.ToJSON(t.ResponseInfo)
 	}
 }
 
@@ -472,7 +472,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (t *HookTask) MarshalJSON(v interface{}) string {
+func (t *HookTask) ToJSON(v interface{}) string {
 	p, err := jsoniter.Marshal(v)
 	if err != nil {
 		log.Error("Marshal [%d]: %v", t.ID, err)
