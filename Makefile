@@ -6,7 +6,7 @@ TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
 PUBLIC_FILES := $(shell find public | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/*.less)
 ASSETS_GENERATED := internal/assets/conf/conf_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go
-GENERATED := $(ASSETS_GENERATED) public/css/gogs.css
+GENERATED := $(ASSETS_GENERATED) public/css/gogs.min.css
 
 TAGS = ""
 BUILD_FLAGS = "-v"
@@ -59,10 +59,10 @@ internal/assets/public/public_gen.go: $(PUBLIC_FILES)
 	go generate internal/assets/public/public.go
 	gofmt -s -w $@
 
-less: public/css/gogs.css
+less: public/css/gogs.min.css
 
-public/css/gogs.css: $(LESS_FILES)
-	@type lessc >/dev/null 2>&1 && lessc --source-map "public/less/gogs.less" $@ || echo "lessc command not found or failed"
+public/css/gogs.min.css: $(LESS_FILES)
+	@type lessc >/dev/null 2>&1 && lessc --clean-css --source-map "public/less/gogs.less" $@ || echo "lessc command not found or failed"
 
 clean:
 	find . -name "*.DS_Store" -type f -delete
