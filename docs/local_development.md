@@ -41,6 +41,7 @@ Gogs has the following dependencies:
     ```bash
     brew install go postgresql git go-bindata npm
     npm install -g less
+    npm install -g less-plugin-clean-css
     ```
 
 1. Configure PostgreSQL to start automatically:
