@@ -239,5 +239,5 @@ func Monitor(c *context.Context) {
 	c.Data["PageIsAdminMonitor"] = true
 	c.Data["Processes"] = process.Processes
 	c.Data["Entries"] = cron.ListTasks()
-	c.Success( MONITOR)
+	c.Success(MONITOR)
 }
