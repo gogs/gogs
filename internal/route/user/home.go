@@ -7,6 +7,7 @@ package user
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
@@ -14,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 const (
@@ -33,7 +33,7 @@ func getDashboardContextUser(c *context.Context) *db.User {
 		// Organization.
 		org, err := db.GetUserByName(orgName)
 		if err != nil {
-			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+			c.NotFoundOrError(err, "get user by name")
 			return nil
 		}
 		ctxUser = org
@@ -41,7 +41,7 @@ func getDashboardContextUser(c *context.Context) *db.User {
 	c.Data["ContextUser"] = ctxUser
 
 	if err := c.User.GetOrganizations(true); err != nil {
-		c.Handle(500, "GetOrganizations", err)
+		c.Error(err, "get organizations")
 		return nil
 	}
 	c.Data["Orgs"] = c.User.Orgs
@@ -55,7 +55,7 @@ func getDashboardContextUser(c *context.Context) *db.User {
 func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile bool) {
 	actions, err := db.GetFeeds(ctxUser, userID, c.QueryInt64("after_id"), isProfile)
 	if err != nil {
-		c.Handle(500, "GetFeeds", err)
+		c.Error(err, "get feeds")
 		return
 	}
 
@@ -68,10 +68,10 @@ func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile
 		if !ok {
 			u, err := db.GetUserByName(act.ActUserName)
 			if err != nil {
-				if errors.IsUserNotExist(err) {
+				if db.IsErrUserNotExist(err) {
 					continue
 				}
-				c.Handle(500, "GetUserByName", err)
+				c.Error(err, "get user by name")
 				return
 			}
 			unameAvatars[act.ActUserName] = u.RelAvatarLink()
@@ -100,7 +100,7 @@ func Dashboard(c *context.Context) {
 	}
 
 	if c.Req.Header.Get("X-AJAX") == "true" {
-		c.HTML(200, NEWS_FEED)
+		c.Success(NEWS_FEED)
 		return
 	}
 
@@ -112,10 +112,10 @@ func Dashboard(c *context.Context) {
 	if !ctxUser.IsOrganization() {
 		collaborateRepos, err := c.User.GetAccessibleRepositories(conf.UI.User.RepoPagingNum)
 		if err != nil {
-			c.Handle(500, "GetAccessibleRepositories", err)
+			c.Error(err, "get accessible repositories")
 			return
 		} else if err = db.RepositoryList(collaborateRepos).LoadAttributes(); err != nil {
-			c.Handle(500, "RepositoryList.LoadAttributes", err)
+			c.Error(err, "load attributes")
 			return
 		}
 		c.Data["CollaborativeRepos"] = collaborateRepos
@@ -127,18 +127,18 @@ func Dashboard(c *context.Context) {
 	if ctxUser.IsOrganization() {
 		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, conf.UI.User.RepoPagingNum)
 		if err != nil {
-			c.Handle(500, "GetUserRepositories", err)
+			c.Error(err, "get user repositories")
 			return
 		}
 
 		mirrors, err = ctxUser.GetUserMirrorRepositories(c.User.ID)
 		if err != nil {
-			c.Handle(500, "GetUserMirrorRepositories", err)
+			c.Error(err, "get user mirror repositories")
 			return
 		}
 	} else {
 		if err = ctxUser.GetRepositories(1, conf.UI.User.RepoPagingNum); err != nil {
-			c.Handle(500, "GetRepositories", err)
+			c.Error(err, "get repositories")
 			return
 		}
 		repos = ctxUser.Repos
@@ -146,7 +146,7 @@ func Dashboard(c *context.Context) {
 
 		mirrors, err = ctxUser.GetMirrorRepositories()
 		if err != nil {
-			c.Handle(500, "GetMirrorRepositories", err)
+			c.Error(err, "get mirror repositories")
 			return
 		}
 	}
@@ -155,13 +155,13 @@ func Dashboard(c *context.Context) {
 	c.Data["MaxShowRepoNum"] = conf.UI.User.RepoPagingNum
 
 	if err := db.MirrorRepositoryList(mirrors).LoadAttributes(); err != nil {
-		c.Handle(500, "MirrorRepositoryList.LoadAttributes", err)
+		c.Error(err, "load attributes")
 		return
 	}
 	c.Data["MirrorCount"] = len(mirrors)
 	c.Data["Mirrors"] = mirrors
 
-	c.HTML(200, DASHBOARD)
+	c.Success(DASHBOARD)
 }
 
 func Issues(c *context.Context) {
@@ -216,12 +216,12 @@ func Issues(c *context.Context) {
 	if ctxUser.IsOrganization() {
 		repos, _, err = ctxUser.GetUserRepositories(c.User.ID, 1, ctxUser.NumRepos)
 		if err != nil {
-			c.Handle(500, "GetRepositories", err)
+			c.Error(err, "get repositories")
 			return
 		}
 	} else {
 		if err := ctxUser.GetRepositories(1, c.User.NumRepos); err != nil {
-			c.Handle(500, "GetRepositories", err)
+			c.Error(err, "get repositories")
 			return
 		}
 		repos = ctxUser.Repos
@@ -255,7 +255,7 @@ func Issues(c *context.Context) {
 	if !isPullList {
 		userRepoIDs, err = db.FilterRepositoryWithIssues(userRepoIDs)
 		if err != nil {
-			c.Handle(500, "FilterRepositoryWithIssues", err)
+			c.Error(err, "filter repositories with issues")
 			return
 		}
 	}
@@ -287,32 +287,32 @@ func Issues(c *context.Context) {
 
 	issues, err := db.Issues(issueOptions)
 	if err != nil {
-		c.Handle(500, "Issues", err)
+		c.Error(err, "list issues")
 		return
 	}
 
 	if repoID > 0 {
 		repo, err := db.GetRepositoryByID(repoID)
 		if err != nil {
-			c.Handle(500, "GetRepositoryByID", fmt.Errorf("[#%d] %v", repoID, err))
+			c.Error(err, "get repository by ID")
 			return
 		}
 
 		if err = repo.GetOwner(); err != nil {
-			c.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", repoID, err))
+			c.Error(err, "get owner")
 			return
 		}
 
 		// Check if user has access to given repository.
 		if !repo.IsOwnedBy(ctxUser.ID) && !repo.HasAccess(ctxUser.ID) {
-			c.Handle(404, "Issues", fmt.Errorf("#%d", repoID))
+			c.NotFound()
 			return
 		}
 	}
 
 	for _, issue := range issues {
 		if err = issue.Repo.GetOwner(); err != nil {
-			c.Handle(500, "GetOwner", fmt.Errorf("[#%d] %v", issue.RepoID, err))
+			c.Error(err, "get owner")
 			return
 		}
 	}
@@ -341,13 +341,13 @@ func Issues(c *context.Context) {
 		c.Data["State"] = "open"
 	}
 
-	c.HTML(200, ISSUES)
+	c.Success(ISSUES)
 }
 
 func ShowSSHKeys(c *context.Context, uid int64) {
 	keys, err := db.ListPublicKeys(uid)
 	if err != nil {
-		c.Handle(500, "ListPublicKeys", err)
+		c.Error(err, "list public keys")
 		return
 	}
 
@@ -356,7 +356,7 @@ func ShowSSHKeys(c *context.Context, uid int64) {
 		buf.WriteString(keys[i].OmitEmail())
 		buf.WriteString("\n")
 	}
-	c.PlainText(200, buf.Bytes())
+	c.PlainText(http.StatusOK, buf.String())
 }
 
 func showOrgProfile(c *context.Context) {
@@ -382,7 +382,7 @@ func showOrgProfile(c *context.Context) {
 	if c.IsLogged && !c.User.IsAdmin {
 		repos, count, err = org.GetUserRepositories(c.User.ID, page, conf.UI.User.RepoPagingNum)
 		if err != nil {
-			c.Handle(500, "GetUserRepositories", err)
+			c.Error(err, "get user repositories")
 			return
 		}
 		c.Data["Repos"] = repos
@@ -395,7 +395,7 @@ func showOrgProfile(c *context.Context) {
 			PageSize: conf.UI.User.RepoPagingNum,
 		})
 		if err != nil {
-			c.Handle(500, "GetRepositories", err)
+			c.Error(err, "get user repositories")
 			return
 		}
 		c.Data["Repos"] = repos
@@ -404,20 +404,20 @@ func showOrgProfile(c *context.Context) {
 	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 
 	if err := org.GetMembers(); err != nil {
-		c.Handle(500, "GetMembers", err)
+		c.Error(err, "get members")
 		return
 	}
 	c.Data["Members"] = org.Members
 
 	c.Data["Teams"] = org.Teams
 
-	c.HTML(200, ORG_HOME)
+	c.Success(ORG_HOME)
 }
 
 func Email2User(c *context.Context) {
 	u, err := db.GetUserByEmail(c.Query("email"))
 	if err != nil {
-		c.NotFoundOrServerError("GetUserByEmail", errors.IsUserNotExist, err)
+		c.NotFoundOrError(err, "get user by email")
 		return
 	}
 	c.Redirect(conf.Server.Subpath + "/user/" + u.Name)

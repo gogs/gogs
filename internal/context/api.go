@@ -14,6 +14,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errutil"
 )
 
 type APIContext struct {
@@ -28,26 +29,6 @@ type APIContext struct {
 // FIXME: move this constant to github.com/gogs/go-gogs-client
 const DocURL = "https://github.com/gogs/docs-api"
 
-// Error responses error message to client with given message.
-// If status is 500, also it prints error to log.
-func (c *APIContext) Error(status int, title string, obj interface{}) {
-	var message string
-	if err, ok := obj.(error); ok {
-		message = err.Error()
-	} else {
-		message = obj.(string)
-	}
-
-	if status == http.StatusInternalServerError {
-		log.ErrorDepth(5, "%s: %s", title, message)
-	}
-
-	c.JSON(status, map[string]string{
-		"message": message,
-		"url":     DocURL,
-	})
-}
-
 // NoContent renders the 204 response.
 func (c *APIContext) NoContent() {
 	c.Status(http.StatusNoContent)
@@ -58,25 +39,34 @@ func (c *APIContext) NotFound() {
 	c.Status(http.StatusNotFound)
 }
 
-// ServerError renders the 500 response.
-func (c *APIContext) ServerError(title string, err error) {
-	c.Error(http.StatusInternalServerError, title, err)
+// ErrorStatus renders error with given status code.
+func (c *APIContext) ErrorStatus(status int, err error) {
+	c.JSON(status, map[string]string{
+		"message": err.Error(),
+		"url":     DocURL,
+	})
+}
+
+// Error renders the 500 response.
+func (c *APIContext) Error(err error, msg string) {
+	log.ErrorDepth(5, "%s: %v", msg, err)
+	c.ErrorStatus(http.StatusInternalServerError, err)
 }
 
 // Errorf renders the 500 response with formatted message.
 func (c *APIContext) Errorf(err error, format string, args ...interface{}) {
-	c.Error(http.StatusInternalServerError, fmt.Sprintf(format, args...), err)
+	c.Error(err, fmt.Sprintf(format, args...))
 }
 
-// NotFoundOrServerError use error check function to determine if the error
+// NotFoundOrError use error check function to determine if the error
 // is about not found. It responses with 404 status code for not found error,
 // or error context description for logging purpose of 500 server error.
-func (c *APIContext) NotFoundOrServerError(title string, errck func(error) bool, err error) {
-	if errck(err) {
+func (c *APIContext) NotFoundOrError(err error, msg string) {
+	if errutil.IsNotFound(err) {
 		c.NotFound()
 		return
 	}
-	c.ServerError(title, err)
+	c.Error(err, msg)
 }
 
 // SetLinkHeader sets pagination link header by given total number and page size.

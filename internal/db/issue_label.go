@@ -14,6 +14,7 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
@@ -103,23 +104,42 @@ func NewLabels(labels ...*Label) error {
 	return err
 }
 
+var _ errutil.NotFound = (*ErrLabelNotExist)(nil)
+
+type ErrLabelNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrLabelNotExist(err error) bool {
+	_, ok := err.(ErrLabelNotExist)
+	return ok
+}
+
+func (err ErrLabelNotExist) Error() string {
+	return fmt.Sprintf("label does not exist: %v", err.args)
+}
+
+func (ErrLabelNotExist) NotFound() bool {
+	return true
+}
+
 // getLabelOfRepoByName returns a label by Name in given repository.
 // If pass repoID as 0, then ORM will ignore limitation of repository
 // and can return arbitrary label with any valid ID.
 func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, error) {
 	if len(labelName) <= 0 {
-		return nil, ErrLabelNotExist{0, repoID}
+		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID}}
 	}
 
 	l := &Label{
 		Name:   labelName,
 		RepoID: repoID,
 	}
-	has, err := x.Get(l)
+	has, err := e.Get(l)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrLabelNotExist{0, l.RepoID}
+		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID}}
 	}
 	return l, nil
 }
@@ -129,18 +149,18 @@ func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, err
 // and can return arbitrary label with any valid ID.
 func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 	if labelID <= 0 {
-		return nil, ErrLabelNotExist{labelID, repoID}
+		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID, "labelID": labelID}}
 	}
 
 	l := &Label{
 		ID:     labelID,
 		RepoID: repoID,
 	}
-	has, err := x.Get(l)
+	has, err := e.Get(l)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrLabelNotExist{l.ID, l.RepoID}
+		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID, "labelID": labelID}}
 	}
 	return l, nil
 }

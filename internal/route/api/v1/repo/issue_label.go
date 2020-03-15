@@ -11,13 +11,12 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 func ListIssueLabels(c *context.APIContext) {
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
@@ -31,24 +30,24 @@ func ListIssueLabels(c *context.APIContext) {
 func AddIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
 	labels, err := db.GetLabelsInRepoByIDs(c.Repo.Repository.ID, form.Labels)
 	if err != nil {
-		c.ServerError("GetLabelsInRepoByIDs", err)
+		c.Error(err, "get labels in repository by IDs")
 		return
 	}
 
 	if err = issue.AddLabels(c.User, labels); err != nil {
-		c.ServerError("AddLabels", err)
+		c.Error(err, "add labels")
 		return
 	}
 
 	labels, err = db.GetLabelsByIssueID(issue.ID)
 	if err != nil {
-		c.ServerError("GetLabelsByIssueID", err)
+		c.Error(err, "get labels by issue ID")
 		return
 	}
 
@@ -62,22 +61,22 @@ func AddIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 func DeleteIssueLabel(c *context.APIContext) {
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
 	label, err := db.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
 		if db.IsErrLabelNotExist(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("GetLabelInRepoByID", err)
+			c.Error(err, "get label of repository by ID")
 		}
 		return
 	}
 
 	if err := db.DeleteIssueLabel(issue, label); err != nil {
-		c.ServerError("DeleteIssueLabel", err)
+		c.Error(err, "delete issue label")
 		return
 	}
 
@@ -87,24 +86,24 @@ func DeleteIssueLabel(c *context.APIContext) {
 func ReplaceIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
 	labels, err := db.GetLabelsInRepoByIDs(c.Repo.Repository.ID, form.Labels)
 	if err != nil {
-		c.ServerError("GetLabelsInRepoByIDs", err)
+		c.Error(err, "get labels in repository by IDs")
 		return
 	}
 
 	if err := issue.ReplaceLabels(labels); err != nil {
-		c.ServerError("ReplaceLabels", err)
+		c.Error(err, "replace labels")
 		return
 	}
 
 	labels, err = db.GetLabelsByIssueID(issue.ID)
 	if err != nil {
-		c.ServerError("GetLabelsByIssueID", err)
+		c.Error(err, "get labels by issue ID")
 		return
 	}
 
@@ -118,12 +117,12 @@ func ReplaceIssueLabels(c *context.APIContext, form api.IssueLabelsOption) {
 func ClearIssueLabels(c *context.APIContext) {
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 
 	if err := issue.ClearLabels(c.User); err != nil {
-		c.ServerError("ClearLabels", err)
+		c.Error(err, "clear labels")
 		return
 	}
 

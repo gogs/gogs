@@ -15,7 +15,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -70,8 +69,8 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 	}
 	if id, ok := uid.(int64); ok {
 		if _, err := db.GetUserByID(id); err != nil {
-			if !errors.IsUserNotExist(err) {
-				log.Error("GetUserByID: %v", err)
+			if !db.IsErrUserNotExist(err) {
+				log.Error("Failed to get user by ID: %v", err)
 			}
 			return 0, false
 		}
@@ -95,8 +94,8 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 			if len(webAuthUser) > 0 {
 				u, err := db.GetUserByName(webAuthUser)
 				if err != nil {
-					if !errors.IsUserNotExist(err) {
-						log.Error("GetUserByName: %v", err)
+					if !db.IsErrUserNotExist(err) {
+						log.Error("Failed to get user by name: %v", err)
 						return nil, false, false
 					}
 
@@ -110,7 +109,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 						}
 						if err = db.CreateUser(u); err != nil {
 							// FIXME: should I create a system notice?
-							log.Error("CreateUser: %v", err)
+							log.Error("Failed to create user: %v", err)
 							return nil, false, false
 						} else {
 							return u, false, false
@@ -130,8 +129,8 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 
 				u, err := db.UserLogin(uname, passwd, -1)
 				if err != nil {
-					if !errors.IsUserNotExist(err) {
-						log.Error("UserLogin: %v", err)
+					if !db.IsErrUserNotExist(err) {
+						log.Error("Failed to authenticate user: %v", err)
 					}
 					return nil, false, false
 				}

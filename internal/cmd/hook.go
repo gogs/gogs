@@ -23,7 +23,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/httplib"
 )
@@ -93,7 +92,7 @@ func runHookPreReceive(c *cli.Context) error {
 		repoID := com.StrTo(os.Getenv(db.ENV_REPO_ID)).MustInt64()
 		protectBranch, err := db.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
-			if errors.IsErrBranchNotExist(err) {
+			if db.IsErrBranchNotExist(err) {
 				continue
 			}
 			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)

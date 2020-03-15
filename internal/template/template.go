@@ -256,6 +256,7 @@ func ActionContent2Commits(act Actioner) *db.PushCommits {
 	return push
 }
 
+// TODO(unknwon): Use url.Escape.
 func EscapePound(str string) string {
 	return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(str)
 }

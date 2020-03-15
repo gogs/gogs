@@ -22,7 +22,7 @@ func responseApiUsers(c *context.APIContext, users []*db.User) {
 func listUserFollowers(c *context.APIContext, u *db.User) {
 	users, err := u.GetFollowers(c.QueryInt("page"))
 	if err != nil {
-		c.ServerError("GetUserFollowers", err)
+		c.Error(err, "get followers")
 		return
 	}
 	responseApiUsers(c, users)
@@ -43,7 +43,7 @@ func ListFollowers(c *context.APIContext) {
 func listUserFollowing(c *context.APIContext, u *db.User) {
 	users, err := u.GetFollowing(c.QueryInt("page"))
 	if err != nil {
-		c.ServerError("GetFollowing", err)
+		c.Error(err, "get following")
 		return
 	}
 	responseApiUsers(c, users)
@@ -95,7 +95,7 @@ func Follow(c *context.APIContext) {
 		return
 	}
 	if err := db.FollowUser(c.User.ID, target.ID); err != nil {
-		c.ServerError("FollowUser", err)
+		c.Error(err, "follow user")
 		return
 	}
 	c.NoContent()
@@ -107,7 +107,7 @@ func Unfollow(c *context.APIContext) {
 		return
 	}
 	if err := db.UnfollowUser(c.User.ID, target.ID); err != nil {
-		c.ServerError("UnfollowUser", err)
+		c.Error(err, "unfollow user")
 		return
 	}
 	c.NoContent()

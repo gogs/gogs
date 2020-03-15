@@ -31,6 +31,7 @@ import (
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -606,8 +607,8 @@ func parseUserFromCode(code string) (user *User) {
 	if b, err := hex.DecodeString(hexStr); err == nil {
 		if user, err = GetUserByName(string(b)); user != nil {
 			return user
-		} else if !errors.IsUserNotExist(err) {
-			log.Error("GetUserByName: %v", err)
+		} else if !IsErrUserNotExist(err) {
+			log.Error("Failed to get user by name %q: %v", string(b), err)
 		}
 	}
 
@@ -890,13 +891,32 @@ func GetUserByKeyID(keyID int64) (*User, error) {
 	return user, nil
 }
 
+var _ errutil.NotFound = (*ErrUserNotExist)(nil)
+
+type ErrUserNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrUserNotExist(err error) bool {
+	_, ok := err.(ErrUserNotExist)
+	return ok
+}
+
+func (err ErrUserNotExist) Error() string {
+	return fmt.Sprintf("user does not exist: %v", err.args)
+}
+
+func (ErrUserNotExist) NotFound() bool {
+	return true
+}
+
 func getUserByID(e Engine, id int64) (*User, error) {
 	u := new(User)
 	has, err := e.ID(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.UserNotExist{UserID: id}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": id}}
 	}
 	return u, nil
 }
@@ -912,7 +932,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.UserNotExist{UserID: userID}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": userID}}
 	}
 	return GetUserByID(userID)
 }
@@ -920,14 +940,14 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 // GetUserByName returns a user by given name.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
-		return nil, errors.UserNotExist{Name: name}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"name": name}}
 	}
 	u := &User{LowerName: strings.ToLower(name)}
 	has, err := x.Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.UserNotExist{Name: name}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"name": name}}
 	}
 	return u, nil
 }
@@ -999,7 +1019,7 @@ func ValidateCommitsWithEmails(oldCommits []*git.Commit) []*UserCommit {
 // GetUserByEmail returns the user object by given e-mail if exists.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
-		return nil, errors.UserNotExist{Name: "email"}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"email": email}}
 	}
 
 	email = strings.ToLower(email)
@@ -1023,7 +1043,7 @@ func GetUserByEmail(email string) (*User, error) {
 		return GetUserByID(emailAddress.UID)
 	}
 
-	return nil, errors.UserNotExist{Name: email}
+	return nil, ErrUserNotExist{args: map[string]interface{}{"email": email}}
 }
 
 type SearchUserOptions struct {

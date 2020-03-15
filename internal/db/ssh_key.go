@@ -24,6 +24,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -684,6 +685,25 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 	return key, sess.Commit()
 }
 
+var _ errutil.NotFound = (*ErrDeployKeyNotExist)(nil)
+
+type ErrDeployKeyNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrDeployKeyNotExist(err error) bool {
+	_, ok := err.(ErrDeployKeyNotExist)
+	return ok
+}
+
+func (err ErrDeployKeyNotExist) Error() string {
+	return fmt.Sprintf("deploy key does not exist: %v", err.args)
+}
+
+func (ErrDeployKeyNotExist) NotFound() bool {
+	return true
+}
+
 // GetDeployKeyByID returns deploy key by given ID.
 func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	key := new(DeployKey)
@@ -691,7 +711,7 @@ func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{id, 0, 0}
+		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"deployKeyID": id}}
 	}
 	return key, nil
 }
@@ -706,7 +726,7 @@ func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{0, keyID, repoID}
+		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"keyID": keyID, "repoID": repoID}}
 	}
 	return key, nil
 }

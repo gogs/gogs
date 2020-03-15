@@ -48,13 +48,13 @@ func NewUser(c *context.Context) {
 
 	sources, err := db.LoginSources()
 	if err != nil {
-		c.Handle(500, "LoginSources", err)
+		c.Error(err, "list login sources")
 		return
 	}
 	c.Data["Sources"] = sources
 
 	c.Data["CanSendEmail"] = conf.Email.Enabled
-	c.HTML(200, USER_NEW)
+	c.Success(USER_NEW)
 }
 
 func NewUserPost(c *context.Context, f form.AdminCrateUser) {
@@ -64,7 +64,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 
 	sources, err := db.LoginSources()
 	if err != nil {
-		c.Handle(500, "LoginSources", err)
+		c.Error(err, "list login sources")
 		return
 	}
 	c.Data["Sources"] = sources
@@ -72,7 +72,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["CanSendEmail"] = conf.Email.Enabled
 
 	if c.HasError() {
-		c.HTML(200, USER_NEW)
+		c.Success(USER_NEW)
 		return
 	}
 
@@ -108,7 +108,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 			c.Data["Err_UserName"] = true
 			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f)
 		default:
-			c.Handle(500, "CreateUser", err)
+			c.Error(err, "create user")
 		}
 		return
 	}
@@ -126,7 +126,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 func prepareUserInfo(c *context.Context) *db.User {
 	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
 	if err != nil {
-		c.Handle(500, "GetUserByID", err)
+		c.Error(err, "get user by ID")
 		return nil
 	}
 	c.Data["User"] = u
@@ -134,7 +134,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 	if u.LoginSource > 0 {
 		c.Data["LoginSource"], err = db.GetLoginSourceByID(u.LoginSource)
 		if err != nil {
-			c.Handle(500, "GetLoginSourceByID", err)
+			c.Error(err, "get login source by ID")
 			return nil
 		}
 	} else {
@@ -143,7 +143,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 
 	sources, err := db.LoginSources()
 	if err != nil {
-		c.Handle(500, "LoginSources", err)
+		c.Error(err, "list login sources")
 		return nil
 	}
 	c.Data["Sources"] = sources
@@ -162,7 +162,7 @@ func EditUser(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, USER_EDIT)
+	c.Success(USER_EDIT)
 }
 
 func EditUserPost(c *context.Context, f form.AdminEditUser) {
@@ -177,7 +177,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	}
 
 	if c.HasError() {
-		c.HTML(200, USER_EDIT)
+		c.Success(USER_EDIT)
 		return
 	}
 
@@ -196,7 +196,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		u.Passwd = f.Password
 		var err error
 		if u.Salt, err = db.GetUserSalt(); err != nil {
-			c.Handle(500, "UpdateUser", err)
+			c.Error(err, "get user salt")
 			return
 		}
 		u.EncodePasswd()
@@ -219,7 +219,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
 		} else {
-			c.Handle(500, "UpdateUser", err)
+			c.Error(err, "update user")
 		}
 		return
 	}
@@ -232,7 +232,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 func DeleteUser(c *context.Context) {
 	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
 	if err != nil {
-		c.Handle(500, "GetUserByID", err)
+		c.Error(err, "get user by ID")
 		return
 	}
 
@@ -240,23 +240,23 @@ func DeleteUser(c *context.Context) {
 		switch {
 		case db.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
-			c.JSON(200, map[string]interface{}{
+			c.JSONSuccess(map[string]interface{}{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		case db.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
-			c.JSON(200, map[string]interface{}{
+			c.JSONSuccess(map[string]interface{}{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		default:
-			c.Handle(500, "DeleteUser", err)
+			c.Error(err, "delete user")
 		}
 		return
 	}
 	log.Trace("Account deleted by admin (%s): %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": conf.Server.Subpath + "/admin/users",
 	})
 }

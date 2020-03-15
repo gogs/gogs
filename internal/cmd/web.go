@@ -318,7 +318,7 @@ func runWeb(c *cli.Context) error {
 		m.Get("/attachments/:uuid", func(c *context.Context) {
 			attach, err := db.GetAttachmentByUUID(c.Params(":uuid"))
 			if err != nil {
-				c.NotFoundOrServerError("GetAttachmentByUUID", db.IsErrAttachmentNotExist, err)
+				c.NotFoundOrError(err, "get attachment by UUID")
 				return
 			} else if !com.IsFile(attach.LocalPath()) {
 				c.NotFound()
@@ -327,7 +327,7 @@ func runWeb(c *cli.Context) error {
 
 			fr, err := os.Open(attach.LocalPath())
 			if err != nil {
-				c.ServerError("open attachment file", err)
+				c.Error(err, "open attachment file")
 				return
 			}
 			defer fr.Close()
@@ -336,7 +336,7 @@ func runWeb(c *cli.Context) error {
 			c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
 
 			if _, err = io.Copy(c.Resp, fr); err != nil {
-				c.ServerError("copy from file to response", err)
+				c.Error(err, "copy from file to response")
 				return
 			}
 		})

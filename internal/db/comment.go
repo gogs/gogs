@@ -15,7 +15,7 @@ import (
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -96,7 +96,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Poster == nil {
 		c.Poster, err = GetUserByID(c.PosterID)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if IsErrUserNotExist(err) {
 				c.PosterID = -1
 				c.Poster = NewGhostUser()
 			} else {
@@ -391,6 +391,25 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 	return err
 }
 
+var _ errutil.NotFound = (*ErrCommentNotExist)(nil)
+
+type ErrCommentNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrCommentNotExist(err error) bool {
+	_, ok := err.(ErrCommentNotExist)
+	return ok
+}
+
+func (err ErrCommentNotExist) Error() string {
+	return fmt.Sprintf("comment does not exist: %v", err.args)
+}
+
+func (ErrCommentNotExist) NotFound() bool {
+	return true
+}
+
 // GetCommentByID returns the comment by given ID.
 func GetCommentByID(id int64) (*Comment, error) {
 	c := new(Comment)
@@ -398,7 +417,7 @@ func GetCommentByID(id int64) (*Comment, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrCommentNotExist{id, 0}
+		return nil, ErrCommentNotExist{args: map[string]interface{}{"commentID": id}}
 	}
 	return c, c.LoadAttributes()
 }

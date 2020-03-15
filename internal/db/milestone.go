@@ -14,6 +14,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errutil"
 )
 
 // Milestone represents a milestone of repository.
@@ -130,6 +131,25 @@ func NewMilestone(m *Milestone) (err error) {
 	return sess.Commit()
 }
 
+var _ errutil.NotFound = (*ErrMilestoneNotExist)(nil)
+
+type ErrMilestoneNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrMilestoneNotExist(err error) bool {
+	_, ok := err.(ErrMilestoneNotExist)
+	return ok
+}
+
+func (err ErrMilestoneNotExist) Error() string {
+	return fmt.Sprintf("milestone does not exist: %v", err.args)
+}
+
+func (ErrMilestoneNotExist) NotFound() bool {
+	return true
+}
+
 func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 	m := &Milestone{
 		ID:     id,
@@ -139,7 +159,7 @@ func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist{id, repoID}
+		return nil, ErrMilestoneNotExist{args: map[string]interface{}{"repoID": repoID, "milestoneID": id}}
 	}
 	return m, nil
 }

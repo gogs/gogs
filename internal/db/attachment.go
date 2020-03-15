@@ -16,6 +16,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errutil"
 )
 
 // Attachment represent a attachment of issue/comment/release.
@@ -83,13 +84,32 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 	return attach, nil
 }
 
+var _ errutil.NotFound = (*ErrAttachmentNotExist)(nil)
+
+type ErrAttachmentNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrAttachmentNotExist(err error) bool {
+	_, ok := err.(ErrAttachmentNotExist)
+	return ok
+}
+
+func (err ErrAttachmentNotExist) Error() string {
+	return fmt.Sprintf("attachment does not exist: %v", err.args)
+}
+
+func (ErrAttachmentNotExist) NotFound() bool {
+	return true
+}
+
 func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
 	attach := &Attachment{UUID: uuid}
-	has, err := x.Get(attach)
+	has, err := e.Get(attach)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrAttachmentNotExist{0, uuid}
+		return nil, ErrAttachmentNotExist{args: map[string]interface{}{"uuid": uuid}}
 	}
 	return attach, nil
 }

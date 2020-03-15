@@ -20,7 +20,6 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
@@ -256,16 +255,16 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pay
 		author, err := GetUserByEmail(commit.AuthorEmail)
 		if err == nil {
 			authorUsername = author.Name
-		} else if !errors.IsUserNotExist(err) {
-			return nil, fmt.Errorf("GetUserByEmail: %v", err)
+		} else if !IsErrUserNotExist(err) {
+			return nil, fmt.Errorf("get user by email: %v", err)
 		}
 
 		committerUsername := ""
 		committer, err := GetUserByEmail(commit.CommitterEmail)
 		if err == nil {
 			committerUsername = committer.Name
-		} else if !errors.IsUserNotExist(err) {
-			return nil, fmt.Errorf("GetUserByEmail: %v", err)
+		} else if !IsErrUserNotExist(err) {
+			return nil, fmt.Errorf("get user by email: %v", err)
 		}
 
 		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
@@ -304,8 +303,8 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 		u, err := GetUserByEmail(email)
 		if err != nil {
 			pcs.avatars[email] = tool.AvatarLink(email)
-			if !errors.IsUserNotExist(err) {
-				log.Error("GetUserByEmail: %v", err)
+			if !IsErrUserNotExist(err) {
+				log.Error("get user by email: %v", err)
 			}
 		} else {
 			pcs.avatars[email] = u.RelAvatarLink()
@@ -341,7 +340,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if errors.IsIssueNotExist(err) {
+				if IsErrIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -383,7 +382,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if errors.IsIssueNotExist(err) {
+				if IsErrIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -423,7 +422,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if errors.IsIssueNotExist(err) {
+				if IsErrIssueNotExist(err) {
 					continue
 				}
 				return err

@@ -11,7 +11,7 @@ import (
 	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -44,9 +44,28 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 	return branches, nil
 }
 
+var _ errutil.NotFound = (*ErrBranchNotExist)(nil)
+
+type ErrBranchNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrBranchNotExist(err error) bool {
+	_, ok := err.(ErrBranchNotExist)
+	return ok
+}
+
+func (err ErrBranchNotExist) Error() string {
+	return fmt.Sprintf("branch does not exist: %v", err.args)
+}
+
+func (ErrBranchNotExist) NotFound() bool {
+	return true
+}
+
 func (repo *Repository) GetBranch(name string) (*Branch, error) {
 	if !git.RepoHasBranch(repo.RepoPath(), name) {
-		return nil, errors.ErrBranchNotExist{Name: name}
+		return nil, ErrBranchNotExist{args: map[string]interface{}{"name": name}}
 	}
 	return &Branch{
 		RepoPath: repo.RepoPath(),
@@ -102,7 +121,7 @@ func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, er
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.ErrBranchNotExist{Name: name}
+		return nil, ErrBranchNotExist{args: map[string]interface{}{"name": name}}
 	}
 	return protectBranch, nil
 }

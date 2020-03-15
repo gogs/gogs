@@ -5,46 +5,47 @@
 package repo
 
 import (
-	"github.com/json-iterator/go"
-	"github.com/unknwon/com"
-	convert2 "gogs.io/gogs/internal/route/api/v1/convert"
+	"net/http"
 
 	api "github.com/gogs/go-gogs-client"
+	"github.com/json-iterator/go"
+	"github.com/pkg/errors"
+	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#list-hooks
 func ListHooks(c *context.APIContext) {
 	hooks, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Error(500, "GetWebhooksByRepoID", err)
+		c.Errorf(err, "get webhooks by repository ID")
 		return
 	}
 
 	apiHooks := make([]*api.Hook, len(hooks))
 	for i := range hooks {
-		apiHooks[i] = convert2.ToHook(c.Repo.RepoLink, hooks[i])
+		apiHooks[i] = convert.ToHook(c.Repo.RepoLink, hooks[i])
 	}
-	c.JSON(200, &apiHooks)
+	c.JSONSuccess(&apiHooks)
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#create-a-hook
 func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	if !db.IsValidHookTaskType(form.Type) {
-		c.Error(422, "", "Invalid hook type")
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid hook type."))
 		return
 	}
 	for _, name := range []string{"url", "content_type"} {
 		if _, ok := form.Config[name]; !ok {
-			c.Error(422, "", "Missing config option: "+name)
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Missing config option: "+name))
 			return
 		}
 	}
 	if !db.IsValidHookContentType(form.Config["content_type"]) {
-		c.Error(422, "", "Invalid content type")
+		c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid content type."))
 		return
 	}
 
@@ -75,7 +76,7 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 	if w.HookTaskType == db.SLACK {
 		channel, ok := form.Config["channel"]
 		if !ok {
-			c.Error(422, "", "Missing config option: channel")
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Missing config option: channel"))
 			return
 		}
 		meta, err := jsoniter.Marshal(&db.SlackMeta{
@@ -85,32 +86,28 @@ func CreateHook(c *context.APIContext, form api.CreateHookOption) {
 			Color:    form.Config["color"],
 		})
 		if err != nil {
-			c.Error(500, "slack: JSON marshal failed", err)
+			c.Errorf(err, "marshal JSON")
 			return
 		}
 		w.Meta = string(meta)
 	}
 
 	if err := w.UpdateEvent(); err != nil {
-		c.Error(500, "UpdateEvent", err)
+		c.Errorf(err, "update event")
 		return
 	} else if err := db.CreateWebhook(w); err != nil {
-		c.Error(500, "CreateWebhook", err)
+		c.Errorf(err, "create webhook")
 		return
 	}
 
-	c.JSON(201, convert2.ToHook(c.Repo.RepoLink, w))
+	c.JSON(http.StatusCreated, convert.ToHook(c.Repo.RepoLink, w))
 }
 
 // https://github.com/gogs/go-gogs-client/wiki/Repositories#edit-a-hook
 func EditHook(c *context.APIContext, form api.EditHookOption) {
 	w, err := db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if errors.IsWebhookNotExist(err) {
-			c.Status(404)
-		} else {
-			c.Error(500, "GetWebhookOfRepoByID", err)
-		}
+		c.NotFoundOrError(err, "get webhook of repository by ID")
 		return
 	}
 
@@ -120,7 +117,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 		}
 		if ct, ok := form.Config["content_type"]; ok {
 			if !db.IsValidHookContentType(ct) {
-				c.Error(422, "", "Invalid content type")
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid content type."))
 				return
 			}
 			w.ContentType = db.ToHookContentType(ct)
@@ -135,7 +132,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 					Color:    form.Config["color"],
 				})
 				if err != nil {
-					c.Error(500, "slack: JSON marshal failed", err)
+					c.Errorf(err, "marshal JSON")
 					return
 				}
 				w.Meta = string(meta)
@@ -159,7 +156,7 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 	w.PullRequest = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_PULL_REQUEST))
 	w.Release = com.IsSliceContainsStr(form.Events, string(db.HOOK_EVENT_RELEASE))
 	if err = w.UpdateEvent(); err != nil {
-		c.Error(500, "UpdateEvent", err)
+		c.Errorf(err, "update event")
 		return
 	}
 
@@ -168,18 +165,18 @@ func EditHook(c *context.APIContext, form api.EditHookOption) {
 	}
 
 	if err := db.UpdateWebhook(w); err != nil {
-		c.Error(500, "UpdateWebhook", err)
+		c.Errorf(err, "update webhook")
 		return
 	}
 
-	c.JSON(200, convert2.ToHook(c.Repo.RepoLink, w))
+	c.JSONSuccess(convert.ToHook(c.Repo.RepoLink, w))
 }
 
 func DeleteHook(c *context.APIContext) {
 	if err := db.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
-		c.Error(500, "DeleteWebhookByRepoID", err)
+		c.Errorf(err, "delete webhook of repository by ID")
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

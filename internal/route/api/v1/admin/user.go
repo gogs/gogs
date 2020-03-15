@@ -7,9 +7,8 @@ package admin
 import (
 	"net/http"
 
-	log "unknwon.dev/clog/v2"
-
 	api "github.com/gogs/go-gogs-client"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -27,9 +26,9 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 	source, err := db.GetLoginSourceByID(sourceID)
 	if err != nil {
 		if errors.IsLoginSourceNotExist(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("GetLoginSourceByID", err)
+			c.Error(err, "get login source by ID")
 		}
 		return
 	}
@@ -59,9 +58,9 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 			db.IsErrEmailAlreadyUsed(err) ||
 			db.IsErrNameReserved(err) ||
 			db.IsErrNamePatternNotAllowed(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("CreateUser", err)
+			c.Error(err, "create user")
 		}
 		return
 	}
@@ -90,7 +89,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		u.Passwd = form.Password
 		var err error
 		if u.Salt, err = db.GetUserSalt(); err != nil {
-			c.ServerError("GetUserSalt", err)
+			c.Error(err, "get user salt")
 			return
 		}
 		u.EncodePasswd()
@@ -119,9 +118,9 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 
 	if err := db.UpdateUser(u); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("UpdateUser", err)
+			c.Error(err, "update user")
 		}
 		return
 	}
@@ -139,9 +138,9 @@ func DeleteUser(c *context.APIContext) {
 	if err := db.DeleteUser(u); err != nil {
 		if db.IsErrUserOwnRepos(err) ||
 			db.IsErrUserHasOrgs(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("DeleteUser", err)
+			c.Error(err, "delete user")
 		}
 		return
 	}

@@ -5,15 +5,14 @@
 package user
 
 import (
-	"fmt"
-	repo2 "gogs.io/gogs/internal/route/repo"
 	"strings"
 
 	"github.com/unknwon/paginater"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -45,7 +44,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 
 	orgs, err := db.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
 	if err != nil {
-		c.ServerError("GetOrgsByUserIDDesc", err)
+		c.Error(err, "get organizations by user ID")
 		return
 	}
 
@@ -73,7 +72,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 			PageSize: conf.UI.User.RepoPagingNum,
 		})
 		if err != nil {
-			c.ServerError("GetRepositories", err)
+			c.Error(err, "get user repositories")
 			return
 		}
 
@@ -89,7 +88,7 @@ func Followers(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("Followers")
 	c.Data["CardsTitle"] = c.Tr("user.followers")
 	c.Data["Owner"] = puser
-	repo2.RenderUserCards(c, puser.NumFollowers, puser.GetFollowers, FOLLOWERS)
+	repo.RenderUserCards(c, puser.NumFollowers, puser.GetFollowers, FOLLOWERS)
 }
 
 func Following(c *context.Context, puser *context.ParamsUser) {
@@ -97,7 +96,7 @@ func Following(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("Following")
 	c.Data["CardsTitle"] = c.Tr("user.following")
 	c.Data["Owner"] = puser
-	repo2.RenderUserCards(c, puser.NumFollowing, puser.GetFollowing, FOLLOWERS)
+	repo.RenderUserCards(c, puser.NumFollowing, puser.GetFollowing, FOLLOWERS)
 }
 
 func Stars(c *context.Context) {
@@ -114,7 +113,7 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	}
 
 	if err != nil {
-		c.ServerError(fmt.Sprintf("Action (%s)", c.Params(":action")), err)
+		c.Errorf(err, "action %q", c.Params(":action"))
 		return
 	}
 

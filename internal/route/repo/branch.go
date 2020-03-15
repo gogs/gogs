@@ -31,13 +31,13 @@ type Branch struct {
 func loadBranches(c *context.Context) []*Branch {
 	rawBranches, err := c.Repo.Repository.GetBranches()
 	if err != nil {
-		c.Handle(500, "GetBranches", err)
+		c.Error(err, "get branches")
 		return nil
 	}
 
 	protectBranches, err := db.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Handle(500, "GetProtectBranchesByRepoID", err)
+		c.Error(err, "get protect branches by repository ID")
 		return nil
 	}
 
@@ -45,7 +45,7 @@ func loadBranches(c *context.Context) []*Branch {
 	for i := range rawBranches {
 		commit, err := rawBranches[i].GetCommit()
 		if err != nil {
-			c.Handle(500, "GetCommit", err)
+			c.Error(err, "get commit")
 			return nil
 		}
 
@@ -91,7 +91,7 @@ func Branches(c *context.Context) {
 
 	c.Data["ActiveBranches"] = activeBranches
 	c.Data["StaleBranches"] = staleBranches
-	c.HTML(200, BRANCHES_OVERVIEW)
+	c.Success( BRANCHES_OVERVIEW)
 }
 
 func AllBranches(c *context.Context) {
@@ -104,7 +104,7 @@ func AllBranches(c *context.Context) {
 	}
 	c.Data["Branches"] = branches
 
-	c.HTML(200, BRANCHES_ALL)
+	c.Success( BRANCHES_ALL)
 }
 
 func DeleteBranchPost(c *context.Context) {

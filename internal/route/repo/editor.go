@@ -56,7 +56,7 @@ func editFile(c *context.Context, isNewFile bool) {
 	if !isNewFile {
 		entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 		if err != nil {
-			c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
+			c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
 			return
 		}
 
@@ -69,7 +69,7 @@ func editFile(c *context.Context, isNewFile bool) {
 		blob := entry.Blob()
 		p, err := blob.Bytes()
 		if err != nil {
-			c.ServerError("blob.Data", err)
+			c.Error(err, "get blob data")
 			return
 		}
 
@@ -182,7 +182,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 				break
 			}
 
-			c.ServerError("Repo.Commit.GetTreeEntryByPath", err)
+			c.Error(err, "get tree entry")
 			return
 		}
 		if index != len(treeNames)-1 {
@@ -211,14 +211,14 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 				c.FormErr("TreePath")
 				c.RenderWithErr(c.Tr("repo.editor.file_editing_no_longer_exists", oldTreePath), EDIT_FILE, &f)
 			} else {
-				c.ServerError("GetTreeEntryByPath", err)
+				c.Error(err, "get tree entry")
 			}
 			return
 		}
 		if lastCommit != c.Repo.CommitID {
 			files, err := c.Repo.Commit.FilesChangedAfter(lastCommit)
 			if err != nil {
-				c.ServerError("GetFilesChangedSinceCommit", err)
+				c.Error(err, "get changed files")
 				return
 			}
 
@@ -236,7 +236,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		entry, err := c.Repo.Commit.TreeEntry(f.TreePath)
 		if err != nil {
 			if !gitutil.IsErrRevisionNotExist(err) {
-				c.ServerError("GetTreeEntryByPath", err)
+				c.Error(err, "get tree entry")
 				return
 			}
 		}
@@ -297,26 +297,26 @@ func DiffPreviewPost(c *context.Context, f form.EditPreviewDiff) {
 
 	entry, err := c.Repo.Commit.TreeEntry(treePath)
 	if err != nil {
-		c.Error(500, "GetTreeEntryByPath: "+err.Error())
+		c.Error(err, "get tree entry")
 		return
 	} else if entry.IsTree() {
-		c.Error(422)
+		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 
 	diff, err := c.Repo.Repository.GetDiffPreview(c.Repo.BranchName, treePath, f.Content)
 	if err != nil {
-		c.Error(500, "GetDiffPreview: "+err.Error())
+		c.Error(err, "get diff preview")
 		return
 	}
 
 	if diff.NumFiles() == 0 {
-		c.PlainText(200, []byte(c.Tr("repo.editor.no_changes_to_show")))
+		c.PlainText(http.StatusOK, c.Tr("repo.editor.no_changes_to_show"))
 		return
 	}
 	c.Data["File"] = diff.Files[0]
 
-	c.HTML(200, EDIT_DIFF_PREVIEW)
+	c.Success(EDIT_DIFF_PREVIEW)
 }
 
 func DeleteFile(c *context.Context) {
@@ -468,7 +468,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 				break
 			}
 
-			c.ServerError("GetTreeEntryByPath", err)
+			c.Error(err, "get tree entry")
 			return
 		}
 
@@ -514,7 +514,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 func UploadFileToServer(c *context.Context) {
 	file, header, err := c.Req.FormFile("file")
 	if err != nil {
-		c.Error(http.StatusInternalServerError, fmt.Sprintf("FormFile: %v", err))
+		c.Error(err, "get file")
 		return
 	}
 	defer file.Close()
@@ -537,14 +537,14 @@ func UploadFileToServer(c *context.Context) {
 		}
 
 		if !allowed {
-			c.Error(http.StatusBadRequest, ErrFileTypeForbidden.Error())
+			c.PlainText(http.StatusBadRequest, ErrFileTypeForbidden.Error())
 			return
 		}
 	}
 
 	upload, err := db.NewUpload(header.Filename, buf, file)
 	if err != nil {
-		c.Error(http.StatusInternalServerError, fmt.Sprintf("NewUpload: %v", err))
+		c.Error(err, "new upload")
 		return
 	}
 
@@ -556,15 +556,15 @@ func UploadFileToServer(c *context.Context) {
 
 func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
 	if len(f.File) == 0 {
-		c.Status(204)
+		c.Status(http.StatusNoContent)
 		return
 	}
 
 	if err := db.DeleteUploadByUUID(f.File); err != nil {
-		c.Error(500, fmt.Sprintf("DeleteUploadByUUID: %v", err))
+		c.Error(err, "delete upload by UUID")
 		return
 	}
 
 	log.Trace("Upload file removed: %s", f.File)
-	c.Status(204)
+	c.Status(http.StatusNoContent)
 }

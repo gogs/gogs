@@ -5,14 +5,14 @@
 package org
 
 import (
-	convert2 "gogs.io/gogs/internal/route/api/v1/convert"
-	user2 "gogs.io/gogs/internal/route/api/v1/user"
 	"net/http"
 
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
 func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *db.User) {
@@ -33,25 +33,25 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		if db.IsErrUserAlreadyExist(err) ||
 			db.IsErrNameReserved(err) ||
 			db.IsErrNamePatternNotAllowed(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("CreateOrganization", err)
+			c.Error(err, "create organization")
 		}
 		return
 	}
 
-	c.JSON(201, convert2.ToOrganization(org))
+	c.JSON(201, convert.ToOrganization(org))
 }
 
 func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
 	if err := u.GetOrganizations(all); err != nil {
-		c.ServerError("GetOrganizations", err)
+		c.Error(err, "get organization")
 		return
 	}
 
 	apiOrgs := make([]*api.Organization, len(u.Orgs))
 	for i := range u.Orgs {
-		apiOrgs[i] = convert2.ToOrganization(u.Orgs[i])
+		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
 	}
 	c.JSONSuccess(&apiOrgs)
 }
@@ -65,7 +65,7 @@ func CreateMyOrg(c *context.APIContext, apiForm api.CreateOrgOption) {
 }
 
 func ListUserOrgs(c *context.APIContext) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -73,7 +73,7 @@ func ListUserOrgs(c *context.APIContext) {
 }
 
 func Get(c *context.APIContext) {
-	c.JSONSuccess(convert2.ToOrganization(c.Org.Organization))
+	c.JSONSuccess(convert.ToOrganization(c.Org.Organization))
 }
 
 func Edit(c *context.APIContext, form api.EditOrgOption) {
@@ -88,9 +88,9 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 	org.Website = form.Website
 	org.Location = form.Location
 	if err := db.UpdateUser(org); err != nil {
-		c.ServerError("UpdateUser", err)
+		c.Error(err, "update user")
 		return
 	}
 
-	c.JSONSuccess(convert2.ToOrganization(org))
+	c.JSONSuccess(convert.ToOrganization(org))
 }

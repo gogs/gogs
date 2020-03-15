@@ -18,7 +18,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 const (
@@ -164,7 +163,7 @@ func runServ(c *cli.Context) error {
 
 	owner, err := db.GetUserByName(ownerName)
 	if err != nil {
-		if errors.IsUserNotExist(err) {
+		if db.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
 		}
 		fail("Internal error", "Failed to get repository owner '%s': %v", ownerName, err)
@@ -172,7 +171,7 @@ func runServ(c *cli.Context) error {
 
 	repo, err := db.GetRepositoryByName(owner.ID, repoName)
 	if err != nil {
-		if errors.IsRepoNotExist(err) {
+		if db.IsErrRepoNotExist(err) {
 			fail(_ACCESS_DENIED_MESSAGE, "Repository does not exist: %s/%s", owner.Name, repoName)
 		}
 		fail("Internal error", "Failed to get repository: %v", err)

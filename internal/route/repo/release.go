@@ -53,13 +53,13 @@ func Releases(c *context.Context) {
 
 	tagsPage, err := gitutil.Module.ListTagsAfter(c.Repo.GitRepo.Path(), c.Query("after"), 10)
 	if err != nil {
-		c.ServerError("get tags", err)
+		c.Error(err, "get tags")
 		return
 	}
 
 	releases, err := db.GetPublishedReleasesByRepoID(c.Repo.Repository.ID, tagsPage.Tags...)
 	if err != nil {
-		c.Handle(500, "GetPublishedReleasesByRepoID", err)
+		c.Error(err, "get published releases by repository ID")
 		return
 	}
 
@@ -75,12 +75,12 @@ func Releases(c *context.Context) {
 			releases[j] = nil // Mark as used.
 
 			if err = r.LoadAttributes(); err != nil {
-				c.Handle(500, "LoadAttributes", err)
+				c.Error(err, "load attributes")
 				return
 			}
 
 			if err := calReleaseNumCommitsBehind(c.Repo, r, countCache); err != nil {
-				c.Handle(500, "calReleaseNumCommitsBehind", err)
+				c.Error(err, "calculate number of commits after release")
 				return
 			}
 
@@ -93,7 +93,7 @@ func Releases(c *context.Context) {
 		if results[i] == nil {
 			commit, err := c.Repo.GitRepo.TagCommit(rawTag)
 			if err != nil {
-				c.Handle(500, "get tag commit", err)
+				c.Error(err, "get tag commit")
 				return
 			}
 
@@ -105,7 +105,7 @@ func Releases(c *context.Context) {
 
 			results[i].NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				c.ServerError("count commits", err)
+				c.Error(err, "count commits")
 				return
 			}
 			results[i].NumCommitsBehind = c.Repo.CommitsCount - results[i].NumCommits
@@ -118,18 +118,18 @@ func Releases(c *context.Context) {
 	if tagsPage.HasLatest {
 		drafts, err = db.GetDraftReleasesByRepoID(c.Repo.Repository.ID)
 		if err != nil {
-			c.Handle(500, "GetDraftReleasesByRepoID", err)
+			c.Error(err, "get draft releases by repository ID")
 			return
 		}
 
 		for _, r := range drafts {
 			if err = r.LoadAttributes(); err != nil {
-				c.Handle(500, "LoadAttributes", err)
+				c.Error(err, "load attributes")
 				return
 			}
 
 			if err := calReleaseNumCommitsBehind(c.Repo, r, countCache); err != nil {
-				c.Handle(500, "calReleaseNumCommitsBehind", err)
+				c.Error(err, "calculate number of commits after release")
 				return
 			}
 
@@ -148,7 +148,7 @@ func Releases(c *context.Context) {
 	if len(results) > 0 {
 		c.Data["NextAfter"] = results[len(results)-1].TagName
 	}
-	c.HTML(200, RELEASES)
+	c.Success(RELEASES)
 }
 
 func renderReleaseAttachmentSettings(c *context.Context) {
@@ -164,7 +164,7 @@ func NewRelease(c *context.Context) {
 	c.Data["PageIsReleaseList"] = true
 	c.Data["tag_target"] = c.Repo.Repository.DefaultBranch
 	renderReleaseAttachmentSettings(c)
-	c.HTML(200, RELEASE_NEW)
+	c.Success(RELEASE_NEW)
 }
 
 func NewReleasePost(c *context.Context, f form.NewRelease) {
@@ -173,7 +173,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 	renderReleaseAttachmentSettings(c)
 
 	if c.HasError() {
-		c.HTML(200, RELEASE_NEW)
+		c.Success(RELEASE_NEW)
 		return
 	}
 
@@ -194,13 +194,13 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 
 	commit, err := c.Repo.GitRepo.BranchCommit(f.Target)
 	if err != nil {
-		c.ServerError("get branch commit", err)
+		c.Error(err, "get branch commit")
 		return
 	}
 
 	commitsCount, err := commit.CommitsCount()
 	if err != nil {
-		c.ServerError("count commits", err)
+		c.Error(err, "count commits")
 		return
 	}
 
@@ -230,7 +230,7 @@ func NewReleasePost(c *context.Context, f form.NewRelease) {
 		case db.IsErrInvalidTagName(err):
 			c.RenderWithErr(c.Tr("repo.release.tag_name_invalid"), RELEASE_NEW, &f)
 		default:
-			c.Handle(500, "NewRelease", err)
+			c.Error(err, "new release")
 		}
 		return
 	}
@@ -248,11 +248,7 @@ func EditRelease(c *context.Context) {
 	tagName := c.Params("*")
 	rel, err := db.GetRelease(c.Repo.Repository.ID, tagName)
 	if err != nil {
-		if db.IsErrReleaseNotExist(err) {
-			c.Handle(404, "GetRelease", err)
-		} else {
-			c.Handle(500, "GetRelease", err)
-		}
+		c.NotFoundOrError(err, "get release")
 		return
 	}
 	c.Data["ID"] = rel.ID
@@ -264,7 +260,7 @@ func EditRelease(c *context.Context) {
 	c.Data["prerelease"] = rel.IsPrerelease
 	c.Data["IsDraft"] = rel.IsDraft
 
-	c.HTML(200, RELEASE_NEW)
+	c.Success(RELEASE_NEW)
 }
 
 func EditReleasePost(c *context.Context, f form.EditRelease) {
@@ -276,11 +272,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	tagName := c.Params("*")
 	rel, err := db.GetRelease(c.Repo.Repository.ID, tagName)
 	if err != nil {
-		if db.IsErrReleaseNotExist(err) {
-			c.Handle(404, "GetRelease", err)
-		} else {
-			c.Handle(500, "GetRelease", err)
-		}
+		c.NotFoundOrError(err, "get release")
 		return
 	}
 	c.Data["tag_name"] = rel.TagName
@@ -292,7 +284,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	c.Data["IsDraft"] = rel.IsDraft
 
 	if c.HasError() {
-		c.HTML(200, RELEASE_NEW)
+		c.Success(RELEASE_NEW)
 		return
 	}
 
@@ -307,7 +299,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 	rel.IsDraft = len(f.Draft) > 0
 	rel.IsPrerelease = f.Prerelease
 	if err = db.UpdateRelease(c.User, c.Repo.GitRepo, rel, isPublish, attachments); err != nil {
-		c.Handle(500, "UpdateRelease", err)
+		c.Error(err, "update release")
 		return
 	}
 	c.Redirect(c.Repo.RepoLink + "/releases")
@@ -328,7 +320,7 @@ func DeleteRelease(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.release.deletion_success"))
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess( map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/releases",
 	})
 }

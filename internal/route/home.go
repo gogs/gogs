@@ -6,11 +6,11 @@ package route
 
 import (
 	"github.com/unknwon/paginater"
-	user2 "gogs.io/gogs/internal/route/user"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/route/user"
 )
 
 const (
@@ -24,9 +24,9 @@ func Home(c *context.Context) {
 	if c.IsLogged {
 		if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
 			c.Data["Title"] = c.Tr("auth.active_your_account")
-			c.Success(user2.ACTIVATE)
+			c.Success(user.ACTIVATE)
 		} else {
-			user2.Dashboard(c)
+			user.Dashboard(c)
 		}
 		return
 	}
@@ -61,7 +61,7 @@ func ExploreRepos(c *context.Context) {
 		PageSize: conf.UI.ExplorePagingNum,
 	})
 	if err != nil {
-		c.ServerError("SearchRepositoryByName", err)
+		c.Error(err, "search repository by name")
 		return
 	}
 	c.Data["Keyword"] = keyword
@@ -69,7 +69,7 @@ func ExploreRepos(c *context.Context) {
 	c.Data["Page"] = paginater.New(int(count), conf.UI.ExplorePagingNum, page, 5)
 
 	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
-		c.ServerError("RepositoryList.LoadAttributes", err)
+		c.Error(err, "load attributes")
 		return
 	}
 	c.Data["Repos"] = repos
@@ -102,7 +102,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	if len(keyword) == 0 {
 		users, err = opts.Ranger(page, opts.PageSize)
 		if err != nil {
-			c.ServerError("Ranger", err)
+			c.Error(err, "ranger")
 			return
 		}
 		count = opts.Counter()
@@ -115,7 +115,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 			PageSize: opts.PageSize,
 		})
 		if err != nil {
-			c.ServerError("SearchUserByName", err)
+			c.Error(err, "search user by name")
 			return
 		}
 	}

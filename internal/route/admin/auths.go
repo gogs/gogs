@@ -34,7 +34,7 @@ func Authentications(c *context.Context) {
 	var err error
 	c.Data["Sources"], err = db.LoginSources()
 	if err != nil {
-		c.ServerError("LoginSources", err)
+		c.Error(err, "list login sources")
 		return
 	}
 
@@ -146,7 +146,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
 	default:
-		c.Error(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	c.Data["HasTLS"] = hasTLS
@@ -167,7 +167,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 			c.FormErr("Name")
 			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(db.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
 		} else {
-			c.ServerError("CreateSource", err)
+			c.Error(err, "create login source")
 		}
 		return
 	}
@@ -188,7 +188,7 @@ func EditAuthSource(c *context.Context) {
 
 	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		c.ServerError("GetLoginSourceByID", err)
+		c.Error(err, "get login source by ID")
 		return
 	}
 	c.Data["Source"] = source
@@ -206,7 +206,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		c.ServerError("GetLoginSourceByID", err)
+		c.Error(err, "get login source by ID")
 		return
 	}
 	c.Data["Source"] = source
@@ -232,7 +232,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
 	default:
-		c.Error(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
@@ -241,7 +241,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	source.IsDefault = f.IsDefault
 	source.Cfg = config
 	if err := db.UpdateLoginSource(source); err != nil {
-		c.ServerError("UpdateLoginSource", err)
+		c.Error(err, "update login source")
 		return
 	}
 
@@ -254,7 +254,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 func DeleteAuthSource(c *context.Context) {
 	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		c.ServerError("GetLoginSourceByID", err)
+		c.Error(err, "get login source by ID")
 		return
 	}
 

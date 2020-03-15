@@ -37,7 +37,7 @@ func Repos(c *context.Context) {
 	if len(keyword) == 0 {
 		repos, err = db.Repositories(page, conf.UI.Admin.RepoPagingNum)
 		if err != nil {
-			c.Handle(500, "Repositories", err)
+			c.Error(err, "list repositories")
 			return
 		}
 		count = db.CountRepositories(true)
@@ -50,7 +50,7 @@ func Repos(c *context.Context) {
 			PageSize: conf.UI.Admin.RepoPagingNum,
 		})
 		if err != nil {
-			c.Handle(500, "SearchRepositoryByName", err)
+			c.Error(err, "search repository by name")
 			return
 		}
 	}
@@ -59,29 +59,29 @@ func Repos(c *context.Context) {
 	c.Data["Page"] = paginater.New(int(count), conf.UI.Admin.RepoPagingNum, page, 5)
 
 	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
-		c.Handle(500, "LoadAttributes", err)
+		c.Error(err, "load attributes")
 		return
 	}
 	c.Data["Repos"] = repos
 
-	c.HTML(200, REPOS)
+	c.Success(REPOS)
 }
 
 func DeleteRepo(c *context.Context) {
 	repo, err := db.GetRepositoryByID(c.QueryInt64("id"))
 	if err != nil {
-		c.Handle(500, "GetRepositoryByID", err)
+		c.Error(err, "get repository by ID")
 		return
 	}
 
 	if err := db.DeleteRepository(repo.MustOwner().ID, repo.ID); err != nil {
-		c.Handle(500, "DeleteRepository", err)
+		c.Error(err, "delete repository")
 		return
 	}
 	log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": conf.Server.Subpath + "/admin/repos?page=" + c.Query("page"),
 	})
 }

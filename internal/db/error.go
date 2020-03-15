@@ -190,21 +190,6 @@ func (err ErrKeyAccessDenied) Error() string {
 		err.UserID, err.KeyID, err.Note)
 }
 
-type ErrDeployKeyNotExist struct {
-	ID     int64
-	KeyID  int64
-	RepoID int64
-}
-
-func IsErrDeployKeyNotExist(err error) bool {
-	_, ok := err.(ErrDeployKeyNotExist)
-	return ok
-}
-
-func (err ErrDeployKeyNotExist) Error() string {
-	return fmt.Sprintf("Deploy key does not exist [id: %d, key_id: %d, repo_id: %d]", err.ID, err.KeyID, err.RepoID)
-}
-
 type ErrDeployKeyAlreadyExist struct {
 	KeyID  int64
 	RepoID int64
@@ -348,20 +333,6 @@ func (err ErrReleaseAlreadyExist) Error() string {
 	return fmt.Sprintf("release tag already exist [tag_name: %s]", err.TagName)
 }
 
-type ErrReleaseNotExist struct {
-	ID      int64
-	TagName string
-}
-
-func IsErrReleaseNotExist(err error) bool {
-	_, ok := err.(ErrReleaseNotExist)
-	return ok
-}
-
-func (err ErrReleaseNotExist) Error() string {
-	return fmt.Sprintf("release tag does not exist [id: %d, tag_name: %s]", err.ID, err.TagName)
-}
-
 type ErrInvalidTagName struct {
 	TagName string
 }
@@ -386,116 +357,6 @@ func IsErrRepoFileAlreadyExist(err error) bool {
 
 func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
-}
-
-// __________      .__  .__ __________                                     __
-// \______   \__ __|  | |  |\______   \ ____  ________ __   ____   _______/  |_
-//  |     ___/  |  \  | |  | |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
-//  |    |   |  |  /  |_|  |_|    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
-//  |____|   |____/|____/____/____|_  /\___  >__   |____/  \___  >____  > |__|
-//                                  \/     \/   |__|           \/     \/
-
-type ErrPullRequestNotExist struct {
-	ID         int64
-	IssueID    int64
-	HeadRepoID int64
-	BaseRepoID int64
-	HeadBarcnh string
-	BaseBranch string
-}
-
-func IsErrPullRequestNotExist(err error) bool {
-	_, ok := err.(ErrPullRequestNotExist)
-	return ok
-}
-
-func (err ErrPullRequestNotExist) Error() string {
-	return fmt.Sprintf("pull request does not exist [id: %d, issue_id: %d, head_repo_id: %d, base_repo_id: %d, head_branch: %s, base_branch: %s]",
-		err.ID, err.IssueID, err.HeadRepoID, err.BaseRepoID, err.HeadBarcnh, err.BaseBranch)
-}
-
-// _________                                       __
-// \_   ___ \  ____   _____   _____   ____   _____/  |_
-// /    \  \/ /  _ \ /     \ /     \_/ __ \ /    \   __\
-// \     \___(  <_> )  Y Y  \  Y Y  \  ___/|   |  \  |
-//  \______  /\____/|__|_|  /__|_|  /\___  >___|  /__|
-//         \/             \/      \/     \/     \/
-
-type ErrCommentNotExist struct {
-	ID      int64
-	IssueID int64
-}
-
-func IsErrCommentNotExist(err error) bool {
-	_, ok := err.(ErrCommentNotExist)
-	return ok
-}
-
-func (err ErrCommentNotExist) Error() string {
-	return fmt.Sprintf("comment does not exist [id: %d, issue_id: %d]", err.ID, err.IssueID)
-}
-
-// .____          ___.          .__
-// |    |   _____ \_ |__   ____ |  |
-// |    |   \__  \ | __ \_/ __ \|  |
-// |    |___ / __ \| \_\ \  ___/|  |__
-// |_______ (____  /___  /\___  >____/
-//         \/    \/    \/     \/
-
-type ErrLabelNotExist struct {
-	LabelID int64
-	RepoID  int64
-}
-
-func IsErrLabelNotExist(err error) bool {
-	_, ok := err.(ErrLabelNotExist)
-	return ok
-}
-
-func (err ErrLabelNotExist) Error() string {
-	return fmt.Sprintf("label does not exist [label_id: %d, repo_id: %d]", err.LabelID, err.RepoID)
-}
-
-//    _____  .__.__                   __
-//   /     \ |__|  |   ____   _______/  |_  ____   ____   ____
-//  /  \ /  \|  |  | _/ __ \ /  ___/\   __\/  _ \ /    \_/ __ \
-// /    Y    \  |  |_\  ___/ \___ \  |  | (  <_> )   |  \  ___/
-// \____|__  /__|____/\___  >____  > |__|  \____/|___|  /\___  >
-//         \/             \/     \/                   \/     \/
-
-type ErrMilestoneNotExist struct {
-	ID     int64
-	RepoID int64
-}
-
-func IsErrMilestoneNotExist(err error) bool {
-	_, ok := err.(ErrMilestoneNotExist)
-	return ok
-}
-
-func (err ErrMilestoneNotExist) Error() string {
-	return fmt.Sprintf("milestone does not exist [id: %d, repo_id: %d]", err.ID, err.RepoID)
-}
-
-//    _____   __    __                .__                           __
-//   /  _  \_/  |__/  |______    ____ |  |__   _____   ____   _____/  |_
-//  /  /_\  \   __\   __\__  \ _/ ___\|  |  \ /     \_/ __ \ /    \   __\
-// /    |    \  |  |  |  / __ \\  \___|   Y  \  Y Y  \  ___/|   |  \  |
-// \____|__  /__|  |__| (____  /\___  >___|  /__|_|  /\___  >___|  /__|
-//         \/                \/     \/     \/      \/     \/     \/
-
-type ErrAttachmentNotExist struct {
-	ID   int64
-	UUID string
-}
-
-func IsErrAttachmentNotExist(err error) bool {
-	_, ok := err.(ErrAttachmentNotExist)
-	return ok
-}
-
-func (err ErrAttachmentNotExist) Error() string {
-	return fmt.Sprintf("attachment does not exist [id: %d, uuid: %s]", err.ID, err.UUID)
 }
 
 // .____                 .__           _________

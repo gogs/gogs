@@ -11,7 +11,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 const (
@@ -25,12 +24,12 @@ func Members(c *context.Context) {
 	c.Data["PageIsOrgMembers"] = true
 
 	if err := org.GetMembers(); err != nil {
-		c.Handle(500, "GetMembers", err)
+		c.Error(err, "get members")
 		return
 	}
 	c.Data["Members"] = org.Members
 
-	c.HTML(200, MEMBERS)
+	c.Success(MEMBERS)
 }
 
 func MembersAction(c *context.Context) {
@@ -45,19 +44,19 @@ func MembersAction(c *context.Context) {
 	switch c.Params(":action") {
 	case "private":
 		if c.User.ID != uid && !c.Org.IsOwner {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		err = db.ChangeOrgUserStatus(org.ID, uid, false)
 	case "public":
 		if c.User.ID != uid && !c.Org.IsOwner {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		err = db.ChangeOrgUserStatus(org.ID, uid, true)
 	case "remove":
 		if !c.Org.IsOwner {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		err = org.RemoveMember(uid)
@@ -77,7 +76,7 @@ func MembersAction(c *context.Context) {
 
 	if err != nil {
 		log.Error("Action(%s): %v", c.Params(":action"), err)
-		c.JSON(200, map[string]interface{}{
+		c.JSONSuccess( map[string]interface{}{
 			"ok":  false,
 			"err": err.Error(),
 		})
@@ -100,17 +99,17 @@ func Invitation(c *context.Context) {
 		uname := c.Query("uname")
 		u, err := db.GetUserByName(uname)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if db.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))
 				c.Redirect(c.Org.OrgLink + "/invitations/new")
 			} else {
-				c.Handle(500, " GetUserByName", err)
+				c.Error(err, "get user by name")
 			}
 			return
 		}
 
 		if err = org.AddMember(u.ID); err != nil {
-			c.Handle(500, " AddMember", err)
+			c.Error(err, "add member")
 			return
 		}
 
@@ -119,5 +118,5 @@ func Invitation(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, MEMBER_INVITE)
+	c.Success(MEMBER_INVITE)
 }

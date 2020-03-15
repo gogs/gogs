@@ -181,7 +181,7 @@ func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return errors.UserNotExist{UserID: email.UID}
+		return ErrUserNotExist{args: map[string]interface{}{"userID": email.UID}}
 	}
 
 	// Make sure the former primary email doesn't disappear.

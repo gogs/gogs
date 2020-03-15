@@ -5,6 +5,7 @@
 package org
 
 import (
+	"net/http"
 	"path"
 
 	"github.com/unknwon/com"
@@ -12,7 +13,6 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 )
 
@@ -30,13 +30,13 @@ func Teams(c *context.Context) {
 
 	for _, t := range org.Teams {
 		if err := t.GetMembers(); err != nil {
-			c.Handle(500, "GetMembers", err)
+			c.Error(err, "get members")
 			return
 		}
 	}
 	c.Data["Teams"] = org.Teams
 
-	c.HTML(200, TEAMS)
+	c.Success(TEAMS)
 }
 
 func TeamsAction(c *context.Context) {
@@ -51,7 +51,7 @@ func TeamsAction(c *context.Context) {
 	switch c.Params(":action") {
 	case "join":
 		if !c.Org.IsOwner {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		err = c.Org.Team.AddMember(c.User.ID)
@@ -59,25 +59,25 @@ func TeamsAction(c *context.Context) {
 		err = c.Org.Team.RemoveMember(c.User.ID)
 	case "remove":
 		if !c.Org.IsOwner {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		err = c.Org.Team.RemoveMember(uid)
 		page = "team"
 	case "add":
 		if !c.Org.IsOwner {
-			c.Error(404)
+			c.NotFound()
 			return
 		}
 		uname := c.Query("uname")
 		var u *db.User
 		u, err = db.GetUserByName(uname)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if db.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))
 				c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName)
 			} else {
-				c.Handle(500, " GetUserByName", err)
+				c.Error(err, "get user by name")
 			}
 			return
 		}
@@ -91,7 +91,7 @@ func TeamsAction(c *context.Context) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
 			log.Error("Action(%s): %v", c.Params(":action"), err)
-			c.JSON(200, map[string]interface{}{
+			c.JSONSuccess(map[string]interface{}{
 				"ok":  false,
 				"err": err.Error(),
 			})
@@ -109,7 +109,7 @@ func TeamsAction(c *context.Context) {
 
 func TeamsRepoAction(c *context.Context) {
 	if !c.Org.IsOwner {
-		c.Error(404)
+		c.NotFound()
 		return
 	}
 
@@ -120,12 +120,13 @@ func TeamsRepoAction(c *context.Context) {
 		var repo *db.Repository
 		repo, err = db.GetRepositoryByName(c.Org.Organization.ID, repoName)
 		if err != nil {
-			if errors.IsRepoNotExist(err) {
+			if db.IsErrRepoNotExist(err) {
 				c.Flash.Error(c.Tr("org.teams.add_nonexistent_repo"))
 				c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName + "/repositories")
 				return
 			}
-			c.Handle(500, "GetRepositoryByName", err)
+
+			c.Error(err, "get repository by name")
 			return
 		}
 		err = c.Org.Team.AddRepository(repo)
@@ -134,8 +135,7 @@ func TeamsRepoAction(c *context.Context) {
 	}
 
 	if err != nil {
-		log.Error("Action(%s): '%s' %v", c.Params(":action"), c.Org.Team.Name, err)
-		c.Handle(500, "TeamsRepoAction", err)
+		c.Errorf(err, "action %q", c.Params(":action"))
 		return
 	}
 	c.Redirect(c.Org.OrgLink + "/teams/" + c.Org.Team.LowerName + "/repositories")
@@ -146,7 +146,7 @@ func NewTeam(c *context.Context) {
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["PageIsOrgTeamsNew"] = true
 	c.Data["Team"] = &db.Team{}
-	c.HTML(200, TEAM_NEW)
+	c.Success(TEAM_NEW)
 }
 
 func NewTeamPost(c *context.Context, f form.CreateTeam) {
@@ -163,7 +163,7 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.HTML(200, TEAM_NEW)
+		c.Success(TEAM_NEW)
 		return
 	}
 
@@ -175,7 +175,7 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		case db.IsErrNameReserved(err):
 			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(db.ErrNameReserved).Name), TEAM_NEW, &f)
 		default:
-			c.Handle(500, "NewTeam", err)
+			c.Error(err, "new team")
 		}
 		return
 	}
@@ -187,20 +187,20 @@ func TeamMembers(c *context.Context) {
 	c.Data["Title"] = c.Org.Team.Name
 	c.Data["PageIsOrgTeams"] = true
 	if err := c.Org.Team.GetMembers(); err != nil {
-		c.Handle(500, "GetMembers", err)
+		c.Error(err, "get members")
 		return
 	}
-	c.HTML(200, TEAM_MEMBERS)
+	c.Success(TEAM_MEMBERS)
 }
 
 func TeamRepositories(c *context.Context) {
 	c.Data["Title"] = c.Org.Team.Name
 	c.Data["PageIsOrgTeams"] = true
 	if err := c.Org.Team.GetRepositories(); err != nil {
-		c.Handle(500, "GetRepositories", err)
+		c.Error(err, "get repositories")
 		return
 	}
-	c.HTML(200, TEAM_REPOSITORIES)
+	c.Success(TEAM_REPOSITORIES)
 }
 
 func EditTeam(c *context.Context) {
@@ -208,7 +208,7 @@ func EditTeam(c *context.Context) {
 	c.Data["PageIsOrgTeams"] = true
 	c.Data["team_name"] = c.Org.Team.Name
 	c.Data["desc"] = c.Org.Team.Description
-	c.HTML(200, TEAM_NEW)
+	c.Success(TEAM_NEW)
 }
 
 func EditTeamPost(c *context.Context, f form.CreateTeam) {
@@ -218,7 +218,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 	c.Data["Team"] = t
 
 	if c.HasError() {
-		c.HTML(200, TEAM_NEW)
+		c.Success(TEAM_NEW)
 		return
 	}
 
@@ -234,7 +234,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		case "admin":
 			auth = db.ACCESS_MODE_ADMIN
 		default:
-			c.Error(401)
+			c.Status(http.StatusUnauthorized)
 			return
 		}
 
@@ -251,7 +251,7 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		case db.IsErrTeamAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
 		default:
-			c.Handle(500, "UpdateTeam", err)
+			c.Error(err, "update team")
 		}
 		return
 	}
@@ -265,7 +265,7 @@ func DeleteTeam(c *context.Context) {
 		c.Flash.Success(c.Tr("org.teams.delete_team_success"))
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Org.OrgLink + "/teams",
 	})
 }

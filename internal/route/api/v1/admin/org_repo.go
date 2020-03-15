@@ -7,13 +7,12 @@ package admin
 import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 func GetRepositoryByParams(c *context.APIContext) *db.Repository {
 	repo, err := db.GetRepositoryByName(c.Org.Team.OrgID, c.Params(":reponame"))
 	if err != nil {
-		c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
+		c.NotFoundOrError(err, "get repository by name")
 		return nil
 	}
 	return repo
@@ -25,7 +24,7 @@ func AddTeamRepository(c *context.APIContext) {
 		return
 	}
 	if err := c.Org.Team.AddRepository(repo); err != nil {
-		c.ServerError("AddRepository", err)
+		c.Error(err, "add repository")
 		return
 	}
 
@@ -38,7 +37,7 @@ func RemoveTeamRepository(c *context.APIContext) {
 		return
 	}
 	if err := c.Org.Team.RemoveRepository(repo.ID); err != nil {
-		c.ServerError("RemoveRepository", err)
+		c.Error(err, "remove repository")
 		return
 	}
 

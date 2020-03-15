@@ -17,6 +17,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -90,7 +91,7 @@ func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Poster == nil {
 		issue.Poster, err = getUserByID(e, issue.PosterID)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if IsErrUserNotExist(err) {
 				issue.PosterID = -1
 				issue.Poster = NewGhostUser()
 			} else {
@@ -395,7 +396,7 @@ func (issue *Issue) GetAssignee() (err error) {
 	}
 
 	issue.Assignee, err = GetUserByID(issue.AssigneeID)
-	if errors.IsUserNotExist(err) {
+	if IsErrUserNotExist(err) {
 		return nil
 	}
 	return err
@@ -600,8 +601,8 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 	}
 
 	issue.Assignee, err = GetUserByID(issue.AssigneeID)
-	if err != nil && !errors.IsUserNotExist(err) {
-		log.Error("GetUserByID [assignee_id: %v]: %v", issue.AssigneeID, err)
+	if err != nil && !IsErrUserNotExist(err) {
+		log.Error("Failed to get user by ID: %v", err)
 		return nil
 	}
 
@@ -673,8 +674,8 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 
 	if opts.Issue.AssigneeID > 0 {
 		assignee, err := getUserByID(e, opts.Issue.AssigneeID)
-		if err != nil && !errors.IsUserNotExist(err) {
-			return fmt.Errorf("getUserByID: %v", err)
+		if err != nil && !IsErrUserNotExist(err) {
+			return fmt.Errorf("get user by ID: %v", err)
 		}
 
 		// Assume assignee is invalid and drop silently.
@@ -796,6 +797,25 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 	return nil
 }
 
+var _ errutil.NotFound = (*ErrIssueNotExist)(nil)
+
+type ErrIssueNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrIssueNotExist(err error) bool {
+	_, ok := err.(ErrIssueNotExist)
+	return ok
+}
+
+func (err ErrIssueNotExist) Error() string {
+	return fmt.Sprintf("issue does not exist: %v", err.args)
+}
+
+func (ErrIssueNotExist) NotFound() bool {
+	return true
+}
+
 // GetIssueByRef returns an Issue specified by a GFM reference.
 // See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
 func GetIssueByRef(ref string) (*Issue, error) {
@@ -806,7 +826,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 
 	index := com.StrTo(ref[n+1:]).MustInt64()
 	if index == 0 {
-		return nil, errors.IssueNotExist{}
+		return nil, ErrIssueNotExist{args: map[string]interface{}{"ref": ref}}
 	}
 
 	repo, err := GetRepositoryByRef(ref[:n])
@@ -832,7 +852,7 @@ func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.IssueNotExist{RepoID: repoID, Index: index}
+		return nil, ErrIssueNotExist{args: map[string]interface{}{"repoID": repoID, "index": index}}
 	}
 	return issue, nil
 }
@@ -852,7 +872,7 @@ func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.IssueNotExist{ID: id}
+		return nil, ErrIssueNotExist{args: map[string]interface{}{"issueID": id}}
 	}
 	return issue, nil
 }

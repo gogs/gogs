@@ -26,11 +26,11 @@ func GetRawFile(c *context.APIContext) {
 
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("get blob", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get blob")
 		return
 	}
 	if err = repo.ServeBlob(c.Context, blob); err != nil {
-		c.ServerError("ServeBlob", err)
+		c.Error(err, "serve blob")
 	}
 }
 
@@ -38,7 +38,7 @@ func GetArchive(c *context.APIContext) {
 	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return
 	}
 	c.Repo.GitRepo = gitRepo
@@ -49,14 +49,14 @@ func GetArchive(c *context.APIContext) {
 func GetEditorconfig(c *context.APIContext) {
 	ec, err := c.Repo.Editorconfig()
 	if err != nil {
-		c.NotFoundOrServerError("get .editorconfig", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get .editorconfig")
 		return
 	}
 
 	fileName := c.Params("filename")
 	def, err := ec.GetDefinitionForFilename(fileName)
 	if err != nil {
-		c.ServerError("get definition for filename", err)
+		c.Error(err, "get definition for filename")
 		return
 	}
 	if def == nil {
