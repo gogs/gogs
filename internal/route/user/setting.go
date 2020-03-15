@@ -237,7 +237,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Make emailaddress primary.
 	if c.Query("_method") == "PRIMARY" {
-		if err := db.MakeEmailPrimary(&db.EmailAddress{ID: c.QueryInt64("id")}); err != nil {
+		if err := db.MakeEmailPrimary(c.UserID(), &db.EmailAddress{ID: c.QueryInt64("id")}); err != nil {
 			c.ServerError("MakeEmailPrimary", err)
 			return
 		}

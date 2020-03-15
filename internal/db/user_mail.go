@@ -160,12 +160,16 @@ func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
 	return nil
 }
 
-func MakeEmailPrimary(email *EmailAddress) error {
+func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 	has, err := x.Get(email)
 	if err != nil {
 		return err
 	} else if !has {
 		return errors.EmailNotFound{Email: email.Email}
+	}
+
+	if email.UID != userID {
+		return errors.New("not the owner of the email")
 	}
 
 	if !email.IsActivated {
