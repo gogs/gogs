@@ -42,7 +42,7 @@ pack:
 
 release: build pack
 
-generate: $(ASSETS_GENERATED)
+generate: clean $(ASSETS_GENERATED)
 
 internal/assets/conf/conf_gen.go: $(CONF_FILES)
 	-rm -f $@
@@ -59,7 +59,7 @@ internal/assets/public/public_gen.go: $(PUBLIC_FILES)
 	go generate internal/assets/public/public.go
 	gofmt -s -w $@
 
-less: public/css/gogs.min.css
+less: clean public/css/gogs.min.css
 
 public/css/gogs.min.css: $(LESS_FILES)
 	@type lessc >/dev/null 2>&1 && lessc --clean-css --source-map "public/less/gogs.less" $@ || echo "lessc command not found or failed"

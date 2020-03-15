@@ -37,6 +37,7 @@ All notable changes to Gogs are documented in this file.
 
 - [Security] Potential open redirection with i18n.
 - [Security] Potential ability to delete files outside a repository.
+- [Security] Potential ability to set primary email on others' behalf from their verified emails.
 - [Security] Potential RCE on mirror repositories. [#5767](https://github.com/gogs/gogs/issues/5767)
 - [Security] Potential XSS attack with raw markdown API. [#5907](https://github.com/gogs/gogs/pull/5907)
 - Open/close milestone redirects to a 404 page. [#5677](https://github.com/gogs/gogs/issues/5677)
