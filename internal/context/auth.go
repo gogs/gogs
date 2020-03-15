@@ -28,26 +28,26 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 	return func(c *Context) {
 		// Cannot view any page before installation.
 		if !conf.Security.InstallLock {
-			c.Redirect(conf.Server.Subpath + "/install")
+			c.RedirectSubpath("/install")
 			return
 		}
 
 		// Check prohibit login users.
 		if c.IsLogged && c.User.ProhibitLogin {
 			c.Data["Title"] = c.Tr("auth.prohibit_login")
-			c.HTML(200, "user/auth/prohibit_login")
+			c.Success( "user/auth/prohibit_login")
 			return
 		}
 
 		// Check non-logged users landing page.
 		if !c.IsLogged && c.Req.RequestURI == "/" && conf.Server.LandingURL != "/" {
-			c.SubURLRedirect(conf.Server.LandingURL)
+			c.RedirectSubpath(conf.Server.LandingURL)
 			return
 		}
 
 		// Redirect to dashboard if user tries to visit any non-login page.
 		if options.SignOutRequired && c.IsLogged && c.Req.RequestURI != "/" {
-			c.Redirect(conf.Server.Subpath + "/")
+			c.RedirectSubpath("/")
 			return
 		}
 
@@ -62,18 +62,18 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			if !c.IsLogged {
 				// Restrict API calls with error message.
 				if auth.IsAPIPath(c.Req.URL.Path) {
-					c.JSON(403, map[string]string{
-						"message": "Only signed in user is allowed to call APIs.",
+					c.JSON(http.StatusForbidden, map[string]string{
+						"message": "Only authenticated user is allowed to call APIs.",
 					})
 					return
 				}
 
 				c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-				c.Redirect(conf.Server.Subpath + "/user/login")
+				c.RedirectSubpath("/user/login")
 				return
 			} else if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-				c.Data["Title"] = c.Tr("auth.active_your_account")
-				c.HTML(200, "user/auth/activate")
+				c.Title("auth.active_your_account")
+				c.Success("user/auth/activate")
 				return
 			}
 		}
@@ -82,21 +82,21 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 		if !options.SignOutRequired && !c.IsLogged && !auth.IsAPIPath(c.Req.URL.Path) &&
 			len(c.GetCookie(conf.Security.CookieUsername)) > 0 {
 			c.SetCookie("redirect_to", url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
-			c.Redirect(conf.Server.Subpath + "/user/login")
+			c.RedirectSubpath("/user/login")
 			return
 		}
 
 		if options.AdminRequired {
 			if !c.User.IsAdmin {
-				c.Error(403)
+				c.Status(http.StatusForbidden)
 				return
 			}
-			c.Data["PageIsAdmin"] = true
+			c.PageIs("Admin")
 		}
 	}
 }
 
-// RequireBasicAuth verifies HTTP Basic Authentication header with given credentials
+// RequireBasicAuth verifies HTTP Basic Authentication header with given credentials.
 func (c *Context) RequireBasicAuth(username, password string) {
 	fields := strings.Fields(c.Req.Header.Get("Authorization"))
 	if len(fields) != 2 || fields[0] != "Basic" {

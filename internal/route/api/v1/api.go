@@ -15,7 +15,6 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/api/v1/admin"
 	"gogs.io/gogs/internal/route/api/v1/misc"
@@ -40,7 +39,7 @@ func repoAssignment() macaron.Handler {
 		} else {
 			owner, err = db.GetUserByName(username)
 			if err != nil {
-				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+				c.NotFoundOrError(err, "get user by name")
 				return
 			}
 		}
@@ -48,10 +47,10 @@ func repoAssignment() macaron.Handler {
 
 		r, err := db.GetRepositoryByName(owner.ID, reponame)
 		if err != nil {
-			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
+			c.NotFoundOrError(err, "get repository by name")
 			return
 		} else if err = r.GetOwner(); err != nil {
-			c.ServerError("GetOwner", err)
+			c.Error(err, "get owner")
 			return
 		}
 
@@ -60,7 +59,7 @@ func repoAssignment() macaron.Handler {
 		} else {
 			mode, err := db.UserAccessMode(c.UserID(), r)
 			if err != nil {
-				c.ServerError("UserAccessMode", err)
+				c.Error(err, "get user access mode")
 				return
 			}
 			c.Repo.AccessMode = mode
@@ -94,7 +93,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 		if assignOrg {
 			c.Org.Organization, err = db.GetUserByName(c.Params(":orgname"))
 			if err != nil {
-				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+				c.NotFoundOrError(err, "get organization by name")
 				return
 			}
 		}
@@ -102,7 +101,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 		if assignTeam {
 			c.Org.Team, err = db.GetTeamByID(c.ParamsInt64(":teamid"))
 			if err != nil {
-				c.NotFoundOrServerError("GetTeamByID", errors.IsTeamNotExist, err)
+				c.NotFoundOrError(err, "get team by ID")
 				return
 			}
 		}
@@ -113,7 +112,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 func reqToken() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.IsTokenAuth {
-			c.Error(http.StatusUnauthorized)
+			c.Status(http.StatusUnauthorized)
 			return
 		}
 	}
@@ -123,7 +122,7 @@ func reqToken() macaron.Handler {
 func reqBasicAuth() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.IsBasicAuth {
-			c.Error(http.StatusUnauthorized)
+			c.Status(http.StatusUnauthorized)
 			return
 		}
 	}
@@ -133,7 +132,7 @@ func reqBasicAuth() macaron.Handler {
 func reqAdmin() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.IsLogged || !c.User.IsAdmin {
-			c.Error(http.StatusForbidden)
+			c.Status(http.StatusForbidden)
 			return
 		}
 	}
@@ -143,7 +142,7 @@ func reqAdmin() macaron.Handler {
 func reqRepoWriter() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsWriter() {
-			c.Error(http.StatusForbidden)
+			c.Status(http.StatusForbidden)
 			return
 		}
 	}
@@ -153,7 +152,7 @@ func reqRepoWriter() macaron.Handler {
 func reqRepoAdmin() macaron.Handler {
 	return func(c *context.Context) {
 		if !c.Repo.IsAdmin() {
-			c.Error(http.StatusForbidden)
+			c.Status(http.StatusForbidden)
 			return
 		}
 	}

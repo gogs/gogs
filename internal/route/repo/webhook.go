@@ -6,6 +6,7 @@ package repo
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
@@ -36,12 +37,12 @@ func Webhooks(c *context.Context) {
 
 	ws, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Handle(500, "GetWebhooksByRepoID", err)
+		c.Error(err, "get webhooks by repository ID")
 		return
 	}
 	c.Data["Webhooks"] = ws
 
-	c.HTML(200, WEBHOOKS)
+	c.Success(WEBHOOKS)
 }
 
 type OrgRepoCtx struct {
@@ -77,7 +78,7 @@ func getOrgRepoCtx(c *context.Context) (*OrgRepoCtx, error) {
 func checkHookType(c *context.Context) string {
 	hookType := strings.ToLower(c.Params(":type"))
 	if !com.IsSliceContainsStr(conf.Webhook.Types, hookType) {
-		c.Handle(404, "checkHookType", nil)
+		c.NotFound()
 		return ""
 	}
 	return hookType
@@ -91,7 +92,7 @@ func WebhooksNew(c *context.Context) {
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
-		c.Handle(500, "getOrgRepoCtx", err)
+		c.Error(err, "get organization repository context")
 		return
 	}
 
@@ -101,7 +102,7 @@ func WebhooksNew(c *context.Context) {
 	}
 	c.Data["BaseLink"] = orCtx.Link
 
-	c.HTML(200, orCtx.NewTemplate)
+	c.Success(orCtx.NewTemplate)
 }
 
 func ParseHookEvent(f form.Webhook) *db.HookEvent {
@@ -131,13 +132,13 @@ func WebHooksNewPost(c *context.Context, f form.NewWebhook) {
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
-		c.Handle(500, "getOrgRepoCtx", err)
+		c.Error(err, "get organization repository context")
 		return
 	}
 	c.Data["BaseLink"] = orCtx.Link
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -157,10 +158,10 @@ func WebHooksNewPost(c *context.Context, f form.NewWebhook) {
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.CreateWebhook(w); err != nil {
-		c.Handle(500, "CreateWebhook", err)
+		c.Error(err, "create webhook")
 		return
 	}
 
@@ -176,12 +177,12 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
-		c.Handle(500, "getOrgRepoCtx", err)
+		c.Error(err, "get organization repository context")
 		return
 	}
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -192,7 +193,7 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 		Color:    f.Color,
 	})
 	if err != nil {
-		c.Handle(500, "Marshal", err)
+		c.Error(err, "marshal JSON")
 		return
 	}
 
@@ -207,10 +208,10 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.CreateWebhook(w); err != nil {
-		c.Handle(500, "CreateWebhook", err)
+		c.Error(err, "create webhook")
 		return
 	}
 
@@ -227,12 +228,12 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
-		c.Handle(500, "getOrgRepoCtx", err)
+		c.Error(err, "get organization repository context")
 		return
 	}
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -242,7 +243,7 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 		Color:    f.Color,
 	})
 	if err != nil {
-		c.Handle(500, "Marshal", err)
+		c.Error(err, "marshal JSON")
 		return
 	}
 
@@ -257,10 +258,10 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.CreateWebhook(w); err != nil {
-		c.Handle(500, "CreateWebhook", err)
+		c.Error(err, "create webhook")
 		return
 	}
 
@@ -276,12 +277,12 @@ func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
-		c.Handle(500, "getOrgRepoCtx", err)
+		c.Error(err, "get organization repository context")
 		return
 	}
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -295,10 +296,10 @@ func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
 		OrgID:        orCtx.OrgID,
 	}
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.CreateWebhook(w); err != nil {
-		c.Handle(500, "CreateWebhook", err)
+		c.Error(err, "create webhook")
 		return
 	}
 
@@ -311,7 +312,7 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
 
 	orCtx, err := getOrgRepoCtx(c)
 	if err != nil {
-		c.Handle(500, "getOrgRepoCtx", err)
+		c.Error(err, "get organization repository context")
 		return nil, nil
 	}
 	c.Data["BaseLink"] = orCtx.Link
@@ -323,7 +324,7 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
 		w, err = db.GetWebhookByOrgID(c.Org.Organization.ID, c.ParamsInt64(":id"))
 	}
 	if err != nil {
-		c.NotFoundOrServerError("GetWebhookOfRepoByID/GetWebhookByOrgID", errors.IsWebhookNotExist, err)
+		c.NotFoundOrError(err, "get webhook")
 		return nil, nil
 	}
 
@@ -342,7 +343,8 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
 
 	c.Data["History"], err = w.History(1)
 	if err != nil {
-		c.Handle(500, "History", err)
+		c.Error(err, "get history")
+		return nil, nil
 	}
 	return orCtx, w
 }
@@ -358,7 +360,7 @@ func WebHooksEdit(c *context.Context) {
 	}
 	c.Data["Webhook"] = w
 
-	c.HTML(200, orCtx.NewTemplate)
+	c.Success(orCtx.NewTemplate)
 }
 
 func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
@@ -373,7 +375,7 @@ func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -388,10 +390,10 @@ func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
 	w.HookEvent = ParseHookEvent(f.Webhook)
 	w.IsActive = f.Active
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Handle(500, "WebHooksEditPost", err)
+		c.Error(err, "update webhook")
 		return
 	}
 
@@ -411,7 +413,7 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -422,7 +424,7 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 		Color:    f.Color,
 	})
 	if err != nil {
-		c.Handle(500, "Marshal", err)
+		c.Error(err, "marshal JSON")
 		return
 	}
 
@@ -431,10 +433,10 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 	w.HookEvent = ParseHookEvent(f.Webhook)
 	w.IsActive = f.Active
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Handle(500, "UpdateWebhook", err)
+		c.Error(err, "update webhook")
 		return
 	}
 
@@ -455,7 +457,7 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -465,7 +467,7 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 		Color:    f.Color,
 	})
 	if err != nil {
-		c.Handle(500, "Marshal", err)
+		c.Error(err, "marshal JSON")
 		return
 	}
 
@@ -474,10 +476,10 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 	w.HookEvent = ParseHookEvent(f.Webhook)
 	w.IsActive = f.Active
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Handle(500, "UpdateWebhook", err)
+		c.Error(err, "update webhook")
 		return
 	}
 
@@ -497,7 +499,7 @@ func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.HTML(200, orCtx.NewTemplate)
+		c.Success(orCtx.NewTemplate)
 		return
 	}
 
@@ -505,10 +507,10 @@ func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
 	w.HookEvent = ParseHookEvent(f.Webhook)
 	w.IsActive = f.Active
 	if err := w.UpdateEvent(); err != nil {
-		c.Handle(500, "UpdateEvent", err)
+		c.Error(err, "update event")
 		return
 	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Handle(500, "UpdateWebhook", err)
+		c.Error(err, "update webhook")
 		return
 	}
 
@@ -550,22 +552,22 @@ func TestWebhook(c *context.Context) {
 		author, err := db.GetUserByEmail(c.Repo.Commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
-		} else if !errors.IsUserNotExist(err) {
-			c.Handle(500, "GetUserByEmail.(author)", err)
+		} else if !db.IsErrUserNotExist(err) {
+			c.Error(err, "get user by email")
 			return
 		}
 
 		user, err := db.GetUserByEmail(c.Repo.Commit.Committer.Email)
 		if err == nil {
 			committerUsername = user.Name
-		} else if !errors.IsUserNotExist(err) {
-			c.Handle(500, "GetUserByEmail.(committer)", err)
+		} else if !db.IsErrUserNotExist(err) {
+			c.Error(err, "get user by email")
 			return
 		}
 
 		nameStatus, err = c.Repo.Commit.ShowNameStatus()
 		if err != nil {
-			c.Handle(500, "FileStatus", err)
+			c.Error(err, "get changed files")
 			return
 		}
 	}
@@ -600,34 +602,36 @@ func TestWebhook(c *context.Context) {
 		Sender: apiUser,
 	}
 	if err := db.TestWebhook(c.Repo.Repository, db.HOOK_EVENT_PUSH, p, c.ParamsInt64("id")); err != nil {
-		c.Handle(500, "TestWebhook", err)
-	} else {
-		c.Flash.Info(c.Tr("repo.settings.webhook.test_delivery_success"))
-		c.Status(200)
+		c.Error(err, "test webhook")
+		return
 	}
+
+	c.Flash.Info(c.Tr("repo.settings.webhook.test_delivery_success"))
+	c.Status(http.StatusOK)
 }
 
 func RedeliveryWebhook(c *context.Context) {
 	webhook, err := db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetWebhookOfRepoByID/GetWebhookByOrgID", errors.IsWebhookNotExist, err)
+		c.NotFoundOrError(err, "get webhook")
 		return
 	}
 
 	hookTask, err := db.GetHookTaskOfWebhookByUUID(webhook.ID, c.Query("uuid"))
 	if err != nil {
-		c.NotFoundOrServerError("GetHookTaskOfWebhookByUUID/GetWebhookByOrgID", errors.IsHookTaskNotExist, err)
+		c.NotFoundOrError(err, "get hook task by UUID")
 		return
 	}
 
 	hookTask.IsDelivered = false
 	if err = db.UpdateHookTask(hookTask); err != nil {
-		c.Handle(500, "UpdateHookTask", err)
-	} else {
-		go db.HookQueue.Add(c.Repo.Repository.ID)
-		c.Flash.Info(c.Tr("repo.settings.webhook.redelivery_success", hookTask.UUID))
-		c.Status(200)
+		c.Error(err, "update hook task")
+		return
 	}
+
+	go db.HookQueue.Add(c.Repo.Repository.ID)
+	c.Flash.Info(c.Tr("repo.settings.webhook.redelivery_success", hookTask.UUID))
+	c.Status(http.StatusOK)
 }
 
 func DeleteWebhook(c *context.Context) {
@@ -637,7 +641,7 @@ func DeleteWebhook(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/settings/hooks",
 	})
 }

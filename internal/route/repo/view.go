@@ -37,13 +37,13 @@ const (
 func renderDirectory(c *context.Context, treeLink string) {
 	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("get subtree", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get subtree")
 		return
 	}
 
 	entries, err := tree.Entries()
 	if err != nil {
-		c.ServerError("list entries", err)
+		c.Error(err, "list entries")
 		return
 	}
 	entries.Sort()
@@ -54,7 +54,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		Timeout:        5 * time.Minute,
 	})
 	if err != nil {
-		c.ServerError("get commits info", err)
+		c.Error(err, "get commits info")
 		return
 	}
 
@@ -76,7 +76,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 		p, err := readmeFile.Bytes()
 		if err != nil {
-			c.ServerError("readmeFile.Data", err)
+			c.Error(err, "read file")
 			return
 		}
 
@@ -107,7 +107,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	if len(c.Repo.TreePath) > 0 {
 		latestCommit, err = c.Repo.Commit.CommitByPath(git.CommitByRevisionOptions{Path: c.Repo.TreePath})
 		if err != nil {
-			c.ServerError("get commit by path", err)
+			c.Error(err, "get commit by path")
 			return
 		}
 	}
@@ -126,7 +126,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	blob := entry.Blob()
 	p, err := blob.Bytes()
 	if err != nil {
-		c.Handle(500, "Data", err)
+		c.Error(err, "read blob")
 		return
 	}
 
@@ -232,7 +232,7 @@ func Home(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 
 	if c.Repo.Repository.IsBare {
-		c.HTML(200, BARE)
+		c.Success(BARE)
 		return
 	}
 
@@ -260,7 +260,7 @@ func Home(c *context.Context) {
 		var err error
 		c.Repo.CommitsCount, err = c.Repo.Commit.CommitsCount()
 		if err != nil {
-			c.Handle(500, "CommitsCount", err)
+			c.Error(err, "count commits")
 			return
 		}
 		c.Data["CommitsCount"] = c.Repo.CommitsCount
@@ -270,7 +270,7 @@ func Home(c *context.Context) {
 	// Get current entry user currently looking at.
 	entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
 		return
 	}
 
@@ -306,7 +306,7 @@ func Home(c *context.Context) {
 	c.Data["TreeLink"] = treeLink
 	c.Data["TreeNames"] = treeNames
 	c.Data["BranchLink"] = branchLink
-	c.HTML(200, HOME)
+	c.Success(HOME)
 }
 
 func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*db.User, error), tpl string) {
@@ -319,12 +319,12 @@ func RenderUserCards(c *context.Context, total int, getter func(page int) ([]*db
 
 	items, err := getter(pager.Current())
 	if err != nil {
-		c.Handle(500, "getter", err)
+		c.Error(err, "getter")
 		return
 	}
 	c.Data["Cards"] = items
 
-	c.HTML(200, tpl)
+	c.Success(tpl)
 }
 
 func Watchers(c *context.Context) {
@@ -346,17 +346,17 @@ func Forks(c *context.Context) {
 
 	forks, err := c.Repo.Repository.GetForks()
 	if err != nil {
-		c.Handle(500, "GetForks", err)
+		c.Error(err, "get forks")
 		return
 	}
 
 	for _, fork := range forks {
 		if err = fork.GetOwner(); err != nil {
-			c.Handle(500, "GetOwner", err)
+			c.Error(err, "get owner")
 			return
 		}
 	}
 	c.Data["Forks"] = forks
 
-	c.HTML(200, FORKS)
+	c.Success(FORKS)
 }

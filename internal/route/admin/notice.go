@@ -5,6 +5,8 @@
 package admin
 
 import (
+	"net/http"
+
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
@@ -19,7 +21,7 @@ const (
 )
 
 func Notices(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.notices")
+	c.Title("admin.notices")
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminNotices"] = true
 
@@ -32,13 +34,13 @@ func Notices(c *context.Context) {
 
 	notices, err := db.Notices(page, conf.UI.Admin.NoticePagingNum)
 	if err != nil {
-		c.Handle(500, "Notices", err)
+		c.Error(err, "list notices")
 		return
 	}
 	c.Data["Notices"] = notices
 
 	c.Data["Total"] = total
-	c.HTML(200, NOTICES)
+	c.Success(NOTICES)
 }
 
 func DeleteNotices(c *context.Context) {
@@ -53,16 +55,16 @@ func DeleteNotices(c *context.Context) {
 
 	if err := db.DeleteNoticesByIDs(ids); err != nil {
 		c.Flash.Error("DeleteNoticesByIDs: " + err.Error())
-		c.Status(500)
+		c.Status(http.StatusInternalServerError)
 	} else {
 		c.Flash.Success(c.Tr("admin.notices.delete_success"))
-		c.Status(200)
+		c.Status(http.StatusOK)
 	}
 }
 
 func EmptyNotices(c *context.Context) {
 	if err := db.DeleteNotices(0, 0); err != nil {
-		c.Handle(500, "DeleteNotices", err)
+		c.Error(err,"delete notices")
 		return
 	}
 

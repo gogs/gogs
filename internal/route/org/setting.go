@@ -12,7 +12,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route/user"
 )
@@ -24,17 +23,17 @@ const (
 )
 
 func Settings(c *context.Context) {
-	c.Data["Title"] = c.Tr("org.settings")
+	c.Title("org.settings")
 	c.Data["PageIsSettingsOptions"] = true
-	c.HTML(200, SETTINGS_OPTIONS)
+	c.Success(SETTINGS_OPTIONS)
 }
 
 func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
-	c.Data["Title"] = c.Tr("org.settings")
+	c.Title("org.settings")
 	c.Data["PageIsSettingsOptions"] = true
 
 	if c.HasError() {
-		c.HTML(200, SETTINGS_OPTIONS)
+		c.Success(SETTINGS_OPTIONS)
 		return
 	}
 
@@ -44,7 +43,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	if org.LowerName != strings.ToLower(f.Name) {
 		isExist, err := db.IsUserExist(org.ID, f.Name)
 		if err != nil {
-			c.Handle(500, "IsUserExist", err)
+			c.Error(err, "check if user exists")
 			return
 		} else if isExist {
 			c.Data["OrgName"] = true
@@ -58,7 +57,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 			case db.IsErrNamePatternNotAllowed(err):
 				c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed"), SETTINGS_OPTIONS, &f)
 			default:
-				c.Handle(500, "ChangeUserName", err)
+				c.Error(err, "change user name")
 			}
 			return
 		}
@@ -79,7 +78,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	org.Website = f.Website
 	org.Location = f.Location
 	if err := db.UpdateUser(org); err != nil {
-		c.Handle(500, "UpdateUser", err)
+		c.Error(err, "update user")
 		return
 	}
 	log.Trace("Organization setting updated: %s", org.Name)
@@ -113,10 +112,10 @@ func SettingsDelete(c *context.Context) {
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
 		if _, err := db.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
-			if errors.IsUserNotExist(err) {
+			if db.IsErrUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
-				c.ServerError("UserLogin", err)
+				c.Error(err, "authenticate user")
 			}
 			return
 		}
@@ -126,7 +125,7 @@ func SettingsDelete(c *context.Context) {
 				c.Flash.Error(c.Tr("form.org_still_own_repo"))
 				c.Redirect(c.Org.OrgLink + "/settings/delete")
 			} else {
-				c.ServerError("DeleteOrganization", err)
+				c.Error(err, "delete organization")
 			}
 		} else {
 			log.Trace("Organization deleted: %s", org.Name)
@@ -139,7 +138,7 @@ func SettingsDelete(c *context.Context) {
 }
 
 func Webhooks(c *context.Context) {
-	c.Data["Title"] = c.Tr("org.settings")
+	c.Title("org.settings")
 	c.Data["PageIsSettingsHooks"] = true
 	c.Data["BaseLink"] = c.Org.OrgLink
 	c.Data["Description"] = c.Tr("org.settings.hooks_desc")
@@ -147,12 +146,12 @@ func Webhooks(c *context.Context) {
 
 	ws, err := db.GetWebhooksByOrgID(c.Org.Organization.ID)
 	if err != nil {
-		c.Handle(500, "GetWebhooksByOrgId", err)
+		c.Error(err, "get webhooks by organization ID")
 		return
 	}
 
 	c.Data["Webhooks"] = ws
-	c.HTML(200, SETTINGS_WEBHOOKS)
+	c.Success(SETTINGS_WEBHOOKS)
 }
 
 func DeleteWebhook(c *context.Context) {
@@ -162,7 +161,7 @@ func DeleteWebhook(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess( map[string]interface{}{
 		"redirect": c.Org.OrgLink + "/settings/hooks",
 	})
 }

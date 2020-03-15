@@ -15,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/gitutil"
 )
 
@@ -28,20 +27,20 @@ func GetSingleCommit(c *context.APIContext) {
 
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return
 	}
 	commit, err := gitRepo.CatFileCommit(c.Params(":sha"))
 	if err != nil {
-		c.NotFoundOrServerError("get commit", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get commit")
 		return
 	}
 
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
 	author, err := db.GetUserByEmail(commit.Author.Email)
-	if err != nil && !errors.IsUserNotExist(err) {
-		c.ServerError("Get user by author email", err)
+	if err != nil && !db.IsErrUserNotExist(err) {
+		c.Error(err, "get user by author email")
 		return
 	} else if err == nil {
 		apiAuthor = author.APIFormat()
@@ -51,8 +50,8 @@ func GetSingleCommit(c *context.APIContext) {
 		apiCommitter = apiAuthor
 	} else {
 		committer, err := db.GetUserByEmail(commit.Committer.Email)
-		if err != nil && !errors.IsUserNotExist(err) {
-			c.ServerError("Get user by committer email", err)
+		if err != nil && !db.IsErrUserNotExist(err) {
+			c.Error(err, "get user by committer email")
 			return
 		} else if err == nil {
 			apiCommitter = committer.APIFormat()
@@ -102,7 +101,7 @@ func GetSingleCommit(c *context.APIContext) {
 func GetReferenceSHA(c *context.APIContext) {
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return
 	}
 
@@ -132,8 +131,8 @@ func GetReferenceSHA(c *context.APIContext) {
 		sha, err = gitRepo.TagCommitID(ref)
 	}
 	if err != nil {
-		c.NotFoundOrServerError("get reference commit ID", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get reference commit ID")
 		return
 	}
-	c.PlainText(http.StatusOK, []byte(sha))
+	c.PlainText(http.StatusOK, sha)
 }

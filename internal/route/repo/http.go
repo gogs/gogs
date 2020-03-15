@@ -22,7 +22,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
@@ -39,7 +38,7 @@ type HTTPContext struct {
 // askCredentials responses HTTP header and status which informs client to provide credentials.
 func askCredentials(c *context.Context, status int, text string) {
 	c.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
-	c.HandleText(status, text)
+	c.PlainText(status, text)
 }
 
 func HTTPContexter() macaron.Handler {
@@ -66,13 +65,13 @@ func HTTPContexter() macaron.Handler {
 
 		owner, err := db.GetUserByName(ownerName)
 		if err != nil {
-			c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+			c.NotFoundOrError(err, "get user by name")
 			return
 		}
 
 		repo, err := db.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
-			c.NotFoundOrServerError("GetRepositoryByName", errors.IsRepoNotExist, err)
+			c.NotFoundOrError(err, "get repository by name")
 			return
 		}
 
@@ -113,8 +112,8 @@ func HTTPContexter() macaron.Handler {
 		}
 
 		authUser, err := db.UserLogin(authUsername, authPassword, -1)
-		if err != nil && !errors.IsUserNotExist(err) {
-			c.Handle(http.StatusInternalServerError, "UserLogin", err)
+		if err != nil && !db.IsErrUserNotExist(err) {
+			c.Error(err, "authenticate user")
 			return
 		}
 
@@ -125,7 +124,7 @@ func HTTPContexter() macaron.Handler {
 				if db.IsErrAccessTokenEmpty(err) || db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
 				} else {
-					c.Handle(http.StatusInternalServerError, "GetAccessTokenBySHA", err)
+					c.Error(err, "get access token by SHA")
 				}
 				return
 			}
@@ -136,7 +135,7 @@ func HTTPContexter() macaron.Handler {
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
-				c.Handle(http.StatusInternalServerError, "GetUserByID", err)
+				c.Error(err, "get user by ID")
 				return
 			}
 		} else if authUser.IsEnabledTwoFactor() {
@@ -153,7 +152,7 @@ Please create and use personal access token on user settings page`)
 		}
 		has, err := db.HasAccess(authUser.ID, repo, mode)
 		if err != nil {
-			c.Handle(http.StatusInternalServerError, "HasAccess", err)
+			c.Error(err, "check access")
 			return
 		} else if !has {
 			askCredentials(c, http.StatusForbidden, "User permission denied")
@@ -161,7 +160,7 @@ Please create and use personal access token on user settings page`)
 		}
 
 		if !isPull && repo.IsMirror {
-			c.HandleText(http.StatusForbidden, "Mirror repository is read-only")
+			c.PlainText(http.StatusForbidden, "Mirror repository is read-only")
 			return
 		}
 
@@ -388,7 +387,7 @@ func HTTP(c *HTTPContext) {
 		// but we only want to output this message only if user is really trying to access
 		// Git HTTP endpoints.
 		if conf.Repository.DisableHTTPGit {
-			c.HandleText(http.StatusForbidden, "Interacting with repositories by HTTP protocol is not disabled")
+			c.PlainText(http.StatusForbidden, "Interacting with repositories by HTTP protocol is disabled")
 			return
 		}
 

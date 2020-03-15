@@ -5,25 +5,26 @@
 package user
 
 import (
-	convert2 "gogs.io/gogs/internal/route/api/v1/convert"
 	"net/http"
 
 	api "github.com/gogs/go-gogs-client"
+	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
 func ListEmails(c *context.APIContext) {
 	emails, err := db.GetEmailAddresses(c.User.ID)
 	if err != nil {
-		c.ServerError("GetEmailAddresses", err)
+		c.Error(err, "get email addresses")
 		return
 	}
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
-		apiEmails[i] = convert2.ToEmail(emails[i])
+		apiEmails[i] = convert.ToEmail(emails[i])
 	}
 	c.JSONSuccess(&apiEmails)
 }
@@ -45,16 +46,16 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 
 	if err := db.AddEmailAddresses(emails); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
-			c.Error(http.StatusUnprocessableEntity, "", "email address has been used: "+err.(db.ErrEmailAlreadyUsed).Email)
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("email address has been used: "+err.(db.ErrEmailAlreadyUsed).Email))
 		} else {
-			c.Error(http.StatusInternalServerError, "AddEmailAddresses", err)
+			c.Error(err, "add email addresses")
 		}
 		return
 	}
 
 	apiEmails := make([]*api.Email, len(emails))
 	for i := range emails {
-		apiEmails[i] = convert2.ToEmail(emails[i])
+		apiEmails[i] = convert.ToEmail(emails[i])
 	}
 	c.JSON(http.StatusCreated, &apiEmails)
 }
@@ -74,7 +75,7 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	}
 
 	if err := db.DeleteEmailAddresses(emails); err != nil {
-		c.Error(http.StatusInternalServerError, "DeleteEmailAddresses", err)
+		c.Error(err, "delete email addresses")
 		return
 	}
 	c.NoContent()

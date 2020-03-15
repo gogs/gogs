@@ -19,7 +19,7 @@ import (
 func GetContents(c *context.APIContext) {
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return
 	}
 
@@ -30,14 +30,14 @@ func GetContents(c *context.APIContext) {
 
 	commit, err := gitRepo.CatFileCommit(ref)
 	if err != nil {
-		c.NotFoundOrServerError("get commit", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get commit")
 		return
 	}
 
 	treePath := c.Params("*")
 	entry, err := commit.TreeEntry(treePath)
 	if err != nil {
-		c.NotFoundOrServerError("get tree entry", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
 		return
 	}
 
@@ -137,13 +137,13 @@ func GetContents(c *context.APIContext) {
 	// The entry is a directory
 	dir, err := gitRepo.LsTree(entry.ID().String())
 	if err != nil {
-		c.NotFoundOrServerError("get tree", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get tree")
 		return
 	}
 
 	entries, err := dir.Entries()
 	if err != nil {
-		c.NotFoundOrServerError("list entries", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "list entries")
 		return
 	}
 

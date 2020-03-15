@@ -5,14 +5,14 @@
 package admin
 
 import (
-	convert2 "gogs.io/gogs/internal/route/api/v1/convert"
-	user2 "gogs.io/gogs/internal/route/api/v1/user"
 	"net/http"
 
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/route/api/v1/convert"
+	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
 func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {
@@ -24,23 +24,23 @@ func CreateTeam(c *context.APIContext, form api.CreateTeamOption) {
 	}
 	if err := db.NewTeam(team); err != nil {
 		if db.IsErrTeamAlreadyExist(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("NewTeam", err)
+			c.Error(err, "new team")
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, convert2.ToTeam(team))
+	c.JSON(http.StatusCreated, convert.ToTeam(team))
 }
 
 func AddTeamMember(c *context.APIContext) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
 	if err := c.Org.Team.AddMember(u.ID); err != nil {
-		c.ServerError("AddMember", err)
+		c.Error(err, "add member")
 		return
 	}
 
@@ -48,13 +48,13 @@ func AddTeamMember(c *context.APIContext) {
 }
 
 func RemoveTeamMember(c *context.APIContext) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
 
 	if err := c.Org.Team.RemoveMember(u.ID); err != nil {
-		c.ServerError("RemoveMember", err)
+		c.Error(err, "remove member")
 		return
 	}
 

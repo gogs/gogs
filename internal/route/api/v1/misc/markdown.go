@@ -5,8 +5,6 @@
 package misc
 
 import (
-	"net/http"
-
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
@@ -14,11 +12,6 @@ import (
 )
 
 func Markdown(c *context.APIContext, form api.MarkdownOption) {
-	if c.HasApiError() {
-		c.Error(http.StatusUnprocessableEntity, "", c.GetErrMsg())
-		return
-	}
-
 	if len(form.Text) == 0 {
 		_, _ = c.Write([]byte(""))
 		return
@@ -30,7 +23,7 @@ func Markdown(c *context.APIContext, form api.MarkdownOption) {
 func MarkdownRaw(c *context.APIContext) {
 	body, err := c.Req.Body().Bytes()
 	if err != nil {
-		c.Error(http.StatusUnprocessableEntity, "", err)
+		c.Error(err, "read body")
 		return
 	}
 	_, _ = c.Write(markup.SanitizeBytes(markup.RawMarkdown(body, "")))

@@ -54,7 +54,7 @@ func renderCommits(c *context.Context, filename string) {
 
 	commits, err := c.Repo.Commit.CommitsByPage(page, pageSize, git.CommitsByPageOptions{Path: filename})
 	if err != nil {
-		c.ServerError("paging commits", err)
+		c.Error(err, "paging commits")
 		return
 	}
 
@@ -73,7 +73,7 @@ func renderCommits(c *context.Context, filename string) {
 
 	c.Data["Username"] = c.Repo.Owner.Name
 	c.Data["Reponame"] = c.Repo.Repository.Name
-	c.HTML(200, COMMITS)
+	c.Success(COMMITS)
 }
 
 func Commits(c *context.Context) {
@@ -91,7 +91,7 @@ func SearchCommits(c *context.Context) {
 
 	commits, err := c.Repo.Commit.SearchCommits(keyword)
 	if err != nil {
-		c.ServerError("SearchCommits", err)
+		c.Error(err, "search commits")
 		return
 	}
 
@@ -102,7 +102,7 @@ func SearchCommits(c *context.Context) {
 	c.Data["Username"] = c.Repo.Owner.Name
 	c.Data["Reponame"] = c.Repo.Repository.Name
 	c.Data["Branch"] = c.Repo.BranchName
-	c.HTML(200, COMMITS)
+	c.Success(COMMITS)
 }
 
 func FileHistory(c *context.Context) {
@@ -119,7 +119,7 @@ func Diff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
 	if err != nil {
-		c.NotFoundOrServerError("get commit by ID", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get commit by ID")
 		return
 	}
 
@@ -127,7 +127,7 @@ func Diff(c *context.Context) {
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 	)
 	if err != nil {
-		c.NotFoundOrServerError("get diff", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get diff")
 		return
 	}
 
@@ -171,7 +171,7 @@ func RawDiff(c *context.Context) {
 		git.RawDiffFormat(c.Params(":ext")),
 		c.Resp,
 	); err != nil {
-		c.NotFoundOrServerError("get raw diff", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get raw diff")
 		return
 	}
 }
@@ -185,7 +185,7 @@ func CompareDiff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
 	if err != nil {
-		c.Handle(404, "GetCommit", err)
+		c.NotFoundOrError(gitutil.NewError(err), "get head commit")
 		return
 	}
 
@@ -194,13 +194,13 @@ func CompareDiff(c *context.Context) {
 		git.DiffOptions{Base: beforeCommitID},
 	)
 	if err != nil {
-		c.ServerError("get diff", err)
+		c.NotFoundOrError(gitutil.NewError(err), "get diff")
 		return
 	}
 
 	commits, err := commit.CommitsAfter(beforeCommitID)
 	if err != nil {
-		c.ServerError("get commits after", err)
+		c.NotFoundOrError(gitutil.NewError(err), "get commits after")
 		return
 	}
 
@@ -220,5 +220,5 @@ func CompareDiff(c *context.Context) {
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", afterCommitID)
 	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", beforeCommitID)
 	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", afterCommitID)
-	c.HTML(200, DIFF)
+	c.Success(DIFF)
 }

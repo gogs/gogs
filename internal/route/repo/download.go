@@ -51,12 +51,12 @@ func ServeBlob(c *context.Context, blob *git.Blob) error {
 func SingleDownload(c *context.Context) {
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrServerError("get blob", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get blob")
 		return
 	}
 
 	if err = ServeBlob(c, blob); err != nil {
-		c.ServerError("serve blob", err)
+		c.Error(err, "serve blob")
 		return
 	}
 }

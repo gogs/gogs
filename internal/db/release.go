@@ -16,7 +16,7 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -68,7 +68,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Publisher == nil {
 		r.Publisher, err = getUserByID(e, r.PublisherID)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if IsErrUserNotExist(err) {
 				r.PublisherID = -1
 				r.Publisher = NewGhostUser()
 			} else {
@@ -206,13 +206,32 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	return nil
 }
 
+var _ errutil.NotFound = (*ErrReleaseNotExist)(nil)
+
+type ErrReleaseNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrReleaseNotExist(err error) bool {
+	_, ok := err.(ErrReleaseNotExist)
+	return ok
+}
+
+func (err ErrReleaseNotExist) Error() string {
+	return fmt.Sprintf("release does not exist: %v", err.args)
+}
+
+func (ErrReleaseNotExist) NotFound() bool {
+	return true
+}
+
 // GetRelease returns release by given ID.
 func GetRelease(repoID int64, tagName string) (*Release, error) {
 	isExist, err := IsReleaseExist(repoID, tagName)
 	if err != nil {
 		return nil, err
 	} else if !isExist {
-		return nil, ErrReleaseNotExist{0, tagName}
+		return nil, ErrReleaseNotExist{args: map[string]interface{}{"tag": tagName}}
 	}
 
 	r := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
@@ -230,7 +249,7 @@ func GetReleaseByID(id int64) (*Release, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrReleaseNotExist{id, ""}
+		return nil, ErrReleaseNotExist{args: map[string]interface{}{"releaseID": id}}
 	}
 
 	return r, r.LoadAttributes()

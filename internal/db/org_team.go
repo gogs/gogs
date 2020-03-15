@@ -11,6 +11,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 )
 
 const OWNER_TEAM = "Owners"
@@ -266,6 +267,25 @@ func NewTeam(t *Team) error {
 	return sess.Commit()
 }
 
+var _ errutil.NotFound = (*ErrTeamNotExist)(nil)
+
+type ErrTeamNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrTeamNotExist(err error) bool {
+	_, ok := err.(ErrTeamNotExist)
+	return ok
+}
+
+func (err ErrTeamNotExist) Error() string {
+	return fmt.Sprintf("team does not exist: %v", err.args)
+}
+
+func (ErrTeamNotExist) NotFound() bool {
+	return true
+}
+
 func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 	t := &Team{
 		OrgID:     orgID,
@@ -275,7 +295,7 @@ func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.TeamNotExist{Name: name}
+		return nil, ErrTeamNotExist{args: map[string]interface{}{"orgID": orgID, "name": name}}
 	}
 	return t, nil
 }
@@ -291,7 +311,7 @@ func getTeamByID(e Engine, teamID int64) (*Team, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.TeamNotExist{TeamID: teamID}
+		return nil, ErrTeamNotExist{args: map[string]interface{}{"teamID": teamID}}
 	}
 	return t, nil
 }

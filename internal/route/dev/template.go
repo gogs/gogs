@@ -20,5 +20,5 @@ func TemplatePreview(c *context.Context) {
 	c.Data["ResetPwdCodeLives"] = conf.Auth.ResetPasswordCodeLives / 60
 	c.Data["CurDbValue"] = ""
 
-	c.HTML(200, (c.Params("*")))
+	c.Success( (c.Params("*")))
 }

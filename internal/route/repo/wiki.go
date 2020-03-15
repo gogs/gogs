@@ -26,7 +26,7 @@ const (
 
 func MustEnableWiki(c *context.Context) {
 	if !c.Repo.Repository.EnableWiki {
-		c.Handle(404, "MustEnableWiki", nil)
+		c.NotFound()
 		return
 	}
 
@@ -45,12 +45,12 @@ type PageMeta struct {
 func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, string) {
 	wikiRepo, err := git.Open(c.Repo.Repository.WikiPath())
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return nil, ""
 	}
 	commit, err := wikiRepo.BranchCommit("master")
 	if err != nil {
-		c.ServerError("get branch commit", err)
+		c.Error(err, "get branch commit")
 		return nil, ""
 	}
 
@@ -58,7 +58,7 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 	if isViewPage {
 		entries, err := commit.Entries()
 		if err != nil {
-			c.ServerError("list entries", err)
+			c.Error(err, "list entries")
 			return nil, ""
 		}
 		pages := make([]PageMeta, 0, len(entries))
@@ -91,13 +91,13 @@ func renderWikiPage(c *context.Context, isViewPage bool) (*git.Repository, strin
 		if gitutil.IsErrRevisionNotExist(err) {
 			c.Redirect(c.Repo.RepoLink + "/wiki/_pages")
 		} else {
-			c.ServerError("GetBlobByPath", err)
+			c.Error(err, "get blob")
 		}
 		return nil, ""
 	}
 	p, err := blob.Bytes()
 	if err != nil {
-		c.ServerError("Data", err)
+		c.Error(err, "read blob")
 		return nil, ""
 	}
 	if isViewPage {
@@ -114,7 +114,7 @@ func Wiki(c *context.Context) {
 
 	if !c.Repo.Repository.HasWiki() {
 		c.Data["Title"] = c.Tr("repo.wiki")
-		c.HTML(200, WIKI_START)
+		c.Success(WIKI_START)
 		return
 	}
 
@@ -126,12 +126,12 @@ func Wiki(c *context.Context) {
 	// Get last change information.
 	commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: pageName + ".md"})
 	if err != nil {
-		c.ServerError("get commits by path", err)
+		c.Error(err, "get commits by path")
 		return
 	}
 	c.Data["Author"] = commits[0].Author
 
-	c.HTML(200, WIKI_VIEW)
+	c.Success(WIKI_VIEW)
 }
 
 func WikiPages(c *context.Context) {
@@ -145,18 +145,18 @@ func WikiPages(c *context.Context) {
 
 	wikiRepo, err := git.Open(c.Repo.Repository.WikiPath())
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return
 	}
 	commit, err := wikiRepo.BranchCommit("master")
 	if err != nil {
-		c.ServerError("get branch commit", err)
+		c.Error(err, "get branch commit")
 		return
 	}
 
 	entries, err := commit.Entries()
 	if err != nil {
-		c.ServerError("list entries", err)
+		c.Error(err, "list entries")
 		return
 	}
 	pages := make([]PageMeta, 0, len(entries))
@@ -164,7 +164,7 @@ func WikiPages(c *context.Context) {
 		if entries[i].Type() == git.ObjectBlob && strings.HasSuffix(entries[i].Name(), ".md") {
 			commits, err := wikiRepo.Log(git.RefsHeads+"master", git.LogOptions{Path: entries[i].Name()})
 			if err != nil {
-				c.ServerError("get commits by path", err)
+				c.Error(err, "get commits by path")
 				return
 			}
 			name := strings.TrimSuffix(entries[i].Name(), ".md")
@@ -177,7 +177,7 @@ func WikiPages(c *context.Context) {
 	}
 	c.Data["Pages"] = pages
 
-	c.HTML(200, WIKI_PAGES)
+	c.Success(WIKI_PAGES)
 }
 
 func NewWiki(c *context.Context) {
@@ -189,7 +189,7 @@ func NewWiki(c *context.Context) {
 		c.Data["title"] = "Home"
 	}
 
-	c.HTML(200, WIKI_NEW)
+	c.Success(WIKI_NEW)
 }
 
 func NewWikiPost(c *context.Context, f form.NewWiki) {
@@ -198,7 +198,7 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.HTML(200, WIKI_NEW)
+		c.Success(WIKI_NEW)
 		return
 	}
 
@@ -207,7 +207,7 @@ func NewWikiPost(c *context.Context, f form.NewWiki) {
 			c.Data["Err_Title"] = true
 			c.RenderWithErr(c.Tr("repo.wiki.page_already_exists"), WIKI_NEW, &f)
 		} else {
-			c.ServerError("AddWikiPage", err)
+			c.Error(err, "add wiki page")
 		}
 		return
 	}
@@ -230,7 +230,7 @@ func EditWiki(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, WIKI_NEW)
+	c.Success(WIKI_NEW)
 }
 
 func EditWikiPost(c *context.Context, f form.NewWiki) {
@@ -239,12 +239,12 @@ func EditWikiPost(c *context.Context, f form.NewWiki) {
 	c.Data["RequireSimpleMDE"] = true
 
 	if c.HasError() {
-		c.HTML(200, WIKI_NEW)
+		c.Success(WIKI_NEW)
 		return
 	}
 
 	if err := c.Repo.Repository.EditWikiPage(c.User, f.OldTitle, f.Title, f.Content, f.Message); err != nil {
-		c.ServerError("EditWikiPage", err)
+		c.Error(err, "edit wiki page")
 		return
 	}
 
@@ -259,11 +259,11 @@ func DeleteWikiPagePost(c *context.Context) {
 
 	pageName := db.ToWikiPageName(pageURL)
 	if err := c.Repo.Repository.DeleteWikiPage(c.User, pageName); err != nil {
-		c.ServerError("DeleteWikiPage", err)
+		c.Error(err, "delete wiki page")
 		return
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/wiki/",
 	})
 }

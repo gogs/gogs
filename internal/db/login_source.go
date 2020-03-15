@@ -556,7 +556,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LOGIN_DLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
-		return nil, errors.UserNotExist{Name: login}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 	}
 
 	if !autoRegister {
@@ -674,9 +674,9 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(login, "@")
 		if idx == -1 {
-			return nil, errors.UserNotExist{Name: login}
+			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 		} else if !com.IsSliceContainsStr(strings.Split(cfg.AllowedDomains, ","), login[idx+1:]) {
-			return nil, errors.UserNotExist{Name: login}
+			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 		}
 	}
 
@@ -695,7 +695,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, errors.UserNotExist{Name: login}
+			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 		}
 		return nil, err
 	}
@@ -735,7 +735,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, errors.UserNotExist{Name: login}
+			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 		}
 		return nil, err
 	}
@@ -768,7 +768,7 @@ func LoginViaGitHub(user *User, login, password string, sourceID int64, cfg *Git
 	fullname, email, url, location, err := github.Authenticate(cfg.APIEndpoint, login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") {
-			return nil, errors.UserNotExist{Name: login}
+			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 		}
 		return nil, err
 	}
@@ -840,7 +840,7 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 				return user, nil
 			}
 
-			return nil, errors.UserNotExist{UserID: user.ID, Name: user.Name}
+			return nil, ErrUserNotExist{args: map[string]interface{}{"userID": user.ID, "name": user.Name}}
 		}
 
 		// Remote login to the login source the user is associated with
@@ -854,7 +854,7 @@ func UserLogin(username, password string, loginSourceID int64) (*User, error) {
 
 	// Non-local login source is always greater than 0
 	if loginSourceID <= 0 {
-		return nil, errors.UserNotExist{UserID: -1, Name: username}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"name": username}}
 	}
 
 	source, err := GetLoginSourceByID(loginSourceID)

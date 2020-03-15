@@ -5,7 +5,7 @@
 package repo
 
 import (
-	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,7 +19,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
 )
@@ -31,14 +30,14 @@ const (
 
 func MustBeNotBare(c *context.Context) {
 	if c.Repo.Repository.IsBare {
-		c.Handle(404, "MustBeNotBare", nil)
+		c.NotFound()
 	}
 }
 
 func checkContextUser(c *context.Context, uid int64) *db.User {
 	orgs, err := db.GetOwnedOrgsByUserIDDesc(c.User.ID, "updated_unix")
 	if err != nil {
-		c.Handle(500, "GetOwnedOrgsByUserIDDesc", err)
+		c.Error(err, "get owned organization by user ID")
 		return nil
 	}
 	c.Data["Orgs"] = orgs
@@ -49,18 +48,18 @@ func checkContextUser(c *context.Context, uid int64) *db.User {
 	}
 
 	org, err := db.GetUserByID(uid)
-	if errors.IsUserNotExist(err) {
+	if db.IsErrUserNotExist(err) {
 		return c.User
 	}
 
 	if err != nil {
-		c.Handle(500, "GetUserByID", fmt.Errorf("[%d]: %v", uid, err))
+		c.Error(err, "get user by ID")
 		return nil
 	}
 
 	// Check ownership of organization.
 	if !org.IsOrganization() || !(c.User.IsAdmin || org.IsOwnedBy(c.User.ID)) {
-		c.Error(403)
+		c.Status(http.StatusForbidden)
 		return nil
 	}
 	return org
@@ -84,12 +83,12 @@ func Create(c *context.Context) {
 	}
 	c.Data["ContextUser"] = ctxUser
 
-	c.HTML(200, CREATE)
+	c.Success(CREATE)
 }
 
 func handleCreateError(c *context.Context, owner *db.User, err error, name, tpl string, form interface{}) {
 	switch {
-	case errors.IsReachLimitOfRepo(err):
+	case db.IsErrReachLimitOfRepo(err):
 		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
 	case db.IsErrRepoAlreadyExist(err):
 		c.Data["Err_RepoName"] = true
@@ -101,7 +100,7 @@ func handleCreateError(c *context.Context, owner *db.User, err error, name, tpl 
 		c.Data["Err_RepoName"] = true
 		c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), tpl, form)
 	default:
-		c.Handle(500, name, err)
+		c.Error(err, name)
 	}
 }
 
@@ -119,7 +118,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.HTML(200, CREATE)
+		c.Success(CREATE)
 		return
 	}
 
@@ -159,7 +158,7 @@ func Migrate(c *context.Context) {
 	}
 	c.Data["ContextUser"] = ctxUser
 
-	c.HTML(200, MIGRATE)
+	c.Success(MIGRATE)
 }
 
 func MigratePost(c *context.Context, f form.MigrateRepo) {
@@ -172,7 +171,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 	c.Data["ContextUser"] = ctxUser
 
 	if c.HasError() {
-		c.HTML(200, MIGRATE)
+		c.Success(MIGRATE)
 		return
 	}
 
@@ -189,10 +188,10 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 			case addrErr.IsInvalidPath:
 				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f)
 			default:
-				c.Handle(500, "Unknown error", err)
+				c.Error(err, "unexpected error")
 			}
 		} else {
-			c.Handle(500, "ParseRemoteAddr", err)
+			c.Error(err, "parse remote address")
 		}
 		return
 	}
@@ -259,7 +258,7 @@ func Action(c *context.Context) {
 	}
 
 	if err != nil {
-		c.ServerError(fmt.Sprintf("Action (%s)", c.Params(":action")), err)
+		c.Errorf(err, "action %q", c.Params(":action"))
 		return
 	}
 
@@ -290,14 +289,14 @@ func Download(c *context.Context) {
 		archiveFormat = git.ArchiveTarGz
 	default:
 		log.Trace("Unknown format: %s", uri)
-		c.Error(404)
+		c.NotFound()
 		return
 	}
 	refName = strings.TrimSuffix(uri, ext)
 
 	if !com.IsDir(archivePath) {
 		if err := os.MkdirAll(archivePath, os.ModePerm); err != nil {
-			c.Handle(500, "Download -> os.MkdirAll(archivePath)", err)
+			c.Error(err, "create archive directory")
 			return
 		}
 	}
@@ -311,13 +310,13 @@ func Download(c *context.Context) {
 	if gitRepo.HasBranch(refName) {
 		commit, err = gitRepo.BranchCommit(refName)
 		if err != nil {
-			c.ServerError("get branch commit", err)
+			c.Error(err, "get branch commit")
 			return
 		}
 	} else if gitRepo.HasTag(refName) {
 		commit, err = gitRepo.TagCommit(refName)
 		if err != nil {
-			c.ServerError("get tag commit", err)
+			c.Error(err, "get tag commit")
 			return
 		}
 	} else if len(refName) >= 7 && len(refName) <= 40 {
@@ -334,7 +333,7 @@ func Download(c *context.Context) {
 	archivePath = path.Join(archivePath, tool.ShortSHA1(commit.ID.String())+ext)
 	if !com.IsFile(archivePath) {
 		if err := commit.CreateArchive(archiveFormat, archivePath); err != nil {
-			c.ServerError("creates archive", err)
+			c.Error(err, "creates archive")
 			return
 		}
 	}

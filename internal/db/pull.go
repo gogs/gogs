@@ -19,7 +19,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/sync"
@@ -89,25 +89,25 @@ func (pr *PullRequest) AfterSet(colName string, _ xorm.Cell) {
 func (pr *PullRequest) loadAttributes(e Engine) (err error) {
 	if pr.HeadRepo == nil {
 		pr.HeadRepo, err = getRepositoryByID(e, pr.HeadRepoID)
-		if err != nil && !errors.IsRepoNotExist(err) {
-			return fmt.Errorf("getRepositoryByID.(HeadRepo) [%d]: %v", pr.HeadRepoID, err)
+		if err != nil && !IsErrRepoNotExist(err) {
+			return fmt.Errorf("get head repository by ID: %v", err)
 		}
 	}
 
 	if pr.BaseRepo == nil {
 		pr.BaseRepo, err = getRepositoryByID(e, pr.BaseRepoID)
 		if err != nil {
-			return fmt.Errorf("getRepositoryByID.(BaseRepo) [%d]: %v", pr.BaseRepoID, err)
+			return fmt.Errorf("get base repository by ID: %v", err)
 		}
 	}
 
 	if pr.HasMerged && pr.Merger == nil {
 		pr.Merger, err = getUserByID(e, pr.MergerID)
-		if errors.IsUserNotExist(err) {
+		if IsErrUserNotExist(err) {
 			pr.MergerID = -1
 			pr.Merger = NewGhostUser()
 		} else if err != nil {
-			return fmt.Errorf("getUserByID [%d]: %v", pr.MergerID, err)
+			return fmt.Errorf("get merger by ID: %v", err)
 		}
 	}
 
@@ -521,7 +521,12 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{0, 0, headRepoID, baseRepoID, headBranch, baseBranch}
+		return nil, ErrPullRequestNotExist{args: map[string]interface{}{
+			"headRepoID": headRepoID,
+			"baseRepoID": baseRepoID,
+			"headBranch": headBranch,
+			"baseBranch": baseBranch,
+		}}
 	}
 
 	return pr, nil
@@ -545,13 +550,32 @@ func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequ
 		Join("INNER", "issue", "issue.id=pull_request.issue_id").Find(&prs)
 }
 
+var _ errutil.NotFound = (*ErrPullRequestNotExist)(nil)
+
+type ErrPullRequestNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrPullRequestNotExist(err error) bool {
+	_, ok := err.(ErrPullRequestNotExist)
+	return ok
+}
+
+func (err ErrPullRequestNotExist) Error() string {
+	return fmt.Sprintf("pull request does not exist: %v", err.args)
+}
+
+func (ErrPullRequestNotExist) NotFound() bool {
+	return true
+}
+
 func getPullRequestByID(e Engine, id int64) (*PullRequest, error) {
 	pr := new(PullRequest)
 	has, err := e.ID(id).Get(pr)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{id, 0, 0, 0, "", ""}
+		return nil, ErrPullRequestNotExist{args: map[string]interface{}{"pullRequestID": id}}
 	}
 	return pr, pr.loadAttributes(e)
 }
@@ -569,7 +593,7 @@ func getPullRequestByIssueID(e Engine, issueID int64) (*PullRequest, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{0, issueID, 0, 0, "", ""}
+		return nil, ErrPullRequestNotExist{args: map[string]interface{}{"issueID": issueID}}
 	}
 	return pr, pr.loadAttributes(e)
 }

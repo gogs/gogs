@@ -6,21 +6,6 @@ package errors
 
 import "fmt"
 
-type IssueNotExist struct {
-	ID     int64
-	RepoID int64
-	Index  int64
-}
-
-func IsIssueNotExist(err error) bool {
-	_, ok := err.(IssueNotExist)
-	return ok
-}
-
-func (err IssueNotExist) Error() string {
-	return fmt.Sprintf("issue does not exist [id: %d, repo_id: %d, index: %d]", err.ID, err.RepoID, err.Index)
-}
-
 type InvalidIssueReference struct {
 	Ref string
 }

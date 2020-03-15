@@ -22,7 +22,7 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/sync"
 )
@@ -235,6 +235,25 @@ func CreateWebhook(w *Webhook) error {
 	return err
 }
 
+var _ errutil.NotFound = (*ErrWebhookNotExist)(nil)
+
+type ErrWebhookNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrWebhookNotExist(err error) bool {
+	_, ok := err.(ErrWebhookNotExist)
+	return ok
+}
+
+func (err ErrWebhookNotExist) Error() string {
+	return fmt.Sprintf("webhook does not exist: %v", err.args)
+}
+
+func (ErrWebhookNotExist) NotFound() bool {
+	return true
+}
+
 // getWebhook uses argument bean as query condition,
 // ID must be specified and do not assign unnecessary fields.
 func getWebhook(bean *Webhook) (*Webhook, error) {
@@ -242,7 +261,7 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.WebhookNotExist{ID: bean.ID}
+		return nil, ErrWebhookNotExist{args: map[string]interface{}{"webhookID": bean.ID}}
 	}
 	return bean, nil
 }
@@ -499,6 +518,25 @@ func createHookTask(e Engine, t *HookTask) error {
 	return err
 }
 
+var _ errutil.NotFound = (*ErrHookTaskNotExist)(nil)
+
+type ErrHookTaskNotExist struct {
+	args map[string]interface{}
+}
+
+func IsHookTaskNotExist(err error) bool {
+	_, ok := err.(ErrHookTaskNotExist)
+	return ok
+}
+
+func (err ErrHookTaskNotExist) Error() string {
+	return fmt.Sprintf("hook task does not exist: %v", err.args)
+}
+
+func (ErrHookTaskNotExist) NotFound() bool {
+	return true
+}
+
 // GetHookTaskOfWebhookByUUID returns hook task of given webhook by UUID.
 func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error) {
 	hookTask := &HookTask{
@@ -509,7 +547,7 @@ func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.HookTaskNotExist{HookID: webhookID, UUID: uuid}
+		return nil, ErrHookTaskNotExist{args: map[string]interface{}{"webhookID": webhookID, "uuid": uuid}}
 	}
 	return hookTask, nil
 }

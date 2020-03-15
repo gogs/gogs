@@ -23,7 +23,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/template"
 )
@@ -149,15 +149,15 @@ func (c *Context) RawRedirect(location string, status ...int) {
 	c.Context.Redirect(location, status...)
 }
 
-// Redirect responses redirection wtih given location and status.
+// Redirect responses redirection with given location and status.
 // It escapes special characters in the location string.
 func (c *Context) Redirect(location string, status ...int) {
 	c.Context.Redirect(template.EscapePound(location), status...)
 }
 
-// SubURLRedirect responses redirection wtih given location and status.
+// RedirectSubpath responses redirection with given location and status.
 // It prepends setting.Server.Subpath to the location string.
-func (c *Context) SubURLRedirect(location string, status ...int) {
+func (c *Context) RedirectSubpath(location string, status ...int) {
 	c.Redirect(conf.Server.Subpath+location, status...)
 }
 
@@ -171,44 +171,46 @@ func (c *Context) RenderWithErr(msg, tpl string, f interface{}) {
 	c.HTML(http.StatusOK, tpl)
 }
 
-// Handle handles and logs error by given status.
-func (c *Context) Handle(status int, msg string, err error) {
-	switch status {
-	case http.StatusNotFound:
-		c.Data["Title"] = "Page Not Found"
-	case http.StatusInternalServerError:
-		c.Data["Title"] = "Internal Server Error"
-		log.ErrorDepth(5, "%s: %v", msg, err)
-		if !conf.IsProdMode() || (c.IsLogged && c.User.IsAdmin) {
-			c.Data["ErrorMsg"] = err
-		}
-	}
-	c.HTML(status, fmt.Sprintf("status/%d", status))
-}
-
 // NotFound renders the 404 page.
 func (c *Context) NotFound() {
-	c.Handle(http.StatusNotFound, "", nil)
+	c.Title("status.page_not_found")
+	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
 }
 
-// ServerError renders the 500 page.
-func (c *Context) ServerError(msg string, err error) {
-	c.Handle(http.StatusInternalServerError, msg, err)
+// Error renders the 500 page.
+func (c *Context) Error(err error, msg string) {
+	log.ErrorDepth(5, "%s: %v", msg, err)
+
+	c.Title("status.internal_server_error")
+
+	// Only in non-production mode or admin can see the actual error message.
+	if !conf.IsProdMode() || (c.IsLogged && c.User.IsAdmin) {
+		c.Data["ErrorMsg"] = err
+	}
+	c.HTML(http.StatusInternalServerError, fmt.Sprintf("status/%d", http.StatusInternalServerError))
 }
 
-// NotFoundOrServerError use error check function to determine if the error
-// is about not found. It responses with 404 status code for not found error,
-// or error context description for logging purpose of 500 server error.
-func (c *Context) NotFoundOrServerError(msg string, errck func(error) bool, err error) {
-	if errck(err) {
+// Errorf renders the 500 response with formatted message.
+func (c *Context) Errorf(err error, format string, args ...interface{}) {
+	c.Error(err, fmt.Sprintf(format, args...))
+}
+
+// NotFoundOrError responses with 404 page for not found error and 500 page otherwise.
+func (c *Context) NotFoundOrError(err error, msg string) {
+	if errutil.IsNotFound(err) {
 		c.NotFound()
 		return
 	}
-	c.ServerError(msg, err)
+	c.Error(err, msg)
 }
 
-func (c *Context) HandleText(status int, msg string) {
-	c.PlainText(status, []byte(msg))
+// NotFoundOrErrorf is same as NotFoundOrError but with formatted message.
+func (c *Context) NotFoundOrErrorf(err error, format string, args ...interface{}) {
+	c.NotFoundOrError(err, fmt.Sprintf(format, args...))
+}
+
+func (c *Context) PlainText(status int, msg string) {
+	c.Render.PlainText(status, []byte(msg))
 }
 
 func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
@@ -259,7 +261,7 @@ func Contexter() macaron.Handler {
 
 			owner, err := db.GetUserByName(ownerName)
 			if err != nil {
-				c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+				c.NotFoundOrError(err, "get user by name")
 				return
 			}
 
@@ -273,7 +275,7 @@ func Contexter() macaron.Handler {
 			if !strings.HasPrefix(conf.Server.ExternalURL, "https://") {
 				insecureFlag = "--insecure "
 			}
-			c.PlainText(http.StatusOK, []byte(com.Expand(`<!doctype html>
+			c.PlainText(http.StatusOK, com.Expand(`<!doctype html>
 <html>
 	<head>
 		<meta name="go-import" content="{GoGetImport} git {CloneLink}">
@@ -284,12 +286,12 @@ func Contexter() macaron.Handler {
 	</body>
 </html>
 `, map[string]string{
-				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, repo.FullName()),
+				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, ownerName, repoName),
 				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
 				"InsecureFlag":   insecureFlag,
-			})))
+			}))
 			return
 		}
 
@@ -318,7 +320,7 @@ func Contexter() macaron.Handler {
 		// If request sends files, parse them here otherwise the Query() can't be parsed and the CsrfToken will be invalid.
 		if c.Req.Method == "POST" && strings.Contains(c.Req.Header.Get("Content-Type"), "multipart/form-data") {
 			if err := c.Req.ParseMultipartForm(conf.Attachment.MaxSize << 20); err != nil && !strings.Contains(err.Error(), "EOF") { // 32MB max size
-				c.ServerError("ParseMultipartForm", err)
+				c.Error(err, "parse multipart form")
 				return
 			}
 		}

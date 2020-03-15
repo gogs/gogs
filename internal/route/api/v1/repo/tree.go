@@ -16,20 +16,20 @@ import (
 func GetRepoGitTree(c *context.APIContext) {
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
 	if err != nil {
-		c.ServerError("open repository", err)
+		c.Error(err, "open repository")
 		return
 	}
 
 	sha := c.Params(":sha")
 	tree, err := gitRepo.LsTree(sha)
 	if err != nil {
-		c.NotFoundOrServerError("get tree", gitutil.IsErrRevisionNotExist, err)
+		c.NotFoundOrError(gitutil.NewError(err), "get tree")
 		return
 	}
 
 	entries, err := tree.Entries()
 	if err != nil {
-		c.ServerError("list entries", err)
+		c.Error(err, "list entries")
 		return
 	}
 
