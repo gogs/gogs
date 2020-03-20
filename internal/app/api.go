@@ -13,10 +13,16 @@ import (
 	"gogs.io/gogs/internal/context"
 )
 
-func SanitizeIpynb() macaron.Handler {
+func ipynbSanitizer() *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 	p.AllowAttrs("class", "data-prompt-number").OnElements("div")
+	p.AllowAttrs("class").OnElements("img")
 	p.AllowURLSchemes("data")
+	return p
+}
+
+func SanitizeIpynb() macaron.Handler {
+	p := ipynbSanitizer()
 
 	return func(c *context.Context) {
 		html, err := c.Req.Body().String()
