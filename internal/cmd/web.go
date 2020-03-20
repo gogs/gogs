@@ -29,6 +29,7 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/assets/public"
 	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
@@ -665,16 +666,15 @@ func runWeb(c *cli.Context) error {
 		apiv1.RegisterRoutes(m)
 	}, ignSignIn)
 
+	// ***************************
+	// ----- Internal routes -----
+	// ***************************
 	m.Group("/-", func() {
-		if conf.Prometheus.Enabled {
-			m.Get("/metrics", func(c *context.Context) {
-				if !conf.Prometheus.EnableBasicAuth {
-					return
-				}
+		m.Get("/metrics", app.MetricsFilter(), promhttp.Handler()) // "/-/metrics"
 
-				c.RequireBasicAuth(conf.Prometheus.BasicAuthUsername, conf.Prometheus.BasicAuthPassword)
-			}, promhttp.Handler())
-		}
+		m.Group("/api", func() {
+			m.Post("/sanitize_ipynb", app.SanitizeIpynb()) // "/-/api/sanitize_ipynb"
+		})
 	})
 
 	// robots.txt

@@ -41,25 +41,32 @@
 				{{if .FileContent}}{{.FileContent | Str2HTML}}{{end}}
 			{{else if .IsIPythonNotebook}}
 				<script>
-					var rendered = null;
 					$.getJSON("{{.RawFileLink}}", null, function(notebook_json) {
 						var notebook = nb.parse(notebook_json);
-						rendered = notebook.render();
-						$("#ipython-notebook").append(rendered);
-						$("#ipython-notebook code").each(function(i, block) {
-							$(block).addClass("py").addClass("python");
-							hljs.highlightBlock(block);
-						});
+						var rendered = notebook.render();
+						$.ajax({
+							type: "POST",
+							url: '{{AppSubURL}}/-/api/sanitize_ipynb',
+							data: rendered.outerHTML,
+							processData: false,
+							contentType: false,
+						}).done(function(data) {
+							$("#ipython-notebook").append(data);
+							$("#ipython-notebook code").each(function(i, block) {
+								$(block).addClass("py").addClass("python");
+								hljs.highlightBlock(block);
+							});
 
-						// Overwrite image method to append proper prefix to the source URL
-						var renderer = new marked.Renderer();
-						var context = '{{.RawFileLink}}';
-						context = context.substring(0, context.lastIndexOf("/"));
-						renderer.image = function (href, title, text) {
-							return `<img src="${context}/${href}"`
-						}
-						$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
-							$(markdown).html(marked($(markdown).html(), {renderer: renderer}));
+							// Overwrite image method to append proper prefix to the source URL
+							var renderer = new marked.Renderer();
+							var context = '{{.RawFileLink}}';
+							context = context.substring(0, context.lastIndexOf("/"));
+							renderer.image = function (href, title, text) {
+								return `<img src="${context}/${href}"`
+							};
+							$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
+								$(markdown).html(marked($(markdown).html(), {renderer: renderer}));
+							});
 						});
 					});
 				</script>
