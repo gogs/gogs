@@ -32,12 +32,14 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[auth] ENABLE_NOTIFY_MAIL` is deprecated and will end support in 0.13.0, please start using `[user] ENABLE_EMAIL_NOTIFICATION`.
 - Configuration option `[session] GC_INTERVAL_TIME` is deprecated and will end support in 0.13.0, please start using `[session] GC_INTERVAL`.
 - Configuration option `[session] SESSION_LIFE_TIME` is deprecated and will end support in 0.13.0, please start using `[session] MAX_LIFE_TIME`.
+- The name `-` is reserved and cannot be used for users or organizations.
 
 ### Fixed
 
 - [Security] Potential open redirection with i18n.
 - [Security] Potential ability to delete files outside a repository.
 - [Security] Potential ability to set primary email on others' behalf from their verified emails.
+- [Security] Potential XSS attack via `.ipynb`. [#5170](https://github.com/gogs/gogs/issues/5170)
 - [Security] Potential RCE on mirror repositories. [#5767](https://github.com/gogs/gogs/issues/5767)
 - [Security] Potential XSS attack with raw markdown API. [#5907](https://github.com/gogs/gogs/pull/5907)
 - Open/close milestone redirects to a 404 page. [#5677](https://github.com/gogs/gogs/issues/5677)
