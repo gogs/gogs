@@ -46,7 +46,7 @@
 						var rendered = notebook.render();
 						$.ajax({
 							type: "POST",
-							url: 'http://localhost:3000/-/api/sanitize_ipynb',
+							url: '{{AppSubURL}}/-/api/sanitize_ipynb',
 							data: rendered.outerHTML,
 							processData: false,
 							contentType: false,
