@@ -738,7 +738,7 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 
 		for i := 0; i < len(attachments); i++ {
 			attachments[i].IssueID = opts.Issue.ID
-			if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
+			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
 				return fmt.Errorf("update attachment [id: %d]: %v", attachments[i].ID, err)
 			}
 		}

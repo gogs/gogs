@@ -61,7 +61,7 @@ func runImportLocale(c *cli.Context) error {
 
 	now := time.Now()
 
-	line := make([]byte, 0, 100)
+	var line []byte
 	badChars := []byte(`="`)
 	escapedQuotes := []byte(`\"`)
 	regularQuotes := []byte(`"`)
