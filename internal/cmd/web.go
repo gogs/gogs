@@ -271,7 +271,7 @@ func runWeb(c *cli.Context) error {
 
 	// ***** START: Admin *****
 	m.Group("/admin", func() {
-		m.Get("", admin.Dashboard)
+		m.Combo("").Get(admin.Dashboard).Post(admin.Operation) // "/admin"
 		m.Get("/config", admin.Config)
 		m.Post("/config/test_mail", admin.SendTestMail)
 		m.Get("/monitor", admin.Monitor)
