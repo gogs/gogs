@@ -42,38 +42,46 @@
 					{{.i18n.Tr "admin.dashboard.operations"}}
 				</h4>
 				<div class="ui unstackable attached table segment">
-					<table class="ui unstackable very basic table">
-						<tbody>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.delete_inactivate_accounts"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=1">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.delete_repo_archives"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=2">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.delete_missing_repos"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=3">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.git_gc_repos"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=4">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.resync_all_sshkeys"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=5">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.resync_all_hooks"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=6">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-							<tr>
-								<td>{{.i18n.Tr "admin.dashboard.reinit_missing_repos"}}</td>
-								<td><i class="fa fa-caret-square-o-right"></i> <a href="{{AppSubURL}}/admin?op=7">{{.i18n.Tr "admin.dashboard.operation_run"}}</a></td>
-							</tr>
-						</tbody>
-					</table>
+					<form action="{{AppSubURL}}/admin" method="post">
+						<table class="ui unstackable very basic table">
+							<tbody>
+								<tr>
+									<td>
+										{{.CSRFTokenHTML}}
+										<div class="ui fluid selection dropdown">
+											<input type="hidden" name="op">
+											<i class="dropdown icon"></i>
+											<div class="default text">{{.i18n.Tr "admin.dashboard.select_operation_to_run"}}</div>
+											<div class="menu">
+												<div class="item" data-value="1">
+													{{.i18n.Tr "admin.dashboard.delete_inactivate_accounts"}}
+												</div>
+												<div class="item" data-value="2">
+													{{.i18n.Tr "admin.dashboard.delete_repo_archives"}}
+												</div>
+												<div class="item" data-value="3">
+													{{.i18n.Tr "admin.dashboard.delete_missing_repos"}}
+												</div>
+												<div class="item" data-value="4">
+													{{.i18n.Tr "admin.dashboard.git_gc_repos"}}
+												</div>
+												<div class="item" data-value="5">
+													{{.i18n.Tr "admin.dashboard.resync_all_sshkeys"}}
+												</div>
+												<div class="item" data-value="6">
+													{{.i18n.Tr "admin.dashboard.resync_all_hooks"}}
+												</div>
+												<div class="item" data-value="7">
+													{{.i18n.Tr "admin.dashboard.reinit_missing_repos"}}
+												</div>
+											</div>
+										</div>
+									</td>
+									<td><button class="ui button" type="submit">{{.i18n.Tr "admin.dashboard.operation_run"}}</button></td>
+								</tr>
+							</tbody>
+						</table>
+					</form>
 				</div>
 
 				<h4 class="ui top attached header">
