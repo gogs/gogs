@@ -61,7 +61,7 @@ func runImportLocale(c *cli.Context) error {
 
 	now := time.Now()
 
-	line := make([]byte, 0, 100)
+	var line []byte
 	badChars := []byte(`="`)
 	escapedQuotes := []byte(`\"`)
 	regularQuotes := []byte(`"`)
@@ -97,15 +97,15 @@ func runImportLocale(c *cli.Context) error {
 				line = append(line[:idx+1], line[idx+2:len(line)-1]...)
 				line = bytes.Replace(line, escapedQuotes, regularQuotes, -1)
 			}
-			tw.Write(line)
-			tw.WriteString("\n")
+			_, _ = tw.Write(line)
+			_, _ = tw.WriteString("\n")
 		}
-		sr.Close()
-		tw.Close()
+		_ = sr.Close()
+		_ = tw.Close()
 
 		// Modification time of files from Crowdin often ahead of current,
 		// so we need to set back to current.
-		os.Chtimes(target, now, now)
+		_ = os.Chtimes(target, now, now)
 	}
 
 	fmt.Println("Locale files has been successfully imported!")

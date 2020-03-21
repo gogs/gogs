@@ -30,7 +30,7 @@ import (
 // MD5Bytes encodes string to MD5 bytes.
 func MD5Bytes(str string) []byte {
 	m := md5.New()
-	m.Write([]byte(str))
+	_, _ = m.Write([]byte(str))
 	return m.Sum(nil)
 }
 
@@ -42,7 +42,7 @@ func MD5(str string) string {
 // SHA1 encodes string to SHA1 hex value.
 func SHA1(str string) string {
 	h := sha1.New()
-	h.Write([]byte(str))
+	_, _ = h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -182,7 +182,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 func HashEmail(email string) string {
 	email = strings.ToLower(strings.TrimSpace(email))
 	h := md5.New()
-	h.Write([]byte(email))
+	_, _ = h.Write([]byte(email))
 	return hex.EncodeToString(h.Sum(nil))
 }
 

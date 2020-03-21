@@ -11,14 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gogs/git-module"
 	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
-
-	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -240,8 +238,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Set test engine.
-	var x *xorm.Engine
-	if err := db.NewTestEngine(x); err != nil {
+	if err := db.NewTestEngine(); err != nil {
 		if strings.Contains(err.Error(), `Unknown database type: sqlite3`) {
 			c.FormErr("DbType")
 			c.RenderWithErr(c.Tr("install.sqlite3_not_available", "https://gogs.io/docs/installation/install_from_binary.html"), INSTALL, &f)
@@ -419,8 +416,8 @@ func InstallPost(c *context.Context, f form.Install) {
 		}
 
 		// Auto-login for admin
-		c.Session.Set("uid", u.ID)
-		c.Session.Set("uname", u.Name)
+		_ = c.Session.Set("uid", u.ID)
+		_ = c.Session.Set("uname", u.Name)
 	}
 
 	log.Info("First-time run install finished!")

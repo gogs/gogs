@@ -219,8 +219,12 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 	// Create temporary directory to store temporary copy of the base repository,
 	// and clean it up when operation finished regardless of succeed or not.
 	tmpBasePath := filepath.Join(conf.Server.AppDataPath, "tmp", "repos", com.ToStr(time.Now().Nanosecond())+".git")
-	os.MkdirAll(filepath.Dir(tmpBasePath), os.ModePerm)
-	defer os.RemoveAll(filepath.Dir(tmpBasePath))
+	if err = os.MkdirAll(filepath.Dir(tmpBasePath), os.ModePerm); err != nil {
+		return err
+	}
+	defer func() {
+		_ = os.RemoveAll(filepath.Dir(tmpBasePath))
+	}()
 
 	// Clone the base repository to the defined temporary directory,
 	// and checks out to base branch directly.
@@ -845,7 +849,7 @@ func (pr *PullRequest) checkAndUpdateStatus() {
 // TODO: test more pull requests at same time.
 func TestPullRequests() {
 	prs := make([]*PullRequest, 0, 10)
-	x.Iterate(PullRequest{
+	_ = x.Iterate(PullRequest{
 		Status: PULL_REQUEST_STATUS_CHECKING,
 	},
 		func(idx int, bean interface{}) error {

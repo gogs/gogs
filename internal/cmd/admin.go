@@ -146,7 +146,9 @@ func runCreateUser(c *cli.Context) error {
 		return errors.Wrap(err, "init configuration")
 	}
 
-	db.SetEngine()
+	if err = db.SetEngine(); err != nil {
+		return errors.Wrap(err, "set engine")
+	}
 
 	if err := db.CreateUser(&db.User{
 		Name:     c.String("name"),
@@ -169,7 +171,9 @@ func adminDashboardOperation(operation func() error, successMessage string) func
 			return errors.Wrap(err, "init configuration")
 		}
 
-		db.SetEngine()
+		if err = db.SetEngine(); err != nil {
+			return errors.Wrap(err, "set engine")
+		}
 
 		if err := operation(); err != nil {
 			functionName := runtime.FuncForPC(reflect.ValueOf(operation).Pointer()).Name()

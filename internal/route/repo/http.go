@@ -314,9 +314,9 @@ func getInfoRefs(h serviceHandler) {
 	refs := gitCommand(h.dir, service, "--stateless-rpc", "--advertise-refs", ".")
 	h.w.Header().Set("Content-Type", fmt.Sprintf("application/x-git-%s-advertisement", service))
 	h.w.WriteHeader(http.StatusOK)
-	h.w.Write(packetWrite("# service=git-" + service + "\n"))
-	h.w.Write([]byte("0000"))
-	h.w.Write(refs)
+	_, _ = h.w.Write(packetWrite("# service=git-" + service + "\n"))
+	_, _ = h.w.Write([]byte("0000"))
+	_, _ = h.w.Write(refs)
 }
 
 func getTextFile(h serviceHandler) {

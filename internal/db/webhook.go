@@ -629,7 +629,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 				log.Error("prepareWebhooks.JSONPayload: %v", err)
 			}
 			sig := hmac.New(sha256.New, []byte(w.Secret))
-			sig.Write(data)
+			_, _ = sig.Write(data)
 			signature = hex.EncodeToString(sig.Sum(nil))
 		}
 
@@ -769,7 +769,7 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	x.Where("is_delivered = ?", false).Iterate(new(HookTask),
+	_ = x.Where("is_delivered = ?", false).Iterate(new(HookTask),
 		func(idx int, bean interface{}) error {
 			t := bean.(*HookTask)
 			t.deliver()

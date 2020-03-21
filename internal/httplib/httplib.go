@@ -7,6 +7,7 @@ package httplib
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/xml"
 	"io"
@@ -271,16 +272,16 @@ func (r *Request) getResponse() (*http.Response, error) {
 					}
 					//iocopy
 					_, err = io.Copy(fileWriter, fh)
-					fh.Close()
+					_ = fh.Close()
 					if err != nil {
 						log.Fatal(err)
 					}
 				}
 				for k, v := range r.params {
-					bodyWriter.WriteField(k, v)
+					_ = bodyWriter.WriteField(k, v)
 				}
-				bodyWriter.Close()
-				pw.Close()
+				_ = bodyWriter.Close()
+				_ = pw.Close()
 			}()
 			r.Header("Content-Type", bodyWriter.FormDataContentType())
 			r.req.Body = ioutil.NopCloser(pr)
@@ -304,7 +305,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 		trans = &http.Transport{
 			TLSClientConfig: r.setting.TlsClientConfig,
 			Proxy:           r.setting.Proxy,
-			Dial:            TimeoutDialer(r.setting.ConnectTimeout, r.setting.ReadWriteTimeout),
+			DialContext:     TimeoutDialer(r.setting.ConnectTimeout, r.setting.ReadWriteTimeout),
 		}
 	} else {
 		// if r.transport is *http.Transport then set the settings.
@@ -315,8 +316,8 @@ func (r *Request) getResponse() (*http.Response, error) {
 			if t.Proxy == nil {
 				t.Proxy = r.setting.Proxy
 			}
-			if t.Dial == nil {
-				t.Dial = TimeoutDialer(r.setting.ConnectTimeout, r.setting.ReadWriteTimeout)
+			if t.DialContext == nil {
+				t.DialContext = TimeoutDialer(r.setting.ConnectTimeout, r.setting.ReadWriteTimeout)
 			}
 		}
 	}
@@ -436,13 +437,12 @@ func (r *Request) Response() (*http.Response, error) {
 }
 
 // TimeoutDialer returns functions of connection dialer with timeout settings for http.Transport Dial field.
-func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
-	return func(netw, addr string) (net.Conn, error) {
+func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(ctx context.Context, net, addr string) (c net.Conn, err error) {
+	return func(ctx context.Context, netw, addr string) (net.Conn, error) {
 		conn, err := net.DialTimeout(netw, addr, cTimeout)
 		if err != nil {
 			return nil, err
 		}
-		conn.SetDeadline(time.Now().Add(rwTimeout))
-		return conn, nil
+		return conn, conn.SetDeadline(time.Now().Add(rwTimeout))
 	}
 }
