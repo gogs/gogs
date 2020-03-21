@@ -172,7 +172,6 @@ func Operation(c *context.Context) {
 		c.Flash.Success(success)
 	}
 	c.RedirectSubpath("/admin")
-	return
 }
 
 func SendTestMail(c *context.Context) {

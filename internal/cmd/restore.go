@@ -99,7 +99,9 @@ func runRestore(c *cli.Context) error {
 		return errors.Wrap(err, "init configuration")
 	}
 
-	db.SetEngine()
+	if err = db.SetEngine(); err != nil {
+		return errors.Wrap(err, "set engine")
+	}
 
 	// Database
 	dbDir := path.Join(archivePath, "db")

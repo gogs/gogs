@@ -255,13 +255,11 @@ func NewTeam(t *Team) error {
 	}
 
 	if _, err = sess.Insert(t); err != nil {
-		sess.Rollback()
 		return err
 	}
 
 	// Update organization number of teams.
 	if _, err = sess.Exec("UPDATE `user` SET num_teams=num_teams+1 WHERE id = ?", t.OrgID); err != nil {
-		sess.Rollback()
 		return err
 	}
 	return sess.Commit()

@@ -819,7 +819,7 @@ func deleteUser(e *xorm.Session, u *User) error {
 		return fmt.Errorf("clear assignee: %v", err)
 	}
 
-	if _, err = e.Id(u.ID).Delete(new(User)); err != nil {
+	if _, err = e.ID(u.ID).Delete(new(User)); err != nil {
 		return fmt.Errorf("Delete: %v", err)
 	}
 
@@ -827,8 +827,8 @@ func deleteUser(e *xorm.Session, u *User) error {
 	// Note: There are something just cannot be roll back,
 	//	so just keep error logs of those operations.
 
-	os.RemoveAll(UserPath(u.Name))
-	os.Remove(u.CustomAvatarPath())
+	_ = os.RemoveAll(UserPath(u.Name))
+	_ = os.Remove(u.CustomAvatarPath())
 
 	return nil
 }
@@ -1076,8 +1076,7 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 		Or("LOWER(full_name) LIKE ?", searchQuery).
 		And("type = ?", opts.Type)
 
-	var countSess xorm.Session
-	countSess = *sess
+	countSess := *sess
 	count, err := countSess.Count(new(User))
 	if err != nil {
 		return nil, 0, fmt.Errorf("Count: %v", err)

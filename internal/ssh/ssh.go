@@ -33,7 +33,7 @@ func cleanCommand(cmd string) string {
 func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 	for newChan := range chans {
 		if newChan.ChannelType() != "session" {
-			newChan.Reject(ssh.UnknownChannelType, "unknown channel type")
+			_ = newChan.Reject(ssh.UnknownChannelType, "unknown channel type")
 			continue
 		}
 
@@ -44,7 +44,9 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 		}
 
 		go func(in <-chan *ssh.Request) {
-			defer ch.Close()
+			defer func() {
+				_ = ch.Close()
+			}()
 			for req := range in {
 				payload := cleanCommand(string(req.Payload))
 				switch req.Type {
@@ -91,17 +93,19 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						return
 					}
 
-					req.Reply(true, nil)
-					go io.Copy(input, ch)
-					io.Copy(ch, stdout)
-					io.Copy(ch.Stderr(), stderr)
+					_ = req.Reply(true, nil)
+					go func() {
+						_, _ = io.Copy(input, ch)
+					}()
+					_, _ = io.Copy(ch, stdout)
+					_, _ = io.Copy(ch.Stderr(), stderr)
 
 					if err = cmd.Wait(); err != nil {
 						log.Error("SSH: Wait: %v", err)
 						return
 					}
 
-					ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
+					_, _ = ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
 					return
 				default:
 				}
@@ -165,7 +169,9 @@ func Listen(host string, port int, ciphers []string) {
 
 	keyPath := filepath.Join(conf.Server.AppDataPath, "ssh", "gogs.rsa")
 	if !com.IsExist(keyPath) {
-		os.MkdirAll(filepath.Dir(keyPath), os.ModePerm)
+		if err := os.MkdirAll(filepath.Dir(keyPath), os.ModePerm); err != nil {
+			panic(err)
+		}
 		_, stderr, err := com.ExecCmd(conf.SSH.KeygenPath, "-f", keyPath, "-t", "rsa", "-m", "PEM", "-N", "")
 		if err != nil {
 			panic(fmt.Sprintf("Failed to generate private key: %v - %s", err, stderr))
