@@ -1076,8 +1076,7 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 		Or("LOWER(full_name) LIKE ?", searchQuery).
 		And("type = ?", opts.Type)
 
-	var countSess xorm.Session
-	countSess = *sess
+	countSess := *sess
 	count, err := countSess.Count(new(User))
 	if err != nil {
 		return nil, 0, fmt.Errorf("Count: %v", err)
