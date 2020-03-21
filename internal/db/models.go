@@ -260,8 +260,11 @@ type Version struct {
 }
 
 // DumpDatabase dumps all data from database to file system in JSON format.
-func DumpDatabase(dirPath string) (err error) {
-	os.MkdirAll(dirPath, os.ModePerm)
+func DumpDatabase(dirPath string) error {
+	if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
+		return err
+	}
+
 	// Purposely create a local variable to not modify global variable
 	tables := append(tables, new(Version))
 	for _, table := range tables {
@@ -275,10 +278,10 @@ func DumpDatabase(dirPath string) (err error) {
 		if err = x.Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
 			return jsoniter.NewEncoder(f).Encode(bean)
 		}); err != nil {
-			f.Close()
+			_ = f.Close()
 			return fmt.Errorf("dump table '%s': %v", tableName, err)
 		}
-		f.Close()
+		_ = f.Close()
 	}
 	return nil
 }

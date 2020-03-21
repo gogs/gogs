@@ -64,8 +64,8 @@ func AutoLogin(c *context.Context) (bool, error) {
 	}
 
 	isSucceed = true
-	c.Session.Set("uid", u.ID)
-	c.Session.Set("uname", u.Name)
+	_ = c.Session.Set("uid", u.ID)
+	_ = c.Session.Set("uname", u.Name)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
 	if conf.Security.EnableLoginStatusCookie {
 		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
@@ -124,10 +124,10 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
 	}
 
-	c.Session.Set("uid", u.ID)
-	c.Session.Set("uname", u.Name)
-	c.Session.Delete("twoFactorRemember")
-	c.Session.Delete("twoFactorUserID")
+	_ = c.Session.Set("uid", u.ID)
+	_ = c.Session.Set("uname", u.Name)
+	_ = c.Session.Delete("twoFactorRemember")
+	_ = c.Session.Delete("twoFactorUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -187,8 +187,8 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	c.Session.Set("twoFactorRemember", f.Remember)
-	c.Session.Set("twoFactorUserID", u.ID)
+	_ = c.Session.Set("twoFactorRemember", f.Remember)
+	_ = c.Session.Set("twoFactorUserID", u.ID)
 	c.RedirectSubpath("/user/login/two_factor")
 }
 
@@ -281,8 +281,8 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 }
 
 func SignOut(c *context.Context) {
-	c.Session.Flush()
-	c.Session.Destory(c.Context)
+	_ = c.Session.Flush()
+	_ = c.Session.Destory(c.Context)
 	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
 	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
@@ -426,8 +426,8 @@ func Activate(c *context.Context) {
 
 		log.Trace("User activated: %s", user.Name)
 
-		c.Session.Set("uid", user.ID)
-		c.Session.Set("uname", user.Name)
+		_ = c.Session.Set("uid", user.ID)
+		_ = c.Session.Set("uname", user.Name)
 		c.RedirectSubpath("/")
 		return
 	}

@@ -271,16 +271,16 @@ func (r *Request) getResponse() (*http.Response, error) {
 					}
 					//iocopy
 					_, err = io.Copy(fileWriter, fh)
-					fh.Close()
+					_ = fh.Close()
 					if err != nil {
 						log.Fatal(err)
 					}
 				}
 				for k, v := range r.params {
-					bodyWriter.WriteField(k, v)
+					_ = bodyWriter.WriteField(k, v)
 				}
-				bodyWriter.Close()
-				pw.Close()
+				_ = bodyWriter.Close()
+				_ = pw.Close()
 			}()
 			r.Header("Content-Type", bodyWriter.FormDataContentType())
 			r.req.Body = ioutil.NopCloser(pr)
@@ -442,7 +442,6 @@ func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, ad
 		if err != nil {
 			return nil, err
 		}
-		conn.SetDeadline(time.Now().Add(rwTimeout))
-		return conn, nil
+		return conn, conn.SetDeadline(time.Now().Add(rwTimeout))
 	}
 }

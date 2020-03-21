@@ -419,8 +419,8 @@ func InstallPost(c *context.Context, f form.Install) {
 		}
 
 		// Auto-login for admin
-		c.Session.Set("uid", u.ID)
-		c.Session.Set("uname", u.Name)
+		_ = c.Session.Set("uid", u.ID)
+		_ = c.Session.Set("uname", u.Name)
 	}
 
 	log.Info("First-time run install finished!")

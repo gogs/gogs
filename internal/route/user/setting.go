@@ -127,7 +127,9 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) er
 		if err != nil {
 			return fmt.Errorf("open avatar reader: %v", err)
 		}
-		defer r.Close()
+		defer func() {
+			_ = r.Close()
+		}()
 
 		data, err := ioutil.ReadAll(r)
 		if err != nil {
@@ -429,8 +431,8 @@ func SettingsTwoFactorEnable(c *context.Context) {
 	}
 	c.Data["QRCode"] = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()))
 
-	c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
-	c.Session.Set("twoFactorURL", key.String())
+	_ = c.Session.Set("twoFactorSecret", c.Data["TwoFactorSecret"])
+	_ = c.Session.Set("twoFactorURL", key.String())
 	c.Success(SETTINGS_TWO_FACTOR_ENABLE)
 }
 
@@ -453,8 +455,8 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	c.Session.Delete("twoFactorSecret")
-	c.Session.Delete("twoFactorURL")
+	_ = c.Session.Delete("twoFactorSecret")
+	_ = c.Session.Delete("twoFactorURL")
 	c.Flash.Success(c.Tr("settings.two_factor_enable_success"))
 	c.RedirectSubpath("/user/settings/security/two_factor_recovery_codes")
 }

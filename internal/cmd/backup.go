@@ -52,7 +52,9 @@ func runBackup(c *cli.Context) error {
 		return errors.Wrap(err, "init configuration")
 	}
 
-	db.SetEngine()
+	if err = db.SetEngine(); err != nil {
+		return errors.Wrap(err, "set engine")
+	}
 
 	tmpDir := c.String("tempdir")
 	if !com.IsExist(tmpDir) {
