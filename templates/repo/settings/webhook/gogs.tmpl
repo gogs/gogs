@@ -1,6 +1,6 @@
 {{if eq .HookType "gogs"}}
-	<p>{{.i18n.Tr "repo.settings.add_webhook_desc" "https://gogs.io/docs/features/webhook.html" | Str2HTML}}</p>
-	<form class="ui form" action="{{.BaseLink}}/settings/hooks/gogs/{{if .PageIsSettingsHooksNew}}new{{else}}{{.Webhook.ID}}{{end}}" method="post">
+	<p>{{.i18n.Tr "repo.settings.add_webhook_desc" "https://gogs.io/docs/features/webhook.html" | Safe}}</p>
+	<form class="ui form" action="{{if .PageIsSettingsHooksNew}}{{$.Link}}{{else}}{{.FormURL}}{{end}}" method="post">
 		{{.CSRFTokenHTML}}
 		<div class="required field {{if .Err_PayloadURL}}error{{end}}">
 			<label for="payload_url">{{.i18n.Tr "repo.settings.payload_url"}}</label>

@@ -60,7 +60,7 @@ var File *ini.File
 //
 // NOTE: The order of loading configuration sections matters as one may depend on another.
 //
-// ⚠️ WARNING: Do not print anything in this function other than wanrings.
+// ⚠️ WARNING: Do not print anything in this function other than warnings.
 func Init(customConf string) error {
 	var err error
 	File, err = ini.LoadSources(ini.LoadOptions{

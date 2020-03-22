@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS  = "org/settings/options"
-	SETTINGS_DELETE   = "org/settings/delete"
-	SETTINGS_WEBHOOKS = "org/settings/webhooks"
+	SETTINGS_OPTIONS = "org/settings/options"
+	SETTINGS_DELETE  = "org/settings/delete"
 )
 
 func Settings(c *context.Context) {
@@ -135,33 +134,4 @@ func SettingsDelete(c *context.Context) {
 	}
 
 	c.Success(SETTINGS_DELETE)
-}
-
-func Webhooks(c *context.Context) {
-	c.Title("org.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["BaseLink"] = c.Org.OrgLink
-	c.Data["Description"] = c.Tr("org.settings.hooks_desc")
-	c.Data["Types"] = conf.Webhook.Types
-
-	ws, err := db.GetWebhooksByOrgID(c.Org.Organization.ID)
-	if err != nil {
-		c.Error(err, "get webhooks by organization ID")
-		return
-	}
-
-	c.Data["Webhooks"] = ws
-	c.Success(SETTINGS_WEBHOOKS)
-}
-
-func DeleteWebhook(c *context.Context) {
-	if err := db.DeleteWebhookOfOrgByID(c.Org.Organization.ID, c.QueryInt64("id")); err != nil {
-		c.Flash.Error("DeleteWebhookByOrgID: " + err.Error())
-	} else {
-		c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
-	}
-
-	c.JSONSuccess( map[string]interface{}{
-		"redirect": c.Org.OrgLink + "/settings/hooks",
-	})
 }
