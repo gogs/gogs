@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	SETTINGS_OPTIONS  = "org/settings/options"
-	SETTINGS_DELETE   = "org/settings/delete"
-	SETTINGS_WEBHOOKS = "org/settings/webhooks"
+	SETTINGS_OPTIONS        = "org/settings/options"
+	SETTINGS_DELETE         = "org/settings/delete"
+	tmplOrgSettingsWebhooks = "org/settings/webhooks"
 )
 
 func Settings(c *context.Context) {
@@ -139,8 +139,7 @@ func SettingsDelete(c *context.Context) {
 
 func Webhooks(c *context.Context) {
 	c.Title("org.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["BaseLink"] = c.Org.OrgLink
+	c.PageIs("SettingsHooks")
 	c.Data["Description"] = c.Tr("org.settings.hooks_desc")
 	c.Data["Types"] = conf.Webhook.Types
 
@@ -149,9 +148,9 @@ func Webhooks(c *context.Context) {
 		c.Error(err, "get webhooks by organization ID")
 		return
 	}
-
 	c.Data["Webhooks"] = ws
-	c.Success(SETTINGS_WEBHOOKS)
+
+	c.Success(tmplOrgSettingsWebhooks)
 }
 
 func DeleteWebhook(c *context.Context) {
@@ -161,7 +160,7 @@ func DeleteWebhook(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
 	}
 
-	c.JSONSuccess( map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Org.OrgLink + "/settings/hooks",
 	})
 }

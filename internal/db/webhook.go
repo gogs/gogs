@@ -136,10 +136,10 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (w *Webhook) GetSlackHook() *SlackMeta {
+func (w *Webhook) SlackMeta() *SlackMeta {
 	s := &SlackMeta{}
 	if err := jsoniter.Unmarshal([]byte(w.Meta), s); err != nil {
-		log.Error("GetSlackHook [%d]: %v", w.ID, err)
+		log.Error("Failed to get Slack meta [webhook_id: %d]: %v", w.ID, err)
 	}
 	return s
 }

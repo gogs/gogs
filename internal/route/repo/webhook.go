@@ -7,13 +7,12 @@ package repo
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
-	jsoniter "github.com/json-iterator/go"
-	"github.com/unknwon/com"
-
-	git "github.com/gogs/git-module"
+	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
+	jsoniter "github.com/json-iterator/go"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -23,16 +22,15 @@ import (
 )
 
 const (
-	WEBHOOKS        = "repo/settings/webhook/base"
-	WEBHOOK_NEW     = "repo/settings/webhook/new"
-	ORG_WEBHOOK_NEW = "org/settings/webhook_new"
+	tmplRepoSettingsWebhooks   = "repo/settings/webhook/base"
+	tmplRepoSettingsWebhookNew = "repo/settings/webhook/new"
+	tmplOrgSettingsWebhookNew  = "org/settings/webhook_new"
 )
 
 func Webhooks(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.settings.hooks")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["BaseLink"] = c.Repo.RepoLink
-	c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://github.com/gogs/docs-api/blob/master/Repositories/Webhooks.md")
+	c.Title("repo.settings.hooks")
+	c.PageIs("SettingsHooks")
+	c.Data["Description"] = c.Tr("repo.settings.hooks_desc")
 	c.Data["Types"] = conf.Webhook.Types
 
 	ws, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
@@ -42,70 +40,117 @@ func Webhooks(c *context.Context) {
 	}
 	c.Data["Webhooks"] = ws
 
-	c.Success(WEBHOOKS)
+	c.Success(tmplRepoSettingsWebhooks)
 }
 
-type OrgRepoCtx struct {
-	OrgID       int64
-	RepoID      int64
-	Link        string
-	NewTemplate string
+func WebhooksNew(c *context.Context) {
+	c.Title("repo.settings.add_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksNew")
+
+	orCtx, err := getOrgRepoContext(c)
+	if err != nil {
+		c.Error(err, "get organization or repository context")
+		return
+	}
+
+	allowed := false
+	hookType := strings.ToLower(c.Params(":type"))
+	for _, typ := range conf.Webhook.Types {
+		if hookType == typ {
+			allowed = true
+			c.Data["HookType"] = typ
+			break
+		}
+	}
+	if !allowed {
+		c.NotFound()
+		return
+	}
+
+	c.Success(orCtx.Tmpl)
 }
 
-// getOrgRepoCtx determines whether this is a repo context or organization context.
-func getOrgRepoCtx(c *context.Context) (*OrgRepoCtx, error) {
+var localHostnames = []string{
+	"localhost",
+	"127.0.0.1",
+	"::1",
+	"0:0:0:0:0:0:0:1",
+}
+
+// isLocalHostname returns true if given hostname is a well-known local address.
+func isLocalHostname(hostname string) bool {
+	for _, local := range localHostnames {
+		if hostname == local {
+			return true
+		}
+	}
+	return false
+}
+
+func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
+	c.Data["Webhook"] = w
+
+	if !c.User.IsAdmin {
+		// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
+		// see https://github.com/gogs/gogs/issues/5366 for details.
+		payloadURL, err := url.Parse(w.URL)
+		if err != nil {
+			c.FormErr("PayloadURL")
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.Tmpl, nil)
+			return
+		}
+
+		if isLocalHostname(payloadURL.Hostname()) {
+			c.FormErr("PayloadURL")
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.Tmpl, nil)
+			return
+		}
+	}
+
+	if err := w.UpdateEvent(); err != nil {
+		c.Error(err, "update event")
+		return
+	} else if err := db.CreateWebhook(w); err != nil {
+		c.Error(err, "create webhook")
+		return
+	}
+
+	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
+	c.Redirect(orCtx.Link + "/settings/hooks")
+}
+
+type orgRepoContext struct {
+	OrgID  int64
+	RepoID int64
+	Link   string
+	Tmpl   string
+}
+
+// getOrgRepoContext determines whether this is a repo context or organization context.
+func getOrgRepoContext(c *context.Context) (*orgRepoContext, error) {
 	if len(c.Repo.RepoLink) > 0 {
-		c.Data["PageIsRepositoryContext"] = true
-		return &OrgRepoCtx{
-			RepoID:      c.Repo.Repository.ID,
-			Link:        c.Repo.RepoLink,
-			NewTemplate: WEBHOOK_NEW,
+		c.PageIs("RepositoryContext")
+		return &orgRepoContext{
+			RepoID: c.Repo.Repository.ID,
+			Link:   c.Repo.RepoLink,
+			Tmpl:   tmplRepoSettingsWebhookNew,
 		}, nil
 	}
 
 	if len(c.Org.OrgLink) > 0 {
-		c.Data["PageIsOrganizationContext"] = true
-		return &OrgRepoCtx{
-			OrgID:       c.Org.Organization.ID,
-			Link:        c.Org.OrgLink,
-			NewTemplate: ORG_WEBHOOK_NEW,
+		c.PageIs("OrganizationContext")
+		return &orgRepoContext{
+			OrgID: c.Org.Organization.ID,
+			Link:  c.Org.OrgLink,
+			Tmpl:  tmplOrgSettingsWebhookNew,
 		}, nil
 	}
 
-	return nil, errors.New("Unable to set OrgRepo context")
+	return nil, errors.New("unable to determine context")
 }
 
-func checkHookType(c *context.Context) string {
-	hookType := strings.ToLower(c.Params(":type"))
-	if !com.IsSliceContainsStr(conf.Webhook.Types, hookType) {
-		c.NotFound()
-		return ""
-	}
-	return hookType
-}
-
-func WebhooksNew(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.settings.add_webhook")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
-
-	orCtx, err := getOrgRepoCtx(c)
-	if err != nil {
-		c.Error(err, "get organization repository context")
-		return
-	}
-
-	c.Data["HookType"] = checkHookType(c)
-	if c.Written() {
-		return
-	}
-	c.Data["BaseLink"] = orCtx.Link
-
-	c.Success(orCtx.NewTemplate)
-}
-
-func ParseHookEvent(f form.Webhook) *db.HookEvent {
+func toHookEvent(f form.Webhook) *db.HookEvent {
 	return &db.HookEvent{
 		PushOnly:       f.PushOnly(),
 		SendEverything: f.SendEverything(),
@@ -123,22 +168,20 @@ func ParseHookEvent(f form.Webhook) *db.HookEvent {
 	}
 }
 
-func WebHooksNewPost(c *context.Context, f form.NewWebhook) {
-	c.Data["Title"] = c.Tr("repo.settings.add_webhook")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
+func WebhooksNewPost(c *context.Context, f form.NewWebhook) {
+	c.Title("repo.settings.add_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "gogs"
 
-	orCtx, err := getOrgRepoCtx(c)
+	orCtx, err := getOrgRepoContext(c)
 	if err != nil {
-		c.Error(err, "get organization repository context")
+		c.Error(err, "get organization or repository context")
 		return
 	}
-	c.Data["BaseLink"] = orCtx.Link
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
 		return
 	}
 
@@ -149,49 +192,42 @@ func WebHooksNewPost(c *context.Context, f form.NewWebhook) {
 
 	w := &db.Webhook{
 		RepoID:       orCtx.RepoID,
+		OrgID:        orCtx.OrgID,
 		URL:          f.PayloadURL,
 		ContentType:  contentType,
 		Secret:       f.Secret,
-		HookEvent:    ParseHookEvent(f.Webhook),
+		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
 		HookTaskType: db.GOGS,
-		OrgID:        orCtx.OrgID,
 	}
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.CreateWebhook(w); err != nil {
-		c.Error(err, "create webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
-	c.Redirect(orCtx.Link + "/settings/hooks")
+	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
+func WebhooksSlackNewPost(c *context.Context, f form.NewSlackHook) {
+	c.Title("repo.settings.add_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksNew")
+	c.Data["HookType"] = "slack"
 
-	orCtx, err := getOrgRepoCtx(c)
+	orCtx, err := getOrgRepoContext(c)
 	if err != nil {
-		c.Error(err, "get organization repository context")
+		c.Error(err, "get organization or repository context")
 		return
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
 		return
 	}
-
-	meta, err := jsoniter.Marshal(&db.SlackMeta{
+	meta := &db.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
-	})
+	}
+	c.Data["SlackMeta"] = meta
+
+	p, err := jsoniter.Marshal(meta)
 	if err != nil {
 		c.Error(err, "marshal JSON")
 		return
@@ -201,47 +237,39 @@ func SlackHooksNewPost(c *context.Context, f form.NewSlackHook) {
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
 		ContentType:  db.JSON,
-		HookEvent:    ParseHookEvent(f.Webhook),
+		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
 		HookTaskType: db.SLACK,
-		Meta:         string(meta),
+		Meta:         string(p),
 		OrgID:        orCtx.OrgID,
 	}
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.CreateWebhook(w); err != nil {
-		c.Error(err, "create webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
-	c.Redirect(orCtx.Link + "/settings/hooks")
+	validateAndCreateWebhook(c, orCtx, w)
 }
 
-// FIXME: merge logic to Slack
-func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
+func WebhooksDiscordNewPost(c *context.Context, f form.NewDiscordHook) {
+	c.Title("repo.settings.add_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksNew")
+	c.Data["HookType"] = "discord"
 
-	orCtx, err := getOrgRepoCtx(c)
+	orCtx, err := getOrgRepoContext(c)
 	if err != nil {
-		c.Error(err, "get organization repository context")
+		c.Error(err, "get organization or repository context")
 		return
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
 		return
 	}
-
-	meta, err := jsoniter.Marshal(&db.SlackMeta{
+	meta := &db.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
 		Color:    f.Color,
-	})
+	}
+	c.Data["SlackMeta"] = meta
+
+	p, err := jsoniter.Marshal(meta)
 	if err != nil {
 		c.Error(err, "marshal JSON")
 		return
@@ -251,38 +279,29 @@ func DiscordHooksNewPost(c *context.Context, f form.NewDiscordHook) {
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
 		ContentType:  db.JSON,
-		HookEvent:    ParseHookEvent(f.Webhook),
+		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
 		HookTaskType: db.DISCORD,
-		Meta:         string(meta),
+		Meta:         string(p),
 		OrgID:        orCtx.OrgID,
 	}
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.CreateWebhook(w); err != nil {
-		c.Error(err, "create webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
-	c.Redirect(orCtx.Link + "/settings/hooks")
+	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksNew"] = true
-	c.Data["Webhook"] = db.Webhook{HookEvent: &db.HookEvent{}}
+func WebhooksDingtalkNewPost(c *context.Context, f form.NewDingtalkHook) {
+	c.Title("repo.settings.add_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksNew")
+	c.Data["HookType"] = "dingtalk"
 
-	orCtx, err := getOrgRepoCtx(c)
+	orCtx, err := getOrgRepoContext(c)
 	if err != nil {
-		c.Error(err, "get organization repository context")
+		c.Error(err, "get organization or repository context")
 		return
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
 		return
 	}
 
@@ -290,32 +309,22 @@ func DingtalkHooksNewPost(c *context.Context, f form.NewDingtalkHook) {
 		RepoID:       orCtx.RepoID,
 		URL:          f.PayloadURL,
 		ContentType:  db.JSON,
-		HookEvent:    ParseHookEvent(f.Webhook),
+		HookEvent:    toHookEvent(f.Webhook),
 		IsActive:     f.Active,
 		HookTaskType: db.DINGTALK,
 		OrgID:        orCtx.OrgID,
 	}
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.CreateWebhook(w); err != nil {
-		c.Error(err, "create webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
-	c.Redirect(orCtx.Link + "/settings/hooks")
+	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
-	c.Data["RequireHighlightJS"] = true
+func checkWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
+	c.RequireHighlightJS()
 
-	orCtx, err := getOrgRepoCtx(c)
+	orCtx, err := getOrgRepoContext(c)
 	if err != nil {
-		c.Error(err, "get organization repository context")
+		c.Error(err, "get organization or repository context")
 		return nil, nil
 	}
-	c.Data["BaseLink"] = orCtx.Link
 
 	var w *db.Webhook
 	if orCtx.RepoID > 0 {
@@ -330,16 +339,18 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
 
 	switch w.HookTaskType {
 	case db.SLACK:
-		c.Data["SlackHook"] = w.GetSlackHook()
+		c.Data["SlackMeta"] = w.SlackMeta()
 		c.Data["HookType"] = "slack"
 	case db.DISCORD:
-		c.Data["SlackHook"] = w.GetSlackHook()
+		c.Data["SlackMeta"] = w.SlackMeta()
 		c.Data["HookType"] = "discord"
 	case db.DINGTALK:
 		c.Data["HookType"] = "dingtalk"
 	default:
 		c.Data["HookType"] = "gogs"
 	}
+	c.Data["FormURL"] = fmt.Sprintf("%s/settings/hooks/%s/%d", orCtx.Link, c.Data["HookType"], w.ID)
+	c.Data["DeleteURL"] = fmt.Sprintf("%s/settings/hooks/delete", orCtx.Link)
 
 	c.Data["History"], err = w.History(1)
 	if err != nil {
@@ -349,10 +360,10 @@ func checkWebhook(c *context.Context) (*OrgRepoCtx, *db.Webhook) {
 	return orCtx, w
 }
 
-func WebHooksEdit(c *context.Context) {
-	c.Data["Title"] = c.Tr("repo.settings.update_webhook")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksEdit"] = true
+func WebhooksEdit(c *context.Context) {
+	c.Title("repo.settings.update_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksEdit")
 
 	orCtx, w := checkWebhook(c)
 	if c.Written() {
@@ -360,35 +371,29 @@ func WebHooksEdit(c *context.Context) {
 	}
 	c.Data["Webhook"] = w
 
-	c.Success(orCtx.NewTemplate)
+	c.Success(orCtx.Tmpl)
 }
 
-func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
-	c.Data["Title"] = c.Tr("repo.settings.update_webhook")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksEdit"] = true
-
-	orCtx, w := checkWebhook(c)
-	if c.Written() {
-		return
-	}
+func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
 	c.Data["Webhook"] = w
 
-	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
-		return
+	if !c.User.IsAdmin {
+		// 🚨 SECURITY: Well-known address to localhost must not be allowed to
+		// prevent SSRF, see https://github.com/gogs/gogs/issues/5366 for details.
+		payloadURL, err := url.Parse(w.URL)
+		if err != nil {
+			c.FormErr("PayloadURL")
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.Tmpl, nil)
+			return
+		}
+
+		if isLocalHostname(payloadURL.Hostname()) {
+			c.FormErr("PayloadURL")
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.Tmpl, nil)
+			return
+		}
 	}
 
-	contentType := db.JSON
-	if db.HookContentType(f.ContentType) == db.FORM {
-		contentType = db.FORM
-	}
-
-	w.URL = f.PayloadURL
-	w.ContentType = contentType
-	w.Secret = f.Secret
-	w.HookEvent = ParseHookEvent(f.Webhook)
-	w.IsActive = f.Active
 	if err := w.UpdateEvent(); err != nil {
 		c.Error(err, "update event")
 		return
@@ -401,10 +406,10 @@ func WebHooksEditPost(c *context.Context, f form.NewWebhook) {
 	c.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
 }
 
-func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksEdit"] = true
+func WebhooksEditPost(c *context.Context, f form.NewWebhook) {
+	c.Title("repo.settings.update_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksEdit")
 
 	orCtx, w := checkWebhook(c)
 	if c.Written() {
@@ -413,7 +418,36 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
+		return
+	}
+
+	contentType := db.JSON
+	if db.HookContentType(f.ContentType) == db.FORM {
+		contentType = db.FORM
+	}
+
+	w.URL = f.PayloadURL
+	w.ContentType = contentType
+	w.Secret = f.Secret
+	w.HookEvent = toHookEvent(f.Webhook)
+	w.IsActive = f.Active
+	validateAndUpdateWebhook(c, orCtx, w)
+}
+
+func WebhooksSlackEditPost(c *context.Context, f form.NewSlackHook) {
+	c.Title("repo.settings.update_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksEdit")
+
+	orCtx, w := checkWebhook(c)
+	if c.Written() {
+		return
+	}
+	c.Data["Webhook"] = w
+
+	if c.HasError() {
+		c.Success(orCtx.Tmpl)
 		return
 	}
 
@@ -430,25 +464,15 @@ func SlackHooksEditPost(c *context.Context, f form.NewSlackHook) {
 
 	w.URL = f.PayloadURL
 	w.Meta = string(meta)
-	w.HookEvent = ParseHookEvent(f.Webhook)
+	w.HookEvent = toHookEvent(f.Webhook)
 	w.IsActive = f.Active
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Error(err, "update webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.update_hook_success"))
-	c.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
+	validateAndUpdateWebhook(c, orCtx, w)
 }
 
-// FIXME: merge logic to Slack
-func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksEdit"] = true
+func WebhooksDiscordEditPost(c *context.Context, f form.NewDiscordHook) {
+	c.Title("repo.settings.update_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksEdit")
 
 	orCtx, w := checkWebhook(c)
 	if c.Written() {
@@ -457,7 +481,7 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
 		return
 	}
 
@@ -473,24 +497,15 @@ func DiscordHooksEditPost(c *context.Context, f form.NewDiscordHook) {
 
 	w.URL = f.PayloadURL
 	w.Meta = string(meta)
-	w.HookEvent = ParseHookEvent(f.Webhook)
+	w.HookEvent = toHookEvent(f.Webhook)
 	w.IsActive = f.Active
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Error(err, "update webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.update_hook_success"))
-	c.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
+	validateAndUpdateWebhook(c, orCtx, w)
 }
 
-func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
-	c.Data["Title"] = c.Tr("repo.settings")
-	c.Data["PageIsSettingsHooks"] = true
-	c.Data["PageIsSettingsHooksEdit"] = true
+func WebhooksDingtalkEditPost(c *context.Context, f form.NewDingtalkHook) {
+	c.Title("repo.settings.update_webhook")
+	c.PageIs("SettingsHooks")
+	c.PageIs("SettingsHooksEdit")
 
 	orCtx, w := checkWebhook(c)
 	if c.Written() {
@@ -499,27 +514,17 @@ func DingtalkHooksEditPost(c *context.Context, f form.NewDingtalkHook) {
 	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.NewTemplate)
+		c.Success(orCtx.Tmpl)
 		return
 	}
 
 	w.URL = f.PayloadURL
-	w.HookEvent = ParseHookEvent(f.Webhook)
+	w.HookEvent = toHookEvent(f.Webhook)
 	w.IsActive = f.Active
-	if err := w.UpdateEvent(); err != nil {
-		c.Error(err, "update event")
-		return
-	} else if err := db.UpdateWebhook(w); err != nil {
-		c.Error(err, "update webhook")
-		return
-	}
-
-	c.Flash.Success(c.Tr("repo.settings.update_hook_success"))
-	c.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
+	validateAndUpdateWebhook(c, orCtx, w)
 }
 
 func TestWebhook(c *context.Context) {
-
 	var (
 		commitID          string
 		commitMessage     string

@@ -1436,22 +1436,6 @@
         margin-top: -4px;
       }
     }
-
-    &.webhook {
-      .text.desc {
-        margin-top: 5px;
-      }
-      .events {
-        .column {
-          padding-bottom: 0;
-        }
-        .help {
-          font-size: 13px;
-          margin-left: 26px;
-          padding-top: 0;
-        }
-      }
-    }
   }
 }
 // End of .repository
@@ -1605,11 +1589,11 @@
     }
   }
   .hook.list {
-    > .item:not(:first-child) {
-      border-top: 1px solid #eaeaea;
+    > .item:not(:last-child) {
+      border-bottom: 1px solid #eaeaea;
     }
     .item {
-      padding: 10px 20px;
+      padding: 10px 0;
       .octicon,
       .fa {
         width: 20px;
@@ -1622,7 +1606,7 @@
   }
   .hook.history.list {
     .item {
-      padding-left: 13px;
+      padding: 10px 20px;
       .meta {
         .ui.right {
           margin-top: 5px;

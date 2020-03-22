@@ -2,40 +2,10 @@
 	{{template "base/alert" .}}
 	<h4 class="ui top attached header">
 		{{.i18n.Tr "repo.settings.hooks"}}
-		<div class="ui right">
-			<div class="ui types jump dropdown">
-				{{if .Types}}
-					<div class="ui blue tiny button">{{.i18n.Tr "repo.settings.add_webhook"}}</div>
-					<div class="menu">
-						{{range .Types}}
-							{{if eq . "gogs"}}
-								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/gogs/new">
-									<img class="img-12" src="{{AppSubURL}}/img/favicon.png">Gogs
-								</a>
-							{{else if eq . "slack"}}
-								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/slack/new">
-									<img class="img-12" src="{{AppSubURL}}/img/slack.png">Slack
-								</a>
-							{{else if eq . "discord"}}
-								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/discord/new">
-									<img class="img-12" src="{{AppSubURL}}/img/discord.png">Discord
-								</a>
-							{{else if eq . "dingtalk"}}
-								<a class="item logo" href="{{$.BaseLink}}/settings/hooks/dingtalk/new">
-									<img class="img-12" src="{{AppSubURL}}/img/dingtalk.png">Dingtalk
-								</a>
-							{{end}}
-						{{end}}
-					</div>
-				{{end}}
-			</div>
-		</div>
 	</h4>
-	<div class="ui attached table segment">
+	<div class="ui attached segment">
+		<p>{{.Description | Safe}}</p>
 		<div class="ui hook list">
-			<div class="item">
-				{{.Description | Str2HTML}}
-			</div>
 			{{range .Webhooks}}
 				<div class="item">
 					{{if eq .LastStatus 1}}
@@ -45,13 +15,41 @@
 					{{else}}
 						<span class="text grey"><i class="octicon octicon-primitive-dot"></i></span>
 					{{end}}
-					<a href="{{$.BaseLink}}/settings/hooks/{{.ID}}">{{.URL}}</a>
+					<a href="{{$.Link}}/{{.ID}}">{{.URL}}</a>
 					<div class="ui right">
-						<span class="text blue"><a href="{{$.BaseLink}}/settings/hooks/{{.ID}}"><i class="fa fa-pencil"></i></a></span>
-						<span class="text red"><a class="delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}"><i class="fa fa-times"></i></a></span>
+						<a class="text blue" href="{{$.Link}}/{{.ID}}"><i class="fa fa-pencil"></i></a>
+						<a class="text red delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}"><i class="fa fa-trash-o"></i></a>
 					</div>
 				</div>
 			{{end}}
+		</div>
+	</div>
+	<div class="ui bottom attached segment">
+		<span><b>{{.i18n.Tr "repo.settings.webhooks.add_new"}}</b></span>
+		<div class="ui selection jump dropdown">
+			<i class="dropdown icon"></i>
+			<div class="default text">{{.i18n.Tr "repo.settings.webhooks.choose_a_type"}}</div>
+			<div class="menu">
+				{{range .Types}}
+					{{if eq . "gogs"}}
+						<a class="item logo" href="{{$.Link}}/gogs/new">
+							<img class="img-12" src="{{AppSubURL}}/img/favicon.png">Gogs
+						</a>
+					{{else if eq . "slack"}}
+						<a class="item logo" href="{{$.Link}}/slack/new">
+							<img class="img-12" src="{{AppSubURL}}/img/slack.png">Slack
+						</a>
+					{{else if eq . "discord"}}
+						<a class="item logo" href="{{$.Link}}/discord/new">
+							<img class="img-12" src="{{AppSubURL}}/img/discord.png">Discord
+						</a>
+					{{else if eq . "dingtalk"}}
+						<a class="item logo" href="{{$.Link}}/dingtalk/new">
+							<img class="img-12" src="{{AppSubURL}}/img/dingtalk.png">Dingtalk
+						</a>
+					{{end}}
+				{{end}}
+			</div>
 		</div>
 	</div>
 </div>

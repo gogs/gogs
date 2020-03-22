@@ -75,7 +75,7 @@ func ToHook(repoLink string, w *db.Webhook) *api.Hook {
 		"content_type": w.ContentType.Name(),
 	}
 	if w.HookTaskType == db.SLACK {
-		s := w.GetSlackHook()
+		s := w.SlackMeta()
 		config["channel"] = s.Channel
 		config["username"] = s.Username
 		config["icon_url"] = s.IconURL
