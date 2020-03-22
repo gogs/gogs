@@ -1,7 +1,7 @@
 name: golint
 on: [pull_request]
 jobs:
-  build:
+  golint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
