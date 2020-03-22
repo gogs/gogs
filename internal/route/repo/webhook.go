@@ -122,6 +122,11 @@ func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field str
 func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
 	c.Data["Webhook"] = w
 
+	if c.HasError() {
+		c.Success(orCtx.TmplNew)
+		return
+	}
+
 	field, msg, ok := validateWebhook(c.User, c.Locale, w)
 	if !ok {
 		c.FormErr(field)
@@ -198,11 +203,6 @@ func WebhooksNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebhoo
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "gogs"
 
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
-		return
-	}
-
 	contentType := db.JSON
 	if db.HookContentType(f.ContentType) == db.FORM {
 		contentType = db.FORM
@@ -227,10 +227,6 @@ func WebhooksSlackNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewS
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "slack"
 
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
-		return
-	}
 	meta := &db.SlackMeta{
 		Channel:  f.Channel,
 		Username: f.Username,
@@ -264,10 +260,6 @@ func WebhooksDiscordNewPost(c *context.Context, orCtx *orgRepoContext, f form.Ne
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "discord"
 
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
-		return
-	}
 	meta := &db.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -299,11 +291,6 @@ func WebhooksDingtalkNewPost(c *context.Context, orCtx *orgRepoContext, f form.N
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "dingtalk"
-
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
-		return
-	}
 
 	w := &db.Webhook{
 		RepoID:       orCtx.RepoID,
@@ -372,6 +359,11 @@ func WebhooksEdit(c *context.Context, orCtx *orgRepoContext) {
 func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
 	c.Data["Webhook"] = w
 
+	if c.HasError() {
+		c.Success(orCtx.TmplNew)
+		return
+	}
+
 	field, msg, ok := validateWebhook(c.User, c.Locale, w)
 	if !ok {
 		c.FormErr(field)
@@ -401,11 +393,6 @@ func WebhooksEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebho
 		return
 	}
 
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
-		return
-	}
-
 	contentType := db.JSON
 	if db.HookContentType(f.ContentType) == db.FORM {
 		contentType = db.FORM
@@ -426,11 +413,6 @@ func WebhooksSlackEditPost(c *context.Context, orCtx *orgRepoContext, f form.New
 
 	w := loadWebhook(c, orCtx)
 	if c.Written() {
-		return
-	}
-
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -462,11 +444,6 @@ func WebhooksDiscordEditPost(c *context.Context, orCtx *orgRepoContext, f form.N
 		return
 	}
 
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
-		return
-	}
-
 	meta, err := jsoniter.Marshal(&db.SlackMeta{
 		Username: f.Username,
 		IconURL:  f.IconURL,
@@ -491,11 +468,6 @@ func WebhooksDingtalkEditPost(c *context.Context, orCtx *orgRepoContext, f form.
 
 	w := loadWebhook(c, orCtx)
 	if c.Written() {
-		return
-	}
-
-	if c.HasError() {
-		c.Success(orCtx.TmplNew)
 		return
 	}
 
