@@ -98,6 +98,7 @@ func runRestore(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "init configuration")
 	}
+	conf.InitLogging(true)
 
 	if err = db.SetEngine(); err != nil {
 		return errors.Wrap(err, "set engine")
