@@ -102,24 +102,31 @@ func isLocalHostname(hostname string) bool {
 	return false
 }
 
-func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
-	c.Data["Webhook"] = w
-
-	if !c.User.IsAdmin {
+func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field string, msg string, ok bool) {
+	if !actor.IsAdmin {
 		// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 		// see https://github.com/gogs/gogs/issues/5366 for details.
 		payloadURL, err := url.Parse(w.URL)
 		if err != nil {
-			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.TmplNew, nil)
-			return
+			return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), false
 		}
 
 		if isLocalHostname(payloadURL.Hostname()) {
-			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.TmplNew, nil)
-			return
+			return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), false
 		}
+	}
+
+	return "", "", true
+}
+
+func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
+	c.Data["Webhook"] = w
+
+	field, msg, ok := validateWebhook(c.User, c.Locale, w)
+	if !ok {
+		c.FormErr(field)
+		c.RenderWithErr(msg, orCtx.TmplNew, nil)
+		return
 	}
 
 	if err := w.UpdateEvent(); err != nil {
@@ -365,21 +372,11 @@ func WebhooksEdit(c *context.Context, orCtx *orgRepoContext) {
 func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
 	c.Data["Webhook"] = w
 
-	if !c.User.IsAdmin {
-		// 🚨 SECURITY: Well-known address to localhost must not be allowed to
-		// prevent SSRF, see https://github.com/gogs/gogs/issues/5366 for details.
-		payloadURL, err := url.Parse(w.URL)
-		if err != nil {
-			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.TmplNew, nil)
-			return
-		}
-
-		if isLocalHostname(payloadURL.Hostname()) {
-			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.TmplNew, nil)
-			return
-		}
+	field, msg, ok := validateWebhook(c.User, c.Locale, w)
+	if !ok {
+		c.FormErr(field)
+		c.RenderWithErr(msg, orCtx.TmplNew, nil)
+		return
 	}
 
 	if err := w.UpdateEvent(); err != nil {
