@@ -13,6 +13,7 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 	jsoniter "github.com/json-iterator/go"
+	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -28,17 +29,23 @@ const (
 	tmplOrgSettingsWebhookNew  = "org/settings/webhook_new"
 )
 
-func Webhooks(c *context.Context) {
+func InjectOrgRepoContext() macaron.Handler {
+	return func(c *context.Context) {
+		orCtx, err := getOrgRepoContext(c)
+		if err != nil {
+			c.Error(err, "get organization or repository context")
+			return
+		}
+		c.Map(orCtx)
+	}
+}
+
+func Webhooks(c *context.Context, orCtx *orgRepoContext) {
 	c.Title("repo.settings.hooks")
 	c.PageIs("SettingsHooks")
 	c.Data["Types"] = conf.Webhook.Types
 
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
-
+	var err error
 	var ws []*db.Webhook
 	if orCtx.RepoID > 0 {
 		c.Data["Description"] = c.Tr("repo.settings.hooks_desc")
@@ -56,16 +63,10 @@ func Webhooks(c *context.Context) {
 	c.Success(orCtx.TmplList)
 }
 
-func WebhooksNew(c *context.Context) {
+func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.Title("repo.settings.add_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksNew")
-
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
 
 	allowed := false
 	hookType := strings.ToLower(c.Params(":type"))
@@ -184,17 +185,11 @@ func toHookEvent(f form.Webhook) *db.HookEvent {
 	}
 }
 
-func WebhooksNewPost(c *context.Context, f form.NewWebhook) {
+func WebhooksNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebhook) {
 	c.Title("repo.settings.add_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "gogs"
-
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
 
 	if c.HasError() {
 		c.Success(orCtx.TmplNew)
@@ -219,17 +214,11 @@ func WebhooksNewPost(c *context.Context, f form.NewWebhook) {
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func WebhooksSlackNewPost(c *context.Context, f form.NewSlackHook) {
+func WebhooksSlackNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewSlackHook) {
 	c.Title("repo.settings.add_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "slack"
-
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
 
 	if c.HasError() {
 		c.Success(orCtx.TmplNew)
@@ -262,17 +251,11 @@ func WebhooksSlackNewPost(c *context.Context, f form.NewSlackHook) {
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func WebhooksDiscordNewPost(c *context.Context, f form.NewDiscordHook) {
+func WebhooksDiscordNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewDiscordHook) {
 	c.Title("repo.settings.add_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "discord"
-
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
 
 	if c.HasError() {
 		c.Success(orCtx.TmplNew)
@@ -304,17 +287,11 @@ func WebhooksDiscordNewPost(c *context.Context, f form.NewDiscordHook) {
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func WebhooksDingtalkNewPost(c *context.Context, f form.NewDingtalkHook) {
+func WebhooksDingtalkNewPost(c *context.Context, orCtx *orgRepoContext, f form.NewDingtalkHook) {
 	c.Title("repo.settings.add_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksNew")
 	c.Data["HookType"] = "dingtalk"
-
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
 
 	if c.HasError() {
 		c.Success(orCtx.TmplNew)
@@ -333,15 +310,10 @@ func WebhooksDingtalkNewPost(c *context.Context, f form.NewDingtalkHook) {
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func loadWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
+func loadWebhook(c *context.Context, orCtx *orgRepoContext) *db.Webhook {
 	c.RequireHighlightJS()
 
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return nil, nil
-	}
-
+	var err error
 	var w *db.Webhook
 	if orCtx.RepoID > 0 {
 		w, err = db.GetWebhookOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
@@ -350,7 +322,7 @@ func loadWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
 	}
 	if err != nil {
 		c.NotFoundOrError(err, "get webhook")
-		return nil, nil
+		return nil
 	}
 	c.Data["Webhook"] = w
 
@@ -372,17 +344,17 @@ func loadWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
 	c.Data["History"], err = w.History(1)
 	if err != nil {
 		c.Error(err, "get history")
-		return nil, nil
+		return nil
 	}
-	return orCtx, w
+	return w
 }
 
-func WebhooksEdit(c *context.Context) {
+func WebhooksEdit(c *context.Context, orCtx *orgRepoContext) {
 	c.Title("repo.settings.update_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, _ := loadWebhook(c)
+	loadWebhook(c, orCtx)
 	if c.Written() {
 		return
 	}
@@ -422,12 +394,12 @@ func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 	c.Redirect(fmt.Sprintf("%s/settings/hooks/%d", orCtx.Link, w.ID))
 }
 
-func WebhooksEditPost(c *context.Context, f form.NewWebhook) {
+func WebhooksEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewWebhook) {
 	c.Title("repo.settings.update_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := loadWebhook(c)
+	w := loadWebhook(c, orCtx)
 	if c.Written() {
 		return
 	}
@@ -450,12 +422,12 @@ func WebhooksEditPost(c *context.Context, f form.NewWebhook) {
 	validateAndUpdateWebhook(c, orCtx, w)
 }
 
-func WebhooksSlackEditPost(c *context.Context, f form.NewSlackHook) {
+func WebhooksSlackEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewSlackHook) {
 	c.Title("repo.settings.update_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := loadWebhook(c)
+	w := loadWebhook(c, orCtx)
 	if c.Written() {
 		return
 	}
@@ -483,12 +455,12 @@ func WebhooksSlackEditPost(c *context.Context, f form.NewSlackHook) {
 	validateAndUpdateWebhook(c, orCtx, w)
 }
 
-func WebhooksDiscordEditPost(c *context.Context, f form.NewDiscordHook) {
+func WebhooksDiscordEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewDiscordHook) {
 	c.Title("repo.settings.update_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := loadWebhook(c)
+	w := loadWebhook(c, orCtx)
 	if c.Written() {
 		return
 	}
@@ -515,12 +487,12 @@ func WebhooksDiscordEditPost(c *context.Context, f form.NewDiscordHook) {
 	validateAndUpdateWebhook(c, orCtx, w)
 }
 
-func WebhooksDingtalkEditPost(c *context.Context, f form.NewDingtalkHook) {
+func WebhooksDingtalkEditPost(c *context.Context, orCtx *orgRepoContext, f form.NewDingtalkHook) {
 	c.Title("repo.settings.update_webhook")
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := loadWebhook(c)
+	w := loadWebhook(c, orCtx)
 	if c.Written() {
 		return
 	}
@@ -651,13 +623,8 @@ func RedeliveryWebhook(c *context.Context) {
 	c.Status(http.StatusOK)
 }
 
-func DeleteWebhook(c *context.Context) {
-	orCtx, err := getOrgRepoContext(c)
-	if err != nil {
-		c.Error(err, "get organization or repository context")
-		return
-	}
-
+func DeleteWebhook(c *context.Context, orCtx *orgRepoContext) {
+	var err error
 	if orCtx.RepoID > 0 {
 		err = db.DeleteWebhookOfRepoByID(orCtx.RepoID, c.QueryInt64("id"))
 	} else {

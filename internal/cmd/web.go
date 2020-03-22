@@ -357,18 +357,20 @@ func runWeb(c *cli.Context) error {
 	reqRepoWriter := context.RequireRepoWriter()
 
 	webhookRoutes := func() {
-		m.Get("", repo.Webhooks)
-		m.Post("/delete", repo.DeleteWebhook)
-		m.Get("/:type/new", repo.WebhooksNew)
-		m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebhooksNewPost)
-		m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackNewPost)
-		m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordNewPost)
-		m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkNewPost)
-		m.Get("/:id", repo.WebhooksEdit)
-		m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebhooksEditPost)
-		m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackEditPost)
-		m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordEditPost)
-		m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkEditPost)
+		m.Group("", func() {
+			m.Get("", repo.Webhooks)
+			m.Post("/delete", repo.DeleteWebhook)
+			m.Get("/:type/new", repo.WebhooksNew)
+			m.Post("/gogs/new", bindIgnErr(form.NewWebhook{}), repo.WebhooksNewPost)
+			m.Post("/slack/new", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackNewPost)
+			m.Post("/discord/new", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordNewPost)
+			m.Post("/dingtalk/new", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkNewPost)
+			m.Get("/:id", repo.WebhooksEdit)
+			m.Post("/gogs/:id", bindIgnErr(form.NewWebhook{}), repo.WebhooksEditPost)
+			m.Post("/slack/:id", bindIgnErr(form.NewSlackHook{}), repo.WebhooksSlackEditPost)
+			m.Post("/discord/:id", bindIgnErr(form.NewDiscordHook{}), repo.WebhooksDiscordEditPost)
+			m.Post("/dingtalk/:id", bindIgnErr(form.NewDingtalkHook{}), repo.WebhooksDingtalkEditPost)
+		}, repo.InjectOrgRepoContext())
 	}
 
 	// ***** START: Organization *****
