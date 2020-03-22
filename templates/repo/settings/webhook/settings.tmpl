@@ -119,7 +119,7 @@
 		<button class="ui green button">{{.i18n.Tr "repo.settings.add_webhook"}}</button>
 	{{else}}
 		<button class="ui green button">{{.i18n.Tr "repo.settings.update_webhook"}}</button>
-		<a class="ui red delete-button button" data-url="{{.BaseLink}}/settings/hooks/delete" data-id="{{.Webhook.ID}}">{{.i18n.Tr "repo.settings.delete_webhook"}}</a>
+		<a class="ui red delete-button button" data-url="{{.DeleteURL}}" data-id="{{.Webhook.ID}}">{{.i18n.Tr "repo.settings.delete_webhook"}}</a>
 	{{end}}
 </div>
 
