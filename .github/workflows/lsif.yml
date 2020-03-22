@@ -1,7 +1,7 @@
 name: LSIF
 on: [push]
 jobs:
-  build:
+  lsif-go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
