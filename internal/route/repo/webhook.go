@@ -24,23 +24,36 @@ import (
 const (
 	tmplRepoSettingsWebhooks   = "repo/settings/webhook/base"
 	tmplRepoSettingsWebhookNew = "repo/settings/webhook/new"
+	tmplOrgSettingsWebhooks    = "org/settings/webhooks"
 	tmplOrgSettingsWebhookNew  = "org/settings/webhook_new"
 )
 
 func Webhooks(c *context.Context) {
 	c.Title("repo.settings.hooks")
 	c.PageIs("SettingsHooks")
-	c.Data["Description"] = c.Tr("repo.settings.hooks_desc")
 	c.Data["Types"] = conf.Webhook.Types
 
-	ws, err := db.GetWebhooksByRepoID(c.Repo.Repository.ID)
+	orCtx, err := getOrgRepoContext(c)
 	if err != nil {
-		c.Error(err, "get webhooks by repository ID")
+		c.Error(err, "get organization or repository context")
+		return
+	}
+
+	var ws []*db.Webhook
+	if orCtx.RepoID > 0 {
+		c.Data["Description"] = c.Tr("repo.settings.hooks_desc")
+		ws, err = db.GetWebhooksByRepoID(orCtx.RepoID)
+	} else {
+		c.Data["Description"] = c.Tr("org.settings.hooks_desc")
+		ws, err = db.GetWebhooksByOrgID(orCtx.OrgID)
+	}
+	if err != nil {
+		c.Error(err, "get webhooks")
 		return
 	}
 	c.Data["Webhooks"] = ws
 
-	c.Success(tmplRepoSettingsWebhooks)
+	c.Success(orCtx.TmplList)
 }
 
 func WebhooksNew(c *context.Context) {
@@ -68,7 +81,7 @@ func WebhooksNew(c *context.Context) {
 		return
 	}
 
-	c.Success(orCtx.Tmpl)
+	c.Success(orCtx.TmplNew)
 }
 
 var localHostnames = []string{
@@ -97,13 +110,13 @@ func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 		payloadURL, err := url.Parse(w.URL)
 		if err != nil {
 			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.Tmpl, nil)
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.TmplNew, nil)
 			return
 		}
 
 		if isLocalHostname(payloadURL.Hostname()) {
 			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.Tmpl, nil)
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.TmplNew, nil)
 			return
 		}
 	}
@@ -121,10 +134,11 @@ func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 }
 
 type orgRepoContext struct {
-	OrgID  int64
-	RepoID int64
-	Link   string
-	Tmpl   string
+	OrgID    int64
+	RepoID   int64
+	Link     string
+	TmplList string
+	TmplNew  string
 }
 
 // getOrgRepoContext determines whether this is a repo context or organization context.
@@ -132,18 +146,20 @@ func getOrgRepoContext(c *context.Context) (*orgRepoContext, error) {
 	if len(c.Repo.RepoLink) > 0 {
 		c.PageIs("RepositoryContext")
 		return &orgRepoContext{
-			RepoID: c.Repo.Repository.ID,
-			Link:   c.Repo.RepoLink,
-			Tmpl:   tmplRepoSettingsWebhookNew,
+			RepoID:   c.Repo.Repository.ID,
+			Link:     c.Repo.RepoLink,
+			TmplList: tmplRepoSettingsWebhooks,
+			TmplNew:  tmplRepoSettingsWebhookNew,
 		}, nil
 	}
 
 	if len(c.Org.OrgLink) > 0 {
 		c.PageIs("OrganizationContext")
 		return &orgRepoContext{
-			OrgID: c.Org.Organization.ID,
-			Link:  c.Org.OrgLink,
-			Tmpl:  tmplOrgSettingsWebhookNew,
+			OrgID:    c.Org.Organization.ID,
+			Link:     c.Org.OrgLink,
+			TmplList: tmplOrgSettingsWebhooks,
+			TmplNew:  tmplOrgSettingsWebhookNew,
 		}, nil
 	}
 
@@ -181,7 +197,7 @@ func WebhooksNewPost(c *context.Context, f form.NewWebhook) {
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -216,7 +232,7 @@ func WebhooksSlackNewPost(c *context.Context, f form.NewSlackHook) {
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 	meta := &db.SlackMeta{
@@ -259,7 +275,7 @@ func WebhooksDiscordNewPost(c *context.Context, f form.NewDiscordHook) {
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 	meta := &db.SlackMeta{
@@ -301,7 +317,7 @@ func WebhooksDingtalkNewPost(c *context.Context, f form.NewDingtalkHook) {
 	}
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -317,7 +333,7 @@ func WebhooksDingtalkNewPost(c *context.Context, f form.NewDingtalkHook) {
 	validateAndCreateWebhook(c, orCtx, w)
 }
 
-func checkWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
+func loadWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
 	c.RequireHighlightJS()
 
 	orCtx, err := getOrgRepoContext(c)
@@ -336,6 +352,7 @@ func checkWebhook(c *context.Context) (*orgRepoContext, *db.Webhook) {
 		c.NotFoundOrError(err, "get webhook")
 		return nil, nil
 	}
+	c.Data["Webhook"] = w
 
 	switch w.HookTaskType {
 	case db.SLACK:
@@ -365,13 +382,12 @@ func WebhooksEdit(c *context.Context) {
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := checkWebhook(c)
+	orCtx, _ := loadWebhook(c)
 	if c.Written() {
 		return
 	}
-	c.Data["Webhook"] = w
 
-	c.Success(orCtx.Tmpl)
+	c.Success(orCtx.TmplNew)
 }
 
 func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.Webhook) {
@@ -383,13 +399,13 @@ func validateAndUpdateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 		payloadURL, err := url.Parse(w.URL)
 		if err != nil {
 			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.Tmpl, nil)
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), orCtx.TmplNew, nil)
 			return
 		}
 
 		if isLocalHostname(payloadURL.Hostname()) {
 			c.FormErr("PayloadURL")
-			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.Tmpl, nil)
+			c.RenderWithErr(c.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), orCtx.TmplNew, nil)
 			return
 		}
 	}
@@ -411,14 +427,13 @@ func WebhooksEditPost(c *context.Context, f form.NewWebhook) {
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := checkWebhook(c)
+	orCtx, w := loadWebhook(c)
 	if c.Written() {
 		return
 	}
-	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -440,14 +455,13 @@ func WebhooksSlackEditPost(c *context.Context, f form.NewSlackHook) {
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := checkWebhook(c)
+	orCtx, w := loadWebhook(c)
 	if c.Written() {
 		return
 	}
-	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -474,14 +488,13 @@ func WebhooksDiscordEditPost(c *context.Context, f form.NewDiscordHook) {
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := checkWebhook(c)
+	orCtx, w := loadWebhook(c)
 	if c.Written() {
 		return
 	}
-	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -507,14 +520,13 @@ func WebhooksDingtalkEditPost(c *context.Context, f form.NewDingtalkHook) {
 	c.PageIs("SettingsHooks")
 	c.PageIs("SettingsHooksEdit")
 
-	orCtx, w := checkWebhook(c)
+	orCtx, w := loadWebhook(c)
 	if c.Written() {
 		return
 	}
-	c.Data["Webhook"] = w
 
 	if c.HasError() {
-		c.Success(orCtx.Tmpl)
+		c.Success(orCtx.TmplNew)
 		return
 	}
 
@@ -640,13 +652,24 @@ func RedeliveryWebhook(c *context.Context) {
 }
 
 func DeleteWebhook(c *context.Context) {
-	if err := db.DeleteWebhookOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id")); err != nil {
-		c.Flash.Error("DeleteWebhookByRepoID: " + err.Error())
-	} else {
-		c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
+	orCtx, err := getOrgRepoContext(c)
+	if err != nil {
+		c.Error(err, "get organization or repository context")
+		return
 	}
 
+	if orCtx.RepoID > 0 {
+		err = db.DeleteWebhookOfRepoByID(orCtx.RepoID, c.QueryInt64("id"))
+	} else {
+		err = db.DeleteWebhookOfOrgByID(orCtx.OrgID, c.QueryInt64("id"))
+	}
+	if err != nil {
+		c.Error(err, "delete webhook")
+		return
+	}
+	c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
+
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": c.Repo.RepoLink + "/settings/hooks",
+		"redirect": orCtx.Link + "/settings/hooks",
 	})
 }
