@@ -40,6 +40,39 @@ func InjectOrgRepoContext() macaron.Handler {
 	}
 }
 
+type orgRepoContext struct {
+	OrgID    int64
+	RepoID   int64
+	Link     string
+	TmplList string
+	TmplNew  string
+}
+
+// getOrgRepoContext determines whether this is a repo context or organization context.
+func getOrgRepoContext(c *context.Context) (*orgRepoContext, error) {
+	if len(c.Repo.RepoLink) > 0 {
+		c.PageIs("RepositoryContext")
+		return &orgRepoContext{
+			RepoID:   c.Repo.Repository.ID,
+			Link:     c.Repo.RepoLink,
+			TmplList: tmplRepoSettingsWebhooks,
+			TmplNew:  tmplRepoSettingsWebhookNew,
+		}, nil
+	}
+
+	if len(c.Org.OrgLink) > 0 {
+		c.PageIs("OrganizationContext")
+		return &orgRepoContext{
+			OrgID:    c.Org.Organization.ID,
+			Link:     c.Org.OrgLink,
+			TmplList: tmplOrgSettingsWebhooks,
+			TmplNew:  tmplOrgSettingsWebhookNew,
+		}, nil
+	}
+
+	return nil, errors.New("unable to determine context")
+}
+
 func Webhooks(c *context.Context, orCtx *orgRepoContext) {
 	c.Title("repo.settings.hooks")
 	c.PageIs("SettingsHooks")
@@ -92,7 +125,7 @@ var localHostnames = []string{
 	"0:0:0:0:0:0:0:1",
 }
 
-// isLocalHostname returns true if given hostname is a well-known local address.
+// isLocalHostname returns true if given hostname is a known local address.
 func isLocalHostname(hostname string) bool {
 	for _, local := range localHostnames {
 		if hostname == local {
@@ -144,39 +177,6 @@ func validateAndCreateWebhook(c *context.Context, orCtx *orgRepoContext, w *db.W
 
 	c.Flash.Success(c.Tr("repo.settings.add_hook_success"))
 	c.Redirect(orCtx.Link + "/settings/hooks")
-}
-
-type orgRepoContext struct {
-	OrgID    int64
-	RepoID   int64
-	Link     string
-	TmplList string
-	TmplNew  string
-}
-
-// getOrgRepoContext determines whether this is a repo context or organization context.
-func getOrgRepoContext(c *context.Context) (*orgRepoContext, error) {
-	if len(c.Repo.RepoLink) > 0 {
-		c.PageIs("RepositoryContext")
-		return &orgRepoContext{
-			RepoID:   c.Repo.Repository.ID,
-			Link:     c.Repo.RepoLink,
-			TmplList: tmplRepoSettingsWebhooks,
-			TmplNew:  tmplRepoSettingsWebhookNew,
-		}, nil
-	}
-
-	if len(c.Org.OrgLink) > 0 {
-		c.PageIs("OrganizationContext")
-		return &orgRepoContext{
-			OrgID:    c.Org.Organization.ID,
-			Link:     c.Org.OrgLink,
-			TmplList: tmplOrgSettingsWebhooks,
-			TmplNew:  tmplOrgSettingsWebhookNew,
-		}, nil
-	}
-
-	return nil, errors.New("unable to determine context")
 }
 
 func toHookEvent(f form.Webhook) *db.HookEvent {
