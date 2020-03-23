@@ -42,6 +42,7 @@ All notable changes to Gogs are documented in this file.
 - [Security] Potential XSS attack via `.ipynb`. [#5170](https://github.com/gogs/gogs/issues/5170)
 - [Security] Potential SSRF attack via webhooks. [#5366](https://github.com/gogs/gogs/issues/5366)
 - [Security] Potential CSRF attack in admin panel. [#5367](https://github.com/gogs/gogs/issues/5367)
+- [Security] Potential stored XSS attack in some browsers. [#5397](https://github.com/gogs/gogs/issues/5397)
 - [Security] Potential RCE on mirror repositories. [#5767](https://github.com/gogs/gogs/issues/5767)
 - [Security] Potential XSS attack with raw markdown API. [#5907](https://github.com/gogs/gogs/pull/5907)
 - Open/close milestone redirects to a 404 page. [#5677](https://github.com/gogs/gogs/issues/5677)
