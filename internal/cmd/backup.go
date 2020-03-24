@@ -126,7 +126,7 @@ func runBackup(c *cli.Context) error {
 		if c.Bool("exclude-mirror-repos") {
 			repos, err := db.GetNonMirrorRepositories()
 			if err != nil {
-				log.Fatal("Mirror repositories failed to load %v", err)
+				log.Fatal("Failed to get non-mirror repositories: %v", err)
 			}
 			reposZip, err := zip.Create(reposDump)
 			if err != nil {

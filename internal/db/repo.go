@@ -1429,11 +1429,7 @@ func GetRepositoriesByForkID(forkID int64) ([]*Repository, error) {
 
 func getNonMirrorRepositories(e Engine) ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
-	err := e.Where("is_mirror = ?", false).Find(&repos)
-	if err != nil {
-		return repos, err
-	}
-	return repos, nil
+	return repos, e.Where("is_mirror = ?", false).Find(&repos)
 }
 
 // GetRepositoriesMirror returns only mirror repositories with user.
