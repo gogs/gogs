@@ -1427,6 +1427,16 @@ func GetRepositoriesByForkID(forkID int64) ([]*Repository, error) {
 	return getRepositoriesByForkID(x, forkID)
 }
 
+func getNonMirrorRepositories(e Engine) ([]*Repository, error) {
+	repos := make([]*Repository, 0, 10)
+	return repos, e.Where("is_mirror = ?", false).Find(&repos)
+}
+
+// GetRepositoriesMirror returns only mirror repositories with user.
+func GetNonMirrorRepositories() ([]*Repository, error) {
+	return getNonMirrorRepositories(x)
+}
+
 func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err error) {
 	repo.LowerName = strings.ToLower(repo.Name)
 
