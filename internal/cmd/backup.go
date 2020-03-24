@@ -37,6 +37,7 @@ portable among all supported database engines.`,
 		stringFlag("target", "./", "Target directory path to save backup archive"),
 		stringFlag("archive-name", fmt.Sprintf("gogs-backup-%s.zip", time.Now().Format("20060102150405")), "Name of backup archive"),
 		boolFlag("database-only", "Only dump database"),
+		boolFlag("exclude-mirror-repos", "Exclude mirror repositories"),
 		boolFlag("exclude-repos", "Exclude repositories"),
 	},
 }
@@ -122,13 +123,34 @@ func runBackup(c *cli.Context) error {
 	if !c.Bool("exclude-repos") && !c.Bool("database-only") {
 		reposDump := filepath.Join(rootDir, "repositories.zip")
 		log.Info("Dumping repositories in %q", conf.Repository.Root)
-		if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
-			log.Fatal("Failed to dump repositories: %v", err)
+		if c.Bool("exclude-mirror-repos") {
+			repos, err := db.GetNonMirrorRepositories()
+			if err != nil {
+				log.Fatal("Failed to get non-mirror repositories: %v", err)
+			}
+			reposZip, err := zip.Create(reposDump)
+			if err != nil {
+				log.Fatal("Failed to create %q: %v", reposDump, err)
+			}
+			baseDir := filepath.Base(conf.Repository.Root)
+			for _, r := range repos {
+				name := r.FullName() + ".git"
+				if err := reposZip.AddDir(filepath.Join(baseDir, name), filepath.Join(conf.Repository.Root, name)); err != nil {
+					log.Fatal("Failed to add %q: %v", name, err)
+				}
+			}
+			if err = reposZip.Close(); err != nil {
+				log.Fatal("Failed to save %q: %v", reposDump, err)
+			}
+		} else {
+			if err = zip.PackTo(conf.Repository.Root, reposDump, true); err != nil {
+				log.Fatal("Failed to dump repositories: %v", err)
+			}
 		}
 		log.Info("Repositories dumped to: %s", reposDump)
 
 		if err = z.AddFile(_ARCHIVE_ROOT_DIR+"/repositories.zip", reposDump); err != nil {
-			log.Fatal("Failed to include 'repositories.zip': %v", err)
+			log.Fatal("Failed to include %q: %v", reposDump, err)
 		}
 	}
 
