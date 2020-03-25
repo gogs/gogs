@@ -88,6 +88,8 @@ github.com/gogs/git-module v1.0.0-beta.4 h1:5CyCvTfrb2n5LRpHcNIaFnywHDkM/NxSZVP6
 github.com/gogs/git-module v1.0.0-beta.4/go.mod h1:oN37FFStFjdnTJXsSbhIHKJXh2YeDsEcXPATVz/oeuQ=
 github.com/gogs/git-module v1.0.0 h1:iOlCZ5kPc3RjnWRxdziL5hjCaosYyZw/Lf2odzR/kjw=
 github.com/gogs/git-module v1.0.0/go.mod h1:oN37FFStFjdnTJXsSbhIHKJXh2YeDsEcXPATVz/oeuQ=
+github.com/gogs/git-module v1.0.1 h1:Xh/sfk6zKjF3y9w2G/dN0YMfLjMhRQzqxMTUPHOL5n4=
+github.com/gogs/git-module v1.0.1/go.mod h1:oN37FFStFjdnTJXsSbhIHKJXh2YeDsEcXPATVz/oeuQ=
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4 h1:C7NryI/RQhsIWwC2bHN601P1wJKeuQ6U/UCOYTn3Cic=
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4/go.mod h1:fR6z1Ie6rtF7kl/vBYMfgD5/G5B1blui7z426/sj2DU=
 github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0 h1:K02vod+sn3M1OOkdqi2tPxN2+xESK4qyITVQ3JkGEv4=
