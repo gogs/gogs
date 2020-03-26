@@ -153,11 +153,14 @@ func newMacaron() *macaron.Macaron {
 		Secure:         conf.Session.CookieSecure,
 	}))
 	m.Use(csrf.Csrfer(csrf.Options{
-		Secret:     conf.Security.SecretKey,
-		Cookie:     conf.Session.CSRFCookieName,
-		SetCookie:  true,
-		Header:     "X-Csrf-Token",
-		CookiePath: conf.Server.Subpath,
+		Secret:         conf.Security.SecretKey,
+		Header:         "X-Csrf-Token",
+		Cookie:         conf.Session.CSRFCookieName,
+		CookieDomain:   conf.Server.URL.Hostname(),
+		CookiePath:     conf.Server.Subpath,
+		CookieHttpOnly: true,
+		SetCookie:      true,
+		Secure:         conf.Server.URL.Scheme == "https",
 	}))
 	m.Use(toolbox.Toolboxer(m, toolbox.Options{
 		HealthCheckFuncs: []*toolbox.HealthCheckFuncDesc{
@@ -412,9 +415,7 @@ func runWeb(c *cli.Context) error {
 					Post(bindIgnErr(form.UpdateOrgSetting{}), org.SettingsPost)
 				m.Post("/avatar", binding.MultipartForm(form.Avatar{}), org.SettingsAvatar)
 				m.Post("/avatar/delete", org.SettingsDeleteAvatar)
-
 				m.Group("/hooks", webhookRoutes)
-
 				m.Route("/delete", "GET,POST", org.SettingsDelete)
 			})
 
