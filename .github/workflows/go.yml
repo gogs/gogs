@@ -30,11 +30,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run unit tests
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: go test -v -race -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v1.0.6
         with:
-          file: ./coverage.out
+          file: ./coverage
           flags: unittests
       - name: Cache downloaded modules
         uses: actions/cache@v1
