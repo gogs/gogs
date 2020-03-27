@@ -37,10 +37,6 @@ func TestMustAsset(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	if IsWindowsRuntime() {
-		return
-	}
-
 	ini.PrettyFormat = false
 	defer func() {
 		MustInit("")
