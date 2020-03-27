@@ -33,7 +33,7 @@ require (
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
-	github.com/mattn/go-sqlite3 v1.11.0
+	github.com/mattn/go-sqlite3 v1.13.0
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
 	github.com/microcosm-cc/bluemonday v1.0.2
 	github.com/msteinert/pam v0.0.0-20190215180659-f29b9f28d6f9
