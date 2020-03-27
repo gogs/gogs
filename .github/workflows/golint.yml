@@ -1,4 +1,4 @@
-name: golint
+name: Lint
 on: [pull_request]
 jobs:
   golint:
