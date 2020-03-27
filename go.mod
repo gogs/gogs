@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20191001013358-cfbb681360f0
-	github.com/editorconfig/editorconfig-core-go/v2 v2.3.0
+	github.com/editorconfig/editorconfig-core-go/v2 v2.3.1
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.0.1
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
