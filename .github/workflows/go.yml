@@ -1,5 +1,8 @@
 name: Go
-on: [pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
 env:
   GOPROXY: "https://proxy.golang.org"
 
@@ -27,11 +30,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run unit tests
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v1.0.6
         with:
-          file: ./coverage.txt
+          file: ./coverage.out
           flags: unittests
       - name: Cache downloaded modules
         uses: actions/cache@v1
@@ -40,3 +43,4 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+      
