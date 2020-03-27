@@ -66,7 +66,7 @@ require (
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/macaron.v1 v1.3.5
 	unknwon.dev/clog/v2 v2.1.2
-	xorm.io/builder v0.3.7
+	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
 )
