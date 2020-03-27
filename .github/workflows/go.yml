@@ -1,0 +1,46 @@
+name: Go
+on:
+  push:
+    branches: [master]
+  pull_request:
+env:
+  GOPROXY: "https://proxy.golang.org"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run golangci-lint
+        uses: actions-contrib/golangci-lint@v1
+
+  test:
+    name: Test
+    strategy:
+      matrix:
+        go-version: [1.13.x, 1.14.x]
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run unit tests
+        run: go test -v -race -coverprofile=coverage -covermode=atomic ./...
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v1.0.6
+        with:
+          file: ./coverage
+          flags: unittests
+      - name: Cache downloaded modules
+        uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      

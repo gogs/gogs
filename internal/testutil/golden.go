@@ -9,6 +9,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"regexp"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,8 +26,12 @@ func Update(name string) bool {
 }
 
 // AssertGolden compares what's got and what's in the golden file. It updates
-// the golden file on-demand.
+// the golden file on-demand. It does nothing when the runtime is "windows".
 func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
+	if runtime.GOOS == "windows" {
+		return
+	}
+
 	t.Helper()
 
 	data := marshal(t, got)

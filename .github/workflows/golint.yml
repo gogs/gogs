@@ -1,9 +1,0 @@
-name: golint
-on: [pull_request]
-jobs:
-  golint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Run golangci-lint
-      uses: actions-contrib/golangci-lint@v1
