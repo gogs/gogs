@@ -1,5 +1,5 @@
 name: Go
-on: [push, pull_request]
+on: [pull_request]
 env:
   GOPROXY: "https://proxy.golang.org"
 
