@@ -403,3 +403,26 @@ func MirrorSync(c *context.APIContext) {
 	go db.MirrorQueue.Add(repo.ID)
 	c.Status(http.StatusAccepted)
 }
+
+func Releases(c *context.APIContext) {
+	_, repo := parseOwnerAndRepo(c)
+	releases, err := db.GetReleasesByRepoID(repo.ID)
+	if err != nil {
+		c.Error(err, "get releases by repository ID")
+		return
+	}
+	apiReleases := make([]*api.Release, 0, len(releases))
+	for _, r := range releases {
+		publisher, err := db.GetUserByID(r.PublisherID)
+		if err != nil {
+			c.Error(err, "get release publisher")
+			return
+		}
+		r.Publisher = publisher
+	}
+	for _, r := range releases {
+		apiReleases = append(apiReleases, r.APIFormat())
+	}
+
+	c.JSONSuccess(&apiReleases)
+}
