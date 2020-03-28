@@ -267,6 +267,12 @@ func GetPublishedReleasesByRepoID(repoID int64, matches ...string) ([]*Release, 
 	return releases, sess.Find(&releases, new(Release))
 }
 
+// GetReleasesByRepoID returns a list of all releases (including drafts) of given repository.
+func GetReleasesByRepoID(repoID int64) ([]*Release, error) {
+	releases := make([]*Release, 0)
+	return releases, x.Where("repo_id = ?", repoID).Find(&releases)
+}
+
 // GetDraftReleasesByRepoID returns all draft releases of repository.
 func GetDraftReleasesByRepoID(repoID int64) ([]*Release, error) {
 	releases := make([]*Release, 0)
