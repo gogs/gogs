@@ -20,7 +20,7 @@ type TagsPage struct {
 	HasNext bool
 }
 
-func (moduler) ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error) {
+func (module) ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error) {
 	all, err := Module.RepoTags(repoPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "get tags")
