@@ -12,7 +12,7 @@ import (
 )
 
 func TestModuler_ListTagsAfter(t *testing.T) {
-	mockModule := &MockModuleStore{
+	SetMockModuleStore(t, &MockModuleStore{
 		repoTags: func(string, ...git.TagsOptions) ([]string, error) {
 			return []string{
 				"v2.3.0", "v2.2.1", "v2.1.0",
@@ -22,11 +22,6 @@ func TestModuler_ListTagsAfter(t *testing.T) {
 		},
 
 		listTagsAfter: Module.ListTagsAfter,
-	}
-	beforeModule := Module
-	Module = mockModule
-	t.Cleanup(func() {
-		Module = beforeModule
 	})
 
 	tests := []struct {

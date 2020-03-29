@@ -24,7 +24,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 		{ID: git.MustIDFromString("adfd6da3c0a3fb038393144becbf37f14f780087")},
 	}
 
-	mockModule := &MockModuleStore{
+	SetMockModuleStore(t, &MockModuleStore{
 		repoAddRemote: func(repoPath, name, url string, opts ...git.AddRemoteOptions) error {
 			if repoPath != headPath {
 				return fmt.Errorf("repoPath: want %q but got %q", headPath, repoPath)
@@ -93,11 +93,6 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 		},
 
 		pullRequestMeta: Module.PullRequestMeta,
-	}
-	beforeModule := Module
-	Module = mockModule
-	t.Cleanup(func() {
-		Module = beforeModule
 	})
 
 	meta, err := Module.PullRequestMeta(headPath, basePath, headBranch, baseBranch)

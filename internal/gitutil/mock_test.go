@@ -5,6 +5,8 @@
 package gitutil
 
 import (
+	"testing"
+
 	"github.com/gogs/git-module"
 )
 
@@ -53,4 +55,12 @@ func (m *MockModuleStore) PullRequestMeta(headPath, basePath, headBranch, baseBr
 
 func (m *MockModuleStore) ListTagsAfter(repoPath, after string, limit int) (*TagsPage, error) {
 	return m.listTagsAfter(repoPath, after, limit)
+}
+
+func SetMockModuleStore(t *testing.T, mock ModuleStore) {
+	before := Module
+	Module = mock
+	t.Cleanup(func() {
+		Module = before
+	})
 }
