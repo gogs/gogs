@@ -6,8 +6,8 @@ package db
 
 import (
 	"bufio"
+	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -15,10 +15,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/json-iterator/go"
-	_ "github.com/lib/pq"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
@@ -48,8 +45,6 @@ var (
 	x         *xorm.Engine
 	tables    []interface{}
 	HasEngine bool
-
-	EnableSQLite3 bool
 )
 
 func init() {
@@ -68,35 +63,6 @@ func init() {
 	for _, name := range gonicNames {
 		core.LintGonicMapper[name] = true
 	}
-}
-
-// parsePostgreSQLHostPort parses given input in various forms defined in
-// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-// and returns proper host and port number.
-func parsePostgreSQLHostPort(info string) (string, string) {
-	host, port := "127.0.0.1", "5432"
-	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
-		idx := strings.LastIndex(info, ":")
-		host = info[:idx]
-		port = info[idx+1:]
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
-}
-
-func parseMSSQLHostPort(info string) (string, string) {
-	host, port := "127.0.0.1", "1433"
-	if strings.Contains(info, ":") {
-		host = strings.Split(info, ":")[0]
-		port = strings.Split(info, ":")[1]
-	} else if strings.Contains(info, ",") {
-		host = strings.Split(info, ",")[0]
-		port = strings.TrimSpace(strings.Split(info, ",")[1])
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
 }
 
 func getEngine() (*xorm.Engine, error) {
@@ -136,9 +102,6 @@ func getEngine() (*xorm.Engine, error) {
 		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Passwd)
 
 	case "sqlite3":
-		if !EnableSQLite3 {
-			return nil, errors.New("this binary version does not build support for SQLite3")
-		}
 		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {
 			return nil, fmt.Errorf("create directories: %v", err)
 		}
@@ -183,9 +146,8 @@ func SetEngine() (err error) {
 		return fmt.Errorf("create 'xorm.log': %v", err)
 	}
 
-	// To prevent mystery "MySQL: invalid connection" error,
-	// see https://gogs.io/gogs/issues/5532.
-	x.SetMaxIdleConns(0)
+	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
+	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
 	if conf.IsProdMode() {
@@ -194,7 +156,7 @@ func SetEngine() (err error) {
 		x.SetLogger(xorm.NewSimpleLogger(logger))
 	}
 	x.ShowSQL(true)
-	return nil
+	return Init(context.Background())
 }
 
 func NewEngine() (err error) {

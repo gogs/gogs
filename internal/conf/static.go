@@ -128,20 +128,7 @@ var (
 	}
 
 	// Database settings
-	Database struct {
-		Type     string
-		Host     string
-		Name     string
-		User     string
-		Password string
-		SSLMode  string `ini:"SSL_MODE"`
-		Path     string
-
-		// Deprecated: Use Type instead, will be removed in 0.13.
-		DbType string
-		// Deprecated: Use Password instead, will be removed in 0.13.
-		Passwd string
-	}
+	Database DatabaseOpts
 
 	// Security settings
 	Security struct {
@@ -408,6 +395,23 @@ var (
 	// Global setting
 	HasRobotsTxt bool
 )
+
+type DatabaseOpts struct {
+	Type         string
+	Host         string
+	Name         string
+	User         string
+	Password     string
+	SSLMode      string `ini:"SSL_MODE"`
+	Path         string
+	MaxOpenConns int
+	MaxIdleConns int
+
+	// Deprecated: Use Type instead, will be removed in 0.13.
+	DbType string
+	// Deprecated: Use Password instead, will be removed in 0.13.
+	Passwd string
+}
 
 type i18nConf struct {
 	Langs     []string          `delim:","`
