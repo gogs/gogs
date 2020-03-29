@@ -99,7 +99,7 @@ func getEngine() (*xorm.Engine, error) {
 	case "mssql":
 		conf.UseMSSQL = true
 		host, port := parseMSSQLHostPort(conf.Database.Host)
-		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Passwd)
+		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Password)
 
 	case "sqlite3":
 		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {

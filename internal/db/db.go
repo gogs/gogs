@@ -91,7 +91,7 @@ func parseOpts(opts conf.DatabaseOpts) (gorm.Dialector, error) {
 	case "mssql":
 		host, port := parseMSSQLHostPort(opts.Host)
 		dsn := fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
-			host, port, opts.Name, opts.User, opts.Passwd)
+			host, port, opts.Name, opts.User, opts.Password)
 		d = mssql.Open(dsn)
 
 	case "sqlite3":
