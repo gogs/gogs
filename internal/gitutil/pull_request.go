@@ -24,7 +24,7 @@ type PullRequestMeta struct {
 	NumFiles int
 }
 
-func (moduler) PullRequestMeta(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
+func (module) PullRequestMeta(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error) {
 	tmpRemoteBranch := baseBranch
 
 	// We need to create a temporary remote when the pull request is sent from a forked repository.
