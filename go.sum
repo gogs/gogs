@@ -67,6 +67,8 @@ github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 github.com/go-macaron/binding v1.0.1 h1:4LASxd4EKsESZ6ZMyzNVX+TM4Yuex4bTHYyz/PQjsRA=
 github.com/go-macaron/binding v1.0.1/go.mod h1:AG8Z6qkQM8s47aUDJOco/SNwJ8Czif2hMm7rc0abDog=
+github.com/go-macaron/binding v1.1.0 h1:A5jpr5UdHr81Hfmb6QUAMTHyvniudOMcgtEg13TJ1ig=
+github.com/go-macaron/binding v1.1.0/go.mod h1:dJU/AtPKG0gUiFra1K5TTGduFGMNxMvfJzV/zmXwyGM=
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196 h1:fqWZxyMLF6RVGmjvsZ9FijiU9UlAjuE6nu9RfNBZ+iE=
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196/go.mod h1:O6fSdaYZbGh4clVMGMGO5k2KbMO0Cz8YdBnPrD0I8dM=
 github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d h1:aSJXLVjEjbLeHo8aCTDcD3/gMWizaRjMBb3VCsEWEHs=
