@@ -152,16 +152,18 @@ func Diff(c *context.Context) {
 	c.Data["Username"] = userName
 	c.Data["Reponame"] = repoName
 	c.Data["IsImageFile"] = commit.IsImageFile
+	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 	c.Data["Commit"] = commit
 	c.Data["Author"] = db.ValidateCommitWithEmail(commit)
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", commitID)
+	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", commitID)
 	if commit.ParentsCount() > 0 {
 		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", parents[0])
+		c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", parents[0])
 	}
-	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", commitID)
 	c.Success(DIFF)
 }
 
@@ -213,12 +215,14 @@ func CompareDiff(c *context.Context) {
 	c.Data["Username"] = userName
 	c.Data["Reponame"] = repoName
 	c.Data["IsImageFile"] = commit.IsImageFile
+	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 	c.Data["Title"] = "Comparing " + tool.ShortSHA1(beforeCommitID) + "..." + tool.ShortSHA1(afterCommitID) + " · " + userName + "/" + repoName
 	c.Data["Commit"] = commit
 	c.Data["Diff"] = diff
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", afterCommitID)
-	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", beforeCommitID)
 	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", afterCommitID)
+	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", beforeCommitID)
+	c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", beforeCommitID)
 	c.Success(DIFF)
 }
