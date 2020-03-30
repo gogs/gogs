@@ -157,7 +157,7 @@ func Init(ctx context.Context) error {
 	db = db.WithContext(ctx)
 	db.ConnPool.(*sql.DB).SetMaxOpenConns(conf.Database.MaxOpenConns)
 	db.ConnPool.(*sql.DB).SetMaxIdleConns(conf.Database.MaxIdleConns)
-	db.ConnPool.(*sql.DB).SetConnMaxLifetime(time.Second)
+	db.ConnPool.(*sql.DB).SetConnMaxLifetime(time.Minute)
 
 	switch conf.Database.Type {
 	case "mysql":
