@@ -378,6 +378,7 @@ func ViewPullFiles(c *context.Context) {
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["IsImageFile"] = commit.IsImageFile
+	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 
 	// It is possible head repo has been deleted for merged pull requests
 	if pull.HeadRepo != nil {
@@ -386,8 +387,9 @@ func ViewPullFiles(c *context.Context) {
 
 		headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
 		c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", endCommitID)
-		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", startCommitID)
 		c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", endCommitID)
+		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", startCommitID)
+		c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", startCommitID)
 	}
 
 	c.Data["RequireHighlightJS"] = true
@@ -595,11 +597,13 @@ func PrepareCompareDiff(
 	c.Data["Username"] = headUser.Name
 	c.Data["Reponame"] = headRepo.Name
 	c.Data["IsImageFile"] = headCommit.IsImageFile
+	c.Data["IsImageFileByIndex"] = headCommit.IsImageFileByIndex
 
 	headTarget := path.Join(headUser.Name, repo.Name)
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", headCommitID)
-	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", meta.MergeBase)
 	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", headCommitID)
+	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", meta.MergeBase)
+	c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", meta.MergeBase)
 	return false
 }
 
