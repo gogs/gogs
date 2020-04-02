@@ -241,11 +241,12 @@ func NewTeam(t *Team) error {
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
-	has, err = x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).Get(new(Team))
+	existingTeam := Team{}
+	has, err = x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).Get(&existingTeam)
 	if err != nil {
 		return err
 	} else if has {
-		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
+		return ErrTeamAlreadyExist{existingTeam.ID, t.OrgID, t.LowerName}
 	}
 
 	sess := x.NewSession()
@@ -346,11 +347,12 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
-	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(new(Team))
+	existingTeam := new(Team)
+	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(&existingTeam)
 	if err != nil {
 		return err
 	} else if has {
-		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
+		return ErrTeamAlreadyExist{existingTeam.ID, t.OrgID, t.LowerName}
 	}
 
 	if _, err = sess.ID(t.ID).AllCols().Update(t); err != nil {
