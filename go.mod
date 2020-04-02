@@ -7,7 +7,7 @@ require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
 	github.com/editorconfig/editorconfig-core-go/v2 v2.3.1
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/go-macaron/binding v1.0.1
+	github.com/go-macaron/binding v1.1.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
 	github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d
 	github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c
@@ -18,7 +18,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
-	github.com/gogs/git-module v1.0.2
+	github.com/gogs/git-module v1.1.1
 	github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4
 	github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0
 	github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a
@@ -28,7 +28,7 @@ require (
 	github.com/issue9/identicon v1.0.1
 	github.com/jaytaylor/html2text v0.0.0-20190408195923-01ec452cbe43
 	github.com/jinzhu/gorm v1.9.13-0.20200323144012-3a126233bff5
-	github.com/json-iterator/go v1.1.7
+	github.com/json-iterator/go v1.1.9
 	github.com/klauspost/compress v1.8.6 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/lib/pq v1.3.0
@@ -39,15 +39,15 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.2
 	github.com/msteinert/pam v0.0.0-20190215180659-f29b9f28d6f9
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/niklasfasching/go-org v0.1.6
+	github.com/niklasfasching/go-org v0.1.9
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.2.0
-	github.com/prometheus/client_golang v1.2.1
+	github.com/prometheus/client_golang v1.5.1
 	github.com/russross/blackfriday v1.5.2
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/sergi/go-diff v1.0.0
+	github.com/sergi/go-diff v1.1.0
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.5.1
@@ -55,7 +55,7 @@ require (
 	github.com/unknwon/com v1.0.1
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
-	github.com/urfave/cli v1.22.3
+	github.com/urfave/cli v1.22.4
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582
 	golang.org/x/sys v0.0.0-20200219091948-cb0a6d8edb6c // indirect
@@ -63,7 +63,7 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	gopkg.in/ini.v1 v1.54.0
+	gopkg.in/ini.v1 v1.55.0
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/macaron.v1 v1.3.5
 	unknwon.dev/clog/v2 v2.1.2
