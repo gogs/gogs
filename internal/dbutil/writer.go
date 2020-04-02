@@ -7,17 +7,20 @@ package dbutil
 import (
 	"fmt"
 	"io"
-
-	"github.com/jinzhu/gorm/logger"
 )
 
-var _ logger.Writer = (*Writer)(nil)
-
-// Writer is a wrapper of io.Writer for the logger.Interface.
+// Writer is a wrapper of io.Writer for the gorm.logger.
 type Writer struct {
 	io.Writer
 }
 
-func (w *Writer) Printf(format string, args ...interface{}) {
-	_, _ = fmt.Fprintf(w.Writer, format, args...)
+func (w *Writer) Print(v ...interface{}) {
+	switch v[0] {
+	case "sql":
+		fmt.Fprintf(w.Writer, "[sql] [%s] [%s] %s %v (%d rows affected)", v[1:]...)
+	case "log":
+		fmt.Fprintf(w.Writer, "[log] [%s] %s", v[1:]...)
+	default:
+		fmt.Fprintln(w.Writer, v...)
+	}
 }

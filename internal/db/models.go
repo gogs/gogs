@@ -6,7 +6,6 @@ package db
 
 import (
 	"bufio"
-	"context"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -156,7 +155,7 @@ func SetEngine() (err error) {
 		x.SetLogger(xorm.NewSimpleLogger(logger))
 	}
 	x.ShowSQL(true)
-	return Init(context.Background())
+	return Init()
 }
 
 func NewEngine() (err error) {

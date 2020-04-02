@@ -5,21 +5,18 @@
 package db
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
+	"io"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/jinzhu/gorm/dialects/mssql"
-	"github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/jinzhu/gorm/logger"
-	"github.com/jinzhu/gorm/schema"
+	_ "github.com/jinzhu/gorm/dialects/mssql"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
@@ -56,17 +53,16 @@ func parseMSSQLHostPort(info string) (string, string) {
 	return host, port
 }
 
-func parseOpts(opts conf.DatabaseOpts) (gorm.Dialector, error) {
+// parseDSN takes given database options and returns parsed DSN.
+func parseDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 	// In case the database name contains "?" with some parameters
 	concate := "?"
 	if strings.Contains(opts.Name, concate) {
 		concate = "&"
 	}
 
-	var d gorm.Dialector
 	switch opts.Type {
 	case "mysql":
-		var dsn string
 		if opts.Host[0] == '/' { // Looks like a unix socket
 			dsn = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8mb4&parseTime=true",
 				opts.User, opts.Password, opts.Host, opts.Name, concate)
@@ -74,10 +70,8 @@ func parseOpts(opts conf.DatabaseOpts) (gorm.Dialector, error) {
 			dsn = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
 				opts.User, opts.Password, opts.Host, opts.Name, concate)
 		}
-		d = mysql.Open(dsn)
 
 	case "postgres":
-		var dsn string
 		host, port := parsePostgreSQLHostPort(opts.Host)
 		if host[0] == '/' { // looks like a unix socket
 			dsn = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
@@ -86,41 +80,32 @@ func parseOpts(opts conf.DatabaseOpts) (gorm.Dialector, error) {
 			dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
 				url.QueryEscape(opts.User), url.QueryEscape(opts.Password), host, port, opts.Name, concate, opts.SSLMode)
 		}
-		d = postgres.Open(dsn)
 
 	case "mssql":
 		host, port := parseMSSQLHostPort(opts.Host)
-		dsn := fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
+		dsn = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
 			host, port, opts.Name, opts.User, opts.Password)
-		d = mssql.Open(dsn)
 
 	case "sqlite3":
-		dsn := "file:" + opts.Path + "?cache=shared&mode=rwc"
-		d = sqlite.Open(dsn)
+		dsn = "file:" + opts.Path + "?cache=shared&mode=rwc"
 
 	default:
-		return nil, errors.Errorf("unrecognized dialect: %s", opts.Type)
+		return "", errors.Errorf("unrecognized dialect: %s", opts.Type)
 	}
 
-	return d, nil
+	return dsn, nil
 }
 
-func openDB(opts conf.DatabaseOpts, logger logger.Interface, now func() time.Time) (*gorm.DB, error) {
-	dialector, err := parseOpts(opts)
+func openDB(opts conf.DatabaseOpts) (*gorm.DB, error) {
+	dsn, err := parseDSN(opts)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse options")
+		return nil, errors.Wrap(err, "parse DSN")
 	}
 
-	return gorm.Open(dialector, &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
-		},
-		Logger:  logger,
-		NowFunc: now,
-	})
+	return gorm.Open(opts.Type, dsn)
 }
 
-func Init(ctx context.Context) error {
+func getLogWriter() (io.Writer, error) {
 	sec := conf.File.Section("log.gorm")
 	w, err := log.NewFileWriter(
 		filepath.Join(conf.Log.RootPath, "gorm.log"),
@@ -132,32 +117,29 @@ func Init(ctx context.Context) error {
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, `create "gorm.log"`)
+		return nil, errors.Wrap(err, `create "gorm.log"`)
 	}
+	return w, nil
+}
 
-	logLevel := logger.Info
-	if conf.IsProdMode() {
-		logLevel = logger.Error
-	}
-
-	l := logger.New(
-		&dbutil.Writer{
-			Writer: w,
-		},
-		logger.Config{
-			SlowThreshold: 100 * time.Millisecond,
-			LogLevel:      logLevel,
-		},
-	)
-
-	db, err := openDB(conf.Database, l, func() time.Time { return time.Now().UTC() })
+func Init() error {
+	db, err := openDB(conf.Database)
 	if err != nil {
 		return errors.Wrap(err, "open database")
 	}
-	db = db.WithContext(ctx)
-	db.ConnPool.(*sql.DB).SetMaxOpenConns(conf.Database.MaxOpenConns)
-	db.ConnPool.(*sql.DB).SetMaxIdleConns(conf.Database.MaxIdleConns)
-	db.ConnPool.(*sql.DB).SetConnMaxLifetime(time.Minute)
+	db.SingularTable(true)
+	db.DB().SetMaxOpenConns(conf.Database.MaxOpenConns)
+	db.DB().SetMaxIdleConns(conf.Database.MaxIdleConns)
+	db.DB().SetConnMaxLifetime(time.Minute)
+
+	w, err := getLogWriter()
+	if err != nil {
+		return errors.Wrap(err, "get log writer")
+	}
+	db.SetLogger(&dbutil.Writer{Writer: w})
+	if !conf.IsProdMode() {
+		db = db.LogMode(true)
+	}
 
 	switch conf.Database.Type {
 	case "mysql":
@@ -171,12 +153,12 @@ func Init(ctx context.Context) error {
 		conf.UseMySQL = true
 	}
 
-	err = db.AutoMigrate(new(LFSObject))
+	err = db.AutoMigrate(new(LFSObject)).Error
 	if err != nil {
 		return errors.Wrap(err, "migrate schemes")
 	}
 
 	// Initialize stores
 	LFS = &lfs{DB: db}
-	return nil
+	return db.DB().Ping()
 }
