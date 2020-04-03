@@ -18,6 +18,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/lfsutil"
 )
 
 // RegisterRoutes registers LFS routes using given router, and inherits all groups and middleware.
@@ -127,34 +128,18 @@ func authorize(mode db.AccessMode) macaron.Handler {
 	}
 }
 
-const contentType = "application/vnd.git-lfs+json"
-
 // verifyAcceptHeader checks if the "Accept" header is "application/vnd.git-lfs+json".
 func verifyAcceptHeader() macaron.Handler {
 	return func(c *context.Context) {
-		if c.Req.Header.Get("Accept") != contentType {
+		if c.Req.Header.Get("Accept") != lfsutil.ContentType {
 			c.Status(http.StatusNotAcceptable)
 			return
 		}
 	}
 }
 
-const transferBasic = "basic"
-const (
-	batchOperationUpload   = "upload"
-	batchOperationDownload = "download"
-)
-
 func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
-	// TODO: Define types in lfsutil
-	var request struct {
-		Operation string `json:"operation"`
-		Objects   []struct {
-			Oid  string `json:"oid"`
-			Size int    `json:"size"`
-		} `json:"objects"`
-	}
-
+	var request lfsutil.BatchRequest
 	defer c.Req.Request.Body.Close()
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 	if err != nil {
@@ -164,60 +149,36 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 		return
 	}
 
-	type error struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-	type action struct {
-		Href string `json:"href"`
-	}
-	type actions struct {
-		Download *action `json:"download,omitempty"`
-		Upload   *action `json:"upload,omitempty"`
-		Verify   *action `json:"verify,omitempty"`
-		Error    *error  `json:"error,omitempty"`
-	}
-	type object struct {
-		Oid     string  `json:"oid"`
-		Size    int     `json:"size"`
-		Actions actions `json:"actions"`
-	}
-
-	objects := make([]object, 0, len(request.Objects))
+	objects := make([]lfsutil.BatchObject, 0, len(request.Objects))
 	for _, obj := range request.Objects {
-		var actions actions
-		action := &action{
+		var actions lfsutil.BatchActions
+		action := &lfsutil.BatchAction{
 			Href: fmt.Sprintf("%s%s/%s.git/info/lfs/objects/batch/%s", conf.Server.ExternalURL, owner.Name, repo.Name, obj.Oid),
 		}
 		switch request.Operation {
-		case batchOperationUpload:
+		case lfsutil.BatchOperationUpload:
 			actions.Upload = action
-		case batchOperationDownload:
+		case lfsutil.BatchOperationDownload:
 			// TODO: Check if object exists
 			actions.Download = action
 		default:
-			actions.Error = &error{
+			actions.Error = &lfsutil.BatchError{
 				Code:    http.StatusUnprocessableEntity,
 				Message: "Operation not recognized",
 			}
 		}
 
-		objects = append(objects, object{
+		objects = append(objects, lfsutil.BatchObject{
 			Oid:     obj.Oid,
 			Size:    obj.Size,
 			Actions: actions,
 		})
 	}
 
-	var response = struct {
-		Transfer string   `json:"transfer"`
-		Objects  []object `json:"objects"`
-	}{
-		Transfer: transferBasic,
+	c.JSONSuccess(lfsutil.BatchResponse{
+		Transfer: lfsutil.TransferBasic,
 		Objects:  objects,
-	}
-
-	c.JSONSuccess(response)
+	})
 }
 
 func serveBatchUpload() {
