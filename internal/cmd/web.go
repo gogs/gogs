@@ -41,6 +41,7 @@ import (
 	"gogs.io/gogs/internal/route/admin"
 	apiv1 "gogs.io/gogs/internal/route/api/v1"
 	"gogs.io/gogs/internal/route/dev"
+	"gogs.io/gogs/internal/route/lfs"
 	"gogs.io/gogs/internal/route/org"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
@@ -648,11 +649,16 @@ func runWeb(c *cli.Context) error {
 		// e.g. with or without ".git" suffix.
 		m.Group("/:reponame([\\d\\w-_\\.]+\\.git$)", func() {
 			m.Get("", ignSignIn, context.RepoAssignment(), context.RepoRef(), repo.Home)
-			m.Options("/*", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
-			m.Route("/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
+
+			m.Group("/info/lfs", func() {
+				m.Post("/objects/batch", lfs.Batch)
+				m.Combo("/objects/:oid").Get(lfs.Download).Post(lfs.Upload)
+				m.Post("/verify/:oid", lfs.Verify)
+			}, ignSignInAndCsrf)
+
+			m.Route("/*", "GET,POST,OPTIONS", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 		})
-		m.Options("/:reponame/*", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
-		m.Route("/:reponame/*", "GET,POST", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
+		m.Route("/:reponame/*", "GET,POST,OPTIONS", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)
 	})
 	// ***** END: Repository *****
 
