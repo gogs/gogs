@@ -130,7 +130,9 @@ func HTTPContexter() macaron.Handler {
 				return
 			}
 			token.Updated = time.Now()
-			// TODO: verify or update token.Updated in database
+			if err = db.AccessTokens.Save(token); err != nil {
+				log.Error("Failed to update access token: %v", err)
+			}
 
 			authUser, err = db.GetUserByID(token.UserID)
 			if err != nil {

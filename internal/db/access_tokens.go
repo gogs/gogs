@@ -19,6 +19,8 @@ type AccessTokensStore interface {
 	// GetBySHA returns the access token with given SHA1.
 	// It returns ErrAccessTokenNotExist when not found.
 	GetBySHA(sha string) (*AccessToken, error)
+	// Save persists all values of given access token.
+	Save(t *AccessToken) error
 }
 
 var AccessTokens AccessTokensStore
@@ -57,4 +59,8 @@ func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
 	}
 
 	return token, nil
+}
+
+func (db *accessTokens) Save(t *AccessToken) error {
+	return db.DB.Save(t).Error
 }

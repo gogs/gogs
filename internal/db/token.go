@@ -21,12 +21,12 @@ type AccessToken struct {
 	Name   string
 	Sha1   string `xorm:"UNIQUE VARCHAR(40)"`
 
-	Created           time.Time `xorm:"-" json:"-"`
+	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" gorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-"`
-	HasUsed           bool `xorm:"-" json:"-"`
+	HasRecentActivity bool `xorm:"-" gorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" gorm:"-" json:"-"`
 }
 
 func (t *AccessToken) BeforeInsert() {
@@ -69,12 +69,6 @@ func NewAccessToken(t *AccessToken) error {
 func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	tokens := make([]*AccessToken, 0, 5)
 	return tokens, x.Where("uid=?", uid).Desc("id").Find(&tokens)
-}
-
-// UpdateAccessToken updates information of access token.
-func UpdateAccessToken(t *AccessToken) error {
-	_, err := x.Id(t.ID).AllCols().Update(t)
-	return err
 }
 
 // DeleteAccessTokenOfUserByID deletes access token by given ID.

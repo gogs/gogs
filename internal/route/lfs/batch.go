@@ -66,7 +66,9 @@ func authenticate() macaron.Handler {
 				return
 			}
 			token.Updated = time.Now()
-			// TODO: update token.Updated in database
+			if err = db.AccessTokens.Save(token); err != nil {
+				log.Error("Failed to update access token: %v", err)
+			}
 
 			user, err = db.Users.GetByID(token.UserID)
 			if err != nil {
