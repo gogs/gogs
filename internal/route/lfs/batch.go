@@ -7,9 +7,9 @@ package lfs
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/go-macaron/inject"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -21,34 +21,35 @@ import (
 // RegisterRoutes registers LFS routes using given router, and inherits all groups and middleware.
 func RegisterRoutes(r *macaron.Router) {
 	r.Group("/objects/batch", func() {
-		r.Post("", verifyAcceptHeader(), serveBatch)
+		r.Post("", authorize(db.AccessModeRead), verifyAcceptHeader(), serveBatch)
 		r.Group("/:oid", func() {
-			r.Combo("").Get(serveBatchDownload).Post(serveBatchUpload)
-			r.Post("/verify", verifyAcceptHeader(), serveBatchVerify)
+			r.Combo("").
+				Get(authorize(db.AccessModeRead), serveBatchDownload).
+				Post(authorize(db.AccessModeWrite), serveBatchUpload)
+			r.Post("/verify", authorize(db.AccessModeWrite), verifyAcceptHeader(), serveBatchVerify)
 		})
 	}, authenticate())
 }
 
 // authenticate tries to authenticate user via HTTP Basic Auth.
 func authenticate() macaron.Handler {
-	return func(w http.ResponseWriter, r *http.Request, injector inject.Injector) {
-		username, password := auth.DecodeBasic(r.Header)
+	return func(c *context.Context) {
+		username, password := auth.DecodeBasic(c.Req.Header)
 		if username == "" {
-			w.Header().Set("WWW-Authenticate", `Basic realm="."`)
-			w.WriteHeader(http.StatusUnauthorized)
+			c.Header().Set("WWW-Authenticate", `Basic realm="."`)
+			c.Status(http.StatusUnauthorized)
 			return
 		}
 
 		user, err := db.Users.Authenticate(username, password, -1)
 		if err != nil && !db.IsErrUserNotExist(err) {
-			w.WriteHeader(http.StatusInternalServerError)
+			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
 			return
 		}
 
 		if err == nil && user.IsEnabledTwoFactor() {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`Users with 2FA enabled are not allowed to authenticate via username and password.`)) //nolint
+			c.PlainText(http.StatusBadRequest, `Users with 2FA enabled are not allowed to authenticate via username and password.`)
 			return
 		}
 
@@ -57,10 +58,10 @@ func authenticate() macaron.Handler {
 			token, err := db.AccessTokens.GetBySHA(username)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
-					w.Header().Set("WWW-Authenticate", `Basic realm="."`)
-					w.WriteHeader(http.StatusUnauthorized)
+					c.Header().Set("WWW-Authenticate", `Basic realm="."`)
+					c.Status(http.StatusUnauthorized)
 				} else {
-					w.WriteHeader(http.StatusInternalServerError)
+					c.Status(http.StatusInternalServerError)
 					log.Error("Failed to get access token [sha: %s]: %v", username, err)
 				}
 				return
@@ -74,7 +75,7 @@ func authenticate() macaron.Handler {
 			if err != nil {
 				// Once we found the token, we're supposed to find its related user,
 				// thus any error is unexpected.
-				w.WriteHeader(http.StatusInternalServerError)
+				c.Status(http.StatusInternalServerError)
 				log.Error("Failed to get user: %v", err)
 				return
 			}
@@ -82,7 +83,42 @@ func authenticate() macaron.Handler {
 
 		log.Trace("[LFS] Authenticated user: %s", user.Name)
 
-		injector.Map(user)
+		c.Map(user)
+	}
+}
+
+// authorize tries to authorize the user to the context repository with given access mode.
+func authorize(mode db.AccessMode) macaron.Handler {
+	return func(c *context.Context, user *db.User) {
+		username := c.Params(":username")
+		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
+
+		owner, err := db.Users.GetByUsername(username)
+		if err != nil {
+			if db.IsErrUserNotExist(err) {
+				c.Status(http.StatusNotFound)
+			} else {
+				c.Status(http.StatusInternalServerError)
+				log.Error("Failed to get user [name: %s]: %v", username, err)
+			}
+			return
+		}
+
+		repo, err := db.Repos.GetByName(owner.ID, reponame)
+		if err != nil {
+			if db.IsErrRepoNotExist(err) {
+				c.Status(http.StatusNotFound)
+			} else {
+				c.Status(http.StatusInternalServerError)
+				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
+			}
+			return
+		}
+
+		if !db.Perms.Authorize(user.ID, repo, mode) {
+			c.Status(http.StatusNotFound)
+			return
+		}
 	}
 }
 
@@ -91,7 +127,7 @@ const contentType = "application/vnd.git-lfs+json"
 // verifyAcceptHeader checks if the "Accept" header is "application/vnd.git-lfs+json".
 func verifyAcceptHeader() macaron.Handler {
 	return func(c *context.Context) {
-		if c.Header().Get("Accept") != contentType {
+		if c.Req.Header.Get("Accept") != contentType {
 			c.Status(http.StatusNotAcceptable)
 			return
 		}
@@ -116,6 +152,8 @@ func serveBatch(c *context.Context) {
 		})
 		return
 	}
+
+	// TODO
 }
 
 func serveBatchUpload() {

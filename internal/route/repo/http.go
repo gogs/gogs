@@ -149,9 +149,9 @@ Please create and use personal access token on user settings page`)
 
 		log.Trace("HTTPGit - Authenticated user: %s", authUser.Name)
 
-		mode := db.ACCESS_MODE_WRITE
+		mode := db.AccessModeWrite
 		if isPull {
-			mode = db.ACCESS_MODE_READ
+			mode = db.AccessModeRead
 		}
 		has, err := db.HasAccess(authUser.ID, repo, mode)
 		if err != nil {

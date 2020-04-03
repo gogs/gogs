@@ -10,7 +10,7 @@ import (
 
 // LoginSourcesStore is the database interface for login sources.
 //
-// NOTE: All methods are sorted in alphabetically.
+// NOTE: All methods are sorted in alphabetical order.
 type LoginSourcesStore interface {
 	// GetByID returns the login source with given ID.
 	// It returns ErrLoginSourceNotExist when not found.

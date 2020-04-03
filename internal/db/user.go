@@ -369,7 +369,7 @@ func (u *User) DeleteAvatar() error {
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
 func (u *User) IsAdminOfRepo(repo *Repository) bool {
-	has, err := HasAccess(u.ID, repo, ACCESS_MODE_ADMIN)
+	has, err := HasAccess(u.ID, repo, AccessModeAdmin)
 	if err != nil {
 		log.Error("HasAccess: %v", err)
 	}
@@ -378,7 +378,7 @@ func (u *User) IsAdminOfRepo(repo *Repository) bool {
 
 // IsWriterOfRepo returns true if user has write access to given repository.
 func (u *User) IsWriterOfRepo(repo *Repository) bool {
-	has, err := HasAccess(u.ID, repo, ACCESS_MODE_WRITE)
+	has, err := HasAccess(u.ID, repo, AccessModeWrite)
 	if err != nil {
 		log.Error("HasAccess: %v", err)
 	}
@@ -929,7 +929,7 @@ func GetUserByID(id int64) (*User, error) {
 
 // GetAssigneeByID returns the user with write access of repository by given ID.
 func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
-	has, err := HasAccess(userID, repo, ACCESS_MODE_READ)
+	has, err := HasAccess(userID, repo, AccessModeRead)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -939,6 +939,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 }
 
 // GetUserByName returns a user by given name.
+// Deprecated: Use Users.GetByUsername instead.
 func GetUserByName(name string) (*User, error) {
 	if len(name) == 0 {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"name": name}}

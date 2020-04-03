@@ -16,7 +16,7 @@ import (
 
 // UsersStore is the database interface for users.
 //
-// NOTE: All methods are sorted in alphabetically.
+// NOTE: All methods are sorted in alphabetical order.
 type UsersStore interface {
 	// Authenticate validates username and password via given login source ID.
 	// It returns ErrUserNotExist when the user was not found.
@@ -32,6 +32,9 @@ type UsersStore interface {
 	Authenticate(username, password string, loginSourceID int64) (*User, error)
 	// GetByID returns the user with given ID. It returns ErrUserNotExist when not found.
 	GetByID(id int64) (*User, error)
+	// GetByUsername returns the user with given username. It returns ErrUserNotExist
+	// when not found.
+	GetByUsername(username string) (*User, error)
 }
 
 var Users UsersStore
@@ -119,6 +122,17 @@ func (db *users) GetByID(id int64) (*User, error) {
 		}
 		return nil, err
 	}
+	return user, nil
+}
 
+func (db *users) GetByUsername(username string) (*User, error) {
+	user := new(User)
+	err := db.Where("lower_name = ?", strings.ToLower(username)).First(user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrUserNotExist{args: map[string]interface{}{"name": username}}
+		}
+		return nil, err
+	}
 	return user, nil
 }

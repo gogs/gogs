@@ -14,7 +14,7 @@ import (
 
 // LFSStore is the database interface for LFS objects.
 //
-// NOTE: All methods are sorted in alphabetically.
+// NOTE: All methods are sorted in alphabetical order.
 type LFSStore interface {
 }
 

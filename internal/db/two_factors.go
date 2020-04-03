@@ -11,7 +11,7 @@ import (
 
 // TwoFactorsStore is the database interface for 2FA.
 //
-// NOTE: All methods are sorted in alphabetically.
+// NOTE: All methods are sorted in alphabetical order.
 type TwoFactorsStore interface {
 	// IsUserEnabled returns true if the user has enabled 2FA.
 	IsUserEnabled(userID int64) bool

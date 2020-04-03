@@ -126,9 +126,9 @@ func checkDeployKey(key *db.PublicKey, repo *db.Repository) {
 
 var (
 	allowedCommands = map[string]db.AccessMode{
-		"git-upload-pack":    db.ACCESS_MODE_READ,
-		"git-upload-archive": db.ACCESS_MODE_READ,
-		"git-receive-pack":   db.ACCESS_MODE_WRITE,
+		"git-upload-pack":    db.AccessModeRead,
+		"git-upload-archive": db.AccessModeRead,
+		"git-receive-pack":   db.AccessModeWrite,
 	}
 )
 
@@ -184,7 +184,7 @@ func runServ(c *cli.Context) error {
 	}
 
 	// Prohibit push to mirror repositories.
-	if requestMode > db.ACCESS_MODE_READ && repo.IsMirror {
+	if requestMode > db.AccessModeRead && repo.IsMirror {
 		fail("Mirror repository is read-only", "")
 	}
 
@@ -196,7 +196,7 @@ func runServ(c *cli.Context) error {
 		fail("Invalid key ID", "Invalid key ID '%s': %v", c.Args()[0], err)
 	}
 
-	if requestMode == db.ACCESS_MODE_WRITE || repo.IsPrivate {
+	if requestMode == db.AccessModeWrite || repo.IsPrivate {
 		// Check deploy key or user key.
 		if key.IsDeployKey() {
 			if key.Mode < requestMode {
@@ -216,7 +216,7 @@ func runServ(c *cli.Context) error {
 
 			if mode < requestMode {
 				clientMessage := _ACCESS_DENIED_MESSAGE
-				if mode >= db.ACCESS_MODE_READ {
+				if mode >= db.AccessModeRead {
 					clientMessage = "You do not have sufficient authorization for this action"
 				}
 				fail(clientMessage,
@@ -259,7 +259,7 @@ func runServ(c *cli.Context) error {
 	} else {
 		gitCmd = exec.Command(verb, repoFullName)
 	}
-	if requestMode == db.ACCESS_MODE_WRITE {
+	if requestMode == db.AccessModeWrite {
 		gitCmd.Env = append(os.Environ(), db.ComposeHookEnvs(db.ComposeHookEnvsOptions{
 			AuthUser:  user,
 			OwnerName: owner.Name,

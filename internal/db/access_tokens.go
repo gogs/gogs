@@ -14,7 +14,7 @@ import (
 
 // AccessTokensStore is the database interface for access tokens.
 //
-// NOTE: All methods are sorted in alphabetically.
+// NOTE: All methods are sorted in alphabetical order.
 type AccessTokensStore interface {
 	// GetBySHA returns the access token with given SHA1.
 	// It returns ErrAccessTokenNotExist when not found.
@@ -57,7 +57,6 @@ func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
 		}
 		return nil, err
 	}
-
 	return token, nil
 }
 

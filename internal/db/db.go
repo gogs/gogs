@@ -158,11 +158,14 @@ func Init() error {
 		return errors.Wrap(err, "migrate schemes")
 	}
 
-	// Initialize stores
-	Users = &users{DB: db}
-	LoginSources = &loginSources{DB: db}
-	TwoFactors = &twoFactors{DB: db}
+	// Initialize stores, sorted in alphabetical order.
 	AccessTokens = &accessTokens{DB: db}
+	LoginSources = &loginSources{DB: db}
 	LFS = &lfs{DB: db}
+	Perms = &perms{DB: db}
+	Repos = &repos{DB: db}
+	TwoFactors = &twoFactors{DB: db}
+	Users = &users{DB: db}
+
 	return db.DB().Ping()
 }
