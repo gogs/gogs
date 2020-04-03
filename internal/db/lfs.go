@@ -27,7 +27,7 @@ type lfs struct {
 // LFSObject is the relation between an LFS object and a repository.
 type LFSObject struct {
 	RepoID    int64           `gorm:"PRIMARY_KEY;AUTO_INCREMENT:false"`
-	OID       string          `gorm:"PRIMARY_KEY;COLUMN:oid"`
+	Oid       string          `gorm:"PRIMARY_KEY"`
 	Size      int64           `gorm:"NOT NULL"`
 	Verified  bool            `gorm:"NOT NULL"`
 	Storage   lfsutil.Storage `gorm:"NOT NULL"`
