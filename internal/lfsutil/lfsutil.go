@@ -4,6 +4,7 @@
 
 package lfsutil
 
+// Storage is the storage type of an LFS object.
 type Storage string
 
 const (

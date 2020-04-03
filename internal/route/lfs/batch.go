@@ -48,7 +48,7 @@ func authenticate() macaron.Handler {
 
 		if err == nil && user.IsEnabledTwoFactor() {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`Users with 2FA enabled are not allowed to authenticate via username and password.`))
+			w.Write([]byte(`Users with 2FA enabled are not allowed to authenticate via username and password.`)) //nolint
 			return
 		}
 
