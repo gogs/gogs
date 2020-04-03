@@ -23,7 +23,7 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 		return
 	}
 
-	source, err := db.GetLoginSourceByID(sourceID)
+	source, err := db.LoginSources.GetByID(sourceID)
 	if err != nil {
 		if errors.IsLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -45,7 +45,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		Email:     form.Email,
 		Passwd:    form.Password,
 		IsActive:  true,
-		LoginType: db.LOGIN_PLAIN,
+		LoginType: db.LoginPlain,
 	}
 
 	parseLoginSource(c, u, form.SourceID, form.LoginName)

@@ -12,7 +12,7 @@ import (
 	"gogs.io/gogs/internal/lfsutil"
 )
 
-// LFSStore is the database interface for LFS data.
+// LFSStore is the database interface for LFS objects.
 //
 // NOTE: All methods are sorted in alphabetically.
 type LFSStore interface {

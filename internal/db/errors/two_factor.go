@@ -18,16 +18,3 @@ func IsTwoFactorNotFound(err error) bool {
 func (err TwoFactorNotFound) Error() string {
 	return fmt.Sprintf("two-factor authentication does not found [user_id: %d]", err.UserID)
 }
-
-type TwoFactorRecoveryCodeNotFound struct {
-	Code string
-}
-
-func IsTwoFactorRecoveryCodeNotFound(err error) bool {
-	_, ok := err.(TwoFactorRecoveryCodeNotFound)
-	return ok
-}
-
-func (err TwoFactorRecoveryCodeNotFound) Error() string {
-	return fmt.Sprintf("two-factor recovery code does not found [code: %s]", err.Code)
-}

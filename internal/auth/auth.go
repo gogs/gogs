@@ -5,6 +5,8 @@
 package auth
 
 import (
+	"encoding/base64"
+	"net/http"
 	"strings"
 	"time"
 
@@ -48,9 +50,9 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := db.GetAccessTokenBySHA(tokenSHA)
+			t, err := db.AccessTokens.GetBySHA(tokenSHA)
 			if err != nil {
-				if !db.IsErrAccessTokenNotExist(err) && !db.IsErrAccessTokenEmpty(err) {
+				if !db.IsErrAccessTokenNotExist(err) {
 					log.Error("GetAccessTokenBySHA: %v", err)
 				}
 				return 0, false
@@ -59,7 +61,7 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 			if err = db.UpdateAccessToken(t); err != nil {
 				log.Error("UpdateAccessToken: %v", err)
 			}
-			return t.UID, true
+			return t.UserID, true
 		}
 	}
 
@@ -90,7 +92,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 
 	if uid <= 0 {
 		if conf.Auth.EnableReverseProxyAuthentication {
-			webAuthUser := ctx.Req.Header.Get(conf.Security.ReverseProxyAuthenticationUser)
+			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
 				u, err := db.GetUserByName(webAuthUser)
 				if err != nil {
@@ -127,7 +129,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := db.UserLogin(uname, passwd, -1)
+				u, err := db.Users.Authenticate(uname, passwd, -1)
 				if err != nil {
 					if !db.IsErrUserNotExist(err) {
 						log.Error("Failed to authenticate user: %v", err)
@@ -147,4 +149,28 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
+}
+
+// DecodeBasic extracts username and password from given header using HTTP Basic Auth.
+// It returns empty strings if values are not presented or not valid.
+func DecodeBasic(header http.Header) (username, password string) {
+	if len(header) == 0 {
+		return "", ""
+	}
+
+	fields := strings.Fields(header.Get("Authorization"))
+	if len(fields) != 2 || fields[0] != "Basic" {
+		return "", ""
+	}
+
+	p, err := base64.StdEncoding.DecodeString(fields[1])
+	if err != nil {
+		return "", ""
+	}
+
+	creds := strings.SplitN(string(p), ":", 2)
+	if len(creds) == 1 {
+		return creds[0], ""
+	}
+	return creds[0], creds[1]
 }

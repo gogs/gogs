@@ -16,10 +16,10 @@ import (
 
 // AccessToken represents a personal access token.
 type AccessToken struct {
-	ID   int64
-	UID  int64 `xorm:"INDEX"`
-	Name string
-	Sha1 string `xorm:"UNIQUE VARCHAR(40)"`
+	ID     int64
+	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid"`
+	Name   string
+	Sha1   string `xorm:"UNIQUE VARCHAR(40)"`
 
 	Created           time.Time `xorm:"-" json:"-"`
 	CreatedUnix       int64
@@ -52,8 +52,8 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 func NewAccessToken(t *AccessToken) error {
 	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
 	has, err := x.Get(&AccessToken{
-		UID:  t.UID,
-		Name: t.Name,
+		UserID: t.UserID,
+		Name:   t.Name,
 	})
 	if err != nil {
 		return err
@@ -63,21 +63,6 @@ func NewAccessToken(t *AccessToken) error {
 
 	_, err = x.Insert(t)
 	return err
-}
-
-// GetAccessTokenBySHA returns access token by given sha1.
-func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
-	if sha == "" {
-		return nil, ErrAccessTokenEmpty{}
-	}
-	t := &AccessToken{Sha1: sha}
-	has, err := x.Get(t)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrAccessTokenNotExist{sha}
-	}
-	return t, nil
 }
 
 // ListAccessTokens returns a list of access tokens belongs to given user.
@@ -95,8 +80,8 @@ func UpdateAccessToken(t *AccessToken) error {
 // DeleteAccessTokenOfUserByID deletes access token by given ID.
 func DeleteAccessTokenOfUserByID(userID, id int64) error {
 	_, err := x.Delete(&AccessToken{
-		ID:  id,
-		UID: userID,
+		ID:     id,
+		UserID: userID,
 	})
 	return err
 }

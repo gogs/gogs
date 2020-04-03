@@ -159,6 +159,10 @@ func Init() error {
 	}
 
 	// Initialize stores
+	Users = &users{DB: db}
+	LoginSources = &loginSources{DB: db}
+	TwoFactors = &twoFactors{DB: db}
+	AccessTokens = &accessTokens{DB: db}
 	LFS = &lfs{DB: db}
 	return db.DB().Ping()
 }

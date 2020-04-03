@@ -35,21 +35,21 @@ type LoginType int
 
 // Note: new type must append to the end of list to maintain compatibility.
 const (
-	LOGIN_NOTYPE LoginType = iota
-	LOGIN_PLAIN            // 1
-	LOGIN_LDAP             // 2
-	LOGIN_SMTP             // 3
-	LOGIN_PAM              // 4
-	LOGIN_DLDAP            // 5
-	LOGIN_GITHUB           // 6
+	LoginNotype LoginType = iota
+	LoginPlain            // 1
+	LoginLDAP             // 2
+	LoginSMTP             // 3
+	LoginPAM              // 4
+	LoginDLDAP            // 5
+	LoginGitHub           // 6
 )
 
 var LoginNames = map[LoginType]string{
-	LOGIN_LDAP:   "LDAP (via BindDN)",
-	LOGIN_DLDAP:  "LDAP (simple auth)", // Via direct bind
-	LOGIN_SMTP:   "SMTP",
-	LOGIN_PAM:    "PAM",
-	LOGIN_GITHUB: "GitHub",
+	LoginLDAP:   "LDAP (via BindDN)",
+	LoginDLDAP:  "LDAP (simple auth)", // Via direct bind
+	LoginSMTP:   "SMTP",
+	LoginPAM:    "PAM",
+	LoginGitHub: "GitHub",
 }
 
 var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
@@ -185,13 +185,13 @@ func (s *LoginSource) BeforeSet(colName string, val xorm.Cell) {
 	switch colName {
 	case "type":
 		switch LoginType(Cell2Int64(val)) {
-		case LOGIN_LDAP, LOGIN_DLDAP:
+		case LoginLDAP, LoginDLDAP:
 			s.Cfg = new(LDAPConfig)
-		case LOGIN_SMTP:
+		case LoginSMTP:
 			s.Cfg = new(SMTPConfig)
-		case LOGIN_PAM:
+		case LoginPAM:
 			s.Cfg = new(PAMConfig)
-		case LOGIN_GITHUB:
+		case LoginGitHub:
 			s.Cfg = new(GitHubConfig)
 		default:
 			panic("unrecognized login source type: " + com.ToStr(*val))
@@ -213,23 +213,23 @@ func (s *LoginSource) TypeName() string {
 }
 
 func (s *LoginSource) IsLDAP() bool {
-	return s.Type == LOGIN_LDAP
+	return s.Type == LoginLDAP
 }
 
 func (s *LoginSource) IsDLDAP() bool {
-	return s.Type == LOGIN_DLDAP
+	return s.Type == LoginDLDAP
 }
 
 func (s *LoginSource) IsSMTP() bool {
-	return s.Type == LOGIN_SMTP
+	return s.Type == LoginSMTP
 }
 
 func (s *LoginSource) IsPAM() bool {
-	return s.Type == LOGIN_PAM
+	return s.Type == LoginPAM
 }
 
 func (s *LoginSource) IsGitHub() bool {
-	return s.Type == LOGIN_GITHUB
+	return s.Type == LoginGitHub
 }
 
 func (s *LoginSource) HasTLS() bool {
@@ -240,9 +240,9 @@ func (s *LoginSource) HasTLS() bool {
 
 func (s *LoginSource) UseTLS() bool {
 	switch s.Type {
-	case LOGIN_LDAP, LOGIN_DLDAP:
+	case LoginLDAP, LoginDLDAP:
 		return s.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
-	case LOGIN_SMTP:
+	case LoginSMTP:
 		return s.SMTP().TLS
 	}
 
@@ -251,9 +251,9 @@ func (s *LoginSource) UseTLS() bool {
 
 func (s *LoginSource) SkipVerify() bool {
 	switch s.Type {
-	case LOGIN_LDAP, LOGIN_DLDAP:
+	case LoginLDAP, LoginDLDAP:
 		return s.LDAP().SkipVerify
-	case LOGIN_SMTP:
+	case LoginSMTP:
 		return s.SMTP().SkipVerify
 	}
 
@@ -293,8 +293,8 @@ func CreateLoginSource(source *LoginSource) error {
 	return nil
 }
 
-// LoginSources returns all login sources defined.
-func LoginSources() ([]*LoginSource, error) {
+// ListLoginSources returns all login sources defined.
+func ListLoginSources() ([]*LoginSource, error) {
 	sources := make([]*LoginSource, 0, 2)
 	if err := x.Find(&sources); err != nil {
 		return nil, err
@@ -310,18 +310,6 @@ func ActivatedLoginSources() ([]*LoginSource, error) {
 		return nil, fmt.Errorf("find activated login sources: %v", err)
 	}
 	return append(sources, localLoginSources.ActivatedList()...), nil
-}
-
-// GetLoginSourceByID returns login source by given ID.
-func GetLoginSourceByID(id int64) (*LoginSource, error) {
-	source := new(LoginSource)
-	has, err := x.Id(id).Get(source)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return localLoginSources.GetLoginSourceByID(id)
-	}
-	return source, nil
 }
 
 // ResetNonDefaultLoginSources clean other default source flag
@@ -504,19 +492,19 @@ func LoadAuthSources() {
 		authType := s.Key("type").String()
 		switch authType {
 		case "ldap_bind_dn":
-			loginSource.Type = LOGIN_LDAP
+			loginSource.Type = LoginLDAP
 			loginSource.Cfg = &LDAPConfig{}
 		case "ldap_simple_auth":
-			loginSource.Type = LOGIN_DLDAP
+			loginSource.Type = LoginDLDAP
 			loginSource.Cfg = &LDAPConfig{}
 		case "smtp":
-			loginSource.Type = LOGIN_SMTP
+			loginSource.Type = LoginSMTP
 			loginSource.Cfg = &SMTPConfig{}
 		case "pam":
-			loginSource.Type = LOGIN_PAM
+			loginSource.Type = LoginPAM
 			loginSource.Cfg = &PAMConfig{}
 		case "github":
-			loginSource.Type = LOGIN_GITHUB
+			loginSource.Type = LoginGitHub
 			loginSource.Cfg = &GitHubConfig{}
 		default:
 			log.Fatal("Failed to load authentication source: unknown type '%s'", authType)
@@ -552,15 +540,15 @@ func composeFullName(firstname, surname, username string) string {
 
 // LoginViaLDAP queries if login/password is valid against the LDAP directory pool,
 // and create a local user if success when enabled.
-func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
-	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LOGIN_DLDAP)
+func LoginViaLDAP(login, password string, source *LoginSource, autoRegister bool) (*User, error) {
+	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LoginDLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 	}
 
 	if !autoRegister {
-		return user, nil
+		return nil, nil
 	}
 
 	// Fallback.
@@ -576,7 +564,7 @@ func LoginViaLDAP(user *User, login, password string, source *LoginSource, autoR
 		mail = fmt.Sprintf("%s@localhost", username)
 	}
 
-	user = &User{
+	user := &User{
 		LowerName:   strings.ToLower(username),
 		Name:        username,
 		FullName:    composeFullName(fn, sn, username),
@@ -669,7 +657,7 @@ func SMTPAuth(a smtp.Auth, cfg *SMTPConfig) error {
 
 // LoginViaSMTP queries if login/password is valid against the SMTP,
 // and create a local user if success when enabled.
-func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
+func LoginViaSMTP(login, password string, sourceID int64, cfg *SMTPConfig, autoRegister bool) (*User, error) {
 	// Verify allowed domains.
 	if len(cfg.AllowedDomains) > 0 {
 		idx := strings.Index(login, "@")
@@ -701,7 +689,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 	}
 
 	if !autoRegister {
-		return user, nil
+		return nil, nil
 	}
 
 	username := login
@@ -710,12 +698,12 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 		username = login[:idx]
 	}
 
-	user = &User{
+	user := &User{
 		LowerName:   strings.ToLower(username),
 		Name:        strings.ToLower(username),
 		Email:       login,
 		Passwd:      password,
-		LoginType:   LOGIN_SMTP,
+		LoginType:   LoginSMTP,
 		LoginSource: sourceID,
 		LoginName:   login,
 		IsActive:    true,
@@ -732,7 +720,7 @@ func LoginViaSMTP(user *User, login, password string, sourceID int64, cfg *SMTPC
 
 // LoginViaPAM queries if login/password is valid against the PAM,
 // and create a local user if success when enabled.
-func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
+func LoginViaPAM(login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
 	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
 			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
@@ -741,15 +729,15 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	}
 
 	if !autoRegister {
-		return user, nil
+		return nil, nil
 	}
 
-	user = &User{
+	user := &User{
 		LowerName:   strings.ToLower(login),
 		Name:        login,
 		Email:       login,
 		Passwd:      password,
-		LoginType:   LOGIN_PAM,
+		LoginType:   LoginPAM,
 		LoginSource: sourceID,
 		LoginName:   login,
 		IsActive:    true,
@@ -757,14 +745,14 @@ func LoginViaPAM(user *User, login, password string, sourceID int64, cfg *PAMCon
 	return user, CreateUser(user)
 }
 
-//________.__  __     ___ ___      ___.
-///  _____/|__|/  |_  /   |   \ __ _\_ |__
-///   \  ___|  \   __\/    ~    \  |  \ __ \
-//\    \_\  \  ||  |  \    Y    /  |  / \_\ \
-//\______  /__||__|   \___|_  /|____/|___  /
-//\/                 \/           \/
+// ________.__  __     ___ ___      ___.
+// /  _____/|__|/  |_  /   |   \ __ _\_ |__
+// /   \  ___|  \   __\/    ~    \  |  \ __ \
+// \    \_\  \  ||  |  \    Y    /  |  / \_\ \
+// \______  /__||__|   \___|_  /|____/|___  /
+// \/                 \/           \/
 
-func LoginViaGitHub(user *User, login, password string, sourceID int64, cfg *GitHubConfig, autoRegister bool) (*User, error) {
+func LoginViaGitHub(login, password string, sourceID int64, cfg *GitHubConfig, autoRegister bool) (*User, error) {
 	fullname, email, url, location, err := github.Authenticate(cfg.APIEndpoint, login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") {
@@ -774,16 +762,16 @@ func LoginViaGitHub(user *User, login, password string, sourceID int64, cfg *Git
 	}
 
 	if !autoRegister {
-		return user, nil
+		return nil, nil
 	}
-	user = &User{
+	user := &User{
 		LowerName:   strings.ToLower(login),
 		Name:        login,
 		FullName:    fullname,
 		Email:       email,
 		Website:     url,
 		Passwd:      password,
-		LoginType:   LOGIN_GITHUB,
+		LoginType:   LoginGitHub,
 		LoginSource: sourceID,
 		LoginName:   login,
 		IsActive:    true,
@@ -792,75 +780,21 @@ func LoginViaGitHub(user *User, login, password string, sourceID int64, cfg *Git
 	return user, CreateUser(user)
 }
 
-func remoteUserLogin(user *User, login, password string, source *LoginSource, autoRegister bool) (*User, error) {
+func authenticateViaLoginSource(source *LoginSource, login, password string, autoRegister bool) (*User, error) {
 	if !source.IsActived {
 		return nil, errors.LoginSourceNotActivated{SourceID: source.ID}
 	}
 
 	switch source.Type {
-	case LOGIN_LDAP, LOGIN_DLDAP:
-		return LoginViaLDAP(user, login, password, source, autoRegister)
-	case LOGIN_SMTP:
-		return LoginViaSMTP(user, login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
-	case LOGIN_PAM:
-		return LoginViaPAM(user, login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
-	case LOGIN_GITHUB:
-		return LoginViaGitHub(user, login, password, source.ID, source.Cfg.(*GitHubConfig), autoRegister)
+	case LoginLDAP, LoginDLDAP:
+		return LoginViaLDAP(login, password, source, autoRegister)
+	case LoginSMTP:
+		return LoginViaSMTP(login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
+	case LoginPAM:
+		return LoginViaPAM(login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+	case LoginGitHub:
+		return LoginViaGitHub(login, password, source.ID, source.Cfg.(*GitHubConfig), autoRegister)
 	}
 
 	return nil, errors.InvalidLoginSourceType{Type: source.Type}
-}
-
-// UserLogin validates user name and password via given login source ID.
-// If the loginSourceID is negative, it will abort login process if user is not found.
-func UserLogin(username, password string, loginSourceID int64) (*User, error) {
-	var user *User
-	if strings.Contains(username, "@") {
-		user = &User{Email: strings.ToLower(username)}
-	} else {
-		user = &User{LowerName: strings.ToLower(username)}
-	}
-
-	hasUser, err := x.Get(user)
-	if err != nil {
-		return nil, fmt.Errorf("get user record: %v", err)
-	}
-
-	if hasUser {
-		// Note: This check is unnecessary but to reduce user confusion at login page
-		// and make it more consistent at user's perspective.
-		if loginSourceID >= 0 && user.LoginSource != loginSourceID {
-			return nil, errors.LoginSourceMismatch{Expect: loginSourceID, Actual: user.LoginSource}
-		}
-
-		// Validate password hash fetched from database for local accounts
-		if user.LoginType == LOGIN_NOTYPE ||
-			user.LoginType == LOGIN_PLAIN {
-			if user.ValidatePassword(password) {
-				return user, nil
-			}
-
-			return nil, ErrUserNotExist{args: map[string]interface{}{"userID": user.ID, "name": user.Name}}
-		}
-
-		// Remote login to the login source the user is associated with
-		source, err := GetLoginSourceByID(user.LoginSource)
-		if err != nil {
-			return nil, err
-		}
-
-		return remoteUserLogin(user, user.LoginName, password, source, false)
-	}
-
-	// Non-local login source is always greater than 0
-	if loginSourceID <= 0 {
-		return nil, ErrUserNotExist{args: map[string]interface{}{"name": username}}
-	}
-
-	source, err := GetLoginSourceByID(loginSourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	return remoteUserLogin(nil, username, password, source, true)
 }

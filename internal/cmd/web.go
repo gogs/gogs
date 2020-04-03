@@ -651,9 +651,7 @@ func runWeb(c *cli.Context) error {
 			m.Get("", ignSignIn, context.RepoAssignment(), context.RepoRef(), repo.Home)
 
 			m.Group("/info/lfs", func() {
-				m.Post("/objects/batch", lfs.Batch)
-				m.Combo("/objects/:oid").Get(lfs.Download).Post(lfs.Upload)
-				m.Post("/verify/:oid", lfs.Verify)
+				lfs.RegisterRoutes(m.Router)
 			}, ignSignInAndCsrf)
 
 			m.Route("/*", "GET,POST,OPTIONS", ignSignInAndCsrf, repo.HTTPContexter(), repo.HTTP)

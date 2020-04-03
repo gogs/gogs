@@ -139,9 +139,9 @@ func (u *User) APIFormat() *api.User {
 	}
 }
 
-// returns true if user login type is LOGIN_PLAIN.
+// returns true if user login type is LoginPlain.
 func (u *User) IsLocal() bool {
-	return u.LoginType <= LOGIN_PLAIN
+	return u.LoginType <= LoginPlain
 }
 
 // HasForkedRepo checks if user has already forked a repository with given ID.
@@ -402,7 +402,7 @@ func (u *User) IsPublicMember(orgId int64) bool {
 
 // IsEnabledTwoFactor returns true if user has enabled two-factor authentication.
 func (u *User) IsEnabledTwoFactor() bool {
-	return IsUserEnabledTwoFactor(u.ID)
+	return TwoFactors.IsUserEnabled(u.ID)
 }
 
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
@@ -590,7 +590,7 @@ func CountUsers() int64 {
 }
 
 // Users returns number of users in given page.
-func Users(page, pageSize int) ([]*User, error) {
+func ListUsers(page, pageSize int) ([]*User, error) {
 	users := make([]*User, 0, pageSize)
 	return users, x.Limit(pageSize, (page-1)*pageSize).Where("type=0").Asc("id").Find(&users)
 }
@@ -786,7 +786,7 @@ func deleteUser(e *xorm.Session, u *User) error {
 	// ***** END: Follow *****
 
 	if err = deleteBeans(e,
-		&AccessToken{UID: u.ID},
+		&AccessToken{UserID: u.ID},
 		&Collaboration{UserID: u.ID},
 		&Access{UserID: u.ID},
 		&Watch{UserID: u.ID},
@@ -922,6 +922,7 @@ func getUserByID(e Engine, id int64) (*User, error) {
 }
 
 // GetUserByID returns the user object by given ID if exists.
+// Deprecated: Use Users.GetByID instead.
 func GetUserByID(id int64) (*User, error) {
 	return getUserByID(x, id)
 }
