@@ -52,14 +52,13 @@ func serveBasicDownload(c *context.Context, repo *db.Repository, oid lfsutil.OID
 
 	c.Header().Set("Content-Type", "application/octet-stream")
 	c.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
+	c.Status(http.StatusOK)
 
 	_, err = io.Copy(c.Resp, r)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
 		log.Error("Failed to copy object file: %v", err)
 		return
 	}
-	c.Status(http.StatusOK)
 }
 
 // PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}

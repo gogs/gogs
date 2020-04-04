@@ -5,26 +5,17 @@
 package lfsutil
 
 import (
-	"strings"
+	"gogs.io/gogs/internal/lazyregexp"
 )
 
 // OID is an LFS object ID.
 type OID string
 
-// ValidOID returns true if given oid is valid according to spec:
-// https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
-func ValidOID(oid OID) bool {
-	fields := strings.SplitN(string(oid), ":", 2)
-	if len(fields) != 2 {
-		return false
-	}
-	method := fields[0]
-	hash := fields[1]
+// An OID is a 64-char lower case hexadecimal, produced by SHA256.
+// Spec: https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
+var oidRe = lazyregexp.New("^[a-f0-9]{64}$")
 
-	switch method {
-	case "sha256":
-		// SHA256 produces 64-char lower case hexadecimal hash
-		return len(hash) == 64 && strings.ToLower(hash) == hash
-	}
-	return false
+// ValidOID returns true if given oid is valid.
+func ValidOID(oid OID) bool {
+	return oidRe.MatchString(string(oid))
 }

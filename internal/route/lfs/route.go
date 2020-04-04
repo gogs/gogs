@@ -134,11 +134,11 @@ func authorize(mode db.AccessMode) macaron.Handler {
 	}
 }
 
-// verifyHeader checks if the HTTP header value is matching.
+// verifyHeader checks if the HTTP header contains given value.
 // When not, response given "failCode" as status code.
 func verifyHeader(key, value string, failCode int) macaron.Handler {
 	return func(c *context.Context) {
-		if c.Req.Header.Get(key) != value {
+		if !strings.Contains(c.Req.Header.Get(key), value) {
 			c.Status(failCode)
 			return
 		}
