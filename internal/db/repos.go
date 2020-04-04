@@ -29,7 +29,7 @@ func (db *repos) GetByName(ownerID int64, name string) (*Repository, error) {
 	repo := new(Repository)
 	err := db.Where("owner_id = ? AND lower_name = ?", ownerID, strings.ToLower(name)).First(repo).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if gorm.IsRecordNotFoundError(err) {
 			return nil, ErrRepoNotExist{args: map[string]interface{}{"ownerID": ownerID, "name": name}}
 		}
 		return nil, err

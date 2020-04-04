@@ -107,7 +107,7 @@ func (db *lfs) GetObjectByOID(repoID int64, oid lfsutil.OID) (*LFSObject, error)
 	object := new(LFSObject)
 	err := db.Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if gorm.IsRecordNotFoundError(err) {
 			return nil, ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": oid}}
 		}
 		return nil, err
