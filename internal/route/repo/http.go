@@ -150,7 +150,7 @@ func HTTPContexter() macaron.Handler {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [id: %s]: %v", token.UserID, err)
+				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
 				return
 			}
 		} else if authUser.IsEnabledTwoFactor() {
