@@ -15,12 +15,21 @@ type Writer struct {
 }
 
 func (w *Writer) Print(v ...interface{}) {
+	if len(v) == 0 {
+		return
+	}
+
+	if len(v) == 1 {
+		fmt.Fprint(w.Writer, v[0])
+		return
+	}
+
 	switch v[0] {
 	case "sql":
 		fmt.Fprintf(w.Writer, "[sql] [%s] [%s] %s %v (%d rows affected)", v[1:]...)
 	case "log":
 		fmt.Fprintf(w.Writer, "[log] [%s] %s", v[1:]...)
 	default:
-		fmt.Fprintln(w.Writer, v...)
+		fmt.Fprint(w.Writer, v...)
 	}
 }
