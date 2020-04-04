@@ -12,10 +12,10 @@ import (
 	"os"
 	"strconv"
 
+	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 	"gogs.io/gogs/internal/strutil"
@@ -28,7 +28,7 @@ const (
 )
 
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func serveBasicDownload(c *context.Context, repo *db.Repository, oid lfsutil.OID) {
+func serveBasicDownload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
 	object, err := db.LFS.GetObjectByOID(repo.ID, oid)
 	if err != nil {
 		if db.IsErrLFSObjectNotExist(err) {
@@ -63,7 +63,7 @@ func serveBasicDownload(c *context.Context, repo *db.Repository, oid lfsutil.OID
 }
 
 // PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func serveBasicUpload(c *context.Context, repo *db.Repository, oid lfsutil.OID) {
+func serveBasicUpload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
 	// NOTE: LFS client will retry upload the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
 	_, err := db.LFS.GetObjectByOID(repo.ID, oid)
@@ -91,7 +91,7 @@ func serveBasicUpload(c *context.Context, repo *db.Repository, oid lfsutil.OID) 
 }
 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
-func serveBasicVerify(c *context.Context, repo *db.Repository) {
+func serveBasicVerify(c *macaron.Context, repo *db.Repository) {
 	var request basicVerifyRequest
 	defer c.Req.Request.Body.Close()
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
