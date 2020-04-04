@@ -93,7 +93,7 @@ func hasAccess(e Engine, userID int64, repo *Repository, testMode AccessMode) (b
 }
 
 // HasAccess returns true if someone has the request access level. User can be nil!
-// Deprecated: Use Perms.HasAccess instead.
+// Deprecated: Use Perms.Authorize instead.
 func HasAccess(userID int64, repo *Repository, testMode AccessMode) (bool, error) {
 	return hasAccess(x, userID, repo, testMode)
 }

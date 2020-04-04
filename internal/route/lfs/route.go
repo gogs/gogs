@@ -13,7 +13,6 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/authutil"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -44,7 +43,7 @@ func authenticate() macaron.Handler {
 		})
 	}
 
-	return func(c *context.Context) {
+	return func(c *macaron.Context) {
 		username, password := authutil.DecodeBasic(c.Req.Header)
 		if username == "" {
 			askCredentials(c.Resp)
@@ -59,7 +58,7 @@ func authenticate() macaron.Handler {
 		}
 
 		if err == nil && user.IsEnabledTwoFactor() {
-			c.PlainText(http.StatusBadRequest, `Users with 2FA enabled are not allowed to authenticate via username and password.`)
+			c.Error(http.StatusBadRequest, `Users with 2FA enabled are not allowed to authenticate via username and password.`)
 			return
 		}
 
@@ -98,7 +97,7 @@ func authenticate() macaron.Handler {
 
 // authorize tries to authorize the user to the context repository with given access mode.
 func authorize(mode db.AccessMode) macaron.Handler {
-	return func(c *context.Context, user *db.User) {
+	return func(c *macaron.Context, user *db.User) {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
@@ -137,7 +136,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 // verifyHeader checks if the HTTP header contains given value.
 // When not, response given "failCode" as status code.
 func verifyHeader(key, value string, failCode int) macaron.Handler {
-	return func(c *context.Context) {
+	return func(c *macaron.Context) {
 		if !strings.Contains(c.Req.Header.Get(key), value) {
 			c.Status(failCode)
 			return
@@ -147,10 +146,10 @@ func verifyHeader(key, value string, failCode int) macaron.Handler {
 
 // verifyOID checks if the ":oid" URL parameter is valid.
 func verifyOID() macaron.Handler {
-	return func(c *context.Context) {
+	return func(c *macaron.Context) {
 		oid := lfsutil.OID(c.Params(":oid"))
 		if !lfsutil.ValidOID(oid) {
-			c.PlainText(http.StatusBadRequest, "Invalid oid")
+			c.Error(http.StatusBadRequest, "Invalid oid")
 			return
 		}
 
