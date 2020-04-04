@@ -166,13 +166,13 @@ const contentType = "application/vnd.git-lfs+json"
 
 func responseJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(status)
 
 	err := jsoniter.NewEncoder(w).Encode(v)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error("Failed to encode JSON: %v", err)
 		return
 	}
-	w.WriteHeader(status)
 }
 
 func internalServerError(w http.ResponseWriter) {

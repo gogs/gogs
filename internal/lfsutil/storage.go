@@ -6,7 +6,6 @@ package lfsutil
 
 import (
 	"path/filepath"
-	"strings"
 )
 
 // Storage is the storage type of an LFS object.
@@ -23,7 +22,5 @@ func StorageLocalPath(root string, oid OID) string {
 		return ""
 	}
 
-	// Valid OID is guaranteed to have second element as hash.
-	hash := strings.SplitN(string(oid), ":", 2)[1]
-	return filepath.Join(root, string(hash[0]), string(hash[1]), hash)
+	return filepath.Join(root, string(oid[0]), string(oid[1]), string(oid))
 }
