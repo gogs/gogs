@@ -9,13 +9,6 @@ import (
 	"strings"
 )
 
-const ContentType = "application/vnd.git-lfs+json"
-const TransferBasic = "basic"
-const (
-	BasicOperationUpload   = "upload"
-	BasicOperationDownload = "download"
-)
-
 // Storage is the storage type of an LFS object.
 type Storage string
 
@@ -32,5 +25,5 @@ func StorageLocalPath(root string, oid OID) string {
 
 	// Valid OID is guaranteed to have second element as hash.
 	hash := strings.SplitN(string(oid), ":", 2)[1]
-	return filepath.Join(root, string(hash[0]), string(hash[1]), string(hash))
+	return filepath.Join(root, string(hash[0]), string(hash[1]), hash)
 }

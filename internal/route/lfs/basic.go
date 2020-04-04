@@ -20,6 +20,12 @@ import (
 	"gogs.io/gogs/internal/strutil"
 )
 
+const transferBasic = "basic"
+const (
+	basicOperationUpload   = "upload"
+	basicOperationDownload = "download"
+)
+
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
 func serveBasicDownload(c *context.Context, repo *db.Repository, oid lfsutil.OID) {
 	object, err := db.LFS.GetObjectByOID(repo.ID, oid)

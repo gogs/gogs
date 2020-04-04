@@ -20,8 +20,8 @@ import (
 
 // RegisterRoutes registers LFS routes using given router, and inherits all groups and middleware.
 func RegisterRoutes(r *macaron.Router) {
-	verifyAccept := verifyHeader("Accept", lfsutil.ContentType, http.StatusNotAcceptable)
-	verifyContentTypeJSON := verifyHeader("Content-Type", lfsutil.ContentType, http.StatusBadRequest)
+	verifyAccept := verifyHeader("Accept", contentType, http.StatusNotAcceptable)
+	verifyContentTypeJSON := verifyHeader("Content-Type", contentType, http.StatusBadRequest)
 	verifyContentTypeStream := verifyHeader("Content-Type", "application/octet-stream", http.StatusBadRequest)
 
 	r.Group("", func() {

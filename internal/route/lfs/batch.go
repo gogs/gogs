@@ -31,13 +31,13 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 	}
 
 	// NOTE: We only support basic transfer as of now.
-	transfer := lfsutil.TransferBasic
+	transfer := transferBasic
 	// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/object/basic
 	baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
 
 	objects := make([]batchObject, 0, len(request.Objects))
 	switch request.Operation {
-	case lfsutil.BasicOperationUpload:
+	case basicOperationUpload:
 		for _, obj := range request.Objects {
 			var actions batchActions
 			if lfsutil.ValidOID(obj.Oid) {
@@ -65,7 +65,7 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 			})
 		}
 
-	case lfsutil.BasicOperationDownload:
+	case basicOperationDownload:
 		oids := make([]lfsutil.OID, 0, len(request.Objects))
 		for _, obj := range request.Objects {
 			oids = append(oids, obj.Oid)
@@ -162,8 +162,10 @@ type responseError struct {
 	Message string `json:"message"`
 }
 
+const contentType = "application/vnd.git-lfs+json"
+
 func responseJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", lfsutil.ContentType)
+	w.Header().Set("Content-Type", contentType)
 
 	err := jsoniter.NewEncoder(w).Encode(v)
 	if err != nil {
