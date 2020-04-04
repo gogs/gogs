@@ -21,14 +21,13 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
 
 type HTTPContext struct {
-	*context.Context
+	*macaron.Context
 	OwnerName string
 	OwnerSalt string
 	RepoID    int64
@@ -37,17 +36,17 @@ type HTTPContext struct {
 }
 
 // askCredentials responses HTTP header and status which informs client to provide credentials.
-func askCredentials(c *context.Context, status int, text string) {
-	c.Resp.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
-	c.PlainText(status, text)
+func askCredentials(c *macaron.Context, status int, text string) {
+	c.Header().Set("WWW-Authenticate", "Basic realm=\".\"")
+	c.Error(status, text)
 }
 
 func HTTPContexter() macaron.Handler {
-	return func(c *context.Context) {
+	return func(c *macaron.Context) {
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			// Set CORS headers for browser-based git clients
-			c.Resp.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
+			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
+			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, User-Agent")
 
 			// Handle preflight OPTIONS request
 			if c.Req.Method == "OPTIONS" {
@@ -64,15 +63,25 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := db.GetUserByName(ownerName)
+		owner, err := db.Users.GetByUsername(ownerName)
 		if err != nil {
-			c.NotFoundOrError(err, "get user by name")
+			if db.IsErrUserNotExist(err) {
+				c.Status(http.StatusNotFound)
+			} else {
+				c.Status(http.StatusInternalServerError)
+				log.Error("Failed to get user [name: %s]: %v", ownerName, err)
+			}
 			return
 		}
 
-		repo, err := db.GetRepositoryByName(owner.ID, repoName)
+		repo, err := db.Repos.GetByName(owner.ID, repoName)
 		if err != nil {
-			c.NotFoundOrError(err, "get repository by name")
+			if db.IsErrRepoNotExist(err) {
+				c.Status(http.StatusNotFound)
+			} else {
+				c.Status(http.StatusInternalServerError)
+				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, repoName, err)
+			}
 			return
 		}
 
@@ -114,7 +123,8 @@ func HTTPContexter() macaron.Handler {
 
 		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
 		if err != nil && !db.IsErrUserNotExist(err) {
-			c.Error(err, "authenticate user")
+			c.Status(http.StatusInternalServerError)
+			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
 			return
 		}
 
@@ -125,7 +135,8 @@ func HTTPContexter() macaron.Handler {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
 				} else {
-					c.Error(err, "get access token by SHA")
+					c.Status(http.StatusInternalServerError)
+					log.Error("Failed to get access token [sha: %s]: %v", authUsername, err)
 				}
 				return
 			}
@@ -134,11 +145,12 @@ func HTTPContexter() macaron.Handler {
 				log.Error("Failed to update access token: %v", err)
 			}
 
-			authUser, err = db.GetUserByID(token.UserID)
+			authUser, err = db.Users.GetByID(token.UserID)
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
-				c.Error(err, "get user by ID")
+				c.Status(http.StatusInternalServerError)
+				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
 				return
 			}
 		} else if authUser.IsEnabledTwoFactor() {
@@ -147,23 +159,19 @@ Please create and use personal access token on user settings page`)
 			return
 		}
 
-		log.Trace("HTTPGit - Authenticated user: %s", authUser.Name)
+		log.Trace("[Git] Authenticated user: %s", authUser.Name)
 
 		mode := db.AccessModeWrite
 		if isPull {
 			mode = db.AccessModeRead
 		}
-		has, err := db.HasAccess(authUser.ID, repo, mode)
-		if err != nil {
-			c.Error(err, "check access")
-			return
-		} else if !has {
+		if !db.Perms.Authorize(authUser.ID, repo, mode) {
 			askCredentials(c, http.StatusForbidden, "User permission denied")
 			return
 		}
 
 		if !isPull && repo.IsMirror {
-			c.PlainText(http.StatusForbidden, "Mirror repository is read-only")
+			c.Error(http.StatusForbidden, "Mirror repository is read-only")
 			return
 		}
 
@@ -390,7 +398,7 @@ func HTTP(c *HTTPContext) {
 		// but we only want to output this message only if user is really trying to access
 		// Git HTTP endpoints.
 		if conf.Repository.DisableHTTPGit {
-			c.PlainText(http.StatusForbidden, "Interacting with repositories by HTTP protocol is disabled")
+			c.Error(http.StatusForbidden, "Interacting with repositories by HTTP protocol is disabled")
 			return
 		}
 
