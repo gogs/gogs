@@ -5,10 +5,10 @@
 package lfs
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
+	jsoniter "github.com/json-iterator/go"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -22,10 +22,10 @@ import (
 func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 	var request batchRequest
 	defer c.Req.Request.Body.Close()
-	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
+	err := jsoniter.NewDecoder(c.Req.Request.Body).Decode(&request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, map[string]string{
-			"error": strutil.ToUpperFirst(err.Error()),
+		responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			Message: strutil.ToUpperFirst(err.Error()),
 		})
 		return
 	}
@@ -66,17 +66,17 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 		}
 
 	case lfsutil.BasicOperationDownload:
-		oids := make([]string, 0, len(request.Objects))
+		oids := make([]lfsutil.OID, 0, len(request.Objects))
 		for _, obj := range request.Objects {
 			oids = append(oids, obj.Oid)
 		}
 		stored, err := db.LFS.GetObjectsByOIDs(repo.ID, oids...)
 		if err != nil {
-			c.Status(http.StatusInternalServerError)
+			internalServerError(c.Resp)
 			log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
 			return
 		}
-		storedSet := make(map[string]*db.LFSObject, len(stored))
+		storedSet := make(map[lfsutil.OID]*db.LFSObject, len(stored))
 		for _, obj := range stored {
 			storedSet[obj.OID] = obj
 		}
@@ -109,13 +109,13 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 		}
 
 	default:
-		c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Operation not recognized",
+		responseJSON(c.Resp, http.StatusBadRequest, responseError{
+			Message: "Operation not recognized",
 		})
 		return
 	}
 
-	c.JSONSuccess(batchResponse{
+	responseJSON(c.Resp, http.StatusOK, batchResponse{
 		Transfer: transfer,
 		Objects:  objects,
 	})
@@ -125,8 +125,8 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 type batchRequest struct {
 	Operation string `json:"operation"`
 	Objects   []struct {
-		Oid  string `json:"oid"`
-		Size int64  `json:"size"`
+		Oid  lfsutil.OID `json:"oid"`
+		Size int64       `json:"size"`
 	} `json:"objects"`
 }
 
@@ -147,7 +147,7 @@ type batchActions struct {
 }
 
 type batchObject struct {
-	Oid     string       `json:"oid"`
+	Oid     lfsutil.OID  `json:"oid"`
 	Size    int64        `json:"size"`
 	Actions batchActions `json:"actions"`
 }
@@ -156,4 +156,25 @@ type batchObject struct {
 type batchResponse struct {
 	Transfer string        `json:"transfer"`
 	Objects  []batchObject `json:"objects"`
+}
+
+type responseError struct {
+	Message string `json:"message"`
+}
+
+func responseJSON(w http.ResponseWriter, status int, v interface{}) {
+	w.Header().Set("Content-Type", lfsutil.ContentType)
+
+	err := jsoniter.NewEncoder(w).Encode(v)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(status)
+}
+
+func internalServerError(w http.ResponseWriter) {
+	responseJSON(w, http.StatusInternalServerError, responseError{
+		Message: "Internal server error",
+	})
 }

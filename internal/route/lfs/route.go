@@ -20,13 +20,17 @@ import (
 
 // RegisterRoutes registers LFS routes using given router, and inherits all groups and middleware.
 func RegisterRoutes(r *macaron.Router) {
+	verifyAccept := verifyHeader("Accept", lfsutil.ContentType, http.StatusNotAcceptable)
+	verifyContentTypeJSON := verifyHeader("Content-Type", lfsutil.ContentType, http.StatusBadRequest)
+	verifyContentTypeStream := verifyHeader("Content-Type", "application/octet-stream", http.StatusBadRequest)
+
 	r.Group("", func() {
-		r.Post("/objects/batch", authorize(db.AccessModeRead), verifyAcceptHeader(), serveBatch)
+		r.Post("/objects/batch", authorize(db.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch)
 		r.Group("/objects/basic", func() {
 			r.Combo("/:oid", verifyOID()).
 				Get(authorize(db.AccessModeRead), serveBasicDownload).
-				Put(authorize(db.AccessModeWrite), serveBasicUpload)
-			r.Post("/verify", authorize(db.AccessModeWrite), verifyAcceptHeader(), serveBasicVerify)
+				Put(authorize(db.AccessModeWrite), verifyContentTypeStream, serveBasicUpload)
+			r.Post("/verify", authorize(db.AccessModeWrite), verifyAccept, verifyContentTypeJSON, serveBasicVerify)
 		})
 	}, authenticate())
 }
@@ -125,11 +129,12 @@ func authorize(mode db.AccessMode) macaron.Handler {
 	}
 }
 
-// verifyAcceptHeader checks if the "Accept" header is "application/vnd.git-lfs+json".
-func verifyAcceptHeader() macaron.Handler {
+// verifyHeader checks if the HTTP header value is matching.
+// When not, response given "failCode" as status code.
+func verifyHeader(key, value string, failCode int) macaron.Handler {
 	return func(c *context.Context) {
-		if c.Req.Header.Get("Accept") != lfsutil.ContentType {
-			c.Status(http.StatusNotAcceptable)
+		if c.Req.Header.Get(key) != value {
+			c.Status(failCode)
 			return
 		}
 	}
@@ -138,12 +143,12 @@ func verifyAcceptHeader() macaron.Handler {
 // verifyOID checks if the ":oid" URL parameter is valid.
 func verifyOID() macaron.Handler {
 	return func(c *context.Context) {
-		oid := c.Params(":oid")
+		oid := lfsutil.OID(c.Params(":oid"))
 		if !lfsutil.ValidOID(oid) {
-			c.PlainText(http.StatusBadRequest, `Invalid oid`)
+			c.PlainText(http.StatusBadRequest, "Invalid oid")
 			return
 		}
 
-		c.Map(lfsutil.OID(oid))
+		c.Map(oid)
 	}
 }

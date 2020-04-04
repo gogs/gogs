@@ -13,8 +13,8 @@ type OID string
 
 // ValidOID returns true if given oid is valid according to spec:
 // https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
-func ValidOID(oid string) bool {
-	fields := strings.SplitN(oid, ":", 2)
+func ValidOID(oid OID) bool {
+	fields := strings.SplitN(string(oid), ":", 2)
 	if len(fields) != 2 {
 		return false
 	}

@@ -30,7 +30,7 @@ type LFSStore interface {
 	GetObjectByOID(repoID int64, oid lfsutil.OID) (*LFSObject, error)
 	// GetObjectsByOIDs returns LFS objects found within "oids". The returned list could have
 	// less elements if some oids were not found.
-	GetObjectsByOIDs(repoID int64, oids ...string) ([]*LFSObject, error)
+	GetObjectsByOIDs(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error)
 }
 
 var LFS LFSStore

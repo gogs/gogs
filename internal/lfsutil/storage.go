@@ -26,7 +26,7 @@ const (
 // StorageLocalPath returns computed file path for storing object on local file system.
 // It returns empty string if given "oid" isn't valid.
 func StorageLocalPath(root string, oid OID) string {
-	if !ValidOID(string(oid)) {
+	if !ValidOID(oid) {
 		return ""
 	}
 
