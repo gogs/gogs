@@ -12,7 +12,7 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/authutil"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
@@ -34,7 +34,7 @@ func RegisterRoutes(r *macaron.Router) {
 // authenticate tries to authenticate user via HTTP Basic Auth.
 func authenticate() macaron.Handler {
 	return func(c *context.Context) {
-		username, password := auth.DecodeBasic(c.Req.Header)
+		username, password := authutil.DecodeBasic(c.Req.Header)
 		if username == "" {
 			c.Header().Set("WWW-Authenticate", `Basic realm="."`)
 			c.Status(http.StatusUnauthorized)
