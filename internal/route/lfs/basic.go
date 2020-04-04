@@ -7,6 +7,7 @@ package lfs
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -63,7 +64,22 @@ func serveBasicDownload(c *context.Context, repo *db.Repository, oid lfsutil.OID
 
 // PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}
 func serveBasicUpload(c *context.Context, repo *db.Repository, oid lfsutil.OID) {
-	err := db.LFS.CreateObject(repo.ID, oid, c.Req.Request.Body, lfsutil.StorageLocal)
+	// NOTE: LFS client will retry upload the same object if there was a partial failure,
+	// therefore we would like to skip ones that already exist.
+	_, err := db.LFS.GetObjectByOID(repo.ID, oid)
+	if err == nil {
+		// Object exists, drain the request body and we're good.
+		_, _ = io.Copy(ioutil.Discard, c.Req.Request.Body)
+		c.Req.Request.Body.Close()
+		c.Status(http.StatusOK)
+		return
+	} else if !db.IsErrLFSObjectNotExist(err) {
+		internalServerError(c.Resp)
+		log.Error("Failed to get object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
+		return
+	}
+
+	err = db.LFS.CreateObject(repo.ID, oid, c.Req.Request.Body, lfsutil.StorageLocal)
 	if err != nil {
 		internalServerError(c.Resp)
 		log.Error("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
