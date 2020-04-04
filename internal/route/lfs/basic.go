@@ -39,7 +39,7 @@ func serveBasicDownload(c *context.Context, repo *db.Repository, oid lfsutil.OID
 	r, err := os.Open(fpath)
 	if err != nil {
 		internalServerError(c.Resp)
-		log.Error("Failed to open object file [path: %s]: %v", err)
+		log.Error("Failed to open object file [path: %s]: %v", fpath, err)
 		return
 	}
 	defer r.Close()
