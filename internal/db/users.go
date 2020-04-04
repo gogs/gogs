@@ -117,7 +117,7 @@ func (db *users) GetByID(id int64) (*User, error) {
 	user := new(User)
 	err := db.Where("id = ?", id).First(user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if gorm.IsRecordNotFoundError(err) {
 			return nil, ErrUserNotExist{args: map[string]interface{}{"userID": id}}
 		}
 		return nil, err
@@ -129,7 +129,7 @@ func (db *users) GetByUsername(username string) (*User, error) {
 	user := new(User)
 	err := db.Where("lower_name = ?", strings.ToLower(username)).First(user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if gorm.IsRecordNotFoundError(err) {
 			return nil, ErrUserNotExist{args: map[string]interface{}{"name": username}}
 		}
 		return nil, err

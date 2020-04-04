@@ -27,7 +27,7 @@ func (db *loginSources) GetByID(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
 	err := db.Where("id = ?", id).First(source).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if gorm.IsRecordNotFoundError(err) {
 			return localLoginSources.GetLoginSourceByID(id)
 		}
 		return nil, err

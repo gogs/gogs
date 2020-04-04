@@ -52,7 +52,7 @@ func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
 	token := new(AccessToken)
 	err := db.Where("sha1 = ?", sha).First(token).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if gorm.IsRecordNotFoundError(err) {
 			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha}}
 		}
 		return nil, err
