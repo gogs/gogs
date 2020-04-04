@@ -48,33 +48,38 @@ type LFSObject struct {
 	CreatedAt time.Time       `gorm:"NOT NULL"`
 }
 
-func (db *lfs) CreateObject(repoID int64, oid lfsutil.OID, rc io.ReadCloser, storage lfsutil.Storage) (err error) {
+func (db *lfs) CreateObject(repoID int64, oid lfsutil.OID, rc io.ReadCloser, storage lfsutil.Storage) error {
 	if storage != lfsutil.StorageLocal {
 		return errors.New("only local storage is supported")
 	}
 
+	var ioerr error
 	fpath := lfsutil.StorageLocalPath(conf.LFS.ObjectsPath, oid)
 	defer func() {
 		rc.Close()
 
-		if err != nil {
+		// NOTE: Only remove the file if there is an IO error, it is OK to
+		// leave the file when the whole operation failed with a DB error,
+		// a retry on client side can safely overwrite the same file as OID
+		// is seen as unique to every file.
+		if ioerr != nil {
 			_ = os.Remove(fpath)
 		}
 	}()
 
-	err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
-	if err != nil {
-		return errors.Wrap(err, "create directories")
+	ioerr = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
+	if ioerr != nil {
+		return errors.Wrap(ioerr, "create directories")
 	}
-	w, err := os.Create(fpath)
-	if err != nil {
-		return errors.Wrap(err, "create file")
+	w, ioerr := os.Create(fpath)
+	if ioerr != nil {
+		return errors.Wrap(ioerr, "create file")
 	}
 	defer w.Close()
 
-	written, err := io.Copy(w, rc)
-	if err != nil {
-		return errors.Wrap(err, "copy file")
+	written, ioerr := io.Copy(w, rc)
+	if ioerr != nil {
+		return errors.Wrap(ioerr, "copy file")
 	}
 
 	object := &LFSObject{
