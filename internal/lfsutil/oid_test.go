@@ -18,24 +18,16 @@ func TestValidOID(t *testing.T) {
 	}{
 		{
 			name: "malformed",
-			oid:  OID("12345678"),
+			oid:  OID("7c222fb2927d828af22f592134e8932480637c0d"),
 		},
 		{
-			name: "unknown method",
-			oid:  OID("sha1:7c222fb2927d828af22f592134e8932480637c0d"),
+			name: "not all lower cased",
+			oid:  OID("EF797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"),
 		},
 
 		{
-			name: "sha256: malformed",
-			oid:  OID("sha256:7c222fb2927d828af22f592134e8932480637c0d"),
-		},
-		{
-			name: "sha256: not all lower cased",
-			oid:  OID("sha256:EF797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"),
-		},
-		{
-			name:   "sha256: valid",
-			oid:    OID("sha256:ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"),
+			name:   "valid",
+			oid:    OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"),
 			expVal: true,
 		},
 	}
