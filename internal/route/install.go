@@ -86,9 +86,6 @@ func GlobalInit(customConf string) error {
 		db.InitDeliverHooks()
 		db.InitTestPullRequests()
 	}
-	if db.EnableSQLite3 {
-		log.Info("SQLite3 is supported")
-	}
 	if conf.HasMinWinSvc {
 		log.Info("Builtin Windows Service is supported")
 	}
@@ -125,11 +122,7 @@ func InstallInit(c *context.Context) {
 	c.Title("install.install")
 	c.PageIs("Install")
 
-	dbOpts := []string{"MySQL", "PostgreSQL", "MSSQL"}
-	if db.EnableSQLite3 {
-		dbOpts = append(dbOpts, "SQLite3")
-	}
-	c.Data["DbOptions"] = dbOpts
+	c.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "MSSQL", "SQLite3"}
 }
 
 func Install(c *context.Context) {
@@ -148,9 +141,7 @@ func Install(c *context.Context) {
 	case "mssql":
 		c.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
-		if db.EnableSQLite3 {
-			c.Data["CurDbOption"] = "SQLite3"
-		}
+		c.Data["CurDbOption"] = "SQLite3"
 	}
 
 	// Application general settings

@@ -133,7 +133,7 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 			return
 		}
 
-		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= db.ACCESS_MODE_ADMIN
+		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= db.AccessModeAdmin
 		c.Data["IsTeamAdmin"] = c.Org.IsTeamAdmin
 		if requireTeamAdmin && !c.Org.IsTeamAdmin {
 			c.NotFound()

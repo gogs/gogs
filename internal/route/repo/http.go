@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -111,7 +112,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := db.UserLogin(authUsername, authPassword, -1)
+		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
 		if err != nil && !db.IsErrUserNotExist(err) {
 			c.Error(err, "authenticate user")
 			return
@@ -119,9 +120,9 @@ func HTTPContexter() macaron.Handler {
 
 		// If username and password combination failed, try again using username as a token.
 		if authUser == nil {
-			token, err := db.GetAccessTokenBySHA(authUsername)
+			token, err := db.AccessTokens.GetBySHA(authUsername)
 			if err != nil {
-				if db.IsErrAccessTokenEmpty(err) || db.IsErrAccessTokenNotExist(err) {
+				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
 				} else {
 					c.Error(err, "get access token by SHA")
@@ -129,9 +130,11 @@ func HTTPContexter() macaron.Handler {
 				return
 			}
 			token.Updated = time.Now()
-			// TODO: verify or update token.Updated in database
+			if err = db.AccessTokens.Save(token); err != nil {
+				log.Error("Failed to update access token: %v", err)
+			}
 
-			authUser, err = db.GetUserByID(token.UID)
+			authUser, err = db.GetUserByID(token.UserID)
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
@@ -146,9 +149,9 @@ Please create and use personal access token on user settings page`)
 
 		log.Trace("HTTPGit - Authenticated user: %s", authUser.Name)
 
-		mode := db.ACCESS_MODE_WRITE
+		mode := db.AccessModeWrite
 		if isPull {
-			mode = db.ACCESS_MODE_READ
+			mode = db.AccessModeRead
 		}
 		has, err := db.HasAccess(authUser.ID, repo, mode)
 		if err != nil {
@@ -367,7 +370,7 @@ func getGitRepoPath(dir string) (string, error) {
 		dir += ".git"
 	}
 
-	filename := path.Join(conf.Repository.Root, dir)
+	filename := filepath.Join(conf.Repository.Root, dir)
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return "", err
 	}

@@ -135,7 +135,7 @@ func ExploreUsers(c *context.Context) {
 	RenderUserSearch(c, &UserSearchOptions{
 		Type:     db.USER_TYPE_INDIVIDUAL,
 		Counter:  db.CountUsers,
-		Ranger:   db.Users,
+		Ranger:   db.ListUsers,
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,

@@ -608,8 +608,8 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 	}
 
 	t := &db.AccessToken{
-		UID:  c.User.ID,
-		Name: f.Name,
+		UserID: c.User.ID,
+		Name:   f.Name,
 	}
 	if err := db.NewAccessToken(t); err != nil {
 		if errors.IsAccessTokenNameAlreadyExist(err) {
@@ -643,7 +643,7 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := db.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {

@@ -30,8 +30,8 @@ func ListAccessTokens(c *context.APIContext) {
 
 func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) {
 	t := &db.AccessToken{
-		UID:  c.User.ID,
-		Name: form.Name,
+		UserID: c.User.ID,
+		Name:   form.Name,
 	}
 	if err := db.NewAccessToken(t); err != nil {
 		if errors.IsAccessTokenNameAlreadyExist(err) {

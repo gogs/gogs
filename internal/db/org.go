@@ -148,7 +148,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		OrgID:      org.ID,
 		LowerName:  strings.ToLower(OWNER_TEAM),
 		Name:       OWNER_TEAM,
-		Authorize:  ACCESS_MODE_OWNER,
+		Authorize:  AccessModeOwner,
 		NumMembers: 1,
 	}
 	if _, err = sess.Insert(t); err != nil {

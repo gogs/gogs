@@ -32,7 +32,7 @@ func Users(c *context.Context) {
 	route.RenderUserSearch(c, &route.UserSearchOptions{
 		Type:     db.USER_TYPE_INDIVIDUAL,
 		Counter:  db.CountUsers,
-		Ranger:   db.Users,
+		Ranger:   db.ListUsers,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := db.LoginSources()
+	sources, err := db.ListLoginSources()
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := db.LoginSources()
+	sources, err := db.ListLoginSources()
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -81,7 +81,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		Email:     f.Email,
 		Passwd:    f.Password,
 		IsActive:  true,
-		LoginType: db.LOGIN_PLAIN,
+		LoginType: db.LoginPlain,
 	}
 
 	if len(f.LoginType) > 0 {
@@ -132,7 +132,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 	c.Data["User"] = u
 
 	if u.LoginSource > 0 {
-		c.Data["LoginSource"], err = db.GetLoginSourceByID(u.LoginSource)
+		c.Data["LoginSource"], err = db.LoginSources.GetByID(u.LoginSource)
 		if err != nil {
 			c.Error(err, "get login source by ID")
 			return nil
@@ -141,7 +141,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 		c.Data["LoginSource"] = &db.LoginSource{}
 	}
 
-	sources, err := db.LoginSources()
+	sources, err := db.ListLoginSources()
 	if err != nil {
 		c.Error(err, "list login sources")
 		return nil

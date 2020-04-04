@@ -52,22 +52,22 @@ type Repository struct {
 
 // IsOwner returns true if current user is the owner of repository.
 func (r *Repository) IsOwner() bool {
-	return r.AccessMode >= db.ACCESS_MODE_OWNER
+	return r.AccessMode >= db.AccessModeOwner
 }
 
 // IsAdmin returns true if current user has admin or higher access of repository.
 func (r *Repository) IsAdmin() bool {
-	return r.AccessMode >= db.ACCESS_MODE_ADMIN
+	return r.AccessMode >= db.AccessModeAdmin
 }
 
 // IsWriter returns true if current user has write or higher access of repository.
 func (r *Repository) IsWriter() bool {
-	return r.AccessMode >= db.ACCESS_MODE_WRITE
+	return r.AccessMode >= db.AccessModeWrite
 }
 
 // HasAccess returns true if the current user has at least read access for this repository
 func (r *Repository) HasAccess() bool {
-	return r.AccessMode >= db.ACCESS_MODE_READ
+	return r.AccessMode >= db.AccessModeRead
 }
 
 // CanEnableEditor returns true if repository is editable and user has proper access level.
@@ -168,7 +168,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		// Admin has super access.
 		if c.IsLogged && c.User.IsAdmin {
-			c.Repo.AccessMode = db.ACCESS_MODE_OWNER
+			c.Repo.AccessMode = db.AccessModeOwner
 		} else {
 			mode, err := db.UserAccessMode(c.UserID(), repo)
 			if err != nil {
@@ -179,7 +179,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		// Check access
-		if c.Repo.AccessMode == db.ACCESS_MODE_NONE {
+		if c.Repo.AccessMode == db.AccessModeNone {
 			// Redirect to any accessible page if not yet on it
 			if repo.IsPartialPublic() &&
 				(!(isIssuesPage || isWikiPage) ||
