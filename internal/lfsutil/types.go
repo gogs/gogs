@@ -7,8 +7,8 @@ package lfsutil
 const ContentType = "application/vnd.git-lfs+json"
 const TransferBasic = "basic"
 const (
-	BatchOperationUpload   = "upload"
-	BatchOperationDownload = "download"
+	BasicOperationUpload   = "upload"
+	BasicOperationDownload = "download"
 )
 
 // Storage is the storage type of an LFS object.
@@ -23,7 +23,7 @@ type BatchRequest struct {
 	Operation string `json:"operation"`
 	Objects   []struct {
 		Oid  string `json:"oid"`
-		Size int    `json:"size"`
+		Size int64  `json:"size"`
 	} `json:"objects"`
 }
 
@@ -45,7 +45,7 @@ type BatchActions struct {
 
 type BatchObject struct {
 	Oid     string       `json:"oid"`
-	Size    int          `json:"size"`
+	Size    int64        `json:"size"`
 	Actions BatchActions `json:"actions"`
 }
 
