@@ -230,6 +230,11 @@ var (
 		AccessControlAllowOrigin string
 	}
 
+	// LFS settings
+	LFS struct {
+		ObjectsPath string
+	}
+
 	// Attachment settings
 	Attachment struct {
 		Enabled      bool
@@ -239,7 +244,7 @@ var (
 		MaxFiles     int
 	}
 
-	// Release settigns
+	// Release settings
 	Release struct {
 		Attachment struct {
 			Enabled      bool
@@ -285,7 +290,7 @@ var (
 		PagingNum      int
 	}
 
-	// Markdown sttings
+	// Markdown settings
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`

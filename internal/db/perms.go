@@ -9,7 +9,7 @@ import (
 	log "unknwon.dev/clog/v2"
 )
 
-// PermsStore is the database interface for permissions.
+// PermsStore is the persistent interface for permissions.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type PermsStore interface {

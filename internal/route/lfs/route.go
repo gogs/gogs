@@ -22,8 +22,8 @@ import (
 func RegisterRoutes(r *macaron.Router) {
 	r.Group("", func() {
 		r.Post("/objects/batch", authorize(db.AccessModeRead), verifyAcceptHeader(), serveBatch)
-		r.Group("/objects/basic/:oid", func() {
-			r.Combo("").
+		r.Group("/objects/basic", func() {
+			r.Combo("/:oid", verifyOID()).
 				Get(authorize(db.AccessModeRead), serveBasicDownload).
 				Put(authorize(db.AccessModeWrite), serveBasicUpload)
 			r.Post("/verify", authorize(db.AccessModeWrite), verifyAcceptHeader(), serveBasicVerify)
@@ -132,5 +132,18 @@ func verifyAcceptHeader() macaron.Handler {
 			c.Status(http.StatusNotAcceptable)
 			return
 		}
+	}
+}
+
+// verifyOID checks if the ":oid" URL parameter is valid.
+func verifyOID() macaron.Handler {
+	return func(c *context.Context) {
+		oid := c.Params(":oid")
+		if !lfsutil.ValidOID(oid) {
+			c.PlainText(http.StatusBadRequest, `Invalid oid`)
+			return
+		}
+
+		c.Map(lfsutil.OID(oid))
 	}
 }

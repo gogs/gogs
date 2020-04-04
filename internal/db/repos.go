@@ -10,7 +10,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// ReposStore is the database interface for repositories.
+// ReposStore is the persistent interface for repositories.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ReposStore interface {

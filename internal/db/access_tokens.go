@@ -12,7 +12,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-// AccessTokensStore is the database interface for access tokens.
+// AccessTokensStore is the persistent interface for access tokens.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type AccessTokensStore interface {

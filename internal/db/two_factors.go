@@ -9,7 +9,7 @@ import (
 	log "unknwon.dev/clog/v2"
 )
 
-// TwoFactorsStore is the database interface for 2FA.
+// TwoFactorsStore is the persistent interface for 2FA.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type TwoFactorsStore interface {

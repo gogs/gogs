@@ -8,9 +8,12 @@ import (
 	"strings"
 )
 
-// ValidateOID returns true if given oid is validate according to spec:
+// OID is an LFS object ID.
+type OID string
+
+// ValidOID returns true if given oid is valid according to spec:
 // https://github.com/git-lfs/git-lfs/blob/master/docs/spec.md
-func ValidateOID(oid string) bool {
+func ValidOID(oid string) bool {
 	fields := strings.SplitN(oid, ":", 2)
 	if len(fields) != 2 {
 		return false

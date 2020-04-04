@@ -8,7 +8,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// LoginSourcesStore is the database interface for login sources.
+// LoginSourcesStore is the persistent interface for login sources.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type LoginSourcesStore interface {

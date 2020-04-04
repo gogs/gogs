@@ -18,8 +18,9 @@ import (
 	"gogs.io/gogs/internal/strutil"
 )
 
+// POST /{owner}/{repo}.git/info/lfs/object/batch
 func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
-	var request lfsutil.BatchRequest
+	var request batchRequest
 	defer c.Req.Request.Body.Close()
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 	if err != nil {
@@ -34,30 +35,30 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 	// Example: https://try.gogs.io/gogs/gogs.git/info/lfs/object/basic
 	baseHref := fmt.Sprintf("%s%s/%s.git/info/lfs/objects/basic", conf.Server.ExternalURL, owner.Name, repo.Name)
 
-	objects := make([]lfsutil.BatchObject, 0, len(request.Objects))
+	objects := make([]batchObject, 0, len(request.Objects))
 	switch request.Operation {
 	case lfsutil.BasicOperationUpload:
 		for _, obj := range request.Objects {
-			var actions lfsutil.BatchActions
-			if lfsutil.ValidateOID(obj.Oid) {
-				actions = lfsutil.BatchActions{
-					Upload: &lfsutil.BatchAction{
+			var actions batchActions
+			if lfsutil.ValidOID(obj.Oid) {
+				actions = batchActions{
+					Upload: &batchAction{
 						Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
 					},
-					Verify: &lfsutil.BatchAction{
-						Href: fmt.Sprintf("%s/%s/verify", baseHref, obj.Oid),
+					Verify: &batchAction{
+						Href: fmt.Sprintf("%s/verify", baseHref),
 					},
 				}
 			} else {
-				actions = lfsutil.BatchActions{
-					Error: &lfsutil.BatchError{
+				actions = batchActions{
+					Error: &batchError{
 						Code:    http.StatusUnprocessableEntity,
 						Message: "Object has invalid oid",
 					},
 				}
 			}
 
-			objects = append(objects, lfsutil.BatchObject{
+			objects = append(objects, batchObject{
 				Oid:     obj.Oid,
 				Size:    obj.Size,
 				Actions: actions,
@@ -81,26 +82,26 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 		}
 
 		for _, obj := range request.Objects {
-			var actions lfsutil.BatchActions
+			var actions batchActions
 			if stored := storedSet[obj.Oid]; stored != nil {
 				if stored.Size != obj.Size {
-					actions.Error = &lfsutil.BatchError{
+					actions.Error = &batchError{
 						Code:    http.StatusUnprocessableEntity,
 						Message: "Object size mismatch",
 					}
 				} else {
-					actions.Download = &lfsutil.BatchAction{
+					actions.Download = &batchAction{
 						Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
 					}
 				}
 			} else {
-				actions.Error = &lfsutil.BatchError{
+				actions.Error = &batchError{
 					Code:    http.StatusNotFound,
 					Message: "Object does not exist",
 				}
 			}
 
-			objects = append(objects, lfsutil.BatchObject{
+			objects = append(objects, batchObject{
 				Oid:     obj.Oid,
 				Size:    obj.Size,
 				Actions: actions,
@@ -114,8 +115,45 @@ func serveBatch(c *context.Context, owner *db.User, repo *db.Repository) {
 		return
 	}
 
-	c.JSONSuccess(lfsutil.BatchResponse{
+	c.JSONSuccess(batchResponse{
 		Transfer: transfer,
 		Objects:  objects,
 	})
+}
+
+// batchRequest defines the request payload for the batch endpoint.
+type batchRequest struct {
+	Operation string `json:"operation"`
+	Objects   []struct {
+		Oid  string `json:"oid"`
+		Size int64  `json:"size"`
+	} `json:"objects"`
+}
+
+type batchError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type batchAction struct {
+	Href string `json:"href"`
+}
+
+type batchActions struct {
+	Download *batchAction `json:"download,omitempty"`
+	Upload   *batchAction `json:"upload,omitempty"`
+	Verify   *batchAction `json:"verify,omitempty"`
+	Error    *batchError  `json:"error,omitempty"`
+}
+
+type batchObject struct {
+	Oid     string       `json:"oid"`
+	Size    int64        `json:"size"`
+	Actions batchActions `json:"actions"`
+}
+
+// batchResponse defines the response payload for the batch endpoint.
+type batchResponse struct {
+	Transfer string        `json:"transfer"`
+	Objects  []batchObject `json:"objects"`
 }

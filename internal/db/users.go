@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-// UsersStore is the database interface for users.
+// UsersStore is the persistent interface for users.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type UsersStore interface {
