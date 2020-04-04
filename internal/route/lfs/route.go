@@ -37,11 +37,17 @@ func RegisterRoutes(r *macaron.Router) {
 
 // authenticate tries to authenticate user via HTTP Basic Auth.
 func authenticate() macaron.Handler {
+	askCredentials := func(w http.ResponseWriter) {
+		w.Header().Set("LFS-Authenticate", `Basic realm="Git LFS"`)
+		responseJSON(w, http.StatusUnauthorized, responseError{
+			Message: "Credentials needed",
+		})
+	}
+
 	return func(c *context.Context) {
 		username, password := authutil.DecodeBasic(c.Req.Header)
 		if username == "" {
-			c.Header().Set("WWW-Authenticate", `Basic realm="."`)
-			c.Status(http.StatusUnauthorized)
+			askCredentials(c.Resp)
 			return
 		}
 
@@ -62,8 +68,7 @@ func authenticate() macaron.Handler {
 			token, err := db.AccessTokens.GetBySHA(username)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
-					c.Header().Set("WWW-Authenticate", `Basic realm="."`)
-					c.Status(http.StatusUnauthorized)
+					askCredentials(c.Resp)
 				} else {
 					c.Status(http.StatusInternalServerError)
 					log.Error("Failed to get access token [sha: %s]: %v", username, err)
