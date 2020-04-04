@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/denisenkom/go-mssqldb v0.0.0-20191001013358-cfbb681360f0
+	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
 	github.com/editorconfig/editorconfig-core-go/v2 v2.3.1
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.0
@@ -13,6 +13,7 @@ require (
 	github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c
 	github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07
 	github.com/go-macaron/i18n v0.5.0
+	github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191
 	github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659
 	github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6
 	github.com/go-sql-driver/mysql v1.5.0
@@ -27,13 +28,14 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/issue9/identicon v1.0.1
 	github.com/jaytaylor/html2text v0.0.0-20190408195923-01ec452cbe43
+	github.com/jinzhu/gorm v1.9.12
 	github.com/json-iterator/go v1.1.9
 	github.com/klauspost/compress v1.8.6 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/lib/pq v1.3.0
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
-	github.com/mattn/go-sqlite3 v1.13.0
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2
 	github.com/microcosm-cc/bluemonday v1.0.2
 	github.com/msteinert/pam v0.0.0-20190215180659-f29b9f28d6f9

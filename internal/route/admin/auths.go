@@ -32,7 +32,7 @@ func Authentications(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	var err error
-	c.Data["Sources"], err = db.LoginSources()
+	c.Data["Sources"], err = db.ListLoginSources()
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -49,11 +49,11 @@ type dropdownItem struct {
 
 var (
 	authSources = []dropdownItem{
-		{db.LoginNames[db.LOGIN_LDAP], db.LOGIN_LDAP},
-		{db.LoginNames[db.LOGIN_DLDAP], db.LOGIN_DLDAP},
-		{db.LoginNames[db.LOGIN_SMTP], db.LOGIN_SMTP},
-		{db.LoginNames[db.LOGIN_PAM], db.LOGIN_PAM},
-		{db.LoginNames[db.LOGIN_GITHUB], db.LOGIN_GITHUB},
+		{db.LoginNames[db.LoginLDAP], db.LoginLDAP},
+		{db.LoginNames[db.LoginDLDAP], db.LoginDLDAP},
+		{db.LoginNames[db.LoginSMTP], db.LoginSMTP},
+		{db.LoginNames[db.LoginPAM], db.LoginPAM},
+		{db.LoginNames[db.LoginGitHub], db.LoginGitHub},
 	}
 	securityProtocols = []dropdownItem{
 		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
@@ -67,8 +67,8 @@ func NewAuthSource(c *context.Context) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["type"] = db.LOGIN_LDAP
-	c.Data["CurrentTypeName"] = db.LoginNames[db.LOGIN_LDAP]
+	c.Data["type"] = db.LoginLDAP
+	c.Data["CurrentTypeName"] = db.LoginNames[db.LoginLDAP]
 	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
@@ -131,17 +131,17 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	hasTLS := false
 	var config core.Conversion
 	switch db.LoginType(f.Type) {
-	case db.LOGIN_LDAP, db.LOGIN_DLDAP:
+	case db.LoginLDAP, db.LoginDLDAP:
 		config = parseLDAPConfig(f)
 		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
-	case db.LOGIN_SMTP:
+	case db.LoginSMTP:
 		config = parseSMTPConfig(f)
 		hasTLS = true
-	case db.LOGIN_PAM:
+	case db.LoginPAM:
 		config = &db.PAMConfig{
 			ServiceName: f.PAMServiceName,
 		}
-	case db.LOGIN_GITHUB:
+	case db.LoginGitHub:
 		config = &db.GitHubConfig{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
@@ -186,7 +186,7 @@ func EditAuthSource(c *context.Context) {
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = db.SMTPAuths
 
-	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return
@@ -204,7 +204,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 	c.Data["SMTPAuths"] = db.SMTPAuths
 
-	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return
@@ -219,15 +219,15 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 	var config core.Conversion
 	switch db.LoginType(f.Type) {
-	case db.LOGIN_LDAP, db.LOGIN_DLDAP:
+	case db.LoginLDAP, db.LoginDLDAP:
 		config = parseLDAPConfig(f)
-	case db.LOGIN_SMTP:
+	case db.LoginSMTP:
 		config = parseSMTPConfig(f)
-	case db.LOGIN_PAM:
+	case db.LoginPAM:
 		config = &db.PAMConfig{
 			ServiceName: f.PAMServiceName,
 		}
-	case db.LOGIN_GITHUB:
+	case db.LoginGitHub:
 		config = &db.GitHubConfig{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
@@ -252,7 +252,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 }
 
 func DeleteAuthSource(c *context.Context) {
-	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return

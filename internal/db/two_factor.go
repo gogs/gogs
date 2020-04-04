@@ -12,7 +12,6 @@ import (
 
 	"github.com/pquerna/otp/totp"
 	"github.com/unknwon/com"
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
@@ -52,15 +51,6 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 		return false, fmt.Errorf("AESGCMDecrypt: %v", err)
 	}
 	return totp.Validate(passcode, string(decryptSecret)), nil
-}
-
-// IsUserEnabledTwoFactor returns true if user has enabled two-factor authentication.
-func IsUserEnabledTwoFactor(userID int64) bool {
-	has, err := x.Where("user_id = ?", userID).Get(new(TwoFactor))
-	if err != nil {
-		log.Error("IsUserEnabledTwoFactor [user_id: %d]: %v", userID, err)
-	}
-	return has
 }
 
 func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
@@ -182,6 +172,19 @@ func RegenerateRecoveryCodes(userID int64) error {
 	return sess.Commit()
 }
 
+type ErrTwoFactorRecoveryCodeNotFound struct {
+	Code string
+}
+
+func IsTwoFactorRecoveryCodeNotFound(err error) bool {
+	_, ok := err.(ErrTwoFactorRecoveryCodeNotFound)
+	return ok
+}
+
+func (err ErrTwoFactorRecoveryCodeNotFound) Error() string {
+	return fmt.Sprintf("two-factor recovery code does not found [code: %s]", err.Code)
+}
+
 // UseRecoveryCode validates recovery code of given user and marks it is used if valid.
 func UseRecoveryCode(userID int64, code string) error {
 	recoveryCode := new(TwoFactorRecoveryCode)
@@ -189,7 +192,7 @@ func UseRecoveryCode(userID int64, code string) error {
 	if err != nil {
 		return fmt.Errorf("get unused code: %v", err)
 	} else if !has {
-		return errors.TwoFactorRecoveryCodeNotFound{Code: code}
+		return ErrTwoFactorRecoveryCodeNotFound{Code: code}
 	}
 
 	recoveryCode.IsUsed = true

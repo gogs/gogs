@@ -48,18 +48,18 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := db.GetAccessTokenBySHA(tokenSHA)
+			t, err := db.AccessTokens.GetBySHA(tokenSHA)
 			if err != nil {
-				if !db.IsErrAccessTokenNotExist(err) && !db.IsErrAccessTokenEmpty(err) {
+				if !db.IsErrAccessTokenNotExist(err) {
 					log.Error("GetAccessTokenBySHA: %v", err)
 				}
 				return 0, false
 			}
 			t.Updated = time.Now()
-			if err = db.UpdateAccessToken(t); err != nil {
+			if err = db.AccessTokens.Save(t); err != nil {
 				log.Error("UpdateAccessToken: %v", err)
 			}
-			return t.UID, true
+			return t.UserID, true
 		}
 	}
 
@@ -90,7 +90,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 
 	if uid <= 0 {
 		if conf.Auth.EnableReverseProxyAuthentication {
-			webAuthUser := ctx.Req.Header.Get(conf.Security.ReverseProxyAuthenticationUser)
+			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
 				u, err := db.GetUserByName(webAuthUser)
 				if err != nil {
@@ -127,7 +127,7 @@ func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasic
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := db.UserLogin(uname, passwd, -1)
+				u, err := db.Users.Authenticate(uname, passwd, -1)
 				if err != nil {
 					if !db.IsErrUserNotExist(err) {
 						log.Error("Failed to authenticate user: %v", err)

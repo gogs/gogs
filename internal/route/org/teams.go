@@ -228,11 +228,11 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		var auth db.AccessMode
 		switch f.Permission {
 		case "read":
-			auth = db.ACCESS_MODE_READ
+			auth = db.AccessModeRead
 		case "write":
-			auth = db.ACCESS_MODE_WRITE
+			auth = db.AccessModeWrite
 		case "admin":
-			auth = db.ACCESS_MODE_ADMIN
+			auth = db.AccessModeAdmin
 		default:
 			c.Status(http.StatusUnauthorized)
 			return

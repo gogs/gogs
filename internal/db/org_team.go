@@ -47,7 +47,7 @@ func (t *Team) IsOwnerTeam() bool {
 
 // HasWriteAccess returns true if team has at least write level access mode.
 func (t *Team) HasWriteAccess() bool {
-	return t.Authorize >= ACCESS_MODE_WRITE
+	return t.Authorize >= AccessModeWrite
 }
 
 // IsTeamMember returns true if given user is a member of team.
@@ -174,7 +174,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 		return fmt.Errorf("get team members: %v", err)
 	}
 	for _, member := range t.Members {
-		has, err := hasAccess(e, member.ID, repo, ACCESS_MODE_READ)
+		has, err := hasAccess(e, member.ID, repo, AccessModeRead)
 		if err != nil {
 			return err
 		} else if has {

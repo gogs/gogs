@@ -110,7 +110,7 @@ func SettingsDelete(c *context.Context) {
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := db.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
