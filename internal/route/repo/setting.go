@@ -513,7 +513,7 @@ func SettingsProtectedBranch(c *context.Context) {
 		c.Data["Users"] = users
 		c.Data["whitelist_users"] = protectBranch.WhitelistUserIDs
 
-		teams, err := c.Repo.Owner.TeamsHaveAccessToRepo(c.Repo.Repository.ID, db.ACCESS_MODE_WRITE)
+		teams, err := c.Repo.Owner.TeamsHaveAccessToRepo(c.Repo.Repository.ID, db.AccessModeWrite)
 		if err != nil {
 			c.Error(err, "get teams have access to the repository")
 			return

@@ -7,14 +7,12 @@ package context
 import (
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/go-macaron/csrf"
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/tool"
 )
 
 type ToggleOptions struct {
@@ -93,20 +91,5 @@ func Toggle(options *ToggleOptions) macaron.Handler {
 			}
 			c.PageIs("Admin")
 		}
-	}
-}
-
-// RequireBasicAuth verifies HTTP Basic Authentication header with given credentials.
-func (c *Context) RequireBasicAuth(username, password string) {
-	fields := strings.Fields(c.Req.Header.Get("Authorization"))
-	if len(fields) != 2 || fields[0] != "Basic" {
-		c.Status(http.StatusUnauthorized)
-		return
-	}
-
-	uname, passwd, _ := tool.BasicAuthDecode(fields[1])
-	if uname != username || passwd != password {
-		c.Status(http.StatusForbidden)
-		return
 	}
 }

@@ -131,8 +131,8 @@ func listUserRepositories(c *context.APIContext, username string) {
 	i := numOwnRepos
 	for repo, access := range accessibleRepos {
 		repos[i] = repo.APIFormat(&api.Permission{
-			Admin: access >= db.ACCESS_MODE_ADMIN,
-			Push:  access >= db.ACCESS_MODE_WRITE,
+			Admin: access >= db.AccessModeAdmin,
+			Push:  access >= db.AccessModeWrite,
 			Pull:  true,
 		})
 		i++

@@ -128,20 +128,7 @@ var (
 	}
 
 	// Database settings
-	Database struct {
-		Type     string
-		Host     string
-		Name     string
-		User     string
-		Password string
-		SSLMode  string `ini:"SSL_MODE"`
-		Path     string
-
-		// Deprecated: Use Type instead, will be removed in 0.13.
-		DbType string
-		// Deprecated: Use Password instead, will be removed in 0.13.
-		Passwd string
-	}
+	Database DatabaseOpts
 
 	// Security settings
 	Security struct {
@@ -243,6 +230,11 @@ var (
 		AccessControlAllowOrigin string
 	}
 
+	// LFS settings
+	LFS struct {
+		ObjectsPath string
+	}
+
 	// Attachment settings
 	Attachment struct {
 		Enabled      bool
@@ -252,7 +244,7 @@ var (
 		MaxFiles     int
 	}
 
-	// Release settigns
+	// Release settings
 	Release struct {
 		Attachment struct {
 			Enabled      bool
@@ -298,7 +290,7 @@ var (
 		PagingNum      int
 	}
 
-	// Markdown sttings
+	// Markdown settings
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
@@ -408,6 +400,23 @@ var (
 	// Global setting
 	HasRobotsTxt bool
 )
+
+type DatabaseOpts struct {
+	Type         string
+	Host         string
+	Name         string
+	User         string
+	Password     string
+	SSLMode      string `ini:"SSL_MODE"`
+	Path         string
+	MaxOpenConns int
+	MaxIdleConns int
+
+	// Deprecated: Use Type instead, will be removed in 0.13.
+	DbType string
+	// Deprecated: Use Password instead, will be removed in 0.13.
+	Passwd string
+}
 
 type i18nConf struct {
 	Langs     []string          `delim:","`

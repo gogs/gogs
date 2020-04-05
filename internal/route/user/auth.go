@@ -9,12 +9,12 @@ import (
 	"net/url"
 
 	"github.com/go-macaron/captcha"
+	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
@@ -160,13 +160,13 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := db.UserLogin(f.UserName, f.Password, f.LoginSource)
+	u, err := db.Users.Authenticate(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
-		switch err.(type) {
+		switch errors.Cause(err).(type) {
 		case db.ErrUserNotExist:
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
-		case errors.LoginSourceMismatch:
+		case db.ErrLoginSourceMismatch:
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
 
@@ -263,7 +263,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 	}
 
 	if err := db.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
-		if errors.IsTwoFactorRecoveryCodeNotFound(err) {
+		if db.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.RedirectSubpath("/user/login/two_factor_recovery_code")
 		} else {

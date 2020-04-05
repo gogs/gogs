@@ -16,17 +16,17 @@ import (
 
 // AccessToken represents a personal access token.
 type AccessToken struct {
-	ID   int64
-	UID  int64 `xorm:"INDEX"`
-	Name string
-	Sha1 string `xorm:"UNIQUE VARCHAR(40)"`
+	ID     int64
+	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid"`
+	Name   string
+	Sha1   string `xorm:"UNIQUE VARCHAR(40)"`
 
-	Created           time.Time `xorm:"-" json:"-"`
+	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" gorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-"`
-	HasUsed           bool `xorm:"-" json:"-"`
+	HasRecentActivity bool `xorm:"-" gorm:"-" json:"-"`
+	HasUsed           bool `xorm:"-" gorm:"-" json:"-"`
 }
 
 func (t *AccessToken) BeforeInsert() {
@@ -52,8 +52,8 @@ func (t *AccessToken) AfterSet(colName string, _ xorm.Cell) {
 func NewAccessToken(t *AccessToken) error {
 	t.Sha1 = tool.SHA1(gouuid.NewV4().String())
 	has, err := x.Get(&AccessToken{
-		UID:  t.UID,
-		Name: t.Name,
+		UserID: t.UserID,
+		Name:   t.Name,
 	})
 	if err != nil {
 		return err
@@ -65,38 +65,17 @@ func NewAccessToken(t *AccessToken) error {
 	return err
 }
 
-// GetAccessTokenBySHA returns access token by given sha1.
-func GetAccessTokenBySHA(sha string) (*AccessToken, error) {
-	if sha == "" {
-		return nil, ErrAccessTokenEmpty{}
-	}
-	t := &AccessToken{Sha1: sha}
-	has, err := x.Get(t)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrAccessTokenNotExist{sha}
-	}
-	return t, nil
-}
-
 // ListAccessTokens returns a list of access tokens belongs to given user.
 func ListAccessTokens(uid int64) ([]*AccessToken, error) {
 	tokens := make([]*AccessToken, 0, 5)
 	return tokens, x.Where("uid=?", uid).Desc("id").Find(&tokens)
 }
 
-// UpdateAccessToken updates information of access token.
-func UpdateAccessToken(t *AccessToken) error {
-	_, err := x.Id(t.ID).AllCols().Update(t)
-	return err
-}
-
 // DeleteAccessTokenOfUserByID deletes access token by given ID.
 func DeleteAccessTokenOfUserByID(userID, id int64) error {
 	_, err := x.Delete(&AccessToken{
-		ID:  id,
-		UID: userID,
+		ID:     id,
+		UserID: userID,
 	})
 	return err
 }

@@ -45,16 +45,3 @@ func (err InvalidLoginSourceType) Error() string {
 	return fmt.Sprintf("invalid login source type [type: %v]", err.Type)
 }
 
-type LoginSourceMismatch struct {
-	Expect int64
-	Actual int64
-}
-
-func IsLoginSourceMismatch(err error) bool {
-	_, ok := err.(LoginSourceMismatch)
-	return ok
-}
-
-func (err LoginSourceMismatch) Error() string {
-	return fmt.Sprintf("login source mismatch [expect: %d, actual: %d]", err.Expect, err.Actual)
-}
