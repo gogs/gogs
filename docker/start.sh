@@ -33,7 +33,7 @@ create_volume_subfolder() {
     # Create VOLUME subfolder
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
         if ! test -d $f; then
-            mkdir -p $f
+            exec gosu $USER mkdir -p $f
         fi
     done
 }
@@ -43,6 +43,7 @@ setids() {
     PGID=${PGID:-1000}
     groupmod -o -g "$PGID" git
     usermod -o -u "$PUID" git
+    export USER=git
 }
 
 setids
