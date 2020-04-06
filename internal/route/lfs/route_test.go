@@ -16,6 +16,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/lfsutil"
 )
 
 func Test_authenticate(t *testing.T) {
@@ -160,4 +161,66 @@ func Test_authenticate(t *testing.T) {
 			assert.Equal(t, test.expBody, string(body))
 		})
 	}
+}
+
+func Test_verifyOID(t *testing.T) {
+	m := macaron.New()
+	m.Get("/:oid", verifyOID(), func(w http.ResponseWriter, oid lfsutil.OID) {
+		fmt.Fprintf(w, "oid: %s", oid)
+	})
+
+	tests := []struct {
+		name          string
+		url           string
+		expStatusCode int
+		expBody       string
+	}{
+		{
+			name:          "bad oid",
+			url:           "/bad_oid",
+			expStatusCode: http.StatusBadRequest,
+			expBody:       `{"message":"Invalid oid"}` + "\n",
+		},
+
+		{
+			name:          "good oid",
+			url:           "/ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+			expStatusCode: http.StatusOK,
+			expBody:       "oid: ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r, err := http.NewRequest("GET", test.url, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			m.ServeHTTP(rr, r)
+
+			resp := rr.Result()
+			assert.Equal(t, test.expStatusCode, resp.StatusCode)
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, test.expBody, string(body))
+		})
+	}
+}
+
+func Test_internalServerError(t *testing.T) {
+	rr := httptest.NewRecorder()
+	internalServerError(rr)
+
+	resp := rr.Result()
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, `{"message":"Internal server error"}`+"\n", string(body))
 }
