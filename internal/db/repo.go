@@ -1563,6 +1563,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 		&ProtectBranchWhitelist{RepoID: repoID},
 		&Webhook{RepoID: repoID},
 		&HookTask{RepoID: repoID},
+		&LFSObject{RepoID: repoID},
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %v", err)
 	}
