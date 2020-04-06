@@ -5,7 +5,10 @@
 package db
 
 import (
+	"io"
 	"testing"
+
+	"gogs.io/gogs/internal/lfsutil"
 )
 
 // NOTE: Mocks are sorted in alphabetical order.
@@ -30,6 +33,34 @@ func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	AccessTokens = mock
 	t.Cleanup(func() {
 		AccessTokens = before
+	})
+}
+
+var _ LFSStore = (*MockLFSStore)(nil)
+
+type MockLFSStore struct {
+	MockCreateObject     func(repoID int64, oid lfsutil.OID, rc io.ReadCloser, storage lfsutil.Storage) error
+	MockGetObjectByOID   func(repoID int64, oid lfsutil.OID) (*LFSObject, error)
+	MockGetObjectsByOIDs func(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error)
+}
+
+func (m *MockLFSStore) CreateObject(repoID int64, oid lfsutil.OID, rc io.ReadCloser, storage lfsutil.Storage) error {
+	return m.MockCreateObject(repoID, oid, rc, storage)
+}
+
+func (m *MockLFSStore) GetObjectByOID(repoID int64, oid lfsutil.OID) (*LFSObject, error) {
+	return m.MockGetObjectByOID(repoID, oid)
+}
+
+func (m *MockLFSStore) GetObjectsByOIDs(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
+	return m.MockGetObjectsByOIDs(repoID, oids...)
+}
+
+func SetMockLFSStore(t *testing.T, mock LFSStore) {
+	before := LFS
+	LFS = mock
+	t.Cleanup(func() {
+		LFS = before
 	})
 }
 
