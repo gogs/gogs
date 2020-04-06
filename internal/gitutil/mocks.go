@@ -12,7 +12,6 @@ import (
 
 var _ ModuleStore = (*MockModuleStore)(nil)
 
-// MockModuleStore is a mock implementation of ModuleStore interface.
 type MockModuleStore struct {
 	repoAddRemote    func(repoPath, name, url string, opts ...git.AddRemoteOptions) error
 	repoDiffNameOnly func(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error)
