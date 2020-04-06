@@ -368,6 +368,7 @@ func (err ErrLoginSourceInUse) Error() string {
 //              \/     \/      \/
 
 type ErrTeamAlreadyExist struct {
+	ID    int64
 	OrgID int64
 	Name  string
 }
@@ -378,7 +379,7 @@ func IsErrTeamAlreadyExist(err error) bool {
 }
 
 func (err ErrTeamAlreadyExist) Error() string {
-	return fmt.Sprintf("team already exists [org_id: %d, name: %s]", err.OrgID, err.Name)
+	return fmt.Sprintf("team already exists [id: %d, org_id: %d, name: %s]", err.ID, err.OrgID, err.Name)
 }
 
 //  ____ ___        .__                    .___
