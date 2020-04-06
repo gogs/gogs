@@ -98,7 +98,7 @@ func authenticate() macaron.Handler {
 
 // authorize tries to authorize the user to the context repository with given access mode.
 func authorize(mode db.AccessMode) macaron.Handler {
-	return func(c *macaron.Context, user *db.User) {
+	return func(c *macaron.Context, actor *db.User) {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
@@ -124,12 +124,12 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		if !db.Perms.Authorize(user.ID, repo, mode) {
+		if !db.Perms.Authorize(actor.ID, repo, mode) {
 			c.Status(http.StatusNotFound)
 			return
 		}
 
-		c.Map(owner)
+		c.Map(owner) // NOTE: Override actor
 		c.Map(repo)
 	}
 }
@@ -137,9 +137,9 @@ func authorize(mode db.AccessMode) macaron.Handler {
 // verifyHeader checks if the HTTP header contains given value.
 // When not, response given "failCode" as status code.
 func verifyHeader(key, value string, failCode int) macaron.Handler {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get(key), value) {
-			w.WriteHeader(failCode)
+	return func(c *macaron.Context) {
+		if !strings.Contains(c.Req.Header.Get(key), value) {
+			c.Status(failCode)
 			return
 		}
 	}

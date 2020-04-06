@@ -33,6 +33,47 @@ func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	})
 }
 
+var _ PermsStore = (*MockPermsStore)(nil)
+
+type MockPermsStore struct {
+	MockAccessMode func(userID int64, repo *Repository) AccessMode
+	MockAuthorize  func(userID int64, repo *Repository, desired AccessMode) bool
+}
+
+func (m *MockPermsStore) AccessMode(userID int64, repo *Repository) AccessMode {
+	return m.MockAccessMode(userID, repo)
+}
+
+func (m *MockPermsStore) Authorize(userID int64, repo *Repository, desired AccessMode) bool {
+	return m.MockAuthorize(userID, repo, desired)
+}
+
+func SetMockPermsStore(t *testing.T, mock PermsStore) {
+	before := Perms
+	Perms = mock
+	t.Cleanup(func() {
+		Perms = before
+	})
+}
+
+var _ ReposStore = (*MockReposStore)(nil)
+
+type MockReposStore struct {
+	MockGetByName func(ownerID int64, name string) (*Repository, error)
+}
+
+func (m *MockReposStore) GetByName(ownerID int64, name string) (*Repository, error) {
+	return m.MockGetByName(ownerID, name)
+}
+
+func SetMockReposStore(t *testing.T, mock ReposStore) {
+	before := Repos
+	Repos = mock
+	t.Cleanup(func() {
+		Repos = before
+	})
+}
+
 var _ TwoFactorsStore = (*MockTwoFactorsStore)(nil)
 
 type MockTwoFactorsStore struct {
