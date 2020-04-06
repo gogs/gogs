@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package mock
+package mocks
 
 import (
 	"gopkg.in/macaron.v1"
@@ -10,24 +10,15 @@ import (
 
 var _ macaron.Locale = (*Locale)(nil)
 
-// Locale is a mock that implements macaron.Locale.
 type Locale struct {
-	lang string
-	tr   func(string, ...interface{}) string
-}
-
-// NewLocale creates a new mock for macaron.Locale.
-func NewLocale(lang string, tr func(string, ...interface{}) string) *Locale {
-	return &Locale{
-		lang: lang,
-		tr:   tr,
-	}
+	MockLang string
+	MockTr   func(string, ...interface{}) string
 }
 
 func (l *Locale) Language() string {
-	return l.lang
+	return l.MockLang
 }
 
 func (l *Locale) Tr(format string, args ...interface{}) string {
-	return l.tr(format, args...)
+	return l.MockTr(format, args...)
 }

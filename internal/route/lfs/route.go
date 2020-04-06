@@ -37,7 +37,7 @@ func RegisterRoutes(r *macaron.Router) {
 // authenticate tries to authenticate user via HTTP Basic Auth.
 func authenticate() macaron.Handler {
 	askCredentials := func(w http.ResponseWriter) {
-		w.Header().Set("LFS-Authenticate", `Basic realm="Git LFS"`)
+		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
 		responseJSON(w, http.StatusUnauthorized, responseError{
 			Message: "Credentials needed",
 		})
@@ -58,7 +58,7 @@ func authenticate() macaron.Handler {
 		}
 
 		if err == nil && user.IsEnabledTwoFactor() {
-			c.Error(http.StatusBadRequest, `Users with 2FA enabled are not allowed to authenticate via username and password.`)
+			c.Error(http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
 			return
 		}
 
