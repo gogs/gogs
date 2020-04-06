@@ -163,6 +163,48 @@ func Test_authenticate(t *testing.T) {
 	}
 }
 
+func Test_verifyHeader(t *testing.T) {
+	tests := []struct {
+		name          string
+		verifyHeader  macaron.Handler
+		header        http.Header
+		expStatusCode int
+	}{
+		{
+			name:          "header not found",
+			verifyHeader:  verifyHeader("Accept", contentType, http.StatusNotAcceptable),
+			expStatusCode: http.StatusNotAcceptable,
+		},
+
+		{
+			name:         "header found",
+			verifyHeader: verifyHeader("Accept", "application/vnd.git-lfs+json", http.StatusNotAcceptable),
+			header: http.Header{
+				"Accept": []string{"application/vnd.git-lfs+json; charset=utf-8"},
+			},
+			expStatusCode: http.StatusOK,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			m := macaron.New()
+			m.Get("/", test.verifyHeader)
+
+			r, err := http.NewRequest("GET", "/", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Header = test.header
+
+			rr := httptest.NewRecorder()
+			m.ServeHTTP(rr, r)
+
+			resp := rr.Result()
+			assert.Equal(t, test.expStatusCode, resp.StatusCode)
+		})
+	}
+}
+
 func Test_verifyOID(t *testing.T) {
 	m := macaron.New()
 	m.Get("/:oid", verifyOID(), func(w http.ResponseWriter, oid lfsutil.OID) {
