@@ -8,6 +8,49 @@ import (
 	"testing"
 )
 
+// NOTE: Mocks are sorted in alphabetical order.
+
+var _ AccessTokensStore = (*MockAccessTokensStore)(nil)
+
+type MockAccessTokensStore struct {
+	MockGetBySHA func(sha string) (*AccessToken, error)
+	MockSave     func(t *AccessToken) error
+}
+
+func (m *MockAccessTokensStore) GetBySHA(sha string) (*AccessToken, error) {
+	return m.MockGetBySHA(sha)
+}
+
+func (m *MockAccessTokensStore) Save(t *AccessToken) error {
+	return m.MockSave(t)
+}
+
+func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
+	before := AccessTokens
+	AccessTokens = mock
+	t.Cleanup(func() {
+		AccessTokens = before
+	})
+}
+
+var _ TwoFactorsStore = (*MockTwoFactorsStore)(nil)
+
+type MockTwoFactorsStore struct {
+	MockIsUserEnabled func(userID int64) bool
+}
+
+func (m *MockTwoFactorsStore) IsUserEnabled(userID int64) bool {
+	return m.MockIsUserEnabled(userID)
+}
+
+func SetMockTwoFactorsStore(t *testing.T, mock TwoFactorsStore) {
+	before := TwoFactors
+	TwoFactors = mock
+	t.Cleanup(func() {
+		TwoFactors = before
+	})
+}
+
 var _ UsersStore = (*MockUsersStore)(nil)
 
 type MockUsersStore struct {
@@ -33,23 +76,5 @@ func SetMockUsersStore(t *testing.T, mock UsersStore) {
 	Users = mock
 	t.Cleanup(func() {
 		Users = before
-	})
-}
-
-var _ TwoFactorsStore = (*MockTwoFactorsStore)(nil)
-
-type MockTwoFactorsStore struct {
-	MockIsUserEnabled func(userID int64) bool
-}
-
-func (m *MockTwoFactorsStore) IsUserEnabled(userID int64) bool {
-	return m.MockIsUserEnabled(userID)
-}
-
-func SetMockTwoFactorsStore(t *testing.T, mock TwoFactorsStore) {
-	before := TwoFactors
-	TwoFactors = mock
-	t.Cleanup(func() {
-		TwoFactors = before
 	})
 }

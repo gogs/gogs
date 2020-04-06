@@ -174,9 +174,3 @@ func responseJSON(w http.ResponseWriter, status int, v interface{}) {
 		return
 	}
 }
-
-func internalServerError(w http.ResponseWriter) {
-	responseJSON(w, http.StatusInternalServerError, responseError{
-		Message: "Internal server error",
-	})
-}
