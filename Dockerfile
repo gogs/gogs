@@ -1,16 +1,16 @@
-FROM golang:alpine3.10 AS binarybuilder
+FROM golang:alpine3.11 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
   git \
   linux-pam-dev
 
-WORKDIR /go/src/github.com/gogs/gogs
+WORKDIR /gogs.io/gogs
 COPY . .
-RUN make build-no-gen TAGS="sqlite cert pam"
+RUN make build-no-gen TAGS="cert pam"
 
-FROM alpine:3.10
-ADD https://github.com/tianon/gosu/releases/download/1.10/gosu-amd64 /usr/sbin/gosu
+FROM alpine:3.11
+ADD https://github.com/tianon/gosu/releases/download/1.11/gosu-amd64 /usr/sbin/gosu
 RUN chmod +x /usr/sbin/gosu \
   && echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
   && apk --no-cache --no-progress add \
@@ -33,7 +33,7 @@ COPY docker/nsswitch.conf /etc/nsswitch.conf
 
 WORKDIR /app/gogs
 COPY docker ./docker
-COPY --from=binarybuilder /go/src/github.com/gogs/gogs/gogs .
+COPY --from=binarybuilder /gogs.io/gogs/gogs .
 
 RUN ./docker/finalize.sh
 
