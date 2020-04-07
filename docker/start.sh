@@ -39,11 +39,11 @@ create_volume_subfolder() {
 }
 
 setids() {
+    export USER=git
     PUID=${PUID:-1000}
     PGID=${PGID:-1000}
-    groupmod -o -g "$PGID" git
-    usermod -o -u "$PUID" git
-    export USER=git
+    groupmod -o -g "$PGID" $USER
+    usermod -o -u "$PUID" $USER
 }
 
 setids
