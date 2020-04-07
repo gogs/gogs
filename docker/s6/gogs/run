@@ -4,5 +4,4 @@ if test -f ./setup; then
     source ./setup
 fi
 
-export USER=git
 exec gosu $USER /app/gogs/gogs web

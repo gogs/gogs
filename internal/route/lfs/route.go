@@ -34,10 +34,11 @@ func RegisterRoutes(r *macaron.Router) {
 	}, authenticate())
 }
 
-// authenticate tries to authenticate user via HTTP Basic Auth.
+// authenticate tries to authenticate user via HTTP Basic Auth. It first tries to authenticate
+// as plain username and password, then use username as access token if previous step failed.
 func authenticate() macaron.Handler {
 	askCredentials := func(w http.ResponseWriter) {
-		w.Header().Set("LFS-Authenticate", `Basic realm="Git LFS"`)
+		w.Header().Set("Lfs-Authenticate", `Basic realm="Git LFS"`)
 		responseJSON(w, http.StatusUnauthorized, responseError{
 			Message: "Credentials needed",
 		})
@@ -52,13 +53,13 @@ func authenticate() macaron.Handler {
 
 		user, err := db.Users.Authenticate(username, password, -1)
 		if err != nil && !db.IsErrUserNotExist(err) {
-			c.Status(http.StatusInternalServerError)
+			internalServerError(c.Resp)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
 			return
 		}
 
 		if err == nil && user.IsEnabledTwoFactor() {
-			c.Error(http.StatusBadRequest, `Users with 2FA enabled are not allowed to authenticate via username and password.`)
+			c.Error(http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
 			return
 		}
 
@@ -69,7 +70,7 @@ func authenticate() macaron.Handler {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c.Resp)
 				} else {
-					c.Status(http.StatusInternalServerError)
+					internalServerError(c.Resp)
 					log.Error("Failed to get access token [sha: %s]: %v", username, err)
 				}
 				return
@@ -83,7 +84,7 @@ func authenticate() macaron.Handler {
 			if err != nil {
 				// Once we found the token, we're supposed to find its related user,
 				// thus any error is unexpected.
-				c.Status(http.StatusInternalServerError)
+				internalServerError(c.Resp)
 				log.Error("Failed to get user: %v", err)
 				return
 			}
@@ -97,7 +98,7 @@ func authenticate() macaron.Handler {
 
 // authorize tries to authorize the user to the context repository with given access mode.
 func authorize(mode db.AccessMode) macaron.Handler {
-	return func(c *macaron.Context, user *db.User) {
+	return func(c *macaron.Context, actor *db.User) {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
@@ -106,7 +107,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
-				c.Status(http.StatusInternalServerError)
+				internalServerError(c.Resp)
 				log.Error("Failed to get user [name: %s]: %v", username, err)
 			}
 			return
@@ -117,18 +118,18 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
 			} else {
-				c.Status(http.StatusInternalServerError)
+				internalServerError(c.Resp)
 				log.Error("Failed to get repository [owner_id: %d, name: %s]: %v", owner.ID, reponame, err)
 			}
 			return
 		}
 
-		if !db.Perms.Authorize(user.ID, repo, mode) {
+		if !db.Perms.Authorize(actor.ID, repo, mode) {
 			c.Status(http.StatusNotFound)
 			return
 		}
 
-		c.Map(owner)
+		c.Map(owner) // NOTE: Override actor
 		c.Map(repo)
 	}
 }
@@ -149,10 +150,18 @@ func verifyOID() macaron.Handler {
 	return func(c *macaron.Context) {
 		oid := lfsutil.OID(c.Params(":oid"))
 		if !lfsutil.ValidOID(oid) {
-			c.Error(http.StatusBadRequest, "Invalid oid")
+			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+				Message: "Invalid oid",
+			})
 			return
 		}
 
 		c.Map(oid)
 	}
+}
+
+func internalServerError(w http.ResponseWriter) {
+	responseJSON(w, http.StatusInternalServerError, responseError{
+		Message: "Internal server error",
+	})
 }

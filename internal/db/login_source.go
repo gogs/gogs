@@ -151,7 +151,8 @@ type LoginSource struct {
 	Name      string          `xorm:"UNIQUE"`
 	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
 	IsDefault bool            `xorm:"DEFAULT false"`
-	Cfg       core.Conversion `xorm:"TEXT"`
+	Cfg       core.Conversion `xorm:"TEXT" gorm:"COLUMN:remove-me-when-migrated-to-gorm"`
+	RawCfg    string          `xorm:"-" gorm:"COLUMN:cfg"` // TODO: Remove me when migrated to GORM.
 
 	Created     time.Time `xorm:"-" json:"-"`
 	CreatedUnix int64
@@ -206,6 +207,23 @@ func (s *LoginSource) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 	}
+}
+
+// NOTE: This is a GORM query hook.
+func (s *LoginSource) AfterFind() error {
+	switch s.Type {
+	case LoginLDAP, LoginDLDAP:
+		s.Cfg = new(LDAPConfig)
+	case LoginSMTP:
+		s.Cfg = new(SMTPConfig)
+	case LoginPAM:
+		s.Cfg = new(PAMConfig)
+	case LoginGitHub:
+		s.Cfg = new(GitHubConfig)
+	default:
+		return fmt.Errorf("unrecognized login source type: %v", s.Type)
+	}
+	return jsoniter.UnmarshalFromString(s.RawCfg, s.Cfg)
 }
 
 func (s *LoginSource) TypeName() string {
