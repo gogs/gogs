@@ -238,9 +238,10 @@ func runHookPostReceive(c *cli.Context) error {
 		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
-		resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
-			InsecureSkipVerify: true,
-		}).Response()
+		resp, err := httplib.Get(reqURL).
+			SetTLSClientConfig(&tls.Config{
+				InsecureSkipVerify: true,
+			}).Response()
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
