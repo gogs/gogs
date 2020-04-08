@@ -51,6 +51,7 @@ All notable changes to Gogs are documented in this file.
 - Enable Federated Avatar Lookup could cause server to crash. [#5848](https://github.com/gogs/gogs/issues/5848)
 - Private repositories are hidden in the organization's view. [#5869](https://github.com/gogs/gogs/issues/5869)
 - Server error when changing email address in user settings page. [#5899](https://github.com/gogs/gogs/issues/5899)
+- Webhooks are not fired after push when `[service] REQUIRE_SIGNIN_VIEW = true`.
 
 ### Removed
 

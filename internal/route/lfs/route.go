@@ -85,7 +85,7 @@ func authenticate() macaron.Handler {
 				// Once we found the token, we're supposed to find its related user,
 				// thus any error is unexpected.
 				internalServerError(c.Resp)
-				log.Error("Failed to get user: %v", err)
+				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
 				return
 			}
 		}
