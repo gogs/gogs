@@ -116,7 +116,7 @@
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.wiki"}}</label>
 							<div class="ui checkbox">
-								<input class="enable-system" type="checkbox" name="enable_wiki" data-target="#wiki_box" {{if .Repository.EnableWiki}}checked{{end}}>
+								<input class="enable-system" type="checkbox" name="enable_wiki" data-target="#wiki_box" data-uncheck="input[name='allow_public_wiki']" {{if .Repository.EnableWiki}}checked{{end}}>
 								<label>{{.i18n.Tr "repo.settings.wiki_desc"}}</label>
 							</div>
 						</div>
@@ -136,7 +136,7 @@
 
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-enable="#external_wiki_box" data-disable="#internal_wiki_box" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_wiki" type="radio" value="true" data-enable="#external_wiki_box" data-disable="#internal_wiki_box" data-uncheck="input[name='allow_public_wiki']" {{if .Repository.EnableExternalWiki}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_external_wiki"}}</label>
 								</div>
 							</div>
@@ -151,7 +151,7 @@
 						<div class="inline field">
 							<label>{{.i18n.Tr "repo.issues"}}</label>
 							<div class="ui checkbox">
-								<input class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" {{if .Repository.EnableIssues}}checked{{end}}>
+								<input class="enable-system" name="enable_issues" type="checkbox" data-target="#issue_box" data-uncheck="input[name='allow_public_issues']" {{if .Repository.EnableIssues}}checked{{end}}>
 								<label>{{.i18n.Tr "repo.settings.issues_desc"}}</label>
 							</div>
 						</div>
@@ -171,7 +171,7 @@
 
 							<div class="field">
 								<div class="ui radio checkbox">
-									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-enable="#external_issue_box" data-disable="#internal_issue_box" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
+									<input class="hidden enable-system-radio" tabindex="0" name="enable_external_tracker" type="radio" value="true" data-enable="#external_issue_box" data-disable="#internal_issue_box" data-uncheck="input[name='allow_public_issues']" {{if .Repository.EnableExternalTracker}}checked{{end}}/>
 									<label>{{.i18n.Tr "repo.settings.use_external_issue_tracker"}}</label>
 								</div>
 							</div>
