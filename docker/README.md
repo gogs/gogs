@@ -73,7 +73,7 @@ $ docker run --name=gogs -p 10022:22 -p 10080:3000 -v gogs-data:/data gogs/gogs
 Most of settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
 
 - **Repository Root Path**: keep it as default value `/home/git/gogs-repositories` because `start.sh` already made a symbolic link for you.
-- **Run User**: keep it as default value `git` because `build.sh` already setup a user with name `git`.
+- **Run User**: keep it as default value `git` because `finalize.sh` already setup a user with name `git`.
 - **Domain**: fill in with Docker container IP (e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
 - **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `22` inside Docker, **but** you expose it by `10022:22`, then use `10022` for this value. **Builtin SSH server is not recommended inside Docker Container**
 - **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, **and** you expose it by `10080:3000`, but you still use `3000` for this value.
