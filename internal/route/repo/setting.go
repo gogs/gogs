@@ -156,6 +156,13 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		repo.PullsIgnoreWhitespace = f.PullsIgnoreWhitespace
 		repo.PullsAllowRebase = f.PullsAllowRebase
 
+		if !repo.EnableWiki || repo.EnableExternalWiki {
+			repo.AllowPublicWiki = false
+		}
+		if !repo.EnableIssues || repo.EnableExternalTracker {
+			repo.AllowPublicIssues = false
+		}
+
 		if err := db.UpdateRepository(repo, false); err != nil {
 			c.Error(err, "update repository")
 			return
