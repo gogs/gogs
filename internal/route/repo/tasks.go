@@ -61,7 +61,7 @@ func TriggerTask(c *macaron.Context) {
 			c.Error(http.StatusBadRequest, "Pusher does not exist")
 		} else {
 			c.Status(http.StatusInternalServerError)
-			log.Error("Failed to get user [id: %s]: %v", pusherID, err)
+			log.Error("Failed to get user [id: %d]: %v", pusherID, err)
 		}
 		return
 	}
