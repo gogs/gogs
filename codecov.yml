@@ -6,4 +6,4 @@ coverage:
         threshold: 1%
 
 comment:
-  layout: 'diff, files'
+  layout: 'diff'
