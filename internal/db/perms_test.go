@@ -267,7 +267,7 @@ func test_perms_SetRepoPerms(t *testing.T, db *perms) {
 	}
 
 	var accesses []*Access
-	err := db.Find(&accesses).Error
+	err := db.Order("id ASC").Find(&accesses).Error
 	if err != nil {
 		t.Fatal(err)
 	}
