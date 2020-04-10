@@ -8,11 +8,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/testutil"
 )
 
@@ -38,4 +41,36 @@ func deleteTables(db *gorm.DB, tables ...interface{}) error {
 		}
 	}
 	return nil
+}
+
+func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
+	t.Helper()
+
+	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
+	db, err := openDB(conf.DatabaseOpts{
+		Type: "sqlite3",
+		Path: dbpath,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = db.Close()
+
+		if t.Failed() {
+			t.Logf("Database %q left intact for inspection", dbpath)
+			return
+		}
+
+		_ = os.Remove(dbpath)
+	})
+
+	err = db.AutoMigrate(tables...).Error
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().Truncate(time.Second)
+	gorm.NowFunc = func() time.Time { return now }
+	return db
 }
