@@ -1,12 +1,12 @@
 #!/bin/sh
 
 if ! test -d ~git/.ssh; then
-    exec gosu $USER mkdir -p ~git/.ssh
+    mkdir -p ~git/.ssh
     chmod 700 ~git/.ssh
 fi
 
 if ! test -f ~git/.ssh/environment; then
-    exec gosu $USER echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~git/.ssh/environment
+    echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~git/.ssh/environment
     chmod 600 ~git/.ssh/environment
 fi
 
@@ -18,5 +18,16 @@ ln -sfn /data/gogs/data ./data
 
 # Backward Compatibility with Gogs Container v0.6.15
 ln -sfn /data/git /home/git
+
+# Only chown for the first time, owner of '/data' is 'git' inside Docker after installation
+if [ $(stat -c '%U' /data) != 'git' ]; then
+    chown -R git:git /data ~git/
+fi
+
+# Check ownership of '/app/gogs' in case the image changed and '/data' is persistent
+if [ $(stat -c '%U' /app/gogs) != 'git' ]; then
+    chown -R git:git /app/gogs
+fi
+
 
 chmod 0755 /data /data/gogs ~git/
