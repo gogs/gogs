@@ -163,9 +163,12 @@ func Init() error {
 		return errors.Wrap(err, "migrate schemes")
 	}
 
-	clock := func() time.Time {return time.Now().UTC().Truncate(time.Microsecond)}
+	gorm.NowFunc = func() time.Time {
+		return time.Now().UTC().Truncate(time.Microsecond)
+	}
+
 	// Initialize stores, sorted in alphabetical order.
-	AccessTokens = &accessTokens{DB: db, clock: clock}
+	AccessTokens = &accessTokens{DB: db}
 	LoginSources = &loginSources{DB: db}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}

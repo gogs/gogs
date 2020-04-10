@@ -56,12 +56,12 @@ type AccessToken struct {
 
 // NOTE: This is a GORM create hook.
 func (t *AccessToken) BeforeCreate() {
-	t.CreatedUnix = t.Created.Unix()
+	t.CreatedUnix = gorm.NowFunc().Unix()
 }
 
 // NOTE: This is a GORM update hook.
 func (t *AccessToken) BeforeUpdate() {
-	t.UpdatedUnix = t.Updated.Unix()
+	t.UpdatedUnix = gorm.NowFunc().Unix()
 }
 
 // NOTE: This is a GORM query hook.
@@ -69,14 +69,13 @@ func (t *AccessToken) AfterFind() {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
 	t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
 	t.HasUsed = t.Updated.After(t.Created)
-	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(time.Now())
+	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(gorm.NowFunc())
 }
 
 var _ AccessTokensStore = (*accessTokens)(nil)
 
 type accessTokens struct {
 	*gorm.DB
-	clock func() time.Time
 }
 
 type ErrAccessTokenAlreadyExist struct {
@@ -101,10 +100,9 @@ func (db *accessTokens) Create(userID int64, name string) (*AccessToken, error) 
 	}
 
 	token := &AccessToken{
-		UserID:  userID,
-		Name:    name,
-		Sha1:    tool.SHA1(gouuid.NewV4().String()),
-		Created: db.clock(),
+		UserID: userID,
+		Name:   name,
+		Sha1:   tool.SHA1(gouuid.NewV4().String()),
 	}
 	return token, db.DB.Create(token).Error
 }
@@ -150,6 +148,5 @@ func (db *accessTokens) List(userID int64) ([]*AccessToken, error) {
 }
 
 func (db *accessTokens) Save(t *AccessToken) error {
-	t.Updated = db.clock()
 	return db.DB.Save(t).Error
 }
