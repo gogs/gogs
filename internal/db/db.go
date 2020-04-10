@@ -27,8 +27,8 @@ import (
 // parsePostgreSQLHostPort parses given input in various forms defined in
 // https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
 // and returns proper host and port number.
-func parsePostgreSQLHostPort(info string) (string, string) {
-	host, port := "127.0.0.1", "5432"
+func parsePostgreSQLHostPort(info string) (host, port string) {
+	host, port = "127.0.0.1", "5432"
 	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
 		idx := strings.LastIndex(info, ":")
 		host = info[:idx]
@@ -39,8 +39,8 @@ func parsePostgreSQLHostPort(info string) (string, string) {
 	return host, port
 }
 
-func parseMSSQLHostPort(info string) (string, string) {
-	host, port := "127.0.0.1", "1433"
+func parseMSSQLHostPort(info string) (host, port  string) {
+	host, port = "127.0.0.1", "1433"
 	if strings.Contains(info, ":") {
 		host = strings.Split(info, ":")[0]
 		port = strings.Split(info, ":")[1]

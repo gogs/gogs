@@ -14,11 +14,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 )
 
-func init() {
-	conf.MustInit("")
-}
-
 func Test_SSHParsePublicKey(t *testing.T) {
+	conf.MustInit("")
 	testKeys := map[string]struct {
 		typeName string
 		length   int
