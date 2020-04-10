@@ -267,7 +267,7 @@ func test_perms_SetRepoPerms(t *testing.T, db *perms) {
 	}
 
 	var accesses []*Access
-	err := db.Order("id ASC").Find(&accesses).Error
+	err := db.Order("user_id, repo_id").Find(&accesses).Error
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,10 +278,10 @@ func test_perms_SetRepoPerms(t *testing.T, db *perms) {
 	}
 
 	expAccesses := []*Access{
-		{UserID: 2, RepoID: 1, Mode: AccessModeWrite},
-		{UserID: 3, RepoID: 1, Mode: AccessModeAdmin},
 		{UserID: 1, RepoID: 2, Mode: AccessModeWrite},
+		{UserID: 2, RepoID: 1, Mode: AccessModeWrite},
 		{UserID: 2, RepoID: 2, Mode: AccessModeRead},
+		{UserID: 3, RepoID: 1, Mode: AccessModeAdmin},
 		{UserID: 5, RepoID: 2, Mode: AccessModeWrite},
 	}
 	assert.Equal(t, expAccesses, accesses)
