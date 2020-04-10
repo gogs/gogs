@@ -7,6 +7,7 @@ package db
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/testutil"
 )
 
@@ -65,6 +67,11 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 		_ = os.Remove(dbpath)
 	})
 
+	db.SingularTable(true)
+	if !testing.Verbose() {
+		db.SetLogger(&dbutil.Writer{Writer: ioutil.Discard})
+	}
+
 	err = db.AutoMigrate(tables...).Error
 	if err != nil {
 		t.Fatal(err)
@@ -72,5 +79,6 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 
 	now := time.Now().Truncate(time.Second)
 	gorm.NowFunc = func() time.Time { return now }
+
 	return db
 }

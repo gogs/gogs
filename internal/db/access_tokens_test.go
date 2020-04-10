@@ -6,6 +6,7 @@ package db
 
 import (
 	"testing"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func test_accessTokens_Create(t *testing.T, db *accessTokens) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc(), token.Created)
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Created.Format(time.RFC3339))
 
 	// Try create second access token with same name should fail
 	_, err = db.Create(token.UserID, token.Name)
@@ -175,5 +176,5 @@ func test_accessTokens_Save(t *testing.T, db *accessTokens) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc(), token.Updated)
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Updated.Format(time.RFC3339))
 }
