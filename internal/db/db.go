@@ -163,9 +163,7 @@ func Init() error {
 		return errors.Wrap(err, "migrate schemes")
 	}
 
-	clock := func() time.Time {
-		return time.Now()
-	}
+	clock := func() time.Time {return time.Now().UTC().Truncate(time.Microsecond)}
 	// Initialize stores, sorted in alphabetical order.
 	AccessTokens = &accessTokens{DB: db, clock: clock}
 	LoginSources = &loginSources{DB: db}
