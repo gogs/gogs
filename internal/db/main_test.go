@@ -21,6 +21,8 @@ import (
 	"gogs.io/gogs/internal/testutil"
 )
 
+var printSQL = flag.Bool("print-sql", false, "Print SQL executed")
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if !testing.Verbose() {
@@ -74,6 +76,9 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	db.SingularTable(true)
 	if !testing.Verbose() {
 		db.SetLogger(&dbutil.Writer{Writer: ioutil.Discard})
+	}
+	if *printSQL {
+		db.LogMode(true)
 	}
 
 	err = db.AutoMigrate(tables...).Error

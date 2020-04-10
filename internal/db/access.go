@@ -146,7 +146,7 @@ func maxAccessMode(modes ...AccessMode) AccessMode {
 	return max
 }
 
-// FIXME: do corss-comparison so reduce deletions and additions to the minimum?
+// Deprecated: Use Perms.SetRepoPerms instead.
 func (repo *Repository) refreshAccesses(e Engine, accessMap map[int64]AccessMode) (err error) {
 	newAccesses := make([]Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
