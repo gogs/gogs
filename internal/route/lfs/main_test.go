@@ -6,6 +6,7 @@ package lfs
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 
@@ -19,7 +20,11 @@ func TestMain(m *testing.M) {
 	if !testing.Verbose() {
 		// Remove the primary logger and register a noop logger.
 		log.Remove(log.DefaultConsoleName)
-		log.New("noop", testutil.InitNoopLogger)
+		err := log.New("noop", testutil.InitNoopLogger)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 	os.Exit(m.Run())
 }
