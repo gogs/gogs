@@ -108,6 +108,9 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid 
 
 	err = db.LFS.CreateObject(repo.ID, oid, written, s.Storage())
 	if err != nil {
+		// NOTE: It is OK to leave the file when the whole operation failed
+		// with a DB error, a retry on client side can safely overwrite the
+		// same file as OID is seen as unique to every file.
 		internalServerError(c.Resp)
 		log.Error("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return
