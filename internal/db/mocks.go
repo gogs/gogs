@@ -81,8 +81,9 @@ func SetMockLFSStore(t *testing.T, mock LFSStore) {
 var _ PermsStore = (*MockPermsStore)(nil)
 
 type MockPermsStore struct {
-	MockAccessMode func(userID int64, repo *Repository) AccessMode
-	MockAuthorize  func(userID int64, repo *Repository, desired AccessMode) bool
+	MockAccessMode   func(userID int64, repo *Repository) AccessMode
+	MockAuthorize    func(userID int64, repo *Repository, desired AccessMode) bool
+	MockSetRepoPerms func(repoID int64, accessMap map[int64]AccessMode) error
 }
 
 func (m *MockPermsStore) AccessMode(userID int64, repo *Repository) AccessMode {
@@ -91,6 +92,10 @@ func (m *MockPermsStore) AccessMode(userID int64, repo *Repository) AccessMode {
 
 func (m *MockPermsStore) Authorize(userID int64, repo *Repository, desired AccessMode) bool {
 	return m.MockAuthorize(userID, repo, desired)
+}
+
+func (m *MockPermsStore) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error {
+	return m.MockSetRepoPerms(repoID, accessMap)
 }
 
 func SetMockPermsStore(t *testing.T, mock PermsStore) {
