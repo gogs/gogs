@@ -139,7 +139,7 @@ func (h *basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 		return
 	}
 
-	object, err := db.LFS.GetObjectByOID(repo.ID, lfsutil.OID(request.Oid))
+	object, err := db.LFS.GetObjectByOID(repo.ID, request.Oid)
 	if err != nil {
 		if db.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.Resp, http.StatusNotFound, responseError{
@@ -153,7 +153,7 @@ func (h *basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 	}
 
 	if object.Size != request.Size {
-		responseJSON(c.Resp, http.StatusNotFound, responseError{
+		responseJSON(c.Resp, http.StatusBadRequest, responseError{
 			Message: "Object size mismatch",
 		})
 		return
