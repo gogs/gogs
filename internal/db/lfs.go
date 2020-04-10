@@ -30,10 +30,6 @@ type LFSStore interface {
 
 var LFS LFSStore
 
-type lfs struct {
-	*gorm.DB
-}
-
 // LFSObject is the relation between an LFS object and a repository.
 type LFSObject struct {
 	RepoID    int64           `gorm:"PRIMARY_KEY;AUTO_INCREMENT:false"`
@@ -41,6 +37,12 @@ type LFSObject struct {
 	Size      int64           `gorm:"NOT NULL"`
 	Storage   lfsutil.Storage `gorm:"NOT NULL"`
 	CreatedAt time.Time       `gorm:"NOT NULL"`
+}
+
+var _ LFSStore = (*lfs)(nil)
+
+type lfs struct {
+	*gorm.DB
 }
 
 func (db *lfs) CreateObject(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
