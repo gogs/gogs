@@ -5,15 +5,12 @@
 package db
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -24,33 +21,9 @@ func Test_accessTokens(t *testing.T) {
 
 	t.Parallel()
 
-	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%d.db", time.Now().Unix()))
-	gdb, err := openDB(conf.DatabaseOpts{
-		Type: "sqlite3",
-		Path: dbpath,
-	})
-	if err != nil {
-		t.Fatal(err)
+	db := &accessTokens{
+		DB: initTestDB(t, "accessTokens", new(AccessToken)),
 	}
-	t.Cleanup(func() {
-		_ = gdb.Close()
-
-		if t.Failed() {
-			t.Logf("Database %q left intact for inspection", dbpath)
-			return
-		}
-
-		_ = os.Remove(dbpath)
-	})
-
-	err = gdb.AutoMigrate(new(AccessToken)).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	now := time.Now().Truncate(time.Second)
-	clock := func() time.Time { return now }
-	db := &accessTokens{DB: gdb, clock: clock}
 
 	for _, tc := range []struct {
 		name string
@@ -64,7 +37,7 @@ func Test_accessTokens(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := deleteTables(gdb, new(AccessToken))
+				err := deleteTables(db.DB, new(AccessToken))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -84,7 +57,13 @@ func test_accessTokens_Create(t *testing.T, db *accessTokens) {
 	assert.Equal(t, int64(1), token.UserID)
 	assert.Equal(t, "Test", token.Name)
 	assert.Equal(t, 40, len(token.Sha1), "sha1 length")
-	assert.Equal(t, db.clock(), token.Created)
+
+	// Get it back and check the Created field
+	token, err = db.GetBySHA(token.Sha1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Created.Format(time.RFC3339))
 
 	// Try create second access token with same name should fail
 	_, err = db.Create(token.UserID, token.Name)
@@ -197,5 +176,5 @@ func test_accessTokens_Save(t *testing.T, db *accessTokens) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, db.clock(), token.Updated)
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Updated.Format(time.RFC3339))
 }
