@@ -48,7 +48,8 @@ func Test_accessTokens(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	clock := func() time.Time { return time.Now().Truncate(time.Second) }
+	now := time.Now().Truncate(time.Second)
+	clock := func() time.Time { return now }
 	db := &accessTokens{DB: gdb, clock: clock}
 
 	for _, tc := range []struct {
