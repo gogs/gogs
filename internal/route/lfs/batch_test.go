@@ -23,6 +23,7 @@ func Test_serveBatch(t *testing.T) {
 	conf.SetMockServer(t, conf.ServerOpts{
 		ExternalURL: "https://gogs.example.com/",
 	})
+
 	m := macaron.New()
 	m.Use(func(c *macaron.Context) {
 		c.Map(&db.User{Name: "owner"})

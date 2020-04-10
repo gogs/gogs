@@ -9,13 +9,11 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 	"gogs.io/gogs/internal/strutil"
@@ -27,8 +25,25 @@ const (
 	basicOperationDownload = "download"
 )
 
+type basicHandler struct {
+	// The default storage backend for uploading new objects.
+	defaultStorage lfsutil.Storage
+	// The list of available storage backends to access objects.
+	storagers map[lfsutil.Storage]lfsutil.Storager
+}
+
+// DefaultStorager returns the default storage backend.
+func (h *basicHandler) DefaultStorager() lfsutil.Storager {
+	return h.storagers[h.defaultStorage]
+}
+
+// Storager returns the given storage backend.
+func (h *basicHandler) Storager(storage lfsutil.Storage) lfsutil.Storager {
+	return h.storagers[storage]
+}
+
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func serveBasicDownload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
+func (h *basicHandler) serveDownload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
 	object, err := db.LFS.GetObjectByOID(repo.ID, oid)
 	if err != nil {
 		if db.IsErrLFSObjectNotExist(err) {
@@ -42,28 +57,26 @@ func serveBasicDownload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID
 		return
 	}
 
-	fpath := lfsutil.StorageLocalPath(conf.LFS.ObjectsPath, object.OID)
-	r, err := os.Open(fpath)
-	if err != nil {
+	s := h.Storager(object.Storage)
+	if s == nil {
 		internalServerError(c.Resp)
-		log.Error("Failed to open object file [path: %s]: %v", fpath, err)
+		log.Error("Failed to locate the object [repo_id: %d, oid: %s]: storage %q not found", object.RepoID, object.OID, object.Storage)
 		return
 	}
-	defer r.Close()
 
 	c.Header().Set("Content-Type", "application/octet-stream")
 	c.Header().Set("Content-Length", strconv.FormatInt(object.Size, 10))
 	c.Status(http.StatusOK)
 
-	_, err = io.Copy(c.Resp, r)
+	err = s.Download(object.OID, c.Resp)
 	if err != nil {
-		log.Error("Failed to copy object file: %v", err)
+		log.Error("Failed to download object [oid: %s]: %v", object.OID, err)
 		return
 	}
 }
 
 // PUT /{owner}/{repo}.git/info/lfs/object/basic/{oid}
-func serveBasicUpload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
+func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
 	// NOTE: LFS client will retry upload the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
 	_, err := db.LFS.GetObjectByOID(repo.ID, oid)
@@ -79,8 +92,25 @@ func serveBasicUpload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) 
 		return
 	}
 
-	err = db.LFS.CreateObject(repo.ID, oid, c.Req.Request.Body, lfsutil.StorageLocal)
+	s := h.DefaultStorager()
+	written, err := s.Upload(oid, c.Req.Request.Body)
 	if err != nil {
+		if err == lfsutil.ErrInvalidOID {
+			responseJSON(c.Resp, http.StatusBadRequest, responseError{
+				Message: err.Error(),
+			})
+		} else {
+			internalServerError(c.Resp)
+			log.Error("Failed to upload object [storage: %s, oid: %s]: %v", s.Storage(), oid, err)
+		}
+		return
+	}
+
+	err = db.LFS.CreateObject(repo.ID, oid, written, s.Storage())
+	if err != nil {
+		// NOTE: It is OK to leave the file when the whole operation failed
+		// with a DB error, a retry on client side can safely overwrite the
+		// same file as OID is seen as unique to every file.
 		internalServerError(c.Resp)
 		log.Error("Failed to create object [repo_id: %d, oid: %s]: %v", repo.ID, oid, err)
 		return
@@ -91,7 +121,7 @@ func serveBasicUpload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) 
 }
 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
-func serveBasicVerify(c *macaron.Context, repo *db.Repository) {
+func (h *basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 	var request basicVerifyRequest
 	defer c.Req.Request.Body.Close()
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
@@ -109,7 +139,7 @@ func serveBasicVerify(c *macaron.Context, repo *db.Repository) {
 		return
 	}
 
-	object, err := db.LFS.GetObjectByOID(repo.ID, lfsutil.OID(request.Oid))
+	object, err := db.LFS.GetObjectByOID(repo.ID, request.Oid)
 	if err != nil {
 		if db.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.Resp, http.StatusNotFound, responseError{
@@ -123,7 +153,7 @@ func serveBasicVerify(c *macaron.Context, repo *db.Repository) {
 	}
 
 	if object.Size != request.Size {
-		responseJSON(c.Resp, http.StatusNotFound, responseError{
+		responseJSON(c.Resp, http.StatusBadRequest, responseError{
 			Message: "Object size mismatch",
 		})
 		return
