@@ -13,6 +13,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/authutil"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -26,10 +27,17 @@ func RegisterRoutes(r *macaron.Router) {
 	r.Group("", func() {
 		r.Post("/objects/batch", authorize(db.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch)
 		r.Group("/objects/basic", func() {
+
+			basic := &basicHandler{
+				defaultStorage: lfsutil.Storage(conf.LFS.Storage),
+				storagers: map[lfsutil.Storage]lfsutil.Storager{
+					lfsutil.StorageLocal: &lfsutil.LocalStorage{Root: conf.LFS.ObjectsPath},
+				},
+			}
 			r.Combo("/:oid", verifyOID()).
-				Get(authorize(db.AccessModeRead), serveBasicDownload).
-				Put(authorize(db.AccessModeWrite), verifyContentTypeStream, serveBasicUpload)
-			r.Post("/verify", authorize(db.AccessModeWrite), verifyAccept, verifyContentTypeJSON, serveBasicVerify)
+				Get(authorize(db.AccessModeRead), basic.serveDownload).
+				Put(authorize(db.AccessModeWrite), verifyContentTypeStream, basic.serveUpload)
+			r.Post("/verify", authorize(db.AccessModeWrite), verifyAccept, verifyContentTypeJSON, basic.serveVerify)
 		})
 	}, authenticate())
 }

@@ -6,15 +6,10 @@ package db
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/pkg/errors"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -23,8 +18,8 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type LFSStore interface {
-	// CreateObject streams io.ReadCloser to target storage and creates a record in database.
-	CreateObject(repoID int64, oid lfsutil.OID, rc io.ReadCloser, storage lfsutil.Storage) error
+	// CreateObject creates a LFS object record in database.
+	CreateObject(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error
 	// GetObjectByOID returns the LFS object with given OID. It returns ErrLFSObjectNotExist
 	// when not found.
 	GetObjectByOID(repoID int64, oid lfsutil.OID) (*LFSObject, error)
@@ -48,44 +43,11 @@ type LFSObject struct {
 	CreatedAt time.Time       `gorm:"NOT NULL"`
 }
 
-func (db *lfs) CreateObject(repoID int64, oid lfsutil.OID, rc io.ReadCloser, storage lfsutil.Storage) error {
-	if storage != lfsutil.StorageLocal {
-		return errors.New("only local storage is supported")
-	}
-
-	var ioerr error
-	fpath := lfsutil.StorageLocalPath(conf.LFS.ObjectsPath, oid)
-	defer func() {
-		rc.Close()
-
-		// NOTE: Only remove the file if there is an IO error, it is OK to
-		// leave the file when the whole operation failed with a DB error,
-		// a retry on client side can safely overwrite the same file as OID
-		// is seen as unique to every file.
-		if ioerr != nil {
-			_ = os.Remove(fpath)
-		}
-	}()
-
-	ioerr = os.MkdirAll(filepath.Dir(fpath), os.ModePerm)
-	if ioerr != nil {
-		return errors.Wrap(ioerr, "create directories")
-	}
-	w, ioerr := os.Create(fpath)
-	if ioerr != nil {
-		return errors.Wrap(ioerr, "create file")
-	}
-	defer w.Close()
-
-	written, ioerr := io.Copy(w, rc)
-	if ioerr != nil {
-		return errors.Wrap(ioerr, "copy file")
-	}
-
+func (db *lfs) CreateObject(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
 	object := &LFSObject{
 		RepoID:  repoID,
 		OID:     oid,
-		Size:    written,
+		Size:    size,
 		Storage: storage,
 	}
 	return db.DB.Create(object).Error
