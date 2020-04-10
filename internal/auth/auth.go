@@ -6,7 +6,6 @@ package auth
 
 import (
 	"strings"
-	"time"
 
 	"github.com/go-macaron/session"
 	gouuid "github.com/satori/go.uuid"
@@ -55,7 +54,6 @@ func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bo
 				}
 				return 0, false
 			}
-			t.Updated = time.Now()
 			if err = db.AccessTokens.Save(t); err != nil {
 				log.Error("UpdateAccessToken: %v", err)
 			}
