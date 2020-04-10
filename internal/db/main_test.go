@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/jinzhu/gorm"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/testutil"
@@ -27,4 +28,14 @@ func TestMain(m *testing.M) {
 		}
 	}
 	os.Exit(m.Run())
+}
+
+func deleteTables(db *gorm.DB, tables ...interface{}) error {
+	for _, t := range tables {
+		err := db.Delete(t).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
