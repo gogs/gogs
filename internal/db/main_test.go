@@ -32,6 +32,10 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	}
+
+	now := time.Now().Truncate(time.Second)
+	gorm.NowFunc = func() time.Time { return now }
+
 	os.Exit(m.Run())
 }
 
@@ -76,9 +80,6 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	now := time.Now().Truncate(time.Second)
-	gorm.NowFunc = func() time.Time { return now }
 
 	return db
 }
