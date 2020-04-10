@@ -39,7 +39,7 @@ func parsePostgreSQLHostPort(info string) (host, port string) {
 	return host, port
 }
 
-func parseMSSQLHostPort(info string) (host, port  string) {
+func parseMSSQLHostPort(info string) (host, port string) {
 	host, port = "127.0.0.1", "1433"
 	if strings.Contains(info, ":") {
 		host = strings.Split(info, ":")[0]
@@ -122,6 +122,11 @@ func getLogWriter() (io.Writer, error) {
 	return w, nil
 }
 
+var tables = []interface{}{
+	new(AccessToken),
+	new(LFSObject),
+}
+
 func Init() error {
 	db, err := openDB(conf.Database)
 	if err != nil {
@@ -150,16 +155,17 @@ func Init() error {
 	case "mssql":
 		conf.UseMSSQL = true
 	case "sqlite3":
-		conf.UseMySQL = true
+		conf.UseSQLite3 = true
 	}
 
-	err = db.AutoMigrate(new(LFSObject)).Error
+	err = db.AutoMigrate(tables...).Error
 	if err != nil {
 		return errors.Wrap(err, "migrate schemes")
 	}
 
+	clock := func() time.Time {return time.Now().UTC().Truncate(time.Microsecond)}
 	// Initialize stores, sorted in alphabetical order.
-	AccessTokens = &accessTokens{DB: db}
+	AccessTokens = &accessTokens{DB: db, clock: clock}
 	LoginSources = &loginSources{DB: db}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}

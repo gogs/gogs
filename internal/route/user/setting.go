@@ -581,7 +581,7 @@ func SettingsApplications(c *context.Context) {
 	c.Title("settings.applications")
 	c.PageIs("SettingsApplications")
 
-	tokens, err := db.ListAccessTokens(c.User.ID)
+	tokens, err := db.AccessTokens.List(c.User.ID)
 	if err != nil {
 		c.Errorf(err, "list access tokens")
 		return
@@ -596,7 +596,7 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 	c.PageIs("SettingsApplications")
 
 	if c.HasError() {
-		tokens, err := db.ListAccessTokens(c.User.ID)
+		tokens, err := db.AccessTokens.List(c.User.ID)
 		if err != nil {
 			c.Errorf(err, "list access tokens")
 			return
@@ -607,12 +607,9 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 		return
 	}
 
-	t := &db.AccessToken{
-		UserID: c.User.ID,
-		Name:   f.Name,
-	}
-	if err := db.NewAccessToken(t); err != nil {
-		if errors.IsAccessTokenNameAlreadyExist(err) {
+	t, err := db.AccessTokens.Create(c.User.ID, f.Name)
+	if err != nil {
+		if db.IsErrAccessTokenAlreadyExist(err) {
 			c.Flash.Error(c.Tr("settings.token_name_exists"))
 			c.RedirectSubpath("/user/settings/applications")
 		} else {
@@ -627,7 +624,7 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 }
 
 func SettingsDeleteApplication(c *context.Context) {
-	if err := db.DeleteAccessTokenOfUserByID(c.User.ID, c.QueryInt64("id")); err != nil {
+	if err := db.AccessTokens.DeleteByID(c.User.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("settings.delete_token_success"))

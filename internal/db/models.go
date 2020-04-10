@@ -41,14 +41,14 @@ type Engine interface {
 }
 
 var (
-	x         *xorm.Engine
-	tables    []interface{}
-	HasEngine bool
+	x            *xorm.Engine
+	legacyTables []interface{}
+	HasEngine    bool
 )
 
 func init() {
-	tables = append(tables,
-		new(User), new(PublicKey), new(AccessToken), new(TwoFactor), new(TwoFactorRecoveryCode),
+	legacyTables = append(legacyTables,
+		new(User), new(PublicKey), new(TwoFactor), new(TwoFactorRecoveryCode),
 		new(Repository), new(DeployKey), new(Collaboration), new(Access), new(Upload),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
@@ -120,7 +120,7 @@ func NewTestEngine() error {
 	}
 
 	x.SetMapper(core.GonicMapper{})
-	return x.StoreEngine("InnoDB").Sync2(tables...)
+	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
 func SetEngine() (err error) {
@@ -167,7 +167,7 @@ func NewEngine() (err error) {
 		return fmt.Errorf("migrate: %v", err)
 	}
 
-	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
+	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
 		return fmt.Errorf("sync structs to database tables: %v\n", err)
 	}
 
@@ -227,8 +227,9 @@ func DumpDatabase(dirPath string) error {
 	}
 
 	// Purposely create a local variable to not modify global variable
-	tables := append(tables, new(Version))
-	for _, table := range tables {
+	allTables := append(legacyTables, new(Version))
+	allTables = append(allTables, tables...)
+	for _, table := range allTables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		tableFile := path.Join(dirPath, tableName+".json")
 		f, err := os.Create(tableFile)
@@ -257,8 +258,9 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 	}
 
 	// Purposely create a local variable to not modify global variable
-	tables := append(tables, new(Version))
-	for _, table := range tables {
+	allTables := append(legacyTables, new(Version))
+	allTables = append(allTables, tables...)
+	for _, table := range allTables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		tableFile := path.Join(dirPath, tableName+".json")
 		if !com.IsExist(tableFile) {

@@ -11,7 +11,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/macaron.v1"
 
@@ -124,9 +123,6 @@ func Test_authenticate(t *testing.T) {
 					return &db.AccessToken{}, nil
 				},
 				MockSave: func(t *db.AccessToken) error {
-					if t.Updated.IsZero() {
-						return errors.New("Updated is zero")
-					}
 					return nil
 				},
 			},
