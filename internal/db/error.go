@@ -334,19 +334,6 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 // |_______ \____/\___  /|__|___|  / /_______  /\____/|____/ |__|    \___  >___  >
 //         \/    /_____/         \/          \/                          \/    \/
 
-type ErrLoginSourceAlreadyExist struct {
-	Name string
-}
-
-func IsErrLoginSourceAlreadyExist(err error) bool {
-	_, ok := err.(ErrLoginSourceAlreadyExist)
-	return ok
-}
-
-func (err ErrLoginSourceAlreadyExist) Error() string {
-	return fmt.Sprintf("login source already exists [name: %s]", err.Name)
-}
-
 type ErrLoginSourceInUse struct {
 	ID int64
 }

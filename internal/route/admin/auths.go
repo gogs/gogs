@@ -11,7 +11,6 @@ import (
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/core"
 
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/conf"
@@ -56,9 +55,9 @@ var (
 		{db.LoginNames[db.LoginGitHub], db.LoginGitHub},
 	}
 	securityProtocols = []dropdownItem{
-		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
-		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_LDAPS], ldap.SECURITY_PROTOCOL_LDAPS},
-		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_START_TLS], ldap.SECURITY_PROTOCOL_START_TLS},
+		{db.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted], ldap.SecurityProtocolUnencrypted},
+		{db.SecurityProtocolNames[ldap.SecurityProtocolLDAPS], ldap.SecurityProtocolLDAPS},
+		{db.SecurityProtocolNames[ldap.SecurityProtocolStartTLS], ldap.SecurityProtocolStartTLS},
 	}
 )
 
@@ -69,7 +68,7 @@ func NewAuthSource(c *context.Context) {
 
 	c.Data["type"] = db.LoginLDAP
 	c.Data["CurrentTypeName"] = db.LoginNames[db.LoginLDAP]
-	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
+	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted]
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
 	c.Data["is_default"] = true
@@ -81,7 +80,7 @@ func NewAuthSource(c *context.Context) {
 
 func parseLDAPConfig(f form.Authentication) *db.LDAPConfig {
 	return &db.LDAPConfig{
-		Source: &ldap.Source{
+		Source: ldap.Source{
 			Host:              f.Host,
 			Port:              f.Port,
 			SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
@@ -129,11 +128,11 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["SMTPAuths"] = db.SMTPAuths
 
 	hasTLS := false
-	var config core.Conversion
+	var config interface{}
 	switch db.LoginType(f.Type) {
 	case db.LoginLDAP, db.LoginDLDAP:
 		config = parseLDAPConfig(f)
-		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
+		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SecurityProtocolUnencrypted
 	case db.LoginSMTP:
 		config = parseSMTPConfig(f)
 		hasTLS = true
@@ -156,20 +155,29 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		return
 	}
 
-	if err := db.CreateLoginSource(&db.LoginSource{
+	source, err := db.LoginSources.Create(db.CreateLoginSourceOpts{
 		Type:      db.LoginType(f.Type),
 		Name:      f.Name,
-		IsActived: f.IsActive,
-		IsDefault: f.IsDefault,
-		Cfg:       config,
-	}); err != nil {
+		Activated: f.IsActive,
+		Default:   f.IsDefault,
+		Config:    config,
+	})
+	if err != nil {
 		if db.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(db.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), AUTH_NEW, f)
 		} else {
 			c.Error(err, "create login source")
 		}
 		return
+	}
+
+	if source.IsDefault {
+		err = db.ResetNonDefaultLoginSources(source)
+		if err != nil {
+			c.Error(err, "reset non-default login sources")
+			return
+		}
 	}
 
 	log.Trace("Authentication created by admin(%s): %s", c.User.Name, f.Name)
@@ -217,7 +225,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 		return
 	}
 
-	var config core.Conversion
+	var config interface{}
 	switch db.LoginType(f.Type) {
 	case db.LoginLDAP, db.LoginDLDAP:
 		config = parseLDAPConfig(f)
@@ -239,10 +247,18 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	source.Name = f.Name
 	source.IsActived = f.IsActive
 	source.IsDefault = f.IsDefault
-	source.Cfg = config
-	if err := db.UpdateLoginSource(source); err != nil {
+	source.Config = config
+	if err := db.LoginSources.Save(source); err != nil {
 		c.Error(err, "update login source")
 		return
+	}
+
+	if source.IsDefault {
+		err = db.ResetNonDefaultLoginSources(source)
+		if err != nil {
+			c.Error(err, "reset non-default login sources")
+			return
+		}
 	}
 
 	log.Trace("Authentication changed by admin '%s': %d", c.User.Name, source.ID)

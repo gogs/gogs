@@ -295,13 +295,13 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 				tp := LoginType(com.StrTo(com.ToStr(meta["Type"])).MustInt64())
 				switch tp {
 				case LoginLDAP, LoginDLDAP:
-					bean.Cfg = new(LDAPConfig)
+					bean.Config = new(LDAPConfig)
 				case LoginSMTP:
-					bean.Cfg = new(SMTPConfig)
+					bean.Config = new(SMTPConfig)
 				case LoginPAM:
-					bean.Cfg = new(PAMConfig)
+					bean.Config = new(PAMConfig)
 				case LoginGitHub:
-					bean.Cfg = new(GitHubConfig)
+					bean.Config = new(GitHubConfig)
 				default:
 					return fmt.Errorf("unrecognized login source type:: %v", tp)
 				}

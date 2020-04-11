@@ -17,12 +17,9 @@ import (
 	"time"
 
 	"github.com/go-macaron/binding"
-	"github.com/json-iterator/go"
 	"github.com/unknwon/com"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/core"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
@@ -52,78 +49,57 @@ var LoginNames = map[LoginType]string{
 	LoginGitHub: "GitHub",
 }
 
-var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
-	ldap.SECURITY_PROTOCOL_UNENCRYPTED: "Unencrypted",
-	ldap.SECURITY_PROTOCOL_LDAPS:       "LDAPS",
-	ldap.SECURITY_PROTOCOL_START_TLS:   "StartTLS",
-}
-
-// Ensure structs implemented interface.
-var (
-	_ core.Conversion = &LDAPConfig{}
-	_ core.Conversion = &SMTPConfig{}
-	_ core.Conversion = &PAMConfig{}
-	_ core.Conversion = &GitHubConfig{}
-)
+// ***********************
+// ----- LDAP config -----
+// ***********************
 
 type LDAPConfig struct {
-	*ldap.Source `ini:"config"`
+	ldap.Source `ini:"config"`
 }
 
-func (cfg *LDAPConfig) FromDB(bs []byte) error {
-	return jsoniter.Unmarshal(bs, &cfg)
-}
-
-func (cfg *LDAPConfig) ToDB() ([]byte, error) {
-	return jsoniter.Marshal(cfg)
+var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
+	ldap.SecurityProtocolUnencrypted: "Unencrypted",
+	ldap.SecurityProtocolLDAPS:       "LDAPS",
+	ldap.SecurityProtocolStartTLS:    "StartTLS",
 }
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
 	return SecurityProtocolNames[cfg.SecurityProtocol]
 }
 
+// ***********************
+// ----- SMTP config -----
+// ***********************
+
 type SMTPConfig struct {
 	Auth           string
 	Host           string
 	Port           int
-	AllowedDomains string `xorm:"TEXT"`
-	TLS            bool   `ini:"tls"`
+	AllowedDomains string
+	TLS            bool `ini:"tls"`
 	SkipVerify     bool
 }
 
-func (cfg *SMTPConfig) FromDB(bs []byte) error {
-	return jsoniter.Unmarshal(bs, cfg)
-}
-
-func (cfg *SMTPConfig) ToDB() ([]byte, error) {
-	return jsoniter.Marshal(cfg)
-}
+// **********************
+// ----- PAM config -----
+// **********************
 
 type PAMConfig struct {
-	ServiceName string // PAM service (e.g. system-auth)
+	// The name of the PAM service, e.g. system-auth.
+	ServiceName string
 }
 
-func (cfg *PAMConfig) FromDB(bs []byte) error {
-	return jsoniter.Unmarshal(bs, &cfg)
-}
-
-func (cfg *PAMConfig) ToDB() ([]byte, error) {
-	return jsoniter.Marshal(cfg)
-}
+// *************************
+// ----- GitHub config -----
+// *************************
 
 type GitHubConfig struct {
-	APIEndpoint string // GitHub service (e.g. https://api.github.com/)
-}
-
-func (cfg *GitHubConfig) FromDB(bs []byte) error {
-	return jsoniter.Unmarshal(bs, &cfg)
-}
-
-func (cfg *GitHubConfig) ToDB() ([]byte, error) {
-	return jsoniter.Marshal(cfg)
+	// the GitHub service endpoint, e.g. https://api.github.com/.
+	APIEndpoint string
 }
 
 // AuthSourceFile contains information of an authentication source file.
+// TODO: Move to authutil.SourceFile.
 type AuthSourceFile struct {
 	abspath string
 	file    *ini.File
@@ -135,7 +111,7 @@ func (f *AuthSourceFile) SetGeneral(name, value string) {
 }
 
 // SetConfig sets new values to the "config" section.
-func (f *AuthSourceFile) SetConfig(cfg core.Conversion) error {
+func (f *AuthSourceFile) SetConfig(cfg interface{}) error {
 	return f.file.Section("config").ReflectFrom(cfg)
 }
 
@@ -148,82 +124,18 @@ func (f *AuthSourceFile) Save() error {
 type LoginSource struct {
 	ID        int64
 	Type      LoginType
-	Name      string          `xorm:"UNIQUE"`
-	IsActived bool            `xorm:"NOT NULL DEFAULT false"`
-	IsDefault bool            `xorm:"DEFAULT false"`
-	Cfg       core.Conversion `xorm:"TEXT" gorm:"COLUMN:remove-me-when-migrated-to-gorm"`
-	RawCfg    string          `xorm:"-" gorm:"COLUMN:cfg"` // TODO: Remove me when migrated to GORM.
+	Name      string      `xorm:"UNIQUE"`
+	IsActived bool        `xorm:"NOT NULL DEFAULT false"`
+	IsDefault bool        `xorm:"DEFAULT false"`
+	Config    interface{} `xorm:"-" gorm:"-"`
+	RawConfig string      `xorm:"TEXT cfg" gorm:"COLUMN:cfg"`
 
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" json:"-"`
+	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
 	UpdatedUnix int64
 
-	LocalFile *AuthSourceFile `xorm:"-" json:"-"`
-}
-
-func (s *LoginSource) BeforeInsert() {
-	s.CreatedUnix = time.Now().Unix()
-	s.UpdatedUnix = s.CreatedUnix
-}
-
-func (s *LoginSource) BeforeUpdate() {
-	s.UpdatedUnix = time.Now().Unix()
-}
-
-// Cell2Int64 converts a xorm.Cell type to int64,
-// and handles possible irregular cases.
-func Cell2Int64(val xorm.Cell) int64 {
-	switch (*val).(type) {
-	case []uint8:
-		log.Trace("Cell2Int64 ([]uint8): %v", *val)
-		return com.StrTo(string((*val).([]uint8))).MustInt64()
-	}
-	return (*val).(int64)
-}
-
-func (s *LoginSource) BeforeSet(colName string, val xorm.Cell) {
-	switch colName {
-	case "type":
-		switch LoginType(Cell2Int64(val)) {
-		case LoginLDAP, LoginDLDAP:
-			s.Cfg = new(LDAPConfig)
-		case LoginSMTP:
-			s.Cfg = new(SMTPConfig)
-		case LoginPAM:
-			s.Cfg = new(PAMConfig)
-		case LoginGitHub:
-			s.Cfg = new(GitHubConfig)
-		default:
-			panic("unrecognized login source type: " + com.ToStr(*val))
-		}
-	}
-}
-
-func (s *LoginSource) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		s.Created = time.Unix(s.CreatedUnix, 0).Local()
-	case "updated_unix":
-		s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
-	}
-}
-
-// NOTE: This is a GORM query hook.
-func (s *LoginSource) AfterFind() error {
-	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
-		s.Cfg = new(LDAPConfig)
-	case LoginSMTP:
-		s.Cfg = new(SMTPConfig)
-	case LoginPAM:
-		s.Cfg = new(PAMConfig)
-	case LoginGitHub:
-		s.Cfg = new(GitHubConfig)
-	default:
-		return fmt.Errorf("unrecognized login source type: %v", s.Type)
-	}
-	return jsoniter.UnmarshalFromString(s.RawCfg, s.Cfg)
+	LocalFile *AuthSourceFile `xorm:"-" gorm:"-" json:"-"`
 }
 
 func (s *LoginSource) TypeName() string {
@@ -252,14 +164,14 @@ func (s *LoginSource) IsGitHub() bool {
 
 func (s *LoginSource) HasTLS() bool {
 	return ((s.IsLDAP() || s.IsDLDAP()) &&
-		s.LDAP().SecurityProtocol > ldap.SECURITY_PROTOCOL_UNENCRYPTED) ||
+		s.LDAP().SecurityProtocol > ldap.SecurityProtocolUnencrypted) ||
 		s.IsSMTP()
 }
 
 func (s *LoginSource) UseTLS() bool {
 	switch s.Type {
 	case LoginLDAP, LoginDLDAP:
-		return s.LDAP().SecurityProtocol != ldap.SECURITY_PROTOCOL_UNENCRYPTED
+		return s.LDAP().SecurityProtocol != ldap.SecurityProtocolUnencrypted
 	case LoginSMTP:
 		return s.SMTP().TLS
 	}
@@ -279,36 +191,19 @@ func (s *LoginSource) SkipVerify() bool {
 }
 
 func (s *LoginSource) LDAP() *LDAPConfig {
-	return s.Cfg.(*LDAPConfig)
+	return s.Config.(*LDAPConfig)
 }
 
 func (s *LoginSource) SMTP() *SMTPConfig {
-	return s.Cfg.(*SMTPConfig)
+	return s.Config.(*SMTPConfig)
 }
 
 func (s *LoginSource) PAM() *PAMConfig {
-	return s.Cfg.(*PAMConfig)
+	return s.Config.(*PAMConfig)
 }
 
 func (s *LoginSource) GitHub() *GitHubConfig {
-	return s.Cfg.(*GitHubConfig)
-}
-
-func CreateLoginSource(source *LoginSource) error {
-	has, err := x.Get(&LoginSource{Name: source.Name})
-	if err != nil {
-		return err
-	} else if has {
-		return ErrLoginSourceAlreadyExist{source.Name}
-	}
-
-	_, err = x.Insert(source)
-	if err != nil {
-		return err
-	} else if source.IsDefault {
-		return ResetNonDefaultLoginSources(source)
-	}
-	return nil
+	return s.Config.(*GitHubConfig)
 }
 
 // ListLoginSources returns all login sources defined.
@@ -340,7 +235,7 @@ func ResetNonDefaultLoginSources(source *LoginSource) error {
 	for i := range localLoginSources.sources {
 		if localLoginSources.sources[i].LocalFile != nil && localLoginSources.sources[i].ID != source.ID {
 			localLoginSources.sources[i].LocalFile.SetGeneral("is_default", "false")
-			if err := localLoginSources.sources[i].LocalFile.SetConfig(source.Cfg); err != nil {
+			if err := localLoginSources.sources[i].LocalFile.SetConfig(source.Config); err != nil {
 				return fmt.Errorf("LocalFile.SetConfig: %v", err)
 			} else if err = localLoginSources.sources[i].LocalFile.Save(); err != nil {
 				return fmt.Errorf("LocalFile.Save: %v", err)
@@ -350,28 +245,6 @@ func ResetNonDefaultLoginSources(source *LoginSource) error {
 	// flush memory so that web page can show the same behaviors
 	localLoginSources.UpdateLoginSource(source)
 	return nil
-}
-
-// UpdateLoginSource updates information of login source to database or local file.
-func UpdateLoginSource(source *LoginSource) error {
-	if source.LocalFile == nil {
-		if _, err := x.Id(source.ID).AllCols().Update(source); err != nil {
-			return err
-		} else {
-			return ResetNonDefaultLoginSources(source)
-		}
-
-	}
-
-	source.LocalFile.SetGeneral("name", source.Name)
-	source.LocalFile.SetGeneral("is_activated", com.ToStr(source.IsActived))
-	source.LocalFile.SetGeneral("is_default", com.ToStr(source.IsDefault))
-	if err := source.LocalFile.SetConfig(source.Cfg); err != nil {
-		return fmt.Errorf("LocalFile.SetConfig: %v", err)
-	} else if err = source.LocalFile.Save(); err != nil {
-		return fmt.Errorf("LocalFile.Save: %v", err)
-	}
-	return ResetNonDefaultLoginSources(source)
 }
 
 func DeleteSource(source *LoginSource) error {
@@ -511,24 +384,24 @@ func LoadAuthSources() {
 		switch authType {
 		case "ldap_bind_dn":
 			loginSource.Type = LoginLDAP
-			loginSource.Cfg = &LDAPConfig{}
+			loginSource.Config = &LDAPConfig{}
 		case "ldap_simple_auth":
 			loginSource.Type = LoginDLDAP
-			loginSource.Cfg = &LDAPConfig{}
+			loginSource.Config = &LDAPConfig{}
 		case "smtp":
 			loginSource.Type = LoginSMTP
-			loginSource.Cfg = &SMTPConfig{}
+			loginSource.Config = &SMTPConfig{}
 		case "pam":
 			loginSource.Type = LoginPAM
-			loginSource.Cfg = &PAMConfig{}
+			loginSource.Config = &PAMConfig{}
 		case "github":
 			loginSource.Type = LoginGitHub
-			loginSource.Cfg = &GitHubConfig{}
+			loginSource.Config = &GitHubConfig{}
 		default:
 			log.Fatal("Failed to load authentication source: unknown type '%s'", authType)
 		}
 
-		if err = authSource.Section("config").MapTo(loginSource.Cfg); err != nil {
+		if err = authSource.Section("config").MapTo(loginSource.Config); err != nil {
 			log.Fatal("Failed to parse authentication source 'config': %v", err)
 		}
 
@@ -559,7 +432,7 @@ func composeFullName(firstname, surname, username string) string {
 // LoginViaLDAP queries if login/password is valid against the LDAP directory pool,
 // and create a local user if success when enabled.
 func LoginViaLDAP(login, password string, source *LoginSource, autoRegister bool) (*User, error) {
-	username, fn, sn, mail, isAdmin, succeed := source.Cfg.(*LDAPConfig).SearchEntry(login, password, source.Type == LoginDLDAP)
+	username, fn, sn, mail, isAdmin, succeed := source.Config.(*LDAPConfig).SearchEntry(login, password, source.Type == LoginDLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
@@ -807,11 +680,11 @@ func authenticateViaLoginSource(source *LoginSource, login, password string, aut
 	case LoginLDAP, LoginDLDAP:
 		return LoginViaLDAP(login, password, source, autoRegister)
 	case LoginSMTP:
-		return LoginViaSMTP(login, password, source.ID, source.Cfg.(*SMTPConfig), autoRegister)
+		return LoginViaSMTP(login, password, source.ID, source.Config.(*SMTPConfig), autoRegister)
 	case LoginPAM:
-		return LoginViaPAM(login, password, source.ID, source.Cfg.(*PAMConfig), autoRegister)
+		return LoginViaPAM(login, password, source.ID, source.Config.(*PAMConfig), autoRegister)
 	case LoginGitHub:
-		return LoginViaGitHub(login, password, source.ID, source.Cfg.(*GitHubConfig), autoRegister)
+		return LoginViaGitHub(login, password, source.ID, source.Config.(*GitHubConfig), autoRegister)
 	}
 
 	return nil, errors.InvalidLoginSourceType{Type: source.Type}
