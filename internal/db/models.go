@@ -155,7 +155,7 @@ func SetEngine() (err error) {
 		x.SetLogger(xorm.NewSimpleLogger(logger))
 	}
 	x.ShowSQL(true)
-	return Init()
+	return nil
 }
 
 func NewEngine() (err error) {
@@ -171,7 +171,7 @@ func NewEngine() (err error) {
 		return fmt.Errorf("sync structs to database tables: %v\n", err)
 	}
 
-	return nil
+	return Init()
 }
 
 type Statistic struct {
