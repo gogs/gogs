@@ -124,7 +124,7 @@ func getLogWriter() (io.Writer, error) {
 
 var tables = []interface{}{
 	new(AccessToken),
-	new(LFSObject),
+	new(LFSObject), new(LoginSource),
 }
 
 func Init() error {

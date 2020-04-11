@@ -31,6 +31,7 @@ func Test_loginSources(t *testing.T) {
 	}{
 		{"Create", test_loginSources_Create},
 		// {"Count", test_loginSources_Count},
+		// {"DeleteByID", test_loginSources_DeleteByID},
 		// {"GetByID", test_loginSources_GetByID},
 		// {"List", test_loginSources_List},
 		// {"ResetNonDefault", test_loginSources_ResetNonDefault},
