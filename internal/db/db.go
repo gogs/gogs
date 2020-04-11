@@ -158,9 +158,19 @@ func Init() error {
 		conf.UseSQLite3 = true
 	}
 
-	err = db.AutoMigrate(tables...).Error
-	if err != nil {
-		return errors.Wrap(err, "migrate schemes")
+	// NOTE: GORM has problem detecting existing columns, see https://github.com/gogs/gogs/issues/6091.
+	// Therefore only use it to create new tables, and do customized migration with future changes.
+	for _, table := range tables {
+		if db.HasTable(table) {
+			continue
+		}
+
+		name := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+		err = db.AutoMigrate(table).Error
+		if err != nil {
+			return errors.Wrapf(err, "auto migrate %q", name)
+		}
+		log.Trace("Auto migrated %q", name)
 	}
 
 	gorm.NowFunc = func() time.Time {
