@@ -78,6 +78,39 @@ func SetMockLFSStore(t *testing.T, mock LFSStore) {
 	})
 }
 
+var _ loginSourceFilesStore = (*mockLoginSourceFilesStore)(nil)
+
+type mockLoginSourceFilesStore struct {
+	MockGetByID func(id int64) (*LoginSource, error)
+	MockLen     func() int
+	MockList    func(opts ListLoginSourceOpts) []*LoginSource
+	MockUpdate  func(source *LoginSource)
+}
+
+func (m *mockLoginSourceFilesStore) GetByID(id int64) (*LoginSource, error) {
+	return m.MockGetByID(id)
+}
+
+func (m *mockLoginSourceFilesStore) Len() int {
+	return m.MockLen()
+}
+
+func (m *mockLoginSourceFilesStore) List(opts ListLoginSourceOpts) []*LoginSource {
+	return m.MockList(opts)
+}
+
+func (m *mockLoginSourceFilesStore) Update(source *LoginSource) {
+	m.MockUpdate(source)
+}
+
+func setMockLoginSourceFilesStore(t *testing.T, db *loginSources, mock loginSourceFilesStore) {
+	before := db.files
+	db.files = mock
+	t.Cleanup(func() {
+		db.files = before
+	})
+}
+
 var _ PermsStore = (*MockPermsStore)(nil)
 
 type MockPermsStore struct {
