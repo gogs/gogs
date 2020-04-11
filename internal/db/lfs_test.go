@@ -37,7 +37,7 @@ func Test_lfs(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := deleteTables(db.DB, tables...)
+				err := clearTables(db.DB, tables...)
 				if err != nil {
 					t.Fatal(err)
 				}

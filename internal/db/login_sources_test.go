@@ -34,13 +34,13 @@ func Test_loginSources(t *testing.T) {
 		{"Count", test_loginSources_Count},
 		{"DeleteByID", test_loginSources_DeleteByID},
 		{"GetByID", test_loginSources_GetByID},
-		// {"List", test_loginSources_List},
+		{"List", test_loginSources_List},
 		// {"ResetNonDefault", test_loginSources_ResetNonDefault},
 		// {"Save", test_loginSources_Save},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := deleteTables(db.DB, tables...)
+				err := clearTables(db.DB, tables...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -214,4 +214,8 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func test_loginSources_List(t *testing.T, db *loginSources) {
+
 }
