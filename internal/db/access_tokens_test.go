@@ -21,8 +21,9 @@ func Test_accessTokens(t *testing.T) {
 
 	t.Parallel()
 
+	tables := []interface{}{new(AccessToken)}
 	db := &accessTokens{
-		DB: initTestDB(t, "accessTokens", new(AccessToken)),
+		DB: initTestDB(t, "accessTokens", tables...),
 	}
 
 	for _, tc := range []struct {
@@ -37,7 +38,7 @@ func Test_accessTokens(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := deleteTables(db.DB, new(AccessToken))
+				err := clearTables(db.DB, tables...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -78,14 +79,14 @@ func test_accessTokens_DeleteByID(t *testing.T, db *accessTokens) {
 		t.Fatal(err)
 	}
 
-	// We should be able to get it back
-	_, err = db.GetBySHA(token.Sha1)
+	// Delete a token with mismatched user ID is noop
+	err = db.DeleteByID(2, token.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Delete a token with mismatched user ID is noop
-	err = db.DeleteByID(2, token.ID)
+	// We should be able to get it back
+	_, err = db.GetBySHA(token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}

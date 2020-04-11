@@ -53,7 +53,7 @@ func init() {
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
 		new(Label), new(IssueLabel), new(Milestone),
-		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(HookTask),
+		new(Mirror), new(Release), new(Webhook), new(HookTask),
 		new(ProtectBranch), new(ProtectBranchWhitelist),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
@@ -200,7 +200,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))
-	stats.Counter.LoginSource = CountLoginSources()
+	stats.Counter.LoginSource = LoginSources.Count()
 	stats.Counter.Webhook, _ = x.Count(new(Webhook))
 	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	stats.Counter.Label, _ = x.Count(new(Label))
@@ -295,13 +295,13 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 				tp := LoginType(com.StrTo(com.ToStr(meta["Type"])).MustInt64())
 				switch tp {
 				case LoginLDAP, LoginDLDAP:
-					bean.Cfg = new(LDAPConfig)
+					bean.Config = new(LDAPConfig)
 				case LoginSMTP:
-					bean.Cfg = new(SMTPConfig)
+					bean.Config = new(SMTPConfig)
 				case LoginPAM:
-					bean.Cfg = new(PAMConfig)
+					bean.Config = new(PAMConfig)
 				case LoginGitHub:
-					bean.Cfg = new(GitHubConfig)
+					bean.Config = new(GitHubConfig)
 				default:
 					return fmt.Errorf("unrecognized login source type:: %v", tp)
 				}

@@ -78,6 +78,59 @@ func SetMockLFSStore(t *testing.T, mock LFSStore) {
 	})
 }
 
+var _ loginSourceFilesStore = (*mockLoginSourceFilesStore)(nil)
+
+type mockLoginSourceFilesStore struct {
+	MockGetByID func(id int64) (*LoginSource, error)
+	MockLen     func() int
+	MockList    func(opts ListLoginSourceOpts) []*LoginSource
+	MockUpdate  func(source *LoginSource)
+}
+
+func (m *mockLoginSourceFilesStore) GetByID(id int64) (*LoginSource, error) {
+	return m.MockGetByID(id)
+}
+
+func (m *mockLoginSourceFilesStore) Len() int {
+	return m.MockLen()
+}
+
+func (m *mockLoginSourceFilesStore) List(opts ListLoginSourceOpts) []*LoginSource {
+	return m.MockList(opts)
+}
+
+func (m *mockLoginSourceFilesStore) Update(source *LoginSource) {
+	m.MockUpdate(source)
+}
+
+func setMockLoginSourceFilesStore(t *testing.T, db *loginSources, mock loginSourceFilesStore) {
+	before := db.files
+	db.files = mock
+	t.Cleanup(func() {
+		db.files = before
+	})
+}
+
+var _ loginSourceFileStore = (*mockLoginSourceFileStore)(nil)
+
+type mockLoginSourceFileStore struct {
+	MockSetGeneral func(name, value string)
+	MockSetConfig  func(cfg interface{}) error
+	MockSave       func() error
+}
+
+func (m *mockLoginSourceFileStore) SetGeneral(name, value string) {
+	m.MockSetGeneral(name, value)
+}
+
+func (m *mockLoginSourceFileStore) SetConfig(cfg interface{}) error {
+	return m.MockSetConfig(cfg)
+}
+
+func (m *mockLoginSourceFileStore) Save() error {
+	return m.MockSave()
+}
+
 var _ PermsStore = (*MockPermsStore)(nil)
 
 type MockPermsStore struct {
