@@ -274,16 +274,16 @@ func (db *loginSources) List(opts ListLoginSourceOpts) ([]*LoginSource, error) {
 	return append(sources, db.files.List(opts)...), nil
 }
 
-func (db *loginSources) ResetNonDefault(source *LoginSource) error {
-	err := db.Model(new(LoginSource)).Where("id != ?", source.ID).Updates(map[string]interface{}{"is_default": false}).Error
+func (db *loginSources) ResetNonDefault(dflt *LoginSource) error {
+	err := db.Model(new(LoginSource)).Where("id != ?", dflt.ID).Updates(map[string]interface{}{"is_default": false}).Error
 	if err != nil {
 		return err
 	}
 
 	for _, source := range db.files.List(ListLoginSourceOpts{}) {
-		if source.File != nil && source.ID != source.ID {
+		if source.File != nil && source.ID != dflt.ID {
 			source.File.SetGeneral("is_default", "false")
-			if err := source.File.SetConfig(source.Config); err != nil {
+			if err := source.File.SetConfig(dflt.Config); err != nil {
 				return errors.Wrap(err, "set config")
 			} else if err = source.File.Save(); err != nil {
 				return errors.Wrap(err, "save file")
@@ -291,7 +291,7 @@ func (db *loginSources) ResetNonDefault(source *LoginSource) error {
 		}
 	}
 
-	db.files.Update(source)
+	db.files.Update(dflt)
 	return nil
 }
 
