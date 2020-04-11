@@ -120,14 +120,13 @@ func loadLoginSourceFiles(authdPath string) (loginSourceFilesStore, error) {
 			return err
 		}
 
-		if path == "." || !strings.HasSuffix(path, ".conf") {
+		if path == authdPath || !strings.HasSuffix(path, ".conf") {
 			return nil
 		} else if info.IsDir() {
 			return filepath.SkipDir
 		}
 
-		fpath := filepath.Join(authdPath, path)
-		authSource, err := ini.Load(fpath)
+		authSource, err := ini.Load(path)
 		if err != nil {
 			return errors.Wrap(err, "load file")
 		}
@@ -141,12 +140,12 @@ func loadLoginSourceFiles(authdPath string) (loginSourceFilesStore, error) {
 			IsActived: s.Key("is_activated").MustBool(),
 			IsDefault: s.Key("is_default").MustBool(),
 			File: &loginSourceFile{
-				path: fpath,
+				path: path,
 				file: authSource,
 			},
 		}
 
-		fi, err := os.Stat(fpath)
+		fi, err := os.Stat(path)
 		if err != nil {
 			return errors.Wrap(err, "stat file")
 		}

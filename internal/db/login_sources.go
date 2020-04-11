@@ -262,7 +262,7 @@ type ListLoginSourceOpts struct {
 
 func (db *loginSources) List(opts ListLoginSourceOpts) ([]*LoginSource, error) {
 	var sources []*LoginSource
-	query := db.DB
+	query := db.Order("id ASC")
 	if opts.OnlyActivated {
 		query = query.Where("is_actived = ?", true)
 	}
