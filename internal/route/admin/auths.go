@@ -31,13 +31,13 @@ func Authentications(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	var err error
-	c.Data["Sources"], err = db.ListLoginSources()
+	c.Data["Sources"], err = db.LoginSources.List(db.ListLoginSourceOpts{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
 	}
 
-	c.Data["Total"] = db.CountLoginSources()
+	c.Data["Total"] = db.LoginSources.Count()
 	c.Success(AUTHS)
 }
 
@@ -173,7 +173,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	if source.IsDefault {
-		err = db.ResetNonDefaultLoginSources(source)
+		err = db.LoginSources.ResetNonDefault(source)
 		if err != nil {
 			c.Error(err, "reset non-default login sources")
 			return
@@ -254,7 +254,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	if source.IsDefault {
-		err = db.ResetNonDefaultLoginSources(source)
+		err = db.LoginSources.ResetNonDefault(source)
 		if err != nil {
 			c.Error(err, "reset non-default login sources")
 			return
@@ -268,13 +268,8 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 }
 
 func DeleteAuthSource(c *context.Context) {
-	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
-	if err != nil {
-		c.Error(err, "get login source by ID")
-		return
-	}
-
-	if err = db.DeleteSource(source); err != nil {
+	id := c.ParamsInt64(":authid")
+	if err := db.LoginSources.DeleteByID(id); err != nil {
 		if db.IsErrLoginSourceInUse(err) {
 			c.Flash.Error(c.Tr("admin.auths.still_in_used"))
 		} else {
@@ -285,7 +280,7 @@ func DeleteAuthSource(c *context.Context) {
 		})
 		return
 	}
-	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, source.ID)
+	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, id)
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
 	c.JSONSuccess(map[string]interface{}{

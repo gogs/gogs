@@ -167,9 +167,14 @@ func Init() error {
 		return time.Now().UTC().Truncate(time.Microsecond)
 	}
 
+	sourceFiles, err := loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"))
+	if err != nil {
+		return errors.Wrap(err, "load login source files")
+	}
+
 	// Initialize stores, sorted in alphabetical order.
 	AccessTokens = &accessTokens{DB: db}
-	LoginSources = &loginSources{DB: db}
+	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}
 	Repos = &repos{DB: db}
