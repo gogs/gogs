@@ -327,39 +327,6 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
 }
 
-// .____                 .__           _________
-// |    |    ____   ____ |__| ____    /   _____/ ____  __ _________   ____  ____
-// |    |   /  _ \ / ___\|  |/    \   \_____  \ /  _ \|  |  \_  __ \_/ ___\/ __ \
-// |    |__(  <_> ) /_/  >  |   |  \  /        (  <_> )  |  /|  | \/\  \__\  ___/
-// |_______ \____/\___  /|__|___|  / /_______  /\____/|____/ |__|    \___  >___  >
-//         \/    /_____/         \/          \/                          \/    \/
-
-type ErrLoginSourceAlreadyExist struct {
-	Name string
-}
-
-func IsErrLoginSourceAlreadyExist(err error) bool {
-	_, ok := err.(ErrLoginSourceAlreadyExist)
-	return ok
-}
-
-func (err ErrLoginSourceAlreadyExist) Error() string {
-	return fmt.Sprintf("login source already exists [name: %s]", err.Name)
-}
-
-type ErrLoginSourceInUse struct {
-	ID int64
-}
-
-func IsErrLoginSourceInUse(err error) bool {
-	_, ok := err.(ErrLoginSourceInUse)
-	return ok
-}
-
-func (err ErrLoginSourceInUse) Error() string {
-	return fmt.Sprintf("login source is still used by some users [id: %d]", err.ID)
-}
-
 // ___________
 // \__    ___/___ _____    _____
 //   |    |_/ __ \\__  \  /     \

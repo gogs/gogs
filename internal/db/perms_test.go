@@ -17,8 +17,9 @@ func Test_perms(t *testing.T) {
 
 	t.Parallel()
 
+	tables := []interface{}{new(Access)}
 	db := &perms{
-		DB: initTestDB(t, "perms", new(Access)),
+		DB: initTestDB(t, "perms", tables...),
 	}
 
 	for _, tc := range []struct {
@@ -31,7 +32,7 @@ func Test_perms(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := deleteTables(db.DB, new(Access))
+				err := clearTables(db.DB, tables...)
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -41,7 +41,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func deleteTables(db *gorm.DB, tables ...interface{}) error {
+// clearTables removes all rows from given tables.
+func clearTables(db *gorm.DB, tables ...interface{}) error {
 	for _, t := range tables {
 		err := db.Delete(t).Error
 		if err != nil {

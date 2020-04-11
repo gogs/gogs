@@ -22,8 +22,9 @@ func Test_lfs(t *testing.T) {
 
 	t.Parallel()
 
+	tables := []interface{}{new(LFSObject)}
 	db := &lfs{
-		DB: initTestDB(t, "lfs", new(LFSObject)),
+		DB: initTestDB(t, "lfs", tables...),
 	}
 
 	for _, tc := range []struct {
@@ -36,7 +37,7 @@ func Test_lfs(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := deleteTables(db.DB, new(LFSObject))
+				err := clearTables(db.DB, tables...)
 				if err != nil {
 					t.Fatal(err)
 				}

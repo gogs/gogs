@@ -76,7 +76,6 @@ func GlobalInit(customConf string) error {
 		}
 		db.HasEngine = true
 
-		db.LoadAuthSources()
 		db.LoadRepoConfig()
 		db.NewRepoContext()
 
