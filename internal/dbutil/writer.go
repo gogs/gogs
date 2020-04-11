@@ -29,6 +29,8 @@ func (w *Writer) Print(v ...interface{}) {
 		fmt.Fprintf(w.Writer, "[sql] [%s] [%s] %s %v (%d rows affected)", v[1:]...)
 	case "log":
 		fmt.Fprintf(w.Writer, "[log] [%s] %s", v[1:]...)
+	case "error":
+		fmt.Fprintf(w.Writer, "[err] [%s] %s", v[1:]...)
 	default:
 		fmt.Fprint(w.Writer, v...)
 	}

@@ -41,6 +41,11 @@ func TestWriter_Print(t *testing.T) {
 			vs:        []interface{}{"log", "writer.go:65", "something"},
 			expOutput: "[log] [writer.go:65] something",
 		},
+		{
+			name:      "error",
+			vs:        []interface{}{"error", "writer.go:65", "something bad"},
+			expOutput: "[err] [writer.go:65] something bad",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
