@@ -35,8 +35,8 @@ func Test_loginSources(t *testing.T) {
 		{"DeleteByID", test_loginSources_DeleteByID},
 		{"GetByID", test_loginSources_GetByID},
 		{"List", test_loginSources_List},
-		// {"ResetNonDefault", test_loginSources_ResetNonDefault},
-		// {"Save", test_loginSources_Save},
+		{"ResetNonDefault", test_loginSources_ResetNonDefault},
+		{"Save", test_loginSources_Save},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -71,6 +71,7 @@ func test_loginSources_Create(t *testing.T, db *loginSources) {
 		t.Fatal(err)
 	}
 	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Created.Format(time.RFC3339))
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Updated.Format(time.RFC3339))
 
 	// Try create second login source with same name should fail
 	_, err = db.Create(CreateLoginSourceOpts{Name: source.Name})
@@ -177,6 +178,15 @@ func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 }
 
 func test_loginSources_GetByID(t *testing.T, db *loginSources) {
+	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
+		MockGetByID: func(id int64) (*LoginSource, error) {
+			if id != 101 {
+				return nil, ErrLoginSourceNotExist{args: errutil.Args{"id": id}}
+			}
+			return &LoginSource{ID: id}, nil
+		},
+	})
+
 	expConfig := &GitHubConfig{
 		APIEndpoint: "https://api.github.com",
 	}
@@ -193,15 +203,6 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 		t.Fatal(err)
 	}
 
-	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
-		MockGetByID: func(id int64) (*LoginSource, error) {
-			if id != 101 {
-				return nil, ErrLoginSourceNotExist{args: errutil.Args{"id": id}}
-			}
-			return &LoginSource{ID: id}, nil
-		},
-	})
-
 	// Get the one in the database and test the read/write hooks
 	source, err = db.GetByID(source.ID)
 	if err != nil {
@@ -217,5 +218,172 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 }
 
 func test_loginSources_List(t *testing.T, db *loginSources) {
+	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
+		MockList: func(opts ListLoginSourceOpts) []*LoginSource {
+			if opts.OnlyActivated {
+				return []*LoginSource{
+					{ID: 1},
+				}
+			}
+			return []*LoginSource{
+				{ID: 1},
+				{ID: 2},
+			}
+		},
+	})
 
+	// Create two login sources in database, one activated and the other one not
+	_, err := db.Create(CreateLoginSourceOpts{
+		Type: LoginPAM,
+		Name: "PAM",
+		Config: &PAMConfig{
+			ServiceName: "PAM",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Create(CreateLoginSourceOpts{
+		Type:      LoginGitHub,
+		Name:      "GitHub",
+		Activated: true,
+		Config: &GitHubConfig{
+			APIEndpoint: "https://api.github.com",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// List all login sources
+	sources, err := db.List(ListLoginSourceOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, 4, len(sources), "number of sources")
+
+	// Only list activated login sources
+	sources, err = db.List(ListLoginSourceOpts{OnlyActivated: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, 2, len(sources), "number of sources")
+}
+
+func test_loginSources_ResetNonDefault(t *testing.T, db *loginSources) {
+	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
+		MockList: func(opts ListLoginSourceOpts) []*LoginSource {
+			return []*LoginSource{
+				{
+					File: &mockLoginSourceFileStore{
+						MockSetGeneral: func(name, value string) {
+							assert.Equal(t, "is_default", name)
+							assert.Equal(t, "false", value)
+						},
+						MockSave: func() error {
+							return nil
+						},
+					},
+				},
+			}
+		},
+		MockUpdate: func(source *LoginSource) {},
+	})
+
+	// Create two login sources both have default on
+	source1, err := db.Create(CreateLoginSourceOpts{
+		Type:    LoginPAM,
+		Name:    "PAM",
+		Default: true,
+		Config: &PAMConfig{
+			ServiceName: "PAM",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	source2, err := db.Create(CreateLoginSourceOpts{
+		Type:      LoginGitHub,
+		Name:      "GitHub",
+		Activated: true,
+		Default:   true,
+		Config: &GitHubConfig{
+			APIEndpoint: "https://api.github.com",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set source 1 as default
+	err = db.ResetNonDefault(source1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify the default state
+	source1, err = db.GetByID(source1.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.True(t, source1.IsDefault)
+
+	source2, err = db.GetByID(source2.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.False(t, source2.IsDefault)
+}
+
+func test_loginSources_Save(t *testing.T, db *loginSources) {
+	t.Run("save to database", func(t *testing.T) {
+		// Create a login source with name "GitHub"
+		source, err := db.Create(CreateLoginSourceOpts{
+			Type:      LoginGitHub,
+			Name:      "GitHub",
+			Activated: true,
+			Default:   false,
+			Config: &GitHubConfig{
+				APIEndpoint: "https://api.github.com",
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		source.IsActived = false
+		source.Config = &GitHubConfig{
+			APIEndpoint: "https://api2.github.com",
+		}
+		err = db.Save(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		source, err = db.GetByID(source.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.False(t, source.IsActived)
+		assert.Equal(t, "https://api2.github.com", source.GitHub().APIEndpoint)
+	})
+
+	t.Run("save to file", func(t *testing.T) {
+		calledSave := false
+		source := &LoginSource{
+			File: &mockLoginSourceFileStore{
+				MockSetGeneral: func(name, value string) {},
+				MockSetConfig:  func(cfg interface{}) error { return nil },
+				MockSave: func() error {
+					calledSave = true
+					return nil
+				},
+			},
+		}
+		err := db.Save(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.True(t, calledSave)
+	})
 }

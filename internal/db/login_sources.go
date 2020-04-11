@@ -283,9 +283,7 @@ func (db *loginSources) ResetNonDefault(dflt *LoginSource) error {
 	for _, source := range db.files.List(ListLoginSourceOpts{}) {
 		if source.File != nil && source.ID != dflt.ID {
 			source.File.SetGeneral("is_default", "false")
-			if err := source.File.SetConfig(dflt.Config); err != nil {
-				return errors.Wrap(err, "set config")
-			} else if err = source.File.Save(); err != nil {
+			if err = source.File.Save(); err != nil {
 				return errors.Wrap(err, "save file")
 			}
 		}
