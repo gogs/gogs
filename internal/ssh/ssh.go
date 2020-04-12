@@ -51,10 +51,10 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				payload := cleanCommand(string(req.Payload))
 				switch req.Type {
 				case "env":
-					msg := struct {
+					var env struct {
 						Name  string
 						Value string
-					}{}
+					}
 					if err := ssh.Unmarshal(req.Payload, &msg); err != nil {
 						log.Warn("SSH: Invalid env arguments")
 						continue
