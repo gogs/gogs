@@ -62,7 +62,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 					// Sometimes the client could send malformed command (i.e. missing "="),
 					// see https://discuss.gogs.io/t/ssh/3106.
 					if msg.Name == "" || msg.Value == "" {
-						log.Warn("SSH: Invalid env arguments")
+						log.Warn("SSH: Invalid env arguments: %+v", msg)
 						continue
 					}
 
