@@ -56,7 +56,7 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						Value string
 					}
 					if err := ssh.Unmarshal(req.Payload, &msg); err != nil {
-						log.Warn("SSH: Invalid env arguments")
+						log.Warn("SSH: Invalid env payload %q: %v", req.Payload, err)
 						continue
 					}
 					// Sometimes the client could send malformed command (i.e. missing "="),
