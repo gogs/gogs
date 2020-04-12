@@ -55,18 +55,18 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 						Name  string
 						Value string
 					}
-					if err := ssh.Unmarshal(req.Payload, &msg); err != nil {
+					if err := ssh.Unmarshal(req.Payload, &env); err != nil {
 						log.Warn("SSH: Invalid env payload %q: %v", req.Payload, err)
 						continue
 					}
 					// Sometimes the client could send malformed command (i.e. missing "="),
 					// see https://discuss.gogs.io/t/ssh/3106.
-					if msg.Name == "" || msg.Value == "" {
-						log.Warn("SSH: Invalid env arguments: %+v", msg)
+					if env.Name == "" || env.Value == "" {
+						log.Warn("SSH: Invalid env arguments: %+v", env)
 						continue
 					}
 
-					_, stderr, err := com.ExecCmd("env", fmt.Sprintf("%s=%s", msg.Name, msg.Value))
+					_, stderr, err := com.ExecCmd("env", fmt.Sprintf("%s=%s", env.Name, env.Value))
 					if err != nil {
 						log.Error("env: %v - %s", err, stderr)
 						return
