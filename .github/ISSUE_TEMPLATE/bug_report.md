@@ -23,8 +23,11 @@ The issue will be closed without any explanation if it does not satisfy any of f
 **Describe the bug**
 <!-- A clear and concise description of what the bug is -->
 
-**Gogs version, commit or Docker image SHA**
-<!-- The version number or the commit SHA of the Gogs instance you use -->
+**Gogs version and commit**
+<!-- 
+  The version number or the commit SHA of the Gogs instance you use.
+  You can find these information in the admin dashboard ("/admin").
+-->
 
 **Git version**
 
