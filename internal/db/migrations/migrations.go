@@ -13,7 +13,7 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/strutil"
 )
 
 const _MIN_DB_VER = 10
@@ -156,10 +156,10 @@ func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	}
 
 	for _, org := range orgs {
-		if org.Rands, err = tool.RandomString(10); err != nil {
+		if org.Rands, err = strutil.RandomChars(10); err != nil {
 			return err
 		}
-		if org.Salt, err = tool.RandomString(10); err != nil {
+		if org.Salt, err = strutil.RandomChars(10); err != nil {
 			return err
 		}
 		if _, err = sess.ID(org.ID).Update(org); err != nil {

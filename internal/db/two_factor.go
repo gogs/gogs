@@ -7,36 +7,22 @@ package db
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/unknwon/com"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/cryptoutil"
 )
 
-// TwoFactor represents a two-factor authentication token.
+// TwoFactor is a 2FA token of a user.
 type TwoFactor struct {
 	ID          int64
-	UserID      int64 `xorm:"UNIQUE"`
+	UserID      int64 `xorm:"UNIQUE" gorm:"UNIQUE"`
 	Secret      string
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
-}
-
-func (t *TwoFactor) BeforeInsert() {
-	t.CreatedUnix = time.Now().Unix()
-}
-
-func (t *TwoFactor) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		t.Created = time.Unix(t.CreatedUnix, 0).Local()
-	}
 }
 
 // ValidateTOTP returns true if given passcode is valid for two-factor authentication token.
@@ -46,72 +32,11 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("DecodeString: %v", err)
 	}
-	decryptSecret, err := com.AESGCMDecrypt(tool.MD5Bytes(conf.Security.SecretKey), secret)
+	decryptSecret, err := com.AESGCMDecrypt(cryptoutil.MD5Bytes(conf.Security.SecretKey), secret)
 	if err != nil {
 		return false, fmt.Errorf("AESGCMDecrypt: %v", err)
 	}
 	return totp.Validate(passcode, string(decryptSecret)), nil
-}
-
-func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
-	recoveryCodes := make([]*TwoFactorRecoveryCode, 10)
-	for i := 0; i < 10; i++ {
-		code, err := tool.RandomString(10)
-		if err != nil {
-			return nil, fmt.Errorf("RandomString: %v", err)
-		}
-		recoveryCodes[i] = &TwoFactorRecoveryCode{
-			UserID: userID,
-			Code:   strings.ToLower(code[:5] + "-" + code[5:]),
-		}
-	}
-	return recoveryCodes, nil
-}
-
-// NewTwoFactor creates a new two-factor authentication token and recovery codes for given user.
-func NewTwoFactor(userID int64, secret string) error {
-	t := &TwoFactor{
-		UserID: userID,
-	}
-
-	// Encrypt secret
-	encryptSecret, err := com.AESGCMEncrypt(tool.MD5Bytes(conf.Security.SecretKey), []byte(secret))
-	if err != nil {
-		return fmt.Errorf("AESGCMEncrypt: %v", err)
-	}
-	t.Secret = base64.StdEncoding.EncodeToString(encryptSecret)
-
-	recoveryCodes, err := generateRecoveryCodes(userID)
-	if err != nil {
-		return fmt.Errorf("generateRecoveryCodes: %v", err)
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Insert(t); err != nil {
-		return fmt.Errorf("insert two-factor: %v", err)
-	} else if _, err = sess.Insert(recoveryCodes); err != nil {
-		return fmt.Errorf("insert recovery codes: %v", err)
-	}
-
-	return sess.Commit()
-}
-
-// GetTwoFactorByUserID returns two-factor authentication token of given user.
-func GetTwoFactorByUserID(userID int64) (*TwoFactor, error) {
-	t := new(TwoFactor)
-	has, err := x.Where("user_id = ?", userID).Get(t)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, errors.TwoFactorNotFound{UserID: userID}
-	}
-
-	return t, nil
 }
 
 // DeleteTwoFactor removes two-factor authentication token and recovery codes of given user.
@@ -152,7 +77,7 @@ func deleteRecoveryCodesByUserID(e Engine, userID int64) error {
 
 // RegenerateRecoveryCodes regenerates new set of recovery codes for given user.
 func RegenerateRecoveryCodes(userID int64) error {
-	recoveryCodes, err := generateRecoveryCodes(userID)
+	recoveryCodes, err := generateRecoveryCodes(userID, 10)
 	if err != nil {
 		return fmt.Errorf("generateRecoveryCodes: %v", err)
 	}
