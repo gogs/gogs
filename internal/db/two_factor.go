@@ -7,33 +7,22 @@ package db
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/unknwon/com"
-	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/tool"
 )
 
-// TwoFactor represents a two-factor authentication token.
+// TwoFactor is a 2FA token of a user.
 type TwoFactor struct {
 	ID          int64
-	UserID      int64 `xorm:"UNIQUE"`
+	UserID      int64 `xorm:"UNIQUE" gorm:"UNIQUE"`
 	Secret      string
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
-}
-
-func (t *TwoFactor) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		t.Created = time.Unix(t.CreatedUnix, 0).Local()
-	}
 }
 
 // ValidateTOTP returns true if given passcode is valid for two-factor authentication token.
@@ -48,34 +37,6 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 		return false, fmt.Errorf("AESGCMDecrypt: %v", err)
 	}
 	return totp.Validate(passcode, string(decryptSecret)), nil
-}
-
-func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
-	recoveryCodes := make([]*TwoFactorRecoveryCode, 10)
-	for i := 0; i < 10; i++ {
-		code, err := tool.RandomString(10)
-		if err != nil {
-			return nil, fmt.Errorf("RandomString: %v", err)
-		}
-		recoveryCodes[i] = &TwoFactorRecoveryCode{
-			UserID: userID,
-			Code:   strings.ToLower(code[:5] + "-" + code[5:]),
-		}
-	}
-	return recoveryCodes, nil
-}
-
-// GetTwoFactorByUserID returns two-factor authentication token of given user.
-func GetTwoFactorByUserID(userID int64) (*TwoFactor, error) {
-	t := new(TwoFactor)
-	has, err := x.Where("user_id = ?", userID).Get(t)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, errors.TwoFactorNotFound{UserID: userID}
-	}
-
-	return t, nil
 }
 
 // DeleteTwoFactor removes two-factor authentication token and recovery codes of given user.
@@ -116,7 +77,7 @@ func deleteRecoveryCodesByUserID(e Engine, userID int64) error {
 
 // RegenerateRecoveryCodes regenerates new set of recovery codes for given user.
 func RegenerateRecoveryCodes(userID int64) error {
-	recoveryCodes, err := generateRecoveryCodes(userID)
+	recoveryCodes, err := generateRecoveryCodes(userID, 10)
 	if err != nil {
 		return fmt.Errorf("generateRecoveryCodes: %v", err)
 	}

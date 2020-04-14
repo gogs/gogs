@@ -382,8 +382,8 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := db.GetTwoFactorByUserID(c.UserID())
-	if err != nil && !errors.IsTwoFactorNotFound(err) {
+	t, err := db.TwoFactors.GetByUserID(c.UserID())
+	if err != nil && !db.IsErrTwoFactorNotFound(err) {
 		c.Errorf(err, "get two factor by user ID")
 		return
 	}
