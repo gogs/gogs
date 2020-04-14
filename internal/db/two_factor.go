@@ -15,6 +15,7 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/tool"
 )
@@ -24,12 +25,8 @@ type TwoFactor struct {
 	ID          int64
 	UserID      int64 `xorm:"UNIQUE"`
 	Secret      string
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
-}
-
-func (t *TwoFactor) BeforeInsert() {
-	t.CreatedUnix = time.Now().Unix()
 }
 
 func (t *TwoFactor) AfterSet(colName string, _ xorm.Cell) {
@@ -46,7 +43,7 @@ func (t *TwoFactor) ValidateTOTP(passcode string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("DecodeString: %v", err)
 	}
-	decryptSecret, err := com.AESGCMDecrypt(tool.MD5Bytes(conf.Security.SecretKey), secret)
+	decryptSecret, err := com.AESGCMDecrypt(cryptoutil.MD5Bytes(conf.Security.SecretKey), secret)
 	if err != nil {
 		return false, fmt.Errorf("AESGCMDecrypt: %v", err)
 	}

@@ -27,22 +27,8 @@ import (
 	"gogs.io/gogs/internal/conf"
 )
 
-// MD5Bytes encodes string to MD5 bytes.
-// TODO: Move to hashutil.MD5Bytes.
-func MD5Bytes(str string) []byte {
-	m := md5.New()
-	_, _ = m.Write([]byte(str))
-	return m.Sum(nil)
-}
-
-// MD5 encodes string to MD5 hex value.
-// TODO: Move to hashutil.MD5.
-func MD5(str string) string {
-	return hex.EncodeToString(MD5Bytes(str))
-}
-
 // SHA1 encodes string to SHA1 hex value.
-// TODO: Move to hashutil.SHA1.
+// TODO: Move to cryptoutil.SHA1.
 func SHA1(str string) string {
 	h := sha1.New()
 	_, _ = h.Write([]byte(str))

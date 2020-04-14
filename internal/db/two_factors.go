@@ -6,14 +6,14 @@ package db
 
 import (
 	"encoding/base64"
-	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/unknwon/com"
+	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/cryptoutil"
 )
 
 // TwoFactorsStore is the persistent interface for 2FA.
@@ -21,12 +21,20 @@ import (
 // NOTE: All methods are sorted in alphabetical order.
 type TwoFactorsStore interface {
 	// Create creates a new 2FA token and recovery codes for given user.
-	Create(userID int64, secret string) error
+	// The "key" is used to encrypt and later decrypt given "secret",
+	// which should be configured in site-level and change of the "key"
+	// will break all existing 2FA tokens.
+	Create(userID int64, key, secret string) error
 	// IsUserEnabled returns true if the user has enabled 2FA.
 	IsUserEnabled(userID int64) bool
 }
 
 var TwoFactors TwoFactorsStore
+
+// NOTE: This is a GORM create hook.
+func (t *TwoFactor) BeforeCreate() {
+	t.CreatedUnix = time.Now().Unix()
+}
 
 var _ TwoFactorsStore = (*twoFactors)(nil)
 
@@ -34,36 +42,37 @@ type twoFactors struct {
 	*gorm.DB
 }
 
-func (db *twoFactors) Create(userID int64, secret string) error {
-	t := &TwoFactor{
-		UserID: userID,
-	}
-
-	// Encrypt secret
-	encryptSecret, err := com.AESGCMEncrypt(tool.MD5Bytes(conf.Security.SecretKey), []byte(secret))
+func (db *twoFactors) Create(userID int64, key, secret string) error {
+	encrypted, err := cryptoutil.AESGCMEncrypt(cryptoutil.MD5Bytes(key), []byte(secret))
 	if err != nil {
-		return fmt.Errorf("AESGCMEncrypt: %v", err)
+		return errors.Wrap(err, "encrypt secret")
 	}
-	t.Secret = base64.StdEncoding.EncodeToString(encryptSecret)
+	tf := &TwoFactor{
+		UserID: userID,
+		Secret: base64.StdEncoding.EncodeToString(encrypted),
+	}
 
 	recoveryCodes, err := generateRecoveryCodes(userID)
 	if err != nil {
-		return fmt.Errorf("generateRecoveryCodes: %v", err)
+		return errors.Wrap(err, "generate recovery codes")
 	}
 
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
+	vals := make([]string, 0, len(recoveryCodes))
+	items := make([]interface{}, 0, len(recoveryCodes)*2)
+	for _, code := range recoveryCodes {
+		vals = append(vals, "(?, ?)")
+		items = append(items, code.UserID, code.Code)
 	}
 
-	if _, err = sess.Insert(t); err != nil {
-		return fmt.Errorf("insert two-factor: %v", err)
-	} else if _, err = sess.Insert(recoveryCodes); err != nil {
-		return fmt.Errorf("insert recovery codes: %v", err)
-	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(tf).Error
+		if err != nil {
+			return err
+		}
 
-	return sess.Commit()
+		sql := "INSERT INTO two_factor_recovery_code (user_id, code) VALUES " + strings.Join(vals, ", ")
+		return tx.Exec(sql, items...).Error
+	})
 }
 
 func (db *twoFactors) IsUserEnabled(userID int64) bool {
