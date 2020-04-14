@@ -12,6 +12,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
+	"github.com/t-tiger/gorm-bulk-insert"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cryptoutil"
@@ -68,11 +69,9 @@ func (db *twoFactors) Create(userID int64, key, secret string) error {
 		return errors.Wrap(err, "generate recovery codes")
 	}
 
-	vals := make([]string, 0, len(recoveryCodes))
-	items := make([]interface{}, 0, len(recoveryCodes)*2)
+	records := make([]interface{}, 0, len(recoveryCodes))
 	for _, code := range recoveryCodes {
-		vals = append(vals, "(?, ?)")
-		items = append(items, code.UserID, code.Code)
+		records = append(records, code)
 	}
 
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -81,8 +80,7 @@ func (db *twoFactors) Create(userID int64, key, secret string) error {
 			return err
 		}
 
-		sql := "INSERT INTO two_factor_recovery_code (user_id, code) VALUES " + strings.Join(vals, ", ")
-		return tx.Exec(sql, items...).Error
+		return gormbulk.BulkInsert(tx, records, 3000)
 	})
 }
 
