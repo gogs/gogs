@@ -60,3 +60,17 @@ func RemoveTeamMember(c *context.APIContext) {
 
 	c.NoContent()
 }
+
+func ListTeamMembers(c *context.APIContext) {
+	team := c.Org.Team
+	if err := team.GetMembers(); err != nil {
+		c.Error(err, "get team members")
+		return
+	}
+
+	apiMembers := make([]*api.User, len(team.Members))
+	for i := range team.Members {
+		apiMembers[i] = team.Members[i].APIFormat()
+	}
+	c.JSONSuccess(apiMembers)
+}
