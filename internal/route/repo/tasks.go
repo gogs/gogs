@@ -10,8 +10,8 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/tool"
 )
 
 func TriggerTask(c *macaron.Context) {
@@ -39,7 +39,7 @@ func TriggerTask(c *macaron.Context) {
 
 	// 🚨 SECURITY: No need to check existence of the repository if the client
 	// can't even get the valid secret. Mostly likely not a legitimate request.
-	if secret != tool.MD5(owner.Salt) {
+	if secret != cryptoutil.MD5(owner.Salt) {
 		c.Error(http.StatusBadRequest, "Invalid secret")
 		return
 	}

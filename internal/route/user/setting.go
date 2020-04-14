@@ -20,6 +20,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
@@ -118,7 +119,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
-		ctxUser.Avatar = tool.MD5(f.Gravatar)
+		ctxUser.Avatar = cryptoutil.MD5(f.Gravatar)
 		ctxUser.AvatarEmail = f.Gravatar
 	}
 
@@ -381,8 +382,8 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := db.GetTwoFactorByUserID(c.UserID())
-	if err != nil && !errors.IsTwoFactorNotFound(err) {
+	t, err := db.TwoFactors.GetByUserID(c.UserID())
+	if err != nil && !db.IsErrTwoFactorNotFound(err) {
 		c.Errorf(err, "get two factor by user ID")
 		return
 	}
@@ -449,7 +450,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := db.NewTwoFactor(c.UserID(), secret); err != nil {
+	if err := db.TwoFactors.Create(c.UserID(), conf.Security.SecretKey, secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.RedirectSubpath("/user/settings/security/two_factor_enable")
 		return

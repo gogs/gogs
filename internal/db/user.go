@@ -32,6 +32,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -483,9 +484,9 @@ func IsUserExist(uid int64, name string) (bool, error) {
 	return x.Where("id != ?", uid).Get(&User{LowerName: strings.ToLower(name)})
 }
 
-// GetUserSalt returns a ramdom user salt token.
+// GetUserSalt returns a random user salt token.
 func GetUserSalt() (string, error) {
-	return tool.RandomString(10)
+	return strutil.RandomChars(10)
 }
 
 // NewGhostUser creates and returns a fake user for someone who has deleted his/her account.
