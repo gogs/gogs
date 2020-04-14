@@ -5,9 +5,8 @@
 package db
 
 import (
-	"strings"
-
 	"github.com/jinzhu/gorm"
+	"github.com/t-tiger/gorm-bulk-insert"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -54,7 +53,7 @@ func (db *perms) AccessMode(userID int64, repo *Repository) (mode AccessMode) {
 	access := new(Access)
 	err := db.Where("user_id = ? AND repo_id = ?", userID, repo.ID).First(access).Error
 	if err != nil {
-		if !gorm.IsRecordNotFoundError(err){
+		if !gorm.IsRecordNotFoundError(err) {
 			log.Error("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repo.ID, err)
 		}
 		return mode
@@ -67,11 +66,13 @@ func (db *perms) Authorize(userID int64, repo *Repository, desired AccessMode) b
 }
 
 func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error {
-	vals := make([]string, 0, len(accessMap))
-	items := make([]interface{}, 0, len(accessMap)*3)
+	records := make([]interface{}, 0, len(accessMap))
 	for userID, mode := range accessMap {
-		vals = append(vals, "(?, ?, ?)")
-		items = append(items, userID, repoID, mode)
+		records = append(records, &Access{
+			UserID: userID,
+			RepoID: repoID,
+			Mode:   mode,
+		})
 	}
 
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -80,7 +81,6 @@ func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) erro
 			return err
 		}
 
-		sql := "INSERT INTO access (user_id, repo_id, mode) VALUES " + strings.Join(vals, ", ")
-		return tx.Exec(sql, items...).Error
+		return gormbulk.BulkInsert(tx, records, 3000)
 	})
 }
