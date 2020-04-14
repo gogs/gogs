@@ -39,7 +39,7 @@ var TwoFactors TwoFactorsStore
 
 // NOTE: This is a GORM create hook.
 func (t *TwoFactor) BeforeCreate() {
-	t.CreatedUnix = time.Now().Unix()
+	t.CreatedUnix = gorm.NowFunc().Unix()
 }
 
 // NOTE: This is a GORM query hook.
