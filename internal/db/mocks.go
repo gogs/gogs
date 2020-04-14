@@ -180,7 +180,12 @@ func SetMockReposStore(t *testing.T, mock ReposStore) {
 var _ TwoFactorsStore = (*MockTwoFactorsStore)(nil)
 
 type MockTwoFactorsStore struct {
+	MockCreate        func(userID int64, secret string) error
 	MockIsUserEnabled func(userID int64) bool
+}
+
+func (m *MockTwoFactorsStore) Create(userID int64, secret string) error {
+	return m.MockCreate(userID, secret)
 }
 
 func (m *MockTwoFactorsStore) IsUserEnabled(userID int64) bool {

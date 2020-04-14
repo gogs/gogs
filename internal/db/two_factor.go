@@ -68,39 +68,6 @@ func generateRecoveryCodes(userID int64) ([]*TwoFactorRecoveryCode, error) {
 	return recoveryCodes, nil
 }
 
-// NewTwoFactor creates a new two-factor authentication token and recovery codes for given user.
-func NewTwoFactor(userID int64, secret string) error {
-	t := &TwoFactor{
-		UserID: userID,
-	}
-
-	// Encrypt secret
-	encryptSecret, err := com.AESGCMEncrypt(tool.MD5Bytes(conf.Security.SecretKey), []byte(secret))
-	if err != nil {
-		return fmt.Errorf("AESGCMEncrypt: %v", err)
-	}
-	t.Secret = base64.StdEncoding.EncodeToString(encryptSecret)
-
-	recoveryCodes, err := generateRecoveryCodes(userID)
-	if err != nil {
-		return fmt.Errorf("generateRecoveryCodes: %v", err)
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Insert(t); err != nil {
-		return fmt.Errorf("insert two-factor: %v", err)
-	} else if _, err = sess.Insert(recoveryCodes); err != nil {
-		return fmt.Errorf("insert recovery codes: %v", err)
-	}
-
-	return sess.Commit()
-}
-
 // GetTwoFactorByUserID returns two-factor authentication token of given user.
 func GetTwoFactorByUserID(userID int64) (*TwoFactor, error) {
 	t := new(TwoFactor)

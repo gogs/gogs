@@ -449,7 +449,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := db.NewTwoFactor(c.UserID(), secret); err != nil {
+	if err := db.TwoFactors.Create(c.UserID(), secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.RedirectSubpath("/user/settings/security/two_factor_enable")
 		return
