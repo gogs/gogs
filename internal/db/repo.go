@@ -1057,13 +1057,13 @@ var (
 	reservedRepoPatterns = []string{"*.git", "*.wiki"}
 )
 
-// IsUsableRepoName return an error if given name is a reserved name or pattern.
-func IsUsableRepoName(name string) error {
-	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
+// isRepoNameAllowed return an error if given name is a reserved name or pattern for repositories.
+func isRepoNameAllowed(name string) error {
+	return isNameAllowed(reservedRepoNames, reservedRepoPatterns, name)
 }
 
 func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err error) {
-	if err = IsUsableRepoName(repo.Name); err != nil {
+	if err = isRepoNameAllowed(repo.Name); err != nil {
 		return err
 	}
 
@@ -1071,7 +1071,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{owner.Name, repo.Name}
+		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
 	if _, err = e.Insert(repo); err != nil {
@@ -1266,7 +1266,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{newOwnerName, repo.Name}
+		return ErrRepoAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
 	}
 
 	sess := x.NewSession()
@@ -1384,7 +1384,7 @@ func deleteRepoLocalCopy(repo *Repository) {
 func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
-	if err = IsUsableRepoName(newRepoName); err != nil {
+	if err = isRepoNameAllowed(newRepoName); err != nil {
 		return err
 	}
 
@@ -1392,7 +1392,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{u.Name, newRepoName}
+		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
 	}
 
 	repo, err := GetRepositoryByName(u.ID, oldRepoName)

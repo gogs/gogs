@@ -8,32 +8,6 @@ import (
 	"fmt"
 )
 
-type ErrNameReserved struct {
-	Name string
-}
-
-func IsErrNameReserved(err error) bool {
-	_, ok := err.(ErrNameReserved)
-	return ok
-}
-
-func (err ErrNameReserved) Error() string {
-	return fmt.Sprintf("name is reserved [name: %s]", err.Name)
-}
-
-type ErrNamePatternNotAllowed struct {
-	Pattern string
-}
-
-func IsErrNamePatternNotAllowed(err error) bool {
-	_, ok := err.(ErrNamePatternNotAllowed)
-	return ok
-}
-
-func (err ErrNamePatternNotAllowed) Error() string {
-	return fmt.Sprintf("name pattern is not allowed [pattern: %s]", err.Pattern)
-}
-
 //  ____ ___
 // |    |   \______ ___________
 // |    |   /  ___// __ \_  __ \
@@ -244,20 +218,6 @@ func (err ErrLastOrgOwner) Error() string {
 //  |    |   \  ___/|  |_> >  <_> )___ \|  ||  | (  <_> )  | \/\___  |
 //  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
 //         \/     \/|__|              \/                       \/
-
-type ErrRepoAlreadyExist struct {
-	Uname string
-	Name  string
-}
-
-func IsErrRepoAlreadyExist(err error) bool {
-	_, ok := err.(ErrRepoAlreadyExist)
-	return ok
-}
-
-func (err ErrRepoAlreadyExist) Error() string {
-	return fmt.Sprintf("repository already exists [uname: %s, name: %s]", err.Uname, err.Name)
-}
 
 type ErrInvalidCloneAddr struct {
 	IsURLError         bool
