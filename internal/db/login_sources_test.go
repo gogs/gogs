@@ -119,10 +119,10 @@ func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 		}
 
 		// Create a user that uses this login source
-		user := &User{
+		_, err = (&users{DB: db.DB}).Create(CreateUserOpts{
+			Name:        "alice",
 			LoginSource: source.ID,
-		}
-		err = db.DB.Create(user).Error
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

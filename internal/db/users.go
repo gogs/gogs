@@ -123,9 +123,10 @@ func (db *users) Authenticate(username, password string, loginSourceID int64) (*
 }
 
 type CreateUserOpts struct {
-	Name     string
-	Email    string
-	Password string
+	Name        string
+	Email       string
+	Password    string
+	LoginSource int64
 }
 
 type ErrUserAlreadyExist struct {
@@ -185,6 +186,7 @@ func (db *users) Create(opts CreateUserOpts) (*User, error) {
 	user := &User{
 		LowerName:       strings.ToLower(opts.Name),
 		Name:            opts.Name,
+		LoginSource:     opts.LoginSource,
 		Avatar:          cryptoutil.MD5(opts.Email),
 		AvatarEmail:     opts.Email,
 		MaxRepoCreation: -1,
