@@ -6,7 +6,6 @@ package db
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -201,11 +200,6 @@ func (db *users) Create(opts CreateUserOpts) (*User, error) {
 		return nil, err
 	}
 	user.EncodePassword()
-
-	err = os.MkdirAll(UserPath(user.Name), os.ModePerm)
-	if err != nil {
-		return nil, err
-	}
 
 	return user, db.DB.Create(user).Error
 }
