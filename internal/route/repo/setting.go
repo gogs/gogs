@@ -67,10 +67,8 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 				switch {
 				case db.IsErrRepoAlreadyExist(err):
 					c.RenderWithErr(c.Tr("form.repo_name_been_taken"), SETTINGS_OPTIONS, &f)
-				case db.IsErrNameReserved(err):
-					c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), SETTINGS_OPTIONS, &f)
-				case db.IsErrNamePatternNotAllowed(err):
-					c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), SETTINGS_OPTIONS, &f)
+				case db.IsErrNameNotAllowed(err):
+					c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SETTINGS_OPTIONS, &f)
 				default:
 					c.Error(err, "change repository name")
 				}
@@ -432,7 +430,7 @@ func DeleteCollaboration(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.remove_collaborator_success"))
 	}
 
-	c.JSONSuccess( map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/settings/collaboration",
 	})
 }
@@ -685,7 +683,7 @@ func DeleteDeployKey(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.deploy_key_deletion_success"))
 	}
 
-	c.JSONSuccess( map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/settings/keys",
 	})
 }

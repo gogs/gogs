@@ -55,8 +55,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	if err := db.CreateUser(u); err != nil {
 		if db.IsErrUserAlreadyExist(err) ||
 			db.IsErrEmailAlreadyUsed(err) ||
-			db.IsErrNameReserved(err) ||
-			db.IsErrNamePatternNotAllowed(err) {
+			db.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create user")

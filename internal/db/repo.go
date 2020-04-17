@@ -148,14 +148,14 @@ func NewRepoContext() {
 // Repository contains information of a repository.
 type Repository struct {
 	ID              int64
-	OwnerID         int64  `xorm:"UNIQUE(s)"`
-	Owner           *User  `xorm:"-" json:"-"`
-	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name            string `xorm:"INDEX NOT NULL"`
-	Description     string `xorm:"VARCHAR(512)"`
+	OwnerID         int64  `xorm:"UNIQUE(s)" gorm:"UNIQUE_INDEX:s"`
+	Owner           *User  `xorm:"-" gorm:"-" json:"-"`
+	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"UNIQUE_INDEX:s"`
+	Name            string `xorm:"INDEX NOT NULL" gorm:"NOT NULL"`
+	Description     string `xorm:"VARCHAR(512)" gorm:"TYPE:VARCHAR(512)"`
 	Website         string
 	DefaultBranch   string
-	Size            int64 `xorm:"NOT NULL DEFAULT 0"`
+	Size            int64 `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
 	UseCustomAvatar bool
 
 	// Counters
@@ -164,54 +164,50 @@ type Repository struct {
 	NumForks            int
 	NumIssues           int
 	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-" json:"-"`
+	NumOpenIssues       int `xorm:"-" gorm:"-" json:"-"`
 	NumPulls            int
 	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-" json:"-"`
-	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
-	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
-	NumOpenMilestones   int `xorm:"-" json:"-"`
-	NumTags             int `xorm:"-" json:"-"`
+	NumOpenPulls        int `xorm:"-" gorm:"-" json:"-"`
+	NumMilestones       int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
+	NumTags             int `xorm:"-" gorm:"-" json:"-"`
 
 	IsPrivate bool
 	IsBare    bool
 
 	IsMirror bool
-	*Mirror  `xorm:"-" json:"-"`
+	*Mirror  `xorm:"-" gorm:"-" json:"-"`
 
 	// Advanced settings
-	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	EnableWiki            bool `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
 	AllowPublicWiki       bool
 	EnableExternalWiki    bool
 	ExternalWikiURL       string
-	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
+	EnableIssues          bool `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
 	AllowPublicIssues     bool
 	EnableExternalTracker bool
 	ExternalTrackerURL    string
 	ExternalTrackerFormat string
 	ExternalTrackerStyle  string
-	ExternalMetas         map[string]string `xorm:"-" json:"-"`
-	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
-	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false"`
-	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false"`
+	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
+	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
+	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
+	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
 
-	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
+	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
 	ForkID   int64
-	BaseRepo *Repository `xorm:"-" json:"-"`
+	BaseRepo *Repository `xorm:"-" gorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" json:"-"`
+	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
 func (repo *Repository) BeforeInsert() {
 	repo.CreatedUnix = time.Now().Unix()
 	repo.UpdatedUnix = repo.CreatedUnix
-}
-
-func (repo *Repository) BeforeUpdate() {
-	repo.UpdatedUnix = time.Now().Unix()
 }
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
@@ -1057,13 +1053,13 @@ var (
 	reservedRepoPatterns = []string{"*.git", "*.wiki"}
 )
 
-// IsUsableRepoName return an error if given name is a reserved name or pattern.
-func IsUsableRepoName(name string) error {
-	return isUsableName(reservedRepoNames, reservedRepoPatterns, name)
+// isRepoNameAllowed return an error if given name is a reserved name or pattern for repositories.
+func isRepoNameAllowed(name string) error {
+	return isNameAllowed(reservedRepoNames, reservedRepoPatterns, name)
 }
 
 func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err error) {
-	if err = IsUsableRepoName(repo.Name); err != nil {
+	if err = isRepoNameAllowed(repo.Name); err != nil {
 		return err
 	}
 
@@ -1071,7 +1067,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{owner.Name, repo.Name}
+		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
 	if _, err = e.Insert(repo); err != nil {
@@ -1266,7 +1262,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{newOwnerName, repo.Name}
+		return ErrRepoAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
 	}
 
 	sess := x.NewSession()
@@ -1384,7 +1380,7 @@ func deleteRepoLocalCopy(repo *Repository) {
 func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) {
 	oldRepoName = strings.ToLower(oldRepoName)
 	newRepoName = strings.ToLower(newRepoName)
-	if err = IsUsableRepoName(newRepoName); err != nil {
+	if err = isRepoNameAllowed(newRepoName); err != nil {
 		return err
 	}
 
@@ -1392,7 +1388,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{u.Name, newRepoName}
+		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
 	}
 
 	repo, err := GetRepositoryByName(u.ID, oldRepoName)
@@ -1645,25 +1641,6 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 	}
 
 	return GetRepositoryByName(user.ID, repoName)
-}
-
-var _ errutil.NotFound = (*ErrRepoNotExist)(nil)
-
-type ErrRepoNotExist struct {
-	args map[string]interface{}
-}
-
-func IsErrRepoNotExist(err error) bool {
-	_, ok := err.(ErrRepoNotExist)
-	return ok
-}
-
-func (err ErrRepoNotExist) Error() string {
-	return fmt.Sprintf("repository does not exist: %v", err.args)
-}
-
-func (ErrRepoNotExist) NotFound() bool {
-	return true
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
