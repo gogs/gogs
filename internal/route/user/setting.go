@@ -76,10 +76,8 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				switch {
 				case db.IsErrUserAlreadyExist(err):
 					msg = c.Tr("form.username_been_taken")
-				case db.IsErrNameReserved(err):
-					msg = c.Tr("form.name_reserved")
-				case db.IsErrNamePatternNotAllowed(err):
-					msg = c.Tr("form.name_pattern_not_allowed")
+				case db.IsErrNameNotAllowed(err):
+					msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 				default:
 					c.Error(err, "change user name")
 					return
