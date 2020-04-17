@@ -28,10 +28,11 @@ import (
 )
 
 const (
-	BARE     = "repo/bare"
-	HOME     = "repo/home"
-	WATCHERS = "repo/watchers"
-	FORKS    = "repo/forks"
+	BARE           = "repo/bare"
+	HOME           = "repo/home"
+	WATCHERS       = "repo/watchers"
+	FORKS          = "repo/forks"
+	SYMLINK_SYMBOL = " -> "
 )
 
 func renderDirectory(c *context.Context, treeLink string) {
@@ -59,6 +60,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 
 	var readmeFile *git.Blob
+	var readmeFileName string
 	for _, entry := range entries {
 		if entry.IsTree() || !markup.IsReadmeFile(entry.Name()) {
 			continue
@@ -66,6 +68,17 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 		// TODO(unknwon): collect all possible README files and show with priority.
 		readmeFile = entry.Blob()
+		if readmeFile != nil {
+			readmeFileName = readmeFile.Name()
+			sourceEntry, sourcePath, err := isSymlink(entry, c)
+			if err != nil {
+				readmeFileName += SYMLINK_SYMBOL + err.Error()
+			}
+			if sourceEntry != nil {
+				readmeFileName += SYMLINK_SYMBOL + sourcePath
+				readmeFile = sourceEntry.Blob()
+			}
+		}
 		break
 	}
 
@@ -82,7 +95,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 
 		isTextFile := tool.IsTextFile(p)
 		c.Data["IsTextFile"] = isTextFile
-		c.Data["FileName"] = readmeFile.Name()
+		c.Data["FileName"] = readmeFileName
 		if isTextFile {
 			switch markup.Detect(readmeFile.Name()) {
 			case markup.MARKDOWN:
@@ -120,9 +133,8 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 }
 
-func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink string) {
+func renderFile(c *context.Context, entry *git.TreeEntry, fileName string, treeLink, rawLink string) {
 	c.Data["IsViewFile"] = true
-
 	blob := entry.Blob()
 	p, err := blob.Bytes()
 	if err != nil {
@@ -131,7 +143,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	}
 
 	c.Data["FileSize"] = blob.Size()
-	c.Data["FileName"] = blob.Name()
+	c.Data["FileName"] = fileName
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
 	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
 
@@ -274,11 +286,29 @@ func Home(c *context.Context) {
 		return
 	}
 
+	sourceEntry, sourcePath, err := isSymlink(entry, c)
+	entryName := entry.Name()
+	if err != nil {
+		entryName += SYMLINK_SYMBOL + err.Error()
+	} else if sourceEntry != nil {
+		treeLink = branchLink + "/" + sourcePath
+		c.Repo.TreePath = sourcePath
+		entry = sourceEntry
+		entryName += SYMLINK_SYMBOL + sourcePath
+
+		// Required, if not overwritten:
+		// 	dir: It will cause an inability to upload and add files.
+		// 	file: It will not be able to be modified or downloaded(raw).
+		// Symlink only does links, the symbol file cannot be edited.
+		c.Data["TreePath"] = sourcePath
+	}
+
 	if entry.IsTree() {
 		renderDirectory(c, treeLink)
 	} else {
-		renderFile(c, entry, treeLink, rawLink)
+		renderFile(c, entry, entryName, treeLink, rawLink)
 	}
+
 	if c.Written() {
 		return
 	}
@@ -359,4 +389,21 @@ func Forks(c *context.Context) {
 	c.Data["Forks"] = forks
 
 	c.Success(FORKS)
+}
+
+// check and get source file/dir entry for symlink.
+func isSymlink(entry *git.TreeEntry, c *context.Context) (*git.TreeEntry, string, error) {
+	if entry.IsSymlink() {
+		p, err := entry.Blob().Bytes()
+		if err != nil {
+			return nil, "", err
+		}
+		sourcePath := string(p)
+		sourceEntry, err := c.Repo.Commit.TreeEntry("/" + sourcePath)
+		if err != nil {
+			return nil, sourcePath, err
+		}
+		return sourceEntry, sourcePath, nil
+	}
+	return nil, "", nil
 }
