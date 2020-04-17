@@ -512,6 +512,20 @@ func IsErrNameNotAllowed(err error) bool {
 	return ok
 }
 
+func (err ErrNameNotAllowed) Value() string {
+	val, ok := err.args["name"].(string)
+	if ok {
+		return val
+	}
+
+	val, ok = err.args["pattern"].(string)
+	if ok {
+		return val
+	}
+
+	return "<value not found>"
+}
+
 func (err ErrNameNotAllowed) Error() string {
 	return fmt.Sprintf("name is not allowed: %v", err.args)
 }
