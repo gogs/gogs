@@ -148,14 +148,14 @@ func NewRepoContext() {
 // Repository contains information of a repository.
 type Repository struct {
 	ID              int64
-	OwnerID         int64  `xorm:"UNIQUE(s)"`
-	Owner           *User  `xorm:"-" json:"-"`
-	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name            string `xorm:"INDEX NOT NULL"`
-	Description     string `xorm:"VARCHAR(512)"`
+	OwnerID         int64  `xorm:"UNIQUE(s)" gorm:"UNIQUE_INDEX:s"`
+	Owner           *User  `xorm:"-" gorm:"-" json:"-"`
+	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"UNIQUE_INDEX:s"`
+	Name            string `xorm:"INDEX NOT NULL" gorm:"NOT NULL"`
+	Description     string `xorm:"VARCHAR(512)" gorm:"TYPE:VARCHAR(512)"`
 	Website         string
 	DefaultBranch   string
-	Size            int64 `xorm:"NOT NULL DEFAULT 0"`
+	Size            int64 `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
 	UseCustomAvatar bool
 
 	// Counters
@@ -164,54 +164,50 @@ type Repository struct {
 	NumForks            int
 	NumIssues           int
 	NumClosedIssues     int
-	NumOpenIssues       int `xorm:"-" json:"-"`
+	NumOpenIssues       int `xorm:"-" gorm:"-" json:"-"`
 	NumPulls            int
 	NumClosedPulls      int
-	NumOpenPulls        int `xorm:"-" json:"-"`
-	NumMilestones       int `xorm:"NOT NULL DEFAULT 0"`
-	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0"`
-	NumOpenMilestones   int `xorm:"-" json:"-"`
-	NumTags             int `xorm:"-" json:"-"`
+	NumOpenPulls        int `xorm:"-" gorm:"-" json:"-"`
+	NumMilestones       int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
+	NumTags             int `xorm:"-" gorm:"-" json:"-"`
 
 	IsPrivate bool
 	IsBare    bool
 
 	IsMirror bool
-	*Mirror  `xorm:"-" json:"-"`
+	*Mirror  `xorm:"-" gorm:"-" json:"-"`
 
 	// Advanced settings
-	EnableWiki            bool `xorm:"NOT NULL DEFAULT true"`
+	EnableWiki            bool `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
 	AllowPublicWiki       bool
 	EnableExternalWiki    bool
 	ExternalWikiURL       string
-	EnableIssues          bool `xorm:"NOT NULL DEFAULT true"`
+	EnableIssues          bool `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
 	AllowPublicIssues     bool
 	EnableExternalTracker bool
 	ExternalTrackerURL    string
 	ExternalTrackerFormat string
 	ExternalTrackerStyle  string
-	ExternalMetas         map[string]string `xorm:"-" json:"-"`
-	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true"`
-	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false"`
-	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false"`
+	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
+	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
+	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
+	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
 
-	IsFork   bool `xorm:"NOT NULL DEFAULT false"`
+	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
 	ForkID   int64
-	BaseRepo *Repository `xorm:"-" json:"-"`
+	BaseRepo *Repository `xorm:"-" gorm:"-" json:"-"`
 
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
-	Updated     time.Time `xorm:"-" json:"-"`
+	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
 	UpdatedUnix int64
 }
 
 func (repo *Repository) BeforeInsert() {
 	repo.CreatedUnix = time.Now().Unix()
 	repo.UpdatedUnix = repo.CreatedUnix
-}
-
-func (repo *Repository) BeforeUpdate() {
-	repo.UpdatedUnix = time.Now().Unix()
 }
 
 func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
@@ -1645,25 +1641,6 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 	}
 
 	return GetRepositoryByName(user.ID, repoName)
-}
-
-var _ errutil.NotFound = (*ErrRepoNotExist)(nil)
-
-type ErrRepoNotExist struct {
-	args map[string]interface{}
-}
-
-func IsErrRepoNotExist(err error) bool {
-	_, ok := err.(ErrRepoNotExist)
-	return ok
-}
-
-func (err ErrRepoNotExist) Error() string {
-	return fmt.Sprintf("repository does not exist: %v", err.args)
-}
-
-func (ErrRepoNotExist) NotFound() bool {
-	return true
 }
 
 // GetRepositoryByName returns the repository by given name under user if exists.
