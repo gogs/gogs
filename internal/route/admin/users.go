@@ -101,12 +101,9 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		case db.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
-		case db.IsErrNameReserved(err):
+		case db.IsErrNameNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(db.ErrNameReserved).Name), USER_NEW, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), USER_NEW, &f)
 		default:
 			c.Error(err, "create user")
 		}

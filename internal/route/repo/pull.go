@@ -136,10 +136,8 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", c.User.RepoCreationNum()), FORK, &f)
 		case db.IsErrRepoAlreadyExist(err):
 			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
-		case db.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), FORK, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), FORK, &f)
+		case db.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), FORK, &f)
 		default:
 			c.Error(err, "fork repository")
 		}

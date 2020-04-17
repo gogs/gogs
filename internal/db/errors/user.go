@@ -8,17 +8,6 @@ import (
 	"fmt"
 )
 
-type EmptyName struct{}
-
-func IsEmptyName(err error) bool {
-	_, ok := err.(EmptyName)
-	return ok
-}
-
-func (err EmptyName) Error() string {
-	return "empty name"
-}
-
 type UserNotKeyOwner struct {
 	KeyID int64
 }

@@ -58,6 +58,8 @@ github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196 h1:fqWZxyMLF6RVGm
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196/go.mod h1:O6fSdaYZbGh4clVMGMGO5k2KbMO0Cz8YdBnPrD0I8dM=
 github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d h1:aSJXLVjEjbLeHo8aCTDcD3/gMWizaRjMBb3VCsEWEHs=
 github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d/go.mod h1:lmhlZnu9cTRGNQEkSh1qZi2IK3HJH4Z1MXkg6ARQKZA=
+github.com/go-macaron/captcha v0.2.0 h1:d38eYDDF8tdqoM0hJbk+Jb7WQGWlwYNnQwRqLRmSk1Y=
+github.com/go-macaron/captcha v0.2.0/go.mod h1:lmhlZnu9cTRGNQEkSh1qZi2IK3HJH4Z1MXkg6ARQKZA=
 github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c h1:kFFz1OpaH3+efG7RA33z+D0piwpA/a3x/Zn2d8z9rfw=
 github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c/go.mod h1:FX53Xq0NNlUj0E5in5J8Dq5nrbdK3ZyDIy6y5VWOiUo=
 github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07 h1:YSIA98PevNf1NtCa/J6cz7gjzpz99WVAOa9Eg0klKps=

@@ -9,7 +9,7 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
-	github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d
+	github.com/go-macaron/captcha v0.2.0
 	github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c
 	github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07
 	github.com/go-macaron/i18n v0.5.0

@@ -217,7 +217,7 @@ var reservedTeamNames = []string{"new"}
 
 // IsUsableTeamName return an error if given name is a reserved name or pattern.
 func IsUsableTeamName(name string) error {
-	return isUsableName(reservedTeamNames, nil, name)
+	return isNameAllowed(reservedTeamNames, nil, name)
 }
 
 // NewTeam creates a record of new team.

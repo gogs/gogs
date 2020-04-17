@@ -40,10 +40,8 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		switch {
 		case db.IsErrUserAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
-		case db.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.name_reserved", err.(db.ErrNameReserved).Name), CREATE, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), CREATE, &f)
+		case db.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), CREATE, &f)
 		default:
 			c.Error(err, "create organization")
 		}

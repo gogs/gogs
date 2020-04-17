@@ -503,25 +503,52 @@ var (
 	reservedUserPatterns = []string{"*.keys"}
 )
 
-// isUsableName checks if name is reserved or pattern of name is not allowed
+type ErrNameNotAllowed struct {
+	args errutil.Args
+}
+
+func IsErrNameNotAllowed(err error) bool {
+	_, ok := err.(ErrNameNotAllowed)
+	return ok
+}
+
+func (err ErrNameNotAllowed) Value() string {
+	val, ok := err.args["name"].(string)
+	if ok {
+		return val
+	}
+
+	val, ok = err.args["pattern"].(string)
+	if ok {
+		return val
+	}
+
+	return "<value not found>"
+}
+
+func (err ErrNameNotAllowed) Error() string {
+	return fmt.Sprintf("name is not allowed: %v", err.args)
+}
+
+// isNameAllowed checks if name is reserved or pattern of name is not allowed
 // based on given reserved names and patterns.
 // Names are exact match, patterns can be prefix or suffix match with placeholder '*'.
-func isUsableName(names, patterns []string, name string) error {
+func isNameAllowed(names, patterns []string, name string) error {
 	name = strings.TrimSpace(strings.ToLower(name))
 	if utf8.RuneCountInString(name) == 0 {
-		return errors.EmptyName{}
+		return ErrNameNotAllowed{args: errutil.Args{"reason": "empty name"}}
 	}
 
 	for i := range names {
 		if name == names[i] {
-			return ErrNameReserved{name}
+			return ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": name}}
 		}
 	}
 
 	for _, pat := range patterns {
 		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
 			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
-			return ErrNamePatternNotAllowed{pat}
+			return ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": pat}}
 		}
 	}
 
@@ -529,7 +556,7 @@ func isUsableName(names, patterns []string, name string) error {
 }
 
 func IsUsableUsername(name string) error {
-	return isUsableName(reservedUsernames, reservedUserPatterns, name)
+	return isNameAllowed(reservedUsernames, reservedUserPatterns, name)
 }
 
 // CreateUser creates record of a new user.
