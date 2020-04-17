@@ -196,7 +196,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = f.LoginName

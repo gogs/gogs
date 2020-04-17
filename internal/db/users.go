@@ -6,11 +6,13 @@ package db
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
 
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -30,14 +32,21 @@ type UsersStore interface {
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
 	Authenticate(username, password string, loginSourceID int64) (*User, error)
+	// Create creates a new user and persist to database.
+	// It returns ErrUserAlreadyExist when a user with same name already exists,
+	// or ErrEmailAlreadyUsed if the email has been used by another user.
+	Create(opts CreateUserOpts) (*User, error)
+	// GetByEmail returns the user with given email. It returns ErrUserNotExist when not found.
+	GetByEmail(email string) (*User, error)
 	// GetByID returns the user with given ID. It returns ErrUserNotExist when not found.
 	GetByID(id int64) (*User, error)
-	// GetByUsername returns the user with given username. It returns ErrUserNotExist
-	// when not found.
+	// GetByUsername returns the user with given username. It returns ErrUserNotExist when not found.
 	GetByUsername(username string) (*User, error)
 }
 
 var Users UsersStore
+
+var _ UsersStore = (*users)(nil)
 
 type users struct {
 	*gorm.DB
@@ -113,12 +122,146 @@ func (db *users) Authenticate(username, password string, loginSourceID int64) (*
 	return user, nil
 }
 
+type CreateUserOpts struct {
+	Name     string
+	Email    string
+	Password string
+}
+
+type ErrUserAlreadyExist struct {
+	args errutil.Args
+}
+
+func IsErrUserAlreadyExist(err error) bool {
+	_, ok := err.(ErrUserAlreadyExist)
+	return ok
+}
+
+func (err ErrUserAlreadyExist) Error() string {
+	return fmt.Sprintf("user already exists: %v", err.args)
+}
+
+type ErrEmailAlreadyUsed struct {
+	args errutil.Args
+}
+
+func IsErrEmailAlreadyUsed(err error) bool {
+	_, ok := err.(ErrEmailAlreadyUsed)
+	return ok
+}
+
+func (err ErrEmailAlreadyUsed) Email() string {
+	email, ok := err.args["email"].(string)
+	if ok {
+		return email
+	}
+	return "<email not found>"
+}
+
+func (err ErrEmailAlreadyUsed) Error() string {
+	return fmt.Sprintf("email has been used: %v", err.args)
+}
+
+func (db *users) Create(opts CreateUserOpts) (*User, error) {
+	err := isUsernameAllowed(opts.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.GetByUsername(opts.Name)
+	if err == nil {
+		return nil, ErrUserAlreadyExist{args: errutil.Args{"name": opts.Name}}
+	} else if !IsErrUserNotExist(err) {
+		return nil, err
+	}
+
+	_, err = db.GetByEmail(opts.Email)
+	if err == nil {
+		return nil, ErrEmailAlreadyUsed{args: errutil.Args{"email": opts.Email}}
+	} else if !IsErrUserNotExist(err) {
+		return nil, err
+	}
+
+	user := &User{
+		LowerName:       strings.ToLower(opts.Name),
+		Name:            opts.Name,
+		Avatar:          cryptoutil.MD5(opts.Email),
+		AvatarEmail:     opts.Email,
+		MaxRepoCreation: -1,
+	}
+
+	user.Rands, err = GetUserSalt()
+	if err != nil {
+		return nil, err
+	}
+	user.Salt, err = GetUserSalt()
+	if err != nil {
+		return nil, err
+	}
+	user.EncodePassword()
+
+	err = os.MkdirAll(UserPath(user.Name), os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, db.DB.Create(user).Error
+}
+
+var _ errutil.NotFound = (*ErrUserNotExist)(nil)
+
+type ErrUserNotExist struct {
+	args errutil.Args
+}
+
+func IsErrUserNotExist(err error) bool {
+	_, ok := err.(ErrUserNotExist)
+	return ok
+}
+
+func (err ErrUserNotExist) Error() string {
+	return fmt.Sprintf("user does not exist: %v", err.args)
+}
+
+func (ErrUserNotExist) NotFound() bool {
+	return true
+}
+
+func (db *users) GetByEmail(email string) (*User, error) {
+	email = strings.ToLower(email)
+
+	if len(email) == 0 {
+		return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
+	}
+
+	// First try to find the user by primary email
+	user := new(User)
+	err := db.Where("email = ?", email).First(user).Error
+	if err == nil {
+		return user, nil
+	} else if !gorm.IsRecordNotFoundError(err) {
+		return nil, err
+	}
+
+	// Otherwise, check activated email addresses
+	emailAddress := new(EmailAddress)
+	err = db.Where("email = ? AND is_activated = ?", email, true).First(emailAddress).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
+		}
+		return nil, err
+	}
+
+	return db.GetByID(emailAddress.UID)
+}
+
 func (db *users) GetByID(id int64) (*User, error) {
 	user := new(User)
 	err := db.Where("id = ?", id).First(user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, ErrUserNotExist{args: map[string]interface{}{"userID": id}}
+			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 		}
 		return nil, err
 	}
@@ -130,7 +273,7 @@ func (db *users) GetByUsername(username string) (*User, error) {
 	err := db.Where("lower_name = ?", strings.ToLower(username)).First(user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, ErrUserNotExist{args: map[string]interface{}{"name": username}}
+			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
 		}
 		return nil, err
 	}

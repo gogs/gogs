@@ -9,16 +9,17 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 )
 
-// EmailAdresses is the list of all email addresses of a user. Can contain the
+// EmailAddresses is the list of all email addresses of a user. Can contain the
 // primary email address, but is not obligatory.
 type EmailAddress struct {
 	ID          int64
 	UID         int64  `xorm:"INDEX NOT NULL"`
 	Email       string `xorm:"UNIQUE NOT NULL"`
 	IsActivated bool
-	IsPrimary   bool `xorm:"-" json:"-"`
+	IsPrimary   bool `xorm:"-" gorm:"-" json:"-"`
 }
 
 // GetEmailAddresses returns all email addresses belongs to given user.
@@ -82,7 +83,7 @@ func addEmailAddress(e Engine, email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if used {
-		return ErrEmailAlreadyUsed{email.Email}
+		return ErrEmailAlreadyUsed{args: errutil.Args{"email": email.Email}}
 	}
 
 	_, err = e.Insert(email)
@@ -105,7 +106,7 @@ func AddEmailAddresses(emails []*EmailAddress) error {
 		if err != nil {
 			return err
 		} else if used {
-			return ErrEmailAlreadyUsed{emails[i].Email}
+			return ErrEmailAlreadyUsed{args: errutil.Args{"email": emails[i].Email}}
 		}
 	}
 

@@ -553,7 +553,7 @@ func ResetPasswdPost(c *context.Context) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 		if err := db.UpdateUser(u); err != nil {
 			c.Error(err, "update user")
 			return
