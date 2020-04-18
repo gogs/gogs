@@ -12,6 +12,8 @@ import (
 
 	"xorm.io/builder"
 	"xorm.io/xorm"
+
+	"gogs.io/gogs/internal/errutil"
 )
 
 var (
@@ -99,7 +101,7 @@ func (org *User) RemoveOrgRepo(repoID int64) error {
 
 // CreateOrganization creates record of a new organization.
 func CreateOrganization(org, owner *User) (err error) {
-	if err = IsUsableUsername(org.Name); err != nil {
+	if err = isUsernameAllowed(org.Name); err != nil {
 		return err
 	}
 
@@ -107,7 +109,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrUserAlreadyExist{org.Name}
+		return ErrUserAlreadyExist{args: errutil.Args{"name": org.Name}}
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
@@ -177,7 +179,7 @@ func GetOrgByName(name string) (*User, error) {
 	}
 	u := &User{
 		LowerName: strings.ToLower(name),
-		Type:      USER_TYPE_ORGANIZATION,
+		Type:      UserOrganization,
 	}
 	has, err := x.Get(u)
 	if err != nil {

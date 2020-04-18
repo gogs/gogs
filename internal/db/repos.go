@@ -75,7 +75,7 @@ type createRepoOpts struct {
 
 // create creates a new repository record in the database. Fields of "repo" will be updated
 // in place upon insertion. It returns ErrNameNotAllowed when the repository name is not allowed,
-// or returns ErrRepoAlreadyExist when a repository with same name already exists for the owner.
+// or ErrRepoAlreadyExist when a repository with same name already exists for the owner.
 func (db *repos) create(ownerID int64, opts createRepoOpts) (*Repository, error) {
 	err := isRepoNameAllowed(opts.Name)
 	if err != nil {

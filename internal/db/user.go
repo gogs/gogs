@@ -42,8 +42,8 @@ const USER_AVATAR_URL_PREFIX = "avatars"
 type UserType int
 
 const (
-	USER_TYPE_INDIVIDUAL UserType = iota // Historic reason to make it starts at 0.
-	USER_TYPE_ORGANIZATION
+	UserIndividual UserType = iota // Historic reason to make it starts at 0.
+	UserOrganization
 )
 
 // User represents the object of individual and member of organization.
@@ -53,10 +53,10 @@ type User struct {
 	Name      string `xorm:"UNIQUE NOT NULL" gorm:"NOT NULL"`
 	FullName  string
 	// Email is the primary email address (to be used for communication)
-	Email       string `xorm:"NOT NULL" gorm:"NOT NULL"`
-	Passwd      string `xorm:"NOT NULL" gorm:"NOT NULL"`
-	LoginType   LoginType
-	LoginSource int64 `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	Email       string    `xorm:"NOT NULL" gorm:"NOT NULL"`
+	Passwd      string    `xorm:"NOT NULL" gorm:"NOT NULL"`
+	LoginType   LoginType // TODO: Remove me https://github.com/gogs/gogs/issues/6117.
+	LoginSource int64     `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
 	LoginName   string
 	Type        UserType
 	OwnedOrgs   []*User       `xorm:"-" gorm:"-" json:"-"`
@@ -321,8 +321,8 @@ func (u *User) NewGitSig() *git.Signature {
 	}
 }
 
-// EncodePasswd encodes password to safe format.
-func (u *User) EncodePasswd() {
+// EncodePassword encodes password to safe format.
+func (u *User) EncodePassword() {
 	newPasswd := pbkdf2.Key([]byte(u.Passwd), []byte(u.Salt), 10000, 50, sha256.New)
 	u.Passwd = fmt.Sprintf("%x", newPasswd)
 }
@@ -330,7 +330,7 @@ func (u *User) EncodePasswd() {
 // ValidatePassword checks if given password matches the one belongs to the user.
 func (u *User) ValidatePassword(passwd string) bool {
 	newUser := &User{Passwd: passwd, Salt: u.Salt}
-	newUser.EncodePasswd()
+	newUser.EncodePassword()
 	return subtle.ConstantTimeCompare([]byte(u.Passwd), []byte(newUser.Passwd)) == 1
 }
 
@@ -388,7 +388,7 @@ func (u *User) IsWriterOfRepo(repo *Repository) bool {
 
 // IsOrganization returns true if user is actually a organization.
 func (u *User) IsOrganization() bool {
-	return u.Type == USER_TYPE_ORGANIZATION
+	return u.Type == UserOrganization
 }
 
 // IsUserOrgOwner returns true if user is in the owner team of given organization.
@@ -448,7 +448,7 @@ func (u *User) GetOrganizations(showPrivate bool) error {
 	}
 
 	u.Orgs = make([]*User, 0, len(orgIDs))
-	if err = x.Where("type = ?", USER_TYPE_ORGANIZATION).In("id", orgIDs).Find(&u.Orgs); err != nil {
+	if err = x.Where("type = ?", UserOrganization).In("id", orgIDs).Find(&u.Orgs); err != nil {
 		return err
 	}
 	return nil
@@ -555,13 +555,15 @@ func isNameAllowed(names, patterns []string, name string) error {
 	return nil
 }
 
-func IsUsableUsername(name string) error {
+// isUsernameAllowed return an error if given name is a reserved name or pattern for users.
+func isUsernameAllowed(name string) error {
 	return isNameAllowed(reservedUsernames, reservedUserPatterns, name)
 }
 
 // CreateUser creates record of a new user.
+// Deprecated: Use Users.Create instead.
 func CreateUser(u *User) (err error) {
-	if err = IsUsableUsername(u.Name); err != nil {
+	if err = isUsernameAllowed(u.Name); err != nil {
 		return err
 	}
 
@@ -569,7 +571,7 @@ func CreateUser(u *User) (err error) {
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrUserAlreadyExist{u.Name}
+		return ErrUserAlreadyExist{args: errutil.Args{"name": u.Name}}
 	}
 
 	u.Email = strings.ToLower(u.Email)
@@ -577,7 +579,7 @@ func CreateUser(u *User) (err error) {
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrEmailAlreadyUsed{u.Email}
+		return ErrEmailAlreadyUsed{args: errutil.Args{"email": u.Email}}
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
@@ -589,7 +591,7 @@ func CreateUser(u *User) (err error) {
 	if u.Salt, err = GetUserSalt(); err != nil {
 		return err
 	}
-	u.EncodePasswd()
+	u.EncodePassword()
 	u.MaxRepoCreation = -1
 
 	sess := x.NewSession()
@@ -680,7 +682,7 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 
 // ChangeUserName changes all corresponding setting from old user name to new one.
 func ChangeUserName(u *User, newUserName string) (err error) {
-	if err = IsUsableUsername(newUserName); err != nil {
+	if err = isUsernameAllowed(newUserName); err != nil {
 		return err
 	}
 
@@ -688,7 +690,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 	if err != nil {
 		return err
 	} else if isExist {
-		return ErrUserAlreadyExist{newUserName}
+		return ErrUserAlreadyExist{args: errutil.Args{"name": newUserName}}
 	}
 
 	if err = ChangeUsernameInPullRequests(u.Name, newUserName); err != nil {
@@ -723,7 +725,7 @@ func updateUser(e Engine, u *User) error {
 		if err != nil {
 			return err
 		} else if has {
-			return ErrEmailAlreadyUsed{u.Email}
+			return ErrEmailAlreadyUsed{args: errutil.Args{"email": u.Email}}
 		}
 
 		if len(u.AvatarEmail) == 0 {
@@ -904,8 +906,8 @@ func DeleteInactivateUsers() (err error) {
 }
 
 // UserPath returns the path absolute path of user repositories.
-func UserPath(userName string) string {
-	return filepath.Join(conf.Repository.Root, strings.ToLower(userName))
+func UserPath(username string) string {
+	return filepath.Join(conf.Repository.Root, strings.ToLower(username))
 }
 
 func GetUserByKeyID(keyID int64) (*User, error) {
@@ -917,25 +919,6 @@ func GetUserByKeyID(keyID int64) (*User, error) {
 		return nil, errors.UserNotKeyOwner{KeyID: keyID}
 	}
 	return user, nil
-}
-
-var _ errutil.NotFound = (*ErrUserNotExist)(nil)
-
-type ErrUserNotExist struct {
-	args map[string]interface{}
-}
-
-func IsErrUserNotExist(err error) bool {
-	_, ok := err.(ErrUserNotExist)
-	return ok
-}
-
-func (err ErrUserNotExist) Error() string {
-	return fmt.Sprintf("user does not exist: %v", err.args)
-}
-
-func (ErrUserNotExist) NotFound() bool {
-	return true
 }
 
 func getUserByID(e Engine, id int64) (*User, error) {
@@ -1047,6 +1030,7 @@ func ValidateCommitsWithEmails(oldCommits []*git.Commit) []*UserCommit {
 }
 
 // GetUserByEmail returns the user object by given e-mail if exists.
+// Deprecated: Use Users.GetByEmail instead.
 func GetUserByEmail(email string) (*User, error) {
 	if len(email) == 0 {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"email": email}}

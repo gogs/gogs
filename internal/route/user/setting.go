@@ -207,7 +207,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 			c.Errorf(err, "get user salt")
 			return
 		}
-		c.User.EncodePasswd()
+		c.User.EncodePassword()
 		if err := db.UpdateUser(c.User); err != nil {
 			c.Errorf(err, "update user")
 			return

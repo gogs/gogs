@@ -32,7 +32,7 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 	org := &db.User{
 		Name:     f.OrgName,
 		IsActive: true,
-		Type:     db.USER_TYPE_ORGANIZATION,
+		Type:     db.UserOrganization,
 	}
 
 	if err := db.CreateOrganization(org, c.User); err != nil {

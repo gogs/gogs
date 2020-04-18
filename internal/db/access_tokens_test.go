@@ -38,7 +38,7 @@ func Test_accessTokens(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(db.DB, tables...)
+				err := clearTables(t, db.DB, tables...)
 				if err != nil {
 					t.Fatal(err)
 				}
