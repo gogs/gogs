@@ -98,7 +98,7 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 		}
 
 		// Validate password hash fetched from database for local accounts.
-		if user.LoginType == LoginNotype || user.LoginType == LoginPlain {
+		if user.IsLocal() {
 			if user.ValidatePassword(password) {
 				return user, nil
 			}
