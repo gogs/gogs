@@ -5,30 +5,29 @@
 package db
 
 import (
-	"os"
+	"path/filepath"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_isRepositoryGitPath(t *testing.T) {
-	Convey("Check if path is or resides inside '.git'", t, func() {
-		sep := string(os.PathSeparator)
-		testCases := []struct {
-			path   string
-			expect bool
-		}{
-			{"." + sep + ".git", true},
-			{"." + sep + ".git" + sep + "", true},
-			{"." + sep + ".git" + sep + "hooks" + sep + "pre-commit", true},
-			{".git" + sep + "hooks", true},
-			{"dir" + sep + ".git", true},
+	tests := []struct {
+		path   string
+		expVal bool
+	}{
+		{path: filepath.Join(".", ".git"), expVal: true},
+		{path: filepath.Join(".", ".git", ""), expVal: true},
+		{path: filepath.Join(".", ".git", "hooks", "pre-commit"), expVal: true},
+		{path: filepath.Join(".git", "hooks"), expVal: true},
+		{path: filepath.Join("dir", ".git"), expVal: true},
 
-			{".gitignore", false},
-			{"dir" + sep + ".gitkeep", false},
-		}
-		for _, tc := range testCases {
-			So(isRepositoryGitPath(tc.path), ShouldEqual, tc.expect)
-		}
-	})
+		{path: filepath.Join(".gitignore"), expVal: false},
+		{path: filepath.Join("dir", ".gitkeep"), expVal: false},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			assert.Equal(t, test.expVal, isRepositoryGitPath(test.path))
+		})
+	}
 }
