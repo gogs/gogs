@@ -56,8 +56,6 @@ github.com/go-macaron/binding v1.1.0 h1:A5jpr5UdHr81Hfmb6QUAMTHyvniudOMcgtEg13TJ
 github.com/go-macaron/binding v1.1.0/go.mod h1:dJU/AtPKG0gUiFra1K5TTGduFGMNxMvfJzV/zmXwyGM=
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196 h1:fqWZxyMLF6RVGmjvsZ9FijiU9UlAjuE6nu9RfNBZ+iE=
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196/go.mod h1:O6fSdaYZbGh4clVMGMGO5k2KbMO0Cz8YdBnPrD0I8dM=
-github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d h1:aSJXLVjEjbLeHo8aCTDcD3/gMWizaRjMBb3VCsEWEHs=
-github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d/go.mod h1:lmhlZnu9cTRGNQEkSh1qZi2IK3HJH4Z1MXkg6ARQKZA=
 github.com/go-macaron/captcha v0.2.0 h1:d38eYDDF8tdqoM0hJbk+Jb7WQGWlwYNnQwRqLRmSk1Y=
 github.com/go-macaron/captcha v0.2.0/go.mod h1:lmhlZnu9cTRGNQEkSh1qZi2IK3HJH4Z1MXkg6ARQKZA=
 github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c h1:kFFz1OpaH3+efG7RA33z+D0piwpA/a3x/Zn2d8z9rfw=
