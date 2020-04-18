@@ -90,7 +90,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = form.LoginName

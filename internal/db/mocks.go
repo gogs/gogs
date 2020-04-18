@@ -209,12 +209,22 @@ var _ UsersStore = (*MockUsersStore)(nil)
 
 type MockUsersStore struct {
 	MockAuthenticate  func(username, password string, loginSourceID int64) (*User, error)
+	MockCreate        func(opts CreateUserOpts) (*User, error)
+	MockGetByEmail    func(email string) (*User, error)
 	MockGetByID       func(id int64) (*User, error)
 	MockGetByUsername func(username string) (*User, error)
 }
 
 func (m *MockUsersStore) Authenticate(username, password string, loginSourceID int64) (*User, error) {
 	return m.MockAuthenticate(username, password, loginSourceID)
+}
+
+func (m *MockUsersStore) Create(opts CreateUserOpts) (*User, error) {
+	return m.MockCreate(opts)
+}
+
+func (m *MockUsersStore) GetByEmail(email string) (*User, error) {
+	return m.MockGetByEmail(email)
 }
 
 func (m *MockUsersStore) GetByID(id int64) (*User, error) {
