@@ -45,6 +45,12 @@ type UsersStore interface {
 
 var Users UsersStore
 
+// NOTE: This is a GORM create hook.
+func (u *User) BeforeCreate() {
+	u.CreatedUnix = gorm.NowFunc().Unix()
+	u.UpdatedUnix = u.CreatedUnix
+}
+
 var _ UsersStore = (*users)(nil)
 
 type users struct {
@@ -59,14 +65,14 @@ func (err ErrLoginSourceMismatch) Error() string {
 	return fmt.Sprintf("login source mismatch: %v", err.args)
 }
 
-func (db *users) Authenticate(username, password string, loginSourceID int64) (*User, error) {
-	username = strings.ToLower(username)
+func (db *users) Authenticate(login, password string, loginSourceID int64) (*User, error) {
+	login = strings.ToLower(login)
 
 	var query *gorm.DB
-	if strings.Contains(username, "@") {
-		query = db.Where("email = ?", username)
+	if strings.Contains(login, "@") {
+		query = db.Where("email = ?", login)
 	} else {
-		query = db.Where("lower_name = ?", username)
+		query = db.Where("lower_name = ?", login)
 	}
 
 	user := new(User)
@@ -97,7 +103,7 @@ func (db *users) Authenticate(username, password string, loginSourceID int64) (*
 			return nil, errors.Wrap(err, "get login source")
 		}
 
-		_, err = authenticateViaLoginSource(source, username, password, false)
+		_, err = authenticateViaLoginSource(source, login, password, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "authenticate via login source")
 		}
@@ -106,7 +112,7 @@ func (db *users) Authenticate(username, password string, loginSourceID int64) (*
 
 	// Non-local login source is always greater than 0.
 	if loginSourceID <= 0 {
-		return nil, ErrUserNotExist{args: map[string]interface{}{"name": username}}
+		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
 	}
 
 	source, err := LoginSources.GetByID(loginSourceID)
@@ -114,7 +120,7 @@ func (db *users) Authenticate(username, password string, loginSourceID int64) (*
 		return nil, errors.Wrap(err, "get login source")
 	}
 
-	user, err = authenticateViaLoginSource(source, username, password, true)
+	user, err = authenticateViaLoginSource(source, login, password, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "authenticate via login source")
 	}
@@ -185,6 +191,8 @@ func (db *users) Create(opts CreateUserOpts) (*User, error) {
 	user := &User{
 		LowerName:       strings.ToLower(opts.Name),
 		Name:            opts.Name,
+		Email:           opts.Email,
+		Passwd:          opts.Password,
 		LoginSource:     opts.LoginSource,
 		Avatar:          cryptoutil.MD5(opts.Email),
 		AvatarEmail:     opts.Email,

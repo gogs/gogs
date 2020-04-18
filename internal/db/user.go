@@ -53,10 +53,10 @@ type User struct {
 	Name      string `xorm:"UNIQUE NOT NULL" gorm:"NOT NULL"`
 	FullName  string
 	// Email is the primary email address (to be used for communication)
-	Email       string `xorm:"NOT NULL" gorm:"NOT NULL"`
-	Passwd      string `xorm:"NOT NULL" gorm:"NOT NULL"`
-	LoginType   LoginType
-	LoginSource int64 `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	Email       string    `xorm:"NOT NULL" gorm:"NOT NULL"`
+	Passwd      string    `xorm:"NOT NULL" gorm:"NOT NULL"`
+	LoginType   LoginType // TODO: Remove me https://github.com/gogs/gogs/issues/6117.
+	LoginSource int64     `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
 	LoginName   string
 	Type        UserType
 	OwnedOrgs   []*User       `xorm:"-" gorm:"-" json:"-"`
