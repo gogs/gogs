@@ -33,7 +33,7 @@ func Test_users(t *testing.T) {
 		{"Authenticate", test_users_Authenticate},
 		{"Create", test_users_Create},
 		{"GetByEmail", test_users_GetByEmail},
-		// {"GetByID", test_users_GetByID},
+		{"GetByID", test_users_GetByID},
 		// {"GetByUsername", test_users_GetByUsername},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -219,4 +219,24 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 		}
 		assert.Equal(t, bob.Name, user.Name)
 	})
+}
+
+func test_users_GetByID(t *testing.T, db *users) {
+	alice, err := db.Create(CreateUserOpts{
+		Name:  "alice",
+		Email: "alice@exmaple.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	user, err := db.GetByID(alice.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, alice.Name, user.Name)
+
+	_, err = db.GetByID(404)
+	expErr := ErrUserNotExist{args: errutil.Args{"userID": int64(404)}}
+	assert.Equal(t, expErr, err)
 }
