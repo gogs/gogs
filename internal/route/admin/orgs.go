@@ -21,7 +21,7 @@ func Organizations(c *context.Context) {
 	c.Data["PageIsAdminOrganizations"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.USER_TYPE_ORGANIZATION,
+		Type:     db.UserOrganization,
 		Counter:  db.CountOrganizations,
 		Ranger:   db.Organizations,
 		PageSize: conf.UI.Admin.OrgPagingNum,

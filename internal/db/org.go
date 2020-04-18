@@ -179,7 +179,7 @@ func GetOrgByName(name string) (*User, error) {
 	}
 	u := &User{
 		LowerName: strings.ToLower(name),
-		Type:      USER_TYPE_ORGANIZATION,
+		Type:      UserOrganization,
 	}
 	has, err := x.Get(u)
 	if err != nil {
