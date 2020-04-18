@@ -6,8 +6,12 @@ package db
 
 import (
 	"testing"
+	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
+
+	"gogs.io/gogs/internal/errutil"
 )
 
 func Test_users(t *testing.T) {
@@ -27,7 +31,7 @@ func Test_users(t *testing.T) {
 		test func(*testing.T, *users)
 	}{
 		{"Authenticate", test_users_Authenticate},
-		// {"Create", test_users_Create},
+		{"Create", test_users_Create},
 		// {"GetByEmail", test_users_GetByEmail},
 		// {"GetByID", test_users_GetByID},
 		// {"GetByUsername", test_users_GetByUsername},
@@ -84,4 +88,47 @@ func test_users_Authenticate(t *testing.T, db *users) {
 		}
 		assert.Equal(t, alice.Name, user.Name)
 	})
+}
+
+func test_users_Create(t *testing.T, db *users) {
+	alice, err := db.Create(CreateUserOpts{
+		Name:      "alice",
+		Email:     "alice@example.com",
+		Activated: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("name not allowed", func(t *testing.T) {
+		_, err := db.Create(CreateUserOpts{
+			Name: "-",
+		})
+		expErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": "-"}}
+		assert.Equal(t, expErr, err)
+	})
+
+	t.Run("name already exists", func(t *testing.T) {
+		_, err := db.Create(CreateUserOpts{
+			Name: alice.Name,
+		})
+		expErr := ErrUserAlreadyExist{args: errutil.Args{"name": alice.Name}}
+		assert.Equal(t, expErr, err)
+	})
+
+	t.Run("email already exists", func(t *testing.T) {
+		_, err := db.Create(CreateUserOpts{
+			Name:  "bob",
+			Email: alice.Email,
+		})
+		expErr := ErrEmailAlreadyUsed{args: errutil.Args{"email": alice.Email}}
+		assert.Equal(t, expErr, err)
+	})
+
+	user, err := db.GetByUsername(alice.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), user.Created.Format(time.RFC3339))
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), user.Updated.Format(time.RFC3339))
 }

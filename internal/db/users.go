@@ -7,6 +7,7 @@ package db
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
@@ -35,7 +36,8 @@ type UsersStore interface {
 	// It returns ErrUserAlreadyExist when a user with same name already exists,
 	// or ErrEmailAlreadyUsed if the email has been used by another user.
 	Create(opts CreateUserOpts) (*User, error)
-	// GetByEmail returns the user with given email. It returns ErrUserNotExist when not found.
+	// GetByEmail returns the user with given email. It ignores records with unverified emails
+	// and returns ErrUserNotExist when not found.
 	GetByEmail(email string) (*User, error)
 	// GetByID returns the user with given ID. It returns ErrUserNotExist when not found.
 	GetByID(id int64) (*User, error)
@@ -49,6 +51,12 @@ var Users UsersStore
 func (u *User) BeforeCreate() {
 	u.CreatedUnix = gorm.NowFunc().Unix()
 	u.UpdatedUnix = u.CreatedUnix
+}
+
+// NOTE: This is a GORM query hook.
+func (u *User) AfterFind() {
+	u.Created = time.Unix(u.CreatedUnix, 0).Local()
+	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 }
 
 var _ UsersStore = (*users)(nil)
@@ -132,6 +140,7 @@ type CreateUserOpts struct {
 	Email       string
 	Password    string
 	LoginSource int64
+	Activated   bool
 }
 
 type ErrUserAlreadyExist struct {
@@ -194,9 +203,10 @@ func (db *users) Create(opts CreateUserOpts) (*User, error) {
 		Email:           opts.Email,
 		Passwd:          opts.Password,
 		LoginSource:     opts.LoginSource,
+		MaxRepoCreation: -1,
+		IsActive:        opts.Activated,
 		Avatar:          cryptoutil.MD5(opts.Email),
 		AvatarEmail:     opts.Email,
-		MaxRepoCreation: -1,
 	}
 
 	user.Rands, err = GetUserSalt()
@@ -240,7 +250,7 @@ func (db *users) GetByEmail(email string) (*User, error) {
 
 	// First try to find the user by primary email
 	user := new(User)
-	err := db.Where("email = ?", email).First(user).Error
+	err := db.Where("email = ? AND type = ? AND is_active = ?", email, UserIndividual, true).First(user).Error
 	if err == nil {
 		return user, nil
 	} else if !gorm.IsRecordNotFoundError(err) {
