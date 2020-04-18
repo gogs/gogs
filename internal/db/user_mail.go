@@ -18,8 +18,8 @@ type EmailAddress struct {
 	ID          int64
 	UID         int64  `xorm:"INDEX NOT NULL" gorm:"INDEX"`
 	Email       string `xorm:"UNIQUE NOT NULL" gorm:"UNIQUE"`
-	IsActivated bool
-	IsPrimary   bool `xorm:"-" gorm:"-" json:"-"`
+	IsActivated bool   `gorm:"NOT NULL;DEFAULT:FALSE"`
+	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
 }
 
 // GetEmailAddresses returns all email addresses belongs to given user.

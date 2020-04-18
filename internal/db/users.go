@@ -36,8 +36,8 @@ type UsersStore interface {
 	// It returns ErrUserAlreadyExist when a user with same name already exists,
 	// or ErrEmailAlreadyUsed if the email has been used by another user.
 	Create(opts CreateUserOpts) (*User, error)
-	// GetByEmail returns the user with given email. It ignores records with unverified emails
-	// and returns ErrUserNotExist when not found.
+	// GetByEmail returns the user (not organization) with given email.
+	// It ignores records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(email string) (*User, error)
 	// GetByID returns the user with given ID. It returns ErrUserNotExist when not found.
 	GetByID(id int64) (*User, error)
