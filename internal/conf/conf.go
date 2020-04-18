@@ -294,7 +294,7 @@ func Init(customConf string) error {
 		"StampNano":   time.StampNano,
 	}[Time.Format]
 	if Time.FormatLayout == "" {
-		return fmt.Errorf("unrecognized '[time] FORMAT': %s", Time.Format)
+		Time.FormatLayout = time.RFC3339
 	}
 
 	// ****************************
