@@ -34,7 +34,7 @@ func Test_users(t *testing.T) {
 		{"Create", test_users_Create},
 		{"GetByEmail", test_users_GetByEmail},
 		{"GetByID", test_users_GetByID},
-		// {"GetByUsername", test_users_GetByUsername},
+		{"GetByUsername", test_users_GetByUsername},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -238,5 +238,25 @@ func test_users_GetByID(t *testing.T, db *users) {
 
 	_, err = db.GetByID(404)
 	expErr := ErrUserNotExist{args: errutil.Args{"userID": int64(404)}}
+	assert.Equal(t, expErr, err)
+}
+
+func test_users_GetByUsername(t *testing.T, db *users) {
+	alice, err := db.Create(CreateUserOpts{
+		Name:  "alice",
+		Email: "alice@exmaple.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	user, err := db.GetByUsername(alice.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, alice.Name, user.Name)
+
+	_, err = db.GetByUsername("bad_username")
+	expErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}
 	assert.Equal(t, expErr, err)
 }
