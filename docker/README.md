@@ -102,6 +102,36 @@ This container have some options available via environment variables, these opti
       `false`
   - <u>Action:</u>
       Request crond to be run inside the container. Its default configuration will periodically run all scripts from `/etc/periodic/${period}` but custom crontabs can be added to `/var/spool/cron/crontabs/`.
+- **BACKUP_INTERVAL**:
+  - <u>Possible value:</u>
+      `1m`, `1h`, `1d`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      In combination with `RUN_CROND` set to `true`, enables backup system.
+- **BACKUP_RETENTION**:
+  - <u>Possible value:</u>
+      `1`, `2`, `3`, `...`
+  - <u>Default:</u>
+      `7`
+  - <u>Action:</u>
+      Used by backup system. Backups older than X days are deleted periodicaly.
+- **BACKUP_ARG_CONFIG**:
+  - <u>Possible value:</u>
+      `/app/gogs/example/custom/config`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      Used by backup system. If defined, supplies `--config` argument to `gogs backup`.
+- **BACKUP_ARG_EXCLUDE_REPOS**:
+  - <u>Possible value:</u>
+      `test-repo1`, `test-repo2`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      Used by backup system. If defined, supplies `--exclude-repos` argument to `gogs backup`.
+
+## Backup System
 
 ## Upgrade
 
