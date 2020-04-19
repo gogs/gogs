@@ -64,6 +64,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[session] ENABLE_SET_COOKIE`
 - Configuration option `[release.attachment] PATH`
 - Configuration option `[webhook] QUEUE_LENGTH`
+- Build tag `sqlite`, which means CGO is now required.
 
 ---
 
