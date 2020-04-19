@@ -16,7 +16,7 @@ execute_backup_job() {
 		BACKUP_ARGS="${BACKUP_ARGS} --exclude-repos='${BACKUP_ARG_EXCLUDE_REPOS}'"
 	fi
 
-	echo ./gogs backup "${BACKUP_ARGS}" || echo "Error: Backup job returned non-successful code." && exit 1
+	./gogs backup "${BACKUP_ARGS}" || echo "Error: Backup job returned non-successful code." && exit 1
 }
 
 main() {
