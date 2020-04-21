@@ -209,6 +209,7 @@ func Config(c *context.Context) {
 	c.Data["Mirror"] = conf.Mirror
 	c.Data["Webhook"] = conf.Webhook
 	c.Data["Git"] = conf.Git
+	c.Data["LFS"] = conf.LFS
 
 	c.Data["LogRootPath"] = conf.Log.RootPath
 	type logger struct {
