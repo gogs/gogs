@@ -178,6 +178,13 @@
 						<dd>{{.Database.SSLMode}} {{.i18n.Tr "admin.config.db.ssl_mode_helper"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.db.path"}}</dt>
 						<dd><code>{{.Database.Path}}</code> {{.i18n.Tr "admin.config.db.path_helper"}}</dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.db.max_open_conns"}}</dt>
+						<dd>{{.Database.MaxOpenConns}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.max_idle_conns"}}</dt>
+						<dd>{{.Database.MaxIdleConns}}</dd>
 					</dl>
 				</div>
 
