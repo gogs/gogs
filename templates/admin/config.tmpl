@@ -178,6 +178,13 @@
 						<dd>{{.Database.SSLMode}} {{.i18n.Tr "admin.config.db.ssl_mode_helper"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.db.path"}}</dt>
 						<dd><code>{{.Database.Path}}</code> {{.i18n.Tr "admin.config.db.path_helper"}}</dd>
+
+						<div class="ui divider"></div>
+
+						<dt>{{.i18n.Tr "admin.config.db.max_open_conns"}}</dt>
+						<dd>{{.Database.MaxOpenConns}}</dd>
+						<dt>{{.i18n.Tr "admin.config.db.max_idle_conns"}}</dt>
+						<dd>{{.Database.MaxIdleConns}}</dd>
 					</dl>
 				</div>
 
@@ -481,6 +488,20 @@
 					</dl>
 				</div>
 
+				{{/* LFS settings */}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.config.lfs_config"}}
+				</h4>
+				<div class="ui attached table segment">
+					<dl class="dl-horizontal admin-dl-horizontal">
+						<dt>{{.i18n.Tr "admin.config.lfs.storage"}}</dt>
+						<dd>{{.LFS.Storage}}</dd>
+						<dt>{{.i18n.Tr "admin.config.lfs.objects_path"}}</dt>
+						<dd><code>{{.LFS.ObjectsPath}}</code></dd>
+					</dl>
+				</div>
+
+				{{/* Log settings */}}
 				<h4 class="ui top attached header">
 					{{.i18n.Tr "admin.config.log_config"}}
 				</h4>
