@@ -41,6 +41,8 @@ github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/editorconfig/editorconfig-core-go/v2 v2.3.1 h1:8+L7G4cCtuYprGaNawfTBq20m8+VpPCH2O0vwKS7r84=
 github.com/editorconfig/editorconfig-core-go/v2 v2.3.1/go.mod h1:mJYZ8yC2PWr+pabYXwHMfcEe45fh2w2sxk8cudJdLPM=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.2 h1:j9GLz0kWF9+1T3IX0MOhhvzLtqhFOvIKLhZFxtY95Qc=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.2/go.mod h1:+u4rFiKVvlbukHyJM76GYXqQcnHScxvQCuKpMLRtJVw=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
 github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 h1:Yzb9+7DPaBjB8zlTR87/ElzFsnQfuHnVUVqpZZIcV5Y=
 github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5/go.mod h1:a2zkGnVExMxdzMo3M0Hi/3sEU+cWnZpSni0O6/Yb/P0=
