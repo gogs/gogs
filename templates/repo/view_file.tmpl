@@ -1,15 +1,41 @@
-<div id="file-content" class="{{TabSizeClass .Editorconfig .FileName}}">
+<div id="file-content" class="{{TabSizeClass .Editorconfig .FileName}}"> 
 	<h4 class="ui top attached header" id="{{if .ReadmeExist}}repo-readme{{else}}repo-read-file{{end}}">
 		{{if .ReadmeExist}}
 			<i class="octicon octicon-book"></i>
 			{{if .ReadmeInList}}
 				<strong>{{.FileName}}</strong>
+        {{if .IsSymlink}}
+          <span class="text normal">&nbsp;->&nbsp;<span>
+          {{ if .IsSymlinkSourceExists}}
+				    <a href="{{EscapePound $.TreeLink}}/{{EscapePound .SourceTreePath}}">{{.SourceTreePath}}</a>
+          {{else}}
+				    <strong class="text red">{{.SourceTreePath}}</strong>
+          {{end}}
+        {{end}}
 			{{else}}
 				<strong>{{.FileName}}</strong> <span class="text grey normal">{{FileSize .FileSize}}</span>
+        {{if .IsSymlink}}
+          <span class="text normal">&nbsp;->&nbsp;<span>
+          {{ if .IsSymlinkSourceExists}}
+				    <a href="{{EscapePound $.TreeLink}}/{{EscapePound .SourceTreePath}}">{{.SourceTreePath}}</a>
+            <span class="text grey normal">{{FileSize .SourceFileSize}}</span>
+          {{else}}
+				    <strong class="text red">{{.SourceTreePath}}</strong>
+          {{end}}
+        {{end}}
 			{{end}}
 		{{else}}
 			<i class="octicon octicon-file-text ui left"></i>
 			<strong>{{.FileName}}</strong> <span class="text grey normal">{{FileSize .FileSize}}</span>
+      {{if .IsSymlink}}
+          <span class="text normal">&nbsp;->&nbsp;<span>
+          {{ if .IsSymlinkSourceExists}}
+				    <a href="{{EscapePound $.TreeLink}}/{{EscapePound .SourceTreePath}}">{{.SourceTreePath}}</a>
+            <span class="text grey normal">{{FileSize .SourceFileSize}}</span>
+          {{else}}
+				    <strong class="text red">{{.SourceTreePath}}</strong>
+          {{end}}
+       {{end}}
 		{{end}}
 		{{if not .ReadmeInList}}
 			<div class="ui right file-actions">
@@ -18,11 +44,16 @@
 						<a class="ui button" href="{{.RepoLink}}/src/{{.CommitID}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.file_permalink"}}</a>
 					{{end}}
 					<a class="ui button" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.file_history"}}</a>
-					<a class="ui button" href="{{EscapePound $.RawFileLink}}">{{.i18n.Tr "repo.file_raw"}}</a>
+
+          {{if .IsShowRawLink}}
+					  <a class="ui button" href="{{EscapePound $.RawFileLink}}">{{.i18n.Tr "repo.file_raw"}}</a>
+          {{else}}
+					  <a class="ui button disabled" href="#">{{.i18n.Tr "repo.file_raw"}}</a>
+          {{end}}
 				</div>
 				{{if .Repository.CanEnableEditor}}
 					{{if .CanEditFile}}
-						<a href="{{.RepoLink}}/_edit/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}"><i class="octicon octicon-pencil btn-octicon poping up"  data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
+						<a href="{{.RepoLink}}/_edit/{{EscapePound .BranchName}}/{{EscapePound .EditableFileTreePath}}"><i class="octicon octicon-pencil btn-octicon poping up"  data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i></a>
 					{{else}}
 						<i class="octicon octicon-pencil btn-octicon poping up disabled" data-content="{{.EditFileTooltip}}" data-position="bottom center" data-variation="tiny inverted"></i>
 					{{end}}

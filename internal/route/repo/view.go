@@ -35,8 +35,14 @@ const (
 	SYMLINK_SYMBOL = " -> "
 )
 
-func renderDirectory(c *context.Context, treeLink string) {
-	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
+func renderDirectory(c *context.Context, treeLink string, entry *git.TreeEntry, sourceEntry *git.TreeEntry, sourceTreePath string) {
+	treePath := c.Repo.TreePath
+	if sourceEntry != nil {
+		treePath = sourceTreePath
+	}
+	c.Data["TreePath"] = treePath
+
+	tree, err := c.Repo.Commit.Subtree(treePath)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get subtree")
 		return
@@ -50,10 +56,11 @@ func renderDirectory(c *context.Context, treeLink string) {
 	entries.Sort()
 
 	c.Data["Files"], err = entries.CommitsInfo(c.Repo.Commit, git.CommitsInfoOptions{
-		Path:           c.Repo.TreePath,
+		Path:           treePath,
 		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
 		Timeout:        5 * time.Minute,
 	})
+
 	if err != nil {
 		c.Error(err, "get commits info")
 		return
@@ -70,13 +77,16 @@ func renderDirectory(c *context.Context, treeLink string) {
 		readmeFile = entry.Blob()
 		if readmeFile != nil {
 			readmeFileName = readmeFile.Name()
-			sourceEntry, sourcePath, err := isSymlink(entry, c)
-			if err != nil {
-				readmeFileName += SYMLINK_SYMBOL + err.Error()
-			}
-			if sourceEntry != nil {
-				readmeFileName += SYMLINK_SYMBOL + sourcePath
-				readmeFile = sourceEntry.Blob()
+			if ok, sourceEntry, sourcePath, errMsg := isSymlink(entry, c); ok {
+				c.Data["IsSymlinkSourceExists"] = true
+				if len(errMsg) > 0 {
+					c.Data["SourceTreePath"] = errMsg
+					c.Data["IsSymlinkSourceExists"] = false
+				} else if sourceEntry != nil {
+					c.Data["SourceTreePath"] = sourcePath
+					readmeFile = sourceEntry.Blob()
+				}
+				c.Data["IsSymlink"] = true
 			}
 		}
 		break
@@ -106,7 +116,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 				p = markup.OrgMode(p, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
-				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
+				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, treePath, readmeFile.Name())
 			default:
 				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
 			}
@@ -133,19 +143,39 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 }
 
-func renderFile(c *context.Context, entry *git.TreeEntry, fileName string, treeLink, rawLink string) {
+func renderFile(c *context.Context, entry *git.TreeEntry, sourceEntry *git.TreeEntry, sourceTreePath string, treeLink, rawLink string) {
 	c.Data["IsViewFile"] = true
-	blob := entry.Blob()
+	c.Data["IsShowRawLink"] = true
+	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
+	c.Data["EditableFileTreePath"] = c.Repo.TreePath
+
+	var blob *git.Blob
+	if entry.IsSymlink() {
+		c.Data["SourceTreePath"] = sourceTreePath
+		if sourceEntry != nil {
+			blob = sourceEntry.Blob()
+			c.Data["SourceFileSize"] = sourceEntry.Blob().Size()
+			c.Data["RawFileLink"] = rawLink + "/" + sourceTreePath
+			c.Data["EditableFileTreePath"] = sourceTreePath
+		} else {
+			c.Data["SourceFileSize"] = int64(0)
+			c.Data["IsShowRawLink"] = false
+		}
+	}
+
+	if blob == nil {
+		blob = entry.Blob()
+	}
+
 	p, err := blob.Bytes()
 	if err != nil {
 		c.Error(err, "read blob")
 		return
 	}
 
-	c.Data["FileSize"] = blob.Size()
-	c.Data["FileName"] = fileName
+	c.Data["FileSize"] = entry.Blob().Size()
+	c.Data["FileName"] = entry.Blob().Name()
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
-	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
 
 	isTextFile := tool.IsTextFile(p)
 	c.Data["IsTextFile"] = isTextFile
@@ -205,8 +235,10 @@ func renderFile(c *context.Context, entry *git.TreeEntry, fileName string, treeL
 		}
 
 		if canEnableEditor {
-			c.Data["CanEditFile"] = true
-			c.Data["EditFileTooltip"] = c.Tr("repo.editor.edit_this_file")
+			if !entry.IsSymlink() || sourceEntry != nil {
+				c.Data["CanEditFile"] = true
+				c.Data["EditFileTooltip"] = c.Tr("repo.editor.edit_this_file")
+			}
 		} else if !c.Repo.IsViewBranch {
 			c.Data["EditFileTooltip"] = c.Tr("repo.editor.must_be_on_a_branch")
 		} else if !c.Repo.IsWriter() {
@@ -286,27 +318,26 @@ func Home(c *context.Context) {
 		return
 	}
 
-	sourceEntry, sourcePath, err := isSymlink(entry, c)
-	entryName := entry.Name()
-	if err != nil {
-		entryName += SYMLINK_SYMBOL + err.Error()
-	} else if sourceEntry != nil {
-		treeLink = branchLink + "/" + sourcePath
-		c.Repo.TreePath = sourcePath
-		entry = sourceEntry
-		entryName += SYMLINK_SYMBOL + sourcePath
-
-		// Required, if not overwritten:
-		// 	dir: It will cause an inability to upload and add files.
-		// 	file: It will not be able to be modified or downloaded(raw).
-		// Symlink only does links, the symbol file cannot be edited.
-		c.Data["TreePath"] = sourcePath
-	}
-
-	if entry.IsTree() {
-		renderDirectory(c, treeLink)
+	if ok, sourceEntry, sourceTreePath, errMsg := isSymlink(entry, c); ok {
+		c.Data["IsSymlink"] = true
+		c.Data["IsSymlinkSourceExists"] = true
+		if len(errMsg) > 0 {
+			renderFile(c, entry, nil, errMsg, treeLink, rawLink)
+			c.Data["IsSymlinkSourceExists"] = false
+		} else if sourceEntry != nil {
+			treeLink = branchLink + "/" + sourceTreePath
+			if sourceEntry.IsTree() {
+				renderDirectory(c, treeLink, entry, sourceEntry, sourceTreePath)
+			} else {
+				renderFile(c, entry, sourceEntry, sourceTreePath, treeLink, rawLink)
+			}
+		}
 	} else {
-		renderFile(c, entry, entryName, treeLink, rawLink)
+		if entry.IsTree() {
+			renderDirectory(c, treeLink, entry, nil, "")
+		} else {
+			renderFile(c, entry, nil, "", treeLink, rawLink)
+		}
 	}
 
 	if c.Written() {
@@ -392,18 +423,23 @@ func Forks(c *context.Context) {
 }
 
 // check and get source file/dir entry for symlink.
-func isSymlink(entry *git.TreeEntry, c *context.Context) (*git.TreeEntry, string, error) {
-	if entry.IsSymlink() {
+func isSymlink(entry *git.TreeEntry, c *context.Context) (ok bool, sourceEntry *git.TreeEntry, sourceTreePath string, errMsg string) {
+	if ok = entry.IsSymlink(); ok {
 		p, err := entry.Blob().Bytes()
 		if err != nil {
-			return nil, "", err
+			errMsg = err.Error()
+			return
 		}
-		sourcePath := string(p)
-		sourceEntry, err := c.Repo.Commit.TreeEntry("/" + sourcePath)
+		sourceTreePath = string(p)
+		sourceEntry, err = c.Repo.Commit.TreeEntry("/" + sourceTreePath)
 		if err != nil {
-			return nil, sourcePath, err
+			errMsg = err.Error()
+			return
 		}
-		return sourceEntry, sourcePath, nil
+		if sourceEntry.IsSymlink() {
+			ok, sourceEntry, sourceTreePath, errMsg = isSymlink(sourceEntry, c)
+		}
+		return
 	}
-	return nil, "", nil
+	return
 }
