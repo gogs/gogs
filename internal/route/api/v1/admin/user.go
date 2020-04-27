@@ -32,19 +32,17 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 		return
 	}
 
-	u.LoginType = source.Type
 	u.LoginSource = source.ID
 	u.LoginName = loginName
 }
 
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	u := &db.User{
-		Name:      form.Username,
-		FullName:  form.FullName,
-		Email:     form.Email,
-		Passwd:    form.Password,
-		IsActive:  true,
-		LoginType: db.LoginPlain,
+		Name:     form.Username,
+		FullName: form.FullName,
+		Email:    form.Email,
+		Passwd:   form.Password,
+		IsActive: true,
 	}
 
 	parseLoginSource(c, u, form.SourceID, form.LoginName)
@@ -90,7 +88,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = form.LoginName

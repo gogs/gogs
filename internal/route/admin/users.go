@@ -30,7 +30,7 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.USER_TYPE_INDIVIDUAL,
+		Type:     db.UserIndividual,
 		Counter:  db.CountUsers,
 		Ranger:   db.ListUsers,
 		PageSize: conf.UI.Admin.UserPagingNum,
@@ -77,17 +77,15 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	}
 
 	u := &db.User{
-		Name:      f.UserName,
-		Email:     f.Email,
-		Passwd:    f.Password,
-		IsActive:  true,
-		LoginType: db.LoginPlain,
+		Name:     f.UserName,
+		Email:    f.Email,
+		Passwd:   f.Password,
+		IsActive: true,
 	}
 
 	if len(f.LoginType) > 0 {
 		fields := strings.Split(f.LoginType, "-")
 		if len(fields) == 2 {
-			u.LoginType = db.LoginType(com.StrTo(fields[0]).MustInt())
 			u.LoginSource = com.StrTo(fields[1]).MustInt64()
 			u.LoginName = f.LoginName
 		}
@@ -180,12 +178,10 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 
 	fields := strings.Split(f.LoginType, "-")
 	if len(fields) == 2 {
-		loginType := db.LoginType(com.StrTo(fields[0]).MustInt())
 		loginSource := com.StrTo(fields[1]).MustInt64()
 
 		if u.LoginSource != loginSource {
 			u.LoginSource = loginSource
-			u.LoginType = loginType
 		}
 	}
 
@@ -196,7 +192,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = f.LoginName

@@ -138,7 +138,7 @@ func ExploreUsers(c *context.Context) {
 	c.Data["PageIsExploreUsers"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     db.USER_TYPE_INDIVIDUAL,
+		Type:     db.UserIndividual,
 		Counter:  db.CountUsers,
 		Ranger:   db.ListUsers,
 		PageSize: conf.UI.ExplorePagingNum,
@@ -153,7 +153,7 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     db.USER_TYPE_ORGANIZATION,
+		Type:     db.UserOrganization,
 		Counter:  db.CountOrganizations,
 		Ranger:   db.Organizations,
 		PageSize: conf.UI.ExplorePagingNum,

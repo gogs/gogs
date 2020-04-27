@@ -41,6 +41,8 @@ github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/editorconfig/editorconfig-core-go/v2 v2.3.1 h1:8+L7G4cCtuYprGaNawfTBq20m8+VpPCH2O0vwKS7r84=
 github.com/editorconfig/editorconfig-core-go/v2 v2.3.1/go.mod h1:mJYZ8yC2PWr+pabYXwHMfcEe45fh2w2sxk8cudJdLPM=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.2 h1:j9GLz0kWF9+1T3IX0MOhhvzLtqhFOvIKLhZFxtY95Qc=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.2/go.mod h1:+u4rFiKVvlbukHyJM76GYXqQcnHScxvQCuKpMLRtJVw=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
 github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 h1:Yzb9+7DPaBjB8zlTR87/ElzFsnQfuHnVUVqpZZIcV5Y=
 github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5/go.mod h1:a2zkGnVExMxdzMo3M0Hi/3sEU+cWnZpSni0O6/Yb/P0=
@@ -56,8 +58,6 @@ github.com/go-macaron/binding v1.1.0 h1:A5jpr5UdHr81Hfmb6QUAMTHyvniudOMcgtEg13TJ
 github.com/go-macaron/binding v1.1.0/go.mod h1:dJU/AtPKG0gUiFra1K5TTGduFGMNxMvfJzV/zmXwyGM=
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196 h1:fqWZxyMLF6RVGmjvsZ9FijiU9UlAjuE6nu9RfNBZ+iE=
 github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196/go.mod h1:O6fSdaYZbGh4clVMGMGO5k2KbMO0Cz8YdBnPrD0I8dM=
-github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d h1:aSJXLVjEjbLeHo8aCTDcD3/gMWizaRjMBb3VCsEWEHs=
-github.com/go-macaron/captcha v0.0.0-20190813234938-24f40749f36d/go.mod h1:lmhlZnu9cTRGNQEkSh1qZi2IK3HJH4Z1MXkg6ARQKZA=
 github.com/go-macaron/captcha v0.2.0 h1:d38eYDDF8tdqoM0hJbk+Jb7WQGWlwYNnQwRqLRmSk1Y=
 github.com/go-macaron/captcha v0.2.0/go.mod h1:lmhlZnu9cTRGNQEkSh1qZi2IK3HJH4Z1MXkg6ARQKZA=
 github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c h1:kFFz1OpaH3+efG7RA33z+D0piwpA/a3x/Zn2d8z9rfw=

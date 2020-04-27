@@ -294,7 +294,7 @@ func Init(customConf string) error {
 		"StampNano":   time.StampNano,
 	}[Time.Format]
 	if Time.FormatLayout == "" {
-		return fmt.Errorf("unrecognized '[time] FORMAT': %s", Time.Format)
+		Time.FormatLayout = time.RFC3339
 	}
 
 	// ****************************
@@ -359,14 +359,21 @@ func Init(customConf string) error {
 	}
 	I18n.dateLangs = File.Section("i18n.datelang").KeysHash()
 
+	// *************************
+	// ----- LFS settings -----
+	// *************************
+
+	if err = File.Section("lfs").MapTo(&LFS); err != nil {
+		return errors.Wrap(err, "mapping [lfs] section")
+	}
+	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
+
 	handleDeprecated()
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")
 	} else if err = File.Section("http").MapTo(&HTTP); err != nil {
 		return errors.Wrap(err, "mapping [http] section")
-	} else if err = File.Section("lfs").MapTo(&LFS); err != nil {
-		return errors.Wrap(err, "mapping [lfs] section")
 	} else if err = File.Section("release").MapTo(&Release); err != nil {
 		return errors.Wrap(err, "mapping [release] section")
 	} else if err = File.Section("webhook").MapTo(&Webhook); err != nil {

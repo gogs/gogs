@@ -19,7 +19,7 @@ import (
 func Search(c *context.APIContext) {
 	opts := &db.SearchUserOptions{
 		Keyword:  c.Query("q"),
-		Type:     db.USER_TYPE_INDIVIDUAL,
+		Type:     db.UserIndividual,
 		PageSize: com.StrTo(c.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {

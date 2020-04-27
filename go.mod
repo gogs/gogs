@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e // indirect
-	github.com/editorconfig/editorconfig-core-go/v2 v2.3.1
+	github.com/editorconfig/editorconfig-core-go/v2 v2.3.2
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
@@ -47,7 +47,6 @@ require (
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.1.0
-	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/t-tiger/gorm-bulk-insert v1.3.0

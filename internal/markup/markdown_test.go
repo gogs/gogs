@@ -10,102 +10,67 @@ import (
 	"testing"
 
 	"github.com/russross/blackfriday"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/conf"
 	. "gogs.io/gogs/internal/markup"
 )
 
 func Test_IsMarkdownFile(t *testing.T) {
+	// TODO: Refactor to accept a list of extensions
 	conf.Markdown.FileExtensions = strings.Split(".md,.markdown,.mdown,.mkd", ",")
-	Convey("Detect Markdown file extension", t, func() {
-		testCases := []struct {
-			ext   string
-			match bool
-		}{
-			{".md", true},
-			{".markdown", true},
-			{".mdown", true},
-			{".mkd", true},
-			{".org", false},
-			{".rst", false},
-			{".asciidoc", false},
-		}
-
-		for _, tc := range testCases {
-			So(IsMarkdownFile(tc.ext), ShouldEqual, tc.match)
-		}
-	})
+	tests := []struct {
+		ext    string
+		expVal bool
+	}{
+		{ext: ".md", expVal: true},
+		{ext: ".markdown", expVal: true},
+		{ext: ".mdown", expVal: true},
+		{ext: ".mkd", expVal: true},
+		{ext: ".org", expVal: false},
+		{ext: ".rst", expVal: false},
+		{ext: ".asciidoc", expVal: false},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.expVal, IsMarkdownFile(test.ext))
+	}
 }
 
 func Test_Markdown(t *testing.T) {
-	Convey("Rendering an issue URL", t, func() {
-		conf.Server.ExternalURL = "http://localhost:3000/"
-		htmlFlags := 0
-		htmlFlags |= blackfriday.HTML_SKIP_STYLE
-		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
-		renderer := &MarkdownRenderer{
-			Renderer: blackfriday.HtmlRenderer(htmlFlags, "", ""),
-		}
-		buffer := new(bytes.Buffer)
-		Convey("To the internal issue tracker", func() {
-			Convey("It should render valid issue URLs", func() {
-				testCases := []string{
-					"http://localhost:3000/user/repo/issues/3333", "<a href=\"http://localhost:3000/user/repo/issues/3333\">#3333</a>",
-				}
+	// TODO: Refactor to accept URL
+	conf.Server.ExternalURL = "http://localhost:3000/"
 
-				for i := 0; i < len(testCases); i += 2 {
-					renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
+	htmlFlags := 0
+	htmlFlags |= blackfriday.HTML_SKIP_STYLE
+	htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
+	renderer := &MarkdownRenderer{
+		Renderer: blackfriday.HtmlRenderer(htmlFlags, "", ""),
+	}
 
-					line, _ := buffer.ReadString(0)
-					So(line, ShouldEqual, testCases[i+1])
-				}
-			})
-			Convey("It should render but not change non-issue URLs", func() {
-				testCases := []string{
-					"http://1111/2222/ssss-issues/3333?param=blah&blahh=333", "<a href=\"http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333\">http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333</a>",
-					"http://test.com/issues/33333", "<a href=\"http://test.com/issues/33333\">http://test.com/issues/33333</a>",
-					"http://test.com/issues/3", "<a href=\"http://test.com/issues/3\">http://test.com/issues/3</a>",
-					"http://issues/333", "<a href=\"http://issues/333\">http://issues/333</a>",
-					"https://issues/333", "<a href=\"https://issues/333\">https://issues/333</a>",
-					"http://tissues/0", "<a href=\"http://tissues/0\">http://tissues/0</a>",
-				}
+	tests := []struct {
+		input  string
+		expVal string
+	}{
+		// Issue URL
+		{input: "http://localhost:3000/user/repo/issues/3333", expVal: "<a href=\"http://localhost:3000/user/repo/issues/3333\">#3333</a>"},
+		{input: "http://1111/2222/ssss-issues/3333?param=blah&blahh=333", expVal: "<a href=\"http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333\">http://1111/2222/ssss-issues/3333?param=blah&amp;blahh=333</a>"},
+		{input: "http://test.com/issues/33333", expVal: "<a href=\"http://test.com/issues/33333\">http://test.com/issues/33333</a>"},
+		{input: "http://test.com/issues/3", expVal: "<a href=\"http://test.com/issues/3\">http://test.com/issues/3</a>"},
+		{input: "http://issues/333", expVal: "<a href=\"http://issues/333\">http://issues/333</a>"},
+		{input: "https://issues/333", expVal: "<a href=\"https://issues/333\">https://issues/333</a>"},
+		{input: "http://tissues/0", expVal: "<a href=\"http://tissues/0\">http://tissues/0</a>"},
 
-				for i := 0; i < len(testCases); i += 2 {
-					renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
-
-					line, _ := buffer.ReadString(0)
-					So(line, ShouldEqual, testCases[i+1])
-				}
-			})
+		// Commit URL
+		{input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae", expVal: " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a></code>"},
+		{input: "http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", expVal: " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24</a></code>"},
+		{input: "https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", expVal: "<a href=\"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2</a>"},
+		{input: "https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae", expVal: "<a href=\"https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae</a>"},
+	}
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			renderer.AutoLink(buf, []byte(test.input), blackfriday.LINK_TYPE_NORMAL)
+			assert.Equal(t, test.expVal, buf.String())
 		})
-	})
-
-	Convey("Rendering a commit URL", t, func() {
-		conf.Server.ExternalURL = "http://localhost:3000/"
-		htmlFlags := 0
-		htmlFlags |= blackfriday.HTML_SKIP_STYLE
-		htmlFlags |= blackfriday.HTML_OMIT_CONTENTS
-		renderer := &MarkdownRenderer{
-			Renderer: blackfriday.HtmlRenderer(htmlFlags, "", ""),
-		}
-		buffer := new(bytes.Buffer)
-		Convey("To the internal issue tracker", func() {
-			Convey("It should correctly convert URLs", func() {
-				testCases := []string{
-					"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae", " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">d8a994ef24</a></code>",
-					"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", " <code><a href=\"http://localhost:3000/user/project/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">d8a994ef24</a></code>",
-					"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2", "<a href=\"https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2\">https://external-link.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2</a>",
-					"https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae", "<a href=\"https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae\">https://commit/d8a994ef243349f321568f9e36d5c3f444b99cae</a>",
-				}
-
-				for i := 0; i < len(testCases); i += 2 {
-					renderer.AutoLink(buffer, []byte(testCases[i]), blackfriday.LINK_TYPE_NORMAL)
-
-					line, _ := buffer.ReadString(0)
-					So(line, ShouldEqual, testCases[i+1])
-				}
-			})
-		})
-	})
+	}
 }
