@@ -16,6 +16,11 @@ main() {
 		exit 1
 	fi
 
+	if [ ! -d "${BACKUP_PATH}" ]; then
+	  echo "Error: BACKUP_PATH does't exist or is not a directory" 1>&2
+		exit 1
+	fi
+
 	find "${BACKUP_PATH}/" -type f -${FIND_EXPRESSION} -print -exec rm "{}" +
 }
 
