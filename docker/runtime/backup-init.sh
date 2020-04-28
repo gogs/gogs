@@ -76,18 +76,23 @@ parse_generate_retention_expression() {
 	TIME_UNIT=$(echo "${BACKUP_RETENTION}" | sed -e 's/^[0-9]\+//')
 
   if [ "${TIME_UNIT}" = "m" ]; then
+    if [ "${TIME_INTERVAL}" -le 59 ]; then
+      echo "Warning: Minimal retention is 60m. Value set to 60m" 1>&2
+      TIME_INTERVAL=60
+    fi
+
     FIND_TIME_EXPR="mmin"
 	elif [ "${TIME_UNIT}" = "h" ]; then
-    echo "Error: Unsupported expression - Try: eg. 120m for 2 hours."
+    echo "Error: Unsupported expression - Try: eg. 120m for 2 hours." 1>&2
 		exit 1
 	elif [ "${TIME_UNIT}" = "d" ]; then
     FIND_TIME_EXPR="mtime"
 	elif [ "${TIME_UNIT}" = "M" ]; then
-    echo "Error: Unsupported expression - Try: eg. 60d for 2 months."
+    echo "Error: Unsupported expression - Try: eg. 60d for 2 months." 1>&2
 		exit 1
 	else
-		echo "Parse error: BACKUP_RETENTION expression is invalid"
-		echo "Warning: Using default: days"
+		echo "Parse error: BACKUP_RETENTION expression is invalid" 1>&2
+    exit 1
 	fi
 
 	echo "${FIND_TIME_EXPR} +${TIME_INTERVAL:-7}"
@@ -115,6 +120,13 @@ add_backup_cronjob() {
 CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 
 set +e
+RETENTION_EXPRESSION="$(parse_generate_retention_expression)"
+
+if [ ! -n "${RETENTION_EXPRESSION}" ]; then
+  echo "Couldn't generate backup retention expression. Aborting backup setup"
+  exit 1
+fi
+
 # Backup rotator cron will run every 5 minutes
-add_backup_cronjob "${CRONTAB_USER}" "*/5 * * * *" "/app/gogs/docker/runtime/backup-rotator.sh" "'${BACKUP_PATH}' '$(parse_generate_retention_expression)'"
+add_backup_cronjob "${CRONTAB_USER}" "*/5 * * * *" "/app/gogs/docker/runtime/backup-rotator.sh" "'${BACKUP_PATH}' '${RETENTION_EXPRESSION}'"
 add_backup_cronjob "${CRONTAB_USER}" "$(parse_generate_cron_expression)" "/app/gogs/docker/runtime/backup-job.sh" "'${BACKUP_PATH}'"
