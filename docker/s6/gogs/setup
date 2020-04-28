@@ -29,5 +29,10 @@ if [ $(stat -c '%U' /app/gogs) != 'git' ]; then
     chown -R git:git /app/gogs
 fi
 
+# Only chown for the first time, owner of '/backup' is 'git' inside Docker after installation
+if [ $(stat -c '%U' /backup) != 'git' ]; then
+    chown -R git:git /backup
+    chmod 2770 /backup
+fi
 
 chmod 0755 /data /data/gogs ~git/

@@ -114,7 +114,7 @@ add_backup_cronjob() {
 	fi
 
 	# Finally append new line with cron task expression
-	echo "${CRONJOB_EXPRESSION} ${CRONJOB_EXECUTOR} ${CRONJOB_EXECUTOR_ARGUMENTS}" >>"${CRONTAB_FILE}"
+	echo "${CRONJOB_EXPRESSION} /bin/sh ${CRONJOB_EXECUTOR} ${CRONJOB_EXECUTOR_ARGUMENTS}" >>"${CRONTAB_FILE}"
 }
 
 CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
