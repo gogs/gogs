@@ -26,43 +26,44 @@ parse_generate_cron_expression() {
 	CRON_EXPR_MINUTES="*"
 	CRON_EXPR_HOURS="*"
 	CRON_EXPR_DAYS="*"
+	CRON_EXPR_MONTHS="*"
 
-	TIME_INTERVAL=$(echo "${BACKUP_INTERVAL}" | sed -e 's/[mhd]$//')
+	TIME_INTERVAL=$(echo "${BACKUP_INTERVAL}" | sed -e 's/[hdm]$//')
 	TIME_UNIT=$(echo "${BACKUP_INTERVAL}" | sed -e 's/^[0-9]\+//')
 
-	if [ "${TIME_UNIT}" = "m" ]; then
-
-		if [ ! "${TIME_INTERVAL}" -le 59 ]; then
-			echo "Parse error: Time unit 'm' largest value is 59"
-			exit 1
-		fi
-
-		CRON_EXPR_MINUTES="*/${TIME_INTERVAL}"
-	elif [ "${TIME_UNIT}" = "h" ]; then
-
+	if [ "${TIME_UNIT}" = "h" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 23 ]; then
-			echo "Parse error: Time unit 'h' largest value is 23"
+			echo "Parse error: Time unit 'h' (hour) largest value is 23"
 			exit 1
 		fi
 
 		CRON_EXPR_MINUTES=0
 		CRON_EXPR_HOURS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "d" ]; then
-
 		if [ ! "${TIME_INTERVAL}" -le 30 ]; then
-			echo "Parse error: Time unit 'd' largest value is 30"
+			echo "Parse error: Time unit 'd' (day) largest value is 30"
 			exit 1
 		fi
 
 		CRON_EXPR_MINUTES=0
 		CRON_EXPR_HOURS=0
 		CRON_EXPR_DAYS="*/${TIME_INTERVAL}"
+	elif [ "${TIME_UNIT}" = "m" ]; then
+		if [ ! "${TIME_INTERVAL}" -le 12 ]; then
+			echo "Parse error: Time unit 'm' (month) largest value is 12"
+			exit 1
+		fi
+
+		CRON_EXPR_MINUTES=0
+		CRON_EXPR_HOURS=0
+		CRON_EXPR_DAYS="1"
+		CRON_EXPR_MONTHS="*/${TIME_INTERVAL}"
 	else
 		echo "Parse error: BACKUP_INTERVAL expression is invalid"
 		exit 1
 	fi
 
-	echo "${CRON_EXPR_MINUTES} ${CRON_EXPR_HOURS} ${CRON_EXPR_DAYS} * *"
+	echo "${CRON_EXPR_MINUTES} ${CRON_EXPR_HOURS} ${CRON_EXPR_DAYS} ${CRON_EXPR_MONTHS} *"
 }
 
 add_backup_cronjob() {
@@ -86,6 +87,6 @@ add_backup_cronjob() {
 CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 
 set +e
-# Backup rotator cron will run every 12 hours
-add_backup_cronjob "${CRONTAB_USER}" "0 */12 * * *" "/app/gogs/docker/runtime/backup-rotator.sh"
+# Backup rotator cron will run every 1 hour
+add_backup_cronjob "${CRONTAB_USER}" "0 */1 * * *" "/app/gogs/docker/runtime/backup-rotator.sh"
 add_backup_cronjob "${CRONTAB_USER}" "$(parse_generate_cron_expression)" "/app/gogs/docker/runtime/backup-job.sh"
