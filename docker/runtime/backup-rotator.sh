@@ -11,7 +11,7 @@ main() {
 		exit 1
 	fi
 
-	if [ "$(realpath ${BACKUP_PATH})" = "/" ]; then
+	if [ "$(realpath "${BACKUP_PATH}")" = "/" ]; then
 		echo "Error: Dangerous BACKUP_PATH: /" 1>&2
 		exit 1
 	fi
