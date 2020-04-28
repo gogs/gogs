@@ -60,7 +60,7 @@ CROND=$(echo "$RUN_CROND" | tr '[:upper:]' '[:lower:]')
 if [ "$CROND" = "true" -o "$CROND" = "1" ]; then
     echo "init:crond  | Cron Daemon (crond) will be run as requested by s6" 1>&2
     rm -f /app/gogs/docker/s6/crond/down
-    /usr/bin/sh /app/gogs/docker/runtime/backup-init.sh "${PUID}"
+    /bin/sh /app/gogs/docker/runtime/backup-init.sh "${PUID}"
 else
     # Tell s6 not to run the crond service
     touch /app/gogs/docker/s6/crond/down
