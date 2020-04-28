@@ -104,18 +104,18 @@ This container have some options available via environment variables, these opti
       Request crond to be run inside the container. Its default configuration will periodically run all scripts from `/etc/periodic/${period}` but custom crontabs can be added to `/var/spool/cron/crontabs/`.
 - **BACKUP_INTERVAL**:
   - <u>Possible value:</u>
-      `1m`, `1h`, `1d`
+      `3h`, `7d`, `3M`
   - <u>Default:</u>
       `null`
   - <u>Action:</u>
       In combination with `RUN_CROND` set to `true`, enables backup system.
 - **BACKUP_RETENTION**:
   - <u>Possible value:</u>
-      `1`, `2`, `3`, `...`
+      `360m`, `7d`, `...m/d`
   - <u>Default:</u>
-      `7`
+      `7d`
   - <u>Action:</u>
-      Used by backup system. Backups older than X days are deleted periodicaly.
+      Used by backup system. Backups older than specified in expression are deleted periodically.
 - **BACKUP_ARG_CONFIG**:
   - <u>Possible value:</u>
       `/app/gogs/example/custom/config`
