@@ -23,7 +23,7 @@ main() {
 	BACKUP_PATH="${1:-}"
 
 	if [ -z "${BACKUP_PATH}" ]; then
-		echo "Required argument missing BACKUP_PATH"
+		echo "Required argument missing BACKUP_PATH" 1>&2
 		exit 1
 	fi
 
