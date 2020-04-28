@@ -7,7 +7,12 @@ main() {
 	FIND_EXPRESSION="${2:-mtime +7}"
 
 	if [ -z "${BACKUP_PATH}" ]; then
-		echo "Required argument missing BACKUP_PATH"
+		echo "Error: Required argument missing BACKUP_PATH" 1>&2
+		exit 1
+	fi
+
+	if [ "$(realpath ${BACKUP_PATH})" = "/" ]; then
+		echo "Error: Dangerous BACKUP_PATH: /" 1>&2
 		exit 1
 	fi
 
