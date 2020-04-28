@@ -10,12 +10,12 @@ mkdir -p "/etc/crontabs"
 # [string] BACKUP_INTERVAL   Period expression
 # [string] BACKUP_RETENTION  Period expression
 if [ -z "${BACKUP_INTERVAL}" ]; then
-	echo "Backup disabled: BACKUP_INTERVAL has not been found"  1>&2
+	echo "Backup disabled: BACKUP_INTERVAL has not been found" 1>&2
 	exit 1
 fi
 
 if [ -z "${BACKUP_RETENTION}" ]; then
-	echo "Backup retention period not defined - default value used: 7 days"  1>&2
+	echo "Backup retention period not defined - default value used: 7 days" 1>&2
 	BACKUP_RETENTION='7d'
 fi
 
@@ -33,7 +33,7 @@ parse_generate_cron_expression() {
 
 	if [ "${TIME_UNIT}" = "h" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 23 ]; then
-			echo "Parse error: Time unit 'h' (hour) largest value is 23"  1>&2
+			echo "Parse error: Time unit 'h' (hour) largest value is 23" 1>&2
 			exit 1
 		fi
 
@@ -41,7 +41,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_HOURS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "d" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 30 ]; then
-			echo "Parse error: Time unit 'd' (day) largest value is 30"  1>&2
+			echo "Parse error: Time unit 'd' (day) largest value is 30" 1>&2
 			exit 1
 		fi
 
@@ -50,7 +50,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_DAYS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "M" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 12 ]; then
-			echo "Parse error: Time unit 'M' (month) largest value is 12"  1>&2
+			echo "Parse error: Time unit 'M' (month) largest value is 12" 1>&2
 			exit 1
 		fi
 
@@ -59,7 +59,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_DAYS="1"
 		CRON_EXPR_MONTHS="*/${TIME_INTERVAL}"
 	else
-		echo "Parse error: BACKUP_INTERVAL expression is invalid"  1>&2
+		echo "Parse error: BACKUP_INTERVAL expression is invalid" 1>&2
 		exit 1
 	fi
 
@@ -75,24 +75,24 @@ parse_generate_retention_expression() {
 	TIME_INTERVAL=$(echo "${BACKUP_RETENTION}" | sed -e 's/[mhdM]$//')
 	TIME_UNIT=$(echo "${BACKUP_RETENTION}" | sed -e 's/^[0-9]\+//')
 
-  if [ "${TIME_UNIT}" = "m" ]; then
-    if [ "${TIME_INTERVAL}" -le 59 ]; then
-      echo "Warning: Minimal retention is 60m. Value set to 60m" 1>&2
-      TIME_INTERVAL=60
-    fi
+	if [ "${TIME_UNIT}" = "m" ]; then
+		if [ "${TIME_INTERVAL}" -le 59 ]; then
+			echo "Warning: Minimal retention is 60m. Value set to 60m" 1>&2
+			TIME_INTERVAL=60
+		fi
 
-    FIND_TIME_EXPR="mmin"
+		FIND_TIME_EXPR="mmin"
 	elif [ "${TIME_UNIT}" = "h" ]; then
-    echo "Error: Unsupported expression - Try: eg. 120m for 2 hours." 1>&2
+		echo "Error: Unsupported expression - Try: eg. 120m for 2 hours." 1>&2
 		exit 1
 	elif [ "${TIME_UNIT}" = "d" ]; then
-    FIND_TIME_EXPR="mtime"
+		FIND_TIME_EXPR="mtime"
 	elif [ "${TIME_UNIT}" = "M" ]; then
-    echo "Error: Unsupported expression - Try: eg. 60d for 2 months." 1>&2
+		echo "Error: Unsupported expression - Try: eg. 60d for 2 months." 1>&2
 		exit 1
 	else
 		echo "Parse error: BACKUP_RETENTION expression is invalid" 1>&2
-    exit 1
+		exit 1
 	fi
 
 	echo "${FIND_TIME_EXPR} +${TIME_INTERVAL:-7}"
@@ -108,7 +108,7 @@ add_backup_cronjob() {
 	if [ -f "${CRONTAB_FILE}" ]; then
 		CRONJOB_EXECUTOR_COUNT=$(grep -c "${CRONJOB_EXECUTOR}" "${CRONTAB_FILE}" || exit 0)
 		if [ "${CRONJOB_EXECUTOR_COUNT}" != "0" ]; then
-			echo "Cron job already exists for ${CRONJOB_EXECUTOR}. Refusing to add duplicate."  1>&2
+			echo "Cron job already exists for ${CRONJOB_EXECUTOR}. Refusing to add duplicate." 1>&2
 			return 1
 		fi
 	fi
@@ -123,8 +123,8 @@ set +e
 RETENTION_EXPRESSION="$(parse_generate_retention_expression)"
 
 if [ ! -n "${RETENTION_EXPRESSION}" ]; then
-  echo "Couldn't generate backup retention expression. Aborting backup setup"  1>&2
-  exit 1
+	echo "Couldn't generate backup retention expression. Aborting backup setup" 1>&2
+	exit 1
 fi
 
 # Backup rotator cron will run every 5 minutes
