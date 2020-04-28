@@ -7,8 +7,8 @@ BACKUP_PATH="/backup"
 mkdir -p "${BACKUP_PATH}"
 mkdir -p "/etc/crontabs"
 
-# [int] BACKUP_INTERVAL   Period with prefix
-# [int] BACKUP_RETENTION  Period in days
+# [string] BACKUP_INTERVAL   Period expression
+# [string] BACKUP_RETENTION  Period expression
 if [ -z "${BACKUP_INTERVAL}" ]; then
 	echo "Backup disabled: BACKUP_INTERVAL has not been found"
 	exit 1
@@ -16,19 +16,19 @@ fi
 
 if [ -z "${BACKUP_RETENTION}" ]; then
 	echo "Backup retention period not defined - default value used: 7 days"
-	BACKUP_RETENTION=7
+	BACKUP_RETENTION='7d'
 fi
 
 # Parse BACKUP_INTERVAL environment variable and generate appropriate cron expression. Backup cron task will be run as scheduled.
 # Expected format: nu (n - number, u - unit) (eg. 3d equals 3 days)
-# Supported units: m - minutes, h - hours, d - days
+# Supported units: h - hours, d - days, M - months
 parse_generate_cron_expression() {
 	CRON_EXPR_MINUTES="*"
 	CRON_EXPR_HOURS="*"
 	CRON_EXPR_DAYS="*"
 	CRON_EXPR_MONTHS="*"
 
-	TIME_INTERVAL=$(echo "${BACKUP_INTERVAL}" | sed -e 's/[hdm]$//')
+	TIME_INTERVAL=$(echo "${BACKUP_INTERVAL}" | sed -e 's/[hdM]$//')
 	TIME_UNIT=$(echo "${BACKUP_INTERVAL}" | sed -e 's/^[0-9]\+//')
 
 	if [ "${TIME_UNIT}" = "h" ]; then
@@ -48,9 +48,9 @@ parse_generate_cron_expression() {
 		CRON_EXPR_MINUTES=0
 		CRON_EXPR_HOURS=0
 		CRON_EXPR_DAYS="*/${TIME_INTERVAL}"
-	elif [ "${TIME_UNIT}" = "m" ]; then
+	elif [ "${TIME_UNIT}" = "M" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 12 ]; then
-			echo "Parse error: Time unit 'm' (month) largest value is 12"
+			echo "Parse error: Time unit 'M' (month) largest value is 12"
 			exit 1
 		fi
 
@@ -66,11 +66,39 @@ parse_generate_cron_expression() {
 	echo "${CRON_EXPR_MINUTES} ${CRON_EXPR_HOURS} ${CRON_EXPR_DAYS} ${CRON_EXPR_MONTHS} *"
 }
 
+# Parse BACKUP_RETENTION environment variable and generate appropriate find command expression.
+# Expected format: nu (n - number, u - unit) (eg. 3d equals 3 days)
+# Supported units: m - minutes, h - hours, d - days, M - months
+parse_generate_retention_expression() {
+	FIND_TIME_EXPR='mtime'
+
+	TIME_INTERVAL=$(echo "${BACKUP_RETENTION}" | sed -e 's/[mhdM]$//')
+	TIME_UNIT=$(echo "${BACKUP_RETENTION}" | sed -e 's/^[0-9]\+//')
+
+  if [ "${TIME_UNIT}" = "m" ]; then
+    FIND_TIME_EXPR="mmin"
+	elif [ "${TIME_UNIT}" = "h" ]; then
+    echo "Error: Unsupported expression - Try: eg. 120m for 2 hours."
+		exit 1
+	elif [ "${TIME_UNIT}" = "d" ]; then
+    FIND_TIME_EXPR="mtime"
+	elif [ "${TIME_UNIT}" = "M" ]; then
+    echo "Error: Unsupported expression - Try: eg. 60d for 2 months."
+		exit 1
+	else
+		echo "Parse error: BACKUP_RETENTION expression is invalid"
+		echo "Warning: Using default: days"
+	fi
+
+	echo "${FIND_TIME_EXPR} +${TIME_INTERVAL:-7}"
+}
+
 add_backup_cronjob() {
 	CRONTAB_USER="${1:-git}"
 	CRONTAB_FILE="rootfs/etc/crontabs/${CRONTAB_USER}"
 	CRONJOB_EXPRESSION="${2:-}"
 	CRONJOB_EXECUTOR="${3:-}"
+	CRONJOB_EXECUTOR_ARGUMENTS="${4:-}"
 
 	if [ -f "${CRONTAB_FILE}" ]; then
 		CRONJOB_EXECUTOR_COUNT=$(grep -c "${CRONJOB_EXECUTOR}" "${CRONTAB_FILE}" || exit 0)
@@ -81,12 +109,12 @@ add_backup_cronjob() {
 	fi
 
 	# Finally append new line with cron task expression
-	echo "${CRONJOB_EXPRESSION} ${CRONJOB_EXECUTOR} '${BACKUP_PATH}' '${BACKUP_RETENTION}'" >>"${CRONTAB_FILE}"
+	echo "${CRONJOB_EXPRESSION} ${CRONJOB_EXECUTOR} ${CRONJOB_EXECUTOR_ARGUMENTS}" >>"${CRONTAB_FILE}"
 }
 
 CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 
 set +e
-# Backup rotator cron will run every 1 hour
-add_backup_cronjob "${CRONTAB_USER}" "0 */1 * * *" "/app/gogs/docker/runtime/backup-rotator.sh"
-add_backup_cronjob "${CRONTAB_USER}" "$(parse_generate_cron_expression)" "/app/gogs/docker/runtime/backup-job.sh"
+# Backup rotator cron will run every 5 minutes
+add_backup_cronjob "${CRONTAB_USER}" "*/5 * * * *" "/app/gogs/docker/runtime/backup-rotator.sh" "'${BACKUP_PATH}' '$(parse_generate_retention_expression)'"
+add_backup_cronjob "${CRONTAB_USER}" "$(parse_generate_cron_expression)" "/app/gogs/docker/runtime/backup-job.sh" "'${BACKUP_PATH}'"
