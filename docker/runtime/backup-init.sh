@@ -122,7 +122,7 @@ CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 set +e
 RETENTION_EXPRESSION="$(parse_generate_retention_expression)"
 
-if [ ! -n "${RETENTION_EXPRESSION}" ]; then
+if [ -z "${RETENTION_EXPRESSION}" ]; then
 	echo "Couldn't generate backup retention expression. Aborting backup setup" 1>&2
 	exit 1
 fi
