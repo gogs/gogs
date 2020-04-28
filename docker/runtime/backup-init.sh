@@ -100,7 +100,7 @@ parse_generate_retention_expression() {
 
 add_backup_cronjob() {
 	CRONTAB_USER="${1:-git}"
-	CRONTAB_FILE="rootfs/etc/crontabs/${CRONTAB_USER}"
+	CRONTAB_FILE="/etc/crontabs/${CRONTAB_USER}"
 	CRONJOB_EXPRESSION="${2:-}"
 	CRONJOB_EXECUTOR="${3:-}"
 	CRONJOB_EXECUTOR_ARGUMENTS="${4:-}"
