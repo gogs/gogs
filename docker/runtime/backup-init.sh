@@ -10,12 +10,12 @@ mkdir -p "/etc/crontabs"
 # [string] BACKUP_INTERVAL   Period expression
 # [string] BACKUP_RETENTION  Period expression
 if [ -z "${BACKUP_INTERVAL}" ]; then
-	echo "Backup disabled: BACKUP_INTERVAL has not been found"
+	echo "Backup disabled: BACKUP_INTERVAL has not been found"  1>&2
 	exit 1
 fi
 
 if [ -z "${BACKUP_RETENTION}" ]; then
-	echo "Backup retention period not defined - default value used: 7 days"
+	echo "Backup retention period not defined - default value used: 7 days"  1>&2
 	BACKUP_RETENTION='7d'
 fi
 
@@ -33,7 +33,7 @@ parse_generate_cron_expression() {
 
 	if [ "${TIME_UNIT}" = "h" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 23 ]; then
-			echo "Parse error: Time unit 'h' (hour) largest value is 23"
+			echo "Parse error: Time unit 'h' (hour) largest value is 23"  1>&2
 			exit 1
 		fi
 
@@ -41,7 +41,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_HOURS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "d" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 30 ]; then
-			echo "Parse error: Time unit 'd' (day) largest value is 30"
+			echo "Parse error: Time unit 'd' (day) largest value is 30"  1>&2
 			exit 1
 		fi
 
@@ -50,7 +50,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_DAYS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "M" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 12 ]; then
-			echo "Parse error: Time unit 'M' (month) largest value is 12"
+			echo "Parse error: Time unit 'M' (month) largest value is 12"  1>&2
 			exit 1
 		fi
 
@@ -59,7 +59,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_DAYS="1"
 		CRON_EXPR_MONTHS="*/${TIME_INTERVAL}"
 	else
-		echo "Parse error: BACKUP_INTERVAL expression is invalid"
+		echo "Parse error: BACKUP_INTERVAL expression is invalid"  1>&2
 		exit 1
 	fi
 
@@ -108,7 +108,7 @@ add_backup_cronjob() {
 	if [ -f "${CRONTAB_FILE}" ]; then
 		CRONJOB_EXECUTOR_COUNT=$(grep -c "${CRONJOB_EXECUTOR}" "${CRONTAB_FILE}" || exit 0)
 		if [ "${CRONJOB_EXECUTOR_COUNT}" != "0" ]; then
-			echo "Cron job already exists for ${CRONJOB_EXECUTOR}. Refusing to add duplicate."
+			echo "Cron job already exists for ${CRONJOB_EXECUTOR}. Refusing to add duplicate."  1>&2
 			return 1
 		fi
 	fi
@@ -123,7 +123,7 @@ set +e
 RETENTION_EXPRESSION="$(parse_generate_retention_expression)"
 
 if [ ! -n "${RETENTION_EXPRESSION}" ]; then
-  echo "Couldn't generate backup retention expression. Aborting backup setup"
+  echo "Couldn't generate backup retention expression. Aborting backup setup"  1>&2
   exit 1
 fi
 
