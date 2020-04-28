@@ -68,7 +68,7 @@ parse_generate_cron_expression() {
 
 # Parse BACKUP_RETENTION environment variable and generate appropriate find command expression.
 # Expected format: nu (n - number, u - unit) (eg. 3d equals 3 days)
-# Supported units: m - minutes, h - hours, d - days, M - months
+# Supported units: m - minutes, d - days
 parse_generate_retention_expression() {
 	FIND_TIME_EXPR='mtime'
 
