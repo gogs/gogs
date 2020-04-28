@@ -11,7 +11,7 @@ main() {
 		exit 1
 	fi
 
-	find "${BACKUP_PATH}/" -type f "-${FIND_EXPRESSION}" -print -exec rm "{}" +
+	find "${BACKUP_PATH}/" -type f -${FIND_EXPRESSION} -print -exec rm "{}" +
 }
 
 main "$@"
