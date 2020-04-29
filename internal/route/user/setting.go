@@ -20,6 +20,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
@@ -75,10 +76,8 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 				switch {
 				case db.IsErrUserAlreadyExist(err):
 					msg = c.Tr("form.username_been_taken")
-				case db.IsErrNameReserved(err):
-					msg = c.Tr("form.name_reserved")
-				case db.IsErrNamePatternNotAllowed(err):
-					msg = c.Tr("form.name_pattern_not_allowed")
+				case db.IsErrNameNotAllowed(err):
+					msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 				default:
 					c.Error(err, "change user name")
 					return
@@ -118,7 +117,7 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) error {
 	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
 	if len(f.Gravatar) > 0 {
-		ctxUser.Avatar = tool.MD5(f.Gravatar)
+		ctxUser.Avatar = cryptoutil.MD5(f.Gravatar)
 		ctxUser.AvatarEmail = f.Gravatar
 	}
 
@@ -208,7 +207,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 			c.Errorf(err, "get user salt")
 			return
 		}
-		c.User.EncodePasswd()
+		c.User.EncodePassword()
 		if err := db.UpdateUser(c.User); err != nil {
 			c.Errorf(err, "update user")
 			return
@@ -381,8 +380,8 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := db.GetTwoFactorByUserID(c.UserID())
-	if err != nil && !errors.IsTwoFactorNotFound(err) {
+	t, err := db.TwoFactors.GetByUserID(c.UserID())
+	if err != nil && !db.IsErrTwoFactorNotFound(err) {
 		c.Errorf(err, "get two factor by user ID")
 		return
 	}
@@ -449,7 +448,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := db.NewTwoFactor(c.UserID(), secret); err != nil {
+	if err := db.TwoFactors.Create(c.UserID(), conf.Security.SecretKey, secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.RedirectSubpath("/user/settings/security/two_factor_enable")
 		return
@@ -581,7 +580,7 @@ func SettingsApplications(c *context.Context) {
 	c.Title("settings.applications")
 	c.PageIs("SettingsApplications")
 
-	tokens, err := db.ListAccessTokens(c.User.ID)
+	tokens, err := db.AccessTokens.List(c.User.ID)
 	if err != nil {
 		c.Errorf(err, "list access tokens")
 		return
@@ -596,7 +595,7 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 	c.PageIs("SettingsApplications")
 
 	if c.HasError() {
-		tokens, err := db.ListAccessTokens(c.User.ID)
+		tokens, err := db.AccessTokens.List(c.User.ID)
 		if err != nil {
 			c.Errorf(err, "list access tokens")
 			return
@@ -607,12 +606,9 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 		return
 	}
 
-	t := &db.AccessToken{
-		UID:  c.User.ID,
-		Name: f.Name,
-	}
-	if err := db.NewAccessToken(t); err != nil {
-		if errors.IsAccessTokenNameAlreadyExist(err) {
+	t, err := db.AccessTokens.Create(c.User.ID, f.Name)
+	if err != nil {
+		if db.IsErrAccessTokenAlreadyExist(err) {
 			c.Flash.Error(c.Tr("settings.token_name_exists"))
 			c.RedirectSubpath("/user/settings/applications")
 		} else {
@@ -627,7 +623,7 @@ func SettingsApplicationsPost(c *context.Context, f form.NewAccessToken) {
 }
 
 func SettingsDeleteApplication(c *context.Context) {
-	if err := db.DeleteAccessTokenOfUserByID(c.User.ID, c.QueryInt64("id")); err != nil {
+	if err := db.AccessTokens.DeleteByID(c.User.ID, c.QueryInt64("id")); err != nil {
 		c.Flash.Error("DeleteAccessTokenByID: " + err.Error())
 	} else {
 		c.Flash.Success(c.Tr("settings.delete_token_success"))
@@ -643,7 +639,7 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := db.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {

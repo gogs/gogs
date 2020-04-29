@@ -27,8 +27,8 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/ssh"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/template/highlight"
-	"gogs.io/gogs/internal/tool"
 )
 
 const (
@@ -76,7 +76,6 @@ func GlobalInit(customConf string) error {
 		}
 		db.HasEngine = true
 
-		db.LoadAuthSources()
 		db.LoadRepoConfig()
 		db.NewRepoContext()
 
@@ -85,9 +84,6 @@ func GlobalInit(customConf string) error {
 		db.InitSyncMirrors()
 		db.InitDeliverHooks()
 		db.InitTestPullRequests()
-	}
-	if db.EnableSQLite3 {
-		log.Info("SQLite3 is supported")
 	}
 	if conf.HasMinWinSvc {
 		log.Info("Builtin Windows Service is supported")
@@ -125,11 +121,7 @@ func InstallInit(c *context.Context) {
 	c.Title("install.install")
 	c.PageIs("Install")
 
-	dbOpts := []string{"MySQL", "PostgreSQL", "MSSQL"}
-	if db.EnableSQLite3 {
-		dbOpts = append(dbOpts, "SQLite3")
-	}
-	c.Data["DbOptions"] = dbOpts
+	c.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "MSSQL", "SQLite3"}
 }
 
 func Install(c *context.Context) {
@@ -148,9 +140,7 @@ func Install(c *context.Context) {
 	case "mssql":
 		c.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
-		if db.EnableSQLite3 {
-			c.Data["CurDbOption"] = "SQLite3"
-		}
+		c.Data["CurDbOption"] = "SQLite3"
 	}
 
 	// Application general settings
@@ -375,7 +365,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("log").Key("ROOT_PATH").SetValue(f.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")
-	secretKey, err := tool.RandomString(15)
+	secretKey, err := strutil.RandomChars(15)
 	if err != nil {
 		c.RenderWithErr(c.Tr("install.secret_key_failed", err), INSTALL, &f)
 		return

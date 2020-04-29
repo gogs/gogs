@@ -172,8 +172,8 @@ func NewTeamPost(c *context.Context, f form.CreateTeam) {
 		switch {
 		case db.IsErrTeamAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.team_name_been_taken"), TEAM_NEW, &f)
-		case db.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.team_name_reserved", err.(db.ErrNameReserved).Name), TEAM_NEW, &f)
+		case db.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("org.form.team_name_not_allowed", err.(db.ErrNameNotAllowed).Value()), TEAM_NEW, &f)
 		default:
 			c.Error(err, "new team")
 		}
@@ -228,11 +228,11 @@ func EditTeamPost(c *context.Context, f form.CreateTeam) {
 		var auth db.AccessMode
 		switch f.Permission {
 		case "read":
-			auth = db.ACCESS_MODE_READ
+			auth = db.AccessModeRead
 		case "write":
-			auth = db.ACCESS_MODE_WRITE
+			auth = db.AccessModeWrite
 		case "admin":
-			auth = db.ACCESS_MODE_ADMIN
+			auth = db.AccessModeAdmin
 		default:
 			c.Status(http.StatusUnauthorized)
 			return

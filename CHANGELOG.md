@@ -11,10 +11,11 @@ All notable changes to Gogs are documented in this file.
 - Support syntax highlighting for SAS code files (i.e. `.r`, `.sas`, `.tex`, `.yaml`). [#5856](https://github.com/gogs/gogs/pull/5856)
 - Able to fill in pull request title with a template. [#5901](https://github.com/gogs/gogs/pull/5901)
 - Able to override static files under `public/` directory, please refer to [documentation](https://gogs.io/docs/features/custom_template) for usage. [#5920](https://github.com/gogs/gogs/pull/5920)
+- New API endpoint `GET /admin/teams/:teamid/members` to list members of a team. [#5877](https://github.com/gogs/gogs/issues/5877)
 
 ### Changed
 
-- The required Go version to compile source code changed to 1.13.
+- The required Go version to compile source code changed to 1.14.
 - All assets are now embedded into binary and served from memory by default. Set `[server] LOAD_ASSETS_FROM_DISK = true` to load them from disk. [#5920](https://github.com/gogs/gogs/pull/5920)
 - Application and Go versions are removed from page footer and only show in the admin dashboard.
 - Build tag for running as Windows Service has been changed from `miniwinsvc` to `minwinsvc`.
@@ -45,11 +46,14 @@ All notable changes to Gogs are documented in this file.
 - [Security] Potential stored XSS attack in some browsers. [#5397](https://github.com/gogs/gogs/issues/5397)
 - [Security] Potential RCE on mirror repositories. [#5767](https://github.com/gogs/gogs/issues/5767)
 - [Security] Potential XSS attack with raw markdown API. [#5907](https://github.com/gogs/gogs/pull/5907)
+- File both modified and renamed within a commit treated as separate files. [#5056](https://github.com/gogs/gogs/issues/5056)
 - Open/close milestone redirects to a 404 page. [#5677](https://github.com/gogs/gogs/issues/5677)
 - Disallow multiple tokens with same name. [#5587](https://github.com/gogs/gogs/issues/5587) [#5820](https://github.com/gogs/gogs/pull/5820)
 - Enable Federated Avatar Lookup could cause server to crash. [#5848](https://github.com/gogs/gogs/issues/5848)
 - Private repositories are hidden in the organization's view. [#5869](https://github.com/gogs/gogs/issues/5869)
 - Server error when changing email address in user settings page. [#5899](https://github.com/gogs/gogs/issues/5899)
+- Fall back to use RFC 3339 as time layout when misconfigured. [#6098](https://github.com/gogs/gogs/issues/6098)
+- Webhooks are not fired after push when `[service] REQUIRE_SIGNIN_VIEW = true`.
 
 ### Removed
 
@@ -60,6 +64,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[session] ENABLE_SET_COOKIE`
 - Configuration option `[release.attachment] PATH`
 - Configuration option `[webhook] QUEUE_LENGTH`
+- Build tag `sqlite`, which means CGO is now required.
 
 ---
 

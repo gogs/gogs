@@ -6,6 +6,8 @@ BACKUP_PATH="/backup"
 # Make sure that required directories exist
 mkdir -p "${BACKUP_PATH}"
 mkdir -p "/etc/crontabs"
+chown git:git /backup
+chmod 2770 /backup
 
 # [string] BACKUP_INTERVAL   Period expression
 # [string] BACKUP_RETENTION  Period expression

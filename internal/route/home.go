@@ -5,7 +5,12 @@
 package route
 
 import (
+	"fmt"
+	"net/http"
+
+	"github.com/go-macaron/i18n"
 	"github.com/unknwon/paginater"
+	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -133,9 +138,9 @@ func ExploreUsers(c *context.Context) {
 	c.Data["PageIsExploreUsers"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     db.USER_TYPE_INDIVIDUAL,
+		Type:     db.UserIndividual,
 		Counter:  db.CountUsers,
-		Ranger:   db.Users,
+		Ranger:   db.ListUsers,
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
@@ -148,7 +153,7 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     db.USER_TYPE_ORGANIZATION,
+		Type:     db.UserOrganization,
 		Counter:  db.CountOrganizations,
 		Ranger:   db.Organizations,
 		PageSize: conf.UI.ExplorePagingNum,
@@ -157,7 +162,7 @@ func ExploreOrganizations(c *context.Context) {
 	})
 }
 
-func NotFound(c *context.Context) {
-	c.Data["Title"] = "Page Not Found"
-	c.NotFound()
+func NotFound(c *macaron.Context, l i18n.Locale) {
+	c.Data["Title"] = l.Tr("status.page_not_found")
+	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
 }

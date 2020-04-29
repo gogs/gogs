@@ -22,6 +22,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/osutil"
@@ -56,7 +57,7 @@ func ComposeHookEnvs(opts ComposeHookEnvsOptions) []string {
 		ENV_AUTH_USER_NAME + "=" + opts.AuthUser.Name,
 		ENV_AUTH_USER_EMAIL + "=" + opts.AuthUser.Email,
 		ENV_REPO_OWNER_NAME + "=" + opts.OwnerName,
-		ENV_REPO_OWNER_SALT_MD5 + "=" + tool.MD5(opts.OwnerSalt),
+		ENV_REPO_OWNER_SALT_MD5 + "=" + cryptoutil.MD5(opts.OwnerSalt),
 		ENV_REPO_ID + "=" + com.ToStr(opts.RepoID),
 		ENV_REPO_NAME + "=" + opts.RepoName,
 		ENV_REPO_CUSTOM_HOOKS_PATH + "=" + filepath.Join(opts.RepoPath, "custom_hooks"),

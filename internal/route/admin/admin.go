@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	DASHBOARD = "admin/dashboard"
-	CONFIG    = "admin/config"
-	MONITOR   = "admin/monitor"
+	tmplDashboard = "admin/dashboard"
+	tmplConfig    = "admin/config"
+	tmplMonitor   = "admin/monitor"
 )
 
 // initTime is the time when the application was initialized.
@@ -123,7 +123,7 @@ func Dashboard(c *context.Context) {
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
-	c.Success(DASHBOARD)
+	c.Success(tmplDashboard)
 }
 
 // Operation types.
@@ -209,6 +209,7 @@ func Config(c *context.Context) {
 	c.Data["Mirror"] = conf.Mirror
 	c.Data["Webhook"] = conf.Webhook
 	c.Data["Git"] = conf.Git
+	c.Data["LFS"] = conf.LFS
 
 	c.Data["LogRootPath"] = conf.Log.RootPath
 	type logger struct {
@@ -225,7 +226,7 @@ func Config(c *context.Context) {
 	}
 	c.Data["Loggers"] = loggers
 
-	c.Success(CONFIG)
+	c.Success(tmplConfig)
 }
 
 func Monitor(c *context.Context) {
@@ -234,5 +235,5 @@ func Monitor(c *context.Context) {
 	c.Data["PageIsAdminMonitor"] = true
 	c.Data["Processes"] = process.Processes
 	c.Data["Entries"] = cron.ListTasks()
-	c.Success(MONITOR)
+	c.Success(tmplMonitor)
 }

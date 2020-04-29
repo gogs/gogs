@@ -9,12 +9,12 @@ import (
 	"net/url"
 
 	"github.com/go-macaron/captcha"
+	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
@@ -101,7 +101,7 @@ func Login(c *context.Context) {
 	}
 
 	// Display normal login page
-	loginSources, err := db.ActivatedLoginSources()
+	loginSources, err := db.LoginSources.List(db.ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -148,7 +148,7 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	loginSources, err := db.ActivatedLoginSources()
+	loginSources, err := db.LoginSources.List(db.ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -160,13 +160,13 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := db.UserLogin(f.UserName, f.Password, f.LoginSource)
+	u, err := db.Users.Authenticate(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
-		switch err.(type) {
+		switch errors.Cause(err).(type) {
 		case db.ErrUserNotExist:
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
-		case errors.LoginSourceMismatch:
+		case db.ErrLoginSourceMismatch:
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
 
@@ -209,7 +209,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	t, err := db.GetTwoFactorByUserID(userID)
+	t, err := db.TwoFactors.GetByUserID(userID)
 	if err != nil {
 		c.Error(err, "get two factor by user ID")
 		return
@@ -263,7 +263,7 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 	}
 
 	if err := db.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
-		if errors.IsTwoFactorRecoveryCodeNotFound(err) {
+		if db.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
 			c.RedirectSubpath("/user/login/two_factor_recovery_code")
 		} else {
@@ -344,12 +344,9 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		case db.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
 			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
-		case db.IsErrNameReserved(err):
+		case db.IsErrNameNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(db.ErrNameReserved).Name), SIGNUP, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SIGNUP, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -556,7 +553,7 @@ func ResetPasswdPost(c *context.Context) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 		if err := db.UpdateUser(u); err != nil {
 			c.Error(err, "update user")
 			return

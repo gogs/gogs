@@ -51,10 +51,8 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 		} else if err = db.ChangeUserName(org, f.Name); err != nil {
 			c.Data["OrgName"] = true
 			switch {
-			case db.IsErrNameReserved(err):
-				c.RenderWithErr(c.Tr("user.form.name_reserved"), SETTINGS_OPTIONS, &f)
-			case db.IsErrNamePatternNotAllowed(err):
-				c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed"), SETTINGS_OPTIONS, &f)
+			case db.IsErrNameNotAllowed(err):
+				c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SETTINGS_OPTIONS, &f)
 			default:
 				c.Error(err, "change user name")
 			}
@@ -110,7 +108,7 @@ func SettingsDelete(c *context.Context) {
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := db.UserLogin(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {

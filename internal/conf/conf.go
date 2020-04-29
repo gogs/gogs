@@ -294,7 +294,7 @@ func Init(customConf string) error {
 		"StampNano":   time.StampNano,
 	}[Time.Format]
 	if Time.FormatLayout == "" {
-		return fmt.Errorf("unrecognized '[time] FORMAT': %s", Time.Format)
+		Time.FormatLayout = time.RFC3339
 	}
 
 	// ****************************
@@ -358,6 +358,15 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [i18n] section")
 	}
 	I18n.dateLangs = File.Section("i18n.datelang").KeysHash()
+
+	// *************************
+	// ----- LFS settings -----
+	// *************************
+
+	if err = File.Section("lfs").MapTo(&LFS); err != nil {
+		return errors.Wrap(err, "mapping [lfs] section")
+	}
+	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 
 	handleDeprecated()
 

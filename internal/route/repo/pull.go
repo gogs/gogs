@@ -19,7 +19,6 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/tool"
 )
 
 const (
@@ -137,10 +136,8 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", c.User.RepoCreationNum()), FORK, &f)
 		case db.IsErrRepoAlreadyExist(err):
 			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
-		case db.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), FORK, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), FORK, &f)
+		case db.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), FORK, &f)
 		default:
 			c.Error(err, "fork repository")
 		}
@@ -378,6 +375,7 @@ func ViewPullFiles(c *context.Context) {
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["IsImageFile"] = commit.IsImageFile
+	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 
 	// It is possible head repo has been deleted for merged pull requests
 	if pull.HeadRepo != nil {
@@ -386,8 +384,9 @@ func ViewPullFiles(c *context.Context) {
 
 		headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
 		c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", endCommitID)
-		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", startCommitID)
 		c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", endCommitID)
+		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", startCommitID)
+		c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", startCommitID)
 	}
 
 	c.Data["RequireHighlightJS"] = true
@@ -595,11 +594,13 @@ func PrepareCompareDiff(
 	c.Data["Username"] = headUser.Name
 	c.Data["Reponame"] = headRepo.Name
 	c.Data["IsImageFile"] = headCommit.IsImageFile
+	c.Data["IsImageFileByIndex"] = headCommit.IsImageFileByIndex
 
 	headTarget := path.Join(headUser.Name, repo.Name)
 	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", headCommitID)
-	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", meta.MergeBase)
 	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", headCommitID)
+	c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "src", meta.MergeBase)
+	c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(headTarget, "raw", meta.MergeBase)
 	return false
 }
 
@@ -739,52 +740,4 @@ func CompareAndPullRequestPost(c *context.Context, f form.NewIssue) {
 
 	log.Trace("Pull request created: %d/%d", repo.ID, pullIssue.ID)
 	c.Redirect(c.Repo.RepoLink + "/pulls/" + com.ToStr(pullIssue.Index))
-}
-
-func parseOwnerAndRepo(c *context.Context) (*db.User, *db.Repository) {
-	owner, err := db.GetUserByName(c.Params(":username"))
-	if err != nil {
-		c.NotFoundOrError(err, "get user by name")
-		return nil, nil
-	}
-
-	repo, err := db.GetRepositoryByName(owner.ID, c.Params(":reponame"))
-	if err != nil {
-		c.NotFoundOrError(err, "get repository by name")
-		return nil, nil
-	}
-
-	return owner, repo
-}
-
-func TriggerTask(c *context.Context) {
-	pusherID := c.QueryInt64("pusher")
-	branch := c.Query("branch")
-	secret := c.Query("secret")
-	if len(branch) == 0 || len(secret) == 0 || pusherID <= 0 {
-		c.NotFound()
-		log.Trace("TriggerTask: branch or secret is empty, or pusher ID is not valid")
-		return
-	}
-	owner, repo := parseOwnerAndRepo(c)
-	if c.Written() {
-		return
-	}
-	if secret != tool.MD5(owner.Salt) {
-		c.NotFound()
-		log.Trace("TriggerTask [%s/%s]: invalid secret", owner.Name, repo.Name)
-		return
-	}
-
-	pusher, err := db.GetUserByID(pusherID)
-	if err != nil {
-		c.NotFoundOrError(err, "get user by ID")
-		return
-	}
-
-	log.Trace("TriggerTask '%s/%s' by '%s'", repo.Name, branch, pusher.Name)
-
-	go db.HookQueue.Add(repo.ID)
-	go db.AddTestPullRequestTask(pusher, repo.ID, branch, true)
-	c.Status(202)
 }

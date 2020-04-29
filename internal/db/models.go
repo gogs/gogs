@@ -7,7 +7,6 @@ package db
 import (
 	"bufio"
 	"database/sql"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -15,10 +14,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/json-iterator/go"
-	_ "github.com/lib/pq"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
@@ -45,21 +41,19 @@ type Engine interface {
 }
 
 var (
-	x         *xorm.Engine
-	tables    []interface{}
-	HasEngine bool
-
-	EnableSQLite3 bool
+	x            *xorm.Engine
+	legacyTables []interface{}
+	HasEngine    bool
 )
 
 func init() {
-	tables = append(tables,
-		new(User), new(PublicKey), new(AccessToken), new(TwoFactor), new(TwoFactorRecoveryCode),
+	legacyTables = append(legacyTables,
+		new(User), new(PublicKey), new(TwoFactor), new(TwoFactorRecoveryCode),
 		new(Repository), new(DeployKey), new(Collaboration), new(Access), new(Upload),
 		new(Watch), new(Star), new(Follow), new(Action),
 		new(Issue), new(PullRequest), new(Comment), new(Attachment), new(IssueUser),
 		new(Label), new(IssueLabel), new(Milestone),
-		new(Mirror), new(Release), new(LoginSource), new(Webhook), new(HookTask),
+		new(Mirror), new(Release), new(Webhook), new(HookTask),
 		new(ProtectBranch), new(ProtectBranchWhitelist),
 		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
 		new(Notice), new(EmailAddress))
@@ -68,35 +62,6 @@ func init() {
 	for _, name := range gonicNames {
 		core.LintGonicMapper[name] = true
 	}
-}
-
-// parsePostgreSQLHostPort parses given input in various forms defined in
-// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-// and returns proper host and port number.
-func parsePostgreSQLHostPort(info string) (string, string) {
-	host, port := "127.0.0.1", "5432"
-	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
-		idx := strings.LastIndex(info, ":")
-		host = info[:idx]
-		port = info[idx+1:]
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
-}
-
-func parseMSSQLHostPort(info string) (string, string) {
-	host, port := "127.0.0.1", "1433"
-	if strings.Contains(info, ":") {
-		host = strings.Split(info, ":")[0]
-		port = strings.Split(info, ":")[1]
-	} else if strings.Contains(info, ",") {
-		host = strings.Split(info, ",")[0]
-		port = strings.TrimSpace(strings.Split(info, ",")[1])
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
 }
 
 func getEngine() (*xorm.Engine, error) {
@@ -133,12 +98,9 @@ func getEngine() (*xorm.Engine, error) {
 	case "mssql":
 		conf.UseMSSQL = true
 		host, port := parseMSSQLHostPort(conf.Database.Host)
-		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Passwd)
+		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Password)
 
 	case "sqlite3":
-		if !EnableSQLite3 {
-			return nil, errors.New("this binary version does not build support for SQLite3")
-		}
 		if err := os.MkdirAll(path.Dir(conf.Database.Path), os.ModePerm); err != nil {
 			return nil, fmt.Errorf("create directories: %v", err)
 		}
@@ -158,7 +120,7 @@ func NewTestEngine() error {
 	}
 
 	x.SetMapper(core.GonicMapper{})
-	return x.StoreEngine("InnoDB").Sync2(tables...)
+	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
 func SetEngine() (err error) {
@@ -183,9 +145,8 @@ func SetEngine() (err error) {
 		return fmt.Errorf("create 'xorm.log': %v", err)
 	}
 
-	// To prevent mystery "MySQL: invalid connection" error,
-	// see https://gogs.io/gogs/issues/5532.
-	x.SetMaxIdleConns(0)
+	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
+	x.SetMaxIdleConns(conf.Database.MaxIdleConns)
 	x.SetConnMaxLifetime(time.Second)
 
 	if conf.IsProdMode() {
@@ -194,7 +155,7 @@ func SetEngine() (err error) {
 		x.SetLogger(xorm.NewSimpleLogger(logger))
 	}
 	x.ShowSQL(true)
-	return nil
+	return Init()
 }
 
 func NewEngine() (err error) {
@@ -206,7 +167,7 @@ func NewEngine() (err error) {
 		return fmt.Errorf("migrate: %v", err)
 	}
 
-	if err = x.StoreEngine("InnoDB").Sync2(tables...); err != nil {
+	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
 		return fmt.Errorf("sync structs to database tables: %v\n", err)
 	}
 
@@ -239,7 +200,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))
-	stats.Counter.LoginSource = CountLoginSources()
+	stats.Counter.LoginSource = LoginSources.Count()
 	stats.Counter.Webhook, _ = x.Count(new(Webhook))
 	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	stats.Counter.Label, _ = x.Count(new(Label))
@@ -266,8 +227,9 @@ func DumpDatabase(dirPath string) error {
 	}
 
 	// Purposely create a local variable to not modify global variable
-	tables := append(tables, new(Version))
-	for _, table := range tables {
+	allTables := append(legacyTables, new(Version))
+	allTables = append(allTables, tables...)
+	for _, table := range allTables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		tableFile := path.Join(dirPath, tableName+".json")
 		f, err := os.Create(tableFile)
@@ -296,8 +258,9 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 	}
 
 	// Purposely create a local variable to not modify global variable
-	tables := append(tables, new(Version))
-	for _, table := range tables {
+	allTables := append(legacyTables, new(Version))
+	allTables = append(allTables, tables...)
+	for _, table := range allTables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		tableFile := path.Join(dirPath, tableName+".json")
 		if !com.IsExist(tableFile) {
@@ -331,14 +294,14 @@ func ImportDatabase(dirPath string, verbose bool) (err error) {
 
 				tp := LoginType(com.StrTo(com.ToStr(meta["Type"])).MustInt64())
 				switch tp {
-				case LOGIN_LDAP, LOGIN_DLDAP:
-					bean.Cfg = new(LDAPConfig)
-				case LOGIN_SMTP:
-					bean.Cfg = new(SMTPConfig)
-				case LOGIN_PAM:
-					bean.Cfg = new(PAMConfig)
-				case LOGIN_GITHUB:
-					bean.Cfg = new(GitHubConfig)
+				case LoginLDAP, LoginDLDAP:
+					bean.Config = new(LDAPConfig)
+				case LoginSMTP:
+					bean.Config = new(SMTPConfig)
+				case LoginPAM:
+					bean.Config = new(PAMConfig)
+				case LoginGitHub:
+					bean.Config = new(GitHubConfig)
 				default:
 					return fmt.Errorf("unrecognized login source type:: %v", tp)
 				}

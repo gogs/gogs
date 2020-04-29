@@ -30,9 +30,9 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.USER_TYPE_INDIVIDUAL,
+		Type:     db.UserIndividual,
 		Counter:  db.CountUsers,
-		Ranger:   db.Users,
+		Ranger:   db.ListUsers,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := db.LoginSources()
+	sources, err := db.LoginSources.List(db.ListLoginSourceOpts{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := db.LoginSources()
+	sources, err := db.LoginSources.List(db.ListLoginSourceOpts{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -77,17 +77,15 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	}
 
 	u := &db.User{
-		Name:      f.UserName,
-		Email:     f.Email,
-		Passwd:    f.Password,
-		IsActive:  true,
-		LoginType: db.LOGIN_PLAIN,
+		Name:     f.UserName,
+		Email:    f.Email,
+		Passwd:   f.Password,
+		IsActive: true,
 	}
 
 	if len(f.LoginType) > 0 {
 		fields := strings.Split(f.LoginType, "-")
 		if len(fields) == 2 {
-			u.LoginType = db.LoginType(com.StrTo(fields[0]).MustInt())
 			u.LoginSource = com.StrTo(fields[1]).MustInt64()
 			u.LoginName = f.LoginName
 		}
@@ -101,12 +99,9 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		case db.IsErrEmailAlreadyUsed(err):
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_NEW, &f)
-		case db.IsErrNameReserved(err):
+		case db.IsErrNameNotAllowed(err):
 			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(db.ErrNameReserved).Name), USER_NEW, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.Data["Err_UserName"] = true
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), USER_NEW, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), USER_NEW, &f)
 		default:
 			c.Error(err, "create user")
 		}
@@ -132,7 +127,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 	c.Data["User"] = u
 
 	if u.LoginSource > 0 {
-		c.Data["LoginSource"], err = db.GetLoginSourceByID(u.LoginSource)
+		c.Data["LoginSource"], err = db.LoginSources.GetByID(u.LoginSource)
 		if err != nil {
 			c.Error(err, "get login source by ID")
 			return nil
@@ -141,7 +136,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 		c.Data["LoginSource"] = &db.LoginSource{}
 	}
 
-	sources, err := db.LoginSources()
+	sources, err := db.LoginSources.List(db.ListLoginSourceOpts{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return nil
@@ -183,12 +178,10 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 
 	fields := strings.Split(f.LoginType, "-")
 	if len(fields) == 2 {
-		loginType := db.LoginType(com.StrTo(fields[0]).MustInt())
 		loginSource := com.StrTo(fields[1]).MustInt64()
 
 		if u.LoginSource != loginSource {
 			u.LoginSource = loginSource
-			u.LoginType = loginType
 		}
 	}
 
@@ -199,7 +192,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = f.LoginName

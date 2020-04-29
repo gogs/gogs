@@ -30,19 +30,23 @@ cleanup() {
 }
 
 create_volume_subfolder() {
+    # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
+    chown -R $USER:$USER /data
+
     # Create VOLUME subfolder
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
         if ! test -d $f; then
-            mkdir -p $f
+            gosu $USER mkdir -p $f
         fi
     done
 }
 
 setids() {
+    export USER=git
     PUID=${PUID:-1000}
     PGID=${PGID:-1000}
-    groupmod -o -g "$PGID" git
-    usermod -o -u "$PUID" git
+    groupmod -o -g "$PGID" $USER
+    usermod -o -u "$PUID" $USER
 }
 
 setids

@@ -9,8 +9,6 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"gopkg.in/macaron.v1"
-
-	"gogs.io/gogs/internal/context"
 )
 
 func ipynbSanitizer() *bluemonday.Policy {
@@ -24,13 +22,13 @@ func ipynbSanitizer() *bluemonday.Policy {
 func SanitizeIpynb() macaron.Handler {
 	p := ipynbSanitizer()
 
-	return func(c *context.Context) {
+	return func(c *macaron.Context) {
 		html, err := c.Req.Body().String()
 		if err != nil {
-			c.Error(err, "read body")
+			c.Error(http.StatusInternalServerError, "read body")
 			return
 		}
 
-		c.PlainText(http.StatusOK, p.Sanitize(html))
+		c.PlainText(http.StatusOK, []byte(p.Sanitize(html)))
 	}
 }

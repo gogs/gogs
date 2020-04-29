@@ -55,7 +55,7 @@ func repoAssignment() macaron.Handler {
 		}
 
 		if c.IsTokenAuth && c.User.IsAdmin {
-			c.Repo.AccessMode = db.ACCESS_MODE_OWNER
+			c.Repo.AccessMode = db.AccessModeOwner
 		} else {
 			mode, err := db.UserAccessMode(c.UserID(), r)
 			if err != nil {
@@ -396,6 +396,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 
 			m.Group("/teams", func() {
 				m.Group("/:teamid", func() {
+					m.Get("/members", admin.ListTeamMembers)
 					m.Combo("/members/:username").
 						Put(admin.AddTeamMember).
 						Delete(admin.RemoveTeamMember)

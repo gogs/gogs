@@ -47,7 +47,7 @@ func (t *Team) IsOwnerTeam() bool {
 
 // HasWriteAccess returns true if team has at least write level access mode.
 func (t *Team) HasWriteAccess() bool {
-	return t.Authorize >= ACCESS_MODE_WRITE
+	return t.Authorize >= AccessModeWrite
 }
 
 // IsTeamMember returns true if given user is a member of team.
@@ -174,7 +174,7 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 		return fmt.Errorf("get team members: %v", err)
 	}
 	for _, member := range t.Members {
-		has, err := hasAccess(e, member.ID, repo, ACCESS_MODE_READ)
+		has, err := hasAccess(e, member.ID, repo, AccessModeRead)
 		if err != nil {
 			return err
 		} else if has {
@@ -217,7 +217,7 @@ var reservedTeamNames = []string{"new"}
 
 // IsUsableTeamName return an error if given name is a reserved name or pattern.
 func IsUsableTeamName(name string) error {
-	return isUsableName(reservedTeamNames, nil, name)
+	return isNameAllowed(reservedTeamNames, nil, name)
 }
 
 // NewTeam creates a record of new team.
@@ -241,11 +241,12 @@ func NewTeam(t *Team) error {
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
-	has, err = x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).Get(new(Team))
+	existingTeam := Team{}
+	has, err = x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).Get(&existingTeam)
 	if err != nil {
 		return err
 	} else if has {
-		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
+		return ErrTeamAlreadyExist{existingTeam.ID, t.OrgID, t.LowerName}
 	}
 
 	sess := x.NewSession()
@@ -346,11 +347,12 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
-	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(new(Team))
+	existingTeam := new(Team)
+	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(&existingTeam)
 	if err != nil {
 		return err
 	} else if has {
-		return ErrTeamAlreadyExist{t.OrgID, t.LowerName}
+		return ErrTeamAlreadyExist{existingTeam.ID, t.OrgID, t.LowerName}
 	}
 
 	if _, err = sess.ID(t.ID).AllCols().Update(t); err != nil {

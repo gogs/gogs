@@ -14,3 +14,6 @@ func IsNotFound(err error) bool {
 	e, ok := err.(NotFound)
 	return ok && e.NotFound()
 }
+
+// Args is a map of key-value pairs to provide additional context of an error.
+type Args map[string]interface{}

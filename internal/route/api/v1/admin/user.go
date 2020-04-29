@@ -13,7 +13,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
@@ -23,9 +22,9 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 		return
 	}
 
-	source, err := db.GetLoginSourceByID(sourceID)
+	source, err := db.LoginSources.GetByID(sourceID)
 	if err != nil {
-		if errors.IsLoginSourceNotExist(err) {
+		if db.IsErrLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "get login source by ID")
@@ -33,19 +32,17 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 		return
 	}
 
-	u.LoginType = source.Type
 	u.LoginSource = source.ID
 	u.LoginName = loginName
 }
 
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	u := &db.User{
-		Name:      form.Username,
-		FullName:  form.FullName,
-		Email:     form.Email,
-		Passwd:    form.Password,
-		IsActive:  true,
-		LoginType: db.LOGIN_PLAIN,
+		Name:     form.Username,
+		FullName: form.FullName,
+		Email:    form.Email,
+		Passwd:   form.Password,
+		IsActive: true,
 	}
 
 	parseLoginSource(c, u, form.SourceID, form.LoginName)
@@ -56,8 +53,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	if err := db.CreateUser(u); err != nil {
 		if db.IsErrUserAlreadyExist(err) ||
 			db.IsErrEmailAlreadyUsed(err) ||
-			db.IsErrNameReserved(err) ||
-			db.IsErrNamePatternNotAllowed(err) {
+			db.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create user")
@@ -92,7 +88,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = form.LoginName

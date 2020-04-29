@@ -8,64 +8,12 @@ import (
 	"fmt"
 )
 
-type ErrNameReserved struct {
-	Name string
-}
-
-func IsErrNameReserved(err error) bool {
-	_, ok := err.(ErrNameReserved)
-	return ok
-}
-
-func (err ErrNameReserved) Error() string {
-	return fmt.Sprintf("name is reserved [name: %s]", err.Name)
-}
-
-type ErrNamePatternNotAllowed struct {
-	Pattern string
-}
-
-func IsErrNamePatternNotAllowed(err error) bool {
-	_, ok := err.(ErrNamePatternNotAllowed)
-	return ok
-}
-
-func (err ErrNamePatternNotAllowed) Error() string {
-	return fmt.Sprintf("name pattern is not allowed [pattern: %s]", err.Pattern)
-}
-
 //  ____ ___
 // |    |   \______ ___________
 // |    |   /  ___// __ \_  __ \
 // |    |  /\___ \\  ___/|  | \/
 // |______//____  >\___  >__|
 //              \/     \/
-
-type ErrUserAlreadyExist struct {
-	Name string
-}
-
-func IsErrUserAlreadyExist(err error) bool {
-	_, ok := err.(ErrUserAlreadyExist)
-	return ok
-}
-
-func (err ErrUserAlreadyExist) Error() string {
-	return fmt.Sprintf("user already exists [name: %s]", err.Name)
-}
-
-type ErrEmailAlreadyUsed struct {
-	Email string
-}
-
-func IsErrEmailAlreadyUsed(err error) bool {
-	_, ok := err.(ErrEmailAlreadyUsed)
-	return ok
-}
-
-func (err ErrEmailAlreadyUsed) Error() string {
-	return fmt.Sprintf("e-mail has been used [email: %s]", err.Email)
-}
 
 type ErrUserOwnRepos struct {
 	UID int64
@@ -218,38 +166,6 @@ func (err ErrDeployKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists [repo_id: %d, name: %s]", err.RepoID, err.Name)
 }
 
-//    _____                                   ___________     __
-//   /  _  \   ____  ____  ____   ______ _____\__    ___/___ |  | __ ____   ____
-//  /  /_\  \_/ ___\/ ___\/ __ \ /  ___//  ___/ |    | /  _ \|  |/ // __ \ /    \
-// /    |    \  \__\  \__\  ___/ \___ \ \___ \  |    |(  <_> )    <\  ___/|   |  \
-// \____|__  /\___  >___  >___  >____  >____  > |____| \____/|__|_ \\___  >___|  /
-//         \/     \/    \/    \/     \/     \/                    \/    \/     \/
-
-type ErrAccessTokenNotExist struct {
-	SHA string
-}
-
-func IsErrAccessTokenNotExist(err error) bool {
-	_, ok := err.(ErrAccessTokenNotExist)
-	return ok
-}
-
-func (err ErrAccessTokenNotExist) Error() string {
-	return fmt.Sprintf("access token does not exist [sha: %s]", err.SHA)
-}
-
-type ErrAccessTokenEmpty struct {
-}
-
-func IsErrAccessTokenEmpty(err error) bool {
-	_, ok := err.(ErrAccessTokenEmpty)
-	return ok
-}
-
-func (err ErrAccessTokenEmpty) Error() string {
-	return fmt.Sprintf("access token is empty")
-}
-
 // ________                            .__                __  .__
 // \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
 //  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \
@@ -276,20 +192,6 @@ func (err ErrLastOrgOwner) Error() string {
 //  |    |   \  ___/|  |_> >  <_> )___ \|  ||  | (  <_> )  | \/\___  |
 //  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
 //         \/     \/|__|              \/                       \/
-
-type ErrRepoAlreadyExist struct {
-	Uname string
-	Name  string
-}
-
-func IsErrRepoAlreadyExist(err error) bool {
-	_, ok := err.(ErrRepoAlreadyExist)
-	return ok
-}
-
-func (err ErrRepoAlreadyExist) Error() string {
-	return fmt.Sprintf("repository already exists [uname: %s, name: %s]", err.Uname, err.Name)
-}
 
 type ErrInvalidCloneAddr struct {
 	IsURLError         bool
@@ -359,39 +261,6 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
 }
 
-// .____                 .__           _________
-// |    |    ____   ____ |__| ____    /   _____/ ____  __ _________   ____  ____
-// |    |   /  _ \ / ___\|  |/    \   \_____  \ /  _ \|  |  \_  __ \_/ ___\/ __ \
-// |    |__(  <_> ) /_/  >  |   |  \  /        (  <_> )  |  /|  | \/\  \__\  ___/
-// |_______ \____/\___  /|__|___|  / /_______  /\____/|____/ |__|    \___  >___  >
-//         \/    /_____/         \/          \/                          \/    \/
-
-type ErrLoginSourceAlreadyExist struct {
-	Name string
-}
-
-func IsErrLoginSourceAlreadyExist(err error) bool {
-	_, ok := err.(ErrLoginSourceAlreadyExist)
-	return ok
-}
-
-func (err ErrLoginSourceAlreadyExist) Error() string {
-	return fmt.Sprintf("login source already exists [name: %s]", err.Name)
-}
-
-type ErrLoginSourceInUse struct {
-	ID int64
-}
-
-func IsErrLoginSourceInUse(err error) bool {
-	_, ok := err.(ErrLoginSourceInUse)
-	return ok
-}
-
-func (err ErrLoginSourceInUse) Error() string {
-	return fmt.Sprintf("login source is still used by some users [id: %d]", err.ID)
-}
-
 // ___________
 // \__    ___/___ _____    _____
 //   |    |_/ __ \\__  \  /     \
@@ -400,6 +269,7 @@ func (err ErrLoginSourceInUse) Error() string {
 //              \/     \/      \/
 
 type ErrTeamAlreadyExist struct {
+	ID    int64
 	OrgID int64
 	Name  string
 }
@@ -410,7 +280,7 @@ func IsErrTeamAlreadyExist(err error) bool {
 }
 
 func (err ErrTeamAlreadyExist) Error() string {
-	return fmt.Sprintf("team already exists [org_id: %d, name: %s]", err.OrgID, err.Name)
+	return fmt.Sprintf("team already exists [id: %d, org_id: %d, name: %s]", err.ID, err.OrgID, err.Name)
 }
 
 //  ____ ___        .__                    .___

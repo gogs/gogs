@@ -17,6 +17,16 @@ func IsFile(path string) bool {
 	return !f.IsDir()
 }
 
+// IsDir returns true if given path is a directory, and returns false when it's
+// a file or does not exist.
+func IsDir(dir string) bool {
+	f, e := os.Stat(dir)
+	if e != nil {
+		return false
+	}
+	return f.IsDir()
+}
+
 // IsExist returns true if a file or directory exists.
 func IsExist(path string) bool {
 	_, err := os.Stat(path)

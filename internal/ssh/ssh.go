@@ -51,17 +51,27 @@ func handleServerConn(keyID string, chans <-chan ssh.NewChannel) {
 				payload := cleanCommand(string(req.Payload))
 				switch req.Type {
 				case "env":
-					args := strings.Split(strings.Replace(payload, "\x00", "", -1), "\v")
-					if len(args) != 2 {
-						log.Warn("SSH: Invalid env arguments: '%#v'", args)
+					var env struct {
+						Name  string
+						Value string
+					}
+					if err := ssh.Unmarshal(req.Payload, &env); err != nil {
+						log.Warn("SSH: Invalid env payload %q: %v", req.Payload, err)
 						continue
 					}
-					args[0] = strings.TrimLeft(args[0], "\x04")
-					_, _, err := com.ExecCmdBytes("env", args[0]+"="+args[1])
+					// Sometimes the client could send malformed command (i.e. missing "="),
+					// see https://discuss.gogs.io/t/ssh/3106.
+					if env.Name == "" || env.Value == "" {
+						log.Warn("SSH: Invalid env arguments: %+v", env)
+						continue
+					}
+
+					_, stderr, err := com.ExecCmd("env", fmt.Sprintf("%s=%s", env.Name, env.Value))
 					if err != nil {
-						log.Error("env: %v", err)
+						log.Error("env: %v - %s", err, stderr)
 						return
 					}
+
 				case "exec":
 					cmdName := strings.TrimLeft(payload, "'()")
 					log.Trace("SSH: Payload: %v", cmdName)

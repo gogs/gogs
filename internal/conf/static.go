@@ -46,40 +46,6 @@ var (
 		AppName string
 	}
 
-	// Server settings
-	Server struct {
-		ExternalURL          string `ini:"EXTERNAL_URL"`
-		Domain               string
-		Protocol             string
-		HTTPAddr             string `ini:"HTTP_ADDR"`
-		HTTPPort             string `ini:"HTTP_PORT"`
-		CertFile             string
-		KeyFile              string
-		TLSMinVersion        string `ini:"TLS_MIN_VERSION"`
-		UnixSocketPermission string
-		LocalRootURL         string `ini:"LOCAL_ROOT_URL"`
-
-		OfflineMode      bool
-		DisableRouterLog bool
-		EnableGzip       bool
-
-		AppDataPath        string
-		LoadAssetsFromDisk bool
-
-		LandingURL string `ini:"LANDING_URL"`
-
-		// Derived from other static values
-		URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
-		Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
-		SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
-		UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
-
-		// Deprecated: Use ExternalURL instead, will be removed in 0.13.
-		RootURL string `ini:"ROOT_URL"`
-		// Deprecated: Use LandingURL instead, will be removed in 0.13.
-		LangdingPage string `ini:"LANDING_PAGE"`
-	}
-
 	// SSH settings
 	SSH struct {
 		Disabled                     bool   `ini:"DISABLE_SSH"`
@@ -125,22 +91,6 @@ var (
 			FileMaxSize  int64
 			MaxFiles     int
 		} `ini:"repository.upload"`
-	}
-
-	// Database settings
-	Database struct {
-		Type     string
-		Host     string
-		Name     string
-		User     string
-		Password string
-		SSLMode  string `ini:"SSL_MODE"`
-		Path     string
-
-		// Deprecated: Use Type instead, will be removed in 0.13.
-		DbType string
-		// Deprecated: Use Password instead, will be removed in 0.13.
-		Passwd string
 	}
 
 	// Security settings
@@ -252,7 +202,7 @@ var (
 		MaxFiles     int
 	}
 
-	// Release settigns
+	// Release settings
 	Release struct {
 		Attachment struct {
 			Enabled      bool
@@ -287,9 +237,6 @@ var (
 		DefaultInterval int
 	}
 
-	// I18n settings
-	I18n *i18nConf
-
 	// Webhook settings
 	Webhook struct {
 		Types          []string
@@ -298,7 +245,7 @@ var (
 		PagingNum      int
 	}
 
-	// Markdown sttings
+	// Markdown settings
 	Markdown struct {
 		EnableHardLineBreak bool
 		CustomURLSchemes    []string `ini:"CUSTOM_URL_SCHEMES"`
@@ -409,6 +356,70 @@ var (
 	HasRobotsTxt bool
 )
 
+type ServerOpts struct {
+	ExternalURL          string `ini:"EXTERNAL_URL"`
+	Domain               string
+	Protocol             string
+	HTTPAddr             string `ini:"HTTP_ADDR"`
+	HTTPPort             string `ini:"HTTP_PORT"`
+	CertFile             string
+	KeyFile              string
+	TLSMinVersion        string `ini:"TLS_MIN_VERSION"`
+	UnixSocketPermission string
+	LocalRootURL         string `ini:"LOCAL_ROOT_URL"`
+
+	OfflineMode      bool
+	DisableRouterLog bool
+	EnableGzip       bool
+
+	AppDataPath        string
+	LoadAssetsFromDisk bool
+
+	LandingURL string `ini:"LANDING_URL"`
+
+	// Derived from other static values
+	URL            *url.URL    `ini:"-"` // Parsed URL object of ExternalURL.
+	Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
+	SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
+	UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
+
+	// Deprecated: Use ExternalURL instead, will be removed in 0.13.
+	RootURL string `ini:"ROOT_URL"`
+	// Deprecated: Use LandingURL instead, will be removed in 0.13.
+	LangdingPage string `ini:"LANDING_PAGE"`
+}
+
+// Server settings
+var Server ServerOpts
+
+type DatabaseOpts struct {
+	Type         string
+	Host         string
+	Name         string
+	User         string
+	Password     string
+	SSLMode      string `ini:"SSL_MODE"`
+	Path         string
+	MaxOpenConns int
+	MaxIdleConns int
+
+	// Deprecated: Use Type instead, will be removed in 0.13.
+	DbType string
+	// Deprecated: Use Password instead, will be removed in 0.13.
+	Passwd string
+}
+
+// Database settings
+var Database DatabaseOpts
+
+type LFSOpts struct {
+	Storage     string
+	ObjectsPath string
+}
+
+// LFS settings
+var LFS LFSOpts
+
 type i18nConf struct {
 	Langs     []string          `delim:","`
 	Names     []string          `delim:","`
@@ -423,6 +434,9 @@ func (c *i18nConf) DateLang(lang string) string {
 	}
 	return "en"
 }
+
+// I18n settings
+var I18n *i18nConf
 
 // handleDeprecated transfers deprecated values to the new ones when set.
 func handleDeprecated() {

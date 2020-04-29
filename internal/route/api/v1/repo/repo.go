@@ -131,8 +131,8 @@ func listUserRepositories(c *context.APIContext, username string) {
 	i := numOwnRepos
 	for repo, access := range accessibleRepos {
 		repos[i] = repo.APIFormat(&api.Permission{
-			Admin: access >= db.ACCESS_MODE_ADMIN,
-			Push:  access >= db.ACCESS_MODE_WRITE,
+			Admin: access >= db.AccessModeAdmin,
+			Push:  access >= db.AccessModeWrite,
 			Pull:  true,
 		})
 		i++
@@ -165,8 +165,7 @@ func CreateUserRepo(c *context.APIContext, owner *db.User, opt api.CreateRepoOpt
 	})
 	if err != nil {
 		if db.IsErrRepoAlreadyExist(err) ||
-			db.IsErrNameReserved(err) ||
-			db.IsErrNamePatternNotAllowed(err) {
+			db.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			if repo != nil {

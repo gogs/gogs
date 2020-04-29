@@ -93,12 +93,9 @@ func handleCreateError(c *context.Context, owner *db.User, err error, name, tpl 
 	case db.IsErrRepoAlreadyExist(err):
 		c.Data["Err_RepoName"] = true
 		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tpl, form)
-	case db.IsErrNameReserved(err):
+	case db.IsErrNameNotAllowed(err):
 		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_reserved", err.(db.ErrNameReserved).Name), tpl, form)
-	case db.IsErrNamePatternNotAllowed(err):
-		c.Data["Err_RepoName"] = true
-		c.RenderWithErr(c.Tr("repo.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), tpl, form)
 	default:
 		c.Error(err, name)
 	}
