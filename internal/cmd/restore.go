@@ -100,13 +100,14 @@ func runRestore(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	if _, err = db.SetEngine(); err != nil {
+	conn, err := db.SetEngine()
+	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = db.ImportDatabase(dbDir, c.Bool("verbose")); err != nil {
+	if err = db.ImportDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 
