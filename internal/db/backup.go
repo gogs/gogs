@@ -13,19 +13,23 @@ import (
 )
 
 // DumpDatabase dumps all data from database to file system in JSON format.
-func DumpDatabase(db *gorm.DB, dirPath string) error {
+func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	err := os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = dumpLegacyTables(dirPath)
+	err = dumpLegacyTables(dirPath, verbose)
 	if err != nil {
 		return errors.Wrap(err, "dump legacy tables")
 	}
 
 	for _, table := range tables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+		if verbose {
+			log.Trace("Dumping table %q...", tableName)
+		}
+
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
 			f, err := os.Create(tableFile)
@@ -68,11 +72,16 @@ func DumpDatabase(db *gorm.DB, dirPath string) error {
 	return nil
 }
 
-func dumpLegacyTables(dirPath string) error {
+func dumpLegacyTables(dirPath string, verbose bool) error {
 	// Purposely create a local variable to not modify global variable
 	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+
+		if verbose {
+			log.Trace("Dumping table %q...", tableName)
+		}
+
 		tableFile := filepath.Join(dirPath, tableName+".json")
 		f, err := os.Create(tableFile)
 		if err != nil {

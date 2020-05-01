@@ -92,7 +92,7 @@ func runBackup(c *cli.Context) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = db.DumpDatabase(conn, dbDir); err != nil {
+	if err = db.DumpDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
