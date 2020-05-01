@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/json-iterator/go"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -123,10 +124,11 @@ func NewTestEngine() error {
 	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
-func SetEngine() (err error) {
+func SetEngine() (*gorm.DB, error) {
+	var err error
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return nil, fmt.Errorf("connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -142,7 +144,7 @@ func SetEngine() (err error) {
 			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
 		})
 	if err != nil {
-		return fmt.Errorf("create 'xorm.log': %v", err)
+		return nil, fmt.Errorf("create 'xorm.log': %v", err)
 	}
 
 	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
@@ -159,7 +161,7 @@ func SetEngine() (err error) {
 }
 
 func NewEngine() (err error) {
-	if err = SetEngine(); err != nil {
+	if _, err = SetEngine(); err != nil {
 		return err
 	}
 
