@@ -6,11 +6,13 @@ package db
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/lfsutil"
@@ -32,6 +34,9 @@ func Test_dumpAndImport(t *testing.T) {
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)
+
+	// Dump and assert golden again to make sure data aren't changed.
+	dumpTables(t, db)
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {
@@ -105,13 +110,14 @@ func dumpTables(t *testing.T, db *gorm.DB) {
 	t.Helper()
 
 	for _, table := range tables {
+		tableName := getTableType(table)
+
 		var buf bytes.Buffer
 		err := dumpTable(db, table, &buf)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%s: %v", tableName, err)
 		}
 
-		tableName := getTableType(table)
 		golden := filepath.Join("testdata", "backup", tableName+".golden.json")
 		testutil.AssertGolden(t, golden, testutil.Update("Test_dumpAndImport"), buf.String())
 	}
@@ -121,6 +127,20 @@ func importTables(t *testing.T, db *gorm.DB) {
 	t.Helper()
 
 	for _, table := range tables {
-		_ = table // TODO
+		tableName := getTableType(table)
+
+		err := func() error {
+			golden := filepath.Join("testdata", "backup", tableName+".golden.json")
+			f, err := os.Open(golden)
+			if err != nil {
+				return errors.Wrap(err, "open table file")
+			}
+			defer func() { _ = f.Close() }()
+
+			return importTable(db, table, f)
+		}()
+		if err != nil {
+			t.Fatalf("%s: %v", tableName, err)
+		}
 	}
 }

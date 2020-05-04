@@ -2,11 +2,11 @@ package db
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -63,26 +63,26 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 }
 
 func dumpTable(db *gorm.DB, table interface{}, w io.Writer) error {
-	var err error
-	var rows *sql.Rows
+	query := db.Model(table).Order("id ASC")
 	switch table.(type) {
 	case *LFSObject:
-		rows, err = db.Model(table).Order("repo_id, oid ASC").Rows()
-	default:
-		rows, err = db.Model(table).Order("id ASC").Rows()
+		query = db.Model(table).Order("repo_id, oid ASC")
 	}
+
+	rows, err := query.Rows()
 	if err != nil {
 		return errors.Wrap(err, "select rows")
 	}
 	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
-		err = db.ScanRows(rows, table)
+		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
+		err = db.ScanRows(rows, elem)
 		if err != nil {
 			return errors.Wrap(err, "scan rows")
 		}
 
-		err = jsoniter.NewEncoder(w).Encode(table)
+		err = jsoniter.NewEncoder(w).Encode(elem)
 		if err != nil {
 			return errors.Wrap(err, "encode JSON")
 		}
@@ -123,12 +123,7 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 		return errors.Wrap(err, "import legacy tables")
 	}
 
-	skipResetIDSeq := map[string]bool{
-		"lfs_object": true,
-	}
-
 	for _, table := range tables {
-		rawTableName := db.NewScope(table).TableName()
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
@@ -141,50 +136,59 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 				log.Trace("Importing table %q...", tableName)
 			}
 
-			err = db.DropTableIfExists(table).Error
-			if err != nil {
-				return errors.Wrapf(err, "drop table %q", tableName)
-			}
-
-			err = db.AutoMigrate(table).Error
-			if err != nil {
-				return errors.Wrapf(err, "auto migrate %q", tableName)
-			}
-
 			f, err := os.Open(tableFile)
 			if err != nil {
 				return errors.Wrap(err, "open table file")
 			}
 			defer func() { _ = f.Close() }()
 
-			scanner := bufio.NewScanner(f)
-			for scanner.Scan() {
-				err = jsoniter.Unmarshal(scanner.Bytes(), table)
-				if err != nil {
-					return errors.Wrap(err, "unmarshal JSON to struct")
-				}
-
-				err = db.Create(table).Error
-				if err != nil {
-					return errors.Wrap(err, "create row")
-				}
-			}
-
-			// PostgreSQL needs manually reset table sequence for auto increment keys
-			if conf.UsePostgreSQL && !skipResetIDSeq[rawTableName] {
-				seqName := rawTableName + "_id_seq"
-				if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
-					return errors.Wrapf(err, "reset table %q.%q", rawTableName, seqName)
-				}
-			}
-
-			return nil
+			return importTable(db, table, f)
 		}()
 		if err != nil {
 			return errors.Wrapf(err, "import table %q", tableName)
 		}
 	}
 
+	return nil
+}
+
+func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
+	err := db.DropTableIfExists(table).Error
+	if err != nil {
+		return errors.Wrap(err, "drop table")
+	}
+
+	err = db.AutoMigrate(table).Error
+	if err != nil {
+		return errors.Wrap(err, "auto migrate")
+	}
+
+	rawTableName := db.NewScope(table).TableName()
+	skipResetIDSeq := map[string]bool{
+		"lfs_object": true,
+	}
+
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
+		err = jsoniter.Unmarshal(scanner.Bytes(), elem)
+		if err != nil {
+			return errors.Wrap(err, "unmarshal JSON to struct")
+		}
+
+		err = db.Create(elem).Error
+		if err != nil {
+			return errors.Wrap(err, "create row")
+		}
+	}
+
+	// PostgreSQL needs manually reset table sequence for auto increment keys
+	if conf.UsePostgreSQL && !skipResetIDSeq[rawTableName] {
+		seqName := rawTableName + "_id_seq"
+		if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
+			return errors.Wrapf(err, "reset table %q.%q", rawTableName, seqName)
+		}
+	}
 	return nil
 }
 
