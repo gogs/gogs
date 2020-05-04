@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mcuadros/go-version"
 	"github.com/nfnt/resize"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
@@ -37,6 +36,7 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
+	"gogs.io/gogs/internal/semverutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -117,7 +117,7 @@ func NewRepoContext() {
 	}
 
 	log.Trace("Git version: %s", conf.Git.Version)
-	if version.Compare("1.8.3", conf.Git.Version, ">") {
+	if semverutil.Compare(conf.Git.Version, "<", "1.8.3") {
 		log.Fatal("Gogs requires Git version greater or equal to 1.8.3")
 	}
 
