@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/mcuadros/go-version"
 	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
@@ -19,6 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/semverutil"
 )
 
 var Restore = cli.Command{
@@ -58,7 +58,7 @@ func runRestore(c *cli.Context) error {
 		log.Fatal("Failed to extract backup archive: %v", err)
 	}
 	archivePath := path.Join(tmpDir, archiveRootDir)
-	defer os.RemoveAll(archivePath)
+	defer func() { _ = os.RemoveAll(archivePath) }()
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
@@ -70,7 +70,7 @@ func runRestore(c *cli.Context) error {
 		log.Fatal("Failed to load metadata '%s': %v", metaFile, err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
-	if version.Compare(conf.App.Version, backupVersion, "<") {
+	if semverutil.Compare(conf.App.Version, "<", backupVersion) {
 		log.Fatal("Current Gogs version is lower than backup version: %s < %s", conf.App.Version, backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()

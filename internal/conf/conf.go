@@ -18,13 +18,13 @@ import (
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	"github.com/mcuadros/go-version"
 	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/semverutil"
 )
 
 func init() {
@@ -156,7 +156,7 @@ func Init(customConf string) error {
 				return errors.Wrap(err, "get OpenSSH version")
 			}
 
-			if IsWindowsRuntime() || version.Compare(sshVersion, "5.1", "<") {
+			if IsWindowsRuntime() || semverutil.Compare(sshVersion, "<", "5.1") {
 				log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
 	2. OpenSSH version is lower than 5.1`)
