@@ -108,8 +108,8 @@ func test_loginSources_Create(t *testing.T, db *loginSources) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Created.Format(time.RFC3339))
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Updated.Format(time.RFC3339))
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Updated.UTC().Format(time.RFC3339))
 
 	// Try create second login source with same name should fail
 	_, err = db.Create(CreateLoginSourceOpts{Name: source.Name})
