@@ -42,8 +42,8 @@ portable among all supported database engines.`,
 	},
 }
 
-const _CURRENT_BACKUP_FORMAT_VERSION = 1
-const _ARCHIVE_ROOT_DIR = "gogs-backup"
+const currentBackupFormatVersion = 1
+const archiveRootDir = "gogs-backup"
 
 func runBackup(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
@@ -54,7 +54,8 @@ func runBackup(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	if err = db.SetEngine(); err != nil {
+	conn, err := db.SetEngine()
+	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
@@ -71,7 +72,7 @@ func runBackup(c *cli.Context) error {
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
 	metadata := ini.Empty()
-	metadata.Section("").Key("VERSION").SetValue(com.ToStr(_CURRENT_BACKUP_FORMAT_VERSION))
+	metadata.Section("").Key("VERSION").SetValue(com.ToStr(currentBackupFormatVersion))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
 	if err = metadata.SaveTo(metaFile); err != nil {
@@ -85,22 +86,22 @@ func runBackup(c *cli.Context) error {
 	if err != nil {
 		log.Fatal("Failed to create backup archive '%s': %v", archiveName, err)
 	}
-	if err = z.AddFile(_ARCHIVE_ROOT_DIR+"/metadata.ini", metaFile); err != nil {
+	if err = z.AddFile(archiveRootDir+"/metadata.ini", metaFile); err != nil {
 		log.Fatal("Failed to include 'metadata.ini': %v", err)
 	}
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = db.DumpDatabase(dbDir); err != nil {
+	if err = db.DumpDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
-	if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/db", dbDir); err != nil {
+	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {
 		log.Fatal("Failed to include 'db': %v", err)
 	}
 
 	// Custom files
 	if !c.Bool("database-only") {
-		if err = z.AddDir(_ARCHIVE_ROOT_DIR+"/custom", conf.CustomDir()); err != nil {
+		if err = z.AddDir(archiveRootDir+"/custom", conf.CustomDir()); err != nil {
 			log.Fatal("Failed to include 'custom': %v", err)
 		}
 	}
@@ -113,7 +114,7 @@ func runBackup(c *cli.Context) error {
 				continue
 			}
 
-			if err = z.AddDir(path.Join(_ARCHIVE_ROOT_DIR+"/data", dir), dirPath); err != nil {
+			if err = z.AddDir(path.Join(archiveRootDir+"/data", dir), dirPath); err != nil {
 				log.Fatal("Failed to include 'data': %v", err)
 			}
 		}
@@ -149,7 +150,7 @@ func runBackup(c *cli.Context) error {
 		}
 		log.Info("Repositories dumped to: %s", reposDump)
 
-		if err = z.AddFile(_ARCHIVE_ROOT_DIR+"/repositories.zip", reposDump); err != nil {
+		if err = z.AddFile(archiveRootDir+"/repositories.zip", reposDump); err != nil {
 			log.Fatal("Failed to include %q: %v", reposDump, err)
 		}
 	}
@@ -158,7 +159,7 @@ func runBackup(c *cli.Context) error {
 		log.Fatal("Failed to save backup archive '%s': %v", archiveName, err)
 	}
 
-	os.RemoveAll(rootDir)
+	_ = os.RemoveAll(rootDir)
 	log.Info("Backup succeed! Archive is located at: %s", archiveName)
 	log.Stop()
 	return nil
