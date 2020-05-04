@@ -11,8 +11,8 @@ import (
 	"github.com/jinzhu/gorm"
 	gouuid "github.com/satori/go.uuid"
 
+	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/tool"
 )
 
 // AccessTokensStore is the persistent interface for access tokens.
@@ -56,6 +56,9 @@ type AccessToken struct {
 
 // NOTE: This is a GORM create hook.
 func (t *AccessToken) BeforeCreate() {
+	if t.CreatedUnix > 0 {
+		return
+	}
 	t.CreatedUnix = gorm.NowFunc().Unix()
 }
 
@@ -102,7 +105,7 @@ func (db *accessTokens) Create(userID int64, name string) (*AccessToken, error) 
 	token := &AccessToken{
 		UserID: userID,
 		Name:   name,
-		Sha1:   tool.SHA1(gouuid.NewV4().String()),
+		Sha1:   cryptoutil.SHA1(gouuid.NewV4().String()),
 	}
 	return token, db.DB.Create(token).Error
 }

@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	now := time.Now().Truncate(time.Second)
+	now := time.Now().UTC().Truncate(time.Second)
 	gorm.NowFunc = func() time.Time { return now }
 
 	os.Exit(m.Run())
