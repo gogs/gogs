@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,12 @@ import (
 	"gogs.io/gogs/internal/osutil"
 )
 
+// getTableType returns the type name of a table definition without package name,
+// e.g. *db.LFSObject -> LFSObject.
+func getTableType(t interface{}) string {
+	return strings.TrimPrefix(fmt.Sprintf("%T", t), "*db.")
+}
+
 // DumpDatabase dumps all data from database to file system in JSON Lines format.
 func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	err := os.MkdirAll(dirPath, os.ModePerm)
@@ -32,7 +39,7 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	}
 
 	for _, table := range tables {
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+		tableName := getTableType(table)
 		if verbose {
 			log.Trace("Dumping table %q...", tableName)
 		}
@@ -45,31 +52,7 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 			}
 			defer func() { _ = f.Close() }()
 
-			var rows *sql.Rows
-			switch table.(type) {
-			case *LFSObject:
-				rows, err = db.Model(table).Order("repo_id, oid ASC").Rows()
-			default:
-				rows, err = db.Model(table).Order("id ASC").Rows()
-			}
-			if err != nil {
-				return errors.Wrap(err, "select rows")
-			}
-			defer func() { _ = rows.Close() }()
-
-			for rows.Next() {
-				err = db.ScanRows(rows, table)
-				if err != nil {
-					return errors.Wrap(err, "scan rows")
-				}
-
-				err = jsoniter.NewEncoder(f).Encode(table)
-				if err != nil {
-					return errors.Wrap(err, "encode JSON")
-				}
-			}
-
-			return nil
+			return dumpTable(db, table, f)
 		}()
 		if err != nil {
 			return errors.Wrapf(err, "dump table %q", tableName)
@@ -79,11 +62,39 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	return nil
 }
 
+func dumpTable(db *gorm.DB, table interface{}, w io.Writer) error {
+	var err error
+	var rows *sql.Rows
+	switch table.(type) {
+	case *LFSObject:
+		rows, err = db.Model(table).Order("repo_id, oid ASC").Rows()
+	default:
+		rows, err = db.Model(table).Order("id ASC").Rows()
+	}
+	if err != nil {
+		return errors.Wrap(err, "select rows")
+	}
+	defer func() { _ = rows.Close() }()
+
+	for rows.Next() {
+		err = db.ScanRows(rows, table)
+		if err != nil {
+			return errors.Wrap(err, "scan rows")
+		}
+
+		err = jsoniter.NewEncoder(w).Encode(table)
+		if err != nil {
+			return errors.Wrap(err, "encode JSON")
+		}
+	}
+	return nil
+}
+
 func dumpLegacyTables(dirPath string, verbose bool) error {
 	// Purposely create a local variable to not modify global variable
 	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
+		tableName := getTableType(table)
 		if verbose {
 			log.Trace("Dumping table %q...", tableName)
 		}

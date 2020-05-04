@@ -122,6 +122,7 @@ func getLogWriter() (io.Writer, error) {
 	return w, nil
 }
 
+// NOTE: Lines are sorted in alphabetical order, each letter in its own line.
 var tables = []interface{}{
 	new(AccessToken),
 	new(LFSObject), new(LoginSource),
