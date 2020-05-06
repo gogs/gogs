@@ -5,7 +5,6 @@
 package db
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -14,8 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/json-iterator/go"
-	"github.com/unknwon/com"
+	"github.com/jinzhu/gorm"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
@@ -123,10 +121,11 @@ func NewTestEngine() error {
 	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
 
-func SetEngine() (err error) {
+func SetEngine() (*gorm.DB, error) {
+	var err error
 	x, err = getEngine()
 	if err != nil {
-		return fmt.Errorf("connect to database: %v", err)
+		return nil, fmt.Errorf("connect to database: %v", err)
 	}
 
 	x.SetMapper(core.GonicMapper{})
@@ -142,7 +141,7 @@ func SetEngine() (err error) {
 			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
 		})
 	if err != nil {
-		return fmt.Errorf("create 'xorm.log': %v", err)
+		return nil, fmt.Errorf("create 'xorm.log': %v", err)
 	}
 
 	x.SetMaxOpenConns(conf.Database.MaxOpenConns)
@@ -159,7 +158,7 @@ func SetEngine() (err error) {
 }
 
 func NewEngine() (err error) {
-	if err = SetEngine(); err != nil {
+	if _, err = SetEngine(); err != nil {
 		return err
 	}
 
@@ -218,132 +217,4 @@ func Ping() error {
 type Version struct {
 	ID      int64
 	Version int64
-}
-
-// DumpDatabase dumps all data from database to file system in JSON format.
-func DumpDatabase(dirPath string) error {
-	if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-		return err
-	}
-
-	// Purposely create a local variable to not modify global variable
-	allTables := append(legacyTables, new(Version))
-	allTables = append(allTables, tables...)
-	for _, table := range allTables {
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
-		tableFile := path.Join(dirPath, tableName+".json")
-		f, err := os.Create(tableFile)
-		if err != nil {
-			return fmt.Errorf("create JSON file: %v", err)
-		}
-
-		if err = x.Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
-			return jsoniter.NewEncoder(f).Encode(bean)
-		}); err != nil {
-			_ = f.Close()
-			return fmt.Errorf("dump table '%s': %v", tableName, err)
-		}
-		_ = f.Close()
-	}
-	return nil
-}
-
-// ImportDatabase imports data from backup archive.
-func ImportDatabase(dirPath string, verbose bool) (err error) {
-	snakeMapper := core.SnakeMapper{}
-
-	skipInsertProcessors := map[string]bool{
-		"mirror":    true,
-		"milestone": true,
-	}
-
-	// Purposely create a local variable to not modify global variable
-	allTables := append(legacyTables, new(Version))
-	allTables = append(allTables, tables...)
-	for _, table := range allTables {
-		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
-		tableFile := path.Join(dirPath, tableName+".json")
-		if !com.IsExist(tableFile) {
-			continue
-		}
-
-		if verbose {
-			log.Trace("Importing table '%s'...", tableName)
-		}
-
-		if err = x.DropTables(table); err != nil {
-			return fmt.Errorf("drop table '%s': %v", tableName, err)
-		} else if err = x.Sync2(table); err != nil {
-			return fmt.Errorf("sync table '%s': %v", tableName, err)
-		}
-
-		f, err := os.Open(tableFile)
-		if err != nil {
-			return fmt.Errorf("open JSON file: %v", err)
-		}
-		rawTableName := x.TableName(table)
-		_, isInsertProcessor := table.(xorm.BeforeInsertProcessor)
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			switch bean := table.(type) {
-			case *LoginSource:
-				meta := make(map[string]interface{})
-				if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
-					return fmt.Errorf("unmarshal to map: %v", err)
-				}
-
-				tp := LoginType(com.StrTo(com.ToStr(meta["Type"])).MustInt64())
-				switch tp {
-				case LoginLDAP, LoginDLDAP:
-					bean.Config = new(LDAPConfig)
-				case LoginSMTP:
-					bean.Config = new(SMTPConfig)
-				case LoginPAM:
-					bean.Config = new(PAMConfig)
-				case LoginGitHub:
-					bean.Config = new(GitHubConfig)
-				default:
-					return fmt.Errorf("unrecognized login source type:: %v", tp)
-				}
-				table = bean
-			}
-
-			if err = jsoniter.Unmarshal(scanner.Bytes(), table); err != nil {
-				return fmt.Errorf("unmarshal to struct: %v", err)
-			}
-
-			if _, err = x.Insert(table); err != nil {
-				return fmt.Errorf("insert strcut: %v", err)
-			}
-
-			meta := make(map[string]interface{})
-			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
-				log.Error("Failed to unmarshal to map: %v", err)
-			}
-
-			// Reset created_unix back to the date save in archive because Insert method updates its value
-			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				if _, err = x.Exec("UPDATE "+rawTableName+" SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
-					log.Error("Failed to reset 'created_unix': %v", err)
-				}
-			}
-
-			switch rawTableName {
-			case "milestone":
-				if _, err = x.Exec("UPDATE "+rawTableName+" SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta["DeadlineUnix"], meta["ClosedDateUnix"], meta["ID"]); err != nil {
-					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
-				}
-			}
-		}
-
-		// PostgreSQL needs manually reset table sequence for auto increment keys
-		if conf.UsePostgreSQL {
-			rawTableName := snakeMapper.Obj2Table(tableName)
-			seqName := rawTableName + "_id_seq"
-			if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
-				return fmt.Errorf("reset table '%s' sequence: %v", rawTableName, err)
-			}
-		}
-	}
-	return nil
 }

@@ -14,6 +14,22 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
+func TestAccessToken_BeforeCreate(t *testing.T) {
+	t.Run("CreatedUnix has been set", func(t *testing.T) {
+		token := &AccessToken{CreatedUnix: 1}
+		token.BeforeCreate()
+		assert.Equal(t, int64(1), token.CreatedUnix)
+		assert.Equal(t, int64(0), token.UpdatedUnix)
+	})
+
+	t.Run("CreatedUnix has not been set", func(t *testing.T) {
+		token := &AccessToken{}
+		token.BeforeCreate()
+		assert.Equal(t, gorm.NowFunc().Unix(), token.CreatedUnix)
+		assert.Equal(t, int64(0), token.UpdatedUnix)
+	})
+}
+
 func Test_accessTokens(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
@@ -64,7 +80,7 @@ func test_accessTokens_Create(t *testing.T, db *accessTokens) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Created.Format(time.RFC3339))
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Created.UTC().Format(time.RFC3339))
 
 	// Try create second access token with same name should fail
 	_, err = db.Create(token.UserID, token.Name)
@@ -177,5 +193,5 @@ func test_accessTokens_Save(t *testing.T, db *accessTokens) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Updated.Format(time.RFC3339))
+	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), token.Updated.UTC().Format(time.RFC3339))
 }

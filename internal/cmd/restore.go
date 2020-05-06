@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/mcuadros/go-version"
 	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
 	"github.com/unknwon/com"
@@ -19,6 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/semverutil"
 )
 
 var Restore = cli.Command{
@@ -57,8 +57,8 @@ func runRestore(c *cli.Context) error {
 	if err := zip.ExtractTo(c.String("from"), tmpDir); err != nil {
 		log.Fatal("Failed to extract backup archive: %v", err)
 	}
-	archivePath := path.Join(tmpDir, _ARCHIVE_ROOT_DIR)
-	defer os.RemoveAll(archivePath)
+	archivePath := path.Join(tmpDir, archiveRootDir)
+	defer func() { _ = os.RemoveAll(archivePath) }()
 
 	// Check backup version
 	metaFile := filepath.Join(archivePath, "metadata.ini")
@@ -70,16 +70,16 @@ func runRestore(c *cli.Context) error {
 		log.Fatal("Failed to load metadata '%s': %v", metaFile, err)
 	}
 	backupVersion := metadata.Section("").Key("GOGS_VERSION").MustString("999.0")
-	if version.Compare(conf.App.Version, backupVersion, "<") {
+	if semverutil.Compare(conf.App.Version, "<", backupVersion) {
 		log.Fatal("Current Gogs version is lower than backup version: %s < %s", conf.App.Version, backupVersion)
 	}
 	formatVersion := metadata.Section("").Key("VERSION").MustInt()
 	if formatVersion == 0 {
 		log.Fatal("Failed to determine the backup format version from metadata '%s': %s", metaFile, "VERSION is not presented")
 	}
-	if formatVersion != _CURRENT_BACKUP_FORMAT_VERSION {
+	if formatVersion != currentBackupFormatVersion {
 		log.Fatal("Backup format version found is %d but this binary only supports %d\nThe last known version that is able to import your backup is %s",
-			formatVersion, _CURRENT_BACKUP_FORMAT_VERSION, lastSupportedVersionOfFormat[formatVersion])
+			formatVersion, currentBackupFormatVersion, lastSupportedVersionOfFormat[formatVersion])
 	}
 
 	// If config file is not present in backup, user must set this file via flag.
@@ -100,13 +100,14 @@ func runRestore(c *cli.Context) error {
 	}
 	conf.InitLogging(true)
 
-	if err = db.SetEngine(); err != nil {
+	conn, err := db.SetEngine()
+	if err != nil {
 		return errors.Wrap(err, "set engine")
 	}
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = db.ImportDatabase(dbDir, c.Bool("verbose")); err != nil {
+	if err = db.ImportDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 
