@@ -28,11 +28,10 @@ import (
 )
 
 const (
-	BARE           = "repo/bare"
-	HOME           = "repo/home"
-	WATCHERS       = "repo/watchers"
-	FORKS          = "repo/forks"
-	SYMLINK_SYMBOL = " -> "
+	BARE     = "repo/bare"
+	HOME     = "repo/home"
+	WATCHERS = "repo/watchers"
+	FORKS    = "repo/forks"
 )
 
 func renderDirectory(c *context.Context, treeLink string, entry *git.TreeEntry, sourceEntry *git.TreeEntry, sourceTreePath string) {
@@ -60,7 +59,6 @@ func renderDirectory(c *context.Context, treeLink string, entry *git.TreeEntry, 
 		MaxConcurrency: conf.Repository.CommitsFetchConcurrency,
 		Timeout:        5 * time.Minute,
 	})
-
 	if err != nil {
 		c.Error(err, "get commits info")
 		return
@@ -75,19 +73,17 @@ func renderDirectory(c *context.Context, treeLink string, entry *git.TreeEntry, 
 
 		// TODO(unknwon): collect all possible README files and show with priority.
 		readmeFile = entry.Blob()
-		if readmeFile != nil {
-			readmeFileName = readmeFile.Name()
-			if ok, sourceEntry, sourcePath, errMsg := isSymlink(entry, c); ok {
-				c.Data["IsSymlinkSourceExists"] = true
-				if len(errMsg) > 0 {
-					c.Data["SourceTreePath"] = errMsg
-					c.Data["IsSymlinkSourceExists"] = false
-				} else if sourceEntry != nil {
-					c.Data["SourceTreePath"] = sourcePath
-					readmeFile = sourceEntry.Blob()
-				}
-				c.Data["IsSymlink"] = true
+		readmeFileName = readmeFile.Name()
+		if ok, sourceEntry, sourcePath, err := isSymlink(entry, c); ok {
+			c.Data["IsSymlinkSourceExists"] = true
+			if err != nil {
+				c.Data["SourceTreePath"] = err.Error()
+				c.Data["IsSymlinkSourceExists"] = false
+			} else if sourceEntry != nil {
+				c.Data["SourceTreePath"] = sourcePath
+				readmeFile = sourceEntry.Blob()
 			}
+			c.Data["IsSymlink"] = true
 		}
 		break
 	}
@@ -318,11 +314,11 @@ func Home(c *context.Context) {
 		return
 	}
 
-	if ok, sourceEntry, sourceTreePath, errMsg := isSymlink(entry, c); ok {
+	if ok, sourceEntry, sourceTreePath, err := isSymlink(entry, c); ok {
 		c.Data["IsSymlink"] = true
 		c.Data["IsSymlinkSourceExists"] = true
-		if len(errMsg) > 0 {
-			renderFile(c, entry, nil, errMsg, treeLink, rawLink)
+		if err != nil {
+			renderFile(c, entry, nil, err.Error(), treeLink, rawLink)
 			c.Data["IsSymlinkSourceExists"] = false
 		} else if sourceEntry != nil {
 			treeLink = branchLink + "/" + sourceTreePath
@@ -422,24 +418,22 @@ func Forks(c *context.Context) {
 	c.Success(FORKS)
 }
 
-// check and get source file/dir entry for symlink.
-func isSymlink(entry *git.TreeEntry, c *context.Context) (ok bool, sourceEntry *git.TreeEntry, sourceTreePath string, errMsg string) {
-	if ok = entry.IsSymlink(); ok {
-		p, err := entry.Blob().Bytes()
-		if err != nil {
-			errMsg = err.Error()
-			return
-		}
-		sourceTreePath = string(p)
-		sourceEntry, err = c.Repo.Commit.TreeEntry("/" + sourceTreePath)
-		if err != nil {
-			errMsg = err.Error()
-			return
-		}
-		if sourceEntry.IsSymlink() {
-			ok, sourceEntry, sourceTreePath, errMsg = isSymlink(sourceEntry, c)
-		}
-		return
+// isSymlink returns destination of given entry if it's a symlink.
+func isSymlink(entry *git.TreeEntry, c *context.Context) (bool, *git.TreeEntry, string, error) {
+	if !entry.IsSymlink() {
+		return false, nil, "", nil
 	}
-	return
+	p, err := entry.Blob().Bytes()
+	if err != nil {
+		return true, nil, "", err
+	}
+	sourceTreePath := string(p)
+	sourceEntry, err := c.Repo.Commit.TreeEntry("/" + sourceTreePath)
+	if err != nil {
+		return true, sourceEntry, sourceTreePath, err
+	}
+	if sourceEntry.IsSymlink() {
+		return isSymlink(sourceEntry, c)
+	}
+	return true, sourceEntry, sourceTreePath, nil
 }
