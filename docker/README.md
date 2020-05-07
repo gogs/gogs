@@ -108,30 +108,45 @@ This container have some options available via environment variables, these opti
   - <u>Default:</u>
       `null`
   - <u>Action:</u>
-      In combination with `RUN_CROND` set to `true`, enables backup system.
+      In combination with `RUN_CROND` set to `true`, enables backup system.  
+      See: [Backup System](#backup-system)
 - **BACKUP_RETENTION**:
   - <u>Possible value:</u>
       `360m`, `7d`, `...m/d`
   - <u>Default:</u>
       `7d`
   - <u>Action:</u>
-      Used by backup system. Backups older than specified in expression are deleted periodically.
+      Used by backup system. Backups older than specified in expression are deleted periodically.  
+      See: [Backup System](#backup-system)
 - **BACKUP_ARG_CONFIG**:
   - <u>Possible value:</u>
       `/app/gogs/example/custom/config`
   - <u>Default:</u>
       `null`
   - <u>Action:</u>
-      Used by backup system. If defined, supplies `--config` argument to `gogs backup`.
+      Used by backup system. If defined, supplies `--config` argument to `gogs backup`.  
+      See: [Backup System](#backup-system)
 - **BACKUP_ARG_EXCLUDE_REPOS**:
   - <u>Possible value:</u>
       `test-repo1`, `test-repo2`
   - <u>Default:</u>
       `null`
   - <u>Action:</u>
-      Used by backup system. If defined, supplies `--exclude-repos` argument to `gogs backup`.
+      Used by backup system. If defined, supplies `--exclude-repos` argument to `gogs backup`.  
+      See: [Backup System](#backup-system)
 
 ## Backup System
+Automated backups with retention policy
+
+- `BACKUP_INTERVAL` supports interval in hours (h), days (d), months (M).  
+eg. 3h or 7d or 3M  
+This value controls how often backup job will run.  
+Cannot be more frequent than one per hour.
+- `BACKUP_RETENTION` supports expressions in minutes (m) and days (d).
+eg. 360m or 2d  
+If minutes, the minimum value is 60m.  
+If lower, it will be set to 60 internally.    
+Expression is limited to minutes and days, however, that should provide sufficient base for more flexible retention policy.  
 
 ## Upgrade
 
