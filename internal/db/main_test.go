@@ -35,14 +35,18 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	now := time.Now().Truncate(time.Second)
+	now := time.Now().UTC().Truncate(time.Second)
 	gorm.NowFunc = func() time.Time { return now }
 
 	os.Exit(m.Run())
 }
 
 // clearTables removes all rows from given tables.
-func clearTables(db *gorm.DB, tables ...interface{}) error {
+func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
+	if t.Failed() {
+		return nil
+	}
+
 	for _, t := range tables {
 		err := db.Delete(t).Error
 		if err != nil {

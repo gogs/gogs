@@ -47,11 +47,13 @@ All notable changes to Gogs are documented in this file.
 - [Security] Potential RCE on mirror repositories. [#5767](https://github.com/gogs/gogs/issues/5767)
 - [Security] Potential XSS attack with raw markdown API. [#5907](https://github.com/gogs/gogs/pull/5907)
 - File both modified and renamed within a commit treated as separate files. [#5056](https://github.com/gogs/gogs/issues/5056)
+- Unable to restore the database backup to MySQL 8.0 with syntax error. [#5602](https://github.com/gogs/gogs/issues/5602)
 - Open/close milestone redirects to a 404 page. [#5677](https://github.com/gogs/gogs/issues/5677)
 - Disallow multiple tokens with same name. [#5587](https://github.com/gogs/gogs/issues/5587) [#5820](https://github.com/gogs/gogs/pull/5820)
 - Enable Federated Avatar Lookup could cause server to crash. [#5848](https://github.com/gogs/gogs/issues/5848)
 - Private repositories are hidden in the organization's view. [#5869](https://github.com/gogs/gogs/issues/5869)
 - Server error when changing email address in user settings page. [#5899](https://github.com/gogs/gogs/issues/5899)
+- Fall back to use RFC 3339 as time layout when misconfigured. [#6098](https://github.com/gogs/gogs/issues/6098)
 - Webhooks are not fired after push when `[service] REQUIRE_SIGNIN_VIEW = true`.
 
 ### Removed
@@ -63,6 +65,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[session] ENABLE_SET_COOKIE`
 - Configuration option `[release.attachment] PATH`
 - Configuration option `[webhook] QUEUE_LENGTH`
+- Build tag `sqlite`, which means CGO is now required.
 
 ---
 

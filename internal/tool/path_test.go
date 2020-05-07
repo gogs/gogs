@@ -7,47 +7,47 @@ package tool
 import (
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_IsSameSiteURLPath(t *testing.T) {
-	Convey("Check if a path belongs to the same site", t, func() {
-		testCases := []struct {
-			url    string
-			expect bool
-		}{
-			{"//github.com", false},
-			{"http://github.com", false},
-			{"https://github.com", false},
-			{"/\\github.com", false},
+	tests := []struct {
+		url    string
+		expVal bool
+	}{
+		{url: "//github.com", expVal: false},
+		{url: "http://github.com", expVal: false},
+		{url: "https://github.com", expVal: false},
+		{url: "/\\github.com", expVal: false},
 
-			{"/admin", true},
-			{"/user/repo", true},
-		}
+		{url: "/admin", expVal: true},
+		{url: "/user/repo", expVal: true},
+	}
 
-		for _, tc := range testCases {
-			So(IsSameSiteURLPath(tc.url), ShouldEqual, tc.expect)
-		}
-	})
+	for _, test := range tests {
+		t.Run(test.url, func(t *testing.T) {
+			assert.Equal(t, test.expVal, IsSameSiteURLPath(test.url))
+		})
+	}
 }
 
 func Test_IsMaliciousPath(t *testing.T) {
-	Convey("Detects malicious path", t, func() {
-		testCases := []struct {
-			path   string
-			expect bool
-		}{
-			{"../../../../../../../../../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", true},
-			{"..\\/..\\/../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", true},
-			{"data/gogs/../../../../../../../../../data/sessions/a/9/a9f0ab6c3ef63dd8", true},
-			{"..\\..\\..\\..\\..\\..\\..\\..\\..\\data\\gogs\\data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", true},
-			{"data\\gogs\\..\\..\\..\\..\\..\\..\\..\\..\\..\\data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", true},
+	tests := []struct {
+		path   string
+		expVal bool
+	}{
+		{path: "../../../../../../../../../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: true},
+		{path: "..\\/..\\/../data/gogs/data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: true},
+		{path: "data/gogs/../../../../../../../../../data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: true},
+		{path: "..\\..\\..\\..\\..\\..\\..\\..\\..\\data\\gogs\\data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", expVal: true},
+		{path: "data\\gogs\\..\\..\\..\\..\\..\\..\\..\\..\\..\\data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", expVal: true},
 
-			{"data/sessions/a/9/a9f0ab6c3ef63dd8", false},
-			{"data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", false},
-		}
-		for _, tc := range testCases {
-			So(IsMaliciousPath(tc.path), ShouldEqual, tc.expect)
-		}
-	})
+		{path: "data/sessions/a/9/a9f0ab6c3ef63dd8", expVal: false},
+		{path: "data\\sessions\\a\\9\\a9f0ab6c3ef63dd8", expVal: false},
+	}
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			assert.Equal(t, test.expVal, IsMaliciousPath(test.path))
+		})
+	}
 }

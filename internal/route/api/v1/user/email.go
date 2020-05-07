@@ -46,7 +46,7 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 
 	if err := db.AddEmailAddresses(emails); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
-			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("email address has been used: "+err.(db.ErrEmailAlreadyUsed).Email))
+			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("email address has been used: "+err.(db.ErrEmailAlreadyUsed).Email()))
 		} else {
 			c.Error(err, "add email addresses")
 		}

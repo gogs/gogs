@@ -27,12 +27,11 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		Website:     apiForm.Website,
 		Location:    apiForm.Location,
 		IsActive:    true,
-		Type:        db.USER_TYPE_ORGANIZATION,
+		Type:        db.UserOrganization,
 	}
 	if err := db.CreateOrganization(org, user); err != nil {
 		if db.IsErrUserAlreadyExist(err) ||
-			db.IsErrNameReserved(err) ||
-			db.IsErrNamePatternNotAllowed(err) {
+			db.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create organization")

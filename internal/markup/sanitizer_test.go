@@ -7,32 +7,34 @@ package markup_test
 import (
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 
 	. "gogs.io/gogs/internal/markup"
 )
 
 func Test_Sanitizer(t *testing.T) {
 	NewSanitizer()
-	Convey("Sanitize HTML string and bytes", t, func() {
-		testCases := []string{
-			// Regular
-			`<a onblur="alert(secret)" href="http://www.google.com">Google</a>`, `<a href="http://www.google.com" rel="nofollow">Google</a>`,
+	tests := []struct {
+		input  string
+		expVal string
+	}{
+		// Regular
+		{input: `<a onblur="alert(secret)" href="http://www.google.com">Google</a>`, expVal: `<a href="http://www.google.com" rel="nofollow">Google</a>`},
 
-			// Code highlighting class
-			`<code class="random string"></code>`, `<code></code>`,
-			`<code class="language-random ui tab active menu attached animating sidebar following bar center"></code>`, `<code></code>`,
-			`<code class="language-go"></code>`, `<code class="language-go"></code>`,
+		// Code highlighting class
+		{input: `<code class="random string"></code>`, expVal: `<code></code>`},
+		{input: `<code class="language-random ui tab active menu attached animating sidebar following bar center"></code>`, expVal: `<code></code>`},
+		{input: `<code class="language-go"></code>`, expVal: `<code class="language-go"></code>`},
 
-			// Input checkbox
-			`<input type="hidden">`, ``,
-			`<input type="checkbox">`, `<input type="checkbox">`,
-			`<input checked disabled autofocus>`, `<input checked="" disabled="">`,
-		}
-
-		for i := 0; i < len(testCases); i += 2 {
-			So(Sanitize(testCases[i]), ShouldEqual, testCases[i+1])
-			So(string(SanitizeBytes([]byte(testCases[i]))), ShouldEqual, testCases[i+1])
-		}
-	})
+		// Input checkbox
+		{input: `<input type="hidden">`, expVal: ``},
+		{input: `<input type="checkbox">`, expVal: `<input type="checkbox">`},
+		{input: `<input checked disabled autofocus>`, expVal: `<input checked="" disabled="">`},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			assert.Equal(t, test.expVal, Sanitize(test.input))
+			assert.Equal(t, test.expVal, string(SanitizeBytes([]byte(test.input))))
+		})
+	}
 }
