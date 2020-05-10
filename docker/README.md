@@ -136,17 +136,10 @@ This container have some options available via environment variables, these opti
       See: [Backup System](#backup-system)
 
 ## Backup System
-Automated backups with retention policy
+Automated backups with retention policy:
 
-- `BACKUP_INTERVAL` supports interval in hours (h), days (d), months (M).\
-eg. 3h or 7d or 3M\
-This value controls how often backup job will run.\
-Cannot be more frequent than one per hour.
-- `BACKUP_RETENTION` supports expressions in minutes (m) and days (d).\
-eg. 360m or 2d\
-If minutes, the minimum value is 60m.\
-If lower, it will be set to 60 internally.\
-Expression is limited to minutes and days, however, that should provide sufficient base for more flexible retention policy.
+- `BACKUP_INTERVAL` controls how often the backup job runs and supports interval in hours (h), days (d), and months (M), eg. `3h`, `7d`, `3M`. The lowest possible value is one hour (`1h`).
+- `BACKUP_RETENTION` supports expressions in minutes (m) and days (d), eg. `360m`, `2d`. The lowest possible value is 60 minutes (`60m`).
 
 ## Upgrade
 

@@ -17,12 +17,12 @@ if [ -z "${BACKUP_INTERVAL}" ]; then
 fi
 
 if [ -z "${BACKUP_RETENTION}" ]; then
-	echo "Backup retention period not defined - default value used: 7 days" 1>&2
+	echo "Backup retention period is not defined, default to 7 days" 1>&2
 	BACKUP_RETENTION='7d'
 fi
 
 # Parse BACKUP_INTERVAL environment variable and generate appropriate cron expression. Backup cron task will be run as scheduled.
-# Expected format: nu (n - number, u - unit) (eg. 3d equals 3 days)
+# Expected format: nu (n - number, u - unit) (eg. 3d means 3 days)
 # Supported units: h - hours, d - days, M - months
 parse_generate_cron_expression() {
 	CRON_EXPR_MINUTES="*"
@@ -35,7 +35,7 @@ parse_generate_cron_expression() {
 
 	if [ "${TIME_UNIT}" = "h" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 23 ]; then
-			echo "Parse error: Time unit 'h' (hour) largest value is 23" 1>&2
+			echo "Parse error: Time unit 'h' (hour) cannot be greater than 23" 1>&2
 			exit 1
 		fi
 
@@ -43,7 +43,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_HOURS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "d" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 30 ]; then
-			echo "Parse error: Time unit 'd' (day) largest value is 30" 1>&2
+			echo "Parse error: Time unit 'd' (day) cannot be greater than 30" 1>&2
 			exit 1
 		fi
 
@@ -52,7 +52,7 @@ parse_generate_cron_expression() {
 		CRON_EXPR_DAYS="*/${TIME_INTERVAL}"
 	elif [ "${TIME_UNIT}" = "M" ]; then
 		if [ ! "${TIME_INTERVAL}" -le 12 ]; then
-			echo "Parse error: Time unit 'M' (month) largest value is 12" 1>&2
+			echo "Parse error: Time unit 'M' (month) cannot be greater than 12" 1>&2
 			exit 1
 		fi
 
@@ -69,7 +69,7 @@ parse_generate_cron_expression() {
 }
 
 # Parse BACKUP_RETENTION environment variable and generate appropriate find command expression.
-# Expected format: nu (n - number, u - unit) (eg. 3d equals 3 days)
+# Expected format: nu (n - number, u - unit) (eg. 3d means 3 days)
 # Supported units: m - minutes, d - days
 parse_generate_retention_expression() {
 	FIND_TIME_EXPR='mtime'
