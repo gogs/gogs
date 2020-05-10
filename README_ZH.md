@@ -22,7 +22,7 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 - 通过 SSH、HTTP 和 HTTPS 协议操作仓库
 - 管理用户、组织和仓库
 - 仓库和组织级 Webhook，包括 Slack、Discord 和钉钉
-- 仓库 Git 钩子和部署密钥
+- 仓库 Git 钩子、部署密钥和 Git LFS
 - 仓库工单（Issue）、合并请求（Pull Request）、Wiki、保护分支和多人协作
 - 从其它代码平台迁移和镜像仓库以及 Wiki
 - 在线编辑仓库文件和 Wiki
