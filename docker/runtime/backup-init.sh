@@ -125,6 +125,8 @@ add_backup_cronjob() {
 
 CRONTAB_USER=$(awk -v val="${PUID}" -F ":" '$3==val{print $1}' /etc/passwd)
 
+# Up to this point, it was desirable that interpreter handles the command errors and halts execution upon any error.
+# From now, we handle the errors our self.
 set +e
 RETENTION_EXPRESSION="$(parse_generate_retention_expression)"
 
