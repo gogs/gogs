@@ -6,6 +6,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
+- Support for Git LFS, you can read documentation for both [user](https://github.com/gogs/gogs/blob/master/docs/user/lfs.md) and [admin](https://github.com/gogs/gogs/blob/master/docs/admin/lfs.md). [#1322](https://github.com/gogs/gogs/issues/1322)
 - Allow admin to remove observers from the repository. [#5803](https://github.com/gogs/gogs/pull/5803)
 - Use `Last-Modified` HTTP header for raw files. [#5811](https://github.com/gogs/gogs/issues/5811)
 - Support syntax highlighting for SAS code files (i.e. `.r`, `.sas`, `.tex`, `.yaml`). [#5856](https://github.com/gogs/gogs/pull/5856)
