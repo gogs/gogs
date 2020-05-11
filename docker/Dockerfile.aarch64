@@ -38,7 +38,7 @@ COPY --from=binarybuilder /gogs.io/gogs/gogs .
 RUN ./docker/finalize.sh
 
 # Configure Docker Container
-VOLUME ["/data"]
+VOLUME ["/data", "/backup"]
 EXPOSE 22 3000
 ENTRYPOINT ["/app/gogs/docker/start.sh"]
 CMD ["/bin/s6-svscan", "/app/gogs/docker/s6/"]

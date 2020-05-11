@@ -13,6 +13,7 @@ All notable changes to Gogs are documented in this file.
 - Able to fill in pull request title with a template. [#5901](https://github.com/gogs/gogs/pull/5901)
 - Able to override static files under `public/` directory, please refer to [documentation](https://gogs.io/docs/features/custom_template) for usage. [#5920](https://github.com/gogs/gogs/pull/5920)
 - New API endpoint `GET /admin/teams/:teamid/members` to list members of a team. [#5877](https://github.com/gogs/gogs/issues/5877)
+- Support backup with retention policy for Docker deployments. [#6140](https://github.com/gogs/gogs/pull/6140)
 
 ### Changed
 
