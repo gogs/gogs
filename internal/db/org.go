@@ -517,7 +517,7 @@ func (org *User) GetUserRepositories(userID int64, page, pageSize int) ([]*Repos
 	repos := make([]*Repository, 0, pageSize)
 	if err = x.Where("owner_id = ?", org.ID).
 		And(builder.Or(
-			builder.Expr("is_private = ?", false),
+			builder.And(builder.Expr("is_private = ?", false), builder.Expr("is_unlisted = ?", false)),
 			builder.In("id", teamRepoIDs))).
 		Desc("updated_unix").
 		Limit(pageSize, (page-1)*pageSize).
