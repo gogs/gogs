@@ -87,10 +87,12 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		// Visibility of forked repository is forced sync with base repository.
 		if repo.IsFork {
 			f.Private = repo.BaseRepo.IsPrivate
+			f.Unlisted = repo.BaseRepo.IsUnlisted
 		}
 
-		visibilityChanged := repo.IsPrivate != f.Private
+		visibilityChanged := repo.IsPrivate != f.Private || repo.IsUnlisted != f.Unlisted
 		repo.IsPrivate = f.Private
+		repo.IsUnlisted = f.Unlisted
 		if err := db.UpdateRepository(repo, visibilityChanged); err != nil {
 			c.Error(err, "update repository")
 			return

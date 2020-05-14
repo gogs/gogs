@@ -88,6 +88,7 @@ type RepoSetting struct {
 	Interval      int
 	MirrorAddress string
 	Private       bool
+	Unlisted      bool
 	EnablePrune   bool
 
 	// Advanced settings
