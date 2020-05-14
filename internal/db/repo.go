@@ -1688,6 +1688,7 @@ func GetUserRepositories(opts *UserRepoOptions) ([]*Repository, error) {
 	sess := x.Where("owner_id=?", opts.UserID).Desc("updated_unix")
 	if !opts.Private {
 		sess.And("is_private=?", false)
+		sess.And("is_unlisted=?", false)
 	}
 
 	if opts.Page <= 0 {
