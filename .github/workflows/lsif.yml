@@ -2,6 +2,7 @@ name: LSIF
 on: [push]
 jobs:
   lsif-go:
+    if: github.repository == 'gogs/gogs'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
