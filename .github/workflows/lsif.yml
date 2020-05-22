@@ -10,9 +10,15 @@ jobs:
         uses: sourcegraph/lsif-go-action@master
         with:
           verbose: 'true'
-      - name: Upload LSIF data
+      - name: Upload LSIF data to sourcegraph.com
         uses: sourcegraph/lsif-upload-action@master
         continue-on-error: true
         with:
           endpoint: https://sourcegraph.com
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload LSIF data to sourcegraph.unknwon.cn
+        uses: sourcegraph/lsif-upload-action@master
+        continue-on-error: true
+        with:
+          endpoint: https://sourcegraph.unknwon.cn
           github_token: ${{ secrets.GITHUB_TOKEN }}
