@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.1.0
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e // indirect
-	github.com/editorconfig/editorconfig-core-go/v2 v2.3.2
+	github.com/editorconfig/editorconfig-core-go/v2 v2.3.3
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
