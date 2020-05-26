@@ -81,6 +81,13 @@
 						</div>
 					</div>
 					<div class="inline field">
+						<label></label>
+						<div class="ui checkbox">
+							<input name="unlisted" type="checkbox">
+							<label>{{.i18n.Tr "repo.unlisted_helper" | Safe}}</label>
+						</div>
+					</div>
+					<div class="inline field">
 						<label>{{.i18n.Tr "repo.migrate_type"}}</label>
 						<div class="ui checkbox">
 							<input name="mirror" type="checkbox" {{if .mirror}}checked{{end}}>
