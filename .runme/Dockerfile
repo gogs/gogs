@@ -36,12 +36,11 @@ COPY docker ./docker
 COPY --from=binarybuilder /gogs.io/gogs/gogs .
 
 # Copy custom init config
-COPY ./.runme/app.ini /app/gogs/conf/app.ini
+COPY ./.runme/app.ini /data/gogs/conf/app.ini
 
 RUN ./docker/finalize.sh
 
 # Configure Docker Container
-VOLUME ["/data", "/backup"]
 EXPOSE 22 3000
 ENTRYPOINT ["/app/gogs/docker/start.sh"]
 CMD ["/bin/s6-svscan", "/app/gogs/docker/s6/"]
