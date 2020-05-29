@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  app:
+    image: gogs:dev
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./.runme/app.ini:/data/gogs/conf/app.ini
+    ports:
+      - 8080:3000
+
+  db:
+    image: bitnami/postgresql:11
+    environment:
+      POSTGRESQL_USERNAME: gogs
+      POSTGRESQL_PASSWORD: gogs
+      POSTGRESQL_DATABASE: gogs

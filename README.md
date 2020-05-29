@@ -1,6 +1,6 @@
 # <img src="https://github.com/gogs/gogs/raw/master/public/img/favicon.png" width="45" align="left">Gogs - A painless self-hosted Git service
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/gogs/gogs/Go?logo=github&style=for-the-badge)](https://github.com/gogs/gogs/actions?query=workflow%3AGo) [![Discord](https://img.shields.io/discord/382595433060499458.svg?style=for-the-badge&logo=discord)](https://discord.gg/9aqdHU7) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/gogs/gogs/Go?logo=github&style=for-the-badge)](https://github.com/gogs/gogs/actions?query=workflow%3AGo) [![Discord](https://img.shields.io/discord/382595433060499458.svg?style=for-the-badge&logo=discord)](https://discord.gg/9aqdHU7) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs) [![Runme](https://svc.runme.io/static/button.svg)](https://runme.io/run?app_id=17a698ef-4023-4288-813a-d5531181c335)
 
 ![Repository](https://gogs.io/img/screenshots/2.png)
 

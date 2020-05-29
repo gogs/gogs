@@ -1,0 +1,17 @@
+version: 1.0
+publish: app
+services:
+  app:
+    build:
+      type: dockerfile
+      config: ./docker/Dockerfile.runme
+    ports:
+    - container: 3000
+      public: 80
+
+  db:
+    image: bitnami/postgresql:11
+    environment:
+      POSTGRESQL_USERNAME: gogs
+      POSTGRESQL_PASSWORD: gogs
+      POSTGRESQL_DATABASE: gogs

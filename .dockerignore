@@ -12,3 +12,4 @@ config.codekit
 .gitignore
 Dockerfile*
 gogs
+docker-compose.yaml
