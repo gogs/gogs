@@ -1,4 +1,4 @@
-FROM arm64v8/golang:1.14 AS binarybuilder
+FROM arm64v8/golang:1.14-alpine3.11 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
