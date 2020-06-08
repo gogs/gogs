@@ -1,5 +1,5 @@
 on: push
-name: "Trigger: Push"
+name: "Shellcheck"
 jobs:
   shellcheck:
     name: Shellcheck
