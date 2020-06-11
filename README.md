@@ -62,7 +62,6 @@ There are 6 ways to install Gogs:
 
 ### Deploy to cloud
 
-- [OpenShift](https://github.com/tkisme/gogs-openshift)
 - [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
 - [Scaleway](https://www.scaleway.com/imagehub/gogs/)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
