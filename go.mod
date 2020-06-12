@@ -64,7 +64,7 @@ require (
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.56.0
 	gopkg.in/ldap.v2 v2.5.1
-	gopkg.in/macaron.v1 v1.3.8
+	gopkg.in/macaron.v1 v1.3.9
 	unknwon.dev/clog/v2 v2.1.2
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
