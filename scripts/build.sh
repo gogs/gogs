@@ -1,11 +1,13 @@
+#!/bin/bash
+
 outPath=./output
 
 rm -rf $outPath
 mkdir $outPath
 
 go build ../gogs.go
-PLATFORM=`uname | cut -d _ -f 1`
-if [ $PLATFORM = "MINGW32" ] || [ $PLATFORM = "MINGW64" ] || [ $PLATFORM = "CYGWIN" ]; then
+PLATFORM=$(uname | cut -d _ -f 1)
+if [ "$PLATFORM" = "MINGW32" ] || [ "$PLATFORM" = "MINGW64" ] || [ "$PLATFORM" = "CYGWIN" ]; then
 	GOGS_EXE=gogs.exe
 else
 	GOGS_EXE=gogs
