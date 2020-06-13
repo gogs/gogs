@@ -49,7 +49,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.1.0
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
-	github.com/stretchr/testify v1.6.0
+	github.com/stretchr/testify v1.6.1
 	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	github.com/unknwon/cae v1.0.0
 	github.com/unknwon/com v1.0.1
