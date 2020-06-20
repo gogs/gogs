@@ -407,14 +407,14 @@ func (issue *Issue) ReadBy(uid int64) error {
 	return UpdateIssueUserByRead(uid, issue.ID)
 }
 
-func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
-	_, err := e.ID(issue.ID).Cols(cols...).Update(issue)
+func updateIssueCols(e Engine, issue *Issue) error {
+	_, err := e.ID(issue.ID).Update(issue)
 	return err
 }
 
 // UpdateIssueCols only updates values of specific columns for given issue.
-func UpdateIssueCols(issue *Issue, cols ...string) error {
-	return updateIssueCols(x, issue, cols...)
+func UpdateIssueCols(issue *Issue) error {
+	return updateIssueCols(x, issue)
 }
 
 func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, isClosed bool) (err error) {
@@ -424,7 +424,7 @@ func (issue *Issue) changeStatus(e *xorm.Session, doer *User, repo *Repository, 
 	}
 	issue.IsClosed = isClosed
 
-	if err = updateIssueCols(e, issue, "is_closed"); err != nil {
+	if err = updateIssueCols(e, issue); err != nil {
 		return err
 	} else if err = updateIssueUsersByStatus(e, issue.ID, isClosed); err != nil {
 		return err
@@ -513,7 +513,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 	oldTitle := issue.Title
 	issue.Title = title
-	if err = UpdateIssueCols(issue, "name"); err != nil {
+	if err = UpdateIssueCols(issue); err != nil {
 		return fmt.Errorf("UpdateIssueCols: %v", err)
 	}
 
@@ -555,7 +555,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 	oldContent := issue.Content
 	issue.Content = content
-	if err = UpdateIssueCols(issue, "content"); err != nil {
+	if err = UpdateIssueCols(issue); err != nil {
 		return fmt.Errorf("UpdateIssueCols: %v", err)
 	}
 
