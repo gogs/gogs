@@ -1,5 +1,8 @@
-on: push
-name: "Shellcheck"
+name: Shell
+on:
+  push:
+    branches: [master]
+  pull_request:
 jobs:
   shellcheck:
     name: Shellcheck
@@ -8,4 +11,3 @@ jobs:
       - uses: actions/checkout@master
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
-
