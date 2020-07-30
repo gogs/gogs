@@ -91,7 +91,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 	} else {
 		ownRepos, err = db.GetUserRepositories(&db.UserRepoOptions{
 			UserID:   user.ID,
-			Private:  c.User.ID == user.ID,
+			Private:  c.User.ID == user.ID || c.User.IsAdmin,
 			Page:     1,
 			PageSize: user.NumRepos,
 		})
