@@ -36,7 +36,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.2
+	github.com/microcosm-cc/bluemonday v1.0.4
 	github.com/msteinert/pam v0.0.0-20190215180659-f29b9f28d6f9
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/niklasfasching/go-org v0.1.9
