@@ -179,7 +179,7 @@ func (c *Context) NotFound() {
 
 // Error renders the 500 page.
 func (c *Context) Error(err error, msg string) {
-	log.ErrorDepth(5, "%s: %v", msg, err)
+	log.ErrorDepth(4, "%s: %v", msg, err)
 
 	c.Title("status.internal_server_error")
 
