@@ -348,7 +348,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 
 	t.LowerName = strings.ToLower(t.Name)
 	existingTeam := new(Team)
-	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(&existingTeam)
+	has, err := x.Where("org_id=?", t.OrgID).And("lower_name=?", t.LowerName).And("id!=?", t.ID).Get(existingTeam)
 	if err != nil {
 		return err
 	} else if has {
