@@ -10,7 +10,7 @@ COPY . .
 RUN make build-no-gen TAGS="cert pam"
 
 FROM arm32v7/alpine:3.11
-ADD https://github.com/tianon/gosu/releases/download/1.11/gosu-arm64 /usr/sbin/gosu
+ADD https://github.com/tianon/gosu/releases/download/1.12/gosu-armhf /usr/sbin/gosu
 RUN chmod +x /usr/sbin/gosu \
   && echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
   && apk --no-cache --no-progress add \
