@@ -403,7 +403,7 @@ func showOrgProfile(c *context.Context) {
 	}
 	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 
-	if err := org.GetMembers(); err != nil {
+	if err := org.GetMembers(12); err != nil {
 		c.Error(err, "get members")
 		return
 	}

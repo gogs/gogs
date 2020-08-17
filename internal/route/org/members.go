@@ -23,7 +23,7 @@ func Members(c *context.Context) {
 	c.Data["Title"] = org.FullName
 	c.Data["PageIsOrgMembers"] = true
 
-	if err := org.GetMembers(); err != nil {
+	if err := org.GetMembers(0); err != nil {
 		c.Error(err, "get members")
 		return
 	}
@@ -76,7 +76,7 @@ func MembersAction(c *context.Context) {
 
 	if err != nil {
 		log.Error("Action(%s): %v", c.Params(":action"), err)
-		c.JSONSuccess( map[string]interface{}{
+		c.JSONSuccess(map[string]interface{}{
 			"ok":  false,
 			"err": err.Error(),
 		})
