@@ -64,8 +64,8 @@ func (org *User) TeamsHaveAccessToRepo(repoID int64, mode AccessMode) ([]*Team, 
 }
 
 // GetMembers returns all members of organization.
-func (org *User) GetMembers() error {
-	ous, err := GetOrgUsersByOrgID(org.ID)
+func (org *User) GetMembers(limit int) error {
+	ous, err := GetOrgUsersByOrgID(org.ID, limit)
 	if err != nil {
 		return err
 	}
@@ -315,14 +315,19 @@ func GetOrgIDsByUserID(userID int64, showPrivate bool) ([]int64, error) {
 	return orgIDs, sess.Distinct("org_id").Find(&orgIDs)
 }
 
-func getOrgUsersByOrgID(e Engine, orgID int64) ([]*OrgUser, error) {
+func getOrgUsersByOrgID(e Engine, orgID int64, limit int) ([]*OrgUser, error) {
 	orgUsers := make([]*OrgUser, 0, 10)
-	return orgUsers, e.Where("org_id=?", orgID).Find(&orgUsers)
+
+	sess := e.Where("org_id=?", orgID)
+	if limit > 0 {
+		sess = sess.Limit(limit)
+	}
+	return orgUsers, sess.Find(&orgUsers)
 }
 
 // GetOrgUsersByOrgID returns all organization-user relations by organization ID.
-func GetOrgUsersByOrgID(orgID int64) ([]*OrgUser, error) {
-	return getOrgUsersByOrgID(x, orgID)
+func GetOrgUsersByOrgID(orgID int64, limit int) ([]*OrgUser, error) {
+	return getOrgUsersByOrgID(x, orgID, limit)
 }
 
 // ChangeOrgUserStatus changes public or private membership status.

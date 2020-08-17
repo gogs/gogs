@@ -17,6 +17,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- The organization profile page has changed to display at most 12 members. [#5506](https://github.com/gogs/gogs/issues/5506)
 - The required Go version to compile source code changed to 1.14.
 - All assets are now embedded into binary and served from memory by default. Set `[server] LOAD_ASSETS_FROM_DISK = true` to load them from disk. [#5920](https://github.com/gogs/gogs/pull/5920)
 - Application and Go versions are removed from page footer and only show in the admin dashboard.
