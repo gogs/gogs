@@ -81,16 +81,10 @@ func TestIsExist(t *testing.T) {
 }
 
 func TestCurrentUsername(t *testing.T) {
-	// Make sure it does not blow up
-	CurrentUsername()
-}
-
-func TestCurrentUsernamePrefersEnvironmentVariable(t *testing.T) {
-	// Some users/scripts expect that they can change the current username via environment variables
-	if userBak, ok := os.LookupEnv("USER"); ok {
-		defer os.Setenv("USER", userBak)
+	if oldUser, ok := os.LookupEnv("USER"); ok {
+		defer func() { _ = os.Setenv("USER", oldUser) }()
 	} else {
-		defer os.Unsetenv("USER")
+		defer func() { _ = os.Unsetenv("USER") }()
 	}
 
 	if err := os.Setenv("USER", "__TESTING::USERNAME"); err != nil {
