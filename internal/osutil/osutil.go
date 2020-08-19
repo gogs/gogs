@@ -6,6 +6,7 @@ package osutil
 
 import (
 	"os"
+	"os/user"
 )
 
 // IsFile returns true if given path exists as a file (i.e. not a directory).
@@ -33,12 +34,20 @@ func IsExist(path string) bool {
 	return err == nil || os.IsExist(err)
 }
 
-// CurrentUsername returns the current system user via environment variables.
+// CurrentUsername returns the current system user
 func CurrentUsername() string {
 	username := os.Getenv("USER")
 	if len(username) > 0 {
 		return username
 	}
 
-	return os.Getenv("USERNAME")
+	username = os.Getenv("USERNAME")
+	if len(username) > 0 {
+		return username
+	}
+
+	if user, err := user.Current(); err == nil {
+		username = user.Username
+	}
+	return username
 }
