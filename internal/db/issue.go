@@ -407,7 +407,7 @@ func (issue *Issue) ReadBy(uid int64) error {
 	return UpdateIssueUserByRead(uid, issue.ID)
 }
 
-func updateIssueCols(e Engine, issue *Issue) error {
+func updateIssue(e Engine, issue *Issue) error {
 	_, err := e.ID(issue.ID).Update(issue)
 	return err
 }
