@@ -59,6 +59,7 @@ All notable changes to Gogs are documented in this file.
 - Fall back to use RFC 3339 as time layout when misconfigured. [#6098](https://github.com/gogs/gogs/issues/6098)
 - Unable to update team with server error. [#6185](https://github.com/gogs/gogs/issues/6185)
 - Webhooks are not fired after push when `[service] REQUIRE_SIGNIN_VIEW = true`.
+- Files with identical content are randomly displayed one of them.
 
 ### Removed
 
