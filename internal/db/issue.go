@@ -413,7 +413,7 @@ func updateIssueCols(e Engine, issue *Issue) error {
 }
 
 // UpdateIssueCols only updates values of specific columns for given issue.
-func UpdateIssueCols(issue *Issue) error {
+func UpdateIssue(issue *Issue) error {
 	return updateIssueCols(x, issue)
 }
 
