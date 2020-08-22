@@ -166,14 +166,29 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["RepoLink"] = c.Repo.RepoLink
 		c.Data["RepoRelPath"] = c.Repo.Owner.Name + "/" + c.Repo.Repository.Name
 
-		// Admin has super access.
+		// Admin has super access
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = db.AccessModeOwner
 		} else {
-			mode, err := db.UserAccessMode(c.UserID(), repo)
+			mode, err := db.UserAccessMode(c.UserID(), c.Repo.Repository)
 			if err != nil {
 				c.Error(err, "get user access mode")
 				return
+			}
+			c.Repo.AccessMode = mode
+		}
+
+		// If the authenticated user has no direct access, see if the repository is a fork
+		// and whether the user has access to the base repository.
+		if c.Repo.AccessMode == db.AccessModeNone && c.Repo.Repository.IsFork {
+			mode, err := db.UserAccessMode(c.UserID(), c.Repo.Repository.BaseRepo)
+			if err != nil {
+				c.Error(err, "get user access mode of base repository")
+				return
+			}
+			// Users shouldn't have indirect access level higher than write.
+			if mode > db.AccessModeWrite {
+				mode = db.AccessModeWrite
 			}
 			c.Repo.AccessMode = mode
 		}
