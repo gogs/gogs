@@ -364,8 +364,8 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		}
 	}
 
-	// Send confirmation email, no need for social account.
-	if conf.Auth.RegisterEmailConfirm && u.ID > 1 {
+	// Send confirmation email.
+	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
 		email.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email
