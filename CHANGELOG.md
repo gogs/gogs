@@ -55,6 +55,7 @@ All notable changes to Gogs are documented in this file.
 - Disallow multiple tokens with same name. [#5587](https://github.com/gogs/gogs/issues/5587) [#5820](https://github.com/gogs/gogs/pull/5820)
 - Enable Federated Avatar Lookup could cause server to crash. [#5848](https://github.com/gogs/gogs/issues/5848)
 - Private repositories are hidden in the organization's view. [#5869](https://github.com/gogs/gogs/issues/5869)
+- Users have access to base repository cannot view commits in forks. [#5878](https://github.com/gogs/gogs/issues/5878)
 - Server error when changing email address in user settings page. [#5899](https://github.com/gogs/gogs/issues/5899)
 - Fall back to use RFC 3339 as time layout when misconfigured. [#6098](https://github.com/gogs/gogs/issues/6098)
 - Unable to update team with server error. [#6185](https://github.com/gogs/gogs/issues/6185)
