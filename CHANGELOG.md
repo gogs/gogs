@@ -4,6 +4,31 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.13.0+dev (`master`)
 
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+- Configuration section `[mailer]` is no longer used.
+- Configuration section `[service]` is no longer used.
+- Configuration option `APP_NAME` is no longer used.
+- Configuration option `[security] REVERSE_PROXY_AUTHENTICATION_USER` is no longer used.
+- Configuration option `[database] PASSWD` is no longer used.
+- Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is no longer used.
+- Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is no longer used.
+- Configuration option `[auth] ENABLE_CAPTCHA` is no longer used.
+- Configuration option `[auth] ENABLE_NOTIFY_MAIL` is no longer used.
+- Configuration option `[auth] REGISTER_EMAIL_CONFIRM` is no longer used.
+- Configuration option `[session] GC_INTERVAL_TIME` is no longer used.
+- Configuration option `[session] SESSION_LIFE_TIME` is no longer used.
+- Configuration option `[server] ROOT_URL` is no longer used.
+- Configuration option `[server] LANDING_PAGE` is no longer used.
+- Configuration option `[database] DB_TYPE` is no longer used.
+- Configuration option `[database] PASSWD` is no longer used.
+
 ## 0.12.0
 
 ### Added
