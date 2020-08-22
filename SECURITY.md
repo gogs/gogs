@@ -6,6 +6,5 @@ Only lastest two minor version releases are supported for patching security fixe
 
 ## Reporting a vulnerability
 
-Please send report privately to [security@gogs.io](mailto:security@gogs.io), and include how would you like to be credited.
-
-Thank you!
+Please create a dummy issue with high-level description of the security vulnerability,
+then report details to [security@gogs.io](mailto:security@gogs.io) privately, thank you!

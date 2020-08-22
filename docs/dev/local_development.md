@@ -76,7 +76,7 @@ Gogs has the following dependencies:
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
-    # Watch out, it is not github.com/go-bindata/go-bindata!
+    # Watch out, it is NOT github.com/go-bindata/go-bindata!
     go get -u github.com/kevinburke/go-bindata/...
     ```
 
