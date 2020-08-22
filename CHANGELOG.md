@@ -2,7 +2,9 @@
 
 All notable changes to Gogs are documented in this file.
 
-## 0.12.0+dev (`master`)
+## 0.13.0+dev (`master`)
+
+## 0.12.0
 
 ### Added
 
