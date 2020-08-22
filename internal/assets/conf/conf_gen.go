@@ -4504,7 +4504,7 @@ func confLocaleLocale_bgBgIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_bg-BG.ini", size: 97949, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_bg-BG.ini", size: 97949, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb0, 0x23, 0x4e, 0xc, 0xc9, 0xd2, 0xb1, 0x18, 0xde, 0xfa, 0x7f, 0xe1, 0xa7, 0xb6, 0xb0, 0x9b, 0xd0, 0xf7, 0x36, 0xc9, 0xeb, 0x95, 0x6c, 0x94, 0xaf, 0xb, 0xaf, 0x1e, 0x7e, 0xa3, 0x31, 0x28}}
 	return a, nil
 }
@@ -4524,7 +4524,7 @@ func confLocaleLocale_csCzIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_cs-CZ.ini", size: 73424, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_cs-CZ.ini", size: 73424, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x9c, 0x2e, 0xe4, 0x3, 0x52, 0x46, 0xdb, 0x60, 0x8a, 0x3d, 0xcd, 0xf1, 0x23, 0x21, 0x26, 0x16, 0xbe, 0xb3, 0x4, 0x7e, 0xa4, 0xf3, 0x54, 0x5, 0x26, 0x82, 0x4, 0xf9, 0xbd, 0x47, 0x3f, 0x7a}}
 	return a, nil
 }
@@ -4544,7 +4544,7 @@ func confLocaleLocale_deDeIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_de-DE.ini", size: 74540, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_de-DE.ini", size: 74540, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x89, 0x59, 0xc7, 0x7c, 0xb3, 0xe4, 0xa3, 0xf2, 0x7e, 0x84, 0xbf, 0x17, 0xa0, 0x80, 0xec, 0xb7, 0xb6, 0xb6, 0xde, 0xd9, 0xa5, 0x12, 0xd0, 0xd5, 0x47, 0x30, 0x7f, 0xb9, 0x7c, 0x40, 0x4c, 0xc8}}
 	return a, nil
 }
@@ -4564,7 +4564,7 @@ func confLocaleLocale_enGbIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_en-GB.ini", size: 66927, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_en-GB.ini", size: 66927, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xdd, 0x3e, 0x3f, 0xd7, 0xdd, 0xf4, 0x9d, 0x79, 0x82, 0x92, 0xe, 0xc3, 0xcd, 0x34, 0xd2, 0xe7, 0x1f, 0xe0, 0xf, 0xd1, 0x4a, 0xe7, 0x87, 0xa7, 0x98, 0x4a, 0xac, 0x91, 0x1a, 0x2e, 0xce, 0xe0}}
 	return a, nil
 }
@@ -4604,7 +4604,7 @@ func confLocaleLocale_esEsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_es-ES.ini", size: 74541, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_es-ES.ini", size: 74541, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x89, 0x71, 0x97, 0xe9, 0x92, 0x76, 0x4, 0x35, 0x3a, 0x8a, 0x56, 0xec, 0x5a, 0x35, 0xcd, 0xe5, 0xc3, 0x18, 0xd3, 0xe4, 0x7c, 0xd4, 0x52, 0xb, 0xe, 0xd3, 0x9f, 0x37, 0x2b, 0x22, 0x98, 0xce}}
 	return a, nil
 }
@@ -4624,7 +4624,7 @@ func confLocaleLocale_faIrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_fa-IR.ini", size: 92428, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_fa-IR.ini", size: 92428, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x27, 0xfc, 0xec, 0xa, 0xe6, 0xeb, 0x68, 0xd2, 0xcb, 0xc2, 0x99, 0x8f, 0xf4, 0x35, 0x1d, 0xdf, 0x89, 0x9a, 0x2b, 0xee, 0x2f, 0x2d, 0xf1, 0x97, 0xea, 0xc, 0xe5, 0xe7, 0xd, 0x7f, 0x6e, 0x55}}
 	return a, nil
 }
@@ -4644,7 +4644,7 @@ func confLocaleLocale_fiFiIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_fi-FI.ini", size: 70799, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_fi-FI.ini", size: 70799, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xa2, 0xd6, 0x9b, 0x1a, 0x71, 0xe1, 0x56, 0x96, 0x8d, 0x45, 0xb8, 0xb4, 0x1f, 0xfc, 0xd, 0x91, 0x5b, 0xae, 0x4e, 0xd2, 0xba, 0xaa, 0x20, 0xab, 0x72, 0x55, 0x7b, 0x18, 0xd2, 0x19, 0x40, 0xa7}}
 	return a, nil
 }
@@ -4664,7 +4664,7 @@ func confLocaleLocale_frFrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_fr-FR.ini", size: 75031, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_fr-FR.ini", size: 75031, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb2, 0xf9, 0xcc, 0xa8, 0x8f, 0x54, 0xb, 0x69, 0xd5, 0xe, 0x8c, 0x29, 0x2b, 0xbe, 0xa8, 0xf3, 0x1f, 0x8b, 0x3b, 0xf5, 0x40, 0x5, 0x43, 0xa5, 0x29, 0xf0, 0x8e, 0x94, 0xde, 0x63, 0x1b, 0x6d}}
 	return a, nil
 }
@@ -4684,7 +4684,7 @@ func confLocaleLocale_glEsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_gl-ES.ini", size: 72427, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_gl-ES.ini", size: 72427, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xe0, 0x2c, 0x7d, 0x6d, 0xc6, 0x1a, 0xb, 0xf5, 0xd8, 0x8d, 0x9e, 0x5c, 0xed, 0x82, 0x43, 0xb6, 0xa6, 0x53, 0x33, 0x68, 0x7, 0xe3, 0x7, 0xd9, 0x64, 0x51, 0x8c, 0x76, 0x4e, 0xc9, 0xc0, 0xa4}}
 	return a, nil
 }
@@ -4704,7 +4704,7 @@ func confLocaleLocale_huHuIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_hu-HU.ini", size: 73590, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_hu-HU.ini", size: 73590, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x98, 0xec, 0x98, 0x96, 0xac, 0x29, 0x4f, 0xaa, 0x4f, 0x45, 0x93, 0xa8, 0x56, 0x89, 0xb7, 0xea, 0x46, 0xb2, 0xf0, 0xd0, 0x46, 0x69, 0x2e, 0xfd, 0x72, 0x4b, 0x5e, 0xae, 0xf9, 0x52, 0xec, 0x63}}
 	return a, nil
 }
@@ -4724,7 +4724,7 @@ func confLocaleLocale_idIdIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_id-ID.ini", size: 69575, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_id-ID.ini", size: 69575, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x87, 0xcc, 0x85, 0x34, 0xea, 0xd6, 0xb8, 0xe1, 0x9d, 0x73, 0x13, 0xfd, 0x71, 0x2c, 0xf6, 0x9e, 0x93, 0x72, 0xef, 0xe1, 0xc3, 0x39, 0x5b, 0x9b, 0x55, 0xf3, 0x4b, 0x5, 0x1e, 0x67, 0xf9, 0x31}}
 	return a, nil
 }
@@ -4744,7 +4744,7 @@ func confLocaleLocale_itItIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_it-IT.ini", size: 71571, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_it-IT.ini", size: 71571, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb0, 0x8d, 0xf4, 0x29, 0x9d, 0x18, 0x7f, 0xe9, 0x67, 0xe4, 0xfd, 0xd2, 0xe6, 0x19, 0x76, 0x44, 0x4a, 0x5d, 0xfb, 0x21, 0xc3, 0x68, 0xf1, 0x9c, 0x4, 0x3f, 0xe5, 0x38, 0x23, 0x16, 0xbc, 0x5f}}
 	return a, nil
 }
@@ -4764,7 +4764,7 @@ func confLocaleLocale_jaJpIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_ja-JP.ini", size: 83822, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_ja-JP.ini", size: 83822, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x91, 0xc2, 0xf7, 0xf0, 0x93, 0xa, 0x3f, 0xec, 0x92, 0x84, 0x36, 0xd8, 0xfb, 0x22, 0xa9, 0x79, 0x42, 0x58, 0x89, 0x12, 0xe0, 0x12, 0xea, 0x0, 0x1a, 0x56, 0x38, 0xe4, 0x96, 0x21, 0xeb, 0x6f}}
 	return a, nil
 }
@@ -4784,7 +4784,7 @@ func confLocaleLocale_koKrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_ko-KR.ini", size: 74794, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_ko-KR.ini", size: 74794, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x4a, 0x5, 0x51, 0x2b, 0x17, 0x78, 0x4, 0x82, 0xfc, 0x20, 0x5b, 0x15, 0x52, 0x7d, 0x7e, 0xcf, 0xe4, 0x37, 0x8f, 0x63, 0xf9, 0x7a, 0x69, 0x4d, 0xdd, 0x9, 0x49, 0xa, 0xa5, 0xbd, 0x23, 0x2c}}
 	return a, nil
 }
@@ -4804,7 +4804,7 @@ func confLocaleLocale_lvLvIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_lv-LV.ini", size: 73813, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_lv-LV.ini", size: 73813, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x19, 0x38, 0x24, 0xf0, 0xdc, 0xfd, 0xce, 0x94, 0x78, 0xa9, 0x94, 0x5d, 0x75, 0xc1, 0xe5, 0xfc, 0x46, 0x55, 0x79, 0x21, 0x95, 0x39, 0x6b, 0x6, 0x68, 0xb, 0xa, 0x9d, 0xe8, 0x11, 0x2c, 0x9a}}
 	return a, nil
 }
@@ -4824,7 +4824,7 @@ func confLocaleLocale_nlNlIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_nl-NL.ini", size: 70067, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_nl-NL.ini", size: 70067, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x18, 0xc2, 0xfc, 0xf8, 0xc7, 0x90, 0x9, 0xea, 0x71, 0x4a, 0xca, 0xf7, 0x92, 0xb6, 0x3c, 0xf7, 0x31, 0x5a, 0x31, 0x99, 0xaa, 0xc7, 0xf4, 0xe, 0x39, 0x9d, 0xe8, 0x4f, 0x70, 0x11, 0x24, 0x1}}
 	return a, nil
 }
@@ -4844,7 +4844,7 @@ func confLocaleLocale_plPlIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_pl-PL.ini", size: 72244, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_pl-PL.ini", size: 72244, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xfe, 0x9e, 0x79, 0x60, 0xfb, 0xda, 0xb9, 0x3b, 0x34, 0x83, 0x36, 0x56, 0x27, 0xc0, 0x88, 0xd7, 0xdd, 0xdb, 0xd4, 0xb7, 0x40, 0xbf, 0x19, 0x50, 0xb5, 0x49, 0xb, 0x1, 0x39, 0x5f, 0x16, 0xe7}}
 	return a, nil
 }
@@ -4864,7 +4864,7 @@ func confLocaleLocale_ptBrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_pt-BR.ini", size: 72290, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_pt-BR.ini", size: 72290, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x50, 0x5c, 0x7b, 0x14, 0x91, 0xc, 0x4d, 0xbf, 0x9c, 0x87, 0xed, 0xeb, 0x2b, 0x35, 0x14, 0x18, 0xa2, 0x5a, 0x57, 0x6a, 0xfa, 0x43, 0x63, 0x88, 0x5d, 0x4, 0x39, 0x6, 0x8c, 0xc4, 0x32, 0xe5}}
 	return a, nil
 }
@@ -4884,7 +4884,7 @@ func confLocaleLocale_ptPtIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_pt-PT.ini", size: 73346, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_pt-PT.ini", size: 73346, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb3, 0x82, 0xc, 0x3f, 0x6, 0xe7, 0x3d, 0x6b, 0x6c, 0x6e, 0x55, 0x1a, 0xae, 0x59, 0xbe, 0x4a, 0x35, 0x5, 0xf7, 0xf2, 0xa3, 0x74, 0x95, 0xe0, 0x9b, 0x67, 0x8c, 0xf9, 0xe4, 0xc9, 0x1d, 0xb}}
 	return a, nil
 }
@@ -4904,7 +4904,7 @@ func confLocaleLocale_ruRuIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_ru-RU.ini", size: 102698, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_ru-RU.ini", size: 102698, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x2b, 0x2c, 0x2d, 0x7b, 0x60, 0xb6, 0xe6, 0x8e, 0xcb, 0x8f, 0xe7, 0x6, 0x99, 0xcb, 0xc0, 0xec, 0xa1, 0x20, 0x4a, 0xcb, 0x49, 0x4, 0x2c, 0x6f, 0xc9, 0x40, 0xf5, 0xf6, 0xea, 0xb5, 0x52, 0xb5}}
 	return a, nil
 }
@@ -4924,7 +4924,7 @@ func confLocaleLocale_skSkIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_sk-SK.ini", size: 73355, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_sk-SK.ini", size: 73355, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xda, 0x27, 0x30, 0x4e, 0xf2, 0xda, 0xc0, 0xd5, 0xb8, 0x9d, 0xd4, 0x7, 0xd1, 0x4a, 0x44, 0xa3, 0x78, 0xf0, 0x33, 0xaa, 0xd8, 0x96, 0xac, 0xad, 0xb2, 0xb4, 0x66, 0x8f, 0xdb, 0xc6, 0x25, 0x67}}
 	return a, nil
 }
@@ -4944,7 +4944,7 @@ func confLocaleLocale_srSpIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_sr-SP.ini", size: 94621, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_sr-SP.ini", size: 94621, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xf, 0x4, 0x3c, 0xa9, 0x98, 0x92, 0xb8, 0x6c, 0x1a, 0x3a, 0x2d, 0x46, 0x40, 0xe3, 0x9e, 0x0, 0xe1, 0x22, 0x1d, 0xb3, 0x1, 0x23, 0x2b, 0xff, 0xe8, 0x93, 0x38, 0xbe, 0xa6, 0x25, 0xab, 0x4c}}
 	return a, nil
 }
@@ -4964,7 +4964,7 @@ func confLocaleLocale_svSeIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_sv-SE.ini", size: 69955, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_sv-SE.ini", size: 69955, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xcc, 0xca, 0xf7, 0xd6, 0x13, 0xc4, 0x88, 0x71, 0x33, 0xce, 0xb7, 0x18, 0x4b, 0xd3, 0xc3, 0xd3, 0xf6, 0xae, 0x40, 0xce, 0x7f, 0x15, 0x4f, 0x34, 0x9d, 0xc8, 0xfc, 0x2f, 0x5, 0xa1, 0x3, 0x50}}
 	return a, nil
 }
@@ -4984,7 +4984,7 @@ func confLocaleLocale_trTrIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_tr-TR.ini", size: 72816, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_tr-TR.ini", size: 72816, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x4b, 0xbb, 0x69, 0xe4, 0xa7, 0xef, 0x25, 0x66, 0x76, 0x5d, 0xee, 0x17, 0x59, 0xf7, 0xd5, 0xda, 0x1e, 0x26, 0x32, 0x44, 0xf3, 0xa2, 0xa7, 0x4b, 0xf1, 0xe6, 0x59, 0xa6, 0x5b, 0x67, 0xc4, 0x6e}}
 	return a, nil
 }
@@ -5004,7 +5004,7 @@ func confLocaleLocale_ukUaIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_uk-UA.ini", size: 100202, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_uk-UA.ini", size: 100202, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x5c, 0xb1, 0x82, 0xd9, 0xa2, 0x6e, 0x8, 0x4f, 0x60, 0x8c, 0xc0, 0x6b, 0x3f, 0x76, 0xbf, 0xc7, 0x9c, 0x2d, 0x59, 0x8c, 0x7e, 0x94, 0x14, 0x76, 0x8a, 0x20, 0xa0, 0xf0, 0xa8, 0xfb, 0x22, 0x1f}}
 	return a, nil
 }
@@ -5024,7 +5024,7 @@ func confLocaleLocale_viVnIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_vi-VN.ini", size: 77827, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_vi-VN.ini", size: 77827, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xc9, 0x35, 0x9e, 0x58, 0x1a, 0x31, 0x59, 0xc4, 0xe5, 0x46, 0x50, 0x21, 0x3, 0x44, 0x22, 0xa5, 0x86, 0x8e, 0xfd, 0x5, 0x17, 0xd, 0x1d, 0x6e, 0x25, 0x40, 0x8, 0x41, 0x23, 0xcf, 0x90, 0xb9}}
 	return a, nil
 }
@@ -5044,7 +5044,7 @@ func confLocaleLocale_zhCnIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_zh-CN.ini", size: 66011, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_zh-CN.ini", size: 66011, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xab, 0x1, 0xd, 0x67, 0xba, 0xe, 0xbc, 0x8c, 0x9b, 0x46, 0x26, 0x96, 0x19, 0x7b, 0x60, 0x6f, 0x55, 0xb7, 0x97, 0x8a, 0xf3, 0x60, 0x17, 0xda, 0x8f, 0x47, 0xc6, 0x62, 0xfa, 0x27, 0x33, 0xdd}}
 	return a, nil
 }
@@ -5064,7 +5064,7 @@ func confLocaleLocale_zhHkIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_zh-HK.ini", size: 66519, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_zh-HK.ini", size: 66519, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xfe, 0x11, 0x6c, 0x73, 0x6, 0x0, 0x24, 0xc5, 0x7f, 0x38, 0x55, 0x8e, 0x48, 0x93, 0xf5, 0x61, 0x4, 0x5c, 0x74, 0xe1, 0xbc, 0x5a, 0x1e, 0xaa, 0x9c, 0xf5, 0x2e, 0x79, 0x54, 0x95, 0xc, 0xb6}}
 	return a, nil
 }
@@ -5084,7 +5084,7 @@ func confLocaleLocale_zhTwIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_zh-TW.ini", size: 65809, mode: os.FileMode(0644), modTime: time.Unix(1598088982, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_zh-TW.ini", size: 65809, mode: os.FileMode(0644), modTime: time.Unix(1598089975, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x98, 0xdb, 0xc8, 0xe3, 0xe9, 0xe9, 0xa7, 0xf1, 0x5b, 0x6a, 0xde, 0x46, 0x24, 0xac, 0x10, 0x23, 0xf5, 0xdc, 0xb6, 0xea, 0xdc, 0x3b, 0x4b, 0xcb, 0x3f, 0xf3, 0x89, 0xa6, 0xa3, 0xb5, 0x1f, 0x1}}
 	return a, nil
 }
@@ -5486,258 +5486,258 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"conf": {nil, map[string]*bintree{
-		"app.ini": {confAppIni, map[string]*bintree{}},
-		"auth.d": {nil, map[string]*bintree{
-			"github.conf.example":           {confAuthDGithubConfExample, map[string]*bintree{}},
-			"ldap_bind_dn.conf.example":     {confAuthDLdap_bind_dnConfExample, map[string]*bintree{}},
-			"ldap_simple_auth.conf.example": {confAuthDLdap_simple_authConfExample, map[string]*bintree{}},
-			"pam.conf.example":              {confAuthDPamConfExample, map[string]*bintree{}},
-			"smtp.conf.example":             {confAuthDSmtpConfExample, map[string]*bintree{}},
+	"conf": &bintree{nil, map[string]*bintree{
+		"app.ini": &bintree{confAppIni, map[string]*bintree{}},
+		"auth.d": &bintree{nil, map[string]*bintree{
+			"github.conf.example":           &bintree{confAuthDGithubConfExample, map[string]*bintree{}},
+			"ldap_bind_dn.conf.example":     &bintree{confAuthDLdap_bind_dnConfExample, map[string]*bintree{}},
+			"ldap_simple_auth.conf.example": &bintree{confAuthDLdap_simple_authConfExample, map[string]*bintree{}},
+			"pam.conf.example":              &bintree{confAuthDPamConfExample, map[string]*bintree{}},
+			"smtp.conf.example":             &bintree{confAuthDSmtpConfExample, map[string]*bintree{}},
 		}},
-		"gitignore": {nil, map[string]*bintree{
-			"Actionscript":          {confGitignoreActionscript, map[string]*bintree{}},
-			"Ada":                   {confGitignoreAda, map[string]*bintree{}},
-			"Agda":                  {confGitignoreAgda, map[string]*bintree{}},
-			"Android":               {confGitignoreAndroid, map[string]*bintree{}},
-			"Anjuta":                {confGitignoreAnjuta, map[string]*bintree{}},
-			"AppEngine":             {confGitignoreAppengine, map[string]*bintree{}},
-			"AppceleratorTitanium":  {confGitignoreAppceleratortitanium, map[string]*bintree{}},
-			"ArchLinuxPackages":     {confGitignoreArchlinuxpackages, map[string]*bintree{}},
-			"Archives":              {confGitignoreArchives, map[string]*bintree{}},
-			"Autotools":             {confGitignoreAutotools, map[string]*bintree{}},
-			"BricxCC":               {confGitignoreBricxcc, map[string]*bintree{}},
-			"C":                     {confGitignoreC, map[string]*bintree{}},
-			"C Sharp":               {confGitignoreCSharp, map[string]*bintree{}},
-			"C++":                   {confGitignoreC2, map[string]*bintree{}},
-			"CFWheels":              {confGitignoreCfwheels, map[string]*bintree{}},
-			"CMake":                 {confGitignoreCmake, map[string]*bintree{}},
-			"CUDA":                  {confGitignoreCuda, map[string]*bintree{}},
-			"CVS":                   {confGitignoreCvs, map[string]*bintree{}},
-			"CakePHP":               {confGitignoreCakephp, map[string]*bintree{}},
-			"ChefCookbook":          {confGitignoreChefcookbook, map[string]*bintree{}},
-			"Cloud9":                {confGitignoreCloud9, map[string]*bintree{}},
-			"CodeIgniter":           {confGitignoreCodeigniter, map[string]*bintree{}},
-			"CodeKit":               {confGitignoreCodekit, map[string]*bintree{}},
-			"CommonLisp":            {confGitignoreCommonlisp, map[string]*bintree{}},
-			"Composer":              {confGitignoreComposer, map[string]*bintree{}},
-			"Concrete5":             {confGitignoreConcrete5, map[string]*bintree{}},
-			"Coq":                   {confGitignoreCoq, map[string]*bintree{}},
-			"CraftCMS":              {confGitignoreCraftcms, map[string]*bintree{}},
-			"DM":                    {confGitignoreDm, map[string]*bintree{}},
-			"Dart":                  {confGitignoreDart, map[string]*bintree{}},
-			"DartEditor":            {confGitignoreDarteditor, map[string]*bintree{}},
-			"Delphi":                {confGitignoreDelphi, map[string]*bintree{}},
-			"Dreamweaver":           {confGitignoreDreamweaver, map[string]*bintree{}},
-			"Drupal":                {confGitignoreDrupal, map[string]*bintree{}},
-			"EPiServer":             {confGitignoreEpiserver, map[string]*bintree{}},
-			"Eagle":                 {confGitignoreEagle, map[string]*bintree{}},
-			"Eclipse":               {confGitignoreEclipse, map[string]*bintree{}},
-			"EiffelStudio":          {confGitignoreEiffelstudio, map[string]*bintree{}},
-			"Elisp":                 {confGitignoreElisp, map[string]*bintree{}},
-			"Elixir":                {confGitignoreElixir, map[string]*bintree{}},
-			"Emacs":                 {confGitignoreEmacs, map[string]*bintree{}},
-			"Ensime":                {confGitignoreEnsime, map[string]*bintree{}},
-			"Erlang":                {confGitignoreErlang, map[string]*bintree{}},
-			"Espresso":              {confGitignoreEspresso, map[string]*bintree{}},
-			"ExpressionEngine":      {confGitignoreExpressionengine, map[string]*bintree{}},
-			"ExtJs":                 {confGitignoreExtjs, map[string]*bintree{}},
-			"Fancy":                 {confGitignoreFancy, map[string]*bintree{}},
-			"Finale":                {confGitignoreFinale, map[string]*bintree{}},
-			"FlexBuilder":           {confGitignoreFlexbuilder, map[string]*bintree{}},
-			"ForceDotCom":           {confGitignoreForcedotcom, map[string]*bintree{}},
-			"FuelPHP":               {confGitignoreFuelphp, map[string]*bintree{}},
-			"GWT":                   {confGitignoreGwt, map[string]*bintree{}},
-			"Gcov":                  {confGitignoreGcov, map[string]*bintree{}},
-			"GitBook":               {confGitignoreGitbook, map[string]*bintree{}},
-			"Go":                    {confGitignoreGo, map[string]*bintree{}},
-			"Gradle":                {confGitignoreGradle, map[string]*bintree{}},
-			"Grails":                {confGitignoreGrails, map[string]*bintree{}},
-			"Haskell":               {confGitignoreHaskell, map[string]*bintree{}},
-			"IGORPro":               {confGitignoreIgorpro, map[string]*bintree{}},
-			"IPythonNotebook":       {confGitignoreIpythonnotebook, map[string]*bintree{}},
-			"Idris":                 {confGitignoreIdris, map[string]*bintree{}},
-			"JDeveloper":            {confGitignoreJdeveloper, map[string]*bintree{}},
-			"Java":                  {confGitignoreJava, map[string]*bintree{}},
-			"Jboss":                 {confGitignoreJboss, map[string]*bintree{}},
-			"Jekyll":                {confGitignoreJekyll, map[string]*bintree{}},
-			"JetBrains":             {confGitignoreJetbrains, map[string]*bintree{}},
-			"Joomla":                {confGitignoreJoomla, map[string]*bintree{}},
-			"KDevelop4":             {confGitignoreKdevelop4, map[string]*bintree{}},
-			"Kate":                  {confGitignoreKate, map[string]*bintree{}},
-			"KiCAD":                 {confGitignoreKicad, map[string]*bintree{}},
-			"Kohana":                {confGitignoreKohana, map[string]*bintree{}},
-			"LabVIEW":               {confGitignoreLabview, map[string]*bintree{}},
-			"Laravel":               {confGitignoreLaravel, map[string]*bintree{}},
-			"Lazarus":               {confGitignoreLazarus, map[string]*bintree{}},
-			"Leiningen":             {confGitignoreLeiningen, map[string]*bintree{}},
-			"LemonStand":            {confGitignoreLemonstand, map[string]*bintree{}},
-			"LibreOffice":           {confGitignoreLibreoffice, map[string]*bintree{}},
-			"Lilypond":              {confGitignoreLilypond, map[string]*bintree{}},
-			"Linux":                 {confGitignoreLinux, map[string]*bintree{}},
-			"Lithium":               {confGitignoreLithium, map[string]*bintree{}},
-			"Lua":                   {confGitignoreLua, map[string]*bintree{}},
-			"LyX":                   {confGitignoreLyx, map[string]*bintree{}},
-			"Magento":               {confGitignoreMagento, map[string]*bintree{}},
-			"Matlab":                {confGitignoreMatlab, map[string]*bintree{}},
-			"Maven":                 {confGitignoreMaven, map[string]*bintree{}},
-			"Mercurial":             {confGitignoreMercurial, map[string]*bintree{}},
-			"Mercury":               {confGitignoreMercury, map[string]*bintree{}},
-			"MetaProgrammingSystem": {confGitignoreMetaprogrammingsystem, map[string]*bintree{}},
-			"MicrosoftOffice":       {confGitignoreMicrosoftoffice, map[string]*bintree{}},
-			"ModelSim":              {confGitignoreModelsim, map[string]*bintree{}},
-			"Momentics":             {confGitignoreMomentics, map[string]*bintree{}},
-			"MonoDevelop":           {confGitignoreMonodevelop, map[string]*bintree{}},
-			"Nanoc":                 {confGitignoreNanoc, map[string]*bintree{}},
-			"NetBeans":              {confGitignoreNetbeans, map[string]*bintree{}},
-			"Nim":                   {confGitignoreNim, map[string]*bintree{}},
-			"Ninja":                 {confGitignoreNinja, map[string]*bintree{}},
-			"Node":                  {confGitignoreNode, map[string]*bintree{}},
-			"NotepadPP":             {confGitignoreNotepadpp, map[string]*bintree{}},
-			"OCaml":                 {confGitignoreOcaml, map[string]*bintree{}},
-			"Objective-C":           {confGitignoreObjectiveC, map[string]*bintree{}},
-			"Opa":                   {confGitignoreOpa, map[string]*bintree{}},
-			"OpenCart":              {confGitignoreOpencart, map[string]*bintree{}},
-			"OracleForms":           {confGitignoreOracleforms, map[string]*bintree{}},
-			"Packer":                {confGitignorePacker, map[string]*bintree{}},
-			"Perl":                  {confGitignorePerl, map[string]*bintree{}},
-			"Phalcon":               {confGitignorePhalcon, map[string]*bintree{}},
-			"PhpStorm":              {confGitignorePhpstorm, map[string]*bintree{}},
-			"PlayFramework":         {confGitignorePlayframework, map[string]*bintree{}},
-			"Plone":                 {confGitignorePlone, map[string]*bintree{}},
-			"Prestashop":            {confGitignorePrestashop, map[string]*bintree{}},
-			"Processing":            {confGitignoreProcessing, map[string]*bintree{}},
-			"Python":                {confGitignorePython, map[string]*bintree{}},
-			"Qooxdoo":               {confGitignoreQooxdoo, map[string]*bintree{}},
-			"Qt":                    {confGitignoreQt, map[string]*bintree{}},
-			"R":                     {confGitignoreR, map[string]*bintree{}},
-			"ROS":                   {confGitignoreRos, map[string]*bintree{}},
-			"Rails":                 {confGitignoreRails, map[string]*bintree{}},
-			"Redcar":                {confGitignoreRedcar, map[string]*bintree{}},
-			"Redis":                 {confGitignoreRedis, map[string]*bintree{}},
-			"RhodesRhomobile":       {confGitignoreRhodesrhomobile, map[string]*bintree{}},
-			"Ruby":                  {confGitignoreRuby, map[string]*bintree{}},
-			"Rust":                  {confGitignoreRust, map[string]*bintree{}},
-			"SBT":                   {confGitignoreSbt, map[string]*bintree{}},
-			"SCons":                 {confGitignoreScons, map[string]*bintree{}},
-			"SVN":                   {confGitignoreSvn, map[string]*bintree{}},
-			"Sass":                  {confGitignoreSass, map[string]*bintree{}},
-			"Scala":                 {confGitignoreScala, map[string]*bintree{}},
-			"Scrivener":             {confGitignoreScrivener, map[string]*bintree{}},
-			"Sdcc":                  {confGitignoreSdcc, map[string]*bintree{}},
-			"SeamGen":               {confGitignoreSeamgen, map[string]*bintree{}},
-			"SketchUp":              {confGitignoreSketchup, map[string]*bintree{}},
-			"SlickEdit":             {confGitignoreSlickedit, map[string]*bintree{}},
-			"Stella":                {confGitignoreStella, map[string]*bintree{}},
-			"SublimeText":           {confGitignoreSublimetext, map[string]*bintree{}},
-			"SugarCRM":              {confGitignoreSugarcrm, map[string]*bintree{}},
-			"Swift":                 {confGitignoreSwift, map[string]*bintree{}},
-			"Symfony":               {confGitignoreSymfony, map[string]*bintree{}},
-			"SymphonyCMS":           {confGitignoreSymphonycms, map[string]*bintree{}},
-			"SynopsysVCS":           {confGitignoreSynopsysvcs, map[string]*bintree{}},
-			"Tags":                  {confGitignoreTags, map[string]*bintree{}},
-			"TeX":                   {confGitignoreTex, map[string]*bintree{}},
-			"TextMate":              {confGitignoreTextmate, map[string]*bintree{}},
-			"Textpattern":           {confGitignoreTextpattern, map[string]*bintree{}},
-			"TortoiseGit":           {confGitignoreTortoisegit, map[string]*bintree{}},
-			"TurboGears2":           {confGitignoreTurbogears2, map[string]*bintree{}},
-			"Typo3":                 {confGitignoreTypo3, map[string]*bintree{}},
-			"Umbraco":               {confGitignoreUmbraco, map[string]*bintree{}},
-			"Unity":                 {confGitignoreUnity, map[string]*bintree{}},
-			"UnrealEngine":          {confGitignoreUnrealengine, map[string]*bintree{}},
-			"VVVV":                  {confGitignoreVvvv, map[string]*bintree{}},
-			"Vagrant":               {confGitignoreVagrant, map[string]*bintree{}},
-			"Vim":                   {confGitignoreVim, map[string]*bintree{}},
-			"VirtualEnv":            {confGitignoreVirtualenv, map[string]*bintree{}},
-			"VisualStudio":          {confGitignoreVisualstudio, map[string]*bintree{}},
-			"VisualStudioCode":      {confGitignoreVisualstudiocode, map[string]*bintree{}},
-			"Waf":                   {confGitignoreWaf, map[string]*bintree{}},
-			"WebMethods":            {confGitignoreWebmethods, map[string]*bintree{}},
-			"WebStorm":              {confGitignoreWebstorm, map[string]*bintree{}},
-			"Windows":               {confGitignoreWindows, map[string]*bintree{}},
-			"WordPress":             {confGitignoreWordpress, map[string]*bintree{}},
-			"Xcode":                 {confGitignoreXcode, map[string]*bintree{}},
-			"XilinxISE":             {confGitignoreXilinxise, map[string]*bintree{}},
-			"Xojo":                  {confGitignoreXojo, map[string]*bintree{}},
-			"Yeoman":                {confGitignoreYeoman, map[string]*bintree{}},
-			"Yii":                   {confGitignoreYii, map[string]*bintree{}},
-			"ZendFramework":         {confGitignoreZendframework, map[string]*bintree{}},
-			"Zephir":                {confGitignoreZephir, map[string]*bintree{}},
-			"macOS":                 {confGitignoreMacos, map[string]*bintree{}},
+		"gitignore": &bintree{nil, map[string]*bintree{
+			"Actionscript":          &bintree{confGitignoreActionscript, map[string]*bintree{}},
+			"Ada":                   &bintree{confGitignoreAda, map[string]*bintree{}},
+			"Agda":                  &bintree{confGitignoreAgda, map[string]*bintree{}},
+			"Android":               &bintree{confGitignoreAndroid, map[string]*bintree{}},
+			"Anjuta":                &bintree{confGitignoreAnjuta, map[string]*bintree{}},
+			"AppEngine":             &bintree{confGitignoreAppengine, map[string]*bintree{}},
+			"AppceleratorTitanium":  &bintree{confGitignoreAppceleratortitanium, map[string]*bintree{}},
+			"ArchLinuxPackages":     &bintree{confGitignoreArchlinuxpackages, map[string]*bintree{}},
+			"Archives":              &bintree{confGitignoreArchives, map[string]*bintree{}},
+			"Autotools":             &bintree{confGitignoreAutotools, map[string]*bintree{}},
+			"BricxCC":               &bintree{confGitignoreBricxcc, map[string]*bintree{}},
+			"C":                     &bintree{confGitignoreC, map[string]*bintree{}},
+			"C Sharp":               &bintree{confGitignoreCSharp, map[string]*bintree{}},
+			"C++":                   &bintree{confGitignoreC2, map[string]*bintree{}},
+			"CFWheels":              &bintree{confGitignoreCfwheels, map[string]*bintree{}},
+			"CMake":                 &bintree{confGitignoreCmake, map[string]*bintree{}},
+			"CUDA":                  &bintree{confGitignoreCuda, map[string]*bintree{}},
+			"CVS":                   &bintree{confGitignoreCvs, map[string]*bintree{}},
+			"CakePHP":               &bintree{confGitignoreCakephp, map[string]*bintree{}},
+			"ChefCookbook":          &bintree{confGitignoreChefcookbook, map[string]*bintree{}},
+			"Cloud9":                &bintree{confGitignoreCloud9, map[string]*bintree{}},
+			"CodeIgniter":           &bintree{confGitignoreCodeigniter, map[string]*bintree{}},
+			"CodeKit":               &bintree{confGitignoreCodekit, map[string]*bintree{}},
+			"CommonLisp":            &bintree{confGitignoreCommonlisp, map[string]*bintree{}},
+			"Composer":              &bintree{confGitignoreComposer, map[string]*bintree{}},
+			"Concrete5":             &bintree{confGitignoreConcrete5, map[string]*bintree{}},
+			"Coq":                   &bintree{confGitignoreCoq, map[string]*bintree{}},
+			"CraftCMS":              &bintree{confGitignoreCraftcms, map[string]*bintree{}},
+			"DM":                    &bintree{confGitignoreDm, map[string]*bintree{}},
+			"Dart":                  &bintree{confGitignoreDart, map[string]*bintree{}},
+			"DartEditor":            &bintree{confGitignoreDarteditor, map[string]*bintree{}},
+			"Delphi":                &bintree{confGitignoreDelphi, map[string]*bintree{}},
+			"Dreamweaver":           &bintree{confGitignoreDreamweaver, map[string]*bintree{}},
+			"Drupal":                &bintree{confGitignoreDrupal, map[string]*bintree{}},
+			"EPiServer":             &bintree{confGitignoreEpiserver, map[string]*bintree{}},
+			"Eagle":                 &bintree{confGitignoreEagle, map[string]*bintree{}},
+			"Eclipse":               &bintree{confGitignoreEclipse, map[string]*bintree{}},
+			"EiffelStudio":          &bintree{confGitignoreEiffelstudio, map[string]*bintree{}},
+			"Elisp":                 &bintree{confGitignoreElisp, map[string]*bintree{}},
+			"Elixir":                &bintree{confGitignoreElixir, map[string]*bintree{}},
+			"Emacs":                 &bintree{confGitignoreEmacs, map[string]*bintree{}},
+			"Ensime":                &bintree{confGitignoreEnsime, map[string]*bintree{}},
+			"Erlang":                &bintree{confGitignoreErlang, map[string]*bintree{}},
+			"Espresso":              &bintree{confGitignoreEspresso, map[string]*bintree{}},
+			"ExpressionEngine":      &bintree{confGitignoreExpressionengine, map[string]*bintree{}},
+			"ExtJs":                 &bintree{confGitignoreExtjs, map[string]*bintree{}},
+			"Fancy":                 &bintree{confGitignoreFancy, map[string]*bintree{}},
+			"Finale":                &bintree{confGitignoreFinale, map[string]*bintree{}},
+			"FlexBuilder":           &bintree{confGitignoreFlexbuilder, map[string]*bintree{}},
+			"ForceDotCom":           &bintree{confGitignoreForcedotcom, map[string]*bintree{}},
+			"FuelPHP":               &bintree{confGitignoreFuelphp, map[string]*bintree{}},
+			"GWT":                   &bintree{confGitignoreGwt, map[string]*bintree{}},
+			"Gcov":                  &bintree{confGitignoreGcov, map[string]*bintree{}},
+			"GitBook":               &bintree{confGitignoreGitbook, map[string]*bintree{}},
+			"Go":                    &bintree{confGitignoreGo, map[string]*bintree{}},
+			"Gradle":                &bintree{confGitignoreGradle, map[string]*bintree{}},
+			"Grails":                &bintree{confGitignoreGrails, map[string]*bintree{}},
+			"Haskell":               &bintree{confGitignoreHaskell, map[string]*bintree{}},
+			"IGORPro":               &bintree{confGitignoreIgorpro, map[string]*bintree{}},
+			"IPythonNotebook":       &bintree{confGitignoreIpythonnotebook, map[string]*bintree{}},
+			"Idris":                 &bintree{confGitignoreIdris, map[string]*bintree{}},
+			"JDeveloper":            &bintree{confGitignoreJdeveloper, map[string]*bintree{}},
+			"Java":                  &bintree{confGitignoreJava, map[string]*bintree{}},
+			"Jboss":                 &bintree{confGitignoreJboss, map[string]*bintree{}},
+			"Jekyll":                &bintree{confGitignoreJekyll, map[string]*bintree{}},
+			"JetBrains":             &bintree{confGitignoreJetbrains, map[string]*bintree{}},
+			"Joomla":                &bintree{confGitignoreJoomla, map[string]*bintree{}},
+			"KDevelop4":             &bintree{confGitignoreKdevelop4, map[string]*bintree{}},
+			"Kate":                  &bintree{confGitignoreKate, map[string]*bintree{}},
+			"KiCAD":                 &bintree{confGitignoreKicad, map[string]*bintree{}},
+			"Kohana":                &bintree{confGitignoreKohana, map[string]*bintree{}},
+			"LabVIEW":               &bintree{confGitignoreLabview, map[string]*bintree{}},
+			"Laravel":               &bintree{confGitignoreLaravel, map[string]*bintree{}},
+			"Lazarus":               &bintree{confGitignoreLazarus, map[string]*bintree{}},
+			"Leiningen":             &bintree{confGitignoreLeiningen, map[string]*bintree{}},
+			"LemonStand":            &bintree{confGitignoreLemonstand, map[string]*bintree{}},
+			"LibreOffice":           &bintree{confGitignoreLibreoffice, map[string]*bintree{}},
+			"Lilypond":              &bintree{confGitignoreLilypond, map[string]*bintree{}},
+			"Linux":                 &bintree{confGitignoreLinux, map[string]*bintree{}},
+			"Lithium":               &bintree{confGitignoreLithium, map[string]*bintree{}},
+			"Lua":                   &bintree{confGitignoreLua, map[string]*bintree{}},
+			"LyX":                   &bintree{confGitignoreLyx, map[string]*bintree{}},
+			"Magento":               &bintree{confGitignoreMagento, map[string]*bintree{}},
+			"Matlab":                &bintree{confGitignoreMatlab, map[string]*bintree{}},
+			"Maven":                 &bintree{confGitignoreMaven, map[string]*bintree{}},
+			"Mercurial":             &bintree{confGitignoreMercurial, map[string]*bintree{}},
+			"Mercury":               &bintree{confGitignoreMercury, map[string]*bintree{}},
+			"MetaProgrammingSystem": &bintree{confGitignoreMetaprogrammingsystem, map[string]*bintree{}},
+			"MicrosoftOffice":       &bintree{confGitignoreMicrosoftoffice, map[string]*bintree{}},
+			"ModelSim":              &bintree{confGitignoreModelsim, map[string]*bintree{}},
+			"Momentics":             &bintree{confGitignoreMomentics, map[string]*bintree{}},
+			"MonoDevelop":           &bintree{confGitignoreMonodevelop, map[string]*bintree{}},
+			"Nanoc":                 &bintree{confGitignoreNanoc, map[string]*bintree{}},
+			"NetBeans":              &bintree{confGitignoreNetbeans, map[string]*bintree{}},
+			"Nim":                   &bintree{confGitignoreNim, map[string]*bintree{}},
+			"Ninja":                 &bintree{confGitignoreNinja, map[string]*bintree{}},
+			"Node":                  &bintree{confGitignoreNode, map[string]*bintree{}},
+			"NotepadPP":             &bintree{confGitignoreNotepadpp, map[string]*bintree{}},
+			"OCaml":                 &bintree{confGitignoreOcaml, map[string]*bintree{}},
+			"Objective-C":           &bintree{confGitignoreObjectiveC, map[string]*bintree{}},
+			"Opa":                   &bintree{confGitignoreOpa, map[string]*bintree{}},
+			"OpenCart":              &bintree{confGitignoreOpencart, map[string]*bintree{}},
+			"OracleForms":           &bintree{confGitignoreOracleforms, map[string]*bintree{}},
+			"Packer":                &bintree{confGitignorePacker, map[string]*bintree{}},
+			"Perl":                  &bintree{confGitignorePerl, map[string]*bintree{}},
+			"Phalcon":               &bintree{confGitignorePhalcon, map[string]*bintree{}},
+			"PhpStorm":              &bintree{confGitignorePhpstorm, map[string]*bintree{}},
+			"PlayFramework":         &bintree{confGitignorePlayframework, map[string]*bintree{}},
+			"Plone":                 &bintree{confGitignorePlone, map[string]*bintree{}},
+			"Prestashop":            &bintree{confGitignorePrestashop, map[string]*bintree{}},
+			"Processing":            &bintree{confGitignoreProcessing, map[string]*bintree{}},
+			"Python":                &bintree{confGitignorePython, map[string]*bintree{}},
+			"Qooxdoo":               &bintree{confGitignoreQooxdoo, map[string]*bintree{}},
+			"Qt":                    &bintree{confGitignoreQt, map[string]*bintree{}},
+			"R":                     &bintree{confGitignoreR, map[string]*bintree{}},
+			"ROS":                   &bintree{confGitignoreRos, map[string]*bintree{}},
+			"Rails":                 &bintree{confGitignoreRails, map[string]*bintree{}},
+			"Redcar":                &bintree{confGitignoreRedcar, map[string]*bintree{}},
+			"Redis":                 &bintree{confGitignoreRedis, map[string]*bintree{}},
+			"RhodesRhomobile":       &bintree{confGitignoreRhodesrhomobile, map[string]*bintree{}},
+			"Ruby":                  &bintree{confGitignoreRuby, map[string]*bintree{}},
+			"Rust":                  &bintree{confGitignoreRust, map[string]*bintree{}},
+			"SBT":                   &bintree{confGitignoreSbt, map[string]*bintree{}},
+			"SCons":                 &bintree{confGitignoreScons, map[string]*bintree{}},
+			"SVN":                   &bintree{confGitignoreSvn, map[string]*bintree{}},
+			"Sass":                  &bintree{confGitignoreSass, map[string]*bintree{}},
+			"Scala":                 &bintree{confGitignoreScala, map[string]*bintree{}},
+			"Scrivener":             &bintree{confGitignoreScrivener, map[string]*bintree{}},
+			"Sdcc":                  &bintree{confGitignoreSdcc, map[string]*bintree{}},
+			"SeamGen":               &bintree{confGitignoreSeamgen, map[string]*bintree{}},
+			"SketchUp":              &bintree{confGitignoreSketchup, map[string]*bintree{}},
+			"SlickEdit":             &bintree{confGitignoreSlickedit, map[string]*bintree{}},
+			"Stella":                &bintree{confGitignoreStella, map[string]*bintree{}},
+			"SublimeText":           &bintree{confGitignoreSublimetext, map[string]*bintree{}},
+			"SugarCRM":              &bintree{confGitignoreSugarcrm, map[string]*bintree{}},
+			"Swift":                 &bintree{confGitignoreSwift, map[string]*bintree{}},
+			"Symfony":               &bintree{confGitignoreSymfony, map[string]*bintree{}},
+			"SymphonyCMS":           &bintree{confGitignoreSymphonycms, map[string]*bintree{}},
+			"SynopsysVCS":           &bintree{confGitignoreSynopsysvcs, map[string]*bintree{}},
+			"Tags":                  &bintree{confGitignoreTags, map[string]*bintree{}},
+			"TeX":                   &bintree{confGitignoreTex, map[string]*bintree{}},
+			"TextMate":              &bintree{confGitignoreTextmate, map[string]*bintree{}},
+			"Textpattern":           &bintree{confGitignoreTextpattern, map[string]*bintree{}},
+			"TortoiseGit":           &bintree{confGitignoreTortoisegit, map[string]*bintree{}},
+			"TurboGears2":           &bintree{confGitignoreTurbogears2, map[string]*bintree{}},
+			"Typo3":                 &bintree{confGitignoreTypo3, map[string]*bintree{}},
+			"Umbraco":               &bintree{confGitignoreUmbraco, map[string]*bintree{}},
+			"Unity":                 &bintree{confGitignoreUnity, map[string]*bintree{}},
+			"UnrealEngine":          &bintree{confGitignoreUnrealengine, map[string]*bintree{}},
+			"VVVV":                  &bintree{confGitignoreVvvv, map[string]*bintree{}},
+			"Vagrant":               &bintree{confGitignoreVagrant, map[string]*bintree{}},
+			"Vim":                   &bintree{confGitignoreVim, map[string]*bintree{}},
+			"VirtualEnv":            &bintree{confGitignoreVirtualenv, map[string]*bintree{}},
+			"VisualStudio":          &bintree{confGitignoreVisualstudio, map[string]*bintree{}},
+			"VisualStudioCode":      &bintree{confGitignoreVisualstudiocode, map[string]*bintree{}},
+			"Waf":                   &bintree{confGitignoreWaf, map[string]*bintree{}},
+			"WebMethods":            &bintree{confGitignoreWebmethods, map[string]*bintree{}},
+			"WebStorm":              &bintree{confGitignoreWebstorm, map[string]*bintree{}},
+			"Windows":               &bintree{confGitignoreWindows, map[string]*bintree{}},
+			"WordPress":             &bintree{confGitignoreWordpress, map[string]*bintree{}},
+			"Xcode":                 &bintree{confGitignoreXcode, map[string]*bintree{}},
+			"XilinxISE":             &bintree{confGitignoreXilinxise, map[string]*bintree{}},
+			"Xojo":                  &bintree{confGitignoreXojo, map[string]*bintree{}},
+			"Yeoman":                &bintree{confGitignoreYeoman, map[string]*bintree{}},
+			"Yii":                   &bintree{confGitignoreYii, map[string]*bintree{}},
+			"ZendFramework":         &bintree{confGitignoreZendframework, map[string]*bintree{}},
+			"Zephir":                &bintree{confGitignoreZephir, map[string]*bintree{}},
+			"macOS":                 &bintree{confGitignoreMacos, map[string]*bintree{}},
 		}},
-		"label": {nil, map[string]*bintree{
-			"Default": {confLabelDefault, map[string]*bintree{}},
+		"label": &bintree{nil, map[string]*bintree{
+			"Default": &bintree{confLabelDefault, map[string]*bintree{}},
 		}},
-		"license": {nil, map[string]*bintree{
-			"Abstyles License":                        {confLicenseAbstylesLicense, map[string]*bintree{}},
-			"Academic Free License v1.1":              {confLicenseAcademicFreeLicenseV11, map[string]*bintree{}},
-			"Academic Free License v1.2":              {confLicenseAcademicFreeLicenseV12, map[string]*bintree{}},
-			"Academic Free License v2.0":              {confLicenseAcademicFreeLicenseV20, map[string]*bintree{}},
-			"Academic Free License v2.1":              {confLicenseAcademicFreeLicenseV21, map[string]*bintree{}},
-			"Academic Free License v3.0":              {confLicenseAcademicFreeLicenseV30, map[string]*bintree{}},
-			"Affero General Public License v1.0":      {confLicenseAfferoGeneralPublicLicenseV10, map[string]*bintree{}},
-			"Apache License 1.0":                      {confLicenseApacheLicense10, map[string]*bintree{}},
-			"Apache License 1.1":                      {confLicenseApacheLicense11, map[string]*bintree{}},
-			"Apache License 2.0":                      {confLicenseApacheLicense20, map[string]*bintree{}},
-			"Artistic License 1.0":                    {confLicenseArtisticLicense10, map[string]*bintree{}},
-			"Artistic License 2.0":                    {confLicenseArtisticLicense20, map[string]*bintree{}},
-			"BSD 2-clause License":                    {confLicenseBsd2ClauseLicense, map[string]*bintree{}},
-			"BSD 3-clause License":                    {confLicenseBsd3ClauseLicense, map[string]*bintree{}},
-			"BSD 4-clause License":                    {confLicenseBsd4ClauseLicense, map[string]*bintree{}},
-			"Creative Commons CC0 1.0 Universal":      {confLicenseCreativeCommonsCc010Universal, map[string]*bintree{}},
-			"Eclipse Public License 1.0":              {confLicenseEclipsePublicLicense10, map[string]*bintree{}},
-			"Educational Community License v1.0":      {confLicenseEducationalCommunityLicenseV10, map[string]*bintree{}},
-			"Educational Community License v2.0":      {confLicenseEducationalCommunityLicenseV20, map[string]*bintree{}},
-			"GNU Affero General Public License v3.0":  {confLicenseGnuAfferoGeneralPublicLicenseV30, map[string]*bintree{}},
-			"GNU Free Documentation License v1.1":     {confLicenseGnuFreeDocumentationLicenseV11, map[string]*bintree{}},
-			"GNU Free Documentation License v1.2":     {confLicenseGnuFreeDocumentationLicenseV12, map[string]*bintree{}},
-			"GNU Free Documentation License v1.3":     {confLicenseGnuFreeDocumentationLicenseV13, map[string]*bintree{}},
-			"GNU General Public License v1.0":         {confLicenseGnuGeneralPublicLicenseV10, map[string]*bintree{}},
-			"GNU General Public License v2.0":         {confLicenseGnuGeneralPublicLicenseV20, map[string]*bintree{}},
-			"GNU General Public License v3.0":         {confLicenseGnuGeneralPublicLicenseV30, map[string]*bintree{}},
-			"GNU Lesser General Public License v2.1":  {confLicenseGnuLesserGeneralPublicLicenseV21, map[string]*bintree{}},
-			"GNU Lesser General Public License v3.0":  {confLicenseGnuLesserGeneralPublicLicenseV30, map[string]*bintree{}},
-			"GNU Library General Public License v2.0": {confLicenseGnuLibraryGeneralPublicLicenseV20, map[string]*bintree{}},
-			"ISC license":                             {confLicenseIscLicense, map[string]*bintree{}},
-			"MIT License":                             {confLicenseMitLicense, map[string]*bintree{}},
-			"Mozilla Public License 1.0":              {confLicenseMozillaPublicLicense10, map[string]*bintree{}},
-			"Mozilla Public License 1.1":              {confLicenseMozillaPublicLicense11, map[string]*bintree{}},
-			"Mozilla Public License 2.0":              {confLicenseMozillaPublicLicense20, map[string]*bintree{}},
+		"license": &bintree{nil, map[string]*bintree{
+			"Abstyles License":                        &bintree{confLicenseAbstylesLicense, map[string]*bintree{}},
+			"Academic Free License v1.1":              &bintree{confLicenseAcademicFreeLicenseV11, map[string]*bintree{}},
+			"Academic Free License v1.2":              &bintree{confLicenseAcademicFreeLicenseV12, map[string]*bintree{}},
+			"Academic Free License v2.0":              &bintree{confLicenseAcademicFreeLicenseV20, map[string]*bintree{}},
+			"Academic Free License v2.1":              &bintree{confLicenseAcademicFreeLicenseV21, map[string]*bintree{}},
+			"Academic Free License v3.0":              &bintree{confLicenseAcademicFreeLicenseV30, map[string]*bintree{}},
+			"Affero General Public License v1.0":      &bintree{confLicenseAfferoGeneralPublicLicenseV10, map[string]*bintree{}},
+			"Apache License 1.0":                      &bintree{confLicenseApacheLicense10, map[string]*bintree{}},
+			"Apache License 1.1":                      &bintree{confLicenseApacheLicense11, map[string]*bintree{}},
+			"Apache License 2.0":                      &bintree{confLicenseApacheLicense20, map[string]*bintree{}},
+			"Artistic License 1.0":                    &bintree{confLicenseArtisticLicense10, map[string]*bintree{}},
+			"Artistic License 2.0":                    &bintree{confLicenseArtisticLicense20, map[string]*bintree{}},
+			"BSD 2-clause License":                    &bintree{confLicenseBsd2ClauseLicense, map[string]*bintree{}},
+			"BSD 3-clause License":                    &bintree{confLicenseBsd3ClauseLicense, map[string]*bintree{}},
+			"BSD 4-clause License":                    &bintree{confLicenseBsd4ClauseLicense, map[string]*bintree{}},
+			"Creative Commons CC0 1.0 Universal":      &bintree{confLicenseCreativeCommonsCc010Universal, map[string]*bintree{}},
+			"Eclipse Public License 1.0":              &bintree{confLicenseEclipsePublicLicense10, map[string]*bintree{}},
+			"Educational Community License v1.0":      &bintree{confLicenseEducationalCommunityLicenseV10, map[string]*bintree{}},
+			"Educational Community License v2.0":      &bintree{confLicenseEducationalCommunityLicenseV20, map[string]*bintree{}},
+			"GNU Affero General Public License v3.0":  &bintree{confLicenseGnuAfferoGeneralPublicLicenseV30, map[string]*bintree{}},
+			"GNU Free Documentation License v1.1":     &bintree{confLicenseGnuFreeDocumentationLicenseV11, map[string]*bintree{}},
+			"GNU Free Documentation License v1.2":     &bintree{confLicenseGnuFreeDocumentationLicenseV12, map[string]*bintree{}},
+			"GNU Free Documentation License v1.3":     &bintree{confLicenseGnuFreeDocumentationLicenseV13, map[string]*bintree{}},
+			"GNU General Public License v1.0":         &bintree{confLicenseGnuGeneralPublicLicenseV10, map[string]*bintree{}},
+			"GNU General Public License v2.0":         &bintree{confLicenseGnuGeneralPublicLicenseV20, map[string]*bintree{}},
+			"GNU General Public License v3.0":         &bintree{confLicenseGnuGeneralPublicLicenseV30, map[string]*bintree{}},
+			"GNU Lesser General Public License v2.1":  &bintree{confLicenseGnuLesserGeneralPublicLicenseV21, map[string]*bintree{}},
+			"GNU Lesser General Public License v3.0":  &bintree{confLicenseGnuLesserGeneralPublicLicenseV30, map[string]*bintree{}},
+			"GNU Library General Public License v2.0": &bintree{confLicenseGnuLibraryGeneralPublicLicenseV20, map[string]*bintree{}},
+			"ISC license":                             &bintree{confLicenseIscLicense, map[string]*bintree{}},
+			"MIT License":                             &bintree{confLicenseMitLicense, map[string]*bintree{}},
+			"Mozilla Public License 1.0":              &bintree{confLicenseMozillaPublicLicense10, map[string]*bintree{}},
+			"Mozilla Public License 1.1":              &bintree{confLicenseMozillaPublicLicense11, map[string]*bintree{}},
+			"Mozilla Public License 2.0":              &bintree{confLicenseMozillaPublicLicense20, map[string]*bintree{}},
 		}},
-		"locale": {nil, map[string]*bintree{
-			"locale_bg-BG.ini": {confLocaleLocale_bgBgIni, map[string]*bintree{}},
-			"locale_cs-CZ.ini": {confLocaleLocale_csCzIni, map[string]*bintree{}},
-			"locale_de-DE.ini": {confLocaleLocale_deDeIni, map[string]*bintree{}},
-			"locale_en-GB.ini": {confLocaleLocale_enGbIni, map[string]*bintree{}},
-			"locale_en-US.ini": {confLocaleLocale_enUsIni, map[string]*bintree{}},
-			"locale_es-ES.ini": {confLocaleLocale_esEsIni, map[string]*bintree{}},
-			"locale_fa-IR.ini": {confLocaleLocale_faIrIni, map[string]*bintree{}},
-			"locale_fi-FI.ini": {confLocaleLocale_fiFiIni, map[string]*bintree{}},
-			"locale_fr-FR.ini": {confLocaleLocale_frFrIni, map[string]*bintree{}},
-			"locale_gl-ES.ini": {confLocaleLocale_glEsIni, map[string]*bintree{}},
-			"locale_hu-HU.ini": {confLocaleLocale_huHuIni, map[string]*bintree{}},
-			"locale_id-ID.ini": {confLocaleLocale_idIdIni, map[string]*bintree{}},
-			"locale_it-IT.ini": {confLocaleLocale_itItIni, map[string]*bintree{}},
-			"locale_ja-JP.ini": {confLocaleLocale_jaJpIni, map[string]*bintree{}},
-			"locale_ko-KR.ini": {confLocaleLocale_koKrIni, map[string]*bintree{}},
-			"locale_lv-LV.ini": {confLocaleLocale_lvLvIni, map[string]*bintree{}},
-			"locale_nl-NL.ini": {confLocaleLocale_nlNlIni, map[string]*bintree{}},
-			"locale_pl-PL.ini": {confLocaleLocale_plPlIni, map[string]*bintree{}},
-			"locale_pt-BR.ini": {confLocaleLocale_ptBrIni, map[string]*bintree{}},
-			"locale_pt-PT.ini": {confLocaleLocale_ptPtIni, map[string]*bintree{}},
-			"locale_ru-RU.ini": {confLocaleLocale_ruRuIni, map[string]*bintree{}},
-			"locale_sk-SK.ini": {confLocaleLocale_skSkIni, map[string]*bintree{}},
-			"locale_sr-SP.ini": {confLocaleLocale_srSpIni, map[string]*bintree{}},
-			"locale_sv-SE.ini": {confLocaleLocale_svSeIni, map[string]*bintree{}},
-			"locale_tr-TR.ini": {confLocaleLocale_trTrIni, map[string]*bintree{}},
-			"locale_uk-UA.ini": {confLocaleLocale_ukUaIni, map[string]*bintree{}},
-			"locale_vi-VN.ini": {confLocaleLocale_viVnIni, map[string]*bintree{}},
-			"locale_zh-CN.ini": {confLocaleLocale_zhCnIni, map[string]*bintree{}},
-			"locale_zh-HK.ini": {confLocaleLocale_zhHkIni, map[string]*bintree{}},
-			"locale_zh-TW.ini": {confLocaleLocale_zhTwIni, map[string]*bintree{}},
+		"locale": &bintree{nil, map[string]*bintree{
+			"locale_bg-BG.ini": &bintree{confLocaleLocale_bgBgIni, map[string]*bintree{}},
+			"locale_cs-CZ.ini": &bintree{confLocaleLocale_csCzIni, map[string]*bintree{}},
+			"locale_de-DE.ini": &bintree{confLocaleLocale_deDeIni, map[string]*bintree{}},
+			"locale_en-GB.ini": &bintree{confLocaleLocale_enGbIni, map[string]*bintree{}},
+			"locale_en-US.ini": &bintree{confLocaleLocale_enUsIni, map[string]*bintree{}},
+			"locale_es-ES.ini": &bintree{confLocaleLocale_esEsIni, map[string]*bintree{}},
+			"locale_fa-IR.ini": &bintree{confLocaleLocale_faIrIni, map[string]*bintree{}},
+			"locale_fi-FI.ini": &bintree{confLocaleLocale_fiFiIni, map[string]*bintree{}},
+			"locale_fr-FR.ini": &bintree{confLocaleLocale_frFrIni, map[string]*bintree{}},
+			"locale_gl-ES.ini": &bintree{confLocaleLocale_glEsIni, map[string]*bintree{}},
+			"locale_hu-HU.ini": &bintree{confLocaleLocale_huHuIni, map[string]*bintree{}},
+			"locale_id-ID.ini": &bintree{confLocaleLocale_idIdIni, map[string]*bintree{}},
+			"locale_it-IT.ini": &bintree{confLocaleLocale_itItIni, map[string]*bintree{}},
+			"locale_ja-JP.ini": &bintree{confLocaleLocale_jaJpIni, map[string]*bintree{}},
+			"locale_ko-KR.ini": &bintree{confLocaleLocale_koKrIni, map[string]*bintree{}},
+			"locale_lv-LV.ini": &bintree{confLocaleLocale_lvLvIni, map[string]*bintree{}},
+			"locale_nl-NL.ini": &bintree{confLocaleLocale_nlNlIni, map[string]*bintree{}},
+			"locale_pl-PL.ini": &bintree{confLocaleLocale_plPlIni, map[string]*bintree{}},
+			"locale_pt-BR.ini": &bintree{confLocaleLocale_ptBrIni, map[string]*bintree{}},
+			"locale_pt-PT.ini": &bintree{confLocaleLocale_ptPtIni, map[string]*bintree{}},
+			"locale_ru-RU.ini": &bintree{confLocaleLocale_ruRuIni, map[string]*bintree{}},
+			"locale_sk-SK.ini": &bintree{confLocaleLocale_skSkIni, map[string]*bintree{}},
+			"locale_sr-SP.ini": &bintree{confLocaleLocale_srSpIni, map[string]*bintree{}},
+			"locale_sv-SE.ini": &bintree{confLocaleLocale_svSeIni, map[string]*bintree{}},
+			"locale_tr-TR.ini": &bintree{confLocaleLocale_trTrIni, map[string]*bintree{}},
+			"locale_uk-UA.ini": &bintree{confLocaleLocale_ukUaIni, map[string]*bintree{}},
+			"locale_vi-VN.ini": &bintree{confLocaleLocale_viVnIni, map[string]*bintree{}},
+			"locale_zh-CN.ini": &bintree{confLocaleLocale_zhCnIni, map[string]*bintree{}},
+			"locale_zh-HK.ini": &bintree{confLocaleLocale_zhHkIni, map[string]*bintree{}},
+			"locale_zh-TW.ini": &bintree{confLocaleLocale_zhTwIni, map[string]*bintree{}},
 		}},
-		"readme": {nil, map[string]*bintree{
-			"Default": {confReadmeDefault, map[string]*bintree{}},
+		"readme": &bintree{nil, map[string]*bintree{
+			"Default": &bintree{confReadmeDefault, map[string]*bintree{}},
 		}},
 	}},
 }}
