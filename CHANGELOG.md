@@ -12,6 +12,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Removed
 
+- ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
 - Configuration section `[mailer]` is no longer used.
 - Configuration section `[service]` is no longer used.
 - Configuration option `APP_NAME` is no longer used.
