@@ -1,5 +1,8 @@
 name: LSIF
-on: [push]
+on:
+  push:
+    paths:
+      - '**.go'
 jobs:
   lsif-go:
     if: github.repository == 'gogs/gogs'
