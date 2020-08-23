@@ -1,7 +1,8 @@
 #!/bin/sh
 
 if test -f ./setup; then
+    # shellcheck disable=SC2039,SC1091
     source ./setup
 fi
 
-exec gosu $USER /app/gogs/gogs web
+exec gosu "$USER" /app/gogs/gogs web
