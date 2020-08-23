@@ -33,4 +33,4 @@ before:
 after:
   - mv bin/gogs gogs
 after_install: ./.packager/hooks/postinst
-buildpack: https://github.com/heroku/heroku-buildpack-go.git
+buildpack: https://github.com/heroku/heroku-buildpack-go.git#main
