@@ -1,6 +1,7 @@
 #!/bin/sh
 
 if test -f ./setup; then
+    # shellcheck disable=SC2039,SC1091
     source ./setup
 fi
 
