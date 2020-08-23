@@ -30,7 +30,9 @@ parse_generate_cron_expression() {
 	CRON_EXPR_DAYS="*"
 	CRON_EXPR_MONTHS="*"
 
+    # shellcheck disable=SC2001
 	TIME_INTERVAL=$(echo "${BACKUP_INTERVAL}" | sed -e 's/[hdM]$//')
+    # shellcheck disable=SC2001
 	TIME_UNIT=$(echo "${BACKUP_INTERVAL}" | sed -e 's/^[0-9]\+//')
 
 	if [ "${TIME_UNIT}" = "h" ]; then
@@ -74,7 +76,9 @@ parse_generate_cron_expression() {
 parse_generate_retention_expression() {
 	FIND_TIME_EXPR='mtime'
 
+	# shellcheck disable=SC2001
 	TIME_INTERVAL=$(echo "${BACKUP_RETENTION}" | sed -e 's/[mhdM]$//')
+	# shellcheck disable=SC2001
 	TIME_UNIT=$(echo "${BACKUP_RETENTION}" | sed -e 's/^[0-9]\+//')
 
 	if [ "${TIME_UNIT}" = "m" ]; then
