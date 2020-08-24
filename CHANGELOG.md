@@ -10,6 +10,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- The `updated_at` field is now correctly updated when updates an issue. [#6209](https://github.com/gogs/gogs/issues/6209)
+
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
