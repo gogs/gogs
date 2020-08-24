@@ -408,6 +408,7 @@ func (issue *Issue) ReadBy(uid int64) error {
 }
 
 func updateIssueCols(e Engine, issue *Issue, cols ...string) error {
+	cols = append(cols, "updated_unix")
 	_, err := e.ID(issue.ID).Cols(cols...).Update(issue)
 	return err
 }
