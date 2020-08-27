@@ -8,6 +8,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Changed
 
+- The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
+
 ### Fixed
 
 ### Removed
