@@ -1,8 +1,6 @@
 name: Go
 on:
   push:
-    branches: [master]
-  pull_request:
     paths:
       - '**.go'
 env:
