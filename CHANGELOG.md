@@ -11,7 +11,6 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - The `updated_at` field is now correctly updated when updates an issue. [#6209](https://github.com/gogs/gogs/issues/6209)
-- Fixed a regression which created `login_source.cfg` column to have `VARCHAR(255)` instead of `TEXT` in MySQL. [#6280](https://github.com/gogs/gogs/issues/6280)
 
 ### Removed
 
@@ -32,6 +31,12 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used.
 - Configuration option `[database] DB_TYPE` is no longer used.
 - Configuration option `[database] PASSWD` is no longer used.
+
+## 0.12.1
+
+### Fixed
+
+- Fixed a regression which created `login_source.cfg` column to have `VARCHAR(255)` instead of `TEXT` in MySQL. [#6280](https://github.com/gogs/gogs/issues/6280)
 
 ## 0.12.0
 
