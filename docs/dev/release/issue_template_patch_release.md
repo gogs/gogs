@@ -2,7 +2,7 @@
 
 On develop branch:
 
-- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/master/CHANGELOG.md) to include entries for the current patch release.
+- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release.
 
 ## During release
 
@@ -11,8 +11,8 @@ On release branch:
 - [ ] Cherry-pick commits from develop branch:
 	- [ ] _link to the commit_
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
-- [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/master/gogs.go#L21) to the current release, e.g. `0.12.0` -> `0.12.1`.
-- [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/master/CHANGELOG.md) for the current patch release and all previous releases with same minor version.
+- [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L21) to the current release, e.g. `0.12.0` -> `0.12.1`.
+- [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version.
 - [ ] Update all previous GitHub releases with same minor version with the warning:
     ```
     **ℹ️ Heads up! There is a new patch release [0.12.1](https://github.com/gogs/gogs/releases/tag/v0.12.1) available, we recommend directly installing or upgrading to that version.**
