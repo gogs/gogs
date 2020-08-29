@@ -121,7 +121,7 @@ func InstallInit(c *context.Context) {
 	c.Title("install.install")
 	c.PageIs("Install")
 
-	c.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "MSSQL", "SQLite3"}
+	c.Data["DbOptions"] = []string{"MySQL", "PostgreSQL", "SQLite3"}
 }
 
 func Install(c *context.Context) {
@@ -137,8 +137,6 @@ func Install(c *context.Context) {
 	switch conf.Database.Type {
 	case "mysql":
 		c.Data["CurDbOption"] = "MySQL"
-	case "mssql":
-		c.Data["CurDbOption"] = "MSSQL"
 	case "sqlite3":
 		c.Data["CurDbOption"] = "SQLite3"
 	}
@@ -210,7 +208,6 @@ func InstallPost(c *context.Context, f form.Install) {
 	dbTypes := map[string]string{
 		"PostgreSQL": "postgres",
 		"MySQL":      "mysql",
-		"MSSQL":      "mssql",
 		"SQLite3":    "sqlite3",
 	}
 	conf.Database.Type = dbTypes[f.DbType]
