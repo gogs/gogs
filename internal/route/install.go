@@ -342,15 +342,14 @@ func InstallPost(c *context.Context, f form.Install) {
 	} else {
 		cfg.Section("mailer").Key("ENABLED").SetValue("false")
 	}
-	cfg.Section("service").Key("REGISTER_EMAIL_CONFIRM").SetValue(com.ToStr(f.RegisterConfirm))
-	cfg.Section("service").Key("ENABLE_NOTIFY_MAIL").SetValue(com.ToStr(f.MailNotify))
-
 	cfg.Section("server").Key("OFFLINE_MODE").SetValue(com.ToStr(f.OfflineMode))
+	cfg.Section("auth").Key("REQUIRE_EMAIL_CONFIRMATION").SetValue(com.ToStr(f.RegisterConfirm))
+	cfg.Section("auth").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(f.DisableRegistration))
+	cfg.Section("auth").Key("ENABLE_REGISTRATION_CAPTCHA").SetValue(com.ToStr(f.EnableCaptcha))
+	cfg.Section("auth").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(f.RequireSignInView))
+	cfg.Section("user").Key("ENABLE_EMAIL_NOTIFICATION").SetValue(com.ToStr(f.MailNotify))
 	cfg.Section("picture").Key("DISABLE_GRAVATAR").SetValue(com.ToStr(f.DisableGravatar))
 	cfg.Section("picture").Key("ENABLE_FEDERATED_AVATAR").SetValue(com.ToStr(f.EnableFederatedAvatar))
-	cfg.Section("service").Key("DISABLE_REGISTRATION").SetValue(com.ToStr(f.DisableRegistration))
-	cfg.Section("service").Key("ENABLE_CAPTCHA").SetValue(com.ToStr(f.EnableCaptcha))
-	cfg.Section("service").Key("REQUIRE_SIGNIN_VIEW").SetValue(com.ToStr(f.RequireSignInView))
 
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
