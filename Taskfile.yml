@@ -1,0 +1,68 @@
+version: '3'
+
+tasks:
+  web:
+    deps: [build]
+    cmds:
+      - ./gogs web
+    sources:
+      - gogs.go
+      - internal/**/*.go
+
+  build:
+    cmds:
+      - go build -v
+        -ldflags '
+          -X "{{.PKG_PATH}}.BuildTime={{.BUILD_TIME}}"
+          -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"
+        '
+        -tags '{{.TAGS}}'
+        -trimpath -o gogs
+    vars:
+      PKG_PATH: gogs.io/gogs/internal/conf
+      BUILD_TIME:
+        sh: date -u '+%Y-%m-%d %I:%M:%S %Z'
+      BUILD_COMMIT:
+        sh: git rev-parse HEAD
+
+  generate:
+    deps: [clean]
+    cmds:
+      - go generate internal/assets/conf/conf.go
+      - go generate internal/assets/templates/templates.go
+      - go generate internal/assets/public/public.go
+
+  test:
+    cmds:
+      - go test -cover -race ./...
+
+  clean:
+    cmds:
+      - find . -name "*.DS_Store" -type f -delete
+
+  release:
+    deps: [build]
+    cmds:
+      - rm -rf {{.RELEASE_GOGS}}
+      - mkdir -p {{.RELEASE_GOGS}}
+      - cp -r gogs LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
+      - cd {{.RELEASE_ROOT}} && zip -r gogs.$(NOW).zip "gogs"
+    vars:
+      RELEASE_ROOT: release
+      RELEASE_GOGS: release/gogs
+
+  less:
+    cmds:
+      - lessc --clean-css --source-map "public/less/gogs.less" public/css/gogs.min.css
+
+  fixme:
+    cmds:
+      - grep -rnw "FIXME" internal
+
+  todo:
+    cmds:
+      - grep -rnw "TODO" internal
+
+  legacy:
+    cmds:
+      - grep -rnw "\(LEGACY\|Deprecated\)" internal

@@ -25,7 +25,7 @@ Gogs has the following dependencies:
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
 - [Go](https://golang.org/doc/install) (v1.14 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
-- [GNU Make](https://www.gnu.org/software/make/)
+- [Task](https://github.com/go-task/task)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
@@ -38,7 +38,7 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git go-bindata npm
+    brew install go postgresql git go-bindata npm go-task/tap/go-task
     npm install -g less
     npm install -g less-plugin-clean-css
     ```
@@ -78,6 +78,7 @@ Gogs has the following dependencies:
     npm install -g less
     # Watch out, it is NOT github.com/go-bindata/go-bindata!
     go get -u github.com/kevinburke/go-bindata/...
+    go get go-task/task/cmd/task
     ```
 
 1. Configure startup services:
@@ -130,21 +131,23 @@ Create a `custom/conf/app.ini` file inside the repository and put the following 
 
 ```ini
 [database]
-DB_TYPE = postgres
+TYPE = postgres
 HOST = 127.0.0.1:5432
 NAME = gogs
 USER = gogs
-PASSWD = <YOUR PASSWORD HERE>
+PASSWORD = <YOUR PASSWORD HERE>
 SSL_MODE = disable
 ```
 
 ## Step 5: Start the server
 
+The following command will start the web server and automatically recompile and restart the server if any Go files changed:
+
 ```bash
-make web
+task web --watch
 ```
 
-You would have to re-run this command after changing Go files, or any file under `conf/`, `template/` and `public/` directories.
+**NOTE** If you changed any file under `conf/`, `template/` or `public/` directory, be sure to run `task generate` afterwards!
 
 ## Other nice things
 
