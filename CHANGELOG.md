@@ -6,6 +6,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
+- An unlisted option is added when create or migrate a repository. Unlisted repositories are public but not being listed for users without direct access in the UI. [#5733](https://github.com/gogs/gogs/issues/5733)
+
 ### Changed
 
 - The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
