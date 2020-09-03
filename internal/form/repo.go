@@ -26,6 +26,7 @@ type CreateRepo struct {
 	UserID      int64  `binding:"Required"`
 	RepoName    string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private     bool
+	Unlisted    bool
 	Description string `binding:"MaxSize(512)"`
 	AutoInit    bool
 	Gitignores  string
@@ -45,6 +46,7 @@ type MigrateRepo struct {
 	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `json:"mirror"`
 	Private      bool   `json:"private"`
+	Unlisted     bool   `json:"unlisted"`
 	Description  string `json:"description" binding:"MaxSize(512)"`
 }
 
@@ -88,6 +90,7 @@ type RepoSetting struct {
 	Interval      int
 	MirrorAddress string
 	Private       bool
+	Unlisted      bool
 	EnablePrune   bool
 
 	// Advanced settings

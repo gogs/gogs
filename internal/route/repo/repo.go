@@ -126,6 +126,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		License:     f.License,
 		Readme:      f.Readme,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
+		IsUnlisted:  f.Unlisted,
 		AutoInit:    f.AutoInit,
 	})
 	if err == nil {
@@ -197,6 +198,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		Name:        f.RepoName,
 		Description: f.Description,
 		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
+		IsUnlisted:  f.Unlisted,
 		IsMirror:    f.Mirror,
 		RemoteAddr:  remoteAddr,
 	})
