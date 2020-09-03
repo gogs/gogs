@@ -173,10 +173,10 @@ type Repository struct {
 	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
 	NumTags             int `xorm:"-" gorm:"-" json:"-"`
 
-	IsPrivate  bool
+	IsPrivate bool
 	// TODO: When migrate to GORM, make sure to do a loose migration with `HasColumn` and `AddColumn`,
 	// see docs in https://gorm.io/docs/migration.html.
-	IsUnlisted bool
+	IsUnlisted bool `xorm:"NOT NULL DEFAULT false"`
 	IsBare     bool
 
 	IsMirror bool
