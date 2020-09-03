@@ -9,8 +9,8 @@
     Locale files has been successfully imported!
     ```
 
-1. Run `make generate` to generate corresponding bindata.
-1. Run `./gogs web` to start the web server, then visit the site in browser to make sure nothing blows up.
+1. Run `task generate` to generate corresponding bindata.
+1. Run `task web` to start the web server, then visit the site in the browser to make sure nothing blows up.
 1. Check out a new branch using `git checkout -b update-locales`.
 1. Stash changes then run `git commit -m "locale: sync from Crowdin"`.
 1. Push the commit then open up a pull request on GitHub.
