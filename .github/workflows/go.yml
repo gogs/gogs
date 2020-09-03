@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - '**.go'
+  pull_request:
+    paths:
+      - '**.go'
 env:
   GOPROXY: "https://proxy.golang.org"
 
