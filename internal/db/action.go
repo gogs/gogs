@@ -188,7 +188,7 @@ func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 	})
 }
 
@@ -205,7 +205,7 @@ func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Reposit
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 		Content:      oldRepoName,
 	}); err != nil {
 		return fmt.Errorf("notify watchers: %v", err)
@@ -512,7 +512,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		RepoUserName: repo.MustOwner().Name,
 		RepoName:     repo.Name,
 		RefName:      refName,
-		IsPrivate:    repo.IsPrivate,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 	}
 
 	apiRepo := repo.APIFormat(nil)
@@ -628,7 +628,7 @@ func transferRepoAction(e Engine, doer, oldOwner *User, repo *Repository) (err e
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 		Content:      path.Join(oldOwner.Name, repo.Name),
 	}); err != nil {
 		return fmt.Errorf("notifyWatchers: %v", err)
@@ -659,7 +659,7 @@ func mergePullRequestAction(e Engine, doer *User, repo *Repository, issue *Issue
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 	})
 }
 
@@ -678,7 +678,7 @@ func mirrorSyncAction(opType ActionType, repo *Repository, refName string, data 
 		RepoUserName: repo.MustOwner().Name,
 		RepoName:     repo.Name,
 		RefName:      refName,
-		IsPrivate:    repo.IsPrivate,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 	})
 }
 

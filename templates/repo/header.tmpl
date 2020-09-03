@@ -7,9 +7,9 @@
 					<div class="ui huge breadcrumb">
 						{{if .UseCustomAvatar}}
 							<img class="ui mini spaced image" src="{{.RelAvatarLink}}">
-							<i class="{{if .IsPrivate}}mega-octicon octicon-lock{{else if .IsMirror}}mega-octicon octicon-repo-clone{{else if .IsFork}}mega-octicon octicon-repo-forked{{end}}"></i>
+							<i class="{{if .IsPrivate}}mega-octicon octicon-lock{{else if .IsUnlisted}}mega-octicon octicon-eye{{else if .IsMirror}}mega-octicon octicon-repo-clone{{else if .IsFork}}mega-octicon octicon-repo-forked{{end}}"></i>
 						{{else}}
-							<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+							<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsUnlisted}}eye{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
 						{{end}}
 						<a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
 						<div class="divider"> / </div>

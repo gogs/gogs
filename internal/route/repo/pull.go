@@ -60,6 +60,7 @@ func parseBaseRepository(c *context.Context) *db.Repository {
 	c.Data["repo_name"] = baseRepo.Name
 	c.Data["description"] = baseRepo.Description
 	c.Data["IsPrivate"] = baseRepo.IsPrivate
+	c.Data["IsUnlisted"] = baseRepo.IsUnlisted
 
 	if err = baseRepo.GetOwner(); err != nil {
 		c.Error(err, "get owner")

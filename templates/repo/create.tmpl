@@ -50,6 +50,13 @@
 							{{end}}
 						</div>
 					</div>
+					<div class="inline field">
+						<label></label>
+						<div class="ui checkbox">
+							<input name="unlisted" type="checkbox">
+							<label>{{.i18n.Tr "repo.unlisted_helper" | Safe}}</label>
+						</div>
+					</div>
 					<div class="inline field {{if .Err_Description}}error{{end}}">
 						<label for="description">{{.i18n.Tr "repo.repo_desc"}}</label>
 						<textarea class="autosize" id="description" name="description" rows="3">{{.description}}</textarea>
