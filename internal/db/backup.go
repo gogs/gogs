@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
@@ -163,8 +165,11 @@ func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
 		return errors.Wrap(err, "auto migrate")
 	}
 
-	// TODO: This is NOT working
-	rawTableName := db.Model(table).Statement.Table
+	s, err := schema.Parse(table, &sync.Map{}, db.NamingStrategy)
+	if err != nil {
+		return errors.Wrap(err, "parse schema")
+	}
+	rawTableName := s.Table
 	skipResetIDSeq := map[string]bool{
 		"lfs_object": true,
 	}
