@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/errutil"
@@ -61,7 +60,7 @@ func test_lfs_CreateObject(t *testing.T, db *lfs) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), object.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), object.CreatedAt.Format(time.RFC3339))
 
 	// Try create second LFS object with same oid should fail
 	err = db.CreateObject(repoID, oid, 12, lfsutil.StorageLocal)

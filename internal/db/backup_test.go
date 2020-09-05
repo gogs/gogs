@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/cryptoutil"

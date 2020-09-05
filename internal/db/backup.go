@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jinzhu/gorm"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
@@ -153,17 +153,18 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 }
 
 func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
-	err := db.DropTableIfExists(table).Error
+	err := db.Migrator().DropTable(table)
 	if err != nil {
 		return errors.Wrap(err, "drop table")
 	}
 
-	err = db.AutoMigrate(table).Error
+	err = db.Migrator().AutoMigrate(table)
 	if err != nil {
 		return errors.Wrap(err, "auto migrate")
 	}
 
-	rawTableName := db.NewScope(table).TableName()
+	// TODO: This is NOT working
+	rawTableName := db.Model(table).Statement.Table
 	skipResetIDSeq := map[string]bool{
 		"lfs_object": true,
 	}

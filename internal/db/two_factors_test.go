@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/errutil"
@@ -58,7 +57,7 @@ func test_twoFactors_Create(t *testing.T, db *twoFactors) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), tf.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), tf.Created.UTC().Format(time.RFC3339))
 
 	// Verify there are 10 recover codes generated
 	var count int64

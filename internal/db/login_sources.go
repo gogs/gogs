@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/errutil"
@@ -71,17 +71,17 @@ func (s *LoginSource) BeforeSave() (err error) {
 }
 
 // NOTE: This is a GORM create hook.
-func (s *LoginSource) BeforeCreate() {
+func (s *LoginSource) BeforeCreate(tx *gorm.DB) {
 	if s.CreatedUnix > 0 {
 		return
 	}
-	s.CreatedUnix = gorm.NowFunc().Unix()
+	s.CreatedUnix = tx.NowFunc().Unix()
 	s.UpdatedUnix = s.CreatedUnix
 }
 
 // NOTE: This is a GORM update hook.
-func (s *LoginSource) BeforeUpdate() {
-	s.UpdatedUnix = gorm.NowFunc().Unix()
+func (s *LoginSource) BeforeUpdate(tx *gorm.DB) {
+	s.UpdatedUnix = tx.NowFunc().Unix()
 }
 
 // NOTE: This is a GORM query hook.
@@ -204,7 +204,7 @@ func (db *loginSources) Create(opts CreateLoginSourceOpts) (*LoginSource, error)
 	err := db.Where("name = ?", opts.Name).First(new(LoginSource)).Error
 	if err == nil {
 		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
-	} else if !gorm.IsRecordNotFoundError(err) {
+	} else if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
@@ -253,7 +253,7 @@ func (db *loginSources) GetByID(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
 	err := db.Where("id = ?", id).First(source).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return db.files.GetByID(id)
 		}
 		return nil, err

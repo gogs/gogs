@@ -6,6 +6,7 @@ package db
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -70,6 +71,7 @@ func Test_loginSourceFiles_Update(t *testing.T) {
 			{ID: 101, IsActived: true, IsDefault: true},
 			{ID: 102, IsActived: false},
 		},
+		clock: time.Now,
 	}
 
 	source102 := &LoginSource{

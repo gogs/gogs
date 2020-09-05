@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
@@ -48,8 +48,8 @@ type UsersStore interface {
 var Users UsersStore
 
 // NOTE: This is a GORM create hook.
-func (u *User) BeforeCreate() {
-	u.CreatedUnix = gorm.NowFunc().Unix()
+func (u *User) BeforeCreate(tx *gorm.DB) {
+	u.CreatedUnix = tx.NowFunc().Unix()
 	u.UpdatedUnix = u.CreatedUnix
 }
 
@@ -253,7 +253,7 @@ func (db *users) GetByEmail(email string) (*User, error) {
 	err := db.Where("email = ? AND type = ? AND is_active = ?", email, UserIndividual, true).First(user).Error
 	if err == nil {
 		return user, nil
-	} else if !gorm.IsRecordNotFoundError(err) {
+	} else if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
@@ -261,7 +261,7 @@ func (db *users) GetByEmail(email string) (*User, error) {
 	emailAddress := new(EmailAddress)
 	err = db.Where("email = ? AND is_activated = ?", email, true).First(emailAddress).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
@@ -274,7 +274,7 @@ func (db *users) GetByID(id int64) (*User, error) {
 	user := new(User)
 	err := db.Where("id = ?", id).First(user).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 		}
 		return nil, err
@@ -286,7 +286,7 @@ func (db *users) GetByUsername(username string) (*User, error) {
 	user := new(User)
 	err := db.Where("lower_name = ?", strings.ToLower(username)).First(user).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
 		}
 		return nil, err
