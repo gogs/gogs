@@ -57,14 +57,14 @@ func TestLoginSource_BeforeCreate(t *testing.T) {
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
 		s := &LoginSource{CreatedUnix: 1}
-		s.BeforeCreate(db)
+		_ = s.BeforeCreate(db)
 		assert.Equal(t, int64(1), s.CreatedUnix)
 		assert.Equal(t, int64(0), s.UpdatedUnix)
 	})
 
 	t.Run("CreatedUnix has not been set", func(t *testing.T) {
 		s := &LoginSource{}
-		s.BeforeCreate(db)
+		_ = s.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), s.CreatedUnix)
 		assert.Equal(t, db.NowFunc().Unix(), s.UpdatedUnix)
 	})

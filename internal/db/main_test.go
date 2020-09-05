@@ -26,6 +26,9 @@ import (
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	var w logger.Writer
+	level := logger.Silent
 	if !testing.Verbose() {
 		// Remove the primary logger and register a noop logger.
 		log.Remove(log.DefaultConsoleName)
@@ -34,7 +37,18 @@ func TestMain(m *testing.M) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+
+		w = stdlog.New(os.Stdout, "\r\n", stdlog.LstdFlags)
+		level = logger.Info
+	} else {
+		w = &dbutil.Logger{Writer: ioutil.Discard}
 	}
+
+	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
+	logger.Default = logger.New(w, logger.Config{
+		SlowThreshold: 100 * time.Millisecond,
+		LogLevel:      level,
+	})
 
 	os.Exit(m.Run())
 }
@@ -58,24 +72,7 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	t.Helper()
 
 	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
-
-	var w logger.Writer
-	level := logger.Silent
-	if testing.Verbose() {
-		w = stdlog.New(os.Stdout, "\r\n", stdlog.LstdFlags)
-		level = logger.Info
-	} else {
-		w = &dbutil.Logger{Writer: ioutil.Discard}
-	}
-
 	now := time.Now().UTC().Truncate(time.Second)
-
-	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
-	logger.Default = logger.New(w, logger.Config{
-		SlowThreshold: 100 * time.Millisecond,
-		LogLevel:      level,
-	})
-
 	db, err := openDB(
 		conf.DatabaseOpts{
 			Type: "sqlite3",
