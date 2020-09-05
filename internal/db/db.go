@@ -121,7 +121,7 @@ func openDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
 	}
 
 	var dialector gorm.Dialector
-	switch conf.Database.Type {
+	switch opts.Type {
 	case "mysql":
 		dialector = mysql.Open(dsn)
 	case "postgres":

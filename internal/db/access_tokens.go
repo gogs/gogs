@@ -55,24 +55,27 @@ type AccessToken struct {
 }
 
 // NOTE: This is a GORM create hook.
-func (t *AccessToken) BeforeCreate(tx *gorm.DB) {
+func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
 	if t.CreatedUnix > 0 {
-		return
+		return nil
 	}
 	t.CreatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM update hook.
-func (t *AccessToken) BeforeUpdate(tx *gorm.DB) {
+func (t *AccessToken) BeforeUpdate(tx *gorm.DB) error {
 	t.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (t *AccessToken) AfterFind(tx *gorm.DB) {
+func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
 	t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
 	t.HasUsed = t.Updated.After(t.Created)
 	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(tx.NowFunc())
+	return nil
 }
 
 var _ AccessTokensStore = (*accessTokens)(nil)

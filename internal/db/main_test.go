@@ -46,7 +46,7 @@ func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
 	}
 
 	for _, t := range tables {
-		err := db.Delete(t).Error
+		err := db.Where("TRUE").Delete(t).Error
 		if err != nil {
 			return err
 		}

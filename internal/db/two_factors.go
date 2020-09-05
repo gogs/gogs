@@ -38,13 +38,15 @@ type TwoFactorsStore interface {
 var TwoFactors TwoFactorsStore
 
 // NOTE: This is a GORM create hook.
-func (t *TwoFactor) BeforeCreate(tx *gorm.DB) {
+func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
 	t.CreatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (t *TwoFactor) AfterFind() {
+func (t *TwoFactor) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
+	return nil
 }
 
 var _ TwoFactorsStore = (*twoFactors)(nil)

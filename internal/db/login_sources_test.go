@@ -15,9 +15,18 @@ import (
 )
 
 func TestLoginSource_BeforeSave(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
 	t.Run("Config has not been set", func(t *testing.T) {
 		s := &LoginSource{}
-		err := s.BeforeSave()
+		err := s.BeforeSave(db)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -28,7 +37,7 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 		s := &LoginSource{
 			Config: &PAMConfig{ServiceName: "pam_service"},
 		}
-		err := s.BeforeSave()
+		err := s.BeforeSave(db)
 		if err != nil {
 			t.Fatal(err)
 		}

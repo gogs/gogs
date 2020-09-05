@@ -62,7 +62,7 @@ type LoginSource struct {
 }
 
 // NOTE: This is a GORM save hook.
-func (s *LoginSource) BeforeSave() (err error) {
+func (s *LoginSource) BeforeSave(tx *gorm.DB) (err error) {
 	if s.Config == nil {
 		return nil
 	}
@@ -71,21 +71,23 @@ func (s *LoginSource) BeforeSave() (err error) {
 }
 
 // NOTE: This is a GORM create hook.
-func (s *LoginSource) BeforeCreate(tx *gorm.DB) {
+func (s *LoginSource) BeforeCreate(tx *gorm.DB) error {
 	if s.CreatedUnix > 0 {
-		return
+		return nil
 	}
 	s.CreatedUnix = tx.NowFunc().Unix()
 	s.UpdatedUnix = s.CreatedUnix
+	return nil
 }
 
 // NOTE: This is a GORM update hook.
-func (s *LoginSource) BeforeUpdate(tx *gorm.DB) {
+func (s *LoginSource) BeforeUpdate(tx *gorm.DB) error {
 	s.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (s *LoginSource) AfterFind() error {
+func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 	s.Created = time.Unix(s.CreatedUnix, 0).Local()
 	s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 

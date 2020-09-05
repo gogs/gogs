@@ -48,15 +48,17 @@ type UsersStore interface {
 var Users UsersStore
 
 // NOTE: This is a GORM create hook.
-func (u *User) BeforeCreate(tx *gorm.DB) {
+func (u *User) BeforeCreate(tx *gorm.DB) error {
 	u.CreatedUnix = tx.NowFunc().Unix()
 	u.UpdatedUnix = u.CreatedUnix
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (u *User) AfterFind() {
+func (u *User) AfterFind(tx *gorm.DB) error {
 	u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
+	return nil
 }
 
 var _ UsersStore = (*users)(nil)

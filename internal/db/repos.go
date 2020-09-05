@@ -26,19 +26,22 @@ type ReposStore interface {
 var Repos ReposStore
 
 // NOTE: This is a GORM create hook.
-func (r *Repository) BeforeCreate(tx *gorm.DB) {
+func (r *Repository) BeforeCreate(tx *gorm.DB) error {
 	r.CreatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM update hook.
-func (r *Repository) BeforeUpdate(tx *gorm.DB) {
+func (r *Repository) BeforeUpdate(tx *gorm.DB) error {
 	r.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (r *Repository) AfterFind() {
+func (r *Repository) AfterFind(tx *gorm.DB) error {
 	r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
+	return nil
 }
 
 var _ ReposStore = (*repos)(nil)
