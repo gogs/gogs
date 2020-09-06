@@ -27,13 +27,22 @@ tasks:
       BUILD_COMMIT:
         sh: git rev-parse HEAD
 
-  generate:
+  generate-bindata:
     desc: Generate bindata for all assets.
     deps: [clean]
     cmds:
       - go generate internal/assets/conf/conf.go
       - go generate internal/assets/templates/templates.go
       - go generate internal/assets/public/public.go
+
+  generate-schemadoc:
+    desc: Generate database schema documentation.
+    cmds:
+      - go generate ./internal/db/schemadoc
+
+  generate:
+    desc: Run all go:generate commands.
+    deps: [generate-bindata, generate-schemadoc]
 
   test:
     desc: Run all tests.
