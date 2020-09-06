@@ -39,7 +39,9 @@ var TwoFactors TwoFactorsStore
 
 // NOTE: This is a GORM create hook.
 func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
-	t.CreatedUnix = tx.NowFunc().Unix()
+	if t.CreatedUnix == 0 {
+		t.CreatedUnix = tx.NowFunc().Unix()
+	}
 	return nil
 }
 

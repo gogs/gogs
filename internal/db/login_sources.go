@@ -72,11 +72,10 @@ func (s *LoginSource) BeforeSave(tx *gorm.DB) (err error) {
 
 // NOTE: This is a GORM create hook.
 func (s *LoginSource) BeforeCreate(tx *gorm.DB) error {
-	if s.CreatedUnix > 0 {
-		return nil
+	if s.CreatedUnix == 0 {
+		s.CreatedUnix = tx.NowFunc().Unix()
+		s.UpdatedUnix = s.CreatedUnix
 	}
-	s.CreatedUnix = tx.NowFunc().Unix()
-	s.UpdatedUnix = s.CreatedUnix
 	return nil
 }
 

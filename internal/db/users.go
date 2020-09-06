@@ -49,8 +49,10 @@ var Users UsersStore
 
 // NOTE: This is a GORM create hook.
 func (u *User) BeforeCreate(tx *gorm.DB) error {
-	u.CreatedUnix = tx.NowFunc().Unix()
-	u.UpdatedUnix = u.CreatedUnix
+	if u.CreatedUnix == 0 {
+		u.CreatedUnix = tx.NowFunc().Unix()
+		u.UpdatedUnix = u.CreatedUnix
+	}
 	return nil
 }
 

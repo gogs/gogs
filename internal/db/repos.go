@@ -27,7 +27,9 @@ var Repos ReposStore
 
 // NOTE: This is a GORM create hook.
 func (r *Repository) BeforeCreate(tx *gorm.DB) error {
-	r.CreatedUnix = tx.NowFunc().Unix()
+	if r.CreatedUnix == 0 {
+		r.CreatedUnix = tx.NowFunc().Unix()
+	}
 	return nil
 }
 

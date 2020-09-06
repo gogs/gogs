@@ -56,10 +56,9 @@ type AccessToken struct {
 
 // NOTE: This is a GORM create hook.
 func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
-	if t.CreatedUnix > 0 {
-		return nil
+	if t.CreatedUnix == 0 {
+		t.CreatedUnix = tx.NowFunc().Unix()
 	}
-	t.CreatedUnix = tx.NowFunc().Unix()
 	return nil
 }
 
