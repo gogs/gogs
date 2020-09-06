@@ -25,13 +25,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create file: %v", err)
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 
 	conn, _, err := sqlmock.New()
 	if err != nil {
 		log.Fatalf("Failed to get mock connection: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	dialectors := []gorm.Dialector{
 		postgres.New(postgres.Config{
@@ -54,10 +54,10 @@ func main() {
 	}
 
 	for i, ti := range collected[0] {
-		w.WriteString(`# Table "` + ti.Name + `"`)
-		w.WriteString("\n\n")
+		_, _ = w.WriteString(`# Table "` + ti.Name + `"`)
+		_, _ = w.WriteString("\n\n")
 
-		w.WriteString("```\n")
+		_, _ = w.WriteString("```\n")
 
 		table := tablewriter.NewWriter(w)
 		table.SetHeader([]string{"Field", "Column", "PostgreSQL", "MySQL", "SQLite3"})
@@ -71,13 +71,13 @@ func main() {
 			})
 		}
 		table.Render()
-		w.WriteString("\n")
+		_, _ = w.WriteString("\n")
 
-		w.WriteString("Primary keys: ")
-		w.WriteString(strings.Join(ti.PrimaryKeys, ", "))
-		w.WriteString("\n")
+		_, _ = w.WriteString("Primary keys: ")
+		_, _ = w.WriteString(strings.Join(ti.PrimaryKeys, ", "))
+		_, _ = w.WriteString("\n")
 
-		w.WriteString("```\n\n")
+		_, _ = w.WriteString("```\n\n")
 	}
 }
 
