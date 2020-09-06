@@ -241,21 +241,26 @@ func importLegacyTables(dirPath string, verbose bool) error {
 				return fmt.Errorf("insert strcut: %v", err)
 			}
 
-			meta := make(map[string]interface{})
+			var meta struct {
+				ID             int64
+				CreatedUnix    int64
+				DeadlineUnix   int64
+				ClosedDateUnix int64
+			}
 			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
 				log.Error("Failed to unmarshal to map: %v", err)
 			}
 
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
-					log.Error("Failed to reset 'created_unix': %v", err)
+				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
+					log.Error("Failed to reset '%s.created_unix': %v", rawTableName, err)
 				}
 			}
 
 			switch rawTableName {
 			case "milestone":
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta["DeadlineUnix"], meta["ClosedDateUnix"], meta["ID"]); err != nil {
+				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
 					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
 				}
 			}
