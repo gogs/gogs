@@ -137,8 +137,10 @@ func openDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
 	return gorm.Open(dialector, cfg)
 }
 
+// Tables is the list of struct-to-table mappings.
+//
 // NOTE: Lines are sorted in alphabetical order, each letter in its own line.
-var tables = []interface{}{
+var Tables = []interface{}{
 	new(AccessToken),
 	new(LFSObject), new(LoginSource),
 }
@@ -196,7 +198,7 @@ func Init() (*gorm.DB, error) {
 
 	// NOTE: GORM has problem detecting existing columns, see https://github.com/gogs/gogs/issues/6091.
 	// Therefore only use it to create new tables, and do customized migration with future changes.
-	for _, table := range tables {
+	for _, table := range Tables {
 		if db.Migrator().HasTable(table) {
 			continue
 		}

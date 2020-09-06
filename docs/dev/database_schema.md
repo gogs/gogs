@@ -1,0 +1,46 @@
+# Table "access_token"
+
+```
+     FIELD    |    COLUMN    |     POSTGRESQL     |         MYSQL         |      SQLITE3        
++-------------+--------------+--------------------+-----------------------+--------------------+
+  ID          | id           | BIGSERIAL          | BIGINT AUTO_INCREMENT | INTEGER             
+  UserID      | uid          | BIGINT             | BIGINT                | INTEGER             
+  Name        | name         | TEXT               | LONGTEXT              | TEXT                
+  Sha1        | sha1         | VARCHAR(40) UNIQUE | VARCHAR(40) UNIQUE    | VARCHAR(40) UNIQUE  
+  CreatedUnix | created_unix | BIGINT             | BIGINT                | INTEGER             
+  UpdatedUnix | updated_unix | BIGINT             | BIGINT                | INTEGER             
+
+Primary keys: id
+```
+
+# Table "lfs_object"
+
+```
+    FIELD   |   COLUMN   |      POSTGRESQL      |        MYSQL         |      SQLITE3       
++-----------+------------+----------------------+----------------------+-------------------+
+  RepoID    | repo_id    | BIGINT               | BIGINT               | INTEGER            
+  OID       | oid        | TEXT                 | VARCHAR(191)         | TEXT               
+  Size      | size       | BIGINT NOT NULL      | BIGINT NOT NULL      | INTEGER NOT NULL   
+  Storage   | storage    | TEXT NOT NULL        | LONGTEXT NOT NULL    | TEXT NOT NULL      
+  CreatedAt | created_at | TIMESTAMPTZ NOT NULL | DATETIME(3) NOT NULL | DATETIME NOT NULL  
+
+Primary keys: repo_id, oid
+```
+
+# Table "login_source"
+
+```
+     FIELD    |    COLUMN    |    POSTGRESQL    |         MYSQL         |     SQLITE3       
++-------------+--------------+------------------+-----------------------+------------------+
+  ID          | id           | BIGSERIAL        | BIGINT AUTO_INCREMENT | INTEGER           
+  Type        | type         | BIGINT           | BIGINT                | INTEGER           
+  Name        | name         | TEXT UNIQUE      | VARCHAR(191) UNIQUE   | TEXT UNIQUE       
+  IsActived   | is_actived   | BOOLEAN NOT NULL | BOOLEAN NOT NULL      | NUMERIC NOT NULL  
+  IsDefault   | is_default   | BOOLEAN          | BOOLEAN               | NUMERIC           
+  RawConfig   | cfg          | TEXT             | TEXT                  | TEXT              
+  CreatedUnix | created_unix | BIGINT           | BIGINT                | INTEGER           
+  UpdatedUnix | updated_unix | BIGINT           | BIGINT                | INTEGER           
+
+Primary keys: id
+```
+
