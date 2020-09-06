@@ -38,10 +38,10 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 
+		w = &dbutil.Logger{Writer: ioutil.Discard}
+	} else {
 		w = stdlog.New(os.Stdout, "\r\n", stdlog.LstdFlags)
 		level = logger.Info
-	} else {
-		w = &dbutil.Logger{Writer: ioutil.Discard}
 	}
 
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
