@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/errutil"
@@ -62,7 +62,7 @@ type LoginSource struct {
 }
 
 // NOTE: This is a GORM save hook.
-func (s *LoginSource) BeforeSave() (err error) {
+func (s *LoginSource) BeforeSave(tx *gorm.DB) (err error) {
 	if s.Config == nil {
 		return nil
 	}
@@ -71,21 +71,22 @@ func (s *LoginSource) BeforeSave() (err error) {
 }
 
 // NOTE: This is a GORM create hook.
-func (s *LoginSource) BeforeCreate() {
-	if s.CreatedUnix > 0 {
-		return
+func (s *LoginSource) BeforeCreate(tx *gorm.DB) error {
+	if s.CreatedUnix == 0 {
+		s.CreatedUnix = tx.NowFunc().Unix()
+		s.UpdatedUnix = s.CreatedUnix
 	}
-	s.CreatedUnix = gorm.NowFunc().Unix()
-	s.UpdatedUnix = s.CreatedUnix
+	return nil
 }
 
 // NOTE: This is a GORM update hook.
-func (s *LoginSource) BeforeUpdate() {
-	s.UpdatedUnix = gorm.NowFunc().Unix()
+func (s *LoginSource) BeforeUpdate(tx *gorm.DB) error {
+	s.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (s *LoginSource) AfterFind() error {
+func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 	s.Created = time.Unix(s.CreatedUnix, 0).Local()
 	s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 
@@ -204,7 +205,7 @@ func (db *loginSources) Create(opts CreateLoginSourceOpts) (*LoginSource, error)
 	err := db.Where("name = ?", opts.Name).First(new(LoginSource)).Error
 	if err == nil {
 		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
-	} else if !gorm.IsRecordNotFoundError(err) {
+	} else if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
@@ -253,7 +254,7 @@ func (db *loginSources) GetByID(id int64) (*LoginSource, error) {
 	source := new(LoginSource)
 	err := db.Where("id = ?", id).First(source).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return db.files.GetByID(id)
 		}
 		return nil, err

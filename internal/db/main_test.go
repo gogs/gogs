@@ -8,12 +8,15 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -21,10 +24,11 @@ import (
 	"gogs.io/gogs/internal/testutil"
 )
 
-var printSQL = flag.Bool("print-sql", false, "Print SQL executed")
-
 func TestMain(m *testing.M) {
 	flag.Parse()
+
+	var w logger.Writer
+	level := logger.Silent
 	if !testing.Verbose() {
 		// Remove the primary logger and register a noop logger.
 		log.Remove(log.DefaultConsoleName)
@@ -33,10 +37,18 @@ func TestMain(m *testing.M) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+
+		w = &dbutil.Logger{Writer: ioutil.Discard}
+	} else {
+		w = stdlog.New(os.Stdout, "\r\n", stdlog.LstdFlags)
+		level = logger.Info
 	}
 
-	now := time.Now().UTC().Truncate(time.Second)
-	gorm.NowFunc = func() time.Time { return now }
+	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
+	logger.Default = logger.New(w, logger.Config{
+		SlowThreshold: 100 * time.Millisecond,
+		LogLevel:      level,
+	})
 
 	os.Exit(m.Run())
 }
@@ -48,7 +60,7 @@ func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
 	}
 
 	for _, t := range tables {
-		err := db.Delete(t).Error
+		err := db.Where("TRUE").Delete(t).Error
 		if err != nil {
 			return err
 		}
@@ -60,15 +72,29 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	t.Helper()
 
 	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
-	db, err := openDB(conf.DatabaseOpts{
-		Type: "sqlite3",
-		Path: dbpath,
-	})
+	now := time.Now().UTC().Truncate(time.Second)
+	db, err := openDB(
+		conf.DatabaseOpts{
+			Type: "sqlite3",
+			Path: dbpath,
+		},
+		&gorm.Config{
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		_ = db.Close()
+		sqlDB, err := db.DB()
+		if err == nil {
+			_ = sqlDB.Close()
+		}
 
 		if t.Failed() {
 			t.Logf("Database %q left intact for inspection", dbpath)
@@ -78,15 +104,7 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 		_ = os.Remove(dbpath)
 	})
 
-	db.SingularTable(true)
-	if !testing.Verbose() {
-		db.SetLogger(&dbutil.Writer{Writer: ioutil.Discard})
-	}
-	if *printSQL {
-		db.LogMode(true)
-	}
-
-	err = db.AutoMigrate(tables...).Error
+	err = db.Migrator().AutoMigrate(tables...)
 	if err != nil {
 		t.Fatal(err)
 	}

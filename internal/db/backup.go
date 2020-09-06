@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 
-	"github.com/jinzhu/gorm"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
@@ -153,17 +155,21 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 }
 
 func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
-	err := db.DropTableIfExists(table).Error
+	err := db.Migrator().DropTable(table)
 	if err != nil {
 		return errors.Wrap(err, "drop table")
 	}
 
-	err = db.AutoMigrate(table).Error
+	err = db.Migrator().AutoMigrate(table)
 	if err != nil {
 		return errors.Wrap(err, "auto migrate")
 	}
 
-	rawTableName := db.NewScope(table).TableName()
+	s, err := schema.Parse(table, &sync.Map{}, db.NamingStrategy)
+	if err != nil {
+		return errors.Wrap(err, "parse schema")
+	}
+	rawTableName := s.Table
 	skipResetIDSeq := map[string]bool{
 		"lfs_object": true,
 	}
@@ -235,21 +241,26 @@ func importLegacyTables(dirPath string, verbose bool) error {
 				return fmt.Errorf("insert strcut: %v", err)
 			}
 
-			meta := make(map[string]interface{})
+			var meta struct {
+				ID             int64
+				CreatedUnix    int64
+				DeadlineUnix   int64
+				ClosedDateUnix int64
+			}
 			if err = jsoniter.Unmarshal(scanner.Bytes(), &meta); err != nil {
 				log.Error("Failed to unmarshal to map: %v", err)
 			}
 
 			// Reset created_unix back to the date save in archive because Insert method updates its value
 			if isInsertProcessor && !skipInsertProcessors[rawTableName] {
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta["CreatedUnix"], meta["ID"]); err != nil {
-					log.Error("Failed to reset 'created_unix': %v", err)
+				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET created_unix=? WHERE id=?", meta.CreatedUnix, meta.ID); err != nil {
+					log.Error("Failed to reset '%s.created_unix': %v", rawTableName, err)
 				}
 			}
 
 			switch rawTableName {
 			case "milestone":
-				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta["DeadlineUnix"], meta["ClosedDateUnix"], meta["ID"]); err != nil {
+				if _, err = x.Exec("UPDATE `"+rawTableName+"` SET deadline_unix=?, closed_date_unix=? WHERE id=?", meta.DeadlineUnix, meta.ClosedDateUnix, meta.ID); err != nil {
 					log.Error("Failed to reset 'milestone.deadline_unix', 'milestone.closed_date_unix': %v", err)
 				}
 			}

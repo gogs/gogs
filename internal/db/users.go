@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
@@ -48,15 +48,19 @@ type UsersStore interface {
 var Users UsersStore
 
 // NOTE: This is a GORM create hook.
-func (u *User) BeforeCreate() {
-	u.CreatedUnix = gorm.NowFunc().Unix()
-	u.UpdatedUnix = u.CreatedUnix
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.CreatedUnix == 0 {
+		u.CreatedUnix = tx.NowFunc().Unix()
+		u.UpdatedUnix = u.CreatedUnix
+	}
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (u *User) AfterFind() {
+func (u *User) AfterFind(tx *gorm.DB) error {
 	u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
+	return nil
 }
 
 var _ UsersStore = (*users)(nil)
@@ -253,7 +257,7 @@ func (db *users) GetByEmail(email string) (*User, error) {
 	err := db.Where("email = ? AND type = ? AND is_active = ?", email, UserIndividual, true).First(user).Error
 	if err == nil {
 		return user, nil
-	} else if !gorm.IsRecordNotFoundError(err) {
+	} else if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
@@ -261,7 +265,7 @@ func (db *users) GetByEmail(email string) (*User, error) {
 	emailAddress := new(EmailAddress)
 	err = db.Where("email = ? AND is_activated = ?", email, true).First(emailAddress).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
@@ -274,7 +278,7 @@ func (db *users) GetByID(id int64) (*User, error) {
 	user := new(User)
 	err := db.Where("id = ?", id).First(user).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 		}
 		return nil, err
@@ -286,7 +290,7 @@ func (db *users) GetByUsername(username string) (*User, error) {
 	user := new(User)
 	err := db.Where("lower_name = ?", strings.ToLower(username)).First(user).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
 		}
 		return nil, err

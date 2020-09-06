@@ -10,9 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
-	"github.com/t-tiger/gorm-bulk-insert"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cryptoutil"
@@ -39,13 +38,17 @@ type TwoFactorsStore interface {
 var TwoFactors TwoFactorsStore
 
 // NOTE: This is a GORM create hook.
-func (t *TwoFactor) BeforeCreate() {
-	t.CreatedUnix = gorm.NowFunc().Unix()
+func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
+	if t.CreatedUnix == 0 {
+		t.CreatedUnix = tx.NowFunc().Unix()
+	}
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (t *TwoFactor) AfterFind() {
+func (t *TwoFactor) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
+	return nil
 }
 
 var _ TwoFactorsStore = (*twoFactors)(nil)
@@ -69,18 +72,13 @@ func (db *twoFactors) Create(userID int64, key, secret string) error {
 		return errors.Wrap(err, "generate recovery codes")
 	}
 
-	records := make([]interface{}, 0, len(recoveryCodes))
-	for _, code := range recoveryCodes {
-		records = append(records, code)
-	}
-
 	return db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(tf).Error
 		if err != nil {
 			return err
 		}
 
-		return gormbulk.BulkInsert(tx, records, 3000)
+		return tx.Create(&recoveryCodes).Error
 	})
 }
 
@@ -107,7 +105,7 @@ func (db *twoFactors) GetByUserID(userID int64) (*TwoFactor, error) {
 	tf := new(TwoFactor)
 	err := db.Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
 		}
 		return nil, err

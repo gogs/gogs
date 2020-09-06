@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/lfsutil"
