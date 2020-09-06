@@ -6,18 +6,19 @@ package db
 
 import (
 	"fmt"
-	"io"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mssql"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/pkg/errors"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/driver/sqlserver"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -96,16 +97,7 @@ func parseDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 	return dsn, nil
 }
 
-func openDB(opts conf.DatabaseOpts) (*gorm.DB, error) {
-	dsn, err := parseDSN(opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse DSN")
-	}
-
-	return gorm.Open(opts.Type, dsn)
-}
-
-func getLogWriter() (io.Writer, error) {
+func newLogWriter() (logger.Writer, error) {
 	sec := conf.File.Section("log.gorm")
 	w, err := log.NewFileWriter(
 		filepath.Join(conf.Log.RootPath, "gorm.log"),
@@ -119,7 +111,30 @@ func getLogWriter() (io.Writer, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, `create "gorm.log"`)
 	}
-	return w, nil
+	return &dbutil.Logger{Writer: w}, nil
+}
+
+func openDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
+	dsn, err := parseDSN(opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "parse DSN")
+	}
+
+	var dialector gorm.Dialector
+	switch opts.Type {
+	case "mysql":
+		dialector = mysql.Open(dsn)
+	case "postgres":
+		dialector = postgres.Open(dsn)
+	case "mssql":
+		dialector = sqlserver.Open(dsn)
+	case "sqlite3":
+		dialector = sqlite.Open(dsn)
+	default:
+		panic("unreachable")
+	}
+
+	return gorm.Open(dialector, cfg)
 }
 
 // NOTE: Lines are sorted in alphabetical order, each letter in its own line.
@@ -129,56 +144,72 @@ var tables = []interface{}{
 }
 
 func Init() (*gorm.DB, error) {
-	db, err := openDB(conf.Database)
+	w, err := newLogWriter()
+	if err != nil {
+		return nil, errors.Wrap(err, "new log writer")
+	}
+
+	level := logger.Info
+	if conf.IsProdMode() {
+		level = logger.Warn
+	}
+
+	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
+	logger.Default = logger.New(w, logger.Config{
+		SlowThreshold: 100 * time.Millisecond,
+		LogLevel:      level,
+	})
+
+	db, err := openDB(conf.Database, &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			SingularTable: true,
+		},
+		NowFunc: func() time.Time {
+			return time.Now().UTC().Truncate(time.Microsecond)
+		},
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
 	}
-	db.SingularTable(true)
-	db.DB().SetMaxOpenConns(conf.Database.MaxOpenConns)
-	db.DB().SetMaxIdleConns(conf.Database.MaxIdleConns)
-	db.DB().SetConnMaxLifetime(time.Minute)
 
-	w, err := getLogWriter()
+	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, errors.Wrap(err, "get log writer")
+		return nil, errors.Wrap(err, "get underlying *sql.DB")
 	}
-	db.SetLogger(&dbutil.Writer{Writer: w})
-	if !conf.IsProdMode() {
-		db = db.LogMode(true)
-	}
+	sqlDB.SetMaxOpenConns(conf.Database.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(conf.Database.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(time.Minute)
 
 	switch conf.Database.Type {
+	case "postgres":
+		conf.UsePostgreSQL = true
 	case "mysql":
 		conf.UseMySQL = true
 		db = db.Set("gorm:table_options", "ENGINE=InnoDB")
-	case "postgres":
-		conf.UsePostgreSQL = true
-	case "mssql":
-		conf.UseMSSQL = true
 	case "sqlite3":
 		conf.UseSQLite3 = true
+	case "mssql":
+		conf.UseMSSQL = true
+	default:
+		panic("unreachable")
 	}
 
 	// NOTE: GORM has problem detecting existing columns, see https://github.com/gogs/gogs/issues/6091.
 	// Therefore only use it to create new tables, and do customized migration with future changes.
 	for _, table := range tables {
-		if db.HasTable(table) {
+		if db.Migrator().HasTable(table) {
 			continue
 		}
 
 		name := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
-		err = db.AutoMigrate(table).Error
+		err = db.Migrator().AutoMigrate(table)
 		if err != nil {
 			return nil, errors.Wrapf(err, "auto migrate %q", name)
 		}
 		log.Trace("Auto migrated %q", name)
 	}
 
-	gorm.NowFunc = func() time.Time {
-		return time.Now().UTC().Truncate(time.Microsecond)
-	}
-
-	sourceFiles, err := loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"))
+	sourceFiles, err := loadLoginSourceFiles(filepath.Join(conf.CustomDir(), "conf", "auth.d"), db.NowFunc)
 	if err != nil {
 		return nil, errors.Wrap(err, "load login source files")
 	}
@@ -192,5 +223,5 @@ func Init() (*gorm.DB, error) {
 	TwoFactors = &twoFactors{DB: db}
 	Users = &users{DB: db}
 
-	return db, db.DB().Ping()
+	return db, nil
 }

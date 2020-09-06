@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/Masterminds/semver/v3 v3.1.0
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.3.2
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.0
@@ -16,7 +15,6 @@ require (
 	github.com/go-macaron/i18n v0.5.0
 	github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659
 	github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6
-	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
 	github.com/gogs/cron v0.0.0-20171120032916-9f6c956d3e14
 	github.com/gogs/git-module v1.1.3
@@ -27,12 +25,9 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/issue9/identicon v1.0.1
 	github.com/jaytaylor/html2text v0.0.0-20190408195923-01ec452cbe43
-	github.com/jinzhu/gorm v1.9.12
 	github.com/json-iterator/go v1.1.10
 	github.com/klauspost/compress v1.8.6 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
-	github.com/lib/pq v1.3.0 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/mcuadros/go-version v0.0.0-20190830083331-035f6764e8d2 // indirect
@@ -50,14 +45,13 @@ require (
 	github.com/sergi/go-diff v1.1.0
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.6.1
-	github.com/t-tiger/gorm-bulk-insert v1.3.0
 	github.com/unknwon/cae v1.0.0
 	github.com/unknwon/com v1.0.1
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
 	github.com/urfave/cli v1.22.4
-	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
-	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
 	golang.org/x/text v0.3.3
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
@@ -65,6 +59,11 @@ require (
 	gopkg.in/ini.v1 v1.56.0
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/macaron.v1 v1.3.9
+	gorm.io/driver/mysql v1.0.1
+	gorm.io/driver/postgres v1.0.0
+	gorm.io/driver/sqlite v1.1.1
+	gorm.io/driver/sqlserver v1.0.3
+	gorm.io/gorm v1.20.0
 	unknwon.dev/clog/v2 v2.1.2
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2

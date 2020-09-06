@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
 
 	"gogs.io/gogs/internal/errutil"
@@ -129,8 +128,8 @@ func test_users_Create(t *testing.T, db *users) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), user.Created.UTC().Format(time.RFC3339))
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), user.Updated.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Updated.UTC().Format(time.RFC3339))
 }
 
 func test_users_GetByEmail(t *testing.T, db *users) {

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
@@ -68,6 +68,7 @@ func getEngine() (*xorm.Engine, error) {
 		Param = "&"
 	}
 
+	driver := conf.Database.Type
 	connStr := ""
 	switch conf.Database.Type {
 	case "mysql":
@@ -92,6 +93,7 @@ func getEngine() (*xorm.Engine, error) {
 			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
 				url.QueryEscape(conf.Database.User), url.QueryEscape(conf.Database.Password), host, port, conf.Database.Name, Param, conf.Database.SSLMode)
 		}
+		driver = "pgx"
 
 	case "mssql":
 		conf.UseMSSQL = true
@@ -108,7 +110,7 @@ func getEngine() (*xorm.Engine, error) {
 	default:
 		return nil, fmt.Errorf("unknown database type: %s", conf.Database.Type)
 	}
-	return xorm.NewEngine(conf.Database.Type, connStr)
+	return xorm.NewEngine(driver, connStr)
 }
 
 func NewTestEngine() error {

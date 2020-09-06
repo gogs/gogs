@@ -8,16 +8,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errutil"
 )
 
 func TestLoginSource_BeforeSave(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
 	t.Run("Config has not been set", func(t *testing.T) {
 		s := &LoginSource{}
-		err := s.BeforeSave()
+		err := s.BeforeSave(db)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -28,7 +37,7 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 		s := &LoginSource{
 			Config: &PAMConfig{ServiceName: "pam_service"},
 		}
-		err := s.BeforeSave()
+		err := s.BeforeSave(db)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -37,18 +46,27 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 }
 
 func TestLoginSource_BeforeCreate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
 		s := &LoginSource{CreatedUnix: 1}
-		s.BeforeCreate()
+		_ = s.BeforeCreate(db)
 		assert.Equal(t, int64(1), s.CreatedUnix)
 		assert.Equal(t, int64(0), s.UpdatedUnix)
 	})
 
 	t.Run("CreatedUnix has not been set", func(t *testing.T) {
 		s := &LoginSource{}
-		s.BeforeCreate()
-		assert.Equal(t, gorm.NowFunc().Unix(), s.CreatedUnix)
-		assert.Equal(t, gorm.NowFunc().Unix(), s.UpdatedUnix)
+		_ = s.BeforeCreate(db)
+		assert.Equal(t, db.NowFunc().Unix(), s.CreatedUnix)
+		assert.Equal(t, db.NowFunc().Unix(), s.UpdatedUnix)
 	})
 }
 
@@ -108,8 +126,8 @@ func test_loginSources_Create(t *testing.T, db *loginSources) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Created.UTC().Format(time.RFC3339))
-	assert.Equal(t, gorm.NowFunc().Format(time.RFC3339), source.Updated.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), source.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), source.Updated.UTC().Format(time.RFC3339))
 
 	// Try create second login source with same name should fail
 	_, err = db.Create(CreateLoginSourceOpts{Name: source.Name})

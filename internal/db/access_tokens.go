@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	gouuid "github.com/satori/go.uuid"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
@@ -55,24 +55,26 @@ type AccessToken struct {
 }
 
 // NOTE: This is a GORM create hook.
-func (t *AccessToken) BeforeCreate() {
-	if t.CreatedUnix > 0 {
-		return
+func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
+	if t.CreatedUnix == 0 {
+		t.CreatedUnix = tx.NowFunc().Unix()
 	}
-	t.CreatedUnix = gorm.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM update hook.
-func (t *AccessToken) BeforeUpdate() {
-	t.UpdatedUnix = gorm.NowFunc().Unix()
+func (t *AccessToken) BeforeUpdate(tx *gorm.DB) error {
+	t.UpdatedUnix = tx.NowFunc().Unix()
+	return nil
 }
 
 // NOTE: This is a GORM query hook.
-func (t *AccessToken) AfterFind() {
+func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
 	t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
 	t.HasUsed = t.Updated.After(t.Created)
-	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(gorm.NowFunc())
+	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(tx.NowFunc())
+	return nil
 }
 
 var _ AccessTokensStore = (*accessTokens)(nil)
@@ -98,7 +100,7 @@ func (db *accessTokens) Create(userID int64, name string) (*AccessToken, error) 
 	err := db.Where("uid = ? AND name = ?", userID, name).First(new(AccessToken)).Error
 	if err == nil {
 		return nil, ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": userID, "name": name}}
-	} else if !gorm.IsRecordNotFoundError(err) {
+	} else if err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
@@ -137,7 +139,7 @@ func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
 	token := new(AccessToken)
 	err := db.Where("sha1 = ?", sha).First(token).Error
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha}}
 		}
 		return nil, err

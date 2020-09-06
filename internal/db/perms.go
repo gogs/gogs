@@ -5,8 +5,7 @@
 package db
 
 import (
-	"github.com/jinzhu/gorm"
-	"github.com/t-tiger/gorm-bulk-insert"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -53,7 +52,7 @@ func (db *perms) AccessMode(userID int64, repo *Repository) (mode AccessMode) {
 	access := new(Access)
 	err := db.Where("user_id = ? AND repo_id = ?", userID, repo.ID).First(access).Error
 	if err != nil {
-		if !gorm.IsRecordNotFoundError(err) {
+		if err != gorm.ErrRecordNotFound {
 			log.Error("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repo.ID, err)
 		}
 		return mode
@@ -66,7 +65,7 @@ func (db *perms) Authorize(userID int64, repo *Repository, desired AccessMode) b
 }
 
 func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error {
-	records := make([]interface{}, 0, len(accessMap))
+	records := make([]*Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
 		records = append(records, &Access{
 			UserID: userID,
@@ -81,6 +80,6 @@ func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) erro
 			return err
 		}
 
-		return gormbulk.BulkInsert(tx, records, 3000)
+		return tx.Create(&records).Error
 	})
 }
