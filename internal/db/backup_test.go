@@ -26,11 +26,11 @@ func Test_dumpAndImport(t *testing.T) {
 
 	t.Parallel()
 
-	if len(tables) != 3 {
-		t.Fatalf("New table has added (want 3 got %d), please add new tests for the table and update this check", len(tables))
+	if len(Tables) != 3 {
+		t.Fatalf("New table has added (want 3 got %d), please add new tests for the table and update this check", len(Tables))
 	}
 
-	db := initTestDB(t, "dumpAndImport", tables...)
+	db := initTestDB(t, "dumpAndImport", Tables...)
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)
@@ -109,7 +109,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 func dumpTables(t *testing.T, db *gorm.DB) {
 	t.Helper()
 
-	for _, table := range tables {
+	for _, table := range Tables {
 		tableName := getTableType(table)
 
 		var buf bytes.Buffer
@@ -126,7 +126,7 @@ func dumpTables(t *testing.T, db *gorm.DB) {
 func importTables(t *testing.T, db *gorm.DB) {
 	t.Helper()
 
-	for _, table := range tables {
+	for _, table := range Tables {
 		tableName := getTableType(table)
 
 		err := func() error {

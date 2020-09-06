@@ -40,7 +40,7 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 		return errors.Wrap(err, "dump legacy tables")
 	}
 
-	for _, table := range tables {
+	for _, table := range Tables {
 		tableName := getTableType(table)
 		if verbose {
 			log.Trace("Dumping table %q...", tableName)
@@ -125,7 +125,7 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 		return errors.Wrap(err, "import legacy tables")
 	}
 
-	for _, table := range tables {
+	for _, table := range Tables {
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
