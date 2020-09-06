@@ -37,7 +37,7 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 
 	err = dumpLegacyTables(dirPath, verbose)
 	if err != nil {
-		return errors.Wrap(err, "dump legacy Tables")
+		return errors.Wrap(err, "dump legacy tables")
 	}
 
 	for _, table := range Tables {
@@ -122,7 +122,7 @@ func dumpLegacyTables(dirPath string, verbose bool) error {
 func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	err := importLegacyTables(dirPath, verbose)
 	if err != nil {
-		return errors.Wrap(err, "import legacy Tables")
+		return errors.Wrap(err, "import legacy tables")
 	}
 
 	for _, table := range Tables {
