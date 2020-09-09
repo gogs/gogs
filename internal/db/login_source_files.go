@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 )
@@ -156,19 +157,19 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 		authType := s.Key("type").String()
 		switch authType {
 		case "ldap_bind_dn":
-			loginSource.Type = LoginLDAP
+			loginSource.Type = auth.LoginLDAP
 			loginSource.Config = &LDAPConfig{}
 		case "ldap_simple_auth":
-			loginSource.Type = LoginDLDAP
+			loginSource.Type = auth.LoginDLDAP
 			loginSource.Config = &LDAPConfig{}
 		case "smtp":
-			loginSource.Type = LoginSMTP
+			loginSource.Type = auth.LoginSMTP
 			loginSource.Config = &SMTPConfig{}
 		case "pam":
-			loginSource.Type = LoginPAM
+			loginSource.Type = auth.LoginPAM
 			loginSource.Config = &PAMConfig{}
 		case "github":
-			loginSource.Type = LoginGitHub
+			loginSource.Type = auth.LoginGitHub
 			loginSource.Config = &GitHubConfig{}
 		default:
 			return fmt.Errorf("unknown type %q", authType)

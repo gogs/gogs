@@ -15,33 +15,12 @@ import (
 	"github.com/go-macaron/binding"
 	"github.com/unknwon/com"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/db/errors"
 )
-
-type LoginType int
-
-// Note: new type must append to the end of list to maintain compatibility.
-// TODO: Move to authutil.
-const (
-	LoginNotype LoginType = iota
-	LoginPlain            // 1
-	LoginLDAP             // 2
-	LoginSMTP             // 3
-	LoginPAM              // 4
-	LoginDLDAP            // 5
-	LoginGitHub           // 6
-)
-
-var LoginNames = map[LoginType]string{
-	LoginLDAP:   "LDAP (via BindDN)",
-	LoginDLDAP:  "LDAP (simple auth)", // Via direct bind
-	LoginSMTP:   "SMTP",
-	LoginPAM:    "PAM",
-	LoginGitHub: "GitHub",
-}
 
 // ***********************
 // ----- LDAP config -----
@@ -51,14 +30,8 @@ type LDAPConfig struct {
 	ldap.Source `ini:"config"`
 }
 
-var SecurityProtocolNames = map[ldap.SecurityProtocol]string{
-	ldap.SecurityProtocolUnencrypted: "Unencrypted",
-	ldap.SecurityProtocolLDAPS:       "LDAPS",
-	ldap.SecurityProtocolStartTLS:    "StartTLS",
-}
-
 func (cfg *LDAPConfig) SecurityProtocolName() string {
-	return SecurityProtocolNames[cfg.SecurityProtocol]
+	return ldap.SecurityProtocolNames(cfg.SecurityProtocol)
 }
 
 func composeFullName(firstname, surname, username string) string {
@@ -77,7 +50,7 @@ func composeFullName(firstname, surname, username string) string {
 // LoginViaLDAP queries if login/password is valid against the LDAP directory pool,
 // and create a local user if success when enabled.
 func LoginViaLDAP(login, password string, source *LoginSource, autoRegister bool) (*User, error) {
-	username, fn, sn, mail, isAdmin, succeed := source.Config.(*LDAPConfig).SearchEntry(login, password, source.Type == LoginDLDAP)
+	username, fn, sn, mail, isAdmin, succeed := source.Config.(*LDAPConfig).SearchEntry(login, password, source.Type == auth.LoginDLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
@@ -328,13 +301,13 @@ func authenticateViaLoginSource(source *LoginSource, login, password string, aut
 	}
 
 	switch source.Type {
-	case LoginLDAP, LoginDLDAP:
+	case auth.LoginLDAP, auth.LoginDLDAP:
 		return LoginViaLDAP(login, password, source, autoRegister)
-	case LoginSMTP:
+	case auth.LoginSMTP:
 		return LoginViaSMTP(login, password, source.ID, source.Config.(*SMTPConfig), autoRegister)
-	case LoginPAM:
+	case auth.LoginPAM:
 		return LoginViaPAM(login, password, source.ID, source.Config.(*PAMConfig), autoRegister)
-	case LoginGitHub:
+	case auth.LoginGitHub:
 		return LoginViaGitHub(login, password, source.ID, source.Config.(*GitHubConfig), autoRegister)
 	}
 

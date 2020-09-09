@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/errutil"
 )
@@ -46,7 +47,7 @@ var LoginSources LoginSourcesStore
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
 	ID        int64
-	Type      LoginType
+	Type      auth.LoginType
 	Name      string      `xorm:"UNIQUE" gorm:"UNIQUE"`
 	IsActived bool        `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
 	IsDefault bool        `xorm:"DEFAULT false"`
@@ -91,13 +92,13 @@ func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 	s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 
 	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
+	case auth.LoginLDAP, auth.LoginDLDAP:
 		s.Config = new(LDAPConfig)
-	case LoginSMTP:
+	case auth.LoginSMTP:
 		s.Config = new(SMTPConfig)
-	case LoginPAM:
+	case auth.LoginPAM:
 		s.Config = new(PAMConfig)
-	case LoginGitHub:
+	case auth.LoginGitHub:
 		s.Config = new(GitHubConfig)
 	default:
 		return fmt.Errorf("unrecognized login source type: %v", s.Type)
@@ -106,27 +107,27 @@ func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 }
 
 func (s *LoginSource) TypeName() string {
-	return LoginNames[s.Type]
+	return auth.LoginNames(s.Type)
 }
 
 func (s *LoginSource) IsLDAP() bool {
-	return s.Type == LoginLDAP
+	return s.Type == auth.LoginLDAP
 }
 
 func (s *LoginSource) IsDLDAP() bool {
-	return s.Type == LoginDLDAP
+	return s.Type == auth.LoginDLDAP
 }
 
 func (s *LoginSource) IsSMTP() bool {
-	return s.Type == LoginSMTP
+	return s.Type == auth.LoginSMTP
 }
 
 func (s *LoginSource) IsPAM() bool {
-	return s.Type == LoginPAM
+	return s.Type == auth.LoginPAM
 }
 
 func (s *LoginSource) IsGitHub() bool {
-	return s.Type == LoginGitHub
+	return s.Type == auth.LoginGitHub
 }
 
 func (s *LoginSource) HasTLS() bool {
@@ -137,9 +138,9 @@ func (s *LoginSource) HasTLS() bool {
 
 func (s *LoginSource) UseTLS() bool {
 	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
+	case auth.LoginLDAP, auth.LoginDLDAP:
 		return s.LDAP().SecurityProtocol != ldap.SecurityProtocolUnencrypted
-	case LoginSMTP:
+	case auth.LoginSMTP:
 		return s.SMTP().TLS
 	}
 
@@ -148,9 +149,9 @@ func (s *LoginSource) UseTLS() bool {
 
 func (s *LoginSource) SkipVerify() bool {
 	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
+	case auth.LoginLDAP, auth.LoginDLDAP:
 		return s.LDAP().SkipVerify
-	case LoginSMTP:
+	case auth.LoginSMTP:
 		return s.SMTP().SkipVerify
 	}
 
@@ -181,7 +182,7 @@ type loginSources struct {
 }
 
 type CreateLoginSourceOpts struct {
-	Type      LoginType
+	Type      auth.LoginType
 	Name      string
 	Activated bool
 	Default   bool
