@@ -58,6 +58,5 @@ func ServeGoGet() macaron.Handler {
 				"InsecureFlag":   insecureFlag,
 			},
 		)))
-		return
 	}
 }
