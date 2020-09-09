@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/i18n"
 	"github.com/go-macaron/session"
-	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -248,52 +246,6 @@ func Contexter() macaron.Handler {
 		}
 		c.Data["Link"] = template.EscapePound(c.Link)
 		c.Data["PageStartTime"] = time.Now()
-
-		// Quick responses appropriate go-get meta with status 200
-		// regardless of if user have access to the repository,
-		// or the repository does not exist at all.
-		// This is particular a workaround for "go get" command which does not respect
-		// .netrc file.
-		if c.Query("go-get") == "1" {
-			ownerName := c.Params(":username")
-			repoName := c.Params(":reponame")
-			branchName := "master"
-
-			owner, err := db.GetUserByName(ownerName)
-			if err != nil {
-				c.NotFoundOrError(err, "get user by name")
-				return
-			}
-
-			repo, err := db.GetRepositoryByName(owner.ID, repoName)
-			if err == nil && len(repo.DefaultBranch) > 0 {
-				branchName = repo.DefaultBranch
-			}
-
-			prefix := conf.Server.ExternalURL + path.Join(ownerName, repoName, "src", branchName)
-			insecureFlag := ""
-			if !strings.HasPrefix(conf.Server.ExternalURL, "https://") {
-				insecureFlag = "--insecure "
-			}
-			c.PlainText(http.StatusOK, com.Expand(`<!doctype html>
-<html>
-	<head>
-		<meta name="go-import" content="{GoGetImport} git {CloneLink}">
-		<meta name="go-source" content="{GoGetImport} _ {GoDocDirectory} {GoDocFile}">
-	</head>
-	<body>
-		go get {InsecureFlag}{GoGetImport}
-	</body>
-</html>
-`, map[string]string{
-				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, ownerName, repoName),
-				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
-				"GoDocDirectory": prefix + "{/dir}",
-				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
-				"InsecureFlag":   insecureFlag,
-			}))
-			return
-		}
 
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
