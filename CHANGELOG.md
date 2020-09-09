@@ -2,13 +2,54 @@
 
 All notable changes to Gogs are documented in this file.
 
-## 0.13.0+dev (`master`)
+## 0.13.0+dev (`main`)
+
+### Added
+
+- An unlisted option is added when create or migrate a repository. Unlisted repositories are public but not being listed for users without direct access in the UI. [#5733](https://github.com/gogs/gogs/issues/5733)
+
+### Changed
+
+- The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
+- MSSQL as database backend is deprecated, installation page no longer shows it as an option. Existing installations and manually craft configuration file continue to work. [#6295](https://github.com/gogs/gogs/pull/6295)
+- Use [Task](https://github.com/go-task/task) as the default build tool for development. [#6297](https://github.com/gogs/gogs/pull/6297)
+
+### Fixed
+
+- _Regression:_ Pages are correctly rendered when requesting `?go-get=1` for subdirectories. [#6314](https://github.com/gogs/gogs/issues/6314)
+
+### Removed
+
+- ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
+- Configuration section `[mailer]` is no longer used.
+- Configuration section `[service]` is no longer used.
+- Configuration option `APP_NAME` is no longer used.
+- Configuration option `[security] REVERSE_PROXY_AUTHENTICATION_USER` is no longer used.
+- Configuration option `[database] PASSWD` is no longer used.
+- Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is no longer used.
+- Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is no longer used.
+- Configuration option `[auth] ENABLE_CAPTCHA` is no longer used.
+- Configuration option `[auth] ENABLE_NOTIFY_MAIL` is no longer used.
+- Configuration option `[auth] REGISTER_EMAIL_CONFIRM` is no longer used.
+- Configuration option `[session] GC_INTERVAL_TIME` is no longer used.
+- Configuration option `[session] SESSION_LIFE_TIME` is no longer used.
+- Configuration option `[server] ROOT_URL` is no longer used.
+- Configuration option `[server] LANDING_PAGE` is no longer used.
+- Configuration option `[database] DB_TYPE` is no longer used.
+- Configuration option `[database] PASSWD` is no longer used.
+
+## 0.12.1
+
+### Fixed
+
+- The `updated_at` field is now correctly updated when updates an issue. [#6209](https://github.com/gogs/gogs/issues/6209)
+- Fixed a regression which created `login_source.cfg` column to have `VARCHAR(255)` instead of `TEXT` in MySQL. [#6280](https://github.com/gogs/gogs/issues/6280)
 
 ## 0.12.0
 
 ### Added
 
-- Support for Git LFS, you can read documentation for both [user](https://github.com/gogs/gogs/blob/master/docs/user/lfs.md) and [admin](https://github.com/gogs/gogs/blob/master/docs/admin/lfs.md). [#1322](https://github.com/gogs/gogs/issues/1322)
+- Support for Git LFS, you can read documentation for both [user](https://github.com/gogs/gogs/blob/main/docs/user/lfs.md) and [admin](https://github.com/gogs/gogs/blob/main/docs/admin/lfs.md). [#1322](https://github.com/gogs/gogs/issues/1322)
 - Allow admin to remove observers from the repository. [#5803](https://github.com/gogs/gogs/pull/5803)
 - Use `Last-Modified` HTTP header for raw files. [#5811](https://github.com/gogs/gogs/issues/5811)
 - Support syntax highlighting for SAS code files (i.e. `.r`, `.sas`, `.tex`, `.yaml`). [#5856](https://github.com/gogs/gogs/pull/5856)
