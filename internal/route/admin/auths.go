@@ -49,16 +49,16 @@ type dropdownItem struct {
 
 var (
 	authSources = []dropdownItem{
-		{auth.LoginNames(auth.LoginLDAP), auth.LoginLDAP},
-		{auth.LoginNames(auth.LoginDLDAP), auth.LoginDLDAP},
-		{auth.LoginNames(auth.LoginSMTP), auth.LoginSMTP},
-		{auth.LoginNames(auth.LoginPAM), auth.LoginPAM},
-		{auth.LoginNames(auth.LoginGitHub), auth.LoginGitHub},
+		{auth.Name(auth.LDAP), auth.LDAP},
+		{auth.Name(auth.DLDAP), auth.DLDAP},
+		{auth.Name(auth.SMTP), auth.SMTP},
+		{auth.Name(auth.PAM), auth.PAM},
+		{auth.Name(auth.GitHub), auth.GitHub},
 	}
 	securityProtocols = []dropdownItem{
-		{ldap.SecurityProtocolNames(ldap.SecurityProtocolUnencrypted), ldap.SecurityProtocolUnencrypted},
-		{ldap.SecurityProtocolNames(ldap.SecurityProtocolLDAPS), ldap.SecurityProtocolLDAPS},
-		{ldap.SecurityProtocolNames(ldap.SecurityProtocolStartTLS), ldap.SecurityProtocolStartTLS},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted), ldap.SecurityProtocolUnencrypted},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolLDAPS), ldap.SecurityProtocolLDAPS},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolStartTLS), ldap.SecurityProtocolStartTLS},
 	}
 )
 
@@ -67,9 +67,9 @@ func NewAuthSource(c *context.Context) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["type"] = auth.LoginLDAP
-	c.Data["CurrentTypeName"] = auth.LoginNames(auth.LoginLDAP)
-	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolNames(ldap.SecurityProtocolUnencrypted)
+	c.Data["type"] = auth.LDAP
+	c.Data["CurrentTypeName"] = auth.Name(auth.LDAP)
+	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted)
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
 	c.Data["is_default"] = true
@@ -122,26 +122,26 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["CurrentTypeName"] = auth.LoginNames(auth.LoginType(f.Type))
-	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolNames(ldap.SecurityProtocol(f.SecurityProtocol))
+	c.Data["CurrentTypeName"] = auth.Name(auth.Type(f.Type))
+	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocol(f.SecurityProtocol))
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = db.SMTPAuths
 
 	hasTLS := false
 	var config interface{}
-	switch auth.LoginType(f.Type) {
-	case auth.LoginLDAP, auth.LoginDLDAP:
+	switch auth.Type(f.Type) {
+	case auth.LDAP, auth.DLDAP:
 		config = parseLDAPConfig(f)
 		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SecurityProtocolUnencrypted
-	case auth.LoginSMTP:
+	case auth.SMTP:
 		config = parseSMTPConfig(f)
 		hasTLS = true
-	case auth.LoginPAM:
+	case auth.PAM:
 		config = &db.PAMConfig{
 			ServiceName: f.PAMServiceName,
 		}
-	case auth.LoginGitHub:
+	case auth.GitHub:
 		config = &db.GitHubConfig{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}
@@ -157,7 +157,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	source, err := db.LoginSources.Create(db.CreateLoginSourceOpts{
-		Type:      auth.LoginType(f.Type),
+		Type:      auth.Type(f.Type),
 		Name:      f.Name,
 		Activated: f.IsActive,
 		Default:   f.IsDefault,
@@ -227,16 +227,16 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	var config interface{}
-	switch auth.LoginType(f.Type) {
-	case auth.LoginLDAP, auth.LoginDLDAP:
+	switch auth.Type(f.Type) {
+	case auth.LDAP, auth.DLDAP:
 		config = parseLDAPConfig(f)
-	case auth.LoginSMTP:
+	case auth.SMTP:
 		config = parseSMTPConfig(f)
-	case auth.LoginPAM:
+	case auth.PAM:
 		config = &db.PAMConfig{
 			ServiceName: f.PAMServiceName,
 		}
-	case auth.LoginGitHub:
+	case auth.GitHub:
 		config = &db.GitHubConfig{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
 		}

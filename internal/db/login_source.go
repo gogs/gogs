@@ -31,7 +31,7 @@ type LDAPConfig struct {
 }
 
 func (cfg *LDAPConfig) SecurityProtocolName() string {
-	return ldap.SecurityProtocolNames(cfg.SecurityProtocol)
+	return ldap.SecurityProtocolName(cfg.SecurityProtocol)
 }
 
 func composeFullName(firstname, surname, username string) string {
@@ -50,7 +50,7 @@ func composeFullName(firstname, surname, username string) string {
 // LoginViaLDAP queries if login/password is valid against the LDAP directory pool,
 // and create a local user if success when enabled.
 func LoginViaLDAP(login, password string, source *LoginSource, autoRegister bool) (*User, error) {
-	username, fn, sn, mail, isAdmin, succeed := source.Config.(*LDAPConfig).SearchEntry(login, password, source.Type == auth.LoginDLDAP)
+	username, fn, sn, mail, isAdmin, succeed := source.Config.(*LDAPConfig).SearchEntry(login, password, source.Type == auth.DLDAP)
 	if !succeed {
 		// User not in LDAP, do nothing
 		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
@@ -301,13 +301,13 @@ func authenticateViaLoginSource(source *LoginSource, login, password string, aut
 	}
 
 	switch source.Type {
-	case auth.LoginLDAP, auth.LoginDLDAP:
+	case auth.LDAP, auth.DLDAP:
 		return LoginViaLDAP(login, password, source, autoRegister)
-	case auth.LoginSMTP:
+	case auth.SMTP:
 		return LoginViaSMTP(login, password, source.ID, source.Config.(*SMTPConfig), autoRegister)
-	case auth.LoginPAM:
+	case auth.PAM:
 		return LoginViaPAM(login, password, source.ID, source.Config.(*PAMConfig), autoRegister)
-	case auth.LoginGitHub:
+	case auth.GitHub:
 		return LoginViaGitHub(login, password, source.ID, source.Config.(*GitHubConfig), autoRegister)
 	}
 

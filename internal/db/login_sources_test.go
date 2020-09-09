@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -109,7 +110,7 @@ func Test_loginSources(t *testing.T) {
 func test_loginSources_Create(t *testing.T, db *loginSources) {
 	// Create first login source with name "GitHub"
 	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   false,
@@ -138,7 +139,7 @@ func test_loginSources_Create(t *testing.T, db *loginSources) {
 func test_loginSources_Count(t *testing.T, db *loginSources) {
 	// Create two login sources, one in database and one as source file.
 	_, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   false,
@@ -162,7 +163,7 @@ func test_loginSources_Count(t *testing.T, db *loginSources) {
 func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 	t.Run("delete but in used", func(t *testing.T) {
 		source, err := db.Create(CreateLoginSourceOpts{
-			Type:      LoginGitHub,
+			Type:      auth.GitHub,
 			Name:      "GitHub",
 			Activated: true,
 			Default:   false,
@@ -197,7 +198,7 @@ func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 
 	// Create a login source with name "GitHub2"
 	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub2",
 		Activated: true,
 		Default:   false,
@@ -249,7 +250,7 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 
 	// Create a login source with name "GitHub"
 	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   false,
@@ -290,7 +291,7 @@ func test_loginSources_List(t *testing.T, db *loginSources) {
 
 	// Create two login sources in database, one activated and the other one not
 	_, err := db.Create(CreateLoginSourceOpts{
-		Type: LoginPAM,
+		Type: auth.PAM,
 		Name: "PAM",
 		Config: &PAMConfig{
 			ServiceName: "PAM",
@@ -300,7 +301,7 @@ func test_loginSources_List(t *testing.T, db *loginSources) {
 		t.Fatal(err)
 	}
 	_, err = db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Config: &GitHubConfig{
@@ -348,7 +349,7 @@ func test_loginSources_ResetNonDefault(t *testing.T, db *loginSources) {
 
 	// Create two login sources both have default on
 	source1, err := db.Create(CreateLoginSourceOpts{
-		Type:    LoginPAM,
+		Type:    auth.PAM,
 		Name:    "PAM",
 		Default: true,
 		Config: &PAMConfig{
@@ -359,7 +360,7 @@ func test_loginSources_ResetNonDefault(t *testing.T, db *loginSources) {
 		t.Fatal(err)
 	}
 	source2, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   true,
@@ -395,7 +396,7 @@ func test_loginSources_Save(t *testing.T, db *loginSources) {
 	t.Run("save to database", func(t *testing.T) {
 		// Create a login source with name "GitHub"
 		source, err := db.Create(CreateLoginSourceOpts{
-			Type:      LoginGitHub,
+			Type:      auth.GitHub,
 			Name:      "GitHub",
 			Activated: true,
 			Default:   false,

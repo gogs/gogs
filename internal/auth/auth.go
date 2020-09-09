@@ -4,26 +4,26 @@
 
 package auth
 
-type LoginType int
+type Type int
 
 // Note: New type must append to the end of list to maintain backward compatibility.
 const (
-	LoginNotype LoginType = iota
-	LoginPlain            // 1
-	LoginLDAP             // 2
-	LoginSMTP             // 3
-	LoginPAM              // 4
-	LoginDLDAP            // 5
-	LoginGitHub           // 6
+	None   Type = iota
+	Plain       // 1
+	LDAP        // 2
+	SMTP        // 3
+	PAM         // 4
+	DLDAP       // 5
+	GitHub      // 6
 )
 
-// LoginNames returns the human-readable name for given authentication type.
-func LoginNames(loginType LoginType) string {
-	return map[LoginType]string{
-		LoginLDAP:   "LDAP (via BindDN)",
-		LoginDLDAP:  "LDAP (simple auth)", // Via direct bind
-		LoginSMTP:   "SMTP",
-		LoginPAM:    "PAM",
-		LoginGitHub: "GitHub",
-	}[loginType]
+// Name returns the human-readable name for given authentication type.
+func Name(typ Type) string {
+	return map[Type]string{
+		LDAP:   "LDAP (via BindDN)",
+		DLDAP:  "LDAP (simple auth)", // Via direct bind
+		SMTP:   "SMTP",
+		PAM:    "PAM",
+		GitHub: "GitHub",
+	}[typ]
 }

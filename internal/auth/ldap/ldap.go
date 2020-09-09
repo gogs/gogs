@@ -24,8 +24,8 @@ const (
 	SecurityProtocolStartTLS
 )
 
-// SecurityProtocolNames returns the human-readable name for given security protocol.
-func SecurityProtocolNames(protocol SecurityProtocol) string {
+// SecurityProtocolName returns the human-readable name for given security protocol.
+func SecurityProtocolName(protocol SecurityProtocol) string {
 	return map[SecurityProtocol]string{
 		SecurityProtocolUnencrypted: "Unencrypted",
 		SecurityProtocolLDAPS:       "LDAPS",

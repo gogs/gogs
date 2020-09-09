@@ -157,19 +157,19 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 		authType := s.Key("type").String()
 		switch authType {
 		case "ldap_bind_dn":
-			loginSource.Type = auth.LoginLDAP
+			loginSource.Type = auth.LDAP
 			loginSource.Config = &LDAPConfig{}
 		case "ldap_simple_auth":
-			loginSource.Type = auth.LoginDLDAP
+			loginSource.Type = auth.DLDAP
 			loginSource.Config = &LDAPConfig{}
 		case "smtp":
-			loginSource.Type = auth.LoginSMTP
+			loginSource.Type = auth.SMTP
 			loginSource.Config = &SMTPConfig{}
 		case "pam":
-			loginSource.Type = auth.LoginPAM
+			loginSource.Type = auth.PAM
 			loginSource.Config = &PAMConfig{}
 		case "github":
-			loginSource.Type = auth.LoginGitHub
+			loginSource.Type = auth.GitHub
 			loginSource.Config = &GitHubConfig{}
 		default:
 			return fmt.Errorf("unknown type %q", authType)
