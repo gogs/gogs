@@ -258,6 +258,7 @@ github.com/mattn/go-runewidth v0.0.7/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m
 github.com/mattn/go-sqlite3 v1.10.0/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
 github.com/mattn/go-sqlite3 v1.11.0/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
 github.com/mattn/go-sqlite3 v1.14.0/go.mod h1:JIl7NbARA7phWnGvh0LKTyg7S9BA+6gx71ShQilpsus=
+github.com/mattn/go-sqlite3 v1.14.3/go.mod h1:WVKg1VTActs4Qso6iwGbiFih2UIHo0ENGwNd0Lj+XmI=
 github.com/mattn/go-sqlite3 v2.0.3+incompatible h1:gXHsfypPkaMZrKbD5209QV9jbUTJKjyR5WD3HYQSd+U=
 github.com/mattn/go-sqlite3 v2.0.3+incompatible/go.mod h1:FPy6KqzDD04eiIsT53CuJW3U88zkxoIYsOqkbpncsNc=
 github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0jegS5sx/RkqARlsWZ6pIwiU=
@@ -557,6 +558,8 @@ gorm.io/driver/postgres v1.0.0 h1:Yh4jyFQ0a7F+JPU0Gtiam/eKmpT/XFc1FKxotGqc6FM=
 gorm.io/driver/postgres v1.0.0/go.mod h1:wtMFcOzmuA5QigNsgEIb7O5lhvH1tHAF1RbWmLWV4to=
 gorm.io/driver/sqlite v1.1.1 h1:qtWqNAEUyi7gYSUAJXeiAMz0lUOdakZF5ia9Fqnp5G4=
 gorm.io/driver/sqlite v1.1.1/go.mod h1:hm2olEcl8Tmsc6eZyxYSeznnsDaMqamBvEXLNtBg4cI=
+gorm.io/driver/sqlite v1.1.3 h1:BYfdVuZB5He/u9dt4qDpZqiqDJ6KhPqs5QUqsr/Eeuc=
+gorm.io/driver/sqlite v1.1.3/go.mod h1:AKDgRWk8lcSQSw+9kxCJnX/yySj8G3rdwYlU57cB45c=
 gorm.io/driver/sqlserver v1.0.3 h1:Al16r8X+57ZNcZBqrEwcakCF1mBChuwZW72O8WgJKnk=
 gorm.io/driver/sqlserver v1.0.3/go.mod h1:gb0Y9QePGgqjzrVyTQUZeh9zkd5v0iz71cM1B4ZycEY=
 gorm.io/driver/sqlserver v1.0.4 h1:V15fszi0XAo7fbx3/cF50ngshDSN4QT0MXpWTylyPTY=
