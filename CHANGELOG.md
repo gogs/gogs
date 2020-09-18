@@ -17,6 +17,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - _Regression:_ Pages are correctly rendered when requesting `?go-get=1` for subdirectories. [#6314](https://github.com/gogs/gogs/issues/6314)
+- _Regression:_ Submodule with a relative path is linked correctly. [#6319](https://github.com/gogs/gogs/issues/6319)
 
 ### Removed
 
