@@ -45,7 +45,7 @@ require (
 	github.com/sergi/go-diff v1.1.0
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/stretchr/testify v1.6.1
-	github.com/unknwon/cae v1.0.0
+	github.com/unknwon/cae v1.0.1
 	github.com/unknwon/com v1.0.1
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
