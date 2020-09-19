@@ -55,7 +55,7 @@ type LoginSource struct {
 	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
 	IsDefault bool          `xorm:"DEFAULT false"`
 	Provider  auth.Provider `xorm:"-" gorm:"-"`
-	Config    string        `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT"`
+	Config    string        `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT" json:"RawConfig"`
 
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
