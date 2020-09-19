@@ -14,8 +14,6 @@ import (
 	"gogs.io/gogs/internal/auth"
 )
 
-var _ auth.Provider = (*Provider)(nil)
-
 // Provider contains configuration of an SMTP authentication provider.
 type Provider struct {
 	config *Config

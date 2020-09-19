@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -127,7 +128,13 @@ func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 		s.Provider = pam.NewProvider(&cfg)
 
 	case auth.GitHub:
-		// s.Provider = new(GitHubConfig)
+		var cfg github.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = github.NewProvider(&cfg)
+
 	default:
 		return fmt.Errorf("unrecognized login source type: %v", s.Type)
 	}
@@ -168,6 +175,10 @@ func (s *LoginSource) SMTP() *smtp.Config {
 
 func (s *LoginSource) PAM() *pam.Config {
 	return s.Provider.Config().(*pam.Config)
+}
+
+func (s *LoginSource) GitHub() *github.Config {
+	return s.Provider.Config().(*github.Config)
 }
 
 var _ LoginSourcesStore = (*loginSources)(nil)

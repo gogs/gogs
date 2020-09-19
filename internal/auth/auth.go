@@ -64,6 +64,10 @@ type ExternalAccount struct {
 	FullName string
 	// The email address of the account.
 	Email string
+	// The location of the account.
+	Location string
+	// The website of the account.
+	Website string
 	// Whether the user should be prompted as a site admin.
 	Admin bool
 }

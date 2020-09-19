@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package pam
+package github
 
 import (
 	"strings"
@@ -23,17 +23,20 @@ func NewProvider(cfg *Config) auth.Provider {
 }
 
 func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
-	err := p.config.doAuth(login, password)
+	fullname, email, website, location, err := p.config.doAuth(login, password)
 	if err != nil {
-		if strings.Contains(err.Error(), "Authentication failure") {
+		if strings.Contains(err.Error(), "401") {
 			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
 		}
 		return nil, err
 	}
-
 	return &auth.ExternalAccount{
-		Login: login,
-		Name:  login,
+		Login:    login,
+		Name:     login,
+		FullName: fullname,
+		Email:    email,
+		Location: location,
+		Website:  website,
 	}, nil
 }
 
@@ -42,13 +45,13 @@ func (p *Provider) Config() interface{} {
 }
 
 func (p *Provider) HasTLS() bool {
-	return false
+	return true
 }
 
 func (p *Provider) UseTLS() bool {
-	return false
+	return true
 }
 
 func (p *Provider) SkipTLSVerify() bool {
-	return false
+	return p.config.SkipVerify
 }

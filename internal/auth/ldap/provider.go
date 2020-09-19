@@ -10,8 +10,6 @@ import (
 	"gogs.io/gogs/internal/auth"
 )
 
-var _ auth.Provider = (*Provider)(nil)
-
 // Provider contains configuration of an LDAP authentication provider.
 type Provider struct {
 	directBind bool

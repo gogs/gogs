@@ -16,6 +16,7 @@ import (
 	"gopkg.in/ini.v1"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -196,9 +197,15 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			loginSource.Type = auth.PAM
 			loginSource.Provider = pam.NewProvider(&cfg)
 
-		// case "github":
-		// 	loginSource.Type = auth.GitHub
-		// 	loginSource.Provider = &GitHubConfig{}
+		case "github":
+			var cfg github.Config
+			err = cfgSection.MapTo(&cfg)
+			if err != nil {
+				return errors.Wrap(err, `map "config" section`)
+			}
+			loginSource.Type = auth.GitHub
+			loginSource.Provider = github.NewProvider(&cfg)
+
 		default:
 			return fmt.Errorf("unknown type %q", authType)
 		}

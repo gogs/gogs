@@ -153,6 +153,8 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 		FullName:    extAccount.FullName,
 		LoginSource: authSourceID,
 		LoginName:   extAccount.Login,
+		Location:    extAccount.Location,
+		Website:     extAccount.Website,
 		Activated:   true,
 		Admin:       extAccount.Admin,
 	})
@@ -163,6 +165,8 @@ type CreateUserOpts struct {
 	Password    string
 	LoginSource int64
 	LoginName   string
+	Location    string
+	Website     string
 	Activated   bool
 	Admin       bool
 }
@@ -229,6 +233,8 @@ func (db *users) Create(username, email string, opts CreateUserOpts) (*User, err
 		Passwd:          opts.Password,
 		LoginSource:     opts.LoginSource,
 		LoginName:       opts.LoginName,
+		Location:        opts.Location,
+		Website:         opts.Website,
 		MaxRepoCreation: -1,
 		IsActive:        opts.Activated,
 		IsAdmin:         opts.Admin,

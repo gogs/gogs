@@ -13,6 +13,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
@@ -142,9 +143,11 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 			ServiceName: f.PAMServiceName,
 		}
 	case auth.GitHub:
-		config = &db.GitHubConfig{
+		config = &github.Config{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
+			SkipVerify:  f.SkipVerify,
 		}
+		hasTLS = true
 	default:
 		c.Status(http.StatusBadRequest)
 		return
@@ -239,9 +242,10 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 			ServiceName: f.PAMServiceName,
 		})
 	case auth.GitHub:
-		// config = &db.GitHubConfig{
-		// 	APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
-		// }
+		provider = github.NewProvider(&github.Config{
+			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
+			SkipVerify:  f.SkipVerify,
+		})
 	default:
 		c.Status(http.StatusBadRequest)
 		return
