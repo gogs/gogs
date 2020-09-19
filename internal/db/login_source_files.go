@@ -17,6 +17,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
@@ -186,9 +187,15 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 			loginSource.Type = auth.SMTP
 			loginSource.Provider = smtp.NewProvider(&cfg)
 
-		// case "pam":
-		// 	loginSource.Type = auth.PAM
-		// 	loginSource.Provider = &PAMConfig{}
+		case "pam":
+			var cfg pam.Config
+			err = cfgSection.MapTo(&cfg)
+			if err != nil {
+				return errors.Wrap(err, `map "config" section`)
+			}
+			loginSource.Type = auth.PAM
+			loginSource.Provider = pam.NewProvider(&cfg)
+
 		// case "github":
 		// 	loginSource.Type = auth.GitHub
 		// 	loginSource.Provider = &GitHubConfig{}

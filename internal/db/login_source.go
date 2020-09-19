@@ -9,43 +9,7 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/auth/github"
-	"gogs.io/gogs/internal/auth/pam"
 )
-
-// **********************
-// ----- PAM config -----
-// **********************
-
-type PAMConfig struct {
-	// The name of the PAM service, e.g. system-auth.
-	ServiceName string
-}
-
-// LoginViaPAM queries if login/password is valid against the PAM,
-// and create a local user if success when enabled.
-func LoginViaPAM(login, password string, sourceID int64, cfg *PAMConfig, autoRegister bool) (*User, error) {
-	if err := pam.PAMAuth(cfg.ServiceName, login, password); err != nil {
-		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
-		}
-		return nil, err
-	}
-
-	if !autoRegister {
-		return nil, nil
-	}
-
-	user := &User{
-		LowerName:   strings.ToLower(login),
-		Name:        login,
-		Email:       login,
-		Passwd:      password,
-		LoginSource: sourceID,
-		LoginName:   login,
-		IsActive:    true,
-	}
-	return user, CreateUser(user)
-}
 
 // *************************
 // ----- GitHub config -----

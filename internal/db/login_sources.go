@@ -15,6 +15,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errutil"
 )
@@ -118,7 +119,13 @@ func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 		s.Provider = smtp.NewProvider(&cfg)
 
 	case auth.PAM:
-		// s.Provider = new(PAMConfig)
+		var cfg pam.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = pam.NewProvider(&cfg)
+
 	case auth.GitHub:
 		// s.Provider = new(GitHubConfig)
 	default:
@@ -157,6 +164,10 @@ func (s *LoginSource) LDAP() *ldap.Config {
 
 func (s *LoginSource) SMTP() *smtp.Config {
 	return s.Provider.Config().(*smtp.Config)
+}
+
+func (s *LoginSource) PAM() *pam.Config {
+	return s.Provider.Config().(*pam.Config)
 }
 
 var _ LoginSourcesStore = (*loginSources)(nil)

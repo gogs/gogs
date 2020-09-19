@@ -14,6 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -137,7 +138,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		config = parseSMTPConfig(f)
 		hasTLS = true
 	case auth.PAM:
-		config = &db.PAMConfig{
+		config = &pam.Config{
 			ServiceName: f.PAMServiceName,
 		}
 	case auth.GitHub:
@@ -234,9 +235,9 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	case auth.SMTP:
 		provider = smtp.NewProvider(parseSMTPConfig(f))
 	case auth.PAM:
-		// config = &db.PAMConfig{
-		// 	ServiceName: f.PAMServiceName,
-		// }
+		provider = pam.NewProvider(&pam.Config{
+			ServiceName: f.PAMServiceName,
+		})
 	case auth.GitHub:
 		// config = &db.GitHubConfig{
 		// 	APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
