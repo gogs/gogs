@@ -217,18 +217,3 @@ func LoginViaGitHub(login, password string, sourceID int64, cfg *GitHubConfig, a
 	}
 	return user, CreateUser(user)
 }
-
-// TODO: Delete me
-func authenticateViaLoginSource(source *LoginSource, login, password string, autoRegister bool) (*User, error) {
-	if !source.IsActived {
-		return nil, errors.LoginSourceNotActivated{SourceID: source.ID}
-	}
-
-	extAccount, err := source.Provider.Authenticate(login, password)
-	if err != nil {
-		return nil, err
-	}
-
-	_ = extAccount // TODO
-	return nil, nil
-}
