@@ -286,7 +286,7 @@ func (db *loginSources) Save(source *LoginSource) error {
 	source.File.SetGeneral("name", source.Name)
 	source.File.SetGeneral("is_activated", strconv.FormatBool(source.IsActived))
 	source.File.SetGeneral("is_default", strconv.FormatBool(source.IsDefault))
-	if err := source.File.SetConfig(source.Provider); err != nil {
+	if err := source.File.SetConfig(source.Provider.Config()); err != nil {
 		return errors.Wrap(err, "set config")
 	} else if err = source.File.Save(); err != nil {
 		return errors.Wrap(err, "save file")

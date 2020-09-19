@@ -15,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 )
@@ -154,13 +156,26 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 
 		// Parse authentication source file
 		authType := s.Key("type").String()
+		cfgSection := authSource.Section("config")
 		switch authType {
-		// case "ldap_bind_dn":
-		// 	loginSource.Type = auth.LDAP
-		// 	loginSource.Provider = &LDAPConfig{}
-		// case "ldap_simple_auth":
-		// 	loginSource.Type = auth.DLDAP
-		// 	loginSource.Provider = &LDAPConfig{}
+		case "ldap_bind_dn":
+			var cfg ldap.Config
+			err = cfgSection.MapTo(&cfg)
+			if err != nil {
+				return errors.Wrap(err, `map "config" section`)
+			}
+			loginSource.Type = auth.LDAP
+			loginSource.Provider = ldap.NewProvider(false, &cfg)
+
+		case "ldap_simple_auth":
+			var cfg ldap.Config
+			err = cfgSection.MapTo(&cfg)
+			if err != nil {
+				return errors.Wrap(err, `map "config" section`)
+			}
+			loginSource.Type = auth.DLDAP
+			loginSource.Provider = ldap.NewProvider(true, &cfg)
+
 		// case "smtp":
 		// 	loginSource.Type = auth.SMTP
 		// 	loginSource.Provider = &SMTPConfig{}
@@ -172,10 +187,6 @@ func loadLoginSourceFiles(authdPath string, clock func() time.Time) (loginSource
 		// 	loginSource.Provider = &GitHubConfig{}
 		default:
 			return fmt.Errorf("unknown type %q", authType)
-		}
-
-		if err = authSource.Section("config").MapTo(loginSource.Provider); err != nil {
-			return errors.Wrap(err, `map "config" section`)
 		}
 
 		store.sources = append(store.sources, loginSource)

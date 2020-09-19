@@ -18,7 +18,7 @@ import (
 // SecurityProtocol is the security protocol when the authenticate provider talks to LDAP directory.
 type SecurityProtocol int
 
-// Note: new type must be added at the end of list to maintain compatibility.
+// ⚠️ WARNING: new type must be added at the end of list to maintain compatibility.
 const (
 	SecurityProtocolUnencrypted SecurityProtocol = iota
 	SecurityProtocolLDAPS
@@ -35,6 +35,8 @@ func SecurityProtocolName(protocol SecurityProtocol) string {
 }
 
 // Config contains configuration for LDAP authentication.
+//
+// ⚠️ WARNING: Change to the field name must preserve the INI key name for backward compatibility.
 type Config struct {
 	Host              string // LDAP host
 	Port              int    // Port number
