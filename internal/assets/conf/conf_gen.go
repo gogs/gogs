@@ -384,7 +384,7 @@ func confAuthDLdap_simple_authConfExample() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/auth.d/ldap_simple_auth.conf.example", size: 761, mode: os.FileMode(0644), modTime: time.Unix(1599160112, 0)}
+	info := bindataFileInfo{name: "conf/auth.d/ldap_simple_auth.conf.example", size: 761, mode: os.FileMode(0644), modTime: time.Unix(1600504559, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x79, 0x97, 0x7b, 0x30, 0x8a, 0x94, 0x93, 0xa7, 0x6e, 0xfc, 0x9e, 0x39, 0xc3, 0xd5, 0x90, 0x25, 0xb8, 0xb9, 0xf2, 0x85, 0xb4, 0x1f, 0xcd, 0x71, 0xf, 0xfa, 0x7b, 0x74, 0x8, 0x5c, 0x53, 0x7f}}
 	return a, nil
 }
