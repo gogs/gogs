@@ -31,18 +31,18 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		assert.Empty(t, s.RawConfig)
+		assert.Empty(t, s.Config)
 	})
 
 	t.Run("Config has been set", func(t *testing.T) {
 		s := &LoginSource{
-			Config: &PAMConfig{ServiceName: "pam_service"},
+			Provider: &PAMConfig{ServiceName: "pam_service"},
 		}
 		err := s.BeforeSave(db)
 		if err != nil {
 			t.Fatal(err)
 		}
-		assert.Equal(t, `{"ServiceName":"pam_service"}`, s.RawConfig)
+		assert.Equal(t, `{"ServiceName":"pam_service"}`, s.Config)
 	})
 }
 
@@ -265,7 +265,7 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, expConfig, source.Config)
+	assert.Equal(t, expConfig, source.Provider)
 
 	// Get the one in source file store
 	_, err = db.GetByID(101)
@@ -409,7 +409,7 @@ func test_loginSources_Save(t *testing.T, db *loginSources) {
 		}
 
 		source.IsActived = false
-		source.Config = &GitHubConfig{
+		source.Provider = &GitHubConfig{
 			APIEndpoint: "https://api2.github.com",
 		}
 		err = db.Save(source)

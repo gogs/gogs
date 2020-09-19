@@ -83,7 +83,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Type:      auth.PAM,
 			Name:      "My PAM",
 			IsActived: true,
-			Config: &PAMConfig{
+			Provider: &PAMConfig{
 				ServiceName: "PAM service",
 			},
 			CreatedUnix: 1588568886,
@@ -93,7 +93,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Type:      auth.GitHub,
 			Name:      "GitHub.com",
 			IsActived: true,
-			Config: &GitHubConfig{
+			Provider: &GitHubConfig{
 				APIEndpoint: "https://api.github.com",
 			},
 			CreatedUnix: 1588568886,

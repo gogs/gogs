@@ -79,30 +79,28 @@ func NewAuthSource(c *context.Context) {
 	c.Success(AUTH_NEW)
 }
 
-func parseLDAPConfig(f form.Authentication) *db.LDAPConfig {
-	return &db.LDAPConfig{
-		Source: ldap.Source{
-			Host:              f.Host,
-			Port:              f.Port,
-			SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
-			SkipVerify:        f.SkipVerify,
-			BindDN:            f.BindDN,
-			UserDN:            f.UserDN,
-			BindPassword:      f.BindPassword,
-			UserBase:          f.UserBase,
-			AttributeUsername: f.AttributeUsername,
-			AttributeName:     f.AttributeName,
-			AttributeSurname:  f.AttributeSurname,
-			AttributeMail:     f.AttributeMail,
-			AttributesInBind:  f.AttributesInBind,
-			Filter:            f.Filter,
-			GroupEnabled:      f.GroupEnabled,
-			GroupDN:           f.GroupDN,
-			GroupFilter:       f.GroupFilter,
-			GroupMemberUID:    f.GroupMemberUID,
-			UserUID:           f.UserUID,
-			AdminFilter:       f.AdminFilter,
-		},
+func parseLDAPConfig(f form.Authentication) *ldap.Config {
+	return &ldap.Config{
+		Host:              f.Host,
+		Port:              f.Port,
+		SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
+		SkipVerify:        f.SkipVerify,
+		BindDN:            f.BindDN,
+		UserDN:            f.UserDN,
+		BindPassword:      f.BindPassword,
+		UserBase:          f.UserBase,
+		AttributeUsername: f.AttributeUsername,
+		AttributeName:     f.AttributeName,
+		AttributeSurname:  f.AttributeSurname,
+		AttributeMail:     f.AttributeMail,
+		AttributesInBind:  f.AttributesInBind,
+		Filter:            f.Filter,
+		GroupEnabled:      f.GroupEnabled,
+		GroupDN:           f.GroupDN,
+		GroupFilter:       f.GroupFilter,
+		GroupMemberUID:    f.GroupMemberUID,
+		UserUID:           f.UserUID,
+		AdminFilter:       f.AdminFilter,
 	}
 }
 
@@ -201,7 +199,7 @@ func EditAuthSource(c *context.Context) {
 		return
 	}
 	c.Data["Source"] = source
-	c.Data["HasTLS"] = source.HasTLS()
+	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	c.Success(AUTH_EDIT)
 }
@@ -219,27 +217,29 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 		return
 	}
 	c.Data["Source"] = source
-	c.Data["HasTLS"] = source.HasTLS()
+	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
 		c.Success(AUTH_EDIT)
 		return
 	}
 
-	var config interface{}
+	var provider auth.Provider
 	switch auth.Type(f.Type) {
-	case auth.LDAP, auth.DLDAP:
-		config = parseLDAPConfig(f)
+	case auth.LDAP:
+		provider = ldap.NewProvider(false, parseLDAPConfig(f))
+	case auth.DLDAP:
+		provider = ldap.NewProvider(true, parseLDAPConfig(f))
 	case auth.SMTP:
-		config = parseSMTPConfig(f)
+		// config = parseSMTPConfig(f)
 	case auth.PAM:
-		config = &db.PAMConfig{
-			ServiceName: f.PAMServiceName,
-		}
+		// config = &db.PAMConfig{
+		// 	ServiceName: f.PAMServiceName,
+		// }
 	case auth.GitHub:
-		config = &db.GitHubConfig{
-			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
-		}
+		// config = &db.GitHubConfig{
+		// 	APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
+		// }
 	default:
 		c.Status(http.StatusBadRequest)
 		return
@@ -248,7 +248,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	source.Name = f.Name
 	source.IsActived = f.IsActive
 	source.IsDefault = f.IsDefault
-	source.Config = config
+	source.Provider = provider
 	if err := db.LoginSources.Save(source); err != nil {
 		c.Error(err, "update login source")
 		return

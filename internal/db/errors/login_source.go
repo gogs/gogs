@@ -18,16 +18,3 @@ func IsLoginSourceNotActivated(err error) bool {
 func (err LoginSourceNotActivated) Error() string {
 	return fmt.Sprintf("login source is not activated [source_id: %d]", err.SourceID)
 }
-
-type InvalidLoginSourceType struct {
-	Type interface{}
-}
-
-func IsInvalidLoginSourceType(err error) bool {
-	_, ok := err.(InvalidLoginSourceType)
-	return ok
-}
-
-func (err InvalidLoginSourceType) Error() string {
-	return fmt.Sprintf("invalid login source type [type: %v]", err.Type)
-}

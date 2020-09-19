@@ -12,89 +12,12 @@ import (
 	"net/textproto"
 	"strings"
 
-	"github.com/go-macaron/binding"
 	"github.com/unknwon/com"
 
-	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
-	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/db/errors"
 )
-
-// ***********************
-// ----- LDAP config -----
-// ***********************
-
-type LDAPConfig struct {
-	ldap.Source `ini:"config"`
-}
-
-func (cfg *LDAPConfig) SecurityProtocolName() string {
-	return ldap.SecurityProtocolName(cfg.SecurityProtocol)
-}
-
-func composeFullName(firstname, surname, username string) string {
-	switch {
-	case len(firstname) == 0 && len(surname) == 0:
-		return username
-	case len(firstname) == 0:
-		return surname
-	case len(surname) == 0:
-		return firstname
-	default:
-		return firstname + " " + surname
-	}
-}
-
-// LoginViaLDAP queries if login/password is valid against the LDAP directory pool,
-// and create a local user if success when enabled.
-func LoginViaLDAP(login, password string, source *LoginSource, autoRegister bool) (*User, error) {
-	username, fn, sn, mail, isAdmin, succeed := source.Config.(*LDAPConfig).SearchEntry(login, password, source.Type == auth.DLDAP)
-	if !succeed {
-		// User not in LDAP, do nothing
-		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
-	}
-
-	if !autoRegister {
-		return nil, nil
-	}
-
-	// Fallback.
-	if len(username) == 0 {
-		username = login
-	}
-	// Validate username make sure it satisfies requirement.
-	if binding.AlphaDashDotPattern.MatchString(username) {
-		return nil, fmt.Errorf("Invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", username)
-	}
-
-	if len(mail) == 0 {
-		mail = fmt.Sprintf("%s@localhost", username)
-	}
-
-	user := &User{
-		LowerName:   strings.ToLower(username),
-		Name:        username,
-		FullName:    composeFullName(fn, sn, username),
-		Email:       mail,
-		LoginSource: source.ID,
-		LoginName:   login,
-		IsActive:    true,
-		IsAdmin:     isAdmin,
-	}
-
-	ok, err := IsUserExist(0, user.Name)
-	if err != nil {
-		return user, err
-	}
-
-	if ok {
-		return user, UpdateUser(user)
-	}
-
-	return user, CreateUser(user)
-}
 
 // ***********************
 // ----- SMTP config -----
@@ -295,21 +218,17 @@ func LoginViaGitHub(login, password string, sourceID int64, cfg *GitHubConfig, a
 	return user, CreateUser(user)
 }
 
+// TODO: Delete me
 func authenticateViaLoginSource(source *LoginSource, login, password string, autoRegister bool) (*User, error) {
 	if !source.IsActived {
 		return nil, errors.LoginSourceNotActivated{SourceID: source.ID}
 	}
 
-	switch source.Type {
-	case auth.LDAP, auth.DLDAP:
-		return LoginViaLDAP(login, password, source, autoRegister)
-	case auth.SMTP:
-		return LoginViaSMTP(login, password, source.ID, source.Config.(*SMTPConfig), autoRegister)
-	case auth.PAM:
-		return LoginViaPAM(login, password, source.ID, source.Config.(*PAMConfig), autoRegister)
-	case auth.GitHub:
-		return LoginViaGitHub(login, password, source.ID, source.Config.(*GitHubConfig), autoRegister)
+	extAccount, err := source.Provider.Authenticate(login, password)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, errors.InvalidLoginSourceType{Type: source.Type}
+	_ = extAccount // TODO
+	return nil, nil
 }

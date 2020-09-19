@@ -48,11 +48,11 @@ var LoginSources LoginSourcesStore
 type LoginSource struct {
 	ID        int64
 	Type      auth.Type
-	Name      string      `xorm:"UNIQUE" gorm:"UNIQUE"`
-	IsActived bool        `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
-	IsDefault bool        `xorm:"DEFAULT false"`
-	Config    interface{} `xorm:"-" gorm:"-"`
-	RawConfig string      `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT"`
+	Name      string        `xorm:"UNIQUE" gorm:"UNIQUE"`
+	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
+	IsDefault bool          `xorm:"DEFAULT false"`
+	Provider  auth.Provider `xorm:"-" gorm:"-"`
+	Config    string        `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT"`
 
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
@@ -64,10 +64,10 @@ type LoginSource struct {
 
 // NOTE: This is a GORM save hook.
 func (s *LoginSource) BeforeSave(tx *gorm.DB) (err error) {
-	if s.Config == nil {
+	if s.Provider == nil {
 		return nil
 	}
-	s.RawConfig, err = jsoniter.MarshalToString(s.Config)
+	s.Config, err = jsoniter.MarshalToString(s.Provider.Config())
 	return err
 }
 
@@ -92,18 +92,32 @@ func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 	s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 
 	switch s.Type {
-	case auth.LDAP, auth.DLDAP:
-		s.Config = new(LDAPConfig)
+	case auth.LDAP:
+		var cfg ldap.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = ldap.NewProvider(false, &cfg)
+
+	case auth.DLDAP:
+		var cfg ldap.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = ldap.NewProvider(true, &cfg)
+
 	case auth.SMTP:
-		s.Config = new(SMTPConfig)
+		// s.Provider = new(SMTPConfig)
 	case auth.PAM:
-		s.Config = new(PAMConfig)
+		// s.Provider = new(PAMConfig)
 	case auth.GitHub:
-		s.Config = new(GitHubConfig)
+		// s.Provider = new(GitHubConfig)
 	default:
 		return fmt.Errorf("unrecognized login source type: %v", s.Type)
 	}
-	return jsoniter.UnmarshalFromString(s.RawConfig, s.Config)
+	return nil
 }
 
 func (s *LoginSource) TypeName() string {
@@ -130,48 +144,8 @@ func (s *LoginSource) IsGitHub() bool {
 	return s.Type == auth.GitHub
 }
 
-func (s *LoginSource) HasTLS() bool {
-	return ((s.IsLDAP() || s.IsDLDAP()) &&
-		s.LDAP().SecurityProtocol > ldap.SecurityProtocolUnencrypted) ||
-		s.IsSMTP()
-}
-
-func (s *LoginSource) UseTLS() bool {
-	switch s.Type {
-	case auth.LDAP, auth.DLDAP:
-		return s.LDAP().SecurityProtocol != ldap.SecurityProtocolUnencrypted
-	case auth.SMTP:
-		return s.SMTP().TLS
-	}
-
-	return false
-}
-
-func (s *LoginSource) SkipVerify() bool {
-	switch s.Type {
-	case auth.LDAP, auth.DLDAP:
-		return s.LDAP().SkipVerify
-	case auth.SMTP:
-		return s.SMTP().SkipVerify
-	}
-
-	return false
-}
-
-func (s *LoginSource) LDAP() *LDAPConfig {
-	return s.Config.(*LDAPConfig)
-}
-
-func (s *LoginSource) SMTP() *SMTPConfig {
-	return s.Config.(*SMTPConfig)
-}
-
-func (s *LoginSource) PAM() *PAMConfig {
-	return s.Config.(*PAMConfig)
-}
-
-func (s *LoginSource) GitHub() *GitHubConfig {
-	return s.Config.(*GitHubConfig)
+func (s *LoginSource) LDAP() *ldap.Config {
+	return s.Provider.Config().(*ldap.Config)
 }
 
 var _ LoginSourcesStore = (*loginSources)(nil)
@@ -215,7 +189,10 @@ func (db *loginSources) Create(opts CreateLoginSourceOpts) (*LoginSource, error)
 		Name:      opts.Name,
 		IsActived: opts.Activated,
 		IsDefault: opts.Default,
-		Config:    opts.Config,
+	}
+	source.Config, err = jsoniter.MarshalToString(opts.Config)
+	if err != nil {
+		return nil, err
 	}
 	return source, db.DB.Create(source).Error
 }
@@ -309,7 +286,7 @@ func (db *loginSources) Save(source *LoginSource) error {
 	source.File.SetGeneral("name", source.Name)
 	source.File.SetGeneral("is_activated", strconv.FormatBool(source.IsActived))
 	source.File.SetGeneral("is_default", strconv.FormatBool(source.IsDefault))
-	if err := source.File.SetConfig(source.Config); err != nil {
+	if err := source.File.SetConfig(source.Provider); err != nil {
 		return errors.Wrap(err, "set config")
 	} else if err = source.File.Save(); err != nil {
 		return errors.Wrap(err, "save file")
