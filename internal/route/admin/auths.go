@@ -14,6 +14,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -75,7 +76,7 @@ func NewAuthSource(c *context.Context) {
 	c.Data["is_default"] = true
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 	c.Success(AUTH_NEW)
 }
 
@@ -104,8 +105,8 @@ func parseLDAPConfig(f form.Authentication) *ldap.Config {
 	}
 }
 
-func parseSMTPConfig(f form.Authentication) *db.SMTPConfig {
-	return &db.SMTPConfig{
+func parseSMTPConfig(f form.Authentication) *smtp.Config {
+	return &smtp.Config{
 		Auth:           f.SMTPAuth,
 		Host:           f.SMTPHost,
 		Port:           f.SMTPPort,
@@ -124,7 +125,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocol(f.SecurityProtocol))
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	hasTLS := false
 	var config interface{}
@@ -191,7 +192,7 @@ func EditAuthSource(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
@@ -209,7 +210,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
@@ -231,7 +232,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	case auth.DLDAP:
 		provider = ldap.NewProvider(true, parseLDAPConfig(f))
 	case auth.SMTP:
-		// config = parseSMTPConfig(f)
+		provider = smtp.NewProvider(parseSMTPConfig(f))
 	case auth.PAM:
 		// config = &db.PAMConfig{
 		// 	ServiceName: f.PAMServiceName,
