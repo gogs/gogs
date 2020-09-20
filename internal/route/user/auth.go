@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -163,7 +164,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	u, err := db.Users.Authenticate(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
 		switch errors.Cause(err).(type) {
-		case db.ErrUserNotExist:
+		case auth.ErrBadCredentials:
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
 		case db.ErrLoginSourceMismatch:

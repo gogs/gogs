@@ -18,7 +18,6 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/errutil"
@@ -255,7 +254,7 @@ func Contexter() macaron.Handler {
 		}
 
 		// Get user from session or header when possible
-		c.User, c.IsBasicAuth, c.IsTokenAuth = auth.SignedInUser(c.Context, c.Session)
+		c.User, c.IsBasicAuth, c.IsTokenAuth = authenticatedUser(c.Context, c.Session)
 
 		if c.User != nil {
 			c.IsLogged = true

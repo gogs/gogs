@@ -1089,6 +1089,7 @@ function initAdmin() {
           break;
         case "6": //GITHUB
           $(".github").show();
+          $(".has-tls").show();
           break;
       }
 

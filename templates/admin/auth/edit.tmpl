@@ -180,13 +180,13 @@
 						<div class="inline field {{if not .Source.IsSMTP}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.enable_tls"}}</strong></label>
-								<input name="tls" type="checkbox" {{if .Source.UseTLS}}checked{{end}}>
+								<input name="tls" type="checkbox" {{if .Source.Provider.UseTLS}}checked{{end}}>
 							</div>
 						</div>
 						<div class="has-tls inline field {{if not .HasTLS}}hide{{end}}">
 							<div class="ui checkbox">
 								<label><strong>{{.i18n.Tr "admin.auths.skip_tls_verify"}}</strong></label>
-								<input name="skip_verify" type="checkbox" {{if .Source.SkipVerify}}checked{{end}}>
+								<input name="skip_verify" type="checkbox" {{if .Source.Provider.SkipTLSVerify}}checked{{end}}>
 							</div>
 						</div>
 						<div class="inline field">

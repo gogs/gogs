@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -51,9 +52,7 @@ func Test_users(t *testing.T) {
 //  along with addressing https://github.com/gogs/gogs/issues/6115.
 func test_users_Authenticate(t *testing.T, db *users) {
 	password := "pa$$word"
-	alice, err := db.Create(CreateUserOpts{
-		Name:     "alice",
-		Email:    "alice@example.com",
+	alice, err := db.Create("alice", "alice@example.com", CreateUserOpts{
 		Password: password,
 	})
 	if err != nil {
@@ -62,13 +61,13 @@ func test_users_Authenticate(t *testing.T, db *users) {
 
 	t.Run("user not found", func(t *testing.T) {
 		_, err := db.Authenticate("bob", password, -1)
-		expErr := ErrUserNotExist{args: map[string]interface{}{"login": "bob"}}
+		expErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": "bob"}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
 		_, err := db.Authenticate(alice.Name, "bad_password", -1)
-		expErr := ErrUserNotExist{args: map[string]interface{}{"userID": alice.ID, "name": alice.Name}}
+		expErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": alice.Name, "userID": alice.ID}}
 		assert.Equal(t, expErr, err)
 	})
 
@@ -90,9 +89,7 @@ func test_users_Authenticate(t *testing.T, db *users) {
 }
 
 func test_users_Create(t *testing.T, db *users) {
-	alice, err := db.Create(CreateUserOpts{
-		Name:      "alice",
-		Email:     "alice@example.com",
+	alice, err := db.Create("alice", "alice@example.com", CreateUserOpts{
 		Activated: true,
 	})
 	if err != nil {
@@ -100,26 +97,19 @@ func test_users_Create(t *testing.T, db *users) {
 	}
 
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.Create(CreateUserOpts{
-			Name: "-",
-		})
+		_, err := db.Create("-", "", CreateUserOpts{})
 		expErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": "-"}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
-		_, err := db.Create(CreateUserOpts{
-			Name: alice.Name,
-		})
+		_, err := db.Create(alice.Name, "", CreateUserOpts{})
 		expErr := ErrUserAlreadyExist{args: errutil.Args{"name": alice.Name}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("email already exists", func(t *testing.T) {
-		_, err := db.Create(CreateUserOpts{
-			Name:  "bob",
-			Email: alice.Email,
-		})
+		_, err := db.Create("bob", alice.Email, CreateUserOpts{})
 		expErr := ErrEmailAlreadyUsed{args: errutil.Args{"email": alice.Email}}
 		assert.Equal(t, expErr, err)
 	})
@@ -141,10 +131,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 
 	t.Run("ignore organization", func(t *testing.T) {
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org, err := db.Create(CreateUserOpts{
-			Name:  "gogs",
-			Email: "gogs@exmaple.com",
-		})
+		org, err := db.Create("gogs", "gogs@exmaple.com", CreateUserOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -160,10 +147,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 	})
 
 	t.Run("by primary email", func(t *testing.T) {
-		alice, err := db.Create(CreateUserOpts{
-			Name:  "alice",
-			Email: "alice@exmaple.com",
-		})
+		alice, err := db.Create("alice", "alice@exmaple.com", CreateUserOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -187,10 +171,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 	})
 
 	t.Run("by secondary email", func(t *testing.T) {
-		bob, err := db.Create(CreateUserOpts{
-			Name:  "bob",
-			Email: "bob@example.com",
-		})
+		bob, err := db.Create("bob", "bob@example.com", CreateUserOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -221,10 +202,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 }
 
 func test_users_GetByID(t *testing.T, db *users) {
-	alice, err := db.Create(CreateUserOpts{
-		Name:  "alice",
-		Email: "alice@exmaple.com",
-	})
+	alice, err := db.Create("alice", "alice@exmaple.com", CreateUserOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,10 +219,7 @@ func test_users_GetByID(t *testing.T, db *users) {
 }
 
 func test_users_GetByUsername(t *testing.T, db *users) {
-	alice, err := db.Create(CreateUserOpts{
-		Name:  "alice",
-		Email: "alice@exmaple.com",
-	})
+	alice, err := db.Create("alice", "alice@exmaple.com", CreateUserOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-macaron/binding"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
 )
@@ -32,10 +34,10 @@ type UsersStore interface {
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
 	Authenticate(username, password string, loginSourceID int64) (*User, error)
-	// Create creates a new user and persist to database.
+	// Create creates a new user and persists to database.
 	// It returns ErrUserAlreadyExist when a user with same name already exists,
 	// or ErrEmailAlreadyUsed if the email has been used by another user.
-	Create(opts CreateUserOpts) (*User, error)
+	Create(username, email string, opts CreateUserOpts) (*User, error)
 	// GetByEmail returns the user (not organization) with given email.
 	// It ignores records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(email string) (*User, error)
@@ -93,6 +95,9 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 		return nil, errors.Wrap(err, "get user")
 	}
 
+	var authSourceID int64 // The login source ID will be used to authenticate the user
+	createNewUser := false // Whether to create a new user after successful authentication
+
 	// User found in the database
 	if err == nil {
 		// Note: This check is unnecessary but to reduce user confusion at login page
@@ -107,44 +112,64 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 				return user, nil
 			}
 
-			return nil, ErrUserNotExist{args: map[string]interface{}{"userID": user.ID, "name": user.Name}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login, "userID": user.ID}}
 		}
 
-		source, err := LoginSources.GetByID(user.LoginSource)
-		if err != nil {
-			return nil, errors.Wrap(err, "get login source")
+		authSourceID = user.LoginSource
+
+	} else {
+		// Non-local login source is always greater than 0.
+		if loginSourceID <= 0 {
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 		}
 
-		_, err = authenticateViaLoginSource(source, login, password, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "authenticate via login source")
-		}
-		return user, nil
+		authSourceID = loginSourceID
+		createNewUser = true
 	}
 
-	// Non-local login source is always greater than 0.
-	if loginSourceID <= 0 {
-		return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
-	}
-
-	source, err := LoginSources.GetByID(loginSourceID)
+	source, err := LoginSources.GetByID(authSourceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get login source")
 	}
 
-	user, err = authenticateViaLoginSource(source, login, password, true)
-	if err != nil {
-		return nil, errors.Wrap(err, "authenticate via login source")
+	if !source.IsActived {
+		return nil, errors.Errorf("login source %d is not activated", source.ID)
 	}
-	return user, nil
+
+	extAccount, err := source.Provider.Authenticate(login, password)
+	if err != nil {
+		return nil, err
+	}
+
+	if !createNewUser {
+		return user, nil
+	}
+
+	// Validate username make sure it satisfies requirement.
+	if binding.AlphaDashDotPattern.MatchString(extAccount.Name) {
+		return nil, fmt.Errorf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
+	}
+
+	return Users.Create(extAccount.Name, extAccount.Email, CreateUserOpts{
+		FullName:    extAccount.FullName,
+		LoginSource: authSourceID,
+		LoginName:   extAccount.Login,
+		Location:    extAccount.Location,
+		Website:     extAccount.Website,
+		Activated:   true,
+		Admin:       extAccount.Admin,
+	})
 }
 
 type CreateUserOpts struct {
-	Name        string
-	Email       string
+	FullName    string
 	Password    string
 	LoginSource int64
+	LoginName   string
+	Location    string
+	Website     string
 	Activated   bool
+	Admin       bool
 }
 
 type ErrUserAlreadyExist struct {
@@ -181,36 +206,41 @@ func (err ErrEmailAlreadyUsed) Error() string {
 	return fmt.Sprintf("email has been used: %v", err.args)
 }
 
-func (db *users) Create(opts CreateUserOpts) (*User, error) {
-	err := isUsernameAllowed(opts.Name)
+func (db *users) Create(username, email string, opts CreateUserOpts) (*User, error) {
+	err := isUsernameAllowed(username)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.GetByUsername(opts.Name)
+	_, err = db.GetByUsername(username)
 	if err == nil {
-		return nil, ErrUserAlreadyExist{args: errutil.Args{"name": opts.Name}}
+		return nil, ErrUserAlreadyExist{args: errutil.Args{"name": username}}
 	} else if !IsErrUserNotExist(err) {
 		return nil, err
 	}
 
-	_, err = db.GetByEmail(opts.Email)
+	_, err = db.GetByEmail(email)
 	if err == nil {
-		return nil, ErrEmailAlreadyUsed{args: errutil.Args{"email": opts.Email}}
+		return nil, ErrEmailAlreadyUsed{args: errutil.Args{"email": email}}
 	} else if !IsErrUserNotExist(err) {
 		return nil, err
 	}
 
 	user := &User{
-		LowerName:       strings.ToLower(opts.Name),
-		Name:            opts.Name,
-		Email:           opts.Email,
+		LowerName:       strings.ToLower(username),
+		Name:            username,
+		FullName:        opts.FullName,
+		Email:           email,
 		Passwd:          opts.Password,
 		LoginSource:     opts.LoginSource,
+		LoginName:       opts.LoginName,
+		Location:        opts.Location,
+		Website:         opts.Website,
 		MaxRepoCreation: -1,
 		IsActive:        opts.Activated,
-		Avatar:          cryptoutil.MD5(opts.Email),
-		AvatarEmail:     opts.Email,
+		IsAdmin:         opts.Admin,
+		Avatar:          cryptoutil.MD5(email),
+		AvatarEmail:     email,
 	}
 
 	user.Rands, err = GetUserSalt()

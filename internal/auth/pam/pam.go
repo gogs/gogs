@@ -7,29 +7,23 @@
 package pam
 
 import (
-	"errors"
-
 	"github.com/msteinert/pam"
+	"github.com/pkg/errors"
 )
 
-func PAMAuth(serviceName, userName, passwd string) error {
-	t, err := pam.StartFunc(serviceName, userName, func(s pam.Style, msg string) (string, error) {
+func (c *Config) doAuth(login, password string) error {
+	t, err := pam.StartFunc(c.ServiceName, login, func(s pam.Style, msg string) (string, error) {
 		switch s {
 		case pam.PromptEchoOff:
-			return passwd, nil
+			return password, nil
 		case pam.PromptEchoOn, pam.ErrorMsg, pam.TextInfo:
 			return "", nil
 		}
-		return "", errors.New("Unrecognized PAM message style")
+		return "", errors.Errorf("unrecognized PAM message style: %v - %s", s, msg)
 	})
-
 	if err != nil {
 		return err
 	}
 
-	if err = t.Authenticate(0); err != nil {
-		return err
-	}
-
-	return nil
+	return t.Authenticate(0)
 }
