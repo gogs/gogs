@@ -129,7 +129,7 @@ func (c *Config) findUserDN(l *ldap.Conn, name string) (string, bool) {
 		return "", false
 	}
 
-	log.Trace("LDAP: Searching for DN using filter '%s' and base '%s'", userFilter, c.UserBase)
+	log.Trace("LDAP: Searching for DN using filter %q and base %q", userFilter, c.UserBase)
 	search := ldap.NewSearchRequest(
 		c.UserBase, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0,
 		false, userFilter, []string{}, nil)
@@ -137,10 +137,10 @@ func (c *Config) findUserDN(l *ldap.Conn, name string) (string, bool) {
 	// Ensure we found a user
 	sr, err := l.Search(search)
 	if err != nil || len(sr.Entries) < 1 {
-		log.Trace("LDAP: Failed search using filter '%s': %v", userFilter, err)
+		log.Trace("LDAP: Failed to search using filter %q: %v", userFilter, err)
 		return "", false
 	} else if len(sr.Entries) > 1 {
-		log.Trace("LDAP: Filter '%s' returned more than one user", userFilter)
+		log.Trace("LDAP: Filter %q returned more than one user", userFilter)
 		return "", false
 	}
 
@@ -236,13 +236,13 @@ func (c *Config) searchEntry(name, passwd string, directBind bool) (string, stri
 		return "", "", "", "", false, false
 	}
 
-	log.Trace("Fetching attributes '%v', '%v', '%v', '%v', '%v' with filter '%s' and base '%s'",
+	log.Trace("Fetching attributes %q, %q, %q, %q, %q with user filter %q and user DN %q",
 		c.AttributeUsername, c.AttributeName, c.AttributeSurname, c.AttributeMail, c.UserUID, userFilter, userDN)
+
 	search := ldap.NewSearchRequest(
 		userDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false, userFilter,
 		[]string{c.AttributeUsername, c.AttributeName, c.AttributeSurname, c.AttributeMail, c.UserUID},
 		nil)
-
 	sr, err := l.Search(search)
 	if err != nil {
 		log.Error("LDAP: User search failed: %v", err)
