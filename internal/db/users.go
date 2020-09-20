@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
 )
@@ -111,7 +112,7 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 				return user, nil
 			}
 
-			return nil, ErrUserNotExist{args: map[string]interface{}{"userID": user.ID, "name": user.Name}}
+			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login, "userID": user.ID}}
 		}
 
 		authSourceID = user.LoginSource
@@ -119,7 +120,7 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 	} else {
 		// Non-local login source is always greater than 0.
 		if loginSourceID <= 0 {
-			return nil, ErrUserNotExist{args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
 		}
 
 		authSourceID = loginSourceID

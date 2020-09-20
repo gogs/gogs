@@ -15,6 +15,7 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/tool"
@@ -209,7 +210,7 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 
 				u, err := db.Users.Authenticate(uname, passwd, -1)
 				if err != nil {
-					if !db.IsErrUserNotExist(err) {
+					if !auth.IsErrInvalidCredentials(err) {
 						log.Error("Failed to authenticate user: %v", err)
 					}
 					return nil, false, false
