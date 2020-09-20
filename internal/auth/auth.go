@@ -5,144 +5,86 @@
 package auth
 
 import (
-	"strings"
+	"fmt"
 
-	"github.com/go-macaron/session"
-	gouuid "github.com/satori/go.uuid"
-	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
-
-	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/errutil"
 )
 
-func IsAPIPath(url string) bool {
-	return strings.HasPrefix(url, "/api/")
+type Type int
+
+// Note: New type must append to the end of list to maintain backward compatibility.
+const (
+	None   Type = iota
+	Plain       // 1
+	LDAP        // 2
+	SMTP        // 3
+	PAM         // 4
+	DLDAP       // 5
+	GitHub      // 6
+)
+
+// Name returns the human-readable name for given authentication type.
+func Name(typ Type) string {
+	return map[Type]string{
+		LDAP:   "LDAP (via BindDN)",
+		DLDAP:  "LDAP (simple auth)", // Via direct bind
+		SMTP:   "SMTP",
+		PAM:    "PAM",
+		GitHub: "GitHub",
+	}[typ]
 }
 
-// SignedInID returns the id of signed in user, along with one bool value which indicates whether user uses token
-// authentication.
-func SignedInID(c *macaron.Context, sess session.Store) (_ int64, isTokenAuth bool) {
-	if !db.HasEngine {
-		return 0, false
-	}
+var _ errutil.NotFound = (*ErrBadCredentials)(nil)
 
-	// Check access token.
-	if IsAPIPath(c.Req.URL.Path) {
-		tokenSHA := c.Query("token")
-		if len(tokenSHA) <= 0 {
-			tokenSHA = c.Query("access_token")
-		}
-		if len(tokenSHA) == 0 {
-			// Well, check with header again.
-			auHead := c.Req.Header.Get("Authorization")
-			if len(auHead) > 0 {
-				auths := strings.Fields(auHead)
-				if len(auths) == 2 && auths[0] == "token" {
-					tokenSHA = auths[1]
-				}
-			}
-		}
-
-		// Let's see if token is valid.
-		if len(tokenSHA) > 0 {
-			t, err := db.AccessTokens.GetBySHA(tokenSHA)
-			if err != nil {
-				if !db.IsErrAccessTokenNotExist(err) {
-					log.Error("GetAccessTokenBySHA: %v", err)
-				}
-				return 0, false
-			}
-			if err = db.AccessTokens.Save(t); err != nil {
-				log.Error("UpdateAccessToken: %v", err)
-			}
-			return t.UserID, true
-		}
-	}
-
-	uid := sess.Get("uid")
-	if uid == nil {
-		return 0, false
-	}
-	if id, ok := uid.(int64); ok {
-		if _, err := db.GetUserByID(id); err != nil {
-			if !db.IsErrUserNotExist(err) {
-				log.Error("Failed to get user by ID: %v", err)
-			}
-			return 0, false
-		}
-		return id, false
-	}
-	return 0, false
+type ErrBadCredentials struct {
+	Args errutil.Args
 }
 
-// SignedInUser returns the user object of signed in user, along with two bool values,
-// which indicate whether user uses HTTP Basic Authentication or token authentication respectively.
-func SignedInUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasicAuth bool, isTokenAuth bool) {
-	if !db.HasEngine {
-		return nil, false, false
-	}
+func IsErrBadCredentials(err error) bool {
+	_, ok := err.(ErrBadCredentials)
+	return ok
+}
 
-	uid, isTokenAuth := SignedInID(ctx, sess)
+func (err ErrBadCredentials) Error() string {
+	return fmt.Sprintf("bad credentials: %v", err.Args)
+}
 
-	if uid <= 0 {
-		if conf.Auth.EnableReverseProxyAuthentication {
-			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
-			if len(webAuthUser) > 0 {
-				u, err := db.GetUserByName(webAuthUser)
-				if err != nil {
-					if !db.IsErrUserNotExist(err) {
-						log.Error("Failed to get user by name: %v", err)
-						return nil, false, false
-					}
+func (ErrBadCredentials) NotFound() bool {
+	return true
+}
 
-					// Check if enabled auto-registration.
-					if conf.Auth.EnableReverseProxyAutoRegistration {
-						u := &db.User{
-							Name:     webAuthUser,
-							Email:    gouuid.NewV4().String() + "@localhost",
-							Passwd:   webAuthUser,
-							IsActive: true,
-						}
-						if err = db.CreateUser(u); err != nil {
-							// FIXME: should I create a system notice?
-							log.Error("Failed to create user: %v", err)
-							return nil, false, false
-						} else {
-							return u, false, false
-						}
-					}
-				}
-				return u, false, false
-			}
-		}
+// ExternalAccount contains queried information returned by an authenticate provider
+// for an external account.
+type ExternalAccount struct {
+	// REQUIRED: The login to be used for authenticating against the provider.
+	Login string
+	// REQUIRED: The username of the account.
+	Name string
+	// The full name of the account.
+	FullName string
+	// The email address of the account.
+	Email string
+	// The location of the account.
+	Location string
+	// The website of the account.
+	Website string
+	// Whether the user should be prompted as a site admin.
+	Admin bool
+}
 
-		// Check with basic auth.
-		baHead := ctx.Req.Header.Get("Authorization")
-		if len(baHead) > 0 {
-			auths := strings.Fields(baHead)
-			if len(auths) == 2 && auths[0] == "Basic" {
-				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
+// Provider defines an authenticate provider which provides ability to authentication against
+// an external identity provider and query external account information.
+type Provider interface {
+	// Authenticate performs authentication against an external identity provider
+	// using given credentials and returns queried information of the external account.
+	Authenticate(login, password string) (*ExternalAccount, error)
 
-				u, err := db.Users.Authenticate(uname, passwd, -1)
-				if err != nil {
-					if !db.IsErrUserNotExist(err) {
-						log.Error("Failed to authenticate user: %v", err)
-					}
-					return nil, false, false
-				}
-
-				return u, true, false
-			}
-		}
-		return nil, false, false
-	}
-
-	u, err := db.GetUserByID(uid)
-	if err != nil {
-		log.Error("GetUserByID: %v", err)
-		return nil, false, false
-	}
-	return u, false, isTokenAuth
+	// Config returns the underlying configuration of the authenticate provider.
+	Config() interface{}
+	// HasTLS returns true if the authenticate provider supports TLS.
+	HasTLS() bool
+	// UseTLS returns true if the authenticate provider is configured to use TLS.
+	UseTLS() bool
+	// SkipTLSVerify returns true if the authenticate provider is configured to skip TLS verify.
+	SkipTLSVerify() bool
 }

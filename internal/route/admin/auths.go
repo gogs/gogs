@@ -12,7 +12,11 @@ import (
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -48,16 +52,16 @@ type dropdownItem struct {
 
 var (
 	authSources = []dropdownItem{
-		{db.LoginNames[db.LoginLDAP], db.LoginLDAP},
-		{db.LoginNames[db.LoginDLDAP], db.LoginDLDAP},
-		{db.LoginNames[db.LoginSMTP], db.LoginSMTP},
-		{db.LoginNames[db.LoginPAM], db.LoginPAM},
-		{db.LoginNames[db.LoginGitHub], db.LoginGitHub},
+		{auth.Name(auth.LDAP), auth.LDAP},
+		{auth.Name(auth.DLDAP), auth.DLDAP},
+		{auth.Name(auth.SMTP), auth.SMTP},
+		{auth.Name(auth.PAM), auth.PAM},
+		{auth.Name(auth.GitHub), auth.GitHub},
 	}
 	securityProtocols = []dropdownItem{
-		{db.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted], ldap.SecurityProtocolUnencrypted},
-		{db.SecurityProtocolNames[ldap.SecurityProtocolLDAPS], ldap.SecurityProtocolLDAPS},
-		{db.SecurityProtocolNames[ldap.SecurityProtocolStartTLS], ldap.SecurityProtocolStartTLS},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted), ldap.SecurityProtocolUnencrypted},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolLDAPS), ldap.SecurityProtocolLDAPS},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolStartTLS), ldap.SecurityProtocolStartTLS},
 	}
 )
 
@@ -66,47 +70,45 @@ func NewAuthSource(c *context.Context) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["type"] = db.LoginLDAP
-	c.Data["CurrentTypeName"] = db.LoginNames[db.LoginLDAP]
-	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted]
+	c.Data["type"] = auth.LDAP
+	c.Data["CurrentTypeName"] = auth.Name(auth.LDAP)
+	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted)
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
 	c.Data["is_default"] = true
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 	c.Success(AUTH_NEW)
 }
 
-func parseLDAPConfig(f form.Authentication) *db.LDAPConfig {
-	return &db.LDAPConfig{
-		Source: ldap.Source{
-			Host:              f.Host,
-			Port:              f.Port,
-			SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
-			SkipVerify:        f.SkipVerify,
-			BindDN:            f.BindDN,
-			UserDN:            f.UserDN,
-			BindPassword:      f.BindPassword,
-			UserBase:          f.UserBase,
-			AttributeUsername: f.AttributeUsername,
-			AttributeName:     f.AttributeName,
-			AttributeSurname:  f.AttributeSurname,
-			AttributeMail:     f.AttributeMail,
-			AttributesInBind:  f.AttributesInBind,
-			Filter:            f.Filter,
-			GroupEnabled:      f.GroupEnabled,
-			GroupDN:           f.GroupDN,
-			GroupFilter:       f.GroupFilter,
-			GroupMemberUID:    f.GroupMemberUID,
-			UserUID:           f.UserUID,
-			AdminFilter:       f.AdminFilter,
-		},
+func parseLDAPConfig(f form.Authentication) *ldap.Config {
+	return &ldap.Config{
+		Host:              f.Host,
+		Port:              f.Port,
+		SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
+		SkipVerify:        f.SkipVerify,
+		BindDN:            f.BindDN,
+		UserDN:            f.UserDN,
+		BindPassword:      f.BindPassword,
+		UserBase:          f.UserBase,
+		AttributeUsername: f.AttributeUsername,
+		AttributeName:     f.AttributeName,
+		AttributeSurname:  f.AttributeSurname,
+		AttributeMail:     f.AttributeMail,
+		AttributesInBind:  f.AttributesInBind,
+		Filter:            f.Filter,
+		GroupEnabled:      f.GroupEnabled,
+		GroupDN:           f.GroupDN,
+		GroupFilter:       f.GroupFilter,
+		GroupMemberUID:    f.GroupMemberUID,
+		UserUID:           f.UserUID,
+		AdminFilter:       f.AdminFilter,
 	}
 }
 
-func parseSMTPConfig(f form.Authentication) *db.SMTPConfig {
-	return &db.SMTPConfig{
+func parseSMTPConfig(f form.Authentication) *smtp.Config {
+	return &smtp.Config{
 		Auth:           f.SMTPAuth,
 		Host:           f.SMTPHost,
 		Port:           f.SMTPPort,
@@ -121,29 +123,31 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["CurrentTypeName"] = db.LoginNames[db.LoginType(f.Type)]
-	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SecurityProtocol(f.SecurityProtocol)]
+	c.Data["CurrentTypeName"] = auth.Name(auth.Type(f.Type))
+	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocol(f.SecurityProtocol))
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	hasTLS := false
 	var config interface{}
-	switch db.LoginType(f.Type) {
-	case db.LoginLDAP, db.LoginDLDAP:
+	switch auth.Type(f.Type) {
+	case auth.LDAP, auth.DLDAP:
 		config = parseLDAPConfig(f)
 		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SecurityProtocolUnencrypted
-	case db.LoginSMTP:
+	case auth.SMTP:
 		config = parseSMTPConfig(f)
 		hasTLS = true
-	case db.LoginPAM:
-		config = &db.PAMConfig{
+	case auth.PAM:
+		config = &pam.Config{
 			ServiceName: f.PAMServiceName,
 		}
-	case db.LoginGitHub:
-		config = &db.GitHubConfig{
+	case auth.GitHub:
+		config = &github.Config{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
+			SkipVerify:  f.SkipVerify,
 		}
+		hasTLS = true
 	default:
 		c.Status(http.StatusBadRequest)
 		return
@@ -156,7 +160,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	source, err := db.LoginSources.Create(db.CreateLoginSourceOpts{
-		Type:      db.LoginType(f.Type),
+		Type:      auth.Type(f.Type),
 		Name:      f.Name,
 		Activated: f.IsActive,
 		Default:   f.IsDefault,
@@ -192,7 +196,7 @@ func EditAuthSource(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
@@ -200,7 +204,7 @@ func EditAuthSource(c *context.Context) {
 		return
 	}
 	c.Data["Source"] = source
-	c.Data["HasTLS"] = source.HasTLS()
+	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	c.Success(AUTH_EDIT)
 }
@@ -210,7 +214,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
@@ -218,27 +222,30 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 		return
 	}
 	c.Data["Source"] = source
-	c.Data["HasTLS"] = source.HasTLS()
+	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
 		c.Success(AUTH_EDIT)
 		return
 	}
 
-	var config interface{}
-	switch db.LoginType(f.Type) {
-	case db.LoginLDAP, db.LoginDLDAP:
-		config = parseLDAPConfig(f)
-	case db.LoginSMTP:
-		config = parseSMTPConfig(f)
-	case db.LoginPAM:
-		config = &db.PAMConfig{
+	var provider auth.Provider
+	switch auth.Type(f.Type) {
+	case auth.LDAP:
+		provider = ldap.NewProvider(false, parseLDAPConfig(f))
+	case auth.DLDAP:
+		provider = ldap.NewProvider(true, parseLDAPConfig(f))
+	case auth.SMTP:
+		provider = smtp.NewProvider(parseSMTPConfig(f))
+	case auth.PAM:
+		provider = pam.NewProvider(&pam.Config{
 			ServiceName: f.PAMServiceName,
-		}
-	case db.LoginGitHub:
-		config = &db.GitHubConfig{
+		})
+	case auth.GitHub:
+		provider = github.NewProvider(&github.Config{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
-		}
+			SkipVerify:  f.SkipVerify,
+		})
 	default:
 		c.Status(http.StatusBadRequest)
 		return
@@ -247,7 +254,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	source.Name = f.Name
 	source.IsActived = f.IsActive
 	source.IsDefault = f.IsDefault
-	source.Config = config
+	source.Provider = provider
 	if err := db.LoginSources.Save(source); err != nil {
 		c.Error(err, "update login source")
 		return

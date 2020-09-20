@@ -11,6 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
+	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -30,18 +33,20 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		assert.Empty(t, s.RawConfig)
+		assert.Empty(t, s.Config)
 	})
 
 	t.Run("Config has been set", func(t *testing.T) {
 		s := &LoginSource{
-			Config: &PAMConfig{ServiceName: "pam_service"},
+			Provider: pam.NewProvider(&pam.Config{
+				ServiceName: "pam_service",
+			}),
 		}
 		err := s.BeforeSave(db)
 		if err != nil {
 			t.Fatal(err)
 		}
-		assert.Equal(t, `{"ServiceName":"pam_service"}`, s.RawConfig)
+		assert.Equal(t, `{"ServiceName":"pam_service"}`, s.Config)
 	})
 }
 
@@ -109,11 +114,11 @@ func Test_loginSources(t *testing.T) {
 func test_loginSources_Create(t *testing.T, db *loginSources) {
 	// Create first login source with name "GitHub"
 	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   false,
-		Config: &GitHubConfig{
+		Config: &github.Config{
 			APIEndpoint: "https://api.github.com",
 		},
 	})
@@ -138,11 +143,11 @@ func test_loginSources_Create(t *testing.T, db *loginSources) {
 func test_loginSources_Count(t *testing.T, db *loginSources) {
 	// Create two login sources, one in database and one as source file.
 	_, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   false,
-		Config: &GitHubConfig{
+		Config: &github.Config{
 			APIEndpoint: "https://api.github.com",
 		},
 	})
@@ -162,11 +167,11 @@ func test_loginSources_Count(t *testing.T, db *loginSources) {
 func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 	t.Run("delete but in used", func(t *testing.T) {
 		source, err := db.Create(CreateLoginSourceOpts{
-			Type:      LoginGitHub,
+			Type:      auth.GitHub,
 			Name:      "GitHub",
 			Activated: true,
 			Default:   false,
-			Config: &GitHubConfig{
+			Config: &github.Config{
 				APIEndpoint: "https://api.github.com",
 			},
 		})
@@ -175,8 +180,7 @@ func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 		}
 
 		// Create a user that uses this login source
-		_, err = (&users{DB: db.DB}).Create(CreateUserOpts{
-			Name:        "alice",
+		_, err = (&users{DB: db.DB}).Create("alice", "", CreateUserOpts{
 			LoginSource: source.ID,
 		})
 		if err != nil {
@@ -197,11 +201,11 @@ func test_loginSources_DeleteByID(t *testing.T, db *loginSources) {
 
 	// Create a login source with name "GitHub2"
 	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub2",
 		Activated: true,
 		Default:   false,
-		Config: &GitHubConfig{
+		Config: &github.Config{
 			APIEndpoint: "https://api.github.com",
 		},
 	})
@@ -243,13 +247,13 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 		},
 	})
 
-	expConfig := &GitHubConfig{
+	expConfig := &github.Config{
 		APIEndpoint: "https://api.github.com",
 	}
 
 	// Create a login source with name "GitHub"
 	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   false,
@@ -264,7 +268,7 @@ func test_loginSources_GetByID(t *testing.T, db *loginSources) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, expConfig, source.Config)
+	assert.Equal(t, expConfig, source.Provider.Config())
 
 	// Get the one in source file store
 	_, err = db.GetByID(101)
@@ -290,9 +294,9 @@ func test_loginSources_List(t *testing.T, db *loginSources) {
 
 	// Create two login sources in database, one activated and the other one not
 	_, err := db.Create(CreateLoginSourceOpts{
-		Type: LoginPAM,
+		Type: auth.PAM,
 		Name: "PAM",
-		Config: &PAMConfig{
+		Config: &pam.Config{
 			ServiceName: "PAM",
 		},
 	})
@@ -300,10 +304,10 @@ func test_loginSources_List(t *testing.T, db *loginSources) {
 		t.Fatal(err)
 	}
 	_, err = db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
-		Config: &GitHubConfig{
+		Config: &github.Config{
 			APIEndpoint: "https://api.github.com",
 		},
 	})
@@ -348,10 +352,10 @@ func test_loginSources_ResetNonDefault(t *testing.T, db *loginSources) {
 
 	// Create two login sources both have default on
 	source1, err := db.Create(CreateLoginSourceOpts{
-		Type:    LoginPAM,
+		Type:    auth.PAM,
 		Name:    "PAM",
 		Default: true,
-		Config: &PAMConfig{
+		Config: &pam.Config{
 			ServiceName: "PAM",
 		},
 	})
@@ -359,11 +363,11 @@ func test_loginSources_ResetNonDefault(t *testing.T, db *loginSources) {
 		t.Fatal(err)
 	}
 	source2, err := db.Create(CreateLoginSourceOpts{
-		Type:      LoginGitHub,
+		Type:      auth.GitHub,
 		Name:      "GitHub",
 		Activated: true,
 		Default:   true,
-		Config: &GitHubConfig{
+		Config: &github.Config{
 			APIEndpoint: "https://api.github.com",
 		},
 	})
@@ -395,11 +399,11 @@ func test_loginSources_Save(t *testing.T, db *loginSources) {
 	t.Run("save to database", func(t *testing.T) {
 		// Create a login source with name "GitHub"
 		source, err := db.Create(CreateLoginSourceOpts{
-			Type:      LoginGitHub,
+			Type:      auth.GitHub,
 			Name:      "GitHub",
 			Activated: true,
 			Default:   false,
-			Config: &GitHubConfig{
+			Config: &github.Config{
 				APIEndpoint: "https://api.github.com",
 			},
 		})
@@ -408,9 +412,9 @@ func test_loginSources_Save(t *testing.T, db *loginSources) {
 		}
 
 		source.IsActived = false
-		source.Config = &GitHubConfig{
+		source.Provider = github.NewProvider(&github.Config{
 			APIEndpoint: "https://api2.github.com",
-		}
+		})
 		err = db.Save(source)
 		if err != nil {
 			t.Fatal(err)
@@ -427,6 +431,9 @@ func test_loginSources_Save(t *testing.T, db *loginSources) {
 	t.Run("save to file", func(t *testing.T) {
 		calledSave := false
 		source := &LoginSource{
+			Provider: github.NewProvider(&github.Config{
+				APIEndpoint: "https://api.github.com",
+			}),
 			File: &mockLoginSourceFileStore{
 				MockSetGeneral: func(name, value string) {},
 				MockSetConfig:  func(cfg interface{}) error { return nil },

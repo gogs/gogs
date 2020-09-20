@@ -1,2 +1,2 @@
-{"ID":1,"Type":4,"Name":"My PAM","IsActived":true,"IsDefault":false,"Config":null,"RawConfig":"{\"ServiceName\":\"PAM service\"}","CreatedUnix":1588568886,"UpdatedUnix":1588572486}
-{"ID":2,"Type":6,"Name":"GitHub.com","IsActived":true,"IsDefault":false,"Config":null,"RawConfig":"{\"APIEndpoint\":\"https://api.github.com\"}","CreatedUnix":1588568886,"UpdatedUnix":0}
+{"ID":1,"Type":4,"Name":"My PAM","IsActived":true,"IsDefault":false,"Provider":null,"RawConfig":"{\"ServiceName\":\"PAM service\"}","CreatedUnix":1588568886,"UpdatedUnix":1588572486}
+{"ID":2,"Type":6,"Name":"GitHub.com","IsActived":true,"IsDefault":false,"Provider":null,"RawConfig":"{\"APIEndpoint\":\"https://api.github.com\",\"SkipVerify\":false}","CreatedUnix":1588568886,"UpdatedUnix":0}

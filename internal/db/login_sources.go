@@ -13,7 +13,11 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -46,12 +50,12 @@ var LoginSources LoginSourcesStore
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
 	ID        int64
-	Type      LoginType
-	Name      string      `xorm:"UNIQUE" gorm:"UNIQUE"`
-	IsActived bool        `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
-	IsDefault bool        `xorm:"DEFAULT false"`
-	Config    interface{} `xorm:"-" gorm:"-"`
-	RawConfig string      `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT"`
+	Type      auth.Type
+	Name      string        `xorm:"UNIQUE" gorm:"UNIQUE"`
+	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
+	IsDefault bool          `xorm:"DEFAULT false"`
+	Provider  auth.Provider `xorm:"-" gorm:"-"`
+	Config    string        `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT" json:"RawConfig"`
 
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
@@ -63,10 +67,10 @@ type LoginSource struct {
 
 // NOTE: This is a GORM save hook.
 func (s *LoginSource) BeforeSave(tx *gorm.DB) (err error) {
-	if s.Config == nil {
+	if s.Provider == nil {
 		return nil
 	}
-	s.RawConfig, err = jsoniter.MarshalToString(s.Config)
+	s.Config, err = jsoniter.MarshalToString(s.Provider.Config())
 	return err
 }
 
@@ -91,86 +95,90 @@ func (s *LoginSource) AfterFind(tx *gorm.DB) error {
 	s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 
 	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
-		s.Config = new(LDAPConfig)
-	case LoginSMTP:
-		s.Config = new(SMTPConfig)
-	case LoginPAM:
-		s.Config = new(PAMConfig)
-	case LoginGitHub:
-		s.Config = new(GitHubConfig)
+	case auth.LDAP:
+		var cfg ldap.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = ldap.NewProvider(false, &cfg)
+
+	case auth.DLDAP:
+		var cfg ldap.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = ldap.NewProvider(true, &cfg)
+
+	case auth.SMTP:
+		var cfg smtp.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = smtp.NewProvider(&cfg)
+
+	case auth.PAM:
+		var cfg pam.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = pam.NewProvider(&cfg)
+
+	case auth.GitHub:
+		var cfg github.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = github.NewProvider(&cfg)
+
 	default:
 		return fmt.Errorf("unrecognized login source type: %v", s.Type)
 	}
-	return jsoniter.UnmarshalFromString(s.RawConfig, s.Config)
+	return nil
 }
 
 func (s *LoginSource) TypeName() string {
-	return LoginNames[s.Type]
+	return auth.Name(s.Type)
 }
 
 func (s *LoginSource) IsLDAP() bool {
-	return s.Type == LoginLDAP
+	return s.Type == auth.LDAP
 }
 
 func (s *LoginSource) IsDLDAP() bool {
-	return s.Type == LoginDLDAP
+	return s.Type == auth.DLDAP
 }
 
 func (s *LoginSource) IsSMTP() bool {
-	return s.Type == LoginSMTP
+	return s.Type == auth.SMTP
 }
 
 func (s *LoginSource) IsPAM() bool {
-	return s.Type == LoginPAM
+	return s.Type == auth.PAM
 }
 
 func (s *LoginSource) IsGitHub() bool {
-	return s.Type == LoginGitHub
+	return s.Type == auth.GitHub
 }
 
-func (s *LoginSource) HasTLS() bool {
-	return ((s.IsLDAP() || s.IsDLDAP()) &&
-		s.LDAP().SecurityProtocol > ldap.SecurityProtocolUnencrypted) ||
-		s.IsSMTP()
+func (s *LoginSource) LDAP() *ldap.Config {
+	return s.Provider.Config().(*ldap.Config)
 }
 
-func (s *LoginSource) UseTLS() bool {
-	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
-		return s.LDAP().SecurityProtocol != ldap.SecurityProtocolUnencrypted
-	case LoginSMTP:
-		return s.SMTP().TLS
-	}
-
-	return false
+func (s *LoginSource) SMTP() *smtp.Config {
+	return s.Provider.Config().(*smtp.Config)
 }
 
-func (s *LoginSource) SkipVerify() bool {
-	switch s.Type {
-	case LoginLDAP, LoginDLDAP:
-		return s.LDAP().SkipVerify
-	case LoginSMTP:
-		return s.SMTP().SkipVerify
-	}
-
-	return false
+func (s *LoginSource) PAM() *pam.Config {
+	return s.Provider.Config().(*pam.Config)
 }
 
-func (s *LoginSource) LDAP() *LDAPConfig {
-	return s.Config.(*LDAPConfig)
-}
-
-func (s *LoginSource) SMTP() *SMTPConfig {
-	return s.Config.(*SMTPConfig)
-}
-
-func (s *LoginSource) PAM() *PAMConfig {
-	return s.Config.(*PAMConfig)
-}
-
-func (s *LoginSource) GitHub() *GitHubConfig {
-	return s.Config.(*GitHubConfig)
+func (s *LoginSource) GitHub() *github.Config {
+	return s.Provider.Config().(*github.Config)
 }
 
 var _ LoginSourcesStore = (*loginSources)(nil)
@@ -181,7 +189,7 @@ type loginSources struct {
 }
 
 type CreateLoginSourceOpts struct {
-	Type      LoginType
+	Type      auth.Type
 	Name      string
 	Activated bool
 	Default   bool
@@ -214,7 +222,10 @@ func (db *loginSources) Create(opts CreateLoginSourceOpts) (*LoginSource, error)
 		Name:      opts.Name,
 		IsActived: opts.Activated,
 		IsDefault: opts.Default,
-		Config:    opts.Config,
+	}
+	source.Config, err = jsoniter.MarshalToString(opts.Config)
+	if err != nil {
+		return nil, err
 	}
 	return source, db.DB.Create(source).Error
 }
@@ -308,7 +319,7 @@ func (db *loginSources) Save(source *LoginSource) error {
 	source.File.SetGeneral("name", source.Name)
 	source.File.SetGeneral("is_activated", strconv.FormatBool(source.IsActived))
 	source.File.SetGeneral("is_default", strconv.FormatBool(source.IsDefault))
-	if err := source.File.SetConfig(source.Config); err != nil {
+	if err := source.File.SetConfig(source.Provider.Config()); err != nil {
 		return errors.Wrap(err, "set config")
 	} else if err = source.File.Save(); err != nil {
 		return errors.Wrap(err, "save file")

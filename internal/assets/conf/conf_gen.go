@@ -384,7 +384,7 @@ func confAuthDLdap_simple_authConfExample() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/auth.d/ldap_simple_auth.conf.example", size: 761, mode: os.FileMode(0644), modTime: time.Unix(1599160112, 0)}
+	info := bindataFileInfo{name: "conf/auth.d/ldap_simple_auth.conf.example", size: 761, mode: os.FileMode(0644), modTime: time.Unix(1600504559, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x79, 0x97, 0x7b, 0x30, 0x8a, 0x94, 0x93, 0xa7, 0x6e, 0xfc, 0x9e, 0x39, 0xc3, 0xd5, 0x90, 0x25, 0xb8, 0xb9, 0xf2, 0x85, 0xb4, 0x1f, 0xcd, 0x71, 0xf, 0xfa, 0x7b, 0x74, 0x8, 0x5c, 0x53, 0x7f}}
 	return a, nil
 }
@@ -4584,7 +4584,7 @@ func confLocaleLocale_enUsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_en-US.ini", size: 69630, mode: os.FileMode(0644), modTime: time.Unix(1599653855, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_en-US.ini", size: 69630, mode: os.FileMode(0644), modTime: time.Unix(1600417296, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xea, 0x6c, 0x8a, 0xc4, 0x1, 0x79, 0xc1, 0x39, 0xaf, 0x1, 0xfc, 0x47, 0x8e, 0x3c, 0xce, 0x35, 0x7f, 0xfb, 0x24, 0xd3, 0x26, 0xf0, 0xe3, 0x1a, 0x6d, 0xdf, 0x91, 0x92, 0xd8, 0x2a, 0x93, 0x95}}
 	return a, nil
 }
@@ -4604,7 +4604,7 @@ func confLocaleLocale_esEsIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_es-ES.ini", size: 74572, mode: os.FileMode(0644), modTime: time.Unix(1600268328, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_es-ES.ini", size: 74572, mode: os.FileMode(0644), modTime: time.Unix(1600500781, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x10, 0x8e, 0x14, 0x2e, 0xa, 0xdc, 0xf0, 0x4d, 0x11, 0x9e, 0x48, 0xe7, 0x7b, 0x3f, 0x84, 0x2d, 0xab, 0x25, 0x2a, 0x11, 0x4d, 0x20, 0x36, 0x49, 0xa8, 0xe3, 0x75, 0x85, 0x54, 0xac, 0x95, 0xa8}}
 	return a, nil
 }
@@ -4884,7 +4884,7 @@ func confLocaleLocale_ptPtIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_pt-PT.ini", size: 73358, mode: os.FileMode(0644), modTime: time.Unix(1600268328, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_pt-PT.ini", size: 73358, mode: os.FileMode(0644), modTime: time.Unix(1600500781, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0x9e, 0x9, 0x9c, 0xec, 0x51, 0x68, 0x0, 0xab, 0xc1, 0xa2, 0xcf, 0x1b, 0x9, 0xca, 0x7b, 0xbb, 0x3a, 0x38, 0x50, 0x3e, 0x29, 0xc4, 0xbe, 0x84, 0xc, 0x43, 0x35, 0xe8, 0x34, 0x20, 0x31, 0x72}}
 	return a, nil
 }
@@ -5004,7 +5004,7 @@ func confLocaleLocale_ukUaIni() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "conf/locale/locale_uk-UA.ini", size: 100902, mode: os.FileMode(0644), modTime: time.Unix(1600268328, 0)}
+	info := bindataFileInfo{name: "conf/locale/locale_uk-UA.ini", size: 100902, mode: os.FileMode(0644), modTime: time.Unix(1600417296, 0)}
 	a := &asset{bytes: bytes, info: info, digest: [32]uint8{0xb9, 0x96, 0x2f, 0x7f, 0x77, 0x58, 0xac, 0x25, 0x18, 0xbb, 0xe2, 0x9f, 0x19, 0x24, 0x75, 0x81, 0xf0, 0xb2, 0x61, 0x12, 0xad, 0xf6, 0xa9, 0xe7, 0xdc, 0x78, 0x4b, 0x98, 0x5c, 0x58, 0x24, 0xc1}}
 	return a, nil
 }

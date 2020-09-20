@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -70,7 +71,7 @@ func Test_authenticate(t *testing.T) {
 			},
 			mockUsersStore: &db.MockUsersStore{
 				MockAuthenticate: func(username, password string, loginSourceID int64) (*db.User, error) {
-					return nil, db.ErrUserNotExist{}
+					return nil, auth.ErrBadCredentials{}
 				},
 			},
 			mockAccessTokensStore: &db.MockAccessTokensStore{
@@ -112,7 +113,7 @@ func Test_authenticate(t *testing.T) {
 			},
 			mockUsersStore: &db.MockUsersStore{
 				MockAuthenticate: func(username, password string, loginSourceID int64) (*db.User, error) {
-					return nil, db.ErrUserNotExist{}
+					return nil, auth.ErrBadCredentials{}
 				},
 				MockGetByID: func(id int64) (*db.User, error) {
 					return &db.User{ID: 1, Name: "unknwon"}, nil
