@@ -26,7 +26,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	err := p.config.doAuth(login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "Authentication failure") {
-			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 		}
 		return nil, err
 	}

@@ -112,7 +112,7 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 				return user, nil
 			}
 
-			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login, "userID": user.ID}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login, "userID": user.ID}}
 		}
 
 		authSourceID = user.LoginSource
@@ -120,7 +120,7 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 	} else {
 		// Non-local login source is always greater than 0.
 		if loginSourceID <= 0 {
-			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 		}
 
 		authSourceID = loginSourceID

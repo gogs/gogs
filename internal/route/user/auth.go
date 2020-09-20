@@ -164,7 +164,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 	u, err := db.Users.Authenticate(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
 		switch errors.Cause(err).(type) {
-		case auth.ErrInvalidCredentials:
+		case auth.ErrBadCredentials:
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
 		case db.ErrLoginSourceMismatch:

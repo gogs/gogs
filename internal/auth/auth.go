@@ -34,22 +34,22 @@ func Name(typ Type) string {
 	}[typ]
 }
 
-var _ errutil.NotFound = (*ErrInvalidCredentials)(nil)
+var _ errutil.NotFound = (*ErrBadCredentials)(nil)
 
-type ErrInvalidCredentials struct {
+type ErrBadCredentials struct {
 	Args errutil.Args
 }
 
-func IsErrInvalidCredentials(err error) bool {
-	_, ok := err.(ErrInvalidCredentials)
+func IsErrBadCredentials(err error) bool {
+	_, ok := err.(ErrBadCredentials)
 	return ok
 }
 
-func (err ErrInvalidCredentials) Error() string {
-	return fmt.Sprintf("invalid credentials: %v", err.Args)
+func (err ErrBadCredentials) Error() string {
+	return fmt.Sprintf("bad credentials: %v", err.Args)
 }
 
-func (ErrInvalidCredentials) NotFound() bool {
+func (ErrBadCredentials) NotFound() bool {
 	return true
 }
 

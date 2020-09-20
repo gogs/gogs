@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 )
@@ -33,7 +34,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	if p.config.AllowedDomains != "" {
 		fields := strings.SplitN(login, "@", 3)
 		if len(fields) != 2 {
-			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 		}
 		domain := fields[1]
 
@@ -46,7 +47,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 		}
 
 		if !isAllowed {
-			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 		}
 	}
 
@@ -61,11 +62,13 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}
 
 	if err := p.config.doAuth(smtpAuth); err != nil {
+		log.Trace("SMTP: Authentication failed: %v", err)
+
 		// Check standard error format first, then fallback to the worse case.
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 		}
 		return nil, err
 	}

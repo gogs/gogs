@@ -641,7 +641,7 @@ func SettingsDelete(c *context.Context) {
 
 	if c.Req.Method == "POST" {
 		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
-			if auth.IsErrInvalidCredentials(err) {
+			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
 				c.Errorf(err, "authenticate user")

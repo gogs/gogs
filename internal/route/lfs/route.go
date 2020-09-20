@@ -60,7 +60,7 @@ func authenticate() macaron.Handler {
 		}
 
 		user, err := db.Users.Authenticate(username, password, -1)
-		if err != nil && !auth.IsErrInvalidCredentials(err) {
+		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(c.Resp)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
 			return
@@ -72,7 +72,7 @@ func authenticate() macaron.Handler {
 		}
 
 		// If username and password authentication failed, try again using username as an access token.
-		if auth.IsErrInvalidCredentials(err) {
+		if auth.IsErrBadCredentials(err) {
 			token, err := db.AccessTokens.GetBySHA(username)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {

@@ -123,7 +123,7 @@ func HTTPContexter() macaron.Handler {
 		}
 
 		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
-		if err != nil && !auth.IsErrInvalidCredentials(err) {
+		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
 			return

@@ -29,7 +29,7 @@ func NewProvider(directBind bool, cfg *Config) auth.Provider {
 func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
 	username, fn, sn, email, isAdmin, succeed := p.config.searchEntry(login, password, p.directBind)
 	if !succeed {
-		return nil, auth.ErrInvalidCredentials{Args: map[string]interface{}{"login": login}}
+		return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 	}
 
 	if len(username) == 0 {

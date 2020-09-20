@@ -210,7 +210,7 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 
 				u, err := db.Users.Authenticate(uname, passwd, -1)
 				if err != nil {
-					if !auth.IsErrInvalidCredentials(err) {
+					if !auth.IsErrBadCredentials(err) {
 						log.Error("Failed to authenticate user: %v", err)
 					}
 					return nil, false, false

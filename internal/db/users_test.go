@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -60,13 +61,13 @@ func test_users_Authenticate(t *testing.T, db *users) {
 
 	t.Run("user not found", func(t *testing.T) {
 		_, err := db.Authenticate("bob", password, -1)
-		expErr := ErrUserNotExist{args: map[string]interface{}{"login": "bob"}}
+		expErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": "bob"}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
 		_, err := db.Authenticate(alice.Name, "bad_password", -1)
-		expErr := ErrUserNotExist{args: map[string]interface{}{"userID": alice.ID, "name": alice.Name}}
+		expErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": alice.Name, "userID": alice.ID}}
 		assert.Equal(t, expErr, err)
 	})
 
