@@ -282,8 +282,8 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/syndtr/goleveldb v1.0.0/go.mod h1:ZVVdQEZoIme9iO1Ch2Jdy24qqXrMMOU6lpPAyBWyWuQ=
 github.com/t-tiger/gorm-bulk-insert v1.3.0 h1:9k7BaVEhw/3fsvh6GTOBwJ2RXk3asc5xs5m6hwozq20=
 github.com/t-tiger/gorm-bulk-insert v1.3.0/go.mod h1:ruDlk8xDl+8sX4bA7PQuYly9YEb3pbp1eP2LCyeRrFY=
-github.com/unknwon/cae v1.0.0 h1:i39lOFaBXZxhGjQOy/RNbi8uzettCs6OQxpR0xXohGU=
-github.com/unknwon/cae v1.0.0/go.mod h1:QaSeRctcea9fK6piJpAMCCPKxzJ01+xFcr2k1m3WRPU=
+github.com/unknwon/cae v1.0.2 h1:3L8/RCN1ARvD5quyNjU30EdvYkFbxBfnRcIBXugpHlg=
+github.com/unknwon/cae v1.0.2/go.mod h1:HqpmD2fVq9G1oGEXrXzbgIp51uJ29Hshv41n9ljm+AA=
 github.com/unknwon/com v0.0.0-20190804042917-757f69c95f3e/go.mod h1:tOOxU81rwgoCLoOVVPHb6T/wt8HZygqH5id+GNnlCXM=
 github.com/unknwon/com v1.0.1 h1:3d1LTxD+Lnf3soQiD4Cp/0BRB+Rsa/+RTvz8GMMzIXs=
 github.com/unknwon/com v1.0.1/go.mod h1:tOOxU81rwgoCLoOVVPHb6T/wt8HZygqH5id+GNnlCXM=
