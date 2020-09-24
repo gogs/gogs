@@ -6,6 +6,7 @@ package repo
 
 import (
 	"path"
+	"time"
 
 	"github.com/gogs/git-module"
 
@@ -125,6 +126,7 @@ func Diff(c *context.Context) {
 
 	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
 		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
+		git.DiffOptions{Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get diff")
@@ -193,7 +195,7 @@ func CompareDiff(c *context.Context) {
 
 	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: beforeCommitID},
+		git.DiffOptions{Base: beforeCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
 		c.NotFoundOrError(gitutil.NewError(err), "get diff")
