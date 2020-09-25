@@ -145,10 +145,8 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 		if com.StrTo(m).MustInt() > 0 {
 			return m
 		}
-		if cutPosition := strings.LastIndex(urlPrefix, "/src/"); cutPosition > 0 {
-			urlPrefix = urlPrefix[:cutPosition]
-		}
-		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSHA1(string(m)))
+
+		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSHA1(m))
 	}))
 }
 
@@ -163,7 +161,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
 	rawBytes = RenderCrossReferenceIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	rawBytes = RenderSha1CurrentPattern(rawBytes, metas["repoLink"])
 	return rawBytes
 }
 
