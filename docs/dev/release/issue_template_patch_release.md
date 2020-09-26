@@ -8,7 +8,7 @@ On develop branch:
 
 On release branch:
 
-- [ ] Cherry-pick commits from develop branch:
+- [ ] Cherry-pick commits from develop branch, `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
 	- [ ] _link to the commit_
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
 - [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L21) to the current release, e.g. `0.12.0` -> `0.12.1`.
