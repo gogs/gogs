@@ -57,9 +57,9 @@ var (
 	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
 	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
 
-	IssueCloseKeywordsPat     = lazyregexp.New(assembleKeywordsPattern(IssueCloseKeywords))
-	IssueReopenKeywordsPat    = lazyregexp.New(assembleKeywordsPattern(IssueReopenKeywords))
-	IssueReferenceKeywordsPat = lazyregexp.New(`(?i)(?:)(^| )\S+`)
+	IssueCloseKeywordsPat  = lazyregexp.New(assembleKeywordsPattern(IssueCloseKeywords))
+	IssueReopenKeywordsPat = lazyregexp.New(assembleKeywordsPattern(IssueReopenKeywords))
+	issueReferencePattern  = lazyregexp.New(`(?i)(?:)(^| )\S*#\d+`)
 )
 
 func assembleKeywordsPattern(words []string) string {
@@ -321,8 +321,8 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 		c := commits[i]
 
 		refMarked := make(map[int64]bool)
-		for _, ref := range IssueReferenceKeywordsPat.FindAllString(c.Message, -1) {
-			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
+		for _, ref := range issueReferencePattern.FindAllString(c.Message, -1) {
+			ref = strings.TrimSpace(ref)
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
 			if len(ref) == 0 {
@@ -455,7 +455,7 @@ type CommitRepoActionOptions struct {
 	Commits     *PushCommits
 }
 
-// CommitRepoAction adds new commit actio to the repository, and prepare corresponding webhooks.
+// CommitRepoAction adds new commit action to the repository, and prepare corresponding webhooks.
 func CommitRepoAction(opts CommitRepoActionOptions) error {
 	pusher, err := GetUserByName(opts.PusherName)
 	if err != nil {
