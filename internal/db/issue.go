@@ -817,12 +817,11 @@ func (ErrIssueNotExist) NotFound() bool {
 	return true
 }
 
-// GetIssueByRef returns an Issue specified by a GFM reference.
-// See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
+// GetIssueByRef returns an Issue specified by a GFM reference, e.g. owner/repo#123.
 func GetIssueByRef(ref string) (*Issue, error) {
 	n := strings.IndexByte(ref, byte('#'))
 	if n == -1 {
-		return nil, errors.InvalidIssueReference{Ref: ref}
+		return nil, ErrIssueNotExist{args: map[string]interface{}{"ref": ref}}
 	}
 
 	index := com.StrTo(ref[n+1:]).MustInt64()
