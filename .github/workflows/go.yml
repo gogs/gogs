@@ -1,8 +1,14 @@
 name: Go
 on:
   push:
-    branches: [master]
+    branches:
+      - main
+      - 'release/**'
+    paths:
+      - '**.go'
   pull_request:
+    paths:
+      - '**.go'
 env:
   GOPROXY: "https://proxy.golang.org"
 
@@ -21,7 +27,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [1.14.x]
+        go-version: [1.14.x, 1.15.x]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -45,4 +51,3 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
