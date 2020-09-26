@@ -2,15 +2,14 @@
 
 On develop branch:
 
-- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release.
+- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release, `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
+	- [ ] _link to the commit_
 
 ## During release
 
 On release branch:
 
-- [ ] Cherry-pick commits from develop branch, `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
-	- [ ] _link to the commit_
-- [ ] Wait for GitHub Actions to complete and no failed jobs.
+- [ ] Make sure the latest run of GitHub Actions jobs are passing.
 - [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L21) to the current release, e.g. `0.12.0` -> `0.12.1`.
 - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version.
 - [ ] Update all previous GitHub releases with same minor version with the warning:
