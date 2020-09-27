@@ -151,6 +151,7 @@ var (
 		ProviderConfig string
 		CookieName     string
 		CookieSecure   bool
+		CookieSameSite bool
 		GCInterval     int64 `ini:"GC_INTERVAL"`
 		MaxLifeTime    int64
 		CSRFCookieName string `ini:"CSRF_COOKIE_NAME"`

@@ -631,6 +631,7 @@ func runWeb(c *cli.Context) error {
 			ProviderConfig: conf.Session.ProviderConfig,
 			CookieName:     conf.Session.CookieName,
 			CookiePath:     conf.Server.Subpath,
+			CookieSameSite: conf.Session.CookieSameSite,
 			Gclifetime:     conf.Session.GCInterval,
 			Maxlifetime:    conf.Session.MaxLifeTime,
 			Secure:         conf.Session.CookieSecure,
