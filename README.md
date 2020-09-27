@@ -88,8 +88,6 @@ There are 6 ways to install Gogs:
 - [Jenkins](https://plugins.jenkins.io/gogs-webhook/) (CI)
 - [Taiga](https://taiga.io/) (Project Management)
 - [Puppet](https://forge.puppet.com/Siteminds/gogs) (IT)
-- [Kanboard](https://github.com/kanboard/plugin-gogs-webhook) (Project Management)
-- [BearyChat](https://bearychat.com/) (Team Communication)
 - [GitPitch](https://gitpitch.com/) (Markdown Presentations)
 - [Synology](https://www.synology.com) (Docker)
 - [Syncloud](https://syncloud.org/) (App Store)
