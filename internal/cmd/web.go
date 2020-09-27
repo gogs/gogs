@@ -643,7 +643,7 @@ func runWeb(c *cli.Context) error {
 			CookiePath:     conf.Server.Subpath,
 			CookieHttpOnly: true,
 			SetCookie:      true,
-			Secure:         conf.Server.URL.Scheme == "https",
+			Secure:         conf.Server.URL.Scheme == "https" || conf.Session.CookieSecure,
 		}),
 		context.Contexter(),
 	)
