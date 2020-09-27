@@ -7,12 +7,11 @@ package context
 import (
 	"bytes"
 	"fmt"
-	"net/url"
-	"strings"
-
 	"github.com/editorconfig/editorconfig-core-go/v2"
 	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
+	"net/url"
+	"strings"
 
 	"github.com/gogs/git-module"
 
@@ -341,24 +340,50 @@ func RepoRef() macaron.Handler {
 		} else {
 			hasMatched := false
 			parts := strings.Split(c.Params("*"), "/")
-			for i, part := range parts {
-				refName = strings.TrimPrefix(refName+"/"+part, "/")
 
-				if c.Repo.GitRepo.HasBranch(refName) ||
-					c.Repo.GitRepo.HasTag(refName) {
-					if i < len(parts)-1 {
-						c.Repo.TreePath = strings.Join(parts[i+1:], "/")
-					}
+			// Try to find commit by short SHA
+			if len(parts[0]) >= 6 &&
+				!c.Repo.GitRepo.HasBranch(parts[0]) &&
+				!c.Repo.GitRepo.HasTag(parts[0]) {
+				commit, err := c.Repo.GitRepo.CommitByRevision(parts[0])
+				if err == nil {
 					hasMatched = true
-					break
+					c.Repo.IsViewCommit = true
+					refName = commit.ID.String()
+					c.Repo.TreePath = strings.Join(parts[1:], "/")
 				}
 			}
-			if !hasMatched && len(parts[0]) == 40 {
-				refName = parts[0]
-				c.Repo.TreePath = strings.Join(parts[1:], "/")
+
+			// Try find branches or tags
+			if !hasMatched {
+				for i, part := range parts {
+					refName = strings.TrimPrefix(refName+"/"+part, "/")
+
+					if c.Repo.GitRepo.HasBranch(refName) ||
+						c.Repo.GitRepo.HasTag(refName) {
+						if i < len(parts)-1 {
+							c.Repo.TreePath = strings.Join(parts[i+1:], "/")
+						}
+						hasMatched = true
+						break
+					}
+				}
 			}
 
-			if c.Repo.GitRepo.HasBranch(refName) {
+			// We don't find neither commit, neither branch or tag
+			if !hasMatched {
+				c.NotFound()
+				return
+			}
+
+			if c.Repo.IsViewCommit {
+				c.Repo.CommitID = refName
+				c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(refName)
+				if err != nil {
+					c.NotFound()
+					return
+				}
+			} else if c.Repo.GitRepo.HasBranch(refName) {
 				c.Repo.IsViewBranch = true
 
 				c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(refName)
@@ -376,18 +401,6 @@ func RepoRef() macaron.Handler {
 					return
 				}
 				c.Repo.CommitID = c.Repo.Commit.ID.String()
-			} else if len(refName) == 40 {
-				c.Repo.IsViewCommit = true
-				c.Repo.CommitID = refName
-
-				c.Repo.Commit, err = c.Repo.GitRepo.CatFileCommit(refName)
-				if err != nil {
-					c.NotFound()
-					return
-				}
-			} else {
-				c.NotFound()
-				return
 			}
 		}
 
@@ -399,7 +412,7 @@ func RepoRef() macaron.Handler {
 		c.Data["IsViewTag"] = c.Repo.IsViewTag
 		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
-		// People who have push access or have fored repository can propose a new pull request.
+		// People who have push access or have forked repository can propose a new pull request.
 		if c.Repo.IsWriter() || (c.IsLogged && c.User.HasForkedRepo(c.Repo.Repository.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
