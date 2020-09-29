@@ -51,7 +51,7 @@ func fail(userMessage, errMessage string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func setup(c *cli.Context, logPath string, connectDB bool) {
+func setup(c *cli.Context, logFile string, connectDB bool) {
 	conf.HookMode = true
 
 	var customConf string
@@ -74,7 +74,7 @@ func setup(c *cli.Context, logPath string, connectDB bool) {
 
 	err = log.NewFile(log.FileConfig{
 		Level:    level,
-		Filename: filepath.Join(conf.Log.RootPath, logPath),
+		Filename: filepath.Join(conf.Log.RootPath, "hooks", logFile),
 		FileRotationConfig: log.FileRotationConfig{
 			Rotate:  true,
 			Daily:   true,
