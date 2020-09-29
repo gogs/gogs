@@ -38,7 +38,7 @@ var Serv = cli.Command{
 // logs error message on the server side. When not in "prod" mode,
 // error message is also printed to the client for easier debugging.
 func fail(userMessage, errMessage string, args ...interface{}) {
-	fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
+	_, _ = fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 
 	if len(errMessage) > 0 {
 		if !conf.IsProdMode() {
@@ -47,6 +47,7 @@ func fail(userMessage, errMessage string, args ...interface{}) {
 		log.Error(errMessage, args...)
 	}
 
+	log.Stop()
 	os.Exit(1)
 }
 
