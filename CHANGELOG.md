@@ -16,6 +16,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Regression:_ Push commits no longer fail with "pre-receive hook declined" when running Gogs on Windows on a daily basis. [#6316](https://github.com/gogs/gogs/issues/6316)
+
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
