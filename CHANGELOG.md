@@ -16,7 +16,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Regression:_ Push commits no longer fail with "pre-receive hook declined" when running Gogs on Windows on a daily basis. [#6316](https://github.com/gogs/gogs/issues/6316)
+- _Regression:_ When running Gogs on Windows, push commits no longer fail on a daily basis with the error "pre-receive hook declined". [#6316](https://github.com/gogs/gogs/issues/6316)
 
 ### Removed
 
