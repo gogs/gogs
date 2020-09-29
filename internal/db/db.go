@@ -128,7 +128,7 @@ var tables = []interface{}{
 	new(LFSObject), new(LoginSource),
 }
 
-func Init() (*gorm.DB, error) {
+func Init(w io.Writer) (*gorm.DB, error) {
 	db, err := openDB(conf.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
@@ -138,10 +138,6 @@ func Init() (*gorm.DB, error) {
 	db.DB().SetMaxIdleConns(conf.Database.MaxIdleConns)
 	db.DB().SetConnMaxLifetime(time.Minute)
 
-	w, err := getLogWriter()
-	if err != nil {
-		return nil, errors.Wrap(err, "get log writer")
-	}
 	db.SetLogger(&dbutil.Writer{Writer: w})
 	if !conf.IsProdMode() {
 		db = db.LogMode(true)

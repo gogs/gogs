@@ -20,6 +20,7 @@ All notable changes to Gogs are documented in this file.
 - _Regression:_ Submodule with a relative path is linked correctly. [#6319](https://github.com/gogs/gogs/issues/6319)
 - Backup can be processed when `--target` is specified on Windows. [#6339](https://github.com/gogs/gogs/issues/6339)
 - Commit message contains keywords look like an issue reference no longer fails the push entirely. [#6289](https://github.com/gogs/gogs/issues/6289)
+- _Regression:_ When running Gogs on Windows, push commits no longer fail on a daily basis with the error "pre-receive hook declined". [#6316](https://github.com/gogs/gogs/issues/6316)
 
 ### Removed
 

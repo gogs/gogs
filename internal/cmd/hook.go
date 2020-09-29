@@ -66,7 +66,7 @@ func runHookPreReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/pre-receive.log", true)
+	setup(c, "pre-receive.log", true)
 
 	isWiki := strings.Contains(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
@@ -159,7 +159,7 @@ func runHookUpdate(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/update.log", false)
+	setup(c, "update.log", false)
 
 	args := c.Args()
 	if len(args) != 3 {
@@ -193,7 +193,7 @@ func runHookPostReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/post-receive.log", true)
+	setup(c, "post-receive.log", true)
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
