@@ -16,9 +16,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Regression:_ Pages are correctly rendered when requesting `?go-get=1` for subdirectories. [#6314](https://github.com/gogs/gogs/issues/6314)
-- _Regression:_ Submodule with a relative path is linked correctly. [#6319](https://github.com/gogs/gogs/issues/6319)
-- Backup can be processed when `--target` is specified on Windows. [#6339](https://github.com/gogs/gogs/issues/6339)
+- _Regression:_ When running Gogs on Windows, push commits no longer fail on a daily basis with the error "pre-receive hook declined". [#6316](https://github.com/gogs/gogs/issues/6316)
 - Auto-linked commit SHAs now have correct links. [#6300](https://github.com/gogs/gogs/issues/6300)
 
 ### Removed
@@ -40,6 +38,15 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used.
 - Configuration option `[database] DB_TYPE` is no longer used.
 - Configuration option `[database] PASSWD` is no longer used.
+
+## 0.12.2
+
+### Fixed
+
+- _Regression:_ Pages are correctly rendered when requesting `?go-get=1` for subdirectories. [#6314](https://github.com/gogs/gogs/issues/6314)
+- _Regression:_ Submodule with a relative path is linked correctly. [#6319](https://github.com/gogs/gogs/issues/6319)
+- Backup can be processed when `--target` is specified on Windows. [#6339](https://github.com/gogs/gogs/issues/6339)
+- Commit message contains keywords look like an issue reference no longer fails the push entirely. [#6289](https://github.com/gogs/gogs/issues/6289)
 
 ## 0.12.1
 
