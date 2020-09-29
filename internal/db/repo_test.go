@@ -19,14 +19,19 @@ func TestRepository_ComposeMetas(t *testing.T) {
 
 	t.Run("no external tracker is configured", func(t *testing.T) {
 		repo.EnableExternalTracker = false
-		assert.Equal(t, map[string]string(nil), repo.ComposeMetas())
 
-		// Should be nil even if other settings are present
-		repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_NUMERIC
-		assert.Equal(t, map[string]string(nil), repo.ComposeMetas())
+		metas := repo.ComposeMetas()
+		assert.Equal(t, metas["repoLink"], repo.Link())
+
+		// Should no format and style if no external tracker is configured
+		_, ok := metas["format"]
+		assert.False(t, ok)
+		_, ok = metas["style"]
+		assert.False(t, ok)
 	})
 
 	t.Run("an external issue tracker is configured", func(t *testing.T) {
+		repo.ExternalMetas = nil
 		repo.EnableExternalTracker = true
 
 		// Default to numeric issue style
