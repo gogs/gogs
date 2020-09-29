@@ -10,16 +10,20 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/migrations"
+	"gogs.io/gogs/internal/dbutil"
 )
 
 // Engine represents a XORM engine or session.
@@ -132,16 +136,21 @@ func SetEngine() (*gorm.DB, error) {
 
 	x.SetMapper(core.GonicMapper{})
 
-	// WARNING: for serv command, MUST remove the output to os.stdout,
-	// so use log file to instead print to stdout.
+	var logPath string
+	if conf.HookMode {
+		logPath = filepath.Join(conf.Log.RootPath, "hooks", "xorm.log")
+	} else {
+		logPath = filepath.Join(conf.Log.RootPath, "xorm.log")
+	}
 	sec := conf.File.Section("log.xorm")
-	logger, err := log.NewFileWriter(path.Join(conf.Log.RootPath, "xorm.log"),
+	fileWriter, err := log.NewFileWriter(logPath,
 		log.FileRotationConfig{
 			Rotate:  sec.Key("ROTATE").MustBool(true),
 			Daily:   sec.Key("ROTATE_DAILY").MustBool(true),
 			MaxSize: sec.Key("MAX_SIZE").MustInt64(100) * 1024 * 1024,
 			MaxDays: sec.Key("MAX_DAYS").MustInt64(3),
-		})
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("create 'xorm.log': %v", err)
 	}
@@ -151,12 +160,22 @@ func SetEngine() (*gorm.DB, error) {
 	x.SetConnMaxLifetime(time.Second)
 
 	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(logger, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
+		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
 	} else {
-		x.SetLogger(xorm.NewSimpleLogger(logger))
+		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
 	}
 	x.ShowSQL(true)
-	return Init()
+
+	var gormLogger logger.Writer
+	if conf.HookMode {
+		gormLogger = &dbutil.Logger{Writer: fileWriter}
+	} else {
+		gormLogger, err = newLogWriter()
+		if err != nil {
+			return nil, errors.Wrap(err, "new log writer")
+		}
+	}
+	return Init(gormLogger)
 }
 
 func NewEngine() (err error) {
