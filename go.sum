@@ -75,6 +75,8 @@ github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191 h1:NjHlg70DuOkcA
 github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191/go.mod h1:VFI2o2q9kYsC4o7VP1HrEVosiZZTd+MVT3YZx4gqvJw=
 github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659 h1:YXDFNK98PgKeBd+xM2Babdd6gyABG8H+SSAh5+hr0os=
 github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659/go.mod h1:tLd0QEudXocQckwcpCq5pCuTCuYc24I0bRJDuRe9OuQ=
+github.com/go-macaron/session v1.0.0 h1:ixsWNPxg038ZuhaMBN64sqLRaueRwDUSbF6q+30WJic=
+github.com/go-macaron/session v1.0.0/go.mod h1:tLd0QEudXocQckwcpCq5pCuTCuYc24I0bRJDuRe9OuQ=
 github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6 h1:x/v1iUWlqXTKVg17ulB0qCgcM2s+eysAbr/dseKLLss=
 github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6/go.mod h1:YFNJ/JT4yLnpuIXTFef30SZkxGHUczjGZGFaZpPcdn0=
 github.com/go-sql-driver/mysql v1.4.1/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
