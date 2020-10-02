@@ -63,7 +63,7 @@ require (
 	gorm.io/driver/postgres v1.0.1
 	gorm.io/driver/sqlite v1.1.3
 	gorm.io/driver/sqlserver v1.0.4
-	gorm.io/gorm v1.20.1
+	gorm.io/gorm v1.20.2
 	unknwon.dev/clog/v2 v2.1.2
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
