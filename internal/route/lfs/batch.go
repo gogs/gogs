@@ -44,6 +44,11 @@ func serveBatch(c *macaron.Context, owner *db.User, repo *db.Repository) {
 				actions = batchActions{
 					Upload: &batchAction{
 						Href: fmt.Sprintf("%s/%s", baseHref, obj.Oid),
+						Header: map[string]string{
+							// NOTE: git-lfs v2.5.0 sets the Content-Type based on the uploaded file.
+							// This ensures that the client always uses the designated value for the header.
+							"Content-Type": "application/octet-stream",
+						},
 					},
 					Verify: &batchAction{
 						Href: fmt.Sprintf("%s/verify", baseHref),
@@ -136,7 +141,8 @@ type batchError struct {
 }
 
 type batchAction struct {
-	Href string `json:"href"`
+	Href   string            `json:"href"`
+	Header map[string]string `json:"header,omitempty"`
 }
 
 type batchActions struct {
