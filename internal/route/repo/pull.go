@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -354,7 +355,7 @@ func ViewPullFiles(c *context.Context) {
 
 	diff, err := gitutil.RepoDiff(diffGitRepo,
 		endCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: startCommitID},
+		git.DiffOptions{Base: startCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
 		c.Error(err, "get diff")
@@ -575,7 +576,7 @@ func PrepareCompareDiff(
 
 	diff, err := gitutil.RepoDiff(headGitRepo,
 		headCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Base: meta.MergeBase},
+		git.DiffOptions{Base: meta.MergeBase, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
 		c.Error(err, "get repository diff")

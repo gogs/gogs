@@ -215,3 +215,41 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 		})
 	})
 }
+
+func TestRenderSha1CurrentPattern(t *testing.T) {
+	metas := map[string]string{
+		"repoLink": "/someuser/somerepo",
+	}
+
+	tests := []struct {
+		desc   string
+		input  string
+		prefix string
+		expVal string
+	}{
+		{
+			desc:   "Full SHA (40 symbols)",
+			input:  "ad8ced4f57d9068cb2874557245be3c7f341149d",
+			prefix: metas["repoLink"],
+			expVal: `<a href="/someuser/somerepo/commit/ad8ced4f57d9068cb2874557245be3c7f341149d"><code>ad8ced4f57</code></a>`,
+		},
+		{
+			desc:   "Short SHA (8 symbols)",
+			input:  "ad8ced4f",
+			prefix: metas["repoLink"],
+			expVal: `<a href="/someuser/somerepo/commit/ad8ced4f"><code>ad8ced4f</code></a>`,
+		},
+		{
+			desc:   "9 digits",
+			input:  "123456789",
+			prefix: metas["repoLink"],
+			expVal: "123456789",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			assert.Equal(t, test.expVal, string(RenderSha1CurrentPattern([]byte(test.input), test.prefix)))
+		})
+	}
+}

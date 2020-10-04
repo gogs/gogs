@@ -7,6 +7,7 @@ All notable changes to Gogs are documented in this file.
 ### Added
 
 - An unlisted option is added when create or migrate a repository. Unlisted repositories are public but not being listed for users without direct access in the UI. [#5733](https://github.com/gogs/gogs/issues/5733)
+- Add new configuration option `[git.timeout] DIFF` for customizing operation timeout of `git diff`. [#6315](https://github.com/gogs/gogs/issues/6315)
 
 ### Changed
 
@@ -17,6 +18,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - _Regression:_ When running Gogs on Windows, push commits no longer fail on a daily basis with the error "pre-receive hook declined". [#6316](https://github.com/gogs/gogs/issues/6316)
+- Auto-linked commit SHAs now have correct links. [#6300](https://github.com/gogs/gogs/issues/6300)
 
 ### Removed
 

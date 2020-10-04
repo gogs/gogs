@@ -429,24 +429,29 @@ func (repo *Repository) UpdateSize() error {
 	return nil
 }
 
-// ComposeMetas composes a map of metas for rendering external issue tracker URL.
+// ComposeMetas composes a map of metas for rendering SHA1 URL and external issue tracker URL.
 func (repo *Repository) ComposeMetas() map[string]string {
-	if !repo.EnableExternalTracker {
-		return nil
-	} else if repo.ExternalMetas == nil {
-		repo.ExternalMetas = map[string]string{
-			"format": repo.ExternalTrackerFormat,
-			"user":   repo.MustOwner().Name,
-			"repo":   repo.Name,
-		}
+	if repo.ExternalMetas != nil {
+		return repo.ExternalMetas
+	}
+
+	repo.ExternalMetas = map[string]string{
+		"repoLink": repo.Link(),
+	}
+
+	if repo.EnableExternalTracker {
+		repo.ExternalMetas["user"] = repo.MustOwner().Name
+		repo.ExternalMetas["repo"] = repo.Name
+		repo.ExternalMetas["format"] = repo.ExternalTrackerFormat
+
 		switch repo.ExternalTrackerStyle {
 		case markup.ISSUE_NAME_STYLE_ALPHANUMERIC:
 			repo.ExternalMetas["style"] = markup.ISSUE_NAME_STYLE_ALPHANUMERIC
 		default:
 			repo.ExternalMetas["style"] = markup.ISSUE_NAME_STYLE_NUMERIC
 		}
-
 	}
+
 	return repo.ExternalMetas
 }
 
