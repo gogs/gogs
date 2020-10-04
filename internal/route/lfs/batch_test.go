@@ -6,6 +6,7 @@ package lfs
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -42,7 +43,7 @@ func Test_serveBatch(t *testing.T) {
 			name:          "unrecognized operation",
 			body:          `{"operation": "update"}`,
 			expStatusCode: http.StatusBadRequest,
-			expBody:       `{"message":"Operation not recognized"}` + "\n",
+			expBody:       `{"message": "Operation not recognized"}` + "\n",
 		},
 		{
 			name: "upload: contains invalid oid",
@@ -53,7 +54,25 @@ func Test_serveBatch(t *testing.T) {
 	{"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size": 123}
 ]}`,
 			expStatusCode: http.StatusOK,
-			expBody:       `{"transfer":"basic","objects":[{"oid":"bad_oid","size":123,"actions":{"error":{"code":422,"message":"Object has invalid oid"}}},{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f","size":123,"actions":{"upload":{"href":"https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"},"verify":{"href":"https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/verify"}}}]}` + "\n",
+			expBody: `{
+	"transfer": "basic",
+	"objects": [
+		{"oid": "bad_oid", "size":123, "actions": {"error": {"code": 422, "message": "Object has invalid oid"}}},
+		{
+			"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+			"size": 123,
+			"actions": {
+				"upload": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+					"header": {"Content-Type": "application/octet-stream"}
+				},
+				"verify": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/verify"
+				}
+			}
+		}
+	]
+}` + "\n",
 		},
 		{
 			name: "download: contains non-existent oid and mismatched size",
@@ -78,7 +97,26 @@ func Test_serveBatch(t *testing.T) {
 				},
 			},
 			expStatusCode: http.StatusOK,
-			expBody:       `{"transfer":"basic","objects":[{"oid":"bad_oid","size":123,"actions":{"error":{"code":404,"message":"Object does not exist"}}},{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f","size":123,"actions":{"error":{"code":422,"message":"Object size mismatch"}}},{"oid":"5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57","size":456,"actions":{"download":{"href":"https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57"}}}]}` + "\n",
+			expBody: `{
+	"transfer": "basic",
+	"objects": [
+		{"oid": "bad_oid", "size": 123, "actions": {"error": {"code": 404, "message": "Object does not exist"}}},
+		{
+			"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+			"size": 123,
+			"actions": {"error": {"code": 422, "message": "Object size mismatch"}}
+		},
+		{
+			"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57",
+			"size": 456,
+			"actions": {
+				"download": {
+					"href": "https://gogs.example.com/owner/repo.git/info/lfs/objects/basic/5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57"
+				}
+			}
+		}
+	]
+}` + "\n",
 		},
 	}
 	for _, test := range tests {
@@ -100,7 +138,20 @@ func Test_serveBatch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, test.expBody, string(body))
+
+			var expBody bytes.Buffer
+			err = json.Indent(&expBody, []byte(test.expBody), "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var gotBody bytes.Buffer
+			err = json.Indent(&gotBody, body, "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, expBody.String(), gotBody.String())
 		})
 	}
 }
