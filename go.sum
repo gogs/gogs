@@ -545,6 +545,8 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gorm.io/driver/mysql v1.0.1 h1:omJoilUzyrAp0xNoio88lGJCroGdIOen9hq2A/+3ifw=
 gorm.io/driver/mysql v1.0.1/go.mod h1:KtqSthtg55lFp3S5kUXqlGaelnWpKitn4k1xZTnoiPw=
+gorm.io/driver/mysql v1.0.2 h1:xm21Um8cR/Cg+nMwSrajf8aBUxOIC+WmH72ir/ByYR8=
+gorm.io/driver/mysql v1.0.2/go.mod h1:T+Fv7Rq/8+lpS3X1KKVUbj8Y/SzbPa5esK9KpPAKXR8=
 gorm.io/driver/postgres v1.0.1 h1:jRfDNUxpxNrea/97kbcscAQGmiks4UCKAYXsvh4rhOQ=
 gorm.io/driver/postgres v1.0.1/go.mod h1:pv4dVhHvEVrP7k/UYqdBIllbdbpB5VTz89X1O0uOrCA=
 gorm.io/driver/postgres v1.0.2 h1:mB5JjD4QglbCTdMT1aZDxQzHr87XDK1qh0MKIU3P96g=
