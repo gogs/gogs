@@ -11,6 +11,7 @@ on:
     paths:
       - '**.go'
       - 'go.mod'
+      - '.github/workflows/go.yml'
 env:
   GOPROXY: "https://proxy.golang.org"
 
