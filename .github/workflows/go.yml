@@ -6,9 +6,11 @@ on:
       - 'release/**'
     paths:
       - '**.go'
+      - 'go.mod'
   pull_request:
     paths:
       - '**.go'
+      - 'go.mod'
 env:
   GOPROXY: "https://proxy.golang.org"
 
