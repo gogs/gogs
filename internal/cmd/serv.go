@@ -210,11 +210,12 @@ func runServ(c *cli.Context) error {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode, err := db.UserAccessMode(user.ID, repo)
-			if err != nil {
-				fail("Internal error", "Failed to check access: %v", err)
-			}
-
+			mode := db.Perms.AccessMode(user.ID, repo.ID,
+				db.AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			)
 			if mode < requestMode {
 				clientMessage := _ACCESS_DENIED_MESSAGE
 				if mode >= db.AccessModeRead {

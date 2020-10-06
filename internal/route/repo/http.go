@@ -165,7 +165,12 @@ Please create and use personal access token on user settings page`)
 		if isPull {
 			mode = db.AccessModeRead
 		}
-		if !db.Perms.Authorize(authUser.ID, repo, mode) {
+		if !db.Perms.Authorize(authUser.ID, repo.ID, mode,
+			db.AccessModeOptions{
+				OwnerID: repo.OwnerID,
+				Private: repo.IsPrivate,
+			},
+		) {
 			askCredentials(c, http.StatusForbidden, "User permission denied")
 			return
 		}
