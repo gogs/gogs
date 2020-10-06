@@ -131,7 +131,12 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		if !db.Perms.Authorize(actor.ID, repo, mode) {
+		if !db.Perms.Authorize(actor.ID, repo.ID, mode,
+			db.AccessModeOptions{
+				OwnerID: repo.OwnerID,
+				Private: repo.IsPrivate,
+			},
+		) {
 			c.Status(http.StatusNotFound)
 			return
 		}

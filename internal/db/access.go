@@ -73,6 +73,7 @@ func userAccessMode(e Engine, userID int64, repo *Repository) (AccessMode, error
 }
 
 // UserAccessMode returns the access mode of given user to the repository.
+// Deprecated: Use Perms.AccessMode instead.
 func UserAccessMode(userID int64, repo *Repository) (AccessMode, error) {
 	return userAccessMode(x, userID, repo)
 }
