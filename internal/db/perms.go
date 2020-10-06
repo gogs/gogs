@@ -24,6 +24,16 @@ type PermsStore interface {
 
 var Perms PermsStore
 
+// Access represents the highest access level of a user has to a repository.
+// The only access type that is not in this table is the real owner of a repository.
+// In case of an organization repository, the members of the owners team are in this table.
+type Access struct {
+	ID     int64
+	UserID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;NOT NULL"`
+	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;NOT NULL"`
+	Mode   AccessMode `gorm:"NOT NULL"`
+}
+
 var _ PermsStore = (*perms)(nil)
 
 type perms struct {

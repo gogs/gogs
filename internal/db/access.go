@@ -47,16 +47,6 @@ func ParseAccessMode(permission string) AccessMode {
 	}
 }
 
-// Access represents the highest access level of a user to a repository. The only access type
-// that is not in this table is the real owner of a repository. In case of an organization
-// repository, the members of the owners team are in this table.
-type Access struct {
-	ID     int64
-	UserID int64 `xorm:"UNIQUE(s)"`
-	RepoID int64 `xorm:"UNIQUE(s)"`
-	Mode   AccessMode
-}
-
 func userAccessMode(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 	mode := AccessModeNone
 	// Everyone has read access to public repository
