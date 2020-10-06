@@ -1,7 +1,8 @@
 ## Before release
 
-On develop branch:
+On release branch:
 
+- [ ] Make sure all commits are cherry-picked from the develop branch by checking the patch milestone.
 - [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release, `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
 	- [ ] _link to the commit_
 
