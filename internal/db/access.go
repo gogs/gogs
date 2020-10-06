@@ -10,43 +10,6 @@ import (
 	log "unknwon.dev/clog/v2"
 )
 
-type AccessMode int
-
-const (
-	AccessModeNone  AccessMode = iota // 0
-	AccessModeRead                    // 1
-	AccessModeWrite                   // 2
-	AccessModeAdmin                   // 3
-	AccessModeOwner                   // 4
-)
-
-func (mode AccessMode) String() string {
-	switch mode {
-	case AccessModeRead:
-		return "read"
-	case AccessModeWrite:
-		return "write"
-	case AccessModeAdmin:
-		return "admin"
-	case AccessModeOwner:
-		return "owner"
-	default:
-		return "none"
-	}
-}
-
-// ParseAccessMode returns corresponding access mode to given permission string.
-func ParseAccessMode(permission string) AccessMode {
-	switch permission {
-	case "write":
-		return AccessModeWrite
-	case "admin":
-		return AccessModeAdmin
-	default:
-		return AccessModeRead
-	}
-}
-
 func userAccessMode(e Engine, userID int64, repo *Repository) (AccessMode, error) {
 	mode := AccessModeNone
 	// Everyone has read access to public repository

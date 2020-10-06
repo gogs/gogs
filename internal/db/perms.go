@@ -34,6 +34,44 @@ type Access struct {
 	Mode   AccessMode `gorm:"NOT NULL"`
 }
 
+// AccessMode is the access mode of a user has to a repository.
+type AccessMode int
+
+const (
+	AccessModeNone  AccessMode = iota // 0
+	AccessModeRead                    // 1
+	AccessModeWrite                   // 2
+	AccessModeAdmin                   // 3
+	AccessModeOwner                   // 4
+)
+
+func (mode AccessMode) String() string {
+	switch mode {
+	case AccessModeRead:
+		return "read"
+	case AccessModeWrite:
+		return "write"
+	case AccessModeAdmin:
+		return "admin"
+	case AccessModeOwner:
+		return "owner"
+	default:
+		return "none"
+	}
+}
+
+// ParseAccessMode returns corresponding access mode to given permission string.
+func ParseAccessMode(permission string) AccessMode {
+	switch permission {
+	case "write":
+		return AccessModeWrite
+	case "admin":
+		return AccessModeAdmin
+	default:
+		return AccessModeRead
+	}
+}
+
 var _ PermsStore = (*perms)(nil)
 
 type perms struct {
