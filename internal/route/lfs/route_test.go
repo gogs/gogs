@@ -209,7 +209,7 @@ func Test_authorize(t *testing.T) {
 				},
 			},
 			mockPermsStore: &db.MockPermsStore{
-				MockAuthorize: func(userID int64, repo *db.Repository, desired db.AccessMode) bool {
+				MockAuthorize: func(userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
 					return desired <= db.AccessModeRead
 				},
 			},
@@ -230,7 +230,7 @@ func Test_authorize(t *testing.T) {
 				},
 			},
 			mockPermsStore: &db.MockPermsStore{
-				MockAuthorize: func(userID int64, repo *db.Repository, desired db.AccessMode) bool {
+				MockAuthorize: func(userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
 					return desired <= db.AccessModeRead
 				},
 			},

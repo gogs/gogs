@@ -77,12 +77,6 @@ func hasAccess(e Engine, userID int64, repo *Repository, testMode AccessMode) (b
 	return mode >= testMode, err
 }
 
-// HasAccess returns true if someone has the request access level. User can be nil!
-// Deprecated: Use Perms.Authorize instead.
-func HasAccess(userID int64, repo *Repository, testMode AccessMode) (bool, error) {
-	return hasAccess(x, userID, repo, testMode)
-}
-
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
 func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	accesses := make([]*Access, 0, 10)

@@ -555,8 +555,12 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 }
 
 func (repo *Repository) HasAccess(userID int64) bool {
-	has, _ := HasAccess(userID, repo, AccessModeRead)
-	return has
+	return Perms.Authorize(userID, repo.ID, AccessModeRead,
+		AccessModeOptions{
+			OwnerID: repo.OwnerID,
+			Private: repo.IsPrivate,
+		},
+	)
 }
 
 func (repo *Repository) IsOwnedBy(userID int64) bool {
