@@ -29,8 +29,8 @@ func Test_dumpAndImport(t *testing.T) {
 
 	t.Parallel()
 
-	if len(Tables) != 3 {
-		t.Fatalf("New table has added (want 3 got %d), please add new tests for the table and update this check", len(Tables))
+	if len(Tables) != 4 {
+		t.Fatalf("New table has added (want 4 got %d), please add new tests for the table and update this check", len(Tables))
 	}
 
 	db := initTestDB(t, "dumpAndImport", Tables...)
@@ -46,6 +46,19 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 	t.Helper()
 
 	vals := []interface{}{
+		&Access{
+			ID:     1,
+			UserID: 1,
+			RepoID: 11,
+			Mode:   AccessModeRead,
+		},
+		&Access{
+			ID:     2,
+			UserID: 2,
+			RepoID: 22,
+			Mode:   AccessModeWrite,
+		},
+
 		&AccessToken{
 			UserID:      1,
 			Name:        "test1",

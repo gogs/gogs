@@ -173,6 +173,38 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 	if err = t.getMembers(e); err != nil {
 		return fmt.Errorf("get team members: %v", err)
 	}
+
+	// TODO: Delete me when this method is migrated to use GORM.
+	userAccessMode := func(e Engine, userID int64, repo *Repository) (AccessMode, error) {
+		mode := AccessModeNone
+		// Everyone has read access to public repository
+		if !repo.IsPrivate {
+			mode = AccessModeRead
+		}
+
+		if userID <= 0 {
+			return mode, nil
+		}
+
+		if userID == repo.OwnerID {
+			return AccessModeOwner, nil
+		}
+
+		access := &Access{
+			UserID: userID,
+			RepoID: repo.ID,
+		}
+		if has, err := e.Get(access); !has || err != nil {
+			return mode, err
+		}
+		return access.Mode, nil
+	}
+
+	hasAccess := func(e Engine, userID int64, repo *Repository, testMode AccessMode) (bool, error) {
+		mode, err := userAccessMode(e, userID, repo)
+		return mode >= testMode, err
+	}
+
 	for _, member := range t.Members {
 		has, err := hasAccess(e, member.ID, repo, AccessModeRead)
 		if err != nil {
