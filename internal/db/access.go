@@ -10,36 +10,6 @@ import (
 	log "unknwon.dev/clog/v2"
 )
 
-func userAccessMode(e Engine, userID int64, repo *Repository) (AccessMode, error) {
-	mode := AccessModeNone
-	// Everyone has read access to public repository
-	if !repo.IsPrivate {
-		mode = AccessModeRead
-	}
-
-	if userID <= 0 {
-		return mode, nil
-	}
-
-	if userID == repo.OwnerID {
-		return AccessModeOwner, nil
-	}
-
-	access := &Access{
-		UserID: userID,
-		RepoID: repo.ID,
-	}
-	if has, err := e.Get(access); !has || err != nil {
-		return mode, err
-	}
-	return access.Mode, nil
-}
-
-func hasAccess(e Engine, userID int64, repo *Repository, testMode AccessMode) (bool, error) {
-	mode, err := userAccessMode(e, userID, repo)
-	return mode >= testMode, err
-}
-
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
 func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
 	accesses := make([]*Access, 0, 10)
