@@ -17,10 +17,6 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Regression:_ When running Gogs on Windows, push commits no longer fail on a daily basis with the error "pre-receive hook declined". [#6316](https://github.com/gogs/gogs/issues/6316)
-- Auto-linked commit SHAs now have correct links. [#6300](https://github.com/gogs/gogs/issues/6300)
-- Git LFS client (with version >= 2.5.0) wasn't able to upload files with known format (e.g. PNG, JPEG), and the server is expecting the HTTP Header `Content-Type` to be `application/octet-stream`. The server now tells the LFS client to always use `Content-Type: application/octet-stream` when upload files.
-
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
@@ -40,6 +36,14 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used.
 - Configuration option `[database] DB_TYPE` is no longer used.
 - Configuration option `[database] PASSWD` is no longer used.
+
+## 0.12.3
+
+### Fixed
+
+- _Regression:_ When running Gogs on Windows, push commits no longer fail on a daily basis with the error "pre-receive hook declined". [#6316](https://github.com/gogs/gogs/issues/6316)
+- Auto-linked commit SHAs now have correct links. [#6300](https://github.com/gogs/gogs/issues/6300)
+- Git LFS client (with version >= 2.5.0) wasn't able to upload files with known format (e.g. PNG, JPEG), and the server is expecting the HTTP Header `Content-Type` to be `application/octet-stream`. The server now tells the LFS client to always use `Content-Type: application/octet-stream` when upload files.
 
 ## 0.12.2
 
