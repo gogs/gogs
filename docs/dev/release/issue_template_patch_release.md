@@ -3,7 +3,7 @@
 On release branch:
 
 - [ ] Make sure all commits are cherry-picked from the develop branch by checking the patch milestone.
-- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release, `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
+- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release, e.g. `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
 	- [ ] _link to the commit_
 
 ## During release
@@ -34,5 +34,9 @@ On release branch:
 
 On develop branch:
 
+- [ ] Post the following message on issues that are included in the patch milestone.
+    ```
+    The <MAJOR>.<MINOR>.<PATCH> has been released.
+    ```
 - [ ] Update the repository mirror on [Gitee](https://gitee.com/unknwon/gogs).
 - [ ] Reply to the release topic for the minor release on [Gogs Discussion](https://discuss.gogs.io/c/announcements/5).
