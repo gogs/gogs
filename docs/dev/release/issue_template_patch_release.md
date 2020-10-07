@@ -12,7 +12,7 @@ On release branch:
 
 - [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L21) to the current release, e.g. `0.12.0` -> `0.12.1`.
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
-- [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version.
+- [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version. **Make sure the tag is created on the release branch**.
 - [ ] Update all previous GitHub releases with same minor version with the warning:
     ```
     **ℹ️ Heads up! There is a new patch release [0.12.1](https://github.com/gogs/gogs/releases/tag/v0.12.1) available, we recommend directly installing or upgrading to that version.**
