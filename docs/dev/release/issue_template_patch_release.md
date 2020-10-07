@@ -40,4 +40,4 @@ On develop branch:
     ```
 - [ ] Update the repository mirror on [Gitee](https://gitee.com/unknwon/gogs).
 - [ ] Reply to the release topic for the minor release on [Gogs Discussion](https://discuss.gogs.io/c/announcements/5).
-- [ ] Close tthe patch milestone.
+- [ ] Close the patch milestone.
