@@ -34,7 +34,7 @@ On release branch:
 
 On develop branch:
 
-- [ ] Post the following message on issues that are included in the patch milestone.
+- [ ] Post the following message on issues that are included in the patch milestone:
     ```
     The <MAJOR>.<MINOR>.<PATCH> has been released.
     ```
