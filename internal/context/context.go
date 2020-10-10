@@ -248,7 +248,7 @@ func Contexter() macaron.Handler {
 
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Header().Set("'Access-Control-Allow-Credentials' ", "true")
+			c.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Header().Set("Access-Control-Max-Age", "3600")
 			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 		}
