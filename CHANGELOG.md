@@ -24,7 +24,6 @@ All notable changes to Gogs are documented in this file.
 - Configuration section `[service]` is no longer used.
 - Configuration option `APP_NAME` is no longer used.
 - Configuration option `[security] REVERSE_PROXY_AUTHENTICATION_USER` is no longer used.
-- Configuration option `[database] PASSWD` is no longer used.
 - Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is no longer used.
 - Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is no longer used.
 - Configuration option `[auth] ENABLE_CAPTCHA` is no longer used.
