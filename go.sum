@@ -50,6 +50,7 @@ github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/editorconfig/editorconfig-core-go/v2 v2.3.7 h1:e88U5ztaklGv7X0gHIgR/cCJmHkLyVAS8aOIoEPKJP0=
 github.com/editorconfig/editorconfig-core-go/v2 v2.3.7/go.mod h1:NifC+uYhAGV/U2AxhZa3bNy4EdFMHz9mVU02vbGSMWQ=
+github.com/editorconfig/editorconfig-core-go/v2 v2.3.8/go.mod h1:z7TIMh40583cev3v8ei7V1RRPKeHQbttoa4Vm5/5u7g=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
