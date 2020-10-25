@@ -735,6 +735,7 @@ gorm.io/driver/sqlite v1.1.3 h1:BYfdVuZB5He/u9dt4qDpZqiqDJ6KhPqs5QUqsr/Eeuc=
 gorm.io/driver/sqlite v1.1.3/go.mod h1:AKDgRWk8lcSQSw+9kxCJnX/yySj8G3rdwYlU57cB45c=
 gorm.io/driver/sqlserver v1.0.4 h1:V15fszi0XAo7fbx3/cF50ngshDSN4QT0MXpWTylyPTY=
 gorm.io/driver/sqlserver v1.0.4/go.mod h1:ciEo5btfITTBCj9BkoUVDvgQbUdLWQNqdFY5OGuGnRg=
+gorm.io/driver/sqlserver v1.0.5/go.mod h1:WI/bfZ+s9TigYXe3hb3XjNaUP0TqmTdXl11pECyLATs=
 gorm.io/gorm v1.20.0 h1:qfIlyaZvrF7kMWY3jBdEBXkXJ2M5MFYMTppjILxS3fQ=
 gorm.io/gorm v1.20.0/go.mod h1:0HFTzE/SqkGTzK6TlDPPQbAYCluiVvhzoA1+aVyzenw=
 gorm.io/gorm v1.20.1 h1:+hOwlHDqvqmBIMflemMVPLJH7tZYK4RxFDBHEfJTup0=
