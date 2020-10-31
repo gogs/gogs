@@ -17,7 +17,7 @@ import (
 	"gogs.io/gogs/internal/osutil"
 )
 
-//go:generate go-bindata -nomemcopy -ignore="\\.DS_Store" -pkg=templates -prefix=../../../templates -debug=false -o=templates_gen.go ../../../templates/...
+//go:generate go-bindata -nomemcopy -nometadata -ignore="\\.DS_Store" -pkg=templates -prefix=../../../templates -debug=false -o=templates_gen.go ../../../templates/...
 
 // fileSystem implements the macaron.TemplateFileSystem interface.
 type fileSystem struct {
