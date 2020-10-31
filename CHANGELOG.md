@@ -24,7 +24,6 @@ All notable changes to Gogs are documented in this file.
 - Configuration section `[service]` is no longer used.
 - Configuration option `APP_NAME` is no longer used.
 - Configuration option `[security] REVERSE_PROXY_AUTHENTICATION_USER` is no longer used.
-- Configuration option `[database] PASSWD` is no longer used.
 - Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is no longer used.
 - Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is no longer used.
 - Configuration option `[auth] ENABLE_CAPTCHA` is no longer used.
@@ -91,6 +90,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration section `[service]` is deprecated and will end support in 0.13.0, please start using `[auth]`.
 - Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is deprecated and will end support in 0.13.0, please start using `[auth] ACTIVATE_CODE_LIVES`.
 - Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is deprecated and will end support in 0.13.0, please start using `[auth] RESET_PASSWORD_CODE_LIVES`.
+- Configuration option `[auth] REGISTER_EMAIL_CONFIRM` is deprecated and will end support in 0.13.0, please start using `[auth] REQUIRE_EMAIL_CONFIRMATION`.
 - Configuration option `[auth] ENABLE_CAPTCHA` is deprecated and will end support in 0.13.0, please start using `[auth] ENABLE_REGISTRATION_CAPTCHA`.
 - Configuration option `[auth] ENABLE_NOTIFY_MAIL` is deprecated and will end support in 0.13.0, please start using `[user] ENABLE_EMAIL_NOTIFICATION`.
 - Configuration option `[session] GC_INTERVAL_TIME` is deprecated and will end support in 0.13.0, please start using `[session] GC_INTERVAL`.
