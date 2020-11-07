@@ -289,6 +289,7 @@ func Contexter() macaron.Handler {
 		// 🚨 SECURITY: Prevent MIME type sniffing in some browsers,
 		// see https://github.com/gogs/gogs/issues/5397 for details.
 		c.Header().Set("X-Content-Type-Options", "nosniff")
+		c.Header().Set("X-Frame-Options", "DENY")
 
 		ctx.Map(c)
 	}
