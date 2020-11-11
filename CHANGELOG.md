@@ -17,7 +17,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- Add `X-Frame-Options` header [#6409](https://github.com/gogs/gogs/issues/6409) 
+- Add `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409) 
 
 ### Removed
 
