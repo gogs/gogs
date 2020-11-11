@@ -17,6 +17,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- Add `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409) 
+
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
