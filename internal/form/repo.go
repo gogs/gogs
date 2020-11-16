@@ -72,6 +72,9 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
 		}
+		if u.Scheme == "git" && u.Port() != "" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
+			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
 		return "", db.ErrInvalidCloneAddr{IsPermissionDenied: true}
