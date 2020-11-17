@@ -129,15 +129,15 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		// If username and password combination failed, try again using username as a token.
+		// If username and password combination failed, try again using password as a token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA(authUsername)
+			token, err := db.AccessTokens.GetBySHA(authPassword)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
 				} else {
 					c.Status(http.StatusInternalServerError)
-					log.Error("Failed to get access token [sha: %s]: %v", authUsername, err)
+					log.Error("Failed to get access token [sha: %s]: %v", authPassword, err)
 				}
 				return
 			}
@@ -151,6 +151,11 @@ func HTTPContexter() macaron.Handler {
 				// thus any error is unexpected.
 				c.Status(http.StatusInternalServerError)
 				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				return
+			}
+			// Username must match, even if token is valid.
+			if authUser.Name != authUsername {
+				askCredentials(c, http.StatusUnauthorized, "")
 				return
 			}
 		} else if authUser.IsEnabledTwoFactor() {
