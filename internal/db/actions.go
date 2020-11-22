@@ -23,10 +23,12 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
-	// NewRepoAction creates an action for creating a new repository. The action
+	// NewRepo creates an action for creating a new repository. The action
 	// type could be ActionCreateRepo or ActionForkRepo based on whether the
 	// repository is a fork.
-	NewRepoAction(ctx context.Context, doer *User, repo *Repository) error
+	NewRepo(ctx context.Context, doer *User, repo *Repository) error
+	// RenameRepo creates an action for renaming a repository.
+	RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error
 }
 
 var Actions ActionsStore
@@ -37,7 +39,7 @@ type actions struct {
 	*gorm.DB
 }
 
-func (db *actions) NewRepoAction(ctx context.Context, doer *User, repo *Repository) error {
+func (db *actions) NewRepo(ctx context.Context, doer *User, repo *Repository) error {
 	opType := ActionCreateRepo
 	if repo.IsFork {
 		opType = ActionForkRepo
@@ -51,6 +53,19 @@ func (db *actions) NewRepoAction(ctx context.Context, doer *User, repo *Reposito
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
 		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+	})
+}
+
+func (db *actions) RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error {
+	return db.notifyWatchers(ctx, &Action{
+		ActUserID:    doer.ID,
+		ActUserName:  doer.Name,
+		OpType:       ActionRenameRepo,
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		Content:      oldRepoName,
 	})
 }
 
