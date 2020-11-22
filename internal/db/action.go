@@ -36,29 +36,6 @@ func assembleKeywordsPattern(words []string) string {
 	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
 }
 
-func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
-	if err = notifyWatchers(e, &Action{
-		ActUserID:    actUser.ID,
-		ActUserName:  actUser.Name,
-		OpType:       ActionRenameRepo,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-		Content:      oldRepoName,
-	}); err != nil {
-		return fmt.Errorf("notify watchers: %v", err)
-	}
-
-	log.Trace("action.renameRepoAction: %s/%s", actUser.Name, repo.Name)
-	return nil
-}
-
-// RenameRepoAction adds new action for renaming a repository.
-func RenameRepoAction(actUser *User, oldRepoName string, repo *Repository) error {
-	return renameRepoAction(x, actUser, oldRepoName, repo)
-}
-
 func issueIndexTrimRight(c rune) bool {
 	return !unicode.IsDigit(c)
 }
