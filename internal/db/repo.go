@@ -1129,6 +1129,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 			RepoUserName: repo.Owner.Name,
 			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+			CreatedUnix:  time.Now().Unix(),
 		})
 	}
 	if err = newRepoAction(e, doer, repo); err != nil {

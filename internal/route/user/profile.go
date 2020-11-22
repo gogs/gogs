@@ -54,7 +54,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 	c.Data["TabName"] = tab
 	switch tab {
 	case "activity":
-		retrieveFeeds(c, puser.User, -1, true)
+		retrieveFeeds(c, puser.User, c.UserID(), true)
 		if c.Written() {
 			return
 		}

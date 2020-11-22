@@ -23,9 +23,14 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
-	// NewRepo creates an action for creating a new repository. The action
-	// type could be ActionCreateRepo or ActionForkRepo based on whether the
-	// repository is a fork.
+	// ListByOrganization returns actions of the organization viewable by the actor. Results are paginated
+	// if `afterID` is given.
+	ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error)
+	// ListByUser returns actions of the user viewable by the actor. Results are paginated if `afterID`
+	// is given. The `isProfile` indicates whether repository permissions should be considered.
+	ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error)
+	// NewRepo creates an action for creating a new repository. The action type could be ActionCreateRepo
+	// or ActionForkRepo based on whether the repository is a fork.
 	NewRepo(ctx context.Context, doer *User, repo *Repository) error
 	// RenameRepo creates an action for renaming a repository.
 	RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error
@@ -37,6 +42,80 @@ var _ ActionsStore = (*actions)(nil)
 
 type actions struct {
 	*gorm.DB
+}
+
+func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
+	/*
+		Equivalent SQL for Postgres:
+
+		SELECT * FROM "action"
+		WHERE
+			user_id = @userID
+		AND (@skipAfter OR id < @afterID)
+		AND repo_id IN (
+			SELECT repository.id FROM "repository"
+			JOIN team_repo ON repository.id = team_repo.repo_id
+			WHERE team_repo.team_id IN (
+					SELECT team_id FROM "team_user"
+					WHERE
+						team_user.org_id = @orgID AND uid = @actorID)
+					OR  (repository.is_private = FALSE AND repository.is_unlisted = FALSE)
+			)
+		ORDER BY id DESC
+		LIMIT 20
+	*/
+	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
+	return actions, db.WithContext(ctx).
+		Where("user_id = ?", orgID).
+		Where(db.
+			// Not apply when afterID is not given
+			Where("?", afterID <= 0).
+			Or("id < ?", afterID),
+		).
+		Where("repo_id IN (?)",
+			db.Select("repository.id").
+				Table("repository").
+				Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
+				Where("team_repo.team_id IN (?)",
+					db.Select("team_id").
+						Table("team_user").
+						Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
+				).
+				Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
+		).
+		Limit(conf.UI.User.NewsFeedPagingNum).
+		Order("id DESC").
+		Find(&actions).Error
+}
+
+func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+	/*
+		Equivalent SQL for Postgres:
+
+		SELECT * FROM "action"
+		WHERE
+			user_id = @userID
+		AND (@skipAfter OR id < @afterID)
+		AND (@includePrivate OR (is_private = FALSE AND act_user_id = @actorID))
+		ORDER BY id DESC
+		LIMIT @limit
+	*/
+	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
+	return actions, db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Where(db.
+			// Not apply when afterID is not given
+			Where("?", afterID <= 0).
+			Or("id < ?", afterID),
+		).
+		Where(db.
+			// Not apply when in not profile page or the user is viewing own profile
+			Where("?", !isProfile || actorID == userID).
+			Or("is_private = ? AND act_user_id = ?", false, userID),
+		).
+		Limit(conf.UI.User.NewsFeedPagingNum).
+		Order("id DESC").
+		Find(&actions).Error
 }
 
 func (db *actions) NewRepo(ctx context.Context, doer *User, repo *Repository) error {

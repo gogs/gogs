@@ -542,35 +542,3 @@ func MirrorSyncCreateAction(repo *Repository, refName string) error {
 func MirrorSyncDeleteAction(repo *Repository, refName string) error {
 	return mirrorSyncAction(ActionMirrorSyncDelete, repo, refName, nil)
 }
-
-// GetFeeds returns action list of given user in given context.
-// actorID is the user who's requesting, ctxUserID is the user/org that is requested.
-// actorID can be -1 when isProfile is true or to skip the permission check.
-func GetFeeds(ctxUser *User, actorID, afterID int64, isProfile bool) ([]*Action, error) {
-	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	sess := x.Limit(conf.UI.User.NewsFeedPagingNum).Where("user_id = ?", ctxUser.ID).Desc("id")
-	if afterID > 0 {
-		sess.And("id < ?", afterID)
-	}
-	if isProfile {
-		sess.And("is_private = ?", false).And("act_user_id = ?", ctxUser.ID)
-	} else if actorID != -1 && ctxUser.IsOrganization() {
-		// FIXME: only need to get IDs here, not all fields of repository.
-		repos, _, err := ctxUser.GetUserRepositories(actorID, 1, ctxUser.NumRepos)
-		if err != nil {
-			return nil, fmt.Errorf("GetUserRepositories: %v", err)
-		}
-
-		var repoIDs []int64
-		for _, repo := range repos {
-			repoIDs = append(repoIDs, repo.ID)
-		}
-
-		if len(repoIDs) > 0 {
-			sess.In("repo_id", repoIDs)
-		}
-	}
-
-	err := sess.Find(&actions)
-	return actions, err
-}
