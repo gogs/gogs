@@ -725,6 +725,7 @@ gopkg.in/macaron.v1 v1.3.4/go.mod h1:/RoHTdC8ALpyJ3+QR36mKjwnT1F1dyYtsGM9Ate6ZFI
 gopkg.in/macaron.v1 v1.3.5/go.mod h1:uMZCFccv9yr5TipIalVOyAyZQuOH3OkmXvgcWwhJuP4=
 gopkg.in/macaron.v1 v1.3.9 h1:Dw+DDRYdXgQyEsPlfAfKz+UA5qVUrH3KPD7JhmZ9MFc=
 gopkg.in/macaron.v1 v1.3.9/go.mod h1:uMZCFccv9yr5TipIalVOyAyZQuOH3OkmXvgcWwhJuP4=
+gopkg.in/macaron.v1 v1.4.0 h1:RJHC09fAnQ8tuGUiZNjG0uyL1BWSdSWd9SpufIcEArQ=
 gopkg.in/macaron.v1 v1.4.0/go.mod h1:uMZCFccv9yr5TipIalVOyAyZQuOH3OkmXvgcWwhJuP4=
 gopkg.in/redis.v2 v2.3.2 h1:GPVIIB/JnL1wvfULefy3qXmPu1nfNu2d0yA09FHgwfs=
 gopkg.in/redis.v2 v2.3.2/go.mod h1:4wl9PJ/CqzeHk3LVq1hNLHH8krm3+AXEgut4jVc++LU=
@@ -762,6 +763,7 @@ gorm.io/gorm v1.20.2/go.mod h1:0HFTzE/SqkGTzK6TlDPPQbAYCluiVvhzoA1+aVyzenw=
 gorm.io/gorm v1.20.4/go.mod h1:0HFTzE/SqkGTzK6TlDPPQbAYCluiVvhzoA1+aVyzenw=
 gorm.io/gorm v1.20.5 h1:g3tpSF9kggASzReK+Z3dYei1IJODLqNUbOjSuCczY8g=
 gorm.io/gorm v1.20.5/go.mod h1:0HFTzE/SqkGTzK6TlDPPQbAYCluiVvhzoA1+aVyzenw=
+gorm.io/gorm v1.20.6 h1:qa7tC1WcU+DBI/ZKMxvXy1FcrlGsvxlaKufHrT2qQ08=
 gorm.io/gorm v1.20.6/go.mod h1:0HFTzE/SqkGTzK6TlDPPQbAYCluiVvhzoA1+aVyzenw=
 honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=

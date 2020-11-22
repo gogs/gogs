@@ -47,8 +47,8 @@ func RandomChars(n int) (string, error) {
 
 // Ellipsis returns a truncated string and appends "..." to the end of the string if the
 // string length is larger than the threshold. Otherwise, the original string is returned.
-func Ellipsis(str string, threshold uint) string {
-	if len(str) <= int(threshold) {
+func Ellipsis(str string, threshold int) string {
+	if len(str) <= threshold || threshold < 0 {
 		return str
 	}
 	return str[:threshold] + "..."

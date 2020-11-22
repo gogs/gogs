@@ -767,7 +767,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 	if err = NotifyWatchers(&Action{
 		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
-		OpType:       ACTION_CREATE_ISSUE,
+		OpType:       ActionCreateIssue,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
