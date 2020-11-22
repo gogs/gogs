@@ -466,7 +466,7 @@ func (u *User) DisplayName() string {
 }
 
 func (u *User) ShortName(length int) string {
-	return tool.EllipsisString(u.Name, length)
+	return strutil.Ellipsis(u.Name, length)
 }
 
 // IsMailable checks if a user is eligible

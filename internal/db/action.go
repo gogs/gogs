@@ -12,9 +12,7 @@ import (
 	"unicode"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -22,34 +20,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
-)
-
-type ActionType int
-
-// Note: To maintain backward compatibility only append to the end of list
-const (
-	ACTION_CREATE_REPO         ActionType = iota + 1 // 1
-	ACTION_RENAME_REPO                               // 2
-	ACTION_STAR_REPO                                 // 3
-	ACTION_WATCH_REPO                                // 4
-	ACTION_COMMIT_REPO                               // 5
-	ACTION_CREATE_ISSUE                              // 6
-	ACTION_CREATE_PULL_REQUEST                       // 7
-	ACTION_TRANSFER_REPO                             // 8
-	ACTION_PUSH_TAG                                  // 9
-	ACTION_COMMENT_ISSUE                             // 10
-	ACTION_MERGE_PULL_REQUEST                        // 11
-	ACTION_CLOSE_ISSUE                               // 12
-	ACTION_REOPEN_ISSUE                              // 13
-	ACTION_CLOSE_PULL_REQUEST                        // 14
-	ACTION_REOPEN_PULL_REQUEST                       // 15
-	ACTION_CREATE_BRANCH                             // 16
-	ACTION_DELETE_BRANCH                             // 17
-	ACTION_DELETE_TAG                                // 18
-	ACTION_FORK_REPO                                 // 19
-	ACTION_MIRROR_SYNC_PUSH                          // 20
-	ACTION_MIRROR_SYNC_CREATE                        // 21
-	ACTION_MIRROR_SYNC_DELETE                        // 22
 )
 
 var (
@@ -66,119 +36,11 @@ func assembleKeywordsPattern(words []string) string {
 	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
 }
 
-// Action represents user operation type and other information to repository,
-// it implemented interface base.Actioner so that can be used in template render.
-type Action struct {
-	ID           int64
-	UserID       int64 // Receiver user ID
-	OpType       ActionType
-	ActUserID    int64  // Doer user ID
-	ActUserName  string // Doer user name
-	ActAvatar    string `xorm:"-" json:"-"`
-	RepoID       int64  `xorm:"INDEX"`
-	RepoUserName string
-	RepoName     string
-	RefName      string
-	IsPrivate    bool      `xorm:"NOT NULL DEFAULT false"`
-	Content      string    `xorm:"TEXT"`
-	Created      time.Time `xorm:"-" json:"-"`
-	CreatedUnix  int64
-}
-
-func (a *Action) BeforeInsert() {
-	a.CreatedUnix = time.Now().Unix()
-}
-
-func (a *Action) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		a.Created = time.Unix(a.CreatedUnix, 0).Local()
-	}
-}
-
-func (a *Action) GetOpType() int {
-	return int(a.OpType)
-}
-
-func (a *Action) GetActUserName() string {
-	return a.ActUserName
-}
-
-func (a *Action) ShortActUserName() string {
-	return tool.EllipsisString(a.ActUserName, 20)
-}
-
-func (a *Action) GetRepoUserName() string {
-	return a.RepoUserName
-}
-
-func (a *Action) ShortRepoUserName() string {
-	return tool.EllipsisString(a.RepoUserName, 20)
-}
-
-func (a *Action) GetRepoName() string {
-	return a.RepoName
-}
-
-func (a *Action) ShortRepoName() string {
-	return tool.EllipsisString(a.RepoName, 33)
-}
-
-func (a *Action) GetRepoPath() string {
-	return path.Join(a.RepoUserName, a.RepoName)
-}
-
-func (a *Action) ShortRepoPath() string {
-	return path.Join(a.ShortRepoUserName(), a.ShortRepoName())
-}
-
-func (a *Action) GetRepoLink() string {
-	if conf.Server.Subpath != "" {
-		return path.Join(conf.Server.Subpath, a.GetRepoPath())
-	}
-	return "/" + a.GetRepoPath()
-}
-
-func (a *Action) GetBranch() string {
-	return a.RefName
-}
-
-func (a *Action) GetContent() string {
-	return a.Content
-}
-
-func (a *Action) GetCreate() time.Time {
-	return a.Created
-}
-
-func (a *Action) GetIssueInfos() []string {
-	return strings.SplitN(a.Content, "|", 2)
-}
-
-func (a *Action) GetIssueTitle() string {
-	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
-	issue, err := GetIssueByIndex(a.RepoID, index)
-	if err != nil {
-		log.Error("GetIssueByIndex: %v", err)
-		return "500 when get issue"
-	}
-	return issue.Title
-}
-
-func (a *Action) GetIssueContent() string {
-	index := com.StrTo(a.GetIssueInfos()[0]).MustInt64()
-	issue, err := GetIssueByIndex(a.RepoID, index)
-	if err != nil {
-		log.Error("GetIssueByIndex: %v", err)
-		return "500 when get issue"
-	}
-	return issue.Content
-}
-
-func newRepoAction(e Engine, doer, _ *User, repo *Repository) (err error) {
-	opType := ACTION_CREATE_REPO
+// TODO
+func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
+	opType := ActionCreateRepo
 	if repo.IsFork {
-		opType = ACTION_FORK_REPO
+		opType = ActionForkRepo
 	}
 
 	return notifyWatchers(e, &Action{
@@ -192,16 +54,11 @@ func newRepoAction(e Engine, doer, _ *User, repo *Repository) (err error) {
 	})
 }
 
-// NewRepoAction adds new action for creating repository.
-func NewRepoAction(doer, owner *User, repo *Repository) (err error) {
-	return newRepoAction(x, doer, owner, repo)
-}
-
 func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
 		ActUserID:    actUser.ID,
 		ActUserName:  actUser.Name,
-		OpType:       ACTION_RENAME_REPO,
+		OpType:       ActionRenameRepo,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
@@ -476,10 +333,10 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	isNewRef := opts.OldCommitID == git.EmptyID
 	isDelRef := opts.NewCommitID == git.EmptyID
 
-	opType := ACTION_COMMIT_REPO
+	opType := ActionCommitRepo
 	// Check if it's tag push or branch.
 	if strings.HasPrefix(opts.RefFullName, git.RefsTags) {
-		opType = ACTION_PUSH_TAG
+		opType = ActionPushTag
 	} else {
 		// if not the first commit, set the compare URL.
 		if !isNewRef && !isDelRef {
@@ -518,7 +375,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	apiRepo := repo.APIFormat(nil)
 	apiPusher := pusher.APIFormat()
 	switch opType {
-	case ACTION_COMMIT_REPO: // Push
+	case ActionCommitRepo: // Push
 		if isDelRef {
 			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
 				Ref:        refName,
@@ -530,7 +387,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 				return fmt.Errorf("PrepareWebhooks.(delete branch): %v", err)
 			}
 
-			action.OpType = ACTION_DELETE_BRANCH
+			action.OpType = ActionDeleteBranch
 			if err = NotifyWatchers(action); err != nil {
 				return fmt.Errorf("NotifyWatchers.(delete branch): %v", err)
 			}
@@ -552,7 +409,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 				return fmt.Errorf("PrepareWebhooks.(new branch): %v", err)
 			}
 
-			action.OpType = ACTION_CREATE_BRANCH
+			action.OpType = ActionCreateBranch
 			if err = NotifyWatchers(action); err != nil {
 				return fmt.Errorf("NotifyWatchers.(new branch): %v", err)
 			}
@@ -576,12 +433,12 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return fmt.Errorf("PrepareWebhooks.(new commit): %v", err)
 		}
 
-		action.OpType = ACTION_COMMIT_REPO
+		action.OpType = ActionCommitRepo
 		if err = NotifyWatchers(action); err != nil {
 			return fmt.Errorf("NotifyWatchers.(new commit): %v", err)
 		}
 
-	case ACTION_PUSH_TAG: // Tag
+	case ActionPushTag: // Tag
 		if isDelRef {
 			if err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
 				Ref:        refName,
@@ -593,7 +450,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 				return fmt.Errorf("PrepareWebhooks.(delete tag): %v", err)
 			}
 
-			action.OpType = ACTION_DELETE_TAG
+			action.OpType = ActionDeleteTag
 			if err = NotifyWatchers(action); err != nil {
 				return fmt.Errorf("NotifyWatchers.(delete tag): %v", err)
 			}
@@ -611,7 +468,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 			return fmt.Errorf("PrepareWebhooks.(new tag): %v", err)
 		}
 
-		action.OpType = ACTION_PUSH_TAG
+		action.OpType = ActionPushTag
 		if err = NotifyWatchers(action); err != nil {
 			return fmt.Errorf("NotifyWatchers.(new tag): %v", err)
 		}
@@ -624,7 +481,7 @@ func transferRepoAction(e Engine, doer, oldOwner *User, repo *Repository) (err e
 	if err = notifyWatchers(e, &Action{
 		ActUserID:    doer.ID,
 		ActUserName:  doer.Name,
-		OpType:       ACTION_TRANSFER_REPO,
+		OpType:       ActionTransferRepo,
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
 		RepoName:     repo.Name,
@@ -644,17 +501,11 @@ func transferRepoAction(e Engine, doer, oldOwner *User, repo *Repository) (err e
 	return nil
 }
 
-// TransferRepoAction adds new action for transferring repository,
-// the Owner field of repository is assumed to be new owner.
-func TransferRepoAction(doer, oldOwner *User, repo *Repository) error {
-	return transferRepoAction(x, doer, oldOwner, repo)
-}
-
 func mergePullRequestAction(e Engine, doer *User, repo *Repository, issue *Issue) error {
 	return notifyWatchers(e, &Action{
 		ActUserID:    doer.ID,
 		ActUserName:  doer.Name,
-		OpType:       ACTION_MERGE_PULL_REQUEST,
+		OpType:       ActionMergePullRequest,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -720,17 +571,17 @@ func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) er
 		return err
 	}
 
-	return mirrorSyncAction(ACTION_MIRROR_SYNC_PUSH, repo, opts.RefName, data)
+	return mirrorSyncAction(ActionMirrorSyncPush, repo, opts.RefName, data)
 }
 
 // MirrorSyncCreateAction adds new action for mirror synchronization of new reference.
 func MirrorSyncCreateAction(repo *Repository, refName string) error {
-	return mirrorSyncAction(ACTION_MIRROR_SYNC_CREATE, repo, refName, nil)
+	return mirrorSyncAction(ActionMirrorSyncCreate, repo, refName, nil)
 }
 
 // MirrorSyncCreateAction adds new action for mirror synchronization of delete reference.
 func MirrorSyncDeleteAction(repo *Repository, refName string) error {
-	return mirrorSyncAction(ACTION_MIRROR_SYNC_DELETE, repo, refName, nil)
+	return mirrorSyncAction(ActionMirrorSyncDelete, repo, refName, nil)
 }
 
 // GetFeeds returns action list of given user in given context.

@@ -60,7 +60,7 @@ func TestEllipsis(t *testing.T) {
 	tests := []struct {
 		name      string
 		str       string
-		threshold uint
+		threshold int
 		want      string
 	}{
 		{
