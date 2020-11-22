@@ -118,12 +118,14 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 
 	// Initialize stores, sorted in alphabetical order.
 	AccessTokens = &accessTokens{DB: db}
+	Actions = &actions{DB: db}
 	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}
 	Repos = &repos{DB: db}
 	TwoFactors = &twoFactors{DB: db}
 	Users = &users{DB: db}
+	Watches = &watches{DB: db}
 
 	return db, nil
 }

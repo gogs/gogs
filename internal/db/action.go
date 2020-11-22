@@ -36,24 +36,6 @@ func assembleKeywordsPattern(words []string) string {
 	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
 }
 
-// TODO
-func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
-	opType := ActionCreateRepo
-	if repo.IsFork {
-		opType = ActionForkRepo
-	}
-
-	return notifyWatchers(e, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       opType,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-	})
-}
-
 func renameRepoAction(e Engine, actUser *User, oldRepoName string, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
 		ActUserID:    actUser.ID,
