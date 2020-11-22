@@ -5,11 +5,13 @@
 package db
 
 import (
+	"context"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 
@@ -21,13 +23,69 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
+	// NewRepoAction creates an action for creating a new repository. The action
+	// type could be ActionCreateRepo or ActionForkRepo based on whether the
+	// repository is a fork.
+	NewRepoAction(ctx context.Context, doer *User, repo *Repository) error
 }
 
 var Actions ActionsStore
 
+var _ ActionsStore = (*actions)(nil)
+
+type actions struct {
+	*gorm.DB
+}
+
+func (db *actions) NewRepoAction(ctx context.Context, doer *User, repo *Repository) error {
+	opType := ActionCreateRepo
+	if repo.IsFork {
+		opType = ActionForkRepo
+	}
+
+	return db.notifyWatchers(ctx, &Action{
+		ActUserID:    doer.ID,
+		ActUserName:  doer.Name,
+		OpType:       opType,
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+	})
+}
+
+// notifyWatchers creates rows in action table for watchers who are able to see the action.
+func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
+	watches, err := Watches.ListByRepo(ctx, act.RepoID)
+	if err != nil {
+		return errors.Wrap(err, "get watches")
+	}
+
+	// clone returns a deep copy of the action with UserID assigned.
+	clone := func(userID int64) *Action {
+		tmp := *act
+		tmp.UserID = userID
+		return &tmp
+	}
+
+	// Plus one for the actor
+	actions := make([]*Action, 0, len(watches)+1)
+	actions = append(actions, clone(act.ActUserID))
+
+	for _, watch := range watches {
+		if act.ActUserID == watch.UserID {
+			continue
+		}
+		actions = append(actions, clone(watch.UserID))
+	}
+
+	return db.Create(&actions).Error
+}
+
+// ActionType is the type of an action.
 type ActionType int
 
-// Note: To maintain backward compatibility only append to the end of list
+// ⚠️ WARNING: Only append to the end of list to maintain backward compatibility.
 const (
 	ActionCreateRepo        ActionType = iota + 1 // 1
 	ActionRenameRepo                              // 2

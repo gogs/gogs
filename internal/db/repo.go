@@ -1113,7 +1113,25 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 
 	if err = watchRepo(e, owner.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
-	} else if err = newRepoAction(e, doer, owner, repo); err != nil {
+	}
+
+	newRepoAction := func(e Engine, doer *User, repo *Repository) (err error) {
+		opType := ActionCreateRepo
+		if repo.IsFork {
+			opType = ActionForkRepo
+		}
+
+		return notifyWatchers(e, &Action{
+			ActUserID:    doer.ID,
+			ActUserName:  doer.Name,
+			OpType:       opType,
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		})
+	}
+	if err = newRepoAction(e, doer, repo); err != nil {
 		return fmt.Errorf("newRepoAction: %v", err)
 	}
 
@@ -2271,12 +2289,15 @@ func WatchRepo(userID, repoID int64, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
 
+// Deprecated: Use Repos.ListByRepo instead.
 func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
 	return watches, e.Find(&watches, &Watch{RepoID: repoID})
 }
 
 // GetWatchers returns all watchers of given repository.
+//
+// Deprecated: Use Repos.ListByRepo instead.
 func GetWatchers(repoID int64) ([]*Watch, error) {
 	return getWatchers(x, repoID)
 }
@@ -2293,6 +2314,7 @@ func (repo *Repository) GetWatchers(page int) ([]*User, error) {
 	return users, sess.Find(&users)
 }
 
+// Deprecated: Use Actions.notifyWatchers instead.
 func notifyWatchers(e Engine, act *Action) error {
 	// Add feeds for user self and all watchers.
 	watchers, err := getWatchers(e, act.RepoID)
