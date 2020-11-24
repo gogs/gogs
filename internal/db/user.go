@@ -369,20 +369,22 @@ func (u *User) DeleteAvatar() error {
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
 func (u *User) IsAdminOfRepo(repo *Repository) bool {
-	has, err := HasAccess(u.ID, repo, AccessModeAdmin)
-	if err != nil {
-		log.Error("HasAccess: %v", err)
-	}
-	return has
+	return Perms.Authorize(u.ID, repo.ID, AccessModeAdmin,
+		AccessModeOptions{
+			OwnerID: repo.OwnerID,
+			Private: repo.IsPrivate,
+		},
+	)
 }
 
 // IsWriterOfRepo returns true if user has write access to given repository.
 func (u *User) IsWriterOfRepo(repo *Repository) bool {
-	has, err := HasAccess(u.ID, repo, AccessModeWrite)
-	if err != nil {
-		log.Error("HasAccess: %v", err)
-	}
-	return has
+	return Perms.Authorize(u.ID, repo.ID, AccessModeWrite,
+		AccessModeOptions{
+			OwnerID: repo.OwnerID,
+			Private: repo.IsPrivate,
+		},
+	)
 }
 
 // IsOrganization returns true if user is actually a organization.
@@ -937,15 +939,17 @@ func GetUserByID(id int64) (*User, error) {
 	return getUserByID(x, id)
 }
 
-// GetAssigneeByID returns the user with write access of repository by given ID.
+// GetAssigneeByID returns the user with read access of repository by given ID.
 func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
-	has, err := HasAccess(userID, repo, AccessModeRead)
-	if err != nil {
-		return nil, err
-	} else if !has {
+	if !Perms.Authorize(userID, repo.ID, AccessModeRead,
+		AccessModeOptions{
+			OwnerID: repo.OwnerID,
+			Private: repo.IsPrivate,
+		},
+	) {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": userID}}
 	}
-	return GetUserByID(userID)
+	return Users.GetByID(userID)
 }
 
 // GetUserByName returns a user by given name.
@@ -1170,4 +1174,42 @@ func UnfollowUser(userID, followID int64) (err error) {
 		return err
 	}
 	return sess.Commit()
+}
+
+// GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
+func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
+	accesses := make([]*Access, 0, 10)
+	if err := x.Find(&accesses, &Access{UserID: u.ID}); err != nil {
+		return nil, err
+	}
+
+	repos := make(map[*Repository]AccessMode, len(accesses))
+	for _, access := range accesses {
+		repo, err := GetRepositoryByID(access.RepoID)
+		if err != nil {
+			if IsErrRepoNotExist(err) {
+				log.Error("Failed to get repository by ID: %v", err)
+				continue
+			}
+			return nil, err
+		}
+		if repo.OwnerID == u.ID {
+			continue
+		}
+		repos[repo] = access.Mode
+	}
+	return repos, nil
+}
+
+// GetAccessibleRepositories finds repositories which the user has access but does not own.
+// If limit is smaller than 1 means returns all found results.
+func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ error) {
+	sess := x.Where("owner_id !=? ", user.ID).Desc("updated_unix")
+	if limit > 0 {
+		sess.Limit(limit)
+		repos = make([]*Repository, 0, limit)
+	} else {
+		repos = make([]*Repository, 0, 10)
+	}
+	return repos, sess.Join("INNER", "access", "access.user_id = ? AND access.repo_id = repository.id", user.ID).Find(&repos)
 }

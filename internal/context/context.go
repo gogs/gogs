@@ -248,7 +248,7 @@ func Contexter() macaron.Handler {
 
 		if len(conf.HTTP.AccessControlAllowOrigin) > 0 {
 			c.Header().Set("Access-Control-Allow-Origin", conf.HTTP.AccessControlAllowOrigin)
-			c.Header().Set("'Access-Control-Allow-Credentials' ", "true")
+			c.Header().Set("Access-Control-Allow-Credentials", "true")
 			c.Header().Set("Access-Control-Max-Age", "3600")
 			c.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
 		}
@@ -289,6 +289,7 @@ func Contexter() macaron.Handler {
 		// 🚨 SECURITY: Prevent MIME type sniffing in some browsers,
 		// see https://github.com/gogs/gogs/issues/5397 for details.
 		c.Header().Set("X-Content-Type-Options", "nosniff")
+		c.Header().Set("X-Frame-Options", "DENY")
 
 		ctx.Map(c)
 	}

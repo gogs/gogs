@@ -57,20 +57,22 @@ func test_perms_AccessMode(t *testing.T, db *perms) {
 		t.Fatal(err)
 	}
 
-	publicRepo := &Repository{
-		ID:      1,
+	publicRepoID := int64(1)
+	publicRepoOpts := AccessModeOptions{
 		OwnerID: 98,
 	}
-	privateRepo := &Repository{
-		ID:        2,
-		OwnerID:   99,
-		IsPrivate: true,
+
+	privateRepoID := int64(2)
+	privateRepoOpts := AccessModeOptions{
+		OwnerID: 99,
+		Private: true,
 	}
 
 	tests := []struct {
 		name          string
 		userID        int64
-		repo          *Repository
+		repoID        int64
+		opts          AccessModeOptions
 		expAccessMode AccessMode
 	}{
 		{
@@ -80,62 +82,71 @@ func test_perms_AccessMode(t *testing.T, db *perms) {
 
 		{
 			name:          "anonymous user has read access to public repository",
-			repo:          publicRepo,
+			repoID:        publicRepoID,
+			opts:          publicRepoOpts,
 			expAccessMode: AccessModeRead,
 		},
 		{
 			name:          "anonymous user has no access to private repository",
-			repo:          privateRepo,
+			repoID:        privateRepoID,
+			opts:          privateRepoOpts,
 			expAccessMode: AccessModeNone,
 		},
 
 		{
 			name:          "user is the owner",
 			userID:        98,
-			repo:          publicRepo,
+			repoID:        publicRepoID,
+			opts:          publicRepoOpts,
 			expAccessMode: AccessModeOwner,
 		},
 		{
 			name:          "user 1 has read access to public repo",
 			userID:        1,
-			repo:          publicRepo,
+			repoID:        publicRepoID,
+			opts:          publicRepoOpts,
 			expAccessMode: AccessModeRead,
 		},
 		{
 			name:          "user 2 has write access to public repo",
 			userID:        2,
-			repo:          publicRepo,
+			repoID:        publicRepoID,
+			opts:          publicRepoOpts,
 			expAccessMode: AccessModeWrite,
 		},
 		{
 			name:          "user 3 has admin access to public repo",
 			userID:        3,
-			repo:          publicRepo,
+			repoID:        publicRepoID,
+			opts:          publicRepoOpts,
 			expAccessMode: AccessModeAdmin,
 		},
 
 		{
 			name:          "user 1 has read access to private repo",
 			userID:        1,
-			repo:          privateRepo,
+			repoID:        privateRepoID,
+			opts:          privateRepoOpts,
 			expAccessMode: AccessModeRead,
 		},
 		{
 			name:          "user 2 has no access to private repo",
 			userID:        2,
-			repo:          privateRepo,
+			repoID:        privateRepoID,
+			opts:          privateRepoOpts,
 			expAccessMode: AccessModeNone,
 		},
 		{
 			name:          "user 3 has no access to private repo",
 			userID:        3,
-			repo:          privateRepo,
+			repoID:        privateRepoID,
+			opts:          privateRepoOpts,
 			expAccessMode: AccessModeNone,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mode := db.AccessMode(test.userID, test.repo)
+			mode := db.AccessMode(test.userID, test.repoID, test.opts)
 			assert.Equal(t, test.expAccessMode, mode)
 		})
 	}
@@ -216,7 +227,10 @@ func test_perms_Authorize(t *testing.T, db *perms) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			authorized := db.Authorize(test.userID, repo, test.desired)
+			authorized := db.Authorize(test.userID, repo.ID, test.desired, AccessModeOptions{
+				OwnerID: repo.OwnerID,
+				Private: repo.IsPrivate,
+			})
 			assert.Equal(t, test.expAuthorized, authorized)
 		})
 	}

@@ -175,10 +175,12 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
 		validUserIDs = make([]int64, 0, len(userIDs))
 		for _, userID := range userIDs {
-			has, err := HasAccess(userID, repo, AccessModeWrite)
-			if err != nil {
-				return fmt.Errorf("HasAccess [user_id: %d, repo_id: %d]: %v", userID, protectBranch.RepoID, err)
-			} else if !has {
+			if !Perms.Authorize(userID, repo.ID, AccessModeWrite,
+				AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			) {
 				continue // Drop invalid user ID
 			}
 

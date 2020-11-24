@@ -679,17 +679,12 @@ func newIssue(e *xorm.Session, opts NewIssueOptions) (err error) {
 			return fmt.Errorf("get user by ID: %v", err)
 		}
 
-		// Assume assignee is invalid and drop silently.
-		opts.Issue.AssigneeID = 0
 		if assignee != nil {
-			valid, err := hasAccess(e, assignee.ID, opts.Repo, AccessModeRead)
-			if err != nil {
-				return fmt.Errorf("hasAccess [user_id: %d, repo_id: %d]: %v", assignee.ID, opts.Repo.ID, err)
-			}
-			if valid {
-				opts.Issue.AssigneeID = assignee.ID
-				opts.Issue.Assignee = assignee
-			}
+			opts.Issue.AssigneeID = assignee.ID
+			opts.Issue.Assignee = assignee
+		} else {
+			// The assignee does not exist, drop it
+			opts.Issue.AssigneeID = 0
 		}
 	}
 
