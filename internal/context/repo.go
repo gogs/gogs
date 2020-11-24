@@ -280,7 +280,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			return
 		}
 		c.Data["Branches"] = branches
-		c.Data["BrancheCount"] = len(branches)
+		c.Data["BranchCount"] = len(branches)
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
