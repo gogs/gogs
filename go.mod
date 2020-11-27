@@ -61,7 +61,7 @@ require (
 	gopkg.in/macaron.v1 v1.4.0
 	gorm.io/driver/mysql v1.0.3
 	gorm.io/driver/postgres v1.0.5
-	gorm.io/driver/sqlite v1.1.3
+	gorm.io/driver/sqlite v1.1.4
 	gorm.io/driver/sqlserver v1.0.5
 	gorm.io/gorm v1.20.7
 	unknwon.dev/clog/v2 v2.1.2
