@@ -72,6 +72,7 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
 		}
+		// To prevent CRLF injection in git protocol, see https://github.com/gogs/gogs/issues/6413
 		if u.Scheme == "git" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
 			return "", db.ErrInvalidCloneAddr{IsURLError: true}
 		}
