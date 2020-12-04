@@ -12,7 +12,7 @@ require (
 	github.com/go-macaron/captcha v0.2.0
 	github.com/go-macaron/csrf v0.0.0-20190812063352-946f6d303a4c
 	github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07
-	github.com/go-macaron/i18n v0.5.0
+	github.com/go-macaron/i18n v0.6.0
 	github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659
 	github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6
 	github.com/gogs/chardet v0.0.0-20150115103509-2404f7772561
@@ -49,7 +49,7 @@ require (
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
 	github.com/urfave/cli v1.22.5
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/text v0.3.4
 	gopkg.in/DATA-DOG/go-sqlmock.v2 v2.0.0-20180914054222-c19298f520d0
