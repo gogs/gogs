@@ -59,6 +59,7 @@ var (
 		ListenHost         string   `ini:"SSH_LISTEN_HOST"`
 		ListenPort         int      `ini:"SSH_LISTEN_PORT"`
 		ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
+		ServerMACs         []string `ini:"SSH_SERVER_MACS"`
 	}
 
 	// Repository settings
