@@ -162,7 +162,7 @@ func listen(config *ssh.ServerConfig, host string, port int) {
 }
 
 // Listen starts a SSH server listens on given port.
-func Listen(host string, port int, ciphers []string, macs []string) {
+func Listen(host string, port int, ciphers, macs []string) {
 	config := &ssh.ServerConfig{
 		Config: ssh.Config{
 			Ciphers: ciphers,
