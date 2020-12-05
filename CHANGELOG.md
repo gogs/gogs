@@ -25,21 +25,21 @@ All notable changes to Gogs are documented in this file.
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
-- Configuration section `[mailer]` is no longer used.
-- Configuration section `[service]` is no longer used.
-- Configuration option `APP_NAME` is no longer used.
-- Configuration option `[security] REVERSE_PROXY_AUTHENTICATION_USER` is no longer used.
-- Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is no longer used.
-- Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is no longer used.
-- Configuration option `[auth] ENABLE_CAPTCHA` is no longer used.
-- Configuration option `[auth] ENABLE_NOTIFY_MAIL` is no longer used.
-- Configuration option `[auth] REGISTER_EMAIL_CONFIRM` is no longer used.
-- Configuration option `[session] GC_INTERVAL_TIME` is no longer used.
-- Configuration option `[session] SESSION_LIFE_TIME` is no longer used.
-- Configuration option `[server] ROOT_URL` is no longer used.
-- Configuration option `[server] LANDING_PAGE` is no longer used.
-- Configuration option `[database] DB_TYPE` is no longer used.
-- Configuration option `[database] PASSWD` is no longer used.
+- Configuration section `[mailer]` is no longer used, please use `[email]`.
+- Configuration section `[service]` is no longer used, please use `[auth]`.
+- Configuration option `APP_NAME` is no longer used, please use `BRAND_NAME`.
+- Configuration option `[security] REVERSE_PROXY_AUTHENTICATION_USER` is no longer used, please use `[auth] REVERSE_PROXY_AUTHENTICATION_HEADER`.
+- Configuration option `[auth] ACTIVE_CODE_LIVE_MINUTES` is no longer used, please use `[auth] ACTIVATE_CODE_LIVES`.
+- Configuration option `[auth] RESET_PASSWD_CODE_LIVE_MINUTES` is no longer used, please use `[auth] RESET_PASSWORD_CODE_LIVES`.
+- Configuration option `[auth] ENABLE_CAPTCHA` is no longer used, please use `[auth] ENABLE_REGISTRATION_CAPTCHA`.
+- Configuration option `[auth] ENABLE_NOTIFY_MAIL` is no longer used, please use `[user] ENABLE_EMAIL_NOTIFICATION`.
+- Configuration option `[auth] REGISTER_EMAIL_CONFIRM` is no longer used, please use `[auth] REQUIRE_EMAIL_CONFIRMATION`.
+- Configuration option `[session] GC_INTERVAL_TIME` is no longer used, please use `[session] GC_INTERVAL`.
+- Configuration option `[session] SESSION_LIFE_TIME` is no longer used, please use `[session] MAX_LIFE_TIME`.
+- Configuration option `[server] ROOT_URL` is no longer used, please use `[server] EXTERNAL_URL`.
+- Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
+- Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
+- Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
 
 ## 0.12.3
 
