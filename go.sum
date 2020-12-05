@@ -105,6 +105,7 @@ github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07 h1:YSIA98PevNf1NtC
 github.com/go-macaron/gzip v0.0.0-20160222043647-cad1c6580a07/go.mod h1://cJFfDp/70L0oTNAMB+M8Jd0rpuIx/55iARuJ6StwE=
 github.com/go-macaron/i18n v0.5.0 h1:946emShWjaaP65K1xkOH/SGdFhGqGQsQ7JocEVq2fio=
 github.com/go-macaron/i18n v0.5.0/go.mod h1:geFUrUuAX4JocBS1mUlK79QbRAJH/pNM+W8VxPzvVXI=
+github.com/go-macaron/i18n v0.6.0/go.mod h1:8XLiwPc4KNvIsHOT0YtSrLvmr9HHjTQMDhAiEhuYCTw=
 github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191 h1:NjHlg70DuOkcAMqgt0+XA+NHwtu66MkTVVgR4fFWbcI=
 github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191/go.mod h1:VFI2o2q9kYsC4o7VP1HrEVosiZZTd+MVT3YZx4gqvJw=
 github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659 h1:YXDFNK98PgKeBd+xM2Babdd6gyABG8H+SSAh5+hr0os=
@@ -564,6 +565,7 @@ golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8U
 golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 h1:psW17arqaxU48Z5kZ0CQnkZWQJsqcURM6tKiBApRjXI=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
 golang.org/x/lint v0.0.0-20190227174305-5b3e6a55c961/go.mod h1:wehouNa3lNwaWXcvxsM5YxQ5yQlVC4a0KAMCusXpPoU=
