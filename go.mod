@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/editorconfig/editorconfig-core-go/v2 v2.3.7
+	github.com/editorconfig/editorconfig-core-go/v2 v2.3.9
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.1
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
