@@ -6,7 +6,6 @@ package db
 
 import (
 	"fmt"
-	"path"
 	"strings"
 	"time"
 	"unicode"
@@ -434,111 +433,4 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	}
 
 	return nil
-}
-
-func transferRepoAction(e Engine, doer, oldOwner *User, repo *Repository) (err error) {
-	if err = notifyWatchers(e, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       ActionTransferRepo,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-		Content:      path.Join(oldOwner.Name, repo.Name),
-	}); err != nil {
-		return fmt.Errorf("notifyWatchers: %v", err)
-	}
-
-	// Remove watch for organization.
-	if oldOwner.IsOrganization() {
-		if err = watchRepo(e, oldOwner.ID, repo.ID, false); err != nil {
-			return fmt.Errorf("watchRepo [false]: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func mergePullRequestAction(e Engine, doer *User, repo *Repository, issue *Issue) error {
-	return notifyWatchers(e, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       ActionMergePullRequest,
-		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Title),
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-	})
-}
-
-// MergePullRequestAction adds new action for merging pull request.
-func MergePullRequestAction(actUser *User, repo *Repository, pull *Issue) error {
-	return mergePullRequestAction(x, actUser, repo, pull)
-}
-
-func mirrorSyncAction(opType ActionType, repo *Repository, refName string, data []byte) error {
-	return NotifyWatchers(&Action{
-		ActUserID:    repo.OwnerID,
-		ActUserName:  repo.MustOwner().Name,
-		OpType:       opType,
-		Content:      string(data),
-		RepoID:       repo.ID,
-		RepoUserName: repo.MustOwner().Name,
-		RepoName:     repo.Name,
-		RefName:      refName,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-	})
-}
-
-type MirrorSyncPushActionOptions struct {
-	RefName     string
-	OldCommitID string
-	NewCommitID string
-	Commits     *PushCommits
-}
-
-// MirrorSyncPushAction adds new action for mirror synchronization of pushed commits.
-func MirrorSyncPushAction(repo *Repository, opts MirrorSyncPushActionOptions) error {
-	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
-		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
-	}
-
-	apiCommits, err := opts.Commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
-	if err != nil {
-		return fmt.Errorf("ToApiPayloadCommits: %v", err)
-	}
-
-	opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
-	apiPusher := repo.MustOwner().APIFormat()
-	if err := PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
-		Ref:        opts.RefName,
-		Before:     opts.OldCommitID,
-		After:      opts.NewCommitID,
-		CompareURL: conf.Server.ExternalURL + opts.Commits.CompareURL,
-		Commits:    apiCommits,
-		Repo:       repo.APIFormat(nil),
-		Pusher:     apiPusher,
-		Sender:     apiPusher,
-	}); err != nil {
-		return fmt.Errorf("PrepareWebhooks: %v", err)
-	}
-
-	data, err := jsoniter.Marshal(opts.Commits)
-	if err != nil {
-		return err
-	}
-
-	return mirrorSyncAction(ActionMirrorSyncPush, repo, opts.RefName, data)
-}
-
-// MirrorSyncCreateAction adds new action for mirror synchronization of new reference.
-func MirrorSyncCreateAction(repo *Repository, refName string) error {
-	return mirrorSyncAction(ActionMirrorSyncCreate, repo, refName, nil)
-}
-
-// MirrorSyncCreateAction adds new action for mirror synchronization of delete reference.
-func MirrorSyncDeleteAction(repo *Repository, refName string) error {
-	return mirrorSyncAction(ActionMirrorSyncDelete, repo, refName, nil)
 }

@@ -1115,6 +1115,9 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return fmt.Errorf("watchRepo: %v", err)
 	}
 
+	// FIXME: This is identical to Actions.NewRepo but we are not yet able to wrap
+	// 	transaction with different ORM objects, should delete this once migrated to
+	// 	GORM for this part of logic.
 	newRepoAction := func(e Engine, doer *User, repo *Repository) (err error) {
 		opType := ActionCreateRepo
 		if repo.IsFork {
@@ -1377,9 +1380,33 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return fmt.Errorf("decrease old owner repository count: %v", err)
 	}
 
+	// Remove watch for organization.
+	if owner.IsOrganization() {
+		if err = watchRepo(sess, owner.ID, repo.ID, false); err != nil {
+			return fmt.Errorf("watchRepo [false]: %v", err)
+		}
+	}
+
 	if err = watchRepo(sess, newOwner.ID, repo.ID, true); err != nil {
 		return fmt.Errorf("watchRepo: %v", err)
-	} else if err = transferRepoAction(sess, doer, owner, repo); err != nil {
+	}
+
+	// FIXME: This is identical to Actions.TransferRepo but we are not yet able to wrap
+	// 	transaction with different ORM objects, should delete this once migrated to
+	// 	GORM for this part of logic.
+	transferRepoAction := func(e Engine, doer, oldOwner *User, repo *Repository) error {
+		return notifyWatchers(e, &Action{
+			ActUserID:    doer.ID,
+			ActUserName:  doer.Name,
+			OpType:       ActionTransferRepo,
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+			Content:      path.Join(oldOwner.Name, repo.Name),
+		})
+	}
+	if err = transferRepoAction(sess, doer, owner, repo); err != nil {
 		return fmt.Errorf("transferRepoAction: %v", err)
 	}
 
@@ -2347,6 +2374,8 @@ func notifyWatchers(e Engine, act *Action) error {
 }
 
 // NotifyWatchers creates batch of actions for every watcher.
+//
+// Deprecated: Use Actions.notifyWatchers instead.
 func NotifyWatchers(act *Action) error {
 	return notifyWatchers(x, act)
 }

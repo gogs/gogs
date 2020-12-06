@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -195,6 +196,8 @@ const (
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
 func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+	ctx := context.Background()
+
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -334,8 +337,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return fmt.Errorf("Commit: %v", err)
 	}
 
-	if err = MergePullRequestAction(doer, pr.Issue.Repo, pr.Issue); err != nil {
-		log.Error("MergePullRequestAction [%d]: %v", pr.ID, err)
+	if err = Actions.MergePullRequest(ctx, doer, pr.Issue.Repo, pr.Issue); err != nil {
+		log.Error("MergePullRequest [pull_id: %d]: %v", pr.ID, err)
 	}
 
 	// Reload pull request information.

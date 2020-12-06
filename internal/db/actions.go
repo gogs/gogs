@@ -6,11 +6,14 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
+	api "github.com/gogs/go-gogs-client"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
@@ -23,17 +26,32 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
-	// ListByOrganization returns actions of the organization viewable by the actor. Results are paginated
-	// if `afterID` is given.
+	// ListByOrganization returns actions of the organization viewable by the actor.
+	// Results are paginated if `afterID` is given.
 	ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error)
-	// ListByUser returns actions of the user viewable by the actor. Results are paginated if `afterID`
-	// is given. The `isProfile` indicates whether repository permissions should be considered.
+	// ListByUser returns actions of the user viewable by the actor. Results are
+	// paginated if `afterID` is given. The `isProfile` indicates whether repository
+	// permissions should be considered.
 	ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error)
-	// NewRepo creates an action for creating a new repository. The action type could be ActionCreateRepo
-	// or ActionForkRepo based on whether the repository is a fork.
+	// MergePullRequest creates an action for merging a pull request.
+	MergePullRequest(ctx context.Context, doer *User, repo *Repository, pull *Issue) error
+	// MirrorSyncCreate creates an action for mirror synchronization of a new
+	// reference.
+	MirrorSyncCreate(ctx context.Context, repo *Repository, refName string) error
+	// MirrorSyncDelete creates an action for mirror synchronization of a reference
+	// deletion.
+	MirrorSyncDelete(ctx context.Context, repo *Repository, refName string) error
+	// MirrorSyncPush creates an action for mirror synchronization of pushed
+	// commits.
+	MirrorSyncPush(ctx context.Context, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error
+	// NewRepo creates an action for creating a new repository. The action type
+	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
+	// is a fork.
 	NewRepo(ctx context.Context, doer *User, repo *Repository) error
 	// RenameRepo creates an action for renaming a repository.
 	RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error
+	// TransferRepo creates an action for transferring a repository to a new owner.
+	TransferRepo(ctx context.Context, doer, oldOwner *User, repo *Repository) error
 }
 
 var Actions ActionsStore
@@ -174,6 +192,87 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 	}
 
 	return db.Create(&actions).Error
+}
+
+func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, repo *Repository, refName string, content []byte) error {
+	return db.notifyWatchers(ctx, &Action{
+		ActUserID:    repo.OwnerID,
+		ActUserName:  repo.Owner.Name,
+		OpType:       opType,
+		Content:      string(content),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		RefName:      refName,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+	})
+}
+
+func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error {
+	if len(commits.Commits) > conf.UI.FeedMaxCommitNum {
+		commits.Commits = commits.Commits[:conf.UI.FeedMaxCommitNum]
+	}
+
+	apiCommits, err := commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
+	if err != nil {
+		return fmt.Errorf("ToApiPayloadCommits: %v", err)
+	}
+
+	commits.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
+	apiPusher := repo.Owner.APIFormat()
+	if err := PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
+		Ref:        refName,
+		Before:     oldCommitID,
+		After:      newCommitID,
+		CompareURL: conf.Server.ExternalURL + commits.CompareURL,
+		Commits:    apiCommits,
+		Repo:       repo.APIFormat(nil),
+		Pusher:     apiPusher,
+		Sender:     apiPusher,
+	}); err != nil {
+		return fmt.Errorf("PrepareWebhooks: %v", err)
+	}
+
+	data, err := jsoniter.Marshal(commits)
+	if err != nil {
+		return err
+	}
+
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, repo, refName, data)
+}
+
+func (db *actions) MirrorSyncCreate(ctx context.Context, repo *Repository, refName string) error {
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncCreate, repo, refName, nil)
+}
+
+func (db *actions) MirrorSyncDelete(ctx context.Context, repo *Repository, refName string) error {
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncDelete, repo, refName, nil)
+}
+
+func (db *actions) MergePullRequest(ctx context.Context, doer *User, repo *Repository, pull *Issue) error {
+	return db.notifyWatchers(ctx, &Action{
+		ActUserID:    doer.ID,
+		ActUserName:  doer.Name,
+		OpType:       ActionMergePullRequest,
+		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+	})
+}
+
+func (db *actions) TransferRepo(ctx context.Context, doer, oldOwner *User, repo *Repository) error {
+	return db.notifyWatchers(ctx, &Action{
+		ActUserID:    doer.ID,
+		ActUserName:  doer.Name,
+		OpType:       ActionTransferRepo,
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		Content:      path.Join(oldOwner.Name, repo.Name),
+	})
 }
 
 // ActionType is the type of an action.
