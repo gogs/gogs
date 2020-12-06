@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -27,29 +28,15 @@ type TwoFactorsStore interface {
 	// The "key" is used to encrypt and later decrypt given "secret",
 	// which should be configured in site-level and change of the "key"
 	// will break all existing 2FA tokens.
-	Create(userID int64, key, secret string) error
+	Create(ctx context.Context, userID int64, key, secret string) error
 	// GetByUserID returns the 2FA token of given user.
 	// It returns ErrTwoFactorNotFound when not found.
-	GetByUserID(userID int64) (*TwoFactor, error)
+	GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error)
 	// IsUserEnabled returns true if the user has enabled 2FA.
-	IsUserEnabled(userID int64) bool
+	IsUserEnabled(ctx context.Context, userID int64) bool
 }
 
 var TwoFactors TwoFactorsStore
-
-// NOTE: This is a GORM create hook.
-func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
-	if t.CreatedUnix == 0 {
-		t.CreatedUnix = tx.NowFunc().Unix()
-	}
-	return nil
-}
-
-// NOTE: This is a GORM query hook.
-func (t *TwoFactor) AfterFind(tx *gorm.DB) error {
-	t.Created = time.Unix(t.CreatedUnix, 0).Local()
-	return nil
-}
 
 var _ TwoFactorsStore = (*twoFactors)(nil)
 
@@ -57,7 +44,13 @@ type twoFactors struct {
 	*gorm.DB
 }
 
-func (db *twoFactors) Create(userID int64, key, secret string) error {
+// NewTwoFactorsStore returns a persistent interface for 2FA with given database
+// connection.
+func NewTwoFactorsStore(db *gorm.DB) TwoFactorsStore {
+	return &twoFactors{DB: db}
+}
+
+func (db *twoFactors) Create(ctx context.Context, userID int64, key, secret string) error {
 	encrypted, err := cryptoutil.AESGCMEncrypt(cryptoutil.MD5Bytes(key), []byte(secret))
 	if err != nil {
 		return errors.Wrap(err, "encrypt secret")
@@ -72,7 +65,7 @@ func (db *twoFactors) Create(userID int64, key, secret string) error {
 		return errors.Wrap(err, "generate recovery codes")
 	}
 
-	return db.Transaction(func(tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Create(tf).Error
 		if err != nil {
 			return err
@@ -101,9 +94,9 @@ func (ErrTwoFactorNotFound) NotFound() bool {
 	return true
 }
 
-func (db *twoFactors) GetByUserID(userID int64) (*TwoFactor, error) {
+func (db *twoFactors) GetByUserID(ctx context.Context, userID int64) (*TwoFactor, error) {
 	tf := new(TwoFactor)
-	err := db.Where("user_id = ?", userID).First(tf).Error
+	err := db.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
@@ -113,9 +106,12 @@ func (db *twoFactors) GetByUserID(userID int64) (*TwoFactor, error) {
 	return tf, nil
 }
 
-func (db *twoFactors) IsUserEnabled(userID int64) bool {
+func (db *twoFactors) IsUserEnabled(ctx context.Context, userID int64) bool {
 	var count int64
-	err := db.Model(new(TwoFactor)).Where("user_id = ?", userID).Count(&count).Error
+	err := db.WithContext(ctx).
+		Model(&TwoFactor{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
 	if err != nil {
 		log.Error("Failed to count two factors [user_id: %d]: %v", userID, err)
 	}
@@ -136,4 +132,18 @@ func generateRecoveryCodes(userID int64, n int) ([]*TwoFactorRecoveryCode, error
 		}
 	}
 	return recoveryCodes, nil
+}
+
+// NOTE: This is a GORM create hook.
+func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
+	if t.CreatedUnix == 0 {
+		t.CreatedUnix = tx.NowFunc().Unix()
+	}
+	return nil
+}
+
+// NOTE: This is a GORM query hook.
+func (t *TwoFactor) AfterFind(tx *gorm.DB) error {
+	t.Created = time.Unix(t.CreatedUnix, 0).Local()
+	return nil
 }

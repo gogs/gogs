@@ -218,7 +218,7 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	LFS = NewLFSStore(db)
 	Perms = NewPermsStore(db)
 	Repos = NewReposStore(db)
-	TwoFactors = &twoFactors{DB: db}
+	TwoFactors = NewTwoFactorsStore(db)
 	Users = NewUsersStore(db)
 	Watches = &watches{DB: db}
 
