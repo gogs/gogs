@@ -52,26 +52,16 @@ type UsersStore interface {
 
 var Users UsersStore
 
-// NOTE: This is a GORM create hook.
-func (u *User) BeforeCreate(tx *gorm.DB) error {
-	if u.CreatedUnix == 0 {
-		u.CreatedUnix = tx.NowFunc().Unix()
-		u.UpdatedUnix = u.CreatedUnix
-	}
-	return nil
-}
-
-// NOTE: This is a GORM query hook.
-func (u *User) AfterFind(tx *gorm.DB) error {
-	u.Created = time.Unix(u.CreatedUnix, 0).Local()
-	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
-	return nil
-}
-
 var _ UsersStore = (*users)(nil)
 
 type users struct {
 	*gorm.DB
+}
+
+// NewUsersStore returns a persistent interface for users with given database
+// connection.
+func NewUsersStore(db *gorm.DB) UsersStore {
+	return &users{DB: db}
 }
 
 type ErrLoginSourceMismatch struct {
@@ -130,7 +120,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 		createNewUser = true
 	}
 
-	source, err := LoginSources.GetByID(authSourceID)
+	source, err := LoginSources.GetByID(ctx, authSourceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get login source")
 	}
@@ -335,4 +325,20 @@ func (db *users) GetByUsername(ctx context.Context, username string) (*User, err
 		return nil, err
 	}
 	return user, nil
+}
+
+// NOTE: This is a GORM create hook.
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.CreatedUnix == 0 {
+		u.CreatedUnix = tx.NowFunc().Unix()
+		u.UpdatedUnix = u.CreatedUnix
+	}
+	return nil
+}
+
+// NOTE: This is a GORM query hook.
+func (u *User) AfterFind(tx *gorm.DB) error {
+	u.Created = time.Unix(u.CreatedUnix, 0).Local()
+	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
+	return nil
 }

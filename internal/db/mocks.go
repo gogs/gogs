@@ -54,21 +54,21 @@ func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 var _ LFSStore = (*MockLFSStore)(nil)
 
 type MockLFSStore struct {
-	MockCreateObject     func(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error
-	MockGetObjectByOID   func(repoID int64, oid lfsutil.OID) (*LFSObject, error)
-	MockGetObjectsByOIDs func(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error)
+	MockCreateObject     func(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error
+	MockGetObjectByOID   func(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error)
+	MockGetObjectsByOIDs func(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error)
 }
 
-func (m *MockLFSStore) CreateObject(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
-	return m.MockCreateObject(repoID, oid, size, storage)
+func (m *MockLFSStore) CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
+	return m.MockCreateObject(ctx, repoID, oid, size, storage)
 }
 
-func (m *MockLFSStore) GetObjectByOID(repoID int64, oid lfsutil.OID) (*LFSObject, error) {
-	return m.MockGetObjectByOID(repoID, oid)
+func (m *MockLFSStore) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID) (*LFSObject, error) {
+	return m.MockGetObjectByOID(ctx, repoID, oid)
 }
 
-func (m *MockLFSStore) GetObjectsByOIDs(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
-	return m.MockGetObjectsByOIDs(repoID, oids...)
+func (m *MockLFSStore) GetObjectsByOIDs(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
+	return m.MockGetObjectsByOIDs(ctx, repoID, oids...)
 }
 
 func SetMockLFSStore(t *testing.T, mock LFSStore) {

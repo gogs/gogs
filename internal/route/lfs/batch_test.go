@@ -6,6 +6,7 @@ package lfs
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -84,7 +85,7 @@ func Test_serveBatch(t *testing.T) {
 	{"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57", "size": 456}
 ]}`,
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectsByOIDs: func(repoID int64, oids ...lfsutil.OID) ([]*db.LFSObject, error) {
+				MockGetObjectsByOIDs: func(ctx context.Context, repoID int64, oids ...lfsutil.OID) ([]*db.LFSObject, error) {
 					return []*db.LFSObject{
 						{
 							OID:  "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",

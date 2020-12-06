@@ -44,26 +44,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// clearTables removes all rows from given tables.
-func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
-	if t.Failed() {
-		return nil
-	}
-
-	for _, t := range tables {
-		err := db.Where("TRUE").Delete(t).Error
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // TODO: Once finished migrating to GORM, we can just use Tables instead of a
 // 	subset `tables` for setting up test database.
 func newTestDB(t *testing.T, suite string, tables ...interface{}) (*gorm.DB, func() error) {
 	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
-	now := time.Now().UTC().Truncate(time.Second)
+	now := time.Now().Local().Truncate(time.Second)
 	db, err := openDB(
 		conf.DatabaseOpts{
 			Type: "sqlite3",

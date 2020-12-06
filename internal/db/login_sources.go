@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -27,25 +28,189 @@ import (
 type LoginSourcesStore interface {
 	// Create creates a new login source and persist to database.
 	// It returns ErrLoginSourceAlreadyExist when a login source with same name already exists.
-	Create(opts CreateLoginSourceOpts) (*LoginSource, error)
+	Create(ctx context.Context, opts CreateLoginSourceOpts) (*LoginSource, error)
 	// Count returns the total number of login sources.
-	Count() int64
+	Count(ctx context.Context) int64
 	// DeleteByID deletes a login source by given ID.
 	// It returns ErrLoginSourceInUse if at least one user is associated with the login source.
-	DeleteByID(id int64) error
+	DeleteByID(ctx context.Context, id int64) error
 	// GetByID returns the login source with given ID.
 	// It returns ErrLoginSourceNotExist when not found.
-	GetByID(id int64) (*LoginSource, error)
+	GetByID(ctx context.Context, id int64) (*LoginSource, error)
 	// List returns a list of login sources filtered by options.
-	List(opts ListLoginSourceOpts) ([]*LoginSource, error)
+	List(ctx context.Context, opts ListLoginSourceOpts) ([]*LoginSource, error)
 	// ResetNonDefault clears default flag for all the other login sources.
-	ResetNonDefault(source *LoginSource) error
+	ResetNonDefault(ctx context.Context, source *LoginSource) error
 	// Save persists all values of given login source to database or local file.
 	// The Updated field is set to current time automatically.
-	Save(t *LoginSource) error
+	Save(ctx context.Context, t *LoginSource) error
 }
 
 var LoginSources LoginSourcesStore
+
+var _ LoginSourcesStore = (*loginSources)(nil)
+
+type loginSources struct {
+	*gorm.DB
+	files loginSourceFilesStore
+}
+
+// NewLoginSourcesStore returns a persistent interface for login sources with
+// given database connection.
+func NewLoginSourcesStore(db *gorm.DB, files loginSourceFilesStore) LoginSourcesStore {
+	return &loginSources{
+		DB:    db,
+		files: files,
+	}
+}
+
+type CreateLoginSourceOpts struct {
+	Type      auth.Type
+	Name      string
+	Activated bool
+	Default   bool
+	Config    interface{}
+}
+
+type ErrLoginSourceAlreadyExist struct {
+	args errutil.Args
+}
+
+func IsErrLoginSourceAlreadyExist(err error) bool {
+	_, ok := err.(ErrLoginSourceAlreadyExist)
+	return ok
+}
+
+func (err ErrLoginSourceAlreadyExist) Error() string {
+	return fmt.Sprintf("login source already exists: %v", err.args)
+}
+
+func (db *loginSources) Create(ctx context.Context, opts CreateLoginSourceOpts) (*LoginSource, error) {
+	err := db.WithContext(ctx).
+		Where("name = ?", opts.Name).
+		First(new(LoginSource)).Error
+	if err == nil {
+		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
+	} else if err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	source := &LoginSource{
+		Type:      opts.Type,
+		Name:      opts.Name,
+		IsActived: opts.Activated,
+		IsDefault: opts.Default,
+	}
+	source.Config, err = jsoniter.MarshalToString(opts.Config)
+	if err != nil {
+		return nil, err
+	}
+	return source, db.WithContext(ctx).Create(source).Error
+}
+
+func (db *loginSources) Count(ctx context.Context) int64 {
+	var count int64
+	db.WithContext(ctx).Model(new(LoginSource)).Count(&count)
+	return count + int64(db.files.Len())
+}
+
+type ErrLoginSourceInUse struct {
+	args errutil.Args
+}
+
+func IsErrLoginSourceInUse(err error) bool {
+	_, ok := err.(ErrLoginSourceInUse)
+	return ok
+}
+
+func (err ErrLoginSourceInUse) Error() string {
+	return fmt.Sprintf("login source is still used by some users: %v", err.args)
+}
+
+func (db *loginSources) DeleteByID(ctx context.Context, id int64) error {
+	var count int64
+	err := db.WithContext(ctx).Model(&User{}).Where("login_source = ?", id).Count(&count).Error
+	if err != nil {
+		return err
+	} else if count > 0 {
+		return ErrLoginSourceInUse{args: errutil.Args{"id": id}}
+	}
+
+	return db.Where("id = ?", id).Delete(new(LoginSource)).Error
+}
+
+func (db *loginSources) GetByID(ctx context.Context, id int64) (*LoginSource, error) {
+	source := new(LoginSource)
+	err := db.WithContext(ctx).Where("id = ?", id).First(source).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return db.files.GetByID(id)
+		}
+		return nil, err
+	}
+	return source, nil
+}
+
+type ListLoginSourceOpts struct {
+	// Whether to only include activated login sources.
+	OnlyActivated bool
+}
+
+func (db *loginSources) List(ctx context.Context, opts ListLoginSourceOpts) ([]*LoginSource, error) {
+	var sources []*LoginSource
+	query := db.WithContext(ctx).Order("id ASC")
+	if opts.OnlyActivated {
+		query = query.Where("is_actived = ?", true)
+	}
+	err := query.Find(&sources).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return append(sources, db.files.List(opts)...), nil
+}
+
+func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) error {
+	err := db.WithContext(ctx).
+		Model(&LoginSource{}).
+		Where("id != ?", dflt.ID).
+		Updates(
+			map[string]interface{}{
+				"is_default": false,
+			},
+		).Error
+	if err != nil {
+		return err
+	}
+
+	for _, source := range db.files.List(ListLoginSourceOpts{}) {
+		if source.File != nil && source.ID != dflt.ID {
+			source.File.SetGeneral("is_default", "false")
+			if err = source.File.Save(); err != nil {
+				return errors.Wrap(err, "save file")
+			}
+		}
+	}
+
+	db.files.Update(dflt)
+	return nil
+}
+
+func (db *loginSources) Save(ctx context.Context, source *LoginSource) error {
+	if source.File == nil {
+		return db.WithContext(ctx).Save(source).Error
+	}
+
+	source.File.SetGeneral("name", source.Name)
+	source.File.SetGeneral("is_activated", strconv.FormatBool(source.IsActived))
+	source.File.SetGeneral("is_default", strconv.FormatBool(source.IsDefault))
+	if err := source.File.SetConfig(source.Provider.Config()); err != nil {
+		return errors.Wrap(err, "set config")
+	} else if err = source.File.Save(); err != nil {
+		return errors.Wrap(err, "save file")
+	}
+	return nil
+}
 
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
@@ -179,150 +344,4 @@ func (s *LoginSource) PAM() *pam.Config {
 
 func (s *LoginSource) GitHub() *github.Config {
 	return s.Provider.Config().(*github.Config)
-}
-
-var _ LoginSourcesStore = (*loginSources)(nil)
-
-type loginSources struct {
-	*gorm.DB
-	files loginSourceFilesStore
-}
-
-type CreateLoginSourceOpts struct {
-	Type      auth.Type
-	Name      string
-	Activated bool
-	Default   bool
-	Config    interface{}
-}
-
-type ErrLoginSourceAlreadyExist struct {
-	args errutil.Args
-}
-
-func IsErrLoginSourceAlreadyExist(err error) bool {
-	_, ok := err.(ErrLoginSourceAlreadyExist)
-	return ok
-}
-
-func (err ErrLoginSourceAlreadyExist) Error() string {
-	return fmt.Sprintf("login source already exists: %v", err.args)
-}
-
-func (db *loginSources) Create(opts CreateLoginSourceOpts) (*LoginSource, error) {
-	err := db.Where("name = ?", opts.Name).First(new(LoginSource)).Error
-	if err == nil {
-		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
-	} else if err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	source := &LoginSource{
-		Type:      opts.Type,
-		Name:      opts.Name,
-		IsActived: opts.Activated,
-		IsDefault: opts.Default,
-	}
-	source.Config, err = jsoniter.MarshalToString(opts.Config)
-	if err != nil {
-		return nil, err
-	}
-	return source, db.DB.Create(source).Error
-}
-
-func (db *loginSources) Count() int64 {
-	var count int64
-	db.Model(new(LoginSource)).Count(&count)
-	return count + int64(db.files.Len())
-}
-
-type ErrLoginSourceInUse struct {
-	args errutil.Args
-}
-
-func IsErrLoginSourceInUse(err error) bool {
-	_, ok := err.(ErrLoginSourceInUse)
-	return ok
-}
-
-func (err ErrLoginSourceInUse) Error() string {
-	return fmt.Sprintf("login source is still used by some users: %v", err.args)
-}
-
-func (db *loginSources) DeleteByID(id int64) error {
-	var count int64
-	err := db.Model(new(User)).Where("login_source = ?", id).Count(&count).Error
-	if err != nil {
-		return err
-	} else if count > 0 {
-		return ErrLoginSourceInUse{args: errutil.Args{"id": id}}
-	}
-
-	return db.Where("id = ?", id).Delete(new(LoginSource)).Error
-}
-
-func (db *loginSources) GetByID(id int64) (*LoginSource, error) {
-	source := new(LoginSource)
-	err := db.Where("id = ?", id).First(source).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return db.files.GetByID(id)
-		}
-		return nil, err
-	}
-	return source, nil
-}
-
-type ListLoginSourceOpts struct {
-	// Whether to only include activated login sources.
-	OnlyActivated bool
-}
-
-func (db *loginSources) List(opts ListLoginSourceOpts) ([]*LoginSource, error) {
-	var sources []*LoginSource
-	query := db.Order("id ASC")
-	if opts.OnlyActivated {
-		query = query.Where("is_actived = ?", true)
-	}
-	err := query.Find(&sources).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return append(sources, db.files.List(opts)...), nil
-}
-
-func (db *loginSources) ResetNonDefault(dflt *LoginSource) error {
-	err := db.Model(new(LoginSource)).Where("id != ?", dflt.ID).Updates(map[string]interface{}{"is_default": false}).Error
-	if err != nil {
-		return err
-	}
-
-	for _, source := range db.files.List(ListLoginSourceOpts{}) {
-		if source.File != nil && source.ID != dflt.ID {
-			source.File.SetGeneral("is_default", "false")
-			if err = source.File.Save(); err != nil {
-				return errors.Wrap(err, "save file")
-			}
-		}
-	}
-
-	db.files.Update(dflt)
-	return nil
-}
-
-func (db *loginSources) Save(source *LoginSource) error {
-	if source.File == nil {
-		return db.DB.Save(source).Error
-	}
-
-	source.File.SetGeneral("name", source.Name)
-	source.File.SetGeneral("is_activated", strconv.FormatBool(source.IsActived))
-	source.File.SetGeneral("is_default", strconv.FormatBool(source.IsDefault))
-	if err := source.File.SetConfig(source.Provider.Config()); err != nil {
-		return errors.Wrap(err, "set config")
-	} else if err = source.File.Save(); err != nil {
-		return errors.Wrap(err, "save file")
-	}
-	return nil
 }

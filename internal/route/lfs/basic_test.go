@@ -6,6 +6,7 @@ package lfs
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -69,7 +70,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 		{
 			name: "object does not exist",
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return nil, db.ErrLFSObjectNotExist{}
 				},
 			},
@@ -82,7 +83,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 		{
 			name: "storage not found",
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return &db.LFSObject{Storage: "bad_storage"}, nil
 				},
 			},
@@ -97,7 +98,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 			name:    "object exists",
 			content: "Hello world!",
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return &db.LFSObject{
 						Size:    12,
 						Storage: s.Storage(),
@@ -165,7 +166,7 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 		{
 			name: "object already exists",
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return &db.LFSObject{}, nil
 				},
 			},
@@ -174,10 +175,10 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 		{
 			name: "new object",
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return nil, db.ErrLFSObjectNotExist{}
 				},
-				MockCreateObject: func(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
+				MockCreateObject: func(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
 					return nil
 				},
 			},
@@ -233,7 +234,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			name: "object does not exist",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"}`,
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return nil, db.ErrLFSObjectNotExist{}
 				},
 			},
@@ -244,7 +245,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			name: "object size mismatch",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"}`,
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return &db.LFSObject{Size: 12}, nil
 				},
 			},
@@ -256,7 +257,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			name: "object exists",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size":12}`,
 			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectByOID: func(repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
+				MockGetObjectByOID: func(ctx context.Context, repoID int64, oid lfsutil.OID) (*db.LFSObject, error) {
 					return &db.LFSObject{Size: 12}, nil
 				},
 			},

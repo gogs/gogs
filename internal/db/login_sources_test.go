@@ -22,9 +22,7 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 	now := time.Now()
 	db := &gorm.DB{
 		Config: &gorm.Config{
-			NowFunc: func() time.Time {
-				return now
-			},
+			NowFunc: func() time.Time { return now },
 		},
 	}
 
@@ -39,9 +37,11 @@ func TestLoginSource_BeforeSave(t *testing.T) {
 
 	t.Run("Config has been set", func(t *testing.T) {
 		s := &LoginSource{
-			Provider: pam.NewProvider(&pam.Config{
-				ServiceName: "pam_service",
-			}),
+			Provider: pam.NewProvider(
+				&pam.Config{
+					ServiceName: "pam_service",
+				},
+			),
 		}
 		err := s.BeforeSave(db)
 		if err != nil {
@@ -55,51 +55,55 @@ func TestLoginSource_BeforeCreate(t *testing.T) {
 	now := time.Now()
 	db := &gorm.DB{
 		Config: &gorm.Config{
-			NowFunc: func() time.Time {
-				return now
-			},
+			NowFunc: func() time.Time { return now },
 		},
 	}
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
 		s := &LoginSource{CreatedUnix: 1}
-		_ = s.BeforeCreate(db)
+		err := s.BeforeCreate(db)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		assert.Equal(t, int64(1), s.CreatedUnix)
 		assert.Equal(t, int64(0), s.UpdatedUnix)
 	})
 
 	t.Run("CreatedUnix has not been set", func(t *testing.T) {
 		s := &LoginSource{}
-		_ = s.BeforeCreate(db)
+		err := s.BeforeCreate(db)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		assert.Equal(t, db.NowFunc().Unix(), s.CreatedUnix)
 		assert.Equal(t, db.NowFunc().Unix(), s.UpdatedUnix)
 	})
 }
 
-func Test_loginSources(t *testing.T) {
+func TestLoginSources(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 
 	t.Parallel()
 
-	tables := []interface{}{new(LoginSource), new(User)}
+	tables := []interface{}{&LoginSource{}, &User{}}
 	db, cleanup := newTestDB(t, "loginSources", tables...)
-	store := &loginSources{
-		DB: db,
-	}
+	store := NewLoginSourcesStore(db, nil)
 
 	for _, tc := range []struct {
 		name string
 		test func(t *testing.T, ctx context.Context, db *loginSources)
 	}{
-		{"Create", test_loginSources_Create},
-		{"Count", test_loginSources_Count},
-		{"DeleteByID", test_loginSources_DeleteByID},
-		{"GetByID", test_loginSources_GetByID},
-		{"List", test_loginSources_List},
-		{"ResetNonDefault", test_loginSources_ResetNonDefault},
-		{"Save", test_loginSources_Save},
+		{"Create", testLoginSourcesCreate},
+		{"Count", testLoginSourcesCount},
+		{"DeleteByID", testLoginSourcesDeleteByID},
+		{"GetByID", testLoginSourcesGetByID},
+		{"List", testLoginSourcesList},
+		{"ResetNonDefault", testLoginSourcesResetNonDefault},
+		{"Save", testLoginSourcesSave},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -108,51 +112,59 @@ func Test_loginSources(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, context.Background(), store)
+			tc.test(t, context.Background(), store.(*loginSources))
 		})
 	}
 }
 
-func test_loginSources_Create(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesCreate(t *testing.T, ctx context.Context, db *loginSources) {
 	// Create first login source with name "GitHub"
-	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      auth.GitHub,
-		Name:      "GitHub",
-		Activated: true,
-		Default:   false,
-		Config: &github.Config{
-			APIEndpoint: "https://api.github.com",
+	source, err := db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type:      auth.GitHub,
+			Name:      "GitHub",
+			Activated: true,
+			Default:   false,
+			Config: &github.Config{
+				APIEndpoint: "https://api.github.com",
+			},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get it back and check the Created field
-	source, err = db.GetByID(source.ID)
+	source, err = db.GetByID(ctx, source.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), source.Created.UTC().Format(time.RFC3339))
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), source.Updated.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), source.Created.Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), source.Updated.Format(time.RFC3339))
 
 	// Try create second login source with same name should fail
-	_, err = db.Create(CreateLoginSourceOpts{Name: source.Name})
-	expErr := ErrLoginSourceAlreadyExist{args: errutil.Args{"name": source.Name}}
-	assert.Equal(t, expErr, err)
+	_, err = db.Create(ctx, CreateLoginSourceOpts{Name: source.Name})
+	wantErr := ErrLoginSourceAlreadyExist{
+		args: errutil.Args{
+			"name": source.Name,
+		},
+	}
+	assert.Equal(t, wantErr, err)
 }
 
-func test_loginSources_Count(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesCount(t *testing.T, ctx context.Context, db *loginSources) {
 	// Create two login sources, one in database and one as source file.
-	_, err := db.Create(CreateLoginSourceOpts{
-		Type:      auth.GitHub,
-		Name:      "GitHub",
-		Activated: true,
-		Default:   false,
-		Config: &github.Config{
-			APIEndpoint: "https://api.github.com",
+	_, err := db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type:      auth.GitHub,
+			Name:      "GitHub",
+			Activated: true,
+			Default:   false,
+			Config: &github.Config{
+				APIEndpoint: "https://api.github.com",
+			},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,36 +175,46 @@ func test_loginSources_Count(t *testing.T, ctx context.Context, db *loginSources
 		},
 	})
 
-	assert.Equal(t, int64(3), db.Count())
+	assert.Equal(t, int64(3), db.Count(ctx))
 }
 
-func test_loginSources_DeleteByID(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesDeleteByID(t *testing.T, ctx context.Context, db *loginSources) {
 	t.Run("delete but in used", func(t *testing.T) {
-		source, err := db.Create(CreateLoginSourceOpts{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
-			Activated: true,
-			Default:   false,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+		source, err := db.Create(ctx,
+			CreateLoginSourceOpts{
+				Type:      auth.GitHub,
+				Name:      "GitHub",
+				Activated: true,
+				Default:   false,
+				Config: &github.Config{
+					APIEndpoint: "https://api.github.com",
+				},
 			},
-		})
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Create a user that uses this login source
-		_, err = (&users{DB: db.DB}).Create(ctx, "alice", "", CreateUserOpts{
-			LoginSource: source.ID,
-		})
+		_, err = NewUsersStore(db.DB).Create(ctx,
+			"alice",
+			"",
+			CreateUserOpts{
+				LoginSource: source.ID,
+			},
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Delete the login source will result in error
-		err = db.DeleteByID(source.ID)
-		expErr := ErrLoginSourceInUse{args: errutil.Args{"id": source.ID}}
-		assert.Equal(t, expErr, err)
+		err = db.DeleteByID(ctx, source.ID)
+		wantErr := ErrLoginSourceInUse{
+			args: errutil.Args{
+				"id": source.ID,
+			},
+		}
+		assert.Equal(t, wantErr, err)
 	})
 
 	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
@@ -202,7 +224,7 @@ func test_loginSources_DeleteByID(t *testing.T, ctx context.Context, db *loginSo
 	})
 
 	// Create a login source with name "GitHub2"
-	source, err := db.Create(CreateLoginSourceOpts{
+	source, err := db.Create(ctx, CreateLoginSourceOpts{
 		Type:      auth.GitHub,
 		Name:      "GitHub2",
 		Activated: true,
@@ -216,30 +238,34 @@ func test_loginSources_DeleteByID(t *testing.T, ctx context.Context, db *loginSo
 	}
 
 	// Delete a non-existent ID is noop
-	err = db.DeleteByID(9999)
+	err = db.DeleteByID(ctx, 9999)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// We should be able to get it back
-	_, err = db.GetByID(source.ID)
+	_, err = db.GetByID(ctx, source.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Now delete this login source with ID
-	err = db.DeleteByID(source.ID)
+	err = db.DeleteByID(ctx, source.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// We should get token not found error
-	_, err = db.GetByID(source.ID)
-	expErr := ErrLoginSourceNotExist{args: errutil.Args{"id": source.ID}}
-	assert.Equal(t, expErr, err)
+	_, err = db.GetByID(ctx, source.ID)
+	wantErr := ErrLoginSourceNotExist{
+		args: errutil.Args{
+			"id": source.ID,
+		},
+	}
+	assert.Equal(t, wantErr, err)
 }
 
-func test_loginSources_GetByID(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesGetByID(t *testing.T, ctx context.Context, db *loginSources) {
 	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
 		MockGetByID: func(id int64) (*LoginSource, error) {
 			if id != 101 {
@@ -254,32 +280,34 @@ func test_loginSources_GetByID(t *testing.T, ctx context.Context, db *loginSourc
 	}
 
 	// Create a login source with name "GitHub"
-	source, err := db.Create(CreateLoginSourceOpts{
-		Type:      auth.GitHub,
-		Name:      "GitHub",
-		Activated: true,
-		Default:   false,
-		Config:    expConfig,
-	})
+	source, err := db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type:      auth.GitHub,
+			Name:      "GitHub",
+			Activated: true,
+			Default:   false,
+			Config:    expConfig,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get the one in the database and test the read/write hooks
-	source, err = db.GetByID(source.ID)
+	source, err = db.GetByID(ctx, source.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, expConfig, source.Provider.Config())
 
 	// Get the one in source file store
-	_, err = db.GetByID(101)
+	_, err = db.GetByID(ctx, 101)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func test_loginSources_List(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesList(t *testing.T, ctx context.Context, db *loginSources) {
 	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
 		MockList: func(opts ListLoginSourceOpts) []*LoginSource {
 			if opts.OnlyActivated {
@@ -295,44 +323,48 @@ func test_loginSources_List(t *testing.T, ctx context.Context, db *loginSources)
 	})
 
 	// Create two login sources in database, one activated and the other one not
-	_, err := db.Create(CreateLoginSourceOpts{
-		Type: auth.PAM,
-		Name: "PAM",
-		Config: &pam.Config{
-			ServiceName: "PAM",
+	_, err := db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type: auth.PAM,
+			Name: "PAM",
+			Config: &pam.Config{
+				ServiceName: "PAM",
+			},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Create(CreateLoginSourceOpts{
-		Type:      auth.GitHub,
-		Name:      "GitHub",
-		Activated: true,
-		Config: &github.Config{
-			APIEndpoint: "https://api.github.com",
+	_, err = db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type:      auth.GitHub,
+			Name:      "GitHub",
+			Activated: true,
+			Config: &github.Config{
+				APIEndpoint: "https://api.github.com",
+			},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// List all login sources
-	sources, err := db.List(ListLoginSourceOpts{})
+	sources, err := db.List(ctx, ListLoginSourceOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, 4, len(sources), "number of sources")
 
 	// Only list activated login sources
-	sources, err = db.List(ListLoginSourceOpts{OnlyActivated: true})
+	sources, err = db.List(ctx, ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, 2, len(sources), "number of sources")
 }
 
-func test_loginSources_ResetNonDefault(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesResetNonDefault(t *testing.T, ctx context.Context, db *loginSources) {
 	setMockLoginSourceFilesStore(t, db, &mockLoginSourceFilesStore{
 		MockList: func(opts ListLoginSourceOpts) []*LoginSource {
 			return []*LoginSource{
@@ -353,62 +385,68 @@ func test_loginSources_ResetNonDefault(t *testing.T, ctx context.Context, db *lo
 	})
 
 	// Create two login sources both have default on
-	source1, err := db.Create(CreateLoginSourceOpts{
-		Type:    auth.PAM,
-		Name:    "PAM",
-		Default: true,
-		Config: &pam.Config{
-			ServiceName: "PAM",
+	source1, err := db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type:    auth.PAM,
+			Name:    "PAM",
+			Default: true,
+			Config: &pam.Config{
+				ServiceName: "PAM",
+			},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	source2, err := db.Create(CreateLoginSourceOpts{
-		Type:      auth.GitHub,
-		Name:      "GitHub",
-		Activated: true,
-		Default:   true,
-		Config: &github.Config{
-			APIEndpoint: "https://api.github.com",
+	source2, err := db.Create(ctx,
+		CreateLoginSourceOpts{
+			Type:      auth.GitHub,
+			Name:      "GitHub",
+			Activated: true,
+			Default:   true,
+			Config: &github.Config{
+				APIEndpoint: "https://api.github.com",
+			},
 		},
-	})
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Set source 1 as default
-	err = db.ResetNonDefault(source1)
+	err = db.ResetNonDefault(ctx, source1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify the default state
-	source1, err = db.GetByID(source1.ID)
+	source1, err = db.GetByID(ctx, source1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.True(t, source1.IsDefault)
 
-	source2, err = db.GetByID(source2.ID)
+	source2, err = db.GetByID(ctx, source2.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.False(t, source2.IsDefault)
 }
 
-func test_loginSources_Save(t *testing.T, ctx context.Context, db *loginSources) {
+func testLoginSourcesSave(t *testing.T, ctx context.Context, db *loginSources) {
 	t.Run("save to database", func(t *testing.T) {
 		// Create a login source with name "GitHub"
-		source, err := db.Create(CreateLoginSourceOpts{
-			Type:      auth.GitHub,
-			Name:      "GitHub",
-			Activated: true,
-			Default:   false,
-			Config: &github.Config{
-				APIEndpoint: "https://api.github.com",
+		source, err := db.Create(ctx,
+			CreateLoginSourceOpts{
+				Type:      auth.GitHub,
+				Name:      "GitHub",
+				Activated: true,
+				Default:   false,
+				Config: &github.Config{
+					APIEndpoint: "https://api.github.com",
+				},
 			},
-		})
+		)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -417,12 +455,12 @@ func test_loginSources_Save(t *testing.T, ctx context.Context, db *loginSources)
 		source.Provider = github.NewProvider(&github.Config{
 			APIEndpoint: "https://api2.github.com",
 		})
-		err = db.Save(source)
+		err = db.Save(ctx, source)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		source, err = db.GetByID(source.ID)
+		source, err = db.GetByID(ctx, source.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -445,7 +483,7 @@ func test_loginSources_Save(t *testing.T, ctx context.Context, db *loginSources)
 				},
 			},
 		}
-		err := db.Save(source)
+		err := db.Save(ctx, source)
 		if err != nil {
 			t.Fatal(err)
 		}

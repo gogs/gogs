@@ -13,7 +13,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-func Test_loginSourceFiles_GetByID(t *testing.T) {
+func TestLoginSourceFiles_GetByID(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101},
@@ -35,7 +35,7 @@ func Test_loginSourceFiles_GetByID(t *testing.T) {
 	})
 }
 
-func Test_loginSourceFiles_Len(t *testing.T) {
+func TestLoginSourceFiles_Len(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101},
@@ -45,7 +45,7 @@ func Test_loginSourceFiles_Len(t *testing.T) {
 	assert.Equal(t, 1, store.Len())
 }
 
-func Test_loginSourceFiles_List(t *testing.T) {
+func TestLoginSourceFiles_List(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101, IsActived: true},
@@ -65,7 +65,7 @@ func Test_loginSourceFiles_List(t *testing.T) {
 	})
 }
 
-func Test_loginSourceFiles_Update(t *testing.T) {
+func TestLoginSourceFiles_Update(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101, IsActived: true, IsDefault: true},

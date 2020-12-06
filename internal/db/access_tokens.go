@@ -48,7 +48,7 @@ type accessTokens struct {
 
 // NewAccessTokensStore returns a persistent interface for access tokens with
 // given database connection.
-func NewAccessTokensStore(db *gorm.DB) *accessTokens {
+func NewAccessTokensStore(db *gorm.DB) AccessTokensStore {
 	return &accessTokens{DB: db}
 }
 
@@ -130,9 +130,9 @@ func (db *accessTokens) Save(ctx context.Context, t *AccessToken) error {
 // AccessToken is a personal access token.
 type AccessToken struct {
 	ID     int64 `gorm:"primarykey"`
-	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
+	UserID int64 `xorm:"uid INDEX" gorm:"column:uid;index"`
 	Name   string
-	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
+	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"type:varchar(40);unique"`
 
 	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
@@ -159,8 +159,10 @@ func (t *AccessToken) BeforeUpdate(tx *gorm.DB) error {
 // NOTE: This is a GORM query hook.
 func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
-	t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
-	t.HasUsed = t.Updated.After(t.Created)
-	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(tx.NowFunc())
+	if t.UpdatedUnix > 0 {
+		t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
+		t.HasUsed = t.Updated.After(t.Created)
+		t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(tx.NowFunc())
+	}
 	return nil
 }

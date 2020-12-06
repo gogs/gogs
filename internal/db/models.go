@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -206,6 +207,8 @@ type Statistic struct {
 }
 
 func GetStatistic() (stats Statistic) {
+	ctx := context.Background()
+
 	stats.Counter.User = CountUsers()
 	stats.Counter.Org = CountOrganizations()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
@@ -220,7 +223,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))
-	stats.Counter.LoginSource = LoginSources.Count()
+	stats.Counter.LoginSource = LoginSources.Count(ctx)
 	stats.Counter.Webhook, _ = x.Count(new(Webhook))
 	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	stats.Counter.Label, _ = x.Count(new(Label))
