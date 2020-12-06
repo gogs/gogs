@@ -78,7 +78,7 @@ func (db *twoFactors) Create(userID int64, key, secret string) error {
 			return err
 		}
 
-		return tx.Create(&recoveryCodes).Error
+		return tx.Create(recoveryCodes).Error
 	})
 }
 

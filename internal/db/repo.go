@@ -1115,7 +1115,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return fmt.Errorf("watchRepo: %v", err)
 	}
 
-	// FIXME: This is identical to Actions.NewRepo but we are not yet able to wrap
+	// TODO: This is identical to Actions.NewRepo but we are not yet able to wrap
 	// 	transaction with different ORM objects, should delete this once migrated to
 	// 	GORM for this part of logic.
 	newRepoAction := func(e Engine, doer *User, repo *Repository) (err error) {
@@ -1391,7 +1391,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 		return fmt.Errorf("watchRepo: %v", err)
 	}
 
-	// FIXME: This is identical to Actions.TransferRepo but we are not yet able to wrap
+	// TODO: This is identical to Actions.TransferRepo but we are not yet able to wrap
 	// 	transaction with different ORM objects, should delete this once migrated to
 	// 	GORM for this part of logic.
 	transferRepoAction := func(e Engine, doer, oldOwner *User, repo *Repository) error {
@@ -2317,7 +2317,7 @@ func WatchRepo(userID, repoID int64, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
 
-// Deprecated: Use Repos.ListByRepo instead.
+// Deprecated: Use Watches.ListByRepo instead.
 func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
 	watches := make([]*Watch, 0, 10)
 	return watches, e.Find(&watches, &Watch{RepoID: repoID})
@@ -2325,7 +2325,7 @@ func getWatchers(e Engine, repoID int64) ([]*Watch, error) {
 
 // GetWatchers returns all watchers of given repository.
 //
-// Deprecated: Use Repos.ListByRepo instead.
+// Deprecated: Use Watches.ListByRepo instead.
 func GetWatchers(repoID int64) ([]*Watch, error) {
 	return getWatchers(x, repoID)
 }

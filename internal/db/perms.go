@@ -133,6 +133,6 @@ func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) erro
 			return err
 		}
 
-		return tx.Create(&records).Error
+		return tx.Create(records).Error
 	})
 }

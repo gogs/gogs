@@ -7,27 +7,24 @@ package db
 import (
 	"fmt"
 	"strings"
-	"time"
 	"unicode"
-
-	"github.com/json-iterator/go"
-	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
+	"github.com/json-iterator/go"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
-	"gogs.io/gogs/internal/tool"
 )
 
 var (
 	// Same as Github. See https://help.github.com/articles/closing-issues-via-commit-messages
-	IssueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
-	IssueReopenKeywords = []string{"reopen", "reopens", "reopened"}
+	issueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
+	issueReopenKeywords = []string{"reopen", "reopens", "reopened"}
 
-	IssueCloseKeywordsPat  = lazyregexp.New(assembleKeywordsPattern(IssueCloseKeywords))
-	IssueReopenKeywordsPat = lazyregexp.New(assembleKeywordsPattern(IssueReopenKeywords))
+	issueCloseKeywordsPat  = lazyregexp.New(assembleKeywordsPattern(issueCloseKeywords))
+	issueReopenKeywordsPat = lazyregexp.New(assembleKeywordsPattern(issueReopenKeywords))
 	issueReferencePattern  = lazyregexp.New(`(?i)(?:)(^| )\S*#\d+`)
 )
 
@@ -37,96 +34,6 @@ func assembleKeywordsPattern(words []string) string {
 
 func issueIndexTrimRight(c rune) bool {
 	return !unicode.IsDigit(c)
-}
-
-type PushCommit struct {
-	Sha1           string
-	Message        string
-	AuthorEmail    string
-	AuthorName     string
-	CommitterEmail string
-	CommitterName  string
-	Timestamp      time.Time
-}
-
-type PushCommits struct {
-	Len        int
-	Commits    []*PushCommit
-	CompareURL string
-
-	avatars map[string]string
-}
-
-func NewPushCommits() *PushCommits {
-	return &PushCommits{
-		avatars: make(map[string]string),
-	}
-}
-
-func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.PayloadCommit, error) {
-	commits := make([]*api.PayloadCommit, len(pc.Commits))
-	for i, commit := range pc.Commits {
-		authorUsername := ""
-		author, err := GetUserByEmail(commit.AuthorEmail)
-		if err == nil {
-			authorUsername = author.Name
-		} else if !IsErrUserNotExist(err) {
-			return nil, fmt.Errorf("get user by email: %v", err)
-		}
-
-		committerUsername := ""
-		committer, err := GetUserByEmail(commit.CommitterEmail)
-		if err == nil {
-			committerUsername = committer.Name
-		} else if !IsErrUserNotExist(err) {
-			return nil, fmt.Errorf("get user by email: %v", err)
-		}
-
-		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
-		if err != nil {
-			return nil, fmt.Errorf("show name status [commit_sha1: %s]: %v", commit.Sha1, err)
-		}
-
-		commits[i] = &api.PayloadCommit{
-			ID:      commit.Sha1,
-			Message: commit.Message,
-			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
-			Author: &api.PayloadUser{
-				Name:     commit.AuthorName,
-				Email:    commit.AuthorEmail,
-				UserName: authorUsername,
-			},
-			Committer: &api.PayloadUser{
-				Name:     commit.CommitterName,
-				Email:    commit.CommitterEmail,
-				UserName: committerUsername,
-			},
-			Added:     nameStatus.Added,
-			Removed:   nameStatus.Removed,
-			Modified:  nameStatus.Modified,
-			Timestamp: commit.Timestamp,
-		}
-	}
-	return commits, nil
-}
-
-// AvatarLink tries to match user in database with e-mail
-// in order to show custom avatar, and falls back to general avatar link.
-func (pcs *PushCommits) AvatarLink(email string) string {
-	_, ok := pcs.avatars[email]
-	if !ok {
-		u, err := GetUserByEmail(email)
-		if err != nil {
-			pcs.avatars[email] = tool.AvatarLink(email)
-			if !IsErrUserNotExist(err) {
-				log.Error("get user by email: %v", err)
-			}
-		} else {
-			pcs.avatars[email] = u.RelAvatarLink()
-		}
-	}
-
-	return pcs.avatars[email]
 }
 
 // UpdateIssuesCommit checks if issues are manipulated by commit message.
@@ -149,7 +56,6 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
 			} else if !strings.Contains(ref, "/") {
 				// FIXME: We don't support User#ID syntax yet
-				// return ErrNotImplemented
 				continue
 			}
 
@@ -179,7 +85,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 		refMarked = make(map[int64]bool)
 		// FIXME: can merge this one and next one to a common function.
-		for _, ref := range IssueCloseKeywordsPat.FindAllString(c.Message, -1) {
+		for _, ref := range issueCloseKeywordsPat.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
@@ -218,7 +124,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 		}
 
 		// It is conflict to have close and reopen at same time, so refsMarkd doesn't need to reinit here.
-		for _, ref := range IssueReopenKeywordsPat.FindAllString(c.Message, -1) {
+		for _, ref := range issueReopenKeywordsPat.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 

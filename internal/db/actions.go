@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
@@ -20,6 +21,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/tool"
 )
 
 // ActionsStore is the persistent interface for actions.
@@ -80,7 +82,7 @@ func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, after
 					OR  (repository.is_private = FALSE AND repository.is_unlisted = FALSE)
 			)
 		ORDER BY id DESC
-		LIMIT 20
+		LIMIT @limit
 	*/
 	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
 	return actions, db.WithContext(ctx).
@@ -191,7 +193,7 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 		actions = append(actions, clone(watch.UserID))
 	}
 
-	return db.Create(&actions).Error
+	return db.Create(actions).Error
 }
 
 func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, repo *Repository, refName string, content []byte) error {
@@ -415,4 +417,112 @@ func (a *Action) GetIssueContent() string {
 		return "error getting issue"
 	}
 	return issue.Content
+}
+
+// PushCommit contains information of a pushed commit.
+type PushCommit struct {
+	Sha1           string
+	Message        string
+	AuthorEmail    string
+	AuthorName     string
+	CommitterEmail string
+	CommitterName  string
+	Timestamp      time.Time
+}
+
+// PushCommits is a list of pushed commits.
+type PushCommits struct {
+	Len        int
+	Commits    []*PushCommit
+	CompareURL string
+
+	avatars map[string]string
+}
+
+// NewPushCommits returns a new PushCommits.
+func NewPushCommits() *PushCommits {
+	return &PushCommits{
+		avatars: make(map[string]string),
+	}
+}
+
+func (pcs *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+	// NOTE: We cache query results in case there are many commits in a single push.
+	usernameByEmail := make(map[string]string)
+	getUsernameByEmail := func(email string) (string, error) {
+		username, ok := usernameByEmail[email]
+		if ok {
+			return username, nil
+		}
+
+		user, err := Users.GetByEmail(email)
+		if err != nil {
+			if IsErrUserNotExist(err) {
+				usernameByEmail[email] = ""
+				return "", nil
+			}
+			return "", err
+		}
+
+		usernameByEmail[email] = user.Name
+		return user.Name, nil
+	}
+
+	commits := make([]*api.PayloadCommit, len(pcs.Commits))
+	for i, commit := range pcs.Commits {
+		authorUsername, err := getUsernameByEmail(commit.AuthorEmail)
+		if err != nil {
+			return nil, fmt.Errorf("get author username: %v", err)
+		}
+
+		committerUsername, err := getUsernameByEmail(commit.CommitterEmail)
+		if err != nil {
+			return nil, fmt.Errorf("get committer username: %v", err)
+		}
+
+		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
+		if err != nil {
+			return nil, fmt.Errorf("show name status [commit_sha1: %s]: %v", commit.Sha1, err)
+		}
+
+		commits[i] = &api.PayloadCommit{
+			ID:      commit.Sha1,
+			Message: commit.Message,
+			URL:     fmt.Sprintf("%s/commit/%s", repoURL, commit.Sha1),
+			Author: &api.PayloadUser{
+				Name:     commit.AuthorName,
+				Email:    commit.AuthorEmail,
+				UserName: authorUsername,
+			},
+			Committer: &api.PayloadUser{
+				Name:     commit.CommitterName,
+				Email:    commit.CommitterEmail,
+				UserName: committerUsername,
+			},
+			Added:     nameStatus.Added,
+			Removed:   nameStatus.Removed,
+			Modified:  nameStatus.Modified,
+			Timestamp: commit.Timestamp,
+		}
+	}
+	return commits, nil
+}
+
+// AvatarLink tries to match user in database with email in order to show custom
+// avatars, and falls back to general avatar link.
+func (pcs *PushCommits) AvatarLink(email string) string {
+	_, ok := pcs.avatars[email]
+	if !ok {
+		u, err := Users.GetByEmail(email)
+		if err != nil {
+			pcs.avatars[email] = tool.AvatarLink(email)
+			if !IsErrUserNotExist(err) {
+				log.Error("get user by email: %v", err)
+			}
+		} else {
+			pcs.avatars[email] = u.RelAvatarLink()
+		}
+	}
+
+	return pcs.avatars[email]
 }
