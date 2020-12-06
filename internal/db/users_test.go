@@ -15,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-func Test_users(t *testing.T) {
+func TestUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -24,19 +24,17 @@ func Test_users(t *testing.T) {
 
 	tables := []interface{}{new(User), new(EmailAddress)}
 	db, cleanup := newTestDB(t, "users", tables...)
-	store := &users{
-		DB: db,
-	}
+	store := NewUsersStore(db)
 
 	for _, tc := range []struct {
 		name string
 		test func(t *testing.T, ctx context.Context, db *users)
 	}{
-		{"Authenticate", test_users_Authenticate},
-		{"Create", test_users_Create},
-		{"GetByEmail", test_users_GetByEmail},
-		{"GetByID", test_users_GetByID},
-		{"GetByUsername", test_users_GetByUsername},
+		{"Authenticate", testUsersAuthenticate},
+		{"Create", testUsersCreate},
+		{"GetByEmail", testUsersGetByEmail},
+		{"GetByID", testUsersGetByID},
+		{"GetByUsername", testUsersGetByUsername},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -45,14 +43,14 @@ func Test_users(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, context.Background(), store)
+			tc.test(t, context.Background(), store.(*users))
 		})
 	}
 }
 
 // TODO: Only local account is tested, tests for external account will be added
 //  along with addressing https://github.com/gogs/gogs/issues/6115.
-func test_users_Authenticate(t *testing.T, ctx context.Context, db *users) {
+func testUsersAuthenticate(t *testing.T, ctx context.Context, db *users) {
 	password := "pa$$word"
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOpts{
 		Password: password,
@@ -90,7 +88,7 @@ func test_users_Authenticate(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func test_users_Create(t *testing.T, ctx context.Context, db *users) {
+func testUsersCreate(t *testing.T, ctx context.Context, db *users) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOpts{
 		Activated: true,
 	})
@@ -120,11 +118,11 @@ func test_users_Create(t *testing.T, ctx context.Context, db *users) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Created.UTC().Format(time.RFC3339))
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Updated.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Created.Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Updated.Format(time.RFC3339))
 }
 
-func test_users_GetByEmail(t *testing.T, ctx context.Context, db *users) {
+func testUsersGetByEmail(t *testing.T, ctx context.Context, db *users) {
 	t.Run("empty email", func(t *testing.T) {
 		_, err := db.GetByEmail(ctx, "")
 		expErr := ErrUserNotExist{args: errutil.Args{"email": ""}}
@@ -203,7 +201,7 @@ func test_users_GetByEmail(t *testing.T, ctx context.Context, db *users) {
 	})
 }
 
-func test_users_GetByID(t *testing.T, ctx context.Context, db *users) {
+func testUsersGetByID(t *testing.T, ctx context.Context, db *users) {
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
 	if err != nil {
 		t.Fatal(err)
@@ -220,7 +218,7 @@ func test_users_GetByID(t *testing.T, ctx context.Context, db *users) {
 	assert.Equal(t, expErr, err)
 }
 
-func test_users_GetByUsername(t *testing.T, ctx context.Context, db *users) {
+func testUsersGetByUsername(t *testing.T, ctx context.Context, db *users) {
 	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
 	if err != nil {
 		t.Fatal(err)
