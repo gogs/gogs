@@ -57,7 +57,7 @@ func Test_authenticate(t *testing.T) {
 				},
 			},
 			mockTwoFactorsStore: &db.MockTwoFactorsStore{
-				MockIsUserEnabled: func(userID int64) bool {
+				MockIsUserEnabled: func(ctx context.Context, userID int64) bool {
 					return true
 				},
 			},
@@ -99,7 +99,7 @@ func Test_authenticate(t *testing.T) {
 				},
 			},
 			mockTwoFactorsStore: &db.MockTwoFactorsStore{
-				MockIsUserEnabled: func(userID int64) bool {
+				MockIsUserEnabled: func(ctx context.Context, userID int64) bool {
 					return false
 				},
 			},
@@ -210,7 +210,7 @@ func Test_authorize(t *testing.T) {
 				},
 			},
 			mockPermsStore: &db.MockPermsStore{
-				MockAuthorize: func(userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
+				MockAuthorize: func(ctx context.Context, userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
 					return desired <= db.AccessModeRead
 				},
 			},
@@ -231,7 +231,7 @@ func Test_authorize(t *testing.T) {
 				},
 			},
 			mockPermsStore: &db.MockPermsStore{
-				MockAuthorize: func(userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
+				MockAuthorize: func(ctx context.Context, userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
 					return desired <= db.AccessModeRead
 				},
 			},

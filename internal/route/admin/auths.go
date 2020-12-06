@@ -35,13 +35,13 @@ func Authentications(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	var err error
-	c.Data["Sources"], err = db.LoginSources.List(db.ListLoginSourceOpts{})
+	c.Data["Sources"], err = db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
 	}
 
-	c.Data["Total"] = db.LoginSources.Count()
+	c.Data["Total"] = db.LoginSources.Count(c.Req.Context())
 	c.Success(AUTHS)
 }
 
@@ -159,13 +159,15 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		return
 	}
 
-	source, err := db.LoginSources.Create(db.CreateLoginSourceOpts{
-		Type:      auth.Type(f.Type),
-		Name:      f.Name,
-		Activated: f.IsActive,
-		Default:   f.IsDefault,
-		Config:    config,
-	})
+	source, err := db.LoginSources.Create(c.Req.Context(),
+		db.CreateLoginSourceOpts{
+			Type:      auth.Type(f.Type),
+			Name:      f.Name,
+			Activated: f.IsActive,
+			Default:   f.IsDefault,
+			Config:    config,
+		},
+	)
 	if err != nil {
 		if db.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
@@ -177,7 +179,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	if source.IsDefault {
-		err = db.LoginSources.ResetNonDefault(source)
+		err = db.LoginSources.ResetNonDefault(c.Req.Context(), source)
 		if err != nil {
 			c.Error(err, "reset non-default login sources")
 			return
@@ -198,7 +200,7 @@ func EditAuthSource(c *context.Context) {
 	c.Data["SecurityProtocols"] = securityProtocols
 	c.Data["SMTPAuths"] = smtp.AuthTypes
 
-	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.Req.Context(), c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return
@@ -216,7 +218,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 	c.Data["SMTPAuths"] = smtp.AuthTypes
 
-	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.Req.Context(), c.ParamsInt64(":authid"))
 	if err != nil {
 		c.Error(err, "get login source by ID")
 		return
@@ -255,13 +257,13 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	source.IsActived = f.IsActive
 	source.IsDefault = f.IsDefault
 	source.Provider = provider
-	if err := db.LoginSources.Save(source); err != nil {
+	if err := db.LoginSources.Save(c.Req.Context(), source); err != nil {
 		c.Error(err, "update login source")
 		return
 	}
 
 	if source.IsDefault {
-		err = db.LoginSources.ResetNonDefault(source)
+		err = db.LoginSources.ResetNonDefault(c.Req.Context(), source)
 		if err != nil {
 			c.Error(err, "reset non-default login sources")
 			return
@@ -276,7 +278,7 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 
 func DeleteAuthSource(c *context.Context) {
 	id := c.ParamsInt64(":authid")
-	if err := db.LoginSources.DeleteByID(id); err != nil {
+	if err := db.LoginSources.DeleteByID(c.Req.Context(), id); err != nil {
 		if db.IsErrLoginSourceInUse(err) {
 			c.Flash.Error(c.Tr("admin.auths.still_in_used"))
 		} else {

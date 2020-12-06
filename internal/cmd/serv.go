@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -134,6 +135,8 @@ var (
 )
 
 func runServ(c *cli.Context) error {
+	ctx := context.Background()
+
 	setup(c, "serv.log", true)
 
 	if conf.SSH.Disabled {
@@ -210,7 +213,9 @@ func runServ(c *cli.Context) error {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode := db.Perms.AccessMode(user.ID, repo.ID,
+			mode := db.Perms.AccessMode(ctx,
+				user.ID,
+				repo.ID,
 				db.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

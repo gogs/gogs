@@ -23,9 +23,7 @@ func TestTwoFactors(t *testing.T) {
 
 	tables := []interface{}{new(TwoFactor), new(TwoFactorRecoveryCode)}
 	db, cleanup := newTestDB(t, "twoFactors", tables...)
-	store := &twoFactors{
-		DB: db,
-	}
+	store := NewTwoFactorsStore(db)
 
 	for _, tc := range []struct {
 		name string
@@ -42,7 +40,7 @@ func TestTwoFactors(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, context.Background(), store)
+			tc.test(t, context.Background(), store.(*twoFactors))
 		})
 	}
 }
