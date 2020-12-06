@@ -5,6 +5,7 @@
 package lfs
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -51,7 +52,7 @@ func Test_authenticate(t *testing.T) {
 				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
 			},
 			mockUsersStore: &db.MockUsersStore{
-				MockAuthenticate: func(username, password string, loginSourceID int64) (*db.User, error) {
+				MockAuthenticate: func(ctx context.Context, username, password string, loginSourceID int64) (*db.User, error) {
 					return &db.User{}, nil
 				},
 			},
@@ -70,12 +71,12 @@ func Test_authenticate(t *testing.T) {
 				"Authorization": []string{"Basic dXNlcm5hbWU="},
 			},
 			mockUsersStore: &db.MockUsersStore{
-				MockAuthenticate: func(username, password string, loginSourceID int64) (*db.User, error) {
+				MockAuthenticate: func(ctx context.Context, username, password string, loginSourceID int64) (*db.User, error) {
 					return nil, auth.ErrBadCredentials{}
 				},
 			},
 			mockAccessTokensStore: &db.MockAccessTokensStore{
-				MockGetBySHA: func(sha string) (*db.AccessToken, error) {
+				MockGetBySHA: func(ctx context.Context, sha string) (*db.AccessToken, error) {
 					return nil, db.ErrAccessTokenNotExist{}
 				},
 			},
@@ -93,7 +94,7 @@ func Test_authenticate(t *testing.T) {
 				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
 			},
 			mockUsersStore: &db.MockUsersStore{
-				MockAuthenticate: func(username, password string, loginSourceID int64) (*db.User, error) {
+				MockAuthenticate: func(ctx context.Context, username, password string, loginSourceID int64) (*db.User, error) {
 					return &db.User{ID: 1, Name: "unknwon"}, nil
 				},
 			},
@@ -112,18 +113,18 @@ func Test_authenticate(t *testing.T) {
 				"Authorization": []string{"Basic dXNlcm5hbWU="},
 			},
 			mockUsersStore: &db.MockUsersStore{
-				MockAuthenticate: func(username, password string, loginSourceID int64) (*db.User, error) {
+				MockAuthenticate: func(ctx context.Context, username, password string, loginSourceID int64) (*db.User, error) {
 					return nil, auth.ErrBadCredentials{}
 				},
-				MockGetByID: func(id int64) (*db.User, error) {
+				MockGetByID: func(ctx context.Context, id int64) (*db.User, error) {
 					return &db.User{ID: 1, Name: "unknwon"}, nil
 				},
 			},
 			mockAccessTokensStore: &db.MockAccessTokensStore{
-				MockGetBySHA: func(sha string) (*db.AccessToken, error) {
+				MockGetBySHA: func(ctx context.Context, sha string) (*db.AccessToken, error) {
 					return &db.AccessToken{}, nil
 				},
-				MockSave: func(t *db.AccessToken) error {
+				MockSave: func(ctx context.Context, t *db.AccessToken) error {
 					return nil
 				},
 			},
@@ -174,7 +175,7 @@ func Test_authorize(t *testing.T) {
 			name:      "user does not exist",
 			authroize: authorize(db.AccessModeNone),
 			mockUsersStore: &db.MockUsersStore{
-				MockGetByUsername: func(username string) (*db.User, error) {
+				MockGetByUsername: func(ctx context.Context, username string) (*db.User, error) {
 					return nil, db.ErrUserNotExist{}
 				},
 			},
@@ -184,12 +185,12 @@ func Test_authorize(t *testing.T) {
 			name:      "repository does not exist",
 			authroize: authorize(db.AccessModeNone),
 			mockUsersStore: &db.MockUsersStore{
-				MockGetByUsername: func(username string) (*db.User, error) {
+				MockGetByUsername: func(ctx context.Context, username string) (*db.User, error) {
 					return &db.User{Name: username}, nil
 				},
 			},
 			mockReposStore: &db.MockReposStore{
-				MockGetByName: func(ownerID int64, name string) (*db.Repository, error) {
+				MockGetByName: func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return nil, db.ErrRepoNotExist{}
 				},
 			},
@@ -199,12 +200,12 @@ func Test_authorize(t *testing.T) {
 			name:      "actor is not authorized",
 			authroize: authorize(db.AccessModeWrite),
 			mockUsersStore: &db.MockUsersStore{
-				MockGetByUsername: func(username string) (*db.User, error) {
+				MockGetByUsername: func(ctx context.Context, username string) (*db.User, error) {
 					return &db.User{Name: username}, nil
 				},
 			},
 			mockReposStore: &db.MockReposStore{
-				MockGetByName: func(ownerID int64, name string) (*db.Repository, error) {
+				MockGetByName: func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return &db.Repository{Name: name}, nil
 				},
 			},
@@ -220,12 +221,12 @@ func Test_authorize(t *testing.T) {
 			name:      "actor is authorized",
 			authroize: authorize(db.AccessModeRead),
 			mockUsersStore: &db.MockUsersStore{
-				MockGetByUsername: func(username string) (*db.User, error) {
+				MockGetByUsername: func(ctx context.Context, username string) (*db.User, error) {
 					return &db.User{Name: username}, nil
 				},
 			},
 			mockReposStore: &db.MockReposStore{
-				MockGetByName: func(ownerID int64, name string) (*db.Repository, error) {
+				MockGetByName: func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return &db.Repository{Name: name}, nil
 				},
 			},
