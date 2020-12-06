@@ -32,6 +32,12 @@ type repos struct {
 	*gorm.DB
 }
 
+// NewReposStore returns a persistent interface for repositories with given
+// database connection.
+func NewReposStore(db *gorm.DB) ReposStore {
+	return &repos{DB: db}
+}
+
 type ErrRepoAlreadyExist struct {
 	args errutil.Args
 }

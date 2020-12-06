@@ -14,7 +14,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-func Test_repos(t *testing.T) {
+func TestRepos(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -23,16 +23,14 @@ func Test_repos(t *testing.T) {
 
 	tables := []interface{}{new(Repository)}
 	db, cleanup := newTestDB(t, "repos", tables...)
-	store := &repos{
-		DB: db,
-	}
+	store := NewReposStore(db)
 
 	for _, tc := range []struct {
 		name string
 		test func(t *testing.T, ctx context.Context, db *repos)
 	}{
-		{"create", test_repos_create},
-		{"GetByName", test_repos_GetByName},
+		{"create", testRepos_create},
+		{"GetByName", testReposGetByName},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -41,18 +39,23 @@ func Test_repos(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, context.Background(), store)
+			tc.test(t, context.Background(), store.(*repos))
 		})
 	}
 }
 
-func test_repos_create(t *testing.T, ctx context.Context, db *repos) {
+func testRepos_create(t *testing.T, ctx context.Context, db *repos) {
 	t.Run("name not allowed", func(t *testing.T) {
 		_, err := db.create(ctx, 1, createRepoOpts{
 			Name: "my.git",
 		})
-		expErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": "*.git"}}
-		assert.Equal(t, expErr, err)
+		wantErr := ErrNameNotAllowed{
+			args: errutil.Args{
+				"reason":  "reserved",
+				"pattern": "*.git",
+			},
+		}
+		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("already exists", func(t *testing.T) {
@@ -66,8 +69,13 @@ func test_repos_create(t *testing.T, ctx context.Context, db *repos) {
 		_, err = db.create(ctx, 1, createRepoOpts{
 			Name: "repo1",
 		})
-		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(1), "name": "repo1"}}
-		assert.Equal(t, expErr, err)
+		wantErr := ErrRepoAlreadyExist{
+			args: errutil.Args{
+				"ownerID": int64(1),
+				"name":    "repo1",
+			},
+		}
+		assert.Equal(t, wantErr, err)
 	})
 
 	repo, err := db.create(ctx, 1, createRepoOpts{
@@ -81,10 +89,10 @@ func test_repos_create(t *testing.T, ctx context.Context, db *repos) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.Format(time.RFC3339))
 }
 
-func test_repos_GetByName(t *testing.T, ctx context.Context, db *repos) {
+func testReposGetByName(t *testing.T, ctx context.Context, db *repos) {
 	repo, err := db.create(ctx, 1, createRepoOpts{
 		Name: "repo1",
 	})
@@ -98,6 +106,11 @@ func test_repos_GetByName(t *testing.T, ctx context.Context, db *repos) {
 	}
 
 	_, err = db.GetByName(ctx, 1, "bad_name")
-	expErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
-	assert.Equal(t, expErr, err)
+	wantErr := ErrRepoNotExist{
+		args: errutil.Args{
+			"ownerID": int64(1),
+			"name":    "bad_name",
+		},
+	}
+	assert.Equal(t, wantErr, err)
 }
