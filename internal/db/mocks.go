@@ -16,31 +16,31 @@ import (
 var _ AccessTokensStore = (*MockAccessTokensStore)(nil)
 
 type MockAccessTokensStore struct {
-	MockCreate     func(userID int64, name string) (*AccessToken, error)
-	MockDeleteByID func(userID, id int64) error
-	MockGetBySHA   func(sha string) (*AccessToken, error)
-	MockList       func(userID int64) ([]*AccessToken, error)
-	MockSave       func(t *AccessToken) error
+	MockCreate     func(ctx context.Context, userID int64, name string) (*AccessToken, error)
+	MockDeleteByID func(ctx context.Context, userID, id int64) error
+	MockGetBySHA   func(ctx context.Context, sha string) (*AccessToken, error)
+	MockList       func(ctx context.Context, userID int64) ([]*AccessToken, error)
+	MockSave       func(ctx context.Context, t *AccessToken) error
 }
 
-func (m *MockAccessTokensStore) Create(userID int64, name string) (*AccessToken, error) {
-	return m.MockCreate(userID, name)
+func (m *MockAccessTokensStore) Create(ctx context.Context, userID int64, name string) (*AccessToken, error) {
+	return m.MockCreate(ctx, userID, name)
 }
 
-func (m *MockAccessTokensStore) DeleteByID(userID, id int64) error {
-	return m.MockDeleteByID(userID, id)
+func (m *MockAccessTokensStore) DeleteByID(ctx context.Context, userID, id int64) error {
+	return m.MockDeleteByID(ctx, userID, id)
 }
 
-func (m *MockAccessTokensStore) GetBySHA(sha string) (*AccessToken, error) {
-	return m.MockGetBySHA(sha)
+func (m *MockAccessTokensStore) GetBySHA(ctx context.Context, sha string) (*AccessToken, error) {
+	return m.MockGetBySHA(ctx, sha)
 }
 
-func (m *MockAccessTokensStore) List(userID int64) ([]*AccessToken, error) {
-	return m.MockList(userID)
+func (m *MockAccessTokensStore) List(ctx context.Context, userID int64) ([]*AccessToken, error) {
+	return m.MockList(ctx, userID)
 }
 
-func (m *MockAccessTokensStore) Save(t *AccessToken) error {
-	return m.MockSave(t)
+func (m *MockAccessTokensStore) Save(ctx context.Context, t *AccessToken) error {
+	return m.MockSave(ctx, t)
 }
 
 func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {

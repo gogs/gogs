@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -21,13 +22,14 @@ func Test_twoFactors(t *testing.T) {
 	t.Parallel()
 
 	tables := []interface{}{new(TwoFactor), new(TwoFactorRecoveryCode)}
-	db := &twoFactors{
-		DB: initTestDB(t, "twoFactors", tables...),
+	db, cleanup := newTestDB(t, "twoFactors", tables...)
+	store := &twoFactors{
+		DB: db,
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *twoFactors)
+		test func(t *testing.T, ctx context.Context, db *twoFactors)
 	}{
 		{"Create", test_twoFactors_Create},
 		{"GetByUserID", test_twoFactors_GetByUserID},
@@ -35,17 +37,17 @@ func Test_twoFactors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := cleanup()
 				if err != nil {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, db)
+			tc.test(t, context.Background(), store)
 		})
 	}
 }
 
-func test_twoFactors_Create(t *testing.T, db *twoFactors) {
+func test_twoFactors_Create(t *testing.T, ctx context.Context, db *twoFactors) {
 	// Create a 2FA token
 	err := db.Create(1, "secure-key", "secure-secret")
 	if err != nil {
@@ -68,7 +70,7 @@ func test_twoFactors_Create(t *testing.T, db *twoFactors) {
 	assert.Equal(t, int64(10), count)
 }
 
-func test_twoFactors_GetByUserID(t *testing.T, db *twoFactors) {
+func test_twoFactors_GetByUserID(t *testing.T, ctx context.Context, db *twoFactors) {
 	// Create a 2FA token for user 1
 	err := db.Create(1, "secure-key", "secure-secret")
 	if err != nil {
@@ -87,7 +89,7 @@ func test_twoFactors_GetByUserID(t *testing.T, db *twoFactors) {
 	assert.Equal(t, expErr, err)
 }
 
-func test_twoFactors_IsUserEnabled(t *testing.T, db *twoFactors) {
+func test_twoFactors_IsUserEnabled(t *testing.T, ctx context.Context, db *twoFactors) {
 	// Create a 2FA token for user 1
 	err := db.Create(1, "secure-key", "secure-secret")
 	if err != nil {

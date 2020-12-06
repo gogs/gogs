@@ -303,12 +303,12 @@ func assembleKeywordsPattern(words []string) string {
 	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
 }
 
-func issueIndexTrimRight(c rune) bool {
-	return !unicode.IsDigit(c)
-}
-
 // updateCommitReferencesToIssues checks if issues are manipulated by commit message.
 func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*PushCommit) error {
+	trimRightNonDigits := func(c rune) bool {
+		return !unicode.IsDigit(c)
+	}
+
 	// Commits are appended in the reverse order.
 	for i := len(commits) - 1; i >= 0; i-- {
 		c := commits[i]
@@ -316,7 +316,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 		refMarked := make(map[int64]bool)
 		for _, ref := range issueReferencePattern.FindAllString(c.Message, -1) {
 			ref = strings.TrimSpace(ref)
-			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
+			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
 
 			if len(ref) == 0 {
 				continue
@@ -355,10 +355,10 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 		}
 
 		refMarked = make(map[int64]bool)
-		// FIXME: can merge this one and next one to a common function.
+		// FIXME: Can merge this and the next for loop to a common function.
 		for _, ref := range issueCloseKeywordsPattern.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
-			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
+			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
 
 			if len(ref) == 0 {
 				continue
@@ -397,7 +397,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 		// It is conflict to have close and reopen at same time, so refsMarkd doesn't need to reinit here.
 		for _, ref := range issueReopenKeywordsPattern.FindAllString(c.Message, -1) {
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
-			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
+			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
 
 			if len(ref) == 0 {
 				continue

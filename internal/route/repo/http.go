@@ -131,7 +131,7 @@ func HTTPContexter() macaron.Handler {
 
 		// If username and password combination failed, try again using username as a token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA(authUsername)
+			token, err := db.AccessTokens.GetBySHA(c.Req.Context(), authUsername)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
@@ -141,7 +141,7 @@ func HTTPContexter() macaron.Handler {
 				}
 				return
 			}
-			if err = db.AccessTokens.Save(token); err != nil {
+			if err = db.AccessTokens.Save(c.Req.Context(), token); err != nil {
 				log.Error("Failed to update access token: %v", err)
 			}
 

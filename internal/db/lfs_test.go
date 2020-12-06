@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -22,13 +23,14 @@ func Test_lfs(t *testing.T) {
 	t.Parallel()
 
 	tables := []interface{}{new(LFSObject)}
-	db := &lfs{
-		DB: initTestDB(t, "lfs", tables...),
+	db, cleanup := newTestDB(t, "lfs", tables...)
+	store := &lfs{
+		DB: db,
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *lfs)
+		test func(t *testing.T, ctx context.Context, db *lfs)
 	}{
 		{"CreateObject", test_lfs_CreateObject},
 		{"GetObjectByOID", test_lfs_GetObjectByOID},
@@ -36,17 +38,17 @@ func Test_lfs(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := cleanup()
 				if err != nil {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, db)
+			tc.test(t, context.Background(), store)
 		})
 	}
 }
 
-func test_lfs_CreateObject(t *testing.T, db *lfs) {
+func test_lfs_CreateObject(t *testing.T, ctx context.Context, db *lfs) {
 	// Create first LFS object
 	repoID := int64(1)
 	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
@@ -67,7 +69,7 @@ func test_lfs_CreateObject(t *testing.T, db *lfs) {
 	assert.Error(t, err)
 }
 
-func test_lfs_GetObjectByOID(t *testing.T, db *lfs) {
+func test_lfs_GetObjectByOID(t *testing.T, ctx context.Context, db *lfs) {
 	// Create a LFS object
 	repoID := int64(1)
 	oid := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")
@@ -88,7 +90,7 @@ func test_lfs_GetObjectByOID(t *testing.T, db *lfs) {
 	assert.Equal(t, expErr, err)
 }
 
-func test_lfs_GetObjectsByOIDs(t *testing.T, db *lfs) {
+func test_lfs_GetObjectsByOIDs(t *testing.T, ctx context.Context, db *lfs) {
 	// Create two LFS objects
 	repoID := int64(1)
 	oid1 := lfsutil.OID("ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f")

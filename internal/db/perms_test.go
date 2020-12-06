@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,13 +19,14 @@ func Test_perms(t *testing.T) {
 	t.Parallel()
 
 	tables := []interface{}{new(Access)}
-	db := &perms{
-		DB: initTestDB(t, "perms", tables...),
+	db, cleanup := newTestDB(t, "perms", tables...)
+	store := &perms{
+		DB: db,
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *perms)
+		test func(t *testing.T, ctx context.Context, db *perms)
 	}{
 		{"AccessMode", test_perms_AccessMode},
 		{"Authorize", test_perms_Authorize},
@@ -32,16 +34,16 @@ func Test_perms(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := cleanup()
 				if err != nil {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, db)
+			tc.test(t, context.Background(), store)
 		})
 	}
 }
-func test_perms_AccessMode(t *testing.T, db *perms) {
+func test_perms_AccessMode(t *testing.T, ctx context.Context, db *perms) {
 	// Set up permissions
 	err := db.SetRepoPerms(1, map[int64]AccessMode{
 		2: AccessModeWrite,
@@ -152,7 +154,7 @@ func test_perms_AccessMode(t *testing.T, db *perms) {
 	}
 }
 
-func test_perms_Authorize(t *testing.T, db *perms) {
+func test_perms_Authorize(t *testing.T, ctx context.Context, db *perms) {
 	// Set up permissions
 	err := db.SetRepoPerms(1, map[int64]AccessMode{
 		1: AccessModeRead,
@@ -236,7 +238,7 @@ func test_perms_Authorize(t *testing.T, db *perms) {
 	}
 }
 
-func test_perms_SetRepoPerms(t *testing.T, db *perms) {
+func test_perms_SetRepoPerms(t *testing.T, ctx context.Context, db *perms) {
 	for _, update := range []struct {
 		repoID    int64
 		accessMap map[int64]AccessMode

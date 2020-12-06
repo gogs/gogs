@@ -18,6 +18,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/testutil"
 )
 
@@ -58,9 +59,9 @@ func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
 	return nil
 }
 
-func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
-	t.Helper()
-
+// TODO: Once finished migrating to GORM, we can just use Tables instead of a
+// 	subset `tables` for setting up test database.
+func newTestDB(t *testing.T, suite string, tables ...interface{}) (*gorm.DB, func() error) {
 	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
 	now := time.Now().UTC().Truncate(time.Second)
 	db, err := openDB(
@@ -72,14 +73,18 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 			NamingStrategy: schema.NamingStrategy{
 				SingularTable: true,
 			},
-			NowFunc: func() time.Time {
-				return now
-			},
+			NowFunc: func() time.Time { return now },
 		},
 	)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Failed to open test database: %v", err)
 	}
+
+	err = db.Migrator().AutoMigrate(tables...)
+	if err != nil {
+		t.Fatalf("Failed to auto migrate tables: %v", err)
+	}
+
 	t.Cleanup(func() {
 		sqlDB, err := db.DB()
 		if err == nil {
@@ -87,17 +92,29 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 		}
 
 		if t.Failed() {
-			t.Logf("Database %q left intact for inspection", dbpath)
+			t.Logf("DATABASE %q left intact for inspection", dbpath)
 			return
 		}
 
 		_ = os.Remove(dbpath)
 	})
 
-	err = db.Migrator().AutoMigrate(tables...)
-	if err != nil {
-		t.Fatal(err)
-	}
+	return db, func() error {
+		if t.Failed() {
+			return nil
+		}
 
-	return db
+		m := db.Migrator().(interface {
+			RunWithValue(value interface{}, fc func(*gorm.Statement) error) error
+		})
+		for _, t := range tables {
+			err := m.RunWithValue(t, func(stmt *gorm.Statement) error {
+				return db.Exec(`DELETE FROM ` + dbutil.QuoteIdentifier(stmt.Table)).Error
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }

@@ -23,8 +23,9 @@ func Test_users(t *testing.T) {
 	t.Parallel()
 
 	tables := []interface{}{new(User), new(EmailAddress)}
-	db := &users{
-		DB: initTestDB(t, "users", tables...),
+	db, cleanup := newTestDB(t, "users", tables...)
+	store := &users{
+		DB: db,
 	}
 
 	for _, tc := range []struct {
@@ -39,12 +40,12 @@ func Test_users(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := cleanup()
 				if err != nil {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, context.Background(), db)
+			tc.test(t, context.Background(), store)
 		})
 	}
 }

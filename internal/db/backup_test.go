@@ -33,7 +33,7 @@ func Test_dumpAndImport(t *testing.T) {
 		t.Fatalf("New table has added (want 4 got %d), please add new tests for the table and update this check", len(Tables))
 	}
 
-	db := initTestDB(t, "dumpAndImport", Tables...)
+	db, _ := newTestDB(t, "dumpAndImport", Tables...)
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)

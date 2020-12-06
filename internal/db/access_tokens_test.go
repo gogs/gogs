@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func TestAccessToken_BeforeCreate(t *testing.T) {
 	})
 }
 
-func Test_accessTokens(t *testing.T) {
+func TestAccessTokens(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -47,35 +48,34 @@ func Test_accessTokens(t *testing.T) {
 	t.Parallel()
 
 	tables := []interface{}{new(AccessToken)}
-	db := &accessTokens{
-		DB: initTestDB(t, "accessTokens", tables...),
-	}
+	db, cleanup := newTestDB(t, "accessTokens", tables...)
+	store := NewAccessTokensStore(db)
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *accessTokens)
+		test func(t *testing.T, ctx context.Context, db *accessTokens)
 	}{
-		{"Create", test_accessTokens_Create},
-		{"DeleteByID", test_accessTokens_DeleteByID},
-		{"GetBySHA", test_accessTokens_GetBySHA},
-		{"List", test_accessTokens_List},
-		{"Save", test_accessTokens_Save},
+		{"Create", testAccessTokensCreate},
+		{"DeleteByID", testAccessTokensDeleteByID},
+		{"GetBySHA", testAccessTokensGetBySHA},
+		{"List", testAccessTokensList},
+		{"Save", testAccessTokensSave},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := cleanup()
 				if err != nil {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, db)
+			tc.test(t, context.Background(), store)
 		})
 	}
 }
 
-func test_accessTokens_Create(t *testing.T, db *accessTokens) {
+func testAccessTokensCreate(t *testing.T, ctx context.Context, db *accessTokens) {
 	// Create first access token with name "Test"
-	token, err := db.Create(1, "Test")
+	token, err := db.Create(ctx, 1, "Test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,91 +85,91 @@ func test_accessTokens_Create(t *testing.T, db *accessTokens) {
 	assert.Equal(t, 40, len(token.Sha1), "sha1 length")
 
 	// Get it back and check the Created field
-	token, err = db.GetBySHA(token.Sha1)
+	token, err = db.GetBySHA(ctx, token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), token.Created.UTC().Format(time.RFC3339))
 
 	// Try create second access token with same name should fail
-	_, err = db.Create(token.UserID, token.Name)
+	_, err = db.Create(ctx, token.UserID, token.Name)
 	expErr := ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": token.UserID, "name": token.Name}}
 	assert.Equal(t, expErr, err)
 }
 
-func test_accessTokens_DeleteByID(t *testing.T, db *accessTokens) {
+func testAccessTokensDeleteByID(t *testing.T, ctx context.Context, db *accessTokens) {
 	// Create an access token with name "Test"
-	token, err := db.Create(1, "Test")
+	token, err := db.Create(ctx, 1, "Test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Delete a token with mismatched user ID is noop
-	err = db.DeleteByID(2, token.ID)
+	err = db.DeleteByID(ctx, 2, token.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// We should be able to get it back
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA(ctx, token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA(ctx, token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Now delete this token with correct user ID
-	err = db.DeleteByID(token.UserID, token.ID)
+	err = db.DeleteByID(ctx, token.UserID, token.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// We should get token not found error
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA(ctx, token.Sha1)
 	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": token.Sha1}}
 	assert.Equal(t, expErr, err)
 }
 
-func test_accessTokens_GetBySHA(t *testing.T, db *accessTokens) {
+func testAccessTokensGetBySHA(t *testing.T, ctx context.Context, db *accessTokens) {
 	// Create an access token with name "Test"
-	token, err := db.Create(1, "Test")
+	token, err := db.Create(ctx, 1, "Test")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// We should be able to get it back
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA(ctx, token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Try to get a non-existent token
-	_, err = db.GetBySHA("bad_sha")
+	_, err = db.GetBySHA(ctx, "bad_sha")
 	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
 	assert.Equal(t, expErr, err)
 }
 
-func test_accessTokens_List(t *testing.T, db *accessTokens) {
+func testAccessTokensList(t *testing.T, ctx context.Context, db *accessTokens) {
 	// Create two access tokens for user 1
-	_, err := db.Create(1, "user1_1")
+	_, err := db.Create(ctx, 1, "user1_1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Create(1, "user1_2")
+	_, err = db.Create(ctx, 1, "user1_2")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create one access token for user 2
-	_, err = db.Create(2, "user2_1")
+	_, err = db.Create(ctx, 2, "user2_1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// List all access tokens for user 1
-	tokens, err := db.List(1)
+	tokens, err := db.List(ctx, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,9 +182,9 @@ func test_accessTokens_List(t *testing.T, db *accessTokens) {
 	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
-func test_accessTokens_Save(t *testing.T, db *accessTokens) {
+func testAccessTokensSave(t *testing.T, ctx context.Context, db *accessTokens) {
 	// Create an access token with name "Test"
-	token, err := db.Create(1, "Test")
+	token, err := db.Create(ctx, 1, "Test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,13 +192,13 @@ func test_accessTokens_Save(t *testing.T, db *accessTokens) {
 	// Updated field is zero now
 	assert.True(t, token.Updated.IsZero())
 
-	err = db.Save(token)
+	err = db.Save(ctx, token)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Get back from DB should have Updated set
-	token, err = db.GetBySHA(token.Sha1)
+	token, err = db.GetBySHA(ctx, token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
