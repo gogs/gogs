@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -27,7 +28,7 @@ func Test_repos(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *repos)
+		test func(t *testing.T, ctx context.Context, db *repos)
 	}{
 		{"create", test_repos_create},
 		{"GetByName", test_repos_GetByName},
@@ -39,14 +40,14 @@ func Test_repos(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, db)
+			tc.test(t, context.Background(), db)
 		})
 	}
 }
 
-func test_repos_create(t *testing.T, db *repos) {
+func test_repos_create(t *testing.T, ctx context.Context, db *repos) {
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.create(1, createRepoOpts{
+		_, err := db.create(ctx, 1, createRepoOpts{
 			Name: "my.git",
 		})
 		expErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": "*.git"}}
@@ -54,48 +55,48 @@ func test_repos_create(t *testing.T, db *repos) {
 	})
 
 	t.Run("already exists", func(t *testing.T) {
-		_, err := db.create(1, createRepoOpts{
+		_, err := db.create(ctx, 1, createRepoOpts{
 			Name: "repo1",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		_, err = db.create(1, createRepoOpts{
+		_, err = db.create(ctx, 1, createRepoOpts{
 			Name: "repo1",
 		})
 		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(1), "name": "repo1"}}
 		assert.Equal(t, expErr, err)
 	})
 
-	repo, err := db.create(1, createRepoOpts{
+	repo, err := db.create(ctx, 1, createRepoOpts{
 		Name: "repo2",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	repo, err = db.GetByName(repo.OwnerID, repo.Name)
+	repo, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
 }
 
-func test_repos_GetByName(t *testing.T, db *repos) {
-	repo, err := db.create(1, createRepoOpts{
+func test_repos_GetByName(t *testing.T, ctx context.Context, db *repos) {
+	repo, err := db.create(ctx, 1, createRepoOpts{
 		Name: "repo1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.GetByName(repo.OwnerID, repo.Name)
+	_, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.GetByName(1, "bad_name")
+	_, err = db.GetByName(ctx, 1, "bad_name")
 	expErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
 	assert.Equal(t, expErr, err)
 }

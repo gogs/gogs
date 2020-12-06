@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 
 	"gogs.io/gogs/internal/lfsutil"
@@ -162,11 +163,11 @@ func SetMockPermsStore(t *testing.T, mock PermsStore) {
 var _ ReposStore = (*MockReposStore)(nil)
 
 type MockReposStore struct {
-	MockGetByName func(ownerID int64, name string) (*Repository, error)
+	MockGetByName func(ctx context.Context, ownerID int64, name string) (*Repository, error)
 }
 
-func (m *MockReposStore) GetByName(ownerID int64, name string) (*Repository, error) {
-	return m.MockGetByName(ownerID, name)
+func (m *MockReposStore) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {
+	return m.MockGetByName(ctx, ownerID, name)
 }
 
 func SetMockReposStore(t *testing.T, mock ReposStore) {
@@ -208,31 +209,31 @@ func SetMockTwoFactorsStore(t *testing.T, mock TwoFactorsStore) {
 var _ UsersStore = (*MockUsersStore)(nil)
 
 type MockUsersStore struct {
-	MockAuthenticate  func(username, password string, loginSourceID int64) (*User, error)
-	MockCreate        func(username, email string, opts CreateUserOpts) (*User, error)
-	MockGetByEmail    func(email string) (*User, error)
-	MockGetByID       func(id int64) (*User, error)
-	MockGetByUsername func(username string) (*User, error)
+	MockAuthenticate  func(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
+	MockCreate        func(ctx context.Context, username, email string, opts CreateUserOpts) (*User, error)
+	MockGetByEmail    func(ctx context.Context, email string) (*User, error)
+	MockGetByID       func(ctx context.Context, id int64) (*User, error)
+	MockGetByUsername func(ctx context.Context, username string) (*User, error)
 }
 
-func (m *MockUsersStore) Authenticate(username, password string, loginSourceID int64) (*User, error) {
-	return m.MockAuthenticate(username, password, loginSourceID)
+func (m *MockUsersStore) Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error) {
+	return m.MockAuthenticate(ctx, username, password, loginSourceID)
 }
 
-func (m *MockUsersStore) Create(username, email string, opts CreateUserOpts) (*User, error) {
-	return m.MockCreate(username, email, opts)
+func (m *MockUsersStore) Create(ctx context.Context, username, email string, opts CreateUserOpts) (*User, error) {
+	return m.MockCreate(ctx, username, email, opts)
 }
 
-func (m *MockUsersStore) GetByEmail(email string) (*User, error) {
-	return m.MockGetByEmail(email)
+func (m *MockUsersStore) GetByEmail(ctx context.Context, email string) (*User, error) {
+	return m.MockGetByEmail(ctx, email)
 }
 
-func (m *MockUsersStore) GetByID(id int64) (*User, error) {
-	return m.MockGetByID(id)
+func (m *MockUsersStore) GetByID(ctx context.Context, id int64) (*User, error) {
+	return m.MockGetByID(ctx, id)
 }
 
-func (m *MockUsersStore) GetByUsername(username string) (*User, error) {
-	return m.MockGetByUsername(username)
+func (m *MockUsersStore) GetByUsername(ctx context.Context, username string) (*User, error) {
+	return m.MockGetByUsername(ctx, username)
 }
 
 func SetMockUsersStore(t *testing.T, mock UsersStore) {

@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ func Test_users(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *users)
+		test func(t *testing.T, ctx context.Context, db *users)
 	}{
 		{"Authenticate", test_users_Authenticate},
 		{"Create", test_users_Create},
@@ -43,16 +44,16 @@ func Test_users(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, db)
+			tc.test(t, context.Background(), db)
 		})
 	}
 }
 
 // TODO: Only local account is tested, tests for external account will be added
 //  along with addressing https://github.com/gogs/gogs/issues/6115.
-func test_users_Authenticate(t *testing.T, db *users) {
+func test_users_Authenticate(t *testing.T, ctx context.Context, db *users) {
 	password := "pa$$word"
-	alice, err := db.Create("alice", "alice@example.com", CreateUserOpts{
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOpts{
 		Password: password,
 	})
 	if err != nil {
@@ -60,19 +61,19 @@ func test_users_Authenticate(t *testing.T, db *users) {
 	}
 
 	t.Run("user not found", func(t *testing.T) {
-		_, err := db.Authenticate("bob", password, -1)
+		_, err := db.Authenticate(ctx, "bob", password, -1)
 		expErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": "bob"}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
-		_, err := db.Authenticate(alice.Name, "bad_password", -1)
+		_, err := db.Authenticate(ctx, alice.Name, "bad_password", -1)
 		expErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": alice.Name, "userID": alice.ID}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("via email and password", func(t *testing.T) {
-		user, err := db.Authenticate(alice.Email, password, -1)
+		user, err := db.Authenticate(ctx, alice.Email, password, -1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -80,7 +81,7 @@ func test_users_Authenticate(t *testing.T, db *users) {
 	})
 
 	t.Run("via username and password", func(t *testing.T) {
-		user, err := db.Authenticate(alice.Name, password, -1)
+		user, err := db.Authenticate(ctx, alice.Name, password, -1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -88,8 +89,8 @@ func test_users_Authenticate(t *testing.T, db *users) {
 	})
 }
 
-func test_users_Create(t *testing.T, db *users) {
-	alice, err := db.Create("alice", "alice@example.com", CreateUserOpts{
+func test_users_Create(t *testing.T, ctx context.Context, db *users) {
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOpts{
 		Activated: true,
 	})
 	if err != nil {
@@ -97,24 +98,24 @@ func test_users_Create(t *testing.T, db *users) {
 	}
 
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.Create("-", "", CreateUserOpts{})
+		_, err := db.Create(ctx, "-", "", CreateUserOpts{})
 		expErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": "-"}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
-		_, err := db.Create(alice.Name, "", CreateUserOpts{})
+		_, err := db.Create(ctx, alice.Name, "", CreateUserOpts{})
 		expErr := ErrUserAlreadyExist{args: errutil.Args{"name": alice.Name}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("email already exists", func(t *testing.T) {
-		_, err := db.Create("bob", alice.Email, CreateUserOpts{})
+		_, err := db.Create(ctx, "bob", alice.Email, CreateUserOpts{})
 		expErr := ErrEmailAlreadyUsed{args: errutil.Args{"email": alice.Email}}
 		assert.Equal(t, expErr, err)
 	})
 
-	user, err := db.GetByUsername(alice.Name)
+	user, err := db.GetByUsername(ctx, alice.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,16 +123,16 @@ func test_users_Create(t *testing.T, db *users) {
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Updated.UTC().Format(time.RFC3339))
 }
 
-func test_users_GetByEmail(t *testing.T, db *users) {
+func test_users_GetByEmail(t *testing.T, ctx context.Context, db *users) {
 	t.Run("empty email", func(t *testing.T) {
-		_, err := db.GetByEmail("")
+		_, err := db.GetByEmail(ctx, "")
 		expErr := ErrUserNotExist{args: errutil.Args{"email": ""}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("ignore organization", func(t *testing.T) {
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org, err := db.Create("gogs", "gogs@exmaple.com", CreateUserOpts{})
+		org, err := db.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -141,18 +142,18 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 			t.Fatal(err)
 		}
 
-		_, err = db.GetByEmail(org.Email)
+		_, err = db.GetByEmail(ctx, org.Email)
 		expErr := ErrUserNotExist{args: errutil.Args{"email": org.Email}}
 		assert.Equal(t, expErr, err)
 	})
 
 	t.Run("by primary email", func(t *testing.T) {
-		alice, err := db.Create("alice", "alice@exmaple.com", CreateUserOpts{})
+		alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		_, err = db.GetByEmail(alice.Email)
+		_, err = db.GetByEmail(ctx, alice.Email)
 		expErr := ErrUserNotExist{args: errutil.Args{"email": alice.Email}}
 		assert.Equal(t, expErr, err)
 
@@ -163,7 +164,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 			t.Fatal(err)
 		}
 
-		user, err := db.GetByEmail(alice.Email)
+		user, err := db.GetByEmail(ctx, alice.Email)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -171,7 +172,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 	})
 
 	t.Run("by secondary email", func(t *testing.T) {
-		bob, err := db.Create("bob", "bob@example.com", CreateUserOpts{})
+		bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -183,7 +184,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 			t.Fatal(err)
 		}
 
-		_, err = db.GetByEmail(email2)
+		_, err = db.GetByEmail(ctx, email2)
 		expErr := ErrUserNotExist{args: errutil.Args{"email": email2}}
 		assert.Equal(t, expErr, err)
 
@@ -193,7 +194,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 			t.Fatal(err)
 		}
 
-		user, err := db.GetByEmail(email2)
+		user, err := db.GetByEmail(ctx, email2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -201,36 +202,36 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 	})
 }
 
-func test_users_GetByID(t *testing.T, db *users) {
-	alice, err := db.Create("alice", "alice@exmaple.com", CreateUserOpts{})
+func test_users_GetByID(t *testing.T, ctx context.Context, db *users) {
+	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	user, err := db.GetByID(alice.ID)
+	user, err := db.GetByID(ctx, alice.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, alice.Name, user.Name)
 
-	_, err = db.GetByID(404)
+	_, err = db.GetByID(ctx, 404)
 	expErr := ErrUserNotExist{args: errutil.Args{"userID": int64(404)}}
 	assert.Equal(t, expErr, err)
 }
 
-func test_users_GetByUsername(t *testing.T, db *users) {
-	alice, err := db.Create("alice", "alice@exmaple.com", CreateUserOpts{})
+func test_users_GetByUsername(t *testing.T, ctx context.Context, db *users) {
+	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	user, err := db.GetByUsername(alice.Name)
+	user, err := db.GetByUsername(ctx, alice.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, alice.Name, user.Name)
 
-	_, err = db.GetByUsername("bad_username")
+	_, err = db.GetByUsername(ctx, "bad_username")
 	expErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}
 	assert.Equal(t, expErr, err)
 }

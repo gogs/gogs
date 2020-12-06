@@ -59,7 +59,7 @@ func authenticate() macaron.Handler {
 			return
 		}
 
-		user, err := db.Users.Authenticate(username, password, -1)
+		user, err := db.Users.Authenticate(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(c.Resp)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
@@ -87,7 +87,7 @@ func authenticate() macaron.Handler {
 				log.Error("Failed to update access token: %v", err)
 			}
 
-			user, err = db.Users.GetByID(token.UserID)
+			user, err = db.Users.GetByID(c.Req.Context(), token.UserID)
 			if err != nil {
 				// Once we found the token, we're supposed to find its related user,
 				// thus any error is unexpected.
@@ -109,7 +109,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
-		owner, err := db.Users.GetByUsername(username)
+		owner, err := db.Users.GetByUsername(c.Req.Context(), username)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -120,7 +120,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(owner.ID, reponame)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)

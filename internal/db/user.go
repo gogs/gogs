@@ -6,6 +6,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
@@ -949,7 +950,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 	) {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": userID}}
 	}
-	return Users.GetByID(userID)
+	return Users.GetByID(context.Background(), userID)
 }
 
 // GetUserByName returns a user by given name.

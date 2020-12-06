@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -20,6 +21,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 )
@@ -28,6 +30,12 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
+	// CommitRepo creates actions for pushing commits to the repository. An action
+	// with the type ActionDeleteBranch is created if the push deletes a branch; an
+	// action with the type ActionCommitRepo is created for a regular push. If the
+	// regular push also creates a new branch, then another action with type
+	// ActionCreateBranch is created.
+	CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	// ListByOrganization returns actions of the organization viewable by the actor.
 	// Results are paginated if `afterID` is given.
 	ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error)
@@ -50,6 +58,10 @@ type ActionsStore interface {
 	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
 	// is a fork.
 	NewRepo(ctx context.Context, doer *User, repo *Repository) error
+	// PushTag creates an action for pushing tags to the repository. An action with
+	// the type ActionDeleteTag is created if the push deletes a tag. Otherwise, an
+	// action with the type ActionPushTag is created for a regular push.
+	PushTag(ctx context.Context, opts PushTagOptions) error
 	// RenameRepo creates an action for renaming a repository.
 	RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error
 	// TransferRepo creates an action for transferring a repository to a new owner.
@@ -215,9 +227,9 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 		commits.Commits = commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
-	apiCommits, err := commits.ToApiPayloadCommits(repo.RepoPath(), repo.HTMLURL())
+	apiCommits, err := commits.ToApiPayloadCommits(ctx, repo.RepoPath(), repo.HTMLURL())
 	if err != nil {
-		return fmt.Errorf("ToApiPayloadCommits: %v", err)
+		return errors.Wrap(err, "convert commits to API format")
 	}
 
 	commits.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
@@ -232,7 +244,7 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 		Pusher:     apiPusher,
 		Sender:     apiPusher,
 	}); err != nil {
-		return fmt.Errorf("PrepareWebhooks: %v", err)
+		return errors.Wrap(err, "PrepareWebhooks")
 	}
 
 	data, err := jsoniter.Marshal(commits)
@@ -275,6 +287,371 @@ func (db *actions) TransferRepo(ctx context.Context, doer, oldOwner *User, repo 
 		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 		Content:      path.Join(oldOwner.Name, repo.Name),
 	})
+}
+
+var (
+	// Same as GitHub, see https://docs.github.com/en/free-pro-team@latest/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue
+	issueCloseKeywords  = []string{"close", "closes", "closed", "fix", "fixes", "fixed", "resolve", "resolves", "resolved"}
+	issueReopenKeywords = []string{"reopen", "reopens", "reopened"}
+
+	issueCloseKeywordsPattern  = lazyregexp.New(assembleKeywordsPattern(issueCloseKeywords))
+	issueReopenKeywordsPattern = lazyregexp.New(assembleKeywordsPattern(issueReopenKeywords))
+	issueReferencePattern      = lazyregexp.New(`(?i)(?:)(^| )\S*#\d+`)
+)
+
+func assembleKeywordsPattern(words []string) string {
+	return fmt.Sprintf(`(?i)(?:%s) \S+`, strings.Join(words, "|"))
+}
+
+func issueIndexTrimRight(c rune) bool {
+	return !unicode.IsDigit(c)
+}
+
+// updateCommitReferencesToIssues checks if issues are manipulated by commit message.
+func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*PushCommit) error {
+	// Commits are appended in the reverse order.
+	for i := len(commits) - 1; i >= 0; i-- {
+		c := commits[i]
+
+		refMarked := make(map[int64]bool)
+		for _, ref := range issueReferencePattern.FindAllString(c.Message, -1) {
+			ref = strings.TrimSpace(ref)
+			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
+
+			if len(ref) == 0 {
+				continue
+			}
+
+			// Add repo name if missing
+			if ref[0] == '#' {
+				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
+			} else if !strings.Contains(ref, "/") {
+				// FIXME: We don't support User#ID syntax yet
+				continue
+			}
+
+			issue, err := GetIssueByRef(ref)
+			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
+				return err
+			}
+
+			if refMarked[issue.ID] {
+				continue
+			}
+			refMarked[issue.ID] = true
+
+			msgLines := strings.Split(c.Message, "\n")
+			shortMsg := msgLines[0]
+			if len(msgLines) > 2 {
+				shortMsg += "..."
+			}
+			message := fmt.Sprintf(`<a href="%s/commit/%s">%s</a>`, repo.Link(), c.Sha1, shortMsg)
+			if err = CreateRefComment(doer, repo, issue, message, c.Sha1); err != nil {
+				return err
+			}
+		}
+
+		refMarked = make(map[int64]bool)
+		// FIXME: can merge this one and next one to a common function.
+		for _, ref := range issueCloseKeywordsPattern.FindAllString(c.Message, -1) {
+			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
+
+			if len(ref) == 0 {
+				continue
+			}
+
+			// Add repo name if missing
+			if ref[0] == '#' {
+				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
+			} else if !strings.Contains(ref, "/") {
+				// FIXME: We don't support User#ID syntax yet
+				continue
+			}
+
+			issue, err := GetIssueByRef(ref)
+			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
+				return err
+			}
+
+			if refMarked[issue.ID] {
+				continue
+			}
+			refMarked[issue.ID] = true
+
+			if issue.RepoID != repo.ID || issue.IsClosed {
+				continue
+			}
+
+			if err = issue.ChangeStatus(doer, repo, true); err != nil {
+				return err
+			}
+		}
+
+		// It is conflict to have close and reopen at same time, so refsMarkd doesn't need to reinit here.
+		for _, ref := range issueReopenKeywordsPattern.FindAllString(c.Message, -1) {
+			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
+			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
+
+			if len(ref) == 0 {
+				continue
+			}
+
+			// Add repo name if missing
+			if ref[0] == '#' {
+				ref = fmt.Sprintf("%s%s", repo.FullName(), ref)
+			} else if !strings.Contains(ref, "/") {
+				// We don't support User#ID syntax yet
+				// return ErrNotImplemented
+				continue
+			}
+
+			issue, err := GetIssueByRef(ref)
+			if err != nil {
+				if IsErrIssueNotExist(err) {
+					continue
+				}
+				return err
+			}
+
+			if refMarked[issue.ID] {
+				continue
+			}
+			refMarked[issue.ID] = true
+
+			if issue.RepoID != repo.ID || !issue.IsClosed {
+				continue
+			}
+
+			if err = issue.ChangeStatus(doer, repo, false); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type CommitRepoOptions struct {
+	PusherName  string
+	RepoOwnerID int64
+	RepoName    string
+	RefFullName string
+	OldCommitID string
+	NewCommitID string
+	Commits     *PushCommits
+}
+
+func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
+	pusher, err := Users.GetByUsername(ctx, opts.PusherName)
+	if err != nil {
+		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
+	}
+
+	repo, err := Repos.GetByName(ctx, opts.RepoOwnerID, opts.RepoName)
+	if err != nil {
+		return errors.Wrapf(err, "get repository [owner_id: %d, name: %s]", opts.RepoOwnerID, opts.RepoName)
+	}
+
+	// Change repository bare status and update last updated time.
+	repo.IsBare = false
+	if err = UpdateRepository(repo, false); err != nil {
+		return errors.Wrap(err, "UpdateRepository")
+	}
+
+	isNewRef := opts.OldCommitID == git.EmptyID
+	isDelRef := opts.NewCommitID == git.EmptyID
+
+	// If not the first commit, set the compare URL.
+	if !isNewRef && !isDelRef {
+		opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
+	}
+
+	refName := git.RefShortName(opts.RefFullName)
+	action := &Action{
+		ActUserID:    pusher.ID,
+		ActUserName:  pusher.Name,
+		RepoID:       repo.ID,
+		RepoUserName: repo.Owner.Name,
+		RepoName:     repo.Name,
+		RefName:      refName,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+	}
+
+	apiRepo := repo.APIFormat(nil)
+	apiPusher := pusher.APIFormat()
+	if isDelRef {
+		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
+			Ref:        refName,
+			RefType:    "branch",
+			PusherType: api.PUSHER_TYPE_USER,
+			Repo:       apiRepo,
+			Sender:     apiPusher,
+		})
+		if err != nil {
+			return errors.Wrap(err, "PrepareWebhooks (delete branch)")
+		}
+
+		action.OpType = ActionDeleteBranch
+		err = db.notifyWatchers(ctx, action)
+		if err != nil {
+			return errors.Wrap(err, "notify watchers")
+		}
+
+		// Delete branch doesn't have anything to push or compare
+		return nil
+	}
+
+	// Only update issues via commits when internal issue tracker is enabled
+	if repo.EnableIssues && !repo.EnableExternalTracker {
+		if err = updateCommitReferencesToIssues(pusher, repo, opts.Commits.Commits); err != nil {
+			log.Error("updateCommitReferencesToIssues: %v", err)
+		}
+	}
+
+	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
+	}
+
+	data, err := jsoniter.Marshal(opts.Commits)
+	if err != nil {
+		return errors.Wrap(err, "marshal JSON")
+	}
+	action.Content = string(data)
+
+	var compareURL string
+	if isNewRef {
+		err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+			Ref:           refName,
+			RefType:       "branch",
+			DefaultBranch: repo.DefaultBranch,
+			Repo:          apiRepo,
+			Sender:        apiPusher,
+		})
+		if err != nil {
+			return errors.Wrap(err, "PrepareWebhooks (new branch)")
+		}
+
+		action.OpType = ActionCreateBranch
+		err = db.notifyWatchers(ctx, action)
+		if err != nil {
+			return errors.Wrap(err, "notify watchers")
+		}
+	} else {
+		compareURL = conf.Server.ExternalURL + opts.Commits.CompareURL
+	}
+
+	commits, err := opts.Commits.ToApiPayloadCommits(ctx, repo.RepoPath(), repo.HTMLURL())
+	if err != nil {
+		return errors.Wrap(err, "convert commits to API format")
+	}
+
+	err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
+		Ref:        opts.RefFullName,
+		Before:     opts.OldCommitID,
+		After:      opts.NewCommitID,
+		CompareURL: compareURL,
+		Commits:    commits,
+		Repo:       apiRepo,
+		Pusher:     apiPusher,
+		Sender:     apiPusher,
+	})
+	if err != nil {
+		return errors.Wrap(err, "PrepareWebhooks (new commit)")
+	}
+
+	action.OpType = ActionCommitRepo
+	err = db.notifyWatchers(ctx, action)
+	if err != nil {
+		return errors.Wrap(err, "notify watchers")
+	}
+
+	return nil
+}
+
+type PushTagOptions struct {
+	PusherName  string
+	RepoOwnerID int64
+	RepoName    string
+	RefFullName string
+	NewCommitID string
+}
+
+func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
+	pusher, err := Users.GetByUsername(ctx, opts.PusherName)
+	if err != nil {
+		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
+	}
+
+	repo, err := Repos.GetByName(ctx, opts.RepoOwnerID, opts.RepoName)
+	if err != nil {
+		return errors.Wrapf(err, "get repository [owner_id: %d, name: %s]", opts.RepoOwnerID, opts.RepoName)
+	}
+
+	// Change repository bare status and update last updated time.
+	repo.IsBare = false
+	if err = UpdateRepository(repo, false); err != nil {
+		return errors.Wrap(err, "UpdateRepository")
+	}
+
+	refName := git.RefShortName(opts.RefFullName)
+	action := &Action{
+		ActUserID:    pusher.ID,
+		ActUserName:  pusher.Name,
+		RepoID:       repo.ID,
+		RepoUserName: repo.MustOwner().Name,
+		RepoName:     repo.Name,
+		RefName:      refName,
+		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+	}
+
+	apiRepo := repo.APIFormat(nil)
+	apiPusher := pusher.APIFormat()
+
+	isDelRef := opts.NewCommitID == git.EmptyID
+	if isDelRef {
+		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
+			Ref:        refName,
+			RefType:    "tag",
+			PusherType: api.PUSHER_TYPE_USER,
+			Repo:       apiRepo,
+			Sender:     apiPusher,
+		})
+		if err != nil {
+			return errors.Wrap(err, "PrepareWebhooks (delete tag)")
+		}
+
+		action.OpType = ActionDeleteTag
+		err = db.notifyWatchers(ctx, action)
+		if err != nil {
+			return errors.Wrap(err, "notify watchers")
+		}
+		return nil
+	}
+
+	if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
+		Ref:           refName,
+		RefType:       "tag",
+		Sha:           opts.NewCommitID,
+		DefaultBranch: repo.DefaultBranch,
+		Repo:          apiRepo,
+		Sender:        apiPusher,
+	}); err != nil {
+		return errors.Wrapf(err, "PrepareWebhooks (new tag)")
+	}
+
+	action.OpType = ActionPushTag
+	err = db.notifyWatchers(ctx, action)
+	if err != nil {
+		return errors.Wrap(err, "notify watchers")
+	}
+
+	return nil
 }
 
 // ActionType is the type of an action.
@@ -446,7 +823,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+func (pcs *PushCommits) ToApiPayloadCommits(ctx context.Context, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {
@@ -455,7 +832,7 @@ func (pcs *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pa
 			return username, nil
 		}
 
-		user, err := Users.GetByEmail(email)
+		user, err := Users.GetByEmail(ctx, email)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				usernameByEmail[email] = ""
@@ -472,17 +849,17 @@ func (pcs *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pa
 	for i, commit := range pcs.Commits {
 		authorUsername, err := getUsernameByEmail(commit.AuthorEmail)
 		if err != nil {
-			return nil, fmt.Errorf("get author username: %v", err)
+			return nil, errors.Wrap(err, "get author username")
 		}
 
 		committerUsername, err := getUsernameByEmail(commit.CommitterEmail)
 		if err != nil {
-			return nil, fmt.Errorf("get committer username: %v", err)
+			return nil, errors.Wrap(err, "get committer username")
 		}
 
 		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
 		if err != nil {
-			return nil, fmt.Errorf("show name status [commit_sha1: %s]: %v", commit.Sha1, err)
+			return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
 		}
 
 		commits[i] = &api.PayloadCommit{
@@ -510,10 +887,13 @@ func (pcs *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pa
 
 // AvatarLink tries to match user in database with email in order to show custom
 // avatars, and falls back to general avatar link.
+//
+// FIXME: This method does not belong to PushCommits, should be a pure template
+// 	function.
 func (pcs *PushCommits) AvatarLink(email string) string {
 	_, ok := pcs.avatars[email]
 	if !ok {
-		u, err := Users.GetByEmail(email)
+		u, err := Users.GetByEmail(context.Background(), email)
 		if err != nil {
 			pcs.avatars[email] = tool.AvatarLink(email)
 			if !IsErrUserNotExist(err) {
