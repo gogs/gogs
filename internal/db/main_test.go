@@ -7,8 +7,6 @@ package db
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
-	stdlog "log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,14 +18,12 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
 	flag.Parse()
 
-	var w logger.Writer
 	level := logger.Silent
 	if !testing.Verbose() {
 		// Remove the primary logger and register a noop logger.
@@ -37,18 +33,12 @@ func TestMain(m *testing.M) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		w = &dbutil.Logger{Writer: ioutil.Discard}
 	} else {
-		w = stdlog.New(os.Stdout, "\r\n", stdlog.LstdFlags)
 		level = logger.Info
 	}
 
 	// NOTE: AutoMigrate does not respect logger passed in gorm.Config.
-	logger.Default = logger.New(w, logger.Config{
-		SlowThreshold: 100 * time.Millisecond,
-		LogLevel:      level,
-	})
+	logger.Default = logger.Default.LogMode(level)
 
 	os.Exit(m.Run())
 }
