@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_perms(t *testing.T) {
+func TestPerms(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -20,17 +20,15 @@ func Test_perms(t *testing.T) {
 
 	tables := []interface{}{new(Access)}
 	db, cleanup := newTestDB(t, "perms", tables...)
-	store := &perms{
-		DB: db,
-	}
+	store := NewPermsStore(db)
 
 	for _, tc := range []struct {
 		name string
 		test func(t *testing.T, ctx context.Context, db *perms)
 	}{
-		{"AccessMode", test_perms_AccessMode},
-		{"Authorize", test_perms_Authorize},
-		{"SetRepoPerms", test_perms_SetRepoPerms},
+		{"AccessMode", testPermsAccessMode},
+		{"Authorize", testPermsAuthorize},
+		{"SetRepoPerms", testPermsSetRepoPerms},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -39,22 +37,28 @@ func Test_perms(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			tc.test(t, context.Background(), store)
+			tc.test(t, context.Background(), store.(*perms))
 		})
 	}
 }
-func test_perms_AccessMode(t *testing.T, ctx context.Context, db *perms) {
+func testPermsAccessMode(t *testing.T, ctx context.Context, db *perms) {
 	// Set up permissions
-	err := db.SetRepoPerms(1, map[int64]AccessMode{
-		2: AccessModeWrite,
-		3: AccessModeAdmin,
-	})
+	err := db.SetRepoPerms(ctx,
+		1,
+		map[int64]AccessMode{
+			2: AccessModeWrite,
+			3: AccessModeAdmin,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = db.SetRepoPerms(2, map[int64]AccessMode{
-		1: AccessModeRead,
-	})
+	err = db.SetRepoPerms(ctx,
+		2,
+		map[int64]AccessMode{
+			1: AccessModeRead,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,96 +75,99 @@ func test_perms_AccessMode(t *testing.T, ctx context.Context, db *perms) {
 	}
 
 	tests := []struct {
-		name          string
-		userID        int64
-		repoID        int64
-		opts          AccessModeOptions
-		expAccessMode AccessMode
+		name   string
+		userID int64
+		repoID int64
+		opts   AccessModeOptions
+		want   AccessMode
 	}{
 		{
-			name:          "nil repository",
-			expAccessMode: AccessModeNone,
+			name: "nil repository",
+			want: AccessModeNone,
 		},
 
 		{
-			name:          "anonymous user has read access to public repository",
-			repoID:        publicRepoID,
-			opts:          publicRepoOpts,
-			expAccessMode: AccessModeRead,
+			name:   "anonymous user has read access to public repository",
+			repoID: publicRepoID,
+			opts:   publicRepoOpts,
+			want:   AccessModeRead,
 		},
 		{
-			name:          "anonymous user has no access to private repository",
-			repoID:        privateRepoID,
-			opts:          privateRepoOpts,
-			expAccessMode: AccessModeNone,
-		},
-
-		{
-			name:          "user is the owner",
-			userID:        98,
-			repoID:        publicRepoID,
-			opts:          publicRepoOpts,
-			expAccessMode: AccessModeOwner,
-		},
-		{
-			name:          "user 1 has read access to public repo",
-			userID:        1,
-			repoID:        publicRepoID,
-			opts:          publicRepoOpts,
-			expAccessMode: AccessModeRead,
-		},
-		{
-			name:          "user 2 has write access to public repo",
-			userID:        2,
-			repoID:        publicRepoID,
-			opts:          publicRepoOpts,
-			expAccessMode: AccessModeWrite,
-		},
-		{
-			name:          "user 3 has admin access to public repo",
-			userID:        3,
-			repoID:        publicRepoID,
-			opts:          publicRepoOpts,
-			expAccessMode: AccessModeAdmin,
+			name:   "anonymous user has no access to private repository",
+			repoID: privateRepoID,
+			opts:   privateRepoOpts,
+			want:   AccessModeNone,
 		},
 
 		{
-			name:          "user 1 has read access to private repo",
-			userID:        1,
-			repoID:        privateRepoID,
-			opts:          privateRepoOpts,
-			expAccessMode: AccessModeRead,
+			name:   "user is the owner",
+			userID: 98,
+			repoID: publicRepoID,
+			opts:   publicRepoOpts,
+			want:   AccessModeOwner,
 		},
 		{
-			name:          "user 2 has no access to private repo",
-			userID:        2,
-			repoID:        privateRepoID,
-			opts:          privateRepoOpts,
-			expAccessMode: AccessModeNone,
+			name:   "user 1 has read access to public repo",
+			userID: 1,
+			repoID: publicRepoID,
+			opts:   publicRepoOpts,
+			want:   AccessModeRead,
 		},
 		{
-			name:          "user 3 has no access to private repo",
-			userID:        3,
-			repoID:        privateRepoID,
-			opts:          privateRepoOpts,
-			expAccessMode: AccessModeNone,
+			name:   "user 2 has write access to public repo",
+			userID: 2,
+			repoID: publicRepoID,
+			opts:   publicRepoOpts,
+			want:   AccessModeWrite,
+		},
+		{
+			name:   "user 3 has admin access to public repo",
+			userID: 3,
+			repoID: publicRepoID,
+			opts:   publicRepoOpts,
+			want:   AccessModeAdmin,
+		},
+
+		{
+			name:   "user 1 has read access to private repo",
+			userID: 1,
+			repoID: privateRepoID,
+			opts:   privateRepoOpts,
+			want:   AccessModeRead,
+		},
+		{
+			name:   "user 2 has no access to private repo",
+			userID: 2,
+			repoID: privateRepoID,
+			opts:   privateRepoOpts,
+			want:   AccessModeNone,
+		},
+		{
+			name:   "user 3 has no access to private repo",
+			userID: 3,
+			repoID: privateRepoID,
+			opts:   privateRepoOpts,
+			want:   AccessModeNone,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mode := db.AccessMode(test.userID, test.repoID, test.opts)
-			assert.Equal(t, test.expAccessMode, mode)
+			mode := db.AccessMode(ctx, test.userID, test.repoID, test.opts)
+			assert.Equal(t, test.want, mode)
 		})
 	}
 }
 
-func test_perms_Authorize(t *testing.T, ctx context.Context, db *perms) {
+func testPermsAuthorize(t *testing.T, ctx context.Context, db *perms) {
 	// Set up permissions
-	err := db.SetRepoPerms(1, map[int64]AccessMode{
-		1: AccessModeRead,
-		2: AccessModeWrite,
-		3: AccessModeAdmin,
-	})
+	err := db.SetRepoPerms(ctx,
+		1,
+		map[int64]AccessMode{
+			1: AccessModeRead,
+			2: AccessModeWrite,
+			3: AccessModeAdmin,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,74 +178,79 @@ func test_perms_Authorize(t *testing.T, ctx context.Context, db *perms) {
 	}
 
 	tests := []struct {
-		name          string
-		userID        int64
-		desired       AccessMode
-		expAuthorized bool
+		name    string
+		userID  int64
+		desired AccessMode
+		want    bool
 	}{
 		{
-			name:          "user 1 has read and wants read",
-			userID:        1,
-			desired:       AccessModeRead,
-			expAuthorized: true,
+			name:    "user 1 has read and wants read",
+			userID:  1,
+			desired: AccessModeRead,
+			want:    true,
 		},
 		{
-			name:          "user 1 has read and wants write",
-			userID:        1,
-			desired:       AccessModeWrite,
-			expAuthorized: false,
-		},
-
-		{
-			name:          "user 2 has write and wants read",
-			userID:        2,
-			desired:       AccessModeRead,
-			expAuthorized: true,
-		},
-		{
-			name:          "user 2 has write and wants write",
-			userID:        2,
-			desired:       AccessModeWrite,
-			expAuthorized: true,
-		},
-		{
-			name:          "user 2 has write and wants admin",
-			userID:        2,
-			desired:       AccessModeAdmin,
-			expAuthorized: false,
+			name:    "user 1 has read and wants write",
+			userID:  1,
+			desired: AccessModeWrite,
+			want:    false,
 		},
 
 		{
-			name:          "user 3 has admin and wants read",
-			userID:        3,
-			desired:       AccessModeRead,
-			expAuthorized: true,
+			name:    "user 2 has write and wants read",
+			userID:  2,
+			desired: AccessModeRead,
+			want:    true,
 		},
 		{
-			name:          "user 3 has admin and wants write",
-			userID:        3,
-			desired:       AccessModeWrite,
-			expAuthorized: true,
+			name:    "user 2 has write and wants write",
+			userID:  2,
+			desired: AccessModeWrite,
+			want:    true,
 		},
 		{
-			name:          "user 3 has admin and wants admin",
-			userID:        3,
-			desired:       AccessModeAdmin,
-			expAuthorized: true,
+			name:    "user 2 has write and wants admin",
+			userID:  2,
+			desired: AccessModeAdmin,
+			want:    false,
+		},
+
+		{
+			name:    "user 3 has admin and wants read",
+			userID:  3,
+			desired: AccessModeRead,
+			want:    true,
+		},
+		{
+			name:    "user 3 has admin and wants write",
+			userID:  3,
+			desired: AccessModeWrite,
+			want:    true,
+		},
+		{
+			name:    "user 3 has admin and wants admin",
+			userID:  3,
+			desired: AccessModeAdmin,
+			want:    true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			authorized := db.Authorize(test.userID, repo.ID, test.desired, AccessModeOptions{
-				OwnerID: repo.OwnerID,
-				Private: repo.IsPrivate,
-			})
-			assert.Equal(t, test.expAuthorized, authorized)
+			authorized := db.Authorize(ctx,
+				test.userID,
+				repo.ID,
+				test.desired,
+				AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			)
+			assert.Equal(t, test.want, authorized)
 		})
 	}
 }
 
-func test_perms_SetRepoPerms(t *testing.T, ctx context.Context, db *perms) {
+func testPermsSetRepoPerms(t *testing.T, ctx context.Context, db *perms) {
 	for _, update := range []struct {
 		repoID    int64
 		accessMap map[int64]AccessMode
@@ -277,7 +289,7 @@ func test_perms_SetRepoPerms(t *testing.T, ctx context.Context, db *perms) {
 			},
 		},
 	} {
-		err := db.SetRepoPerms(update.repoID, update.accessMap)
+		err := db.SetRepoPerms(ctx, update.repoID, update.accessMap)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -294,12 +306,12 @@ func test_perms_SetRepoPerms(t *testing.T, ctx context.Context, db *perms) {
 		a.ID = 0
 	}
 
-	expAccesses := []*Access{
+	want := []*Access{
 		{UserID: 1, RepoID: 2, Mode: AccessModeWrite},
 		{UserID: 2, RepoID: 1, Mode: AccessModeWrite},
 		{UserID: 2, RepoID: 2, Mode: AccessModeRead},
 		{UserID: 3, RepoID: 1, Mode: AccessModeAdmin},
 		{UserID: 5, RepoID: 2, Mode: AccessModeWrite},
 	}
-	assert.Equal(t, expAccesses, accesses)
+	assert.Equal(t, want, accesses)
 }

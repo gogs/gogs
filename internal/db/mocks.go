@@ -135,21 +135,21 @@ func (m *mockLoginSourceFileStore) Save() error {
 var _ PermsStore = (*MockPermsStore)(nil)
 
 type MockPermsStore struct {
-	MockAccessMode   func(userID, repoID int64, opts AccessModeOptions) AccessMode
-	MockAuthorize    func(userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool
-	MockSetRepoPerms func(repoID int64, accessMap map[int64]AccessMode) error
+	MockAccessMode   func(ctx context.Context, userID, repoID int64, opts AccessModeOptions) AccessMode
+	MockAuthorize    func(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool
+	MockSetRepoPerms func(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error
 }
 
-func (m *MockPermsStore) AccessMode(userID, repoID int64, opts AccessModeOptions) AccessMode {
-	return m.MockAccessMode(userID, repoID, opts)
+func (m *MockPermsStore) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) AccessMode {
+	return m.MockAccessMode(ctx, userID, repoID, opts)
 }
 
-func (m *MockPermsStore) Authorize(userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
-	return m.MockAuthorize(userID, repoID, desired, opts)
+func (m *MockPermsStore) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
+	return m.MockAuthorize(ctx, userID, repoID, desired, opts)
 }
 
-func (m *MockPermsStore) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error {
-	return m.MockSetRepoPerms(repoID, accessMap)
+func (m *MockPermsStore) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
+	return m.MockSetRepoPerms(ctx, repoID, accessMap)
 }
 
 func SetMockPermsStore(t *testing.T, mock PermsStore) {

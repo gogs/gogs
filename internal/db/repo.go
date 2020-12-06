@@ -6,6 +6,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -555,7 +556,10 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 }
 
 func (repo *Repository) HasAccess(userID int64) bool {
-	return Perms.Authorize(userID, repo.ID, AccessModeRead,
+	return Perms.Authorize(context.Background(),
+		userID,
+		repo.ID,
+		AccessModeRead,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,

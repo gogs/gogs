@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -753,7 +754,10 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		if !Perms.Authorize(doer.ID, repo.ID, AccessModeAdmin,
+		if !Perms.Authorize(context.Background(),
+			doer.ID,
+			repo.ID,
+			AccessModeAdmin,
 			AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,

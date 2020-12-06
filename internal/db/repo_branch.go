@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -162,6 +163,8 @@ func UpdateProtectBranch(protectBranch *ProtectBranch) (err error) {
 // This function also performs check if whitelist user and team's IDs have been changed
 // to avoid unnecessary whitelist delete and regenerate.
 func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whitelistUserIDs, whitelistTeamIDs string) (err error) {
+	ctx := context.Background()
+
 	if err = repo.GetOwner(); err != nil {
 		return fmt.Errorf("GetOwner: %v", err)
 	} else if !repo.Owner.IsOrganization() {
@@ -175,7 +178,10 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
 		validUserIDs = make([]int64, 0, len(userIDs))
 		for _, userID := range userIDs {
-			if !Perms.Authorize(userID, repo.ID, AccessModeWrite,
+			if !Perms.Authorize(ctx,
+				userID,
+				repo.ID,
+				AccessModeWrite,
 				AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

@@ -370,7 +370,10 @@ func (u *User) DeleteAvatar() error {
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
 func (u *User) IsAdminOfRepo(repo *Repository) bool {
-	return Perms.Authorize(u.ID, repo.ID, AccessModeAdmin,
+	return Perms.Authorize(context.Background(),
+		u.ID,
+		repo.ID,
+		AccessModeAdmin,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,
@@ -380,7 +383,10 @@ func (u *User) IsAdminOfRepo(repo *Repository) bool {
 
 // IsWriterOfRepo returns true if user has write access to given repository.
 func (u *User) IsWriterOfRepo(repo *Repository) bool {
-	return Perms.Authorize(u.ID, repo.ID, AccessModeWrite,
+	return Perms.Authorize(context.Background(),
+		u.ID,
+		repo.ID,
+		AccessModeWrite,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,
@@ -942,7 +948,10 @@ func GetUserByID(id int64) (*User, error) {
 
 // GetAssigneeByID returns the user with read access of repository by given ID.
 func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
-	if !Perms.Authorize(userID, repo.ID, AccessModeRead,
+	if !Perms.Authorize(context.Background(),
+		userID,
+		repo.ID,
+		AccessModeRead,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,
