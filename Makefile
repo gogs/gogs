@@ -13,7 +13,7 @@ RELEASE_ROOT = "release"
 RELEASE_GOGS = "release/gogs"
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
-.PHONY: check dist build build-no-gen pack release generate less clean test fixme todo legacy
+.PHONY: check dist build build-no-gen pack release less clean test fixme todo legacy
 
 .IGNORE: public/css/gogs.css
 
@@ -36,11 +36,6 @@ pack:
 	cd $(RELEASE_ROOT) && zip -r gogs.$(NOW).zip "gogs"
 
 release: build pack
-
-generate: clean
-	go generate internal/assets/conf/conf.go
-	go generate internal/assets/templates/templates.go
-	go generate internal/assets/public/public.go
 
 less: clean public/css/gogs.min.css
 

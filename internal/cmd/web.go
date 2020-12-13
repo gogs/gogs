@@ -30,8 +30,6 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/app"
-	"gogs.io/gogs/internal/assets/public"
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -46,6 +44,8 @@ import (
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/public"
+	"gogs.io/gogs/templates"
 )
 
 var Web = cli.Command{
