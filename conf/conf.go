@@ -28,7 +28,7 @@ type embedFS struct {
 }
 
 func newEmbedFS(prefix string, resouce embed.FS) embedFS {
-	prefix = strings.TrimPrefix(prefix, "/")
+	prefix = strings.TrimSuffix(prefix, "/")
 	return embedFS{
 		FS:          &resouce,
 		prefix:      prefix,
