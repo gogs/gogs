@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-macaron/binding"
 	"github.com/go-macaron/cache"
@@ -74,11 +75,20 @@ func newMacaron() *macaron.Macaron {
 		m.SetURLPrefix(conf.Server.Subpath)
 	}
 
+	var expires func() string = nil
+	if conf.Assert.ExpireSeconds > 0 {
+		expires = func() string {
+			t := time.Now().Add(conf.Assert.ExpireSeconds * time.Second).In(time.UTC).Format(http.TimeFormat)
+			return t
+		}
+	}
+
 	// Register custom middleware first to make it possible to override files under "public".
 	m.Use(macaron.Static(
 		filepath.Join(conf.CustomDir(), "public"),
 		macaron.StaticOptions{
 			SkipLogging: conf.Server.DisableRouterLog,
+			Expires:     expires,
 		},
 	))
 	var publicFs http.FileSystem
@@ -90,6 +100,7 @@ func newMacaron() *macaron.Macaron {
 		macaron.StaticOptions{
 			SkipLogging: conf.Server.DisableRouterLog,
 			FileSystem:  publicFs,
+			Expires:     expires,
 		},
 	))
 
@@ -98,6 +109,7 @@ func newMacaron() *macaron.Macaron {
 		macaron.StaticOptions{
 			Prefix:      db.USER_AVATAR_URL_PREFIX,
 			SkipLogging: conf.Server.DisableRouterLog,
+			Expires:     expires,
 		},
 	))
 	m.Use(macaron.Static(
@@ -105,6 +117,7 @@ func newMacaron() *macaron.Macaron {
 		macaron.StaticOptions{
 			Prefix:      db.REPO_AVATAR_URL_PREFIX,
 			SkipLogging: conf.Server.DisableRouterLog,
+			Expires:     expires,
 		},
 	))
 
