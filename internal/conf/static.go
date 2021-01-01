@@ -169,6 +169,10 @@ var (
 		AccessControlAllowOrigin string
 	}
 
+	Assert struct {
+		ExpireSeconds time.Duration `ini:"ASSERT_EXPIRE_SECONDS"`
+	}
+
 	// Attachment settings
 	Attachment struct {
 		Enabled      bool
