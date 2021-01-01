@@ -169,6 +169,7 @@ var (
 		AccessControlAllowOrigin string
 	}
 
+	// Assert settings
 	Assert struct {
 		ExpireSeconds time.Duration `ini:"ASSERT_EXPIRE_SECONDS"`
 	}
