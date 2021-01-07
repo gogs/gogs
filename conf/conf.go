@@ -6,62 +6,23 @@ package conf
 
 import (
 	"embed"
-	"io/fs"
-	"strings"
+
+	"github.com/alimy/embedx"
 )
 
-var (
-	//go:embed auth.d gitignore label license locale readme app.ini
-	resouce embed.FS
-
-	emFS embedFS
-)
+var embedFS embedx.EmbedFS
 
 func init() {
-	emFS = newEmbedFS("conf", resouce)
-}
+	//go:embed auth.d gitignore label license locale readme app.ini
+	var content embed.FS
 
-type embedFS struct {
-	*embed.FS
-	prefix      string
-	prefixSlash string
-}
-
-func newEmbedFS(prefix string, resouce embed.FS) embedFS {
-	prefix = strings.TrimSuffix(prefix, "/")
-	return embedFS{
-		FS:          &resouce,
-		prefix:      prefix,
-		prefixSlash: prefix + "/",
-	}
-}
-
-// Open opens the named file for reading and returns it as an fs.File.
-func (f embedFS) Open(name string) (fs.File, error) {
-	return f.FS.Open(f.trimPrefix(name))
-}
-
-// ReadDir reads and returns the entire named directory.
-func (f embedFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	return f.FS.ReadDir(f.trimPrefix(name))
-}
-
-// ReadFile reads and returns the content of the named file.
-func (f embedFS) ReadFile(name string) ([]byte, error) {
-	return f.FS.ReadFile(f.trimPrefix(name))
-}
-
-func (f embedFS) trimPrefix(name string) string {
-	if name == f.prefix {
-		return "."
-	}
-	return strings.TrimPrefix(name, f.prefixSlash)
+	embedFS = embedx.NewFileSystem(&content, embedx.AttachRoot("conf"))
 }
 
 // MustAsset is like Asset but panics when Asset would return an error.
 // It simplifies safe initialization of global variables.
 func MustAsset(name string) []byte {
-	data, err := emFS.ReadFile(name)
+	data, err := embedFS.ReadFile(name)
 	if err != nil {
 		panic("asset: Asset(" + name + "): " + err.Error())
 	}
@@ -70,12 +31,12 @@ func MustAsset(name string) []byte {
 
 // Asset loads and returns the asset for the given name.
 func Asset(name string) ([]byte, error) {
-	return emFS.ReadFile(name)
+	return embedFS.ReadFile(name)
 }
 
 // AssetDir returns the file names below a certain directory.
 func AssetDir(name string) ([]string, error) {
-	entries, err := emFS.ReadDir(name)
+	entries, err := embedFS.ReadDir(name)
 	if err != nil {
 		return nil, err
 	}

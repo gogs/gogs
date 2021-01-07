@@ -10,9 +10,9 @@ import (
 )
 
 //go:embed assets css img js less plugins
-var fs embed.FS
+var embedFS embed.FS
 
 // NewFileSystem returns an http.FileSystem instance backed by embedded assets.
 func NewFileSystem() http.FileSystem {
-	return http.FS(fs)
+	return http.FS(embedFS)
 }

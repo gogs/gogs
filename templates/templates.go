@@ -19,12 +19,12 @@ import (
 )
 
 //go:embed admin base explore inject mail org repo status user home.tmpl install.tmpl
-var resouce embed.FS
+var embedFS embed.FS
 
 // MustAsset is like Asset but panics when Asset would return an error.
 // It simplifies safe initialization of global variables.
 func MustAsset(name string) []byte {
-	data, err := resouce.ReadFile(name)
+	data, err := embedFS.ReadFile(name)
 	if err != nil {
 		panic("asset: Asset(" + name + "): " + err.Error())
 	}
@@ -52,7 +52,7 @@ func (fs *fileSystem) Get(name string) (io.Reader, error) {
 // assetNames returns the names of the assets.
 func assetNames() []string {
 	var names []string
-	fs.WalkDir(resouce, ".", func(path string, d fs.DirEntry, err error) error {
+	fs.WalkDir(embedFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			names = append(names, path)
 		}
@@ -83,7 +83,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		if osutil.IsFile(fpath) {
 			data, err = ioutil.ReadFile(fpath)
 		} else {
-			data, err = resouce.ReadFile(name)
+			data, err = embedFS.ReadFile(name)
 		}
 		if err != nil {
 			panic(err)
@@ -96,4 +96,3 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 	}
 	return &fileSystem{files: files}
 }
-
