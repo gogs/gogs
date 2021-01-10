@@ -16,7 +16,7 @@ func init() {
 	//go:embed auth.d gitignore label license locale readme app.ini
 	var content embed.FS
 
-	embedFS = embedx.NewFileSystem(&content, embedx.AttachRoot("conf"))
+	embedFS = embedx.AttachRoot(content, "conf")
 }
 
 // MustAsset is like Asset but panics when Asset would return an error.
