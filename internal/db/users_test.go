@@ -5,6 +5,7 @@
 package db
 
 import (
+	"gogs.io/gogs/internal/strutil"
 	"testing"
 	"time"
 
@@ -120,6 +121,17 @@ func test_users_Create(t *testing.T, db *users) {
 	}
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Created.UTC().Format(time.RFC3339))
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), user.Updated.UTC().Format(time.RFC3339))
+
+	t.Run("password length too long", func(t *testing.T) {
+		pwd, _ := strutil.RandomChars(MAX_PASSWD_LENGTH + 10)
+		u, err := db.Create("tony", "tony@ut", CreateUserOpts{
+			Password: pwd,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.True(t, u.ValidatePassword(pwd[:MAX_PASSWD_LENGTH]))
+	})
 }
 
 func test_users_GetByEmail(t *testing.T, db *users) {

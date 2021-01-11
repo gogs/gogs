@@ -39,6 +39,8 @@ import (
 // USER_AVATAR_URL_PREFIX is used to identify a URL is to access user avatar.
 const USER_AVATAR_URL_PREFIX = "avatars"
 
+const MAX_PASSWD_LENGTH = 256
+
 type UserType int
 
 const (

@@ -6,6 +6,7 @@ package db
 
 import (
 	"fmt"
+	"gogs.io/gogs/internal/tool"
 	"strings"
 	"time"
 
@@ -227,11 +228,12 @@ func (db *users) Create(username, email string, opts CreateUserOpts) (*User, err
 	}
 
 	user := &User{
-		LowerName:       strings.ToLower(username),
-		Name:            username,
-		FullName:        opts.FullName,
-		Email:           email,
-		Passwd:          opts.Password,
+		LowerName: strings.ToLower(username),
+		Name:      username,
+		FullName:  opts.FullName,
+		Email:     email,
+		// Trunc password length to max value if it is too long
+		Passwd:          tool.TruncateString(opts.Password, MAX_PASSWD_LENGTH),
 		LoginSource:     opts.LoginSource,
 		LoginName:       opts.LoginName,
 		Location:        opts.Location,
