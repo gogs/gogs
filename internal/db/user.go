@@ -1066,18 +1066,25 @@ func GetUserByEmail(email string) (*User, error) {
 type SearchUserOptions struct {
 	Keyword  string
 	Type     UserType
+	Field    string // This needs to be allow-listed to prevent abuse
 	OrderBy  string
 	Page     int
 	PageSize int // Can be smaller than or equal to setting.UI.ExplorePagingNum
 }
 
-// SearchUserByName takes keyword and part of user name to search,
-// it returns results in given range and number of total results.
-func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error) {
+// SearchUser takes keyword and part of a field to search
+// The field value must be explicitly whitelisted, and currently includes Email or Name
+// It returns results in given range and number of total results.
+func SearchUser(opts *SearchUserOptions) (users []*User, _ int64, _ error) {
 	if len(opts.Keyword) == 0 {
 		return users, 0, nil
 	}
 	opts.Keyword = strings.ToLower(opts.Keyword)
+
+	if opts.Field == "" {
+		opts.Field = "name"
+	}
+	opts.Field = strings.ToLower(opts.Field)
 
 	if opts.PageSize <= 0 || opts.PageSize > conf.UI.ExplorePagingNum {
 		opts.PageSize = conf.UI.ExplorePagingNum
@@ -1088,11 +1095,20 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 
 	searchQuery := "%" + opts.Keyword + "%"
 	users = make([]*User, 0, opts.PageSize)
-	// Append conditions
-	sess := x.Where("LOWER(lower_name) LIKE ?", searchQuery).
-		Or("LOWER(full_name) LIKE ?", searchQuery).
-		And("type = ?", opts.Type)
 
+	var sess *xorm.Session
+	// Append conditions
+	switch opts.Field {
+	case "name":
+		sess = x.Where("LOWER(lower_name) LIKE ?", searchQuery).
+			Or("LOWER(full_name) LIKE ?", searchQuery).
+			And("type = ?", opts.Type)
+	case "email":
+		sess = x.Where("LOWER(email) LIKE ?", searchQuery).
+			And("type = ?", opts.Type)
+	default:
+		return nil, 0, fmt.Errorf("Invalid field specified: %v", opts.Field)
+	}
 	countSess := *sess
 	count, err := countSess.Count(new(User))
 	if err != nil {
@@ -1103,6 +1119,13 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 		sess.OrderBy(opts.OrderBy)
 	}
 	return users, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&users)
+}
+
+// SearchUserByName takes keyword and part of user name to search,
+// it returns results in given range and number of total results.
+// Deprecated: This function is replaced by the generic SearchUser function
+func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error) {
+	return SearchUser(opts)
 }
 
 // ___________    .__  .__
