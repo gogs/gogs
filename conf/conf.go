@@ -10,12 +10,14 @@ import (
 	"github.com/alimy/embedx"
 )
 
-var embedFS embedx.EmbedFS
+var (
+	//go:embed auth.d gitignore label license locale readme app.ini
+	content embed.FS
+
+	embedFS embedx.EmbedFS
+)
 
 func init() {
-	//go:embed auth.d gitignore label license locale readme app.ini
-	var content embed.FS
-
 	embedFS = embedx.AttachRoot(content, "conf")
 }
 
