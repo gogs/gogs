@@ -6,6 +6,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
+- Support comparing tags in addition to branches. [#6141](https://github.com/gogs/gogs/issues/6141)
 - Show file name in browser tab title when viewing files. [#5896](https://github.com/gogs/gogs/pull/5896)
 - Support using TLS for Redis session provider using `[session] PROVIDER_CONFIG = ...,tls=true`. [#7860](https://github.com/gogs/gogs/pull/7860)
 - Support expanading values in `app.ini` from environment variables, e.g. `[database] PASSWORD = ${DATABASE_PASSWORD}`. [#8057](https://github.com/gogs/gogs/pull/8057)
