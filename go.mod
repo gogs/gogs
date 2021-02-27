@@ -58,11 +58,11 @@ require (
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/macaron.v1 v1.4.0
-	gorm.io/driver/mysql v1.0.3
+	gorm.io/driver/mysql v1.0.4
 	gorm.io/driver/postgres v1.0.5
 	gorm.io/driver/sqlite v1.1.4
 	gorm.io/driver/sqlserver v1.0.5
-	gorm.io/gorm v1.20.8
+	gorm.io/gorm v1.20.12
 	unknwon.dev/clog/v2 v2.1.2
 	xorm.io/builder v0.3.6
 	xorm.io/core v0.7.2
