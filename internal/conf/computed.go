@@ -7,6 +7,7 @@ package conf
 import (
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -34,9 +35,17 @@ var (
 func AppPath() string {
 	appPathOnce.Do(func() {
 		var err error
-		appPath, err = exec.LookPath(os.Args[0])
-		if err != nil {
-			panic("look executable path: " + err.Error())
+		lookPath := true
+		if os.PathSeparator == '\\' {
+			appPath = strings.ReplaceAll(os.Args[0], "\\", "/")
+			file := path.Base(appPath)
+			lookPath = file != "__debug_bin"
+		}
+		if lookPath {
+			appPath, err = exec.LookPath(os.Args[0])
+			if err != nil {
+				panic("look executable path: " + err.Error())
+			}
 		}
 
 		appPath, err = filepath.Abs(appPath)
