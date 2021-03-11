@@ -2,7 +2,7 @@
 
 create_socat_links() {
     # Bind linked docker container to localhost socket using socat
-    USED_PORT="3000:22"
+    USED_PORT="5000:22"
     while read -r NAME ADDR PORT; do
         if test -z "$NAME$ADDR$PORT"; then
             continue

@@ -2,7 +2,7 @@
 
 DIR=/home/git/gogs
 USER=git
-PORT=3000
+PORT=5000
 
 start_stop_daemon_args="--user ${USER} --chdir ${DIR}"
 command="${DIR}/gogs"

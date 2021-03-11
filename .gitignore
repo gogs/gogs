@@ -16,3 +16,8 @@ output*
 *.sublime-project
 *.sublime-workspace
 /release
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
