@@ -8,4 +8,5 @@ go get
 mkdir -p /var/app/current/bin/custom/conf
 # create the application binary that eb uses
 GOOS=linux GOARCH=amd64 go build -o bin/application application.go
-cp custom/conf/app.ini /var/app/current/bin/custom/conf/app.ini
+ls
+sudo cp custom/conf/app.ini /var/app/current/bin/custom/conf/app.ini
