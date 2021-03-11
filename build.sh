@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Stops the process if something fails
 set -xe
+sudo rm /var/app/current/go.*
 echo $GOPATH
 ls $GOPATH
 go get
