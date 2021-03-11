@@ -1,1 +1,1 @@
-web: bin/application web
+web: bin/application web -p ${PORT:=5000}
