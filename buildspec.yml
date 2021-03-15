@@ -1,0 +1,7 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+       - go get && go build -o bin/application 
+       - zip -r artifact.zip .
