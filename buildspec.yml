@@ -5,3 +5,6 @@ phases:
     commands:
        - go get && go build -o bin/application 
        - zip -r artifact.zip .
+artifacts:
+  files:
+    - artifact.zip
