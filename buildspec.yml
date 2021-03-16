@@ -4,7 +4,10 @@ phases:
   build:
     commands:
        - go get && go build -o bin/application 
-       - zip -r artifact.zip Buildfile Procfile build.sh bin/
+#        - zip -r artifact.zip Buildfile Procfile build.sh bin/
 artifacts:
   files:
-    - artifact.zip
+    - Buildfile
+    - Procfile
+    - build.sh
+    - bin/
