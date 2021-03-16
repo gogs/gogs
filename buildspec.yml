@@ -7,7 +7,6 @@ phases:
 #        - zip -r artifact.zip Buildfile Procfile build.sh bin/
 artifacts:
   files:
-#    - Buildfile
     - Procfile
-#    - build.sh
-    - bin/*
+    - bin/application
+    - bin/custom/conf/app.ini
