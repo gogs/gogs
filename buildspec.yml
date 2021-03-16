@@ -10,4 +10,4 @@ artifacts:
     - Buildfile
     - Procfile
     - build.sh
-    - bin/
+    - bin/*
