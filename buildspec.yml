@@ -1,11 +1,9 @@
 version: 0.2
 
 phases:
-  test:
-    commands:
-      - for d in ./internal/*/ ; do (cd "$d" && go test); done
   build:
     commands:
+       - for d in ./internal/*/ ; do (cd "$d" && go test); done
        - go get && go build -o bin/application 
 #        - zip -r artifact.zip Buildfile Procfile build.sh bin/
 artifacts:
