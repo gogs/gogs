@@ -1,6 +1,9 @@
 version: 0.2
 
 phases:
+  test:
+    commands:
+      - for d in ./internal/*/ ; do (cd "$d" && go test); done
   build:
     commands:
        - go get && go build -o bin/application 
