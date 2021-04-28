@@ -1,0 +1,37 @@
+version: 2
+updates:
+- package-ecosystem: gomod
+  directory: "/"
+  schedule:
+    interval: weekly
+    day: saturday
+    time: "00:00"
+    timezone: Asia/Shanghai
+  open-pull-requests-limit: 10
+  labels:
+  - "\U0001F916 dependencies"
+  ignore:
+  - dependency-name: github.com/jinzhu/gorm
+    versions:
+    - "> 1.9.12, < 2"
+  - dependency-name: xorm.io/builder
+    versions:
+    - "> 0.3.6"
+  - dependency-name: xorm.io/core
+    versions:
+    - "> 0.7.2"
+  - dependency-name: xorm.io/xorm
+    versions:
+    - "> 0.8.0"
+  - dependency-name: gorm.io/gorm
+    versions:
+    - 1.20.11
+    - 1.20.12
+    - 1.21.2
+  - dependency-name: gorm.io/driver/mysql
+    versions:
+    - 1.0.4
+  - dependency-name: gorm.io/driver/postgres
+    versions:
+    - 1.0.6
+    - 1.0.7
