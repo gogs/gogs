@@ -6,25 +6,30 @@ package conf
 
 import (
 	"embed"
+	"io/fs"
 
-	"github.com/alimy/embedx"
+	"gogs.io/gogs/internal/fsutil"
 )
 
 var (
 	//go:embed auth.d gitignore label license locale readme app.ini
 	content embed.FS
 
-	embedFS embedx.EmbedFS
+	embedFS fs.FS
 )
 
 func init() {
-	embedFS = embedx.AttachRoot(content, "conf")
+	efs, err := fsutil.Mount(content, "conf")
+	if err != nil {
+		panic("failed to init embed config: " + err.Error())
+	}
+	embedFS = efs
 }
 
 // MustAsset is like Asset but panics when Asset would return an error.
 // It simplifies safe initialization of global variables.
 func MustAsset(name string) []byte {
-	data, err := embedFS.ReadFile(name)
+	data, err := fs.ReadFile(embedFS, name)
 	if err != nil {
 		panic("asset: Asset(" + name + "): " + err.Error())
 	}
@@ -33,12 +38,12 @@ func MustAsset(name string) []byte {
 
 // Asset loads and returns the asset for the given name.
 func Asset(name string) ([]byte, error) {
-	return embedFS.ReadFile(name)
+	return fs.ReadFile(embedFS, name)
 }
 
 // AssetDir returns the file names below a certain directory.
 func AssetDir(name string) ([]string, error) {
-	entries, err := embedFS.ReadDir(name)
+	entries, err := fs.ReadDir(embedFS, name)
 	if err != nil {
 		return nil, err
 	}
