@@ -31,8 +31,12 @@ cleanup() {
 }
 
 create_volume_subfolder() {
-    # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
-    chown -R "$USER:$USER" /data
+    # only change ownership if needed, if using an nfs mount this could be expensive
+    if [ "$USER:$USER" != "$(stat /data -c '%U:%G')" ]
+    then
+        # Modify the owner of /data dir, make $USER(git) user have permission to create sub-dir in /data.
+        chown -R "$USER:$USER" /data
+    fi
 
     # Create VOLUME subfolder
     for f in /data/gogs/data /data/gogs/conf /data/gogs/log /data/git /data/ssh; do
