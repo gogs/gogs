@@ -53,7 +53,7 @@ var (
 	workDirOnce sync.Once
 )
 
-// WorkDir returns the absolute path of work directory. It reads the value of envrionment
+// WorkDir returns the absolute path of work directory. It reads the value of environment
 // variable GOGS_WORK_DIR. When not set, it uses the directory where the application's
 // binary is located.
 func WorkDir() string {
@@ -75,8 +75,8 @@ var (
 )
 
 // CustomDir returns the absolute path of the custom directory that contains local overrides.
-// It reads the value of envrionment variable GOGS_CUSTOM. When not set, it uses the work
-// directory returned by WorkDir fucntion.
+// It reads the value of environment variable GOGS_CUSTOM. When not set, it uses the work
+// directory returned by WorkDir function.
 func CustomDir() string {
 	customDirOnce.Do(func() {
 		customDir = os.Getenv("GOGS_CUSTOM")

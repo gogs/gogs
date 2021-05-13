@@ -58,7 +58,7 @@ func (org *User) GetTeams() error {
 	return org.getTeams(x)
 }
 
-// TeamsHaveAccessToRepo returns all teamsthat have given access level to the repository.
+// TeamsHaveAccessToRepo returns all teams that have given access level to the repository.
 func (org *User) TeamsHaveAccessToRepo(repoID int64, mode AccessMode) ([]*Team, error) {
 	return GetTeamsHaveAccessToRepo(org.ID, repoID, mode)
 }
@@ -470,7 +470,7 @@ func (org *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, 
 		Cols(cols...).Find(&teams)
 }
 
-// GetUserTeamIDs returns of all team IDs of the organization that user is memeber of.
+// GetUserTeamIDs returns of all team IDs of the organization that user is member of.
 func (org *User) GetUserTeamIDs(userID int64) ([]int64, error) {
 	teams, err := org.getUserTeams(x, userID, "team.id")
 	if err != nil {
