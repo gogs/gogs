@@ -14737,13 +14737,13 @@ var JpxImage = (function JpxImageClosure() {
         var subband = resolution.subbands[j];
         var gainLog2 = SubbandsGainLog2[subband.type];
 
-        // calulate quantization coefficient (Section E.1.1.1)
+        // calculate quantization coefficient (Section E.1.1.1)
         var delta = (reversible ? 1 :
           Math.pow(2, precision + gainLog2 - epsilon) * (1 + mu / 2048));
         var mb = (guardBits + epsilon - 1);
 
         // In the first resolution level, copyCoefficients will fill the
-        // whole array with coefficients. In the succeding passes,
+        // whole array with coefficients. In the succeeding passes,
         // copyCoefficients will consecutively fill in the values that belong
         // to the interleaved positions of the HL, LH, and HH coefficients.
         // The LL coefficients will then be interleaved in Transform.iterate().
@@ -15629,7 +15629,7 @@ exports.JpxImage = JpxImage;
 var Uint32ArrayView = sharedUtil.Uint32ArrayView;
 
 var MurmurHash3_64 = (function MurmurHash3_64Closure (seed) {
-  // Workaround for missing math precison in JS.
+  // Workaround for missing math precision in JS.
   var MASK_HIGH = 0xffff0000;
   var MASK_LOW = 0xffff;
 
@@ -25395,7 +25395,7 @@ var PDF_GLYPH_SPACE_UNITS = 1000;
 // in tracemonkey and various other pdfs with type1 fonts.
 var HINTING_ENABLED = false;
 
-// Accented charactars are not displayed properly on windows, using this flag
+// Accented characters are not displayed properly on windows, using this flag
 // to control analysis of seac charstrings.
 var SEAC_ANALYSIS_ENABLED = false;
 
@@ -29254,7 +29254,7 @@ var Font = (function FontClosure() {
             }
           } else if (op === 0x2B && !tooComplexToFollowFunctions) { // CALL
             if (!inFDEF && !inELSE) {
-              // collecting inforamtion about which functions are used
+              // collecting information about which functions are used
               funcId = stack[stack.length - 1];
               ttContext.functionsUsed[funcId] = true;
               if (funcId in ttContext.functionsStackDeltas) {
@@ -29279,7 +29279,7 @@ var Font = (function FontClosure() {
               tooComplexToFollowFunctions = true;
             }
             inFDEF = true;
-            // collecting inforamtion about which functions are defined
+            // collecting information about which functions are defined
             lastDeff = i;
             funcId = stack.pop();
             ttContext.functionsDefined[funcId] = {data: data, i: i};
@@ -31170,7 +31170,7 @@ Type1Font.prototype = {
     cff.names = [name];
 
     var topDict = new CFFTopDict();
-    // CFF strings IDs 0...390 are predefined names, so refering
+    // CFF strings IDs 0...390 are predefined names, so referring
     // to entries in our own String INDEX starts at SID 391.
     topDict.setByName('version', 391);
     topDict.setByName('Notice', 392);
@@ -35744,7 +35744,7 @@ var PDFImage = (function PDFImageClosure() {
                                        height);
           }
         } else if (isArray(mask)) {
-          // Color key mask: if any of the compontents are outside the range
+          // Color key mask: if any of the components are outside the range
           // then they should be painted.
           alphaBuf = new Uint8Array(width * height);
           var numComps = this.numComps;

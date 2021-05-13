@@ -63,7 +63,7 @@ func Releases(c *context.Context) {
 		return
 	}
 
-	// Temproray cache commits count of used branches to speed up.
+	// Temporary cache commits count of used branches to speed up.
 	countCache := make(map[string]int64)
 
 	results := make([]*db.Release, len(tagsPage.Tags))

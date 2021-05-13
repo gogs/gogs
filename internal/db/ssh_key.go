@@ -517,7 +517,7 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 
 // RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
 // Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
-// outsite any session scope independently.
+// outside any session scope independently.
 func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
