@@ -6,9 +6,6 @@ tasks:
     deps: [build]
     cmds:
       - ./gogs web
-    sources:
-      - gogs.go
-      - internal/**/*.go
 
   build:
     desc: Build the binary.
@@ -26,6 +23,9 @@ tasks:
         sh: date -u '+%Y-%m-%d %I:%M:%S %Z'
       BUILD_COMMIT:
         sh: git rev-parse HEAD
+    sources:
+      - gogs.go
+      - internal/**/*.go
 
   generate-bindata:
     desc: Generate bindata for all assets.
