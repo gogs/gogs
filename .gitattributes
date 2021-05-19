@@ -1,9 +1,8 @@
-conf/gitignore/* linguist-vendored
-conf/license/* linguist-vendored
-public/assets/* linguist-vendored
-public/plugins/* linguist-vendored
-public/css/themes/* linguist-vendored
-public/css/semantic-2.4.2.min.css linguist-vendored
-public/js/libs/* linguist-vendored
-public/js/jquery-3.4.1.min.js linguist-vendored
-public/js/semantic-2.4.2.min.js linguist-vendored
+conf/gitignore/** linguist-vendored
+conf/license/** linguist-vendored
+public/assets/** linguist-vendored
+public/plugins/** linguist-vendored
+public/css/themes/** linguist-vendored
+public/css/semantic-* linguist-vendored
+public/js/libs/** linguist-vendored
+public/js/semantic-* linguist-vendored
