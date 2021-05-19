@@ -227,7 +227,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.HookTask, _ = x.Count(new(HookTask))
 	stats.Counter.Team, _ = x.Count(new(Team))
 	stats.Counter.Attachment, _ = x.Count(new(Attachment))
-	return
+	return stats
 }
 
 func Ping() error {

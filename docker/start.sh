@@ -24,7 +24,7 @@ EOT
 }
 
 cleanup() {
-    # Cleanup SOCAT services and s6 event folder
+    # Cleanup SOCAT services and s6 event folder
     # On start and on shutdown in case container has been killed
     rm -rf "$(find /app/gogs/docker/s6/ -name 'event')"
     rm -rf /app/gogs/docker/s6/SOCAT_*
@@ -67,7 +67,7 @@ if [ "$CROND" = "true" ] || [ "$CROND" = "1" ]; then
     rm -f /app/gogs/docker/s6/crond/down
     /bin/sh /app/gogs/docker/runtime/backup-init.sh "${PUID}"
 else
-    # Tell s6 not to run the crond service
+    # Tell s6 not to run the crond service
     touch /app/gogs/docker/s6/crond/down
 fi
 

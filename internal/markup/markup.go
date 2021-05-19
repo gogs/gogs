@@ -216,7 +216,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 	buf.WriteString(`">`)
 
 	if needPrepend {
-		src = strings.Replace(urlPrefix+string(src), " ", "%20", -1)
+		src = strings.Replace(urlPrefix+src, " ", "%20", -1)
 		buf.WriteString(`<img src="`)
 		buf.WriteString(src)
 		buf.WriteString(`"`)
