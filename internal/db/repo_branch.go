@@ -111,7 +111,7 @@ type ProtectBranch struct {
 	WhitelistTeamIDs   string `xorm:"TEXT"`
 }
 
-// GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repostiory.
+// GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repository.
 func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, error) {
 	protectBranch := &ProtectBranch{
 		RepoID: repoID,
@@ -271,7 +271,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	return sess.Commit()
 }
 
-// GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repostiory.
+// GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repository.
 func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
 	protectBranches := make([]*ProtectBranch, 0, 2)
 	return protectBranches, x.Where("repo_id = ? and protected = ?", repoID, true).Asc("name").Find(&protectBranches)
