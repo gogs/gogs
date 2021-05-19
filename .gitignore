@@ -13,6 +13,4 @@ public/img/avatar/
 profile/
 *.pem
 output*
-*.sublime-project
-*.sublime-workspace
 /release
