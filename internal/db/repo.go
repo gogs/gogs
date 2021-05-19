@@ -278,7 +278,7 @@ func (repo *Repository) CanGuestViewIssues() bool {
 }
 
 // MustOwner always returns a valid *User object to avoid conceptually impossible error handling.
-// It creates a fake object that contains error deftail when error occurs.
+// It creates a fake object that contains error details when error occurs.
 func (repo *Repository) MustOwner() *User {
 	return repo.mustOwner(x)
 }
@@ -951,7 +951,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 }
 
 func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {
-	// Clone to temprory path and do the init commit.
+	// Clone to temporary path and do the init commit.
 	_, stderr, err := process.Exec(
 		fmt.Sprintf("initRepository(git clone): %s", repoPath), "git", "clone", repoPath, tmpDir)
 	if err != nil {
@@ -1233,7 +1233,7 @@ func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
 	return repos, nil
 }
 
-// FilterRepositoryWithIssues selects repositories that are using interal issue tracker
+// FilterRepositoryWithIssues selects repositories that are using internal issue tracker
 // and has disabled external tracker from given set.
 // It returns nil if result set is empty.
 func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
@@ -1468,7 +1468,7 @@ func updateRepository(e Engine, repo *Repository, visibilityChanged bool) (err e
 			return fmt.Errorf("getOwner: %v", err)
 		}
 		if repo.Owner.IsOrganization() {
-			// Organization repository need to recalculate access table when visivility is changed
+			// Organization repository need to recalculate access table when visibility is changed
 			if err = repo.recalculateTeamAccesses(e, 0); err != nil {
 				return fmt.Errorf("recalculateTeamAccesses: %v", err)
 			}

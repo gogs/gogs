@@ -32,7 +32,7 @@ var Log *logConf
 // argument "hookMode" is true, it only initializes the root path for log files.
 // NOTE: Because we always create a console logger as the primary logger at init time,
 // we need to remove it in case the user doesn't configure to use it after the logging
-// service is initalized.
+// service is initialized.
 func initLogConf(cfg *ini.File, hookMode bool) (_ *logConf, hasConsole bool, _ error) {
 	rootPath := cfg.Section("log").Key("ROOT_PATH").MustString(filepath.Join(WorkDir(), "log"))
 	if hookMode {

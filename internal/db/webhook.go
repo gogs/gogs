@@ -601,7 +601,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			}
 		}
 
-		// Use separate objects so modifcations won't be made on payload on non-Gogs type hooks.
+		// Use separate objects so modifications won't be made on payload on non-Gogs type hooks.
 		switch w.HookTaskType {
 		case SLACK:
 			payloader, err = GetSlackPayload(p, event, w.Meta)
