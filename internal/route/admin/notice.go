@@ -64,7 +64,7 @@ func DeleteNotices(c *context.Context) {
 
 func EmptyNotices(c *context.Context) {
 	if err := db.DeleteNotices(0, 0); err != nil {
-		c.Error(err,"delete notices")
+		c.Error(err, "delete notices")
 		return
 	}
 

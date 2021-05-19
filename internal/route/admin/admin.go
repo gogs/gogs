@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
