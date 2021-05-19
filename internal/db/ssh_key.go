@@ -221,7 +221,7 @@ func SSHKeyGenParsePublicKey(key string) (string, int, error) {
 func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 	fields := strings.Fields(keyLine)
 	if len(fields) < 2 {
-		return "", 0, fmt.Errorf("not enough fields in public key line: %s", string(keyLine))
+		return "", 0, fmt.Errorf("not enough fields in public key line: %s", keyLine)
 	}
 
 	raw, err := base64.StdEncoding.DecodeString(fields[1])
@@ -517,7 +517,7 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 
 // RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
 // Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
-// outsite any session scope independently.
+// outside any session scope independently.
 func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()

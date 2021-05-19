@@ -26,7 +26,7 @@ func GetUserByParamsName(c *context.APIContext, name string) *db.User {
 	return user
 }
 
-// GetUserByParams returns user whose name is presented in URL paramenter.
+// GetUserByParams returns user whose name is presented in URL parameter.
 func GetUserByParams(c *context.APIContext) *db.User {
 	return GetUserByParamsName(c, ":username")
 }

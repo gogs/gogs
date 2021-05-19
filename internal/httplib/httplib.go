@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var defaultSetting = Settings{false, "GogsServer", 60 * time.Second, 60 * time.Second, nil, nil, nil, false}
@@ -431,7 +431,7 @@ func (r *Request) ToXml(v interface{}) error {
 	return xml.Unmarshal(data, v)
 }
 
-// Response executes request client gets response mannually.
+// Response executes request client gets response manually.
 func (r *Request) Response() (*http.Response, error) {
 	return r.getResponse()
 }

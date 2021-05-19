@@ -44,7 +44,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		}
 	}
 
-	// We alway want the primary email address displayed, even if it's not in
+	// We always want the primary email address displayed, even if it's not in
 	// the emailaddress table (yet).
 	if !isPrimaryFound {
 		emails = append(emails, &EmailAddress{
