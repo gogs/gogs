@@ -91,7 +91,7 @@ func Branches(c *context.Context) {
 
 	c.Data["ActiveBranches"] = activeBranches
 	c.Data["StaleBranches"] = staleBranches
-	c.Success( BRANCHES_OVERVIEW)
+	c.Success(BRANCHES_OVERVIEW)
 }
 
 func AllBranches(c *context.Context) {
@@ -104,7 +104,7 @@ func AllBranches(c *context.Context) {
 	}
 	c.Data["Branches"] = branches
 
-	c.Success( BRANCHES_ALL)
+	c.Success(BRANCHES_ALL)
 }
 
 func DeleteBranchPost(c *context.Context) {
