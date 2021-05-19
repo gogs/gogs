@@ -12,7 +12,7 @@ create_socat_links() {
             SERV_FOLDER=/app/gogs/docker/s6/SOCAT_${NAME}_${PORT}
             mkdir -p "${SERV_FOLDER}"
             CMD="socat -ls TCP4-LISTEN:${PORT},fork,reuseaddr TCP4:${ADDR}:${PORT}"
-            # shellcheck disable=SC2039
+            # shellcheck disable=SC2039,SC3037
             echo -e "#!/bin/sh\nexec $CMD" > "${SERV_FOLDER}"/run
             chmod +x "${SERV_FOLDER}"/run
             USED_PORT="${USED_PORT}:${PORT}"
