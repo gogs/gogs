@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/editorconfig/editorconfig-core-go/v2 v2.3.9
+	github.com/editorconfig/editorconfig-core-go/v2 v2.4.1
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-macaron/binding v1.1.1
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
@@ -36,13 +36,13 @@ require (
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.2.0
-	github.com/prometheus/client_golang v1.8.0
+	github.com/prometheus/client_golang v1.9.0
 	github.com/russross/blackfriday v1.6.0
 	github.com/saintfish/chardet v0.0.0-20120816061221-3af4cd4741ca // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.1.0
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/unknwon/cae v1.0.2
 	github.com/unknwon/com v1.0.1
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6

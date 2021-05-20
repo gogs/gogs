@@ -16,7 +16,7 @@
   "use strict";
 
   CodeMirror.defineSimpleMode("factor", {
-    // The start state contains the rules that are intially used
+    // The start state contains the rules that are initially used
     start: [
       // comments
       {regex: /#?!.*/, token: "comment"},

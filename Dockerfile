@@ -10,8 +10,8 @@ COPY . .
 RUN make build TAGS="cert pam"
 
 FROM alpine:3.11
-ADD https://github.com/tianon/gosu/releases/download/1.11/gosu-amd64 /usr/sbin/gosu
-RUN chmod +x /usr/sbin/gosu \
+RUN wget https://github.com/tianon/gosu/releases/download/1.11/gosu-amd64 -O /usr/sbin/gosu \
+  && chmod +x /usr/sbin/gosu \
   && echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
   && apk --no-cache --no-progress add \
   bash \

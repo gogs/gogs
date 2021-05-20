@@ -283,7 +283,7 @@ func (u *User) AvatarLink() string {
 	return link
 }
 
-// User.GetFollwoers returns range of user's followers.
+// User.GetFollowers returns range of user's followers.
 func (u *User) GetFollowers(page int) ([]*User, error) {
 	users := make([]*User, 0, ItemsPerPage)
 	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.follow_id=?", u.ID)
@@ -468,7 +468,7 @@ func (u *User) ShortName(length int) string {
 	return tool.EllipsisString(u.Name, length)
 }
 
-// IsMailable checks if a user is elegible
+// IsMailable checks if a user is eligible
 // to receive emails.
 func (u *User) IsMailable() bool {
 	return u.IsActive
@@ -1002,7 +1002,7 @@ type UserCommit struct {
 	*git.Commit
 }
 
-// ValidateCommitWithEmail chceck if author's e-mail of commit is corresponsind to a user.
+// ValidateCommitWithEmail checks if author's e-mail of commit is corresponding to a user.
 func ValidateCommitWithEmail(c *git.Commit) *User {
 	u, err := GetUserByEmail(c.Author.Email)
 	if err != nil {

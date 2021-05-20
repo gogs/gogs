@@ -63,7 +63,7 @@ func Releases(c *context.Context) {
 		return
 	}
 
-	// Temproray cache commits count of used branches to speed up.
+	// Temporary cache commits count of used branches to speed up.
 	countCache := make(map[string]int64)
 
 	results := make([]*db.Release, len(tagsPage.Tags))
@@ -320,7 +320,7 @@ func DeleteRelease(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.release.deletion_success"))
 	}
 
-	c.JSONSuccess( map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"redirect": c.Repo.RepoLink + "/releases",
 	})
 }

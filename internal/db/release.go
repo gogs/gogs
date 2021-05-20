@@ -352,7 +352,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return fmt.Errorf("GetReleaseByID: %v", err)
 	}
 
-	// Mark sure the delete operation againsts same repository.
+	// Mark sure the delete operation against same repository.
 	if repoID != rel.RepoID {
 		return nil
 	}
