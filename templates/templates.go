@@ -49,15 +49,18 @@ func (fs *fileSystem) Get(name string) (io.Reader, error) {
 	return nil, fmt.Errorf("file %q not found", name)
 }
 
-// assetNames returns the names of the assets.
-func assetNames() []string {
+// mustAssetNames returns the names of the assets.
+func mustAssetNames() []string {
 	var names []string
-	fs.WalkDir(embedFS, ".", func(path string, d fs.DirEntry, err error) error {
+	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			names = append(names, path)
 		}
 		return nil
-	})
+	}
+	if err := fs.WalkDir(embedFS, ".", walkDirFunc); err != nil {
+		panic("assetNames failure: " + err.Error())
+	}
 	return names
 }
 
@@ -70,7 +73,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 	}
 
 	var files []macaron.TemplateFile
-	names := assetNames()
+	names := mustAssetNames()
 	for _, name := range names {
 		if !strings.HasPrefix(name, dir) {
 			continue
