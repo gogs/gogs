@@ -6,6 +6,7 @@ package db
 
 import (
 	"crypto/hmac"
+	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
@@ -437,6 +438,7 @@ type HookTask struct {
 	Type            HookTaskType
 	URL             string `xorm:"TEXT"`
 	Signature       string `xorm:"TEXT"`
+	SignatureGithub string `xorm:"TEXT"`
 	api.Payloader   `xorm:"-" json:"-"`
 	PayloadContent  string `xorm:"TEXT"`
 	ContentType     HookContentType
@@ -633,16 +635,28 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			signature = hex.EncodeToString(sig.Sum(nil))
 		}
 
+		var signaturegithub string
+		if len(w.Secret) > 0 {
+			data, err := payloader.JSONPayload()
+			if err != nil {
+				log.Error("prepareWebhooks.JSONPayload: %v", err)
+			}
+			sig := hmac.New(sha1.New, []byte(w.Secret))
+			_, _ = sig.Write(data)
+			signaturegithub = "sha1=" + hex.EncodeToString(sig.Sum(nil))
+		}
+
 		if err = createHookTask(e, &HookTask{
-			RepoID:      repo.ID,
-			HookID:      w.ID,
-			Type:        w.HookTaskType,
-			URL:         w.URL,
-			Signature:   signature,
-			Payloader:   payloader,
-			ContentType: w.ContentType,
-			EventType:   event,
-			IsSSL:       w.IsSSL,
+			RepoID:      		repo.ID,
+			HookID:      		w.ID,
+			Type:        		w.HookTaskType,
+			URL:         		w.URL,
+			Signature:   		signature,
+			SignatureGithub: 	signaturegithub,
+			Payloader:   		payloader,
+			ContentType: 		w.ContentType,
+			EventType:   		event,
+			IsSSL:       		w.IsSSL,
 		}); err != nil {
 			return fmt.Errorf("createHookTask: %v", err)
 		}
@@ -694,6 +708,7 @@ func (t *HookTask) deliver() {
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
 		Header("X-Github-Delivery", t.UUID).
 		Header("X-Github-Event", string(t.EventType)).
+		Header("X-Hub-Signature", t.SignatureGithub).
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Signature", t.Signature).
 		Header("X-Gogs-Event", string(t.EventType)).
