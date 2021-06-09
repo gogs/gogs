@@ -652,7 +652,7 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 			Type:        		w.HookTaskType,
 			URL:         		w.URL,
 			Signature:   		signature,
-			SignatureGithub: 	signaturegithub,
+			SignatureGithub:	signaturegithub,
 			Payloader:   		payloader,
 			ContentType: 		w.ContentType,
 			EventType:   		event,
