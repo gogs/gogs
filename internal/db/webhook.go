@@ -647,16 +647,16 @@ func prepareHookTasks(e Engine, repo *Repository, event HookEventType, p api.Pay
 		}
 
 		if err = createHookTask(e, &HookTask{
-			RepoID:      		repo.ID,
-			HookID:      		w.ID,
-			Type:        		w.HookTaskType,
-			URL:         		w.URL,
-			Signature:   		signature,
-			SignatureGithub:	signaturegithub,
-			Payloader:   		payloader,
-			ContentType: 		w.ContentType,
-			EventType:   		event,
-			IsSSL:       		w.IsSSL,
+			RepoID:          repo.ID,
+			HookID:          w.ID,
+			Type:            w.HookTaskType,
+			URL:             w.URL,
+			Signature:       signature,
+			SignatureGithub: signaturegithub,
+			Payloader:       payloader,
+			ContentType:     w.ContentType,
+			EventType:       event,
+			IsSSL:           w.IsSSL,
 		}); err != nil {
 			return fmt.Errorf("createHookTask: %v", err)
 		}
