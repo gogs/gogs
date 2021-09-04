@@ -14,3 +14,4 @@ profile/
 *.pem
 output*
 /release
+.task
