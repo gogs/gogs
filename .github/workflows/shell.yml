@@ -1,13 +1,14 @@
 name: Shell
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
+
 jobs:
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
