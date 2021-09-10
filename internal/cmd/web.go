@@ -611,10 +611,10 @@ func runWeb(c *cli.Context) error {
 			m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.MustBeNotBare, context.RepoRef(), repo.CompareDiff)
 		}, ignSignIn, context.RepoAssignment())
 		m.Group("/:username/:reponame", func() {
-			m.Get("", context.ServeGoGet(), repo.Home)
+			m.Get("", repo.Home)
 			m.Get("/stars", repo.Stars)
 			m.Get("/watchers", repo.Watchers)
-		}, ignSignIn, context.RepoAssignment(), context.RepoRef())
+		}, context.ServeGoGet(), ignSignIn, context.RepoAssignment(), context.RepoRef())
 		// ***** END: Repository *****
 
 		// **********************
