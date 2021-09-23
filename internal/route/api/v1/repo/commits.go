@@ -118,7 +118,6 @@ func GetReferenceSHA(c *context.APIContext) {
 
 // gitCommitToApiCommit is a helper function to convert git commit object to API commit.
 func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commit, error) {
-
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
 	author, err := db.GetUserByEmail(commit.Author.Email)
