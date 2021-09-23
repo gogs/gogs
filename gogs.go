@@ -1,3 +1,4 @@
+//go:build go1.14
 // +build go1.14
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
