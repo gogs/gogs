@@ -286,6 +286,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				})
 				m.Group("/commits", func() {
 					m.Get("/:sha", repo.GetSingleCommit)
+					m.Get("", repo.GetAllCommits)
 					m.Get("/*", repo.GetReferenceSHA)
 				})
 
