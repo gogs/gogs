@@ -6,7 +6,6 @@ package repo
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,21 +20,10 @@ import (
 
 // GetAllCommits returns a slice of commits starting from HEAD.
 func GetAllCommits(c *context.APIContext) {
-	if strings.Contains(c.Req.Header.Get("Accept"), api.MediaApplicationSHA) {
-		c.SetParams("*", c.Params(":sha"))
-		GetReferenceSHA(c)
-		return
-	}
-
 	// Get pagesize, set default if it is not specified.
-	pageSizeStr := c.Query("pageSize")
-	if pageSizeStr == "" {
-		pageSizeStr = "30"
-	}
-
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil {
-		c.Error(err, "get page size error")
+	pageSize := c.QueryInt("pageSize")
+	if pageSize == 0 {
+		pageSize = 30
 	}
 
 	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
@@ -45,15 +33,14 @@ func GetAllCommits(c *context.APIContext) {
 	}
 
 	// The response object returned as JSON
-	result := []*api.Commit{}
-
+	result := make([]*api.Commit, 0, pageSize)
 	commits, err := gitRepo.Log("HEAD", git.LogOptions{MaxCount: pageSize})
 	if err != nil {
 		c.Error(err, "git log")
 	}
 
 	for _, commit := range commits {
-		apiCommit, err := gitCommitToApiCommit(commit, c)
+		apiCommit, err := gitCommitToAPICommit(commit, c)
 		if err != nil {
 			c.Error(err, "convert git commit to api commit")
 			return
@@ -83,7 +70,7 @@ func GetSingleCommit(c *context.APIContext) {
 		return
 	}
 
-	apiCommit, err := gitCommitToApiCommit(commit, c)
+	apiCommit, err := gitCommitToAPICommit(commit, c)
 	if err != nil {
 		c.Error(err, "convert git commit to api commit")
 	}
@@ -130,7 +117,7 @@ func GetReferenceSHA(c *context.APIContext) {
 }
 
 // gitCommitToApiCommit is a helper function to convert git commit object to API commit.
-func gitCommitToApiCommit(commit *git.Commit, c *context.APIContext) (*api.Commit, error) {
+func gitCommitToAPICommit(commit *git.Commit, c *context.APIContext) (*api.Commit, error) {
 
 	// Retrieve author and committer information
 	var apiAuthor, apiCommitter *api.User
