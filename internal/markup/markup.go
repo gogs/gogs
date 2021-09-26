@@ -170,7 +170,7 @@ var (
 	rightAngleBracket = []byte(">")
 )
 
-var noEndTags = []string{"input", "br", "hr", "img"}
+var noEndTags = []string{"input", "br", "hr", "img", "sup"}
 
 // wrapImgWithLink warps link to standalone <img> tags.
 func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
