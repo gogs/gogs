@@ -1,0 +1,65 @@
+{{/*
+<html>
+<body>
+	<div>
+*/}}
+	</div>
+	<footer>
+		<div class="ui container">
+			<div class="ui left">
+				© {{Year}} {{AppName}}
+			</div>
+			<div class="ui right links">
+				{{if ShowFooterTemplateLoadTime}}
+					<span>
+						{{.i18n.Tr "page"}}: <strong>{{LoadTimes .PageStartTime}}</strong> {{.i18n.Tr "template"}}: <strong>{{call .TmplLoadTimes}}</strong>
+					</span>
+				{{end}}
+				{{if .ShowFooterBranding}}
+					<a target="_blank" rel="noopener noreferrer" href="https://github.com/gogs/gogs"><i class="fa fa-github-square"></i><span class="sr-only">GitHub</span></a>
+					<a target="_blank" rel="noopener noreferrer" href="https://twitter.com/GogsHQ"><i class="fa fa-twitter"></i><span class="sr-only">Twitter</span></a>
+					<a target="_blank" rel="noopener noreferrer" href="http://weibo.com/gogschina"><i class="fa fa-weibo"></i><span class="sr-only">Sina Weibo</span></a>
+				{{end}}
+				<div class="ui language bottom floating slide up dropdown link item">
+					<i class="world icon"></i>
+					<div class="text">{{.LangName}}</div>
+					<div class="menu">
+						{{range .AllLangs}}
+							<a class="item {{if eq $.Lang .Lang}}active selected{{end}}" href="{{if eq $.Lang .Lang}}#{{else}}{{$.Link}}?lang={{.Lang}}{{end}}">{{.Name}}</a>
+						{{end}}
+					</div>
+				</div>
+				<a href="/assets/librejs/librejs.html" style="display:none" data-jslicense="1">Javascript Licenses</a>
+				<a target="_blank" rel="noopener noreferrer" href="https://gogs.io">{{.i18n.Tr "website"}}</a>
+			</div>
+		</div>
+	</footer>
+</body>
+
+<!-- Third-party libraries -->
+{{if .RequireHighlightJS}}
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/highlight-9.18.0/github.css">
+	<script src="{{AppSubURL}}/plugins/highlight-9.18.0/highlight.pack.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+{{end}}
+{{if .RequireMinicolors}}
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
+	<script src="{{AppSubURL}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.min.js"></script>
+{{end}}
+{{if .RequireDatetimepicker}}
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.css">
+	<script src="{{AppSubURL}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
+{{end}}
+{{if .RequireDropzone}}
+	<link rel="stylesheet" href="{{AppSubURL}}/plugins/dropzone-5.5.0/dropzone.min.css">
+	<script src="{{AppSubURL}}/plugins/dropzone-5.5.0/dropzone.min.js"></script>
+	<script>Dropzone.autoDiscover = false</script>
+{{end}}
+{{if .RequireAutosize}}
+	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
+{{end}}
+<script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
+<script src="{{AppSubURL}}/js/libs/clipboard-2.0.4.min.js"></script>
+
+{{template "inject/footer" .}}
+</html>

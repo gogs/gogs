@@ -1,0 +1,54 @@
+<table id="repo-files-table" class="ui unstackable fixed single line table">
+	<thead>
+		<tr>
+			<th class="four wide">
+				{{if .LatestCommitUser}}
+					<img class="ui avatar image img-12" src="{{.LatestCommitUser.RelAvatarLink}}" />
+					<a href="{{AppSubURL}}/{{.LatestCommitUser.Name}}"><strong>{{.LatestCommit.Author.Name}}</strong></a>
+				{{else}}
+					<img class="ui avatar image img-12" src="{{AvatarLink .LatestCommit.Author.Email}}" />
+					<strong>{{.LatestCommit.Author.Name}}</strong>
+				{{end}}
+				<a rel="nofollow" class="ui sha label" href="{{.RepoLink}}/commit/{{.LatestCommit.ID}}" rel="nofollow">{{ShortSHA1 .LatestCommit.ID.String}}</a>
+				<span class="grey has-emoji">{{RenderCommitMessage false .LatestCommit.Summary .RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
+			</th>
+			<th class="nine wide">
+			</th>
+			<th class="three wide text grey right age">{{TimeSince .LatestCommit.Author.When $.Lang}}</th>
+		</tr>
+	</thead>
+	<tbody>
+		{{if .HasParentPath}}
+			<tr class="has-parent">
+				<td colspan="3"><i class="octicon octicon-mail-reply"></i><a href="{{EscapePound .BranchLink}}{{.ParentPath}}">..</a></td>
+			</tr>
+		{{end}}
+		{{range .Files}}
+			<tr>
+				{{if .Submodule}}
+					<td>
+						<span class="octicon octicon-file-submodule"></span>
+						<a href="{{InferSubmoduleURL $.RepoLink .Submodule}}">{{.Entry.Name}} @ {{ShortSHA1 .Submodule.Commit}}</a>
+					</td>
+				{{else}}
+					<td class="name">
+						{{if .Entry.IsSymlink}}
+							<span class="octicon octicon-file-symlink-file"></span>
+						{{else}}
+							<span class="octicon octicon-file-{{if or .Entry.IsTree}}directory{{else}}text{{end}}"></span>
+						{{end}}
+						<a href="{{EscapePound $.TreeLink}}/{{EscapePound .Entry.Name}}">{{.Entry.Name}}</a>
+					</td>
+				{{end}}
+				<td class="message collapsing has-emoji">
+					<a rel="nofollow" class="ui sha label" href="{{$.RepoLink}}/commit/{{.Commit.ID}}">{{ShortSHA1 .Commit.ID.String}}</a>
+					{{RenderCommitMessage false .Commit.Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}
+				</td>
+				<td class="text grey right age">{{TimeSince .Commit.Committer.When $.Lang}}</td>
+			</tr>
+		{{end}}
+	</tbody>
+</table>
+{{if and .ReadmeExist .IsTextFile}}
+	{{template "repo/view_file" .}}
+{{end}}

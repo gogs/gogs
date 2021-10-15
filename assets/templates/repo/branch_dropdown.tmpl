@@ -1,0 +1,44 @@
+<div class="fitted item choose reference">
+	<div class="ui floating filter dropdown" data-no-results="{{.i18n.Tr "repo.pulls.no_results"}}">
+			<div class="ui basic small button">
+			<span class="text">
+				<i class="octicon octicon-git-branch"></i>
+				{{if .IsViewBranch}}{{.i18n.Tr "repo.branch"}}{{else}}{{.i18n.Tr "repo.tree"}}{{end}}:
+				<strong>{{if .IsViewBranch}}{{.BranchName}}{{else}}{{ShortSHA1 .BranchName}}{{end}}</strong>
+			</span>
+			<i class="dropdown icon"></i>
+		</div>
+		<div class="menu">
+			<div class="ui icon search input">
+				<i class="filter icon"></i>
+				<input name="search" placeholder="{{.i18n.Tr "repo.filter_branch_and_tag"}}...">
+			</div>
+			<div class="header">
+				<div class="ui grid">
+					<div class="two column row">
+						<a class="reference column" href="#" data-target="#branch-list">
+							<span class="text {{if not .IsViewTag}}black{{end}}">
+								{{.i18n.Tr "repo.branches"}}
+							</span>
+						</a>
+						<a class="reference column" href="#" data-target="#tag-list">
+							<span class="text {{if .IsViewTag}}black{{end}}">
+								{{.i18n.Tr "repo.tags"}}
+							</span>
+						</a>
+					</div>
+				</div>
+			</div>
+			<div id="branch-list" class="scrolling menu" {{if .IsViewTag}}style="display: none"{{end}}>
+				{{range .Branches}}
+					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}{{if $.TreePath}}/{{EscapePound $.TreePath}}{{end}}">{{.}}</div>
+				{{end}}
+			</div>
+			<div id="tag-list" class="scrolling menu" {{if not .IsViewTag}}style="display: none"{{end}}>
+				{{range .Tags}}
+					<div class="item {{if eq $.BranchName .}}selected{{end}}" data-url="{{$.RepoLink}}/{{if $.PageIsCommits}}commits{{else}}src{{end}}/{{EscapePound .}}{{if $.TreePath}}/{{EscapePound $.TreePath}}{{end}}">{{.}}</div>
+				{{end}}
+			</div>
+		</div>
+	</div>
+</div>

@@ -1,0 +1,36 @@
+{{template "base/head" .}}
+<div class="user settings security two-factor">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "user/settings/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "settings.two_factor_recovery_codes_title"}}
+				</h4>
+				<div class="ui attached segment">
+					<p>{{.i18n.Tr "settings.two_factor_recovery_codes_desc" | Safe}}</p>
+				 	<ul class="ui list">
+						{{range .RecoveryCodes}}
+							<li class="item">
+								<code>
+									{{if .IsUsed}}
+										<del>{{.Code}}</del>
+									{{else}}
+										{{.Code}}
+									{{end}}
+								</code>
+							</li>
+						{{end}}
+				 	</ul>
+
+				 	<form class="ui form" method="post">
+				 		{{.CSRFTokenHTML}}
+				 		<button class="ui blue button">{{.i18n.Tr "settings.two_factor_regenerate_recovery_codes"}}</button>
+				 	</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

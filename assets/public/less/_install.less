@@ -1,0 +1,34 @@
+.install {
+	@input-padding: 320px !important;
+
+	padding-top: 45px;
+	padding-bottom: @footer-margin * 2;
+	form {
+		label {
+			text-align: right;
+			width: @input-padding;
+		}
+		input {
+			width: 300px !important;
+		}
+		.field {
+			text-align: left;
+			.help {
+				margin-left: @input-padding+15px;
+			}
+			&.optional .title {
+				margin-left: @input-padding;
+			}
+		}
+	}
+	.ui.checkbox {
+		margin-left: @input-padding+15px;
+		label {
+			width: auto !important;
+		}
+	}
+	.inline.checkbox {
+		margin-top: -1em;
+		margin-bottom: 2em;
+	}
+}

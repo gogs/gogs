@@ -1,0 +1,99 @@
+{{range .Feeds}}
+	<div class="news">
+		<div class="ui left">
+			<img class="ui avatar image" src="{{.ActAvatar}}" alt="">
+		</div>
+		<div class="ui grid">
+			<div class="ui fifteen wide column">
+				<div class="{{if or (eq .GetOpType 5) (eq .GetOpType 20)}}push news{{end}}">
+					<p>
+						<a href="{{AppSubURL}}/{{.GetActUserName}}">{{.ShortActUserName}}</a>
+						<!-- Reference types to models/action.go -->
+						{{if eq .GetOpType 1}} 
+							{{$.i18n.Tr "action.create_repo" .GetRepoLink .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 2}}
+							{{$.i18n.Tr "action.rename_repo" .GetContent .GetRepoLink .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 5}}
+							{{ $branchLink := .GetBranch | EscapePound}}
+							{{$.i18n.Tr "action.commit_repo" .GetRepoLink $branchLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 6}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.create_issue" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 7}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.create_pull_request" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 8}}
+							{{$.i18n.Tr "action.transfer_repo" .GetContent .GetRepoLink .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 9}}
+							{{$.i18n.Tr "action.push_tag" .GetRepoLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 10}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.comment_issue" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 11}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.merge_pull_request" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 12}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.close_issue" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 13}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.reopen_issue" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 14}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.close_pull_request" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 15}}
+							{{ $index := index .GetIssueInfos 0}}
+							{{$.i18n.Tr "action.reopen_pull_request" .GetRepoLink $index .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 16}}
+							{{ $branchLink := .GetBranch | EscapePound}}
+							{{$.i18n.Tr "action.create_branch" .GetRepoLink $branchLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 17}}
+							{{$.i18n.Tr "action.delete_branch" .GetRepoLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 18}}
+							{{$.i18n.Tr "action.delete_tag" .GetRepoLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 19}}
+							{{$.i18n.Tr "action.fork_repo" .GetRepoLink .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 20}}
+							{{ $branchLink := .GetBranch | EscapePound}}
+							{{$.i18n.Tr "action.mirror_sync_push" .GetRepoLink $branchLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 21}}
+							{{$.i18n.Tr "action.mirror_sync_create" .GetRepoLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{else if eq .GetOpType 22}}
+							{{$.i18n.Tr "action.mirror_sync_delete" .GetRepoLink .GetBranch .ShortRepoPath | Str2HTML}}
+						{{end}}
+					</p>
+					{{if or (eq .GetOpType 5) (eq .GetOpType 20)}}
+						<div class="content">
+							<ul>
+								{{ $push := ActionContent2Commits .}}
+								{{ $repoLink := .GetRepoLink}}
+								{{if $push.Commits}}
+									{{range $push.Commits}}
+										<li><img class="img-8" src="{{$push.AvatarLink .AuthorEmail}}"> <a class="commit-id" href="{{$repoLink}}/commit/{{.Sha1}}">{{ShortSHA1 .Sha1}}</a> <span class="text truncate light grey has-emoji">{{.Message}}</span></li>
+									{{end}}
+								{{end}}
+								{{if and (gt $push.Len 1) $push.CompareURL}}<li><a href="{{AppSubURL}}/{{$push.CompareURL}}">{{$.i18n.Tr "action.compare_commits" $push.Len}} »</a></li>{{end}}
+							</ul>
+						</div>
+					{{else if eq .GetOpType 6}}
+						<span class="text truncate issue title has-emoji">{{index .GetIssueInfos 1}}</span>
+					{{else if eq .GetOpType 7}}
+						<span class="text truncate issue title has-emoji">{{index .GetIssueInfos 1}}</span>
+					{{else if eq .GetOpType 10}}
+						<span class="text truncate issue title has-emoji">{{.GetIssueTitle}}</span>
+						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
+					{{else if eq .GetOpType 11}}
+						<p class="text light grey has-emoji">{{index .GetIssueInfos 1}}</p>
+					{{else if (or (or (eq .GetOpType 12) (eq .GetOpType 13)) (or (eq .GetOpType 14) (eq .GetOpType 15)))}}
+						<span class="text truncate issue title has-emoji">{{.GetIssueTitle}}</span>
+					{{end}}
+					<p class="text italic light grey">{{TimeSince .GetCreate $.i18n.Lang}}</p>
+				</div>
+			</div>
+			<div class="ui one wide column">
+				<i class="text grey mega-octicon octicon-{{ActionIcon .GetOpType}}"></i>
+			</div>
+		</div>
+		<div class="ui divider"></div>
+	</div>
+{{end}}

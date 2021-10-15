@@ -29,9 +29,8 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/assets"
 	"gogs.io/gogs/internal/app"
-	"gogs.io/gogs/internal/assets/public"
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -83,7 +82,7 @@ func newMacaron() *macaron.Macaron {
 	))
 	var publicFs http.FileSystem
 	if !conf.Server.LoadAssetsFromDisk {
-		publicFs = public.NewFileSystem()
+		publicFs = assets.NewPublicFileSystem()
 	}
 	m.Use(macaron.Static(
 		filepath.Join(conf.WorkDir(), "public"),
@@ -115,7 +114,7 @@ func newMacaron() *macaron.Macaron {
 		IndentJSON:        macaron.Env != macaron.PROD,
 	}
 	if !conf.Server.LoadAssetsFromDisk {
-		renderOpt.TemplateFileSystem = templates.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
+		renderOpt.TemplateFileSystem = assets.NewTemplateFileSystem("", renderOpt.AppendDirectories[0])
 	}
 	m.Use(macaron.Renderer(renderOpt))
 

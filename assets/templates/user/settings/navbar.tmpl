@@ -1,0 +1,35 @@
+<div class="four wide column">
+	<div class="ui vertical menu">
+		<div class="header item">{{.i18n.Tr "settings"}}</div>
+		<a class="{{if .PageIsSettingsProfile}}active{{end}} item" href="{{AppSubURL}}/user/settings">
+			{{.i18n.Tr "settings.profile"}}
+		</a>
+		<a class="{{if .PageIsSettingsAvatar}}active{{end}} item" href="{{AppSubURL}}/user/settings/avatar">
+			{{.i18n.Tr "settings.avatar"}}
+		</a>
+		<a class="{{if .PageIsSettingsPassword}}active{{end}} item" href="{{AppSubURL}}/user/settings/password">
+			{{.i18n.Tr "settings.password"}}
+		</a>
+		<a class="{{if .PageIsSettingsEmails}}active{{end}} item" href="{{AppSubURL}}/user/settings/email">
+			{{.i18n.Tr "settings.emails"}}
+		</a>
+		<a class="{{if .PageIsSettingsSSHKeys}}active{{end}} item" href="{{AppSubURL}}/user/settings/ssh">
+			{{.i18n.Tr "settings.ssh_keys"}}
+		</a>
+		<a class="{{if .PageIsSettingsSecurity}}active{{end}} item" href="{{AppSubURL}}/user/settings/security">
+			{{.i18n.Tr "settings.security"}}
+		</a>
+		<a class="{{if .PageIsSettingsRepositories}}active{{end}} item" href="{{AppSubURL}}/user/settings/repositories">
+			{{.i18n.Tr "settings.repos"}}
+		</a>
+		<a class="{{if .PageIsSettingsOrganizations}}active{{end}} item" href="{{AppSubURL}}/user/settings/organizations">
+			{{.i18n.Tr "settings.orgs"}}
+		</a>
+		<a class="{{if .PageIsSettingsApplications}}active{{end}} item" href="{{AppSubURL}}/user/settings/applications">
+			{{.i18n.Tr "settings.applications"}}
+		</a>
+		<a class="{{if .PageIsSettingsDelete}}active{{end}} item" href="{{AppSubURL}}/user/settings/delete">
+			{{.i18n.Tr "settings.delete"}}
+		</a>
+	</div>
+</div>

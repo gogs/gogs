@@ -1,0 +1,321 @@
+{{template "base/head" .}}
+<div class="install">
+	<div class="ui middle very relaxed page grid">
+		<div class="sixteen wide center aligned centered column">
+			<h3 class="ui top attached header">
+				{{.i18n.Tr "install.title"}}
+			</h3>
+			<div class="ui attached segment">
+				{{template "base/alert" .}}
+
+				<p>{{.i18n.Tr "install.docker_helper" "https://github.com/gogs/gogs/tree/main/docker" | Safe}}</p>
+
+				<form class="ui form" action="{{AppSubURL}}/install" method="post">
+					<!-- Dtabase Settings -->
+					<h4 class="ui dividing header">{{.i18n.Tr "install.db_title"}}</h4>
+					<p>{{.i18n.Tr "install.requite_db_desc"}}</p>
+					<div class="inline required field {{if .Err_DbType}}error{{end}}">
+						<label>{{.i18n.Tr "install.db_type"}}</label>
+						<div class="ui selection database type dropdown">
+							<input type="hidden" id="db_type" name="db_type" value="{{.CurDbOption}}">
+							<div class="text">{{.CurDbOption}}</div>
+							<i class="dropdown icon"></i>
+							<div class="menu">
+								{{range .DbOptions}}
+									<div class="item" data-value="{{.}}">{{.}}</div>
+								{{end}}
+							</div>
+						</div>
+					</div>
+
+					<div id="sql_settings" class="{{if eq .CurDbOption "SQLite3"}}hide{{end}}">
+						<div class="inline required field {{if .Err_DbSetting}}error{{end}}">
+							<label for="db_host">{{.i18n.Tr "install.host"}}</label>
+							<input id="db_host" name="db_host" value="{{.db_host}}">
+						</div>
+						<div class="inline required field {{if .Err_DbSetting}}error{{end}}">
+							<label for="db_user">{{.i18n.Tr "install.user"}}</label>
+							<input id="db_user" name="db_user" value="{{.db_user}}">
+						</div>
+						<div class="inline required field {{if .Err_DbSetting}}error{{end}}">
+							<label for="db_passwd">{{.i18n.Tr "install.password"}}</label>
+							<input id="db_passwd" name="db_passwd" type="password" value="{{.db_passwd}}">
+						</div>
+						<div class="inline required field {{if .Err_DbSetting}}error{{end}}">
+							<label for="db_name">{{.i18n.Tr "install.db_name"}}</label>
+							<input id="db_name" name="db_name" value="{{.db_name}}">
+							<span class="help">{{.i18n.Tr "install.db_helper"}}</span>
+						</div>
+					</div>
+
+					<div id="pgsql_settings" class="{{if not (eq .CurDbOption "PostgreSQL")}}hide{{end}}">
+						<div class="inline required field">
+							<label>{{.i18n.Tr "install.ssl_mode"}}</label>
+							<div class="ui selection database type dropdown">
+								<input type="hidden" name="ssl_mode" value="{{if .ssl_mode}}{{.ssl_mode}}{{else}}disable{{end}}">
+								<div class="default text">disable</div>
+								<i class="dropdown icon"></i>
+								<div class="menu">
+									<div class="item" data-value="disable">Disable</div>
+									<div class="item" data-value="require">Require</div>
+									<div class="item" data-value="verify-full">Verify Full</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div id="sqlite_settings" class="{{if not (eq .CurDbOption "SQLite3")}}hide{{end}}">
+						<div class="inline required field {{if or .Err_DbPath .Err_DbSetting}}error{{end}}">
+							<label for="db_path">{{.i18n.Tr "install.path"}}</label>
+							<input id="db_path" name="db_path" value="{{.db_path}}">
+							<span class="help">{{.i18n.Tr "install.sqlite_helper" | Safe}}</span>
+						</div>
+					</div>
+
+					<!-- General Settings -->
+					<h4 class="ui dividing header">{{.i18n.Tr "install.general_title"}}</h4>
+					<div class="inline required field {{if .Err_AppName}}error{{end}}">
+						<label for="app_name">{{.i18n.Tr "install.app_name"}}</label>
+						<input id="app_name" name="app_name" value="{{.app_name}}" required>
+						<span class="help">{{.i18n.Tr "install.app_name_helper"}}</span>
+					</div>
+					<div class="inline required field {{if .Err_RepoRootPath}}error{{end}}">
+						<label for="repo_root_path">{{.i18n.Tr "install.repo_path"}}</label>
+						<input id="repo_root_path" name="repo_root_path" value="{{.repo_root_path}}" required>
+						<span class="help">{{.i18n.Tr "install.repo_path_helper"}}</span>
+					</div>
+					<div class="inline required field {{if .Err_RunUser}}error{{end}}">
+						<label for="run_user">{{.i18n.Tr "install.run_user"}}</label>
+						<input id="run_user" name="run_user" value="{{.run_user}}" required>
+						<span class="help">{{.i18n.Tr "install.run_user_helper"}}</span>
+					</div>
+					<div class="inline required field">
+						<label for="domain">{{.i18n.Tr "install.domain"}}</label>
+						<input id="domain" name="domain" value="{{.domain}}" placeholder="e.g. try.gogs.io" required>
+						<span class="help">{{.i18n.Tr "install.domain_helper"}}</span>
+					</div>
+					<div class="inline required field">
+						<label for="ssh_port">{{.i18n.Tr "install.ssh_port"}}</label>
+						<input id="ssh_port" name="ssh_port" value="{{.ssh_port}}">
+						<span class="help">{{.i18n.Tr "install.ssh_port_helper"}}</span>
+					</div>
+					<div class="inline field checkbox">
+						<div class="ui checkbox">
+							<label class="poping up" data-content="{{.i18n.Tr "install.use_builtin_ssh_server_popup"}}"><strong>{{.i18n.Tr "install.use_builtin_ssh_server"}}</strong></label>
+							<input name="use_builtin_ssh_server" type="checkbox" {{if .use_builtin_ssh_server}}checked{{end}}>
+						</div>
+					</div>
+					<div class="inline required field">
+						<label for="http_port">{{.i18n.Tr "install.http_port"}}</label>
+						<input id="http_port" name="http_port" value="{{.http_port}}" required>
+						<span class="help">{{.i18n.Tr "install.http_port_helper"}}</span>
+					</div>
+					<div class="inline required field">
+						<label for="app_url">{{.i18n.Tr "install.app_url"}}</label>
+						<input id="app_url" name="app_url" value="{{.app_url}}" placeholder="e.g. https://try.gogs.io" required>
+						<span class="help">{{.i18n.Tr "install.app_url_helper"}}</span>
+					</div>
+					<div class="inline required field">
+						<label for="log_root_path">{{.i18n.Tr "install.log_root_path"}}</label>
+						<input id="log_root_path" name="log_root_path" value="{{.log_root_path}}" placeholder="log" required>
+						<span class="help">{{.i18n.Tr "install.log_root_path_helper"}}</span>
+					</div>
+					<div class="inline field checkbox">
+						<div class="ui checkbox">
+							<label class="poping up" data-content="{{.i18n.Tr "install.enable_console_mode_popup"}}"><strong>{{.i18n.Tr "install.enable_console_mode"}}</strong></label>
+							<input name="enable_console_mode" type="checkbox" {{if .enable_console_mode}}checked{{end}}>
+						</div>
+					</div>
+
+
+					<!-- Optional Settings -->
+					<h4 class="ui dividing header">{{.i18n.Tr "install.optional_title"}}</h4>
+
+					<!-- Email -->
+					<div class="ui accordion optional field">
+						<div class="title {{if .Err_SMTP}}text red{{end}}">
+							<i class="icon dropdown"></i>
+							{{.i18n.Tr "install.email_title"}}
+						</div>
+						<div class="content {{if .Err_SMTP}}active{{end}}">
+							<div class="inline field {{if .Err_SMTPHost}}error{{end}}">
+								<label for="smtp_host">{{.i18n.Tr "install.smtp_host"}}</label>
+								<input id="smtp_host" name="smtp_host" value="{{.smtp_host}}">
+							</div>
+							<div class="inline field {{if .Err_SMTPFrom}}error{{end}}">
+								<label for="smtp_from">{{.i18n.Tr "install.smtp_from"}}</label>
+								<input id="smtp_from" name="smtp_from" value="{{.smtp_from}}">
+								<span class="help">{{.i18n.Tr "install.smtp_from_helper"}}</span>
+							</div>
+							<div class="inline field {{if .Err_SMTPUser}}error{{end}}">
+								<label for="smtp_user">{{.i18n.Tr "install.mailer_user"}}</label>
+								<input id="smtp_user" name="smtp_user" value="{{.smtp_user}}">
+							</div>
+							<div class="inline field">
+								<label for="smtp_passwd">{{.i18n.Tr "install.mailer_password"}}</label>
+								<input id="smtp_passwd" name="smtp_passwd" type="password" value="{{.smtp_passwd}}">
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "install.register_confirm"}}</strong></label>
+									<input name="register_confirm" type="checkbox" {{if .register_confirm}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label><strong>{{.i18n.Tr "install.mail_notify"}}</strong></label>
+									<input name="mail_notify" type="checkbox" {{if .mail_notify}}checked{{end}}>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Server and other services -->
+					<div class="ui accordion optional field">
+						<div class="title {{if .Err_Services}}text red{{end}}">
+							<i class="icon dropdown"></i>
+							{{.i18n.Tr "install.server_service_title"}}
+						</div>
+						<div class="content {{if .Err_Services}}active{{end}}">
+							<div class="inline field">
+								<div class="ui checkbox" id="offline-mode">
+									<label class="poping up" data-content="{{.i18n.Tr "install.offline_mode_popup"}}"><strong>{{.i18n.Tr "install.offline_mode"}}</strong></label>
+									<input name="offline_mode" type="checkbox" {{if .offline_mode}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox" id="disable-gravatar">
+									<label class="poping up" data-content="{{.i18n.Tr "install.disable_gravatar_popup"}}"><strong>{{.i18n.Tr "install.disable_gravatar"}}</strong></label>
+									<input name="disable_gravatar" type="checkbox" {{if .disable_gravatar}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox" id="federated-avatar-lookup">
+									<label class="poping up" data-content="{{.i18n.Tr "install.federated_avatar_lookup_popup"}}"><strong>{{.i18n.Tr "install.federated_avatar_lookup"}}</strong></label>
+									<input name="enable_federated_avatar" type="checkbox" {{if .enable_federated_avatar}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox" id="disable-registration">
+									<label class="poping up" data-content="{{.i18n.Tr "install.disable_registration_popup"}}"><strong>{{.i18n.Tr "install.disable_registration"}}</strong></label>
+									<input name="disable_registration" type="checkbox" {{if .disable_registration}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox" id="enable-captcha">
+									<label class="poping up" data-content="{{.i18n.Tr "install.enable_captcha_popup"}}"><strong>{{.i18n.Tr "install.enable_captcha"}}</strong></label>
+									<input name="enable_captcha" type="checkbox" {{if .enable_captcha}}checked{{end}}>
+								</div>
+							</div>
+							<div class="inline field">
+								<div class="ui checkbox">
+									<label class="poping up" data-content="{{.i18n.Tr "install.require_sign_in_view_popup"}}"><strong>{{.i18n.Tr "install.require_sign_in_view"}}</strong></label>
+									<input name="require_sign_in_view" type="checkbox" {{if .require_sign_in_view}}checked{{end}}>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Admin -->
+					<div class="ui accordion optional field">
+						<div class="title {{if .Err_Admin}}text red{{end}}">
+							<i class="icon dropdown"></i>
+							{{.i18n.Tr "install.admin_title"}}
+						</div>
+						<div class="content {{if .Err_Admin}}active{{end}}">
+							<p class="center">{{.i18n.Tr "install.admin_setting_desc"}}</p>
+							<div class="inline field {{if .Err_AdminName}}error{{end}}">
+								<label for="admin_name">{{.i18n.Tr "install.admin_name"}}</label>
+								<input id="admin_name" name="admin_name" value="{{.admin_name}}">
+							</div>
+							<div class="inline field {{if .Err_AdminPasswd}}error{{end}}">
+								<label for="admin_passwd">{{.i18n.Tr "install.admin_password"}}</label>
+								<input id="admin_passwd" name="admin_passwd" type="password" value="{{.admin_passwd}}">
+							</div>
+							<div class="inline field {{if .Err_AdminPasswd}}error{{end}}">
+								<label for="admin_confirm_passwd">{{.i18n.Tr "install.confirm_password"}}</label>
+								<input id="admin_confirm_passwd" name="admin_confirm_passwd" type="password" value="{{.admin_confirm_passwd}}">
+							</div>
+							<div class="inline field {{if .Err_AdminEmail}}error{{end}}">
+								<label for="admin_email">{{.i18n.Tr "install.admin_email"}}</label>
+								<input id="admin_email" name="admin_email" type="email" value="{{.admin_email}}">
+							</div>
+						</div>
+					</div>
+
+					<div class="ui divider"></div>
+					<div class="inline field">
+						<label></label>
+						<button class="ui primary button">{{.i18n.Tr "install.install_gogs"}}</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	// Database type change detection.
+	$("#db_type").change(function () {
+		var sqliteDefault = 'data/gogs.db';
+
+		var dbType = $(this).val();
+		if (dbType === "SQLite3") {
+			$('#sql_settings').hide();
+			$('#pgsql_settings').hide();
+			$('#sqlite_settings').show();
+
+			if (dbType === "SQLite3") {
+				$('#db_path').val(sqliteDefault);
+			}
+			return;
+		}
+
+		var dbDefaults = {
+			"MySQL": "127.0.0.1:3306",
+			"PostgreSQL": "127.0.0.1:5432",
+		};
+
+		$('#sqlite_settings').hide();
+		$('#sql_settings').show();
+		$('#pgsql_settings').toggle(dbType === "PostgreSQL");
+		$.each(dbDefaults, function(type, defaultHost) {
+			if ($('#db_host').val() == defaultHost) {
+				$('#db_host').val(dbDefaults[dbType]);
+				return false;
+			}
+		});
+	});
+
+	// TODO: better handling of exclusive relations.
+	$('#offline-mode input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#disable-gravatar').checkbox('check');
+			$('#federated-avatar-lookup').checkbox('uncheck');
+		}
+	});
+	$('#disable-gravatar input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#federated-avatar-lookup').checkbox('uncheck');
+		} else {
+			$('#offline-mode').checkbox('uncheck');
+		}
+	});
+	$('#federated-avatar-lookup input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#disable-gravatar').checkbox('uncheck');
+			$('#offline-mode').checkbox('uncheck');
+		}
+	});
+	$('#disable-registration input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#enable-captcha').checkbox('uncheck');
+		}
+	});
+	$('#enable-captcha input').change(function () {
+		if ($(this).is(':checked')) {
+			$('#disable-registration').checkbox('uncheck');
+		}
+	});
+</script>
+{{template "base/footer" .}}

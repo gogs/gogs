@@ -27,14 +27,6 @@ tasks:
       - gogs.go
       - internal/**/*.go
 
-  generate-bindata:
-    desc: Generate bindata for all assets.
-    deps: [clean]
-    cmds:
-      - go generate internal/assets/conf/conf.go
-      - go generate internal/assets/templates/templates.go
-      - go generate internal/assets/public/public.go
-
   generate-schemadoc:
     desc: Generate database schema documentation.
     cmds:
@@ -42,7 +34,7 @@ tasks:
 
   generate:
     desc: Run all go:generate commands.
-    deps: [generate-bindata, generate-schemadoc]
+    deps: [generate-schemadoc]
 
   test:
     desc: Run all tests.
@@ -69,7 +61,7 @@ tasks:
   less:
     desc: Generate CSS from LESS files.
     cmds:
-      - lessc --clean-css --source-map "public/less/gogs.less" public/css/gogs.min.css
+      - lessc --clean-css --source-map "assets/public/less/gogs.less" assets/public/css/gogs.min.css
 
   fixme:
     desc: Show all occurrences of "FIXME".

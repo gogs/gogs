@@ -1,0 +1,31 @@
+{{template "base/head" .}}
+<div class="user reset password">
+	<div class="ui middle very relaxed page grid">
+		<div class="column">
+			<form class="ui form" action="{{.Link}}" method="post">
+				{{.CSRFTokenHTML}}
+				<input name="code" type="hidden" value="{{.Code}}">
+				<h2 class="ui top attached header">
+					{{.i18n.Tr "auth.reset_password"}}
+				</h2>
+				<div class="ui attached segment">
+					{{template "base/alert" .}}
+					{{if .IsResetForm}}
+						<div class="required inline field {{if .Err_Password}}error{{end}}">
+							<label for="password">{{.i18n.Tr "password"}}</label>
+							<input id="password" name="password" type="password"  value="{{.password}}" autofocus required>
+						</div>
+						<div class="ui divider"></div>
+						<div class="inline field">
+							<label></label>
+							<button class="ui blue button">{{.i18n.Tr "auth.reset_password_helper"}}</button>
+						</div>
+					{{else}}
+						<p class="center">{{.i18n.Tr "auth.invalid_code"}}</p>
+					{{end}}
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

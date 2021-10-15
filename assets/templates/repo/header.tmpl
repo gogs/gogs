@@ -1,0 +1,98 @@
+<div class="header-wrapper">
+{{with .Repository}}
+	<div class="ui container"><!-- start container -->
+		<div class="ui vertically padded grid head"><!-- start grid -->
+			<div class="column"><!-- start column -->
+				<div class="ui header">
+					<div class="ui huge breadcrumb">
+						{{if .UseCustomAvatar}}
+							<img class="ui mini spaced image" src="{{.RelAvatarLink}}">
+							<i class="{{if .IsPrivate}}mega-octicon octicon-lock{{else if .IsUnlisted}}mega-octicon octicon-eye{{else if .IsMirror}}mega-octicon octicon-repo-clone{{else if .IsFork}}mega-octicon octicon-repo-forked{{end}}"></i>
+						{{else}}
+							<i class="mega-octicon octicon-{{if .IsPrivate}}lock{{else if .IsUnlisted}}eye{{else if .IsMirror}}repo-clone{{else if .IsFork}}repo-forked{{else}}repo{{end}}"></i>
+						{{end}}
+						<a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+						<div class="divider"> / </div>
+						<a href="{{$.RepoLink}}">{{.Name}}</a>
+						{{if .IsMirror}}<div class="fork-flag">{{$.i18n.Tr "repo.mirror_from"}} <a target="_blank" rel="noopener noreferrer" href="{{$.Mirror.Address}}">{{$.Mirror.Address}}</a></div>{{end}}
+						{{if .IsFork}}<div class="fork-flag">{{$.i18n.Tr "repo.forked_from"}} <a href="{{.BaseRepo.Link}}">{{SubStr .BaseRepo.RelLink 1 -1}}</a></div>{{end}}
+					</div>
+
+					{{if not $.IsGuest}}
+						<div class="ui right">
+							<form class="display inline" action="{{$.RepoLink}}/action/{{if $.IsWatchingRepo}}un{{end}}watch?redirect_to={{$.Link}}" method="POST">
+								{{$.CSRFTokenHTML}}
+								<div class="ui labeled button" tabindex="0">
+									<button class="ui basic button">
+										<i class="eye{{if not $.IsWatchingRepo}} slash outline{{end}} icon"></i>{{if $.IsWatchingRepo}}{{$.i18n.Tr "repo.unwatch"}}{{else}}{{$.i18n.Tr "repo.watch"}}{{end}}
+									</button>
+									<a class="ui basic label" href="{{.Link}}/watchers">
+										{{.NumWatches}}
+									</a>
+								</div>
+							</form>
+							<form class="display inline" action="{{$.RepoLink}}/action/{{if $.IsStaringRepo}}un{{end}}star?redirect_to={{$.Link}}" method="POST">
+								{{$.CSRFTokenHTML}}
+								<div class="ui labeled button" tabindex="0">
+									<button class="ui basic button">
+										<i class="star{{if not $.IsStaringRepo}} outline{{end}} icon"></i>{{if $.IsStaringRepo}}{{$.i18n.Tr "repo.unstar"}}{{else}}{{$.i18n.Tr "repo.star"}}{{end}}
+									</button>
+									<a class="ui basic label" href="{{.Link}}/stars">
+										{{.NumStars}}
+									</a>
+								</div>
+							</form>
+							{{if .CanBeForked}}
+								<div class="ui labeled button" tabindex="0">
+									<a class="ui basic button {{if eq .OwnerID $.LoggedUserID}}poping up{{end}}" href="{{AppSubURL}}/repo/fork/{{.ID}}">
+										<i class="octicon octicon-repo-forked"></i>{{$.i18n.Tr "repo.fork"}}
+									</a>
+									<a class="ui basic label" href="{{.Link}}/forks">
+										{{.NumForks}}
+									</a>
+								</div>
+							{{end}}
+						</div>
+					{{end}}
+				</div>
+			</div><!-- end column -->
+		</div><!-- end grid -->
+	</div><!-- end container -->
+{{end}}
+{{if not .IsDiffCompare}}
+	<div class="ui tabs container">
+		<div class="ui tabular menu navbar">
+			{{if not $.IsGuest}}
+				<a class="{{if .PageIsViewFiles}}active{{end}} item" href="{{.RepoLink}}">
+					<i class="octicon octicon-file-text"></i> {{.i18n.Tr "repo.files"}}
+				</a>
+			{{end}}
+			{{if .Repository.EnableIssues}}
+				<a class="{{if .PageIsIssueList}}active{{end}} item" href="{{.RepoLink}}/issues">
+					<i class="octicon octicon-issue-opened"></i> {{.i18n.Tr "repo.issues"}} {{if not .Repository.EnableExternalTracker}}<span class="ui {{if not .Repository.NumOpenIssues}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenIssues}}{{end}}</span>
+				</a>
+			{{end}}
+			{{if and .Repository.AllowsPulls (not .IsGuest)}}
+				<a class="{{if .PageIsPullList}}active{{end}} item" href="{{.RepoLink}}/pulls">
+					<i class="octicon octicon-git-pull-request"></i> {{.i18n.Tr "repo.pulls"}} <span class="ui {{if not .Repository.NumOpenPulls}}gray{{else}}blue{{end}} small label">{{.Repository.NumOpenPulls}}</span>
+				</a>
+			{{end}}
+			{{if .Repository.EnableWiki}}
+				<a class="{{if .PageIsWiki}}active{{end}} item" href="{{.RepoLink}}/wiki">
+					<i class="octicon octicon-book"></i> {{.i18n.Tr "repo.wiki"}}
+				</a>
+			{{end}}
+			{{if .IsRepositoryAdmin}}
+				<div class="right menu">
+					<a class="{{if .PageIsSettings}}active{{end}} item" href="{{.RepoLink}}/settings">
+						<i class="octicon octicon-tools"></i> {{.i18n.Tr "repo.settings"}}
+					</a>
+				</div>
+			{{end}}
+		</div>
+	</div>
+	<div class="ui tabs divider"></div>
+{{else}}
+	<div class="ui divider"></div>
+{{end}}
+</div>

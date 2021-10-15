@@ -1,0 +1,26 @@
+{{with .Org}}
+	<div class="ui container">
+		<div class="ui vertically grid head">
+			<div class="column">
+				<div class="ui header">
+					<img class="ui image" src="{{.RelAvatarLink}}?s=100">
+					<span class="text thin grey"><a href="{{.HomeLink}}">{{.DisplayName}}</a></span>
+
+					<div class="ui right">
+						<div class="ui menu">
+							<a class="{{if $.PageIsOrgMembers}}active{{end}} item" href="{{$.OrgLink}}/members">
+								<i class="octicon octicon-organization"></i>&nbsp;{{$.i18n.Tr "org.people"}}
+								<div class="floating ui black label">{{.NumMembers}}</div>
+							</a>
+							<a class="{{if $.PageIsOrgTeams}}active{{end}} item" href="{{$.OrgLink}}/teams">
+								<i class="octicon octicon-jersey"></i>&nbsp;{{$.i18n.Tr "org.teams"}}
+								<div class="floating ui black label">{{.NumTeams}}</div>
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="ui divider"></div>
+{{end}}

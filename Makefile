@@ -1,10 +1,10 @@
 LDFLAGS += -X "gogs.io/gogs/internal/conf.BuildTime=$(shell date -u '+%Y-%m-%d %I:%M:%S %Z')"
 LDFLAGS += -X "gogs.io/gogs/internal/conf.BuildCommit=$(shell git rev-parse HEAD)"
 
-CONF_FILES := $(shell find conf | sed 's/ /\\ /g')
-TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
-PUBLIC_FILES := $(shell find public | sed 's/ /\\ /g')
-LESS_FILES := $(wildcard public/less/*.less)
+CONF_FILES := $(shell find assets/conf | sed 's/ /\\ /g')
+TEMPLATES_FILES := $(shell find assets/templates | sed 's/ /\\ /g')
+PUBLIC_FILES := $(shell find assets/public | sed 's/ /\\ /g')
+LESS_FILES := $(wildcard assets/public/less/*.less)
 
 TAGS = ""
 BUILD_FLAGS = "-v"
@@ -15,7 +15,7 @@ NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
 .PHONY: check dist build build-no-gen pack release generate less clean test fixme todo legacy
 
-.IGNORE: public/css/gogs.css
+.IGNORE: assets/public/css/gogs.css
 
 all: build
 
@@ -37,15 +37,10 @@ pack:
 
 release: build pack
 
-generate: clean
-	go generate internal/assets/conf/conf.go
-	go generate internal/assets/templates/templates.go
-	go generate internal/assets/public/public.go
+less: clean assets/public/css/gogs.min.css
 
-less: clean public/css/gogs.min.css
-
-public/css/gogs.min.css: $(LESS_FILES)
-	@type lessc >/dev/null 2>&1 && lessc --clean-css --source-map "public/less/gogs.less" $@ || echo "lessc command not found or failed"
+assets/public/css/gogs.min.css: $(LESS_FILES)
+	@type lessc >/dev/null 2>&1 && lessc --clean-css --source-map "assets/public/less/gogs.less" $@ || echo "lessc command not found or failed"
 
 clean:
 	find . -name "*.DS_Store" -type f -delete

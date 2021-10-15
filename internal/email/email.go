@@ -15,7 +15,7 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/assets/templates"
+	"gogs.io/gogs/assets"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
 )
@@ -60,7 +60,7 @@ func render(tpl string, data map[string]interface{}) (string, error) {
 			}},
 		}
 		if !conf.Server.LoadAssetsFromDisk {
-			opt.TemplateFileSystem = templates.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
+			opt.TemplateFileSystem = assets.NewTemplateFileSystem("mail", opt.AppendDirectories[0])
 		}
 
 		ts := macaron.NewTemplateSet()

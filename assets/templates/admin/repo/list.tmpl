@@ -1,0 +1,67 @@
+{{template "base/head" .}}
+<div class="admin user">
+	<div class="ui container">
+		<div class="ui grid">
+			{{template "admin/navbar" .}}
+			<div class="twelve wide column content">
+				{{template "base/alert" .}}
+				<h4 class="ui top attached header">
+					{{.i18n.Tr "admin.repos.repo_manage_panel"}} ({{.i18n.Tr "admin.total" .Total}})
+				</h4>
+				<div class="ui attached segment">
+					{{template "admin/base/search" .}}
+				</div>
+				<div class="ui unstackable attached table segment">
+					<table class="ui unstackable very basic striped table">
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>{{.i18n.Tr "admin.repos.owner"}}</th>
+								<th>{{.i18n.Tr "admin.repos.name"}}</th>
+								<th>{{.i18n.Tr "admin.repos.private"}}</th>
+								<th>{{.i18n.Tr "admin.repos.watches"}}</th>
+								<th>{{.i18n.Tr "admin.repos.stars"}}</th>
+								<th>{{.i18n.Tr "admin.repos.issues"}}</th>
+								<th>{{.i18n.Tr "admin.repos.size"}}</th>
+								<th>{{.i18n.Tr "admin.users.created"}}</th>
+								<th>{{.i18n.Tr "admin.notices.op"}}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{{range .Repos}}
+								<tr>
+									<td>{{.ID}}</td>
+									<td><a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a></td>
+									<td><a href="{{AppSubURL}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a></td>
+									<td><i class="fa fa{{if .IsPrivate}}-check{{end}}-square-o"></i></td>
+									<td>{{.NumWatches}}</td>
+									<td>{{.NumStars}}</td>
+									<td>{{.NumIssues}}</td>
+									<td>{{.Size | FileSize}}</td>
+									<td><span title="{{DateFmtLong .Created}}">{{DateFmtShort .Created}}</span></td>
+									<td><a class="delete-button" href="" data-url="{{$.Link}}/delete?page={{$.Page.Current}}" data-id="{{.ID}}"><i class="trash icon text red"></i></a></td>
+								</tr>
+							{{end}}
+						</tbody>
+					</table>
+				</div>
+
+				{{template "admin/base/page" .}}
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="ui small basic delete modal">
+	<div class="ui icon header">
+		<i class="trash icon"></i>
+		{{.i18n.Tr "repo.settings.delete"}}
+	</div>
+	<div class="content">
+		<p>{{.i18n.Tr "repo.settings.delete_desc"}}</p>
+		{{.i18n.Tr "repo.settings.delete_notices_2"}}<br>
+		{{.i18n.Tr "repo.settings.delete_notices_fork_1"}}<br>
+	</div>
+	{{template "base/delete_modal_actions" .}}
+</div>
+{{template "base/footer" .}}

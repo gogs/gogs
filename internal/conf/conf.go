@@ -22,7 +22,7 @@ import (
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/assets/conf"
+	"gogs.io/gogs/assets"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/semverutil"
 )
@@ -37,17 +37,17 @@ func init() {
 
 // Asset is a wrapper for getting conf assets.
 func Asset(name string) ([]byte, error) {
-	return conf.Asset(name)
+	return assets.Asset(name)
 }
 
 // AssetDir is a wrapper for getting conf assets.
 func AssetDir(name string) ([]string, error) {
-	return conf.AssetDir(name)
+	return assets.AssetDir(name)
 }
 
 // MustAsset is a wrapper for getting conf assets.
 func MustAsset(name string) []byte {
-	return conf.MustAsset(name)
+	return assets.MustAsset(name)
 }
 
 // File is the configuration object.
@@ -65,7 +65,7 @@ func Init(customConf string) error {
 	var err error
 	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, conf.MustAsset("conf/app.ini"))
+	}, assets.MustAsset("conf/app.ini"))
 	if err != nil {
 		return errors.Wrap(err, "parse 'conf/app.ini'")
 	}

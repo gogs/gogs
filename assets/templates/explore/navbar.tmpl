@@ -1,0 +1,14 @@
+<div class="four wide column">
+	<div class="ui vertical menu navbar">
+		<div class="header item">{{.i18n.Tr "explore"}}</div>
+		<a class="{{if .PageIsExploreRepositories}}active{{end}} item" href="{{AppSubURL}}/explore/repos">
+			<span class="octicon octicon-repo"></span> {{.i18n.Tr "explore.repos"}}
+		</a>
+		<a class="{{if .PageIsExploreUsers}}active{{end}} item" href="{{AppSubURL}}/explore/users">
+			<span class="octicon octicon-person"></span> {{.i18n.Tr "explore.users"}}
+		</a>
+		<a class="{{if .PageIsExploreOrganizations}}active{{end}} item" href="{{AppSubURL}}/explore/organizations">
+			<span class="octicon octicon-organization"></span> {{.i18n.Tr "explore.organizations"}}
+		</a>
+	</div>
+</div>

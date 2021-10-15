@@ -1,0 +1,46 @@
+{{template "base/head" .}}
+<div class="organization teams">
+	{{template "org/header" .}}
+	<div class="ui container">
+		{{template "base/alert" .}}
+		<div class="ui grid">
+			{{template "org/team/sidebar" .}}
+			<div class="ui ten wide column">
+				<div class="ui top attached header">
+					{{.i18n.Tr "org.teams.members"}}
+				</div>
+				<div class="ui attached table segment members">
+					{{range .Team.Members}}
+						<div class="item">
+							{{if $.IsOrganizationOwner}}
+								<a class="ui red small button right" href="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/remove?uid={{.ID}}">{{$.i18n.Tr "org.members.remove"}}</a>
+							{{end}}
+							<a href="{{.HomeLink}}">
+								<img class="ui avatar image" src="{{.RelAvatarLink}}">
+								{{.DisplayName}}
+							</a>
+						</div>
+					{{end}}
+				</div>
+				{{if .IsOrganizationOwner}}
+					<div class="ui bottom attached segment">
+						<form class="ui form" id="add-member-form" action="{{$.OrgLink}}/teams/{{$.Team.LowerName}}/action/add" method="post">
+							{{.CSRFTokenHTML}}
+							<input type="hidden" name="uid" value="{{.LoggedUser.ID}}">
+							<div class="inline field ui left">
+								<div id="search-user-box">
+									<div class="ui input">
+										<input class="prompt" name="uname" placeholder="{{.i18n.Tr "repo.settings.search_user_placeholder"}}" autocomplete="off" required>
+									</div>
+									<div class="ui segment results hide"></div>
+								</div>
+							</div>
+							<button class="ui green button">{{.i18n.Tr "org.teams.add_team_member"}}</button>
+						</form>
+					</div>
+				{{end}}
+			</div>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

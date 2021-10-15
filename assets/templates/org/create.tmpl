@@ -1,0 +1,30 @@
+{{template "base/head" .}}
+<div class="organization new org">
+	<div class="ui middle very relaxed page grid">
+		<div class="column">
+			<form class="ui form" action="{{.Link}}" method="post">
+				{{.CSRFTokenHTML}}
+				<h3 class="ui top attached header">
+					{{.i18n.Tr "new_org"}}
+				</h3>
+				<div class="ui attached segment">
+					{{template "base/alert" .}}
+					<div class="inline required field {{if .Err_OrgName}}error{{end}}">
+						<label for="org_name">{{.i18n.Tr "org.org_name_holder"}}</label>
+						<input id="org_name" name="org_name" value="{{.org_name}}" autofocus required>
+						<span class="help">{{.i18n.Tr "org.org_name_helper"}}</span>
+					</div>
+
+					<div class="inline field">
+						<label></label>
+						<button class="ui green button">
+							{{.i18n.Tr "org.create_org"}}
+						</button>
+						<a class="ui button" href="{{AppSubURL}}/">{{.i18n.Tr "cancel"}}</a>
+					</div>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}

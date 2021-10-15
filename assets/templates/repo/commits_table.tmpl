@@ -1,0 +1,69 @@
+<h4 class="ui top attached header">
+	{{if .PageIsCommits}}
+		{{.i18n.Tr "repo.commits.commit_history"}}
+	{{else}}
+		{{.CommitsCount}} {{.i18n.Tr "repo.commits.commits"}}
+	{{end}}
+	{{if .PageIsCommits}}
+		<div class="ui right">
+			<form action="{{.RepoLink}}/commits/{{.BranchName}}/search">
+				<div class="ui tiny search input">
+					<input name="q" placeholder="{{.i18n.Tr "repo.commits.search"}}" value="{{.Keyword}}" autofocus>
+				</div>
+				<button class="ui black tiny button" data-panel="#add-deploy-key-panel">{{.i18n.Tr "repo.commits.find"}}</button>
+			</form>
+		</div>
+	{{else if .IsDiffCompare}}
+		<a href="{{$.CommitRepoLink}}/commit/{{.BeforeCommitID}}" class="ui green sha label">{{ShortSHA1 .BeforeCommitID}}</a> ... <a href="{{$.CommitRepoLink}}/commit/{{.AfterCommitID}}" class="ui green sha label">{{ShortSHA1 .AfterCommitID}}</a>
+	{{end}}
+</h4>
+
+{{if .Commits}}
+<div class="ui unstackable attached table segment">
+		<table id="commits-table" class="ui unstackable very basic striped fixed table single line">
+			<thead>
+				<tr>
+					<th class="four wide">{{.i18n.Tr "repo.commits.author"}}</th>
+					<th class="nine wide message"><span class="sha">SHA1</span> {{.i18n.Tr "repo.commits.message"}}</th>
+					<th class="three wide right aligned">{{.i18n.Tr "repo.commits.date"}}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Commits}}
+					<tr>
+						<td class="author">
+							{{if .User}}
+								<img class="ui avatar image" src="{{.User.RelAvatarLink}}" alt=""/>&nbsp;&nbsp;<a href="{{AppSubURL}}/{{.User.Name}}">{{.Author.Name}}</a>
+							{{else}}
+								<img class="ui avatar image" src="{{AvatarLink .Author.Email}}" alt=""/>&nbsp;&nbsp;{{.Author.Name}}
+							{{end}}
+						</td>
+
+						<td class="message collapsing">
+							{{/* Username or Reponame doesn't present we assume the source repository no longer exists */}}
+							{{if not (and $.Username $.Reponame)}}
+								<span class="ui sha label">{{ShortSHA1 .ID.String}}</span>
+							{{else}}
+								<a rel="nofollow" class="ui sha label" href="{{AppSubURL}}/{{$.Username}}/{{$.Reponame}}/commit/{{.ID}}">{{ShortSHA1 .ID.String}}</a>
+							{{end}}
+							<span class="{{if gt .ParentsCount 1}}grey text {{end}} has-emoji">{{RenderCommitMessage false .Summary $.RepoLink $.Repository.ComposeMetas | Str2HTML}}</span>
+						</td>
+						<td class="grey text right aligned">{{TimeSince .Author.When $.Lang}}</td>
+					</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+{{end}}
+
+{{if or .HasPrevious .HasNext}}
+	<br>
+	<div class="center">
+		<a class="ui small button {{if not .HasPrevious}}disabled{{end}}" {{if .HasPrevious}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.PreviousPage}}&pageSize={{.PageSize}}"{{end}}>
+			{{$.i18n.Tr "repo.commits.newer"}}
+		</a>
+		<a class="ui small button {{if not .HasNext}}disabled{{end}}" {{if .HasNext}}href="{{$.RepoLink}}/commits/{{$.BranchName}}{{if $.FileName}}/{{$.FileName}}{{end}}?page={{.NextPage}}&pageSize={{.PageSize}}"{{end}}>
+			{{$.i18n.Tr "repo.commits.older"}}
+		</a>
+	</div>
+{{end}}

@@ -1,0 +1,22 @@
+{{template "base/head" .}}
+<div class="repository forks">
+	{{template "repo/header" .}}
+	<div class="ui container">
+		<h2 class="ui dividing header">
+			{{.i18n.Tr "repo.forks"}}
+		</h2>
+		<div class="ui list">
+			{{range .Forks}}
+				<div class="item">
+					<img class="ui avatar image" src="{{.Owner.RelAvatarLink}}">
+					<div class="link">
+						<a href="{{AppSubURL}}/{{.Owner.Name}}">{{.Owner.Name}}</a>
+						/
+						<a href="{{AppSubURL}}/{{.Owner.Name}}/{{.Name}}">{{.Name}}</a>
+					</div>
+				</div>
+			{{end}}
+		</div>
+	</div>
+</div>
+{{template "base/footer" .}}
