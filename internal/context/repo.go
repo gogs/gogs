@@ -260,6 +260,15 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		c.Data["DisableSSH"] = conf.SSH.Disabled
 		c.Data["DisableHTTP"] = conf.Repository.DisableHTTPGit
+
+		HostSplits := strings.Split(c.Req.Host, ":")
+		conf.SSH.Domain = HostSplits[0]
+		if conf.Server.Protocol == "unix" {
+			conf.Server.ExternalURL = c.Req.Host
+		} else {
+			conf.Server.ExternalURL = fmt.Sprintf("%s://%s", conf.Server.Protocol, c.Req.Host)
+		}
+
 		c.Data["CloneLink"] = repo.CloneLink()
 		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
