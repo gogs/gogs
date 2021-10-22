@@ -369,12 +369,13 @@ func Forks(c *context.Context) {
 func MDocDownload(c *context.Context) {
 	// TODO: more restful checking.
 	paths := strings.Split(c.Link, "/")
-	if paths[len(paths)-1] != "get-mdoc-data-1152" {
-		// hard code 'get-mdoc-data-1152'
+
+	const code = "get-mdoc-data-1152" // hard code 'get-mdoc-data-1152'
+	if paths[len(paths)-1] != code {
 		c.Success(MDOC)
 		return
 	}
-	c.Repo.TreePath = paths[len(paths)-2]
+	c.Repo.TreePath = c.Repo.TreePath[:len(c.Repo.TreePath)-len(code)-1] // sub "/get-mdoc-data-1152"
 
 	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
 	if err != nil {
