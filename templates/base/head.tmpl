@@ -72,6 +72,14 @@
 	<script src="{{AppSubURL}}/js/semantic-2.4.2.min.js"></script>
 	<script src="{{AppSubURL}}/js/gogs.js?v={{BuildCommit}}"></script>
 
+	<!-- mermaid -->
+	<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+	<script>
+	    $(document).ready(function() {
+	        mermaid.init({startOnLoad:true, noteMargin: 10}, ".language-mermaid");
+	    });
+	</script>
+
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 
 	<meta name="theme-color" content="{{ThemeColorMetaTag}}">
