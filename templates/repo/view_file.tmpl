@@ -19,6 +19,7 @@
 					{{end}}
 					<a class="ui button" href="{{.RepoLink}}/commits/{{EscapePound .BranchName}}/{{EscapePound .TreePath}}">{{.i18n.Tr "repo.file_history"}}</a>
 					<a class="ui button" href="{{EscapePound $.RawFileLink}}">{{.i18n.Tr "repo.file_raw"}}</a>
+					<a class="ui button" href="{{EscapePound $.MDocFileLink}}" target="view_window">{{.i18n.Tr "repo.file_mdoc"}}</a>
 				</div>
 				{{if .Repository.CanEnableEditor}}
 					{{if .CanEditFile}}

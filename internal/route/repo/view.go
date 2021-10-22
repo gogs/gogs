@@ -32,6 +32,7 @@ const (
 	HOME     = "repo/home"
 	WATCHERS = "repo/watchers"
 	FORKS    = "repo/forks"
+	MDOC     = "repo/view_mdoc"
 )
 
 func renderDirectory(c *context.Context, treeLink string) {
@@ -70,6 +71,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 
 	if readmeFile != nil {
+		c.Data["MDocFileLink"] = ""
 		c.Data["RawFileLink"] = ""
 		c.Data["ReadmeInList"] = true
 		c.Data["ReadmeExist"] = true
@@ -94,6 +96,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
+				c.Data["MDocFileLink"] = c.Repo.RepoLink + "/mdoc/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
 				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
 			}
@@ -120,7 +123,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 	}
 }
 
-func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink string) {
+func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink, mdocLink string) {
 	c.Data["IsViewFile"] = true
 
 	blob := entry.Blob()
@@ -134,6 +137,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 	c.Data["FileName"] = blob.Name()
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
 	c.Data["RawFileLink"] = rawLink + "/" + c.Repo.TreePath
+	c.Data["MDocFileLink"] = mdocLink + "/" + c.Repo.TreePath
 
 	isTextFile := tool.IsTextFile(p)
 	c.Data["IsTextFile"] = isTextFile
@@ -249,6 +253,7 @@ func Home(c *context.Context) {
 	branchLink := c.Repo.RepoLink + "/src/" + c.Repo.BranchName
 	treeLink := branchLink
 	rawLink := c.Repo.RepoLink + "/raw/" + c.Repo.BranchName
+	mdocLink := c.Repo.RepoLink + "/mdoc/" + c.Repo.BranchName
 
 	isRootDir := false
 	if len(c.Repo.TreePath) > 0 {
@@ -277,7 +282,7 @@ func Home(c *context.Context) {
 	if entry.IsTree() {
 		renderDirectory(c, treeLink)
 	} else {
-		renderFile(c, entry, treeLink, rawLink)
+		renderFile(c, entry, treeLink, rawLink, mdocLink)
 	}
 	if c.Written() {
 		return
@@ -359,4 +364,26 @@ func Forks(c *context.Context) {
 	c.Data["Forks"] = forks
 
 	c.Success(FORKS)
+}
+
+func MDocDownload(c *context.Context) {
+	// TODO: more restful checking.
+	paths := strings.Split(c.Link, "/")
+	if paths[len(paths)-1] != "get-mdoc-data-1152" {
+		// hard code 'get-mdoc-data-1152'
+		c.Success(MDOC)
+		return
+	}
+	c.Repo.TreePath = paths[len(paths)-2]
+
+	blob, err := c.Repo.Commit.Blob(c.Repo.TreePath)
+	if err != nil {
+		c.NotFoundOrError(gitutil.NewError(err), "get blob")
+		return
+	}
+
+	if err = ServeBlob(c, blob); err != nil {
+		c.Error(err, "serve blob")
+		return
+	}
 }

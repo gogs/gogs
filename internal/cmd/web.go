@@ -602,6 +602,7 @@ func runWeb(c *cli.Context) error {
 			m.Group("", func() {
 				m.Get("/src/*", repo.Home)
 				m.Get("/raw/*", repo.SingleDownload)
+				m.Get("/mdoc/*", repo.MDocDownload)
 				m.Get("/commits/*", repo.RefCommits)
 				m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.Diff)
 				m.Get("/forks", repo.Forks)
