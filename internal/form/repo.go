@@ -26,6 +26,7 @@ type CreateRepo struct {
 	UserID      int64  `binding:"Required"`
 	RepoName    string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Private     bool
+	Unlisted    bool
 	Description string `binding:"MaxSize(512)"`
 	AutoInit    bool
 	Gitignores  string
@@ -45,6 +46,7 @@ type MigrateRepo struct {
 	RepoName     string `json:"repo_name" binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Mirror       bool   `json:"mirror"`
 	Private      bool   `json:"private"`
+	Unlisted     bool   `json:"unlisted"`
 	Description  string `json:"description" binding:"MaxSize(512)"`
 }
 
@@ -70,6 +72,10 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
 		}
+		// To prevent CRLF injection in git protocol, see https://github.com/gogs/gogs/issues/6413
+		if u.Scheme == "git" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
+			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
 		return "", db.ErrInvalidCloneAddr{IsPermissionDenied: true}
@@ -88,6 +94,7 @@ type RepoSetting struct {
 	Interval      int
 	MirrorAddress string
 	Private       bool
+	Unlisted      bool
 	EnablePrune   bool
 
 	// Advanced settings
@@ -340,7 +347,7 @@ func (f *NewWiki) Validate(ctx *macaron.Context, errs binding.Errors) binding.Er
 type EditRepoFile struct {
 	TreePath      string `binding:"Required;MaxSize(500)"`
 	Content       string `binding:"Required"`
-	CommitSummary string `binding:"MaxSize(100)`
+	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDotSlash;MaxSize(100)"`
@@ -372,8 +379,8 @@ func (f *EditPreviewDiff) Validate(ctx *macaron.Context, errs binding.Errors) bi
 //
 
 type UploadRepoFile struct {
-	TreePath      string `binding:MaxSize(500)"`
-	CommitSummary string `binding:"MaxSize(100)`
+	TreePath      string `binding:"MaxSize(500)"`
+	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
@@ -404,7 +411,7 @@ func (f *RemoveUploadFile) Validate(ctx *macaron.Context, errs binding.Errors) b
 //         \/     \/          \/          \/
 
 type DeleteRepoFile struct {
-	CommitSummary string `binding:"MaxSize(100)`
+	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
 	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`

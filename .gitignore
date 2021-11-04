@@ -4,7 +4,6 @@
 log/
 custom/
 data/
-.vendor/
 .idea/
 *.iml
 public/img/avatar/
@@ -14,6 +13,5 @@ public/img/avatar/
 profile/
 *.pem
 output*
-*.sublime-project
-*.sublime-workspace
 /release
+.task

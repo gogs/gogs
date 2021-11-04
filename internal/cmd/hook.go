@@ -9,24 +9,22 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/httplib"
-	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/internal/template"
 )
 
 var (
@@ -35,7 +33,7 @@ var (
 		Usage:       "Delegate commands to corresponding Git hooks",
 		Description: "All sub-commands should only be called by Git",
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 		Subcommands: []cli.Command{
 			subcmdHookPreReceive,
@@ -68,7 +66,7 @@ func runHookPreReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/pre-receive.log", true)
+	setup(c, "pre-receive.log", true)
 
 	isWiki := strings.Contains(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
@@ -88,13 +86,13 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 		oldCommitID := string(fields[0])
 		newCommitID := string(fields[1])
-		branchName := strings.TrimPrefix(string(fields[2]), git.BRANCH_PREFIX)
+		branchName := git.RefShortName(string(fields[2]))
 
 		// Branch protection
 		repoID := com.StrTo(os.Getenv(db.ENV_REPO_ID)).MustInt64()
 		protectBranch, err := db.GetProtectBranchOfRepoByName(repoID, branchName)
 		if err != nil {
-			if errors.IsErrBranchNotExist(err) {
+			if db.IsErrBranchNotExist(err) {
 				continue
 			}
 			fail("Internal error", "GetProtectBranchOfRepoByName [repo_id: %d, branch: %s]: %v", repoID, branchName, err)
@@ -122,7 +120,7 @@ func runHookPreReceive(c *cli.Context) error {
 		}
 
 		// check and deletion
-		if newCommitID == git.EMPTY_SHA {
+		if newCommitID == git.EmptyID {
 			fail(fmt.Sprintf("Branch '%s' is protected from deletion", branchName), "")
 		}
 
@@ -130,7 +128,7 @@ func runHookPreReceive(c *cli.Context) error {
 		output, err := git.NewCommand("rev-list", "--max-count=1", oldCommitID, "^"+newCommitID).
 			RunInDir(db.RepoPath(os.Getenv(db.ENV_REPO_OWNER_NAME), os.Getenv(db.ENV_REPO_NAME)))
 		if err != nil {
-			fail("Internal error", "Fail to detect force push: %v", err)
+			fail("Internal error", "Failed to detect force push: %v", err)
 		} else if len(output) > 0 {
 			fail(fmt.Sprintf("Branch '%s' is protected from force push", branchName), "")
 		}
@@ -142,7 +140,7 @@ func runHookPreReceive(c *cli.Context) error {
 	}
 
 	var hookCmd *exec.Cmd
-	if setting.IsWindows {
+	if conf.IsWindowsRuntime() {
 		hookCmd = exec.Command("bash.exe", "custom_hooks/pre-receive")
 	} else {
 		hookCmd = exec.Command(customHooksPath)
@@ -152,7 +150,7 @@ func runHookPreReceive(c *cli.Context) error {
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute custom pre-receive hook: %v", err)
+		fail("Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
@@ -161,7 +159,7 @@ func runHookUpdate(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/update.log", false)
+	setup(c, "update.log", false)
 
 	args := c.Args()
 	if len(args) != 3 {
@@ -176,7 +174,7 @@ func runHookUpdate(c *cli.Context) error {
 	}
 
 	var hookCmd *exec.Cmd
-	if setting.IsWindows {
+	if conf.IsWindowsRuntime() {
 		hookCmd = exec.Command("bash.exe", append([]string{"custom_hooks/update"}, args...)...)
 	} else {
 		hookCmd = exec.Command(customHooksPath, args...)
@@ -186,7 +184,7 @@ func runHookUpdate(c *cli.Context) error {
 	hookCmd.Stdin = os.Stdin
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute custom pre-receive hook: %v", err)
+		fail("Internal error", "Failed to execute custom pre-receive hook: %v", err)
 	}
 	return nil
 }
@@ -195,14 +193,11 @@ func runHookPostReceive(c *cli.Context) error {
 	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
 		return nil
 	}
-	setup(c, "hooks/post-receive.log", true)
+	setup(c, "post-receive.log", true)
 
 	// Post-receive hook does more than just gather Git information,
 	// so we need to setup additional services for email notifications.
-	setting.NewPostReceiveHookServices()
-	mailer.NewContext()
-	mailer.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
-		path.Join(setting.CustomPath, "templates/mail"), template.NewFuncMap())
+	email.NewContext()
 
 	isWiki := strings.Contains(os.Getenv(db.ENV_REPO_CUSTOM_HOOKS_PATH), ".wiki.git/")
 
@@ -225,33 +220,35 @@ func runHookPostReceive(c *cli.Context) error {
 		options := db.PushUpdateOptions{
 			OldCommitID:  string(fields[0]),
 			NewCommitID:  string(fields[1]),
-			RefFullName:  string(fields[2]),
+			FullRefspec:  string(fields[2]),
 			PusherID:     com.StrTo(os.Getenv(db.ENV_AUTH_USER_ID)).MustInt64(),
 			PusherName:   os.Getenv(db.ENV_AUTH_USER_NAME),
 			RepoUserName: os.Getenv(db.ENV_REPO_OWNER_NAME),
 			RepoName:     os.Getenv(db.ENV_REPO_NAME),
 		}
 		if err := db.PushUpdate(options); err != nil {
-			log.Error(2, "PushUpdate: %v", err)
+			log.Error("PushUpdate: %v", err)
 		}
 
 		// Ask for running deliver hook and test pull request tasks
-		reqURL := setting.LocalURL + options.RepoUserName + "/" + options.RepoName + "/tasks/trigger?branch=" +
-			template.EscapePound(strings.TrimPrefix(options.RefFullName, git.BRANCH_PREFIX)) +
-			"&secret=" + os.Getenv(db.ENV_REPO_OWNER_SALT_MD5) +
-			"&pusher=" + os.Getenv(db.ENV_AUTH_USER_ID)
+		q := make(url.Values)
+		q.Add("branch", git.RefShortName(options.FullRefspec))
+		q.Add("secret", os.Getenv(db.ENV_REPO_OWNER_SALT_MD5))
+		q.Add("pusher", os.Getenv(db.ENV_AUTH_USER_ID))
+		reqURL := fmt.Sprintf("%s%s/%s/tasks/trigger?%s", conf.Server.LocalRootURL, options.RepoUserName, options.RepoName, q.Encode())
 		log.Trace("Trigger task: %s", reqURL)
 
-		resp, err := httplib.Head(reqURL).SetTLSClientConfig(&tls.Config{
-			InsecureSkipVerify: true,
-		}).Response()
+		resp, err := httplib.Get(reqURL).
+			SetTLSClientConfig(&tls.Config{
+				InsecureSkipVerify: true,
+			}).Response()
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode/100 != 2 {
-				log.Error(2, "Fail to trigger task: not 2xx response code")
+				log.Error("Failed to trigger task: unsuccessful response code %d", resp.StatusCode)
 			}
 		} else {
-			log.Error(2, "Fail to trigger task: %v", err)
+			log.Error("Failed to trigger task: %v", err)
 		}
 	}
 
@@ -261,7 +258,7 @@ func runHookPostReceive(c *cli.Context) error {
 	}
 
 	var hookCmd *exec.Cmd
-	if setting.IsWindows {
+	if conf.IsWindowsRuntime() {
 		hookCmd = exec.Command("bash.exe", "custom_hooks/post-receive")
 	} else {
 		hookCmd = exec.Command(customHooksPath)
@@ -271,7 +268,7 @@ func runHookPostReceive(c *cli.Context) error {
 	hookCmd.Stdin = buf
 	hookCmd.Stderr = os.Stderr
 	if err := hookCmd.Run(); err != nil {
-		fail("Internal error", "Fail to execute custom post-receive hook: %v", err)
+		fail("Internal error", "Failed to execute custom post-receive hook: %v", err)
 	}
 	return nil
 }

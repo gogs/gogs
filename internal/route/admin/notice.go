@@ -5,13 +5,15 @@
 package admin
 
 import (
+	"net/http"
+
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -19,7 +21,7 @@ const (
 )
 
 func Notices(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.notices")
+	c.Title("admin.notices")
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminNotices"] = true
 
@@ -28,17 +30,17 @@ func Notices(c *context.Context) {
 	if page <= 1 {
 		page = 1
 	}
-	c.Data["Page"] = paginater.New(int(total), setting.UI.Admin.NoticePagingNum, page, 5)
+	c.Data["Page"] = paginater.New(int(total), conf.UI.Admin.NoticePagingNum, page, 5)
 
-	notices, err := db.Notices(page, setting.UI.Admin.NoticePagingNum)
+	notices, err := db.Notices(page, conf.UI.Admin.NoticePagingNum)
 	if err != nil {
-		c.Handle(500, "Notices", err)
+		c.Error(err, "list notices")
 		return
 	}
 	c.Data["Notices"] = notices
 
 	c.Data["Total"] = total
-	c.HTML(200, NOTICES)
+	c.Success(NOTICES)
 }
 
 func DeleteNotices(c *context.Context) {
@@ -53,20 +55,20 @@ func DeleteNotices(c *context.Context) {
 
 	if err := db.DeleteNoticesByIDs(ids); err != nil {
 		c.Flash.Error("DeleteNoticesByIDs: " + err.Error())
-		c.Status(500)
+		c.Status(http.StatusInternalServerError)
 	} else {
 		c.Flash.Success(c.Tr("admin.notices.delete_success"))
-		c.Status(200)
+		c.Status(http.StatusOK)
 	}
 }
 
 func EmptyNotices(c *context.Context) {
 	if err := db.DeleteNotices(0, 0); err != nil {
-		c.Handle(500, "DeleteNotices", err)
+		c.Error(err, "delete notices")
 		return
 	}
 
 	log.Trace("System notices deleted by admin (%s): [start: %d]", c.User.Name, 0)
 	c.Flash.Success(c.Tr("admin.notices.delete_success"))
-	c.Redirect(setting.AppSubURL + "/admin/notices")
+	c.Redirect(conf.Server.Subpath + "/admin/notices")
 }

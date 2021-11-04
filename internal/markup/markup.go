@@ -8,13 +8,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"regexp"
 	"strings"
 
 	"github.com/unknwon/com"
 	"golang.org/x/net/html"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -35,26 +35,26 @@ const (
 
 var (
 	// MentionPattern matches string that mentions someone, e.g. @Unknwon
-	MentionPattern = regexp.MustCompile(`(\s|^|\W)@[0-9a-zA-Z-_\.]+`)
+	MentionPattern = lazyregexp.New(`(\s|^|\W)@[0-9a-zA-Z-_\.]+`)
 
 	// CommitPattern matches link to certain commit with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/commit/d8a994ef243349f321568f9e36d5c3f444b99cae#diff-2
-	CommitPattern = regexp.MustCompile(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
+	CommitPattern = lazyregexp.New(`(\s|^)https?.*commit/[0-9a-zA-Z]+(#+[0-9a-zA-Z-]*)?`)
 
 	// IssueFullPattern matches link to an issue with or without trailing hash,
 	// e.g. https://try.gogs.io/gogs/gogs/issues/4#issue-685
-	IssueFullPattern = regexp.MustCompile(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
+	IssueFullPattern = lazyregexp.New(`(\s|^)https?.*issues/[0-9]+(#+[0-9a-zA-Z-]*)?`)
 	// IssueNumericPattern matches string that references to a numeric issue, e.g. #1287
-	IssueNumericPattern = regexp.MustCompile(`( |^|\(|\[)#[0-9]+\b`)
+	IssueNumericPattern = lazyregexp.New(`( |^|\(|\[)#[0-9]+\b`)
 	// IssueAlphanumericPattern matches string that references to an alphanumeric issue, e.g. ABC-1234
-	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\(|\[)[A-Z]{1,10}-[1-9][0-9]*\b`)
+	IssueAlphanumericPattern = lazyregexp.New(`( |^|\(|\[)[A-Z]{1,10}-[1-9][0-9]*\b`)
 	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a difference repository
 	// e.g. gogs/gogs#12345
-	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
+	CrossReferenceIssueNumericPattern = lazyregexp.New(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// FIXME: this pattern matches pure numbers as well, right now we do a hack to check in RenderSha1CurrentPattern by converting string to a number.
-	Sha1CurrentPattern = regexp.MustCompile(`\b[0-9a-f]{7,40}\b`)
+	Sha1CurrentPattern = lazyregexp.New(`\b[0-9a-f]{7,40}\b`)
 )
 
 // FindAllMentions matches mention patterns in given content
@@ -78,7 +78,7 @@ func cutoutVerbosePrefix(prefix string) string {
 		if prefix[i] == '/' {
 			count++
 		}
-		if count >= 3+setting.AppSubURLDepth {
+		if count >= 3+conf.Server.SubpathDepth {
 			return prefix[:i]
 		}
 	}
@@ -133,7 +133,7 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, me
 		repo := string(m[:delimIdx])
 		index := string(m[delimIdx+1:])
 
-		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, setting.AppURL, repo, index, m)
+		link := fmt.Sprintf(`<a href="%s%s/issues/%s">%s</a>`, conf.Server.ExternalURL, repo, index, m)
 		rawBytes = bytes.Replace(rawBytes, m, []byte(link), 1)
 	}
 	return rawBytes
@@ -145,7 +145,8 @@ func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
 		if com.StrTo(m).MustInt() > 0 {
 			return m
 		}
-		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSHA1(string(m)))
+
+		return fmt.Sprintf(`<a href="%s/commit/%s"><code>%s</code></a>`, urlPrefix, m, tool.ShortSHA1(m))
 	}))
 }
 
@@ -155,12 +156,12 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	for _, m := range ms {
 		m = m[bytes.Index(m, []byte("@")):]
 		rawBytes = bytes.Replace(rawBytes, m,
-			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, setting.AppSubURL, m[1:], m)), -1)
+			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)), -1)
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
 	rawBytes = RenderCrossReferenceIssueIndexPattern(rawBytes, urlPrefix, metas)
-	rawBytes = RenderSha1CurrentPattern(rawBytes, urlPrefix)
+	rawBytes = RenderSha1CurrentPattern(rawBytes, metas["repoLink"])
 	return rawBytes
 }
 
@@ -215,7 +216,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 	buf.WriteString(`">`)
 
 	if needPrepend {
-		src = strings.Replace(urlPrefix+string(src), " ", "%20", -1)
+		src = strings.Replace(urlPrefix+src, " ", "%20", -1)
 		buf.WriteString(`<img src="`)
 		buf.WriteString(src)
 		buf.WriteString(`"`)
@@ -334,7 +335,7 @@ func Detect(filename string) Type {
 	}
 }
 
-// Render takes a string or []byte and renders to HTML in given type of syntax with special links.
+// Render takes a string or []byte and renders to sanitized HTML in given type of syntax with special links.
 func Render(typ Type, input interface{}, urlPrefix string, metas map[string]string) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {

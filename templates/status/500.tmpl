@@ -4,6 +4,6 @@
 	<div class="ui divider"></div>
 	<br>
 	{{if .ErrorMsg}}<p>An error has occurred : {{.ErrorMsg}}</p>{{end}}
-	{{if .ShowFooterVersion}}<p>Application Version: {{AppVer}}</p>{{end}}
+	{{if .IsAdmin}}<p>Application Version: {{AppVer}}</p>{{end}}
 </div>
 {{template "base/footer" .}}

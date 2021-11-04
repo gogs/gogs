@@ -17,7 +17,7 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -62,8 +62,8 @@ func (repo *Repository) InitWiki() error {
 		return nil
 	}
 
-	if err := git.InitRepository(repo.WikiPath(), true); err != nil {
-		return fmt.Errorf("InitRepository: %v", err)
+	if err := git.Init(repo.WikiPath(), git.InitOptions{Bare: true}); err != nil {
+		return fmt.Errorf("init repository: %v", err)
 	} else if err = createDelegateHooks(repo.WikiPath()); err != nil {
 		return fmt.Errorf("createDelegateHooks: %v", err)
 	}
@@ -71,7 +71,7 @@ func (repo *Repository) InitWiki() error {
 }
 
 func (repo *Repository) LocalWikiPath() string {
-	return path.Join(setting.AppDataPath, "tmp/local-wiki", com.ToStr(repo.ID))
+	return filepath.Join(conf.Server.AppDataPath, "tmp", "local-wiki", com.ToStr(repo.ID))
 }
 
 // UpdateLocalWiki makes sure the local copy of repository wiki is up-to-date.
@@ -125,15 +125,12 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	if len(message) == 0 {
 		message = "Update page '" + title + "'"
 	}
-	if err = git.AddChanges(localPath, true); err != nil {
-		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
-		Committer: doer.NewGitSig(),
-		Message:   message,
-	}); err != nil {
-		return fmt.Errorf("CommitChanges: %v", err)
-	} else if err = git.Push(localPath, "origin", "master"); err != nil {
-		return fmt.Errorf("Push: %v", err)
+	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+		return fmt.Errorf("add all changes: %v", err)
+	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), message); err != nil {
+		return fmt.Errorf("commit changes: %v", err)
+	} else if err = git.RepoPush(localPath, "origin", "master"); err != nil {
+		return fmt.Errorf("push: %v", err)
 	}
 
 	return nil
@@ -164,15 +161,12 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	message := "Delete page '" + title + "'"
 
-	if err = git.AddChanges(localPath, true); err != nil {
-		return fmt.Errorf("AddChanges: %v", err)
-	} else if err = git.CommitChanges(localPath, git.CommitChangesOptions{
-		Committer: doer.NewGitSig(),
-		Message:   message,
-	}); err != nil {
-		return fmt.Errorf("CommitChanges: %v", err)
-	} else if err = git.Push(localPath, "origin", "master"); err != nil {
-		return fmt.Errorf("Push: %v", err)
+	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+		return fmt.Errorf("add all changes: %v", err)
+	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), message); err != nil {
+		return fmt.Errorf("commit changes: %v", err)
+	} else if err = git.RepoPush(localPath, "origin", "master"); err != nil {
+		return fmt.Errorf("push: %v", err)
 	}
 
 	return nil

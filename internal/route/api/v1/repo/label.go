@@ -7,9 +7,8 @@ package repo
 import (
 	"net/http"
 
-	"github.com/unknwon/com"
-
 	api "github.com/gogs/go-gogs-client"
+	"github.com/unknwon/com"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -18,7 +17,7 @@ import (
 func ListLabels(c *context.APIContext) {
 	labels, err := db.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.ServerError("GetLabelsByRepoID", err)
+		c.Error(err, "get labels by repository ID")
 		return
 	}
 
@@ -39,7 +38,7 @@ func GetLabel(c *context.APIContext) {
 		label, err = db.GetLabelOfRepoByName(c.Repo.Repository.ID, idStr)
 	}
 	if err != nil {
-		c.NotFoundOrServerError("GetLabel", db.IsErrLabelNotExist, err)
+		c.NotFoundOrError(err, "get label")
 		return
 	}
 
@@ -53,7 +52,7 @@ func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
 		RepoID: c.Repo.Repository.ID,
 	}
 	if err := db.NewLabels(label); err != nil {
-		c.ServerError("NewLabel", err)
+		c.Error(err, "new labels")
 		return
 	}
 	c.JSON(http.StatusCreated, label.APIFormat())
@@ -62,7 +61,7 @@ func CreateLabel(c *context.APIContext, form api.CreateLabelOption) {
 func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 	label, err := db.GetLabelOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetLabelOfRepoByID", db.IsErrLabelNotExist, err)
+		c.NotFoundOrError(err, "get label of repository by ID")
 		return
 	}
 
@@ -73,7 +72,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 		label.Color = *form.Color
 	}
 	if err := db.UpdateLabel(label); err != nil {
-		c.ServerError("UpdateLabel", err)
+		c.Error(err, "update label")
 		return
 	}
 	c.JSONSuccess(label.APIFormat())
@@ -81,7 +80,7 @@ func EditLabel(c *context.APIContext, form api.EditLabelOption) {
 
 func DeleteLabel(c *context.APIContext) {
 	if err := db.DeleteLabel(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
-		c.ServerError("DeleteLabel", err)
+		c.Error(err, "delete label")
 		return
 	}
 

@@ -1,4 +1,5 @@
-// +build go1.11
+//go:build go1.14
+// +build go1.14
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
@@ -11,23 +12,21 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cmd"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
-const Version = "0.11.96.1107"
-
 func init() {
-	setting.AppVer = Version
+	conf.App.Version = "0.13.0+dev"
 }
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "Gogs"
 	app.Usage = "A painless self-hosted Git service"
-	app.Version = Version
+	app.Version = conf.App.Version
 	app.Commands = []cli.Command{
 		cmd.Web,
 		cmd.Serv,
@@ -39,6 +38,6 @@ func main() {
 		cmd.Restore,
 	}
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(2, "Failed to run: %v", err)
+		log.Fatal("Failed to start application: %v", err)
 	}
 }

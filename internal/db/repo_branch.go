@@ -11,7 +11,7 @@ import (
 	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -24,33 +24,52 @@ type Branch struct {
 }
 
 func GetBranchesByPath(path string) ([]*Branch, error) {
-	gitRepo, err := git.OpenRepository(path)
+	gitRepo, err := git.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open repository: %v", err)
 	}
 
-	brs, err := gitRepo.GetBranches()
+	names, err := gitRepo.Branches()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list branches")
 	}
 
-	branches := make([]*Branch, len(brs))
-	for i := range brs {
+	branches := make([]*Branch, len(names))
+	for i := range names {
 		branches[i] = &Branch{
 			RepoPath: path,
-			Name:     brs[i],
+			Name:     names[i],
 		}
 	}
 	return branches, nil
 }
 
-func (repo *Repository) GetBranch(br string) (*Branch, error) {
-	if !git.IsBranchExist(repo.RepoPath(), br) {
-		return nil, errors.ErrBranchNotExist{br}
+var _ errutil.NotFound = (*ErrBranchNotExist)(nil)
+
+type ErrBranchNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrBranchNotExist(err error) bool {
+	_, ok := err.(ErrBranchNotExist)
+	return ok
+}
+
+func (err ErrBranchNotExist) Error() string {
+	return fmt.Sprintf("branch does not exist: %v", err.args)
+}
+
+func (ErrBranchNotExist) NotFound() bool {
+	return true
+}
+
+func (repo *Repository) GetBranch(name string) (*Branch, error) {
+	if !git.RepoHasBranch(repo.RepoPath(), name) {
+		return nil, ErrBranchNotExist{args: map[string]interface{}{"name": name}}
 	}
 	return &Branch{
 		RepoPath: repo.RepoPath(),
-		Name:     br,
+		Name:     name,
 	}, nil
 }
 
@@ -59,11 +78,11 @@ func (repo *Repository) GetBranches() ([]*Branch, error) {
 }
 
 func (br *Branch) GetCommit() (*git.Commit, error) {
-	gitRepo, err := git.OpenRepository(br.RepoPath)
+	gitRepo, err := git.Open(br.RepoPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open repository: %v", err)
 	}
-	return gitRepo.GetBranchCommit(br.Name)
+	return gitRepo.BranchCommit(br.Name)
 }
 
 type ProtectBranchWhitelist struct {
@@ -92,7 +111,7 @@ type ProtectBranch struct {
 	WhitelistTeamIDs   string `xorm:"TEXT"`
 }
 
-// GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repostiory.
+// GetProtectBranchOfRepoByName returns *ProtectBranch by branch name in given repository.
 func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, error) {
 	protectBranch := &ProtectBranch{
 		RepoID: repoID,
@@ -102,7 +121,7 @@ func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, er
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, errors.ErrBranchNotExist{name}
+		return nil, ErrBranchNotExist{args: map[string]interface{}{"name": name}}
 	}
 	return protectBranch, nil
 }
@@ -156,10 +175,12 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 		userIDs := tool.StringsToInt64s(strings.Split(whitelistUserIDs, ","))
 		validUserIDs = make([]int64, 0, len(userIDs))
 		for _, userID := range userIDs {
-			has, err := HasAccess(userID, repo, ACCESS_MODE_WRITE)
-			if err != nil {
-				return fmt.Errorf("HasAccess [user_id: %d, repo_id: %d]: %v", userID, protectBranch.RepoID, err)
-			} else if !has {
+			if !Perms.Authorize(userID, repo.ID, AccessModeWrite,
+				AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			) {
 				continue // Drop invalid user ID
 			}
 
@@ -174,7 +195,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	if protectBranch.WhitelistTeamIDs != whitelistTeamIDs {
 		hasTeamsChanged = true
 		teamIDs := tool.StringsToInt64s(strings.Split(whitelistTeamIDs, ","))
-		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, ACCESS_MODE_WRITE)
+		teams, err := GetTeamsHaveAccessToRepo(repo.OwnerID, repo.ID, AccessModeWrite)
 		if err != nil {
 			return fmt.Errorf("GetTeamsHaveAccessToRepo [org_id: %d, repo_id: %d]: %v", repo.OwnerID, repo.ID, err)
 		}
@@ -250,7 +271,7 @@ func UpdateOrgProtectBranch(repo *Repository, protectBranch *ProtectBranch, whit
 	return sess.Commit()
 }
 
-// GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repostiory.
+// GetProtectBranchesByRepoID returns a list of *ProtectBranch in given repository.
 func GetProtectBranchesByRepoID(repoID int64) ([]*ProtectBranch, error) {
 	protectBranches := make([]*ProtectBranch, 0, 2)
 	return protectBranches, x.Where("repo_id = ? and protected = ?", repoID, true).Asc("name").Find(&protectBranches)

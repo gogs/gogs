@@ -5,17 +5,18 @@
 package repo
 
 import (
+	"net/http"
+
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 )
 
 func ListCollaborators(c *context.APIContext) {
 	collaborators, err := c.Repo.Repository.GetCollaborators()
 	if err != nil {
-		c.ServerError("GetCollaborators", err)
+		c.Error(err, "get collaborators")
 		return
 	}
 
@@ -29,62 +30,62 @@ func ListCollaborators(c *context.APIContext) {
 func AddCollaborator(c *context.APIContext, form api.AddCollaboratorOption) {
 	collaborator, err := db.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.Error(422, "", err)
+		if db.IsErrUserNotExist(err) {
+			c.Status(http.StatusUnprocessableEntity)
 		} else {
-			c.Error(500, "GetUserByName", err)
+			c.Error(err, "get user by name")
 		}
 		return
 	}
 
 	if err := c.Repo.Repository.AddCollaborator(collaborator); err != nil {
-		c.Error(500, "AddCollaborator", err)
+		c.Error(err, "add collaborator")
 		return
 	}
 
 	if form.Permission != nil {
 		if err := c.Repo.Repository.ChangeCollaborationAccessMode(collaborator.ID, db.ParseAccessMode(*form.Permission)); err != nil {
-			c.Error(500, "ChangeCollaborationAccessMode", err)
+			c.Error(err, "change collaboration access mode")
 			return
 		}
 	}
 
-	c.Status(204)
+	c.NoContent()
 }
 
 func IsCollaborator(c *context.APIContext) {
 	collaborator, err := db.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.Error(422, "", err)
+		if db.IsErrUserNotExist(err) {
+			c.Status(http.StatusUnprocessableEntity)
 		} else {
-			c.Error(500, "GetUserByName", err)
+			c.Error(err, "get user by name")
 		}
 		return
 	}
 
 	if !c.Repo.Repository.IsCollaborator(collaborator.ID) {
-		c.Status(404)
+		c.NotFound()
 	} else {
-		c.Status(204)
+		c.NoContent()
 	}
 }
 
 func DeleteCollaborator(c *context.APIContext) {
 	collaborator, err := db.GetUserByName(c.Params(":collaborator"))
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.Error(422, "", err)
+		if db.IsErrUserNotExist(err) {
+			c.Status(http.StatusUnprocessableEntity)
 		} else {
-			c.Error(500, "GetUserByName", err)
+			c.Error(err, "get user by name")
 		}
 		return
 	}
 
 	if err := c.Repo.Repository.DeleteCollaboration(collaborator.ID); err != nil {
-		c.Error(500, "DeleteCollaboration", err)
+		c.Error(err, "delete collaboration")
 		return
 	}
 
-	c.Status(204)
+	c.NoContent()
 }

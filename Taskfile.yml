@@ -1,0 +1,87 @@
+version: '3'
+
+tasks:
+  web:
+    desc: Build the binary and start the web server.
+    deps: [build]
+    cmds:
+      - ./gogs web
+
+  build:
+    desc: Build the binary.
+    cmds:
+      - go build -v
+        -ldflags '
+          -X "{{.PKG_PATH}}.BuildTime={{.BUILD_TIME}}"
+          -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"
+        '
+        -tags '{{.TAGS}}'
+        -trimpath -o gogs
+    vars:
+      PKG_PATH: gogs.io/gogs/internal/conf
+      BUILD_TIME:
+        sh: date -u '+%Y-%m-%d %I:%M:%S %Z'
+      BUILD_COMMIT:
+        sh: git rev-parse HEAD
+    sources:
+      - gogs.go
+      - internal/**/*.go
+
+  generate-bindata:
+    desc: Generate bindata for all assets.
+    deps: [clean]
+    cmds:
+      - go generate internal/assets/conf/conf.go
+      - go generate internal/assets/templates/templates.go
+      - go generate internal/assets/public/public.go
+
+  generate-schemadoc:
+    desc: Generate database schema documentation.
+    cmds:
+      - go generate ./internal/db/schemadoc
+
+  generate:
+    desc: Run all go:generate commands.
+    deps: [generate-bindata, generate-schemadoc]
+
+  test:
+    desc: Run all tests.
+    cmds:
+      - go test -cover -race ./...
+
+  clean:
+    desc: Cleans up system meta files for code generation.
+    cmds:
+      - find . -name "*.DS_Store" -type f -delete
+
+  release:
+    desc: Build the binary and pack resources to a ZIP file.
+    deps: [build]
+    cmds:
+      - rm -rf {{.RELEASE_GOGS}}
+      - mkdir -p {{.RELEASE_GOGS}}
+      - cp -r gogs LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
+      - cd {{.RELEASE_ROOT}} && zip -r gogs.$(NOW).zip "gogs"
+    vars:
+      RELEASE_ROOT: release
+      RELEASE_GOGS: release/gogs
+
+  less:
+    desc: Generate CSS from LESS files.
+    cmds:
+      - lessc --clean-css --source-map "public/less/gogs.less" public/css/gogs.min.css
+
+  fixme:
+    desc: Show all occurrences of "FIXME".
+    cmds:
+      - grep -rnw "FIXME" internal
+
+  todo:
+    desc: Show all occurrences of "TODO".
+    cmds:
+      - grep -rnw "TODO" internal
+
+  legacy:
+    desc: Identify legacy and deprecated lines.
+    cmds:
+      - grep -rnw "\(LEGACY\|Deprecated\)" internal

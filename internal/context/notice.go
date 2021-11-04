@@ -6,34 +6,34 @@ package context
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
 // renderNoticeBanner checks if a notice banner file exists and loads the message to display
 // on all pages.
 func (c *Context) renderNoticeBanner() {
-	fpath := path.Join(setting.CustomPath, "notice", "banner.md")
+	fpath := filepath.Join(conf.CustomDir(), "notice", "banner.md")
 	if !com.IsExist(fpath) {
 		return
 	}
 
 	f, err := os.Open(fpath)
 	if err != nil {
-		log.Error(2, "Failed to open file %q: %v", fpath, err)
+		log.Error("Failed to open file %q: %v", fpath, err)
 		return
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		log.Error(2, "Failed to stat file %q: %v", fpath, err)
+		log.Error("Failed to stat file %q: %v", fpath, err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (c *Context) renderNoticeBanner() {
 	buf := make([]byte, maxSize)
 	n, err := f.Read(buf)
 	if err != nil {
-		log.Error(2, "Failed to read file %q: %v", fpath, err)
+		log.Error("Failed to read file %q: %v", fpath, err)
 		return
 	}
 	buf = buf[:n]

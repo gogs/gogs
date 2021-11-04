@@ -7,7 +7,7 @@ package repo
 import (
 	"time"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -31,13 +31,13 @@ type Branch struct {
 func loadBranches(c *context.Context) []*Branch {
 	rawBranches, err := c.Repo.Repository.GetBranches()
 	if err != nil {
-		c.Handle(500, "GetBranches", err)
+		c.Error(err, "get branches")
 		return nil
 	}
 
 	protectBranches, err := db.GetProtectBranchesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Handle(500, "GetProtectBranchesByRepoID", err)
+		c.Error(err, "get protect branches by repository ID")
 		return nil
 	}
 
@@ -45,7 +45,7 @@ func loadBranches(c *context.Context) []*Branch {
 	for i := range rawBranches {
 		commit, err := rawBranches[i].GetCommit()
 		if err != nil {
-			c.Handle(500, "GetCommit", err)
+			c.Error(err, "get commit")
 			return nil
 		}
 
@@ -91,7 +91,7 @@ func Branches(c *context.Context) {
 
 	c.Data["ActiveBranches"] = activeBranches
 	c.Data["StaleBranches"] = staleBranches
-	c.HTML(200, BRANCHES_OVERVIEW)
+	c.Success(BRANCHES_OVERVIEW)
 }
 
 func AllBranches(c *context.Context) {
@@ -104,7 +104,7 @@ func AllBranches(c *context.Context) {
 	}
 	c.Data["Branches"] = branches
 
-	c.HTML(200, BRANCHES_ALL)
+	c.Success(BRANCHES_ALL)
 }
 
 func DeleteBranchPost(c *context.Context) {
@@ -119,13 +119,13 @@ func DeleteBranchPost(c *context.Context) {
 		c.Redirect(redirectTo)
 	}()
 
-	if !c.Repo.GitRepo.IsBranchExist(branchName) {
+	if !c.Repo.GitRepo.HasBranch(branchName) {
 		return
 	}
 	if len(commitID) > 0 {
-		branchCommitID, err := c.Repo.GitRepo.GetBranchCommitID(branchName)
+		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(branchName)
 		if err != nil {
-			log.Error(2, "Failed to get commit ID of branch %q: %v", branchName, err)
+			log.Error("Failed to get commit ID of branch %q: %v", branchName, err)
 			return
 		}
 
@@ -138,7 +138,7 @@ func DeleteBranchPost(c *context.Context) {
 	if err := c.Repo.GitRepo.DeleteBranch(branchName, git.DeleteBranchOptions{
 		Force: true,
 	}); err != nil {
-		log.Error(2, "Failed to delete branch %q: %v", branchName, err)
+		log.Error("Failed to delete branch %q: %v", branchName, err)
 		return
 	}
 
@@ -149,7 +149,7 @@ func DeleteBranchPost(c *context.Context) {
 		Repo:       c.Repo.Repository.APIFormat(nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {
-		log.Error(2, "Failed to prepare webhooks for %q: %v", db.HOOK_EVENT_DELETE, err)
+		log.Error("Failed to prepare webhooks for %q: %v", db.HOOK_EVENT_DELETE, err)
 		return
 	}
 }

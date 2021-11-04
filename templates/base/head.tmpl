@@ -11,7 +11,7 @@
 	<meta name="referrer" content="no-referrer" />
 	<meta name="_csrf" content="{{.CSRFToken}}" />
 	<meta name="_suburl" content="{{AppSubURL}}" />
-	
+
 	<!-- Open Graph Tags -->
 	{{if .PageIsAdmin}}
 	{{else if .PageIsUserProfile}}
@@ -31,21 +31,21 @@
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content="{{AppName}}">
 		<meta property="og:description" content="Gogs is a painless self-hosted Git service.">
-		<meta property="og:image" content="{{AppURL}}img/gogs-lg.png" />
+		<meta property="og:image" content="{{AppURL}}img/favicon.png" />
 		<meta property="og:site_name" content="Gogs">
 	{{end}}
 
 	<link rel="shortcut icon" href="{{AppSubURL}}/img/favicon.png" />
 
-	<script src="{{AppSubURL}}/js/jquery-1.11.3.min.js"></script>
+	<script src="{{AppSubURL}}/js/jquery-3.6.0.min.js"></script>
 	<script src="{{AppSubURL}}/js/libs/jquery.are-you-sure.js"></script>
 	<link rel="stylesheet" href="{{AppSubURL}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
 	<link rel="stylesheet" href="{{AppSubURL}}/assets/octicons-4.3.0/octicons.min.css">
 
 	<!-- notebook.js for rendering ipython notebooks and marked.js for rendering markdown in notebooks -->
 	{{if .IsIPythonNotebook}}
-		<script src="{{AppSubURL}}/plugins/notebookjs-0.3.0/notebook.min.js"></script>
-		<script src="{{AppSubURL}}/plugins/marked-0.3.6/marked.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/notebookjs-0.4.2/notebook.min.js"></script>
+		<script src="{{AppSubURL}}/plugins/marked-0.8.1/marked.min.js"></script>
 	{{end}}
 
 	{{if .RequireSimpleMDE}}
@@ -59,8 +59,8 @@
 	{{end}}
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.3.1.min.css">
-	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.css?v={{MD5 AppVer}}">
+	<link rel="stylesheet" href="{{AppSubURL}}/css/semantic-2.4.2.min.css">
+	<link rel="stylesheet" href="{{AppSubURL}}/css/gogs.min.css?v={{BuildCommit}}">
 	<noscript>
 		<style>
 			.dropdown:hover > .menu { display: block; }
@@ -69,8 +69,8 @@
 	</noscript>
 
 	<!-- JavaScript -->
-	<script src="{{AppSubURL}}/js/semantic-2.3.1.min.js"></script>
-	<script src="{{AppSubURL}}/js/gogs.js?v={{MD5 AppVer}}"></script>
+	<script src="{{AppSubURL}}/js/semantic-2.4.2.min.js"></script>
+	<script src="{{AppSubURL}}/js/gogs.js?v={{BuildCommit}}"></script>
 
 	<title>{{if .Title}}{{.Title}} - {{end}}{{AppName}}</title>
 

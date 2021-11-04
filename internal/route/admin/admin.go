@@ -10,28 +10,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/json-iterator/go"
-	"github.com/unknwon/com"
-	"gopkg.in/macaron.v1"
+	jsoniter "github.com/json-iterator/go"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cron"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/mailer"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
 const (
-	DASHBOARD = "admin/dashboard"
-	CONFIG    = "admin/config"
-	MONITOR   = "admin/monitor"
+	tmplDashboard = "admin/dashboard"
+	tmplConfig    = "admin/config"
+	tmplMonitor   = "admin/monitor"
 )
 
-var (
-	startTime = time.Now()
-)
+// initTime is the time when the application was initialized.
+var initTime = time.Now()
 
 var sysStatus struct {
 	Uptime       string
@@ -75,7 +72,7 @@ var sysStatus struct {
 }
 
 func updateSystemStatus() {
-	sysStatus.Uptime = tool.TimeSincePro(startTime)
+	sysStatus.Uptime = tool.TimeSincePro(initTime)
 
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
@@ -112,141 +109,124 @@ func updateSystemStatus() {
 	sysStatus.NumGC = m.NumGC
 }
 
-// Operation types.
-type AdminOperation int
-
-const (
-	CLEAN_INACTIVATE_USER AdminOperation = iota + 1
-	CLEAN_REPO_ARCHIVES
-	CLEAN_MISSING_REPOS
-	GIT_GC_REPOS
-	SYNC_SSH_AUTHORIZED_KEY
-	SYNC_REPOSITORY_HOOKS
-	REINIT_MISSING_REPOSITORY
-)
-
 func Dashboard(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.dashboard")
-	c.Data["PageIsAdmin"] = true
-	c.Data["PageIsAdminDashboard"] = true
+	c.Title("admin.dashboard")
+	c.PageIs("Admin")
+	c.PageIs("AdminDashboard")
 
-	// Run operation.
-	op, _ := com.StrTo(c.Query("op")).Int()
-	if op > 0 {
-		var err error
-		var success string
-
-		switch AdminOperation(op) {
-		case CLEAN_INACTIVATE_USER:
-			success = c.Tr("admin.dashboard.delete_inactivate_accounts_success")
-			err = db.DeleteInactivateUsers()
-		case CLEAN_REPO_ARCHIVES:
-			success = c.Tr("admin.dashboard.delete_repo_archives_success")
-			err = db.DeleteRepositoryArchives()
-		case CLEAN_MISSING_REPOS:
-			success = c.Tr("admin.dashboard.delete_missing_repos_success")
-			err = db.DeleteMissingRepositories()
-		case GIT_GC_REPOS:
-			success = c.Tr("admin.dashboard.git_gc_repos_success")
-			err = db.GitGcRepos()
-		case SYNC_SSH_AUTHORIZED_KEY:
-			success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
-			err = db.RewriteAuthorizedKeys()
-		case SYNC_REPOSITORY_HOOKS:
-			success = c.Tr("admin.dashboard.resync_all_hooks_success")
-			err = db.SyncRepositoryHooks()
-		case REINIT_MISSING_REPOSITORY:
-			success = c.Tr("admin.dashboard.reinit_missing_repos_success")
-			err = db.ReinitMissingRepositories()
-		}
-
-		if err != nil {
-			c.Flash.Error(err.Error())
-		} else {
-			c.Flash.Success(success)
-		}
-		c.Redirect(setting.AppSubURL + "/admin")
-		return
-	}
+	c.Data["GitVersion"] = conf.Git.Version
+	c.Data["GoVersion"] = runtime.Version()
+	c.Data["BuildTime"] = conf.BuildTime
+	c.Data["BuildCommit"] = conf.BuildCommit
 
 	c.Data["Stats"] = db.GetStatistic()
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
-	c.HTML(200, DASHBOARD)
+	c.Success(tmplDashboard)
+}
+
+// Operation types.
+type AdminOperation int
+
+const (
+	CleanInactivateUser AdminOperation = iota + 1
+	CleanRepoArchives
+	CleanMissingRepos
+	GitGCRepos
+	SyncSSHAuthorizedKey
+	SyncRepositoryHooks
+	ReinitMissingRepository
+)
+
+func Operation(c *context.Context) {
+	var err error
+	var success string
+	switch AdminOperation(c.QueryInt("op")) {
+	case CleanInactivateUser:
+		success = c.Tr("admin.dashboard.delete_inactivate_accounts_success")
+		err = db.DeleteInactivateUsers()
+	case CleanRepoArchives:
+		success = c.Tr("admin.dashboard.delete_repo_archives_success")
+		err = db.DeleteRepositoryArchives()
+	case CleanMissingRepos:
+		success = c.Tr("admin.dashboard.delete_missing_repos_success")
+		err = db.DeleteMissingRepositories()
+	case GitGCRepos:
+		success = c.Tr("admin.dashboard.git_gc_repos_success")
+		err = db.GitGcRepos()
+	case SyncSSHAuthorizedKey:
+		success = c.Tr("admin.dashboard.resync_all_sshkeys_success")
+		err = db.RewriteAuthorizedKeys()
+	case SyncRepositoryHooks:
+		success = c.Tr("admin.dashboard.resync_all_hooks_success")
+		err = db.SyncRepositoryHooks()
+	case ReinitMissingRepository:
+		success = c.Tr("admin.dashboard.reinit_missing_repos_success")
+		err = db.ReinitMissingRepositories()
+	}
+
+	if err != nil {
+		c.Flash.Error(err.Error())
+	} else {
+		c.Flash.Success(success)
+	}
+	c.RedirectSubpath("/admin")
 }
 
 func SendTestMail(c *context.Context) {
-	email := c.Query("email")
+	emailAddr := c.Query("email")
 	// Send a test email to the user's email address and redirect back to Config
-	if err := mailer.SendTestMail(email); err != nil {
-		c.Flash.Error(c.Tr("admin.config.test_mail_failed", email, err))
+	if err := email.SendTestMail(emailAddr); err != nil {
+		c.Flash.Error(c.Tr("admin.config.email.test_mail_failed", emailAddr, err))
 	} else {
-		c.Flash.Info(c.Tr("admin.config.test_mail_sent", email))
+		c.Flash.Info(c.Tr("admin.config.email.test_mail_sent", emailAddr))
 	}
 
-	c.Redirect(setting.AppSubURL + "/admin/config")
+	c.Redirect(conf.Server.Subpath + "/admin/config")
 }
 
 func Config(c *context.Context) {
-	c.Data["Title"] = c.Tr("admin.config")
-	c.Data["PageIsAdmin"] = true
-	c.Data["PageIsAdminConfig"] = true
+	c.Title("admin.config")
+	c.PageIs("Admin")
+	c.PageIs("AdminConfig")
 
-	c.Data["AppURL"] = setting.AppURL
-	c.Data["Domain"] = setting.Domain
-	c.Data["OfflineMode"] = setting.OfflineMode
-	c.Data["DisableRouterLog"] = setting.DisableRouterLog
-	c.Data["RunUser"] = setting.RunUser
-	c.Data["RunMode"] = strings.Title(macaron.Env)
-	c.Data["StaticRootPath"] = setting.StaticRootPath
-	c.Data["LogRootPath"] = setting.LogRootPath
-	c.Data["ReverseProxyAuthUser"] = setting.ReverseProxyAuthUser
+	c.Data["App"] = conf.App
+	c.Data["Server"] = conf.Server
+	c.Data["SSH"] = conf.SSH
+	c.Data["Repository"] = conf.Repository
+	c.Data["Database"] = conf.Database
+	c.Data["Security"] = conf.Security
+	c.Data["Email"] = conf.Email
+	c.Data["Auth"] = conf.Auth
+	c.Data["User"] = conf.User
+	c.Data["Session"] = conf.Session
+	c.Data["Cache"] = conf.Cache
+	c.Data["Attachment"] = conf.Attachment
+	c.Data["Release"] = conf.Release
+	c.Data["Picture"] = conf.Picture
+	c.Data["HTTP"] = conf.HTTP
+	c.Data["Mirror"] = conf.Mirror
+	c.Data["Webhook"] = conf.Webhook
+	c.Data["Git"] = conf.Git
+	c.Data["LFS"] = conf.LFS
 
-	c.Data["SSH"] = setting.SSH
-
-	c.Data["RepoRootPath"] = setting.RepoRootPath
-	c.Data["ScriptType"] = setting.ScriptType
-	c.Data["Repository"] = setting.Repository
-	c.Data["HTTP"] = setting.HTTP
-
-	c.Data["DbCfg"] = db.DbCfg
-	c.Data["Service"] = setting.Service
-	c.Data["Webhook"] = setting.Webhook
-
-	c.Data["MailerEnabled"] = false
-	if setting.MailService != nil {
-		c.Data["MailerEnabled"] = true
-		c.Data["Mailer"] = setting.MailService
-	}
-
-	c.Data["CacheAdapter"] = setting.CacheAdapter
-	c.Data["CacheInterval"] = setting.CacheInterval
-	c.Data["CacheConn"] = setting.CacheConn
-
-	c.Data["SessionConfig"] = setting.SessionConfig
-
-	c.Data["DisableGravatar"] = setting.DisableGravatar
-	c.Data["EnableFederatedAvatar"] = setting.EnableFederatedAvatar
-
-	c.Data["GitVersion"] = setting.Git.Version
-	c.Data["Git"] = setting.Git
-
+	c.Data["LogRootPath"] = conf.Log.RootPath
 	type logger struct {
 		Mode, Config string
 	}
-	loggers := make([]*logger, len(setting.LogModes))
-	for i := range setting.LogModes {
+	loggers := make([]*logger, len(conf.Log.Modes))
+	for i := range conf.Log.Modes {
 		loggers[i] = &logger{
-			Mode: strings.Title(setting.LogModes[i]),
+			Mode: strings.Title(conf.Log.Modes[i]),
 		}
 
-		result, _ := jsoniter.MarshalIndent(setting.LogConfigs[i], "", "  ")
+		result, _ := jsoniter.MarshalIndent(conf.Log.Configs[i], "", "  ")
 		loggers[i].Config = string(result)
 	}
 	c.Data["Loggers"] = loggers
 
-	c.HTML(200, CONFIG)
+	c.Success(tmplConfig)
 }
 
 func Monitor(c *context.Context) {
@@ -255,5 +235,5 @@ func Monitor(c *context.Context) {
 	c.Data["PageIsAdminMonitor"] = true
 	c.Data["Processes"] = process.Processes
 	c.Data["Entries"] = cron.ListTasks()
-	c.HTML(200, MONITOR)
+	c.Success(tmplMonitor)
 }

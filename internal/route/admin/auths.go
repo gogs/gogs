@@ -10,14 +10,17 @@ import (
 	"strings"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
-	"xorm.io/core"
+	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/smtp"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -32,13 +35,13 @@ func Authentications(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	var err error
-	c.Data["Sources"], err = db.LoginSources()
+	c.Data["Sources"], err = db.LoginSources.List(db.ListLoginSourceOpts{})
 	if err != nil {
-		c.ServerError("LoginSources", err)
+		c.Error(err, "list login sources")
 		return
 	}
 
-	c.Data["Total"] = db.CountLoginSources()
+	c.Data["Total"] = db.LoginSources.Count()
 	c.Success(AUTHS)
 }
 
@@ -49,16 +52,16 @@ type dropdownItem struct {
 
 var (
 	authSources = []dropdownItem{
-		{db.LoginNames[db.LOGIN_LDAP], db.LOGIN_LDAP},
-		{db.LoginNames[db.LOGIN_DLDAP], db.LOGIN_DLDAP},
-		{db.LoginNames[db.LOGIN_SMTP], db.LOGIN_SMTP},
-		{db.LoginNames[db.LOGIN_PAM], db.LOGIN_PAM},
-		{db.LoginNames[db.LOGIN_GITHUB], db.LOGIN_GITHUB},
+		{auth.Name(auth.LDAP), auth.LDAP},
+		{auth.Name(auth.DLDAP), auth.DLDAP},
+		{auth.Name(auth.SMTP), auth.SMTP},
+		{auth.Name(auth.PAM), auth.PAM},
+		{auth.Name(auth.GitHub), auth.GitHub},
 	}
 	securityProtocols = []dropdownItem{
-		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
-		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_LDAPS], ldap.SECURITY_PROTOCOL_LDAPS},
-		{db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_START_TLS], ldap.SECURITY_PROTOCOL_START_TLS},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted), ldap.SecurityProtocolUnencrypted},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolLDAPS), ldap.SecurityProtocolLDAPS},
+		{ldap.SecurityProtocolName(ldap.SecurityProtocolStartTLS), ldap.SecurityProtocolStartTLS},
 	}
 )
 
@@ -67,47 +70,45 @@ func NewAuthSource(c *context.Context) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["type"] = db.LOGIN_LDAP
-	c.Data["CurrentTypeName"] = db.LoginNames[db.LOGIN_LDAP]
-	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
+	c.Data["type"] = auth.LDAP
+	c.Data["CurrentTypeName"] = auth.Name(auth.LDAP)
+	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocolUnencrypted)
 	c.Data["smtp_auth"] = "PLAIN"
 	c.Data["is_active"] = true
 	c.Data["is_default"] = true
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 	c.Success(AUTH_NEW)
 }
 
-func parseLDAPConfig(f form.Authentication) *db.LDAPConfig {
-	return &db.LDAPConfig{
-		Source: &ldap.Source{
-			Host:              f.Host,
-			Port:              f.Port,
-			SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
-			SkipVerify:        f.SkipVerify,
-			BindDN:            f.BindDN,
-			UserDN:            f.UserDN,
-			BindPassword:      f.BindPassword,
-			UserBase:          f.UserBase,
-			AttributeUsername: f.AttributeUsername,
-			AttributeName:     f.AttributeName,
-			AttributeSurname:  f.AttributeSurname,
-			AttributeMail:     f.AttributeMail,
-			AttributesInBind:  f.AttributesInBind,
-			Filter:            f.Filter,
-			GroupEnabled:      f.GroupEnabled,
-			GroupDN:           f.GroupDN,
-			GroupFilter:       f.GroupFilter,
-			GroupMemberUID:    f.GroupMemberUID,
-			UserUID:           f.UserUID,
-			AdminFilter:       f.AdminFilter,
-		},
+func parseLDAPConfig(f form.Authentication) *ldap.Config {
+	return &ldap.Config{
+		Host:              f.Host,
+		Port:              f.Port,
+		SecurityProtocol:  ldap.SecurityProtocol(f.SecurityProtocol),
+		SkipVerify:        f.SkipVerify,
+		BindDN:            f.BindDN,
+		UserDN:            f.UserDN,
+		BindPassword:      f.BindPassword,
+		UserBase:          f.UserBase,
+		AttributeUsername: f.AttributeUsername,
+		AttributeName:     f.AttributeName,
+		AttributeSurname:  f.AttributeSurname,
+		AttributeMail:     f.AttributeMail,
+		AttributesInBind:  f.AttributesInBind,
+		Filter:            f.Filter,
+		GroupEnabled:      f.GroupEnabled,
+		GroupDN:           f.GroupDN,
+		GroupFilter:       f.GroupFilter,
+		GroupMemberUID:    f.GroupMemberUID,
+		UserUID:           f.UserUID,
+		AdminFilter:       f.AdminFilter,
 	}
 }
 
-func parseSMTPConfig(f form.Authentication) *db.SMTPConfig {
-	return &db.SMTPConfig{
+func parseSMTPConfig(f form.Authentication) *smtp.Config {
+	return &smtp.Config{
 		Auth:           f.SMTPAuth,
 		Host:           f.SMTPHost,
 		Port:           f.SMTPPort,
@@ -122,31 +123,33 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["CurrentTypeName"] = db.LoginNames[db.LoginType(f.Type)]
-	c.Data["CurrentSecurityProtocol"] = db.SecurityProtocolNames[ldap.SecurityProtocol(f.SecurityProtocol)]
+	c.Data["CurrentTypeName"] = auth.Name(auth.Type(f.Type))
+	c.Data["CurrentSecurityProtocol"] = ldap.SecurityProtocolName(ldap.SecurityProtocol(f.SecurityProtocol))
 	c.Data["AuthSources"] = authSources
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	hasTLS := false
-	var config core.Conversion
-	switch db.LoginType(f.Type) {
-	case db.LOGIN_LDAP, db.LOGIN_DLDAP:
+	var config interface{}
+	switch auth.Type(f.Type) {
+	case auth.LDAP, auth.DLDAP:
 		config = parseLDAPConfig(f)
-		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
-	case db.LOGIN_SMTP:
+		hasTLS = ldap.SecurityProtocol(f.SecurityProtocol) > ldap.SecurityProtocolUnencrypted
+	case auth.SMTP:
 		config = parseSMTPConfig(f)
 		hasTLS = true
-	case db.LOGIN_PAM:
-		config = &db.PAMConfig{
+	case auth.PAM:
+		config = &pam.Config{
 			ServiceName: f.PAMServiceName,
 		}
-	case db.LOGIN_GITHUB:
-		config = &db.GitHubConfig{
+	case auth.GitHub:
+		config = &github.Config{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
+			SkipVerify:  f.SkipVerify,
 		}
+		hasTLS = true
 	default:
-		c.Error(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	c.Data["HasTLS"] = hasTLS
@@ -156,26 +159,35 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 		return
 	}
 
-	if err := db.CreateLoginSource(&db.LoginSource{
-		Type:      db.LoginType(f.Type),
+	source, err := db.LoginSources.Create(db.CreateLoginSourceOpts{
+		Type:      auth.Type(f.Type),
 		Name:      f.Name,
-		IsActived: f.IsActive,
-		IsDefault: f.IsDefault,
-		Cfg:       config,
-	}); err != nil {
+		Activated: f.IsActive,
+		Default:   f.IsDefault,
+		Config:    config,
+	})
+	if err != nil {
 		if db.IsErrLoginSourceAlreadyExist(err) {
 			c.FormErr("Name")
-			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", err.(db.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, f)
+			c.RenderWithErr(c.Tr("admin.auths.login_source_exist", f.Name), AUTH_NEW, f)
 		} else {
-			c.ServerError("CreateSource", err)
+			c.Error(err, "create login source")
 		}
 		return
+	}
+
+	if source.IsDefault {
+		err = db.LoginSources.ResetNonDefault(source)
+		if err != nil {
+			c.Error(err, "reset non-default login sources")
+			return
+		}
 	}
 
 	log.Trace("Authentication created by admin(%s): %s", c.User.Name, f.Name)
 
 	c.Flash.Success(c.Tr("admin.auths.new_success", f.Name))
-	c.Redirect(setting.AppSubURL + "/admin/auths")
+	c.Redirect(conf.Server.Subpath + "/admin/auths")
 }
 
 func EditAuthSource(c *context.Context) {
@@ -184,15 +196,15 @@ func EditAuthSource(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	c.Data["SecurityProtocols"] = securityProtocols
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
-	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		c.ServerError("GetLoginSourceByID", err)
+		c.Error(err, "get login source by ID")
 		return
 	}
 	c.Data["Source"] = source
-	c.Data["HasTLS"] = source.HasTLS()
+	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	c.Success(AUTH_EDIT)
 }
@@ -202,77 +214,83 @@ func EditAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.PageIs("Admin")
 	c.PageIs("AdminAuthentications")
 
-	c.Data["SMTPAuths"] = db.SMTPAuths
+	c.Data["SMTPAuths"] = smtp.AuthTypes
 
-	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
+	source, err := db.LoginSources.GetByID(c.ParamsInt64(":authid"))
 	if err != nil {
-		c.ServerError("GetLoginSourceByID", err)
+		c.Error(err, "get login source by ID")
 		return
 	}
 	c.Data["Source"] = source
-	c.Data["HasTLS"] = source.HasTLS()
+	c.Data["HasTLS"] = source.Provider.HasTLS()
 
 	if c.HasError() {
 		c.Success(AUTH_EDIT)
 		return
 	}
 
-	var config core.Conversion
-	switch db.LoginType(f.Type) {
-	case db.LOGIN_LDAP, db.LOGIN_DLDAP:
-		config = parseLDAPConfig(f)
-	case db.LOGIN_SMTP:
-		config = parseSMTPConfig(f)
-	case db.LOGIN_PAM:
-		config = &db.PAMConfig{
+	var provider auth.Provider
+	switch auth.Type(f.Type) {
+	case auth.LDAP:
+		provider = ldap.NewProvider(false, parseLDAPConfig(f))
+	case auth.DLDAP:
+		provider = ldap.NewProvider(true, parseLDAPConfig(f))
+	case auth.SMTP:
+		provider = smtp.NewProvider(parseSMTPConfig(f))
+	case auth.PAM:
+		provider = pam.NewProvider(&pam.Config{
 			ServiceName: f.PAMServiceName,
-		}
-	case db.LOGIN_GITHUB:
-		config = &db.GitHubConfig{
+		})
+	case auth.GitHub:
+		provider = github.NewProvider(&github.Config{
 			APIEndpoint: strings.TrimSuffix(f.GitHubAPIEndpoint, "/") + "/",
-		}
+			SkipVerify:  f.SkipVerify,
+		})
 	default:
-		c.Error(http.StatusBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	source.Name = f.Name
 	source.IsActived = f.IsActive
 	source.IsDefault = f.IsDefault
-	source.Cfg = config
-	if err := db.UpdateLoginSource(source); err != nil {
-		c.ServerError("UpdateLoginSource", err)
+	source.Provider = provider
+	if err := db.LoginSources.Save(source); err != nil {
+		c.Error(err, "update login source")
 		return
+	}
+
+	if source.IsDefault {
+		err = db.LoginSources.ResetNonDefault(source)
+		if err != nil {
+			c.Error(err, "reset non-default login sources")
+			return
+		}
 	}
 
 	log.Trace("Authentication changed by admin '%s': %d", c.User.Name, source.ID)
 
 	c.Flash.Success(c.Tr("admin.auths.update_success"))
-	c.Redirect(setting.AppSubURL + "/admin/auths/" + com.ToStr(f.ID))
+	c.Redirect(conf.Server.Subpath + "/admin/auths/" + com.ToStr(f.ID))
 }
 
 func DeleteAuthSource(c *context.Context) {
-	source, err := db.GetLoginSourceByID(c.ParamsInt64(":authid"))
-	if err != nil {
-		c.ServerError("GetLoginSourceByID", err)
-		return
-	}
-
-	if err = db.DeleteSource(source); err != nil {
+	id := c.ParamsInt64(":authid")
+	if err := db.LoginSources.DeleteByID(id); err != nil {
 		if db.IsErrLoginSourceInUse(err) {
 			c.Flash.Error(c.Tr("admin.auths.still_in_used"))
 		} else {
 			c.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
 		c.JSONSuccess(map[string]interface{}{
-			"redirect": setting.AppSubURL + "/admin/auths/" + c.Params(":authid"),
+			"redirect": conf.Server.Subpath + "/admin/auths/" + c.Params(":authid"),
 		})
 		return
 	}
-	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, source.ID)
+	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, id)
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
 	c.JSONSuccess(map[string]interface{}{
-		"redirect": setting.AppSubURL + "/admin/auths",
+		"redirect": conf.Server.Subpath + "/admin/auths",
 	})
 }

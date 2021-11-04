@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 type SlackMeta struct {
@@ -72,7 +72,7 @@ func SlackLinkFormatter(url string, text string) string {
 
 // getSlackCreatePayload composes Slack payload for create new branch or tag.
 func getSlackCreatePayload(p *api.CreatePayload) (*SlackPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := SlackLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
 	text := fmt.Sprintf("[%s:%s] %s created by %s", repoLink, refLink, p.RefType, p.Sender.UserName)
@@ -83,7 +83,7 @@ func getSlackCreatePayload(p *api.CreatePayload) (*SlackPayload, error) {
 
 // getSlackDeletePayload composes Slack payload for delete a branch or tag.
 func getSlackDeletePayload(p *api.DeletePayload) (*SlackPayload, error) {
-	refName := git.RefEndName(p.Ref)
+	refName := git.RefShortName(p.Ref)
 	repoLink := SlackLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	text := fmt.Sprintf("[%s:%s] %s deleted by %s", repoLink, refName, p.RefType, p.Sender.UserName)
 	return &SlackPayload{
@@ -104,7 +104,7 @@ func getSlackForkPayload(p *api.ForkPayload) (*SlackPayload, error) {
 func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, error) {
 	// n new commits
 	var (
-		branchName   = git.RefEndName(p.Ref)
+		branchName   = git.RefShortName(p.Ref)
 		commitDesc   string
 		commitString string
 	)
@@ -147,7 +147,7 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) (*SlackPayload, e
 }
 
 func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*SlackPayload, error) {
-	senderLink := SlackLinkFormatter(setting.AppURL+p.Sender.UserName, p.Sender.UserName)
+	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.Issue.Title))
 	var text, title, attachmentText string
@@ -165,7 +165,7 @@ func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*SlackPayloa
 		attachmentText = SlackTextFormatter(p.Issue.Body)
 	case api.HOOK_ISSUE_ASSIGNED:
 		text = fmt.Sprintf("[%s] Issue assigned to %s: %s by %s", p.Repository.FullName,
-			SlackLinkFormatter(setting.AppURL+p.Issue.Assignee.UserName, p.Issue.Assignee.UserName),
+			SlackLinkFormatter(conf.Server.ExternalURL+p.Issue.Assignee.UserName, p.Issue.Assignee.UserName),
 			titleLink, senderLink)
 	case api.HOOK_ISSUE_UNASSIGNED:
 		text = fmt.Sprintf("[%s] Issue unassigned: %s by %s", p.Repository.FullName, titleLink, senderLink)
@@ -193,7 +193,7 @@ func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*SlackPayloa
 }
 
 func getSlackIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) (*SlackPayload, error) {
-	senderLink := SlackLinkFormatter(setting.AppURL+p.Sender.UserName, p.Sender.UserName)
+	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID)),
 		fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title))
 	var text, title, attachmentText string
@@ -227,7 +227,7 @@ func getSlackIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) (
 }
 
 func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*SlackPayload, error) {
-	senderLink := SlackLinkFormatter(setting.AppURL+p.Sender.UserName, p.Sender.UserName)
+	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
 		fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
 	var text, title, attachmentText string
@@ -249,7 +249,7 @@ func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*S
 		attachmentText = SlackTextFormatter(p.PullRequest.Body)
 	case api.HOOK_ISSUE_ASSIGNED:
 		text = fmt.Sprintf("[%s] Pull request assigned to %s: %s by %s", p.Repository.FullName,
-			SlackLinkFormatter(setting.AppURL+p.PullRequest.Assignee.UserName, p.PullRequest.Assignee.UserName),
+			SlackLinkFormatter(conf.Server.ExternalURL+p.PullRequest.Assignee.UserName, p.PullRequest.Assignee.UserName),
 			titleLink, senderLink)
 	case api.HOOK_ISSUE_UNASSIGNED:
 		text = fmt.Sprintf("[%s] Pull request unassigned: %s by %s", p.Repository.FullName, titleLink, senderLink)

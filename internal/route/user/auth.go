@@ -9,14 +9,15 @@ import (
 	"net/url"
 
 	"github.com/go-macaron/captcha"
-	log "gopkg.in/clog.v1"
+	"github.com/pkg/errors"
+	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/setting"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -36,7 +37,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	uname := c.GetCookie(setting.CookieUserName)
+	uname := c.GetCookie(conf.Security.CookieUsername)
 	if len(uname) == 0 {
 		return false, nil
 	}
@@ -45,30 +46,30 @@ func AutoLogin(c *context.Context) (bool, error) {
 	defer func() {
 		if !isSucceed {
 			log.Trace("auto-login cookie cleared: %s", uname)
-			c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
-			c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
-			c.SetCookie(setting.LoginStatusCookieName, "", -1, setting.AppSubURL)
+			c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
+			c.SetCookie(conf.Security.LoginStatusCookieName, "", -1, conf.Server.Subpath)
 		}
 	}()
 
 	u, err := db.GetUserByName(uname)
 	if err != nil {
-		if !errors.IsUserNotExist(err) {
-			return false, fmt.Errorf("GetUserByName: %v", err)
+		if !db.IsErrUserNotExist(err) {
+			return false, fmt.Errorf("get user by name: %v", err)
 		}
 		return false, nil
 	}
 
-	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName); !ok || val != u.Name {
+	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName); !ok || val != u.Name {
 		return false, nil
 	}
 
 	isSucceed = true
-	c.Session.Set("uid", u.ID)
-	c.Session.Set("uname", u.Name)
-	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
-	if setting.EnableLoginStatusCookie {
-		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubURL)
+	_ = c.Session.Set("uid", u.ID)
+	_ = c.Session.Set("uname", u.Name)
+	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	if conf.Security.EnableLoginStatusCookie {
+		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 	return true, nil
 }
@@ -79,13 +80,13 @@ func Login(c *context.Context) {
 	// Check auto-login
 	isSucceed, err := AutoLogin(c)
 	if err != nil {
-		c.ServerError("AutoLogin", err)
+		c.Error(err, "auto login")
 		return
 	}
 
 	redirectTo := c.Query("redirect_to")
 	if len(redirectTo) > 0 {
-		c.SetCookie("redirect_to", redirectTo, 0, setting.AppSubURL)
+		c.SetCookie("redirect_to", redirectTo, 0, conf.Server.Subpath)
 	} else {
 		redirectTo, _ = url.QueryUnescape(c.GetCookie("redirect_to"))
 	}
@@ -94,16 +95,16 @@ func Login(c *context.Context) {
 		if tool.IsSameSiteURLPath(redirectTo) {
 			c.Redirect(redirectTo)
 		} else {
-			c.SubURLRedirect("/")
+			c.RedirectSubpath("/")
 		}
-		c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
+		c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
 		return
 	}
 
 	// Display normal login page
-	loginSources, err := db.ActivatedLoginSources()
+	loginSources, err := db.LoginSources.List(db.ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
-		c.ServerError("ActivatedLoginSources", err)
+		c.Error(err, "list activated login sources")
 		return
 	}
 	c.Data["LoginSources"] = loginSources
@@ -119,38 +120,38 @@ func Login(c *context.Context) {
 
 func afterLogin(c *context.Context, u *db.User, remember bool) {
 	if remember {
-		days := 86400 * setting.LoginRememberDays
-		c.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubURL, "", setting.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Passwd, setting.CookieRememberName, u.Name, days, setting.AppSubURL, "", setting.CookieSecure, true)
+		days := 86400 * conf.Security.LoginRememberDays
+		c.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
+		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
 	}
 
-	c.Session.Set("uid", u.ID)
-	c.Session.Set("uname", u.Name)
-	c.Session.Delete("twoFactorRemember")
-	c.Session.Delete("twoFactorUserID")
+	_ = c.Session.Set("uid", u.ID)
+	_ = c.Session.Set("uname", u.Name)
+	_ = c.Session.Delete("twoFactorRemember")
+	_ = c.Session.Delete("twoFactorUserID")
 
 	// Clear whatever CSRF has right now, force to generate a new one
-	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
-	if setting.EnableLoginStatusCookie {
-		c.SetCookie(setting.LoginStatusCookieName, "true", 0, setting.AppSubURL)
+	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	if conf.Security.EnableLoginStatusCookie {
+		c.SetCookie(conf.Security.LoginStatusCookieName, "true", 0, conf.Server.Subpath)
 	}
 
 	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
-	c.SetCookie("redirect_to", "", -1, setting.AppSubURL)
+	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
 	if tool.IsSameSiteURLPath(redirectTo) {
 		c.Redirect(redirectTo)
 		return
 	}
 
-	c.SubURLRedirect("/")
+	c.RedirectSubpath("/")
 }
 
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	loginSources, err := db.ActivatedLoginSources()
+	loginSources, err := db.LoginSources.List(db.ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
-		c.ServerError("ActivatedLoginSources", err)
+		c.Error(err, "list activated login sources")
 		return
 	}
 	c.Data["LoginSources"] = loginSources
@@ -160,18 +161,18 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := db.UserLogin(f.UserName, f.Password, f.LoginSource)
+	u, err := db.Users.Authenticate(f.UserName, f.Password, f.LoginSource)
 	if err != nil {
-		switch err.(type) {
-		case errors.UserNotExist:
+		switch errors.Cause(err).(type) {
+		case auth.ErrBadCredentials:
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
-		case errors.LoginSourceMismatch:
+		case db.ErrLoginSourceMismatch:
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
 
 		default:
-			c.ServerError("UserLogin", err)
+			c.Error(err, "authenticate user")
 		}
 		for i := range loginSources {
 			if loginSources[i].IsDefault {
@@ -187,9 +188,9 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	c.Session.Set("twoFactorRemember", f.Remember)
-	c.Session.Set("twoFactorUserID", u.ID)
-	c.SubURLRedirect("/user/login/two_factor")
+	_ = c.Session.Set("twoFactorRemember", f.Remember)
+	_ = c.Session.Set("twoFactorUserID", u.ID)
+	c.RedirectSubpath("/user/login/two_factor")
 }
 
 func LoginTwoFactor(c *context.Context) {
@@ -209,37 +210,37 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	t, err := db.GetTwoFactorByUserID(userID)
+	t, err := db.TwoFactors.GetByUserID(userID)
 	if err != nil {
-		c.ServerError("GetTwoFactorByUserID", err)
+		c.Error(err, "get two factor by user ID")
 		return
 	}
 
 	passcode := c.Query("passcode")
 	valid, err := t.ValidateTOTP(passcode)
 	if err != nil {
-		c.ServerError("ValidateTOTP", err)
+		c.Error(err, "validate TOTP")
 		return
 	} else if !valid {
 		c.Flash.Error(c.Tr("settings.two_factor_invalid_passcode"))
-		c.SubURLRedirect("/user/login/two_factor")
+		c.RedirectSubpath("/user/login/two_factor")
 		return
 	}
 
 	u, err := db.GetUserByID(userID)
 	if err != nil {
-		c.ServerError("GetUserByID", err)
+		c.Error(err, "get user by ID")
 		return
 	}
 
 	// Prevent same passcode from being reused
 	if c.Cache.IsExist(u.TwoFactorCacheKey(passcode)) {
 		c.Flash.Error(c.Tr("settings.two_factor_reused_passcode"))
-		c.SubURLRedirect("/user/login/two_factor")
+		c.RedirectSubpath("/user/login/two_factor")
 		return
 	}
 	if err = c.Cache.Put(u.TwoFactorCacheKey(passcode), 1, 60); err != nil {
-		log.Error(2, "Failed to put cache 'two factor passcode': %v", err)
+		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
@@ -263,38 +264,38 @@ func LoginTwoFactorRecoveryCodePost(c *context.Context) {
 	}
 
 	if err := db.UseRecoveryCode(userID, c.Query("recovery_code")); err != nil {
-		if errors.IsTwoFactorRecoveryCodeNotFound(err) {
+		if db.IsTwoFactorRecoveryCodeNotFound(err) {
 			c.Flash.Error(c.Tr("auth.login_two_factor_invalid_recovery_code"))
-			c.SubURLRedirect("/user/login/two_factor_recovery_code")
+			c.RedirectSubpath("/user/login/two_factor_recovery_code")
 		} else {
-			c.ServerError("UseRecoveryCode", err)
+			c.Error(err, "use recovery code")
 		}
 		return
 	}
 
 	u, err := db.GetUserByID(userID)
 	if err != nil {
-		c.ServerError("GetUserByID", err)
+		c.Error(err, "get user by ID")
 		return
 	}
 	afterLogin(c, u, c.Session.Get("twoFactorRemember").(bool))
 }
 
 func SignOut(c *context.Context) {
-	c.Session.Flush()
-	c.Session.Destory(c.Context)
-	c.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
-	c.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
-	c.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
-	c.SubURLRedirect("/")
+	_ = c.Session.Flush()
+	_ = c.Session.Destory(c.Context)
+	c.SetCookie(conf.Security.CookieUsername, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Security.CookieRememberName, "", -1, conf.Server.Subpath)
+	c.SetCookie(conf.Session.CSRFCookieName, "", -1, conf.Server.Subpath)
+	c.RedirectSubpath("/")
 }
 
 func SignUp(c *context.Context) {
 	c.Title("sign_up")
 
-	c.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
+	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
 
-	if setting.Service.DisableRegistration {
+	if conf.Auth.DisableRegistration {
 		c.Data["DisableRegistration"] = true
 		c.Success(SIGNUP)
 		return
@@ -306,9 +307,9 @@ func SignUp(c *context.Context) {
 func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	c.Title("sign_up")
 
-	c.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
+	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
 
-	if setting.Service.DisableRegistration {
+	if conf.Auth.DisableRegistration {
 		c.Status(403)
 		return
 	}
@@ -318,7 +319,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	if setting.Service.EnableCaptcha && !cpt.VerifyReq(c.Req) {
+	if conf.Auth.EnableRegistrationCaptcha && !cpt.VerifyReq(c.Req) {
 		c.FormErr("Captcha")
 		c.RenderWithErr(c.Tr("form.captcha_incorrect"), SIGNUP, &f)
 		return
@@ -334,7 +335,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		Name:     f.UserName,
 		Email:    f.Email,
 		Passwd:   f.Password,
-		IsActive: !setting.Service.RegisterEmailConfirm,
+		IsActive: !conf.Auth.RequireEmailConfirmation,
 	}
 	if err := db.CreateUser(u); err != nil {
 		switch {
@@ -344,14 +345,11 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		case db.IsErrEmailAlreadyUsed(err):
 			c.FormErr("Email")
 			c.RenderWithErr(c.Tr("form.email_been_used"), SIGNUP, &f)
-		case db.IsErrNameReserved(err):
+		case db.IsErrNameNotAllowed(err):
 			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_reserved", err.(db.ErrNameReserved).Name), SIGNUP, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.FormErr("UserName")
-			c.RenderWithErr(c.Tr("user.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), SIGNUP, &f)
+			c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SIGNUP, &f)
 		default:
-			c.ServerError("CreateUser", err)
+			c.Error(err, "create user")
 		}
 		return
 	}
@@ -362,26 +360,26 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		u.IsAdmin = true
 		u.IsActive = true
 		if err := db.UpdateUser(u); err != nil {
-			c.ServerError("UpdateUser", err)
+			c.Error(err, "update user")
 			return
 		}
 	}
 
-	// Send confirmation email, no need for social account.
-	if setting.Service.RegisterEmailConfirm && u.ID > 1 {
-		mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
+	// Send confirmation email.
+	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
+		email.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
 		c.Data["IsSendRegisterMail"] = true
 		c.Data["Email"] = u.Email
-		c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 		c.Success(ACTIVATE)
 
 		if err := c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
-			log.Error(2, "Failed to put cache key 'mail resend': %v", err)
+			log.Error("Failed to put cache key 'mail resend': %v", err)
 		}
 		return
 	}
 
-	c.SubURLRedirect("/user/login")
+	c.RedirectSubpath("/user/login")
 }
 
 func Activate(c *context.Context) {
@@ -393,15 +391,15 @@ func Activate(c *context.Context) {
 			return
 		}
 		// Resend confirmation email.
-		if setting.Service.RegisterEmailConfirm {
+		if conf.Auth.RequireEmailConfirmation {
 			if c.Cache.IsExist(c.User.MailResendCacheKey()) {
 				c.Data["ResendLimited"] = true
 			} else {
-				c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
-				mailer.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
+				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
+				email.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
 
 				if err := c.Cache.Put(c.User.MailResendCacheKey(), 1, 180); err != nil {
-					log.Error(2, "Failed to put cache key 'mail resend': %v", err)
+					log.Error("Failed to put cache key 'mail resend': %v", err)
 				}
 			}
 		} else {
@@ -416,19 +414,19 @@ func Activate(c *context.Context) {
 		user.IsActive = true
 		var err error
 		if user.Rands, err = db.GetUserSalt(); err != nil {
-			c.ServerError("GetUserSalt", err)
+			c.Error(err, "get user salt")
 			return
 		}
 		if err := db.UpdateUser(user); err != nil {
-			c.ServerError("UpdateUser", err)
+			c.Error(err, "update user")
 			return
 		}
 
 		log.Trace("User activated: %s", user.Name)
 
-		c.Session.Set("uid", user.ID)
-		c.Session.Set("uname", user.Name)
-		c.SubURLRedirect("/")
+		_ = c.Session.Set("uid", user.ID)
+		_ = c.Session.Set("uname", user.Name)
+		c.RedirectSubpath("/")
 		return
 	}
 
@@ -438,26 +436,25 @@ func Activate(c *context.Context) {
 
 func ActivateEmail(c *context.Context) {
 	code := c.Query("code")
-	email_string := c.Query("email")
+	emailAddr := c.Query("email")
 
 	// Verify code.
-	if email := db.VerifyActiveEmailCode(code, email_string); email != nil {
+	if email := db.VerifyActiveEmailCode(code, emailAddr); email != nil {
 		if err := email.Activate(); err != nil {
-			c.ServerError("ActivateEmail", err)
+			c.Error(err, "activate email")
 		}
 
 		log.Trace("Email activated: %s", email.Email)
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
 
-	c.SubURLRedirect("/user/settings/email")
-	return
+	c.RedirectSubpath("/user/settings/email")
 }
 
 func ForgotPasswd(c *context.Context) {
 	c.Title("auth.forgot_password")
 
-	if setting.MailService == nil {
+	if !conf.Email.Enabled {
 		c.Data["IsResetDisable"] = true
 		c.Success(FORGOT_PASSWORD)
 		return
@@ -470,25 +467,25 @@ func ForgotPasswd(c *context.Context) {
 func ForgotPasswdPost(c *context.Context) {
 	c.Title("auth.forgot_password")
 
-	if setting.MailService == nil {
+	if !conf.Email.Enabled {
 		c.Status(403)
 		return
 	}
 	c.Data["IsResetRequest"] = true
 
-	email := c.Query("email")
-	c.Data["Email"] = email
+	emailAddr := c.Query("email")
+	c.Data["Email"] = emailAddr
 
-	u, err := db.GetUserByEmail(email)
+	u, err := db.GetUserByEmail(emailAddr)
 	if err != nil {
-		if errors.IsUserNotExist(err) {
-			c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+		if db.IsErrUserNotExist(err) {
+			c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 			c.Data["IsResetSent"] = true
 			c.Success(FORGOT_PASSWORD)
 			return
-		} else {
-			c.ServerError("GetUserByEmail", err)
 		}
+
+		c.Error(err, "get user by email")
 		return
 	}
 
@@ -504,12 +501,12 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	mailer.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
+	email.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
 	if err = c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
-		log.Error(2, "Failed to put cache key 'mail resend': %v", err)
+		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 
-	c.Data["Hours"] = setting.Service.ActiveCodeLives / 60
+	c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 	c.Data["IsResetSent"] = true
 	c.Success(FORGOT_PASSWORD)
 }
@@ -550,21 +547,21 @@ func ResetPasswdPost(c *context.Context) {
 		u.Passwd = passwd
 		var err error
 		if u.Rands, err = db.GetUserSalt(); err != nil {
-			c.ServerError("GetUserSalt", err)
+			c.Error(err, "get user salt")
 			return
 		}
 		if u.Salt, err = db.GetUserSalt(); err != nil {
-			c.ServerError("GetUserSalt", err)
+			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 		if err := db.UpdateUser(u); err != nil {
-			c.ServerError("UpdateUser", err)
+			c.Error(err, "update user")
 			return
 		}
 
 		log.Trace("User password reset: %s", u.Name)
-		c.SubURLRedirect("/user/login")
+		c.RedirectSubpath("/user/login")
 		return
 	}
 

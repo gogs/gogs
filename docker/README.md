@@ -2,9 +2,11 @@
 
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge) ![Docker image size](https://img.shields.io/microbadger/image-size/gogs/gogs?logo=docker&style=for-the-badge)
 
-Visit [Docker Cloud](https://cloud.docker.com/u/gogs/repository/docker/gogs/gogs) see all available images and tags.
+Visit [Docker Hub](https://hub.docker.com/u/gogs) see all available images and tags.
 
 ## Usage
+
+ℹ️ Please use `gogs/gogs-rpi` if you're using Raspberry Pis!
 
 To keep your data out of Docker container, we do a volume (`/var/gogs` -> `/data`) here, and you can change it based on your situation.
 
@@ -16,7 +18,7 @@ $ docker pull gogs/gogs
 $ mkdir -p /var/gogs
 
 # Use `docker run` for the first time.
-$ docker run --name=gogs -p 10022:22 -p 10080:3000 -v /var/gogs:/data gogs/gogs
+$ docker run --name=gogs -p 10022:22 -p 10880:3000 -v /var/gogs:/data gogs/gogs
 
 # Use `docker start` if you have stopped it.
 $ docker start gogs
@@ -51,7 +53,7 @@ If you're more comfortable with mounting data to a data container, the commands 
 docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
 
 # Use `docker run` for the first time.
-docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/gogs
+docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10880:3000 gogs/gogs
 ```
 
 #### Using Docker 1.9 Volume Command
@@ -61,7 +63,7 @@ docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10080:3000 gogs/g
 $ docker volume create --name gogs-data
 
 # Use `docker run` for the first time.
-$ docker run --name=gogs -p 10022:22 -p 10080:3000 -v gogs-data:/data gogs/gogs
+$ docker run --name=gogs -p 10022:22 -p 10880:3000 -v gogs-data:/data gogs/gogs
 ```
 
 ## Settings
@@ -71,13 +73,13 @@ $ docker run --name=gogs -p 10022:22 -p 10080:3000 -v gogs-data:/data gogs/gogs
 Most of settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
 
 - **Repository Root Path**: keep it as default value `/home/git/gogs-repositories` because `start.sh` already made a symbolic link for you.
-- **Run User**: keep it as default value `git` because `build.sh` already setup a user with name `git`.
+- **Run User**: keep it as default value `git` because `finalize.sh` already setup a user with name `git`.
 - **Domain**: fill in with Docker container IP (e.g. `192.168.99.100`). But if you want to access your Gogs instance from a different physical machine, please fill in with the hostname or IP address of the Docker host machine.
 - **SSH Port**: Use the exposed port from Docker container. For example, your SSH server listens on `22` inside Docker, **but** you expose it by `10022:22`, then use `10022` for this value. **Builtin SSH server is not recommended inside Docker Container**
-- **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, **and** you expose it by `10080:3000`, but you still use `3000` for this value.
-- **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values (e.g. `http://192.168.99.100:10080/`).
+- **HTTP Port**: Use port you want Gogs to listen on inside Docker container. For example, your Gogs listens on `3000` inside Docker, **and** you expose it by `10880:3000`, but you still use `3000` for this value.
+- **Application URL**: Use combination of **Domain** and **exposed HTTP Port** values (e.g. `http://192.168.99.100:10880/`).
 
-Full documentation of application settings can be found [here](https://gogs.io/docs/advanced/configuration_cheat_sheet.html).
+Full documentation of application settings can be found [here](https://github.com/gogs/gogs/blob/main/conf/app.ini).
 
 ### Container Options
 
@@ -100,6 +102,44 @@ This container have some options available via environment variables, these opti
       `false`
   - <u>Action:</u>
       Request crond to be run inside the container. Its default configuration will periodically run all scripts from `/etc/periodic/${period}` but custom crontabs can be added to `/var/spool/cron/crontabs/`.
+- **BACKUP_INTERVAL**:
+  - <u>Possible value:</u>
+      `3h`, `7d`, `3M`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      In combination with `RUN_CROND` set to `true`, enables backup system.\
+      See: [Backup System](#backup-system)
+- **BACKUP_RETENTION**:
+  - <u>Possible value:</u>
+      `360m`, `7d`, `...m/d`
+  - <u>Default:</u>
+      `7d`
+  - <u>Action:</u>
+      Used by backup system. Backups older than specified in expression are deleted periodically.\
+      See: [Backup System](#backup-system)
+- **BACKUP_ARG_CONFIG**:
+  - <u>Possible value:</u>
+      `/app/gogs/example/custom/config`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      Used by backup system. If defined, supplies `--config` argument to `gogs backup`.\
+      See: [Backup System](#backup-system)
+- **BACKUP_ARG_EXCLUDE_REPOS**:
+  - <u>Possible value:</u>
+      `test-repo1`, `test-repo2`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      Used by backup system. If defined, supplies `--exclude-repos` argument to `gogs backup`.\
+      See: [Backup System](#backup-system)
+
+## Backup System
+Automated backups with retention policy:
+
+- `BACKUP_INTERVAL` controls how often the backup job runs and supports interval in hours (h), days (d), and months (M), eg. `3h`, `7d`, `3M`. The lowest possible value is one hour (`1h`).
+- `BACKUP_RETENTION` supports expressions in minutes (m) and days (d), eg. `360m`, `2d`. The lowest possible value is 60 minutes (`60m`).
 
 ## Upgrade
 

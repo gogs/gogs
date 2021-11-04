@@ -9,16 +9,17 @@ import (
 	"strings"
 
 	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 )
 
-// EmailAdresses is the list of all email addresses of a user. Can contain the
+// EmailAddresses is the list of all email addresses of a user. Can contain the
 // primary email address, but is not obligatory.
 type EmailAddress struct {
 	ID          int64
-	UID         int64  `xorm:"INDEX NOT NULL"`
-	Email       string `xorm:"UNIQUE NOT NULL"`
-	IsActivated bool
-	IsPrimary   bool `xorm:"-" json:"-"`
+	UID         int64  `xorm:"INDEX NOT NULL" gorm:"INDEX"`
+	Email       string `xorm:"UNIQUE NOT NULL" gorm:"UNIQUE"`
+	IsActivated bool   `gorm:"NOT NULL;DEFAULT:FALSE"`
+	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
 }
 
 // GetEmailAddresses returns all email addresses belongs to given user.
@@ -43,7 +44,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		}
 	}
 
-	// We alway want the primary email address displayed, even if it's not in
+	// We always want the primary email address displayed, even if it's not in
 	// the emailaddress table (yet).
 	if !isPrimaryFound {
 		emails = append(emails, &EmailAddress{
@@ -68,7 +69,7 @@ func isEmailUsed(e Engine, email string) (bool, error) {
 	}
 
 	// We need to check primary email of users as well.
-	return e.Where("type=?", USER_TYPE_INDIVIDUAL).And("email=?", email).Get(new(User))
+	return e.Where("type=?", UserIndividual).And("email=?", email).Get(new(User))
 }
 
 // IsEmailUsed returns true if the email has been used.
@@ -82,7 +83,7 @@ func addEmailAddress(e Engine, email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if used {
-		return ErrEmailAlreadyUsed{email.Email}
+		return ErrEmailAlreadyUsed{args: errutil.Args{"email": email.Email}}
 	}
 
 	_, err = e.Insert(email)
@@ -105,7 +106,7 @@ func AddEmailAddresses(emails []*EmailAddress) error {
 		if err != nil {
 			return err
 		} else if used {
-			return ErrEmailAlreadyUsed{emails[i].Email}
+			return ErrEmailAlreadyUsed{args: errutil.Args{"email": emails[i].Email}}
 		}
 	}
 
@@ -160,16 +161,20 @@ func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
 	return nil
 }
 
-func MakeEmailPrimary(email *EmailAddress) error {
+func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 	has, err := x.Get(email)
 	if err != nil {
 		return err
 	} else if !has {
-		return errors.EmailNotFound{email.Email}
+		return errors.EmailNotFound{Email: email.Email}
+	}
+
+	if email.UID != userID {
+		return errors.New("not the owner of the email")
 	}
 
 	if !email.IsActivated {
-		return errors.EmailNotVerified{email.Email}
+		return errors.EmailNotVerified{Email: email.Email}
 	}
 
 	user := &User{ID: email.UID}
@@ -177,7 +182,7 @@ func MakeEmailPrimary(email *EmailAddress) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return errors.UserNotExist{email.UID, ""}
+		return ErrUserNotExist{args: map[string]interface{}{"userID": email.UID}}
 	}
 
 	// Make sure the former primary email doesn't disappear.

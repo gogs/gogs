@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/unknwon/com"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
 )
 
@@ -96,7 +96,7 @@ func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Poster == nil {
 		c.Poster, err = GetUserByID(c.PosterID)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if IsErrUserNotExist(err) {
 				c.PosterID = -1
 				c.Poster = NewGhostUser()
 			} else {
@@ -180,7 +180,7 @@ func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) 
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
 	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
-		log.Error(2, "mailIssueCommentToParticipants: %v", err)
+		log.Error("mailIssueCommentToParticipants: %v", err)
 	}
 
 	return nil
@@ -239,7 +239,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 			attachments[i].IssueID = opts.Issue.ID
 			attachments[i].CommentID = comment.ID
 			// No assign value could be 0, so ignore AllCols().
-			if _, err = e.Id(attachments[i].ID).Update(attachments[i]); err != nil {
+			if _, err = e.ID(attachments[i].ID).Update(attachments[i]); err != nil {
 				return nil, fmt.Errorf("update attachment [%d]: %v", attachments[i].ID, err)
 			}
 		}
@@ -282,10 +282,10 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Notify watchers for whatever action comes in, ignore if no action type.
 	if act.OpType > 0 {
 		if err = notifyWatchers(e, act); err != nil {
-			log.Error(2, "notifyWatchers: %v", err)
+			log.Error("notifyWatchers: %v", err)
 		}
 		if err = comment.mailParticipants(e, act.OpType, opts.Issue); err != nil {
-			log.Error(2, "MailParticipants: %v", err)
+			log.Error("MailParticipants: %v", err)
 		}
 	}
 
@@ -356,7 +356,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 		Repository: repo.APIFormat(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		log.Error(2, "PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
+		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
 	}
 
 	return comment, nil
@@ -391,6 +391,25 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 	return err
 }
 
+var _ errutil.NotFound = (*ErrCommentNotExist)(nil)
+
+type ErrCommentNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrCommentNotExist(err error) bool {
+	_, ok := err.(ErrCommentNotExist)
+	return ok
+}
+
+func (err ErrCommentNotExist) Error() string {
+	return fmt.Sprintf("comment does not exist: %v", err.args)
+}
+
+func (ErrCommentNotExist) NotFound() bool {
+	return true
+}
+
 // GetCommentByID returns the comment by given ID.
 func GetCommentByID(id int64) (*Comment, error) {
 	c := new(Comment)
@@ -398,7 +417,7 @@ func GetCommentByID(id int64) (*Comment, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrCommentNotExist{id, 0}
+		return nil, ErrCommentNotExist{args: map[string]interface{}{"commentID": id}}
 	}
 	return c, c.LoadAttributes()
 }
@@ -465,7 +484,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 	}
 
 	if err = c.Issue.LoadAttributes(); err != nil {
-		log.Error(2, "Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
+		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", c.IssueID, err)
 	} else if err = PrepareWebhooks(c.Issue.Repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
 		Action:  api.HOOK_ISSUE_COMMENT_EDITED,
 		Issue:   c.Issue.APIFormat(),
@@ -478,7 +497,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 		Repository: c.Issue.Repo.APIFormat(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		log.Error(2, "PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
+		log.Error("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
 	}
 
 	return nil
@@ -516,11 +535,11 @@ func DeleteCommentByID(doer *User, id int64) error {
 
 	_, err = DeleteAttachmentsByComment(comment.ID, true)
 	if err != nil {
-		log.Error(2, "Failed to delete attachments by comment[%d]: %v", comment.ID, err)
+		log.Error("Failed to delete attachments by comment[%d]: %v", comment.ID, err)
 	}
 
 	if err = comment.Issue.LoadAttributes(); err != nil {
-		log.Error(2, "Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
+		log.Error("Issue.LoadAttributes [issue_id: %d]: %v", comment.IssueID, err)
 	} else if err = PrepareWebhooks(comment.Issue.Repo, HOOK_EVENT_ISSUE_COMMENT, &api.IssueCommentPayload{
 		Action:     api.HOOK_ISSUE_COMMENT_DELETED,
 		Issue:      comment.Issue.APIFormat(),
@@ -528,7 +547,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		Repository: comment.Issue.Repo.APIFormat(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
-		log.Error(2, "PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
+		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
 	}
 	return nil
 }

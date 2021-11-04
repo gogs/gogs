@@ -20,11 +20,12 @@ import (
 
 	"github.com/unknwon/com"
 	"golang.org/x/crypto/ssh"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
+	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/process"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -84,7 +85,7 @@ func (k *PublicKey) OmitEmail() string {
 
 // AuthorizedString returns formatted public key string for authorized_keys file.
 func (k *PublicKey) AuthorizedString() string {
-	return fmt.Sprintf(_TPL_PUBLICK_KEY, setting.AppPath, k.ID, setting.CustomConf, k.Content)
+	return fmt.Sprintf(_TPL_PUBLICK_KEY, conf.AppPath(), k.ID, conf.CustomConf, k.Content)
 }
 
 // IsDeployKey returns true if the public key is used as deploy key.
@@ -179,7 +180,7 @@ func parseKeyString(content string) (string, error) {
 // writeTmpKeyFile writes key content to a temporary file
 // and returns the name of that file, along with any possible errors.
 func writeTmpKeyFile(content string) (string, error) {
-	tmpFile, err := ioutil.TempFile(setting.SSH.KeyTestPath, "gogs_keytest")
+	tmpFile, err := ioutil.TempFile(conf.SSH.KeyTestPath, "gogs_keytest")
 	if err != nil {
 		return "", fmt.Errorf("TempFile: %v", err)
 	}
@@ -199,7 +200,7 @@ func SSHKeyGenParsePublicKey(key string) (string, int, error) {
 	}
 	defer os.Remove(tmpName)
 
-	stdout, stderr, err := process.Exec("SSHKeyGenParsePublicKey", setting.SSH.KeygenPath, "-lf", tmpName)
+	stdout, stderr, err := process.Exec("SSHKeyGenParsePublicKey", conf.SSH.KeygenPath, "-lf", tmpName)
 	if err != nil {
 		return "", 0, fmt.Errorf("fail to parse public key: %s - %s", err, stderr)
 	}
@@ -220,7 +221,7 @@ func SSHKeyGenParsePublicKey(key string) (string, int, error) {
 func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 	fields := strings.Fields(keyLine)
 	if len(fields) < 2 {
-		return "", 0, fmt.Errorf("not enough fields in public key line: %s", string(keyLine))
+		return "", 0, fmt.Errorf("not enough fields in public key line: %s", keyLine)
 	}
 
 	raw, err := base64.StdEncoding.DecodeString(fields[1])
@@ -274,7 +275,7 @@ func SSHNativeParsePublicKey(keyLine string) (string, int, error) {
 // CheckPublicKeyString checks if the given public key string is recognized by SSH.
 // It returns the actual public key line on success.
 func CheckPublicKeyString(content string) (_ string, err error) {
-	if setting.SSH.Disabled {
+	if conf.SSH.Disabled {
 		return "", errors.New("SSH is disabled")
 	}
 
@@ -291,7 +292,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	// Remove any unnecessary whitespace
 	content = strings.TrimSpace(content)
 
-	if !setting.SSH.MinimumKeySizeCheck {
+	if !conf.SSH.MinimumKeySizeCheck {
 		return content, nil
 	}
 
@@ -300,7 +301,7 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 		keyType string
 		length  int
 	)
-	if setting.SSH.StartBuiltinServer {
+	if conf.SSH.StartBuiltinServer {
 		fnName = "SSHNativeParsePublicKey"
 		keyType, length, err = SSHNativeParsePublicKey(content)
 	} else {
@@ -310,9 +311,9 @@ func CheckPublicKeyString(content string) (_ string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: %v", fnName, err)
 	}
-	log.Trace("Key info [native: %v]: %s-%d", setting.SSH.StartBuiltinServer, keyType, length)
+	log.Trace("Key info [native: %v]: %s-%d", conf.SSH.StartBuiltinServer, keyType, length)
 
-	if minLen, found := setting.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
+	if minLen, found := conf.SSH.MinimumKeySizes[keyType]; found && length >= minLen {
 		return content, nil
 	} else if found && length < minLen {
 		return "", fmt.Errorf("key length is not enough: got %d, needs %d", length, minLen)
@@ -325,7 +326,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
-	fpath := filepath.Join(setting.SSH.RootPath, "authorized_keys")
+	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
 	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
 		return err
@@ -333,7 +334,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 	defer f.Close()
 
 	// Note: chmod command does not support in Windows.
-	if !setting.IsWindows {
+	if !conf.IsWindowsRuntime() {
 		fi, err := f.Stat()
 		if err != nil {
 			return err
@@ -341,7 +342,7 @@ func appendAuthorizedKeysToFile(keys ...*PublicKey) error {
 
 		// .ssh directory should have mode 700, and authorized_keys file should have mode 600.
 		if fi.Mode().Perm() > 0600 {
-			log.Error(4, "authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
+			log.Error("authorized_keys file has unusual permission flags: %s - setting to -rw-------", fi.Mode().Perm().String())
 			if err = f.Chmod(0600); err != nil {
 				return err
 			}
@@ -375,12 +376,12 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
 	tmpPath := strings.Replace(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
 		"id_rsa.pub"), "\\", "/", -1)
-	os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
+	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
 
-	stdout, stderr, err := process.Exec("AddPublicKey", setting.SSH.KeygenPath, "-lf", tmpPath)
+	stdout, stderr, err := process.Exec("AddPublicKey", conf.SSH.KeygenPath, "-lf", tmpPath)
 	if err != nil {
 		return fmt.Errorf("fail to parse public key: %s - %s", err, stderr)
 	} else if len(stdout) < 2 {
@@ -394,7 +395,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	}
 
 	// Don't need to rewrite this file if builtin SSH server is enabled.
-	if setting.SSH.StartBuiltinServer {
+	if conf.SSH.StartBuiltinServer {
 		return nil
 	}
 	return appendAuthorizedKeysToFile(key)
@@ -425,7 +426,7 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 		OwnerID: ownerID,
 		Name:    name,
 		Content: content,
-		Mode:    ACCESS_MODE_WRITE,
+		Mode:    AccessModeWrite,
 		Type:    KEY_TYPE_USER,
 	}
 	if err = addKey(sess, key); err != nil {
@@ -516,15 +517,15 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 
 // RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
 // Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
-// outsite any session scope independently.
+// outside any session scope independently.
 func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
 
 	log.Trace("Doing: RewriteAuthorizedKeys")
 
-	os.MkdirAll(setting.SSH.RootPath, os.ModePerm)
-	fpath := filepath.Join(setting.SSH.RootPath, "authorized_keys")
+	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
+	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
 	tmpPath := fpath + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -536,7 +537,7 @@ func RewriteAuthorizedKeys() error {
 		_, err = f.WriteString((bean.(*PublicKey)).AuthorizedString())
 		return err
 	})
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return err
 	}
@@ -655,7 +656,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 
 	pkey := &PublicKey{
 		Content: content,
-		Mode:    ACCESS_MODE_READ,
+		Mode:    AccessModeRead,
 		Type:    KEY_TYPE_DEPLOY,
 	}
 	has, err := x.Get(pkey)
@@ -684,6 +685,25 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 	return key, sess.Commit()
 }
 
+var _ errutil.NotFound = (*ErrDeployKeyNotExist)(nil)
+
+type ErrDeployKeyNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrDeployKeyNotExist(err error) bool {
+	_, ok := err.(ErrDeployKeyNotExist)
+	return ok
+}
+
+func (err ErrDeployKeyNotExist) Error() string {
+	return fmt.Sprintf("deploy key does not exist: %v", err.args)
+}
+
+func (ErrDeployKeyNotExist) NotFound() bool {
+	return true
+}
+
 // GetDeployKeyByID returns deploy key by given ID.
 func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	key := new(DeployKey)
@@ -691,7 +711,7 @@ func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{id, 0, 0}
+		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"deployKeyID": id}}
 	}
 	return key, nil
 }
@@ -706,7 +726,7 @@ func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{0, keyID, repoID}
+		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"keyID": keyID, "repoID": repoID}}
 	}
 	return key, nil
 }
@@ -733,10 +753,12 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		yes, err := HasAccess(doer.ID, repo, ACCESS_MODE_ADMIN)
-		if err != nil {
-			return fmt.Errorf("HasAccess: %v", err)
-		} else if !yes {
+		if !Perms.Authorize(doer.ID, repo.ID, AccessModeAdmin,
+			AccessModeOptions{
+				OwnerID: repo.OwnerID,
+				Private: repo.IsPrivate,
+			},
+		) {
 			return ErrKeyAccessDenied{doer.ID, key.ID, "deploy"}
 		}
 	}

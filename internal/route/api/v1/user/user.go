@@ -13,14 +13,13 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/markup"
 )
 
 func Search(c *context.APIContext) {
 	opts := &db.SearchUserOptions{
 		Keyword:  c.Query("q"),
-		Type:     db.USER_TYPE_INDIVIDUAL,
+		Type:     db.UserIndividual,
 		PageSize: com.StrTo(c.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {
@@ -58,7 +57,7 @@ func Search(c *context.APIContext) {
 func GetInfo(c *context.APIContext) {
 	u, err := db.GetUserByName(c.Params(":username"))
 	if err != nil {
-		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+		c.NotFoundOrError(err, "get user by name")
 		return
 	}
 

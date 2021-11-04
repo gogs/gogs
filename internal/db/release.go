@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/process"
 )
 
@@ -68,7 +68,7 @@ func (r *Release) loadAttributes(e Engine) (err error) {
 	if r.Publisher == nil {
 		r.Publisher, err = getUserByID(e, r.PublisherID)
 		if err != nil {
-			if errors.IsUserNotExist(err) {
+			if IsErrUserNotExist(err) {
 				r.PublisherID = -1
 				r.Publisher = NewGhostUser()
 			} else {
@@ -119,10 +119,10 @@ func IsReleaseExist(repoID int64, tagName string) (bool, error) {
 func createTag(gitRepo *git.Repository, r *Release) error {
 	// Only actual create when publish.
 	if !r.IsDraft {
-		if !gitRepo.IsTagExist(r.TagName) {
-			commit, err := gitRepo.GetBranchCommit(r.Target)
+		if !gitRepo.HasTag(r.TagName) {
+			commit, err := gitRepo.BranchCommit(r.Target)
 			if err != nil {
-				return fmt.Errorf("GetBranchCommit: %v", err)
+				return fmt.Errorf("get branch commit: %v", err)
 			}
 
 			// Trim '--' prefix to prevent command line argument vulnerability.
@@ -134,15 +134,15 @@ func createTag(gitRepo *git.Repository, r *Release) error {
 				return err
 			}
 		} else {
-			commit, err := gitRepo.GetTagCommit(r.TagName)
+			commit, err := gitRepo.TagCommit(r.TagName)
 			if err != nil {
-				return fmt.Errorf("GetTagCommit: %v", err)
+				return fmt.Errorf("get tag commit: %v", err)
 			}
 
 			r.Sha1 = commit.ID.String()
 			r.NumCommits, err = commit.CommitsCount()
 			if err != nil {
-				return fmt.Errorf("CommitsCount: %v", err)
+				return fmt.Errorf("count commits: %v", err)
 			}
 		}
 	}
@@ -156,7 +156,7 @@ func (r *Release) preparePublishWebhooks() {
 		Repository: r.Repo.APIFormat(nil),
 		Sender:     r.Publisher.APIFormat(),
 	}); err != nil {
-		log.Error(2, "PrepareWebhooks: %v", err)
+		log.Error("PrepareWebhooks: %v", err)
 	}
 }
 
@@ -206,13 +206,32 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 	return nil
 }
 
+var _ errutil.NotFound = (*ErrReleaseNotExist)(nil)
+
+type ErrReleaseNotExist struct {
+	args map[string]interface{}
+}
+
+func IsErrReleaseNotExist(err error) bool {
+	_, ok := err.(ErrReleaseNotExist)
+	return ok
+}
+
+func (err ErrReleaseNotExist) Error() string {
+	return fmt.Sprintf("release does not exist: %v", err.args)
+}
+
+func (ErrReleaseNotExist) NotFound() bool {
+	return true
+}
+
 // GetRelease returns release by given ID.
 func GetRelease(repoID int64, tagName string) (*Release, error) {
 	isExist, err := IsReleaseExist(repoID, tagName)
 	if err != nil {
 		return nil, err
 	} else if !isExist {
-		return nil, ErrReleaseNotExist{0, tagName}
+		return nil, ErrReleaseNotExist{args: map[string]interface{}{"tag": tagName}}
 	}
 
 	r := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
@@ -230,7 +249,7 @@ func GetReleaseByID(id int64) (*Release, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrReleaseNotExist{id, ""}
+		return nil, ErrReleaseNotExist{args: map[string]interface{}{"releaseID": id}}
 	}
 
 	return r, r.LoadAttributes()
@@ -246,6 +265,12 @@ func GetPublishedReleasesByRepoID(repoID int64, matches ...string) ([]*Release, 
 	}
 	releases := make([]*Release, 0, 5)
 	return releases, sess.Find(&releases, new(Release))
+}
+
+// GetReleasesByRepoID returns a list of all releases (including drafts) of given repository.
+func GetReleasesByRepoID(repoID int64) ([]*Release, error) {
+	releases := make([]*Release, 0)
+	return releases, x.Where("repo_id = ?", repoID).Find(&releases)
 }
 
 // GetDraftReleasesByRepoID returns all draft releases of repository.
@@ -327,7 +352,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return fmt.Errorf("GetReleaseByID: %v", err)
 	}
 
-	// Mark sure the delete operation againsts same repository.
+	// Mark sure the delete operation against same repository.
 	if repoID != rel.RepoID {
 		return nil
 	}

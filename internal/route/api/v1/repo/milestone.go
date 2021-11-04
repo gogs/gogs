@@ -17,7 +17,7 @@ import (
 func ListMilestones(c *context.APIContext) {
 	milestones, err := db.GetMilestonesByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.ServerError("GetMilestonesByRepoID", err)
+		c.Error(err, "get milestones by repository ID")
 		return
 	}
 
@@ -31,7 +31,7 @@ func ListMilestones(c *context.APIContext) {
 func GetMilestone(c *context.APIContext) {
 	milestone, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetMilestoneByRepoID", db.IsErrMilestoneNotExist, err)
+		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
 	c.JSONSuccess(milestone.APIFormat())
@@ -51,7 +51,7 @@ func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
 	}
 
 	if err := db.NewMilestone(milestone); err != nil {
-		c.ServerError("NewMilestone", err)
+		c.Error(err, "new milestone")
 		return
 	}
 	c.JSON(http.StatusCreated, milestone.APIFormat())
@@ -60,7 +60,7 @@ func CreateMilestone(c *context.APIContext, form api.CreateMilestoneOption) {
 func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 	milestone, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetMilestoneByRepoID", db.IsErrMilestoneNotExist, err)
+		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
 
@@ -76,11 +76,11 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 
 	if form.State != nil {
 		if err = milestone.ChangeStatus(api.STATE_CLOSED == api.StateType(*form.State)); err != nil {
-			c.ServerError("ChangeStatus", err)
+			c.Error(err, "change status")
 			return
 		}
 	} else if err = db.UpdateMilestone(milestone); err != nil {
-		c.ServerError("UpdateMilestone", err)
+		c.Error(err, "update milestone")
 		return
 	}
 
@@ -89,7 +89,7 @@ func EditMilestone(c *context.APIContext, form api.EditMilestoneOption) {
 
 func DeleteMilestone(c *context.APIContext) {
 	if err := db.DeleteMilestoneOfRepoByID(c.Repo.Repository.ID, c.ParamsInt64(":id")); err != nil {
-		c.ServerError("DeleteMilestoneByRepoID", err)
+		c.Error(err, "delete milestone of repository by ID")
 		return
 	}
 	c.NoContent()

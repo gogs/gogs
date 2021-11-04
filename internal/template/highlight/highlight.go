@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var (
@@ -72,7 +72,7 @@ var (
 )
 
 func NewContext() {
-	keys := setting.Cfg.Section("highlight.mapping").Keys()
+	keys := conf.File.Section("highlight.mapping").Keys()
 	for i := range keys {
 		highlightMapping[keys[i].Name()] = keys[i].Value()
 	}

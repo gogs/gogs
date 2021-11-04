@@ -7,16 +7,16 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
 
 var (
@@ -37,7 +37,7 @@ without manually hacking the data files`,
 		Flags: []cli.Flag{
 			stringFlag("source", "", "Source directory that stores new locale files"),
 			stringFlag("target", "", "Target directory that stores old locale files"),
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 )
@@ -54,20 +54,19 @@ func runImportLocale(c *cli.Context) error {
 		return fmt.Errorf("target directory %q does not exist or is not a directory", c.String("target"))
 	}
 
-	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
 	}
-
-	setting.NewContext()
 
 	now := time.Now()
 
-	line := make([]byte, 0, 100)
+	var line []byte
 	badChars := []byte(`="`)
 	escapedQuotes := []byte(`\"`)
 	regularQuotes := []byte(`"`)
 	// Cut out en-US.
-	for _, lang := range setting.Langs[1:] {
+	for _, lang := range conf.I18n.Langs[1:] {
 		name := fmt.Sprintf("locale_%s.ini", lang)
 		source := filepath.Join(c.String("source"), name)
 		target := filepath.Join(c.String("target"), name)
@@ -98,15 +97,15 @@ func runImportLocale(c *cli.Context) error {
 				line = append(line[:idx+1], line[idx+2:len(line)-1]...)
 				line = bytes.Replace(line, escapedQuotes, regularQuotes, -1)
 			}
-			tw.Write(line)
-			tw.WriteString("\n")
+			_, _ = tw.Write(line)
+			_, _ = tw.WriteString("\n")
 		}
-		sr.Close()
-		tw.Close()
+		_ = sr.Close()
+		_ = tw.Close()
 
 		// Modification time of files from Crowdin often ahead of current,
 		// so we need to set back to current.
-		os.Chtimes(target, now, now)
+		_ = os.Chtimes(target, now, now)
 	}
 
 	fmt.Println("Locale files has been successfully imported!")

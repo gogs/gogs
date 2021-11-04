@@ -9,9 +9,8 @@ import (
 
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/setting"
 )
 
 type Organization struct {
@@ -50,7 +49,7 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 	var err error
 	c.Org.Organization, err = db.GetUserByName(orgName)
 	if err != nil {
-		c.NotFoundOrServerError("GetUserByName", errors.IsUserNotExist, err)
+		c.NotFoundOrError(err, "get organization by name")
 		return
 	}
 	org := c.Org.Organization
@@ -85,26 +84,26 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 	}
 	if (requireMember && !c.Org.IsMember) ||
 		(requireOwner && !c.Org.IsOwner) {
-		c.Handle(404, "OrgAssignment", err)
+		c.NotFound()
 		return
 	}
 	c.Data["IsOrganizationOwner"] = c.Org.IsOwner
 	c.Data["IsOrganizationMember"] = c.Org.IsMember
 
-	c.Org.OrgLink = setting.AppSubURL + "/org/" + org.Name
+	c.Org.OrgLink = conf.Server.Subpath + "/org/" + org.Name
 	c.Data["OrgLink"] = c.Org.OrgLink
 
 	// Team.
 	if c.Org.IsMember {
 		if c.Org.IsOwner {
 			if err := org.GetTeams(); err != nil {
-				c.Handle(500, "GetTeams", err)
+				c.Error(err, "get teams")
 				return
 			}
 		} else {
 			org.Teams, err = org.GetUserTeams(c.User.ID)
 			if err != nil {
-				c.Handle(500, "GetUserTeams", err)
+				c.Error(err, "get user teams")
 				return
 			}
 		}
@@ -124,20 +123,20 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 		}
 
 		if !teamExists {
-			c.Handle(404, "OrgAssignment", err)
+			c.NotFound()
 			return
 		}
 
 		c.Data["IsTeamMember"] = c.Org.IsTeamMember
 		if requireTeamMember && !c.Org.IsTeamMember {
-			c.Handle(404, "OrgAssignment", err)
+			c.NotFound()
 			return
 		}
 
-		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= db.ACCESS_MODE_ADMIN
+		c.Org.IsTeamAdmin = c.Org.Team.IsOwnerTeam() || c.Org.Team.Authorize >= db.AccessModeAdmin
 		c.Data["IsTeamAdmin"] = c.Org.IsTeamAdmin
 		if requireTeamAdmin && !c.Org.IsTeamAdmin {
-			c.Handle(404, "OrgAssignment", err)
+			c.NotFound()
 			return
 		}
 	}

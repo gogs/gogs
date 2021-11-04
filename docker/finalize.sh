@@ -11,8 +11,6 @@ echo "export GOGS_CUSTOM=${GOGS_CUSTOM}" >> /etc/profile
 
 # Final cleaning
 rm -rf /app/gogs/build
-rm /app/gogs/docker/build.sh
-rm /app/gogs/docker/build-go.sh
 rm /app/gogs/docker/finalize.sh
 rm /app/gogs/docker/nsswitch.conf
 rm /app/gogs/docker/README.md

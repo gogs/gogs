@@ -6,13 +6,11 @@ package tool
 
 import (
 	"crypto/md5"
-	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"html/template"
-	"math/big"
 	"strings"
 	"time"
 	"unicode"
@@ -20,31 +18,12 @@ import (
 
 	"github.com/unknwon/com"
 	"github.com/unknwon/i18n"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/chardet"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
 )
-
-// MD5Bytes encodes string to MD5 bytes.
-func MD5Bytes(str string) []byte {
-	m := md5.New()
-	m.Write([]byte(str))
-	return m.Sum(nil)
-}
-
-// MD5 encodes string to MD5 hex value.
-func MD5(str string) string {
-	return hex.EncodeToString(MD5Bytes(str))
-}
-
-// SHA1 encodes string to SHA1 hex value.
-func SHA1(str string) string {
-	h := sha1.New()
-	h.Write([]byte(str))
-	return hex.EncodeToString(h.Sum(nil))
-}
 
 // ShortSHA1 truncates SHA1 string length to at most 10.
 func ShortSHA1(sha1 string) string {
@@ -62,9 +41,9 @@ func DetectEncoding(content []byte) (string, error) {
 	}
 
 	result, err := chardet.NewTextDetector().DetectBest(content)
-	if result.Charset != "UTF-8" && len(setting.Repository.AnsiCharset) > 0 {
-		log.Trace("Using default AnsiCharset: %s", setting.Repository.AnsiCharset)
-		return setting.Repository.AnsiCharset, err
+	if result.Charset != "UTF-8" && len(conf.Repository.ANSICharset) > 0 {
+		log.Trace("Using default ANSICharset: %s", conf.Repository.ANSICharset)
+		return conf.Repository.ANSICharset, err
 	}
 
 	log.Trace("Detected encoding: %s", result.Charset)
@@ -81,40 +60,6 @@ func BasicAuthDecode(encoded string) (string, string, error) {
 
 	auth := strings.SplitN(string(s), ":", 2)
 	return auth[0], auth[1], nil
-}
-
-// BasicAuthEncode encodes username and password in HTTP Basic Authentication format.
-func BasicAuthEncode(username, password string) string {
-	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
-}
-
-const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-
-// RandomString returns generated random string in given length of characters.
-// It also returns possible error during generation.
-func RandomString(n int) (string, error) {
-	buffer := make([]byte, n)
-	max := big.NewInt(int64(len(alphanum)))
-
-	for i := 0; i < n; i++ {
-		index, err := randomInt(max)
-		if err != nil {
-			return "", err
-		}
-
-		buffer[i] = alphanum[index]
-	}
-
-	return string(buffer), nil
-}
-
-func randomInt(max *big.Int) (int, error) {
-	rand, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		return 0, err
-	}
-
-	return int(rand.Int64()), nil
 }
 
 // verify time limit code
@@ -170,7 +115,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 
 	// create sha1 encode string
 	sh := sha1.New()
-	sh.Write([]byte(data + setting.SecretKey + startStr + endStr + com.ToStr(minutes)))
+	_, _ = sh.Write([]byte(data + conf.Security.SecretKey + startStr + endStr + com.ToStr(minutes)))
 	encoded := hex.EncodeToString(sh.Sum(nil))
 
 	code := fmt.Sprintf("%s%06d%s", startStr, minutes, encoded)
@@ -182,7 +127,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 func HashEmail(email string) string {
 	email = strings.ToLower(strings.TrimSpace(email))
 	h := md5.New()
-	h.Write([]byte(email))
+	_, _ = h.Write([]byte(email))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -190,19 +135,19 @@ func HashEmail(email string) string {
 // which includes app sub-url as prefix. However, it is possible
 // to return full URL if user enables Gravatar-like service.
 func AvatarLink(email string) (url string) {
-	if setting.EnableFederatedAvatar && setting.LibravatarService != nil &&
+	if conf.Picture.EnableFederatedAvatar && conf.Picture.LibravatarService != nil &&
 		strings.Contains(email, "@") {
 		var err error
-		url, err = setting.LibravatarService.FromEmail(email)
+		url, err = conf.Picture.LibravatarService.FromEmail(email)
 		if err != nil {
 			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
-	if len(url) == 0 && !setting.DisableGravatar {
-		url = setting.GravatarSource + HashEmail(email) + "?d=identicon"
+	if len(url) == 0 && !conf.Picture.DisableGravatar {
+		url = conf.Picture.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
 	if len(url) == 0 {
-		url = setting.AppSubURL + "/img/avatar_default.png"
+		url = conf.Server.Subpath + "/img/avatar_default.png"
 	}
 	return url
 }
@@ -360,44 +305,44 @@ func RawTimeSince(t time.Time, lang string) string {
 
 // TimeSince calculates the time interval and generate user-friendly string.
 func TimeSince(t time.Time, lang string) template.HTML {
-	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(setting.TimeFormat), timeSince(t, lang)))
+	return template.HTML(fmt.Sprintf(`<span class="time-since" title="%s">%s</span>`, t.Format(conf.Time.FormatLayout), timeSince(t, lang)))
 }
 
 // Subtract deals with subtraction of all types of number.
 func Subtract(left interface{}, right interface{}) interface{} {
 	var rleft, rright int64
 	var fleft, fright float64
-	var isInt bool = true
-	switch left.(type) {
+	var isInt = true
+	switch left := left.(type) {
 	case int:
-		rleft = int64(left.(int))
+		rleft = int64(left)
 	case int8:
-		rleft = int64(left.(int8))
+		rleft = int64(left)
 	case int16:
-		rleft = int64(left.(int16))
+		rleft = int64(left)
 	case int32:
-		rleft = int64(left.(int32))
+		rleft = int64(left)
 	case int64:
-		rleft = left.(int64)
+		rleft = left
 	case float32:
-		fleft = float64(left.(float32))
+		fleft = float64(left)
 		isInt = false
 	case float64:
-		fleft = left.(float64)
+		fleft = left
 		isInt = false
 	}
 
-	switch right.(type) {
+	switch right := right.(type) {
 	case int:
-		rright = int64(right.(int))
+		rright = int64(right)
 	case int8:
-		rright = int64(right.(int8))
+		rright = int64(right)
 	case int16:
-		rright = int64(right.(int16))
+		rright = int64(right)
 	case int32:
-		rright = int64(right.(int32))
+		rright = int64(right)
 	case int64:
-		rright = right.(int64)
+		rright = right
 	case float32:
 		fright = float64(left.(float32))
 		isInt = false

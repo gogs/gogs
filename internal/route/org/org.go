@@ -5,12 +5,11 @@
 package org
 
 import (
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/form"
-	"gogs.io/gogs/internal/setting"
 )
 
 const (
@@ -18,22 +17,22 @@ const (
 )
 
 func Create(c *context.Context) {
-	c.Data["Title"] = c.Tr("new_org")
-	c.HTML(200, CREATE)
+	c.Title("new_org")
+	c.Success(CREATE)
 }
 
 func CreatePost(c *context.Context, f form.CreateOrg) {
-	c.Data["Title"] = c.Tr("new_org")
+	c.Title("new_org")
 
 	if c.HasError() {
-		c.HTML(200, CREATE)
+		c.Success(CREATE)
 		return
 	}
 
 	org := &db.User{
 		Name:     f.OrgName,
 		IsActive: true,
-		Type:     db.USER_TYPE_ORGANIZATION,
+		Type:     db.UserOrganization,
 	}
 
 	if err := db.CreateOrganization(org, c.User); err != nil {
@@ -41,16 +40,14 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		switch {
 		case db.IsErrUserAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
-		case db.IsErrNameReserved(err):
-			c.RenderWithErr(c.Tr("org.form.name_reserved", err.(db.ErrNameReserved).Name), CREATE, &f)
-		case db.IsErrNamePatternNotAllowed(err):
-			c.RenderWithErr(c.Tr("org.form.name_pattern_not_allowed", err.(db.ErrNamePatternNotAllowed).Pattern), CREATE, &f)
+		case db.IsErrNameNotAllowed(err):
+			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), CREATE, &f)
 		default:
-			c.Handle(500, "CreateOrganization", err)
+			c.Error(err, "create organization")
 		}
 		return
 	}
 	log.Trace("Organization created: %s", org.Name)
 
-	c.Redirect(setting.AppSubURL + "/org/" + f.OrgName + "/dashboard")
+	c.RedirectSubpath("/org/" + f.OrgName + "/dashboard")
 }

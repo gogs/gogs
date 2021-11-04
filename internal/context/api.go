@@ -10,10 +10,11 @@ import (
 	"strings"
 
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
 	"gopkg.in/macaron.v1"
+	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/errutil"
 )
 
 type APIContext struct {
@@ -28,26 +29,6 @@ type APIContext struct {
 // FIXME: move this constant to github.com/gogs/go-gogs-client
 const DocURL = "https://github.com/gogs/docs-api"
 
-// Error responses error message to client with given message.
-// If status is 500, also it prints error to log.
-func (c *APIContext) Error(status int, title string, obj interface{}) {
-	var message string
-	if err, ok := obj.(error); ok {
-		message = err.Error()
-	} else {
-		message = obj.(string)
-	}
-
-	if status == http.StatusInternalServerError {
-		log.Error(3, "%s: %s", title, message)
-	}
-
-	c.JSON(status, map[string]string{
-		"message": message,
-		"url":     DocURL,
-	})
-}
-
 // NoContent renders the 204 response.
 func (c *APIContext) NoContent() {
 	c.Status(http.StatusNoContent)
@@ -58,20 +39,34 @@ func (c *APIContext) NotFound() {
 	c.Status(http.StatusNotFound)
 }
 
-// ServerError renders the 500 response.
-func (c *APIContext) ServerError(title string, err error) {
-	c.Error(http.StatusInternalServerError, title, err)
+// ErrorStatus renders error with given status code.
+func (c *APIContext) ErrorStatus(status int, err error) {
+	c.JSON(status, map[string]string{
+		"message": err.Error(),
+		"url":     DocURL,
+	})
 }
 
-// NotFoundOrServerError use error check function to determine if the error
+// Error renders the 500 response.
+func (c *APIContext) Error(err error, msg string) {
+	log.ErrorDepth(5, "%s: %v", msg, err)
+	c.ErrorStatus(http.StatusInternalServerError, err)
+}
+
+// Errorf renders the 500 response with formatted message.
+func (c *APIContext) Errorf(err error, format string, args ...interface{}) {
+	c.Error(err, fmt.Sprintf(format, args...))
+}
+
+// NotFoundOrError use error check function to determine if the error
 // is about not found. It responses with 404 status code for not found error,
 // or error context description for logging purpose of 500 server error.
-func (c *APIContext) NotFoundOrServerError(title string, errck func(error) bool, err error) {
-	if errck(err) {
+func (c *APIContext) NotFoundOrError(err error, msg string) {
+	if errutil.IsNotFound(err) {
 		c.NotFound()
 		return
 	}
-	c.ServerError(title, err)
+	c.Error(err, msg)
 }
 
 // SetLinkHeader sets pagination link header by given total number and page size.
@@ -79,16 +74,16 @@ func (c *APIContext) SetLinkHeader(total, pageSize int) {
 	page := paginater.New(total, pageSize, c.QueryInt("page"), 0)
 	links := make([]string, 0, 4)
 	if page.HasNext() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", setting.AppURL, c.Req.URL.Path[1:], page.Next()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"next\"", conf.Server.ExternalURL, c.Req.URL.Path[1:], page.Next()))
 	}
 	if !page.IsLast() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", setting.AppURL, c.Req.URL.Path[1:], page.TotalPages()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"last\"", conf.Server.ExternalURL, c.Req.URL.Path[1:], page.TotalPages()))
 	}
 	if !page.IsFirst() {
-		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", setting.AppURL, c.Req.URL.Path[1:]))
+		links = append(links, fmt.Sprintf("<%s%s?page=1>; rel=\"first\"", conf.Server.ExternalURL, c.Req.URL.Path[1:]))
 	}
 	if page.HasPrevious() {
-		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", setting.AppURL, c.Req.URL.Path[1:], page.Previous()))
+		links = append(links, fmt.Sprintf("<%s%s?page=%d>; rel=\"prev\"", conf.Server.ExternalURL, c.Req.URL.Path[1:], page.Previous()))
 	}
 
 	if len(links) > 0 {
@@ -100,7 +95,7 @@ func APIContexter() macaron.Handler {
 	return func(ctx *Context) {
 		c := &APIContext{
 			Context: ctx,
-			BaseURL: setting.AppURL + "api/v1",
+			BaseURL: conf.Server.ExternalURL + "api/v1",
 		}
 		ctx.Map(c)
 	}

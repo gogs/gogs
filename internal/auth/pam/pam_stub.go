@@ -1,3 +1,4 @@
+//go:build !pam
 // +build !pam
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
@@ -7,9 +8,9 @@
 package pam
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 )
 
-func PAMAuth(serviceName, userName, passwd string) error {
+func (c *Config) doAuth(login, password string) error {
 	return errors.New("PAM not supported")
 }

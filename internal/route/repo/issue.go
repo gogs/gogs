@@ -6,8 +6,6 @@ package repo
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,15 +13,14 @@ import (
 
 	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
-	log "gopkg.in/clog.v1"
+	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/markup"
-	"gogs.io/gogs/internal/setting"
-	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -54,7 +51,7 @@ var (
 
 func MustEnableIssues(c *context.Context) {
 	if !c.Repo.Repository.EnableIssues {
-		c.Handle(404, "MustEnableIssues", nil)
+		c.NotFound()
 		return
 	}
 
@@ -66,7 +63,7 @@ func MustEnableIssues(c *context.Context) {
 
 func MustAllowPulls(c *context.Context) {
 	if !c.Repo.Repository.AllowsPulls() {
-		c.Handle(404, "MustAllowPulls", nil)
+		c.NotFound()
 		return
 	}
 
@@ -80,7 +77,7 @@ func MustAllowPulls(c *context.Context) {
 func RetrieveLabels(c *context.Context) {
 	labels, err := db.GetLabelsByRepoID(c.Repo.Repository.ID)
 	if err != nil {
-		c.Handle(500, "RetrieveLabels.GetLabels", err)
+		c.Error(err, "get labels by repository ID")
 		return
 	}
 	for _, l := range labels {
@@ -117,8 +114,8 @@ func issues(c *context.Context, isPullList bool) {
 
 	// Must sign in to see issues about you.
 	if viewType != "all" && !c.IsLogged {
-		c.SetCookie("redirect_to", "/"+url.QueryEscape(setting.AppSubURL+c.Req.RequestURI), 0, setting.AppSubURL)
-		c.Redirect(setting.AppSubURL + "/user/login")
+		c.SetCookie("redirect_to", "/"+url.QueryEscape(conf.Server.Subpath+c.Req.RequestURI), 0, conf.Server.Subpath)
+		c.Redirect(conf.Server.Subpath + "/user/login")
 		return
 	}
 
@@ -168,7 +165,7 @@ func issues(c *context.Context, isPullList bool) {
 	} else {
 		total = int(issueStats.ClosedCount)
 	}
-	pager := paginater.New(total, setting.UI.IssuePagingNum, page, 5)
+	pager := paginater.New(total, conf.UI.IssuePagingNum, page, 5)
 	c.Data["Page"] = pager
 
 	issues, err := db.Issues(&db.IssuesOptions{
@@ -185,14 +182,14 @@ func issues(c *context.Context, isPullList bool) {
 		SortType:    sortType,
 	})
 	if err != nil {
-		c.Handle(500, "Issues", err)
+		c.Error(err, "list issues")
 		return
 	}
 
 	// Get issue-user relations.
 	pairs, err := db.GetIssueUsers(repo.ID, posterID, isShowClosed)
 	if err != nil {
-		c.Handle(500, "GetIssueUsers", err)
+		c.Error(err, "get issue-user relations")
 		return
 	}
 
@@ -216,14 +213,14 @@ func issues(c *context.Context, isPullList bool) {
 	// Get milestones.
 	c.Data["Milestones"], err = db.GetMilestonesByRepoID(repo.ID)
 	if err != nil {
-		c.Handle(500, "GetAllRepoMilestones", err)
+		c.Error(err, "get milestone by repository ID")
 		return
 	}
 
 	// Get assignees.
 	c.Data["Assignees"], err = repo.GetAssignees()
 	if err != nil {
-		c.Handle(500, "GetAssignees", err)
+		c.Error(err, "get assignees")
 		return
 	}
 
@@ -244,7 +241,7 @@ func issues(c *context.Context, isPullList bool) {
 		c.Data["State"] = "open"
 	}
 
-	c.HTML(200, ISSUES)
+	c.Success(ISSUES)
 }
 
 func Issues(c *context.Context) {
@@ -257,28 +254,28 @@ func Pulls(c *context.Context) {
 
 func renderAttachmentSettings(c *context.Context) {
 	c.Data["RequireDropzone"] = true
-	c.Data["IsAttachmentEnabled"] = setting.AttachmentEnabled
-	c.Data["AttachmentAllowedTypes"] = setting.AttachmentAllowedTypes
-	c.Data["AttachmentMaxSize"] = setting.AttachmentMaxSize
-	c.Data["AttachmentMaxFiles"] = setting.AttachmentMaxFiles
+	c.Data["IsAttachmentEnabled"] = conf.Attachment.Enabled
+	c.Data["AttachmentAllowedTypes"] = conf.Attachment.AllowedTypes
+	c.Data["AttachmentMaxSize"] = conf.Attachment.MaxSize
+	c.Data["AttachmentMaxFiles"] = conf.Attachment.MaxFiles
 }
 
 func RetrieveRepoMilestonesAndAssignees(c *context.Context, repo *db.Repository) {
 	var err error
 	c.Data["OpenMilestones"], err = db.GetMilestones(repo.ID, -1, false)
 	if err != nil {
-		c.Handle(500, "GetMilestones", err)
+		c.Error(err, "get open milestones")
 		return
 	}
 	c.Data["ClosedMilestones"], err = db.GetMilestones(repo.ID, -1, true)
 	if err != nil {
-		c.Handle(500, "GetMilestones", err)
+		c.Error(err, "get closed milestones")
 		return
 	}
 
 	c.Data["Assignees"], err = repo.GetAssignees()
 	if err != nil {
-		c.Handle(500, "GetAssignees", err)
+		c.Error(err, "get assignees")
 		return
 	}
 }
@@ -290,7 +287,7 @@ func RetrieveRepoMetas(c *context.Context, repo *db.Repository) []*db.Label {
 
 	labels, err := db.GetLabelsByRepoID(repo.ID)
 	if err != nil {
-		c.Handle(500, "GetLabelsByRepoID", err)
+		c.Error(err, "get labels by repository ID")
 		return nil
 	}
 	c.Data["Labels"] = labels
@@ -304,30 +301,23 @@ func RetrieveRepoMetas(c *context.Context, repo *db.Repository) []*db.Label {
 }
 
 func getFileContentFromDefaultBranch(c *context.Context, filename string) (string, bool) {
-	var r io.Reader
-	var bytes []byte
-
 	if c.Repo.Commit == nil {
 		var err error
-		c.Repo.Commit, err = c.Repo.GitRepo.GetBranchCommit(c.Repo.Repository.DefaultBranch)
+		c.Repo.Commit, err = c.Repo.GitRepo.BranchCommit(c.Repo.Repository.DefaultBranch)
 		if err != nil {
 			return "", false
 		}
 	}
 
-	entry, err := c.Repo.Commit.GetTreeEntryByPath(filename)
+	entry, err := c.Repo.Commit.TreeEntry(filename)
 	if err != nil {
 		return "", false
 	}
-	r, err = entry.Blob().Data()
+	p, err := entry.Blob().Bytes()
 	if err != nil {
 		return "", false
 	}
-	bytes, err = ioutil.ReadAll(r)
-	if err != nil {
-		return "", false
-	}
-	return string(bytes), true
+	return string(p), true
 }
 
 func setTemplateIfExists(c *context.Context, ctxDataKey string, possibleFiles []string) {
@@ -355,7 +345,7 @@ func NewIssue(c *context.Context) {
 		return
 	}
 
-	c.HTML(200, ISSUE_NEW)
+	c.Success(ISSUE_NEW)
 }
 
 func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int64) {
@@ -392,7 +382,7 @@ func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int
 	if milestoneID > 0 {
 		c.Data["Milestone"], err = repo.GetMilestoneByID(milestoneID)
 		if err != nil {
-			c.Handle(500, "GetMilestoneByID", err)
+			c.Error(err, "get milestone by ID")
 			return nil, 0, 0
 		}
 		c.Data["milestone_id"] = milestoneID
@@ -403,7 +393,7 @@ func ValidateRepoMetas(c *context.Context, f form.NewIssue) ([]int64, int64, int
 	if assigneeID > 0 {
 		c.Data["Assignee"], err = repo.GetAssigneeByID(assigneeID)
 		if err != nil {
-			c.Handle(500, "GetAssigneeByID", err)
+			c.Error(err, "get assignee by ID")
 			return nil, 0, 0
 		}
 		c.Data["assignee_id"] = assigneeID
@@ -425,12 +415,12 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 	}
 
 	if c.HasError() {
-		c.HTML(200, ISSUE_NEW)
+		c.Success(ISSUE_NEW)
 		return
 	}
 
 	var attachments []string
-	if setting.AttachmentEnabled {
+	if conf.Attachment.Enabled {
 		attachments = f.Files
 	}
 
@@ -444,18 +434,18 @@ func NewIssuePost(c *context.Context, f form.NewIssue) {
 		Content:     f.Content,
 	}
 	if err := db.NewIssue(c.Repo.Repository, issue, labelIDs, attachments); err != nil {
-		c.Handle(500, "NewIssue", err)
+		c.Error(err, "new issue")
 		return
 	}
 
 	log.Trace("Issue created: %d/%d", c.Repo.Repository.ID, issue.ID)
-	c.Redirect(c.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
+	c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 }
 
 func uploadAttachment(c *context.Context, allowedTypes []string) {
 	file, header, err := c.Req.FormFile("file")
 	if err != nil {
-		c.Error(500, fmt.Sprintf("FormFile: %v", err))
+		c.Error(err, "get file")
 		return
 	}
 	defer file.Close()
@@ -477,29 +467,29 @@ func uploadAttachment(c *context.Context, allowedTypes []string) {
 	}
 
 	if !allowed {
-		c.Error(400, ErrFileTypeForbidden.Error())
+		c.PlainText(http.StatusBadRequest, ErrFileTypeForbidden.Error())
 		return
 	}
 
 	attach, err := db.NewAttachment(header.Filename, buf, file)
 	if err != nil {
-		c.Error(500, fmt.Sprintf("NewAttachment: %v", err))
+		c.Error(err, "new attachment")
 		return
 	}
 
 	log.Trace("New attachment uploaded: %s", attach.UUID)
-	c.JSON(200, map[string]string{
+	c.JSONSuccess(map[string]string{
 		"uuid": attach.UUID,
 	})
 }
 
 func UploadIssueAttachment(c *context.Context) {
-	if !setting.AttachmentEnabled {
+	if !conf.Attachment.Enabled {
 		c.NotFound()
 		return
 	}
 
-	uploadAttachment(c, strings.Split(setting.AttachmentAllowedTypes, ","))
+	uploadAttachment(c, conf.Attachment.AllowedTypes)
 }
 
 func viewIssue(c *context.Context, isPullList bool) {
@@ -515,17 +505,17 @@ func viewIssue(c *context.Context, isPullList bool) {
 
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, index)
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return
 	}
 	c.Data["Title"] = issue.Title
 
 	// Make sure type and URL matches.
 	if !isPullList && issue.IsPull {
-		c.Redirect(c.Repo.RepoLink + "/pulls/" + com.ToStr(issue.Index))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("pulls/%d", issue.Index)))
 		return
 	} else if isPullList && !issue.IsPull {
-		c.Redirect(c.Repo.RepoLink + "/issues/" + com.ToStr(issue.Index))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 		return
 	}
 
@@ -569,7 +559,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	}
 	labels, err := db.GetLabelsByRepoID(repo.ID)
 	if err != nil {
-		c.Handle(500, "GetLabelsByRepoID", err)
+		c.Error(err, "get labels by repository ID")
 		return
 	}
 	hasSelected := false
@@ -593,7 +583,7 @@ func viewIssue(c *context.Context, isPullList bool) {
 	if c.IsLogged {
 		// Update issue-user.
 		if err = issue.ReadBy(c.User.ID); err != nil {
-			c.Handle(500, "ReadBy", err)
+			c.Error(err, "mark read by")
 			return
 		}
 	}
@@ -648,8 +638,8 @@ func viewIssue(c *context.Context, isPullList bool) {
 		branchProtected := false
 		protectBranch, err := db.GetProtectBranchOfRepoByName(pull.BaseRepoID, pull.HeadBranch)
 		if err != nil {
-			if !errors.IsErrBranchNotExist(err) {
-				c.ServerError("GetProtectBranchOfRepoByName", err)
+			if !db.IsErrBranchNotExist(err) {
+				c.Error(err, "get protect branch of repository by name")
 				return
 			}
 		} else {
@@ -657,19 +647,21 @@ func viewIssue(c *context.Context, isPullList bool) {
 		}
 
 		c.Data["IsPullBranchDeletable"] = pull.BaseRepoID == pull.HeadRepoID &&
-			c.Repo.IsWriter() && c.Repo.GitRepo.IsBranchExist(pull.HeadBranch) &&
+			c.Repo.IsWriter() && c.Repo.GitRepo.HasBranch(pull.HeadBranch) &&
 			!branchProtected
 
-		deleteBranchUrl := template.EscapePound(c.Repo.RepoLink + "/branches/delete/" + pull.HeadBranch)
-		c.Data["DeleteBranchLink"] = fmt.Sprintf("%s?commit=%s&redirect_to=%s", deleteBranchUrl, pull.MergedCommitID, c.Data["Link"])
+		c.Data["DeleteBranchLink"] = c.Repo.MakeURL(url.URL{
+			Path:     "branches/delete/" + pull.HeadBranch,
+			RawQuery: fmt.Sprintf("commit=%s&redirect_to=%s", pull.MergedCommitID, c.Data["Link"]),
+		})
 	}
 
 	c.Data["Participants"] = participants
 	c.Data["NumParticipants"] = len(participants)
 	c.Data["Issue"] = issue
 	c.Data["IsIssueOwner"] = c.Repo.IsWriter() || (c.IsLogged && issue.IsPoster(c.User.ID))
-	c.Data["SignInLink"] = setting.AppSubURL + "/user/login?redirect_to=" + c.Data["Link"].(string)
-	c.HTML(200, ISSUE_VIEW)
+	c.Data["SignInLink"] = conf.Server.Subpath + "/user/login?redirect_to=" + c.Data["Link"].(string)
+	c.Success(ISSUE_VIEW)
 }
 
 func ViewIssue(c *context.Context) {
@@ -683,7 +675,7 @@ func ViewPull(c *context.Context) {
 func getActionIssue(c *context.Context) *db.Issue {
 	issue, err := db.GetIssueByIndex(c.Repo.Repository.ID, c.ParamsInt64(":index"))
 	if err != nil {
-		c.NotFoundOrServerError("GetIssueByIndex", errors.IsIssueNotExist, err)
+		c.NotFoundOrError(err, "get issue by index")
 		return nil
 	}
 
@@ -703,22 +695,22 @@ func UpdateIssueTitle(c *context.Context) {
 	}
 
 	if !c.IsLogged || (!issue.IsPoster(c.User.ID) && !c.Repo.IsWriter()) {
-		c.Error(403)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
 	title := c.QueryTrim("title")
 	if len(title) == 0 {
-		c.Error(204)
+		c.Status(http.StatusNoContent)
 		return
 	}
 
 	if err := issue.ChangeTitle(c.User, title); err != nil {
-		c.Handle(500, "ChangeTitle", err)
+		c.Error(err, "change title")
 		return
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"title": issue.Title,
 	})
 }
@@ -730,17 +722,17 @@ func UpdateIssueContent(c *context.Context) {
 	}
 
 	if !c.IsLogged || (c.User.ID != issue.PosterID && !c.Repo.IsWriter()) {
-		c.Error(403)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
 	content := c.Query("content")
 	if err := issue.ChangeContent(c.User, content); err != nil {
-		c.Handle(500, "ChangeContent", err)
+		c.Error(err, "change content")
 		return
 	}
 
-	c.JSON(200, map[string]string{
+	c.JSONSuccess(map[string]string{
 		"content": string(markup.Markdown(issue.Content, c.Query("context"), c.Repo.Repository.ComposeMetas())),
 	})
 }
@@ -753,35 +745,31 @@ func UpdateIssueLabel(c *context.Context) {
 
 	if c.Query("action") == "clear" {
 		if err := issue.ClearLabels(c.User); err != nil {
-			c.Handle(500, "ClearLabels", err)
+			c.Error(err, "clear labels")
 			return
 		}
 	} else {
 		isAttach := c.Query("action") == "attach"
 		label, err := db.GetLabelOfRepoByID(c.Repo.Repository.ID, c.QueryInt64("id"))
 		if err != nil {
-			if db.IsErrLabelNotExist(err) {
-				c.Error(404, "GetLabelByID")
-			} else {
-				c.Handle(500, "GetLabelByID", err)
-			}
+			c.NotFoundOrError(err, "get label by ID")
 			return
 		}
 
 		if isAttach && !issue.HasLabel(label.ID) {
 			if err = issue.AddLabel(c.User, label); err != nil {
-				c.Handle(500, "AddLabel", err)
+				c.Error(err, "add label")
 				return
 			}
 		} else if !isAttach && issue.HasLabel(label.ID) {
 			if err = issue.RemoveLabel(c.User, label); err != nil {
-				c.Handle(500, "RemoveLabel", err)
+				c.Error(err, "remove label")
 				return
 			}
 		}
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"ok": true,
 	})
 }
@@ -795,7 +783,7 @@ func UpdateIssueMilestone(c *context.Context) {
 	oldMilestoneID := issue.MilestoneID
 	milestoneID := c.QueryInt64("id")
 	if oldMilestoneID == milestoneID {
-		c.JSON(200, map[string]interface{}{
+		c.JSONSuccess(map[string]interface{}{
 			"ok": true,
 		})
 		return
@@ -804,11 +792,11 @@ func UpdateIssueMilestone(c *context.Context) {
 	// Not check for invalid milestone id and give responsibility to owners.
 	issue.MilestoneID = milestoneID
 	if err := db.ChangeMilestoneAssign(c.User, issue, oldMilestoneID); err != nil {
-		c.Handle(500, "ChangeMilestoneAssign", err)
+		c.Error(err, "change milestone assign")
 		return
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"ok": true,
 	})
 }
@@ -821,18 +809,18 @@ func UpdateIssueAssignee(c *context.Context) {
 
 	assigneeID := c.QueryInt64("id")
 	if issue.AssigneeID == assigneeID {
-		c.JSON(200, map[string]interface{}{
+		c.JSONSuccess(map[string]interface{}{
 			"ok": true,
 		})
 		return
 	}
 
 	if err := issue.ChangeAssignee(c.User, assigneeID); err != nil {
-		c.Handle(500, "ChangeAssignee", err)
+		c.Error(err, "change assignee")
 		return
 	}
 
-	c.JSON(200, map[string]interface{}{
+	c.JSONSuccess(map[string]interface{}{
 		"ok": true,
 	})
 }
@@ -844,13 +832,13 @@ func NewComment(c *context.Context, f form.CreateComment) {
 	}
 
 	var attachments []string
-	if setting.AttachmentEnabled {
+	if conf.Attachment.Enabled {
 		attachments = f.Files
 	}
 
 	if c.HasError() {
 		c.Flash.Error(c.Data["ErrorMsg"].(string))
-		c.Redirect(fmt.Sprintf("%s/issues/%d", c.Repo.RepoLink, issue.Index))
+		c.RawRedirect(c.Repo.MakeURL(fmt.Sprintf("issues/%d", issue.Index)))
 		return
 	}
 
@@ -870,7 +858,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 				pr, err = db.GetUnmergedPullRequest(pull.HeadRepoID, pull.BaseRepoID, pull.HeadBranch, pull.BaseBranch)
 				if err != nil {
 					if !db.IsErrPullRequestNotExist(err) {
-						c.ServerError("GetUnmergedPullRequest", err)
+						c.Error(err, "get unmerged pull request")
 						return
 					}
 				}
@@ -878,7 +866,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 				// Regenerate patch and test conflict.
 				if pr == nil {
 					if err = issue.PullRequest.UpdatePatch(); err != nil {
-						c.ServerError("UpdatePatch", err)
+						c.Error(err, "update patch")
 						return
 					}
 
@@ -890,7 +878,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 				c.Flash.Info(c.Tr("repo.pulls.open_unmerged_pull_exists", pr.Index))
 			} else {
 				if err = issue.ChangeStatus(c.User, c.Repo.Repository, f.Status == "close"); err != nil {
-					log.Error(2, "ChangeStatus: %v", err)
+					log.Error("ChangeStatus: %v", err)
 				} else {
 					log.Trace("Issue [%d] status changed to closed: %v", issue.ID, issue.IsClosed)
 				}
@@ -902,11 +890,16 @@ func NewComment(c *context.Context, f form.CreateComment) {
 		if issue.IsPull {
 			typeName = "pulls"
 		}
-		if comment != nil {
-			c.RawRedirect(fmt.Sprintf("%s/%s/%d#%s", c.Repo.RepoLink, typeName, issue.Index, comment.HashTag()))
-		} else {
-			c.Redirect(fmt.Sprintf("%s/%s/%d", c.Repo.RepoLink, typeName, issue.Index))
+
+		location := url.URL{
+			Path: fmt.Sprintf("%s/%d", typeName, issue.Index),
 		}
+
+		if comment != nil {
+			location.Fragment = comment.HashTag()
+		}
+
+		c.RawRedirect(c.Repo.MakeURL(location))
 	}()
 
 	// Fix #321: Allow empty comments, as long as we have attachments.
@@ -916,7 +909,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 
 	comment, err = db.CreateIssueComment(c.User, c.Repo.Repository, issue, f.Content, attachments)
 	if err != nil {
-		c.ServerError("CreateIssueComment", err)
+		c.Error(err, "create issue comment")
 		return
 	}
 
@@ -926,32 +919,32 @@ func NewComment(c *context.Context, f form.CreateComment) {
 func UpdateCommentContent(c *context.Context) {
 	comment, err := db.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetCommentByID", db.IsErrCommentNotExist, err)
+		c.NotFoundOrError(err, "get comment by ID")
 		return
 	}
 
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
-		c.Error(404)
+		c.NotFound()
 		return
 	} else if comment.Type != db.COMMENT_TYPE_COMMENT {
-		c.Error(204)
+		c.Status(http.StatusNoContent)
 		return
 	}
 
 	oldContent := comment.Content
 	comment.Content = c.Query("content")
 	if len(comment.Content) == 0 {
-		c.JSON(200, map[string]interface{}{
+		c.JSONSuccess(map[string]interface{}{
 			"content": "",
 		})
 		return
 	}
 	if err = db.UpdateComment(c.User, comment, oldContent); err != nil {
-		c.Handle(500, "UpdateComment", err)
+		c.Error(err, "update comment")
 		return
 	}
 
-	c.JSON(200, map[string]string{
+	c.JSONSuccess(map[string]string{
 		"content": string(markup.Markdown(comment.Content, c.Query("context"), c.Repo.Repository.ComposeMetas())),
 	})
 }
@@ -959,24 +952,24 @@ func UpdateCommentContent(c *context.Context) {
 func DeleteComment(c *context.Context) {
 	comment, err := db.GetCommentByID(c.ParamsInt64(":id"))
 	if err != nil {
-		c.NotFoundOrServerError("GetCommentByID", db.IsErrCommentNotExist, err)
+		c.NotFoundOrError(err, "get comment by ID")
 		return
 	}
 
 	if c.UserID() != comment.PosterID && !c.Repo.IsAdmin() {
-		c.Error(404)
+		c.NotFound()
 		return
 	} else if comment.Type != db.COMMENT_TYPE_COMMENT {
-		c.Error(204)
+		c.Status(http.StatusNoContent)
 		return
 	}
 
 	if err = db.DeleteCommentByID(c.User, comment.ID); err != nil {
-		c.Handle(500, "DeleteCommentByID", err)
+		c.Error(err, "delete comment by ID")
 		return
 	}
 
-	c.Status(200)
+	c.Status(http.StatusOK)
 }
 
 func Labels(c *context.Context) {
@@ -985,18 +978,18 @@ func Labels(c *context.Context) {
 	c.Data["PageIsLabels"] = true
 	c.Data["RequireMinicolors"] = true
 	c.Data["LabelTemplates"] = db.LabelTemplates
-	c.HTML(200, LABELS)
+	c.Success(LABELS)
 }
 
 func InitializeLabels(c *context.Context, f form.InitializeLabels) {
 	if c.HasError() {
-		c.Redirect(c.Repo.RepoLink + "/labels")
+		c.RawRedirect(c.Repo.MakeURL("labels"))
 		return
 	}
 	list, err := db.GetLabelTemplateFile(f.TemplateName)
 	if err != nil {
 		c.Flash.Error(c.Tr("repo.issues.label_templates.fail_to_load_file", f.TemplateName, err))
-		c.Redirect(c.Repo.RepoLink + "/labels")
+		c.RawRedirect(c.Repo.MakeURL("labels"))
 		return
 	}
 
@@ -1009,10 +1002,10 @@ func InitializeLabels(c *context.Context, f form.InitializeLabels) {
 		}
 	}
 	if err := db.NewLabels(labels...); err != nil {
-		c.Handle(500, "NewLabels", err)
+		c.Error(err, "new labels")
 		return
 	}
-	c.Redirect(c.Repo.RepoLink + "/labels")
+	c.RawRedirect(c.Repo.MakeURL("labels"))
 }
 
 func NewLabel(c *context.Context, f form.CreateLabel) {
@@ -1021,7 +1014,7 @@ func NewLabel(c *context.Context, f form.CreateLabel) {
 
 	if c.HasError() {
 		c.Flash.Error(c.Data["ErrorMsg"].(string))
-		c.Redirect(c.Repo.RepoLink + "/labels")
+		c.RawRedirect(c.Repo.MakeURL("labels"))
 		return
 	}
 
@@ -1031,31 +1024,26 @@ func NewLabel(c *context.Context, f form.CreateLabel) {
 		Color:  f.Color,
 	}
 	if err := db.NewLabels(l); err != nil {
-		c.Handle(500, "NewLabel", err)
+		c.Error(err, "new labels")
 		return
 	}
-	c.Redirect(c.Repo.RepoLink + "/labels")
+	c.RawRedirect(c.Repo.MakeURL("labels"))
 }
 
 func UpdateLabel(c *context.Context, f form.CreateLabel) {
 	l, err := db.GetLabelByID(f.ID)
 	if err != nil {
-		switch {
-		case db.IsErrLabelNotExist(err):
-			c.Error(404)
-		default:
-			c.Handle(500, "UpdateLabel", err)
-		}
+		c.NotFoundOrError(err, "get label by ID")
 		return
 	}
 
 	l.Name = f.Title
 	l.Color = f.Color
 	if err := db.UpdateLabel(l); err != nil {
-		c.Handle(500, "UpdateLabel", err)
+		c.Error(err, "update label")
 		return
 	}
-	c.Redirect(c.Repo.RepoLink + "/labels")
+	c.RawRedirect(c.Repo.MakeURL("labels"))
 }
 
 func DeleteLabel(c *context.Context) {
@@ -1065,10 +1053,9 @@ func DeleteLabel(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.issues.label_deletion_success"))
 	}
 
-	c.JSON(200, map[string]interface{}{
-		"redirect": c.Repo.RepoLink + "/labels",
+	c.JSONSuccess(map[string]interface{}{
+		"redirect": c.Repo.MakeURL("labels"),
 	})
-	return
 }
 
 func Milestones(c *context.Context) {
@@ -1092,11 +1079,11 @@ func Milestones(c *context.Context) {
 	} else {
 		total = int(closedCount)
 	}
-	c.Data["Page"] = paginater.New(total, setting.UI.IssuePagingNum, page, 5)
+	c.Data["Page"] = paginater.New(total, conf.UI.IssuePagingNum, page, 5)
 
 	miles, err := db.GetMilestones(c.Repo.Repository.ID, page, isShowClosed)
 	if err != nil {
-		c.Handle(500, "GetMilestones", err)
+		c.Error(err, "get milestones")
 		return
 	}
 	for _, m := range miles {
@@ -1116,7 +1103,7 @@ func Milestones(c *context.Context) {
 	}
 
 	c.Data["IsShowClosed"] = isShowClosed
-	c.HTML(200, MILESTONE)
+	c.Success(MILESTONE)
 }
 
 func NewMilestone(c *context.Context) {
@@ -1124,8 +1111,8 @@ func NewMilestone(c *context.Context) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
-	c.HTML(200, MILESTONE_NEW)
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
+	c.Success(MILESTONE_NEW)
 }
 
 func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
@@ -1133,10 +1120,10 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsIssueList"] = true
 	c.Data["PageIsMilestones"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	if c.HasError() {
-		c.HTML(200, MILESTONE_NEW)
+		c.Success(MILESTONE_NEW)
 		return
 	}
 
@@ -1156,12 +1143,12 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 		Content:  f.Content,
 		Deadline: deadline,
 	}); err != nil {
-		c.Handle(500, "NewMilestone", err)
+		c.Error(err, "new milestone")
 		return
 	}
 
 	c.Flash.Success(c.Tr("repo.milestones.create_success", f.Title))
-	c.Redirect(c.Repo.RepoLink + "/milestones")
+	c.RawRedirect(c.Repo.MakeURL("milestones"))
 }
 
 func EditMilestone(c *context.Context) {
@@ -1169,15 +1156,11 @@ func EditMilestone(c *context.Context) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if db.IsErrMilestoneNotExist(err) {
-			c.Handle(404, "", nil)
-		} else {
-			c.Handle(500, "GetMilestoneByRepoID", err)
-		}
+		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
 	c.Data["title"] = m.Name
@@ -1185,7 +1168,7 @@ func EditMilestone(c *context.Context) {
 	if len(m.DeadlineString) > 0 {
 		c.Data["deadline"] = m.DeadlineString
 	}
-	c.HTML(200, MILESTONE_NEW)
+	c.Success(MILESTONE_NEW)
 }
 
 func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
@@ -1193,10 +1176,10 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 	c.Data["PageIsMilestones"] = true
 	c.Data["PageIsEditMilestone"] = true
 	c.Data["RequireDatetimepicker"] = true
-	c.Data["DateLang"] = setting.DateLang(c.Locale.Language())
+	c.Data["DateLang"] = conf.I18n.DateLang(c.Locale.Language())
 
 	if c.HasError() {
-		c.HTML(200, MILESTONE_NEW)
+		c.Success(MILESTONE_NEW)
 		return
 	}
 
@@ -1212,57 +1195,53 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 
 	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if db.IsErrMilestoneNotExist(err) {
-			c.Handle(404, "", nil)
-		} else {
-			c.Handle(500, "GetMilestoneByRepoID", err)
-		}
+		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
 	}
 	m.Name = f.Title
 	m.Content = f.Content
 	m.Deadline = deadline
 	if err = db.UpdateMilestone(m); err != nil {
-		c.Handle(500, "UpdateMilestone", err)
+		c.Error(err, "update milestone")
 		return
 	}
 
 	c.Flash.Success(c.Tr("repo.milestones.edit_success", m.Name))
-	c.Redirect(c.Repo.RepoLink + "/milestones")
+	c.RawRedirect(c.Repo.MakeURL("milestones"))
 }
 
 func ChangeMilestonStatus(c *context.Context) {
 	m, err := db.GetMilestoneByRepoID(c.Repo.Repository.ID, c.ParamsInt64(":id"))
 	if err != nil {
-		if db.IsErrMilestoneNotExist(err) {
-			c.Handle(404, "", err)
-		} else {
-			c.Handle(500, "GetMilestoneByRepoID", err)
-		}
+		c.NotFoundOrError(err, "get milestone by repository ID")
 		return
+	}
+
+	location := url.URL{
+		Path: "milestones",
 	}
 
 	switch c.Params(":action") {
 	case "open":
 		if m.IsClosed {
 			if err = db.ChangeMilestoneStatus(m, false); err != nil {
-				c.Handle(500, "ChangeMilestoneStatus", err)
+				c.Error(err, "change milestone status to open")
 				return
 			}
 		}
-		c.Redirect(c.Repo.RepoLink + "/milestones?state=open")
+		location.RawQuery = "state=open"
 	case "close":
 		if !m.IsClosed {
 			m.ClosedDate = time.Now()
 			if err = db.ChangeMilestoneStatus(m, true); err != nil {
-				c.Handle(500, "ChangeMilestoneStatus", err)
+				c.Error(err, "change milestone status to closed")
 				return
 			}
 		}
-		c.Redirect(c.Repo.RepoLink + "/milestones?state=closed")
-	default:
-		c.Redirect(c.Repo.RepoLink + "/milestones")
+		location.RawQuery = "state=closed"
 	}
+
+	c.RawRedirect(c.Repo.MakeURL(location))
 }
 
 func DeleteMilestone(c *context.Context) {
@@ -1272,7 +1251,7 @@ func DeleteMilestone(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.milestones.deletion_success"))
 	}
 
-	c.JSON(200, map[string]interface{}{
-		"redirect": c.Repo.RepoLink + "/milestones",
+	c.JSONSuccess(map[string]interface{}{
+		"redirect": c.Repo.MakeURL("milestones"),
 	})
 }

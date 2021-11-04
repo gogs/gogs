@@ -9,10 +9,11 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/setting"
 )
 
 var (
@@ -42,7 +43,7 @@ to make automatic initialization process more smoothly`,
 			stringFlag("password", "", "User password"),
 			stringFlag("email", "", "User email address"),
 			boolFlag("admin", "User is an admin"),
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -54,7 +55,7 @@ to make automatic initialization process more smoothly`,
 			"All inactivate accounts have been deleted successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -66,7 +67,7 @@ to make automatic initialization process more smoothly`,
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -78,7 +79,7 @@ to make automatic initialization process more smoothly`,
 			"All repositories archives have been deleted successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -90,7 +91,7 @@ to make automatic initialization process more smoothly`,
 			"All repositories have done garbage collection successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -102,7 +103,7 @@ to make automatic initialization process more smoothly`,
 			"All public keys have been rewritten successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -114,7 +115,7 @@ to make automatic initialization process more smoothly`,
 			"All repositories' pre-receive, update and post-receive hooks have been resynced successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 
@@ -126,27 +127,29 @@ to make automatic initialization process more smoothly`,
 			"All repository records that lost Git files have been reinitialized successfully",
 		),
 		Flags: []cli.Flag{
-			stringFlag("config, c", "custom/conf/app.ini", "Custom configuration file path"),
+			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
 )
 
 func runCreateUser(c *cli.Context) error {
 	if !c.IsSet("name") {
-		return fmt.Errorf("Username is not specified")
+		return errors.New("Username is not specified")
 	} else if !c.IsSet("password") {
-		return fmt.Errorf("Password is not specified")
+		return errors.New("Password is not specified")
 	} else if !c.IsSet("email") {
-		return fmt.Errorf("Email is not specified")
+		return errors.New("Email is not specified")
 	}
 
-	if c.IsSet("config") {
-		setting.CustomConf = c.String("config")
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
 	}
+	conf.InitLogging(true)
 
-	setting.NewContext()
-	db.LoadConfigs()
-	db.SetEngine()
+	if _, err = db.SetEngine(); err != nil {
+		return errors.Wrap(err, "set engine")
+	}
 
 	if err := db.CreateUser(&db.User{
 		Name:     c.String("name"),
@@ -164,13 +167,15 @@ func runCreateUser(c *cli.Context) error {
 
 func adminDashboardOperation(operation func() error, successMessage string) func(*cli.Context) error {
 	return func(c *cli.Context) error {
-		if c.IsSet("config") {
-			setting.CustomConf = c.String("config")
+		err := conf.Init(c.String("config"))
+		if err != nil {
+			return errors.Wrap(err, "init configuration")
 		}
+		conf.InitLogging(true)
 
-		setting.NewContext()
-		db.LoadConfigs()
-		db.SetEngine()
+		if _, err = db.SetEngine(); err != nil {
+			return errors.Wrap(err, "set engine")
+		}
 
 		if err := operation(); err != nil {
 			functionName := runtime.FuncForPC(reflect.ValueOf(operation).Pointer()).Name()

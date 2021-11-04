@@ -5,18 +5,16 @@
 package admin
 
 import (
-	user2 "gogs.io/gogs/internal/route/api/v1/user"
 	"net/http"
 
-	log "gopkg.in/clog.v1"
-
 	api "github.com/gogs/go-gogs-client"
+	log "unknwon.dev/clog/v2"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/mailer"
-	"gogs.io/gogs/internal/setting"
+	"gogs.io/gogs/internal/email"
+	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
 func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginName string) {
@@ -24,29 +22,27 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 		return
 	}
 
-	source, err := db.GetLoginSourceByID(sourceID)
+	source, err := db.LoginSources.GetByID(sourceID)
 	if err != nil {
-		if errors.IsLoginSourceNotExist(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+		if db.IsErrLoginSourceNotExist(err) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("GetLoginSourceByID", err)
+			c.Error(err, "get login source by ID")
 		}
 		return
 	}
 
-	u.LoginType = source.Type
 	u.LoginSource = source.ID
 	u.LoginName = loginName
 }
 
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	u := &db.User{
-		Name:      form.Username,
-		FullName:  form.FullName,
-		Email:     form.Email,
-		Passwd:    form.Password,
-		IsActive:  true,
-		LoginType: db.LOGIN_PLAIN,
+		Name:     form.Username,
+		FullName: form.FullName,
+		Email:    form.Email,
+		Passwd:   form.Password,
+		IsActive: true,
 	}
 
 	parseLoginSource(c, u, form.SourceID, form.LoginName)
@@ -57,26 +53,25 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 	if err := db.CreateUser(u); err != nil {
 		if db.IsErrUserAlreadyExist(err) ||
 			db.IsErrEmailAlreadyUsed(err) ||
-			db.IsErrNameReserved(err) ||
-			db.IsErrNamePatternNotAllowed(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			db.IsErrNameNotAllowed(err) {
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("CreateUser", err)
+			c.Error(err, "create user")
 		}
 		return
 	}
 	log.Trace("Account created by admin %q: %s", c.User.Name, u.Name)
 
 	// Send email notification.
-	if form.SendNotify && setting.MailService != nil {
-		mailer.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(u))
+	if form.SendNotify && conf.Email.Enabled {
+		email.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(u))
 	}
 
 	c.JSON(http.StatusCreated, u.APIFormat())
 }
 
 func EditUser(c *context.APIContext, form api.EditUserOption) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -90,10 +85,10 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		u.Passwd = form.Password
 		var err error
 		if u.Salt, err = db.GetUserSalt(); err != nil {
-			c.ServerError("GetUserSalt", err)
+			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePasswd()
+		u.EncodePassword()
 	}
 
 	u.LoginName = form.LoginName
@@ -119,9 +114,9 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 
 	if err := db.UpdateUser(u); err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("UpdateUser", err)
+			c.Error(err, "update user")
 		}
 		return
 	}
@@ -131,7 +126,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 }
 
 func DeleteUser(c *context.APIContext) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
@@ -139,9 +134,9 @@ func DeleteUser(c *context.APIContext) {
 	if err := db.DeleteUser(u); err != nil {
 		if db.IsErrUserOwnRepos(err) ||
 			db.IsErrUserHasOrgs(err) {
-			c.Error(http.StatusUnprocessableEntity, "", err)
+			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
-			c.ServerError("DeleteUser", err)
+			c.Error(err, "delete user")
 		}
 		return
 	}
@@ -151,9 +146,9 @@ func DeleteUser(c *context.APIContext) {
 }
 
 func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
-	u := user2.GetUserByParams(c)
+	u := user.GetUserByParams(c)
 	if c.Written() {
 		return
 	}
-	user2.CreateUserPublicKey(c, form, u.ID)
+	user.CreateUserPublicKey(c, form, u.ID)
 }
