@@ -7,6 +7,7 @@ package v1
 import (
 	"net/http"
 	"strings"
+
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 
