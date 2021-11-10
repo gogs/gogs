@@ -390,6 +390,32 @@ func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
 	c.NoContent()
 }
 
+func Wiki(c *context.APIContext, form api.EditWikiOption) {
+	_, repo := parseOwnerAndRepo(c)
+	if c.Written() {
+		return
+	}
+
+	if form.AllowPublicWiki != nil {
+		repo.AllowPublicWiki = *form.AllowPublicWiki
+	}
+	if form.EnableExternalWiki != nil {
+		repo.EnableExternalWiki = *form.EnableExternalWiki
+	}
+	if form.EnableWiki != nil {
+		repo.EnableWiki = *form.EnableWiki
+	}
+	if form.ExternalWikiURL != nil {
+		repo.ExternalWikiURL = *form.ExternalWikiURL
+	}
+	if err := db.UpdateRepository(repo, false); err != nil {
+		c.Error(err, "update repository")
+		return
+	}
+
+	c.NoContent()
+}
+
 func MirrorSync(c *context.APIContext) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
