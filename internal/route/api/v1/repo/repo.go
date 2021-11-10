@@ -390,7 +390,6 @@ func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
 	c.NoContent()
 }
 
-
 func Wiki(c *context.APIContext, form api.EditWikiOption) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {
@@ -410,7 +409,7 @@ func Wiki(c *context.APIContext, form api.EditWikiOption) {
 		repo.ExternalWikiURL = *form.ExternalWikiURL
 	}
 	if err := db.UpdateRepository(repo, false); err != nil {
-		c.ServerError("UpdateRepository", err)
+		c.Error(err, "update repository")
 		return
 	}
 
