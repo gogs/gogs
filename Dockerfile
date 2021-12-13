@@ -12,6 +12,8 @@ RUN make build TAGS="cert pam"
 FROM alpine:3.11
 RUN if [ `uname -m` == "aarch64" ] ; then \
       export arch="arm64" ; \
+  elif [ `uname -m` == "armv7l" ] ; then \
+      export arch="armhf"; \
   else \
       export arch="amd64" ; \
   fi \
