@@ -30,6 +30,18 @@ func ToBranch(b *db.Branch, c *git.Commit) *api.Branch {
 	}
 }
 
+type Tag struct {
+	Name   string             `json:"name"`
+	Commit *api.PayloadCommit `json:"commit"`
+}
+
+func ToTag(b *db.Tag, c *git.Commit) *Tag {
+	return &Tag{
+		Name:   b.Name,
+		Commit: ToCommit(c),
+	}
+}
+
 func ToCommit(c *git.Commit) *api.PayloadCommit {
 	authorUsername := ""
 	author, err := db.GetUserByEmail(c.Author.Email)
