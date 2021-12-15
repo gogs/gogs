@@ -10,7 +10,14 @@ COPY . .
 RUN make build TAGS="cert pam"
 
 FROM alpine:3.11
-RUN wget https://github.com/tianon/gosu/releases/download/1.11/gosu-amd64 -O /usr/sbin/gosu \
+RUN if [ `uname -m` == "aarch64" ] ; then \
+      export arch="arm64" ; \
+  elif [ `uname -m` == "armv7l" ] ; then \
+      export arch="armhf"; \
+  else \
+      export arch="amd64" ; \
+  fi \
+  && wget https://github.com/tianon/gosu/releases/download/1.11/gosu-$arch -O /usr/sbin/gosu \
   && chmod +x /usr/sbin/gosu \
   && echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
   && apk --no-cache --no-progress add \
