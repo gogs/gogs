@@ -360,6 +360,14 @@ func Init(customConf string) error {
 	}
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 
+	// *************************
+	// ----- ASSERT settings -----
+	// *************************
+
+	if err = File.Section("assert").MapTo(&Assert); err != nil {
+		return errors.Wrap(err, "mapping [assert] section")
+	}
+
 	handleDeprecated()
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
