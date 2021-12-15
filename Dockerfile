@@ -1,4 +1,4 @@
-FROM golang:alpine3.11 AS binarybuilder
+FROM golang:alpine3.12 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -9,7 +9,7 @@ WORKDIR /gogs.io/gogs
 COPY . .
 RUN make build TAGS="cert pam"
 
-FROM alpine:3.11
+FROM alpine:3.12
 RUN if [ `uname -m` == "aarch64" ] ; then \
       export arch="arm64" ; \
   elif [ `uname -m` == "armv7l" ] ; then \
