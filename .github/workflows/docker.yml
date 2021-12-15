@@ -15,9 +15,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Set up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
+        with:
+          platforms: arm64,arm
       - name: Inspect builder
         run: |
           echo "Name:      ${{ steps.buildx.outputs.name }}"
@@ -25,6 +30,7 @@ jobs:
           echo "Status:    ${{ steps.buildx.outputs.status }}"
           echo "Flags:     ${{ steps.buildx.outputs.flags }}"
           echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+          echo "QEMU platforms: ${{ steps.qemu.outputs.platforms }}"
       - run: |
           docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --tag gogs/gogs:test .
           dokcer images
