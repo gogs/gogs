@@ -1,0 +1,30 @@
+name: Docker
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.github/workflows/docker.yml'
+
+jobs:
+  buildx:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - run: |
+          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 --tag gogs/gogs:test .
+          dokcer images
