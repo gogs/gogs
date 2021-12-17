@@ -1,0 +1,11 @@
+# Docs: https://git.io/JCUAY
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "unknwon"
+    commit-message:
+      prefix: "mod:"
