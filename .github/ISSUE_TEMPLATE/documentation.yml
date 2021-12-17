@@ -12,7 +12,7 @@ body:
         - Check to make sure someone hasn't already opened a similar [issue](https://github.com/gogs/gogs/issues).
   - type: textarea
     attributes:
-      label: What needs to improved? Please describe
+      label: What needs to be improved? Please describe
       description: A clear and concise description of what is wrong or missing.
     validations:
       required: true
