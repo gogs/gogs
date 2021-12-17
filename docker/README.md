@@ -2,7 +2,7 @@
 
 ![Docker pulls](https://img.shields.io/docker/pulls/gogs/gogs?logo=docker&style=for-the-badge)
 
-Visit [Docker Hub](https://hub.docker.com/u/gogs) see all available images and tags.
+Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs) to see all available images and tags.
 
 ## Usage
 
@@ -24,7 +24,7 @@ $ docker run --name=gogs -p 10022:22 -p 10880:3000 -v /var/gogs:/data gogs/gogs
 $ docker start gogs
 ```
 
-Note: It is important to map the Gogs ssh service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Gogs Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
+Note: It is important to map the SSH service from the container to the host and set the appropriate SSH Port and URI settings when setting up Gogs for the first time. To access and clone Git repositories with the above configuration you would use: `git clone ssh://git@hostname:10022/username/myrepo.git` for example.
 
 Files will be store in local path `/var/gogs` in my case.
 
@@ -40,23 +40,11 @@ Directory `/var/gogs` keeps Git repositories and Gogs data:
         |-- data
         |-- log
 
-#### Custom Directory
+#### Custom directory
 
 The "custom" directory may not be obvious in Docker environment. The `/var/gogs/gogs` (in the host) and `/data/gogs` (in the container) is already the "custom" directory and you do not need to create another layer but directly edit corresponding files under this directory.
 
-### Volume With Data Container
-
-If you're more comfortable with mounting data to a data container, the commands you execute at the first time will look like as follows:
-
-```sh
-# Create data container
-docker run --name=gogs-data --entrypoint /bin/true gogs/gogs
-
-# Use `docker run` for the first time.
-docker run --name=gogs --volumes-from gogs-data -p 10022:22 -p 10880:3000 gogs/gogs
-```
-
-#### Using Docker 1.9 Volume Command
+#### Using Docker volumes
 
 ```sh
 # Create docker volume.
@@ -70,7 +58,7 @@ $ docker run --name=gogs -p 10022:22 -p 10880:3000 -v gogs-data:/data gogs/gogs
 
 ### Application
 
-Most of settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
+Most of the settings are obvious and easy to understand, but there are some settings can be confusing by running Gogs inside Docker:
 
 - **Repository Root Path**: keep it as default value `/home/git/gogs-repositories` because `start.sh` already made a symbolic link for you.
 - **Run User**: keep it as default value `git` because `finalize.sh` already setup a user with name `git`.
@@ -81,9 +69,9 @@ Most of settings are obvious and easy to understand, but there are some settings
 
 Full documentation of application settings can be found [here](https://github.com/gogs/gogs/blob/main/conf/app.ini).
 
-### Container Options
+### Container options
 
-This container have some options available via environment variables, these options are opt-in features that can help the administration of this container:
+This container has some options available via environment variables, these options are opt-in features that can help the administration of this container:
 
 - **SOCAT_LINK**:
   - <u>Possible value:</u>
@@ -135,7 +123,8 @@ This container have some options available via environment variables, these opti
       Used by backup system. If defined, supplies `--exclude-repos` argument to `gogs backup`.\
       See: [Backup System](#backup-system)
 
-## Backup System
+## Backup system
+
 Automated backups with retention policy:
 
 - `BACKUP_INTERVAL` controls how often the backup job runs and supports interval in hours (h), days (d), and months (M), eg. `3h`, `7d`, `3M`. The lowest possible value is one hour (`1h`).
@@ -152,10 +141,10 @@ Steps to upgrade Gogs with Docker:
 - `docker rm gogs`
 - Finally, create a container for the first time and don't forget to do the same for the volume and port mapping.
 
-## Known Issues
+## Known issues
 
 - The docker container cannot currently be built on Raspberry 1 (armv6l) as our base image `alpine` does not have a `go` package available for this platform.
 
-## Useful Links
+## Useful links
 
 - [Share port 22 between Gogs inside Docker & the local system](http://www.ateijelo.com/blog/2016/07/09/share-port-22-between-docker-gogs-ssh-and-local-system)
