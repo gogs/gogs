@@ -1,44 +1,74 @@
-# Contributing to Gogs
+# Welcome to Gogs contributing guide
 
-> This guidelines sheet is forked from [CONTRIBUTING.md](https://github.com/drone/drone/blob/8d9c7cee56d6c2eac81dc156ce27be6716d97e68/CONTRIBUTING.md).
+Thank you for investing your time in contributing to our projects!
 
-Gogs is not perfect, and it has bugs or incomplete features in rare cases. You're welcome to tell us, or to contribute some code. This document describes details about how can you contribute to Gogs project.
+Read our [Code of Conduct](https://go.dev/conduct) to keep our community approachable and respectable.
 
-## Contribution guidelines
+In this guide you will get an overview of the contribution workflow from opening an issue, creating a PR, reviewing, and merging the PR.
 
-Depends on the situation, you will:
+Use the table of contents icon <img src="https://github.com/github/docs/raw/50561895328b8f369694973252127b7d93899d83/assets/images/table-of-contents.png" width="25" height="25" /> on the top left corner of this document to get to a specific section of this guide quickly.
 
-- Find a bug and create an issue
-- Need more functionality and make a feature request
-- Want to contribute code and open a pull request
-- Run into issue and need help
+## New contributor guide
 
-### Bug Report
+To get an overview of the project, read the [README](/README.md). Here are some resources to help you get started with open source contributions:
 
-If you find something you consider a bug, please create an issue on [GitHub](https://github.com/gogits/gogs/issues). To avoid wasting time and reduce back-and-forth communication with team members, please be respect to [Issue Template](ISSUE_TEMPLATE.md).
+- [Finding ways to contribute to open source on GitHub](https://docs.github.com/en/get-started/exploring-projects-on-github/finding-ways-to-contribute-to-open-source-on-github)
+- [Set up Git](https://docs.github.com/en/get-started/quickstart/set-up-git)
+- [GitHub flow](https://docs.github.com/en/get-started/quickstart/github-flow)
+- [Collaborating with pull requests](https://docs.github.com/en/github/collaborating-with-pull-requests)
 
-### Feature Request
+In addition to the general guides with open source contributions, you would also need to:
 
-There is no standard form of making a feature request. Just try to describe the feature as clearly as possible, because team members may not have experience with the functionality you're talking about.
+- Have basic knowledge about web applications development, database management systems and programming in [Go](https://go.dev/).
+- Have a working local development setup with a reasonable good IDE or editor like [Visual Studio Code](https://code.visualstudio.com/docs/languages/go), [GoLand](https://www.jetbrains.com/go/) or [Vim](https://github.com/fatih/vim-go).
 
-### Pull Request
+## Issues
 
-Please read detailed information on [Wiki](https://github.com/gogits/gogs/wiki/Contributing-Code).
+### Ask for help
 
-### Ask For Help
+Before opening an issue, please make sure the problem you're encountering isn't already addressed on the [Troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) and [FAQs](https://gogs.io/docs/intro/faqs.html) pages.
 
-Before opening an issue, please make sure your problem isn't already addressed on the [Troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) and [FAQs](https://gogs.io/docs/intro/faqs.html) pages.
+### Create a new issue
 
-## Code of conduct
+- For questions, ask in [Discussions](https://github.com/gogs/gogs/discussions).
+- [Check to make sure](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments) someone hasn't already opened a similar [issue](https://github.com/gogs/gogs/issues).
+- If a similar issue doesn't exist, open a new issue using a relevant [issue form](https://github.com/gogs/gogs/issues/new/choose).
 
-As contributors and maintainers of this project, we pledge to respect all people who contribute through reporting issues, posting feature requests, updating documentation, submitting pull requests or patches, and other activities.
+### Pick up an issue to solve
 
-We are committed to making participation in this project a harassment-free experience for everyone, regardless of level of experience, gender, gender identity and expression, sexual orientation, disability, personal appearance, body size, race, age, or religion.
+- Scan through our [existing issues](https://github.com/gogs/gogs/issues) to find one that interests you.
+- The [👋 good first issue](https://github.com/gogs/gogs/issues?q=is%3Aissue+is%3Aopen+label%3A%22%F0%9F%91%8B+good+first+issue%22) is a good place to start exploring issues that are well-groomed for newcomers
+- Do not hesitate to ask for more details or clarifying questions on the issue!
+- Communicate on the issue you are intended to pick up _before_ starting working on it.
+- Every issue that gets picked up will have an expected timeline for the implementation, the issue may be reassigned after the expected timeline. Please be responsible and proactive on the communication 🙇‍♂️
 
-Examples of unacceptable behavior by participants include the use of sexual language or imagery, derogatory comments or personal attacks, trolling, public or private harassment, insults, or other unprofessional conduct.
+## Pull requests
 
-Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct. Project maintainers who do not follow the Code of Conduct may be removed from the project team.
+When you're finished with the changes, create a pull request, or a series of pull requests if necessary.
 
-Instances of abusive, harassing, or otherwise unacceptable behavior can be reported by emailing u@gogs.io
+Contributing to another codebase is not as simple as code changes, it is also about contributing influence to the design. Therefore, we kindly ask you that:
 
-This Code of Conduct is adapted from the [Contributor Covenant](http:contributor-covenant.org), version 1.0.0, available at [http://contributor-covenant.org/version/1/0/0/](http://contributor-covenant.org/version/1/0/0/)
+- Please acknowledge that no pull request is guaranteed to be merged.
+- Please always do a self-review before requesting reviews from others.
+- Please expect code review to be strict and may have multiple rounds.
+- Please make self-contained incremental changes, pull requests with huge diff may be rejected for review.
+- Please use English in code comments and docstring.
+- Please do not force push unless absolutely necessary. Force pushes make review much harder in multiple rounds, and we use [Squash and merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-pull-request-commits) so you don't need to worry about messy commits and just focus on the changes.
+
+### Add new features
+
+New features require proposals before we may be able to accept any contribution.
+
+### Things we do not accept
+
+1. Updates to locale files (`conf/locale_xx-XX.ini`) other than the `conf/locale_en-US.ini`. Please read the [guide for localizing Gogs](https://gogs.io/docs/features/i18n).
+1. Docker compose files.
+
+### Coding guidelines
+
+1. Please read the Sourcegraph's [Go style guide](https://docs.sourcegraph.com/dev/background-information/languages/go).
+1. **NO** direct modifications to `.css` files, `.css` files are all generated by `.less` files. You can regenerate `.css` files by executing `task less`.
+
+## Your PR is merged!
+
+Congratulations 🎉🎉 Thanks again for taking the effort to have this journey with us 🌟
