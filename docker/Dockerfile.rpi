@@ -1,4 +1,4 @@
-FROM arm32v7/golang:1.14-alpine3.11 AS binarybuilder
+FROM arm32v7/golang:1.14-alpine3.14 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -9,7 +9,7 @@ WORKDIR /gogs.io/gogs
 COPY . .
 RUN make build TAGS="cert pam"
 
-FROM arm32v7/alpine:3.12
+FROM arm32v7/alpine:3.14
 RUN wget https://github.com/tianon/gosu/releases/download/1.12/gosu-armhf -O /usr/sbin/gosu \
   && chmod +x /usr/sbin/gosu \
   && echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
