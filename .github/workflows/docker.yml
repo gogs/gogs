@@ -13,10 +13,16 @@ jobs:
   buildx:
     runs-on: ubuntu-latest
     steps:
+      - name: Canel previous runs on main
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          all_but_latest: true
+          access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Set up QEMU
-        id: qemu
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         id: buildx
@@ -51,7 +57,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64
           push: true
           tags: |
             gogs/gogs:commit-${{ env.SHA }}
