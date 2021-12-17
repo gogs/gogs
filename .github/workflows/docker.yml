@@ -52,7 +52,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            gogs/gogs:commit-${GITHUB_SHA}
+            gogs/gogs:commit-$GITHUB_SHA
       - name: Build and push images on main
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
