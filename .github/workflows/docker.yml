@@ -44,6 +44,8 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get short commit SHA
+        uses: benjlevesque/short-sha@v1.2
       - name: Build and push images on pull requests
         if: ${{ github.event_name == 'pull_request' }}
         uses: docker/build-push-action@v2
@@ -52,7 +54,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
-            gogs/gogs:commit-$GITHUB_SHA
+            gogs/gogs:commit-${{ env.SHA }}
       - name: Build and push images on main
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
