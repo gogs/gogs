@@ -14,7 +14,7 @@ body:
     attributes:
       label: Gogs version
       description: |
-        Please specify the exact Gogs version you're reporting for. You can find the version information in the admin dashboard (`/admin`).
+        Please specify the exact Gogs version you're reporting for, e.g. "0.12.3". You can find the version information in the admin dashboard (`/admin`).
         
         _Note that "gogs/gogs:latest" is not a Gogs version, it does not mean anything._
     validations:
@@ -23,10 +23,10 @@ body:
     attributes:
       label: Git version
       description: |
-        Please specify the exact Git version you're using of both server and client. You can get the version information by running `git version`.
+        Please specify the exact Git version you're using of both server and client. You can find the version information by running `git version`.
       value: |
-        - Server:
-        - Client:
+        - Server: 
+        - Client: 
     validations:
       required: true
   - type: input
