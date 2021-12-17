@@ -24,7 +24,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/issue9/identicon v1.0.1
 	github.com/jaytaylor/html2text v0.0.0-20190408195923-01ec452cbe43
-	github.com/json-iterator/go v1.1.10
+	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.8.6 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.13 // indirect
