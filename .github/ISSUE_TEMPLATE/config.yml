@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Gogs Community Forum
-    url: https://discuss.gogs.io/
-    about: Please ask and answer questions here.
+  - name: Ask questions
+    url: https://github.com/gogs/gogs/discussions
+    about: Please ask questions in Discussions.
