@@ -75,3 +75,19 @@ jobs:
           tags: |
             gogs/gogs:latest
             ghcr.io/gogs/gogs:latest
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@v3
+        if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        with:
+          server_address: smtp.mailgun.org
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: GitHub Actions (${{ github.repository }}) job result
+          to: github-actions-8ce6454@unknwon.io
+          from: GitHub Actions (${{ github.repository }})
+          reply_to: noreply@unknwon.io
+          body: |
+            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
+
+            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
