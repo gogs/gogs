@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: write
-      contents: read
+      contents: write
     steps:
       - name: Canel previous runs on main
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -64,6 +64,7 @@ jobs:
           push: true
           tags: |
             gogs/gogs:commit-${{ env.SHA }}
+            ghcr.io/gogs/gogs:latest
       - name: Build and push images on main
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
