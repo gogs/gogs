@@ -1,7 +1,5 @@
 # Getting started with developing Gogs
 
-> This document is driven from https://docs.sourcegraph.com/dev/local_development.
-
 Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https://tour.golang.org/) if you haven't done so!
 
 ## Outline
@@ -23,7 +21,7 @@ Gogs is built and runs as a single binary and meant to be cross platform. Theref
 Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
-- [Go](https://golang.org/doc/install) (v1.14 or higher)
+- [Go](https://golang.org/doc/install) (v1.15 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [Task](https://github.com/go-task/task)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
@@ -123,7 +121,7 @@ Generally, you don't need a full clone, so set `--depth` to `10`:
 git clone --depth 10 https://github.com/gogs/gogs.git
 ```
 
-**NOTE** The repository has Go Modules enabled, please clone to somewhere outside of your `$GOPATH`.
+**NOTE** The repository has Go modules enabled, please clone to somewhere outside of your `$GOPATH`.
 
 ## Step 4: Configure database settings
 
@@ -162,7 +160,7 @@ LOAD_ASSETS_FROM_DISK = true
 
 ### Offline development
 
-Sometimes you will want to develop Gogs but it just so happens you will be on a plane or a train or perhaps a beach, and you will have no WiFi. And you may raise your fist toward heaven and say something like, "Why, we can put a man on the moon, so why can't we develop high-quality Git hosting without an Internet connection?" But lower your hand back to your keyboard and fret no further, for the year is 2020, and you *can* develop Gogs with no connectivity by setting the following configuration in your `custom/conf/app.ini`:
+Sometimes you will want to develop Gogs but it just so happens you will be on a plane or a train or perhaps a beach, and you will have no WiFi. And you may raise your fist toward heaven and say something like, "Why, we can put a man on the moon, so why can't we develop high-quality Git hosting without an Internet connection?" But lower your hand back to your keyboard and fret no further, you *can* develop Gogs with no connectivity by setting the following configuration in your `custom/conf/app.ini`:
 
 ```ini
 [server]
