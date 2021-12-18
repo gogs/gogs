@@ -48,7 +48,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Container registry
-        #if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
@@ -63,9 +63,8 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-            #gogs/gogs:commit-${{ env.SHA }}
           tags: |
-            ghcr.io/gogs/gogs:latest
+            gogs/gogs:commit-${{ env.SHA }}
       - name: Build and push images on main
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: docker/build-push-action@v2
