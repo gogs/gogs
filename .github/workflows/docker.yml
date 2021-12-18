@@ -75,7 +75,7 @@ jobs:
           tags: |
             gogs/gogs:latest
             ghcr.io/gogs/gogs:latest
-      - name: Send mail on failures
+      - name: Send email on failure
         uses: dawidd6/action-send-mail@v3
         #if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         with:
@@ -87,6 +87,6 @@ jobs:
           to: github-actions-8ce6454@unknwon.io
           from: GitHub Actions (${{ github.repository }})
           body: |
-            The "${{ github.action }}" job of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
+            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
 
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
