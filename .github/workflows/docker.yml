@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       actions: write
-      contents: write
+      contents: read
+      packages: write
     steps:
       - name: Canel previous runs on main
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
