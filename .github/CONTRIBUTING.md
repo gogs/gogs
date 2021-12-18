@@ -21,6 +21,7 @@ In addition to the general guides with open source contributions, you would also
 
 - Have basic knowledge about web applications development, database management systems and programming in [Go](https://go.dev/).
 - Have a working local development setup with a reasonable good IDE or editor like [Visual Studio Code](https://code.visualstudio.com/docs/languages/go), [GoLand](https://www.jetbrains.com/go/) or [Vim](https://github.com/fatih/vim-go).
+- [Set up your development environment](/docs/dev/local_development.md).
 
 ## Issues
 
