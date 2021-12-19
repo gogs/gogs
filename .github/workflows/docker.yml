@@ -127,7 +127,7 @@ jobs:
       packages: write
     steps:
       - name: Compute image tag name
-        run: echo "IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG=$(echo 'v0.13.0' | cut -c 2-)" >> $GITHUB_ENV #$GITHUB_REF_NAME
       - name: Test
         run: echo $IMAGE_TAG
 #      - name: Checkout code
