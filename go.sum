@@ -746,8 +746,8 @@ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sourcegraph.com/sourcegraph/appdash v0.0.0-20190731080439-ebfcffb1b5c0/go.mod h1:hI742Nqp5OhwiqlzhgfbWU4mW4yO10fP+LoT9WOswdU=
-unknwon.dev/clog/v2 v2.1.2 h1:+jwPPp10UtOPunFtviUmXF01Abf6q7p5GEy4jluLl8o=
-unknwon.dev/clog/v2 v2.1.2/go.mod h1:zvUlyibDHI4mykYdWyWje2G9nF/nBzfDOqRo2my4mWc=
+unknwon.dev/clog/v2 v2.2.0 h1:jkPdsxux0MC04BT/9NHbT75z4prK92SH10VBNmIpVCc=
+unknwon.dev/clog/v2 v2.2.0/go.mod h1:zvUlyibDHI4mykYdWyWje2G9nF/nBzfDOqRo2my4mWc=
 xorm.io/builder v0.3.6 h1:ha28mQ2M+TFx96Hxo+iq6tQgnkC9IZkM6D8w9sKHHF8=
 xorm.io/builder v0.3.6/go.mod h1:LEFAPISnRzG+zxaxj2vPicRwz67BdhFreKg8yv8/TgU=
 xorm.io/core v0.7.2 h1:mEO22A2Z7a3fPaZMk6gKL/jMD80iiyNwRrX5HOv3XLw=
