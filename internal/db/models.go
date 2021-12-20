@@ -231,6 +231,9 @@ func GetStatistic() (stats Statistic) {
 }
 
 func Ping() error {
+	if x == nil {
+		return errors.New("database not available")
+	}
 	return x.Ping()
 }
 
