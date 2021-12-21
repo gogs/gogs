@@ -1,8 +1,6 @@
-# <img src="https://github.com/gogs/gogs/raw/main/public/img/favicon.png" width="45" align="left">Gogs - A painless self-hosted Git service
+![gogs-brand](https://user-images.githubusercontent.com/2946214/146899259-6a8b58ad-8d6e-40d2-ab02-79dc6aadabbf.png)
 
 [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/gogs/gogs/Go?logo=github&style=for-the-badge)](https://github.com/gogs/gogs/actions?query=workflow%3AGo) [![Discord](https://img.shields.io/discord/382595433060499458.svg?style=for-the-badge&logo=discord)](https://discord.gg/9aqdHU7) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
-
-![Repository](https://gogs.io/img/screenshots/2.png)
 
 [简体中文](README_ZH.md)
 
