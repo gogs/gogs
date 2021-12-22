@@ -6,7 +6,7 @@
 
 ## 🔮 Vision
 
-The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-hosted Git service that can be setup in the most painless way. With Go, this can be done with an independent binary distribution across **ALL platforms** that Go supports, including Linux, macOS, Windows and ARM.
+The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-hosted Git service that can be set up in the most painless way. With Go, this can be done with an independent binary distribution across all platforms that Go supports, including Linux, macOS, Windows and ARM-based systems.
 
 ## 📡 Overview
 
@@ -36,7 +36,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 💾 Hardware requirements
 
-- A Raspberry Pi or $5 Digital Ocean Droplet is more than enough to get you started. Some even use 64MB RAM Docker [CaaS](https://blog.docker.com/2016/02/containers-as-a-service-caas/).
+- A Raspberry Pi or $5 Digital Ocean Droplet is more than enough to get you started. Some even use 64MB RAM Docker [CaaS](https://www.docker.com/blog/containers-as-a-service-caas/).
 - 2 CPU cores and 512MB RAM would be the baseline for teamwork.
 - Increase CPU cores when your team size gets significantly larger, memory footprint remains low.
 
@@ -55,39 +55,34 @@ There are 6 ways to install Gogs:
 - [Install from source](https://gogs.io/docs/installation/install_from_source.html)
 - [Install from packages](https://gogs.io/docs/installation/install_from_packages.html)
 - [Ship with Docker](https://github.com/gogs/gogs/tree/main/docker)
-- [Install with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
-- [Install with Kubernetes Using Helm Charts](https://github.com/helm/charts/tree/master/incubator/gogs)
+- [Try with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
 
 ### Deploy to cloud
 
-- [Cloudron](https://cloudron.io/appstore.html#io.gogs.cloudronapp)
-- [Scaleway](https://www.scaleway.com/imagehub/gogs/)
+- [Cloudron](https://www.cloudron.io/store/io.gogs.cloudronapp.html)
 - [Sandstorm](https://github.com/cem/gogs-sandstorm)
 - [sloppy.io](https://github.com/sloppyio/quickstarters/tree/master/gogs)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
-- [DPlatform](https://github.com/j8r/DPlatform)
+- [DPlatform](https://github.com/DFabric/DPlatform-Shell)
 - [LunaNode](https://github.com/LunaNode/launchgogs)
 
 ### Tutorials
 
 - [Private Git Web Portal in Raspberry PI With Gogs](https://peppe8o.com/private-git-web-portal-in-raspberry-pi-with-gogs/)
 - [How To Set Up Gogs on Ubuntu 14.04](https://www.digitalocean.com/community/tutorials/how-to-set-up-gogs-on-ubuntu-14-04)
-- [Run your own GitHub-like service with the help of Docker](http://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
-- [Dockerized Gogs git server and alpine postgres in 20 minutes or less](http://garthwaite.org/docker-gogs.html)
+- [Run your own GitHub-like service with the help of Docker](https://blog.hypriot.com/post/run-your-own-github-like-service-with-docker/)
+- [Dockerized Gogs git server and alpine postgres in 20 minutes or less](https://garthwaite.org/docker-gogs.html)
 - [Host Your Own Private GitHub with Gogs](https://eladnava.com/host-your-own-private-github-with-gogs-io/)
 - [使用 Gogs 搭建自己的 Git 服务器](https://blog.mynook.info/post/host-your-own-git-server-using-gogs/) (Chinese)
-- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](http://my.oschina.net/luyao/blog/375654) (Chinese)
+- [阿里云上 Ubuntu 14.04 64 位安装 Gogs](https://my.oschina.net/luyao/blog/375654) (Chinese)
 - [Installing Gogs on FreeBSD](https://www.codejam.info/2015/03/installing-gogs-on-freebsd.html)
-- [Cloudflare Full SSL with Gogs using NGINX](http://www.listekconsulting.com/articles/cloudflare-full-ssl-with-gogs-go-git-service-using-nginx/)
 - [How to install Gogs on a Linux Server (DigitalOcean)](https://www.youtube.com/watch?v=deSfX0gqefE)
 
 ## 📦 Software, service and product support
 
 - [Fabric8](http://fabric8.io/) (DevOps)
 - [Jenkins](https://plugins.jenkins.io/gogs-webhook/) (CI)
-- [Taiga](https://taiga.io/) (Project Management)
-- [Puppet](https://forge.puppet.com/Siteminds/gogs) (IT)
-- [GitPitch](https://gitpitch.com/) (Markdown Presentations)
+- [Puppet](https://forge.puppet.com/modules/Siteminds/gogs) (IT)
 - [Synology](https://www.synology.com) (Docker)
 - [Syncloud](https://syncloud.org/) (App Store)
 
