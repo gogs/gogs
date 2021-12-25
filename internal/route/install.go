@@ -132,6 +132,7 @@ func Install(c *context.Context) {
 	f.DbHost = conf.Database.Host
 	f.DbUser = conf.Database.User
 	f.DbName = conf.Database.Name
+	f.DbSchema = conf.Database.Schema
 	f.DbPath = conf.Database.Path
 
 	c.Data["CurDbOption"] = "PostgreSQL"
@@ -216,6 +217,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	conf.Database.User = f.DbUser
 	conf.Database.Password = f.DbPasswd
 	conf.Database.Name = f.DbName
+	conf.Database.Schema = f.DbSchema
 	conf.Database.SSLMode = f.SSLMode
 	conf.Database.Path = f.DbPath
 
@@ -311,6 +313,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("database").Key("TYPE").SetValue(conf.Database.Type)
 	cfg.Section("database").Key("HOST").SetValue(conf.Database.Host)
 	cfg.Section("database").Key("NAME").SetValue(conf.Database.Name)
+	cfg.Section("database").Key("SCHEMA").SetValue(conf.Database.Schema)
 	cfg.Section("database").Key("USER").SetValue(conf.Database.User)
 	cfg.Section("database").Key("PASSWORD").SetValue(conf.Database.Password)
 	cfg.Section("database").Key("SSL_MODE").SetValue(conf.Database.SSLMode)

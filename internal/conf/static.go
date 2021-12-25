@@ -368,6 +368,7 @@ type DatabaseOpts struct {
 	Type         string
 	Host         string
 	Name         string
+	Schema       string
 	User         string
 	Password     string
 	SSLMode      string `ini:"SSL_MODE"`

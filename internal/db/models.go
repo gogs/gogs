@@ -134,6 +134,10 @@ func SetEngine() (*gorm.DB, error) {
 		return nil, fmt.Errorf("connect to database: %v", err)
 	}
 
+	if conf.Database.Type == "postgres" {
+		x.SetSchema(conf.Database.Schema)
+	}
+
 	x.SetMapper(core.GonicMapper{})
 
 	var logPath string
