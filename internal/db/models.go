@@ -7,7 +7,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -90,13 +89,8 @@ func getEngine() (*xorm.Engine, error) {
 	case "postgres":
 		conf.UsePostgreSQL = true
 		host, port := parsePostgreSQLHostPort(conf.Database.Host)
-		if host[0] == '/' { // looks like a unix socket
-			connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
-				url.QueryEscape(conf.Database.User), url.QueryEscape(conf.Database.Password), port, conf.Database.Name, Param, conf.Database.SSLMode, host)
-		} else {
-			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
-				url.QueryEscape(conf.Database.User), url.QueryEscape(conf.Database.Password), host, port, conf.Database.Name, Param, conf.Database.SSLMode)
-		}
+		connStr = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
+			conf.Database.User, conf.Database.Password, host, port, conf.Database.Name, conf.Database.SSLMode, conf.Database.Schema)
 		driver = "pgx"
 
 	case "mssql":
