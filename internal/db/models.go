@@ -117,6 +117,10 @@ func NewTestEngine() error {
 		return fmt.Errorf("connect to database: %v", err)
 	}
 
+	if conf.Database.Type == "postgres" {
+		x.SetSchema(conf.Database.Schema)
+	}
+
 	x.SetMapper(core.GonicMapper{})
 	return x.StoreEngine("InnoDB").Sync2(legacyTables...)
 }
