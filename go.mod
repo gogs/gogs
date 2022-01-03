@@ -66,9 +66,9 @@ require (
 	gorm.io/driver/sqlserver v1.0.5
 	gorm.io/gorm v1.22.3
 	unknwon.dev/clog/v2 v2.2.0
-	xorm.io/builder v0.3.6
+	xorm.io/builder v0.3.9
 	xorm.io/core v0.7.2
-	xorm.io/xorm v0.8.0
+	xorm.io/xorm v1.2.5
 )
 
 // +heroku goVersion go1.15
