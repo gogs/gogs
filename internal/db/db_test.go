@@ -96,11 +96,12 @@ func Test_parseDSN(t *testing.T) {
 				Type:     "postgres",
 				Host:     "/tmp/pg.sock",
 				Name:     "gogs",
+				Schema:   "test",
 				User:     "gogs@local",
 				Password: "pa$$word",
 				SSLMode:  "disable",
 			},
-			expDSN: "postgres://gogs%40local:pa%24%24word@:5432/gogs?sslmode=disable&host=/tmp/pg.sock",
+			expDSN: "user='gogs@local' password='pa$$word' host='/tmp/pg.sock' port='5432' dbname='gogs' sslmode='disable' search_path='test'",
 		},
 		{
 			name: "postgres: tcp",
@@ -108,11 +109,12 @@ func Test_parseDSN(t *testing.T) {
 				Type:     "postgres",
 				Host:     "127.0.0.1",
 				Name:     "gogs",
+				Schema:   "test",
 				User:     "gogs@local",
 				Password: "pa$$word",
 				SSLMode:  "disable",
 			},
-			expDSN: "postgres://gogs%40local:pa%24%24word@127.0.0.1:5432/gogs?sslmode=disable",
+			expDSN: "user='gogs@local' password='pa$$word' host='127.0.0.1' port='5432' dbname='gogs' sslmode='disable' search_path='test'",
 		},
 
 		{

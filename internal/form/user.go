@@ -17,6 +17,7 @@ type Install struct {
 	DbUser   string
 	DbPasswd string
 	DbName   string
+	DbSchema string
 	SSLMode  string
 	DbPath   string
 

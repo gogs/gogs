@@ -6,7 +6,6 @@ package db
 
 import (
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -74,13 +73,8 @@ func parseDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 
 	case "postgres":
 		host, port := parsePostgreSQLHostPort(opts.Host)
-		if host[0] == '/' { // looks like a unix socket
-			dsn = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
-				url.QueryEscape(opts.User), url.QueryEscape(opts.Password), port, opts.Name, concate, opts.SSLMode, host)
-		} else {
-			dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
-				url.QueryEscape(opts.User), url.QueryEscape(opts.Password), host, port, opts.Name, concate, opts.SSLMode)
-		}
+		dsn = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
+			opts.User, opts.Password, host, port, opts.Name, opts.SSLMode, opts.Schema)
 
 	case "mssql":
 		host, port := parseMSSQLHostPort(opts.Host)
