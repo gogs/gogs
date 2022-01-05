@@ -117,7 +117,7 @@ func NewTestEngine() error {
 		return fmt.Errorf("connect to database: %v", err)
 	}
 
-	if conf.Database.Type == "postgres" {
+	if conf.UsePostgreSQL {
 		x.SetSchema(conf.Database.Schema)
 	}
 
@@ -132,7 +132,7 @@ func SetEngine() (*gorm.DB, error) {
 		return nil, fmt.Errorf("connect to database: %v", err)
 	}
 
-	if conf.Database.Type == "postgres" {
+	if conf.UsePostgreSQL {
 		x.SetSchema(conf.Database.Schema)
 	}
 
