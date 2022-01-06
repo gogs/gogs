@@ -15,7 +15,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
 - Having trouble? Help yourself with [troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
 - Want to help with localization? Check out the [localization documentation](https://gogs.io/docs/features/i18n.html).
-- Ready to get hands dirty? Read our [contributing guide](.github/contributing.md).
+- Ready to get hands dirty? Read our [contributing guide](.github/CONTRIBUTING.md).
 - Hmm... What about APIs? We have experimental support with [documentation](https://github.com/gogs/docs-api).
 
 ## 💌 Features
