@@ -173,59 +173,61 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	remoteAddr, err := f.ParseRemoteAddr(c.User)
-	if err != nil {
-		if db.IsErrInvalidCloneAddr(err) {
-			c.Data["Err_CloneAddr"] = true
-			addrErr := err.(db.ErrInvalidCloneAddr)
-			switch {
-			case addrErr.IsURLError:
-				c.RenderWithErr(c.Tr("form.url_error"), MIGRATE, &f)
-			case addrErr.IsPermissionDenied:
-				c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), MIGRATE, &f)
-			case addrErr.IsInvalidPath:
-				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f)
-			default:
-				c.Error(err, "unexpected error")
+	go func() {
+		remoteAddr, err := f.ParseRemoteAddr(c.User)
+		if err != nil {
+			if db.IsErrInvalidCloneAddr(err) {
+				c.Data["Err_CloneAddr"] = true
+				addrErr := err.(db.ErrInvalidCloneAddr)
+				switch {
+				case addrErr.IsURLError:
+					c.RenderWithErr(c.Tr("form.url_error"), MIGRATE, &f)
+				case addrErr.IsPermissionDenied:
+					c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), MIGRATE, &f)
+				case addrErr.IsInvalidPath:
+					c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f)
+				default:
+					c.Error(err, "unexpected error")
+				}
+			} else {
+				c.Error(err, "parse remote address")
 			}
-		} else {
-			c.Error(err, "parse remote address")
+			return
 		}
-		return
-	}
 
-	repo, err := db.MigrateRepository(c.User, ctxUser, db.MigrateRepoOptions{
-		Name:        f.RepoName,
-		Description: f.Description,
-		IsPrivate:   f.Private || conf.Repository.ForcePrivate,
-		IsUnlisted:  f.Unlisted,
-		IsMirror:    f.Mirror,
-		RemoteAddr:  remoteAddr,
-	})
-	if err == nil {
-		log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
-		c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
-		return
-	}
-
-	if repo != nil {
-		if errDelete := db.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
-			log.Error("DeleteRepository: %v", errDelete)
+		repo, err := db.MigrateRepository(c.User, ctxUser, db.MigrateRepoOptions{
+			Name:        f.RepoName,
+			Description: f.Description,
+			IsPrivate:   f.Private || conf.Repository.ForcePrivate,
+			IsUnlisted:  f.Unlisted,
+			IsMirror:    f.Mirror,
+			RemoteAddr:  remoteAddr,
+		})
+		if err == nil {
+			log.Trace("Repository migrated [%d]: %s/%s", repo.ID, ctxUser.Name, f.RepoName)
+			c.Redirect(conf.Server.Subpath + "/" + ctxUser.Name + "/" + f.RepoName)
+			return
 		}
-	}
 
-	if strings.Contains(err.Error(), "Authentication failed") ||
-		strings.Contains(err.Error(), "could not read Username") {
-		c.Data["Err_Auth"] = true
-		c.RenderWithErr(c.Tr("form.auth_failed", db.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
-		return
-	} else if strings.Contains(err.Error(), "fatal:") {
-		c.Data["Err_CloneAddr"] = true
-		c.RenderWithErr(c.Tr("repo.migrate.failed", db.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
-		return
-	}
+		if repo != nil {
+			if errDelete := db.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+				log.Error("DeleteRepository: %v", errDelete)
+			}
+		}
 
-	handleCreateError(c, ctxUser, err, "MigratePost", MIGRATE, &f)
+		if strings.Contains(err.Error(), "Authentication failed") ||
+			strings.Contains(err.Error(), "could not read Username") {
+			c.Data["Err_Auth"] = true
+			c.RenderWithErr(c.Tr("form.auth_failed", db.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+			return
+		} else if strings.Contains(err.Error(), "fatal:") {
+			c.Data["Err_CloneAddr"] = true
+			c.RenderWithErr(c.Tr("repo.migrate.failed", db.HandleMirrorCredentials(err.Error(), true)), MIGRATE, &f)
+			return
+		}
+	}()
+
+	c.Redirect(conf.Server.Subpath + "/")
 }
 
 func Action(c *context.Context) {

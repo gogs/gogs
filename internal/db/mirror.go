@@ -38,8 +38,8 @@ type Mirror struct {
 	LastSyncUnix int64     `xorm:"updated_unix"`
 	NextSync     time.Time `xorm:"-" json:"-"`
 	NextSyncUnix int64     `xorm:"next_update_unix"`
-
-	address string `xorm:"-"`
+	SyncStatus   int       `xorm:"sync_status NOT NULL DEFAULT 1" json:"sync_status"`
+	address      string    `xorm:"-"`
 }
 
 func (m *Mirror) BeforeInsert() {

@@ -49,7 +49,10 @@ var (
 	Gitignores, Licenses, Readmes, LabelTemplates []string
 
 	// Maximum items per page in forks, watchers and stars of a repo
-	ItemsPerPage = 40
+	ItemsPerPage        = 40
+	SYNC_STATUS_DONE    = 0
+	SYNC_STATUS_SYNCING = 1
+	SYNC_STATUS_FAILED  = 2
 )
 
 func LoadRepoConfig() {
@@ -753,8 +756,13 @@ func wikiRemoteURL(remote string) string {
 	return ""
 }
 
-// MigrateRepository migrates a existing repository from other project hosting.
+// MigrateRepository migrates an existing repository from other project hosting.
 func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
+	err := CreateRepositoryNotice("User " + doer.Name + " is migrating repository: " + opts.Name + " from " + opts.RemoteAddr)
+	if err != nil {
+		log.Error("MigrateRepository_CreateNotice: failed to migrate repo: %s", err)
+		return nil, err
+	}
 	repo, err := CreateRepository(doer, owner, CreateRepoOptions{
 		Name:        opts.Name,
 		Description: opts.Description,
@@ -763,6 +771,8 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		IsMirror:    opts.IsMirror,
 	})
 	if err != nil {
+		log.Error("MigrateRepository_CreateRepository: failed to migrate repo: %s", err)
+		_ = CreateRepositoryNotice("error: user " + doer.Name + " migrating repository: " + opts.Name + " from " + opts.RemoteAddr)
 		return nil, err
 	}
 
@@ -772,11 +782,29 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	if owner.IsOrganization() {
 		t, err := owner.GetOwnerTeam()
 		if err != nil {
+			log.Error("MigrateRepository_GetOwnerTeam: failed to migrate repo: %s", err)
+			_ = CreateRepositoryNotice("error: user " + doer.Name + " migrating repository: " + opts.Name + " from " + opts.RemoteAddr)
 			return nil, err
 		}
 		repo.NumWatches = t.NumMembers
 	} else {
 		repo.NumWatches = 1
+	}
+
+	mirror := Mirror{
+		RepoID:      repo.ID,
+		Interval:    conf.Mirror.DefaultInterval,
+		EnablePrune: true,
+		NextSync:    time.Now().Add(time.Duration(conf.Mirror.DefaultInterval) * time.Hour),
+		SyncStatus:  SYNC_STATUS_SYNCING,
+	}
+
+	// insert with SYNC_STATUS_DONE
+	if opts.IsMirror {
+		if _, err = x.InsertOne(&mirror); err != nil {
+			return repo, fmt.Errorf("InsertOne: %v", err)
+		}
+		repo.IsMirror = true
 	}
 
 	migrateTimeout := time.Duration(conf.Git.Timeout.Migrate) * time.Second
@@ -787,6 +815,8 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 		Quiet:   true,
 		Timeout: migrateTimeout,
 	}); err != nil {
+		log.Error("MigrateRepository_GetOGitCloneailed to migrate repo: %s", err)
+		_ = CreateRepositoryNotice("error: user " + doer.Name + " migrating repository: " + opts.Name + " from " + opts.RemoteAddr)
 		return repo, fmt.Errorf("clone: %v", err)
 	}
 
@@ -831,19 +861,18 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	}
 
 	if opts.IsMirror {
-		if _, err = x.InsertOne(&Mirror{
-			RepoID:      repo.ID,
-			Interval:    conf.Mirror.DefaultInterval,
-			EnablePrune: true,
-			NextSync:    time.Now().Add(time.Duration(conf.Mirror.DefaultInterval) * time.Hour),
+		x.ShowSQL(true)
+		if _, err = x.ID(mirror.ID).Cols("sync_status").Update(&Mirror{
+			SyncStatus: SYNC_STATUS_DONE,
 		}); err != nil {
 			return repo, fmt.Errorf("InsertOne: %v", err)
 		}
-
+		_ = CreateRepositoryNotice("Complete: user " + doer.Name + " migrating repository: " + opts.Name + " from " + opts.RemoteAddr)
 		repo.IsMirror = true
 		return repo, UpdateRepository(repo, false)
 	}
 
+	_ = CreateRepositoryNotice("error: user " + doer.Name + " migrating repository: " + opts.Name + " from " + opts.RemoteAddr)
 	return CleanUpMigrateInfo(repo)
 }
 
