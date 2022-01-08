@@ -23,6 +23,10 @@ In addition to the general guides with open source contributions, you would also
 - Have a working local development setup with a reasonable good IDE or editor like [Visual Studio Code](https://code.visualstudio.com/docs/languages/go), [GoLand](https://www.jetbrains.com/go/) or [Vim](https://github.com/fatih/vim-go).
 - [Set up your development environment](/docs/dev/local_development.md).
 
+## Philosophy and methodology
+
+- [Talk, then code](https://www.craft.do/s/kyHVs6OoE4Dj5V)
+
 ## Issues
 
 ### Ask for help
