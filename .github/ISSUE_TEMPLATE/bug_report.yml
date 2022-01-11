@@ -7,8 +7,9 @@ body:
       value: |
         Thanks for taking the time to fill out this bug report!
         
+        - Please use English :)
         - For questions, ask in [Discussions](https://github.com/gogs/gogs/discussions).
-        - Before you file an issue read the [Contributing guide](https://github.com/gogs/gogs/blob/main/.github/contributing.md).
+        - Before you file an issue read the [Contributing guide](https://github.com/gogs/gogs/blob/main/.github/CONTRIBUTING.md).
         - Check to make sure someone hasn't already opened a similar [issue](https://github.com/gogs/gogs/issues).
   - type: input
     attributes:
