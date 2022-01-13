@@ -101,7 +101,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 			m = m[1:]
 		}
 		var link string
-		if metas == nil {
+		if metas == nil || metas["format"] == "" {
 			link = fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)
 		} else {
 			// Support for external issue tracker
