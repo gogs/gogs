@@ -110,7 +110,7 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 				"format": "https://someurl.com/{user}/{repo}/{index}",
 				"user":   "someuser",
 				"repo":   "somerepo",
-				"style":  ISSUE_NAME_STYLE_NUMERIC,
+				"style":  IssueNameStyleNumeric,
 			}
 
 			tests := []struct {
@@ -156,7 +156,7 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 				"format": "https://someurl.com/{user}/{repo}/?b={index}",
 				"user":   "someuser",
 				"repo":   "somerepo",
-				"style":  ISSUE_NAME_STYLE_ALPHANUMERIC,
+				"style":  IssueNameStyleAlphanumeric,
 			}
 
 			tests := []struct {
