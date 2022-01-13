@@ -81,7 +81,7 @@ jobs:
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   buildx-pull-request:
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' && github.repository == 'gogs/gogs' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -117,6 +117,34 @@ jobs:
           push: true
           tags: |
             gogs/gogs:commit-${{ env.SHA }}
+
+  buildx-pull-request-fork:
+    if: ${{ github.event_name == 'pull_request' && github.repository != 'gogs/gogs' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 2
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Build images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64
 
   buildx-release:
     if: ${{ github.event_name == 'release' }}
