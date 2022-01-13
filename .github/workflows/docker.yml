@@ -81,7 +81,7 @@ jobs:
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   buildx-pull-request:
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'pull_request' && github.repository == 'gogs/gogs' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
