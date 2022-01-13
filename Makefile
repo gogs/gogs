@@ -5,8 +5,6 @@ CONF_FILES := $(shell find conf | sed 's/ /\\ /g')
 TEMPLATES_FILES := $(shell find templates | sed 's/ /\\ /g')
 PUBLIC_FILES := $(shell find public | sed 's/ /\\ /g')
 LESS_FILES := $(wildcard public/less/*.less)
-ASSETS_GENERATED := internal/assets/conf/conf_gen.go internal/assets/templates/templates_gen.go internal/assets/public/public_gen.go
-GENERATED := $(ASSETS_GENERATED) public/css/gogs.min.css
 
 TAGS = ""
 BUILD_FLAGS = "-v"
@@ -28,10 +26,7 @@ dist: release
 web: build
 	./gogs web
 
-build: $(GENERATED)
-	go build $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)' -trimpath -o gogs
-
-build-no-gen:
+build:
 	go build $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(TAGS)' -trimpath -o gogs
 
 pack:
@@ -42,22 +37,10 @@ pack:
 
 release: build pack
 
-generate: clean $(ASSETS_GENERATED)
-
-internal/assets/conf/conf_gen.go: $(CONF_FILES)
-	-rm -f $@
+generate: clean
 	go generate internal/assets/conf/conf.go
-	gofmt -s -w $@
-
-internal/assets/templates/templates_gen.go: $(TEMPLATES_FILES)
-	-rm -f $@
 	go generate internal/assets/templates/templates.go
-	gofmt -s -w $@
-
-internal/assets/public/public_gen.go: $(PUBLIC_FILES)
-	-rm -f $@
 	go generate internal/assets/public/public.go
-	gofmt -s -w $@
 
 less: clean public/css/gogs.min.css
 
