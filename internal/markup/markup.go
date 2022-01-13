@@ -29,8 +29,8 @@ func IsIPythonNotebook(name string) bool {
 }
 
 const (
-	ISSUE_NAME_STYLE_NUMERIC      = "numeric"
-	ISSUE_NAME_STYLE_ALPHANUMERIC = "alphanumeric"
+	IssueNameStyleNumeric      = "numeric"
+	IssueNameStyleAlphanumeric = "alphanumeric"
 )
 
 var (
@@ -90,7 +90,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 	urlPrefix = cutoutVerbosePrefix(urlPrefix)
 
 	pattern := IssueNumericPattern
-	if metas["style"] == ISSUE_NAME_STYLE_ALPHANUMERIC {
+	if metas["style"] == IssueNameStyleAlphanumeric {
 		pattern = IssueAlphanumericPattern
 	}
 
@@ -105,7 +105,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 			link = fmt.Sprintf(`<a href="%s/issues/%s">%s</a>`, urlPrefix, m[1:], m)
 		} else {
 			// Support for external issue tracker
-			if metas["style"] == ISSUE_NAME_STYLE_ALPHANUMERIC {
+			if metas["style"] == IssueNameStyleAlphanumeric {
 				metas["index"] = string(m)
 			} else {
 				metas["index"] = string(m[1:])
@@ -243,7 +243,7 @@ func postProcessHTML(rawHTML []byte, urlPrefix string, metas map[string]string) 
 	buf := bytes.NewBuffer(nil)
 	tokenizer := html.NewTokenizer(bytes.NewReader(rawHTML))
 
-OUTER_LOOP:
+outerLoop:
 	for html.ErrorToken != tokenizer.Next() {
 		token := tokenizer.Token()
 		switch token.Type {
@@ -255,7 +255,7 @@ OUTER_LOOP:
 
 			if tagName == "img" {
 				wrapImgWithLink(urlPrefix, buf, token)
-				continue OUTER_LOOP
+				continue outerLoop
 			}
 
 			buf.WriteString(token.String())
@@ -268,7 +268,7 @@ OUTER_LOOP:
 					// Copy the token to the output verbatim
 					buf.WriteString(token.String())
 
-					// Stack number doesn't increate for tags without end tags.
+					// Stack number doesn't increase for tags without end tags.
 					if token.Type == html.StartTagToken && !com.IsSliceContainsStr(noEndTags, token.Data) {
 						stackNum++
 					}
@@ -281,7 +281,7 @@ OUTER_LOOP:
 						}
 					}
 				}
-				continue OUTER_LOOP
+				continue outerLoop
 			}
 
 			if !com.IsSliceContainsStr(noEndTags, tagName) {
@@ -315,23 +315,23 @@ OUTER_LOOP:
 type Type string
 
 const (
-	UNRECOGNIZED     Type = "unrecognized"
-	MARKDOWN         Type = "markdown"
-	ORG_MODE         Type = "orgmode"
-	IPYTHON_NOTEBOOK Type = "ipynb"
+	TypeUnrecognized    Type = "unrecognized"
+	TypeMarkdown        Type = "markdown"
+	TypeOrgMode         Type = "orgmode"
+	TypeIPythonNotebook Type = "ipynb"
 )
 
 // Detect returns best guess of a markup type based on file name.
 func Detect(filename string) Type {
 	switch {
 	case IsMarkdownFile(filename):
-		return MARKDOWN
+		return TypeMarkdown
 	case IsOrgModeFile(filename):
-		return ORG_MODE
+		return TypeOrgMode
 	case IsIPythonNotebook(filename):
-		return IPYTHON_NOTEBOOK
+		return TypeIPythonNotebook
 	default:
-		return UNRECOGNIZED
+		return TypeUnrecognized
 	}
 }
 
@@ -350,9 +350,9 @@ func Render(typ Type, input interface{}, urlPrefix string, metas map[string]stri
 	urlPrefix = strings.TrimRight(strings.Replace(urlPrefix, " ", "%20", -1), "/")
 	var rawHTML []byte
 	switch typ {
-	case MARKDOWN:
+	case TypeMarkdown:
 		rawHTML = RawMarkdown(rawBytes, urlPrefix)
-	case ORG_MODE:
+	case TypeOrgMode:
 		rawHTML = RawOrgMode(rawBytes, urlPrefix)
 	default:
 		return rawBytes // Do nothing if syntax type is not recognized
