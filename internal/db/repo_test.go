@@ -35,15 +35,15 @@ func TestRepository_ComposeMetas(t *testing.T) {
 		repo.EnableExternalTracker = true
 
 		// Default to numeric issue style
-		assert.Equal(t, markup.ISSUE_NAME_STYLE_NUMERIC, repo.ComposeMetas()["style"])
+		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas()["style"])
 		repo.ExternalMetas = nil
 
-		repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_NUMERIC
-		assert.Equal(t, markup.ISSUE_NAME_STYLE_NUMERIC, repo.ComposeMetas()["style"])
+		repo.ExternalTrackerStyle = markup.IssueNameStyleNumeric
+		assert.Equal(t, markup.IssueNameStyleNumeric, repo.ComposeMetas()["style"])
 		repo.ExternalMetas = nil
 
-		repo.ExternalTrackerStyle = markup.ISSUE_NAME_STYLE_ALPHANUMERIC
-		assert.Equal(t, markup.ISSUE_NAME_STYLE_ALPHANUMERIC, repo.ComposeMetas()["style"])
+		repo.ExternalTrackerStyle = markup.IssueNameStyleAlphanumeric
+		assert.Equal(t, markup.IssueNameStyleAlphanumeric, repo.ComposeMetas()["style"])
 		repo.ExternalMetas = nil
 
 		metas := repo.ComposeMetas()
