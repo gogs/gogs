@@ -31,6 +31,7 @@ On the release branch:
 - [ ] Upload all binaries to:
 	- [ ] GitHub release
 	- [ ] https://dl.gogs.io (also upload `checksum_sha256.txt`)
+- [ ] Update content of [Install from binary](https://gogs.io/docs/installation/install_from_binary).
 
 ## After release
 

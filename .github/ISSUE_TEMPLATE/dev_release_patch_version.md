@@ -21,9 +21,9 @@ On the release branch:
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
 - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version. **Make sure the tag is created on the release branch**.
 - [ ] Update all previous GitHub releases with same minor version with the warning:
-    ```
-    **ℹ️ Heads up! There is a new patch release [0.12.1](https://github.com/gogs/gogs/releases/tag/v0.12.1) available, we recommend directly installing or upgrading to that version.**
-    ```
+	```
+	**ℹ️ Heads up! There is a new patch release [0.12.1](https://github.com/gogs/gogs/releases/tag/v0.12.1) available, we recommend directly installing or upgrading to that version.**
+	```
 - [ ] Wait for a new image tag for the current release to be created automatically on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 - [ ] Update Docker image tag for the minor release `<MAJOR>.<MINOR>`, e.g. `0.12` on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 - [ ] Compile and pack binaries (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
@@ -35,6 +35,7 @@ On the release branch:
 - [ ] Upload all binaries to:
 	- [ ] GitHub release
 	- [ ] https://dl.gogs.io (also upload `checksum_sha256.txt`)
+- [ ] Update content of [Install from binary](https://gogs.io/docs/installation/install_from_binary).
 
 ## After release
 
