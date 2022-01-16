@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var defaultSetting = Settings{false, "GogsServer", 60 * time.Second, 60 * time.Second, nil, nil, nil, false}
@@ -270,7 +270,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 					if err != nil {
 						log.Fatal(err)
 					}
-					//iocopy
+					// iocopy
 					_, err = io.Copy(fileWriter, fh)
 					_ = fh.Close()
 					if err != nil {

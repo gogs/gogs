@@ -20,15 +20,15 @@ func updateRepositoryDescriptionField(x *xorm.Engine) error {
 		return nil
 	}
 	switch {
-		case conf.UseMySQL:
-			_, err = x.Exec("ALTER TABLE `repository` MODIFY `description` VARCHAR(512);")
-		case conf.UseMSSQL:
-			_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` VARCHAR(512);")
-		case conf.UsePostgreSQL:
-			_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE VARCHAR(512);")
-		case conf.UseSQLite3:
-			// Sqlite3 uses TEXT type by default for any string type field.
-			// Keep this comment to mention that we don't missed any option.
+	case conf.UseMySQL:
+		_, err = x.Exec("ALTER TABLE `repository` MODIFY `description` VARCHAR(512);")
+	case conf.UseMSSQL:
+		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` VARCHAR(512);")
+	case conf.UsePostgreSQL:
+		_, err = x.Exec("ALTER TABLE `repository` ALTER COLUMN `description` TYPE VARCHAR(512);")
+	case conf.UseSQLite3:
+		// Sqlite3 uses TEXT type by default for any string type field.
+		// Keep this comment to mention that we don't missed any option.
 	}
 	return err
 }

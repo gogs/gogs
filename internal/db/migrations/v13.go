@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/unknwon/com"
 	"xorm.io/xorm"
-	"github.com/json-iterator/go"
 )
 
 func ldapUseSSLToSecurityProtocol(x *xorm.Engine) error {

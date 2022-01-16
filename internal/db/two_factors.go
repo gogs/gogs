@@ -12,7 +12,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	"github.com/pkg/errors"
-	"github.com/t-tiger/gorm-bulk-insert"
+	gormbulk "github.com/t-tiger/gorm-bulk-insert"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/cryptoutil"
