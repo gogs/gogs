@@ -1,16 +1,23 @@
+---
+name: Dev: Release a patch version
+about: ONLY USED BY MAINTAINERS.
+title: "Release [VERSION]"
+labels: 📸 release
+---
+
 ## Before release
 
-On release branch:
+On the release branch:
 
-- [ ] Make sure all commits are cherry-picked from the develop branch by checking the patch milestone.
+- [ ] Make sure all commits are cherry-picked from the `main` branch by checking the patch milestone.
 - [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current patch release, e.g. `git log v0.12.1...HEAD --pretty=format:'- [ ] %H %s' --reverse`:
 	- [ ] _link to the commit_
 
 ## During release
 
-On release branch:
+On the release branch:
 
-- [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L21) to the current release, e.g. `0.12.0` -> `0.12.1`.
+- [ ] Update the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L22) to the current release, e.g. `0.12.0` -> `0.12.1`.
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
 - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current patch release and all previous releases with same minor version. **Make sure the tag is created on the release branch**.
 - [ ] Update all previous GitHub releases with same minor version with the warning:
@@ -18,7 +25,7 @@ On release branch:
     **ℹ️ Heads up! There is a new patch release [0.12.1](https://github.com/gogs/gogs/releases/tag/v0.12.1) available, we recommend directly installing or upgrading to that version.**
     ```
 - [ ] Wait for a new image tag for the current release to be created automatically on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
-- [ ] Update Docker image tag for the minor release `<MAJOR>.<MINOR>`, e.g. `0.12`.
+- [ ] Update Docker image tag for the minor release `<MAJOR>.<MINOR>`, e.g. `0.12` on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 - [ ] Compile and pack binaries (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
 	- [ ] macOS: `darwin_amd64.zip`, `darwin_arm64.zip`
 	- [ ] Linux: `linux_386.tar.gz`, `linux_386.zip`, `linux_amd64.tar.gz`, `linux_amd64.zip`
@@ -28,15 +35,14 @@ On release branch:
 - [ ] Upload all binaries to:
 	- [ ] GitHub release
 	- [ ] https://dl.gogs.io (also upload `checksum_sha256.txt`)
-- [ ] Build, push and tag a new Docker image for ARM to [Docker Hub](https://hub.docker.com/r/gogs/gogs-rpi).
 
 ## After release
 
-On develop branch:
+On the `main` branch:
 
 - [ ] Post the following message on issues that are included in the patch milestone:
     ```
-    The <MAJOR>.<MINOR>.<PATCH> has been released.
+    The <MAJOR>.<MINOR>.<PATCH> has been released that includes the patch of the reported issue.
     ```
 - [ ] Update the repository mirror on [Gitee](https://gitee.com/unknwon/gogs).
 - [ ] Reply to the release topic for the minor release in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
