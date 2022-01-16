@@ -1,16 +1,16 @@
 #!/bin/sh
 
 if ! test -d ~git/.ssh; then
-    gosu $USER mkdir -p ~git/.ssh
+    gosu "$USER" mkdir -p ~git/.ssh
     chmod 700 ~git/.ssh
 fi
 
 if ! test -f ~git/.ssh/environment; then
-    gosu $USER echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~git/.ssh/environment
+    gosu "$USER" echo "GOGS_CUSTOM=${GOGS_CUSTOM}" > ~git/.ssh/environment
     chmod 600 ~git/.ssh/environment
 fi
 
-cd /app/gogs
+cd /app/gogs || exit 1
 
 # Link volumed data with app data
 ln -sfn /data/gogs/log  ./log
