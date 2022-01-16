@@ -5,10 +5,10 @@
 package admin
 
 import (
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/route"
-	"gogs.io/gogs/internal/conf"
 )
 
 const (

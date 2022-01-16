@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	api "github.com/gogs/go-gogs-client"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 

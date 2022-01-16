@@ -6,7 +6,7 @@ package db
 
 import (
 	"github.com/jinzhu/gorm"
-	"github.com/t-tiger/gorm-bulk-insert"
+	gormbulk "github.com/t-tiger/gorm-bulk-insert"
 	log "unknwon.dev/clog/v2"
 )
 
