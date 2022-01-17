@@ -1,0 +1,212 @@
+name: Docker
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - 'docker/**'
+      - '.github/workflows/docker.yml'
+  release:
+    types: [ published ]
+
+jobs:
+  buildx:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      packages: write
+    steps:
+      - name: Canel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          all_but_latest: true
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 2
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            gogs/gogs:latest
+            ghcr.io/gogs/gogs:latest
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@v3
+        if: ${{ failure() }}
+        with:
+          server_address: smtp.mailgun.org
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: GitHub Actions (${{ github.repository }}) job result
+          to: github-actions-8ce6454@unknwon.io
+          from: GitHub Actions (${{ github.repository }})
+          reply_to: noreply@unknwon.io
+          body: |
+            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
+
+            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  buildx-pull-request:
+    if: ${{ github.event_name == 'pull_request' && github.repository == 'gogs/gogs' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 2
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Compute short commit SHA
+        uses: benjlevesque/short-sha@v1.2
+      - name: Build and push images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            gogs/gogs:commit-${{ env.SHA }}
+
+  buildx-pull-request-fork:
+    if: ${{ github.event_name == 'pull_request' && github.repository != 'gogs/gogs' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 2
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Build images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64
+
+  buildx-release:
+    if: ${{ github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      packages: write
+    steps:
+      - name: Compute image tag name
+        run: echo "IMAGE_TAG=$(echo $GITHUB_REF_NAME | cut -c 2-)" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          config-inline: |
+            [worker.oci]
+              max-parallelism = 2
+      - name: Inspect builder
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub Container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push images
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            gogs/gogs:${{ env.IMAGE_TAG }}
+            ghcr.io/gogs/gogs:${{ env.IMAGE_TAG }}
+      - name: Send email on failure
+        uses: dawidd6/action-send-mail@v3
+        if: ${{ failure() }}
+        with:
+          server_address: smtp.mailgun.org
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: GitHub Actions (${{ github.repository }}) job result
+          to: github-actions-8ce6454@unknwon.io
+          from: GitHub Actions (${{ github.repository }})
+          reply_to: noreply@unknwon.io
+          body: |
+            The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
+
+            View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
