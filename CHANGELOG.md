@@ -20,10 +20,6 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- Add `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409)
-- _Regression:_ Fixed smart links for issues stops rendering. [#6506](https://github.com/gogs/gogs/issues/6506)
-- _Security:_ Potential SSRF attack by CRLF injection via repository migration. [#6413](https://github.com/gogs/gogs/issues/6413)
-
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.
@@ -42,6 +38,14 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+
+## 0.12.4
+
+### Fixed
+
+- _Security:_ Potential SSRF attack by CRLF injection via repository migration. [#6413](https://github.com/gogs/gogs/issues/6413)
+- _Regression:_ Fixed smart links for issues stops rendering. [#6506](https://github.com/gogs/gogs/issues/6506)
+- Added `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409)
 
 ## 0.12.3
 
