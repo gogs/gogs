@@ -13,7 +13,7 @@ On the `main` branch:
 
 - [ ] Close stale issues with the label [status: needs feedback](https://github.com/gogs/gogs/issues?q=is%3Aissue+is%3Aopen+label%3A%22status%3A+needs+feedback%22).
 - [ ] [Sync locales from Crowdin](https://github.com/gogs/gogs/blob/main/docs/dev/import_locale.md).
-- [ ] Update [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) to include entries for the current release.
+- [ ] [Update CHANGELOG](https://github.com/gogs/gogs/commit/720cb5fcb169b9e026b5b47f57d50888b35fdb4b) to include entries for the current minor release.
 - [ ] Cut a new release branch `release/<MAJOR>.<MINOR>`, e.g. `release/0.12`.
 
 ## During release
@@ -47,5 +47,5 @@ On the `main` branch:
 - [ ] Create a new release announcement in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
 - [ ] Send out release announcement emails via [Mailchimp](https://mailchimp.com/).
 - [ ] Publish a new release article on [OSChina](http://my.oschina.net/Obahua/admin/releases).
-- [ ] Bump the [hard-coded version](https://github.com/gogs/gogs/blob/main/gogs.go#L22) to the new develop version, e.g. `0.12.0+dev` -> `0.13.0+dev`.
+- [ ] [Bump the hard-coded version](https://github.com/gogs/gogs/commit/05477f1d294dc43f36c4a3b3b9575a96aea66a67) to the new develop version, e.g. `0.12.0+dev` -> `0.13.0+dev`.
 - [ ] Run `task legacy` to identify deprecated code that is aimed to be removed in current develop version.
