@@ -39,9 +39,10 @@
 
 ### Compile and pack binaries
 
+All commands are starting at the repository root.
+
 - macOS:
 	```sh
-	# In the repository root
 	$ TAGS=cert task release
 	```
 - Linux:
