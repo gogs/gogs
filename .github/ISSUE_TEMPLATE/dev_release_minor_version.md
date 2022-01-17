@@ -27,7 +27,11 @@ On the release branch:
 - [ ] - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current minor release. **Make sure the tag is created on the release branch**.
 	- [ ] Only mention patch authors for the current release.
 - [ ] [Wait for a new image tag for the current release](https://github.com/gogs/gogs/actions/workflows/docker.yml?query=event%3Arelease) to be created automatically on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
-- [ ] Push a new Docker image tag as `<MAJOR>.<MINOR>`, e.g. `0.12` to both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
+- [ ] Push a new Docker image tag as `<MAJOR>.<MINOR>` to both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs), e.g.:
+	```sh
+	$ docker tag gogs/gogs:0.12.0 gogs/gogs:0.12
+	$ docker push gogs/gogs:0.12
+	```
 - [ ] Compile and pack binaries (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
 	- [ ] macOS: `darwin_amd64.zip`, `darwin_arm64.zip`
 	- [ ] Linux: `linux_386.tar.gz`, `linux_386.zip`, `linux_amd64.tar.gz`, `linux_amd64.zip`
