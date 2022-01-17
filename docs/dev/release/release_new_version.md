@@ -43,11 +43,17 @@ All commands are starting at the repository root.
 
 - macOS:
 	```sh
+	# Produce the ZIP archive
 	$ TAGS=cert task release
 	```
 - Linux:
 	```sh
-	$
+	# Produce the ZIP archive
+	$ TAGS=cert task release
+
+	# Produce the Tarball
+    $ export VERSION=0.12.4
+	$ cd release && tar czf gogs_${VERSION}_linux_$(go env GOARCH).tar.gz gogs
 	```
 - ARM:
 	```sh
@@ -55,5 +61,6 @@ All commands are starting at the repository root.
 	```
 - Windows:
 	```sh
-	$
+	$ TAGS=cert task release
+	$ TAGS="cert minwinsvc" task release
 	```
