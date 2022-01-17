@@ -49,15 +49,30 @@ All commands are starting at the repository root.
 - Linux:
 	```sh
 	# Produce the ZIP archive
-	$ TAGS=cert task release
+	$ TAGS="cert pam" task release
 
 	# Produce the Tarball
     $ export VERSION=0.12.4
 	$ cd release && tar czf gogs_${VERSION}_linux_$(go env GOARCH).tar.gz gogs
 	```
-- ARM:
+- ARMv7:
 	```sh
-	$
+	# Extract the binary from the Docker image
+	$ docker pull --platform linux/arm/v7 gogs/gogs:${VERSION}
+	$ docker run \
+		--platform linux/arm/v7 \
+		-v ${PWD}:/opt/mount/ \
+		gogs/gogs:${VERSION} \
+		bash -c "cp /app/gogs/gogs /opt/mount/"
+	```
+- ARMv8:
+	```sh
+	# Produce the ZIP archive
+	$ TAGS="cert pam" task release
+
+	# Produce the Tarball
+    $ export VERSION=0.12.4
+	$ cd release && tar czf gogs_${VERSION}_linux_armv8.tar.gz gogs
 	```
 - Windows:
 	```sh

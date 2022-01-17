@@ -65,7 +65,7 @@ tasks:
       - rm -rf {{.RELEASE_GOGS}}
       - mkdir -p {{.RELEASE_GOGS}}
       - cp -r gogs{{.BINARY_EXT}} LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
-      - cd {{.RELEASE_ROOT}} && zip -r gogs.$(NOW).zip "gogs"
+      - cd {{.RELEASE_ROOT}} && zip -r gogs.zip "gogs"
     vars:
       RELEASE_ROOT: release
       RELEASE_GOGS: release/gogs
