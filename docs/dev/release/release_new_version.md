@@ -23,10 +23,10 @@
     $ docker push gogs/gogs:${MINOR_RELEASE}-armv7
 
     $ docker manifest create \
-        gogs/gogs:${MINOR_RELEASE} \
-        --amend gogs/gogs:${MINOR_RELEASE}-amd64 \
-        --amend gogs/gogs:${MINOR_RELEASE}-arm64 \
-        --amend gogs/gogs:${MINOR_RELEASE}-armv7
+    	gogs/gogs:${MINOR_RELEASE} \
+    	--amend gogs/gogs:${MINOR_RELEASE}-amd64 \
+    	--amend gogs/gogs:${MINOR_RELEASE}-arm64 \
+    	--amend gogs/gogs:${MINOR_RELEASE}-armv7
     $ docker manifest push gogs/gogs:${MINOR_RELEASE}
 
     # Only push "linux/amd64" for now
@@ -36,3 +36,22 @@
     $ docker push ghcr.io/gogs/gogs:${MINOR_RELEASE}
     ```
 2. Delete ephemeral tags from the [Docker Hub](https://hub.docker.com/repository/docker/gogs/gogs/tags).
+
+### Compile and pack binaries
+
+- macOS:
+	```sh
+	$ task release
+	```
+- Linux:
+	```sh
+	$
+	```
+- ARM:
+	```sh
+	$
+	```
+- Windows:
+	```sh
+	$
+	```
