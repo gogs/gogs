@@ -53,4 +53,5 @@ On the `main` branch:
     ```
 - [ ] Update the repository mirror on [Gitee](https://gitee.com/unknwon/gogs).
 - [ ] Reply to the release topic for the minor release in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
+- [ ] Send a Tweet on the [official Twitter account](https://twitter.com/GogsHQ) for the patch release.
 - [ ] Close the patch milestone.
