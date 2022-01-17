@@ -16,3 +16,4 @@ output*
 *.sublime-project
 *.sublime-workspace
 /release
+.task
