@@ -41,7 +41,8 @@
 
 - macOS:
 	```sh
-	$ task release
+	# In the repository root
+	$ TAGS=cert task release
 	```
 - Linux:
 	```sh
