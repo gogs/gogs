@@ -146,6 +146,7 @@ jobs:
           context: .
           platforms: linux/amd64
 
+  # Updates to the following section needs to be synced to all release branches within their lifecycles.
   buildx-release:
     if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
