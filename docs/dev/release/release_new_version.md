@@ -8,33 +8,34 @@
 ### Update Docker image tag
 
 1. Pull down images and create a manifest:
-    ```sh
-    $ export VERSION=0.12.4
-    $ export MINOR_RELEASE=0.12
+	```sh
+	$ export VERSION=0.12.4
+	$ export MINOR_RELEASE=0.12
 
-    $ docker pull --platform linux/amd64 gogs/gogs:${VERSION}
-    $ docker tag gogs/gogs:${VERSION} gogs/gogs:${MINOR_RELEASE}-amd64
-    $ docker push gogs/gogs:${MINOR_RELEASE}-amd64
-    $ docker pull --platform linux/arm64 gogs/gogs:${VERSION}
-    $ docker tag gogs/gogs:${VERSION} gogs/gogs:${MINOR_RELEASE}-arm64
-    $ docker push gogs/gogs:${MINOR_RELEASE}-arm64
-    $ docker pull --platform linux/arm/v7 gogs/gogs:${VERSION}
-    $ docker tag gogs/gogs:${VERSION} gogs/gogs:${MINOR_RELEASE}-armv7
-    $ docker push gogs/gogs:${MINOR_RELEASE}-armv7
+	$ docker pull --platform linux/amd64 gogs/gogs:${VERSION}
+	$ docker tag gogs/gogs:${VERSION} gogs/gogs:${MINOR_RELEASE}-amd64
+	$ docker push gogs/gogs:${MINOR_RELEASE}-amd64
+	$ docker pull --platform linux/arm64 gogs/gogs:${VERSION}
+	$ docker tag gogs/gogs:${VERSION} gogs/gogs:${MINOR_RELEASE}-arm64
+	$ docker push gogs/gogs:${MINOR_RELEASE}-arm64
+	$ docker pull --platform linux/arm/v7 gogs/gogs:${VERSION}
+	$ docker tag gogs/gogs:${VERSION} gogs/gogs:${MINOR_RELEASE}-armv7
+	$ docker push gogs/gogs:${MINOR_RELEASE}-armv7
 
-    $ docker manifest create \
-    	gogs/gogs:${MINOR_RELEASE} \
-    	--amend gogs/gogs:${MINOR_RELEASE}-amd64 \
-    	--amend gogs/gogs:${MINOR_RELEASE}-arm64 \
-    	--amend gogs/gogs:${MINOR_RELEASE}-armv7
-    $ docker manifest push gogs/gogs:${MINOR_RELEASE}
+	$ docker manifest rm gogs/gogs:${MINOR_RELEASE}
+	$ docker manifest create \
+		gogs/gogs:${MINOR_RELEASE} \
+		gogs/gogs:${MINOR_RELEASE}-amd64 \
+		gogs/gogs:${MINOR_RELEASE}-arm64 \
+		gogs/gogs:${MINOR_RELEASE}-armv7
+	$ docker manifest push gogs/gogs:${MINOR_RELEASE}
 
-    # Only push "linux/amd64" for now
-    $ echo ${GITHUB_CR_PAT} | docker login ghcr.io -u <USERNAME> --password-stdin
-    $ docker pull --platform linux/amd64 gogs/gogs:${VERSION}
-    $ docker tag gogs/gogs:${VERSION} ghcr.io/gogs/gogs:${MINOR_RELEASE}
-    $ docker push ghcr.io/gogs/gogs:${MINOR_RELEASE}
-    ```
+	# Only push "linux/amd64" for now
+	$ echo ${GITHUB_CR_PAT} | docker login ghcr.io -u <USERNAME> --password-stdin
+	$ docker pull --platform linux/amd64 gogs/gogs:${VERSION}
+	$ docker tag gogs/gogs:${VERSION} ghcr.io/gogs/gogs:${MINOR_RELEASE}
+	$ docker push ghcr.io/gogs/gogs:${MINOR_RELEASE}
+	```
 2. Delete ephemeral tags from the [Docker Hub](https://hub.docker.com/repository/docker/gogs/gogs/tags).
 
 ### Compile and pack binaries
