@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/ldap.v2"
+	ldap "github.com/go-ldap/ldap/v3"
 	log "unknwon.dev/clog/v2"
 )
 
