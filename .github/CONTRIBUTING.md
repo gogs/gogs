@@ -16,6 +16,7 @@ To get an overview of the project, read the [README](/README.md). Here are some 
 - [Set up Git](https://docs.github.com/en/get-started/quickstart/set-up-git)
 - [GitHub flow](https://docs.github.com/en/get-started/quickstart/github-flow)
 - [Collaborating with pull requests](https://docs.github.com/en/github/collaborating-with-pull-requests)
+- [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
 
 In addition to the general guides with open source contributions, you would also need to:
 
@@ -26,6 +27,7 @@ In addition to the general guides with open source contributions, you would also
 ## Philosophy and methodology
 
 - [Talk, then code](https://www.craft.do/s/kyHVs6OoE4Dj5V)
+- [Write a proposal for open source contributions](https://unknwon.io/posts/220210-write-a-proposal-for-open-source-contributions/)
 
 ## Issues
 
