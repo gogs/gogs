@@ -1,10 +1,7 @@
 .packager
 .packager/**
-scripts
-scripts/**
 .github/
 .github/**
-config.codekit
 .dockerignore
 *.yml
 *.md
@@ -12,3 +9,8 @@ config.codekit
 .gitignore
 Dockerfile*
 gogs
+.task
+
+!Taskfile.yml
+!README.md
+!README_ZH.md

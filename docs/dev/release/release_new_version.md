@@ -5,6 +5,14 @@
 
 ## Playbooks
 
+### Prerequisite
+
+Install Docker Buildx:
+
+```sh
+$ docker buildx install
+```
+
 ### Update Docker image tag
 
 1. Pull down images and create a manifest:
@@ -47,14 +55,21 @@ All commands are starting at the repository root.
 	# Produce the ZIP archive
 	$ TAGS=cert task release
 	```
-- Linux:
+- Linux AMD64 and i386:
 	```sh
-	# Produce the ZIP archive
-	$ TAGS="cert pam" task release
-
-	# Produce the Tarball
     $ export VERSION=0.12.4
-	$ cd release && tar czf gogs_${VERSION}_linux_$(go env GOARCH).tar.gz gogs
+
+	$ docker pull --platform linux/amd64 centos:7
+	$ docker buildx build --no-cache --platform=linux/amd64 -f docs/dev/release/linux-amd64.Dockerfile .
+	$ docker run --name=gogs_${VERSION}_linux_amd64 --platform=linux/amd64 <image SHA>
+	$ docker cp gogs_${VERSION}_linux_amd64:/gogs.io/gogs/release/gogs.zip gogs_${VERSION}_linux_amd64.zip
+	$ docker cp gogs_${VERSION}_linux_amd64:/gogs.io/gogs/release/gogs.tar.gz gogs_${VERSION}_linux_amd64.tar.gz
+
+	$ docker pull --platform linux/386 centos:7
+	$ docker buildx build --no-cache --platform=linux/386 -f docs/dev/release/linux-386.Dockerfile .
+	$ docker run --name=gogs_${VERSION}_linux_386 --platform=linux/386 <image SHA>
+	$ docker cp gogs_${VERSION}_linux_386:/gogs.io/gogs/release/gogs.zip gogs_${VERSION}_linux_386.zip
+	$ docker cp gogs_${VERSION}_linux_386:/gogs.io/gogs/release/gogs.tar.gz gogs_${VERSION}_linux_386.tar.gz
 	```
 - ARMv7:
 	```sh
