@@ -1,0 +1,35 @@
+{
+  "name": "docsify-mermaid",
+  "version": "1.0.0",
+  "description": "A plugin to render mermaid diagrams in docsify",
+  "browser": "src/index.js",
+  "scripts": {
+    "build": "parcel build src/index.js --out-file docsify-mermaid.js --no-minify",
+    "example": "npm run build && docsify serve example/ --open",
+    "test": "echo 'No test to run'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Leward/mermaid-docsify.git"
+  },
+  "keywords": [
+    "docsify",
+    "mermaid",
+    "diagram"
+  ],
+  "author": "Paul-Julien Vauthier",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Leward/mermaid-docsify/issues"
+  },
+  "files": [
+    "README.md",
+    "src/",
+    "dist/"
+  ],
+  "homepage": "https://github.com/Leward/mermaid-docsify#readme",
+  "devDependencies": {
+    "docsify-cli": "^4.4.0",
+    "parcel-bundler": "^1.12.4"
+  }
+}

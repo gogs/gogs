@@ -89,14 +89,15 @@ func renderDirectory(c *context.Context, treeLink string) {
 			switch markup.Detect(readmeFile.Name()) {
 			case markup.MARKDOWN:
 				c.Data["IsMarkdown"] = true
+				c.Data["MDocFileLink"] = c.Repo.RepoLink + "/mdoc/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 				p = markup.Markdown(p, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.ORG_MODE:
 				c.Data["IsMarkdown"] = true
+				c.Data["MDocFileLink"] = c.Repo.RepoLink + "/mdoc/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 				p = markup.OrgMode(p, treeLink, c.Repo.Repository.ComposeMetas())
 			case markup.IPYTHON_NOTEBOOK:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
-				c.Data["MDocFileLink"] = c.Repo.RepoLink + "/mdoc/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
 				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
 			}

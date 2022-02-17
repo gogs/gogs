@@ -1,0 +1,130 @@
+{
+  "name": "docsify",
+  "version": "4.12.2",
+  "description": "A magical documentation generator.",
+  "author": {
+    "name": "qingwei-li",
+    "email": "cinwell.li@gmail.com",
+    "url": "https://github.com/QingWei-Li"
+  },
+  "homepage": "https://docsify.js.org",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/docsifyjs/docsify.git"
+  },
+  "main": "lib/docsify.js",
+  "unpkg": "lib/docsify.min.js",
+  "files": [
+    "lib",
+    "themes"
+  ],
+  "scripts": {
+    "bootstrap": "npm i && lerna bootstrap && npm run build:ssr",
+    "serve": "node server",
+    "serve:ssr": "cross-env SSR=1 node server",
+    "dev": "run-p serve watch:*",
+    "dev:ssr": "run-p serve:ssr watch:*",
+    "lint": "eslint .",
+    "fixlint": "eslint . --fix",
+    "test": "jest",
+    "build:test": "npm run build && npm test",
+    "test:e2e": "jest --selectProjects e2e",
+    "test:integration": "jest --selectProjects integration",
+    "test:unit": "jest --selectProjects unit",
+    "css": "node build/css",
+    "watch:css": "npm run css -- -o themes -w",
+    "watch:js": "node build/build.js",
+    "build:css:min": "mkdirp lib/themes && npm run css -- -o lib/themes && node build/mincss.js",
+    "build:css": "mkdirp themes && npm run css -- -o themes",
+    "build:js": "cross-env NODE_ENV=production node build/build.js",
+    "build:ssr": "node build/ssr.js",
+    "build:cover": "node build/cover.js",
+    "build": "rimraf lib themes && run-s build:js build:css build:css:min build:ssr build:cover",
+    "prepare": "npm run build",
+    "pub:next": "cross-env RELEASE_TAG=next sh build/release.sh",
+    "pub": "sh build/release.sh",
+    "postinstall": "opencollective-postinstall",
+    "docker:build": "docker build -f Dockerfile -t docsify-test:local .",
+    "docker:clean": "docker rmi docsify-test:local",
+    "docker:rebuild": "npm run docker:clean && npm run docker:build",
+    "docker:test": "npm run docker:cli -- test",
+    "docker:build:test": "npm run docker:cli -- build:test",
+    "docker:test:e2e": "npm run docker:cli -- test:e2e",
+    "docker:test:integration": "npm run docker:cli -- test:integration",
+    "docker:test:unit": "npm run docker:cli -- test:unit",
+    "docker:cli": "docker run --rm -it --ipc=host --mount type=bind,source=$(pwd)/test,target=/app/test docsify-test:local"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": "eslint --fix"
+  },
+  "dependencies": {
+    "dompurify": "^2.3.1",
+    "marked": "^1.2.9",
+    "medium-zoom": "^1.0.6",
+    "opencollective-postinstall": "^2.0.2",
+    "prismjs": "^1.23.0",
+    "strip-indent": "^3.0.0",
+    "tinydate": "^1.3.0",
+    "tweezer.js": "^1.4.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.11.6",
+    "@babel/preset-env": "^7.11.5",
+    "autoprefixer-stylus": "^1.0.0",
+    "axios": "^0.21.1",
+    "babel-eslint": "^10.0.3",
+    "babel-jest": "^26.3.0",
+    "browser-sync": "^2.26.12",
+    "chokidar": "^3.4.2",
+    "common-tags": "^1.8.0",
+    "conventional-changelog-cli": "^2.1.0",
+    "copy-dir": "^1.2.0",
+    "cross-env": "^6.0.3",
+    "cssnano": "^4.1.10",
+    "eslint": "^5.16.0",
+    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-jest": "^24.0.2",
+    "eslint-plugin-jest-playwright": "^0.2.1",
+    "eslint-plugin-prettier": "^3.1.2",
+    "husky": "^3.1.0",
+    "jest": "^26.4.2",
+    "jest-image-snapshot": "^4.2.0",
+    "jest-playwright-preset": "^1.4.1",
+    "lerna": "^3.22.1",
+    "lint-staged": "^10.4.0",
+    "live-server": "^1.2.1",
+    "mkdirp": "^0.5.1",
+    "npm-run-all": "^4.1.5",
+    "playwright": "^1.8.0",
+    "prettier": "^1.19.1",
+    "rimraf": "^3.0.0",
+    "rollup": "^1.23.1",
+    "rollup-plugin-async": "^1.2.0",
+    "rollup-plugin-buble": "^0.19.8",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-replace": "^2.2.0",
+    "rollup-plugin-uglify": "^6.0.4",
+    "serve-handler": "^6.1.2",
+    "stylus": "^0.54.5",
+    "vue2": "npm:vue@^2.6.12",
+    "vue3": "npm:vue@^3.0.0",
+    "xhr-mock": "^2.5.1"
+  },
+  "keywords": [
+    "doc",
+    "docs",
+    "documentation",
+    "creator",
+    "generator"
+  ],
+  "collective": {
+    "url": "https://opencollective.com/docsify"
+  }
+}
