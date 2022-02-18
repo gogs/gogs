@@ -89,7 +89,7 @@ func dumpTable(db *gorm.DB, table interface{}, w io.Writer) error {
 			return errors.Wrap(err, "encode JSON")
 		}
 	}
-	return nil
+	return rows.Err()
 }
 
 func dumpLegacyTables(dirPath string, verbose bool) error {

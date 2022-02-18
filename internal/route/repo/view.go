@@ -85,13 +85,13 @@ func renderDirectory(c *context.Context, treeLink string) {
 		c.Data["FileName"] = readmeFile.Name()
 		if isTextFile {
 			switch markup.Detect(readmeFile.Name()) {
-			case markup.MARKDOWN:
+			case markup.TypeMarkdown:
 				c.Data["IsMarkdown"] = true
 				p = markup.Markdown(p, treeLink, c.Repo.Repository.ComposeMetas())
-			case markup.ORG_MODE:
+			case markup.TypeOrgMode:
 				c.Data["IsMarkdown"] = true
 				p = markup.OrgMode(p, treeLink, c.Repo.Repository.ComposeMetas())
-			case markup.IPYTHON_NOTEBOOK:
+			case markup.TypeIPythonNotebook:
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
@@ -154,13 +154,13 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 		c.Data["ReadmeExist"] = markup.IsReadmeFile(blob.Name())
 
 		switch markup.Detect(blob.Name()) {
-		case markup.MARKDOWN:
+		case markup.TypeMarkdown:
 			c.Data["IsMarkdown"] = true
 			c.Data["FileContent"] = string(markup.Markdown(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
-		case markup.ORG_MODE:
+		case markup.TypeOrgMode:
 			c.Data["IsMarkdown"] = true
 			c.Data["FileContent"] = string(markup.OrgMode(p, path.Dir(treeLink), c.Repo.Repository.ComposeMetas()))
-		case markup.IPYTHON_NOTEBOOK:
+		case markup.TypeIPythonNotebook:
 			c.Data["IsIPythonNotebook"] = true
 		default:
 			// Building code view blocks with line number on server side.

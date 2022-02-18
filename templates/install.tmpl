@@ -50,6 +50,10 @@
 
 					<div id="pgsql_settings" class="{{if not (eq .CurDbOption "PostgreSQL")}}hide{{end}}">
 						<div class="inline required field">
+							<label for="db_schema">{{.i18n.Tr "install.db_schema"}}</label>
+							<input id="db_schema" name="db_schema" value="{{.db_schema}}">
+						</div>
+						<div class="inline required field">
 							<label>{{.i18n.Tr "install.ssl_mode"}}</label>
 							<div class="ui selection database type dropdown">
 								<input type="hidden" name="ssl_mode" value="{{if .ssl_mode}}{{.ssl_mode}}{{else}}disable{{end}}">

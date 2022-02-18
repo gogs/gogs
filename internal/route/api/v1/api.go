@@ -280,6 +280,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Get("/:sha", repo.GetRepoGitTree)
 				})
 				m.Get("/forks", repo.ListForks)
+				m.Get("/tags", repo.ListTags)
 				m.Group("/branches", func() {
 					m.Get("", repo.ListBranches)
 					m.Get("/*", repo.GetBranch)
@@ -355,6 +356,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 				}, reqRepoWriter())
 
 				m.Patch("/issue-tracker", reqRepoWriter(), bind(api.EditIssueTrackerOption{}), repo.IssueTracker)
+				m.Patch("/wiki", reqRepoWriter(), bind(api.EditWikiOption{}), repo.Wiki)
 				m.Post("/mirror-sync", reqRepoWriter(), repo.MirrorSync)
 				m.Get("/editorconfig/:filename", context.RepoRef(), repo.GetEditorconfig)
 			}, repoAssignment())

@@ -1,5 +1,9 @@
 version: '3'
 
+vars:
+  BINARY_EXT:
+    sh: echo '{{if eq OS "windows"}}.exe{{end}}'
+
 tasks:
   web:
     desc: Build the binary and start the web server.
@@ -16,7 +20,7 @@ tasks:
           -X "{{.PKG_PATH}}.BuildCommit={{.BUILD_COMMIT}}"
         '
         -tags '{{.TAGS}}'
-        -trimpath -o gogs
+        -trimpath -o gogs{{.BINARY_EXT}}
     vars:
       PKG_PATH: gogs.io/gogs/internal/conf
       BUILD_TIME:
@@ -60,8 +64,8 @@ tasks:
     cmds:
       - rm -rf {{.RELEASE_GOGS}}
       - mkdir -p {{.RELEASE_GOGS}}
-      - cp -r gogs LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
-      - cd {{.RELEASE_ROOT}} && zip -r gogs.$(NOW).zip "gogs"
+      - cp -r gogs{{.BINARY_EXT}} LICENSE README.md README_ZH.md scripts {{.RELEASE_GOGS}}
+      - cd {{.RELEASE_ROOT}} && zip -r gogs.zip "gogs"
     vars:
       RELEASE_ROOT: release
       RELEASE_GOGS: release/gogs
