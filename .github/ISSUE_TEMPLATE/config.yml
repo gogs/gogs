@@ -1,5 +1,8 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: Ask questions
     url: https://github.com/gogs/gogs/discussions
     about: Please ask questions in Discussions.
+  - name: Make a proposal
+    url: https://github.com/gogs/gogs/discussions/categories/proposal
+    about: Please make proposals in Discussions.

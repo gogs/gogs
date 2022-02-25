@@ -17,17 +17,13 @@ To get an overview of the project, read the [README](/README.md). Here are some 
 - [GitHub flow](https://docs.github.com/en/get-started/quickstart/github-flow)
 - [Collaborating with pull requests](https://docs.github.com/en/github/collaborating-with-pull-requests)
 - [How to Contribute to Open Source](https://opensource.guide/how-to-contribute/)
+- [Talk, then code](https://www.craft.do/s/kyHVs6OoE4Dj5V)
 
 In addition to the general guides with open source contributions, you would also need to:
 
 - Have basic knowledge about web applications development, database management systems and programming in [Go](https://go.dev/).
 - Have a working local development setup with a reasonable good IDE or editor like [Visual Studio Code](https://code.visualstudio.com/docs/languages/go), [GoLand](https://www.jetbrains.com/go/) or [Vim](https://github.com/fatih/vim-go).
 - [Set up your development environment](/docs/dev/local_development.md).
-
-## Philosophy and methodology
-
-- [Talk, then code](https://www.craft.do/s/kyHVs6OoE4Dj5V)
-- [Write a proposal for open source contributions](https://unknwon.io/posts/220210-write-a-proposal-for-open-source-contributions/)
 
 ## Issues
 
@@ -40,6 +36,7 @@ Before opening an issue, please make sure the problem you're encountering isn't 
 - For questions, ask in [Discussions](https://github.com/gogs/gogs/discussions).
 - [Check to make sure](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments) someone hasn't already opened a similar [issue](https://github.com/gogs/gogs/issues).
 - If a similar issue doesn't exist, open a new issue using a relevant [issue form](https://github.com/gogs/gogs/issues/new/choose).
+- Blank issues that are not coming from maintainers will be closed without a response.
 
 ### Pick up an issue to solve
 
@@ -48,6 +45,10 @@ Before opening an issue, please make sure the problem you're encountering isn't 
 - Do not hesitate to ask for more details or clarifying questions on the issue!
 - Communicate on the issue you are intended to pick up _before_ starting working on it.
 - Every issue that gets picked up will have an expected timeline for the implementation, the issue may be reassigned after the expected timeline. Please be responsible and proactive on the communication 🙇‍♂️
+
+## Add new features or make big changes
+
+New features or big changes require proposals before we may be able to accept any contribution. Proposals should be posted to the [Discussions - Proposal](https://github.com/gogs/gogs/discussions/categories/proposal) category for review and discussions. GitHub Discussions provides sub-threading which is much more suitable than GitHub Issues for discussions to happen. Please read [Write a proposal for open source contributions](https://unknwon.io/posts/220210-write-a-proposal-for-open-source-contributions/) to begin with.
 
 ## Pull requests
 
@@ -61,10 +62,6 @@ Contributing to another codebase is not as simple as code changes, it is also ab
 - Please make self-contained incremental changes, pull requests with huge diff may be rejected for review.
 - Please use English in code comments and docstring.
 - Please do not force push unless absolutely necessary. Force pushes make review much harder in multiple rounds, and we use [Squash and merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-pull-request-commits) so you don't need to worry about messy commits and just focus on the changes.
-
-### Add new features
-
-New features require proposals before we may be able to accept any contribution.
 
 ### Things we do not accept
 
