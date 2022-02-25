@@ -36,6 +36,7 @@ Before opening an issue, please make sure the problem you're encountering isn't 
 - For questions, ask in [Discussions](https://github.com/gogs/gogs/discussions).
 - [Check to make sure](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments) someone hasn't already opened a similar [issue](https://github.com/gogs/gogs/issues).
 - If a similar issue doesn't exist, open a new issue using a relevant [issue form](https://github.com/gogs/gogs/issues/new/choose).
+- Blank issues that are not coming from maintainers will be closed without a response.
 
 ### Pick up an issue to solve
 
