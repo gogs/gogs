@@ -67,6 +67,9 @@
 							$("#ipython-notebook .nb-markdown-cell").each(function(i, markdown) {
 								$(markdown).html(marked($(markdown).html(), {renderer: renderer}));
 							});
+							// Mathjax Library injection
+							var latexInject = '<script id="MathJax-script" async src="{{AppSubURL}}/plugins/mathJax-es5-3.0.5/tex-svg-full.js"><\/script>';
+							$("#latexI").html(latexInject);
 						});
 					});
 				</script>
