@@ -20,6 +20,8 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
+
 ### Removed
 
 - ⚠️ Migrations before 0.12 are removed, installations not on 0.12 should upgrade to it to run the migrations and then upgrade to 0.13.

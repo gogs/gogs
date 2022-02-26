@@ -7,6 +7,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.4.3
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/go-ldap/ldap/v3 v3.4.1
 	github.com/go-macaron/binding v1.2.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
 	github.com/go-macaron/captcha v0.2.0
@@ -58,7 +59,6 @@ require (
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.66.4
-	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/macaron.v1 v1.4.0
 	gorm.io/driver/mysql v1.2.3
 	gorm.io/driver/postgres v1.2.3
