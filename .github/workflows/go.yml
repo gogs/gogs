@@ -30,6 +30,15 @@ jobs:
         with:
           version: latest
           args: --timeout=30m
+      - name: Check Go module tidiness
+        shell: bash
+        run: |
+          go mod tidy
+          STATUS=$(git status --porcelain go.mod go.sum)
+          if [ ! -z "$STATUS" ]; then
+            echo "Running go mod tidy modified go.mod and/or go.sum"
+            exit 1
+          fi
 
   test:
     name: Test
