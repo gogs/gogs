@@ -53,18 +53,17 @@ All commands are starting at the repository root.
 	$ TAGS="cert pam" task release
 
 	# Produce the Tarball
-    $ export VERSION=0.12.4
+	$ export VERSION=0.12.4
 	$ cd release && tar czf gogs_${VERSION}_linux_$(go env GOARCH).tar.gz gogs
 	```
 - ARMv7:
 	```sh
-	# Extract the binary from the Docker image
-	$ docker pull --platform linux/arm/v7 gogs/gogs:${VERSION}
-	$ docker run \
-		--platform linux/arm/v7 \
-		-v ${PWD}:/opt/mount/ \
-		gogs/gogs:${VERSION} \
-		bash -c "cp /app/gogs/gogs /opt/mount/"
+	# Produce the ZIP archive
+	$ TAGS="cert pam" task release
+
+	# Produce the Tarball
+	$ export VERSION=0.12.4
+	$ cd release && tar czf gogs_${VERSION}_linux_armv7.tar.gz gogs
 	```
 - ARMv8:
 	```sh
@@ -72,7 +71,7 @@ All commands are starting at the repository root.
 	$ TAGS="cert pam" task release
 
 	# Produce the Tarball
-    $ export VERSION=0.12.4
+	$ export VERSION=0.12.4
 	$ cd release && tar czf gogs_${VERSION}_linux_armv8.tar.gz gogs
 	```
 - Windows:
