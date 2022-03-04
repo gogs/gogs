@@ -1,5 +1,6 @@
 FROM golang:alpine3.14 AS binarybuilder
-RUN apk --no-cache --no-progress add --virtual \
+RUN echo http://dl-2.alpinelinux.org/alpine/edge/community/ >> /etc/apk/repositories \
+  && apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
   git \
