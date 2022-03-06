@@ -70,7 +70,7 @@ func FindAllMentions(content string) []string {
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
 // return a clean unified string of request URL path.
 func cutoutVerbosePrefix(prefix string) string {
-	if len(prefix) == 0 || prefix[0] != '/' {
+	if prefix == "" || prefix[0] != '/' {
 		return prefix
 	}
 	count := 0
@@ -186,7 +186,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 	}
 
 	// Skip in case the "src" is empty
-	if len(src) == 0 {
+	if src == "" {
 		buf.WriteString(token.String())
 		return
 	}

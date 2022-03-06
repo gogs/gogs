@@ -142,7 +142,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 
 	if c.Repo.IsWriter() && form.Assignee != nil &&
 		(issue.Assignee == nil || issue.Assignee.LowerName != strings.ToLower(*form.Assignee)) {
-		if len(*form.Assignee) == 0 {
+		if *form.Assignee == "" {
 			issue.AssigneeID = 0
 		} else {
 			assignee, err := db.GetUserByName(*form.Assignee)

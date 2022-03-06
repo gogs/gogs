@@ -470,7 +470,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		t.DeliveredString = time.Unix(0, t.Delivered).Format("2006-01-02 15:04:05 MST")
 
 	case "request_content":
-		if len(t.RequestContent) == 0 {
+		if t.RequestContent == "" {
 			return
 		}
 
@@ -480,7 +480,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 		}
 
 	case "response_content":
-		if len(t.ResponseContent) == 0 {
+		if t.ResponseContent == "" {
 			return
 		}
 

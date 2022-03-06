@@ -278,7 +278,7 @@ func (ErrUserNotExist) NotFound() bool {
 func (db *users) GetByEmail(email string) (*User, error) {
 	email = strings.ToLower(email)
 
-	if len(email) == 0 {
+	if email == "" {
 		return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 	}
 

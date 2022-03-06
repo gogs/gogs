@@ -284,7 +284,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		// If not branch selected, try default one.
 		// If default branch doesn't exists, fall back to some other branch.
-		if len(c.Repo.BranchName) == 0 {
+		if c.Repo.BranchName == "" {
 			if len(c.Repo.Repository.DefaultBranch) > 0 && gitRepo.HasBranch(c.Repo.Repository.DefaultBranch) {
 				c.Repo.BranchName = c.Repo.Repository.DefaultBranch
 			} else if len(branches) > 0 {
@@ -322,7 +322,7 @@ func RepoRef() macaron.Handler {
 		}
 
 		// Get default branch.
-		if len(c.Params("*")) == 0 {
+		if c.Params("*") == "" {
 			refName = c.Repo.Repository.DefaultBranch
 			if !c.Repo.GitRepo.HasBranch(refName) {
 				branches, err := c.Repo.GitRepo.Branches()

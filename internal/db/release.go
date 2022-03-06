@@ -109,7 +109,7 @@ func (r *Release) APIFormat() *api.Release {
 
 // IsReleaseExist returns true if release with given tag name already exists.
 func IsReleaseExist(repoID int64, tagName string) (bool, error) {
-	if len(tagName) == 0 {
+	if tagName == "" {
 		return false, nil
 	}
 

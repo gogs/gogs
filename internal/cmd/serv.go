@@ -125,13 +125,11 @@ func checkDeployKey(key *db.PublicKey, repo *db.Repository) {
 	}
 }
 
-var (
-	allowedCommands = map[string]db.AccessMode{
-		"git-upload-pack":    db.AccessModeRead,
-		"git-upload-archive": db.AccessModeRead,
-		"git-receive-pack":   db.AccessModeWrite,
-	}
-)
+var allowedCommands = map[string]db.AccessMode{
+	"git-upload-pack":    db.AccessModeRead,
+	"git-upload-archive": db.AccessModeRead,
+	"git-receive-pack":   db.AccessModeWrite,
+}
 
 func runServ(c *cli.Context) error {
 	setup(c, "serv.log", true)
@@ -146,7 +144,7 @@ func runServ(c *cli.Context) error {
 	}
 
 	sshCmd := os.Getenv("SSH_ORIGINAL_COMMAND")
-	if len(sshCmd) == 0 {
+	if sshCmd == "" {
 		println("Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
 		println("If this is unexpected, please log in with password and setup Gogs under another user.")
 		return nil

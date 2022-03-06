@@ -57,7 +57,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 }
 
 func isEmailUsed(e Engine, email string) (bool, error) {
-	if len(email) == 0 {
+	if email == "" {
 		return true, nil
 	}
 

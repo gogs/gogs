@@ -32,10 +32,10 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 		return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
 	}
 
-	if len(username) == 0 {
+	if username == "" {
 		username = login
 	}
-	if len(email) == 0 {
+	if email == "" {
 		email = fmt.Sprintf("%s@localhost", username)
 	}
 

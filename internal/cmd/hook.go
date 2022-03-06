@@ -63,7 +63,7 @@ var (
 )
 
 func runHookPreReceive(c *cli.Context) error {
-	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
+	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(c, "pre-receive.log", true)
@@ -156,7 +156,7 @@ func runHookPreReceive(c *cli.Context) error {
 }
 
 func runHookUpdate(c *cli.Context) error {
-	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
+	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(c, "update.log", false)
@@ -164,7 +164,7 @@ func runHookUpdate(c *cli.Context) error {
 	args := c.Args()
 	if len(args) != 3 {
 		fail("Arguments received are not equal to three", "Arguments received are not equal to three")
-	} else if len(args[0]) == 0 {
+	} else if args[0] == "" {
 		fail("First argument 'refName' is empty", "First argument 'refName' is empty")
 	}
 
@@ -190,7 +190,7 @@ func runHookUpdate(c *cli.Context) error {
 }
 
 func runHookPostReceive(c *cli.Context) error {
-	if len(os.Getenv("SSH_ORIGINAL_COMMAND")) == 0 {
+	if os.Getenv("SSH_ORIGINAL_COMMAND") == "" {
 		return nil
 	}
 	setup(c, "post-receive.log", true)

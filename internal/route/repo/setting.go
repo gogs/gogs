@@ -378,7 +378,7 @@ func SettingsCollaboration(c *context.Context) {
 
 func SettingsCollaborationPost(c *context.Context) {
 	name := strings.ToLower(c.Query("collaborator"))
-	if len(name) == 0 || c.Repo.Owner.LowerName == name {
+	if name == "" || c.Repo.Owner.LowerName == name {
 		c.Redirect(conf.Server.Subpath + c.Req.URL.Path)
 		return
 	}

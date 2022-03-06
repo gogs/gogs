@@ -57,7 +57,7 @@ func Assign(form interface{}, data map[string]interface{}) {
 		// Allow ignored fields in the struct
 		if fieldName == "-" {
 			continue
-		} else if len(fieldName) == 0 {
+		} else if fieldName == "" {
 			fieldName = com.ToSnakeCase(field.Name)
 		}
 
@@ -119,7 +119,7 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 			data["Err_"+field.Name] = true
 
 			trName := field.Tag.Get("locale")
-			if len(trName) == 0 {
+			if trName == "" {
 				trName = l.Tr("form." + field.Name)
 			} else {
 				trName = l.Tr(trName)

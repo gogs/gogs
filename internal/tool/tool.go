@@ -143,10 +143,10 @@ func AvatarLink(email string) (url string) {
 			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
-	if len(url) == 0 && !conf.Picture.DisableGravatar {
+	if url == "" && !conf.Picture.DisableGravatar {
 		url = conf.Picture.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
-	if len(url) == 0 {
+	if url == "" {
 		url = conf.Server.Subpath + "/img/avatar_default.png"
 	}
 	return url

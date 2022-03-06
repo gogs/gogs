@@ -700,7 +700,7 @@ func UpdateIssueTitle(c *context.Context) {
 	}
 
 	title := c.QueryTrim("title")
-	if len(title) == 0 {
+	if title == "" {
 		c.Status(http.StatusNoContent)
 		return
 	}
@@ -903,7 +903,7 @@ func NewComment(c *context.Context, f form.CreateComment) {
 	}()
 
 	// Fix #321: Allow empty comments, as long as we have attachments.
-	if len(f.Content) == 0 && len(attachments) == 0 {
+	if f.Content == "" && len(attachments) == 0 {
 		return
 	}
 
@@ -933,7 +933,7 @@ func UpdateCommentContent(c *context.Context) {
 
 	oldContent := comment.Content
 	comment.Content = c.Query("content")
-	if len(comment.Content) == 0 {
+	if comment.Content == "" {
 		c.JSONSuccess(map[string]interface{}{
 			"content": "",
 		})
@@ -1127,7 +1127,7 @@ func NewMilestonePost(c *context.Context, f form.CreateMilestone) {
 		return
 	}
 
-	if len(f.Deadline) == 0 {
+	if f.Deadline == "" {
 		f.Deadline = "9999-12-31"
 	}
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
@@ -1183,7 +1183,7 @@ func EditMilestonePost(c *context.Context, f form.CreateMilestone) {
 		return
 	}
 
-	if len(f.Deadline) == 0 {
+	if f.Deadline == "" {
 		f.Deadline = "9999-12-31"
 	}
 	deadline, err := time.ParseInLocation("2006-01-02", f.Deadline, time.Local)
