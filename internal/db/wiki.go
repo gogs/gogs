@@ -122,7 +122,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 
-	if len(message) == 0 {
+	if message == "" {
 		message = "Update page '" + title + "'"
 	}
 	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {

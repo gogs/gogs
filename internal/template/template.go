@@ -93,7 +93,7 @@ func FuncMap() []template.FuncMap {
 				return t.Format("Jan 02, 2006")
 			},
 			"SubStr": func(str string, start, length int) string {
-				if len(str) == 0 {
+				if str == "" {
 					return ""
 				}
 				end := start + length
@@ -186,7 +186,7 @@ func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]stri
 		return ""
 	} else if !full {
 		return msgLines[0]
-	} else if numLines == 1 || (numLines >= 2 && len(msgLines[1]) == 0) {
+	} else if numLines == 1 || (numLines >= 2 && msgLines[1] == "") {
 		// First line is a header, standalone or followed by empty line
 		header := fmt.Sprintf("<h3>%s</h3>", msgLines[0])
 		if numLines >= 2 {

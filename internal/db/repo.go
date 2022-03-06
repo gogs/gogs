@@ -217,7 +217,7 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "default_branch":
 		// FIXME: use db migration to solve all at once.
-		if len(repo.DefaultBranch) == 0 {
+		if repo.DefaultBranch == "" {
 			repo.DefaultBranch = "master"
 		}
 	case "num_closed_issues":
@@ -227,7 +227,7 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	case "num_closed_milestones":
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	case "external_tracker_style":
-		if len(repo.ExternalTrackerStyle) == 0 {
+		if repo.ExternalTrackerStyle == "" {
 			repo.ExternalTrackerStyle = markup.IssueNameStyleNumeric
 		}
 	case "created_unix":

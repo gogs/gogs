@@ -364,7 +364,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 
 // CreateRefComment creates a commit reference comment to issue.
 func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commitSHA string) error {
-	if len(commitSHA) == 0 {
+	if commitSHA == "" {
 		return fmt.Errorf("cannot create reference with empty commit SHA")
 	}
 

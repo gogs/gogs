@@ -12,7 +12,7 @@ import (
 )
 
 func Markdown(c *context.APIContext, form api.MarkdownOption) {
-	if len(form.Text) == 0 {
+	if form.Text == "" {
 		_, _ = c.Write([]byte(""))
 		return
 	}

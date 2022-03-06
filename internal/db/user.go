@@ -222,7 +222,7 @@ func (u *User) CustomAvatarPath() string {
 // GenerateRandomAvatar generates a random avatar for user.
 func (u *User) GenerateRandomAvatar() error {
 	seed := u.Email
-	if len(seed) == 0 {
+	if seed == "" {
 		seed = u.Name
 	}
 
@@ -479,7 +479,7 @@ func (u *User) IsMailable() bool {
 // If uid is presented, then check will rule out that one,
 // it is used when update a user name in settings page.
 func IsUserExist(uid int64, name string) (bool, error) {
-	if len(name) == 0 {
+	if name == "" {
 		return false, nil
 	}
 	return x.Where("id != ?", uid).Get(&User{LowerName: strings.ToLower(name)})
@@ -729,7 +729,7 @@ func updateUser(e Engine, u *User) error {
 			return ErrEmailAlreadyUsed{args: errutil.Args{"email": u.Email}}
 		}
 
-		if len(u.AvatarEmail) == 0 {
+		if u.AvatarEmail == "" {
 			u.AvatarEmail = u.Email
 		}
 		u.Avatar = tool.HashEmail(u.AvatarEmail)
@@ -955,7 +955,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 // GetUserByName returns a user by given name.
 // Deprecated: Use Users.GetByUsername instead.
 func GetUserByName(name string) (*User, error) {
-	if len(name) == 0 {
+	if name == "" {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"name": name}}
 	}
 	u := &User{LowerName: strings.ToLower(name)}
@@ -1035,7 +1035,7 @@ func ValidateCommitsWithEmails(oldCommits []*git.Commit) []*UserCommit {
 // GetUserByEmail returns the user object by given e-mail if exists.
 // Deprecated: Use Users.GetByEmail instead.
 func GetUserByEmail(email string) (*User, error) {
-	if len(email) == 0 {
+	if email == "" {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"email": email}}
 	}
 
@@ -1074,7 +1074,7 @@ type SearchUserOptions struct {
 // SearchUserByName takes keyword and part of user name to search,
 // it returns results in given range and number of total results.
 func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error) {
-	if len(opts.Keyword) == 0 {
+	if opts.Keyword == "" {
 		return users, 0, nil
 	}
 	opts.Keyword = strings.ToLower(opts.Keyword)

@@ -325,7 +325,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			ref = strings.TrimSpace(ref)
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
-			if len(ref) == 0 {
+			if ref == "" {
 				continue
 			}
 
@@ -368,7 +368,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
-			if len(ref) == 0 {
+			if ref == "" {
 				continue
 			}
 
@@ -407,7 +407,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, issueIndexTrimRight)
 
-			if len(ref) == 0 {
+			if ref == "" {
 				continue
 			}
 

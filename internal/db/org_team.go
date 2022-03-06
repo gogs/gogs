@@ -255,7 +255,7 @@ func IsUsableTeamName(name string) error {
 // NewTeam creates a record of new team.
 // It's caller's responsibility to assign organization ID.
 func NewTeam(t *Team) error {
-	if len(t.Name) == 0 {
+	if t.Name == "" {
 		return errors.New("empty team name")
 	} else if t.OrgID == 0 {
 		return errors.New("OrgID is not assigned")
@@ -364,7 +364,7 @@ func GetTeamsByOrgID(orgID int64) ([]*Team, error) {
 
 // UpdateTeam updates information of team.
 func UpdateTeam(t *Team, authChanged bool) (err error) {
-	if len(t.Name) == 0 {
+	if t.Name == "" {
 		return errors.New("empty team name")
 	}
 

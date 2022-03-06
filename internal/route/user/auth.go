@@ -38,7 +38,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 	}
 
 	uname := c.GetCookie(conf.Security.CookieUsername)
-	if len(uname) == 0 {
+	if uname == "" {
 		return false, nil
 	}
 
@@ -384,7 +384,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 func Activate(c *context.Context) {
 	code := c.Query("code")
-	if len(code) == 0 {
+	if code == "" {
 		c.Data["IsActivatePage"] = true
 		if c.User.IsActive {
 			c.NotFound()
@@ -515,7 +515,7 @@ func ResetPasswd(c *context.Context) {
 	c.Title("auth.reset_password")
 
 	code := c.Query("code")
-	if len(code) == 0 {
+	if code == "" {
 		c.NotFound()
 		return
 	}
@@ -528,7 +528,7 @@ func ResetPasswdPost(c *context.Context) {
 	c.Title("auth.reset_password")
 
 	code := c.Query("code")
-	if len(code) == 0 {
+	if code == "" {
 		c.NotFound()
 		return
 	}

@@ -117,7 +117,7 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 		if len(tokenSHA) <= 0 {
 			tokenSHA = c.Query("access_token")
 		}
-		if len(tokenSHA) == 0 {
+		if tokenSHA == "" {
 			// Well, check with header again.
 			auHead := c.Req.Header.Get("Authorization")
 			if len(auHead) > 0 {
