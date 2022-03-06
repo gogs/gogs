@@ -21,9 +21,7 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-var (
-	ErrMissingIssueNumber = errors.New("No issue number specified")
-)
+var ErrMissingIssueNumber = errors.New("No issue number specified")
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
