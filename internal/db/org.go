@@ -16,9 +16,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 )
 
-var (
-	ErrOrgNotExist = errors.New("Organization does not exist")
-)
+var ErrOrgNotExist = errors.New("Organization does not exist")
 
 // IsOwnedBy returns true if given user is in the owner team.
 func (org *User) IsOwnedBy(userID int64) bool {

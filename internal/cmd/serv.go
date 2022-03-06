@@ -125,13 +125,11 @@ func checkDeployKey(key *db.PublicKey, repo *db.Repository) {
 	}
 }
 
-var (
-	allowedCommands = map[string]db.AccessMode{
-		"git-upload-pack":    db.AccessModeRead,
-		"git-upload-archive": db.AccessModeRead,
-		"git-receive-pack":   db.AccessModeWrite,
-	}
-)
+var allowedCommands = map[string]db.AccessMode{
+	"git-upload-pack":    db.AccessModeRead,
+	"git-upload-archive": db.AccessModeRead,
+	"git-receive-pack":   db.AccessModeWrite,
+}
 
 func runServ(c *cli.Context) error {
 	setup(c, "serv.log", true)
