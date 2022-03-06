@@ -20,13 +20,19 @@ func Search(c *context.APIContext) {
 	opts := &db.SearchUserOptions{
 		Keyword:  c.Query("q"),
 		Type:     db.UserIndividual,
+		Field:    c.Query("field"),
 		PageSize: com.StrTo(c.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {
 		opts.PageSize = 10
 	}
 
-	users, _, err := db.SearchUserByName(opts)
+	// Default to searching based on the name
+	if opts.Field == "" {
+		opts.Field = "name"
+	}
+
+	users, _, err := db.SearchUser(opts)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]interface{}{
 			"ok":    false,
@@ -43,6 +49,8 @@ func Search(c *context.APIContext) {
 			AvatarUrl: users[i].AvatarLink(),
 			FullName:  markup.Sanitize(users[i].FullName),
 		}
+
+		// We allow searching based on email regardless of whether you are logged in, but only display emails if you are
 		if c.IsLogged {
 			results[i].Email = users[i].Email
 		}
