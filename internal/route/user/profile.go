@@ -100,7 +100,6 @@ func Following(c *context.Context, puser *context.ParamsUser) {
 }
 
 func Stars(_ *context.Context) {
-
 }
 
 func Action(c *context.Context, puser *context.ParamsUser) {

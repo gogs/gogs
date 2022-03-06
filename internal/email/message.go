@@ -95,8 +95,7 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 	return nil, nil
 }
 
-type Sender struct {
-}
+type Sender struct{}
 
 func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 	opts := conf.Email
