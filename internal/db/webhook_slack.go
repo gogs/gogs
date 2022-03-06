@@ -66,7 +66,7 @@ func SlackShortTextFormatter(s string) string {
 	return s
 }
 
-func SlackLinkFormatter(url string, text string) string {
+func SlackLinkFormatter(url, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
 
