@@ -31,7 +31,7 @@ func TestAssetDir(t *testing.T) {
 	}
 }
 
-func TestMustAsset(t *testing.T) {
+func TestMustAsset(_ *testing.T) {
 	// Make sure it does not blow up
 	MustAsset("conf/app.ini")
 }

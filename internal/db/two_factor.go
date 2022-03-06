@@ -111,7 +111,7 @@ func (err ErrTwoFactorRecoveryCodeNotFound) Error() string {
 }
 
 // UseRecoveryCode validates recovery code of given user and marks it is used if valid.
-func UseRecoveryCode(userID int64, code string) error {
+func UseRecoveryCode(_ int64, code string) error {
 	recoveryCode := new(TwoFactorRecoveryCode)
 	has, err := x.Where("code = ?", code).And("is_used = ?", false).Get(recoveryCode)
 	if err != nil {

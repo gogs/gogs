@@ -66,7 +66,7 @@ type LoginSource struct {
 }
 
 // NOTE: This is a GORM save hook.
-func (s *LoginSource) BeforeSave(tx *gorm.DB) (err error) {
+func (s *LoginSource) BeforeSave(_ *gorm.DB) (err error) {
 	if s.Provider == nil {
 		return nil
 	}
@@ -90,7 +90,7 @@ func (s *LoginSource) BeforeUpdate(tx *gorm.DB) error {
 }
 
 // NOTE: This is a GORM query hook.
-func (s *LoginSource) AfterFind(tx *gorm.DB) error {
+func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 	s.Created = time.Unix(s.CreatedUnix, 0).Local()
 	s.Updated = time.Unix(s.UpdatedUnix, 0).Local()
 

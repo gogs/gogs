@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExecHelper(t *testing.T) {
+func TestExecHelper(_ *testing.T) {
 	if !WantHelperProcess() {
 		return
 	}

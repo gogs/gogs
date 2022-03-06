@@ -175,7 +175,7 @@ func (a *Action) GetIssueContent() string {
 	return issue.Content
 }
 
-func newRepoAction(e Engine, doer, owner *User, repo *Repository) (err error) {
+func newRepoAction(e Engine, doer, _ *User, repo *Repository) (err error) {
 	opType := ACTION_CREATE_REPO
 	if repo.IsFork {
 		opType = ACTION_FORK_REPO
