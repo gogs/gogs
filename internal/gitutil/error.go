@@ -20,7 +20,6 @@ type Error struct {
 func (e Error) NotFound() bool {
 	return IsErrSubmoduleNotExist(e.error) ||
 		IsErrRevisionNotExist(e.error)
-
 }
 
 // NewError wraps given error.

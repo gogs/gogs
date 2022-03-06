@@ -553,7 +553,6 @@ func PrepareCompareDiff(
 	meta *gitutil.PullRequestMeta,
 	headBranch string,
 ) bool {
-
 	var (
 		repo = c.Repo.Repository
 		err  error

@@ -41,6 +41,7 @@ func Test_perms(t *testing.T) {
 		})
 	}
 }
+
 func test_perms_AccessMode(t *testing.T, db *perms) {
 	// Set up permissions
 	err := db.SetRepoPerms(1, map[int64]AccessMode{

@@ -27,7 +27,6 @@ func RegisterRoutes(r *macaron.Router) {
 	r.Group("", func() {
 		r.Post("/objects/batch", authorize(db.AccessModeRead), verifyAccept, verifyContentTypeJSON, serveBatch)
 		r.Group("/objects/basic", func() {
-
 			basic := &basicHandler{
 				defaultStorage: lfsutil.Storage(conf.LFS.Storage),
 				storagers: map[lfsutil.Storage]lfsutil.Storager{
