@@ -456,7 +456,6 @@ func runWeb(c *cli.Context) error {
 						Post(bindIgnErr(form.AddSSHKey{}), repo.SettingsDeployKeysPost)
 					m.Post("/delete", repo.DeleteDeployKey)
 				})
-
 			}, func(c *context.Context) {
 				c.Data["PageIsSettings"] = true
 			})
@@ -734,7 +733,8 @@ func runWeb(c *cli.Context) error {
 					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 				},
-			}, Handler: m}
+			}, Handler: m,
+		}
 		err = server.ListenAndServeTLS(conf.Server.CertFile, conf.Server.KeyFile)
 
 	case "fcgi":

@@ -1,3 +1,4 @@
+//go:build cert
 // +build cert
 
 // Copyright 2009 The Go Authors. All rights reserved.

@@ -42,8 +42,10 @@ portable among all supported database engines.`,
 	},
 }
 
-const currentBackupFormatVersion = 1
-const archiveRootDir = "gogs-backup"
+const (
+	currentBackupFormatVersion = 1
+	archiveRootDir             = "gogs-backup"
+)
 
 func runBackup(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
