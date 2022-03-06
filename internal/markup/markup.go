@@ -155,8 +155,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = m[bytes.Index(m, []byte("@")):]
-		rawBytes = bytes.Replace(rawBytes, m,
-			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)), -1)
+		rawBytes = bytes.ReplaceAll(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)))
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
@@ -216,7 +215,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 	buf.WriteString(`">`)
 
 	if needPrepend {
-		src = strings.Replace(urlPrefix+src, " ", "%20", -1)
+		src = strings.ReplaceAll(urlPrefix+src, " ", "%20")
 		buf.WriteString(`<img src="`)
 		buf.WriteString(src)
 		buf.WriteString(`"`)
@@ -347,7 +346,7 @@ func Render(typ Type, input interface{}, urlPrefix string, metas map[string]stri
 		panic(fmt.Sprintf("unrecognized input content type: %T", input))
 	}
 
-	urlPrefix = strings.TrimRight(strings.Replace(urlPrefix, " ", "%20", -1), "/")
+	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:

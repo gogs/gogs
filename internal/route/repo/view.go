@@ -95,7 +95,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
-				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
+				p = bytes.ReplaceAll(p, []byte("\n"), []byte(`<br>`))
 			}
 			c.Data["FileContent"] = string(p)
 		}

@@ -146,7 +146,7 @@ func Str2HTML(raw string) template.HTML {
 
 // NewLine2br simply replaces "\n" to "<br>".
 func NewLine2br(raw string) string {
-	return strings.Replace(raw, "\n", "<br>", -1)
+	return strings.ReplaceAll(raw, "\n", "<br>")
 }
 
 func Sha1(str string) string {

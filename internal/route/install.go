@@ -240,7 +240,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test repository root path.
-	f.RepoRootPath = strings.Replace(f.RepoRootPath, "\\", "/", -1)
+	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), INSTALL, &f)
@@ -248,7 +248,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test log root path.
-	f.LogRootPath = strings.Replace(f.LogRootPath, "\\", "/", -1)
+	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), INSTALL, &f)

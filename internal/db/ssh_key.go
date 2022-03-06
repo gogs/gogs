@@ -112,10 +112,10 @@ func parseKeyString(content string) (string, error) {
 	// Transform all legal line endings to a single "\n"
 
 	// Replace all windows full new lines ("\r\n")
-	content = strings.Replace(content, "\r\n", "\n", -1)
+	content = strings.ReplaceAll(content, "\r\n", "\n")
 
 	// Replace all windows half new lines ("\r"), if it happen not to match replace above
-	content = strings.Replace(content, "\r", "\n", -1)
+	content = strings.ReplaceAll(content, "\r", "\n")
 
 	// Replace ending new line as its may cause unwanted behaviour (extra line means not a single line key | OpenSSH key)
 	content = strings.TrimRight(content, "\n")
@@ -374,8 +374,7 @@ func checkKeyContent(content string) error {
 
 func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
-	tmpPath := strings.Replace(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
-		"id_rsa.pub"), "\\", "/", -1)
+	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
 	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
