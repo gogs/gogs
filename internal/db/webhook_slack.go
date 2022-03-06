@@ -51,18 +51,18 @@ func (p *SlackPayload) JSONPayload() ([]byte, error) {
 // see: https://api.slack.com/docs/formatting
 func SlackTextFormatter(s string) string {
 	// replace & < >
-	s = strings.Replace(s, "&", "&amp;", -1)
-	s = strings.Replace(s, "<", "&lt;", -1)
-	s = strings.Replace(s, ">", "&gt;", -1)
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
 	return s
 }
 
 func SlackShortTextFormatter(s string) string {
 	s = strings.Split(s, "\n")[0]
 	// replace & < >
-	s = strings.Replace(s, "&", "&amp;", -1)
-	s = strings.Replace(s, "<", "&lt;", -1)
-	s = strings.Replace(s, ">", "&gt;", -1)
+	s = strings.ReplaceAll(s, "&", "&amp;")
+	s = strings.ReplaceAll(s, "<", "&lt;")
+	s = strings.ReplaceAll(s, ">", "&gt;")
 	return s
 }
 
