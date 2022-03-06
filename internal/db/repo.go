@@ -1746,7 +1746,7 @@ func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	return append(repos, ownRepos...), nil
 }
 
-func getRepositoryCount(e Engine, u *User) (int64, error) {
+func getRepositoryCount(_ Engine, u *User) (int64, error) {
 	return x.Count(&Repository{OwnerID: u.ID})
 }
 

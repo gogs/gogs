@@ -35,7 +35,7 @@ func RefCommits(c *context.Context) {
 }
 
 // TODO(unknwon)
-func RenderIssueLinks(oldCommits []*git.Commit, repoLink string) []*git.Commit {
+func RenderIssueLinks(oldCommits []*git.Commit, _ string) []*git.Commit {
 	return oldCommits
 }
 

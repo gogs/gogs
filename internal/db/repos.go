@@ -40,7 +40,7 @@ func (r *Repository) BeforeUpdate(tx *gorm.DB) error {
 }
 
 // NOTE: This is a GORM query hook.
-func (r *Repository) AfterFind(tx *gorm.DB) error {
+func (r *Repository) AfterFind(_ *gorm.DB) error {
 	r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
 	return nil

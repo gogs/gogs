@@ -99,7 +99,7 @@ func Following(c *context.Context, puser *context.ParamsUser) {
 	repo.RenderUserCards(c, puser.NumFollowing, puser.GetFollowing, FOLLOWERS)
 }
 
-func Stars(c *context.Context) {
+func Stars(_ *context.Context) {
 
 }
 

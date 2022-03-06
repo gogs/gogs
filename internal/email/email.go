@@ -102,7 +102,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
+func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
