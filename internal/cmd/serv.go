@@ -146,7 +146,7 @@ func runServ(c *cli.Context) error {
 	}
 
 	sshCmd := os.Getenv("SSH_ORIGINAL_COMMAND")
-	if len(sshCmd) == 0 {
+	if sshCmd == "" {
 		println("Hi there, You've successfully authenticated, but Gogs does not provide shell access.")
 		println("If this is unexpected, please log in with password and setup Gogs under another user.")
 		return nil

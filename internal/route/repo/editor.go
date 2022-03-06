@@ -33,7 +33,7 @@ const (
 // getParentTreeFields returns list of parent tree names and corresponding tree paths
 // based on given tree path.
 func getParentTreeFields(treePath string) (treeNames, treePaths []string) {
-	if len(treePath) == 0 {
+	if treePath == "" {
 		return treeNames, treePaths
 	}
 
@@ -158,7 +158,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		return
 	}
 
-	if len(f.TreePath) == 0 {
+	if f.TreePath == "" {
 		c.FormErr("TreePath")
 		c.RenderWithErr(c.Tr("repo.editor.filename_cannot_be_empty"), tmplEditorEdit, &f)
 		return
@@ -248,7 +248,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
-	if len(message) == 0 {
+	if message == "" {
 		if isNewFile {
 			message = c.Tr("repo.editor.add", f.TreePath)
 		} else {
@@ -362,7 +362,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
-	if len(message) == 0 {
+	if message == "" {
 		message = c.Tr("repo.editor.delete", c.Repo.TreePath)
 	}
 
@@ -481,7 +481,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 	}
 
 	message := strings.TrimSpace(f.CommitSummary)
-	if len(message) == 0 {
+	if message == "" {
 		message = c.Tr("repo.editor.upload_files_to_dir", f.TreePath)
 	}
 
@@ -555,7 +555,7 @@ func UploadFileToServer(c *context.Context) {
 }
 
 func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
-	if len(f.File) == 0 {
+	if f.File == "" {
 		c.Status(http.StatusNoContent)
 		return
 	}

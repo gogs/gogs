@@ -174,7 +174,7 @@ func CreateOrganization(org, owner *User) (err error) {
 
 // GetOrgByName returns organization by given name.
 func GetOrgByName(name string) (*User, error) {
-	if len(name) == 0 {
+	if name == "" {
 		return nil, ErrOrgNotExist
 	}
 	u := &User{

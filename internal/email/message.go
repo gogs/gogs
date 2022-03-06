@@ -138,7 +138,7 @@ func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
 
 	if !opts.DisableHELO {
 		hostname := opts.HELOHostname
-		if len(hostname) == 0 {
+		if hostname == "" {
 			hostname, err = os.Hostname()
 			if err != nil {
 				return err

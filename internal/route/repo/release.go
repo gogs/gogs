@@ -293,7 +293,7 @@ func EditReleasePost(c *context.Context, f form.EditRelease) {
 		attachments = f.Files
 	}
 
-	isPublish := rel.IsDraft && len(f.Draft) == 0
+	isPublish := rel.IsDraft && f.Draft == ""
 	rel.Title = f.Title
 	rel.Note = f.Content
 	rel.IsDraft = len(f.Draft) > 0

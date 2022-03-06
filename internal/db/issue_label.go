@@ -33,7 +33,7 @@ func GetLabelTemplateFile(name string) ([][2]string, error) {
 	list := make([][2]string, 0, len(lines))
 	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
-		if len(line) == 0 {
+		if line == "" {
 			continue
 		}
 

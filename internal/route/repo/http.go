@@ -106,7 +106,7 @@ func HTTPContexter() macaron.Handler {
 
 		// Handle HTTP Basic Authentication
 		authHead := c.Req.Header.Get("Authorization")
-		if len(authHead) == 0 {
+		if authHead == "" {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}

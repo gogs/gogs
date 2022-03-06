@@ -169,7 +169,7 @@ func (r *Request) Headers() http.Header {
 // Set the protocol version for incoming requests.
 // Client requests always use HTTP/1.1.
 func (r *Request) SetProtocolVersion(vers string) *Request {
-	if len(vers) == 0 {
+	if vers == "" {
 		vers = "HTTP/1.1"
 	}
 
@@ -339,7 +339,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 		Jar:       jar,
 	}
 
-	if len(r.setting.UserAgent) > 0 && len(r.req.Header.Get("User-Agent")) == 0 {
+	if len(r.setting.UserAgent) > 0 && r.req.Header.Get("User-Agent") == "" {
 		r.req.Header.Set("User-Agent", r.setting.UserAgent)
 	}
 

@@ -147,7 +147,7 @@ func parseKeyString(content string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("extractTypeFromBase64Key: %v", err)
 		}
-		if len(keyType) == 0 {
+		if keyType == "" {
 			keyType = t
 		} else if keyType != t {
 			return "", fmt.Errorf("key type and content does not match: %s - %s", keyType, t)
