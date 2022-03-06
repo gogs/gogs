@@ -86,7 +86,7 @@ func (c *Config) sanitizedUserDN(username string) (string, bool) {
 	return strings.ReplaceAll(c.UserDN, "%s", username), true
 }
 
-func (c *Config) sanitizedGroupFilter(group string) (string, bool) {
+func (*Config) sanitizedGroupFilter(group string) (string, bool) {
 	// See http://tools.ietf.org/search/rfc4515
 	badCharacters := "\x00*\\"
 	if strings.ContainsAny(group, badCharacters) {
@@ -97,7 +97,7 @@ func (c *Config) sanitizedGroupFilter(group string) (string, bool) {
 	return group, true
 }
 
-func (c *Config) sanitizedGroupDN(groupDn string) (string, bool) {
+func (*Config) sanitizedGroupDN(groupDn string) (string, bool) {
 	// See http://tools.ietf.org/search/rfc4514: "special characters"
 	badCharacters := "\x00()*\\'\"#+;<>"
 	if strings.ContainsAny(groupDn, badCharacters) || strings.HasPrefix(groupDn, " ") || strings.HasSuffix(groupDn, " ") {

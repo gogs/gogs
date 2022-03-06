@@ -11,6 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (c *Config) doAuth(_, _ string) error {
+func (*Config) doAuth(_, _ string) error {
 	return errors.New("PAM not supported")
 }

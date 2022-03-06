@@ -92,7 +92,7 @@ func (p *Provider) Config() interface{} {
 	return p.config
 }
 
-func (p *Provider) HasTLS() bool {
+func (*Provider) HasTLS() bool {
 	return true
 }
 

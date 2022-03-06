@@ -41,14 +41,14 @@ func (p *Provider) Config() interface{} {
 	return p.config
 }
 
-func (p *Provider) HasTLS() bool {
+func (*Provider) HasTLS() bool {
 	return false
 }
 
-func (p *Provider) UseTLS() bool {
+func (*Provider) UseTLS() bool {
 	return false
 }
 
-func (p *Provider) SkipTLSVerify() bool {
+func (*Provider) SkipTLSVerify() bool {
 	return false
 }
