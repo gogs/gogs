@@ -77,7 +77,7 @@ func LoginAuth(username, password string) smtp.Auth {
 	return &loginAuth{username, password}
 }
 
-func (a *loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
+func (*loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
 	return "LOGIN", []byte{}, nil
 }
 
@@ -97,7 +97,7 @@ func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
 
 type Sender struct{}
 
-func (s *Sender) Send(from string, to []string, msg io.WriterTo) error {
+func (*Sender) Send(from string, to []string, msg io.WriterTo) error {
 	opts := conf.Email
 
 	host, port, err := net.SplitHostPort(opts.Host)

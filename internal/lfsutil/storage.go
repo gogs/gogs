@@ -45,7 +45,7 @@ type LocalStorage struct {
 	Root string
 }
 
-func (s *LocalStorage) Storage() Storage {
+func (*LocalStorage) Storage() Storage {
 	return StorageLocal
 }
 

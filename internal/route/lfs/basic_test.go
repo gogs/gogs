@@ -27,7 +27,7 @@ type mockStorage struct {
 	buf *bytes.Buffer
 }
 
-func (s *mockStorage) Storage() lfsutil.Storage {
+func (*mockStorage) Storage() lfsutil.Storage {
 	return "memory"
 }
 

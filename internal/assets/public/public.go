@@ -33,20 +33,20 @@ func (d fileInfo) Size() int64 {
 	return d.size
 }
 
-func (d fileInfo) Mode() os.FileMode {
+func (fileInfo) Mode() os.FileMode {
 	return os.FileMode(0644) | os.ModeDir
 }
 
-func (d fileInfo) ModTime() time.Time {
+func (fileInfo) ModTime() time.Time {
 	return time.Time{}
 }
 
 // IsDir return file whether a directory
-func (d *fileInfo) IsDir() bool {
+func (*fileInfo) IsDir() bool {
 	return true
 }
 
-func (d fileInfo) Sys() interface{} {
+func (fileInfo) Sys() interface{} {
 	return nil
 }
 
@@ -59,7 +59,7 @@ type file struct {
 	childrenOffset int
 }
 
-func (f *file) Close() error {
+func (*file) Close() error {
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (f *file) Stat() (os.FileInfo, error) {
 // fileSystem implements the http.FileSystem interface.
 type fileSystem struct{}
 
-func (f *fileSystem) Open(name string) (http.File, error) {
+func (*fileSystem) Open(name string) (http.File, error) {
 	if len(name) > 0 && name[0] == '/' {
 		name = name[1:]
 	}
