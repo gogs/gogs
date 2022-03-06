@@ -121,7 +121,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid 
 }
 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
-func (h *basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
+func (*basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 	var request basicVerifyRequest
 	defer c.Req.Request.Body.Close()
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
