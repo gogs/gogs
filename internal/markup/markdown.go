@@ -43,7 +43,7 @@ func isLink(link []byte) bool {
 }
 
 // Link defines how formal links should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
+func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] != '#' {
 			link = []byte(path.Join(r.urlPrefix, string(link)))
