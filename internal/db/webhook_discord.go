@@ -61,11 +61,11 @@ func DiscordTextFormatter(s string) string {
 	return strings.Split(s, "\n")[0]
 }
 
-func DiscordLinkFormatter(url string, text string) string {
+func DiscordLinkFormatter(url, text string) string {
 	return fmt.Sprintf("[%s](%s)", text, url)
 }
 
-func DiscordSHALinkFormatter(url string, text string) string {
+func DiscordSHALinkFormatter(url, text string) string {
 	return fmt.Sprintf("[`%s`](%s)", text, url)
 }
 

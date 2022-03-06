@@ -309,10 +309,10 @@ func TimeSince(t time.Time, lang string) template.HTML {
 }
 
 // Subtract deals with subtraction of all types of number.
-func Subtract(left interface{}, right interface{}) interface{} {
+func Subtract(left, right interface{}) interface{} {
 	var rleft, rright int64
 	var fleft, fright float64
-	var isInt = true
+	isInt := true
 	switch left := left.(type) {
 	case int:
 		rleft = int64(left)

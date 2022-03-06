@@ -135,7 +135,7 @@ func isLocalHostname(hostname string) bool {
 	return false
 }
 
-func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field string, msg string, ok bool) {
+func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field, msg string, ok bool) {
 	if !actor.IsAdmin {
 		// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
 		// see https://github.com/gogs/gogs/issues/5366 for details.

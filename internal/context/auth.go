@@ -162,7 +162,7 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasicAuth bool, isTokenAuth bool) {
+func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasicAuth, isTokenAuth bool) {
 	if !db.HasEngine {
 		return nil, false, false
 	}

@@ -21,9 +21,7 @@ import (
 	"gogs.io/gogs/internal/tool"
 )
 
-var (
-	ErrMissingIssueNumber = errors.New("No issue number specified")
-)
+var ErrMissingIssueNumber = errors.New("No issue number specified")
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
@@ -1346,7 +1344,7 @@ func GetUserIssueStats(repoID, userID int64, repoIDs []int64, filterMode FilterM
 }
 
 // GetRepoIssueStats returns number of open and closed repository issues by given filter mode.
-func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool) (numOpen int64, numClosed int64) {
+func GetRepoIssueStats(repoID, userID int64, filterMode FilterMode, isPull bool) (numOpen, numClosed int64) {
 	countSession := func(isClosed, isPull bool, repoID int64) *xorm.Session {
 		sess := x.Where("issue.repo_id = ?", isClosed).
 			And("is_pull = ?", isPull).
