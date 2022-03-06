@@ -73,10 +73,8 @@ func HandleOrgAssignment(c *Context, args ...bool) {
 			c.Org.IsMember = true
 			c.Org.IsTeamMember = true
 			c.Org.IsTeamAdmin = true
-		} else {
-			if org.IsOrgMember(c.User.ID) {
-				c.Org.IsMember = true
-			}
+		} else if org.IsOrgMember(c.User.ID) {
+			c.Org.IsMember = true
 		}
 	} else {
 		// Fake data.
