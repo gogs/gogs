@@ -268,7 +268,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		OldTreeName:  oldTreePath,
 		NewTreeName:  f.TreePath,
 		Message:      message,
-		Content:      strings.Replace(f.Content, "\r", "", -1),
+		Content:      strings.ReplaceAll(f.Content, "\r", ""),
 		IsNewFile:    isNewFile,
 	}); err != nil {
 		log.Error("Failed to update repo file: %v", err)

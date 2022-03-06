@@ -33,7 +33,7 @@ func ToWikiPageURL(name string) string {
 // that are not belong to wiki repository.
 func ToWikiPageName(urlString string) string {
 	name, _ := url.QueryUnescape(urlString)
-	return strings.Replace(strings.TrimLeft(path.Clean("/"+name), "/"), "/", " ", -1)
+	return strings.ReplaceAll(strings.TrimLeft(path.Clean("/"+name), "/"), "/", " ")
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.

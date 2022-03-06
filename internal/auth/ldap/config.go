@@ -72,7 +72,7 @@ func (c *Config) sanitizedUserQuery(username string) (string, bool) {
 		return "", false
 	}
 
-	return strings.Replace(c.Filter, "%s", username, -1), true
+	return strings.ReplaceAll(c.Filter, "%s", username), true
 }
 
 func (c *Config) sanitizedUserDN(username string) (string, bool) {
@@ -83,7 +83,7 @@ func (c *Config) sanitizedUserDN(username string) (string, bool) {
 		return "", false
 	}
 
-	return strings.Replace(c.UserDN, "%s", username, -1), true
+	return strings.ReplaceAll(c.UserDN, "%s", username), true
 }
 
 func (c *Config) sanitizedGroupFilter(group string) (string, bool) {
@@ -112,7 +112,7 @@ func (c *Config) findUserDN(l *ldap.Conn, name string) (string, bool) {
 	log.Trace("Search for LDAP user: %s", name)
 	if len(c.BindDN) > 0 && len(c.BindPassword) > 0 {
 		// Replace placeholders with username
-		bindDN := strings.Replace(c.BindDN, "%s", name, -1)
+		bindDN := strings.ReplaceAll(c.BindDN, "%s", name)
 		err := l.Bind(bindDN, c.BindPassword)
 		if err != nil {
 			log.Trace("LDAP: Failed to bind as BindDN '%s': %v", bindDN, err)
