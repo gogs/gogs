@@ -83,7 +83,7 @@ func getEngine() (*xorm.Engine, error) {
 			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
 				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
 		}
-		var engineParams = map[string]string{"rowFormat": "DYNAMIC"}
+		engineParams := map[string]string{"rowFormat": "DYNAMIC"}
 		return xorm.NewEngineWithParams(conf.Database.Type, connStr, engineParams)
 
 	case "postgres":

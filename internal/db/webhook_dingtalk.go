@@ -18,7 +18,7 @@ const (
 	DingtalkNotificationTitle = "Gogs Notification"
 )
 
-//Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
+// Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
 type DingtalkActionCard struct {
 	Title          string `json:"title"`
 	Text           string `json:"text"`
@@ -28,13 +28,13 @@ type DingtalkActionCard struct {
 	SingleURL      string `json:"singleURL"`
 }
 
-//Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
+// Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
 type DingtalkAtObject struct {
 	AtMobiles []string `json:"atMobiles"`
 	IsAtAll   bool     `json:"isAtAll"`
 }
 
-//Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
+// Refer: https://open-doc.dingtalk.com/docs/doc.htm?treeId=257&articleId=105735&docType=1
 type DingtalkPayload struct {
 	MsgType    string             `json:"msgtype"`
 	At         DingtalkAtObject   `json:"at"`
@@ -57,7 +57,7 @@ func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
 	}
 }
 
-//TODO: add content
+// TODO: add content
 func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
 	switch event {
 	case HOOK_EVENT_CREATE:
@@ -255,7 +255,7 @@ func getDingtalkReleasePayload(p *api.ReleasePayload) (*DingtalkPayload, error) 
 	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
 }
 
-//Format link addr and title into markdown style
+// Format link addr and title into markdown style
 func MarkdownLinkFormatter(link, text string) string {
 	return "[" + text + "](" + link + ")"
 }
