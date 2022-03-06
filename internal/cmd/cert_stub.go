@@ -22,7 +22,7 @@ var Cert = cli.Command{
 	Action:      runCert,
 }
 
-func runCert(ctx *cli.Context) error {
+func runCert(_ *cli.Context) error {
 	fmt.Println("Command cert not available, please use build tags 'cert' to rebuild.")
 	os.Exit(1)
 

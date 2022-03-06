@@ -46,7 +46,7 @@ func (t *TwoFactor) BeforeCreate(tx *gorm.DB) error {
 }
 
 // NOTE: This is a GORM query hook.
-func (t *TwoFactor) AfterFind(tx *gorm.DB) error {
+func (t *TwoFactor) AfterFind(_ *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
 	return nil
 }

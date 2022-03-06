@@ -122,7 +122,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 var pound = []byte("#")
 
 // RenderCrossReferenceIssueIndexPattern renders issue indexes from other repositories to corresponding links.
-func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[string]string) []byte {
 	ms := CrossReferenceIssueNumericPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		if m[0] == ' ' || m[0] == '(' {
