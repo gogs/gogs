@@ -28,7 +28,7 @@ func Test_isLocalHostname(t *testing.T) {
 		{hostname: "192.168.123.45", want: true},
 		
 		{hostname: "gogs.io", want: false},
-		{hostname: "google.com", want: false}
+		{hostname: "google.com", want: false},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
