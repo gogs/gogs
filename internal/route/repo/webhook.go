@@ -146,7 +146,7 @@ var localHostnames = []string{
 
 // isLocalHostname returns true if given hostname is a known local address.
 func isLocalHostname(hostname string) bool {
-	resolvedAddress, dnsError := net.LookupIP(host)
+	resolvedAddress, dnsError := net.LookupIP(hostname)
 	if dnsError != nil {
 		return true
 	}
