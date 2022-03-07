@@ -65,6 +65,7 @@ There are 6 ways to install Gogs:
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [DPlatform](https://github.com/DFabric/DPlatform-Shell)
 - [LunaNode](https://github.com/LunaNode/launchgogs)
+- [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
 
 ### Tutorials
 
