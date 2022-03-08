@@ -20,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/netutil"
 )
 
 const (
@@ -118,23 +119,6 @@ func WebhooksNew(c *context.Context, orCtx *orgRepoContext) {
 	c.Success(orCtx.TmplNew)
 }
 
-var localHostnames = []string{
-	"localhost",
-	"127.0.0.1",
-	"::1",
-	"0:0:0:0:0:0:0:1",
-}
-
-// isLocalHostname returns true if given hostname is a known local address.
-func isLocalHostname(hostname string) bool {
-	for _, local := range localHostnames {
-		if hostname == local {
-			return true
-		}
-	}
-	return false
-}
-
 func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field, msg string, ok bool) {
 	if !actor.IsAdmin {
 		// 🚨 SECURITY: Local addresses must not be allowed by non-admins to prevent SSRF,
@@ -144,7 +128,7 @@ func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field, ms
 			return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), false
 		}
 
-		if isLocalHostname(payloadURL.Hostname()) {
+		if netutil.IsLocalHostname(payloadURL.Hostname()) {
 			return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), false
 		}
 	}
