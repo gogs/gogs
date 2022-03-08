@@ -13,7 +13,7 @@ import (
 	"gogs.io/gogs/internal/mocks"
 )
 
-func Test_isLocalHostname(t *testing.T) {
+func TestIsLocalHostname(t *testing.T) {
 	tests := []struct {
 		hostname string
 		want     bool
@@ -26,13 +26,14 @@ func Test_isLocalHostname(t *testing.T) {
 		{hostname: "127.0.0.95", want: true},
 		{hostname: "0.0.0.0", want: true},
 		{hostname: "192.168.123.45", want: true},
-		
+
 		{hostname: "gogs.io", want: false},
 		{hostname: "google.com", want: false},
+		{hostname: "165.232.140.255", want: false},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.want, isLocalHostname(test.hostname))
+			assert.Equal(t, test.want, IsLocalHostname(test.hostname))
 		})
 	}
 }
