@@ -22,6 +22,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - _Security:_ Potential SSRF in repository migration. [#6754](https://github.com/gogs/gogs/issues/6754)
+- _Security:_ Improper PAM authorization handling. [#6810](https://github.com/gogs/gogs/issues/6810)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 
 ### Removed
