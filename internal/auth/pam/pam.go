@@ -27,9 +27,9 @@ func PAMAuth(serviceName, userName, passwd string) error {
 		return err
 	}
 
-	if err = t.Authenticate(0); err != nil {
+	err = t.Authenticate(0)
+	if err != nil {
 		return err
 	}
-
-	return nil
+	return t.AcctMgmt(0)
 }
