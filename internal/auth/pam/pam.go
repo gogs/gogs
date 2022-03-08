@@ -25,7 +25,7 @@ func (c *Config) doAuth(login, password string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	err = t.Authenticate(0)
 	if err != nil {
 		return err
