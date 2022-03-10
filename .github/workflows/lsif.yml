@@ -21,8 +21,8 @@ jobs:
         uses: docker://sourcegraph/src-cli:latest
         with:
           args: lsif upload -github-token=${{ secrets.GITHUB_TOKEN }}
-      - name: Upload LSIF data to sourcegraph.unknwon.cn
+      - name: Upload LSIF data to cs.unknwon.dev
         continue-on-error: true
         uses: docker://sourcegraph/src-cli:latest
         with:
-          args: -endpoint=https://sourcegraph.unknwon.cn lsif upload -github-token=${{ secrets.GITHUB_TOKEN }}
+          args: -endpoint=https://cs.unknwon.dev lsif upload -github-token=${{ secrets.GITHUB_TOKEN }}
