@@ -22,7 +22,7 @@ On the release branch:
 
 - [ ] [Update the hard-coded version](https://github.com/gogs/gogs/commit/f17e7d5a2c36c52a1121d2315f3d75dcd8053b89) to the current release, e.g. `0.12.0+dev` -> `0.12.0`.
 - [ ] Wait for GitHub Actions to complete and no failed jobs.
-- [ ] Publish new RC releases (e.g. `v0.12.0-rc.1`, `v0.12.0-rc.2`) to ensure Docker wrokflow succeeds. **Make sure the tag is created on the release branch**.
+- [ ] Publish new RC releases (e.g. `v0.12.0-rc.1`, `v0.12.0-rc.2`) to ensure Docker workflow succeeds. **Make sure the tag is created on the release branch**.
 	- [ ] Pull down the Docker image and [run through application setup](https://github.com/gogs/gogs/blob/main/docker/README.md) to make sure nothing blows up.
 - [ ] - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current minor release. **Make sure the tag is created on the release branch**.
 	- [ ] Only mention patch authors for the current release.
