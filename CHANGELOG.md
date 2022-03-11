@@ -21,8 +21,6 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Security:_ Potential SSRF in repository migration. [#6754](https://github.com/gogs/gogs/issues/6754)
-- _Security:_ Improper PAM authorization handling. [#6810](https://github.com/gogs/gogs/issues/6810)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 
 ### Removed
@@ -43,6 +41,13 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+
+## 0.12.5
+
+### Fixed
+
+- _Security:_ Potential SSRF in repository migration. [#6754](https://github.com/gogs/gogs/issues/6754)
+- _Security:_ Improper PAM authorization handling. [#6810](https://github.com/gogs/gogs/issues/6810)
 
 ## 0.12.4
 
