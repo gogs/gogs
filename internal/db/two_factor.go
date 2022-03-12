@@ -121,7 +121,7 @@ func UseRecoveryCode(_ int64, code string) error {
 	}
 
 	recoveryCode.IsUsed = true
-	if _, err = x.Id(recoveryCode.ID).Cols("is_used").Update(recoveryCode); err != nil {
+	if _, err = x.ID(recoveryCode.ID).Cols("is_used").Update(recoveryCode); err != nil {
 		return fmt.Errorf("mark code as used: %v", err)
 	}
 

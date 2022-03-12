@@ -413,7 +413,7 @@ func (ErrCommentNotExist) NotFound() bool {
 // GetCommentByID returns the comment by given ID.
 func GetCommentByID(id int64) (*Comment, error) {
 	c := new(Comment)
-	has, err := x.Id(id).Get(c)
+	has, err := x.ID(id).Get(c)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -479,7 +479,7 @@ func GetCommentsByRepoIDSince(repoID, since int64) ([]*Comment, error) {
 
 // UpdateComment updates information of comment.
 func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
-	if _, err = x.Id(c.ID).AllCols().Update(c); err != nil {
+	if _, err = x.ID(c.ID).AllCols().Update(c); err != nil {
 		return err
 	}
 

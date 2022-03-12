@@ -265,7 +265,7 @@ func NewTeam(t *Team) error {
 		return err
 	}
 
-	has, err := x.Id(t.OrgID).Get(new(User))
+	has, err := x.ID(t.OrgID).Get(new(User))
 	if err != nil {
 		return err
 	} else if !has {
@@ -477,7 +477,7 @@ func IsTeamMember(orgID, teamID, uid int64) bool {
 
 func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
 	teamUsers := make([]*TeamUser, 0, 10)
-	if err = e.Sql("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id = ?", teamID).
+	if err = e.SQL("SELECT `id`, `org_id`, `team_id`, `uid` FROM `team_user` WHERE team_id = ?", teamID).
 		Find(&teamUsers); err != nil {
 		return nil, fmt.Errorf("get team-users: %v", err)
 	}

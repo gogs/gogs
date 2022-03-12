@@ -19,6 +19,7 @@ import (
 	log "unknwon.dev/clog/v2"
 	"xorm.io/core"
 	"xorm.io/xorm"
+	xormlog "xorm.io/xorm/log"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/migrations"
@@ -27,7 +28,7 @@ import (
 
 // Engine represents a XORM engine or session.
 type Engine interface {
-	Delete(interface{}) (int64, error)
+	Delete(...interface{}) (int64, error)
 	Exec(...interface{}) (sql.Result, error)
 	Find(interface{}, ...interface{}) error
 	Get(interface{}) (bool, error)
@@ -36,7 +37,7 @@ type Engine interface {
 	Insert(...interface{}) (int64, error)
 	InsertOne(interface{}) (int64, error)
 	Iterate(interface{}, xorm.IterFunc) error
-	Sql(string, ...interface{}) *xorm.Session
+	SQL(interface {}, ...interface {}) *xorm.Session
 	Table(interface{}) *xorm.Session
 	Where(interface{}, ...interface{}) *xorm.Session
 }
@@ -162,9 +163,14 @@ func SetEngine() (*gorm.DB, error) {
 	x.SetConnMaxLifetime(time.Second)
 
 	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
+		x.SetLogger(xormlog.NewSimpleLogger3(
+			fileWriter,
+			xormlog.DEFAULT_LOG_PREFIX,
+			xormlog.DEFAULT_LOG_FLAG,
+			xormlog.LOG_WARNING,
+		))
 	} else {
-		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
+		x.SetLogger(xormlog.NewSimpleLogger(fileWriter))
 	}
 	x.ShowSQL(true)
 

@@ -94,7 +94,7 @@ func Notices(page, pageSize int) ([]*Notice, error) {
 
 // DeleteNotice deletes a system notice by given ID.
 func DeleteNotice(id int64) error {
-	_, err := x.Id(id).Delete(new(Notice))
+	_, err := x.ID(id).Delete(new(Notice))
 	return err
 }
 

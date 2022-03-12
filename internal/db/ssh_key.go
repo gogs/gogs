@@ -438,7 +438,7 @@ func AddPublicKey(ownerID int64, name, content string) (*PublicKey, error) {
 // GetPublicKeyByID returns public key by given ID.
 func GetPublicKeyByID(keyID int64) (*PublicKey, error) {
 	key := new(PublicKey)
-	has, err := x.Id(keyID).Get(key)
+	has, err := x.ID(keyID).Get(key)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -468,7 +468,7 @@ func ListPublicKeys(uid int64) ([]*PublicKey, error) {
 
 // UpdatePublicKey updates given public key.
 func UpdatePublicKey(key *PublicKey) error {
-	_, err := x.Id(key.ID).AllCols().Update(key)
+	_, err := x.ID(key.ID).AllCols().Update(key)
 	return err
 }
 
@@ -706,7 +706,7 @@ func (ErrDeployKeyNotExist) NotFound() bool {
 // GetDeployKeyByID returns deploy key by given ID.
 func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	key := new(DeployKey)
-	has, err := x.Id(id).Get(key)
+	has, err := x.ID(id).Get(key)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -732,7 +732,7 @@ func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
 
 // UpdateDeployKey updates deploy key information.
 func UpdateDeployKey(key *DeployKey) error {
-	_, err := x.Id(key.ID).AllCols().Update(key)
+	_, err := x.ID(key.ID).AllCols().Update(key)
 	return err
 }
 

@@ -107,7 +107,7 @@ In case you're stilling getting this notice, go through instructions again until
 	if int(v-minDBVersion) > len(migrations) {
 		// User downgraded Gogs.
 		currentVersion.Version = int64(len(migrations) + minDBVersion)
-		_, err = x.Id(1).Update(currentVersion)
+		_, err = x.ID(1).Update(currentVersion)
 		return err
 	}
 	for i, m := range migrations[v-minDBVersion:] {
@@ -116,7 +116,7 @@ In case you're stilling getting this notice, go through instructions again until
 			return fmt.Errorf("do migrate: %v", err)
 		}
 		currentVersion.Version = v + int64(i) + 1
-		if _, err = x.Id(1).Update(currentVersion); err != nil {
+		if _, err = x.ID(1).Update(currentVersion); err != nil {
 			return err
 		}
 	}

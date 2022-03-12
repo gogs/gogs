@@ -609,13 +609,13 @@ func GetPullRequestByIssueID(issueID int64) (*PullRequest, error) {
 
 // Update updates all fields of pull request.
 func (pr *PullRequest) Update() error {
-	_, err := x.Id(pr.ID).AllCols().Update(pr)
+	_, err := x.ID(pr.ID).AllCols().Update(pr)
 	return err
 }
 
 // Update updates specific fields of pull request.
 func (pr *PullRequest) UpdateCols(cols ...string) error {
-	_, err := x.Id(pr.ID).Cols(cols...).Update(pr)
+	_, err := x.ID(pr.ID).Cols(cols...).Update(pr)
 	return err
 }
 

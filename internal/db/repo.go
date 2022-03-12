@@ -423,7 +423,7 @@ func (repo *Repository) UpdateSize() error {
 	}
 
 	repo.Size = countObject.Size + countObject.SizePack
-	if _, err = x.Id(repo.ID).Cols("size").Update(repo); err != nil {
+	if _, err = x.ID(repo.ID).Cols("size").Update(repo); err != nil {
 		return fmt.Errorf("update size: %v", err)
 	}
 	return nil
@@ -1772,7 +1772,21 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 		opts.Page = 1
 	}
 
+	// We need all fields (repo.*) in final list but only ID (repo.id) is good enough for counting.
+	count, err = searchRepositoriesByNameSession(opts).Distinct("repo.id").Count(new(Repository))
+	if err != nil {
+		return nil, 0, fmt.Errorf("Count: %v", err)
+	}
+
+	sess := searchRepositoriesByNameSession(opts)
+	if len(opts.OrderBy) > 0 {
+		sess.OrderBy("repo." + opts.OrderBy)
+	}
 	repos = make([]*Repository, 0, opts.PageSize)
+	return repos, count, sess.Distinct("repo.*").Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
+}
+
+func searchRepositoriesByNameSession(opts *SearchRepoOptions) *xorm.Session {
 	sess := x.Alias("repo")
 	// Attempt to find repositories that opts.UserID has access to,
 	// this does not include other people's private repositories even if opts.UserID is an admin.
@@ -1791,17 +1805,7 @@ func SearchRepositoryByName(opts *SearchRepoOptions) (repos []*Repository, count
 	if opts.OwnerID > 0 {
 		sess.And("repo.owner_id = ?", opts.OwnerID)
 	}
-
-	// We need all fields (repo.*) in final list but only ID (repo.id) is good enough for counting.
-	count, err = sess.Clone().Distinct("repo.id").Count(new(Repository))
-	if err != nil {
-		return nil, 0, fmt.Errorf("Count: %v", err)
-	}
-
-	if len(opts.OrderBy) > 0 {
-		sess.OrderBy("repo." + opts.OrderBy)
-	}
-	return repos, count, sess.Distinct("repo.*").Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&repos)
+	return sess
 }
 
 func DeleteOldRepositoryArchives() {

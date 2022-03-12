@@ -245,7 +245,7 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 // GetReleaseByID returns release with given ID.
 func GetReleaseByID(id int64) (*Release, error) {
 	r := new(Release)
-	has, err := x.Id(id).Get(r)
+	has, err := x.ID(id).Get(r)
 	if err != nil {
 		return nil, err
 	} else if !has {
@@ -369,7 +369,7 @@ func DeleteReleaseOfRepoByID(repoID, id int64) error {
 		return fmt.Errorf("git tag -d: %v - %s", err, stderr)
 	}
 
-	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
+	if _, err = x.ID(rel.ID).Delete(new(Release)); err != nil {
 		return fmt.Errorf("Delete: %v", err)
 	}
 

@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.4.3
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-ldap/ldap/v3 v3.4.2
@@ -65,9 +64,9 @@ require (
 	gorm.io/driver/sqlserver v1.3.1
 	gorm.io/gorm v1.23.2
 	unknwon.dev/clog/v2 v2.2.0
-	xorm.io/builder v0.3.6
+	xorm.io/builder v0.3.9
 	xorm.io/core v0.7.2
-	xorm.io/xorm v0.8.0
+	xorm.io/xorm v1.2.5
 )
 
 // +heroku goVersion go1.15

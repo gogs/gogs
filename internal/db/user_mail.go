@@ -144,7 +144,7 @@ func (email *EmailAddress) Activate() error {
 
 func DeleteEmailAddress(email *EmailAddress) (err error) {
 	if email.ID > 0 {
-		_, err = x.Id(email.ID).Delete(new(EmailAddress))
+		_, err = x.ID(email.ID).Delete(new(EmailAddress))
 	} else {
 		_, err = x.Where("email=?", email.Email).Delete(new(EmailAddress))
 	}
