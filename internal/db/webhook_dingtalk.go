@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -61,67 +62,70 @@ func NewDingtalkActionCard(singleTitle, singleURL string) DingtalkActionCard {
 func GetDingtalkPayload(p api.Payloader, event HookEventType) (payload *DingtalkPayload, err error) {
 	switch event {
 	case HOOK_EVENT_CREATE:
-		payload, err = getDingtalkCreatePayload(p.(*api.CreatePayload))
+		payload = getDingtalkCreatePayload(p.(*api.CreatePayload))
 	case HOOK_EVENT_DELETE:
-		payload, err = getDingtalkDeletePayload(p.(*api.DeletePayload))
+		payload = getDingtalkDeletePayload(p.(*api.DeletePayload))
 	case HOOK_EVENT_FORK:
-		payload, err = getDingtalkForkPayload(p.(*api.ForkPayload))
+		payload = getDingtalkForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
-		payload, err = getDingtalkPushPayload(p.(*api.PushPayload))
+		payload = getDingtalkPushPayload(p.(*api.PushPayload))
 	case HOOK_EVENT_ISSUES:
-		payload, err = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
+		payload = getDingtalkIssuesPayload(p.(*api.IssuesPayload))
 	case HOOK_EVENT_ISSUE_COMMENT:
-		payload, err = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
+		payload = getDingtalkIssueCommentPayload(p.(*api.IssueCommentPayload))
 	case HOOK_EVENT_PULL_REQUEST:
-		payload, err = getDingtalkPullRequestPayload(p.(*api.PullRequestPayload))
+		payload = getDingtalkPullRequestPayload(p.(*api.PullRequestPayload))
 	case HOOK_EVENT_RELEASE:
-		payload, err = getDingtalkReleasePayload(p.(*api.ReleasePayload))
+		payload = getDingtalkReleasePayload(p.(*api.ReleasePayload))
+	default:
+		return nil, errors.Errorf("unexpected event %q", event)
 	}
-
-	if err != nil {
-		return nil, fmt.Errorf("event '%s': %v", event, err)
-	}
-
 	return payload, nil
 }
 
-func getDingtalkCreatePayload(p *api.CreatePayload) (*DingtalkPayload, error) {
+func getDingtalkCreatePayload(p *api.CreatePayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
 	actionCard := NewDingtalkActionCard("View "+refType, p.Repo.HTMLURL+"/src/"+refName)
-
 	actionCard.Text += "# New " + refType + " Create Event"
 	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- New " + refType + ": **" + MarkdownLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName) + "**"
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkDeletePayload(p *api.DeletePayload) (*DingtalkPayload, error) {
+func getDingtalkDeletePayload(p *api.DeletePayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 	refType := strings.Title(p.RefType)
 
 	actionCard := NewDingtalkActionCard("View Repo", p.Repo.HTMLURL)
-
 	actionCard.Text += "# " + refType + " Delete Event"
 	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- " + refType + ": **" + refName + "**"
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkForkPayload(p *api.ForkPayload) (*DingtalkPayload, error) {
-	actionCard := NewDingtalkActionCard("View Forkee", p.Forkee.HTMLURL)
-
+func getDingtalkForkPayload(p *api.ForkPayload) *DingtalkPayload {
+	actionCard := NewDingtalkActionCard("View Fork", p.Forkee.HTMLURL)
 	actionCard.Text += "# Repo Fork Event"
 	actionCard.Text += "\n- From Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- To Repo: **" + MarkdownLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName) + "**"
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkPushPayload(p *api.PushPayload) (*DingtalkPayload, error) {
+func getDingtalkPushPayload(p *api.PushPayload) *DingtalkPayload {
 	refName := git.RefShortName(p.Ref)
 
 	pusher := p.Pusher.FullName
@@ -137,7 +141,6 @@ func getDingtalkPushPayload(p *api.PushPayload) (*DingtalkPayload, error) {
 	}
 
 	actionCard := NewDingtalkActionCard("View Changes", p.CompareURL)
-
 	actionCard.Text += "# Repo Push Event"
 	actionCard.Text += "\n- Repo: **" + MarkdownLinkFormatter(p.Repo.HTMLURL, p.Repo.Name) + "**"
 	actionCard.Text += "\n- Ref: **" + MarkdownLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName) + "**"
@@ -145,15 +148,17 @@ func getDingtalkPushPayload(p *api.PushPayload) (*DingtalkPayload, error) {
 	actionCard.Text += "\n## " + fmt.Sprintf("Total %d commits(s)", len(p.Commits))
 	actionCard.Text += "\n" + detail
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkIssuesPayload(p *api.IssuesPayload) (*DingtalkPayload, error) {
+func getDingtalkIssuesPayload(p *api.IssuesPayload) *DingtalkPayload {
 	issueName := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	issueURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
 
 	actionCard := NewDingtalkActionCard("View Issue", issueURL)
-
 	actionCard.Text += "# Issue Event " + strings.Title(string(p.Action))
 	actionCard.Text += "\n- Issue: **" + MarkdownLinkFormatter(issueURL, issueName) + "**"
 
@@ -177,10 +182,13 @@ func getDingtalkIssuesPayload(p *api.IssuesPayload) (*DingtalkPayload, error) {
 		actionCard.Text += "\n> " + p.Issue.Body
 	}
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) (*DingtalkPayload, error) {
+func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) *DingtalkPayload {
 	issueName := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 	commentURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
 	if p.Action != api.HOOK_ISSUE_COMMENT_DELETED {
@@ -190,16 +198,18 @@ func getDingtalkIssueCommentPayload(p *api.IssueCommentPayload) (*DingtalkPayloa
 	issueURL := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index)
 
 	actionCard := NewDingtalkActionCard("View Issue Comment", commentURL)
-
 	actionCard.Text += "# Issue Comment " + strings.Title(string(p.Action))
 	actionCard.Text += "\n- Issue: " + MarkdownLinkFormatter(issueURL, issueName)
 	actionCard.Text += "\n- Comment content: "
 	actionCard.Text += "\n> " + p.Comment.Body
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkPullRequestPayload(p *api.PullRequestPayload) (*DingtalkPayload, error) {
+func getDingtalkPullRequestPayload(p *api.PullRequestPayload) *DingtalkPayload {
 	title := "# Pull Request " + strings.Title(string(p.Action))
 	if p.Action == api.HOOK_ISSUE_CLOSED && p.PullRequest.HasMerged {
 		title = "# Pull Request Merged"
@@ -227,10 +237,13 @@ func getDingtalkPullRequestPayload(p *api.PullRequestPayload) (*DingtalkPayload,
 		actionCard.Text += "\n> " + p.PullRequest.Body
 	}
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-func getDingtalkReleasePayload(p *api.ReleasePayload) (*DingtalkPayload, error) {
+func getDingtalkReleasePayload(p *api.ReleasePayload) *DingtalkPayload {
 	releaseURL := p.Repository.HTMLURL + "/src/" + p.Release.TagName
 
 	author := p.Release.Author.FullName
@@ -239,7 +252,6 @@ func getDingtalkReleasePayload(p *api.ReleasePayload) (*DingtalkPayload, error) 
 	}
 
 	actionCard := NewDingtalkActionCard("View Release", releaseURL)
-
 	actionCard.Text += "# New Release Published"
 	actionCard.Text += "\n- Repo: " + MarkdownLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
 	actionCard.Text += "\n- Tag: " + MarkdownLinkFormatter(releaseURL, p.Release.TagName)
@@ -252,10 +264,13 @@ func getDingtalkReleasePayload(p *api.ReleasePayload) (*DingtalkPayload, error) 
 		actionCard.Text += "\n- Note: " + p.Release.Body
 	}
 
-	return &DingtalkPayload{MsgType: "actionCard", ActionCard: actionCard}, nil
+	return &DingtalkPayload{
+		MsgType:    "actionCard",
+		ActionCard: actionCard,
+	}
 }
 
-// Format link addr and title into markdown style
+// MarkdownLinkFormatter formats link address and title into Markdown style.
 func MarkdownLinkFormatter(link, text string) string {
 	return "[" + text + "](" + link + ")"
 }
