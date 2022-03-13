@@ -54,21 +54,21 @@ func test_repos_create(t *testing.T, db *repos) {
 	})
 
 	t.Run("already exists", func(t *testing.T) {
-		_, err := db.create(1, createRepoOpts{
+		_, err := db.create(2, createRepoOpts{
 			Name: "repo1",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		_, err = db.create(1, createRepoOpts{
+		_, err = db.create(2, createRepoOpts{
 			Name: "repo1",
 		})
-		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(1), "name": "repo1"}}
+		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
 		assert.Equal(t, expErr, err)
 	})
 
-	repo, err := db.create(1, createRepoOpts{
+	repo, err := db.create(3, createRepoOpts{
 		Name: "repo2",
 	})
 	if err != nil {

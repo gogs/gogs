@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/pkg/errors"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -70,7 +71,7 @@ func DiscordSHALinkFormatter(url, text string) string {
 }
 
 // getDiscordCreatePayload composes Discord payload for create new branch or tag.
-func getDiscordCreatePayload(p *api.CreatePayload) (*DiscordPayload, error) {
+func getDiscordCreatePayload(p *api.CreatePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	refLink := DiscordLinkFormatter(p.Repo.HTMLURL+"/src/"+refName, refName)
@@ -84,11 +85,11 @@ func getDiscordCreatePayload(p *api.CreatePayload) (*DiscordPayload, error) {
 				IconURL: p.Sender.AvatarUrl,
 			},
 		}},
-	}, nil
+	}
 }
 
 // getDiscordDeletePayload composes Discord payload for delete a branch or tag.
-func getDiscordDeletePayload(p *api.DeletePayload) (*DiscordPayload, error) {
+func getDiscordDeletePayload(p *api.DeletePayload) *DiscordPayload {
 	refName := git.RefShortName(p.Ref)
 	repoLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	content := fmt.Sprintf("Deleted %s: %s/%s", p.RefType, repoLink, refName)
@@ -101,11 +102,11 @@ func getDiscordDeletePayload(p *api.DeletePayload) (*DiscordPayload, error) {
 				IconURL: p.Sender.AvatarUrl,
 			},
 		}},
-	}, nil
+	}
 }
 
 // getDiscordForkPayload composes Discord payload for forked by a repository.
-func getDiscordForkPayload(p *api.ForkPayload) (*DiscordPayload, error) {
+func getDiscordForkPayload(p *api.ForkPayload) *DiscordPayload {
 	baseLink := DiscordLinkFormatter(p.Repo.HTMLURL, p.Repo.Name)
 	forkLink := DiscordLinkFormatter(p.Forkee.HTMLURL, p.Forkee.FullName)
 	content := fmt.Sprintf("%s is forked to %s", baseLink, forkLink)
@@ -118,10 +119,10 @@ func getDiscordForkPayload(p *api.ForkPayload) (*DiscordPayload, error) {
 				IconURL: p.Sender.AvatarUrl,
 			},
 		}},
-	}, nil
+	}
 }
 
-func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayload, error) {
+func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) *DiscordPayload {
 	// n new commits
 	var (
 		branchName   = git.RefShortName(p.Ref)
@@ -167,10 +168,10 @@ func getDiscordPushPayload(p *api.PushPayload, slack *SlackMeta) (*DiscordPayloa
 				IconURL: p.Sender.AvatarUrl,
 			},
 		}},
-	}, nil
+	}
 }
 
-func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*DiscordPayload, error) {
+func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Index, p.Issue.Title)
 	url := fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index)
 	content := ""
@@ -239,10 +240,10 @@ func getDiscordIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) (*DiscordPa
 			},
 			Fields: fields,
 		}},
-	}, nil
+	}
 }
 
-func getDiscordIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) (*DiscordPayload, error) {
+func getDiscordIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title)
 	url := fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID))
 	content := ""
@@ -278,10 +279,10 @@ func getDiscordIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta)
 			},
 			Fields: fields,
 		}},
-	}, nil
+	}
 }
 
-func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (*DiscordPayload, error) {
+func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) *DiscordPayload {
 	title := fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title)
 	url := fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index)
 	content := ""
@@ -351,10 +352,10 @@ func getDiscordPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) (
 			},
 			Fields: fields,
 		}},
-	}, nil
+	}
 }
 
-func getDiscordReleasePayload(p *api.ReleasePayload) (*DiscordPayload, error) {
+func getDiscordReleasePayload(p *api.ReleasePayload) *DiscordPayload {
 	repoLink := DiscordLinkFormatter(p.Repository.HTMLURL, p.Repository.Name)
 	refLink := DiscordLinkFormatter(p.Repository.HTMLURL+"/src/"+p.Release.TagName, p.Release.TagName)
 	content := fmt.Sprintf("Published new release %s of %s", refLink, repoLink)
@@ -367,7 +368,7 @@ func getDiscordReleasePayload(p *api.ReleasePayload) (*DiscordPayload, error) {
 				IconURL: p.Sender.AvatarUrl,
 			},
 		}},
-	}, nil
+	}
 }
 
 func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (payload *DiscordPayload, err error) {
@@ -378,24 +379,23 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 
 	switch event {
 	case HOOK_EVENT_CREATE:
-		payload, err = getDiscordCreatePayload(p.(*api.CreatePayload))
+		payload = getDiscordCreatePayload(p.(*api.CreatePayload))
 	case HOOK_EVENT_DELETE:
-		payload, err = getDiscordDeletePayload(p.(*api.DeletePayload))
+		payload = getDiscordDeletePayload(p.(*api.DeletePayload))
 	case HOOK_EVENT_FORK:
-		payload, err = getDiscordForkPayload(p.(*api.ForkPayload))
+		payload = getDiscordForkPayload(p.(*api.ForkPayload))
 	case HOOK_EVENT_PUSH:
-		payload, err = getDiscordPushPayload(p.(*api.PushPayload), slack)
+		payload = getDiscordPushPayload(p.(*api.PushPayload), slack)
 	case HOOK_EVENT_ISSUES:
-		payload, err = getDiscordIssuesPayload(p.(*api.IssuesPayload), slack)
+		payload = getDiscordIssuesPayload(p.(*api.IssuesPayload), slack)
 	case HOOK_EVENT_ISSUE_COMMENT:
-		payload, err = getDiscordIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
+		payload = getDiscordIssueCommentPayload(p.(*api.IssueCommentPayload), slack)
 	case HOOK_EVENT_PULL_REQUEST:
-		payload, err = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
+		payload = getDiscordPullRequestPayload(p.(*api.PullRequestPayload), slack)
 	case HOOK_EVENT_RELEASE:
-		payload, err = getDiscordReleasePayload(p.(*api.ReleasePayload))
-	}
-	if err != nil {
-		return nil, fmt.Errorf("event '%s': %v", event, err)
+		payload = getDiscordReleasePayload(p.(*api.ReleasePayload))
+	default:
+		return nil, errors.Errorf("unexpected event %q", event)
 	}
 
 	payload.Username = slack.Username
@@ -404,6 +404,5 @@ func GetDiscordPayload(p api.Payloader, event HookEventType, meta string) (paylo
 		color, _ := strconv.ParseInt(strings.TrimLeft(slack.Color, "#"), 16, 32)
 		payload.Embeds[0].Color = int(color)
 	}
-
 	return payload, nil
 }
