@@ -64,7 +64,7 @@ func test_repos_create(t *testing.T, db *repos) {
 		_, err = db.create(2, createRepoOpts{
 			Name: "repo1",
 		})
-		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(1), "name": "repo1"}}
+		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
 		assert.Equal(t, expErr, err)
 	})
 
