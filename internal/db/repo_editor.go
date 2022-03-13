@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"github.com/unknwon/com"
 
@@ -23,9 +24,10 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/db/errors"
+	dberrors "gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
 )
@@ -134,7 +136,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
 		if git.RepoHasBranch(repoPath, opts.NewBranch) {
-			return errors.BranchAlreadyExists{Name: opts.NewBranch}
+			return dberrors.BranchAlreadyExists{Name: opts.NewBranch}
 		}
 
 		// Otherwise, delete branch from local copy in case out of sync
@@ -449,9 +451,14 @@ func isRepositoryGitPath(path string) bool {
 	return strings.HasSuffix(path, ".git") || strings.Contains(path, ".git"+string(os.PathSeparator))
 }
 
-func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) (err error) {
+func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
 	if len(opts.Files) == 0 {
 		return nil
+	}
+
+	// Prevent uploading files into the ".git" directory
+	if isRepositoryGitPath(opts.TreePath) {
+		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
 	uploads, err := GetUploadsByUUIDs(opts.Files)
@@ -487,7 +494,9 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 			continue
 		}
 
-		// Prevent copying files into .git directory, see https://gogs.io/gogs/issues/5558.
+		upload.Name = pathutil.Clean(upload.Name)
+
+		// Prevent uploading files into the ".git" directory
 		if isRepositoryGitPath(upload.Name) {
 			continue
 		}
