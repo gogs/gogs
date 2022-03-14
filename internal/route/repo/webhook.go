@@ -128,7 +128,7 @@ func validateWebhook(actor *db.User, l macaron.Locale, w *db.Webhook) (field, ms
 			return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_parse_payload_url", err), false
 		}
 
-		if netutil.IsLocalHostname(payloadURL.Hostname()) {
+		if netutil.IsLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
 			return "PayloadURL", l.Tr("repo.settings.webhook.err_cannot_use_local_addresses"), false
 		}
 	}

@@ -47,8 +47,15 @@ func init() {
 	}
 }
 
-// IsLocalHostname returns true if given hostname is a known local address.
-func IsLocalHostname(hostname string) bool {
+// IsLocalHostname returns true if given hostname is resolved to local network
+// address, except exempted from the allowlist.
+func IsLocalHostname(hostname string, allowlist []string) bool {
+	for _, allow := range allowlist {
+		if hostname == allow {
+			return false
+		}
+	}
+
 	ips, err := net.LookupIP(hostname)
 	if err != nil {
 		return true
