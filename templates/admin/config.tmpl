@@ -210,6 +210,8 @@
 						<dd><i class="fa fa{{if .Security.EnableLoginStatusCookie}}-check{{end}}-square-o"></i></dd>
 						<dt>{{.i18n.Tr "admin.config.security.login_status_cookie_name"}}</dt>
 						<dd>{{.Security.LoginStatusCookieName}}</dd>
+						<dt>{{.i18n.Tr "admin.config.security.local_network_allowlist"}}</dt>
+						<dd><code>{{.Security.LocalNetworkAllowlist}}</code></dd>
 					</dl>
 				</div>
 
