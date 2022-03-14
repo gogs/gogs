@@ -103,6 +103,7 @@ var (
 		CookieSecure            bool
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string
+		LocalNetworkAllowlist   []string `delim:","`
 
 		// Deprecated: Use Auth.ReverseProxyAuthenticationHeader instead, will be removed in 0.13.
 		ReverseProxyAuthenticationUser string
