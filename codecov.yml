@@ -7,3 +7,5 @@ coverage:
 
 comment:
   layout: 'diff'
+
+github_checks: false
