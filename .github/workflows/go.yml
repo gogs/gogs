@@ -30,13 +30,16 @@ jobs:
         with:
           version: latest
           args: --timeout=30m
-      - name: Check Go module tidiness
+      - name: Install Task
+        uses: arduino/setup-task@v1
+      - name: Check Go module tidiness and generated files
         shell: bash
         run: |
           go mod tidy
-          STATUS=$(git status --porcelain go.mod go.sum)
+          task generate
+          STATUS=$(git status --porcelain)
           if [ ! -z "$STATUS" ]; then
-            echo "Running go mod tidy modified go.mod and/or go.sum"
+            echo "Unstaged files:\n$STATUS"
             exit 1
           fi
 
