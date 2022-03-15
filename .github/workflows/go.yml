@@ -46,7 +46,7 @@ jobs:
           if [ ! -z "$STATUS" ]; then
             echo "Unstaged files:"
             echo $STATUS
-            echo "Run 'go mod tidy' or 'task generate' to commit them"
+            echo "Run 'go mod tidy' or 'task generate' and commit them"
             exit 1
           fi
 
