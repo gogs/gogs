@@ -9,4 +9,4 @@ import (
 )
 
 //go:embed app.ini **/*
-var EmbedFS embed.FS
+var Files embed.FS
