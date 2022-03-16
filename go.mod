@@ -1,6 +1,6 @@
 module gogs.io/gogs
 
-go 1.14
+go 1.16
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
@@ -70,5 +70,5 @@ require (
 	xorm.io/xorm v0.8.0
 )
 
-// +heroku goVersion go1.15
+// +heroku goVersion go1.16
 // +heroku install ./
