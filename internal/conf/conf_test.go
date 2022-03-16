@@ -15,25 +15,12 @@ import (
 	"gogs.io/gogs/internal/testutil"
 )
 
-func TestAsset(t *testing.T) {
-	// Make sure it does not blow up
-	_, err := Asset("conf/app.ini")
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestAssetDir(t *testing.T) {
 	// Make sure it does not blow up
-	_, err := AssetDir("conf")
+	_, err := AssetDir(".")
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-func TestMustAsset(_ *testing.T) {
-	// Make sure it does not blow up
-	MustAsset("conf/app.ini")
 }
 
 func TestInit(t *testing.T) {

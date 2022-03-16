@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -29,6 +30,7 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -83,7 +85,7 @@ func newMacaron() *macaron.Macaron {
 	))
 	var publicFs http.FileSystem
 	if !conf.Server.LoadAssetsFromDisk {
-		publicFs = public.NewFileSystem()
+		publicFs = http.FS(public.Files)
 	}
 	m.Use(macaron.Static(
 		filepath.Join(conf.WorkDir(), "public"),
@@ -119,13 +121,16 @@ func newMacaron() *macaron.Macaron {
 	}
 	m.Use(macaron.Renderer(renderOpt))
 
-	localeNames, err := conf.AssetDir("conf/locale")
+	localeNames, err := conf.AssetDir("locale")
 	if err != nil {
 		log.Fatal("Failed to list locale files: %v", err)
 	}
 	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localeFiles[name] = conf.MustAsset("conf/locale/" + name)
+		localeFiles[name], err = fs.ReadFile(embedConf.Files, "locale/"+name)
+		if err != nil {
+			panic(err)
+		}
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.Server.Subpath,

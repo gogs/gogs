@@ -36,24 +36,9 @@ func init() {
 	}
 }
 
-// trimPath maps name to the trim prefix "conf/" path.
-func trimPath(name string) string {
-	if name == "conf/" || name == "conf" {
-		return "."
-	}
-	return strings.TrimPrefix(name, "conf/")
-}
-
-// Asset is a wrapper for getting conf assets.
-func Asset(name string) ([]byte, error) {
-	path := trimPath(name)
-	return fs.ReadFile(conf.Files, path)
-}
-
 // AssetDir is a wrapper for getting conf assets.
 func AssetDir(name string) ([]string, error) {
-	path := trimPath(name)
-	entries, err := fs.ReadDir(conf.Files, path)
+	entries, err := fs.ReadDir(conf.Files, name)
 	if err != nil {
 		return nil, err
 	}
@@ -62,16 +47,6 @@ func AssetDir(name string) ([]string, error) {
 		fileNames = append(fileNames, entry.Name())
 	}
 	return fileNames, nil
-}
-
-// MustAsset is a wrapper for getting conf assets.
-func MustAsset(name string) []byte {
-	path := trimPath(name)
-	data, err := fs.ReadFile(conf.Files, path)
-	if err != nil {
-		panic("asset: Asset(" + name + "): " + err.Error())
-	}
-	return data
 }
 
 // File is the configuration object.
@@ -86,12 +61,15 @@ var File *ini.File
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
 func Init(customConf string) error {
-	var err error
+	data, err := fs.ReadFile(conf.Files, "app.ini")
+	if err != nil {
+		panic(err)
+	}
 	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, MustAsset("conf/app.ini"))
+	}, data)
 	if err != nil {
-		return errors.Wrap(err, "parse 'conf/app.ini'")
+		return errors.Wrap(err, "parse 'app.ini'")
 	}
 	File.NameMapper = ini.SnackCase
 

@@ -1,4 +1,4 @@
-// Copyright 2021 The Gogs Authors. All rights reserved.
+// Copyright 2022 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -6,13 +6,7 @@ package public
 
 import (
 	"embed"
-	"net/http"
 )
 
 //go:embed assets/* css/* img/* js/* plugins/*
-var embedFS embed.FS
-
-// NewFileSystem returns a http.FileSystem instance backed by embedded assets.
-func NewFileSystem() http.FileSystem {
-	return http.FS(embedFS)
-}
+var Files embed.FS

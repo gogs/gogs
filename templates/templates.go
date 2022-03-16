@@ -20,7 +20,7 @@ import (
 )
 
 //go:embed *.tmpl **/*
-var embedFS embed.FS
+var files embed.FS
 
 // fileSystem implements the macaron.TemplateFileSystem interface.
 type fileSystem struct {
@@ -63,8 +63,8 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 	}
 
 	var err error
-	var files []macaron.TemplateFile
-	names := mustNames(embedFS)
+	var tmplFiles []macaron.TemplateFile
+	names := mustNames(files)
 	for _, name := range names {
 		if !strings.HasPrefix(name, dir) {
 			continue
@@ -75,7 +75,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		if osutil.IsFile(fpath) {
 			data, err = ioutil.ReadFile(fpath)
 		} else {
-			data, err = fs.ReadFile(embedFS, name)
+			data, err = fs.ReadFile(files, name)
 		}
 		if err != nil {
 			panic(err)
@@ -83,7 +83,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		name = strings.TrimPrefix(name, dir)
 		ext := path.Ext(name)
 		name = strings.TrimSuffix(name, ext)
-		files = append(files, macaron.NewTplFile(name, data, ext))
+		tmplFiles = append(tmplFiles, macaron.NewTplFile(name, data, ext))
 	}
-	return &fileSystem{files: files}
+	return &fileSystem{files: tmplFiles}
 }
