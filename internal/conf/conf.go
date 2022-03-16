@@ -6,6 +6,7 @@ package conf
 
 import (
 	"fmt"
+	"io/fs"
 	"net/mail"
 	"net/url"
 	"os"
@@ -35,19 +36,42 @@ func init() {
 	}
 }
 
+// trimPath maps name to the trim prefix "conf/" path.
+func trimPath(name string) string {
+	if name == "conf/" || name == "conf" {
+		return "."
+	}
+	return strings.TrimPrefix(name, "conf/")
+}
+
 // Asset is a wrapper for getting conf assets.
 func Asset(name string) ([]byte, error) {
-	return conf.Asset(name)
+	path := trimPath(name)
+	return fs.ReadFile(conf.EmbedFS, path)
 }
 
 // AssetDir is a wrapper for getting conf assets.
 func AssetDir(name string) ([]string, error) {
-	return conf.AssetDir(name)
+	path := trimPath(name)
+	entries, err := fs.ReadDir(conf.EmbedFS, path)
+	if err != nil {
+		return nil, err
+	}
+	fileNames := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		fileNames = append(fileNames, entry.Name())
+	}
+	return fileNames, nil
 }
 
 // MustAsset is a wrapper for getting conf assets.
 func MustAsset(name string) []byte {
-	return conf.MustAsset(name)
+	path := trimPath(name)
+	data, err := fs.ReadFile(conf.EmbedFS, path)
+	if err != nil {
+		panic("asset: Asset(" + name + "): " + err.Error())
+	}
+	return data
 }
 
 // File is the configuration object.
@@ -65,7 +89,7 @@ func Init(customConf string) error {
 	var err error
 	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, conf.MustAsset("conf/app.ini"))
+	}, MustAsset("conf/app.ini"))
 	if err != nil {
 		return errors.Wrap(err, "parse 'conf/app.ini'")
 	}
