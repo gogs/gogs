@@ -16,7 +16,6 @@ import (
 
 	"gogs.io/gogs/internal/osutil"
 	"gopkg.in/macaron.v1"
-	log "unknwon.dev/clog/v2"
 )
 
 //go:embed admin base explore inject mail org repo status user home.tmpl install.tmpl
@@ -78,7 +77,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 			data, err = fs.ReadFile(embedFS, name)
 		}
 		if err != nil {
-			log.Fatal("Failed to read file: %v", err)
+			panic(err)
 		}
 		name = strings.TrimPrefix(name, dir)
 		ext := path.Ext(name)
