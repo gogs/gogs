@@ -6,7 +6,6 @@ package conf
 
 import (
 	"fmt"
-	"io/fs"
 	"net/mail"
 	"net/url"
 	"os"
@@ -38,7 +37,7 @@ func init() {
 
 // AssetDir is a wrapper for getting conf assets.
 func AssetDir(name string) ([]string, error) {
-	entries, err := fs.ReadDir(conf.Files, name)
+	entries, err := conf.Files.ReadDir(name)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +60,7 @@ var File *ini.File
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
 func Init(customConf string) error {
-	data, err := fs.ReadFile(conf.Files, "app.ini")
+	data, err := conf.Files.ReadFile("app.ini")
 	if err != nil {
 		panic(err)
 	}

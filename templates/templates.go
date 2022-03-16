@@ -75,7 +75,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		if osutil.IsFile(fpath) {
 			data, err = ioutil.ReadFile(fpath)
 		} else {
-			data, err = fs.ReadFile(files, name)
+			data, err = files.ReadFile(name)
 		}
 		if err != nil {
 			panic(err)

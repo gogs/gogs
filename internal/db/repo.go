@@ -10,7 +10,6 @@ import (
 	"image"
 	_ "image/jpeg"
 	"image/png"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -949,7 +948,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	if osutil.IsFile(customPath) {
 		return ioutil.ReadFile(customPath)
 	}
-	return fs.ReadFile(embedConf.Files, relPath)
+	return embedConf.Files.ReadFile(relPath)
 }
 
 func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {

@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/fs"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -127,7 +126,7 @@ func newMacaron() *macaron.Macaron {
 	}
 	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localeFiles[name], err = fs.ReadFile(embedConf.Files, "locale/"+name)
+		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
 		if err != nil {
 			panic(err)
 		}
