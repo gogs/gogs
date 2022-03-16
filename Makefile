@@ -37,11 +37,6 @@ pack:
 
 release: build pack
 
-generate: clean
-	go generate internal/assets/conf/conf.go
-	go generate internal/assets/templates/templates.go
-	go generate internal/assets/public/public.go
-
 less: clean public/css/gogs.min.css
 
 public/css/gogs.min.css: $(LESS_FILES)
