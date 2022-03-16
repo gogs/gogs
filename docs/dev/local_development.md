@@ -1,4 +1,4 @@
-# Getting started with developing Gogs
+# Set up your development environment
 
 Gogs is written in [Go](https://golang.org/), please take [A Tour of Go](https://tour.golang.org/) if you haven't done so!
 
@@ -21,9 +21,9 @@ Gogs is built and runs as a single binary and meant to be cross platform. Theref
 Gogs has the following dependencies:
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) (v1.8.3 or higher)
-- [Go](https://golang.org/doc/install) (v1.15 or higher)
+- [Go](https://golang.org/doc/install) (v1.16 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
-- [Task](https://github.com/go-task/task)
+- [Task](https://github.com/go-task/task) (v3)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
