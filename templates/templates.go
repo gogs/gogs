@@ -1,4 +1,4 @@
-// Copyright 2021 The Gogs Authors. All rights reserved.
+// Copyright 2020 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -14,11 +14,12 @@ import (
 	"path"
 	"strings"
 
-	"gogs.io/gogs/internal/osutil"
 	"gopkg.in/macaron.v1"
+
+	"gogs.io/gogs/internal/osutil"
 )
 
-//go:embed admin base explore inject mail org repo status user home.tmpl install.tmpl
+//go:embed *.tmpl **/*
 var embedFS embed.FS
 
 // fileSystem implements the macaron.TemplateFileSystem interface.

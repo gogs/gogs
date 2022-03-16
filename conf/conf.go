@@ -1,4 +1,4 @@
-// Copyright 2021 The Gogs Authors. All rights reserved.
+// Copyright 2022 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-//go:embed auth.d gitignore label license locale readme app.ini
+//go:embed **/*
+//go:embed app.ini
 var embedFS embed.FS
 
 // trimPath maps name to the trim prefix "conf/" path.

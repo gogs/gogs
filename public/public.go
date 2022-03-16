@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-//go:embed assets css img js less plugins
+//go:embed assets/* css/* img/* js/* plugins/*
 var embedFS embed.FS
 
 // NewFileSystem returns a http.FileSystem instance backed by embedded assets.
