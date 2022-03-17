@@ -36,7 +36,7 @@ Gogs has the following dependencies:
 1. Install dependencies:
 
     ```bash
-    brew install go postgresql git go-bindata npm go-task/tap/go-task
+    brew install go postgresql git npm go-task/tap/go-task
     npm install -g less
     npm install -g less-plugin-clean-css
     ```
@@ -74,8 +74,6 @@ Gogs has the following dependencies:
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
-    # Watch out, it is NOT github.com/go-bindata/go-bindata!
-    go get -u github.com/kevinburke/go-bindata/...
     go get go-task/task/cmd/task
     ```
 
