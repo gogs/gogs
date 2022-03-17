@@ -32,11 +32,6 @@ jobs:
           args: --timeout=30m
       - name: Install Task
         uses: arduino/setup-task@v1
-      - name: Install go-bindata
-        shell: bash
-        run: |
-          curl --silent --location --output /usr/local/bin/go-bindata https://github.com/kevinburke/go-bindata/releases/download/v3.23.0/go-bindata-linux-amd64
-          chmod +x /usr/local/bin/go-bindata
       - name: Check Go module tidiness and generated files
         shell: bash
         run: |

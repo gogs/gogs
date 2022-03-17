@@ -29,9 +29,8 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
+	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/app"
-	"gogs.io/gogs/internal/assets/public"
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -46,6 +45,8 @@ import (
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/route/user"
 	"gogs.io/gogs/internal/template"
+	"gogs.io/gogs/public"
+	"gogs.io/gogs/templates"
 )
 
 var Web = cli.Command{
@@ -83,7 +84,7 @@ func newMacaron() *macaron.Macaron {
 	))
 	var publicFs http.FileSystem
 	if !conf.Server.LoadAssetsFromDisk {
-		publicFs = public.NewFileSystem()
+		publicFs = http.FS(public.Files)
 	}
 	m.Use(macaron.Static(
 		filepath.Join(conf.WorkDir(), "public"),
@@ -119,13 +120,16 @@ func newMacaron() *macaron.Macaron {
 	}
 	m.Use(macaron.Renderer(renderOpt))
 
-	localeNames, err := conf.AssetDir("conf/locale")
+	localeNames, err := embedConf.FileNames("locale")
 	if err != nil {
 		log.Fatal("Failed to list locale files: %v", err)
 	}
 	localeFiles := make(map[string][]byte)
 	for _, name := range localeNames {
-		localeFiles[name] = conf.MustAsset("conf/locale/" + name)
+		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
+		if err != nil {
+			log.Fatal("Failed to read locale file %q: %v", name, err)
+		}
 	}
 	m.Use(i18n.I18n(i18n.Options{
 		SubURL:          conf.Server.Subpath,
