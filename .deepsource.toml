@@ -1,7 +1,5 @@
 version = 1
 
-exclude_patterns = ["**/*_gen.go"]
-
 [[analyzers]]
 name = "docker"
 enabled = true

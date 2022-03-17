@@ -29,6 +29,7 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
@@ -57,10 +58,11 @@ func LoadRepoConfig() {
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
 	for i, t := range types {
-		files, err := conf.AssetDir("conf/" + t)
+		files, err := embedConf.FileNames(t)
 		if err != nil {
-			log.Fatal("Failed to get %s files: %v", t, err)
+			log.Fatal("Failed to get %q files: %v", t, err)
 		}
+
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
 		if com.IsDir(customPath) {
 			customFiles, err := com.StatDir(customPath)
@@ -940,14 +942,14 @@ type CreateRepoOptions struct {
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
-	relPath := path.Join("conf", tp, strings.TrimLeft(path.Clean("/"+name), "/"))
+	relPath := path.Join(tp, strings.TrimLeft(path.Clean("/"+name), "/"))
 
 	// Use custom file when available.
-	customPath := filepath.Join(conf.CustomDir(), relPath)
+	customPath := filepath.Join(conf.CustomDir(), "conf", relPath)
 	if osutil.IsFile(customPath) {
 		return ioutil.ReadFile(customPath)
 	}
-	return conf.Asset(relPath)
+	return embedConf.Files.ReadFile(relPath)
 }
 
 func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {
