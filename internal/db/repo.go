@@ -58,10 +58,11 @@ func LoadRepoConfig() {
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
 	for i, t := range types {
-		files, err := conf.AssetDir(t)
+		files, err := embedConf.FileNames(t)
 		if err != nil {
-			log.Fatal("Failed to get %s files: %v", t, err)
+			log.Fatal("Failed to get %q files: %v", t, err)
 		}
+
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
 		if com.IsDir(customPath) {
 			customFiles, err := com.StatDir(customPath)

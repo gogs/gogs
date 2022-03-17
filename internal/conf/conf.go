@@ -35,19 +35,6 @@ func init() {
 	}
 }
 
-// AssetDir is a wrapper for getting conf assets.
-func AssetDir(name string) ([]string, error) {
-	entries, err := conf.Files.ReadDir(name)
-	if err != nil {
-		return nil, err
-	}
-	fileNames := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		fileNames = append(fileNames, entry.Name())
-	}
-	return fileNames, nil
-}
-
 // File is the configuration object.
 var File *ini.File
 
@@ -62,13 +49,14 @@ var File *ini.File
 func Init(customConf string) error {
 	data, err := conf.Files.ReadFile("app.ini")
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, `read default "app.ini"`)
 	}
+
 	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
 	}, data)
 	if err != nil {
-		return errors.Wrap(err, "parse 'app.ini'")
+		return errors.Wrap(err, `parse "app.ini"`)
 	}
 	File.NameMapper = ini.SnackCase
 

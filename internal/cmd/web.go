@@ -120,7 +120,7 @@ func newMacaron() *macaron.Macaron {
 	}
 	m.Use(macaron.Renderer(renderOpt))
 
-	localeNames, err := conf.AssetDir("locale")
+	localeNames, err := embedConf.FileNames("locale")
 	if err != nil {
 		log.Fatal("Failed to list locale files: %v", err)
 	}
@@ -128,7 +128,7 @@ func newMacaron() *macaron.Macaron {
 	for _, name := range localeNames {
 		localeFiles[name], err = embedConf.Files.ReadFile("locale/" + name)
 		if err != nil {
-			panic(err)
+			log.Fatal("Failed to read locale file %q: %v", name, err)
 		}
 	}
 	m.Use(i18n.I18n(i18n.Options{

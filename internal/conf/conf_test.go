@@ -15,14 +15,6 @@ import (
 	"gogs.io/gogs/internal/testutil"
 )
 
-func TestAssetDir(t *testing.T) {
-	// Make sure it does not blow up
-	_, err := AssetDir(".")
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestInit(t *testing.T) {
 	ini.PrettyFormat = false
 	defer func() {
