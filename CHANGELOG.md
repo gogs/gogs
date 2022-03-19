@@ -23,7 +23,6 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
-- _Regression:_ Unable to migrate repository from other local Git hosting. Added a new configuration option `[security] LOCAL_NETWORK_ALLOWLIST`, which is a comma separated list of hostnames that are explicitly allowed to be accessed within the local network. [#6841](https://github.com/gogs/gogs/issues/6841)
 
 ### Removed
 
@@ -43,6 +42,14 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+
+## 0.12.6
+
+### Fixed
+
+- _Security:_ Remote command execution in file uploading. [#6833](https://github.com/gogs/gogs/issues/6833)
+- _Regression:_ Unable to migrate repository from other local Git hosting. Added a new configuration option `[security] LOCAL_NETWORK_ALLOWLIST`, which is a comma separated list of hostnames that are explicitly allowed to be accessed within the local network. [#6841](https://github.com/gogs/gogs/issues/6841)
+- Slow start of Docker containers using NAS devices. [#6554](https://github.com/gogs/gogs/issues/6554)
 
 ## 0.12.5
 
