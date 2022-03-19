@@ -77,5 +77,5 @@ All commands are starting at the repository root.
 - Windows:
 	```sh
 	$ TAGS=cert task release
-	$ TAGS="cert minwinsvc" task release
+	$ TAGS="cert minwinsvc" task release --force
 	```
