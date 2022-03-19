@@ -37,16 +37,15 @@ jobs:
         run: |
           curl --silent --location --output /usr/local/bin/go-bindata https://github.com/kevinburke/go-bindata/releases/download/v3.23.0/go-bindata-linux-amd64
           chmod +x /usr/local/bin/go-bindata
-      - name: Check Go module tidiness and generated files
+      - name: Check Go module tidiness
         shell: bash
         run: |
           go mod tidy
-          task generate
           STATUS=$(git status --porcelain)
           if [ ! -z "$STATUS" ]; then
             echo "Unstaged files:"
             echo $STATUS
-            echo "Run 'go mod tidy' or 'task generate' and commit them"
+            echo "Run 'go mod tidy' and commit them"
             exit 1
           fi
 
