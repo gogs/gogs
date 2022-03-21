@@ -87,7 +87,7 @@ func discardLocalRepoBranchChanges(localPath, branch string) error {
 	}
 
 	rev := "origin/" + branch
-	if err := git.RepoReset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
+	if err := git.Reset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
 		return fmt.Errorf("reset [revision: %s]: %v", rev, err)
 	}
 	return nil
@@ -99,7 +99,7 @@ func (repo *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 
 // CheckoutNewBranch checks out to a new branch from the a branch name.
 func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	if err := git.RepoCheckout(repo.LocalCopyPath(), newBranch, git.CheckoutOptions{
+	if err := git.Checkout(repo.LocalCopyPath(), newBranch, git.CheckoutOptions{
 		BaseBranch: oldBranch,
 		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
@@ -141,7 +141,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 		// Otherwise, delete branch from local copy in case out of sync
 		if git.RepoHasBranch(localPath, opts.NewBranch) {
-			if err = git.RepoDeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
+			if err = git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
 				Force: true,
 			}); err != nil {
 				return fmt.Errorf("delete branch %q: %v", opts.NewBranch, err)
@@ -169,7 +169,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	// Ignore move step if it's a new file under a directory.
 	// Otherwise, move the file when name changed.
 	if osutil.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
-		if err = git.RepoMove(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
+		if err = git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return fmt.Errorf("git mv %q %q: %v", opts.OldTreeName, opts.NewTreeName, err)
 		}
 	}
@@ -178,9 +178,9 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		return fmt.Errorf("write file: %v", err)
 	}
 
-	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
@@ -192,7 +192,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		RepoName:  repo.Name,
 		RepoPath:  repo.RepoPath(),
 	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	if err = git.Push(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -283,9 +283,9 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		return fmt.Errorf("remove file %q: %v", opts.TreePath, err)
 	}
 
-	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
 		return fmt.Errorf("commit changes to %q: %v", localPath, err)
 	}
 
@@ -297,7 +297,7 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		RepoName:  repo.Name,
 		RepoPath:  repo.RepoPath(),
 	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	if err = git.Push(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -507,9 +507,9 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		}
 	}
 
-	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
@@ -521,7 +521,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		RepoName:  repo.Name,
 		RepoPath:  repo.RepoPath(),
 	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	if err = git.Push(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 

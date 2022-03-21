@@ -128,7 +128,7 @@ func (m *Mirror) RawAddress() string {
 func (m *Mirror) SaveAddress(addr string) error {
 	repoPath := m.Repo.RepoPath()
 
-	err := git.RepoRemoveRemote(repoPath, "origin")
+	err := git.RemoteRemove(repoPath, "origin")
 	if err != nil {
 		return fmt.Errorf("remove remote 'origin': %v", err)
 	}
@@ -138,7 +138,7 @@ func (m *Mirror) SaveAddress(addr string) error {
 		return err
 	}
 
-	err = git.RepoAddRemote(repoPath, "origin", addrURL.String(), git.AddRemoteOptions{MirrorFetch: true})
+	err = git.RemoteAdd(repoPath, "origin", addrURL.String(), git.RemoteAddOptions{MirrorFetch: true})
 	if err != nil {
 		return fmt.Errorf("add remote 'origin': %v", err)
 	}

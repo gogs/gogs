@@ -30,12 +30,12 @@ func (module) PullRequestMeta(headPath, basePath, headBranch, baseBranch string)
 	// We need to create a temporary remote when the pull request is sent from a forked repository.
 	if headPath != basePath {
 		tmpRemote := strconv.FormatInt(time.Now().UnixNano(), 10)
-		err := Module.RepoAddRemote(headPath, tmpRemote, basePath, git.AddRemoteOptions{Fetch: true})
+		err := Module.RemoteAdd(headPath, tmpRemote, basePath, git.RemoteAddOptions{Fetch: true})
 		if err != nil {
 			return nil, fmt.Errorf("add remote: %v", err)
 		}
 		defer func() {
-			err := Module.RepoRemoveRemote(headPath, tmpRemote)
+			err := Module.RemoteRemove(headPath, tmpRemote)
 			if err != nil {
 				log.Error("Failed to remove remote %q [path: %s]: %v", tmpRemote, headPath, err)
 				return
@@ -45,18 +45,18 @@ func (module) PullRequestMeta(headPath, basePath, headBranch, baseBranch string)
 		tmpRemoteBranch = "remotes/" + tmpRemote + "/" + baseBranch
 	}
 
-	mergeBase, err := Module.RepoMergeBase(headPath, tmpRemoteBranch, headBranch)
+	mergeBase, err := Module.MergeBase(headPath, tmpRemoteBranch, headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get merge base")
 	}
 
-	commits, err := Module.RepoLog(headPath, mergeBase+"..."+headBranch)
+	commits, err := Module.Log(headPath, mergeBase+"..."+headBranch)
 	if err != nil {
 		return nil, errors.Wrap(err, "get commits")
 	}
 
 	// Count number of changed files
-	names, err := Module.RepoDiffNameOnly(headPath, tmpRemoteBranch, headBranch, git.DiffNameOnlyOptions{NeedsMergeBase: true})
+	names, err := Module.DiffNameOnly(headPath, tmpRemoteBranch, headBranch, git.DiffNameOnlyOptions{NeedsMergeBase: true})
 	if err != nil {
 		return nil, errors.Wrap(err, "get changed files")
 	}
