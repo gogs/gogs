@@ -77,10 +77,12 @@
 				</h4>
 				<div class="ui unstackable attached table segment">
 					{{$isImage := false}}
-					{{if $file.IsDeleted}}
-						{{$isImage = (call $.IsImageFileByIndex $file.Index)}}
-					{{else}}
-						{{$isImage = (call $.IsImageFile $file.Name)}}
+					{{if not $file.IsSubmodule}}
+						{{if $file.IsDeleted}}
+							{{$isImage = (call $.IsImageFileByIndex $file.Index)}}
+						{{else}}
+							{{$isImage = (call $.IsImageFile $file.Name)}}
+						{{end}}
 					{{end}}
 
 					{{if $isImage}}
