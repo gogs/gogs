@@ -267,7 +267,7 @@ func (pc *PushCommits) ToApiPayloadCommits(repoPath, repoURL string) ([]*api.Pay
 			return nil, fmt.Errorf("get user by email: %v", err)
 		}
 
-		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
+		nameStatus, err := git.ShowNameStatus(repoPath, commit.Sha1)
 		if err != nil {
 			return nil, fmt.Errorf("show name status [commit_sha1: %s]: %v", commit.Sha1, err)
 		}

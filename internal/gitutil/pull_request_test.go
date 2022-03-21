@@ -25,7 +25,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 	}
 
 	SetMockModuleStore(t, &MockModuleStore{
-		repoAddRemote: func(repoPath, name, url string, opts ...git.AddRemoteOptions) error {
+		remoteAdd: func(repoPath, name, url string, opts ...git.RemoteAddOptions) error {
 			if repoPath != headPath {
 				return fmt.Errorf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if name == "" {
@@ -42,7 +42,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return nil
 		},
-		repoMergeBase: func(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error) {
+		mergeBase: func(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error) {
 			if repoPath != headPath {
 				return "", fmt.Errorf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if base == "" {
@@ -53,7 +53,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return mergeBase, nil
 		},
-		repoLog: func(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error) {
+		log: func(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error) {
 			if repoPath != headPath {
 				return nil, fmt.Errorf("repoPath: want %q but got %q", headPath, repoPath)
 			}
@@ -65,7 +65,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return commits, nil
 		},
-		repoDiffNameOnly: func(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error) {
+		diffNameOnly: func(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error) {
 			if repoPath != headPath {
 				return nil, fmt.Errorf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if base == "" {
@@ -82,7 +82,7 @@ func TestModuler_PullRequestMeta(t *testing.T) {
 
 			return changedFiles, nil
 		},
-		repoRemoveRemote: func(repoPath, name string, opts ...git.RemoveRemoteOptions) error {
+		remoteRemove: func(repoPath, name string, opts ...git.RemoteRemoveOptions) error {
 			if repoPath != headPath {
 				return fmt.Errorf("repoPath: want %q but got %q", headPath, repoPath)
 			} else if name == "" {

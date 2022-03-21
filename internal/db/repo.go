@@ -419,7 +419,7 @@ func (repo *Repository) mustOwner(e Engine) *User {
 }
 
 func (repo *Repository) UpdateSize() error {
-	countObject, err := git.RepoCountObjects(repo.RepoPath())
+	countObject, err := git.CountObjects(repo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("count repository objects: %v", err)
 	}
@@ -1979,7 +1979,7 @@ func GitFsck() {
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			err := git.RepoFsck(repoPath, git.FsckOptions{
+			err := git.Fsck(repoPath, git.FsckOptions{
 				Args:    conf.Cron.RepoHealthCheck.Args,
 				Timeout: conf.Cron.RepoHealthCheck.Timeout,
 			})
@@ -2511,7 +2511,7 @@ func (repo *Repository) CreateNewBranch(oldBranch, newBranch string) (err error)
 		return fmt.Errorf("create new branch [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 
-	if err = git.RepoPush(localPath, "origin", newBranch); err != nil {
+	if err = git.Push(localPath, "origin", newBranch); err != nil {
 		return fmt.Errorf("push [branch: %s]: %v", newBranch, err)
 	}
 

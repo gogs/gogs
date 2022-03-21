@@ -13,35 +13,35 @@ import (
 var _ ModuleStore = (*MockModuleStore)(nil)
 
 type MockModuleStore struct {
-	repoAddRemote    func(repoPath, name, url string, opts ...git.AddRemoteOptions) error
-	repoDiffNameOnly func(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error)
-	repoLog          func(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error)
-	repoMergeBase    func(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error)
-	repoRemoveRemote func(repoPath, name string, opts ...git.RemoveRemoteOptions) error
-	repoTags         func(repoPath string, opts ...git.TagsOptions) ([]string, error)
+	remoteAdd    func(repoPath, name, url string, opts ...git.RemoteAddOptions) error
+	diffNameOnly func(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error)
+	log          func(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error)
+	mergeBase    func(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error)
+	remoteRemove func(repoPath, name string, opts ...git.RemoteRemoveOptions) error
+	repoTags     func(repoPath string, opts ...git.TagsOptions) ([]string, error)
 
 	pullRequestMeta func(headPath, basePath, headBranch, baseBranch string) (*PullRequestMeta, error)
 	listTagsAfter   func(repoPath, after string, limit int) (*TagsPage, error)
 }
 
-func (m *MockModuleStore) RepoAddRemote(repoPath, name, url string, opts ...git.AddRemoteOptions) error {
-	return m.repoAddRemote(repoPath, name, url, opts...)
+func (m *MockModuleStore) RemoteAdd(repoPath, name, url string, opts ...git.RemoteAddOptions) error {
+	return m.remoteAdd(repoPath, name, url, opts...)
 }
 
-func (m *MockModuleStore) RepoDiffNameOnly(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error) {
-	return m.repoDiffNameOnly(repoPath, base, head, opts...)
+func (m *MockModuleStore) DiffNameOnly(repoPath, base, head string, opts ...git.DiffNameOnlyOptions) ([]string, error) {
+	return m.diffNameOnly(repoPath, base, head, opts...)
 }
 
-func (m *MockModuleStore) RepoLog(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error) {
-	return m.repoLog(repoPath, rev, opts...)
+func (m *MockModuleStore) Log(repoPath, rev string, opts ...git.LogOptions) ([]*git.Commit, error) {
+	return m.log(repoPath, rev, opts...)
 }
 
-func (m *MockModuleStore) RepoMergeBase(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error) {
-	return m.repoMergeBase(repoPath, base, head, opts...)
+func (m *MockModuleStore) MergeBase(repoPath, base, head string, opts ...git.MergeBaseOptions) (string, error) {
+	return m.mergeBase(repoPath, base, head, opts...)
 }
 
-func (m *MockModuleStore) RepoRemoveRemote(repoPath, name string, opts ...git.RemoveRemoteOptions) error {
-	return m.repoRemoveRemote(repoPath, name, opts...)
+func (m *MockModuleStore) RemoteRemove(repoPath, name string, opts ...git.RemoteRemoveOptions) error {
+	return m.remoteRemove(repoPath, name, opts...)
 }
 
 func (m *MockModuleStore) RepoTags(repoPath string, opts ...git.TagsOptions) ([]string, error) {
