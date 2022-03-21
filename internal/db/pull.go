@@ -634,12 +634,12 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	// Add a temporary remote.
 	tmpRemote := com.ToStr(time.Now().UnixNano())
 	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
-	err = headGitRepo.AddRemote(tmpRemote, baseRepoPath, git.AddRemoteOptions{Fetch: true})
+	err = headGitRepo.RemoteAdd(tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
 	if err != nil {
 		return fmt.Errorf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 	defer func() {
-		if err := headGitRepo.RemoveRemote(tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
@@ -678,13 +678,13 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 	}
 
 	tmpRemote := fmt.Sprintf("tmp-pull-%d", pr.ID)
-	if err = headGitRepo.AddRemote(tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
+	if err = headGitRepo.RemoteAdd(tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
 		return fmt.Errorf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 
 	// Make sure to remove the remote even if the push fails
 	defer func() {
-		if err := headGitRepo.RemoveRemote(tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
