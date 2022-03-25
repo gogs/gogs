@@ -6,13 +6,13 @@ vars:
 
 tasks:
   web:
-    desc: Build the binary and start the web server.
+    desc: Build the binary and start the web server
     deps: [build]
     cmds:
       - ./gogs web
 
   build:
-    desc: Build the binary.
+    desc: Build the binary
     cmds:
       - go build -v
         -ldflags '
@@ -35,12 +35,12 @@ tasks:
       - templates/**
 
   generate-schemadoc:
-    desc: Generate database schema documentation.
+    desc: Generate database schema documentation
     cmds:
       - go generate ./internal/db/schemadoc
 
   generate:
-    desc: Run all go:generate commands.
+    desc: Run all go:generate commands
     deps: [generate-schemadoc]
 
   test:
@@ -49,12 +49,12 @@ tasks:
       - go test -cover -race ./...
 
   clean:
-    desc: Cleans up system meta files for code generation.
+    desc: Cleans up system meta files
     cmds:
       - find . -name "*.DS_Store" -type f -delete
 
   release:
-    desc: Build the binary and pack resources to a ZIP file.
+    desc: Build the binary and pack resources to a ZIP file
     deps: [build]
     cmds:
       - rm -rf {{.RELEASE_GOGS}}
@@ -66,21 +66,21 @@ tasks:
       RELEASE_GOGS: release/gogs
 
   less:
-    desc: Generate CSS from LESS files.
+    desc: Generate CSS from LESS files
     cmds:
       - lessc --clean-css --source-map "public/less/gogs.less" public/css/gogs.min.css
 
   fixme:
-    desc: Show all occurrences of "FIXME".
+    desc: Show all occurrences of "FIXME"
     cmds:
       - grep -rnw "FIXME" internal
 
   todo:
-    desc: Show all occurrences of "TODO".
+    desc: Show all occurrences of "TODO"
     cmds:
       - grep -rnw "TODO" internal
 
   legacy:
-    desc: Identify legacy and deprecated lines.
+    desc: Identify legacy and deprecated lines
     cmds:
       - grep -rnw "\(LEGACY\|Deprecated\)" internal
