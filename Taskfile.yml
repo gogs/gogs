@@ -49,7 +49,7 @@ tasks:
       - go test -cover -race ./...
 
   clean:
-    desc: Cleans up system meta files for code generation
+    desc: Cleans up system meta files
     cmds:
       - find . -name "*.DS_Store" -type f -delete
 
