@@ -2,6 +2,7 @@ package db
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -176,8 +177,11 @@ func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
+		// PostgreSQL does not like the null characters (U+0000)
+		cleaned := bytes.ReplaceAll(scanner.Bytes(), []byte("\\u0000"), []byte(""))
+
 		elem := reflect.New(reflect.TypeOf(table).Elem()).Interface()
-		err = jsoniter.Unmarshal(scanner.Bytes(), elem)
+		err = jsoniter.Unmarshal(cleaned, elem)
 		if err != nil {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
