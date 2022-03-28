@@ -8,7 +8,7 @@
 					{{/* {{if gt $j 0}}<span class="fold octicon octicon-fold"></span>{{end}} */}}
 				</td>
 			{{else}}
-				<td class="lines-num lines-num-old" {{if $line.LeftLine}} id="diff-{{$file.Index}}L{{$line.LeftLine}}" data-line-number="{{$line.LeftLine}}"{{end}}></td>
+				<td class="lines-num lines-num-old" {{if $line.LeftLine}} id="diff-{{$file.OldIndex}}L{{$line.LeftLine}}" data-line-number="{{$line.LeftLine}}"{{end}}></td>
 				<td class="lines-num lines-num-new" {{if $line.RightLine}} id="diff-{{$file.Index}}R{{$line.RightLine}}" data-line-number="{{$line.RightLine}}"{{end}}></td>
 			{{end}}
 			<td class="lines-code">
