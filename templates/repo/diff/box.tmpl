@@ -27,7 +27,7 @@
 					</div>
 					<!-- todo finish all file status, now modify, add, delete and rename -->
 					<span class="status {{DiffFileTypeToStr .Type}} poping up" data-content="{{DiffFileTypeToStr .Type}}" data-variation="inverted tiny" data-position="right center">&nbsp;</span>
-					<a class="file" href="#diff-{{.Index}}">{{.Name}}</a>
+					<a class="file" href="#diff-{{if .IsDeleted}}{{.OldIndex}}{{else}}{{.Index}}{{end}}">{{.Name}}</a>
 				</li>
 			{{end}}
 		</ol>
@@ -50,7 +50,7 @@
 				</h4>
 			</div>
 		{{else}}
-			<div class="diff-file-box diff-box file-content {{TabSizeClass $.Editorconfig $file.Name}}" id="diff-{{.Index}}">
+			<div class="diff-file-box diff-box file-content {{TabSizeClass $.Editorconfig $file.Name}}" id="diff-{{if .IsDeleted}}{{.OldIndex}}{{else}}{{.Index}}{{end}}">
 				<h4 class="ui top attached normal header">
 					<div class="diff-counter count ui left">
 						{{if $file.IsBinary}}
@@ -106,7 +106,7 @@
 															<pre><code class="{{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{$section.ComputedInlineDiffFor $line}}</code></pre>
 														</td>
 													{{else}}
-														<td class="lines-num lines-num-old" {{if $line.LeftLine}} id="diff-{{Sha1 $file.Index}}L{{$line.LeftLine}}" data-line-number="{{$line.LeftLine}}"{{end}}>
+														<td class="lines-num lines-num-old" {{if $line.LeftLine}} id="diff-{{Sha1 $file.OldIndex}}L{{$line.LeftLine}}" data-line-number="{{$line.LeftLine}}"{{end}}>
 														</td>
 														<td class="lines-code halfwidth">
 															<pre><code class="wrap {{if $highlightClass}}language-{{$highlightClass}}{{else}}nohighlight{{end}}">{{if $line.LeftLine}}{{$section.ComputedInlineDiffFor $line}}{{end}}</code></pre>
