@@ -78,7 +78,7 @@
 				<div class="ui unstackable attached table segment">
 					{{$isImage := false}}
 					{{if $file.IsDeleted}}
-						{{$isImage = (call $.IsImageFileByIndex $file.Index)}}
+						{{$isImage = (call $.IsImageFileByIndex $file.OldIndex)}}
 					{{else}}
 						{{$isImage = (call $.IsImageFile $file.Name)}}
 					{{end}}
