@@ -28,11 +28,13 @@ tasks:
       BUILD_COMMIT:
         sh: git rev-parse HEAD
     sources:
+      - go.mod
       - gogs.go
       - internal/**/*.go
       - conf/**/*
       - public/**/*
       - templates/**/*
+    method: timestamp
 
   generate-schemadoc:
     desc: Generate database schema documentation
