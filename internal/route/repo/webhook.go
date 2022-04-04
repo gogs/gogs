@@ -82,7 +82,7 @@ func Webhooks(c *context.Context, orCtx *orgRepoContext) {
 	var err error
 	var ws []*db.Webhook
 	if orCtx.RepoID > 0 {
-		c.Data["Description"] = c.Tr("repo.settings.hooks_desc")
+		c.Data["Description"] = c.Tr("repo.settings.hooks_desc", "https://gogs.io/docs/features/webhook.html")
 		ws, err = db.GetWebhooksByRepoID(orCtx.RepoID)
 	} else {
 		c.Data["Description"] = c.Tr("org.settings.hooks_desc")
