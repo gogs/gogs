@@ -1980,7 +1980,9 @@ func GitFsck() {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
 			err := git.Fsck(repoPath, git.FsckOptions{
-				Args:    conf.Cron.RepoHealthCheck.Args,
+				CommandOptions: git.CommandOptions{
+					Args: conf.Cron.RepoHealthCheck.Args,
+				},
 				Timeout: conf.Cron.RepoHealthCheck.Timeout,
 			})
 			if err != nil {
