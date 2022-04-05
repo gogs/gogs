@@ -173,7 +173,7 @@ func InitLogging(hookMode bool) {
 			log.Fatal("Failed to init %s logger: %v", mode, err)
 			return
 		}
-		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(strings.ToLower(level.String())))
+		log.Trace("Log mode: %s (%s)", strings.Title(mode), strings.Title(strings.ToLower(level.String()))) //nolint:staticcheck
 	}
 
 	// ⚠️ WARNING: It is only safe to remove the primary logger until

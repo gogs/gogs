@@ -184,15 +184,21 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
-	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
-		AuthUser:  doer,
-		OwnerName: repo.MustOwner().Name,
-		OwnerSalt: repo.MustOwner().Salt,
-		RepoID:    repo.ID,
-		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
-	})
-	if err = git.Push(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	err = git.Push(localPath, "origin", opts.NewBranch,
+		git.PushOptions{
+			CommandOptions: git.CommandOptions{
+				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+					AuthUser:  doer,
+					OwnerName: repo.MustOwner().Name,
+					OwnerSalt: repo.MustOwner().Salt,
+					RepoID:    repo.ID,
+					RepoName:  repo.Name,
+					RepoPath:  repo.RepoPath(),
+				}),
+			},
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -289,15 +295,21 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		return fmt.Errorf("commit changes to %q: %v", localPath, err)
 	}
 
-	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
-		AuthUser:  doer,
-		OwnerName: repo.MustOwner().Name,
-		OwnerSalt: repo.MustOwner().Salt,
-		RepoID:    repo.ID,
-		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
-	})
-	if err = git.Push(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	err = git.Push(localPath, "origin", opts.NewBranch,
+		git.PushOptions{
+			CommandOptions: git.CommandOptions{
+				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+					AuthUser:  doer,
+					OwnerName: repo.MustOwner().Name,
+					OwnerSalt: repo.MustOwner().Salt,
+					RepoID:    repo.ID,
+					RepoName:  repo.Name,
+					RepoPath:  repo.RepoPath(),
+				}),
+			},
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -513,15 +525,21 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
-	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
-		AuthUser:  doer,
-		OwnerName: repo.MustOwner().Name,
-		OwnerSalt: repo.MustOwner().Salt,
-		RepoID:    repo.ID,
-		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
-	})
-	if err = git.Push(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	err = git.Push(localPath, "origin", opts.NewBranch,
+		git.PushOptions{
+			CommandOptions: git.CommandOptions{
+				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+					AuthUser:  doer,
+					OwnerName: repo.MustOwner().Name,
+					OwnerSalt: repo.MustOwner().Salt,
+					RepoID:    repo.ID,
+					RepoName:  repo.Name,
+					RepoPath:  repo.RepoPath(),
+				}),
+			},
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 
