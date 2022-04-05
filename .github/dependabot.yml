@@ -6,6 +6,6 @@ updates:
     schedule:
       interval: "weekly"
     reviewers:
-      - "unknwon"
+      - "gogs/core"
     commit-message:
       prefix: "mod:"
