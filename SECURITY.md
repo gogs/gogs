@@ -11,7 +11,7 @@ Existing vulnerability reports are being tracked in [Gogs Vulnerability Reports]
 1. Report a vulnerability:
     - We strongly enourage to use https://huntr.dev/ for submitting and managing status of vulnerability reports.
     - Alternatively, you may send vulnerability reports through emails to [security@gogs.io](mailto:security@gogs.io).
-1. Create a [dummy issue](https://github.com/gogs/gogs/issues/6810) with high-level description of the security vulnerability for credibility and tracking purposes.
+1. Create a [dummy issue](https://github.com/gogs/gogs/issues/6901) with high-level description of the security vulnerability for credibility and tracking purposes.
 1. Project maintainers review the report and either:
     - Ask clarifying questions
     - Confirm or deny the vulnerability
