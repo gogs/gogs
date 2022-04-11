@@ -7,7 +7,7 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.4.4
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/go-ldap/ldap/v3 v3.4.2
+	github.com/go-ldap/ldap/v3 v3.4.3
 	github.com/go-macaron/binding v1.2.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
 	github.com/go-macaron/captcha v0.2.0
