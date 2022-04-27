@@ -7,5 +7,5 @@ Link to the issue: <!-- paste the issue link here, or put "n/a" if not applicabl
 ### Checklist
 
 - [ ] I agree to follow the [Code of Conduct](https://go.dev/conduct) by submitting this pull request.
-- [ ] I have read and acknowledge the [Contributing guide](https://github.com/gogs/gogs/blob/main/.github/contributing.md).
+- [ ] I have read and acknowledge the [Contributing guide](https://github.com/gogs/gogs/blob/main/.github/CONTRIBUTING.md).
 - [ ] I have added test cases to cover the new code.
