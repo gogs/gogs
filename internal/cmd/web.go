@@ -318,6 +318,7 @@ func runWeb(c *cli.Context) error {
 				}
 				defer fr.Close()
 
+				c.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
 				c.Header().Set("Cache-Control", "public,max-age=86400")
 				c.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, attach.Name))
 
