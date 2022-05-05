@@ -22,6 +22,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Security:_ Stored XSS in issues. [#6919](https://github.com/gogs/gogs/issues/6919)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 - Invalid character in `Access-Control-Allow-Credentials` response header. [#4983](https://github.com/gogs/gogs/issues/4983)
 - Mysterious `ssh: overflow reading version string` errors from builtin SSH server. [#6882](https://github.com/gogs/gogs/issues/6882)
