@@ -47,6 +47,7 @@ On the release branch:
 
 On the `main` branch:
 
+- [ ] Publish [GitHub security advisories](https://github.com/gogs/gogs/security) for security patches included in the release.
 - [ ] Post the following message on issues that are included in the patch milestone:
     ```
     The <MAJOR>.<MINOR>.<PATCH> has been released that includes the patch of the reported issue.
