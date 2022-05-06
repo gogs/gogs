@@ -12,8 +12,6 @@ _This is generated from the [patch release template](https://github.com/gogs/gog
 On the release branch:
 
 - [ ] Make sure all commits are cherry-picked from the `main` branch by checking the patch milestone.
-- [ ] Run `git log v0.12.1...HEAD --pretty=format:'- %H %s' --reverse` (where `v0.12.1` is the last patch release) to get the list of new commits and paste the output below:
-	- _link to the commit_
 - [ ] [Update CHANGELOG on the `main` branch](https://github.com/gogs/gogs/commit/e6c5633f580399c8f4dfc07166a63a01c6c70346) to include entries for the current patch release.
 
 ## During release
@@ -53,6 +51,6 @@ On the `main` branch:
     The <MAJOR>.<MINOR>.<PATCH> has been released that includes the patch of the reported issue.
     ```
 - [ ] Update the repository mirror on [Gitee](https://gitee.com/unknwon/gogs).
-- [ ] Reply to the release topic for the minor release in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
+- [ ] Create a new release announcement in [Discussions](https://github.com/gogs/gogs/discussions/categories/announcements).
 - [ ] Send a tweet on the [official Twitter account](https://twitter.com/GogsHQ) for the patch release.
 - [ ] Close the patch milestone.
