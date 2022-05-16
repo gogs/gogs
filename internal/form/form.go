@@ -99,11 +99,8 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 	Assign(f, data)
 
 	typ := reflect.TypeOf(f)
-	val := reflect.ValueOf(f)
-
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
-		val = val.Elem()
 	}
 
 	for i := 0; i < typ.NumField(); i++ {
