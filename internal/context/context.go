@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"regexp"
 
 	"github.com/go-macaron/cache"
 	"github.com/go-macaron/csrf"
@@ -276,8 +277,12 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		c.Data["CSRFToken"] = x.GetToken()
-		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		// SECURITY: Prevent invalid characters in the CSRF token to prevent XSS and script injection; strip everything after (and including) anything that is not a letter, number, hyphen or underscore 
+		csrf_value := x.GetToken()
+		re := regexp.MustCompile("[^a-zA-Z0-9-_].*")
+		csrf_value = re.ReplaceAllString(csrf_value, "")
+		c.Data["CSRFToken"] = csrf_value
+		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + csrf_value + `">`)
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
