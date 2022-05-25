@@ -18,8 +18,14 @@ on:
 env:
   GOPROXY: "https://proxy.golang.org"
 
+permissions:
+  contents: read
+
 jobs:
   lint:
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      pull-requests: read  # for golangci/golangci-lint-action to fetch pull requests
     name: Lint
     runs-on: ubuntu-latest
     steps:
