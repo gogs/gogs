@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/template"
 )
 
@@ -228,6 +229,11 @@ func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface
 	http.ServeContent(c.Resp, c.Req.Request, name, modtime, r)
 }
 
+// csrfTokenExcludePattern matches characters that are not used for generating
+// CSRF tokens, see all possible characters at
+// https://github.com/go-macaron/csrf/blob/5d38f39de352972063d1ef026fc477283841bb9b/csrf.go#L148.
+var csrfTokenExcludePattern = lazyregexp.New(`[^a-zA-Z0-9-_].*`)
+
 // Contexter initializes a classic context for a request.
 func Contexter() macaron.Handler {
 	return func(ctx *macaron.Context, l i18n.Locale, cache cache.Cache, sess session.Store, f *session.Flash, x csrf.CSRF) {
@@ -276,8 +282,12 @@ func Contexter() macaron.Handler {
 			}
 		}
 
-		c.Data["CSRFToken"] = x.GetToken()
-		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + x.GetToken() + `">`)
+		// 🚨 SECURITY: Prevent XSS from injected CSRF cookie by stripping all
+		// characters that are not used for generating CSRF tokens, see
+		// https://github.com/gogs/gogs/issues/6953 for details.
+		csrfToken := csrfTokenExcludePattern.ReplaceAllString(x.GetToken(), "")
+		c.Data["CSRFToken"] = csrfToken
+		c.Data["CSRFTokenHTML"] = template.Safe(`<input type="hidden" name="_csrf" value="` + csrfToken + `">`)
 		log.Trace("Session ID: %s", sess.ID())
 		log.Trace("CSRF Token: %v", c.Data["CSRFToken"])
 
