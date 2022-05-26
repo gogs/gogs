@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/form"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
 )
 
