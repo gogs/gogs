@@ -74,7 +74,7 @@ Gogs has the following dependencies:
     ```bash
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
-    go get go-task/task/cmd/task
+    go install github.com/go-task/task/v3/cmd/task@latest
     ```
 
 1. Configure startup services:
