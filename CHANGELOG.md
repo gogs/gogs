@@ -17,7 +17,7 @@ All notable changes to Gogs are documented in this file.
 
 - The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
 - MSSQL as database backend is deprecated, installation page no longer shows it as an option. Existing installations and manually craft configuration file continue to work. [#6295](https://github.com/gogs/gogs/pull/6295)
-- Use [Task](https://github.com/go-task/task) as the default build tool for development. [#6297](https://github.com/gogs/gogs/pull/6297)
+- Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
 - The required Go version to compile source code changed to 1.16.
 
 ### Fixed
@@ -42,6 +42,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+- Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
 
 ## 0.12.7
 
