@@ -42,6 +42,7 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+- Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
 
 ## 0.12.7
 
