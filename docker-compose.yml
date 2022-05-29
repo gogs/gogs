@@ -1,0 +1,45 @@
+version: '3'
+
+volumes:
+  local_postgres_data: {}
+  local_postgres_data_backups: {}
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+    ports:
+      - "8084:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "200k"
+    env_file:
+      - ./.env
+
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/persistence/Dockerfile
+    image: gogs_postgres
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data
+      - local_postgres_data_backups:/backups
+    ports:
+      - "5434:5434"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "200k"
+    env_file:
+      - ./.env
+    expose:
+      - "5434" # Publishes 5434 to other containers but NOT to host machine  
+    command: -p 5434
+  
+  
