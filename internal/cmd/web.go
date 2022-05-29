@@ -707,6 +707,7 @@ func runWeb(c *cli.Context) error {
 		listenAddr = fmt.Sprintf("%s:%s", conf.Server.HTTPAddr, conf.Server.HTTPPort)
 		log.Info("Listen on %v://%s%s", conf.Server.Protocol, listenAddr, conf.Server.Subpath)
 	}
+	log.Info("Available on %s", conf.Server.ExternalURL)
 
 	switch conf.Server.Protocol {
 	case "http":
