@@ -8,7 +8,7 @@ data/
 *.iml
 public/img/avatar/
 *.exe
-*.exe~
+*~
 /gogs
 profile/
 *.pem
