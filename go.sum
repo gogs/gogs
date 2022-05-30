@@ -815,8 +815,9 @@ gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df h1:n7WqCuqOuCbNr617RXOY0AW
 gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df/go.mod h1:LRQQ+SO6ZHR7tOkpBDuZnXENFzX8qRjMDMyPD6BRkCw=
 gopkg.in/inconshreveable/log15.v2 v2.0.0-20180818164646-67afb5ed74ec/go.mod h1:aPpfJ7XW+gOuirDoZ8gHhLh3kZ1B08FtV2bbmy7Jv3s=
 gopkg.in/ini.v1 v1.46.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
-gopkg.in/ini.v1 v1.66.4 h1:SsAcf+mM7mRZo2nJNGt8mZCjG8ZRaNGMURJw7BsIST4=
 gopkg.in/ini.v1 v1.66.4/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
+gopkg.in/ini.v1 v1.66.5 h1:zfiCO0p88Fj4f6NR6KR5WdGMQ02U8vlDnN6HuD2xv5o=
+gopkg.in/ini.v1 v1.66.5/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
 gopkg.in/macaron.v1 v1.3.4/go.mod h1:/RoHTdC8ALpyJ3+QR36mKjwnT1F1dyYtsGM9Ate6ZFI=
 gopkg.in/macaron.v1 v1.3.5/go.mod h1:uMZCFccv9yr5TipIalVOyAyZQuOH3OkmXvgcWwhJuP4=
 gopkg.in/macaron.v1 v1.4.0 h1:RJHC09fAnQ8tuGUiZNjG0uyL1BWSdSWd9SpufIcEArQ=
