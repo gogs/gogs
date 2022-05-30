@@ -460,7 +460,11 @@ type UploadRepoFileOptions struct {
 
 // isRepositoryGitPath returns true if given path is or resides inside ".git" path of the repository.
 func isRepositoryGitPath(path string) bool {
-	return strings.HasSuffix(path, ".git") || strings.Contains(path, ".git"+string(os.PathSeparator))
+	return strings.HasSuffix(path, ".git") ||
+		strings.Contains(path, ".git"+string(os.PathSeparator)) ||
+		// Windows treats ".git." the same as ".git"
+		strings.HasSuffix(path, ".git.") ||
+		strings.Contains(path, ".git."+string(os.PathSeparator))
 }
 
 func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
