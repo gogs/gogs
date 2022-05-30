@@ -13,21 +13,27 @@ import (
 
 func Test_isRepositoryGitPath(t *testing.T) {
 	tests := []struct {
-		path   string
-		expVal bool
+		path    string
+		wantVal bool
 	}{
-		{path: filepath.Join(".", ".git"), expVal: true},
-		{path: filepath.Join(".", ".git", ""), expVal: true},
-		{path: filepath.Join(".", ".git", "hooks", "pre-commit"), expVal: true},
-		{path: filepath.Join(".git", "hooks"), expVal: true},
-		{path: filepath.Join("dir", ".git"), expVal: true},
+		{path: filepath.Join(".", ".git"), wantVal: true},
+		{path: filepath.Join(".", ".git", ""), wantVal: true},
+		{path: filepath.Join(".", ".git", "hooks", "pre-commit"), wantVal: true},
+		{path: filepath.Join(".git", "hooks"), wantVal: true},
+		{path: filepath.Join("dir", ".git"), wantVal: true},
 
-		{path: filepath.Join(".gitignore"), expVal: false},
-		{path: filepath.Join("dir", ".gitkeep"), expVal: false},
+		{path: filepath.Join(".", ".git."), wantVal: true},
+		{path: filepath.Join(".", ".git.", ""), wantVal: true},
+		{path: filepath.Join(".", ".git.", "hooks", "pre-commit"), wantVal: true},
+		{path: filepath.Join(".git.", "hooks"), wantVal: true},
+		{path: filepath.Join("dir", ".git."), wantVal: true},
+
+		{path: filepath.Join(".gitignore"), wantVal: false},
+		{path: filepath.Join("dir", ".gitkeep"), wantVal: false},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, isRepositoryGitPath(test.path))
+			assert.Equal(t, test.wantVal, isRepositoryGitPath(test.path))
 		})
 	}
 }
