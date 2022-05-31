@@ -44,6 +44,19 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
 - Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
 
+## 0.12.8
+
+### Changed
+
+- All users (including admins) need to use the configuration option `[security] LOCAL_NETWORK_ALLOWLIST` to allow repository migration and webhooks to be able to access local network addresses, which is a comma separated list of hostnames. [#6988](https://github.com/gogs/gogs/pull/6988)
+
+### Fixed
+
+- _Security:_ SSRF in webhook. [#6901](https://github.com/gogs/gogs/issues/6901)
+- _Security:_ XSS in cookies. [#6953](https://github.com/gogs/gogs/issues/6953)
+- _Security:_ OS Command Injection in file uploading. [#6968](https://github.com/gogs/gogs/issues/6968)
+- _Security:_ Remote Command Execution in file editing. [#6555](https://github.com/gogs/gogs/issues/6555)
+
 ## 0.12.7
 
 ### Fixed

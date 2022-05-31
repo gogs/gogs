@@ -34,9 +34,9 @@ On the release branch:
 	- [ ] ARM: `linux_armv7.tar.gz`, `linux_armv7.zip`, `linux_armv8.tar.gz`, `linux_armv8.zip`
 	- [ ] Windows: `windows_amd64.zip`, `windows_amd64_mws.zip`
 - [ ] [Generate SHA256 checksum](https://github.com/gogs/gogs/blob/main/docs/dev/release/sha256.sh) for all binaries to the file `checksum_sha256.txt`.
-- [ ] Upload all binaries to:
+- [ ] Upload all binaries and `checksum_sha256.txt` to:
 	- [ ] GitHub release
-	- [ ] https://dl.gogs.io (also upload `checksum_sha256.txt`)
+	- [ ] https://dl.gogs.io
 - [ ] Update content of [Install from binary](https://gogs.io/docs/installation/install_from_binary).
 
 ## After release
