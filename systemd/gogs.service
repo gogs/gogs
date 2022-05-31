@@ -1,0 +1,24 @@
+[Unit]
+Description=GOGS Frontend and Backend Services
+After=network.target
+
+[Service]
+User=gogs
+Group=docker
+Type=exec
+
+# Relies on:
+#  adduser --system --disabled-login --group docker gogs
+#  cp docker-compose.yaml .env ~gogs
+#  chown gogs:docker ~gogs/.env ~gogs/*
+#  chmod 640 ~gogs/.env ~gogs/*
+#  chmod 750 ~gogs
+Restart=always
+RestartSec=30
+WorkingDirectory=~
+
+ExecStart=/usr/bin/docker-compose up
+
+[Install]
+WantedBy=multi-user.target
+
