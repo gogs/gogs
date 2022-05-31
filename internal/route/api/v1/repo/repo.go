@@ -248,6 +248,8 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("You are not allowed to import local repositories."))
 			case addrErr.IsInvalidPath:
 				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Invalid local path, it does not exist or not a directory."))
+			case addrErr.IsBlockedLocalAddress:
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("Clone address resolved to a local network address that is implicitly blocked."))
 			default:
 				c.Error(err, "unexpected error")
 			}

@@ -72,8 +72,8 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 			return "", db.ErrInvalidCloneAddr{IsURLError: true}
 		}
 
-		if netutil.IsLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
-			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+		if netutil.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+			return "", db.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
 		}
 
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
