@@ -23,7 +23,9 @@ RUN apk --no-cache --no-progress add \
   shadow \
   socat \
   tzdata \
-  rsync
+  rsync \
+  net-tools \
+  postgresql-client
 
 ENV GOGS_CUSTOM /data/gogs
 

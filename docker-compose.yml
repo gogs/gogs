@@ -6,6 +6,7 @@ volumes:
 
 services:
   frontend:
+    container_name: gogs_frontend
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,19 +14,20 @@ services:
       - postgres
     ports:
       - "8084:3000"
+      - "10022:22"
     logging:
       driver: "json-file"
       options:
         max-file: "5"
         max-size: "200k"
-    env_file:
-      - ./.env
+    env_file: .env
 
   postgres:
+    container_name: gogs_postgres
     build:
       context: .
       dockerfile: docker/persistence/Dockerfile
-    image: gogs_postgres
+#    image: postgres
     volumes:
       - local_postgres_data:/var/lib/postgresql/data
       - local_postgres_data_backups:/backups
@@ -36,10 +38,9 @@ services:
       options:
         max-file: "5"
         max-size: "200k"
-    env_file:
-      - ./.env
+    env_file: .env
     expose:
-      - "5434" # Publishes 5434 to other containers but NOT to host machine  
+     - "5434" # Publishes 5434 to other containers but NOT to host machine  
     command: -p 5434
   
   
