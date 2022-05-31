@@ -22,6 +22,7 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
+- _Security:_ SSRF in webhook. [#6901](https://github.com/gogs/gogs/issues/6901)
 - _Security:_ XSS in cookies. [#6953](https://github.com/gogs/gogs/issues/6953)
 - _Security:_ OS Command Injection in file uploading. [#6968](https://github.com/gogs/gogs/issues/6968)
 - _Security:_ Remote Command Execution in file editing. [#6555](https://github.com/gogs/gogs/issues/6555)

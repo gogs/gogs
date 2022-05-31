@@ -47,9 +47,10 @@ func init() {
 	}
 }
 
-// IsLocalHostname returns true if given hostname is resolved to local network
-// address, except exempted from the allowlist.
-func IsLocalHostname(hostname string, allowlist []string) bool {
+// IsBlockedLocalHostname returns true if given hostname is resolved to a local
+// network address that is implicitly blocked (i.e. not exempted from the
+// allowlist).
+func IsBlockedLocalHostname(hostname string, allowlist []string) bool {
 	for _, allow := range allowlist {
 		if hostname == allow {
 			return false

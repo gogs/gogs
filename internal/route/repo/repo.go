@@ -180,11 +180,13 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 			addrErr := err.(db.ErrInvalidCloneAddr)
 			switch {
 			case addrErr.IsURLError:
-				c.RenderWithErr(c.Tr("form.url_error"), MIGRATE, &f)
+				c.RenderWithErr(c.Tr("repo.migrate.clone_address")+c.Tr("form.url_error"), MIGRATE, &f)
 			case addrErr.IsPermissionDenied:
 				c.RenderWithErr(c.Tr("repo.migrate.permission_denied"), MIGRATE, &f)
 			case addrErr.IsInvalidPath:
 				c.RenderWithErr(c.Tr("repo.migrate.invalid_local_path"), MIGRATE, &f)
+			case addrErr.IsBlockedLocalAddress:
+				c.RenderWithErr(c.Tr("repo.migrate.clone_address_resolved_to_blocked_local_address"), MIGRATE, &f)
 			default:
 				c.Error(err, "unexpected error")
 			}
