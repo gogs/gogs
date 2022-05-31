@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/httplib"
+	"gogs.io/gogs/internal/netutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -688,6 +689,11 @@ func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhook
 }
 
 func (t *HookTask) deliver() {
+	if netutil.IsBlockedLocalHostname(t.URL, conf.Security.LocalNetworkAllowlist) {
+		t.ResponseContent = "Payload URL resolved to a local network address that is implicitly blocked."
+		return
+	}
+
 	t.IsDelivered = true
 
 	timeout := time.Duration(conf.Webhook.DeliverTimeout) * time.Second

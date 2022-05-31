@@ -34,7 +34,7 @@ func TestIsLocalHostname(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.want, IsLocalHostname(test.hostname, test.allowlist))
+			assert.Equal(t, test.want, IsBlockedLocalHostname(test.hostname, test.allowlist))
 		})
 	}
 }

@@ -31,23 +31,21 @@ func Test_validateWebhook(t *testing.T) {
 	}{
 		{
 			name:    "admin bypass local address check",
-			actor:   &db.User{IsAdmin: true},
-			webhook: &db.Webhook{URL: "http://localhost:3306"},
+			webhook: &db.Webhook{URL: "https://www.google.com"},
 			expOK:   true,
 		},
 
 		{
 			name:     "local address not allowed",
-			actor:    &db.User{},
 			webhook:  &db.Webhook{URL: "http://localhost:3306"},
 			expField: "PayloadURL",
-			expMsg:   "repo.settings.webhook.err_cannot_use_local_addresses",
+			expMsg:   "repo.settings.webhook.url_resolved_to_blocked_local_address",
 			expOK:    false,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			field, msg, ok := validateWebhook(test.actor, l, test.webhook)
+			field, msg, ok := validateWebhook(l, test.webhook)
 			assert.Equal(t, test.expOK, ok)
 			assert.Equal(t, test.expMsg, msg)
 			assert.Equal(t, test.expField, field)
