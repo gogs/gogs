@@ -10,19 +10,23 @@ All notable changes to Gogs are documented in this file.
 - New configuration option `[git.timeout] DIFF` for customizing operation timeout of `git diff`. [#6315](https://github.com/gogs/gogs/issues/6315)
 - New configuration option `[server] SSH_SERVER_MACS` for setting list of accepted MACs for connections to builtin SSH server. [#6434](https://github.com/gogs/gogs/issues/6434)
 - Support specifying custom schema for PostgreSQL. [#6695](https://github.com/gogs/gogs/pull/6695)
+- Support rendering Mermaid diagrams in Markdown. [#6776](https://github.com/gogs/gogs/pull/6776)
 - New languages support: Mongolian. [#6510](https://github.com/gogs/gogs/pull/6510)
 
 ### Changed
 
 - The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
 - MSSQL as database backend is deprecated, installation page no longer shows it as an option. Existing installations and manually craft configuration file continue to work. [#6295](https://github.com/gogs/gogs/pull/6295)
-- Use [Task](https://github.com/go-task/task) as the default build tool for development. [#6297](https://github.com/gogs/gogs/pull/6297)
+- Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
+- The required Go version to compile source code changed to 1.16.
 
 ### Fixed
 
-- Add `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409)
-- _Regression:_ Fixed smart links for issues stops rendering. [#6506](https://github.com/gogs/gogs/issues/6506)
-- _Security:_ Potential SSRF attack by CRLF injection via repository migration. [#6413](https://github.com/gogs/gogs/issues/6413)
+- _Security:_ SSRF in webhook. [#6901](https://github.com/gogs/gogs/issues/6901)
+- _Security:_ XSS in cookies. [#6953](https://github.com/gogs/gogs/issues/6953)
+- _Security:_ OS Command Injection in file uploading. [#6968](https://github.com/gogs/gogs/issues/6968)
+- _Security:_ Remote Command Execution in file editing. [#6555](https://github.com/gogs/gogs/issues/6555)
+- Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 
 ### Removed
 
@@ -42,6 +46,38 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[server] LANDING_PAGE` is no longer used, please use `[server] LANDING_URL`.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
+- Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
+
+## 0.12.7
+
+### Fixed
+
+- _Security:_ Stored XSS in issues. [#6919](https://github.com/gogs/gogs/issues/6919)
+- Invalid character in `Access-Control-Allow-Credentials` response header. [#4983](https://github.com/gogs/gogs/issues/4983)
+- Mysterious `ssh: overflow reading version string` errors from builtin SSH server. [#6882](https://github.com/gogs/gogs/issues/6882)
+
+## 0.12.6
+
+### Fixed
+
+- _Security:_ Remote command execution in file uploading. [#6833](https://github.com/gogs/gogs/issues/6833)
+- _Regression:_ Unable to migrate repository from other local Git hosting. Added a new configuration option `[security] LOCAL_NETWORK_ALLOWLIST`, which is a comma separated list of hostnames that are explicitly allowed to be accessed within the local network. [#6841](https://github.com/gogs/gogs/issues/6841)
+- Slow start of Docker containers using NAS devices. [#6554](https://github.com/gogs/gogs/issues/6554)
+
+## 0.12.5
+
+### Fixed
+
+- _Security:_ Potential SSRF in repository migration. [#6754](https://github.com/gogs/gogs/issues/6754)
+- _Security:_ Improper PAM authorization handling. [#6810](https://github.com/gogs/gogs/issues/6810)
+
+## 0.12.4
+
+### Fixed
+
+- _Security:_ Potential SSRF attack by CRLF injection via repository migration. [#6413](https://github.com/gogs/gogs/issues/6413)
+- _Regression:_ Fixed smart links for issues stops rendering. [#6506](https://github.com/gogs/gogs/issues/6506)
+- Added `X-Frame-Options` header to prevent Clickjacking. [#6409](https://github.com/gogs/gogs/issues/6409)
 
 ## 0.12.3
 
