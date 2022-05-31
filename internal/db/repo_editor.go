@@ -121,6 +121,11 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	if isRepositoryGitPath(opts.NewTreeName) {
+		return errors.Errorf("bad tree path %q", opts.NewTreeName)
+	}
+
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -458,7 +463,8 @@ type UploadRepoFileOptions struct {
 	Files        []string // In UUID format
 }
 
-// isRepositoryGitPath returns true if given path is or resides inside ".git" path of the repository.
+// isRepositoryGitPath returns true if given path is or resides inside ".git"
+// path of the repository.
 func isRepositoryGitPath(path string) bool {
 	return strings.HasSuffix(path, ".git") ||
 		strings.Contains(path, ".git"+string(os.PathSeparator)) ||
@@ -472,7 +478,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		return nil
 	}
 
-	// Prevent uploading files into the ".git" directory
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
 	if isRepositoryGitPath(opts.TreePath) {
 		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
@@ -512,7 +518,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 
 		upload.Name = pathutil.Clean(upload.Name)
 
-		// Prevent uploading files into the ".git" directory
+		// 🚨 SECURITY: Prevent uploading files into the ".git" directory
 		if isRepositoryGitPath(upload.Name) {
 			continue
 		}
