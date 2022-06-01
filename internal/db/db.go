@@ -151,14 +151,18 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 		LogLevel:      level,
 	})
 
-	db, err := openDB(conf.Database, &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
+	db, err := openDB(
+		conf.Database,
+		&gorm.Config{
+			SkipDefaultTransaction: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+			NowFunc: func() time.Time {
+				return time.Now().UTC().Truncate(time.Microsecond)
+			},
 		},
-		NowFunc: func() time.Time {
-			return time.Now().UTC().Truncate(time.Microsecond)
-		},
-	})
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
 	}

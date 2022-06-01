@@ -146,6 +146,7 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	db, err := openDB(
 		dbOpts,
 		&gorm.Config{
+			SkipDefaultTransaction: true,
 			NamingStrategy: schema.NamingStrategy{
 				SingularTable: true,
 			},
