@@ -43,6 +43,9 @@ func Test_lfs(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 
@@ -60,7 +63,7 @@ func test_lfs_CreateObject(t *testing.T, db *lfs) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, db.NowFunc().Format(time.RFC3339), object.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, db.NowFunc().Format(time.RFC3339), object.CreatedAt.UTC().Format(time.RFC3339))
 
 	// Try create second LFS object with same oid should fail
 	err = db.CreateObject(repoID, oid, 12, lfsutil.StorageLocal)

@@ -53,8 +53,8 @@ func parseMSSQLHostPort(info string) (host, port string) {
 	return host, port
 }
 
-// parseDSN takes given database options and returns parsed DSN.
-func parseDSN(opts conf.DatabaseOpts) (dsn string, err error) {
+// newDSN takes given database options and returns parsed DSN.
+func newDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 	// In case the database name contains "?" with some parameters
 	concate := "?"
 	if strings.Contains(opts.Name, concate) {
@@ -109,7 +109,7 @@ func newLogWriter() (logger.Writer, error) {
 }
 
 func openDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
-	dsn, err := parseDSN(opts)
+	dsn, err := newDSN(opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "parse DSN")
 	}
@@ -151,14 +151,18 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 		LogLevel:      level,
 	})
 
-	db, err := openDB(conf.Database, &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
+	db, err := openDB(
+		conf.Database,
+		&gorm.Config{
+			SkipDefaultTransaction: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+			NowFunc: func() time.Time {
+				return time.Now().UTC().Truncate(time.Microsecond)
+			},
 		},
-		NowFunc: func() time.Time {
-			return time.Now().UTC().Truncate(time.Microsecond)
-		},
-	})
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
 	}

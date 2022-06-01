@@ -24,7 +24,7 @@ permissions:
 jobs:
   lint:
     permissions:
-      contents: read  # for actions/checkout to fetch code
+      contents: read       # for actions/checkout to fetch code
       pull-requests: read  # for golangci/golangci-lint-action to fetch pull requests
     name: Lint
     runs-on: ubuntu-latest
@@ -88,3 +88,64 @@ jobs:
             The job "${{ github.job }}" of ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }} completed with "${{ job.status }}".
 
             View the job run at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  postgres:
+    name: Postgres
+    strategy:
+      matrix:
+        go-version: [ 1.16.x, 1.17.x, 1.18.x ]
+        platform: [ ubuntu-latest ]
+    runs-on: ${{ matrix.platform }}
+    services:
+      postgres:
+        image: postgres:9.6
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run tests with coverage
+        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db
+        env:
+          GOGS_DATABASE_TYPE: postgres
+          PGPORT: 5432
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGSSLMODE: disable
+
+  mysql:
+    name: MySQL
+    strategy:
+      matrix:
+        go-version: [ 1.16.x, 1.17.x, 1.18.x ]
+        platform: [ ubuntu-18.04 ]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Start MySQL server
+        run: sudo systemctl start mysql
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run tests with coverage
+        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db
+        env:
+          GOGS_DATABASE_TYPE: mysql
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+          MYSQL_HOST: localhost
+          MYSQL_PORT: 3306
