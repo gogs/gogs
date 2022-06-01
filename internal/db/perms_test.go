@@ -39,6 +39,9 @@ func Test_perms(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 

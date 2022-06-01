@@ -45,6 +45,9 @@ func Test_users(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 
@@ -136,7 +139,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 			t.Fatal(err)
 		}
 
-		err = db.Exec(`UPDATE user SET type = ? WHERE id = ?`, UserOrganization, org.ID).Error
+		err = db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserOrganization).Error
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +161,7 @@ func test_users_GetByEmail(t *testing.T, db *users) {
 
 		// Mark user as activated
 		// TODO: Use UserEmails.Verify to replace SQL hack when the method is available.
-		err = db.Exec(`UPDATE user SET is_active = ? WHERE id = ?`, true, alice.ID).Error
+		err = db.Model(&User{}).Where("id", alice.ID).UpdateColumn("is_active", true).Error
 		if err != nil {
 			t.Fatal(err)
 		}

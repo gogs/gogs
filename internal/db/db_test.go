@@ -56,7 +56,7 @@ func Test_parseMSSQLHostPort(t *testing.T) {
 
 func Test_parseDSN(t *testing.T) {
 	t.Run("bad dialect", func(t *testing.T) {
-		_, err := parseDSN(conf.DatabaseOpts{
+		_, err := newDSN(conf.DatabaseOpts{
 			Type: "bad_dialect",
 		})
 		assert.Equal(t, "unrecognized dialect: bad_dialect", fmt.Sprintf("%v", err))

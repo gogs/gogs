@@ -41,6 +41,9 @@ func Test_repos(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 

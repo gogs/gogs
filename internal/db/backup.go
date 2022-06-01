@@ -85,6 +85,11 @@ func dumpTable(db *gorm.DB, table interface{}, w io.Writer) error {
 			return errors.Wrap(err, "scan rows")
 		}
 
+		switch e := elem.(type) {
+		case *LFSObject:
+			e.CreatedAt = e.CreatedAt.UTC()
+		}
+
 		err = jsoniter.NewEncoder(w).Encode(elem)
 		if err != nil {
 			return errors.Wrap(err, "encode JSON")

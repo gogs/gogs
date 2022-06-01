@@ -42,6 +42,9 @@ func Test_twoFactors(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 

@@ -108,6 +108,9 @@ func Test_loginSources(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 
