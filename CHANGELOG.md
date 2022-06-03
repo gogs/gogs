@@ -23,6 +23,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
+- Unable to init repository during creation on Windows. [#6967](https://github.com/gogs/gogs/issues/6967)
 
 ### Removed
 
