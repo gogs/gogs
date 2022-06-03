@@ -149,3 +149,22 @@ jobs:
           MYSQL_PASSWORD: root
           MYSQL_HOST: localhost
           MYSQL_PORT: 3306
+
+  sqlite-go:
+    name: SQLite (Go)
+    strategy:
+      matrix:
+        go-version: [ 1.16.x, 1.17.x, 1.18.x ]
+        platform: [ ubuntu-latest ]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run tests with coverage
+        run: go test -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db
+        env:
+          GOGS_DATABASE_TYPE: sqlite

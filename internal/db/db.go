@@ -81,7 +81,7 @@ func newDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 		dsn = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
 			host, port, opts.Name, opts.User, opts.Password)
 
-	case "sqlite3":
+	case "sqlite3", "sqlite":
 		dsn = "file:" + opts.Path + "?cache=shared&mode=rwc"
 
 	default:
@@ -124,6 +124,9 @@ func openDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
 		dialector = sqlserver.Open(dsn)
 	case "sqlite3":
 		dialector = sqlite.Open(dsn)
+	case "sqlite":
+		dialector = sqlite.Open(dsn)
+		dialector.(*sqlite.Dialector).DriverName = "sqlite"
 	default:
 		panic("unreachable")
 	}

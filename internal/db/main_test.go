@@ -17,6 +17,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+	_ "modernc.org/sqlite"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -126,6 +127,19 @@ func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 		cleanup = func(db *gorm.DB) {
 			db.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
 			_ = sqlDB.Close()
+		}
+	case "sqlite":
+		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
+		dbOpts = conf.DatabaseOpts{
+			Type: "sqlite",
+			Path: dbName,
+		}
+		cleanup = func(db *gorm.DB) {
+			sqlDB, err := db.DB()
+			if err == nil {
+				_ = sqlDB.Close()
+			}
+			_ = os.Remove(dbName)
 		}
 	default:
 		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
