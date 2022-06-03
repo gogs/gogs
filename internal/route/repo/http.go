@@ -100,7 +100,7 @@ func HTTPContexter() macaron.Handler {
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
 			!strings.Contains(action, "objects/") {
-			c.NotFound()
+			c.Error(http.StatusNotFound, fmt.Sprintf("Unrecognized action %q", action))
 			return
 		}
 
