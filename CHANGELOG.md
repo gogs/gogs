@@ -26,6 +26,7 @@ All notable changes to Gogs are documented in this file.
 - _Security:_ OS Command Injection in file uploading. [#6968](https://github.com/gogs/gogs/issues/6968)
 - _Security:_ Remote Command Execution in file editing. [#6555](https://github.com/gogs/gogs/issues/6555)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
+- Unable to init repository during creation on Windows. [#6967](https://github.com/gogs/gogs/issues/6967)
 
 ### Removed
 
