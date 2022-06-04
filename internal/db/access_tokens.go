@@ -111,7 +111,7 @@ func (db *accessTokens) Create(userID int64, name string) (*AccessToken, error) 
 	accessToken := &AccessToken{
 		UserID: userID,
 		Name:   name,
-		Sha1:   sha256,
+		Sha1:   sha256[:40], // To pass the column unique constraint, keep the length of SHA1.
 		Sha256: sha256,
 	}
 	if err = db.DB.Create(accessToken).Error; err != nil {
