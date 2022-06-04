@@ -54,7 +54,7 @@ type AccessToken struct {
 	HasUsed           bool `xorm:"-" gorm:"-" json:"-"`
 }
 
-// NOTE: This is a GORM create hook.
+// BeforeCreate implements the GORM create hook.
 func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
 	if t.CreatedUnix == 0 {
 		t.CreatedUnix = tx.NowFunc().Unix()
@@ -62,13 +62,13 @@ func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// NOTE: This is a GORM update hook.
+// BeforeUpdate implements the GORM update hook.
 func (t *AccessToken) BeforeUpdate(tx *gorm.DB) error {
 	t.UpdatedUnix = tx.NowFunc().Unix()
 	return nil
 }
 
-// NOTE: This is a GORM query hook.
+// AfterFind implements the GORM query hook.
 func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
 	t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
