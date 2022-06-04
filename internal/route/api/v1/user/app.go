@@ -13,6 +13,20 @@ import (
 	"gogs.io/gogs/internal/db"
 )
 
+func ListAccessTokens(c *context.APIContext) {
+	tokens, err := db.AccessTokens.List(c.User.ID)
+	if err != nil {
+		c.Error(err, "list access tokens")
+		return
+	}
+
+	apiTokens := make([]*api.AccessToken, len(tokens))
+	for i := range tokens {
+		apiTokens[i] = &api.AccessToken{Name: tokens[i].Name, Sha1: tokens[i].Sha1}
+	}
+	c.JSONSuccess(&apiTokens)
+}
+
 func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) {
 	t, err := db.AccessTokens.Create(c.User.ID, form.Name)
 	if err != nil {

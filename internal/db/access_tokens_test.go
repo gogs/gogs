@@ -58,6 +58,7 @@ func TestAccessTokens(t *testing.T) {
 		{"Create", accessTokensCreate},
 		{"DeleteByID", accessTokensDeleteByID},
 		{"GetBySHA1", accessTokensGetBySHA},
+		{"List", accessTokensList},
 		{"Save", accessTokensSave},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -151,6 +152,37 @@ func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
 	_, err = db.GetBySHA1("bad_sha")
 	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
 	assert.Equal(t, expErr, err)
+}
+
+func accessTokensList(t *testing.T, db *accessTokens) {
+	// Create two access tokens for user 1
+	_, err := db.Create(1, "user1_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Create(1, "user1_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create one access token for user 2
+	_, err = db.Create(2, "user2_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// List all access tokens for user 1
+	tokens, err := db.List(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, 2, len(tokens), "number of tokens")
+
+	assert.Equal(t, int64(1), tokens[0].UserID)
+	assert.Equal(t, "user1_1", tokens[0].Name)
+
+	assert.Equal(t, int64(1), tokens[1].UserID)
+	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
 func accessTokensSave(t *testing.T, db *accessTokens) {

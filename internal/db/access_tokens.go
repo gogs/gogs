@@ -30,6 +30,8 @@ type AccessTokensStore interface {
 	// GetBySHA1 returns the access token with given SHA1.
 	// It returns ErrAccessTokenNotExist when not found.
 	GetBySHA1(sha1 string) (*AccessToken, error)
+	// List returns all access tokens belongs to given user.
+	List(userID int64) ([]*AccessToken, error)
 	// Save persists all values of given access token.
 	// The Updated field is set to current time automatically.
 	Save(t *AccessToken) error
@@ -43,7 +45,7 @@ type AccessToken struct {
 	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
 	Name   string
 	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
-	Sha256 string `xorm:"UNIQUE VARCHAR(64)" gorm:"TYPE:VARCHAR(64);UNIQUE"`
+	Sha256 string `xorm:"UNIQUE VARCHAR(64)" gorm:"TYPE:VARCHAR(64);UNIQUE;->:false"`
 
 	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
@@ -154,6 +156,11 @@ func (db *accessTokens) GetBySHA1(sha1 string) (*AccessToken, error) {
 		return nil, err
 	}
 	return token, nil
+}
+
+func (db *accessTokens) List(userID int64) ([]*AccessToken, error) {
+	var tokens []*AccessToken
+	return tokens, db.Where("uid = ?", userID).Find(&tokens).Error
 }
 
 func (db *accessTokens) Save(t *AccessToken) error {
