@@ -7,23 +7,24 @@ package migrations
 import (
 	"fmt"
 
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 )
 
-const minDBVersion = 20
+const minDBVersion = 19
 
 type Migration interface {
 	Description() string
-	Migrate(*xorm.Engine) error
+	Migrate(*gorm.DB) error
 }
 
 type migration struct {
 	description string
-	migrate     func(*xorm.Engine) error
+	migrate     func(*gorm.DB) error
 }
 
-func NewMigration(desc string, fn func(*xorm.Engine) error) Migration {
+func NewMigration(desc string, fn func(*gorm.DB) error) Migration {
 	return &migration{desc, fn}
 }
 
@@ -31,11 +32,11 @@ func (m *migration) Description() string {
 	return m.description
 }
 
-func (m *migration) Migrate(x *xorm.Engine) error {
-	return m.migrate(x)
+func (m *migration) Migrate(db *gorm.DB) error {
+	return m.migrate(db)
 }
 
-// The version table. Should have only one row with id==1
+// Version represents the version table. It should have only one row with `id == 1`.
 type Version struct {
 	ID      int64
 	Version int64
@@ -58,7 +59,7 @@ var migrations = []Migration{
 }
 
 // Migrate database to current version
-func Migrate(x *xorm.Engine) error {
+func Migrate(x *xorm.Engine, db *gorm.DB) error {
 	if err := x.Sync(new(Version)); err != nil {
 		return fmt.Errorf("sync: %v", err)
 	}
@@ -115,7 +116,7 @@ In case you're stilling getting this notice, go through instructions again until
 	}
 	for i, m := range migrations[v-minDBVersion:] {
 		log.Info("Migration: %s", m.Description())
-		if err = m.Migrate(x); err != nil {
+		if err = m.Migrate(db); err != nil {
 			return fmt.Errorf("do migrate: %v", err)
 		}
 		currentVersion.Version = v + int64(i) + 1

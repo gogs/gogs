@@ -181,11 +181,12 @@ func SetEngine() (*gorm.DB, error) {
 }
 
 func NewEngine() (err error) {
-	if _, err = SetEngine(); err != nil {
+	db, err := SetEngine()
+	if err != nil {
 		return err
 	}
 
-	if err = migrations.Migrate(x); err != nil {
+	if err = migrations.Migrate(x, db); err != nil {
 		return fmt.Errorf("migrate: %v", err)
 	}
 

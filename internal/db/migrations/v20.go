@@ -6,42 +6,45 @@ package migrations
 
 import (
 	"github.com/pkg/errors"
-	"xorm.io/xorm"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/cryptoutil"
 )
 
-func migrateAccessTokenSHA1(x *xorm.Engine) (err error) {
-	exist, err := x.IsTableExist("access_token")
-	if err != nil {
-		return errors.Wrap(err, "is table exists")
-	} else if !exist {
-		return nil
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
+func migrateAccessTokenSHA1(db *gorm.DB) error {
 	type accessToken struct {
 		ID     int64
 		Sha1   string
-		SHA256 string
+		SHA256 string `gorm:"TYPE:VARCHAR(64)"`
 	}
-	var accessTokens []*accessToken
-	err = sess.Table("access_token").Where("sha256 IS NULL").Find(&accessTokens)
-	if err != nil {
-		return errors.Wrap(err, "query access_token")
-	}
-
-	for _, t := range accessTokens {
-		sha256 := cryptoutil.SHA256(t.Sha1)
-		if _, err := sess.Table("access_token").ID(t.ID).Update(map[string]interface{}{"sha256": sha256}); err != nil {
-			return errors.Wrap(err, "update sha256")
+	return db.Transaction(func(tx *gorm.DB) error {
+		err := tx.Migrator().AddColumn(&accessToken{}, "SHA256")
+		if err != nil {
+			return errors.Wrap(err, "add column")
 		}
-	}
 
-	return sess.Commit()
+		var accessTokens []*accessToken
+		err = tx.Debug().Where("sha256 IS NULL").Find(&accessTokens).Error
+		if err != nil {
+			return errors.Wrap(err, "list")
+		}
+
+		for _, t := range accessTokens {
+			sha256 := cryptoutil.SHA256(t.Sha1)
+			err = tx.Model(&accessToken{}).Where("id = ?", t.ID).Update("sha256", sha256).Error
+			if err != nil {
+				return errors.Wrap(err, "update")
+			}
+		}
+
+		type accessTokenWithConstraint struct {
+			SHA256 string `gorm:"type:VARCHAR(64);uniqueIndex:access_token_unique;not null"`
+		}
+		err = tx.Table("access_token").AutoMigrate(&accessTokenWithConstraint{})
+		if err != nil {
+			return errors.Wrap(err, "auto migrate")
+		}
+
+		return nil
+	})
 }

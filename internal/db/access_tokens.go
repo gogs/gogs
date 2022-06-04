@@ -45,7 +45,7 @@ type AccessToken struct {
 	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
 	Name   string
 	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
-	SHA256 string `xorm:"VARCHAR(64)" gorm:"TYPE:VARCHAR(64);UNIQUE"`
+	SHA256 string `gorm:"type:VARCHAR(64);uniqueIndex:access_token_unique;not null;->:false"`
 
 	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
