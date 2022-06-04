@@ -161,7 +161,7 @@ func (db *accessTokens) GetBySHA1(sha1 string) (*AccessToken, error) {
 
 func (db *accessTokens) List(userID int64) ([]*AccessToken, error) {
 	var tokens []*AccessToken
-	return tokens, db.Where("uid = ?", userID).Find(&tokens).Error
+	return tokens, db.Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
 }
 
 func (db *accessTokens) Save(t *AccessToken) error {
