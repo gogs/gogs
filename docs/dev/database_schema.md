@@ -20,6 +20,7 @@ Primary keys: id
   UserID      | uid          | BIGINT             | BIGINT                | INTEGER             
   Name        | name         | TEXT               | LONGTEXT              | TEXT                
   Sha1        | sha1         | VARCHAR(40) UNIQUE | VARCHAR(40) UNIQUE    | VARCHAR(40) UNIQUE  
+  Sha256      | sha256       | VARCHAR(64) UNIQUE | VARCHAR(64) UNIQUE    | VARCHAR(64) UNIQUE  
   CreatedUnix | created_unix | BIGINT             | BIGINT                | INTEGER             
   UpdatedUnix | updated_unix | BIGINT             | BIGINT                | INTEGER             
 
