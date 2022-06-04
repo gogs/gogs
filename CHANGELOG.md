@@ -24,6 +24,7 @@ All notable changes to Gogs are documented in this file.
 
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 - Unable to init repository during creation on Windows. [#6967](https://github.com/gogs/gogs/issues/6967)
+- Mysterious panic on `Value not found for type *repo.HTTPContext`. [#6963](https://github.com/gogs/gogs/issues/6963)
 
 ### Removed
 
