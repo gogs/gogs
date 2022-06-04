@@ -38,7 +38,7 @@ func migrateAccessTokenSHA1(db *gorm.DB) error {
 		}
 
 		type accessTokenWithConstraint struct {
-			SHA256 string `gorm:"type:VARCHAR(64);uniqueIndex:access_token_unique;not null"`
+			SHA256 string `gorm:"type:VARCHAR(64);unique;not null"`
 		}
 		err = tx.Table("access_token").AutoMigrate(&accessTokenWithConstraint{})
 		if err != nil {
