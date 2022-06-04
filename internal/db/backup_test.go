@@ -81,6 +81,13 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Sha256:      cryptoutil.SHA256(cryptoutil.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4")),
 			CreatedUnix: 1588568886,
 		},
+		&AccessToken{
+			UserID:      2,
+			Name:        "test2",
+			Sha1:        cryptoutil.SHA256(cryptoutil.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb"))[:40],
+			Sha256:      cryptoutil.SHA256(cryptoutil.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb")),
+			CreatedUnix: 1588568886,
+		},
 
 		&LFSObject{
 			RepoID:    1,
