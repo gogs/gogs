@@ -28,7 +28,7 @@ func migrateAccessTokenSHA1(x *xorm.Engine) (err error) {
 	type accessToken struct {
 		ID     int64
 		Sha1   string
-		Sha256 string
+		SHA256 string
 	}
 	var accessTokens []*accessToken
 	err = sess.Table("access_token").Where("sha256 IS NULL").Find(&accessTokens)
