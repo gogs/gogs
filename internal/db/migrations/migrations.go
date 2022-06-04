@@ -11,7 +11,7 @@ import (
 	"xorm.io/xorm"
 )
 
-const minDBVersion = 19
+const minDBVersion = 20
 
 type Migration interface {
 	Description() string
@@ -52,6 +52,9 @@ var migrations = []Migration{
 	// Add new migration here, example:
 	// v18 -> v19:v0.11.55
 	// NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
+
+	// v19 -> v20:v0.13.0
+	NewMigration("migrate access token sha1 value to sha256", migrateAccessTokenSHA1),
 }
 
 // Migrate database to current version

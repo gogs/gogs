@@ -45,7 +45,7 @@ type AccessToken struct {
 	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
 	Name   string
 	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
-	Sha256 string `xorm:"UNIQUE VARCHAR(64)" gorm:"TYPE:VARCHAR(64);UNIQUE;->:false"`
+	Sha256 string `xorm:"VARCHAR(64)" gorm:"TYPE:VARCHAR(64);UNIQUE" json:"-"`
 
 	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
@@ -111,6 +111,7 @@ func (db *accessTokens) Create(userID int64, name string) (*AccessToken, error) 
 	accessToken := &AccessToken{
 		UserID: userID,
 		Name:   name,
+		Sha1:   sha256,
 		Sha256: sha256,
 	}
 	if err = db.DB.Create(accessToken).Error; err != nil {

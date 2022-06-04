@@ -61,6 +61,8 @@ func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
 	return nil
 }
 
+var InitTestDB func(t *testing.T, suite string, tables ...interface{}) *gorm.DB = initTestDB
+
 func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	dbType := os.Getenv("GOGS_DATABASE_TYPE")
 
