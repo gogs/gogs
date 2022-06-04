@@ -5,7 +5,6 @@
 package db
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,23 +15,37 @@ func Test_isRepositoryGitPath(t *testing.T) {
 		path    string
 		wantVal bool
 	}{
-		{path: filepath.Join(".", ".git"), wantVal: true},
-		{path: filepath.Join(".", ".git", ""), wantVal: true},
-		{path: filepath.Join(".", ".git", "hooks", "pre-commit"), wantVal: true},
-		{path: filepath.Join(".git", "hooks"), wantVal: true},
-		{path: filepath.Join("dir", ".git"), wantVal: true},
+		{path: ".git", wantVal: true},
+		{path: "./.git", wantVal: true},
+		{path: ".git/hooks/pre-commit", wantVal: true},
+		{path: ".git/hooks", wantVal: true},
+		{path: "dir/.git", wantVal: true},
 
-		{path: filepath.Join(".", ".git."), wantVal: true},
-		{path: filepath.Join(".", ".git.", ""), wantVal: true},
-		{path: filepath.Join(".", ".git.", "hooks", "pre-commit"), wantVal: true},
-		{path: filepath.Join(".git.", "hooks"), wantVal: true},
-		{path: filepath.Join("dir", ".git."), wantVal: true},
+		{path: ".gitignore", wantVal: false},
+		{path: "dir/.gitkeep", wantVal: false},
 
-		{path: filepath.Join(".gitignore"), wantVal: false},
-		{path: filepath.Join("dir", ".gitkeep"), wantVal: false},
+		// Windows-specific
+		{path: `.git\`, wantVal: true},
+		{path: `.git\hooks\pre-commit`, wantVal: true},
+		{path: `.git\hooks`, wantVal: true},
+		{path: `dir\.git`, wantVal: true},
+
+		{path: `.\.git.`, wantVal: true},
+		{path: `.\.git.\`, wantVal: true},
+		{path: `.git.\hooks\pre-commit`, wantVal: true},
+		{path: `.git.\hooks`, wantVal: true},
+		{path: `dir\.git.`, wantVal: true},
+
+		{path: "./.git.", wantVal: true},
+		{path: "./.git./", wantVal: true},
+		{path: ".git./hooks/pre-commit", wantVal: true},
+		{path: ".git./hooks", wantVal: true},
+		{path: "dir/.git.", wantVal: true},
+
+		{path: `dir\.gitkeep`, wantVal: false},
 	}
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
+		t.Run(test.path, func(t *testing.T) {
 			assert.Equal(t, test.wantVal, isRepositoryGitPath(test.path))
 		})
 	}
