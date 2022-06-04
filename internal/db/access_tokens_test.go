@@ -39,7 +39,7 @@ func TestAccessToken_BeforeCreate(t *testing.T) {
 	})
 }
 
-func Test_accessTokens(t *testing.T) {
+func TestAccessTokens(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -55,11 +55,11 @@ func Test_accessTokens(t *testing.T) {
 		name string
 		test func(*testing.T, *accessTokens)
 	}{
-		{"Create", test_accessTokens_Create},
-		{"DeleteByID", test_accessTokens_DeleteByID},
-		{"GetBySHA", test_accessTokens_GetBySHA},
-		{"List", test_accessTokens_List},
-		{"Save", test_accessTokens_Save},
+		{"Create", accessTokensCreate},
+		{"DeleteByID", accessTokensDeleteByID},
+		{"GetBySHA", accessTokensGetBySHA},
+		{"List", accessTokensList},
+		{"Save", accessTokensSave},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -70,10 +70,13 @@ func Test_accessTokens(t *testing.T) {
 			})
 			tc.test(t, db)
 		})
+		if t.Failed() {
+			break
+		}
 	}
 }
 
-func test_accessTokens_Create(t *testing.T, db *accessTokens) {
+func accessTokensCreate(t *testing.T, db *accessTokens) {
 	// Create first access token with name "Test"
 	token, err := db.Create(1, "Test")
 	if err != nil {
@@ -97,7 +100,7 @@ func test_accessTokens_Create(t *testing.T, db *accessTokens) {
 	assert.Equal(t, expErr, err)
 }
 
-func test_accessTokens_DeleteByID(t *testing.T, db *accessTokens) {
+func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 	// Create an access token with name "Test"
 	token, err := db.Create(1, "Test")
 	if err != nil {
@@ -132,7 +135,7 @@ func test_accessTokens_DeleteByID(t *testing.T, db *accessTokens) {
 	assert.Equal(t, expErr, err)
 }
 
-func test_accessTokens_GetBySHA(t *testing.T, db *accessTokens) {
+func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
 	// Create an access token with name "Test"
 	token, err := db.Create(1, "Test")
 	if err != nil {
@@ -151,7 +154,7 @@ func test_accessTokens_GetBySHA(t *testing.T, db *accessTokens) {
 	assert.Equal(t, expErr, err)
 }
 
-func test_accessTokens_List(t *testing.T, db *accessTokens) {
+func accessTokensList(t *testing.T, db *accessTokens) {
 	// Create two access tokens for user 1
 	_, err := db.Create(1, "user1_1")
 	if err != nil {
@@ -182,7 +185,7 @@ func test_accessTokens_List(t *testing.T, db *accessTokens) {
 	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
-func test_accessTokens_Save(t *testing.T, db *accessTokens) {
+func accessTokensSave(t *testing.T, db *accessTokens) {
 	// Create an access token with name "Test"
 	token, err := db.Create(1, "Test")
 	if err != nil {
