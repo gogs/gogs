@@ -11,7 +11,7 @@ import (
 	"gogs.io/gogs/internal/cryptoutil"
 )
 
-func migrateAccessTokenSHA1(db *gorm.DB) error {
+func migrateAccessTokenToSHA256(db *gorm.DB) error {
 	type accessToken struct {
 		ID     int64
 		Sha1   string

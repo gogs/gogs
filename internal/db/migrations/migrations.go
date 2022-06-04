@@ -55,7 +55,7 @@ var migrations = []Migration{
 	// NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
 
 	// v19 -> v20:v0.13.0
-	NewMigration("migrate access token sha1 value to sha256", migrateAccessTokenSHA1),
+	NewMigration("migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
 }
 
 // Migrate database to current version
