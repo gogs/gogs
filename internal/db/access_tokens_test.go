@@ -57,8 +57,7 @@ func TestAccessTokens(t *testing.T) {
 	}{
 		{"Create", accessTokensCreate},
 		{"DeleteByID", accessTokensDeleteByID},
-		{"GetBySHA", accessTokensGetBySHA},
-		{"List", accessTokensList},
+		{"GetBySHA1", accessTokensGetBySHA},
 		{"Save", accessTokensSave},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -88,7 +87,7 @@ func accessTokensCreate(t *testing.T, db *accessTokens) {
 	assert.Equal(t, 40, len(token.Sha1), "sha1 length")
 
 	// Get it back and check the Created field
-	token, err = db.GetBySHA(token.Sha1)
+	token, err = db.GetBySHA1(token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,11 +113,11 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 	}
 
 	// We should be able to get it back
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA1(token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA1(token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +129,7 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 	}
 
 	// We should get token not found error
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA1(token.Sha1)
 	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": token.Sha1}}
 	assert.Equal(t, expErr, err)
 }
@@ -143,46 +142,15 @@ func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
 	}
 
 	// We should be able to get it back
-	_, err = db.GetBySHA(token.Sha1)
+	_, err = db.GetBySHA1(token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Try to get a non-existent token
-	_, err = db.GetBySHA("bad_sha")
+	_, err = db.GetBySHA1("bad_sha")
 	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
 	assert.Equal(t, expErr, err)
-}
-
-func accessTokensList(t *testing.T, db *accessTokens) {
-	// Create two access tokens for user 1
-	_, err := db.Create(1, "user1_1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = db.Create(1, "user1_2")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create one access token for user 2
-	_, err = db.Create(2, "user2_1")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// List all access tokens for user 1
-	tokens, err := db.List(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Equal(t, 2, len(tokens), "number of tokens")
-
-	assert.Equal(t, int64(1), tokens[0].UserID)
-	assert.Equal(t, "user1_1", tokens[0].Name)
-
-	assert.Equal(t, int64(1), tokens[1].UserID)
-	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
 func accessTokensSave(t *testing.T, db *accessTokens) {
@@ -201,7 +169,7 @@ func accessTokensSave(t *testing.T, db *accessTokens) {
 	}
 
 	// Get back from DB should have Updated set
-	token, err = db.GetBySHA(token.Sha1)
+	token, err = db.GetBySHA1(token.Sha1)
 	if err != nil {
 		t.Fatal(err)
 	}

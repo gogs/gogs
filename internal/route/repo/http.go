@@ -131,7 +131,7 @@ func HTTPContexter() macaron.Handler {
 
 		// If username and password combination failed, try again using username as a token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA(authUsername)
+			token, err := db.AccessTokens.GetBySHA1(authUsername)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")

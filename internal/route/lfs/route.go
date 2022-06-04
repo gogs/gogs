@@ -72,7 +72,7 @@ func authenticate() macaron.Handler {
 
 		// If username and password authentication failed, try again using username as an access token.
 		if auth.IsErrBadCredentials(err) {
-			token, err := db.AccessTokens.GetBySHA(username)
+			token, err := db.AccessTokens.GetBySHA1(username)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c.Resp)
