@@ -467,10 +467,12 @@ type UploadRepoFileOptions struct {
 // path of the repository.
 func isRepositoryGitPath(path string) bool {
 	return strings.HasSuffix(path, ".git") ||
-		strings.Contains(path, ".git"+string(os.PathSeparator)) ||
+		strings.Contains(path, ".git/") ||
+		strings.Contains(path, `.git\`) ||
 		// Windows treats ".git." the same as ".git"
 		strings.HasSuffix(path, ".git.") ||
-		strings.Contains(path, ".git."+string(os.PathSeparator))
+		strings.Contains(path, ".git./") ||
+		strings.Contains(path, `.git.\`)
 }
 
 func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
