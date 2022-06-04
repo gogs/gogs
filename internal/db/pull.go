@@ -621,11 +621,6 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 
 // UpdatePatch generates and saves a new patch.
 func (pr *PullRequest) UpdatePatch() (err error) {
-	if pr.HeadRepo == nil {
-		log.Trace("PullRequest[%d].UpdatePatch: ignored corrupted data", pr.ID)
-		return nil
-	}
-
 	headGitRepo, err := git.Open(pr.HeadRepo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("open repository: %v", err)
@@ -759,6 +754,11 @@ func (prs PullRequestList) LoadAttributes() error {
 
 func addHeadRepoTasks(prs []*PullRequest) {
 	for _, pr := range prs {
+		if pr.HeadRepo == nil {
+			log.Trace("addHeadRepoTasks[%d]: missing head repository", pr.ID)
+			continue
+		}
+
 		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
 		if err := pr.UpdatePatch(); err != nil {
 			log.Error("UpdatePatch: %v", err)
