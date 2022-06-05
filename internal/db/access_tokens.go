@@ -27,9 +27,9 @@ type AccessTokensStore interface {
 	// 🚨 SECURITY: The "userID" is required to prevent attacker
 	// deletes arbitrary access token that belongs to another user.
 	DeleteByID(userID, id int64) error
-	// GetBySHA returns the access token with given SHA1.
+	// GetBySHA1 returns the access token with given SHA1.
 	// It returns ErrAccessTokenNotExist when not found.
-	GetBySHA(sha string) (*AccessToken, error)
+	GetBySHA1(sha1 string) (*AccessToken, error)
 	// List returns all access tokens belongs to given user.
 	List(userID int64) ([]*AccessToken, error)
 	// Save persists all values of given access token.
@@ -45,6 +45,7 @@ type AccessToken struct {
 	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
 	Name   string
 	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
+	SHA256 string `gorm:"type:VARCHAR(64);unique;not null"`
 
 	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix       int64
@@ -104,12 +105,22 @@ func (db *accessTokens) Create(userID int64, name string) (*AccessToken, error) 
 		return nil, err
 	}
 
-	token := &AccessToken{
+	token := cryptoutil.SHA1(gouuid.NewV4().String())
+	sha256 := cryptoutil.SHA256(token)
+
+	accessToken := &AccessToken{
 		UserID: userID,
 		Name:   name,
-		Sha1:   cryptoutil.SHA1(gouuid.NewV4().String()),
+		Sha1:   sha256[:40], // To pass the column unique constraint, keep the length of SHA1.
+		SHA256: sha256,
 	}
-	return token, db.DB.Create(token).Error
+	if err = db.DB.Create(accessToken).Error; err != nil {
+		return nil, err
+	}
+
+	// Set back the raw access token value, for the sake of the caller.
+	accessToken.Sha1 = token
+	return accessToken, nil
 }
 
 func (db *accessTokens) DeleteByID(userID, id int64) error {
@@ -135,12 +146,13 @@ func (ErrAccessTokenNotExist) NotFound() bool {
 	return true
 }
 
-func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
+func (db *accessTokens) GetBySHA1(sha1 string) (*AccessToken, error) {
+	sha256 := cryptoutil.SHA256(sha1)
 	token := new(AccessToken)
-	err := db.Where("sha1 = ?", sha).First(token).Error
+	err := db.Where("sha256 = ?", sha256).First(token).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha}}
+			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
 		}
 		return nil, err
 	}
@@ -149,7 +161,7 @@ func (db *accessTokens) GetBySHA(sha string) (*AccessToken, error) {
 
 func (db *accessTokens) List(userID int64) ([]*AccessToken, error) {
 	var tokens []*AccessToken
-	return tokens, db.Where("uid = ?", userID).Find(&tokens).Error
+	return tokens, db.Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
 }
 
 func (db *accessTokens) Save(t *AccessToken) error {

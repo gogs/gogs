@@ -142,6 +142,7 @@ var Tables = []interface{}{
 	new(LFSObject), new(LoginSource),
 }
 
+// Init initializes the database with given logger.
 func Init(w logger.Writer) (*gorm.DB, error) {
 	level := logger.Info
 	if conf.IsProdMode() {

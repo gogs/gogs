@@ -25,3 +25,19 @@ func TestSHA1(t *testing.T) {
 		})
 	}
 }
+
+func TestSHA256(t *testing.T) {
+	tests := []struct {
+		input  string
+		output string
+	}{
+		{input: "", output: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+		{input: "The quick brown fox jumps over the lazy dog", output: "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"},
+		{input: "The quick brown fox jumps over the lazy dog.", output: "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c"},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			assert.Equal(t, test.output, SHA256(test.input))
+		})
+	}
+}

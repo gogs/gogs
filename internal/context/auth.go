@@ -130,7 +130,7 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := db.AccessTokens.GetBySHA(tokenSHA)
+			t, err := db.AccessTokens.GetBySHA1(tokenSHA)
 			if err != nil {
 				if !db.IsErrAccessTokenNotExist(err) {
 					log.Error("GetAccessTokenBySHA: %v", err)

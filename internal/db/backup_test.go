@@ -63,6 +63,7 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			UserID:      1,
 			Name:        "test1",
 			Sha1:        cryptoutil.SHA1("2910d03d-c0b5-4f71-bad5-c4086e4efae3"),
+			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("2910d03d-c0b5-4f71-bad5-c4086e4efae3")),
 			CreatedUnix: 1588568886,
 			UpdatedUnix: 1588572486, // 1 hour later
 		},
@@ -70,12 +71,21 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			UserID:      1,
 			Name:        "test2",
 			Sha1:        cryptoutil.SHA1("84117e17-7e67-4024-bd04-1c23e6e809d4"),
+			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("84117e17-7e67-4024-bd04-1c23e6e809d4")),
 			CreatedUnix: 1588568886,
 		},
 		&AccessToken{
 			UserID:      2,
 			Name:        "test1",
 			Sha1:        cryptoutil.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4"),
+			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("da2775ce-73dd-47ba-b9d2-bbcc346585c4")),
+			CreatedUnix: 1588568886,
+		},
+		&AccessToken{
+			UserID:      2,
+			Name:        "test2",
+			Sha1:        cryptoutil.SHA256(cryptoutil.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb"))[:40],
+			SHA256:      cryptoutil.SHA256(cryptoutil.SHA1("1b2dccd1-a262-470f-bb8c-7fc73192e9bb")),
 			CreatedUnix: 1588568886,
 		},
 
