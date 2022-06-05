@@ -75,7 +75,7 @@ func Test_authenticate(t *testing.T) {
 				},
 			},
 			mockAccessTokensStore: &db.MockAccessTokensStore{
-				MockGetBySHA: func(sha string) (*db.AccessToken, error) {
+				MockGetBySHA1: func(sha string) (*db.AccessToken, error) {
 					return nil, db.ErrAccessTokenNotExist{}
 				},
 			},
@@ -120,7 +120,7 @@ func Test_authenticate(t *testing.T) {
 				},
 			},
 			mockAccessTokensStore: &db.MockAccessTokensStore{
-				MockGetBySHA: func(sha string) (*db.AccessToken, error) {
+				MockGetBySHA1: func(sha string) (*db.AccessToken, error) {
 					return &db.AccessToken{}, nil
 				},
 				MockSave: func(t *db.AccessToken) error {
