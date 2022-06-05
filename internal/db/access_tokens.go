@@ -44,17 +44,17 @@ var AccessTokens AccessTokensStore
 // AccessToken is a personal access token.
 type AccessToken struct {
 	ID     int64
-	UserID int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
+	UserID int64 `gorm:"column:uid;index"`
 	Name   string
-	Sha1   string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
+	Sha1   string `gorm:"type:VARCHAR(40);unique"`
 	SHA256 string `gorm:"type:VARCHAR(64);unique;not null"`
 
-	Created           time.Time `xorm:"-" gorm:"-" json:"-"`
+	Created           time.Time `gorm:"-" json:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" gorm:"-" json:"-"`
+	Updated           time.Time `gorm:"-" json:"-"`
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" gorm:"-" json:"-"`
-	HasUsed           bool `xorm:"-" gorm:"-" json:"-"`
+	HasRecentActivity bool `gorm:"-" json:"-"`
+	HasUsed           bool `gorm:"-" json:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
