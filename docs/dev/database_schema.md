@@ -9,6 +9,8 @@
   Mode   | mode    | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
 
 Primary keys: id
+Indexes: 
+	"access_user_repo_unique" UNIQUE (user_id, repo_id)
 ```
 
 # Table "access_token"
@@ -25,6 +27,8 @@ Primary keys: id
   UpdatedUnix | updated_unix | BIGINT                      | BIGINT                      | INTEGER                      
 
 Primary keys: id
+Indexes: 
+	"idx_access_token_user_id" (uid)
 ```
 
 # Table "lfs_object"
