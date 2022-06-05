@@ -166,7 +166,6 @@ func (db *accessTokens) List(ctx context.Context, userID int64) ([]*AccessToken,
 	return tokens, db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
 }
 
-// todo: update individual fields
 func (db *accessTokens) Save(ctx context.Context, t *AccessToken) error {
 	return db.DB.WithContext(ctx).Save(t).Error
 }
