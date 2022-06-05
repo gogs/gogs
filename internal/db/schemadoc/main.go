@@ -120,13 +120,16 @@ type tableInfo struct {
 
 // This function is derived from gorm.io/gorm/migrator/migrator.go:Migrator.CreateTable.
 func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
-	conn, err := gorm.Open(dialector, &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
+	conn, err := gorm.Open(dialector,
+		&gorm.Config{
+			SkipDefaultTransaction: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+			DryRun:               true,
+			DisableAutomaticPing: true,
 		},
-		DryRun:               true,
-		DisableAutomaticPing: true,
-	})
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
 	}
