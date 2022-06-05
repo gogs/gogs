@@ -43,12 +43,11 @@ jobs:
         run: |
           go mod tidy
           task generate
-          task generate-schemadoc
           STATUS=$(git status --porcelain)
           if [ ! -z "$STATUS" ]; then
             echo "Unstaged files:"
             echo $STATUS
-            echo "Run 'go mod tidy', 'task generate' or 'task generate-schemadoc' and commit them"
+            echo "Run 'go mod tidy' or 'task generate' commit them"
             exit 1
           fi
 
