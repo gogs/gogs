@@ -24,7 +24,7 @@ func migrateAccessTokenToSHA256(db *gorm.DB) error {
 		}
 
 		var accessTokens []*accessToken
-		err = tx.Debug().Where("sha256 IS NULL").Find(&accessTokens).Error
+		err = tx.Where("sha256 IS NULL").Find(&accessTokens).Error
 		if err != nil {
 			return errors.Wrap(err, "list")
 		}
