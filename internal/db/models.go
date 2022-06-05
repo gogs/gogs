@@ -191,7 +191,7 @@ func NewEngine() (err error) {
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
-		return fmt.Errorf("sync structs to database tables: %v\n", err)
+		return errors.Wrap(err, "sync tables")
 	}
 
 	return nil
