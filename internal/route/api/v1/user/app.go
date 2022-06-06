@@ -14,7 +14,7 @@ import (
 )
 
 func ListAccessTokens(c *context.APIContext) {
-	tokens, err := db.AccessTokens.List(c.User.ID)
+	tokens, err := db.AccessTokens.List(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "list access tokens")
 		return
@@ -28,7 +28,7 @@ func ListAccessTokens(c *context.APIContext) {
 }
 
 func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) {
-	t, err := db.AccessTokens.Create(c.User.ID, form.Name)
+	t, err := db.AccessTokens.Create(c.Req.Context(), c.User.ID, form.Name)
 	if err != nil {
 		if db.IsErrAccessTokenAlreadyExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
