@@ -24,6 +24,8 @@ Gogs has the following dependencies:
 - [Go](https://golang.org/doc/install) (v1.16 or higher)
 - [Less.js](http://lesscss.org/usage/#command-line-usage-installing)
 - [Task](https://github.com/go-task/task) (v3)
+- [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports)
+- [go-mockgen](https://github.com/derision-test/go-mockgen)
 - Database upon your choice (pick one, we choose PostgreSQL in this document):
     - [PostgreSQL](https://wiki.postgresql.org/wiki/Detailed_installation_guides) (v9.6 or higher)
     - [MySQL](https://dev.mysql.com/downloads/mysql/) with `ENGINE=InnoDB` (v5.7 or higher)
@@ -39,6 +41,8 @@ Gogs has the following dependencies:
     brew install go postgresql git npm go-task/tap/go-task
     npm install -g less
     npm install -g less-plugin-clean-css
+    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@latest
+    go install golang.org/x/tools/cmd/goimports@latest
     ```
 
 1. Configure PostgreSQL to start automatically:
@@ -75,6 +79,8 @@ Gogs has the following dependencies:
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
     go install github.com/go-task/task/v3/cmd/task@latest
+    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@latest
+    go install golang.org/x/tools/cmd/goimports@latest
     ```
 
 1. Configure startup services:

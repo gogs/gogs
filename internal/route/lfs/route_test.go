@@ -31,7 +31,7 @@ func Test_authenticate(t *testing.T) {
 		header                http.Header
 		mockUsersStore        *db.MockUsersStore
 		mockTwoFactorsStore   *db.MockTwoFactorsStore
-		mockAccessTokensStore *db.MockAccessTokensStore
+		mockAccessTokensStore func() db.AccessTokensStore
 		expStatusCode         int
 		expHeader             http.Header
 		expBody               string
@@ -74,10 +74,10 @@ func Test_authenticate(t *testing.T) {
 					return nil, auth.ErrBadCredentials{}
 				},
 			},
-			mockAccessTokensStore: &db.MockAccessTokensStore{
-				MockGetBySHA1: func(sha string) (*db.AccessToken, error) {
-					return nil, db.ErrAccessTokenNotExist{}
-				},
+			mockAccessTokensStore: func() db.AccessTokensStore {
+				mock := db.NewMockAccessTokensStore()
+				mock.GetBySHA1Func.SetDefaultReturn(nil, db.ErrAccessTokenNotExist{})
+				return mock
 			},
 			expStatusCode: http.StatusUnauthorized,
 			expHeader: http.Header{
@@ -119,13 +119,10 @@ func Test_authenticate(t *testing.T) {
 					return &db.User{ID: 1, Name: "unknwon"}, nil
 				},
 			},
-			mockAccessTokensStore: &db.MockAccessTokensStore{
-				MockGetBySHA1: func(sha string) (*db.AccessToken, error) {
-					return &db.AccessToken{}, nil
-				},
-				MockSave: func(t *db.AccessToken) error {
-					return nil
-				},
+			mockAccessTokensStore: func() db.AccessTokensStore {
+				mock := db.NewMockAccessTokensStore()
+				mock.GetBySHA1Func.SetDefaultReturn(&db.AccessToken{}, nil)
+				return mock
 			},
 			expStatusCode: http.StatusOK,
 			expHeader:     http.Header{},
@@ -136,7 +133,10 @@ func Test_authenticate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			db.SetMockUsersStore(t, test.mockUsersStore)
 			db.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore)
-			db.SetMockAccessTokensStore(t, test.mockAccessTokensStore)
+
+			if test.mockAccessTokensStore != nil {
+				db.SetMockAccessTokensStore(t, test.mockAccessTokensStore())
+			}
 
 			r, err := http.NewRequest("GET", "/", nil)
 			if err != nil {

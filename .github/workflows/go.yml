@@ -38,17 +38,20 @@ jobs:
           args: --timeout=30m
       - name: Install Task
         uses: arduino/setup-task@v1
+      - name: Install goimports and go-mockgen
+        run: |
+          go install github.com/derision-test/go-mockgen/cmd/go-mockgen@latest
+          go install golang.org/x/tools/cmd/goimports@latest
       - name: Check Go module tidiness and generated files
         shell: bash
         run: |
           go mod tidy
           task generate
-          task generate-schemadoc
           STATUS=$(git status --porcelain)
           if [ ! -z "$STATUS" ]; then
             echo "Unstaged files:"
             echo $STATUS
-            echo "Run 'go mod tidy', 'task generate' or 'task generate-schemadoc' and commit them"
+            echo "Run 'go mod tidy' or 'task generate' commit them"
             exit 1
           fi
 

@@ -1,5 +1,7 @@
 version = 1
 
+exclude_patterns = ["**/mocks.go"]
+
 [[analyzers]]
 name = "docker"
 enabled = true
