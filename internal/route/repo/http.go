@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -408,15 +409,21 @@ func HTTP(c *HTTPContext) {
 		}
 
 		if route.method != c.Req.Method {
-			c.NotFound()
+			c.Error(http.StatusNotFound)
 			return
 		}
 
-		file := strings.TrimPrefix(reqPath, m[1]+"/")
-		dir, err := getGitRepoPath(m[1])
+		cleaned := pathutil.Clean(m[1])
+		if m[1] != "/"+cleaned {
+			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
+			return
+		}
+
+		file := strings.TrimPrefix(reqPath, cleaned)
+		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
-			c.NotFound()
+			c.Error(http.StatusNotFound)
 			return
 		}
 
@@ -435,5 +442,5 @@ func HTTP(c *HTTPContext) {
 		return
 	}
 
-	c.NotFound()
+	c.Error(http.StatusNotFound)
 }
