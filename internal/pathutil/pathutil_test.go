@@ -28,6 +28,10 @@ func TestClean(t *testing.T) {
 			wantVal: "a/readme.txt",
 		},
 		{
+			path:    "../../objects/info/..",
+			wantVal: "objects",
+		},
+		{
 			path:    "/a/readme.txt",
 			wantVal: "a/readme.txt",
 		},
