@@ -25,7 +25,6 @@ On the release branch:
 - [ ] Publish new RC releases (e.g. `v0.12.0-rc.1`, `v0.12.0-rc.2`) to ensure Docker workflow succeeds. **Make sure the tag is created on the release branch**.
 	- [ ] Pull down the Docker image and [run through application setup](https://github.com/gogs/gogs/blob/main/docker/README.md) to make sure nothing blows up.
 - [ ] Publish a new [GitHub release](https://github.com/gogs/gogs/releases) with entries from [CHANGELOG](https://github.com/gogs/gogs/blob/main/CHANGELOG.md) for the current minor release. **Make sure the tag is created on the release branch**.
-	- [ ] Only mention patch authors for the current release.
 - [ ] [Wait for a new image tag for the current release](https://github.com/gogs/gogs/actions/workflows/docker.yml?query=event%3Arelease) to be created automatically on both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs).
 - [ ] [Push a new Docker image tag](https://github.com/gogs/gogs/blob/main/docs/dev/release/release_new_version.md#update-docker-image-tag) as `<MAJOR>.<MINOR>` to both [Docker Hub](https://hub.docker.com/r/gogs/gogs/tags) and [GitHub Container registry](https://github.com/gogs/gogs/pkgs/container/gogs), e.g.:
 - [ ] [Compile and pack binaries](https://github.com/gogs/gogs/blob/main/docs/dev/release/release_new_version.md#compile-and-pack-binaries) (all prefixed with `gogs_<MAJOR>.<MINOR>.<PATCH>_`, e.g. `gogs_0.12.0_`):
