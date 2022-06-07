@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -423,7 +424,7 @@ func HTTP(c *HTTPContext) {
 		route.handler(serviceHandler{
 			w:    c.Resp,
 			r:    c.Req.Request,
-			dir:  dir,
+			dir:  pathutil.Clean(dir),
 			file: file,
 
 			authUser:  c.AuthUser,
