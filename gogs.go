@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	conf.App.Version = "0.12.8"
+	conf.App.Version = "0.12.9"
 }
 
 func main() {
