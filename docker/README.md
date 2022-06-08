@@ -6,8 +6,6 @@ Visit [Docker Hub](https://hub.docker.com/u/gogs) or [GitHub Container registry]
 
 ## Usage
 
-ℹ️ Please use `gogs/gogs-rpi` if you're using Raspberry Pis!
-
 To keep your data out of Docker container, we do a volume (`/var/gogs` -> `/data`) here, and you can change it based on your situation.
 
 ```sh
