@@ -166,7 +166,7 @@ Please create and use personal access token on user settings page`)
 		if isPull {
 			mode = db.AccessModeRead
 		}
-		if !db.Perms.Authorize(authUser.ID, repo.ID, mode,
+		if !db.Perms.Authorize(c.Req.Context(), authUser.ID, repo.ID, mode,
 			db.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
