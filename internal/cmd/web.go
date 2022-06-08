@@ -89,6 +89,7 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		filepath.Join(conf.WorkDir(), "public"),
 		macaron.StaticOptions{
+			ETag:        true,
 			SkipLogging: conf.Server.DisableRouterLog,
 			FileSystem:  publicFs,
 		},
@@ -97,6 +98,7 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		conf.Picture.AvatarUploadPath,
 		macaron.StaticOptions{
+			ETag:        true,
 			Prefix:      db.USER_AVATAR_URL_PREFIX,
 			SkipLogging: conf.Server.DisableRouterLog,
 		},
@@ -104,6 +106,7 @@ func newMacaron() *macaron.Macaron {
 	m.Use(macaron.Static(
 		conf.Picture.RepositoryAvatarUploadPath,
 		macaron.StaticOptions{
+			ETag:        true,
 			Prefix:      db.REPO_AVATAR_URL_PREFIX,
 			SkipLogging: conf.Server.DisableRouterLog,
 		},
