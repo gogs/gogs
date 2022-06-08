@@ -61,7 +61,7 @@ func TestAccessTokens(t *testing.T) {
 		{"DeleteByID", accessTokensDeleteByID},
 		{"GetBySHA1", accessTokensGetBySHA},
 		{"List", accessTokensList},
-		{"Save", accessTokensSave},
+		{"Touch", accessTokensTouch},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -169,7 +169,7 @@ func accessTokensList(t *testing.T, db *accessTokens) {
 	assert.Equal(t, "user1_2", tokens[1].Name)
 }
 
-func accessTokensSave(t *testing.T, db *accessTokens) {
+func accessTokensTouch(t *testing.T, db *accessTokens) {
 	ctx := context.Background()
 
 	// Create an access token with name "Test"
@@ -179,7 +179,7 @@ func accessTokensSave(t *testing.T, db *accessTokens) {
 	// Updated field is zero now
 	assert.True(t, token.Updated.IsZero())
 
-	err = db.Save(ctx, token)
+	err = db.Touch(ctx, token.ID)
 	require.NoError(t, err)
 
 	// Get back from DB should have Updated set

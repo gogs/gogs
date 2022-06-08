@@ -137,8 +137,8 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 				}
 				return 0, false
 			}
-			if err = db.AccessTokens.Save(c.Req.Context(), t); err != nil {
-				log.Error("UpdateAccessToken: %v", err)
+			if err = db.AccessTokens.Touch(c.Req.Context(), t.ID); err != nil {
+				log.Error("Failed to touch access token: %v", err)
 			}
 			return t.UserID, true
 		}

@@ -34,9 +34,8 @@ type AccessTokensStore interface {
 	GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error)
 	// List returns all access tokens belongs to given user.
 	List(ctx context.Context, userID int64) ([]*AccessToken, error)
-	// Save persists all values of given access token. The Updated field is set to
-	// current time automatically.
-	Save(ctx context.Context, t *AccessToken) error
+	// Touch updates the updated time of the given access token to the current time.
+	Touch(ctx context.Context, id int64) error
 }
 
 var AccessTokens AccessTokensStore
@@ -62,12 +61,6 @@ func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
 	if t.CreatedUnix == 0 {
 		t.CreatedUnix = tx.NowFunc().Unix()
 	}
-	return nil
-}
-
-// BeforeUpdate implements the GORM update hook.
-func (t *AccessToken) BeforeUpdate(tx *gorm.DB) error {
-	t.UpdatedUnix = tx.NowFunc().Unix()
 	return nil
 }
 
@@ -116,7 +109,7 @@ func (db *accessTokens) Create(ctx context.Context, userID int64, name string) (
 		Sha1:   sha256[:40], // To pass the column unique constraint, keep the length of SHA1.
 		SHA256: sha256,
 	}
-	if err = db.DB.WithContext(ctx).Create(accessToken).Error; err != nil {
+	if err = db.WithContext(ctx).Create(accessToken).Error; err != nil {
 		return nil, err
 	}
 
@@ -166,6 +159,10 @@ func (db *accessTokens) List(ctx context.Context, userID int64) ([]*AccessToken,
 	return tokens, db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&tokens).Error
 }
 
-func (db *accessTokens) Save(ctx context.Context, t *AccessToken) error {
-	return db.DB.WithContext(ctx).Save(t).Error
+func (db *accessTokens) Touch(ctx context.Context, id int64) error {
+	return db.WithContext(ctx).
+		Model(new(AccessToken)).
+		Where("id = ?", id).
+		UpdateColumn("updated_unix", db.NowFunc().Unix()).
+		Error
 }
