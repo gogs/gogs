@@ -23,9 +23,9 @@ type MockAccessTokensStore struct {
 	// ListFunc is an instance of a mock function object controlling the
 	// behavior of the method List.
 	ListFunc *AccessTokensStoreListFunc
-	// SaveFunc is an instance of a mock function object controlling the
-	// behavior of the method Save.
-	SaveFunc *AccessTokensStoreSaveFunc
+	// TouchFunc is an instance of a mock function object controlling the
+	// behavior of the method Touch.
+	TouchFunc *AccessTokensStoreTouchFunc
 }
 
 // NewMockAccessTokensStore creates a new mock of the AccessTokensStore
@@ -53,8 +53,8 @@ func NewMockAccessTokensStore() *MockAccessTokensStore {
 				return
 			},
 		},
-		SaveFunc: &AccessTokensStoreSaveFunc{
-			defaultHook: func(context.Context, *AccessToken) (r0 error) {
+		TouchFunc: &AccessTokensStoreTouchFunc{
+			defaultHook: func(context.Context, int64) (r0 error) {
 				return
 			},
 		},
@@ -86,9 +86,9 @@ func NewStrictMockAccessTokensStore() *MockAccessTokensStore {
 				panic("unexpected invocation of MockAccessTokensStore.List")
 			},
 		},
-		SaveFunc: &AccessTokensStoreSaveFunc{
-			defaultHook: func(context.Context, *AccessToken) error {
-				panic("unexpected invocation of MockAccessTokensStore.Save")
+		TouchFunc: &AccessTokensStoreTouchFunc{
+			defaultHook: func(context.Context, int64) error {
+				panic("unexpected invocation of MockAccessTokensStore.Touch")
 			},
 		},
 	}
@@ -111,8 +111,8 @@ func NewMockAccessTokensStoreFrom(i AccessTokensStore) *MockAccessTokensStore {
 		ListFunc: &AccessTokensStoreListFunc{
 			defaultHook: i.List,
 		},
-		SaveFunc: &AccessTokensStoreSaveFunc{
-			defaultHook: i.Save,
+		TouchFunc: &AccessTokensStoreTouchFunc{
+			defaultHook: i.Touch,
 		},
 	}
 }
@@ -553,35 +553,35 @@ func (c AccessTokensStoreListFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
-// AccessTokensStoreSaveFunc describes the behavior when the Save method of
-// the parent MockAccessTokensStore instance is invoked.
-type AccessTokensStoreSaveFunc struct {
-	defaultHook func(context.Context, *AccessToken) error
-	hooks       []func(context.Context, *AccessToken) error
-	history     []AccessTokensStoreSaveFuncCall
+// AccessTokensStoreTouchFunc describes the behavior when the Touch method
+// of the parent MockAccessTokensStore instance is invoked.
+type AccessTokensStoreTouchFunc struct {
+	defaultHook func(context.Context, int64) error
+	hooks       []func(context.Context, int64) error
+	history     []AccessTokensStoreTouchFuncCall
 	mutex       sync.Mutex
 }
 
-// Save delegates to the next hook function in the queue and stores the
+// Touch delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockAccessTokensStore) Save(v0 context.Context, v1 *AccessToken) error {
-	r0 := m.SaveFunc.nextHook()(v0, v1)
-	m.SaveFunc.appendCall(AccessTokensStoreSaveFuncCall{v0, v1, r0})
+func (m *MockAccessTokensStore) Touch(v0 context.Context, v1 int64) error {
+	r0 := m.TouchFunc.nextHook()(v0, v1)
+	m.TouchFunc.appendCall(AccessTokensStoreTouchFuncCall{v0, v1, r0})
 	return r0
 }
 
-// SetDefaultHook sets function that is called when the Save method of the
+// SetDefaultHook sets function that is called when the Touch method of the
 // parent MockAccessTokensStore instance is invoked and the hook queue is
 // empty.
-func (f *AccessTokensStoreSaveFunc) SetDefaultHook(hook func(context.Context, *AccessToken) error) {
+func (f *AccessTokensStoreTouchFunc) SetDefaultHook(hook func(context.Context, int64) error) {
 	f.defaultHook = hook
 }
 
 // PushHook adds a function to the end of hook queue. Each invocation of the
-// Save method of the parent MockAccessTokensStore instance invokes the hook
-// at the front of the queue and discards it. After the queue is empty, the
-// default hook function is invoked for any future action.
-func (f *AccessTokensStoreSaveFunc) PushHook(hook func(context.Context, *AccessToken) error) {
+// Touch method of the parent MockAccessTokensStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *AccessTokensStoreTouchFunc) PushHook(hook func(context.Context, int64) error) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -589,20 +589,20 @@ func (f *AccessTokensStoreSaveFunc) PushHook(hook func(context.Context, *AccessT
 
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
-func (f *AccessTokensStoreSaveFunc) SetDefaultReturn(r0 error) {
-	f.SetDefaultHook(func(context.Context, *AccessToken) error {
+func (f *AccessTokensStoreTouchFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64) error {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
-func (f *AccessTokensStoreSaveFunc) PushReturn(r0 error) {
-	f.PushHook(func(context.Context, *AccessToken) error {
+func (f *AccessTokensStoreTouchFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64) error {
 		return r0
 	})
 }
 
-func (f *AccessTokensStoreSaveFunc) nextHook() func(context.Context, *AccessToken) error {
+func (f *AccessTokensStoreTouchFunc) nextHook() func(context.Context, int64) error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -615,32 +615,32 @@ func (f *AccessTokensStoreSaveFunc) nextHook() func(context.Context, *AccessToke
 	return hook
 }
 
-func (f *AccessTokensStoreSaveFunc) appendCall(r0 AccessTokensStoreSaveFuncCall) {
+func (f *AccessTokensStoreTouchFunc) appendCall(r0 AccessTokensStoreTouchFuncCall) {
 	f.mutex.Lock()
 	f.history = append(f.history, r0)
 	f.mutex.Unlock()
 }
 
-// History returns a sequence of AccessTokensStoreSaveFuncCall objects
+// History returns a sequence of AccessTokensStoreTouchFuncCall objects
 // describing the invocations of this function.
-func (f *AccessTokensStoreSaveFunc) History() []AccessTokensStoreSaveFuncCall {
+func (f *AccessTokensStoreTouchFunc) History() []AccessTokensStoreTouchFuncCall {
 	f.mutex.Lock()
-	history := make([]AccessTokensStoreSaveFuncCall, len(f.history))
+	history := make([]AccessTokensStoreTouchFuncCall, len(f.history))
 	copy(history, f.history)
 	f.mutex.Unlock()
 
 	return history
 }
 
-// AccessTokensStoreSaveFuncCall is an object that describes an invocation
-// of method Save on an instance of MockAccessTokensStore.
-type AccessTokensStoreSaveFuncCall struct {
+// AccessTokensStoreTouchFuncCall is an object that describes an invocation
+// of method Touch on an instance of MockAccessTokensStore.
+type AccessTokensStoreTouchFuncCall struct {
 	// Arg0 is the value of the 1st argument passed to this method
 	// invocation.
 	Arg0 context.Context
 	// Arg1 is the value of the 2nd argument passed to this method
 	// invocation.
-	Arg1 *AccessToken
+	Arg1 int64
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 error
@@ -648,12 +648,12 @@ type AccessTokensStoreSaveFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c AccessTokensStoreSaveFuncCall) Args() []interface{} {
+func (c AccessTokensStoreTouchFuncCall) Args() []interface{} {
 	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c AccessTokensStoreSaveFuncCall) Results() []interface{} {
+func (c AccessTokensStoreTouchFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
