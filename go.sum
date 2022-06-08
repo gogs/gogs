@@ -159,6 +159,8 @@ github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4 h1:C7NryI/RQhs
 github.com/gogs/go-gogs-client v0.0.0-20200128182646-c69cb7680fd4/go.mod h1:fR6z1Ie6rtF7kl/vBYMfgD5/G5B1blui7z426/sj2DU=
 github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0 h1:K02vod+sn3M1OOkdqi2tPxN2+xESK4qyITVQ3JkGEv4=
 github.com/gogs/go-libravatar v0.0.0-20191106065024-33a75213d0a0/go.mod h1:Zas3BtO88pk1cwUfEYlvnl/CRwh0ybDxRWSwRjG8I3w=
+github.com/gogs/gorm-sqlite v1.3.3-0.20220608111034-1298ceb93369 h1:nlpH50ShzqBGnZwul13EYJc8l5quxdTkBmzewuLZHgs=
+github.com/gogs/gorm-sqlite v1.3.3-0.20220608111034-1298ceb93369/go.mod h1:B+8GyC9K7VgzJAcrcXMRPdnMcck+8FgJynEehEPM16U=
 github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a h1:8DZwxETOVWIinYxDK+i6L+rMb7eGATGaakD6ZucfHVk=
 github.com/gogs/minwinsvc v0.0.0-20170301035411-95be6356811a/go.mod h1:TUIZ+29jodWQ8Gk6Pvtg4E09aMsc3C/VLZiVYfUhWQU=
 github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe h1:lXe2qZdvpiX5WZkZR4hgp4KJVfY3nMkvmwbVkpv1rVY=
@@ -860,8 +862,6 @@ gorm.io/driver/mysql v1.3.4 h1:/KoBMgsUHC3bExsekDcmNYaBnfH2WNeFuXqqrqMc98Q=
 gorm.io/driver/mysql v1.3.4/go.mod h1:s4Tq0KmD0yhPGHbZEwg1VPlH0vT/GBHJZorPzhcxBUE=
 gorm.io/driver/postgres v1.3.7 h1:FKF6sIMDHDEvvMF/XJvbnCl0nu6KSKUaPXevJ4r+VYQ=
 gorm.io/driver/postgres v1.3.7/go.mod h1:f02ympjIcgtHEGFMZvdgTxODZ9snAHDb4hXfigBVuNI=
-gorm.io/driver/sqlite v1.3.2 h1:nWTy4cE52K6nnMhv23wLmur9Y3qWbZvOBz+V4PrGAxg=
-gorm.io/driver/sqlite v1.3.2/go.mod h1:B+8GyC9K7VgzJAcrcXMRPdnMcck+8FgJynEehEPM16U=
 gorm.io/driver/sqlserver v1.3.1 h1:F5t6ScMzOgy1zukRTIZgLZwKahgt3q1woAILVolKpOI=
 gorm.io/driver/sqlserver v1.3.1/go.mod h1:w25Vrx2BG+CJNUu/xKbFhaKlGxT/nzRkhWCCoptX8tQ=
 gorm.io/gorm v1.23.1/go.mod h1:l2lP/RyAtc1ynaTjFksBde/O8v9oOGIApu2/xRitmZk=

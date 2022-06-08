@@ -72,5 +72,13 @@ require (
 	xorm.io/xorm v0.8.0
 )
 
+// Temporary replace directives
+// ============================
+// These entries indicate temporary replace directives due to a pending pull request upstream
+// or issues with specific versions.
+
+// https://github.com/gogs/gogs/issues/7019
+replace gorm.io/driver/sqlite => github.com/gogs/gorm-sqlite v1.3.3-0.20220608111034-1298ceb93369
+
 // +heroku goVersion go1.16
 // +heroku install ./
