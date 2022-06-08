@@ -10,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/lfsutil"
 )
 
-//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -o mocks.go
+//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i PermsStore -o mocks.go
 
 func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	before := AccessTokens
@@ -99,26 +99,6 @@ func (m *mockLoginSourceFileStore) SetConfig(cfg interface{}) error {
 
 func (m *mockLoginSourceFileStore) Save() error {
 	return m.MockSave()
-}
-
-var _ PermsStore = (*MockPermsStore)(nil)
-
-type MockPermsStore struct {
-	MockAccessMode   func(userID, repoID int64, opts AccessModeOptions) AccessMode
-	MockAuthorize    func(userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool
-	MockSetRepoPerms func(repoID int64, accessMap map[int64]AccessMode) error
-}
-
-func (m *MockPermsStore) AccessMode(userID, repoID int64, opts AccessModeOptions) AccessMode {
-	return m.MockAccessMode(userID, repoID, opts)
-}
-
-func (m *MockPermsStore) Authorize(userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
-	return m.MockAuthorize(userID, repoID, desired, opts)
-}
-
-func (m *MockPermsStore) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error {
-	return m.MockSetRepoPerms(repoID, accessMap)
 }
 
 func SetMockPermsStore(t *testing.T, mock PermsStore) {

@@ -657,3 +657,410 @@ func (c AccessTokensStoreTouchFuncCall) Args() []interface{} {
 func (c AccessTokensStoreTouchFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
+
+// MockPermsStore is a mock implementation of the PermsStore interface (from
+// the package gogs.io/gogs/internal/db) used for unit testing.
+type MockPermsStore struct {
+	// AccessModeFunc is an instance of a mock function object controlling
+	// the behavior of the method AccessMode.
+	AccessModeFunc *PermsStoreAccessModeFunc
+	// AuthorizeFunc is an instance of a mock function object controlling
+	// the behavior of the method Authorize.
+	AuthorizeFunc *PermsStoreAuthorizeFunc
+	// SetRepoPermsFunc is an instance of a mock function object controlling
+	// the behavior of the method SetRepoPerms.
+	SetRepoPermsFunc *PermsStoreSetRepoPermsFunc
+}
+
+// NewMockPermsStore creates a new mock of the PermsStore interface. All
+// methods return zero values for all results, unless overwritten.
+func NewMockPermsStore() *MockPermsStore {
+	return &MockPermsStore{
+		AccessModeFunc: &PermsStoreAccessModeFunc{
+			defaultHook: func(context.Context, int64, int64, AccessModeOptions) (r0 AccessMode) {
+				return
+			},
+		},
+		AuthorizeFunc: &PermsStoreAuthorizeFunc{
+			defaultHook: func(context.Context, int64, int64, AccessMode, AccessModeOptions) (r0 bool) {
+				return
+			},
+		},
+		SetRepoPermsFunc: &PermsStoreSetRepoPermsFunc{
+			defaultHook: func(context.Context, int64, map[int64]AccessMode) (r0 error) {
+				return
+			},
+		},
+	}
+}
+
+// NewStrictMockPermsStore creates a new mock of the PermsStore interface.
+// All methods panic on invocation, unless overwritten.
+func NewStrictMockPermsStore() *MockPermsStore {
+	return &MockPermsStore{
+		AccessModeFunc: &PermsStoreAccessModeFunc{
+			defaultHook: func(context.Context, int64, int64, AccessModeOptions) AccessMode {
+				panic("unexpected invocation of MockPermsStore.AccessMode")
+			},
+		},
+		AuthorizeFunc: &PermsStoreAuthorizeFunc{
+			defaultHook: func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool {
+				panic("unexpected invocation of MockPermsStore.Authorize")
+			},
+		},
+		SetRepoPermsFunc: &PermsStoreSetRepoPermsFunc{
+			defaultHook: func(context.Context, int64, map[int64]AccessMode) error {
+				panic("unexpected invocation of MockPermsStore.SetRepoPerms")
+			},
+		},
+	}
+}
+
+// NewMockPermsStoreFrom creates a new mock of the MockPermsStore interface.
+// All methods delegate to the given implementation, unless overwritten.
+func NewMockPermsStoreFrom(i PermsStore) *MockPermsStore {
+	return &MockPermsStore{
+		AccessModeFunc: &PermsStoreAccessModeFunc{
+			defaultHook: i.AccessMode,
+		},
+		AuthorizeFunc: &PermsStoreAuthorizeFunc{
+			defaultHook: i.Authorize,
+		},
+		SetRepoPermsFunc: &PermsStoreSetRepoPermsFunc{
+			defaultHook: i.SetRepoPerms,
+		},
+	}
+}
+
+// PermsStoreAccessModeFunc describes the behavior when the AccessMode
+// method of the parent MockPermsStore instance is invoked.
+type PermsStoreAccessModeFunc struct {
+	defaultHook func(context.Context, int64, int64, AccessModeOptions) AccessMode
+	hooks       []func(context.Context, int64, int64, AccessModeOptions) AccessMode
+	history     []PermsStoreAccessModeFuncCall
+	mutex       sync.Mutex
+}
+
+// AccessMode delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockPermsStore) AccessMode(v0 context.Context, v1 int64, v2 int64, v3 AccessModeOptions) AccessMode {
+	r0 := m.AccessModeFunc.nextHook()(v0, v1, v2, v3)
+	m.AccessModeFunc.appendCall(PermsStoreAccessModeFuncCall{v0, v1, v2, v3, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the AccessMode method of
+// the parent MockPermsStore instance is invoked and the hook queue is
+// empty.
+func (f *PermsStoreAccessModeFunc) SetDefaultHook(hook func(context.Context, int64, int64, AccessModeOptions) AccessMode) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// AccessMode method of the parent MockPermsStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *PermsStoreAccessModeFunc) PushHook(hook func(context.Context, int64, int64, AccessModeOptions) AccessMode) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *PermsStoreAccessModeFunc) SetDefaultReturn(r0 AccessMode) {
+	f.SetDefaultHook(func(context.Context, int64, int64, AccessModeOptions) AccessMode {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *PermsStoreAccessModeFunc) PushReturn(r0 AccessMode) {
+	f.PushHook(func(context.Context, int64, int64, AccessModeOptions) AccessMode {
+		return r0
+	})
+}
+
+func (f *PermsStoreAccessModeFunc) nextHook() func(context.Context, int64, int64, AccessModeOptions) AccessMode {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *PermsStoreAccessModeFunc) appendCall(r0 PermsStoreAccessModeFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of PermsStoreAccessModeFuncCall objects
+// describing the invocations of this function.
+func (f *PermsStoreAccessModeFunc) History() []PermsStoreAccessModeFuncCall {
+	f.mutex.Lock()
+	history := make([]PermsStoreAccessModeFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// PermsStoreAccessModeFuncCall is an object that describes an invocation of
+// method AccessMode on an instance of MockPermsStore.
+type PermsStoreAccessModeFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 AccessModeOptions
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 AccessMode
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c PermsStoreAccessModeFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c PermsStoreAccessModeFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// PermsStoreAuthorizeFunc describes the behavior when the Authorize method
+// of the parent MockPermsStore instance is invoked.
+type PermsStoreAuthorizeFunc struct {
+	defaultHook func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool
+	hooks       []func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool
+	history     []PermsStoreAuthorizeFuncCall
+	mutex       sync.Mutex
+}
+
+// Authorize delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockPermsStore) Authorize(v0 context.Context, v1 int64, v2 int64, v3 AccessMode, v4 AccessModeOptions) bool {
+	r0 := m.AuthorizeFunc.nextHook()(v0, v1, v2, v3, v4)
+	m.AuthorizeFunc.appendCall(PermsStoreAuthorizeFuncCall{v0, v1, v2, v3, v4, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Authorize method of
+// the parent MockPermsStore instance is invoked and the hook queue is
+// empty.
+func (f *PermsStoreAuthorizeFunc) SetDefaultHook(hook func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Authorize method of the parent MockPermsStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *PermsStoreAuthorizeFunc) PushHook(hook func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *PermsStoreAuthorizeFunc) SetDefaultReturn(r0 bool) {
+	f.SetDefaultHook(func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *PermsStoreAuthorizeFunc) PushReturn(r0 bool) {
+	f.PushHook(func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool {
+		return r0
+	})
+}
+
+func (f *PermsStoreAuthorizeFunc) nextHook() func(context.Context, int64, int64, AccessMode, AccessModeOptions) bool {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *PermsStoreAuthorizeFunc) appendCall(r0 PermsStoreAuthorizeFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of PermsStoreAuthorizeFuncCall objects
+// describing the invocations of this function.
+func (f *PermsStoreAuthorizeFunc) History() []PermsStoreAuthorizeFuncCall {
+	f.mutex.Lock()
+	history := make([]PermsStoreAuthorizeFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// PermsStoreAuthorizeFuncCall is an object that describes an invocation of
+// method Authorize on an instance of MockPermsStore.
+type PermsStoreAuthorizeFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 AccessMode
+	// Arg4 is the value of the 5th argument passed to this method
+	// invocation.
+	Arg4 AccessModeOptions
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 bool
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c PermsStoreAuthorizeFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c PermsStoreAuthorizeFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// PermsStoreSetRepoPermsFunc describes the behavior when the SetRepoPerms
+// method of the parent MockPermsStore instance is invoked.
+type PermsStoreSetRepoPermsFunc struct {
+	defaultHook func(context.Context, int64, map[int64]AccessMode) error
+	hooks       []func(context.Context, int64, map[int64]AccessMode) error
+	history     []PermsStoreSetRepoPermsFuncCall
+	mutex       sync.Mutex
+}
+
+// SetRepoPerms delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockPermsStore) SetRepoPerms(v0 context.Context, v1 int64, v2 map[int64]AccessMode) error {
+	r0 := m.SetRepoPermsFunc.nextHook()(v0, v1, v2)
+	m.SetRepoPermsFunc.appendCall(PermsStoreSetRepoPermsFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the SetRepoPerms method
+// of the parent MockPermsStore instance is invoked and the hook queue is
+// empty.
+func (f *PermsStoreSetRepoPermsFunc) SetDefaultHook(hook func(context.Context, int64, map[int64]AccessMode) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// SetRepoPerms method of the parent MockPermsStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *PermsStoreSetRepoPermsFunc) PushHook(hook func(context.Context, int64, map[int64]AccessMode) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *PermsStoreSetRepoPermsFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, map[int64]AccessMode) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *PermsStoreSetRepoPermsFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, map[int64]AccessMode) error {
+		return r0
+	})
+}
+
+func (f *PermsStoreSetRepoPermsFunc) nextHook() func(context.Context, int64, map[int64]AccessMode) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *PermsStoreSetRepoPermsFunc) appendCall(r0 PermsStoreSetRepoPermsFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of PermsStoreSetRepoPermsFuncCall objects
+// describing the invocations of this function.
+func (f *PermsStoreSetRepoPermsFunc) History() []PermsStoreSetRepoPermsFuncCall {
+	f.mutex.Lock()
+	history := make([]PermsStoreSetRepoPermsFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// PermsStoreSetRepoPermsFuncCall is an object that describes an invocation
+// of method SetRepoPerms on an instance of MockPermsStore.
+type PermsStoreSetRepoPermsFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 map[int64]AccessMode
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c PermsStoreSetRepoPermsFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c PermsStoreSetRepoPermsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
