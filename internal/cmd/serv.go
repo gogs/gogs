@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -208,7 +209,7 @@ func runServ(c *cli.Context) error {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode := db.Perms.AccessMode(user.ID, repo.ID,
+			mode := db.Perms.AccessMode(context.Background(), user.ID, repo.ID,
 				db.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

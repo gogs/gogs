@@ -5,6 +5,7 @@
 package lfs
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -166,7 +167,7 @@ func Test_authorize(t *testing.T) {
 		authroize      macaron.Handler
 		mockUsersStore *db.MockUsersStore
 		mockReposStore *db.MockReposStore
-		mockPermsStore *db.MockPermsStore
+		mockPermsStore func() db.PermsStore
 		expStatusCode  int
 		expBody        string
 	}{
@@ -208,10 +209,12 @@ func Test_authorize(t *testing.T) {
 					return &db.Repository{Name: name}, nil
 				},
 			},
-			mockPermsStore: &db.MockPermsStore{
-				MockAuthorize: func(userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
+			mockPermsStore: func() db.PermsStore {
+				mock := db.NewMockPermsStore()
+				mock.AuthorizeFunc.SetDefaultHook(func(ctx context.Context, userID int64, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
 					return desired <= db.AccessModeRead
-				},
+				})
+				return mock
 			},
 			expStatusCode: http.StatusNotFound,
 		},
@@ -229,10 +232,12 @@ func Test_authorize(t *testing.T) {
 					return &db.Repository{Name: name}, nil
 				},
 			},
-			mockPermsStore: &db.MockPermsStore{
-				MockAuthorize: func(userID, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
+			mockPermsStore: func() db.PermsStore {
+				mock := db.NewMockPermsStore()
+				mock.AuthorizeFunc.SetDefaultHook(func(ctx context.Context, userID int64, repoID int64, desired db.AccessMode, opts db.AccessModeOptions) bool {
 					return desired <= db.AccessModeRead
-				},
+				})
+				return mock
 			},
 			expStatusCode: http.StatusOK,
 			expBody:       "owner.Name: owner, repo.Name: repo",
@@ -242,7 +247,10 @@ func Test_authorize(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			db.SetMockUsersStore(t, test.mockUsersStore)
 			db.SetMockReposStore(t, test.mockReposStore)
-			db.SetMockPermsStore(t, test.mockPermsStore)
+
+			if test.mockPermsStore != nil {
+				db.SetMockPermsStore(t, test.mockPermsStore())
+			}
 
 			m := macaron.New()
 			m.Use(macaron.Renderer())

@@ -66,9 +66,7 @@ func TestAccessTokens(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
 				err := clearTables(t, db.DB, tables...)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 			})
 			tc.test(t, db)
 		})
@@ -123,8 +121,8 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 
 	// We should get token not found error
 	_, err = db.GetBySHA1(ctx, token.Sha1)
-	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": token.Sha1}}
-	assert.Equal(t, expErr, err)
+	wantErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": token.Sha1}}
+	assert.Equal(t, wantErr, err)
 }
 
 func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
@@ -140,8 +138,8 @@ func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
 
 	// Try to get a non-existent token
 	_, err = db.GetBySHA1(ctx, "bad_sha")
-	expErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
-	assert.Equal(t, expErr, err)
+	wantErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
+	assert.Equal(t, wantErr, err)
 }
 
 func accessTokensList(t *testing.T, db *accessTokens) {

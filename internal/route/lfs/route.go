@@ -130,7 +130,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		if !db.Perms.Authorize(actor.ID, repo.ID, mode,
+		if !db.Perms.Authorize(c.Req.Context(), actor.ID, repo.ID, mode,
 			db.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
