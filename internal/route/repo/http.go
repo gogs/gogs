@@ -142,8 +142,8 @@ func HTTPContexter() macaron.Handler {
 				}
 				return
 			}
-			if err = db.AccessTokens.Save(c.Req.Context(), token); err != nil {
-				log.Error("Failed to update access token: %v", err)
+			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
+				log.Error("Failed to touch access token: %v", err)
 			}
 
 			authUser, err = db.Users.GetByID(token.UserID)
