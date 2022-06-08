@@ -43,7 +43,7 @@ var AccessTokens AccessTokensStore
 // AccessToken is a personal access token.
 type AccessToken struct {
 	ID     int64
-	UserID int64 `gorm:"column:uid;index"`
+	UserID int64 `xorm:"uid" gorm:"column:uid;index"`
 	Name   string
 	Sha1   string `gorm:"type:VARCHAR(40);unique"`
 	SHA256 string `gorm:"type:VARCHAR(64);unique;not null"`
