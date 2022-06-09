@@ -5,6 +5,8 @@ package db
 import (
 	"context"
 	"sync"
+
+	lfsutil "gogs.io/gogs/internal/lfsutil"
 )
 
 // MockAccessTokensStore is a mock implementation of the AccessTokensStore
@@ -656,6 +658,423 @@ func (c AccessTokensStoreTouchFuncCall) Args() []interface{} {
 // invocation.
 func (c AccessTokensStoreTouchFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
+}
+
+// MockLFSStore is a mock implementation of the LFSStore interface (from the
+// package gogs.io/gogs/internal/db) used for unit testing.
+type MockLFSStore struct {
+	// CreateObjectFunc is an instance of a mock function object controlling
+	// the behavior of the method CreateObject.
+	CreateObjectFunc *LFSStoreCreateObjectFunc
+	// GetObjectByOIDFunc is an instance of a mock function object
+	// controlling the behavior of the method GetObjectByOID.
+	GetObjectByOIDFunc *LFSStoreGetObjectByOIDFunc
+	// GetObjectsByOIDsFunc is an instance of a mock function object
+	// controlling the behavior of the method GetObjectsByOIDs.
+	GetObjectsByOIDsFunc *LFSStoreGetObjectsByOIDsFunc
+}
+
+// NewMockLFSStore creates a new mock of the LFSStore interface. All methods
+// return zero values for all results, unless overwritten.
+func NewMockLFSStore() *MockLFSStore {
+	return &MockLFSStore{
+		CreateObjectFunc: &LFSStoreCreateObjectFunc{
+			defaultHook: func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) (r0 error) {
+				return
+			},
+		},
+		GetObjectByOIDFunc: &LFSStoreGetObjectByOIDFunc{
+			defaultHook: func(context.Context, int64, lfsutil.OID) (r0 *LFSObject, r1 error) {
+				return
+			},
+		},
+		GetObjectsByOIDsFunc: &LFSStoreGetObjectsByOIDsFunc{
+			defaultHook: func(context.Context, int64, ...lfsutil.OID) (r0 []*LFSObject, r1 error) {
+				return
+			},
+		},
+	}
+}
+
+// NewStrictMockLFSStore creates a new mock of the LFSStore interface. All
+// methods panic on invocation, unless overwritten.
+func NewStrictMockLFSStore() *MockLFSStore {
+	return &MockLFSStore{
+		CreateObjectFunc: &LFSStoreCreateObjectFunc{
+			defaultHook: func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error {
+				panic("unexpected invocation of MockLFSStore.CreateObject")
+			},
+		},
+		GetObjectByOIDFunc: &LFSStoreGetObjectByOIDFunc{
+			defaultHook: func(context.Context, int64, lfsutil.OID) (*LFSObject, error) {
+				panic("unexpected invocation of MockLFSStore.GetObjectByOID")
+			},
+		},
+		GetObjectsByOIDsFunc: &LFSStoreGetObjectsByOIDsFunc{
+			defaultHook: func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error) {
+				panic("unexpected invocation of MockLFSStore.GetObjectsByOIDs")
+			},
+		},
+	}
+}
+
+// NewMockLFSStoreFrom creates a new mock of the MockLFSStore interface. All
+// methods delegate to the given implementation, unless overwritten.
+func NewMockLFSStoreFrom(i LFSStore) *MockLFSStore {
+	return &MockLFSStore{
+		CreateObjectFunc: &LFSStoreCreateObjectFunc{
+			defaultHook: i.CreateObject,
+		},
+		GetObjectByOIDFunc: &LFSStoreGetObjectByOIDFunc{
+			defaultHook: i.GetObjectByOID,
+		},
+		GetObjectsByOIDsFunc: &LFSStoreGetObjectsByOIDsFunc{
+			defaultHook: i.GetObjectsByOIDs,
+		},
+	}
+}
+
+// LFSStoreCreateObjectFunc describes the behavior when the CreateObject
+// method of the parent MockLFSStore instance is invoked.
+type LFSStoreCreateObjectFunc struct {
+	defaultHook func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error
+	hooks       []func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error
+	history     []LFSStoreCreateObjectFuncCall
+	mutex       sync.Mutex
+}
+
+// CreateObject delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockLFSStore) CreateObject(v0 context.Context, v1 int64, v2 lfsutil.OID, v3 int64, v4 lfsutil.Storage) error {
+	r0 := m.CreateObjectFunc.nextHook()(v0, v1, v2, v3, v4)
+	m.CreateObjectFunc.appendCall(LFSStoreCreateObjectFuncCall{v0, v1, v2, v3, v4, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the CreateObject method
+// of the parent MockLFSStore instance is invoked and the hook queue is
+// empty.
+func (f *LFSStoreCreateObjectFunc) SetDefaultHook(hook func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// CreateObject method of the parent MockLFSStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *LFSStoreCreateObjectFunc) PushHook(hook func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *LFSStoreCreateObjectFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *LFSStoreCreateObjectFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error {
+		return r0
+	})
+}
+
+func (f *LFSStoreCreateObjectFunc) nextHook() func(context.Context, int64, lfsutil.OID, int64, lfsutil.Storage) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *LFSStoreCreateObjectFunc) appendCall(r0 LFSStoreCreateObjectFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of LFSStoreCreateObjectFuncCall objects
+// describing the invocations of this function.
+func (f *LFSStoreCreateObjectFunc) History() []LFSStoreCreateObjectFuncCall {
+	f.mutex.Lock()
+	history := make([]LFSStoreCreateObjectFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// LFSStoreCreateObjectFuncCall is an object that describes an invocation of
+// method CreateObject on an instance of MockLFSStore.
+type LFSStoreCreateObjectFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 lfsutil.OID
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 int64
+	// Arg4 is the value of the 5th argument passed to this method
+	// invocation.
+	Arg4 lfsutil.Storage
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c LFSStoreCreateObjectFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c LFSStoreCreateObjectFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// LFSStoreGetObjectByOIDFunc describes the behavior when the GetObjectByOID
+// method of the parent MockLFSStore instance is invoked.
+type LFSStoreGetObjectByOIDFunc struct {
+	defaultHook func(context.Context, int64, lfsutil.OID) (*LFSObject, error)
+	hooks       []func(context.Context, int64, lfsutil.OID) (*LFSObject, error)
+	history     []LFSStoreGetObjectByOIDFuncCall
+	mutex       sync.Mutex
+}
+
+// GetObjectByOID delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockLFSStore) GetObjectByOID(v0 context.Context, v1 int64, v2 lfsutil.OID) (*LFSObject, error) {
+	r0, r1 := m.GetObjectByOIDFunc.nextHook()(v0, v1, v2)
+	m.GetObjectByOIDFunc.appendCall(LFSStoreGetObjectByOIDFuncCall{v0, v1, v2, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the GetObjectByOID
+// method of the parent MockLFSStore instance is invoked and the hook queue
+// is empty.
+func (f *LFSStoreGetObjectByOIDFunc) SetDefaultHook(hook func(context.Context, int64, lfsutil.OID) (*LFSObject, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetObjectByOID method of the parent MockLFSStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *LFSStoreGetObjectByOIDFunc) PushHook(hook func(context.Context, int64, lfsutil.OID) (*LFSObject, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *LFSStoreGetObjectByOIDFunc) SetDefaultReturn(r0 *LFSObject, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64, lfsutil.OID) (*LFSObject, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *LFSStoreGetObjectByOIDFunc) PushReturn(r0 *LFSObject, r1 error) {
+	f.PushHook(func(context.Context, int64, lfsutil.OID) (*LFSObject, error) {
+		return r0, r1
+	})
+}
+
+func (f *LFSStoreGetObjectByOIDFunc) nextHook() func(context.Context, int64, lfsutil.OID) (*LFSObject, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *LFSStoreGetObjectByOIDFunc) appendCall(r0 LFSStoreGetObjectByOIDFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of LFSStoreGetObjectByOIDFuncCall objects
+// describing the invocations of this function.
+func (f *LFSStoreGetObjectByOIDFunc) History() []LFSStoreGetObjectByOIDFuncCall {
+	f.mutex.Lock()
+	history := make([]LFSStoreGetObjectByOIDFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// LFSStoreGetObjectByOIDFuncCall is an object that describes an invocation
+// of method GetObjectByOID on an instance of MockLFSStore.
+type LFSStoreGetObjectByOIDFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 lfsutil.OID
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 *LFSObject
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c LFSStoreGetObjectByOIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c LFSStoreGetObjectByOIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// LFSStoreGetObjectsByOIDsFunc describes the behavior when the
+// GetObjectsByOIDs method of the parent MockLFSStore instance is invoked.
+type LFSStoreGetObjectsByOIDsFunc struct {
+	defaultHook func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error)
+	hooks       []func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error)
+	history     []LFSStoreGetObjectsByOIDsFuncCall
+	mutex       sync.Mutex
+}
+
+// GetObjectsByOIDs delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockLFSStore) GetObjectsByOIDs(v0 context.Context, v1 int64, v2 ...lfsutil.OID) ([]*LFSObject, error) {
+	r0, r1 := m.GetObjectsByOIDsFunc.nextHook()(v0, v1, v2...)
+	m.GetObjectsByOIDsFunc.appendCall(LFSStoreGetObjectsByOIDsFuncCall{v0, v1, v2, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the GetObjectsByOIDs
+// method of the parent MockLFSStore instance is invoked and the hook queue
+// is empty.
+func (f *LFSStoreGetObjectsByOIDsFunc) SetDefaultHook(hook func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetObjectsByOIDs method of the parent MockLFSStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *LFSStoreGetObjectsByOIDsFunc) PushHook(hook func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *LFSStoreGetObjectsByOIDsFunc) SetDefaultReturn(r0 []*LFSObject, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *LFSStoreGetObjectsByOIDsFunc) PushReturn(r0 []*LFSObject, r1 error) {
+	f.PushHook(func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error) {
+		return r0, r1
+	})
+}
+
+func (f *LFSStoreGetObjectsByOIDsFunc) nextHook() func(context.Context, int64, ...lfsutil.OID) ([]*LFSObject, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *LFSStoreGetObjectsByOIDsFunc) appendCall(r0 LFSStoreGetObjectsByOIDsFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of LFSStoreGetObjectsByOIDsFuncCall objects
+// describing the invocations of this function.
+func (f *LFSStoreGetObjectsByOIDsFunc) History() []LFSStoreGetObjectsByOIDsFuncCall {
+	f.mutex.Lock()
+	history := make([]LFSStoreGetObjectsByOIDsFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// LFSStoreGetObjectsByOIDsFuncCall is an object that describes an
+// invocation of method GetObjectsByOIDs on an instance of MockLFSStore.
+type LFSStoreGetObjectsByOIDsFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is a slice containing the values of the variadic arguments
+	// passed to this method invocation.
+	Arg2 []lfsutil.OID
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []*LFSObject
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation. The variadic slice argument is flattened in this array such
+// that one positional argument and three variadic arguments would result in
+// a slice of four, not two.
+func (c LFSStoreGetObjectsByOIDsFuncCall) Args() []interface{} {
+	trailing := []interface{}{}
+	for _, val := range c.Arg2 {
+		trailing = append(trailing, val)
+	}
+
+	return append([]interface{}{c.Arg0, c.Arg1}, trailing...)
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c LFSStoreGetObjectsByOIDsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // MockPermsStore is a mock implementation of the PermsStore interface (from

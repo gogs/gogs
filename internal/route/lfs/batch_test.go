@@ -17,7 +17,6 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/lfsutil"
 )
 
 func Test_serveBatch(t *testing.T) {
@@ -35,7 +34,7 @@ func Test_serveBatch(t *testing.T) {
 	tests := []struct {
 		name          string
 		body          string
-		mockLFSStore  *db.MockLFSStore
+		mockLFSStore  func() db.LFSStore
 		expStatusCode int
 		expBody       string
 	}{
@@ -83,9 +82,10 @@ func Test_serveBatch(t *testing.T) {
 	{"oid": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size": 123},
 	{"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57", "size": 456}
 ]}`,
-			mockLFSStore: &db.MockLFSStore{
-				MockGetObjectsByOIDs: func(repoID int64, oids ...lfsutil.OID) ([]*db.LFSObject, error) {
-					return []*db.LFSObject{
+			mockLFSStore: func() db.LFSStore {
+				mock := db.NewMockLFSStore()
+				mock.GetObjectsByOIDsFunc.SetDefaultReturn(
+					[]*db.LFSObject{
 						{
 							OID:  "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
 							Size: 1234,
@@ -93,8 +93,10 @@ func Test_serveBatch(t *testing.T) {
 							OID:  "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57",
 							Size: 456,
 						},
-					}, nil
-				},
+					},
+					nil,
+				)
+				return mock
 			},
 			expStatusCode: http.StatusOK,
 			expBody: `{
@@ -121,7 +123,9 @@ func Test_serveBatch(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			db.SetMockLFSStore(t, test.mockLFSStore)
+			if test.mockLFSStore != nil {
+				db.SetMockLFSStore(t, test.mockLFSStore())
+			}
 
 			r, err := http.NewRequest("POST", "/", bytes.NewBufferString(test.body))
 			if err != nil {
