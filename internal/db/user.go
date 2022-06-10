@@ -942,7 +942,8 @@ func GetUserByID(id int64) (*User, error) {
 
 // GetAssigneeByID returns the user with read access of repository by given ID.
 func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
-	if !Perms.Authorize(context.TODO(), userID, repo.ID, AccessModeRead,
+	ctx := context.TODO()
+	if !Perms.Authorize(ctx, userID, repo.ID, AccessModeRead,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,
@@ -950,7 +951,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 	) {
 		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": userID}}
 	}
-	return Users.GetByID(userID)
+	return Users.GetByID(ctx, userID)
 }
 
 // GetUserByName returns a user by given name.

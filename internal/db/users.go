@@ -23,8 +23,8 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type UsersStore interface {
-	// Authenticate validates username and password via given login source ID.
-	// It returns ErrUserNotExist when the user was not found.
+	// Authenticate validates username and password via given login source ID. It
+	// returns ErrUserNotExist when the user was not found.
 	//
 	// When the "loginSourceID" is negative, it aborts the process and returns
 	// ErrUserNotExist if the user was not found in the database.
@@ -34,23 +34,25 @@ type UsersStore interface {
 	//
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
-	Authenticate(username, password string, loginSourceID int64) (*User, error)
-	// Create creates a new user and persists to database.
-	// It returns ErrUserAlreadyExist when a user with same name already exists,
-	// or ErrEmailAlreadyUsed if the email has been used by another user.
-	Create(username, email string, opts CreateUserOpts) (*User, error)
-	// GetByEmail returns the user (not organization) with given email.
-	// It ignores records with unverified emails and returns ErrUserNotExist when not found.
-	GetByEmail(email string) (*User, error)
-	// GetByID returns the user with given ID. It returns ErrUserNotExist when not found.
-	GetByID(id int64) (*User, error)
-	// GetByUsername returns the user with given username. It returns ErrUserNotExist when not found.
-	GetByUsername(username string) (*User, error)
+	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
+	// Create creates a new user and persists to database. It returns
+	// ErrUserAlreadyExist when a user with same name already exists, or
+	// ErrEmailAlreadyUsed if the email has been used by another user.
+	Create(ctx context.Context, username, email string, opts CreateUserOpts) (*User, error)
+	// GetByEmail returns the user (not organization) with given email. It ignores
+	// records with unverified emails and returns ErrUserNotExist when not found.
+	GetByEmail(ctx context.Context, email string) (*User, error)
+	// GetByID returns the user with given ID. It returns ErrUserNotExist when not
+	// found.
+	GetByID(ctx context.Context, id int64) (*User, error)
+	// GetByUsername returns the user with given username. It returns
+	// ErrUserNotExist when not found.
+	GetByUsername(ctx context.Context, username string) (*User, error)
 }
 
 var Users UsersStore
 
-// NOTE: This is a GORM create hook.
+// BeforeCreate implements the GORM create hook.
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.CreatedUnix == 0 {
 		u.CreatedUnix = tx.NowFunc().Unix()
@@ -59,7 +61,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// NOTE: This is a GORM query hook.
+// AfterFind implements the GORM query hook.
 func (u *User) AfterFind(_ *gorm.DB) error {
 	u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
@@ -80,16 +82,14 @@ func (err ErrLoginSourceMismatch) Error() string {
 	return fmt.Sprintf("login source mismatch: %v", err.args)
 }
 
-func (db *users) Authenticate(login, password string, loginSourceID int64) (*User, error) {
-	ctx := context.TODO()
-
+func (db *users) Authenticate(ctx context.Context, login, password string, loginSourceID int64) (*User, error) {
 	login = strings.ToLower(login)
 
-	var query *gorm.DB
+	query := db.WithContext(ctx)
 	if strings.Contains(login, "@") {
-		query = db.Where("email = ?", login)
+		query = query.Where("email = ?", login)
 	} else {
-		query = db.Where("lower_name = ?", login)
+		query = query.Where("lower_name = ?", login)
 	}
 
 	user := new(User)
@@ -153,15 +153,17 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 		return nil, fmt.Errorf("invalid pattern for attribute 'username' [%s]: must be valid alpha or numeric or dash(-_) or dot characters", extAccount.Name)
 	}
 
-	return Users.Create(extAccount.Name, extAccount.Email, CreateUserOpts{
-		FullName:    extAccount.FullName,
-		LoginSource: authSourceID,
-		LoginName:   extAccount.Login,
-		Location:    extAccount.Location,
-		Website:     extAccount.Website,
-		Activated:   true,
-		Admin:       extAccount.Admin,
-	})
+	return db.Create(ctx, extAccount.Name, extAccount.Email,
+		CreateUserOpts{
+			FullName:    extAccount.FullName,
+			LoginSource: authSourceID,
+			LoginName:   extAccount.Login,
+			Location:    extAccount.Location,
+			Website:     extAccount.Website,
+			Activated:   true,
+			Admin:       extAccount.Admin,
+		},
+	)
 }
 
 type CreateUserOpts struct {
@@ -209,20 +211,20 @@ func (err ErrEmailAlreadyUsed) Error() string {
 	return fmt.Sprintf("email has been used: %v", err.args)
 }
 
-func (db *users) Create(username, email string, opts CreateUserOpts) (*User, error) {
+func (db *users) Create(ctx context.Context, username, email string, opts CreateUserOpts) (*User, error) {
 	err := isUsernameAllowed(username)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.GetByUsername(username)
+	_, err = db.GetByUsername(ctx, username)
 	if err == nil {
 		return nil, ErrUserAlreadyExist{args: errutil.Args{"name": username}}
 	} else if !IsErrUserNotExist(err) {
 		return nil, err
 	}
 
-	_, err = db.GetByEmail(email)
+	_, err = db.GetByEmail(ctx, email)
 	if err == nil {
 		return nil, ErrEmailAlreadyUsed{args: errutil.Args{"email": email}}
 	} else if !IsErrUserNotExist(err) {
@@ -256,7 +258,7 @@ func (db *users) Create(username, email string, opts CreateUserOpts) (*User, err
 	}
 	user.EncodePassword()
 
-	return user, db.DB.Create(user).Error
+	return user, db.WithContext(ctx).Create(user).Error
 }
 
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
@@ -278,7 +280,7 @@ func (ErrUserNotExist) NotFound() bool {
 	return true
 }
 
-func (db *users) GetByEmail(email string) (*User, error) {
+func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 	email = strings.ToLower(email)
 
 	if email == "" {
@@ -287,7 +289,10 @@ func (db *users) GetByEmail(email string) (*User, error) {
 
 	// First try to find the user by primary email
 	user := new(User)
-	err := db.Where("email = ? AND type = ? AND is_active = ?", email, UserIndividual, true).First(user).Error
+	err := db.WithContext(ctx).
+		Where("email = ? AND type = ? AND is_active = ?", email, UserIndividual, true).
+		First(user).
+		Error
 	if err == nil {
 		return user, nil
 	} else if err != gorm.ErrRecordNotFound {
@@ -296,7 +301,10 @@ func (db *users) GetByEmail(email string) (*User, error) {
 
 	// Otherwise, check activated email addresses
 	emailAddress := new(EmailAddress)
-	err = db.Where("email = ? AND is_activated = ?", email, true).First(emailAddress).Error
+	err = db.WithContext(ctx).
+		Where("email = ? AND is_activated = ?", email, true).
+		First(emailAddress).
+		Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
@@ -304,12 +312,12 @@ func (db *users) GetByEmail(email string) (*User, error) {
 		return nil, err
 	}
 
-	return db.GetByID(emailAddress.UID)
+	return db.GetByID(ctx, emailAddress.UID)
 }
 
-func (db *users) GetByID(id int64) (*User, error) {
+func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
 	user := new(User)
-	err := db.Where("id = ?", id).First(user).Error
+	err := db.WithContext(ctx).Where("id = ?", id).First(user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
@@ -319,9 +327,9 @@ func (db *users) GetByID(id int64) (*User, error) {
 	return user, nil
 }
 
-func (db *users) GetByUsername(username string) (*User, error) {
+func (db *users) GetByUsername(ctx context.Context, username string) (*User, error) {
 	user := new(User)
-	err := db.Where("lower_name = ?", strings.ToLower(username)).First(user).Error
+	err := db.WithContext(ctx).Where("lower_name = ?", strings.ToLower(username)).First(user).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
