@@ -6,11 +6,9 @@ package db
 
 import (
 	"testing"
-
-	"gogs.io/gogs/internal/lfsutil"
 )
 
-//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i PermsStore -o mocks.go
+//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i PermsStore -o mocks.go
 
 func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	before := AccessTokens
@@ -18,26 +16,6 @@ func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	t.Cleanup(func() {
 		AccessTokens = before
 	})
-}
-
-var _ LFSStore = (*MockLFSStore)(nil)
-
-type MockLFSStore struct {
-	MockCreateObject     func(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error
-	MockGetObjectByOID   func(repoID int64, oid lfsutil.OID) (*LFSObject, error)
-	MockGetObjectsByOIDs func(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error)
-}
-
-func (m *MockLFSStore) CreateObject(repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error {
-	return m.MockCreateObject(repoID, oid, size, storage)
-}
-
-func (m *MockLFSStore) GetObjectByOID(repoID int64, oid lfsutil.OID) (*LFSObject, error) {
-	return m.MockGetObjectByOID(repoID, oid)
-}
-
-func (m *MockLFSStore) GetObjectsByOIDs(repoID int64, oids ...lfsutil.OID) ([]*LFSObject, error) {
-	return m.MockGetObjectsByOIDs(repoID, oids...)
 }
 
 func SetMockLFSStore(t *testing.T, mock LFSStore) {

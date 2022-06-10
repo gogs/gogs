@@ -75,7 +75,7 @@ func serveBatch(c *macaron.Context, owner *db.User, repo *db.Repository) {
 		for _, obj := range request.Objects {
 			oids = append(oids, obj.Oid)
 		}
-		stored, err := db.LFS.GetObjectsByOIDs(repo.ID, oids...)
+		stored, err := db.LFS.GetObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
 		if err != nil {
 			internalServerError(c.Resp)
 			log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
