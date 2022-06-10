@@ -70,7 +70,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 			name: "object does not exist",
 			mockLFSStore: func() db.LFSStore {
 				mock := db.NewMockLFSStore()
-				mock.GetObjectsByOIDsFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
+				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
 				return mock
 			},
 			expStatusCode: http.StatusNotFound,
