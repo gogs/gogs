@@ -119,7 +119,7 @@ func Dashboard(c *context.Context) {
 	c.Data["BuildTime"] = conf.BuildTime
 	c.Data["BuildCommit"] = conf.BuildCommit
 
-	c.Data["Stats"] = db.GetStatistic()
+	c.Data["Stats"] = db.GetStatistic(c.Req.Context())
 	// FIXME: update periodically
 	updateSystemStatus()
 	c.Data["SysStatus"] = sysStatus
