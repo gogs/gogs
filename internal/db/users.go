@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -80,6 +81,8 @@ func (err ErrLoginSourceMismatch) Error() string {
 }
 
 func (db *users) Authenticate(login, password string, loginSourceID int64) (*User, error) {
+	ctx := context.TODO()
+
 	login = strings.ToLower(login)
 
 	var query *gorm.DB
@@ -127,7 +130,7 @@ func (db *users) Authenticate(login, password string, loginSourceID int64) (*Use
 		createNewUser = true
 	}
 
-	source, err := LoginSources.GetByID(authSourceID)
+	source, err := LoginSources.GetByID(ctx, authSourceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "get login source")
 	}
