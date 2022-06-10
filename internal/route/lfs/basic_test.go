@@ -265,7 +265,9 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			db.SetMockLFSStore(t, test.mockLFSStore())
+			if test.mockLFSStore != nil {
+				db.SetMockLFSStore(t, test.mockLFSStore())
+			}
 
 			r, err := http.NewRequest("POST", "/", strings.NewReader(test.body))
 			if err != nil {
