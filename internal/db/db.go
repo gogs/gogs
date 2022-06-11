@@ -73,7 +73,7 @@ func newDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 
 	case "postgres":
 		host, port := parsePostgreSQLHostPort(opts.Host)
-		dsn = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
+		dsn = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s' application_name='gogs'",
 			opts.User, opts.Password, host, port, opts.Name, opts.SSLMode, opts.Schema)
 
 	case "mssql":
