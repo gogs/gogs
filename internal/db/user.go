@@ -405,7 +405,7 @@ func (u *User) IsPublicMember(orgId int64) bool {
 
 // IsEnabledTwoFactor returns true if user has enabled two-factor authentication.
 func (u *User) IsEnabledTwoFactor() bool {
-	return TwoFactors.IsUserEnabled(u.ID)
+	return TwoFactors.IsUserEnabled(context.TODO(), u.ID)
 }
 
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
