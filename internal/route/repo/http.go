@@ -65,7 +65,7 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := db.Users.GetByUsername(ownerName)
+		owner, err := db.Users.GetByUsername(c.Req.Context(), ownerName)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -123,7 +123,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
+		authUser, err := db.Users.Authenticate(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
@@ -146,7 +146,7 @@ func HTTPContexter() macaron.Handler {
 				log.Error("Failed to touch access token: %v", err)
 			}
 
-			authUser, err = db.Users.GetByID(token.UserID)
+			authUser, err = db.Users.GetByID(c.Req.Context(), token.UserID)
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.

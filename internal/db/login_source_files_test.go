@@ -23,8 +23,8 @@ func TestLoginSourceFiles_GetByID(t *testing.T) {
 
 	t.Run("source does not exist", func(t *testing.T) {
 		_, err := store.GetByID(1)
-		expErr := ErrLoginSourceNotExist{args: errutil.Args{"id": int64(1)}}
-		assert.Equal(t, expErr, err)
+		wantErr := ErrLoginSourceNotExist{args: errutil.Args{"id": int64(1)}}
+		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("source exists", func(t *testing.T) {
