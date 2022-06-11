@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"path"
 	"path/filepath"
@@ -114,7 +115,7 @@ func runRestore(c *cli.Context) error {
 
 	// Database
 	dbDir := path.Join(archivePath, "db")
-	if err = db.ImportDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = db.ImportDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to import database: %v", err)
 	}
 
