@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i LoginSourcesStore -i LoginSourceFilesStore -i loginSourceFileStore -i PermsStore -o mocks.go
+//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i LoginSourcesStore -i LoginSourceFilesStore -i loginSourceFileStore -i PermsStore -i UsersStore -o mocks.go
 
 func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	before := AccessTokens
@@ -86,36 +86,6 @@ func SetMockTwoFactorsStore(t *testing.T, mock TwoFactorsStore) {
 	t.Cleanup(func() {
 		TwoFactors = before
 	})
-}
-
-var _ UsersStore = (*MockUsersStore)(nil)
-
-type MockUsersStore struct {
-	MockAuthenticate  func(username, password string, loginSourceID int64) (*User, error)
-	MockCreate        func(username, email string, opts CreateUserOpts) (*User, error)
-	MockGetByEmail    func(email string) (*User, error)
-	MockGetByID       func(id int64) (*User, error)
-	MockGetByUsername func(username string) (*User, error)
-}
-
-func (m *MockUsersStore) Authenticate(username, password string, loginSourceID int64) (*User, error) {
-	return m.MockAuthenticate(username, password, loginSourceID)
-}
-
-func (m *MockUsersStore) Create(username, email string, opts CreateUserOpts) (*User, error) {
-	return m.MockCreate(username, email, opts)
-}
-
-func (m *MockUsersStore) GetByEmail(email string) (*User, error) {
-	return m.MockGetByEmail(email)
-}
-
-func (m *MockUsersStore) GetByID(id int64) (*User, error) {
-	return m.MockGetByID(id)
-}
-
-func (m *MockUsersStore) GetByUsername(username string) (*User, error) {
-	return m.MockGetByUsername(username)
 }
 
 func SetMockUsersStore(t *testing.T, mock UsersStore) {

@@ -138,8 +138,8 @@ func loginSourcesCreate(t *testing.T, db *loginSources) {
 
 	// Try create second login source with same name should fail
 	_, err = db.Create(ctx, CreateLoginSourceOpts{Name: source.Name})
-	expErr := ErrLoginSourceAlreadyExist{args: errutil.Args{"name": source.Name}}
-	assert.Equal(t, expErr, err)
+	wantErr := ErrLoginSourceAlreadyExist{args: errutil.Args{"name": source.Name}}
+	assert.Equal(t, wantErr, err)
 }
 
 func loginSourcesCount(t *testing.T, db *loginSources) {
@@ -184,15 +184,17 @@ func loginSourcesDeleteByID(t *testing.T, db *loginSources) {
 		require.NoError(t, err)
 
 		// Create a user that uses this login source
-		_, err = (&users{DB: db.DB}).Create("alice", "", CreateUserOpts{
-			LoginSource: source.ID,
-		})
+		_, err = (&users{DB: db.DB}).Create(ctx, "alice", "",
+			CreateUserOpts{
+				LoginSource: source.ID,
+			},
+		)
 		require.NoError(t, err)
 
 		// Delete the login source will result in error
 		err = db.DeleteByID(ctx, source.ID)
-		expErr := ErrLoginSourceInUse{args: errutil.Args{"id": source.ID}}
-		assert.Equal(t, expErr, err)
+		wantErr := ErrLoginSourceInUse{args: errutil.Args{"id": source.ID}}
+		assert.Equal(t, wantErr, err)
 	})
 
 	mock := NewMockLoginSourceFilesStore()
@@ -229,8 +231,8 @@ func loginSourcesDeleteByID(t *testing.T, db *loginSources) {
 
 	// We should get token not found error
 	_, err = db.GetByID(ctx, source.ID)
-	expErr := ErrLoginSourceNotExist{args: errutil.Args{"id": source.ID}}
-	assert.Equal(t, expErr, err)
+	wantErr := ErrLoginSourceNotExist{args: errutil.Args{"id": source.ID}}
+	assert.Equal(t, wantErr, err)
 }
 
 func loginSourcesGetByID(t *testing.T, db *loginSources) {
