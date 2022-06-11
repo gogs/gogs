@@ -6,12 +6,14 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
@@ -22,7 +24,7 @@ import (
 	"gogs.io/gogs/internal/testutil"
 )
 
-func Test_dumpAndImport(t *testing.T) {
+func TestDumpAndImport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -43,8 +45,6 @@ func Test_dumpAndImport(t *testing.T) {
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {
-	t.Helper()
-
 	vals := []interface{}{
 		&Access{
 			ID:     1,
@@ -126,31 +126,29 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 	}
 	for _, val := range vals {
 		err := db.Create(val).Error
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 }
 
 func dumpTables(t *testing.T, db *gorm.DB) {
-	t.Helper()
+	ctx := context.Background()
 
 	for _, table := range Tables {
 		tableName := getTableType(table)
 
 		var buf bytes.Buffer
-		err := dumpTable(db, table, &buf)
+		err := dumpTable(ctx, db, table, &buf)
 		if err != nil {
 			t.Fatalf("%s: %v", tableName, err)
 		}
 
 		golden := filepath.Join("testdata", "backup", tableName+".golden.json")
-		testutil.AssertGolden(t, golden, testutil.Update("Test_dumpAndImport"), buf.String())
+		testutil.AssertGolden(t, golden, testutil.Update("TestDumpAndImport"), buf.String())
 	}
 }
 
 func importTables(t *testing.T, db *gorm.DB) {
-	t.Helper()
+	ctx := context.Background()
 
 	for _, table := range Tables {
 		tableName := getTableType(table)
@@ -163,7 +161,7 @@ func importTables(t *testing.T, db *gorm.DB) {
 			}
 			defer func() { _ = f.Close() }()
 
-			return importTable(db, table, f)
+			return importTable(ctx, db, table, f)
 		}()
 		if err != nil {
 			t.Fatalf("%s: %v", tableName, err)

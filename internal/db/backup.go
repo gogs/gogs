@@ -3,6 +3,7 @@ package db
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -30,18 +31,24 @@ func getTableType(t interface{}) string {
 }
 
 // DumpDatabase dumps all data from database to file system in JSON Lines format.
-func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
+func DumpDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool) error {
 	err := os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = dumpLegacyTables(dirPath, verbose)
+	err = dumpLegacyTables(ctx, dirPath, verbose)
 	if err != nil {
 		return errors.Wrap(err, "dump legacy tables")
 	}
 
 	for _, table := range Tables {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		tableName := getTableType(table)
 		if verbose {
 			log.Trace("Dumping table %q...", tableName)
@@ -55,7 +62,7 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 			}
 			defer func() { _ = f.Close() }()
 
-			return dumpTable(db, table, f)
+			return dumpTable(ctx, db, table, f)
 		}()
 		if err != nil {
 			return errors.Wrapf(err, "dump table %q", tableName)
@@ -65,11 +72,13 @@ func DumpDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	return nil
 }
 
-func dumpTable(db *gorm.DB, table interface{}, w io.Writer) error {
-	query := db.Model(table).Order("id ASC")
+func dumpTable(ctx context.Context, db *gorm.DB, table interface{}, w io.Writer) error {
+	query := db.WithContext(ctx).Model(table)
 	switch table.(type) {
 	case *LFSObject:
-		query = db.Model(table).Order("repo_id, oid ASC")
+		query = query.Order("repo_id, oid ASC")
+	default:
+		query = query.Order("id ASC")
 	}
 
 	rows, err := query.Rows()
@@ -98,10 +107,16 @@ func dumpTable(db *gorm.DB, table interface{}, w io.Writer) error {
 	return rows.Err()
 }
 
-func dumpLegacyTables(dirPath string, verbose bool) error {
+func dumpLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 	// Purposely create a local variable to not modify global variable
 	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		tableName := getTableType(table)
 		if verbose {
 			log.Trace("Dumping table %q...", tableName)
@@ -113,7 +128,7 @@ func dumpLegacyTables(dirPath string, verbose bool) error {
 			return fmt.Errorf("create JSON file: %v", err)
 		}
 
-		if err = x.Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
+		if err = x.Context(ctx).Asc("id").Iterate(table, func(idx int, bean interface{}) (err error) {
 			return jsoniter.NewEncoder(f).Encode(bean)
 		}); err != nil {
 			_ = f.Close()
@@ -125,13 +140,19 @@ func dumpLegacyTables(dirPath string, verbose bool) error {
 }
 
 // ImportDatabase imports data from backup archive in JSON Lines format.
-func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
-	err := importLegacyTables(dirPath, verbose)
+func ImportDatabase(ctx context.Context, db *gorm.DB, dirPath string, verbose bool) error {
+	err := importLegacyTables(ctx, dirPath, verbose)
 	if err != nil {
 		return errors.Wrap(err, "import legacy tables")
 	}
 
 	for _, table := range Tables {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		err := func() error {
 			tableFile := filepath.Join(dirPath, tableName+".json")
@@ -150,7 +171,7 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 			}
 			defer func() { _ = f.Close() }()
 
-			return importTable(db, table, f)
+			return importTable(ctx, db, table, f)
 		}()
 		if err != nil {
 			return errors.Wrapf(err, "import table %q", tableName)
@@ -160,13 +181,13 @@ func ImportDatabase(db *gorm.DB, dirPath string, verbose bool) error {
 	return nil
 }
 
-func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
-	err := db.Migrator().DropTable(table)
+func importTable(ctx context.Context, db *gorm.DB, table interface{}, r io.Reader) error {
+	err := db.WithContext(ctx).Migrator().DropTable(table)
 	if err != nil {
 		return errors.Wrap(err, "drop table")
 	}
 
-	err = db.Migrator().AutoMigrate(table)
+	err = db.WithContext(ctx).Migrator().AutoMigrate(table)
 	if err != nil {
 		return errors.Wrap(err, "auto migrate")
 	}
@@ -191,7 +212,7 @@ func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
 			return errors.Wrap(err, "unmarshal JSON to struct")
 		}
 
-		err = db.Create(elem).Error
+		err = db.WithContext(ctx).Create(elem).Error
 		if err != nil {
 			return errors.Wrap(err, "create row")
 		}
@@ -200,14 +221,14 @@ func importTable(db *gorm.DB, table interface{}, r io.Reader) error {
 	// PostgreSQL needs manually reset table sequence for auto increment keys
 	if conf.UsePostgreSQL && !skipResetIDSeq[rawTableName] {
 		seqName := rawTableName + "_id_seq"
-		if _, err = x.Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
+		if _, err = x.Context(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
 			return errors.Wrapf(err, "reset table %q.%q", rawTableName, seqName)
 		}
 	}
 	return nil
 }
 
-func importLegacyTables(dirPath string, verbose bool) error {
+func importLegacyTables(ctx context.Context, dirPath string, verbose bool) error {
 	snakeMapper := core.SnakeMapper{}
 
 	skipInsertProcessors := map[string]bool{
@@ -218,6 +239,12 @@ func importLegacyTables(dirPath string, verbose bool) error {
 	// Purposely create a local variable to not modify global variable
 	legacyTables := append(legacyTables, new(Version))
 	for _, table := range legacyTables {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		tableName := strings.TrimPrefix(fmt.Sprintf("%T", table), "*db.")
 		tableFile := filepath.Join(dirPath, tableName+".json")
 		if !osutil.IsFile(tableFile) {
