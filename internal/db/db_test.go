@@ -63,9 +63,9 @@ func Test_parseDSN(t *testing.T) {
 	})
 
 	tests := []struct {
-		name   string
-		opts   conf.DatabaseOpts
-		expDSN string
+		name    string
+		opts    conf.DatabaseOpts
+		wantDSN string
 	}{
 		{
 			name: "mysql: unix",
@@ -76,7 +76,7 @@ func Test_parseDSN(t *testing.T) {
 				User:     "gogs",
 				Password: "pa$$word",
 			},
-			expDSN: "gogs:pa$$word@unix(/tmp/mysql.sock)/gogs?charset=utf8mb4&parseTime=true",
+			wantDSN: "gogs:pa$$word@unix(/tmp/mysql.sock)/gogs?charset=utf8mb4&parseTime=true",
 		},
 		{
 			name: "mysql: tcp",
@@ -87,7 +87,7 @@ func Test_parseDSN(t *testing.T) {
 				User:     "gogs",
 				Password: "pa$$word",
 			},
-			expDSN: "gogs:pa$$word@tcp(localhost:3306)/gogs?charset=utf8mb4&parseTime=true",
+			wantDSN: "gogs:pa$$word@tcp(localhost:3306)/gogs?charset=utf8mb4&parseTime=true",
 		},
 
 		{
@@ -101,7 +101,7 @@ func Test_parseDSN(t *testing.T) {
 				Password: "pa$$word",
 				SSLMode:  "disable",
 			},
-			expDSN: "user='gogs@local' password='pa$$word' host='/tmp/pg.sock' port='5432' dbname='gogs' sslmode='disable' search_path='test'",
+			wantDSN: "user='gogs@local' password='pa$$word' host='/tmp/pg.sock' port='5432' dbname='gogs' sslmode='disable' search_path='test' application_name='gogs'",
 		},
 		{
 			name: "postgres: tcp",
@@ -114,7 +114,7 @@ func Test_parseDSN(t *testing.T) {
 				Password: "pa$$word",
 				SSLMode:  "disable",
 			},
-			expDSN: "user='gogs@local' password='pa$$word' host='127.0.0.1' port='5432' dbname='gogs' sslmode='disable' search_path='test'",
+			wantDSN: "user='gogs@local' password='pa$$word' host='127.0.0.1' port='5432' dbname='gogs' sslmode='disable' search_path='test' application_name='gogs'",
 		},
 
 		{
@@ -126,7 +126,7 @@ func Test_parseDSN(t *testing.T) {
 				User:     "gogs@local",
 				Password: "pa$$word",
 			},
-			expDSN: "server=127.0.0.1; port=1433; database=gogs; user id=gogs@local; password=pa$$word;",
+			wantDSN: "server=127.0.0.1; port=1433; database=gogs; user id=gogs@local; password=pa$$word;",
 		},
 
 		{
@@ -135,7 +135,7 @@ func Test_parseDSN(t *testing.T) {
 				Type: "sqlite3",
 				Path: "/tmp/gogs.db",
 			},
-			expDSN: "file:/tmp/gogs.db?cache=shared&mode=rwc",
+			wantDSN: "file:/tmp/gogs.db?cache=shared&mode=rwc",
 		},
 	}
 	for _, test := range tests {
@@ -144,7 +144,7 @@ func Test_parseDSN(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, test.expDSN, dsn)
+			assert.Equal(t, test.wantDSN, dsn)
 		})
 	}
 }

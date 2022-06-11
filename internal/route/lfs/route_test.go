@@ -167,7 +167,7 @@ func Test_authorize(t *testing.T) {
 		name           string
 		authroize      macaron.Handler
 		mockUsersStore func() db.UsersStore
-		mockReposStore *db.MockReposStore
+		mockReposStore func() db.ReposStore
 		mockPermsStore func() db.PermsStore
 		expStatusCode  int
 		expBody        string
@@ -192,10 +192,10 @@ func Test_authorize(t *testing.T) {
 				})
 				return mock
 			},
-			mockReposStore: &db.MockReposStore{
-				MockGetByName: func(ownerID int64, name string) (*db.Repository, error) {
-					return nil, db.ErrRepoNotExist{}
-				},
+			mockReposStore: func() db.ReposStore {
+				mock := db.NewMockReposStore()
+				mock.GetByNameFunc.SetDefaultReturn(nil, db.ErrRepoNotExist{})
+				return mock
 			},
 			expStatusCode: http.StatusNotFound,
 		},
@@ -209,10 +209,12 @@ func Test_authorize(t *testing.T) {
 				})
 				return mock
 			},
-			mockReposStore: &db.MockReposStore{
-				MockGetByName: func(ownerID int64, name string) (*db.Repository, error) {
+			mockReposStore: func() db.ReposStore {
+				mock := db.NewMockReposStore()
+				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return &db.Repository{Name: name}, nil
-				},
+				})
+				return mock
 			},
 			mockPermsStore: func() db.PermsStore {
 				mock := db.NewMockPermsStore()
@@ -234,10 +236,12 @@ func Test_authorize(t *testing.T) {
 				})
 				return mock
 			},
-			mockReposStore: &db.MockReposStore{
-				MockGetByName: func(ownerID int64, name string) (*db.Repository, error) {
+			mockReposStore: func() db.ReposStore {
+				mock := db.NewMockReposStore()
+				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return &db.Repository{Name: name}, nil
-				},
+				})
+				return mock
 			},
 			mockPermsStore: func() db.PermsStore {
 				mock := db.NewMockPermsStore()
@@ -255,7 +259,9 @@ func Test_authorize(t *testing.T) {
 			if test.mockUsersStore != nil {
 				db.SetMockUsersStore(t, test.mockUsersStore())
 			}
-			db.SetMockReposStore(t, test.mockReposStore)
+			if test.mockReposStore != nil {
+				db.SetMockReposStore(t, test.mockReposStore())
+			}
 			if test.mockPermsStore != nil {
 				db.SetMockPermsStore(t, test.mockPermsStore())
 			}
