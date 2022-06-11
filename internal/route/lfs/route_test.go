@@ -31,7 +31,7 @@ func Test_authenticate(t *testing.T) {
 		name                  string
 		header                http.Header
 		mockUsersStore        func() db.UsersStore
-		mockTwoFactorsStore   *db.MockTwoFactorsStore
+		mockTwoFactorsStore   func() db.TwoFactorsStore
 		mockAccessTokensStore func() db.AccessTokensStore
 		expStatusCode         int
 		expHeader             http.Header
@@ -56,10 +56,10 @@ func Test_authenticate(t *testing.T) {
 				mock.AuthenticateFunc.SetDefaultReturn(&db.User{}, nil)
 				return mock
 			},
-			mockTwoFactorsStore: &db.MockTwoFactorsStore{
-				MockIsUserEnabled: func(userID int64) bool {
-					return true
-				},
+			mockTwoFactorsStore: func() db.TwoFactorsStore {
+				mock := db.NewMockTwoFactorsStore()
+				mock.IsUserEnabledFunc.SetDefaultReturn(true)
+				return mock
 			},
 			expStatusCode: http.StatusBadRequest,
 			expHeader:     http.Header{},
@@ -98,10 +98,10 @@ func Test_authenticate(t *testing.T) {
 				mock.AuthenticateFunc.SetDefaultReturn(&db.User{ID: 1, Name: "unknwon"}, nil)
 				return mock
 			},
-			mockTwoFactorsStore: &db.MockTwoFactorsStore{
-				MockIsUserEnabled: func(userID int64) bool {
-					return false
-				},
+			mockTwoFactorsStore: func() db.TwoFactorsStore {
+				mock := db.NewMockTwoFactorsStore()
+				mock.IsUserEnabledFunc.SetDefaultReturn(false)
+				return mock
 			},
 			expStatusCode: http.StatusOK,
 			expHeader:     http.Header{},
@@ -133,7 +133,9 @@ func Test_authenticate(t *testing.T) {
 			if test.mockUsersStore != nil {
 				db.SetMockUsersStore(t, test.mockUsersStore())
 			}
-			db.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore)
+			if test.mockTwoFactorsStore != nil {
+				db.SetMockTwoFactorsStore(t, test.mockTwoFactorsStore())
+			}
 			if test.mockAccessTokensStore != nil {
 				db.SetMockAccessTokensStore(t, test.mockAccessTokensStore())
 			}

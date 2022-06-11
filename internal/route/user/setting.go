@@ -381,7 +381,7 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := db.TwoFactors.GetByUserID(c.UserID())
+	t, err := db.TwoFactors.GetByUserID(c.Req.Context(), c.UserID())
 	if err != nil && !db.IsErrTwoFactorNotFound(err) {
 		c.Errorf(err, "get two factor by user ID")
 		return
@@ -449,7 +449,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := db.TwoFactors.Create(c.UserID(), conf.Security.SecretKey, secret); err != nil {
+	if err := db.TwoFactors.Create(c.Req.Context(), c.UserID(), conf.Security.SecretKey, secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.RedirectSubpath("/user/settings/security/two_factor_enable")
 		return

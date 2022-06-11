@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i LoginSourcesStore -i LoginSourceFilesStore -i loginSourceFileStore -i PermsStore -i UsersStore -o mocks.go
+//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i LoginSourcesStore -i LoginSourceFilesStore -i loginSourceFileStore -i PermsStore -i TwoFactorsStore -i UsersStore -o mocks.go
 
 func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	before := AccessTokens
@@ -58,26 +58,6 @@ func SetMockReposStore(t *testing.T, mock ReposStore) {
 	t.Cleanup(func() {
 		Repos = before
 	})
-}
-
-var _ TwoFactorsStore = (*MockTwoFactorsStore)(nil)
-
-type MockTwoFactorsStore struct {
-	MockCreate        func(userID int64, key, secret string) error
-	MockGetByUserID   func(userID int64) (*TwoFactor, error)
-	MockIsUserEnabled func(userID int64) bool
-}
-
-func (m *MockTwoFactorsStore) Create(userID int64, key, secret string) error {
-	return m.MockCreate(userID, key, secret)
-}
-
-func (m *MockTwoFactorsStore) GetByUserID(userID int64) (*TwoFactor, error) {
-	return m.MockGetByUserID(userID)
-}
-
-func (m *MockTwoFactorsStore) IsUserEnabled(userID int64) bool {
-	return m.MockIsUserEnabled(userID)
 }
 
 func SetMockTwoFactorsStore(t *testing.T, mock TwoFactorsStore) {
