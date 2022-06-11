@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i LoginSourcesStore -i LoginSourceFilesStore -i loginSourceFileStore -i PermsStore -i TwoFactorsStore -i UsersStore -o mocks.go
+//go:generate go-mockgen -f gogs.io/gogs/internal/db -i AccessTokensStore -i LFSStore -i LoginSourcesStore -i LoginSourceFilesStore -i loginSourceFileStore -i PermsStore -i ReposStore -i TwoFactorsStore -i UsersStore -o mocks.go
 
 func SetMockAccessTokensStore(t *testing.T, mock AccessTokensStore) {
 	before := AccessTokens
@@ -40,16 +40,6 @@ func SetMockPermsStore(t *testing.T, mock PermsStore) {
 	t.Cleanup(func() {
 		Perms = before
 	})
-}
-
-var _ ReposStore = (*MockReposStore)(nil)
-
-type MockReposStore struct {
-	MockGetByName func(ownerID int64, name string) (*Repository, error)
-}
-
-func (m *MockReposStore) GetByName(ownerID int64, name string) (*Repository, error) {
-	return m.MockGetByName(ownerID, name)
 }
 
 func SetMockReposStore(t *testing.T, mock ReposStore) {
