@@ -33,7 +33,8 @@ func ParsePostgreSQLHostPort(info string) (host, port string) {
 	return host, port
 }
 
-// todo
+// ParseMSSQLHostPort parses given input in various forms for MSSQL and returns
+// proper host and port number.
 func ParseMSSQLHostPort(info string) (host, port string) {
 	host, port = "127.0.0.1", "1433"
 	if strings.Contains(info, ":") {
@@ -86,7 +87,8 @@ func NewDSN(opts conf.DatabaseOpts) (dsn string, err error) {
 	return dsn, nil
 }
 
-// todo
+// OpenDB opens a new database connection encapsulated as gorm.DB using given
+// database options and GORM config.
 func OpenDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
 	dsn, err := NewDSN(opts)
 	if err != nil {

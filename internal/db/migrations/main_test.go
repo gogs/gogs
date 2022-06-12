@@ -1,3 +1,7 @@
+// Copyright 2022 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package migrations
 
 import (
@@ -7,6 +11,7 @@ import (
 	"testing"
 
 	"gorm.io/gorm/logger"
+	_ "modernc.org/sqlite"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/testutil"

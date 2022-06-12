@@ -20,7 +20,9 @@ import (
 	"gogs.io/gogs/internal/dbutil"
 )
 
-// todo
+// NewDB creates a new test database and initializes the given list of tables
+// for the suite. The test database is dropped after testing is completed unless
+// failed.
 func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	dbType := os.Getenv("GOGS_DATABASE_TYPE")
 
