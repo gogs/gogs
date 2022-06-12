@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -51,8 +52,6 @@ func TestUsers(t *testing.T) {
 	}
 }
 
-// TODO: Only local account is tested, tests for external account will be added
-//  along with addressing https://github.com/gogs/gogs/issues/6115.
 func usersAuthenticate(t *testing.T, db *users) {
 	ctx := context.Background()
 
@@ -86,6 +85,67 @@ func usersAuthenticate(t *testing.T, db *users) {
 		user, err := db.Authenticate(ctx, alice.Name, password, -1)
 		require.NoError(t, err)
 		assert.Equal(t, alice.Name, user.Name)
+	})
+
+	t.Run("login source mismatch", func(t *testing.T) {
+		_, err := db.Authenticate(ctx, alice.Email, password, 1)
+		gotErr := fmt.Sprintf("%v", err)
+		wantErr := ErrLoginSourceMismatch{args: map[string]interface{}{"actual": 0, "expect": 1}}.Error()
+		assert.Equal(t, wantErr, gotErr)
+	})
+
+	t.Run("via login source", func(t *testing.T) {
+		mockLoginSources := NewMockLoginSourcesStore()
+		mockLoginSources.GetByIDFunc.SetDefaultHook(func(ctx context.Context, id int64) (*LoginSource, error) {
+			mockProvider := NewMockProvider()
+			mockProvider.AuthenticateFunc.SetDefaultReturn(&auth.ExternalAccount{}, nil)
+			s := &LoginSource{
+				IsActived: true,
+				Provider:  mockProvider,
+			}
+			return s, nil
+		})
+		setMockLoginSourcesStore(t, mockLoginSources)
+
+		bob, err := db.Create(ctx, "bob", "bob@example.com",
+			CreateUserOpts{
+				Password:    password,
+				LoginSource: 1,
+			},
+		)
+		require.NoError(t, err)
+
+		user, err := db.Authenticate(ctx, bob.Email, password, 1)
+		require.NoError(t, err)
+		assert.Equal(t, bob.Name, user.Name)
+	})
+
+	t.Run("new user via login source", func(t *testing.T) {
+		mockLoginSources := NewMockLoginSourcesStore()
+		mockLoginSources.GetByIDFunc.SetDefaultHook(func(ctx context.Context, id int64) (*LoginSource, error) {
+			mockProvider := NewMockProvider()
+			mockProvider.AuthenticateFunc.SetDefaultReturn(
+				&auth.ExternalAccount{
+					Name:  "cindy",
+					Email: "cindy@example.com",
+				},
+				nil,
+			)
+			s := &LoginSource{
+				IsActived: true,
+				Provider:  mockProvider,
+			}
+			return s, nil
+		})
+		setMockLoginSourcesStore(t, mockLoginSources)
+
+		user, err := db.Authenticate(ctx, "cindy", password, 1)
+		require.NoError(t, err)
+		assert.Equal(t, "cindy", user.Name)
+
+		user, err = db.GetByUsername(ctx, "cindy")
+		require.NoError(t, err)
+		assert.Equal(t, "cindy@example.com", user.Email)
 	})
 }
 
