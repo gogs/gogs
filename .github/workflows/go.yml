@@ -116,7 +116,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db
+        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
           GOGS_DATABASE_TYPE: postgres
           PGPORT: 5432
@@ -142,7 +142,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db
+        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
           GOGS_DATABASE_TYPE: mysql
           MYSQL_USER: root
@@ -165,6 +165,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db
+        run: go test -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
           GOGS_DATABASE_TYPE: sqlite
