@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -24,7 +25,7 @@ func TestRepos(t *testing.T) {
 
 	tables := []interface{}{new(Repository)}
 	db := &repos{
-		DB: initTestDB(t, "repos", tables...),
+		DB: dbtest.NewDB(t, "repos", tables...),
 	}
 
 	for _, tc := range []struct {
