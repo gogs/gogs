@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/dbtest"
 )
 
 func TestPerms(t *testing.T) {
@@ -21,7 +23,7 @@ func TestPerms(t *testing.T) {
 
 	tables := []interface{}{new(Access)}
 	db := &perms{
-		DB: initTestDB(t, "perms", tables...),
+		DB: dbtest.NewDB(t, "perms", tables...),
 	}
 
 	for _, tc := range []struct {

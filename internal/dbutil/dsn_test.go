@@ -2,18 +2,19 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package db
+package dbutil
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 )
 
-func Test_parsePostgreSQLHostPort(t *testing.T) {
+func TestParsePostgreSQLHostPort(t *testing.T) {
 	tests := []struct {
 		info    string
 		expHost string
@@ -28,14 +29,14 @@ func Test_parsePostgreSQLHostPort(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			host, port := parsePostgreSQLHostPort(test.info)
+			host, port := ParsePostgreSQLHostPort(test.info)
 			assert.Equal(t, test.expHost, host)
 			assert.Equal(t, test.expPort, port)
 		})
 	}
 }
 
-func Test_parseMSSQLHostPort(t *testing.T) {
+func TestParseMSSQLHostPort(t *testing.T) {
 	tests := []struct {
 		info    string
 		expHost string
@@ -47,16 +48,16 @@ func Test_parseMSSQLHostPort(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			host, port := parseMSSQLHostPort(test.info)
+			host, port := ParseMSSQLHostPort(test.info)
 			assert.Equal(t, test.expHost, host)
 			assert.Equal(t, test.expPort, port)
 		})
 	}
 }
 
-func Test_parseDSN(t *testing.T) {
+func TestNewDSN(t *testing.T) {
 	t.Run("bad dialect", func(t *testing.T) {
-		_, err := newDSN(conf.DatabaseOpts{
+		_, err := NewDSN(conf.DatabaseOpts{
 			Type: "bad_dialect",
 		})
 		assert.Equal(t, "unrecognized dialect: bad_dialect", fmt.Sprintf("%v", err))
@@ -140,10 +141,8 @@ func Test_parseDSN(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			dsn, err := newDSN(test.opts)
-			if err != nil {
-				t.Fatal(err)
-			}
+			dsn, err := NewDSN(test.opts)
+			require.NoError(t, err)
 			assert.Equal(t, test.wantDSN, dsn)
 		})
 	}

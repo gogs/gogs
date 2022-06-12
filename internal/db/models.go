@@ -89,14 +89,14 @@ func getEngine() (*xorm.Engine, error) {
 
 	case "postgres":
 		conf.UsePostgreSQL = true
-		host, port := parsePostgreSQLHostPort(conf.Database.Host)
+		host, port := dbutil.ParsePostgreSQLHostPort(conf.Database.Host)
 		connStr = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
 			conf.Database.User, conf.Database.Password, host, port, conf.Database.Name, conf.Database.SSLMode, conf.Database.Schema)
 		driver = "pgx"
 
 	case "mssql":
 		conf.UseMSSQL = true
-		host, port := parseMSSQLHostPort(conf.Database.Host)
+		host, port := dbutil.ParseMSSQLHostPort(conf.Database.Host)
 		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Password)
 
 	case "sqlite3":
@@ -187,7 +187,7 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	if err = migrations.Migrate(x, db); err != nil {
+	if err = migrations.Migrate(db); err != nil {
 		return fmt.Errorf("migrate: %v", err)
 	}
 

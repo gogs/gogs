@@ -20,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/lfsutil"
 	"gogs.io/gogs/internal/testutil"
 )
@@ -35,7 +36,7 @@ func TestDumpAndImport(t *testing.T) {
 		t.Fatalf("New table has added (want 4 got %d), please add new tests for the table and update this check", len(Tables))
 	}
 
-	db := initTestDB(t, "dumpAndImport", Tables...)
+	db := dbtest.NewDB(t, "dumpAndImport", Tables...)
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)

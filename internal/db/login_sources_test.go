@@ -17,6 +17,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -85,7 +86,7 @@ func Test_loginSources(t *testing.T) {
 
 	tables := []interface{}{new(LoginSource), new(User)}
 	db := &loginSources{
-		DB: initTestDB(t, "loginSources", tables...),
+		DB: dbtest.NewDB(t, "loginSources", tables...),
 	}
 
 	for _, tc := range []struct {

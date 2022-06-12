@@ -62,7 +62,7 @@ require (
 	gopkg.in/macaron.v1 v1.4.0
 	gorm.io/driver/mysql v1.3.4
 	gorm.io/driver/postgres v1.3.7
-	gorm.io/driver/sqlite v1.3.2
+	gorm.io/driver/sqlite v1.3.4
 	gorm.io/driver/sqlserver v1.3.1
 	gorm.io/gorm v1.23.5
 	modernc.org/sqlite v1.17.3
@@ -71,14 +71,6 @@ require (
 	xorm.io/core v0.7.2
 	xorm.io/xorm v0.8.0
 )
-
-// Temporary replace directives
-// ============================
-// These entries indicate temporary replace directives due to a pending pull request upstream
-// or issues with specific versions.
-
-// https://github.com/gogs/gogs/issues/7019
-replace gorm.io/driver/sqlite => github.com/gogs/gorm-sqlite v1.3.3-0.20220608111034-1298ceb93369
 
 // +heroku goVersion go1.16
 // +heroku install ./

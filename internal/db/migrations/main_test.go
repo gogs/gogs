@@ -1,8 +1,8 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
+// Copyright 2022 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package db
+package migrations
 
 import (
 	"flag"
@@ -10,7 +10,6 @@ import (
 	"os"
 	"testing"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	_ "modernc.org/sqlite"
 	log "unknwon.dev/clog/v2"
@@ -38,19 +37,4 @@ func TestMain(m *testing.M) {
 	logger.Default = logger.Default.LogMode(level)
 
 	os.Exit(m.Run())
-}
-
-// clearTables removes all rows from given tables.
-func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
-	if t.Failed() {
-		return nil
-	}
-
-	for _, t := range tables {
-		err := db.Where("TRUE").Delete(t).Error
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
