@@ -15,9 +15,9 @@ import (
 
 type accessTokenPreV20 struct {
 	ID          int64
-	UserID      int64 `xorm:"uid INDEX" gorm:"COLUMN:uid;INDEX"`
+	UserID      int64 `gorm:"COLUMN:uid;INDEX"`
 	Name        string
-	Sha1        string `xorm:"UNIQUE VARCHAR(40)" gorm:"TYPE:VARCHAR(40);UNIQUE"`
+	Sha1        string `gorm:"TYPE:VARCHAR(40);UNIQUE"`
 	CreatedUnix int64
 	UpdatedUnix int64
 }
@@ -28,7 +28,7 @@ func (*accessTokenPreV20) TableName() string {
 
 type accessTokenV20 struct {
 	ID          int64
-	UserID      int64 `xorm:"uid" gorm:"column:uid;index"`
+	UserID      int64 `gorm:"column:uid;index"`
 	Name        string
 	Sha1        string `gorm:"type:VARCHAR(40);unique"`
 	SHA256      string `gorm:"type:VARCHAR(64);unique;not null"`

@@ -187,7 +187,7 @@ func NewEngine() (err error) {
 		return err
 	}
 
-	if err = migrations.Migrate(x, db); err != nil {
+	if err = migrations.Migrate(db); err != nil {
 		return fmt.Errorf("migrate: %v", err)
 	}
 
