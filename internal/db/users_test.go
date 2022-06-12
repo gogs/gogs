@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -26,7 +27,7 @@ func TestUsers(t *testing.T) {
 
 	tables := []interface{}{new(User), new(EmailAddress)}
 	db := &users{
-		DB: initTestDB(t, "users", tables...),
+		DB: dbtest.NewDB(t, "users", tables...),
 	}
 
 	for _, tc := range []struct {

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -24,7 +25,7 @@ func TestTwoFactors(t *testing.T) {
 
 	tables := []interface{}{new(TwoFactor), new(TwoFactorRecoveryCode)}
 	db := &twoFactors{
-		DB: initTestDB(t, "twoFactors", tables...),
+		DB: dbtest.NewDB(t, "twoFactors", tables...),
 	}
 
 	for _, tc := range []struct {
