@@ -1,6 +1,6 @@
 version = 1
 
-exclude_patterns = ["**/mocks.go"]
+exclude_patterns = ["**/mocks_test.go"]
 
 [[analyzers]]
 name = "docker"

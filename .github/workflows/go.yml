@@ -38,10 +38,6 @@ jobs:
           args: --timeout=30m
       - name: Install Task
         uses: arduino/setup-task@v1
-      - name: Install goimports and go-mockgen
-        run: |
-          go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.2.0
-          go install golang.org/x/tools/cmd/goimports@latest
       - name: Check Go module tidiness and generated files
         shell: bash
         run: |
