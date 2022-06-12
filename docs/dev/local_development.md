@@ -41,7 +41,7 @@ Gogs has the following dependencies:
     brew install go postgresql git npm go-task/tap/go-task
     npm install -g less
     npm install -g less-plugin-clean-css
-    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.2.0
+    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
 
@@ -79,7 +79,7 @@ Gogs has the following dependencies:
     sudo apt install -y make git-all postgresql postgresql-contrib golang-go nodejs
     npm install -g less
     go install github.com/go-task/task/v3/cmd/task@latest
-    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.2.0
+    go install github.com/derision-test/go-mockgen/cmd/go-mockgen@v1.3.3
     go install golang.org/x/tools/cmd/goimports@latest
     ```
 
