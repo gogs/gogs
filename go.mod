@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/bgentry/speakeasy v0.1.0 // indirect
-	github.com/derision-test/go-mockgen v1.2.0
+	github.com/derision-test/go-mockgen v1.3.3
 	github.com/editorconfig/editorconfig-core-go/v2 v2.4.4
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/go-ldap/ldap/v3 v3.4.3
