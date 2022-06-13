@@ -81,7 +81,6 @@ func Test_loginSources(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(LoginSource), new(User)}

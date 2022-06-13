@@ -2255,8 +2255,8 @@ func (repos MirrorRepositoryList) LoadAttributes() error {
 // Watch is connection request for receiving repository notification.
 type Watch struct {
 	ID     int64
-	UserID int64 `xorm:"UNIQUE(watch)"`
-	RepoID int64 `xorm:"UNIQUE(watch)"`
+	UserID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch;not null"`
+	RepoID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch;not null"`
 }
 
 func isWatching(e Engine, userID, repoID int64) bool {

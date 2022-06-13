@@ -22,7 +22,6 @@ func TestUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(User), new(EmailAddress)}

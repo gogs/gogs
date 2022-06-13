@@ -29,7 +29,6 @@ func TestDumpAndImport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	if len(Tables) != 4 {
