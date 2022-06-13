@@ -1118,6 +1118,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return fmt.Errorf("watchRepo: %v", err)
 	}
 
+	// TODO: After migrating this function to use GORM, use Action.NewRepo instead.
 	newRepoAction := func(e Engine, doer *User, repo *Repository) (err error) {
 		opType := ActionCreateRepo
 		if repo.IsFork {
