@@ -64,7 +64,7 @@ require (
 	gorm.io/driver/postgres v1.3.7
 	gorm.io/driver/sqlite v1.3.4
 	gorm.io/driver/sqlserver v1.3.1
-	gorm.io/gorm v1.23.5
+	gorm.io/gorm v1.23.6
 	modernc.org/sqlite v1.17.3
 	unknwon.dev/clog/v2 v2.2.0
 	xorm.io/builder v0.3.6
