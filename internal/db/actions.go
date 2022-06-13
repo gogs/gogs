@@ -76,7 +76,7 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 		return errors.Wrap(err, "get watches")
 	}
 
-	// clone returns a deep copy of the action with UserID assigned.
+	// Clone returns a deep copy of the action with UserID assigned
 	clone := func(userID int64) *Action {
 		tmp := *act
 		tmp.UserID = userID
@@ -94,7 +94,7 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 		actions = append(actions, clone(watch.UserID))
 	}
 
-	return db.Create(&actions).Error
+	return db.WithContext(ctx).Create(&actions).Error
 }
 
 // ActionType is the type of an action.
@@ -126,10 +126,10 @@ const (
 	ActionMirrorSyncDelete                        // 22
 )
 
-// Action is a user operation to a repository. It implements template.Actioner interface
-// to be able to use it in template rendering.
+// Action is a user operation to a repository. It implements template.Actioner
+// interface to be able to use it in template rendering.
 type Action struct {
-	ID           int64 `gorm:"primarykey"`
+	ID           int64
 	UserID       int64 `gorm:"index"` // Receiver user ID
 	OpType       ActionType
 	ActUserID    int64  // Doer user ID
@@ -146,7 +146,7 @@ type Action struct {
 	CreatedUnix int64
 }
 
-// NOTE: This is a GORM create hook.
+// BeforeCreate implements the GORM create hook.
 func (a *Action) BeforeCreate(tx *gorm.DB) error {
 	if a.CreatedUnix == 0 {
 		a.CreatedUnix = tx.NowFunc().Unix()
@@ -154,8 +154,8 @@ func (a *Action) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// NOTE: This is a GORM query hook.
-func (a *Action) AfterFind(tx *gorm.DB) error {
+// AfterFind implements the GORM query hook.
+func (a *Action) AfterFind(_ *gorm.DB) error {
 	a.Created = time.Unix(a.CreatedUnix, 0).Local()
 	return nil
 }
@@ -223,7 +223,7 @@ func (a *Action) GetIssueTitle() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error("GetIssueByIndex: %v", err)
+		log.Error("get issue by index: %v", err)
 		return "error getting issue"
 	}
 	return issue.Title
@@ -233,7 +233,7 @@ func (a *Action) GetIssueContent() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error("GetIssueByIndex: %v", err)
+		log.Error("get issue by index: %v", err)
 		return "error getting issue"
 	}
 	return issue.Content
