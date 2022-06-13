@@ -90,7 +90,12 @@ func (db *repos) create(ctx context.Context, ownerID int64, opts createRepoOpts)
 
 	_, err = db.GetByName(ctx, ownerID, opts.Name)
 	if err == nil {
-		return nil, ErrRepoAlreadyExist{args: errutil.Args{"ownerID": ownerID, "name": opts.Name}}
+		return nil, ErrRepoAlreadyExist{
+			args: errutil.Args{
+				"ownerID": ownerID,
+				"name":    opts.Name,
+			},
+		}
 	} else if !IsErrRepoNotExist(err) {
 		return nil, err
 	}
@@ -115,7 +120,7 @@ func (db *repos) create(ctx context.Context, ownerID int64, opts createRepoOpts)
 var _ errutil.NotFound = (*ErrRepoNotExist)(nil)
 
 type ErrRepoNotExist struct {
-	args map[string]interface{}
+	args errutil.Args
 }
 
 func IsErrRepoNotExist(err error) bool {
@@ -139,7 +144,12 @@ func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Re
 		Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, ErrRepoNotExist{args: map[string]interface{}{"ownerID": ownerID, "name": name}}
+			return nil, ErrRepoNotExist{
+				args: errutil.Args{
+					"ownerID": ownerID,
+					"name":    name,
+				},
+			}
 		}
 		return nil, err
 	}

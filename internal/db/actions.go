@@ -23,9 +23,9 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
-	// NewRepo creates an action for creating a new repository. The action
-	// type could be ActionCreateRepo or ActionForkRepo based on whether the
-	// repository is a fork.
+	// NewRepo creates an action for creating a new repository. The action type
+	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
+	// is a fork.
 	NewRepo(ctx context.Context, doer *User, repo *Repository) error
 	// RenameRepo creates an action for renaming a repository.
 	RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error
