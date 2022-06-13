@@ -67,9 +67,11 @@ func (t *AccessToken) BeforeCreate(tx *gorm.DB) error {
 // AfterFind implements the GORM query hook.
 func (t *AccessToken) AfterFind(tx *gorm.DB) error {
 	t.Created = time.Unix(t.CreatedUnix, 0).Local()
-	t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
-	t.HasUsed = t.Updated.After(t.Created)
-	t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(tx.NowFunc())
+	if t.UpdatedUnix > 0 {
+		t.Updated = time.Unix(t.UpdatedUnix, 0).Local()
+		t.HasUsed = t.Updated.After(t.Created)
+		t.HasRecentActivity = t.Updated.Add(7 * 24 * time.Hour).After(tx.NowFunc())
+	}
 	return nil
 }
 
