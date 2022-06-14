@@ -50,7 +50,7 @@ var LoginSources LoginSourcesStore
 
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
-	ID        int64
+	ID        int64 `gorm:"primaryKey"`
 	Type      auth.Type
 	Name      string        `xorm:"UNIQUE" gorm:"UNIQUE"`
 	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`

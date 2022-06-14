@@ -32,7 +32,7 @@ var Perms PermsStore
 // In case of an organization repository, the members of the owners team are in
 // this table.
 type Access struct {
-	ID     int64
+	ID     int64      `gorm:"primaryKey"`
 	UserID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
 	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
 	Mode   AccessMode `gorm:"not null"`

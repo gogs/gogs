@@ -151,15 +151,15 @@ func NewRepoContext() {
 
 // Repository contains information of a repository.
 type Repository struct {
-	ID              int64
-	OwnerID         int64  `xorm:"UNIQUE(s)" gorm:"UNIQUE_INDEX:s"`
+	ID              int64  `gorm:"primaryKey"`
+	OwnerID         int64  `xorm:"UNIQUE(s)" gorm:"uniqueIndex:repo_owner_name_unique"`
 	Owner           *User  `xorm:"-" gorm:"-" json:"-"`
-	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"UNIQUE_INDEX:s"`
-	Name            string `xorm:"INDEX NOT NULL" gorm:"NOT NULL"`
-	Description     string `xorm:"VARCHAR(512)" gorm:"TYPE:VARCHAR(512)"`
+	LowerName       string `xorm:"UNIQUE(s) INDEX NOT NULL" gorm:"uniqueIndex:repo_owner_name_unique;index;not null"`
+	Name            string `xorm:"INDEX NOT NULL" gorm:"index;not null"`
+	Description     string `xorm:"VARCHAR(512)" gorm:"type:VARCHAR(512)"`
 	Website         string
 	DefaultBranch   string
-	Size            int64 `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	Size            int64 `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	UseCustomAvatar bool
 
 	// Counters
@@ -172,37 +172,37 @@ type Repository struct {
 	NumPulls            int
 	NumClosedPulls      int
 	NumOpenPulls        int `xorm:"-" gorm:"-" json:"-"`
-	NumMilestones       int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
-	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	NumMilestones       int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
+	NumClosedMilestones int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	NumOpenMilestones   int `xorm:"-" gorm:"-" json:"-"`
 	NumTags             int `xorm:"-" gorm:"-" json:"-"`
 
 	IsPrivate bool
 	// TODO: When migrate to GORM, make sure to do a loose migration with `HasColumn` and `AddColumn`,
 	// see docs in https://gorm.io/docs/migration.html.
-	IsUnlisted bool `xorm:"NOT NULL DEFAULT false"`
+	IsUnlisted bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	IsBare     bool
 
 	IsMirror bool
 	*Mirror  `xorm:"-" gorm:"-" json:"-"`
 
 	// Advanced settings
-	EnableWiki            bool `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
+	EnableWiki            bool `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
 	AllowPublicWiki       bool
 	EnableExternalWiki    bool
 	ExternalWikiURL       string
-	EnableIssues          bool `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
+	EnableIssues          bool `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
 	AllowPublicIssues     bool
 	EnableExternalTracker bool
 	ExternalTrackerURL    string
 	ExternalTrackerFormat string
 	ExternalTrackerStyle  string
 	ExternalMetas         map[string]string `xorm:"-" gorm:"-" json:"-"`
-	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"NOT NULL;DEFAULT:TRUE"`
-	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
-	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
+	EnablePulls           bool              `xorm:"NOT NULL DEFAULT true" gorm:"not null;default:TRUE"`
+	PullsIgnoreWhitespace bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
+	PullsAllowRebase      bool              `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 
-	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL;DEFAULT:FALSE"`
+	IsFork   bool `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	ForkID   int64
 	BaseRepo *Repository `xorm:"-" gorm:"-" json:"-"`
 
@@ -2281,7 +2281,7 @@ func (repos MirrorRepositoryList) LoadAttributes() error {
 
 // Watch is connection request for receiving repository notification.
 type Watch struct {
-	ID     int64
+	ID     int64 `gorm:"primaryKey"`
 	UserID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
 	RepoID int64 `xorm:"UNIQUE(watch)" gorm:"uniqueIndex:watch_user_repo_unique;not null"`
 }

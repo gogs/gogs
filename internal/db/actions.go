@@ -117,7 +117,8 @@ func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, after
 		).
 		Limit(conf.UI.User.NewsFeedPagingNum).
 		Order("id DESC").
-		Find(&actions).Error
+		Find(&actions).
+		Error
 }
 
 func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
@@ -147,47 +148,18 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 		).
 		Limit(conf.UI.User.NewsFeedPagingNum).
 		Order("id DESC").
-		Find(&actions).Error
-}
-
-func (db *actions) NewRepo(ctx context.Context, doer *User, repo *Repository) error {
-	opType := ActionCreateRepo
-	if repo.IsFork {
-		opType = ActionForkRepo
-	}
-
-	return db.notifyWatchers(ctx, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       opType,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-	})
-}
-
-func (db *actions) RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error {
-	return db.notifyWatchers(ctx, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       ActionRenameRepo,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-		Content:      oldRepoName,
-	})
+		Find(&actions).
+		Error
 }
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
 func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 	watches, err := Watches.ListByRepo(ctx, act.RepoID)
 	if err != nil {
-		return errors.Wrap(err, "get watches")
+		return errors.Wrap(err, "list watches")
 	}
 
-	// clone returns a deep copy of the action with UserID assigned.
+	// Clone returns a deep copy of the action with UserID assigned
 	clone := func(userID int64) *Action {
 		tmp := *act
 		tmp.UserID = userID
@@ -208,18 +180,54 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 	return db.Create(actions).Error
 }
 
+func (db *actions) NewRepo(ctx context.Context, doer *User, repo *Repository) error {
+	opType := ActionCreateRepo
+	if repo.IsFork {
+		opType = ActionForkRepo
+	}
+
+	return db.notifyWatchers(ctx,
+		&Action{
+			ActUserID:    doer.ID,
+			ActUserName:  doer.Name,
+			OpType:       opType,
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		},
+	)
+}
+
+func (db *actions) RenameRepo(ctx context.Context, doer *User, oldRepoName string, repo *Repository) error {
+	return db.notifyWatchers(ctx,
+		&Action{
+			ActUserID:    doer.ID,
+			ActUserName:  doer.Name,
+			OpType:       ActionRenameRepo,
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+			Content:      oldRepoName,
+		},
+	)
+}
+
 func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, repo *Repository, refName string, content []byte) error {
-	return db.notifyWatchers(ctx, &Action{
-		ActUserID:    repo.OwnerID,
-		ActUserName:  repo.Owner.Name,
-		OpType:       opType,
-		Content:      string(content),
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		RefName:      refName,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-	})
+	return db.notifyWatchers(ctx,
+		&Action{
+			ActUserID:    repo.OwnerID,
+			ActUserName:  repo.Owner.Name,
+			OpType:       opType,
+			Content:      string(content),
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			RefName:      refName,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		},
+	)
 }
 
 func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error {
@@ -234,22 +242,25 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 
 	commits.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
 	apiPusher := repo.Owner.APIFormat()
-	if err := PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
-		Ref:        refName,
-		Before:     oldCommitID,
-		After:      newCommitID,
-		CompareURL: conf.Server.ExternalURL + commits.CompareURL,
-		Commits:    apiCommits,
-		Repo:       repo.APIFormat(nil),
-		Pusher:     apiPusher,
-		Sender:     apiPusher,
-	}); err != nil {
-		return errors.Wrap(err, "PrepareWebhooks")
+	err = PrepareWebhooks(repo, HOOK_EVENT_PUSH,
+		&api.PushPayload{
+			Ref:        refName,
+			Before:     oldCommitID,
+			After:      newCommitID,
+			CompareURL: conf.Server.ExternalURL + commits.CompareURL,
+			Commits:    apiCommits,
+			Repo:       repo.APIFormat(nil),
+			Pusher:     apiPusher,
+			Sender:     apiPusher,
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "prepare webhooks")
 	}
 
 	data, err := jsoniter.Marshal(commits)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "marshal JSON")
 	}
 
 	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, repo, refName, data)
@@ -264,29 +275,33 @@ func (db *actions) MirrorSyncDelete(ctx context.Context, repo *Repository, refNa
 }
 
 func (db *actions) MergePullRequest(ctx context.Context, doer *User, repo *Repository, pull *Issue) error {
-	return db.notifyWatchers(ctx, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       ActionMergePullRequest,
-		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-	})
+	return db.notifyWatchers(ctx,
+		&Action{
+			ActUserID:    doer.ID,
+			ActUserName:  doer.Name,
+			OpType:       ActionMergePullRequest,
+			Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		},
+	)
 }
 
 func (db *actions) TransferRepo(ctx context.Context, doer, oldOwner *User, repo *Repository) error {
-	return db.notifyWatchers(ctx, &Action{
-		ActUserID:    doer.ID,
-		ActUserName:  doer.Name,
-		OpType:       ActionTransferRepo,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-		Content:      path.Join(oldOwner.Name, repo.Name),
-	})
+	return db.notifyWatchers(ctx,
+		&Action{
+			ActUserID:    doer.ID,
+			ActUserName:  doer.Name,
+			OpType:       ActionTransferRepo,
+			RepoID:       repo.ID,
+			RepoUserName: repo.Owner.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+			Content:      path.Join(oldOwner.Name, repo.Name),
+		},
+	)
 }
 
 var (
@@ -461,7 +476,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	// Change repository bare status and update last updated time.
 	repo.IsBare = false
 	if err = UpdateRepository(repo, false); err != nil {
-		return errors.Wrap(err, "UpdateRepository")
+		return errors.Wrap(err, "update repository")
 	}
 
 	isNewRef := opts.OldCommitID == git.EmptyID
@@ -486,15 +501,17 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	apiRepo := repo.APIFormat(nil)
 	apiPusher := pusher.APIFormat()
 	if isDelRef {
-		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
-			Ref:        refName,
-			RefType:    "branch",
-			PusherType: api.PUSHER_TYPE_USER,
-			Repo:       apiRepo,
-			Sender:     apiPusher,
-		})
+		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE,
+			&api.DeletePayload{
+				Ref:        refName,
+				RefType:    "branch",
+				PusherType: api.PUSHER_TYPE_USER,
+				Repo:       apiRepo,
+				Sender:     apiPusher,
+			},
+		)
 		if err != nil {
-			return errors.Wrap(err, "PrepareWebhooks (delete branch)")
+			return errors.Wrap(err, "prepare webhooks for delete branch")
 		}
 
 		action.OpType = ActionDeleteBranch
@@ -510,7 +527,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	// Only update issues via commits when internal issue tracker is enabled
 	if repo.EnableIssues && !repo.EnableExternalTracker {
 		if err = updateCommitReferencesToIssues(pusher, repo, opts.Commits.Commits); err != nil {
-			log.Error("updateCommitReferencesToIssues: %v", err)
+			log.Error("update commit references to issues: %v", err)
 		}
 	}
 
@@ -526,15 +543,17 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 
 	var compareURL string
 	if isNewRef {
-		err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-			Ref:           refName,
-			RefType:       "branch",
-			DefaultBranch: repo.DefaultBranch,
-			Repo:          apiRepo,
-			Sender:        apiPusher,
-		})
+		err = PrepareWebhooks(repo, HOOK_EVENT_CREATE,
+			&api.CreatePayload{
+				Ref:           refName,
+				RefType:       "branch",
+				DefaultBranch: repo.DefaultBranch,
+				Repo:          apiRepo,
+				Sender:        apiPusher,
+			},
+		)
 		if err != nil {
-			return errors.Wrap(err, "PrepareWebhooks (new branch)")
+			return errors.Wrap(err, "prepare webhooks for new branch")
 		}
 
 		action.OpType = ActionCreateBranch
@@ -562,7 +581,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 		Sender:     apiPusher,
 	})
 	if err != nil {
-		return errors.Wrap(err, "PrepareWebhooks (new commit)")
+		return errors.Wrap(err, "prepare webhooks for new commit")
 	}
 
 	action.OpType = ActionCommitRepo
@@ -596,7 +615,7 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 	// Change repository bare status and update last updated time.
 	repo.IsBare = false
 	if err = UpdateRepository(repo, false); err != nil {
-		return errors.Wrap(err, "UpdateRepository")
+		return errors.Wrap(err, "update repository")
 	}
 
 	refName := git.RefShortName(opts.RefFullName)
@@ -615,15 +634,17 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 
 	isDelRef := opts.NewCommitID == git.EmptyID
 	if isDelRef {
-		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE, &api.DeletePayload{
-			Ref:        refName,
-			RefType:    "tag",
-			PusherType: api.PUSHER_TYPE_USER,
-			Repo:       apiRepo,
-			Sender:     apiPusher,
-		})
+		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE,
+			&api.DeletePayload{
+				Ref:        refName,
+				RefType:    "tag",
+				PusherType: api.PUSHER_TYPE_USER,
+				Repo:       apiRepo,
+				Sender:     apiPusher,
+			},
+		)
 		if err != nil {
-			return errors.Wrap(err, "PrepareWebhooks (delete tag)")
+			return errors.Wrap(err, "prepare webhooks for delete tag")
 		}
 
 		action.OpType = ActionDeleteTag
@@ -634,15 +655,18 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 		return nil
 	}
 
-	if err = PrepareWebhooks(repo, HOOK_EVENT_CREATE, &api.CreatePayload{
-		Ref:           refName,
-		RefType:       "tag",
-		Sha:           opts.NewCommitID,
-		DefaultBranch: repo.DefaultBranch,
-		Repo:          apiRepo,
-		Sender:        apiPusher,
-	}); err != nil {
-		return errors.Wrapf(err, "PrepareWebhooks (new tag)")
+	err = PrepareWebhooks(repo, HOOK_EVENT_CREATE,
+		&api.CreatePayload{
+			Ref:           refName,
+			RefType:       "tag",
+			Sha:           opts.NewCommitID,
+			DefaultBranch: repo.DefaultBranch,
+			Repo:          apiRepo,
+			Sender:        apiPusher,
+		},
+	)
+	if err != nil {
+		return errors.Wrapf(err, "prepare webhooks for new tag")
 	}
 
 	action.OpType = ActionPushTag
@@ -683,10 +707,10 @@ const (
 	ActionMirrorSyncDelete                        // 22
 )
 
-// Action is a user operation to a repository. It implements template.Actioner interface
-// to be able to use it in template rendering.
+// Action is a user operation to a repository. It implements template.Actioner
+// interface to be able to use it in template rendering.
 type Action struct {
-	ID           int64 `gorm:"primarykey"`
+	ID           int64 `gorm:"primaryKey"`
 	UserID       int64 `gorm:"index"` // Receiver user ID
 	OpType       ActionType
 	ActUserID    int64  // Doer user ID
@@ -696,7 +720,7 @@ type Action struct {
 	RepoUserName string
 	RepoName     string
 	RefName      string
-	IsPrivate    bool   `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:false"`
+	IsPrivate    bool   `xorm:"NOT NULL DEFAULT false" gorm:"not null;default:FALSE"`
 	Content      string `xorm:"TEXT"`
 
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
@@ -780,7 +804,7 @@ func (a *Action) GetIssueTitle() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error("GetIssueByIndex: %v", err)
+		log.Error("Failed to get issue title [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
 		return "error getting issue"
 	}
 	return issue.Title
@@ -790,7 +814,7 @@ func (a *Action) GetIssueContent() string {
 	index, _ := strconv.ParseInt(a.GetIssueInfos()[0], 10, 64)
 	issue, err := GetIssueByIndex(a.RepoID, index)
 	if err != nil {
-		log.Error("GetIssueByIndex: %v", err)
+		log.Error("Failed to get issue content [repo_id: %d, index: %d]: %v", a.RepoID, index, err)
 		return "error getting issue"
 	}
 	return issue.Content
@@ -897,7 +921,7 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 		if err != nil {
 			pcs.avatars[email] = tool.AvatarLink(email)
 			if !IsErrUserNotExist(err) {
-				log.Error("get user by email: %v", err)
+				log.Error("Failed to get user [email: %s]: %v", email, err)
 			}
 		} else {
 			pcs.avatars[email] = u.RelAvatarLink()
