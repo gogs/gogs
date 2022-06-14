@@ -53,8 +53,17 @@ func TestActions(t *testing.T) {
 		name string
 		test func(*testing.T, *actions)
 	}{
+		{"CommitRepo", actionsCommitRepo},
+		{"ListByOrganization", actionsListByOrganization},
+		{"ListByUser", actionsListByUser},
+		{"MergePullRequest", actionsMergePullRequest},
+		{"MirrorSyncCreate", actionsMirrorSyncCreate},
+		{"MirrorSyncDelete", actionsMirrorSyncDelete},
+		{"MirrorSyncPush", actionsMirrorSyncPush},
 		{"NewRepo", actionsNewRepo},
+		{"PushTag", actionsPushTag},
 		{"RenameRepo", actionsRenameRepo},
+		{"TransferRepo", actionsTransferRepo},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -69,10 +78,46 @@ func TestActions(t *testing.T) {
 	}
 }
 
+func actionsCommitRepo(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsListByOrganization(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsListByUser(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsMergePullRequest(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsMirrorSyncCreate(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsMirrorSyncDelete(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsMirrorSyncPush(t *testing.T, db *actions) {
+	// todo
+}
+
 func actionsNewRepo(t *testing.T, db *actions) {
 	// todo
 }
 
+func actionsPushTag(t *testing.T, db *actions) {
+	// todo
+}
+
 func actionsRenameRepo(t *testing.T, db *actions) {
+	// todo
+}
+
+func actionsTransferRepo(t *testing.T, db *actions) {
 	// todo
 }

@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -195,6 +196,8 @@ const (
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
 func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+	ctx := context.TODO()
+
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -334,8 +337,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return fmt.Errorf("Commit: %v", err)
 	}
 
-	if err = MergePullRequestAction(doer, pr.Issue.Repo, pr.Issue); err != nil {
-		log.Error("MergePullRequestAction [%d]: %v", pr.ID, err)
+	if err = Actions.MergePullRequest(ctx, doer, pr.Issue.Repo, pr.Issue); err != nil {
+		log.Error("Failed to create action for merge pull request, pull_request_id: %d, error: %v", pr.ID, err)
 	}
 
 	// Reload pull request information.
@@ -372,7 +375,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		commits = append([]*git.Commit{mergeCommit}, commits...)
 	}
 
-	pcs, err := CommitsToPushCommits(commits).ToApiPayloadCommits(pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
+	pcs, err := CommitsToPushCommits(commits).ToApiPayloadCommits(ctx, pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
 	if err != nil {
 		log.Error("Failed to convert to API payload commits: %v", err)
 		return nil
