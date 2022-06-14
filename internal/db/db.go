@@ -96,8 +96,9 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 		panic("unreachable")
 	}
 
-	// NOTE: GORM has problem detecting existing columns, see https://github.com/gogs/gogs/issues/6091.
-	// Therefore only use it to create new tables, and do customized migration with future changes.
+	// NOTE: GORM has problem detecting existing columns, see
+	// https://github.com/gogs/gogs/issues/6091. Therefore only use it to create new
+	// tables, and do customized migration with future changes.
 	for _, table := range Tables {
 		if db.Migrator().HasTable(table) {
 			continue
