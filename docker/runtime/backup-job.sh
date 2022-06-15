@@ -21,7 +21,7 @@ execute_backup_job() {
 		BACKUP_ARGS="${BACKUP_ARGS} ${BACKUP_EXTRA_ARGS}"
 	fi
 
-	./gogs backup "${BACKUP_ARGS}" || echo "Error: Backup job returned non-successful code." && exit 1
+	./gogs backup ${BACKUP_ARGS} || echo "Error: Backup job returned non-successful code." && exit 1
 }
 
 main() {
