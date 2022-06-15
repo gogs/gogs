@@ -4,6 +4,7 @@ execute_backup_job() {
 	BACKUP_ARG_PATH="${1:-}"
 	BACKUP_ARG_CONFIG="${BACKUP_ARG_CONFIG:-}"
 	BACKUP_ARG_EXCLUDE_REPOS="${BACKUP_ARG_EXCLUDE_REPOS:-}"
+	BACKUP_EXTRA_ARGS="${BACKUP_EXTRA_ARGS:-}"
 	cd "/app/gogs" || exit 1
 
 	BACKUP_ARGS="--target=${BACKUP_ARG_PATH}"
@@ -14,6 +15,10 @@ execute_backup_job() {
 
 	if [ -n "${BACKUP_ARG_EXCLUDE_REPOS}" ]; then
 		BACKUP_ARGS="${BACKUP_ARGS} --exclude-repos=${BACKUP_ARG_EXCLUDE_REPOS}"
+	fi
+
+	if [ -n "${BACKUP_EXTRA_ARGS}" ]; then
+		BACKUP_ARGS="${BACKUP_ARGS} ${BACKUP_EXTRA_ARGS}"
 	fi
 
 	./gogs backup "${BACKUP_ARGS}" || echo "Error: Backup job returned non-successful code." && exit 1
