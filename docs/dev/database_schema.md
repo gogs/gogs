@@ -9,21 +9,26 @@
   Mode   | mode    | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
 
 Primary keys: id
+Indexes: 
+	"access_user_repo_unique" UNIQUE (user_id, repo_id)
 ```
 
 # Table "access_token"
 
 ```
-     FIELD    |    COLUMN    |     POSTGRESQL     |         MYSQL         |      SQLITE3        
---------------+--------------+--------------------+-----------------------+---------------------
-  ID          | id           | BIGSERIAL          | BIGINT AUTO_INCREMENT | INTEGER             
-  UserID      | uid          | BIGINT             | BIGINT                | INTEGER             
-  Name        | name         | TEXT               | LONGTEXT              | TEXT                
-  Sha1        | sha1         | VARCHAR(40) UNIQUE | VARCHAR(40) UNIQUE    | VARCHAR(40) UNIQUE  
-  CreatedUnix | created_unix | BIGINT             | BIGINT                | INTEGER             
-  UpdatedUnix | updated_unix | BIGINT             | BIGINT                | INTEGER             
+     FIELD    |    COLUMN    |         POSTGRESQL          |            MYSQL            |           SQLITE3            
+--------------+--------------+-----------------------------+-----------------------------+------------------------------
+  ID          | id           | BIGSERIAL                   | BIGINT AUTO_INCREMENT       | INTEGER                      
+  UserID      | uid          | BIGINT                      | BIGINT                      | INTEGER                      
+  Name        | name         | TEXT                        | LONGTEXT                    | TEXT                         
+  Sha1        | sha1         | VARCHAR(40) UNIQUE          | VARCHAR(40) UNIQUE          | VARCHAR(40) UNIQUE           
+  SHA256      | sha256       | VARCHAR(64) NOT NULL UNIQUE | VARCHAR(64) NOT NULL UNIQUE | VARCHAR(64) NOT NULL UNIQUE  
+  CreatedUnix | created_unix | BIGINT                      | BIGINT                      | INTEGER                      
+  UpdatedUnix | updated_unix | BIGINT                      | BIGINT                      | INTEGER                      
 
 Primary keys: id
+Indexes: 
+	"idx_access_token_user_id" (uid)
 ```
 
 # Table "lfs_object"

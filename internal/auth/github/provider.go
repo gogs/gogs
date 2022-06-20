@@ -44,11 +44,11 @@ func (p *Provider) Config() interface{} {
 	return p.config
 }
 
-func (p *Provider) HasTLS() bool {
+func (*Provider) HasTLS() bool {
 	return true
 }
 
-func (p *Provider) UseTLS() bool {
+func (*Provider) UseTLS() bool {
 	return true
 }
 

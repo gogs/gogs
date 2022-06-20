@@ -70,7 +70,7 @@ func FindAllMentions(content string) []string {
 // cutoutVerbosePrefix cutouts URL prefix including sub-path to
 // return a clean unified string of request URL path.
 func cutoutVerbosePrefix(prefix string) string {
-	if len(prefix) == 0 || prefix[0] != '/' {
+	if prefix == "" || prefix[0] != '/' {
 		return prefix
 	}
 	count := 0
@@ -122,7 +122,7 @@ func RenderIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string
 var pound = []byte("#")
 
 // RenderCrossReferenceIssueIndexPattern renders issue indexes from other repositories to corresponding links.
-func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, metas map[string]string) []byte {
+func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, _ string, _ map[string]string) []byte {
 	ms := CrossReferenceIssueNumericPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		if m[0] == ' ' || m[0] == '(' {
@@ -141,7 +141,7 @@ func RenderCrossReferenceIssueIndexPattern(rawBytes []byte, urlPrefix string, me
 
 // RenderSha1CurrentPattern renders SHA1 strings to corresponding links that assumes in the same repository.
 func RenderSha1CurrentPattern(rawBytes []byte, urlPrefix string) []byte {
-	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes[:]), func(m string) string {
+	return []byte(Sha1CurrentPattern.ReplaceAllStringFunc(string(rawBytes), func(m string) string {
 		if com.StrTo(m).MustInt() > 0 {
 			return m
 		}
@@ -155,8 +155,7 @@ func RenderSpecialLink(rawBytes []byte, urlPrefix string, metas map[string]strin
 	ms := MentionPattern.FindAll(rawBytes, -1)
 	for _, m := range ms {
 		m = m[bytes.Index(m, []byte("@")):]
-		rawBytes = bytes.Replace(rawBytes, m,
-			[]byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)), -1)
+		rawBytes = bytes.ReplaceAll(rawBytes, m, []byte(fmt.Sprintf(`<a href="%s/%s">%s</a>`, conf.Server.Subpath, m[1:], m)))
 	}
 
 	rawBytes = RenderIssueIndexPattern(rawBytes, urlPrefix, metas)
@@ -186,7 +185,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 	}
 
 	// Skip in case the "src" is empty
-	if len(src) == 0 {
+	if src == "" {
 		buf.WriteString(token.String())
 		return
 	}
@@ -216,7 +215,7 @@ func wrapImgWithLink(urlPrefix string, buf *bytes.Buffer, token html.Token) {
 	buf.WriteString(`">`)
 
 	if needPrepend {
-		src = strings.Replace(urlPrefix+src, " ", "%20", -1)
+		src = strings.ReplaceAll(urlPrefix+src, " ", "%20")
 		buf.WriteString(`<img src="`)
 		buf.WriteString(src)
 		buf.WriteString(`"`)
@@ -347,7 +346,7 @@ func Render(typ Type, input interface{}, urlPrefix string, metas map[string]stri
 		panic(fmt.Sprintf("unrecognized input content type: %T", input))
 	}
 
-	urlPrefix = strings.TrimRight(strings.Replace(urlPrefix, " ", "%20", -1), "/")
+	urlPrefix = strings.TrimRight(strings.ReplaceAll(urlPrefix, " ", "%20"), "/")
 	var rawHTML []byte
 	switch typ {
 	case TypeMarkdown:

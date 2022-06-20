@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"github.com/unknwon/com"
 
@@ -23,9 +24,10 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
-	"gogs.io/gogs/internal/db/errors"
+	dberrors "gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/process"
 	"gogs.io/gogs/internal/tool"
 )
@@ -85,7 +87,7 @@ func discardLocalRepoBranchChanges(localPath, branch string) error {
 	}
 
 	rev := "origin/" + branch
-	if err := git.RepoReset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
+	if err := git.Reset(localPath, rev, git.ResetOptions{Hard: true}); err != nil {
 		return fmt.Errorf("reset [revision: %s]: %v", rev, err)
 	}
 	return nil
@@ -97,7 +99,7 @@ func (repo *Repository) DiscardLocalRepoBranchChanges(branch string) error {
 
 // CheckoutNewBranch checks out to a new branch from the a branch name.
 func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
-	if err := git.RepoCheckout(repo.LocalCopyPath(), newBranch, git.CheckoutOptions{
+	if err := git.Checkout(repo.LocalCopyPath(), newBranch, git.CheckoutOptions{
 		BaseBranch: oldBranch,
 		Timeout:    time.Duration(conf.Git.Timeout.Pull) * time.Second,
 	}); err != nil {
@@ -119,6 +121,11 @@ type UpdateRepoFileOptions struct {
 
 // UpdateRepoFile adds or updates a file in repository.
 func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (err error) {
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	if isRepositoryGitPath(opts.NewTreeName) {
+		return errors.Errorf("bad tree path %q", opts.NewTreeName)
+	}
+
 	repoWorkingPool.CheckIn(com.ToStr(repo.ID))
 	defer repoWorkingPool.CheckOut(com.ToStr(repo.ID))
 
@@ -134,12 +141,12 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	if opts.OldBranch != opts.NewBranch {
 		// Directly return error if new branch already exists in the server
 		if git.RepoHasBranch(repoPath, opts.NewBranch) {
-			return errors.BranchAlreadyExists{Name: opts.NewBranch}
+			return dberrors.BranchAlreadyExists{Name: opts.NewBranch}
 		}
 
 		// Otherwise, delete branch from local copy in case out of sync
 		if git.RepoHasBranch(localPath, opts.NewBranch) {
-			if err = git.RepoDeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
+			if err = git.DeleteBranch(localPath, opts.NewBranch, git.DeleteBranchOptions{
 				Force: true,
 			}); err != nil {
 				return fmt.Errorf("delete branch %q: %v", opts.NewBranch, err)
@@ -167,7 +174,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 	// Ignore move step if it's a new file under a directory.
 	// Otherwise, move the file when name changed.
 	if osutil.IsFile(oldFilePath) && opts.OldTreeName != opts.NewTreeName {
-		if err = git.RepoMove(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
+		if err = git.Move(localPath, opts.OldTreeName, opts.NewTreeName); err != nil {
 			return fmt.Errorf("git mv %q %q: %v", opts.OldTreeName, opts.NewTreeName, err)
 		}
 	}
@@ -176,21 +183,27 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		return fmt.Errorf("write file: %v", err)
 	}
 
-	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
-	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
-		AuthUser:  doer,
-		OwnerName: repo.MustOwner().Name,
-		OwnerSalt: repo.MustOwner().Salt,
-		RepoID:    repo.ID,
-		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
-	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	err = git.Push(localPath, "origin", opts.NewBranch,
+		git.PushOptions{
+			CommandOptions: git.CommandOptions{
+				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+					AuthUser:  doer,
+					OwnerName: repo.MustOwner().Name,
+					OwnerSalt: repo.MustOwner().Salt,
+					RepoID:    repo.ID,
+					RepoName:  repo.Name,
+					RepoPath:  repo.RepoPath(),
+				}),
+			},
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -281,21 +294,27 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		return fmt.Errorf("remove file %q: %v", opts.TreePath, err)
 	}
 
-	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
 		return fmt.Errorf("commit changes to %q: %v", localPath, err)
 	}
 
-	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
-		AuthUser:  doer,
-		OwnerName: repo.MustOwner().Name,
-		OwnerSalt: repo.MustOwner().Salt,
-		RepoID:    repo.ID,
-		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
-	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	err = git.Push(localPath, "origin", opts.NewBranch,
+		git.PushOptions{
+			CommandOptions: git.CommandOptions{
+				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+					AuthUser:  doer,
+					OwnerName: repo.MustOwner().Name,
+					OwnerSalt: repo.MustOwner().Salt,
+					RepoID:    repo.ID,
+					RepoName:  repo.Name,
+					RepoPath:  repo.RepoPath(),
+				}),
+			},
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -444,14 +463,26 @@ type UploadRepoFileOptions struct {
 	Files        []string // In UUID format
 }
 
-// isRepositoryGitPath returns true if given path is or resides inside ".git" path of the repository.
+// isRepositoryGitPath returns true if given path is or resides inside ".git"
+// path of the repository.
 func isRepositoryGitPath(path string) bool {
-	return strings.HasSuffix(path, ".git") || strings.Contains(path, ".git"+string(os.PathSeparator))
+	return strings.HasSuffix(path, ".git") ||
+		strings.Contains(path, ".git/") ||
+		strings.Contains(path, `.git\`) ||
+		// Windows treats ".git." the same as ".git"
+		strings.HasSuffix(path, ".git.") ||
+		strings.Contains(path, ".git./") ||
+		strings.Contains(path, `.git.\`)
 }
 
-func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) (err error) {
+func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) error {
 	if len(opts.Files) == 0 {
 		return nil
+	}
+
+	// 🚨 SECURITY: Prevent uploading files into the ".git" directory
+	if isRepositoryGitPath(opts.TreePath) {
+		return errors.Errorf("bad tree path %q", opts.TreePath)
 	}
 
 	uploads, err := GetUploadsByUUIDs(opts.Files)
@@ -487,7 +518,9 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 			continue
 		}
 
-		// Prevent copying files into .git directory, see https://gogs.io/gogs/issues/5558.
+		upload.Name = pathutil.Clean(upload.Name)
+
+		// 🚨 SECURITY: Prevent uploading files into the ".git" directory
 		if isRepositoryGitPath(upload.Name) {
 			continue
 		}
@@ -498,21 +531,27 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		}
 	}
 
-	if err = git.RepoAdd(localPath, git.AddOptions{All: true}); err != nil {
+	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.RepoCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
-	envs := ComposeHookEnvs(ComposeHookEnvsOptions{
-		AuthUser:  doer,
-		OwnerName: repo.MustOwner().Name,
-		OwnerSalt: repo.MustOwner().Salt,
-		RepoID:    repo.ID,
-		RepoName:  repo.Name,
-		RepoPath:  repo.RepoPath(),
-	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	err = git.Push(localPath, "origin", opts.NewBranch,
+		git.PushOptions{
+			CommandOptions: git.CommandOptions{
+				Envs: ComposeHookEnvs(ComposeHookEnvsOptions{
+					AuthUser:  doer,
+					OwnerName: repo.MustOwner().Name,
+					OwnerSalt: repo.MustOwner().Salt,
+					RepoID:    repo.ID,
+					RepoName:  repo.Name,
+					RepoPath:  repo.RepoPath(),
+				}),
+			},
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 

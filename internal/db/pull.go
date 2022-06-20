@@ -621,11 +621,6 @@ func (pr *PullRequest) UpdateCols(cols ...string) error {
 
 // UpdatePatch generates and saves a new patch.
 func (pr *PullRequest) UpdatePatch() (err error) {
-	if pr.HeadRepo == nil {
-		log.Trace("PullRequest[%d].UpdatePatch: ignored corrupted data", pr.ID)
-		return nil
-	}
-
 	headGitRepo, err := git.Open(pr.HeadRepo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("open repository: %v", err)
@@ -634,12 +629,12 @@ func (pr *PullRequest) UpdatePatch() (err error) {
 	// Add a temporary remote.
 	tmpRemote := com.ToStr(time.Now().UnixNano())
 	baseRepoPath := RepoPath(pr.BaseRepo.MustOwner().Name, pr.BaseRepo.Name)
-	err = headGitRepo.AddRemote(tmpRemote, baseRepoPath, git.AddRemoteOptions{Fetch: true})
+	err = headGitRepo.RemoteAdd(tmpRemote, baseRepoPath, git.RemoteAddOptions{Fetch: true})
 	if err != nil {
 		return fmt.Errorf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 	defer func() {
-		if err := headGitRepo.RemoveRemote(tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
@@ -678,13 +673,13 @@ func (pr *PullRequest) PushToBaseRepo() (err error) {
 	}
 
 	tmpRemote := fmt.Sprintf("tmp-pull-%d", pr.ID)
-	if err = headGitRepo.AddRemote(tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
+	if err = headGitRepo.RemoteAdd(tmpRemote, pr.BaseRepo.RepoPath()); err != nil {
 		return fmt.Errorf("add remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 	}
 
 	// Make sure to remove the remote even if the push fails
 	defer func() {
-		if err := headGitRepo.RemoveRemote(tmpRemote); err != nil {
+		if err := headGitRepo.RemoteRemove(tmpRemote); err != nil {
 			log.Error("Failed to remove remote %q [repo_id: %d]: %v", tmpRemote, pr.HeadRepoID, err)
 		}
 	}()
@@ -759,6 +754,11 @@ func (prs PullRequestList) LoadAttributes() error {
 
 func addHeadRepoTasks(prs []*PullRequest) {
 	for _, pr := range prs {
+		if pr.HeadRepo == nil {
+			log.Trace("addHeadRepoTasks[%d]: missing head repository", pr.ID)
+			continue
+		}
+
 		log.Trace("addHeadRepoTasks[%d]: composing new test task", pr.ID)
 		if err := pr.UpdatePatch(); err != nil {
 			log.Error("UpdatePatch: %v", err)

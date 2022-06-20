@@ -6,6 +6,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -29,6 +30,7 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
+	embedConf "gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
@@ -57,10 +59,11 @@ func LoadRepoConfig() {
 	types := []string{"gitignore", "license", "readme", "label"}
 	typeFiles := make([][]string, 4)
 	for i, t := range types {
-		files, err := conf.AssetDir("conf/" + t)
+		files, err := embedConf.FileNames(t)
 		if err != nil {
-			log.Fatal("Failed to get %s files: %v", t, err)
+			log.Fatal("Failed to get %q files: %v", t, err)
 		}
+
 		customPath := filepath.Join(conf.CustomDir(), "conf", t)
 		if com.IsDir(customPath) {
 			customFiles, err := com.StatDir(customPath)
@@ -217,7 +220,7 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
 	case "default_branch":
 		// FIXME: use db migration to solve all at once.
-		if len(repo.DefaultBranch) == 0 {
+		if repo.DefaultBranch == "" {
 			repo.DefaultBranch = "master"
 		}
 	case "num_closed_issues":
@@ -227,7 +230,7 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	case "num_closed_milestones":
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	case "external_tracker_style":
-		if len(repo.ExternalTrackerStyle) == 0 {
+		if repo.ExternalTrackerStyle == "" {
 			repo.ExternalTrackerStyle = markup.IssueNameStyleNumeric
 		}
 	case "created_unix":
@@ -417,7 +420,7 @@ func (repo *Repository) mustOwner(e Engine) *User {
 }
 
 func (repo *Repository) UpdateSize() error {
-	countObject, err := git.RepoCountObjects(repo.RepoPath())
+	countObject, err := git.CountObjects(repo.RepoPath())
 	if err != nil {
 		return fmt.Errorf("count repository objects: %v", err)
 	}
@@ -555,7 +558,7 @@ func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) strin
 }
 
 func (repo *Repository) HasAccess(userID int64) bool {
-	return Perms.Authorize(userID, repo.ID, AccessModeRead,
+	return Perms.Authorize(context.TODO(), userID, repo.ID, AccessModeRead,
 		AccessModeOptions{
 			OwnerID: repo.OwnerID,
 			Private: repo.IsPrivate,
@@ -921,7 +924,7 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 
 	if _, stderr, err = process.ExecDir(-1,
 		tmpPath, fmt.Sprintf("initRepoCommit (git push): %s", tmpPath),
-		"git", "push", "origin", "master"); err != nil {
+		"git", "push"); err != nil {
 		return fmt.Errorf("git push: %s", stderr)
 	}
 	return nil
@@ -940,14 +943,14 @@ type CreateRepoOptions struct {
 }
 
 func getRepoInitFile(tp, name string) ([]byte, error) {
-	relPath := path.Join("conf", tp, strings.TrimLeft(path.Clean("/"+name), "/"))
+	relPath := path.Join(tp, strings.TrimLeft(path.Clean("/"+name), "/"))
 
 	// Use custom file when available.
-	customPath := filepath.Join(conf.CustomDir(), relPath)
+	customPath := filepath.Join(conf.CustomDir(), "conf", relPath)
 	if osutil.IsFile(customPath) {
 		return ioutil.ReadFile(customPath)
 	}
-	return conf.Asset(relPath)
+	return embedConf.Files.ReadFile(relPath)
 }
 
 func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {
@@ -1746,7 +1749,7 @@ func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	return append(repos, ownRepos...), nil
 }
 
-func getRepositoryCount(e Engine, u *User) (int64, error) {
+func getRepositoryCount(_ Engine, u *User) (int64, error) {
 	return x.Count(&Repository{OwnerID: u.ID})
 }
 
@@ -1977,8 +1980,10 @@ func GitFsck() {
 		func(idx int, bean interface{}) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
-			err := git.RepoFsck(repoPath, git.FsckOptions{
-				Args:    conf.Cron.RepoHealthCheck.Args,
+			err := git.Fsck(repoPath, git.FsckOptions{
+				CommandOptions: git.CommandOptions{
+					Args: conf.Cron.RepoHealthCheck.Args,
+				},
 				Timeout: conf.Cron.RepoHealthCheck.Timeout,
 			})
 			if err != nil {
@@ -2509,7 +2514,7 @@ func (repo *Repository) CreateNewBranch(oldBranch, newBranch string) (err error)
 		return fmt.Errorf("create new branch [base: %s, new: %s]: %v", oldBranch, newBranch, err)
 	}
 
-	if err = git.RepoPush(localPath, "origin", newBranch); err != nil {
+	if err = git.Push(localPath, "origin", newBranch); err != nil {
 		return fmt.Errorf("push [branch: %s]: %v", newBranch, err)
 	}
 

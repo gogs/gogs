@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -112,10 +113,10 @@ func parseKeyString(content string) (string, error) {
 	// Transform all legal line endings to a single "\n"
 
 	// Replace all windows full new lines ("\r\n")
-	content = strings.Replace(content, "\r\n", "\n", -1)
+	content = strings.ReplaceAll(content, "\r\n", "\n")
 
 	// Replace all windows half new lines ("\r"), if it happen not to match replace above
-	content = strings.Replace(content, "\r", "\n", -1)
+	content = strings.ReplaceAll(content, "\r", "\n")
 
 	// Replace ending new line as its may cause unwanted behaviour (extra line means not a single line key | OpenSSH key)
 	content = strings.TrimRight(content, "\n")
@@ -147,7 +148,7 @@ func parseKeyString(content string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("extractTypeFromBase64Key: %v", err)
 		}
-		if len(keyType) == 0 {
+		if keyType == "" {
 			keyType = t
 		} else if keyType != t {
 			return "", fmt.Errorf("key type and content does not match: %s - %s", keyType, t)
@@ -374,8 +375,7 @@ func checkKeyContent(content string) error {
 
 func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
-	tmpPath := strings.Replace(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()),
-		"id_rsa.pub"), "\\", "/", -1)
+	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
 	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
 	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
@@ -753,7 +753,7 @@ func DeleteDeployKey(doer *User, id int64) error {
 		if err != nil {
 			return fmt.Errorf("GetRepositoryByID: %v", err)
 		}
-		if !Perms.Authorize(doer.ID, repo.ID, AccessModeAdmin,
+		if !Perms.Authorize(context.TODO(), doer.ID, repo.ID, AccessModeAdmin,
 			AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,

@@ -5,6 +5,8 @@
 package db
 
 import (
+	"context"
+
 	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
 )
@@ -14,24 +16,26 @@ import (
 // NOTE: All methods are sorted in alphabetical order.
 type PermsStore interface {
 	// AccessMode returns the access mode of given user has to the repository.
-	AccessMode(userID, repoID int64, opts AccessModeOptions) AccessMode
-	// Authorize returns true if the user has as good as desired access mode to the repository.
-	Authorize(userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool
-	// SetRepoPerms does a full update to which users have which level of access to given repository.
-	// Keys of the "accessMap" are user IDs.
-	SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error
+	AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) AccessMode
+	// Authorize returns true if the user has as good as desired access mode to the
+	// repository.
+	Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool
+	// SetRepoPerms does a full update to which users have which level of access to
+	// given repository. Keys of the "accessMap" are user IDs.
+	SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error
 }
 
 var Perms PermsStore
 
-// Access represents the highest access level of a user has to a repository.
-// The only access type that is not in this table is the real owner of a repository.
-// In case of an organization repository, the members of the owners team are in this table.
+// Access represents the highest access level of a user has to a repository. The
+// only access type that is not in this table is the real owner of a repository.
+// In case of an organization repository, the members of the owners team are in
+// this table.
 type Access struct {
 	ID     int64
-	UserID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;NOT NULL"`
-	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;NOT NULL"`
-	Mode   AccessMode `gorm:"NOT NULL"`
+	UserID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
+	RepoID int64      `xorm:"UNIQUE(s)" gorm:"uniqueIndex:access_user_repo_unique;not null"`
+	Mode   AccessMode `gorm:"not null"`
 }
 
 // AccessMode is the access mode of a user has to a repository.
@@ -83,7 +87,7 @@ type AccessModeOptions struct {
 	Private bool  // Whether the repository is private.
 }
 
-func (db *perms) AccessMode(userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
+func (db *perms) AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) (mode AccessMode) {
 	if repoID <= 0 {
 		return AccessModeNone
 	}
@@ -103,7 +107,7 @@ func (db *perms) AccessMode(userID, repoID int64, opts AccessModeOptions) (mode 
 	}
 
 	access := new(Access)
-	err := db.Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
+	err := db.WithContext(ctx).Where("user_id = ? AND repo_id = ?", userID, repoID).First(access).Error
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
 			log.Error("Failed to get access [user_id: %d, repo_id: %d]: %v", userID, repoID, err)
@@ -113,11 +117,11 @@ func (db *perms) AccessMode(userID, repoID int64, opts AccessModeOptions) (mode 
 	return access.Mode
 }
 
-func (db *perms) Authorize(userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
-	return desired <= db.AccessMode(userID, repoID, opts)
+func (db *perms) Authorize(ctx context.Context, userID, repoID int64, desired AccessMode, opts AccessModeOptions) bool {
+	return desired <= db.AccessMode(ctx, userID, repoID, opts)
 }
 
-func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) error {
+func (db *perms) SetRepoPerms(ctx context.Context, repoID int64, accessMap map[int64]AccessMode) error {
 	records := make([]*Access, 0, len(accessMap))
 	for userID, mode := range accessMap {
 		records = append(records, &Access{
@@ -127,7 +131,7 @@ func (db *perms) SetRepoPerms(repoID int64, accessMap map[int64]AccessMode) erro
 		})
 	}
 
-	return db.Transaction(func(tx *gorm.DB) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Where("repo_id = ?", repoID).Delete(new(Access)).Error
 		if err != nil {
 			return err

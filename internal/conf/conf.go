@@ -22,7 +22,7 @@ import (
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/assets/conf"
+	"gogs.io/gogs/conf"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/semverutil"
 )
@@ -33,21 +33,6 @@ func init() {
 	if err != nil {
 		panic("init console logger: " + err.Error())
 	}
-}
-
-// Asset is a wrapper for getting conf assets.
-func Asset(name string) ([]byte, error) {
-	return conf.Asset(name)
-}
-
-// AssetDir is a wrapper for getting conf assets.
-func AssetDir(name string) ([]string, error) {
-	return conf.AssetDir(name)
-}
-
-// MustAsset is a wrapper for getting conf assets.
-func MustAsset(name string) []byte {
-	return conf.MustAsset(name)
 }
 
 // File is the configuration object.
@@ -62,12 +47,16 @@ var File *ini.File
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
 func Init(customConf string) error {
-	var err error
+	data, err := conf.Files.ReadFile("app.ini")
+	if err != nil {
+		return errors.Wrap(err, `read default "app.ini"`)
+	}
+
 	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, conf.MustAsset("conf/app.ini"))
+	}, data)
 	if err != nil {
-		return errors.Wrap(err, "parse 'conf/app.ini'")
+		return errors.Wrap(err, `parse "app.ini"`)
 	}
 	File.NameMapper = ini.SnackCase
 

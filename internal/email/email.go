@@ -15,9 +15,9 @@ import (
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/assets/templates"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/templates"
 )
 
 const (
@@ -102,7 +102,7 @@ type Issue interface {
 	HTMLURL() string
 }
 
-func SendUserMail(c *macaron.Context, u User, tpl, code, subject, info string) {
+func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,

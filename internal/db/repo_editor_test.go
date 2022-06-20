@@ -5,7 +5,6 @@
 package db
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,21 +12,41 @@ import (
 
 func Test_isRepositoryGitPath(t *testing.T) {
 	tests := []struct {
-		path   string
-		expVal bool
+		path    string
+		wantVal bool
 	}{
-		{path: filepath.Join(".", ".git"), expVal: true},
-		{path: filepath.Join(".", ".git", ""), expVal: true},
-		{path: filepath.Join(".", ".git", "hooks", "pre-commit"), expVal: true},
-		{path: filepath.Join(".git", "hooks"), expVal: true},
-		{path: filepath.Join("dir", ".git"), expVal: true},
+		{path: ".git", wantVal: true},
+		{path: "./.git", wantVal: true},
+		{path: ".git/hooks/pre-commit", wantVal: true},
+		{path: ".git/hooks", wantVal: true},
+		{path: "dir/.git", wantVal: true},
 
-		{path: filepath.Join(".gitignore"), expVal: false},
-		{path: filepath.Join("dir", ".gitkeep"), expVal: false},
+		{path: ".gitignore", wantVal: false},
+		{path: "dir/.gitkeep", wantVal: false},
+
+		// Windows-specific
+		{path: `.git\`, wantVal: true},
+		{path: `.git\hooks\pre-commit`, wantVal: true},
+		{path: `.git\hooks`, wantVal: true},
+		{path: `dir\.git`, wantVal: true},
+
+		{path: `.\.git.`, wantVal: true},
+		{path: `.\.git.\`, wantVal: true},
+		{path: `.git.\hooks\pre-commit`, wantVal: true},
+		{path: `.git.\hooks`, wantVal: true},
+		{path: `dir\.git.`, wantVal: true},
+
+		{path: "./.git.", wantVal: true},
+		{path: "./.git./", wantVal: true},
+		{path: ".git./hooks/pre-commit", wantVal: true},
+		{path: ".git./hooks", wantVal: true},
+		{path: "dir/.git.", wantVal: true},
+
+		{path: `dir\.gitkeep`, wantVal: false},
 	}
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			assert.Equal(t, test.expVal, isRepositoryGitPath(test.path))
+		t.Run(test.path, func(t *testing.T) {
+			assert.Equal(t, test.wantVal, isRepositoryGitPath(test.path))
 		})
 	}
 }

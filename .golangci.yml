@@ -1,4 +1,9 @@
 linters-settings:
+  staticcheck:
+    checks: [
+      "all",
+      "-SA1019" # There are valid use cases of strings.Title
+    ]
   nakedret:
     max-func-lines: 0 # Disallow any unnamed return statement
 
@@ -19,3 +24,4 @@ linters:
     - rowserrcheck
     - unconvert
     - goimports
+    - unparam

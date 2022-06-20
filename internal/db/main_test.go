@@ -8,16 +8,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"gorm.io/gorm/schema"
+	_ "modernc.org/sqlite"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/testutil"
 )
 
@@ -56,48 +53,4 @@ func clearTables(t *testing.T, db *gorm.DB, tables ...interface{}) error {
 		}
 	}
 	return nil
-}
-
-func initTestDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
-	t.Helper()
-
-	dbpath := filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
-	now := time.Now().UTC().Truncate(time.Second)
-	db, err := openDB(
-		conf.DatabaseOpts{
-			Type: "sqlite3",
-			Path: dbpath,
-		},
-		&gorm.Config{
-			NamingStrategy: schema.NamingStrategy{
-				SingularTable: true,
-			},
-			NowFunc: func() time.Time {
-				return now
-			},
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		sqlDB, err := db.DB()
-		if err == nil {
-			_ = sqlDB.Close()
-		}
-
-		if t.Failed() {
-			t.Logf("Database %q left intact for inspection", dbpath)
-			return
-		}
-
-		_ = os.Remove(dbpath)
-	})
-
-	err = db.Migrator().AutoMigrate(tables...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return db
 }

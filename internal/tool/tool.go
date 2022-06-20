@@ -143,10 +143,10 @@ func AvatarLink(email string) (url string) {
 			log.Warn("AvatarLink.LibravatarService.FromEmail [%s]: %v", email, err)
 		}
 	}
-	if len(url) == 0 && !conf.Picture.DisableGravatar {
+	if url == "" && !conf.Picture.DisableGravatar {
 		url = conf.Picture.GravatarSource + HashEmail(email) + "?d=identicon"
 	}
-	if len(url) == 0 {
+	if url == "" {
 		url = conf.Server.Subpath + "/img/avatar_default.png"
 	}
 	return url
@@ -309,10 +309,10 @@ func TimeSince(t time.Time, lang string) template.HTML {
 }
 
 // Subtract deals with subtraction of all types of number.
-func Subtract(left interface{}, right interface{}) interface{} {
+func Subtract(left, right interface{}) interface{} {
 	var rleft, rright int64
 	var fleft, fright float64
-	var isInt = true
+	isInt := true
 	switch left := left.(type) {
 	case int:
 		rleft = int64(left)

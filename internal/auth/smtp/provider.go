@@ -92,7 +92,7 @@ func (p *Provider) Config() interface{} {
 	return p.config
 }
 
-func (p *Provider) HasTLS() bool {
+func (*Provider) HasTLS() bool {
 	return true
 }
 
@@ -115,7 +115,7 @@ type smtpLoginAuth struct {
 	username, password string
 }
 
-func (auth *smtpLoginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+func (auth *smtpLoginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
 	return "LOGIN", []byte(auth.username), nil
 }
 

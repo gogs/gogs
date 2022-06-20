@@ -4,7 +4,6 @@ scripts
 scripts/**
 .github/
 .github/**
-config.codekit
 .dockerignore
 *.yml
 *.md
@@ -12,3 +11,5 @@ config.codekit
 .gitignore
 Dockerfile*
 gogs
+
+!Taskfile.yml

@@ -15,9 +15,7 @@ import (
 	log "unknwon.dev/clog/v2"
 )
 
-var (
-	ErrExecTimeout = errors.New("process execution timeout")
-)
+var ErrExecTimeout = errors.New("process execution timeout")
 
 const DEFAULT_TIMEOUT = 60 * time.Second
 
@@ -41,8 +39,10 @@ func (c *pidCounter) PID() int64 {
 	return c.pid
 }
 
-var counter = new(pidCounter)
-var Processes []*Process
+var (
+	counter   = new(pidCounter)
+	Processes []*Process
+)
 
 // Add adds a process to global list and returns its PID.
 func Add(desc string, cmd *exec.Cmd) int64 {

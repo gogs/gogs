@@ -58,6 +58,15 @@
 {{if .RequireAutosize}}
 	<script src="{{AppSubURL}}/plugins/autosize-4.0.2/autosize.min.js"></script>
 {{end}}
+{{if .IsMarkdown}}
+	<script src="{{AppSubURL}}/plugins/mermaid-8.14.0/mermaid.min.js"></script>
+	<script>
+		$(document).ready(function () {
+			mermaid.init({startOnLoad: true, noteMargin: 10}, ".language-mermaid");
+		});
+	</script>
+{{end}}
+
 <script src="{{AppSubURL}}/js/libs/emojify-1.1.0.min.js"></script>
 <script src="{{AppSubURL}}/js/libs/clipboard-2.0.4.min.js"></script>
 

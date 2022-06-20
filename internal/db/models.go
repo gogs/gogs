@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -83,19 +84,19 @@ func getEngine() (*xorm.Engine, error) {
 			connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
 				conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Name, Param)
 		}
-		var engineParams = map[string]string{"rowFormat": "DYNAMIC"}
+		engineParams := map[string]string{"rowFormat": "DYNAMIC"}
 		return xorm.NewEngineWithParams(conf.Database.Type, connStr, engineParams)
 
 	case "postgres":
 		conf.UsePostgreSQL = true
-		host, port := parsePostgreSQLHostPort(conf.Database.Host)
+		host, port := dbutil.ParsePostgreSQLHostPort(conf.Database.Host)
 		connStr = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
 			conf.Database.User, conf.Database.Password, host, port, conf.Database.Name, conf.Database.SSLMode, conf.Database.Schema)
 		driver = "pgx"
 
 	case "mssql":
 		conf.UseMSSQL = true
-		host, port := parseMSSQLHostPort(conf.Database.Host)
+		host, port := dbutil.ParseMSSQLHostPort(conf.Database.Host)
 		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, conf.Database.Name, conf.Database.User, conf.Database.Password)
 
 	case "sqlite3":
@@ -181,16 +182,17 @@ func SetEngine() (*gorm.DB, error) {
 }
 
 func NewEngine() (err error) {
-	if _, err = SetEngine(); err != nil {
+	db, err := SetEngine()
+	if err != nil {
 		return err
 	}
 
-	if err = migrations.Migrate(x); err != nil {
+	if err = migrations.Migrate(db); err != nil {
 		return fmt.Errorf("migrate: %v", err)
 	}
 
 	if err = x.StoreEngine("InnoDB").Sync2(legacyTables...); err != nil {
-		return fmt.Errorf("sync structs to database tables: %v\n", err)
+		return errors.Wrap(err, "sync tables")
 	}
 
 	return nil
@@ -207,7 +209,7 @@ type Statistic struct {
 	}
 }
 
-func GetStatistic() (stats Statistic) {
+func GetStatistic(ctx context.Context) (stats Statistic) {
 	stats.Counter.User = CountUsers()
 	stats.Counter.Org = CountOrganizations()
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
@@ -222,7 +224,7 @@ func GetStatistic() (stats Statistic) {
 	stats.Counter.Follow, _ = x.Count(new(Follow))
 	stats.Counter.Mirror, _ = x.Count(new(Mirror))
 	stats.Counter.Release, _ = x.Count(new(Release))
-	stats.Counter.LoginSource = LoginSources.Count()
+	stats.Counter.LoginSource = LoginSources.Count(ctx)
 	stats.Counter.Webhook, _ = x.Count(new(Webhook))
 	stats.Counter.Milestone, _ = x.Count(new(Milestone))
 	stats.Counter.Label, _ = x.Count(new(Label))

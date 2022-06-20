@@ -95,7 +95,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 				c.Data["IsIPythonNotebook"] = true
 				c.Data["RawFileLink"] = c.Repo.RepoLink + "/raw/" + path.Join(c.Repo.BranchName, c.Repo.TreePath, readmeFile.Name())
 			default:
-				p = bytes.Replace(p, []byte("\n"), []byte(`<br>`), -1)
+				p = bytes.ReplaceAll(p, []byte("\n"), []byte(`<br>`))
 			}
 			c.Data["FileContent"] = string(p)
 		}
@@ -177,7 +177,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 			var output bytes.Buffer
 			lines := strings.Split(fileContent, "\n")
 			// Remove blank line at the end of file
-			if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
+			if len(lines) > 0 && lines[len(lines)-1] == "" {
 				lines = lines[:len(lines)-1]
 			}
 			for index, line := range lines {

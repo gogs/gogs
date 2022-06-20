@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/errutil"
 )
 
-func Test_loginSourceFiles_GetByID(t *testing.T) {
+func TestLoginSourceFiles_GetByID(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101},
@@ -22,20 +23,18 @@ func Test_loginSourceFiles_GetByID(t *testing.T) {
 
 	t.Run("source does not exist", func(t *testing.T) {
 		_, err := store.GetByID(1)
-		expErr := ErrLoginSourceNotExist{args: errutil.Args{"id": int64(1)}}
-		assert.Equal(t, expErr, err)
+		wantErr := ErrLoginSourceNotExist{args: errutil.Args{"id": int64(1)}}
+		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("source exists", func(t *testing.T) {
 		source, err := store.GetByID(101)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		assert.Equal(t, int64(101), source.ID)
 	})
 }
 
-func Test_loginSourceFiles_Len(t *testing.T) {
+func TestLoginSourceFiles_Len(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101},
@@ -45,7 +44,7 @@ func Test_loginSourceFiles_Len(t *testing.T) {
 	assert.Equal(t, 1, store.Len())
 }
 
-func Test_loginSourceFiles_List(t *testing.T) {
+func TestLoginSourceFiles_List(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101, IsActived: true},
@@ -65,7 +64,7 @@ func Test_loginSourceFiles_List(t *testing.T) {
 	})
 }
 
-func Test_loginSourceFiles_Update(t *testing.T) {
+func TestLoginSourceFiles_Update(t *testing.T) {
 	store := &loginSourceFiles{
 		sources: []*LoginSource{
 			{ID: 101, IsActived: true, IsDefault: true},

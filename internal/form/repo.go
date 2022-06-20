@@ -12,7 +12,9 @@ import (
 	"github.com/unknwon/com"
 	"gopkg.in/macaron.v1"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/netutil"
 )
 
 // _______________________________________    _________.______________________ _______________.___.
@@ -69,6 +71,11 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		if err != nil {
 			return "", db.ErrInvalidCloneAddr{IsURLError: true}
 		}
+
+		if netutil.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
+			return "", db.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
+		}
+
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
 			u.User = url.UserPassword(f.AuthUsername, f.AuthPassword)
 		}

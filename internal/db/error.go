@@ -194,9 +194,10 @@ func (err ErrLastOrgOwner) Error() string {
 //         \/     \/|__|              \/                       \/
 
 type ErrInvalidCloneAddr struct {
-	IsURLError         bool
-	IsInvalidPath      bool
-	IsPermissionDenied bool
+	IsURLError            bool
+	IsInvalidPath         bool
+	IsPermissionDenied    bool
+	IsBlockedLocalAddress bool
 }
 
 func IsErrInvalidCloneAddr(err error) bool {
@@ -205,8 +206,8 @@ func IsErrInvalidCloneAddr(err error) bool {
 }
 
 func (err ErrInvalidCloneAddr) Error() string {
-	return fmt.Sprintf("invalid clone address [is_url_error: %v, is_invalid_path: %v, is_permission_denied: %v]",
-		err.IsURLError, err.IsInvalidPath, err.IsPermissionDenied)
+	return fmt.Sprintf("invalid clone address [is_url_error: %v, is_invalid_path: %v, is_permission_denied: %v, is_blocked_local_address: %v]",
+		err.IsURLError, err.IsInvalidPath, err.IsPermissionDenied, err.IsBlockedLocalAddress)
 }
 
 type ErrUpdateTaskNotExist struct {

@@ -30,10 +30,13 @@
 		gogs/gogs:${MINOR_RELEASE}-armv7
 	$ docker manifest push gogs/gogs:${MINOR_RELEASE}
 
-	# Only push "linux/amd64" for now
 	$ echo ${GITHUB_CR_PAT} | docker login ghcr.io -u <USERNAME> --password-stdin
-	$ docker pull --platform linux/amd64 gogs/gogs:${VERSION}
-	$ docker tag gogs/gogs:${VERSION} ghcr.io/gogs/gogs:${MINOR_RELEASE}
+	$ docker manifest create \
+		ghcr.io/gogs/gogs:${MINOR_RELEASE} \
+		gogs/gogs:${MINOR_RELEASE}-amd64 \
+		gogs/gogs:${MINOR_RELEASE}-arm64 \
+		gogs/gogs:${MINOR_RELEASE}-armv7
+	$ docker manifest push ghcr.io/gogs/gogs:${MINOR_RELEASE}
 	$ docker push ghcr.io/gogs/gogs:${MINOR_RELEASE}
 	```
 2. Delete ephemeral tags from the [Docker Hub](https://hub.docker.com/repository/docker/gogs/gogs/tags).
@@ -53,18 +56,17 @@ All commands are starting at the repository root.
 	$ TAGS="cert pam" task release
 
 	# Produce the Tarball
-    $ export VERSION=0.12.4
+	$ export VERSION=0.12.4
 	$ cd release && tar czf gogs_${VERSION}_linux_$(go env GOARCH).tar.gz gogs
 	```
 - ARMv7:
 	```sh
-	# Extract the binary from the Docker image
-	$ docker pull --platform linux/arm/v7 gogs/gogs:${VERSION}
-	$ docker run \
-		--platform linux/arm/v7 \
-		-v ${PWD}:/opt/mount/ \
-		gogs/gogs:${VERSION} \
-		bash -c "cp /app/gogs/gogs /opt/mount/"
+	# Produce the ZIP archive
+	$ TAGS="cert pam" task release
+
+	# Produce the Tarball
+	$ export VERSION=0.12.4
+	$ cd release && tar czf gogs_${VERSION}_linux_armv7.tar.gz gogs
 	```
 - ARMv8:
 	```sh
@@ -72,11 +74,11 @@ All commands are starting at the repository root.
 	$ TAGS="cert pam" task release
 
 	# Produce the Tarball
-    $ export VERSION=0.12.4
+	$ export VERSION=0.12.4
 	$ cd release && tar czf gogs_${VERSION}_linux_armv8.tar.gz gogs
 	```
 - Windows:
 	```sh
 	$ TAGS=cert task release
-	$ TAGS="cert minwinsvc" task release
+	$ TAGS="cert minwinsvc" task release --force
 	```

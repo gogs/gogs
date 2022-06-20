@@ -38,7 +38,7 @@ func Home(c *context.Context) {
 
 	// Check auto-login.
 	uname := c.GetCookie(conf.Security.CookieUsername)
-	if len(uname) != 0 {
+	if uname != "" {
 		c.Redirect(conf.Server.Subpath + "/user/login")
 		return
 	}
@@ -104,7 +104,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	)
 
 	keyword := c.Query("q")
-	if len(keyword) == 0 {
+	if keyword == "" {
 		users, err = opts.Ranger(page, opts.PageSize)
 		if err != nil {
 			c.Error(err, "ranger")

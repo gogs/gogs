@@ -43,7 +43,7 @@ func isLink(link []byte) bool {
 }
 
 // Link defines how formal links should be processed to produce corresponding HTML elements.
-func (r *MarkdownRenderer) Link(out *bytes.Buffer, link []byte, title []byte, content []byte) {
+func (r *MarkdownRenderer) Link(out *bytes.Buffer, link, title, content []byte) {
 	if len(link) > 0 && !isLink(link) {
 		if link[0] != '#' {
 			link = []byte(path.Join(r.urlPrefix, string(link)))
@@ -67,8 +67,8 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 		m := CommitPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "commit/")
-			j := strings.Index(string(m), "#")
+			i := bytes.Index(m, []byte("commit/"))
+			j := bytes.Index(m, []byte("#"))
 			if j == -1 {
 				j = len(m)
 			}
@@ -79,8 +79,8 @@ func (r *MarkdownRenderer) AutoLink(out *bytes.Buffer, link []byte, kind int) {
 		m = IssueFullPattern.Find(link)
 		if m != nil {
 			m = bytes.TrimSpace(m)
-			i := strings.Index(string(m), "issues/")
-			j := strings.Index(string(m), "#")
+			i := bytes.Index(m, []byte("issues/"))
+			j := bytes.Index(m, []byte("#"))
 			if j == -1 {
 				j = len(m)
 			}

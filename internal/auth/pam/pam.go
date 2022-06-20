@@ -1,3 +1,4 @@
+//go:build pam
 // +build pam
 
 // Copyright 2014 The Gogs Authors. All rights reserved.
@@ -25,5 +26,9 @@ func (c *Config) doAuth(login, password string) error {
 		return err
 	}
 
-	return t.Authenticate(0)
+	err = t.Authenticate(0)
+	if err != nil {
+		return err
+	}
+	return t.AcctMgmt(0)
 }

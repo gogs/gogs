@@ -38,7 +38,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 	}
 
 	uname := c.GetCookie(conf.Security.CookieUsername)
-	if len(uname) == 0 {
+	if uname == "" {
 		return false, nil
 	}
 
@@ -102,7 +102,7 @@ func Login(c *context.Context) {
 	}
 
 	// Display normal login page
-	loginSources, err := db.LoginSources.List(db.ListLoginSourceOpts{OnlyActivated: true})
+	loginSources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -149,7 +149,7 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 func LoginPost(c *context.Context, f form.SignIn) {
 	c.Title("sign_in")
 
-	loginSources, err := db.LoginSources.List(db.ListLoginSourceOpts{OnlyActivated: true})
+	loginSources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{OnlyActivated: true})
 	if err != nil {
 		c.Error(err, "list activated login sources")
 		return
@@ -161,7 +161,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	u, err := db.Users.Authenticate(f.UserName, f.Password, f.LoginSource)
+	u, err := db.Users.Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
 	if err != nil {
 		switch errors.Cause(err).(type) {
 		case auth.ErrBadCredentials:
@@ -210,7 +210,7 @@ func LoginTwoFactorPost(c *context.Context) {
 		return
 	}
 
-	t, err := db.TwoFactors.GetByUserID(userID)
+	t, err := db.TwoFactors.GetByUserID(c.Req.Context(), userID)
 	if err != nil {
 		c.Error(err, "get two factor by user ID")
 		return
@@ -384,7 +384,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 
 func Activate(c *context.Context) {
 	code := c.Query("code")
-	if len(code) == 0 {
+	if code == "" {
 		c.Data["IsActivatePage"] = true
 		if c.User.IsActive {
 			c.NotFound()
@@ -515,7 +515,7 @@ func ResetPasswd(c *context.Context) {
 	c.Title("auth.reset_password")
 
 	code := c.Query("code")
-	if len(code) == 0 {
+	if code == "" {
 		c.NotFound()
 		return
 	}
@@ -528,7 +528,7 @@ func ResetPasswdPost(c *context.Context) {
 	c.Title("auth.reset_password")
 
 	code := c.Query("code")
-	if len(code) == 0 {
+	if code == "" {
 		c.NotFound()
 		return
 	}

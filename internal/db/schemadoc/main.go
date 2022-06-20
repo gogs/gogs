@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
@@ -77,6 +79,28 @@ func main() {
 		_, _ = w.WriteString(strings.Join(ti.PrimaryKeys, ", "))
 		_, _ = w.WriteString("\n")
 
+		if len(ti.Indexes) > 0 {
+			_, _ = w.WriteString("Indexes: \n")
+			for _, index := range ti.Indexes {
+				_, _ = w.WriteString(fmt.Sprintf("\t%q", index.Name))
+				if index.Class != "" {
+					_, _ = w.WriteString(fmt.Sprintf(" %s", index.Class))
+				}
+				if index.Type != "" {
+					_, _ = w.WriteString(fmt.Sprintf(", %s", index.Type))
+				}
+
+				if len(index.Fields) > 0 {
+					fields := make([]string, len(index.Fields))
+					for i := range index.Fields {
+						fields[i] = index.Fields[i].DBName
+					}
+					_, _ = w.WriteString(fmt.Sprintf(" (%s)", strings.Join(fields, ", ")))
+				}
+				_, _ = w.WriteString("\n")
+			}
+		}
+
 		_, _ = w.WriteString("```\n\n")
 	}
 }
@@ -91,17 +115,21 @@ type tableInfo struct {
 	Name        string
 	Fields      []*tableField
 	PrimaryKeys []string
+	Indexes     []schema.Index
 }
 
 // This function is derived from gorm.io/gorm/migrator/migrator.go:Migrator.CreateTable.
 func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
-	conn, err := gorm.Open(dialector, &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
+	conn, err := gorm.Open(dialector,
+		&gorm.Config{
+			SkipDefaultTransaction: true,
+			NamingStrategy: schema.NamingStrategy{
+				SingularTable: true,
+			},
+			DryRun:               true,
+			DisableAutomaticPing: true,
 		},
-		DryRun:               true,
-		DisableAutomaticPing: true,
-	})
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "open database")
 	}
@@ -133,10 +161,19 @@ func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
 				}
 			}
 
+			var indexes []schema.Index
+			for _, index := range stmt.Schema.ParseIndexes() {
+				indexes = append(indexes, index)
+			}
+			sort.Slice(indexes, func(i, j int) bool {
+				return indexes[i].Name < indexes[j].Name
+			})
+
 			tableInfos = append(tableInfos, &tableInfo{
 				Name:        stmt.Table,
 				Fields:      fields,
 				PrimaryKeys: primaryKeys,
+				Indexes:     indexes,
 			})
 			return nil
 		})

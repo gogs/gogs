@@ -117,7 +117,7 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 		if len(tokenSHA) <= 0 {
 			tokenSHA = c.Query("access_token")
 		}
-		if len(tokenSHA) == 0 {
+		if tokenSHA == "" {
 			// Well, check with header again.
 			auHead := c.Req.Header.Get("Authorization")
 			if len(auHead) > 0 {
@@ -130,15 +130,15 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 
 		// Let's see if token is valid.
 		if len(tokenSHA) > 0 {
-			t, err := db.AccessTokens.GetBySHA(tokenSHA)
+			t, err := db.AccessTokens.GetBySHA1(c.Req.Context(), tokenSHA)
 			if err != nil {
 				if !db.IsErrAccessTokenNotExist(err) {
 					log.Error("GetAccessTokenBySHA: %v", err)
 				}
 				return 0, false
 			}
-			if err = db.AccessTokens.Save(t); err != nil {
-				log.Error("UpdateAccessToken: %v", err)
+			if err = db.AccessTokens.Touch(c.Req.Context(), t.ID); err != nil {
+				log.Error("Failed to touch access token: %v", err)
 			}
 			return t.UserID, true
 		}
@@ -162,7 +162,7 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 
 // authenticatedUser returns the user object of the authenticated user, along with two bool values
 // which indicate whether the user uses HTTP Basic Authentication or token authentication respectively.
-func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasicAuth bool, isTokenAuth bool) {
+func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, isBasicAuth, isTokenAuth bool) {
 	if !db.HasEngine {
 		return nil, false, false
 	}
@@ -208,7 +208,7 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := db.Users.Authenticate(uname, passwd, -1)
+				u, err := db.Users.Authenticate(ctx.Req.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
 						log.Error("Failed to authenticate user: %v", err)

@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/pathutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -64,7 +65,7 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := db.Users.GetByUsername(ownerName)
+		owner, err := db.Users.GetByUsername(c.Req.Context(), ownerName)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -75,7 +76,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(owner.ID, repoName)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
 		if err != nil {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -100,13 +101,13 @@ func HTTPContexter() macaron.Handler {
 			!strings.Contains(action, "info/") &&
 			!strings.Contains(action, "HEAD") &&
 			!strings.Contains(action, "objects/") {
-			c.NotFound()
+			c.Error(http.StatusBadRequest, fmt.Sprintf("Unrecognized action %q", action))
 			return
 		}
 
 		// Handle HTTP Basic Authentication
 		authHead := c.Req.Header.Get("Authorization")
-		if len(authHead) == 0 {
+		if authHead == "" {
 			askCredentials(c, http.StatusUnauthorized, "")
 			return
 		}
@@ -122,7 +123,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
+		authUser, err := db.Users.Authenticate(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
@@ -131,7 +132,7 @@ func HTTPContexter() macaron.Handler {
 
 		// If username and password combination failed, try again using username as a token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA(authUsername)
+			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), authUsername)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c, http.StatusUnauthorized, "")
@@ -141,11 +142,11 @@ func HTTPContexter() macaron.Handler {
 				}
 				return
 			}
-			if err = db.AccessTokens.Save(token); err != nil {
-				log.Error("Failed to update access token: %v", err)
+			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
+				log.Error("Failed to touch access token: %v", err)
 			}
 
-			authUser, err = db.Users.GetByID(token.UserID)
+			authUser, err = db.Users.GetByID(c.Req.Context(), token.UserID)
 			if err != nil {
 				// Once we found token, we're supposed to find its related user,
 				// thus any error is unexpected.
@@ -165,7 +166,7 @@ Please create and use personal access token on user settings page`)
 		if isPull {
 			mode = db.AccessModeRead
 		}
-		if !db.Perms.Authorize(authUser.ID, repo.ID, mode,
+		if !db.Perms.Authorize(c.Req.Context(), authUser.ID, repo.ID, mode,
 			db.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,
@@ -408,15 +409,21 @@ func HTTP(c *HTTPContext) {
 		}
 
 		if route.method != c.Req.Method {
-			c.NotFound()
+			c.Error(http.StatusNotFound)
 			return
 		}
 
-		file := strings.TrimPrefix(reqPath, m[1]+"/")
-		dir, err := getGitRepoPath(m[1])
+		cleaned := pathutil.Clean(m[1])
+		if m[1] != "/"+cleaned {
+			c.Error(http.StatusBadRequest, "Request path contains suspicious characters")
+			return
+		}
+
+		file := strings.TrimPrefix(reqPath, cleaned)
+		dir, err := getGitRepoPath(cleaned)
 		if err != nil {
 			log.Warn("HTTP.getGitRepoPath: %v", err)
-			c.NotFound()
+			c.Error(http.StatusNotFound)
 			return
 		}
 
@@ -435,5 +442,5 @@ func HTTP(c *HTTPContext) {
 		return
 	}
 
-	c.NotFound()
+	c.Error(http.StatusNotFound)
 }

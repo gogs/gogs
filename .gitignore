@@ -15,3 +15,4 @@ profile/
 output*
 /release
 .task
+.envrc

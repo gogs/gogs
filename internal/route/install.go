@@ -221,7 +221,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	conf.Database.SSLMode = f.SSLMode
 	conf.Database.Path = f.DbPath
 
-	if conf.Database.Type == "sqlite3" && len(conf.Database.Path) == 0 {
+	if conf.Database.Type == "sqlite3" && conf.Database.Path == "" {
 		c.FormErr("DbPath")
 		c.RenderWithErr(c.Tr("install.err_empty_db_path"), INSTALL, &f)
 		return
@@ -240,7 +240,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test repository root path.
-	f.RepoRootPath = strings.Replace(f.RepoRootPath, "\\", "/", -1)
+	f.RepoRootPath = strings.ReplaceAll(f.RepoRootPath, "\\", "/")
 	if err := os.MkdirAll(f.RepoRootPath, os.ModePerm); err != nil {
 		c.FormErr("RepoRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_repo_path", err), INSTALL, &f)
@@ -248,7 +248,7 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Test log root path.
-	f.LogRootPath = strings.Replace(f.LogRootPath, "\\", "/", -1)
+	f.LogRootPath = strings.ReplaceAll(f.LogRootPath, "\\", "/")
 	if err := os.MkdirAll(f.LogRootPath, os.ModePerm); err != nil {
 		c.FormErr("LogRootPath")
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), INSTALL, &f)
@@ -280,14 +280,14 @@ func InstallPost(c *context.Context, f form.Install) {
 	}
 
 	// Check logic loophole between disable self-registration and no admin account.
-	if f.DisableRegistration && len(f.AdminName) == 0 {
+	if f.DisableRegistration && f.AdminName == "" {
 		c.FormErr("Services", "Admin")
 		c.RenderWithErr(c.Tr("install.no_admin_and_disable_registration"), INSTALL, f)
 		return
 	}
 
 	// Check admin password.
-	if len(f.AdminName) > 0 && len(f.AdminPasswd) == 0 {
+	if len(f.AdminName) > 0 && f.AdminPasswd == "" {
 		c.FormErr("Admin", "AdminPasswd")
 		c.RenderWithErr(c.Tr("install.err_empty_admin_password"), INSTALL, f)
 		return

@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -42,8 +43,10 @@ portable among all supported database engines.`,
 	},
 }
 
-const currentBackupFormatVersion = 1
-const archiveRootDir = "gogs-backup"
+const (
+	currentBackupFormatVersion = 1
+	archiveRootDir             = "gogs-backup"
+)
 
 func runBackup(c *cli.Context) error {
 	zip.Verbose = c.Bool("verbose")
@@ -92,7 +95,7 @@ func runBackup(c *cli.Context) error {
 
 	// Database
 	dbDir := filepath.Join(rootDir, "db")
-	if err = db.DumpDatabase(conn, dbDir, c.Bool("verbose")); err != nil {
+	if err = db.DumpDatabase(context.Background(), conn, dbDir, c.Bool("verbose")); err != nil {
 		log.Fatal("Failed to dump database: %v", err)
 	}
 	if err = z.AddDir(archiveRootDir+"/db", dbDir); err != nil {

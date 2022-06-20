@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"gopkg.in/ldap.v2"
+	ldap "github.com/go-ldap/ldap/v3"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -72,7 +72,7 @@ func (c *Config) sanitizedUserQuery(username string) (string, bool) {
 		return "", false
 	}
 
-	return strings.Replace(c.Filter, "%s", username, -1), true
+	return strings.ReplaceAll(c.Filter, "%s", username), true
 }
 
 func (c *Config) sanitizedUserDN(username string) (string, bool) {
@@ -83,10 +83,10 @@ func (c *Config) sanitizedUserDN(username string) (string, bool) {
 		return "", false
 	}
 
-	return strings.Replace(c.UserDN, "%s", username, -1), true
+	return strings.ReplaceAll(c.UserDN, "%s", username), true
 }
 
-func (c *Config) sanitizedGroupFilter(group string) (string, bool) {
+func (*Config) sanitizedGroupFilter(group string) (string, bool) {
 	// See http://tools.ietf.org/search/rfc4515
 	badCharacters := "\x00*\\"
 	if strings.ContainsAny(group, badCharacters) {
@@ -97,7 +97,7 @@ func (c *Config) sanitizedGroupFilter(group string) (string, bool) {
 	return group, true
 }
 
-func (c *Config) sanitizedGroupDN(groupDn string) (string, bool) {
+func (*Config) sanitizedGroupDN(groupDn string) (string, bool) {
 	// See http://tools.ietf.org/search/rfc4514: "special characters"
 	badCharacters := "\x00()*\\'\"#+;<>"
 	if strings.ContainsAny(groupDn, badCharacters) || strings.HasPrefix(groupDn, " ") || strings.HasSuffix(groupDn, " ") {
@@ -112,7 +112,7 @@ func (c *Config) findUserDN(l *ldap.Conn, name string) (string, bool) {
 	log.Trace("Search for LDAP user: %s", name)
 	if len(c.BindDN) > 0 && len(c.BindPassword) > 0 {
 		// Replace placeholders with username
-		bindDN := strings.Replace(c.BindDN, "%s", name, -1)
+		bindDN := strings.ReplaceAll(c.BindDN, "%s", name)
 		err := l.Bind(bindDN, c.BindPassword)
 		if err != nil {
 			log.Trace("LDAP: Failed to bind as BindDN '%s': %v", bindDN, err)
@@ -193,7 +193,7 @@ func bindUser(l *ldap.Conn, userDN, passwd string) error {
 // searchEntry searches an LDAP source if an entry (name, passwd) is valid and in the specific filter.
 func (c *Config) searchEntry(name, passwd string, directBind bool) (string, string, string, string, bool, bool) {
 	// See https://tools.ietf.org/search/rfc4513#section-5.1.2
-	if len(passwd) == 0 {
+	if passwd == "" {
 		log.Trace("authentication failed for '%s' with empty password", name)
 		return "", "", "", "", false, false
 	}

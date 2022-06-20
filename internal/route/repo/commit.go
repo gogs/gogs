@@ -25,7 +25,7 @@ const (
 func RefCommits(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 	switch {
-	case len(c.Repo.TreePath) == 0:
+	case c.Repo.TreePath == "":
 		Commits(c)
 	case c.Repo.TreePath == "search":
 		SearchCommits(c)
@@ -35,7 +35,7 @@ func RefCommits(c *context.Context) {
 }
 
 // TODO(unknwon)
-func RenderIssueLinks(oldCommits []*git.Commit, repoLink string) []*git.Commit {
+func RenderIssueLinks(oldCommits []*git.Commit, _ string) []*git.Commit {
 	return oldCommits
 }
 
@@ -85,7 +85,7 @@ func SearchCommits(c *context.Context) {
 	c.Data["PageIsCommits"] = true
 
 	keyword := c.Query("q")
-	if len(keyword) == 0 {
+	if keyword == "" {
 		c.Redirect(c.Repo.RepoLink + "/commits/" + c.Repo.BranchName)
 		return
 	}

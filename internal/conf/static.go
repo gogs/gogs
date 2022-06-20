@@ -101,6 +101,7 @@ var (
 		CookieSecure            bool
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string
+		LocalNetworkAllowlist   []string `delim:","`
 	}
 
 	// Email settings

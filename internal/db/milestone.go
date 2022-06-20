@@ -216,7 +216,7 @@ func CountRepoClosedMilestones(repoID int64) int64 {
 }
 
 // MilestoneStats returns number of open and closed milestones of given repository.
-func MilestoneStats(repoID int64) (open int64, closed int64) {
+func MilestoneStats(repoID int64) (open, closed int64) {
 	open, _ = x.Where("repo_id=? AND is_closed=?", repoID, false).Count(new(Milestone))
 	return open, CountRepoClosedMilestones(repoID)
 }
