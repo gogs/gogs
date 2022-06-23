@@ -58,13 +58,17 @@ var migrations = []Migration{
 
 // Migrate migrates the database schema and/or data to the current version.
 func Migrate(db *gorm.DB) error {
-	err := db.AutoMigrate(new(Version))
-	if err != nil {
-		return errors.Wrap(err, `auto migrate "version" table`)
+	// NOTE: GORM has problem migrating tables that happen to have columns with the
+	// same name, see https://github.com/gogs/gogs/issues/7056.
+	if !db.Migrator().HasTable(new(Version)) {
+		err := db.AutoMigrate(new(Version))
+		if err != nil {
+			return errors.Wrap(err, `auto migrate "version" table`)
+		}
 	}
 
 	var current Version
-	err = db.Where("id = ?", 1).First(&current).Error
+	err := db.Where("id = ?", 1).First(&current).Error
 	if err == gorm.ErrRecordNotFound {
 		err = db.Create(
 			&Version{
