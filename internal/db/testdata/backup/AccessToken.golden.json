@@ -1,3 +1,4 @@
-{"ID":1,"UserID":1,"Name":"test1","Sha1":"56ed62d55225e9ae1275b1c4aa6e3de62f44e730","CreatedUnix":1588568886,"UpdatedUnix":1588572486}
-{"ID":2,"UserID":1,"Name":"test2","Sha1":"16fb74941e834e057d11c59db5d81cdae15be794","CreatedUnix":1588568886,"UpdatedUnix":0}
-{"ID":3,"UserID":2,"Name":"test1","Sha1":"09f170f4ee70ba035587f7df8319b2a3a3d2b74a","CreatedUnix":1588568886,"UpdatedUnix":0}
+{"ID":1,"UserID":1,"Name":"test1","Sha1":"56ed62d55225e9ae1275b1c4aa6e3de62f44e730","SHA256":"d6ba6426326c71d24c0f42a3f266cae492b83fd727b9eb216004489f482fa42b","CreatedUnix":1588568886,"UpdatedUnix":1588572486}
+{"ID":2,"UserID":1,"Name":"test2","Sha1":"16fb74941e834e057d11c59db5d81cdae15be794","SHA256":"fc9b958d5f2c382302e93d1dd24f296de2d87b0edc38e6e8d424b752ca0bcd99","CreatedUnix":1588568886,"UpdatedUnix":0}
+{"ID":3,"UserID":2,"Name":"test1","Sha1":"09f170f4ee70ba035587f7df8319b2a3a3d2b74a","SHA256":"e9a9cb1fb358ebc8009f4612c10dae7f2bcaa4de2ced2f4f6e4894c8eef31ed3","CreatedUnix":1588568886,"UpdatedUnix":0}
+{"ID":4,"UserID":2,"Name":"test2","Sha1":"97aae28f0aa2cc1b496424cbd2fd9eced51c584c","SHA256":"97aae28f0aa2cc1b496424cbd2fd9eced51c584c3179941efbe4e732a19a1dc8","CreatedUnix":1588568886,"UpdatedUnix":0}

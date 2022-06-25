@@ -2,18 +2,19 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package db
+package dbutil
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"gogs.io/gogs/internal/conf"
 )
 
-func Test_parsePostgreSQLHostPort(t *testing.T) {
+func TestParsePostgreSQLHostPort(t *testing.T) {
 	tests := []struct {
 		info    string
 		expHost string
@@ -28,14 +29,14 @@ func Test_parsePostgreSQLHostPort(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			host, port := parsePostgreSQLHostPort(test.info)
+			host, port := ParsePostgreSQLHostPort(test.info)
 			assert.Equal(t, test.expHost, host)
 			assert.Equal(t, test.expPort, port)
 		})
 	}
 }
 
-func Test_parseMSSQLHostPort(t *testing.T) {
+func TestParseMSSQLHostPort(t *testing.T) {
 	tests := []struct {
 		info    string
 		expHost string
@@ -47,25 +48,25 @@ func Test_parseMSSQLHostPort(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			host, port := parseMSSQLHostPort(test.info)
+			host, port := ParseMSSQLHostPort(test.info)
 			assert.Equal(t, test.expHost, host)
 			assert.Equal(t, test.expPort, port)
 		})
 	}
 }
 
-func Test_parseDSN(t *testing.T) {
+func TestNewDSN(t *testing.T) {
 	t.Run("bad dialect", func(t *testing.T) {
-		_, err := newDSN(conf.DatabaseOpts{
+		_, err := NewDSN(conf.DatabaseOpts{
 			Type: "bad_dialect",
 		})
 		assert.Equal(t, "unrecognized dialect: bad_dialect", fmt.Sprintf("%v", err))
 	})
 
 	tests := []struct {
-		name   string
-		opts   conf.DatabaseOpts
-		expDSN string
+		name    string
+		opts    conf.DatabaseOpts
+		wantDSN string
 	}{
 		{
 			name: "mysql: unix",
@@ -76,7 +77,7 @@ func Test_parseDSN(t *testing.T) {
 				User:     "gogs",
 				Password: "pa$$word",
 			},
-			expDSN: "gogs:pa$$word@unix(/tmp/mysql.sock)/gogs?charset=utf8mb4&parseTime=true",
+			wantDSN: "gogs:pa$$word@unix(/tmp/mysql.sock)/gogs?charset=utf8mb4&parseTime=true",
 		},
 		{
 			name: "mysql: tcp",
@@ -87,7 +88,7 @@ func Test_parseDSN(t *testing.T) {
 				User:     "gogs",
 				Password: "pa$$word",
 			},
-			expDSN: "gogs:pa$$word@tcp(localhost:3306)/gogs?charset=utf8mb4&parseTime=true",
+			wantDSN: "gogs:pa$$word@tcp(localhost:3306)/gogs?charset=utf8mb4&parseTime=true",
 		},
 
 		{
@@ -101,7 +102,7 @@ func Test_parseDSN(t *testing.T) {
 				Password: "pa$$word",
 				SSLMode:  "disable",
 			},
-			expDSN: "user='gogs@local' password='pa$$word' host='/tmp/pg.sock' port='5432' dbname='gogs' sslmode='disable' search_path='test'",
+			wantDSN: "user='gogs@local' password='pa$$word' host='/tmp/pg.sock' port='5432' dbname='gogs' sslmode='disable' search_path='test' application_name='gogs'",
 		},
 		{
 			name: "postgres: tcp",
@@ -114,7 +115,7 @@ func Test_parseDSN(t *testing.T) {
 				Password: "pa$$word",
 				SSLMode:  "disable",
 			},
-			expDSN: "user='gogs@local' password='pa$$word' host='127.0.0.1' port='5432' dbname='gogs' sslmode='disable' search_path='test'",
+			wantDSN: "user='gogs@local' password='pa$$word' host='127.0.0.1' port='5432' dbname='gogs' sslmode='disable' search_path='test' application_name='gogs'",
 		},
 
 		{
@@ -126,7 +127,7 @@ func Test_parseDSN(t *testing.T) {
 				User:     "gogs@local",
 				Password: "pa$$word",
 			},
-			expDSN: "server=127.0.0.1; port=1433; database=gogs; user id=gogs@local; password=pa$$word;",
+			wantDSN: "server=127.0.0.1; port=1433; database=gogs; user id=gogs@local; password=pa$$word;",
 		},
 
 		{
@@ -135,16 +136,14 @@ func Test_parseDSN(t *testing.T) {
 				Type: "sqlite3",
 				Path: "/tmp/gogs.db",
 			},
-			expDSN: "file:/tmp/gogs.db?cache=shared&mode=rwc",
+			wantDSN: "file:/tmp/gogs.db?cache=shared&mode=rwc",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			dsn, err := newDSN(test.opts)
-			if err != nil {
-				t.Fatal(err)
-			}
-			assert.Equal(t, test.expDSN, dsn)
+			dsn, err := NewDSN(test.opts)
+			require.NoError(t, err)
+			assert.Equal(t, test.wantDSN, dsn)
 		})
 	}
 }

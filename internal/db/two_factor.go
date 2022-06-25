@@ -18,8 +18,8 @@ import (
 
 // TwoFactor is a 2FA token of a user.
 type TwoFactor struct {
-	ID          int64
-	UserID      int64 `xorm:"UNIQUE" gorm:"UNIQUE"`
+	ID          int64 `gorm:"primaryKey"`
+	UserID      int64 `xorm:"UNIQUE" gorm:"unique"`
 	Secret      string
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64

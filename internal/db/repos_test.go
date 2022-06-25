@@ -5,39 +5,40 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
-func Test_repos(t *testing.T) {
+func TestRepos(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(Repository)}
 	db := &repos{
-		DB: initTestDB(t, "repos", tables...),
+		DB: dbtest.NewDB(t, "repos", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
 		test func(*testing.T, *repos)
 	}{
-		{"create", test_repos_create},
-		{"GetByName", test_repos_GetByName},
+		{"Create", reposCreate},
+		{"GetByName", reposGetByName},
+		{"Touch", reposTouch},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
 				err := clearTables(t, db.DB, tables...)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 			})
 			tc.test(t, db)
 		})
@@ -47,58 +48,91 @@ func Test_repos(t *testing.T) {
 	}
 }
 
-func test_repos_create(t *testing.T, db *repos) {
+func reposCreate(t *testing.T, db *repos) {
+	ctx := context.Background()
+
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.create(1, createRepoOpts{
-			Name: "my.git",
-		})
-		expErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": "*.git"}}
-		assert.Equal(t, expErr, err)
+		_, err := db.Create(ctx,
+			1,
+			CreateRepoOptions{
+				Name: "my.git",
+			},
+		)
+		wantErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": "*.git"}}
+		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("already exists", func(t *testing.T) {
-		_, err := db.create(2, createRepoOpts{
-			Name: "repo1",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, err := db.Create(ctx, 2,
+			CreateRepoOptions{
+				Name: "repo1",
+			},
+		)
+		require.NoError(t, err)
 
-		_, err = db.create(2, createRepoOpts{
-			Name: "repo1",
-		})
-		expErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
-		assert.Equal(t, expErr, err)
+		_, err = db.Create(ctx, 2,
+			CreateRepoOptions{
+				Name: "repo1",
+			},
+		)
+		wantErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
+		assert.Equal(t, wantErr, err)
 	})
 
-	repo, err := db.create(3, createRepoOpts{
-		Name: "repo2",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	repo, err := db.Create(ctx, 3,
+		CreateRepoOptions{
+			Name: "repo2",
+		},
+	)
+	require.NoError(t, err)
 
-	repo, err = db.GetByName(repo.OwnerID, repo.Name)
-	if err != nil {
-		t.Fatal(err)
-	}
+	repo, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	require.NoError(t, err)
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
 }
 
-func test_repos_GetByName(t *testing.T, db *repos) {
-	repo, err := db.create(1, createRepoOpts{
-		Name: "repo1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+func reposGetByName(t *testing.T, db *repos) {
+	ctx := context.Background()
 
-	_, err = db.GetByName(repo.OwnerID, repo.Name)
-	if err != nil {
-		t.Fatal(err)
-	}
+	repo, err := db.Create(ctx, 1,
+		CreateRepoOptions{
+			Name: "repo1",
+		},
+	)
+	require.NoError(t, err)
 
-	_, err = db.GetByName(1, "bad_name")
-	expErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
-	assert.Equal(t, expErr, err)
+	_, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	require.NoError(t, err)
+
+	_, err = db.GetByName(ctx, 1, "bad_name")
+	wantErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
+	assert.Equal(t, wantErr, err)
+}
+
+func reposTouch(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	repo, err := db.Create(ctx, 1,
+		CreateRepoOptions{
+			Name: "repo1",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.WithContext(ctx).Model(new(Repository)).Where("id = ?", repo.ID).Update("is_bare", true).Error
+	require.NoError(t, err)
+
+	// Make sure it is bare
+	got, err := db.GetByName(ctx, repo.OwnerID, repo.Name)
+	require.NoError(t, err)
+	assert.True(t, got.IsBare)
+
+	// Touch it
+	err = db.Touch(ctx, repo.ID)
+	require.NoError(t, err)
+
+	// It should not be bare anymore
+	got, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	require.NoError(t, err)
+	assert.False(t, got.IsBare)
 }

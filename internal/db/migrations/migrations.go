@@ -5,25 +5,24 @@
 package migrations
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	log "unknwon.dev/clog/v2"
-	"xorm.io/xorm"
 )
 
 const minDBVersion = 19
 
 type Migration interface {
 	Description() string
-	Migrate(*xorm.Engine) error
+	Migrate(*gorm.DB) error
 }
 
 type migration struct {
 	description string
-	migrate     func(*xorm.Engine) error
+	migrate     func(*gorm.DB) error
 }
 
-func NewMigration(desc string, fn func(*xorm.Engine) error) Migration {
+func NewMigration(desc string, fn func(*gorm.DB) error) Migration {
 	return &migration{desc, fn}
 }
 
@@ -31,11 +30,11 @@ func (m *migration) Description() string {
 	return m.description
 }
 
-func (m *migration) Migrate(x *xorm.Engine) error {
-	return m.migrate(x)
+func (m *migration) Migrate(db *gorm.DB) error {
+	return m.migrate(db)
 }
 
-// The version table. Should have only one row with id==1
+// Version represents the version table. It should have only one row with `id == 1`.
 type Version struct {
 	ID      int64
 	Version int64
@@ -52,31 +51,43 @@ var migrations = []Migration{
 	// Add new migration here, example:
 	// v18 -> v19:v0.11.55
 	// NewMigration("clean unlinked webhook and hook_tasks", cleanUnlinkedWebhookAndHookTasks),
+
+	// v19 -> v20:v0.13.0
+	NewMigration("migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
+	// v20 -> v21:v0.13.0
+	NewMigration("add index to action.user_id", addIndexToActionUserID),
 }
 
-// Migrate database to current version
-func Migrate(x *xorm.Engine) error {
-	if err := x.Sync(new(Version)); err != nil {
-		return fmt.Errorf("sync: %v", err)
-	}
-
-	currentVersion := &Version{ID: 1}
-	has, err := x.Get(currentVersion)
-	if err != nil {
-		return fmt.Errorf("get: %v", err)
-	} else if !has {
-		// If the version record does not exist we think
-		// it is a fresh installation and we can skip all migrations.
-		currentVersion.ID = 0
-		currentVersion.Version = int64(minDBVersion + len(migrations))
-
-		if _, err = x.InsertOne(currentVersion); err != nil {
-			return fmt.Errorf("insert: %v", err)
+// Migrate migrates the database schema and/or data to the current version.
+func Migrate(db *gorm.DB) error {
+	// NOTE: GORM has problem migrating tables that happen to have columns with the
+	// same name, see https://github.com/gogs/gogs/issues/7056.
+	if !db.Migrator().HasTable(new(Version)) {
+		err := db.AutoMigrate(new(Version))
+		if err != nil {
+			return errors.Wrap(err, `auto migrate "version" table`)
 		}
 	}
 
-	v := currentVersion.Version
-	if minDBVersion > v {
+	var current Version
+	err := db.Where("id = ?", 1).First(&current).Error
+	if err == gorm.ErrRecordNotFound {
+		err = db.Create(
+			&Version{
+				ID:      1,
+				Version: int64(minDBVersion + len(migrations)),
+			},
+		).Error
+		if err != nil {
+			return errors.Wrap(err, "create the version record")
+		}
+		return nil
+
+	} else if err != nil {
+		return errors.Wrap(err, "get the version record")
+	}
+
+	if minDBVersion > current.Version {
 		log.Fatal(`
 Hi there, thank you for using Gogs for so long!
 However, Gogs has stopped supporting auto-migration from your previously installed version.
@@ -104,20 +115,22 @@ In case you're stilling getting this notice, go through instructions again until
 		return nil
 	}
 
-	if int(v-minDBVersion) > len(migrations) {
+	if int(current.Version-minDBVersion) > len(migrations) {
 		// User downgraded Gogs.
-		currentVersion.Version = int64(len(migrations) + minDBVersion)
-		_, err = x.Id(1).Update(currentVersion)
-		return err
+		current.Version = int64(len(migrations) + minDBVersion)
+		return db.Where("id = ?", current.ID).Updates(current).Error
 	}
-	for i, m := range migrations[v-minDBVersion:] {
+
+	for i, m := range migrations[current.Version-minDBVersion:] {
 		log.Info("Migration: %s", m.Description())
-		if err = m.Migrate(x); err != nil {
-			return fmt.Errorf("do migrate: %v", err)
+		if err = m.Migrate(db); err != nil {
+			return errors.Wrap(err, "do migrate")
 		}
-		currentVersion.Version = v + int64(i) + 1
-		if _, err = x.Id(1).Update(currentVersion); err != nil {
-			return err
+
+		current.Version += int64(i) + 1
+		err = db.Where("id = ?", current.ID).Updates(current).Error
+		if err != nil {
+			return errors.Wrap(err, "update the version record")
 		}
 	}
 	return nil

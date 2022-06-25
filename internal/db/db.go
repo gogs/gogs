@@ -11,10 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
-	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
@@ -23,73 +19,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbutil"
 )
-
-// parsePostgreSQLHostPort parses given input in various forms defined in
-// https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
-// and returns proper host and port number.
-func parsePostgreSQLHostPort(info string) (host, port string) {
-	host, port = "127.0.0.1", "5432"
-	if strings.Contains(info, ":") && !strings.HasSuffix(info, "]") {
-		idx := strings.LastIndex(info, ":")
-		host = info[:idx]
-		port = info[idx+1:]
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
-}
-
-func parseMSSQLHostPort(info string) (host, port string) {
-	host, port = "127.0.0.1", "1433"
-	if strings.Contains(info, ":") {
-		host = strings.Split(info, ":")[0]
-		port = strings.Split(info, ":")[1]
-	} else if strings.Contains(info, ",") {
-		host = strings.Split(info, ",")[0]
-		port = strings.TrimSpace(strings.Split(info, ",")[1])
-	} else if len(info) > 0 {
-		host = info
-	}
-	return host, port
-}
-
-// newDSN takes given database options and returns parsed DSN.
-func newDSN(opts conf.DatabaseOpts) (dsn string, err error) {
-	// In case the database name contains "?" with some parameters
-	concate := "?"
-	if strings.Contains(opts.Name, concate) {
-		concate = "&"
-	}
-
-	switch opts.Type {
-	case "mysql":
-		if opts.Host[0] == '/' { // Looks like a unix socket
-			dsn = fmt.Sprintf("%s:%s@unix(%s)/%s%scharset=utf8mb4&parseTime=true",
-				opts.User, opts.Password, opts.Host, opts.Name, concate)
-		} else {
-			dsn = fmt.Sprintf("%s:%s@tcp(%s)/%s%scharset=utf8mb4&parseTime=true",
-				opts.User, opts.Password, opts.Host, opts.Name, concate)
-		}
-
-	case "postgres":
-		host, port := parsePostgreSQLHostPort(opts.Host)
-		dsn = fmt.Sprintf("user='%s' password='%s' host='%s' port='%s' dbname='%s' sslmode='%s' search_path='%s'",
-			opts.User, opts.Password, host, port, opts.Name, opts.SSLMode, opts.Schema)
-
-	case "mssql":
-		host, port := parseMSSQLHostPort(opts.Host)
-		dsn = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;",
-			host, port, opts.Name, opts.User, opts.Password)
-
-	case "sqlite3", "sqlite":
-		dsn = "file:" + opts.Path + "?cache=shared&mode=rwc"
-
-	default:
-		return "", errors.Errorf("unrecognized dialect: %s", opts.Type)
-	}
-
-	return dsn, nil
-}
 
 func newLogWriter() (logger.Writer, error) {
 	sec := conf.File.Section("log.gorm")
@@ -108,40 +37,15 @@ func newLogWriter() (logger.Writer, error) {
 	return &dbutil.Logger{Writer: w}, nil
 }
 
-func openDB(opts conf.DatabaseOpts, cfg *gorm.Config) (*gorm.DB, error) {
-	dsn, err := newDSN(opts)
-	if err != nil {
-		return nil, errors.Wrap(err, "parse DSN")
-	}
-
-	var dialector gorm.Dialector
-	switch opts.Type {
-	case "mysql":
-		dialector = mysql.Open(dsn)
-	case "postgres":
-		dialector = postgres.Open(dsn)
-	case "mssql":
-		dialector = sqlserver.Open(dsn)
-	case "sqlite3":
-		dialector = sqlite.Open(dsn)
-	case "sqlite":
-		dialector = sqlite.Open(dsn)
-		dialector.(*sqlite.Dialector).DriverName = "sqlite"
-	default:
-		panic("unreachable")
-	}
-
-	return gorm.Open(dialector, cfg)
-}
-
 // Tables is the list of struct-to-table mappings.
 //
 // NOTE: Lines are sorted in alphabetical order, each letter in its own line.
 var Tables = []interface{}{
-	new(Access), new(AccessToken),
+	new(Access), new(AccessToken), new(Action),
 	new(LFSObject), new(LoginSource),
 }
 
+// Init initializes the database with given logger.
 func Init(w logger.Writer) (*gorm.DB, error) {
 	level := logger.Info
 	if conf.IsProdMode() {
@@ -154,7 +58,7 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 		LogLevel:      level,
 	})
 
-	db, err := openDB(
+	db, err := dbutil.OpenDB(
 		conf.Database,
 		&gorm.Config{
 			SkipDefaultTransaction: true,
@@ -192,8 +96,9 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 		panic("unreachable")
 	}
 
-	// NOTE: GORM has problem detecting existing columns, see https://github.com/gogs/gogs/issues/6091.
-	// Therefore only use it to create new tables, and do customized migration with future changes.
+	// NOTE: GORM has problem detecting existing columns, see
+	// https://github.com/gogs/gogs/issues/6091. Therefore only use it to create new
+	// tables, and do customized migration with future changes.
 	for _, table := range Tables {
 		if db.Migrator().HasTable(table) {
 			continue
@@ -214,12 +119,14 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 
 	// Initialize stores, sorted in alphabetical order.
 	AccessTokens = &accessTokens{DB: db}
+	Actions = NewActionsStore(db)
 	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}
-	Repos = &repos{DB: db}
+	Repos = NewReposStore(db)
 	TwoFactors = &twoFactors{DB: db}
-	Users = &users{DB: db}
+	Users = NewUsersStore(db)
+	Watches = NewWatchesStore(db)
 
 	return db, nil
 }

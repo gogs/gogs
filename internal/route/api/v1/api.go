@@ -45,7 +45,7 @@ func repoAssignment() macaron.Handler {
 		}
 		c.Repo.Owner = owner
 
-		repo, err := db.Repos.GetByName(owner.ID, reponame)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			c.NotFoundOrError(err, "get repository by name")
 			return
@@ -57,7 +57,7 @@ func repoAssignment() macaron.Handler {
 		if c.IsTokenAuth && c.User.IsAdmin {
 			c.Repo.AccessMode = db.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = db.Perms.AccessMode(c.UserID(), repo.ID,
+			c.Repo.AccessMode = db.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
 				db.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,

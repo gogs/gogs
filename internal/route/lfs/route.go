@@ -58,7 +58,7 @@ func authenticate() macaron.Handler {
 			return
 		}
 
-		user, err := db.Users.Authenticate(username, password, -1)
+		user, err := db.Users.Authenticate(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(c.Resp)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
@@ -72,7 +72,7 @@ func authenticate() macaron.Handler {
 
 		// If username and password authentication failed, try again using username as an access token.
 		if auth.IsErrBadCredentials(err) {
-			token, err := db.AccessTokens.GetBySHA(username)
+			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), username)
 			if err != nil {
 				if db.IsErrAccessTokenNotExist(err) {
 					askCredentials(c.Resp)
@@ -82,11 +82,11 @@ func authenticate() macaron.Handler {
 				}
 				return
 			}
-			if err = db.AccessTokens.Save(token); err != nil {
-				log.Error("Failed to update access token: %v", err)
+			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
+				log.Error("Failed to touch access token: %v", err)
 			}
 
-			user, err = db.Users.GetByID(token.UserID)
+			user, err = db.Users.GetByID(c.Req.Context(), token.UserID)
 			if err != nil {
 				// Once we found the token, we're supposed to find its related user,
 				// thus any error is unexpected.
@@ -108,7 +108,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
-		owner, err := db.Users.GetByUsername(username)
+		owner, err := db.Users.GetByUsername(c.Req.Context(), username)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -119,7 +119,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(owner.ID, reponame)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -130,7 +130,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		if !db.Perms.Authorize(actor.ID, repo.ID, mode,
+		if !db.Perms.Authorize(c.Req.Context(), actor.ID, repo.ID, mode,
 			db.AccessModeOptions{
 				OwnerID: repo.OwnerID,
 				Private: repo.IsPrivate,

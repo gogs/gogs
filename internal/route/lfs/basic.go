@@ -44,7 +44,7 @@ func (h *basicHandler) Storager(storage lfsutil.Storage) lfsutil.Storager {
 
 // GET /{owner}/{repo}.git/info/lfs/object/basic/{oid}
 func (h *basicHandler) serveDownload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
-	object, err := db.LFS.GetObjectByOID(repo.ID, oid)
+	object, err := db.LFS.GetObjectByOID(c.Req.Context(), repo.ID, oid)
 	if err != nil {
 		if db.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.Resp, http.StatusNotFound, responseError{
@@ -79,7 +79,7 @@ func (h *basicHandler) serveDownload(c *macaron.Context, repo *db.Repository, oi
 func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid lfsutil.OID) {
 	// NOTE: LFS client will retry upload the same object if there was a partial failure,
 	// therefore we would like to skip ones that already exist.
-	_, err := db.LFS.GetObjectByOID(repo.ID, oid)
+	_, err := db.LFS.GetObjectByOID(c.Req.Context(), repo.ID, oid)
 	if err == nil {
 		// Object exists, drain the request body and we're good.
 		_, _ = io.Copy(ioutil.Discard, c.Req.Request.Body)
@@ -106,7 +106,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid 
 		return
 	}
 
-	err = db.LFS.CreateObject(repo.ID, oid, written, s.Storage())
+	err = db.LFS.CreateObject(c.Req.Context(), repo.ID, oid, written, s.Storage())
 	if err != nil {
 		// NOTE: It is OK to leave the file when the whole operation failed
 		// with a DB error, a retry on client side can safely overwrite the
@@ -139,7 +139,7 @@ func (*basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 		return
 	}
 
-	object, err := db.LFS.GetObjectByOID(repo.ID, request.Oid)
+	object, err := db.LFS.GetObjectByOID(c.Req.Context(), repo.ID, request.Oid)
 	if err != nil {
 		if db.IsErrLFSObjectNotExist(err) {
 			responseJSON(c.Resp, http.StatusNotFound, responseError{

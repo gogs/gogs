@@ -18,6 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 type PullRequest struct {
@@ -43,7 +44,7 @@ type Repository struct {
 	TreePath     string
 	CommitID     string
 	RepoLink     string
-	CloneLink    db.CloneLink
+	CloneLink    repoutil.CloneLink
 	CommitsCount int64
 	Mirror       *db.Mirror
 
@@ -170,7 +171,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.IsAdmin {
 			c.Repo.AccessMode = db.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = db.Perms.AccessMode(c.UserID(), repo.ID,
+			c.Repo.AccessMode = db.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
 				db.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
@@ -181,7 +182,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If the authenticated user has no direct access, see if the repository is a fork
 		// and whether the user has access to the base repository.
 		if c.Repo.AccessMode == db.AccessModeNone && repo.BaseRepo != nil {
-			mode := db.Perms.AccessMode(c.UserID(), repo.BaseRepo.ID,
+			mode := db.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
 				db.AccessModeOptions{
 					OwnerID: repo.BaseRepo.OwnerID,
 					Private: repo.BaseRepo.IsPrivate,

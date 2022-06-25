@@ -44,7 +44,8 @@ tasks:
 
   generate:
     desc: Run all go:generate commands
-    deps: [generate-schemadoc]
+    cmds:
+      - go generate ./...
 
   test:
     desc: Run all tests.

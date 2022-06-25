@@ -55,3 +55,43 @@ func TestRandomChars(t *testing.T) {
 		cache[chars] = true
 	}
 }
+
+func TestEllipsis(t *testing.T) {
+	tests := []struct {
+		name      string
+		str       string
+		threshold int
+		want      string
+	}{
+		{
+			name:      "empty string and zero threshold",
+			str:       "",
+			threshold: 0,
+			want:      "",
+		},
+		{
+			name:      "smaller length than threshold",
+			str:       "ab",
+			threshold: 3,
+			want:      "ab",
+		},
+		{
+			name:      "same length as threshold",
+			str:       "abc",
+			threshold: 3,
+			want:      "abc",
+		},
+		{
+			name:      "greater length than threshold",
+			str:       "ab",
+			threshold: 1,
+			want:      "a...",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := Ellipsis(test.str, test.threshold)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
