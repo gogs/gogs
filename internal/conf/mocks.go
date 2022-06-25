@@ -39,3 +39,11 @@ func SetMockRepository(t *testing.T, opts RepositoryOpts) {
 		Repository = before
 	})
 }
+
+func SetMockUI(t *testing.T, opts UIOpts) {
+	before := UI
+	UI = opts
+	t.Cleanup(func() {
+		UI = before
+	})
+}

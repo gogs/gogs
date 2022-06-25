@@ -31,6 +31,7 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	var cleanup func(db *gorm.DB)
 	switch dbType {
 	case "mysql":
+		conf.UseMySQL = true
 		dbOpts = conf.DatabaseOpts{
 			Type:     "mysql",
 			Host:     os.ExpandEnv("$MYSQL_HOST:$MYSQL_PORT"),
@@ -56,10 +57,11 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 		dbOpts.Name = dbName
 
 		cleanup = func(db *gorm.DB) {
-			db.Exec(fmt.Sprintf("DROP DATABASE `%s`", dbName))
+			_, _ = sqlDB.Exec(fmt.Sprintf("DROP DATABASE `%s`", dbName))
 			_ = sqlDB.Close()
 		}
 	case "postgres":
+		conf.UsePostgreSQL = true
 		dbOpts = conf.DatabaseOpts{
 			Type:     "postgres",
 			Host:     os.ExpandEnv("$PGHOST:$PGPORT"),
@@ -87,10 +89,11 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 		dbOpts.Name = dbName
 
 		cleanup = func(db *gorm.DB) {
-			db.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
+			_, _ = sqlDB.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
 			_ = sqlDB.Close()
 		}
 	case "sqlite":
+		conf.UseSQLite3 = true
 		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
 		dbOpts = conf.DatabaseOpts{
 			Type: "sqlite",

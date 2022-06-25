@@ -238,27 +238,6 @@ var (
 		MaxResponseItems int
 	}
 
-	// UI settings
-	UI struct {
-		ExplorePagingNum   int
-		IssuePagingNum     int
-		FeedMaxCommitNum   int
-		ThemeColorMetaTag  string
-		MaxDisplayFileSize int64
-
-		Admin struct {
-			UserPagingNum   int
-			RepoPagingNum   int
-			NoticePagingNum int
-			OrgPagingNum    int
-		} `ini:"ui.admin"`
-		User struct {
-			RepoPagingNum     int
-			NewsFeedPagingNum int
-			CommitsPagingNum  int
-		} `ini:"ui.user"`
-	}
-
 	// Prometheus settings
 	Prometheus struct {
 		Enabled           bool
@@ -395,6 +374,31 @@ type LFSOpts struct {
 
 // LFS settings
 var LFS LFSOpts
+
+type UIUserOpts struct {
+	RepoPagingNum     int
+	NewsFeedPagingNum int
+	CommitsPagingNum  int
+}
+
+type UIOpts struct {
+	ExplorePagingNum   int
+	IssuePagingNum     int
+	FeedMaxCommitNum   int
+	ThemeColorMetaTag  string
+	MaxDisplayFileSize int64
+
+	Admin struct {
+		UserPagingNum   int
+		RepoPagingNum   int
+		NoticePagingNum int
+		OrgPagingNum    int
+	} `ini:"ui.admin"`
+	User UIUserOpts `ini:"ui.user"`
+}
+
+// UI settings
+var UI UIOpts
 
 type i18nConf struct {
 	Langs     []string          `delim:","`

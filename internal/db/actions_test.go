@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
 )
 
@@ -307,7 +308,70 @@ func actionsListByOrganization(t *testing.T, db *actions) {
 }
 
 func actionsListByUser(t *testing.T, db *actions) {
-	// todo
+	if !conf.UsePostgreSQL {
+		t.Skip("Skipping testing with not using PostgreSQL")
+		return
+	}
+
+	ctx := context.Background()
+
+	conf.SetMockUI(t,
+		conf.UIOpts{
+			User: conf.UIUserOpts{
+				NewsFeedPagingNum: 20,
+			},
+		},
+	)
+
+	tests := []struct {
+		name      string
+		userID    int64
+		actorID   int64
+		afterID   int64
+		isProfile bool
+		want      string
+	}{
+		{
+			name:      "same user no afterID not in profile",
+			userID:    1,
+			actorID:   1,
+			afterID:   0,
+			isProfile: false,
+			want:      `SELECT * FROM "action" WHERE user_id = 1 AND (true OR id < 0) AND (true OR (is_private = false AND act_user_id = 1)) ORDER BY id DESC LIMIT 20`,
+		},
+		{
+			name:      "same user no afterID in profile",
+			userID:    1,
+			actorID:   1,
+			afterID:   0,
+			isProfile: true,
+			want:      `SELECT * FROM "action" WHERE user_id = 1 AND (true OR id < 0) AND (true OR (is_private = false AND act_user_id = 1)) ORDER BY id DESC LIMIT 20`,
+		},
+		{
+			name:      "same user has afterID not in profile",
+			userID:    1,
+			actorID:   1,
+			afterID:   5,
+			isProfile: false,
+			want:      `SELECT * FROM "action" WHERE user_id = 1 AND (false OR id < 5) AND (true OR (is_private = false AND act_user_id = 1)) ORDER BY id DESC LIMIT 20`,
+		},
+		{
+			name:      "different user no afterID in profile",
+			userID:    1,
+			actorID:   2,
+			afterID:   0,
+			isProfile: true,
+			want:      `SELECT * FROM "action" WHERE user_id = 1 AND (true OR id < 0) AND (false OR (is_private = false AND act_user_id = 1)) ORDER BY id DESC LIMIT 20`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := db.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+				return NewActionsStore(tx).(*actions).listByUser(ctx, test.userID, test.actorID, test.afterID, test.isProfile).Find(new(Action))
+			})
+			assert.Equal(t, test.want, got)
+		})
+	}
 }
 
 func actionsMergePullRequest(t *testing.T, db *actions) {

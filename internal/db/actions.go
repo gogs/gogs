@@ -78,6 +78,12 @@ type actions struct {
 	*gorm.DB
 }
 
+// NewActionsStore returns a persistent interface for actions with given
+// database connection.
+func NewActionsStore(db *gorm.DB) ActionsStore {
+	return &actions{DB: db}
+}
+
 func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
 	/*
 		Equivalent SQL for Postgres:
@@ -123,9 +129,9 @@ func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, after
 		Error
 }
 
-func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {
 	/*
-		Equivalent SQL for Postgres:
+		Equivalent SQL for PostgreSQL:
 
 		SELECT * FROM "action"
 		WHERE
@@ -135,8 +141,7 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
-	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	return actions, db.WithContext(ctx).
+	return db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Where(db.
 			// Not apply when afterID is not given
@@ -149,9 +154,12 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 			Or("is_private = ? AND act_user_id = ?", false, userID),
 		).
 		Limit(conf.UI.User.NewsFeedPagingNum).
-		Order("id DESC").
-		Find(&actions).
-		Error
+		Order("id DESC")
+}
+
+func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {
+	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
+	return actions, db.listByUser(ctx, userID, actorID, afterID, isProfile).Find(&actions).Error
 }
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
