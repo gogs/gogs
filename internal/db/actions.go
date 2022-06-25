@@ -360,7 +360,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 			ref = strings.TrimSpace(ref)
 			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
 
-			if len(ref) == 0 {
+			if ref == "" {
 				continue
 			}
 
@@ -402,7 +402,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
 
-			if len(ref) == 0 {
+			if ref == "" {
 				continue
 			}
 
@@ -441,7 +441,7 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 			ref = ref[strings.IndexByte(ref, byte(' '))+1:]
 			ref = strings.TrimRightFunc(ref, trimRightNonDigits)
 
-			if len(ref) == 0 {
+			if ref == "" {
 				continue
 			}
 
