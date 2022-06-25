@@ -163,10 +163,11 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 
 		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
+		require.Len(t, got, 1)
+		got[0].ID = 0
 
 		want := []*Action{
 			{
-				ID:           1,
 				UserID:       alice.ID,
 				OpType:       ActionCommitRepo,
 				ActUserID:    alice.ID,
@@ -222,10 +223,12 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 
 		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
+		require.Len(t, got, 2)
+		got[0].ID = 0
+		got[1].ID = 0
 
 		want := []*Action{
 			{
-				ID:           2,
 				UserID:       alice.ID,
 				OpType:       ActionCommitRepo,
 				ActUserID:    alice.ID,
@@ -239,7 +242,6 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 				CreatedUnix:  db.NowFunc().Unix(),
 			},
 			{
-				ID:           1,
 				UserID:       alice.ID,
 				OpType:       ActionCreateBranch,
 				ActUserID:    alice.ID,
@@ -278,10 +280,11 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 
 		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
+		require.Len(t, got, 1)
+		got[0].ID = 0
 
 		want := []*Action{
 			{
-				ID:           1,
 				UserID:       alice.ID,
 				OpType:       ActionDeleteBranch,
 				ActUserID:    alice.ID,
@@ -527,10 +530,11 @@ func actionsNewRepo(t *testing.T, db *actions) {
 
 		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
+		require.Len(t, got, 1)
+		got[0].ID = 0
 
 		want := []*Action{
 			{
-				ID:           1,
 				UserID:       alice.ID,
 				OpType:       ActionCreateRepo,
 				ActUserID:    alice.ID,
@@ -558,10 +562,11 @@ func actionsNewRepo(t *testing.T, db *actions) {
 
 		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
 		require.NoError(t, err)
+		require.Len(t, got, 1)
+		got[0].ID = 0
 
 		want := []*Action{
 			{
-				ID:           1,
 				UserID:       alice.ID,
 				OpType:       ActionForkRepo,
 				ActUserID:    alice.ID,
@@ -579,7 +584,97 @@ func actionsNewRepo(t *testing.T, db *actions) {
 }
 
 func actionsPushTag(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		CreateRepoOptions{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	t.Run("new tag", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			require.NoError(t, err)
+		})
+
+		err = db.PushTag(ctx,
+			PushTagOptions{
+				Owner:       alice,
+				Repo:        repo,
+				PusherName:  alice.Name,
+				RefFullName: "refs/tags/v1.0.0",
+				NewCommitID: "085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7",
+			},
+		)
+		require.NoError(t, err)
+
+		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		got[0].ID = 0
+
+		want := []*Action{
+			{
+				UserID:       alice.ID,
+				OpType:       ActionPushTag,
+				ActUserID:    alice.ID,
+				ActUserName:  alice.Name,
+				RepoID:       repo.ID,
+				RepoUserName: alice.Name,
+				RepoName:     repo.Name,
+				RefName:      "v1.0.0",
+				IsPrivate:    false,
+				CreatedUnix:  db.NowFunc().Unix(),
+			},
+		}
+		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("delete tag", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			require.NoError(t, err)
+		})
+
+		err = db.PushTag(ctx,
+			PushTagOptions{
+				Owner:       alice,
+				Repo:        repo,
+				PusherName:  alice.Name,
+				RefFullName: "refs/tags/v1.0.0",
+				NewCommitID: git.EmptyID,
+			},
+		)
+		require.NoError(t, err)
+
+		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		got[0].ID = 0
+
+		want := []*Action{
+			{
+				UserID:       alice.ID,
+				OpType:       ActionDeleteTag,
+				ActUserID:    alice.ID,
+				ActUserName:  alice.Name,
+				RepoID:       repo.ID,
+				RepoUserName: alice.Name,
+				RepoName:     repo.Name,
+				RefName:      "v1.0.0",
+				IsPrivate:    false,
+				CreatedUnix:  db.NowFunc().Unix(),
+			},
+		}
+		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+		assert.Equal(t, want, got)
+	})
 }
 
 func actionsRenameRepo(t *testing.T, db *actions) {

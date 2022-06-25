@@ -91,9 +91,9 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 	if strings.HasPrefix(opts.FullRefspec, git.RefsTags) {
 		err := Actions.PushTag(ctx,
 			PushTagOptions{
+				Owner:       owner,
+				Repo:        repo,
 				PusherName:  opts.PusherName,
-				RepoOwnerID: owner.ID,
-				RepoName:    repo.Name,
 				RefFullName: opts.FullRefspec,
 				NewCommitID: opts.NewCommitID,
 			},

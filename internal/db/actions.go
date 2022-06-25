@@ -242,7 +242,7 @@ type MirrorSyncPushOptions struct {
 }
 
 func (db *actions) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
-	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
+	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
@@ -544,7 +544,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 		}
 	}
 
-	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
+	if conf.UI.FeedMaxCommitNum > 0 && len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
 		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
@@ -612,52 +612,45 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	if err != nil {
 		return errors.Wrap(err, "notify watchers")
 	}
-
 	return nil
 }
 
 type PushTagOptions struct {
+	Owner       *User
+	Repo        *Repository
 	PusherName  string
-	RepoOwnerID int64
-	RepoName    string
 	RefFullName string
 	NewCommitID string
 }
 
 func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
-	pusher, err := Users.GetByUsername(ctx, opts.PusherName)
+	err := NewReposStore(db.DB).Touch(ctx, opts.Repo.ID)
+	if err != nil {
+		return errors.Wrap(err, "touch repository")
+	}
+
+	pusher, err := NewUsersStore(db.DB).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
-	}
-
-	repo, err := Repos.GetByName(ctx, opts.RepoOwnerID, opts.RepoName)
-	if err != nil {
-		return errors.Wrapf(err, "get repository [owner_id: %d, name: %s]", opts.RepoOwnerID, opts.RepoName)
-	}
-
-	// Change repository bare status and update last updated time.
-	repo.IsBare = false
-	if err = UpdateRepository(repo, false); err != nil {
-		return errors.Wrap(err, "update repository")
 	}
 
 	refName := git.RefShortName(opts.RefFullName)
 	action := &Action{
 		ActUserID:    pusher.ID,
 		ActUserName:  pusher.Name,
-		RepoID:       repo.ID,
-		RepoUserName: repo.MustOwner().Name,
-		RepoName:     repo.Name,
+		RepoID:       opts.Repo.ID,
+		RepoUserName: opts.Owner.Name,
+		RepoName:     opts.Repo.Name,
 		RefName:      refName,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		IsPrivate:    opts.Repo.IsPrivate || opts.Repo.IsUnlisted,
 	}
 
-	apiRepo := repo.APIFormat(nil)
+	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
-
-	isDelRef := opts.NewCommitID == git.EmptyID
-	if isDelRef {
-		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE,
+	if opts.NewCommitID == git.EmptyID {
+		err = PrepareWebhooks(
+			opts.Repo,
+			HOOK_EVENT_DELETE,
 			&api.DeletePayload{
 				Ref:        refName,
 				RefType:    "tag",
@@ -678,12 +671,14 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 		return nil
 	}
 
-	err = PrepareWebhooks(repo, HOOK_EVENT_CREATE,
+	err = PrepareWebhooks(
+		opts.Repo,
+		HOOK_EVENT_CREATE,
 		&api.CreatePayload{
 			Ref:           refName,
 			RefType:       "tag",
 			Sha:           opts.NewCommitID,
-			DefaultBranch: repo.DefaultBranch,
+			DefaultBranch: opts.Repo.DefaultBranch,
 			Repo:          apiRepo,
 			Sender:        apiPusher,
 		},
@@ -697,7 +692,6 @@ func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
 	if err != nil {
 		return errors.Wrap(err, "notify watchers")
 	}
-
 	return nil
 }
 
