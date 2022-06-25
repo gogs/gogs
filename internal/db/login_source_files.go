@@ -33,7 +33,7 @@ type loginSourceFilesStore interface {
 	// Len returns number of login sources.
 	Len() int
 	// List returns a list of login sources filtered by options.
-	List(opts ListLoginSourceOpts) []*LoginSource
+	List(opts ListLoginSourceOptions) []*LoginSource
 	// Update updates in-memory copy of the authentication source.
 	Update(source *LoginSource)
 }
@@ -85,7 +85,7 @@ func (s *loginSourceFiles) Len() int {
 	return len(s.sources)
 }
 
-func (s *loginSourceFiles) List(opts ListLoginSourceOpts) []*LoginSource {
+func (s *loginSourceFiles) List(opts ListLoginSourceOptions) []*LoginSource {
 	s.RLock()
 	defer s.RUnlock()
 

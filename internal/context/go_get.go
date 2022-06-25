@@ -10,6 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 // ServeGoGet does quick responses for appropriate go-get meta with status OK
@@ -52,7 +53,7 @@ func ServeGoGet() macaron.Handler {
 `,
 			map[string]string{
 				"GoGetImport":    path.Join(conf.Server.URL.Host, conf.Server.Subpath, ownerName, repoName),
-				"CloneLink":      db.ComposeHTTPSCloneURL(ownerName, repoName),
+				"CloneLink":      repoutil.HTTPSCloneURL(ownerName, repoName),
 				"GoDocDirectory": prefix + "{/dir}",
 				"GoDocFile":      prefix + "{/dir}/{file}#L{line}",
 				"InsecureFlag":   insecureFlag,

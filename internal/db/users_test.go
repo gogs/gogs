@@ -22,7 +22,6 @@ func TestUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(User), new(EmailAddress)}
@@ -58,7 +57,7 @@ func usersAuthenticate(t *testing.T, db *users) {
 
 	password := "pa$$word"
 	alice, err := db.Create(ctx, "alice", "alice@example.com",
-		CreateUserOpts{
+		CreateUserOptions{
 			Password: password,
 		},
 	)
@@ -109,7 +108,7 @@ func usersAuthenticate(t *testing.T, db *users) {
 		setMockLoginSourcesStore(t, mockLoginSources)
 
 		bob, err := db.Create(ctx, "bob", "bob@example.com",
-			CreateUserOpts{
+			CreateUserOptions{
 				Password:    password,
 				LoginSource: 1,
 			},
@@ -154,26 +153,26 @@ func usersCreate(t *testing.T, db *users) {
 	ctx := context.Background()
 
 	alice, err := db.Create(ctx, "alice", "alice@example.com",
-		CreateUserOpts{
+		CreateUserOptions{
 			Activated: true,
 		},
 	)
 	require.NoError(t, err)
 
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.Create(ctx, "-", "", CreateUserOpts{})
+		_, err := db.Create(ctx, "-", "", CreateUserOptions{})
 		wantErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": "-"}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
-		_, err := db.Create(ctx, alice.Name, "", CreateUserOpts{})
+		_, err := db.Create(ctx, alice.Name, "", CreateUserOptions{})
 		wantErr := ErrUserAlreadyExist{args: errutil.Args{"name": alice.Name}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("email already exists", func(t *testing.T) {
-		_, err := db.Create(ctx, "bob", alice.Email, CreateUserOpts{})
+		_, err := db.Create(ctx, "bob", alice.Email, CreateUserOptions{})
 		wantErr := ErrEmailAlreadyUsed{args: errutil.Args{"email": alice.Email}}
 		assert.Equal(t, wantErr, err)
 	})
@@ -195,7 +194,7 @@ func usersGetByEmail(t *testing.T, db *users) {
 
 	t.Run("ignore organization", func(t *testing.T) {
 		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org, err := db.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOpts{})
+		org, err := db.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		err = db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserOrganization).Error
@@ -207,7 +206,7 @@ func usersGetByEmail(t *testing.T, db *users) {
 	})
 
 	t.Run("by primary email", func(t *testing.T) {
-		alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
+		alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		_, err = db.GetByEmail(ctx, alice.Email)
@@ -225,7 +224,7 @@ func usersGetByEmail(t *testing.T, db *users) {
 	})
 
 	t.Run("by secondary email", func(t *testing.T) {
-		bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOpts{})
+		bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 		require.NoError(t, err)
 
 		// TODO: Use UserEmails.Create to replace SQL hack when the method is available.
@@ -250,7 +249,7 @@ func usersGetByEmail(t *testing.T, db *users) {
 func usersGetByID(t *testing.T, db *users) {
 	ctx := context.Background()
 
-	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
+	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	user, err := db.GetByID(ctx, alice.ID)
@@ -265,7 +264,7 @@ func usersGetByID(t *testing.T, db *users) {
 func usersGetByUsername(t *testing.T, db *users) {
 	ctx := context.Background()
 
-	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOpts{})
+	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 
 	user, err := db.GetByUsername(ctx, alice.Name)

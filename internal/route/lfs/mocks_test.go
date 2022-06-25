@@ -1492,17 +1492,33 @@ func (c PermsStoreSetRepoPermsFuncCall) Results() []interface{} {
 // MockReposStore is a mock implementation of the ReposStore interface (from
 // the package gogs.io/gogs/internal/db) used for unit testing.
 type MockReposStore struct {
+	// CreateFunc is an instance of a mock function object controlling the
+	// behavior of the method Create.
+	CreateFunc *ReposStoreCreateFunc
 	// GetByNameFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByName.
 	GetByNameFunc *ReposStoreGetByNameFunc
+	// TouchFunc is an instance of a mock function object controlling the
+	// behavior of the method Touch.
+	TouchFunc *ReposStoreTouchFunc
 }
 
 // NewMockReposStore creates a new mock of the ReposStore interface. All
 // methods return zero values for all results, unless overwritten.
 func NewMockReposStore() *MockReposStore {
 	return &MockReposStore{
+		CreateFunc: &ReposStoreCreateFunc{
+			defaultHook: func(context.Context, int64, db.CreateRepoOptions) (r0 *db.Repository, r1 error) {
+				return
+			},
+		},
 		GetByNameFunc: &ReposStoreGetByNameFunc{
 			defaultHook: func(context.Context, int64, string) (r0 *db.Repository, r1 error) {
+				return
+			},
+		},
+		TouchFunc: &ReposStoreTouchFunc{
+			defaultHook: func(context.Context, int64) (r0 error) {
 				return
 			},
 		},
@@ -1513,9 +1529,19 @@ func NewMockReposStore() *MockReposStore {
 // All methods panic on invocation, unless overwritten.
 func NewStrictMockReposStore() *MockReposStore {
 	return &MockReposStore{
+		CreateFunc: &ReposStoreCreateFunc{
+			defaultHook: func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
+				panic("unexpected invocation of MockReposStore.Create")
+			},
+		},
 		GetByNameFunc: &ReposStoreGetByNameFunc{
 			defaultHook: func(context.Context, int64, string) (*db.Repository, error) {
 				panic("unexpected invocation of MockReposStore.GetByName")
+			},
+		},
+		TouchFunc: &ReposStoreTouchFunc{
+			defaultHook: func(context.Context, int64) error {
+				panic("unexpected invocation of MockReposStore.Touch")
 			},
 		},
 	}
@@ -1525,10 +1551,126 @@ func NewStrictMockReposStore() *MockReposStore {
 // All methods delegate to the given implementation, unless overwritten.
 func NewMockReposStoreFrom(i db.ReposStore) *MockReposStore {
 	return &MockReposStore{
+		CreateFunc: &ReposStoreCreateFunc{
+			defaultHook: i.Create,
+		},
 		GetByNameFunc: &ReposStoreGetByNameFunc{
 			defaultHook: i.GetByName,
 		},
+		TouchFunc: &ReposStoreTouchFunc{
+			defaultHook: i.Touch,
+		},
 	}
+}
+
+// ReposStoreCreateFunc describes the behavior when the Create method of the
+// parent MockReposStore instance is invoked.
+type ReposStoreCreateFunc struct {
+	defaultHook func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)
+	hooks       []func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)
+	history     []ReposStoreCreateFuncCall
+	mutex       sync.Mutex
+}
+
+// Create delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockReposStore) Create(v0 context.Context, v1 int64, v2 db.CreateRepoOptions) (*db.Repository, error) {
+	r0, r1 := m.CreateFunc.nextHook()(v0, v1, v2)
+	m.CreateFunc.appendCall(ReposStoreCreateFuncCall{v0, v1, v2, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the Create method of the
+// parent MockReposStore instance is invoked and the hook queue is empty.
+func (f *ReposStoreCreateFunc) SetDefaultHook(hook func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Create method of the parent MockReposStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *ReposStoreCreateFunc) PushHook(hook func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreCreateFunc) SetDefaultReturn(r0 *db.Repository, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreCreateFunc) PushReturn(r0 *db.Repository, r1 error) {
+	f.PushHook(func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
+		return r0, r1
+	})
+}
+
+func (f *ReposStoreCreateFunc) nextHook() func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreCreateFunc) appendCall(r0 ReposStoreCreateFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of ReposStoreCreateFuncCall objects describing
+// the invocations of this function.
+func (f *ReposStoreCreateFunc) History() []ReposStoreCreateFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreCreateFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreCreateFuncCall is an object that describes an invocation of
+// method Create on an instance of MockReposStore.
+type ReposStoreCreateFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 db.CreateRepoOptions
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 *db.Repository
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreCreateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreCreateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // ReposStoreGetByNameFunc describes the behavior when the GetByName method
@@ -1640,6 +1782,110 @@ func (c ReposStoreGetByNameFuncCall) Args() []interface{} {
 // invocation.
 func (c ReposStoreGetByNameFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// ReposStoreTouchFunc describes the behavior when the Touch method of the
+// parent MockReposStore instance is invoked.
+type ReposStoreTouchFunc struct {
+	defaultHook func(context.Context, int64) error
+	hooks       []func(context.Context, int64) error
+	history     []ReposStoreTouchFuncCall
+	mutex       sync.Mutex
+}
+
+// Touch delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockReposStore) Touch(v0 context.Context, v1 int64) error {
+	r0 := m.TouchFunc.nextHook()(v0, v1)
+	m.TouchFunc.appendCall(ReposStoreTouchFuncCall{v0, v1, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Touch method of the
+// parent MockReposStore instance is invoked and the hook queue is empty.
+func (f *ReposStoreTouchFunc) SetDefaultHook(hook func(context.Context, int64) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Touch method of the parent MockReposStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *ReposStoreTouchFunc) PushHook(hook func(context.Context, int64) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreTouchFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreTouchFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64) error {
+		return r0
+	})
+}
+
+func (f *ReposStoreTouchFunc) nextHook() func(context.Context, int64) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreTouchFunc) appendCall(r0 ReposStoreTouchFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of ReposStoreTouchFuncCall objects describing
+// the invocations of this function.
+func (f *ReposStoreTouchFunc) History() []ReposStoreTouchFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreTouchFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreTouchFuncCall is an object that describes an invocation of
+// method Touch on an instance of MockReposStore.
+type ReposStoreTouchFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreTouchFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreTouchFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // MockTwoFactorsStore is a mock implementation of the TwoFactorsStore
@@ -2074,7 +2320,7 @@ func NewMockUsersStore() *MockUsersStore {
 			},
 		},
 		CreateFunc: &UsersStoreCreateFunc{
-			defaultHook: func(context.Context, string, string, db.CreateUserOpts) (r0 *db.User, r1 error) {
+			defaultHook: func(context.Context, string, string, db.CreateUserOptions) (r0 *db.User, r1 error) {
 				return
 			},
 		},
@@ -2106,7 +2352,7 @@ func NewStrictMockUsersStore() *MockUsersStore {
 			},
 		},
 		CreateFunc: &UsersStoreCreateFunc{
-			defaultHook: func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+			defaultHook: func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.Create")
 			},
 		},
@@ -2267,15 +2513,15 @@ func (c UsersStoreAuthenticateFuncCall) Results() []interface{} {
 // UsersStoreCreateFunc describes the behavior when the Create method of the
 // parent MockUsersStore instance is invoked.
 type UsersStoreCreateFunc struct {
-	defaultHook func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)
-	hooks       []func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)
+	defaultHook func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)
+	hooks       []func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)
 	history     []UsersStoreCreateFuncCall
 	mutex       sync.Mutex
 }
 
 // Create delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockUsersStore) Create(v0 context.Context, v1 string, v2 string, v3 db.CreateUserOpts) (*db.User, error) {
+func (m *MockUsersStore) Create(v0 context.Context, v1 string, v2 string, v3 db.CreateUserOptions) (*db.User, error) {
 	r0, r1 := m.CreateFunc.nextHook()(v0, v1, v2, v3)
 	m.CreateFunc.appendCall(UsersStoreCreateFuncCall{v0, v1, v2, v3, r0, r1})
 	return r0, r1
@@ -2283,7 +2529,7 @@ func (m *MockUsersStore) Create(v0 context.Context, v1 string, v2 string, v3 db.
 
 // SetDefaultHook sets function that is called when the Create method of the
 // parent MockUsersStore instance is invoked and the hook queue is empty.
-func (f *UsersStoreCreateFunc) SetDefaultHook(hook func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)) {
+func (f *UsersStoreCreateFunc) SetDefaultHook(hook func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)) {
 	f.defaultHook = hook
 }
 
@@ -2291,7 +2537,7 @@ func (f *UsersStoreCreateFunc) SetDefaultHook(hook func(context.Context, string,
 // Create method of the parent MockUsersStore instance invokes the hook at
 // the front of the queue and discards it. After the queue is empty, the
 // default hook function is invoked for any future action.
-func (f *UsersStoreCreateFunc) PushHook(hook func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)) {
+func (f *UsersStoreCreateFunc) PushHook(hook func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -2300,19 +2546,19 @@ func (f *UsersStoreCreateFunc) PushHook(hook func(context.Context, string, strin
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *UsersStoreCreateFunc) SetDefaultReturn(r0 *db.User, r1 error) {
-	f.SetDefaultHook(func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+	f.SetDefaultHook(func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 		return r0, r1
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *UsersStoreCreateFunc) PushReturn(r0 *db.User, r1 error) {
-	f.PushHook(func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+	f.PushHook(func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 		return r0, r1
 	})
 }
 
-func (f *UsersStoreCreateFunc) nextHook() func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+func (f *UsersStoreCreateFunc) nextHook() func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -2356,7 +2602,7 @@ type UsersStoreCreateFuncCall struct {
 	Arg2 string
 	// Arg3 is the value of the 4th argument passed to this method
 	// invocation.
-	Arg3 db.CreateUserOpts
+	Arg3 db.CreateUserOptions
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 *db.User

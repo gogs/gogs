@@ -28,7 +28,7 @@ import (
 type LoginSourcesStore interface {
 	// Create creates a new login source and persist to database. It returns
 	// ErrLoginSourceAlreadyExist when a login source with same name already exists.
-	Create(ctx context.Context, opts CreateLoginSourceOpts) (*LoginSource, error)
+	Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error)
 	// Count returns the total number of login sources.
 	Count(ctx context.Context) int64
 	// DeleteByID deletes a login source by given ID. It returns ErrLoginSourceInUse
@@ -38,7 +38,7 @@ type LoginSourcesStore interface {
 	// ErrLoginSourceNotExist when not found.
 	GetByID(ctx context.Context, id int64) (*LoginSource, error)
 	// List returns a list of login sources filtered by options.
-	List(ctx context.Context, opts ListLoginSourceOpts) ([]*LoginSource, error)
+	List(ctx context.Context, opts ListLoginSourceOptions) ([]*LoginSource, error)
 	// ResetNonDefault clears default flag for all the other login sources.
 	ResetNonDefault(ctx context.Context, source *LoginSource) error
 	// Save persists all values of given login source to database or local file. The
@@ -50,7 +50,7 @@ var LoginSources LoginSourcesStore
 
 // LoginSource represents an external way for authorizing users.
 type LoginSource struct {
-	ID        int64
+	ID        int64 `gorm:"primaryKey"`
 	Type      auth.Type
 	Name      string        `xorm:"UNIQUE" gorm:"UNIQUE"`
 	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
@@ -189,7 +189,7 @@ type loginSources struct {
 	files loginSourceFilesStore
 }
 
-type CreateLoginSourceOpts struct {
+type CreateLoginSourceOptions struct {
 	Type      auth.Type
 	Name      string
 	Activated bool
@@ -210,7 +210,7 @@ func (err ErrLoginSourceAlreadyExist) Error() string {
 	return fmt.Sprintf("login source already exists: %v", err.args)
 }
 
-func (db *loginSources) Create(ctx context.Context, opts CreateLoginSourceOpts) (*LoginSource, error) {
+func (db *loginSources) Create(ctx context.Context, opts CreateLoginSourceOptions) (*LoginSource, error) {
 	err := db.WithContext(ctx).Where("name = ?", opts.Name).First(new(LoginSource)).Error
 	if err == nil {
 		return nil, ErrLoginSourceAlreadyExist{args: errutil.Args{"name": opts.Name}}
@@ -274,12 +274,12 @@ func (db *loginSources) GetByID(ctx context.Context, id int64) (*LoginSource, er
 	return source, nil
 }
 
-type ListLoginSourceOpts struct {
+type ListLoginSourceOptions struct {
 	// Whether to only include activated login sources.
 	OnlyActivated bool
 }
 
-func (db *loginSources) List(ctx context.Context, opts ListLoginSourceOpts) ([]*LoginSource, error) {
+func (db *loginSources) List(ctx context.Context, opts ListLoginSourceOptions) ([]*LoginSource, error) {
 	var sources []*LoginSource
 	query := db.WithContext(ctx).Order("id ASC")
 	if opts.OnlyActivated {
@@ -303,7 +303,7 @@ func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) 
 		return err
 	}
 
-	for _, source := range db.files.List(ListLoginSourceOpts{}) {
+	for _, source := range db.files.List(ListLoginSourceOptions{}) {
 		if source.File != nil && source.ID != dflt.ID {
 			source.File.SetGeneral("is_default", "false")
 			if err = source.File.Save(); err != nil {

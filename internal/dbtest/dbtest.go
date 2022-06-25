@@ -55,8 +55,8 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 
 		dbOpts.Name = dbName
 
-		cleanup = func(db *gorm.DB) {
-			db.Exec(fmt.Sprintf("DROP DATABASE `%s`", dbName))
+		cleanup = func(_ *gorm.DB) {
+			_, _ = sqlDB.Exec(fmt.Sprintf("DROP DATABASE `%s`", dbName))
 			_ = sqlDB.Close()
 		}
 	case "postgres":
@@ -86,8 +86,8 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 
 		dbOpts.Name = dbName
 
-		cleanup = func(db *gorm.DB) {
-			db.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
+		cleanup = func(_ *gorm.DB) {
+			_, _ = sqlDB.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
 			_ = sqlDB.Close()
 		}
 	case "sqlite":

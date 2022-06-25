@@ -153,7 +153,7 @@ func (r *Release) preparePublishWebhooks() {
 	if err := PrepareWebhooks(r.Repo, HOOK_EVENT_RELEASE, &api.ReleasePayload{
 		Action:     api.HOOK_RELEASE_PUBLISHED,
 		Release:    r.APIFormat(),
-		Repository: r.Repo.APIFormat(nil),
+		Repository: r.Repo.APIFormatLegacy(nil),
 		Sender:     r.Publisher.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)

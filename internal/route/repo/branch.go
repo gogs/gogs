@@ -146,7 +146,7 @@ func DeleteBranchPost(c *context.Context) {
 		Ref:        branchName,
 		RefType:    "branch",
 		PusherType: api.PUSHER_TYPE_USER,
-		Repo:       c.Repo.Repository.APIFormat(nil),
+		Repo:       c.Repo.Repository.APIFormatLegacy(nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {
 		log.Error("Failed to prepare webhooks for %q: %v", db.HOOK_EVENT_DELETE, err)

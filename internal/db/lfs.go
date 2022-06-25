@@ -33,8 +33,8 @@ var LFS LFSStore
 
 // LFSObject is the relation between an LFS object and a repository.
 type LFSObject struct {
-	RepoID    int64           `gorm:"primary_key;auto_increment:false"`
-	OID       lfsutil.OID     `gorm:"primary_key;column:oid"`
+	RepoID    int64           `gorm:"primaryKey;auto_increment:false"`
+	OID       lfsutil.OID     `gorm:"primaryKey;column:oid"`
 	Size      int64           `gorm:"not null"`
 	Storage   lfsutil.Storage `gorm:"not null"`
 	CreatedAt time.Time       `gorm:"not null"`

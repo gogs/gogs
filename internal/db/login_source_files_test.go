@@ -53,12 +53,12 @@ func TestLoginSourceFiles_List(t *testing.T) {
 	}
 
 	t.Run("list all sources", func(t *testing.T) {
-		sources := store.List(ListLoginSourceOpts{})
+		sources := store.List(ListLoginSourceOptions{})
 		assert.Equal(t, 2, len(sources), "number of sources")
 	})
 
 	t.Run("list only activated sources", func(t *testing.T) {
-		sources := store.List(ListLoginSourceOpts{OnlyActivated: true})
+		sources := store.List(ListLoginSourceOptions{OnlyActivated: true})
 		assert.Equal(t, 1, len(sources), "number of sources")
 		assert.Equal(t, int64(101), sources[0].ID)
 	})

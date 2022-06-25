@@ -536,7 +536,7 @@ func TestWebhook(c *context.Context) {
 				Modified: nameStatus.Modified,
 			},
 		},
-		Repo:   c.Repo.Repository.APIFormat(nil),
+		Repo:   c.Repo.Repository.APIFormatLegacy(nil),
 		Pusher: apiUser,
 		Sender: apiUser,
 	}

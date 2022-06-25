@@ -51,7 +51,7 @@ func NewMockLoginSourcesStore() *MockLoginSourcesStore {
 			},
 		},
 		CreateFunc: &LoginSourcesStoreCreateFunc{
-			defaultHook: func(context.Context, CreateLoginSourceOpts) (r0 *LoginSource, r1 error) {
+			defaultHook: func(context.Context, CreateLoginSourceOptions) (r0 *LoginSource, r1 error) {
 				return
 			},
 		},
@@ -66,7 +66,7 @@ func NewMockLoginSourcesStore() *MockLoginSourcesStore {
 			},
 		},
 		ListFunc: &LoginSourcesStoreListFunc{
-			defaultHook: func(context.Context, ListLoginSourceOpts) (r0 []*LoginSource, r1 error) {
+			defaultHook: func(context.Context, ListLoginSourceOptions) (r0 []*LoginSource, r1 error) {
 				return
 			},
 		},
@@ -94,7 +94,7 @@ func NewStrictMockLoginSourcesStore() *MockLoginSourcesStore {
 			},
 		},
 		CreateFunc: &LoginSourcesStoreCreateFunc{
-			defaultHook: func(context.Context, CreateLoginSourceOpts) (*LoginSource, error) {
+			defaultHook: func(context.Context, CreateLoginSourceOptions) (*LoginSource, error) {
 				panic("unexpected invocation of MockLoginSourcesStore.Create")
 			},
 		},
@@ -109,7 +109,7 @@ func NewStrictMockLoginSourcesStore() *MockLoginSourcesStore {
 			},
 		},
 		ListFunc: &LoginSourcesStoreListFunc{
-			defaultHook: func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error) {
+			defaultHook: func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error) {
 				panic("unexpected invocation of MockLoginSourcesStore.List")
 			},
 		},
@@ -260,15 +260,15 @@ func (c LoginSourcesStoreCountFuncCall) Results() []interface{} {
 // LoginSourcesStoreCreateFunc describes the behavior when the Create method
 // of the parent MockLoginSourcesStore instance is invoked.
 type LoginSourcesStoreCreateFunc struct {
-	defaultHook func(context.Context, CreateLoginSourceOpts) (*LoginSource, error)
-	hooks       []func(context.Context, CreateLoginSourceOpts) (*LoginSource, error)
+	defaultHook func(context.Context, CreateLoginSourceOptions) (*LoginSource, error)
+	hooks       []func(context.Context, CreateLoginSourceOptions) (*LoginSource, error)
 	history     []LoginSourcesStoreCreateFuncCall
 	mutex       sync.Mutex
 }
 
 // Create delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockLoginSourcesStore) Create(v0 context.Context, v1 CreateLoginSourceOpts) (*LoginSource, error) {
+func (m *MockLoginSourcesStore) Create(v0 context.Context, v1 CreateLoginSourceOptions) (*LoginSource, error) {
 	r0, r1 := m.CreateFunc.nextHook()(v0, v1)
 	m.CreateFunc.appendCall(LoginSourcesStoreCreateFuncCall{v0, v1, r0, r1})
 	return r0, r1
@@ -277,7 +277,7 @@ func (m *MockLoginSourcesStore) Create(v0 context.Context, v1 CreateLoginSourceO
 // SetDefaultHook sets function that is called when the Create method of the
 // parent MockLoginSourcesStore instance is invoked and the hook queue is
 // empty.
-func (f *LoginSourcesStoreCreateFunc) SetDefaultHook(hook func(context.Context, CreateLoginSourceOpts) (*LoginSource, error)) {
+func (f *LoginSourcesStoreCreateFunc) SetDefaultHook(hook func(context.Context, CreateLoginSourceOptions) (*LoginSource, error)) {
 	f.defaultHook = hook
 }
 
@@ -285,7 +285,7 @@ func (f *LoginSourcesStoreCreateFunc) SetDefaultHook(hook func(context.Context, 
 // Create method of the parent MockLoginSourcesStore instance invokes the
 // hook at the front of the queue and discards it. After the queue is empty,
 // the default hook function is invoked for any future action.
-func (f *LoginSourcesStoreCreateFunc) PushHook(hook func(context.Context, CreateLoginSourceOpts) (*LoginSource, error)) {
+func (f *LoginSourcesStoreCreateFunc) PushHook(hook func(context.Context, CreateLoginSourceOptions) (*LoginSource, error)) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -294,19 +294,19 @@ func (f *LoginSourcesStoreCreateFunc) PushHook(hook func(context.Context, Create
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *LoginSourcesStoreCreateFunc) SetDefaultReturn(r0 *LoginSource, r1 error) {
-	f.SetDefaultHook(func(context.Context, CreateLoginSourceOpts) (*LoginSource, error) {
+	f.SetDefaultHook(func(context.Context, CreateLoginSourceOptions) (*LoginSource, error) {
 		return r0, r1
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *LoginSourcesStoreCreateFunc) PushReturn(r0 *LoginSource, r1 error) {
-	f.PushHook(func(context.Context, CreateLoginSourceOpts) (*LoginSource, error) {
+	f.PushHook(func(context.Context, CreateLoginSourceOptions) (*LoginSource, error) {
 		return r0, r1
 	})
 }
 
-func (f *LoginSourcesStoreCreateFunc) nextHook() func(context.Context, CreateLoginSourceOpts) (*LoginSource, error) {
+func (f *LoginSourcesStoreCreateFunc) nextHook() func(context.Context, CreateLoginSourceOptions) (*LoginSource, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -344,7 +344,7 @@ type LoginSourcesStoreCreateFuncCall struct {
 	Arg0 context.Context
 	// Arg1 is the value of the 2nd argument passed to this method
 	// invocation.
-	Arg1 CreateLoginSourceOpts
+	Arg1 CreateLoginSourceOptions
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 *LoginSource
@@ -582,15 +582,15 @@ func (c LoginSourcesStoreGetByIDFuncCall) Results() []interface{} {
 // LoginSourcesStoreListFunc describes the behavior when the List method of
 // the parent MockLoginSourcesStore instance is invoked.
 type LoginSourcesStoreListFunc struct {
-	defaultHook func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error)
-	hooks       []func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error)
+	defaultHook func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error)
+	hooks       []func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error)
 	history     []LoginSourcesStoreListFuncCall
 	mutex       sync.Mutex
 }
 
 // List delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockLoginSourcesStore) List(v0 context.Context, v1 ListLoginSourceOpts) ([]*LoginSource, error) {
+func (m *MockLoginSourcesStore) List(v0 context.Context, v1 ListLoginSourceOptions) ([]*LoginSource, error) {
 	r0, r1 := m.ListFunc.nextHook()(v0, v1)
 	m.ListFunc.appendCall(LoginSourcesStoreListFuncCall{v0, v1, r0, r1})
 	return r0, r1
@@ -599,7 +599,7 @@ func (m *MockLoginSourcesStore) List(v0 context.Context, v1 ListLoginSourceOpts)
 // SetDefaultHook sets function that is called when the List method of the
 // parent MockLoginSourcesStore instance is invoked and the hook queue is
 // empty.
-func (f *LoginSourcesStoreListFunc) SetDefaultHook(hook func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error)) {
+func (f *LoginSourcesStoreListFunc) SetDefaultHook(hook func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error)) {
 	f.defaultHook = hook
 }
 
@@ -607,7 +607,7 @@ func (f *LoginSourcesStoreListFunc) SetDefaultHook(hook func(context.Context, Li
 // List method of the parent MockLoginSourcesStore instance invokes the hook
 // at the front of the queue and discards it. After the queue is empty, the
 // default hook function is invoked for any future action.
-func (f *LoginSourcesStoreListFunc) PushHook(hook func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error)) {
+func (f *LoginSourcesStoreListFunc) PushHook(hook func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error)) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -616,19 +616,19 @@ func (f *LoginSourcesStoreListFunc) PushHook(hook func(context.Context, ListLogi
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *LoginSourcesStoreListFunc) SetDefaultReturn(r0 []*LoginSource, r1 error) {
-	f.SetDefaultHook(func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error) {
+	f.SetDefaultHook(func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error) {
 		return r0, r1
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *LoginSourcesStoreListFunc) PushReturn(r0 []*LoginSource, r1 error) {
-	f.PushHook(func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error) {
+	f.PushHook(func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error) {
 		return r0, r1
 	})
 }
 
-func (f *LoginSourcesStoreListFunc) nextHook() func(context.Context, ListLoginSourceOpts) ([]*LoginSource, error) {
+func (f *LoginSourcesStoreListFunc) nextHook() func(context.Context, ListLoginSourceOptions) ([]*LoginSource, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -666,7 +666,7 @@ type LoginSourcesStoreListFuncCall struct {
 	Arg0 context.Context
 	// Arg1 is the value of the 2nd argument passed to this method
 	// invocation.
-	Arg1 ListLoginSourceOpts
+	Arg1 ListLoginSourceOptions
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 []*LoginSource
@@ -1328,7 +1328,7 @@ func NewMockLoginSourceFilesStore() *MockLoginSourceFilesStore {
 			},
 		},
 		ListFunc: &LoginSourceFilesStoreListFunc{
-			defaultHook: func(ListLoginSourceOpts) (r0 []*LoginSource) {
+			defaultHook: func(ListLoginSourceOptions) (r0 []*LoginSource) {
 				return
 			},
 		},
@@ -1356,7 +1356,7 @@ func NewStrictMockLoginSourceFilesStore() *MockLoginSourceFilesStore {
 			},
 		},
 		ListFunc: &LoginSourceFilesStoreListFunc{
-			defaultHook: func(ListLoginSourceOpts) []*LoginSource {
+			defaultHook: func(ListLoginSourceOptions) []*LoginSource {
 				panic("unexpected invocation of MockLoginSourceFilesStore.List")
 			},
 		},
@@ -1374,7 +1374,7 @@ func NewStrictMockLoginSourceFilesStore() *MockLoginSourceFilesStore {
 type surrogateMockLoginSourceFilesStore interface {
 	GetByID(int64) (*LoginSource, error)
 	Len() int
-	List(ListLoginSourceOpts) []*LoginSource
+	List(ListLoginSourceOptions) []*LoginSource
 	Update(*LoginSource)
 }
 
@@ -1605,15 +1605,15 @@ func (c LoginSourceFilesStoreLenFuncCall) Results() []interface{} {
 // LoginSourceFilesStoreListFunc describes the behavior when the List method
 // of the parent MockLoginSourceFilesStore instance is invoked.
 type LoginSourceFilesStoreListFunc struct {
-	defaultHook func(ListLoginSourceOpts) []*LoginSource
-	hooks       []func(ListLoginSourceOpts) []*LoginSource
+	defaultHook func(ListLoginSourceOptions) []*LoginSource
+	hooks       []func(ListLoginSourceOptions) []*LoginSource
 	history     []LoginSourceFilesStoreListFuncCall
 	mutex       sync.Mutex
 }
 
 // List delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockLoginSourceFilesStore) List(v0 ListLoginSourceOpts) []*LoginSource {
+func (m *MockLoginSourceFilesStore) List(v0 ListLoginSourceOptions) []*LoginSource {
 	r0 := m.ListFunc.nextHook()(v0)
 	m.ListFunc.appendCall(LoginSourceFilesStoreListFuncCall{v0, r0})
 	return r0
@@ -1622,7 +1622,7 @@ func (m *MockLoginSourceFilesStore) List(v0 ListLoginSourceOpts) []*LoginSource 
 // SetDefaultHook sets function that is called when the List method of the
 // parent MockLoginSourceFilesStore instance is invoked and the hook queue
 // is empty.
-func (f *LoginSourceFilesStoreListFunc) SetDefaultHook(hook func(ListLoginSourceOpts) []*LoginSource) {
+func (f *LoginSourceFilesStoreListFunc) SetDefaultHook(hook func(ListLoginSourceOptions) []*LoginSource) {
 	f.defaultHook = hook
 }
 
@@ -1630,7 +1630,7 @@ func (f *LoginSourceFilesStoreListFunc) SetDefaultHook(hook func(ListLoginSource
 // List method of the parent MockLoginSourceFilesStore instance invokes the
 // hook at the front of the queue and discards it. After the queue is empty,
 // the default hook function is invoked for any future action.
-func (f *LoginSourceFilesStoreListFunc) PushHook(hook func(ListLoginSourceOpts) []*LoginSource) {
+func (f *LoginSourceFilesStoreListFunc) PushHook(hook func(ListLoginSourceOptions) []*LoginSource) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -1639,19 +1639,19 @@ func (f *LoginSourceFilesStoreListFunc) PushHook(hook func(ListLoginSourceOpts) 
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *LoginSourceFilesStoreListFunc) SetDefaultReturn(r0 []*LoginSource) {
-	f.SetDefaultHook(func(ListLoginSourceOpts) []*LoginSource {
+	f.SetDefaultHook(func(ListLoginSourceOptions) []*LoginSource {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *LoginSourceFilesStoreListFunc) PushReturn(r0 []*LoginSource) {
-	f.PushHook(func(ListLoginSourceOpts) []*LoginSource {
+	f.PushHook(func(ListLoginSourceOptions) []*LoginSource {
 		return r0
 	})
 }
 
-func (f *LoginSourceFilesStoreListFunc) nextHook() func(ListLoginSourceOpts) []*LoginSource {
+func (f *LoginSourceFilesStoreListFunc) nextHook() func(ListLoginSourceOptions) []*LoginSource {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -1686,7 +1686,7 @@ func (f *LoginSourceFilesStoreListFunc) History() []LoginSourceFilesStoreListFun
 type LoginSourceFilesStoreListFuncCall struct {
 	// Arg0 is the value of the 1st argument passed to this method
 	// invocation.
-	Arg0 ListLoginSourceOpts
+	Arg0 ListLoginSourceOptions
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 []*LoginSource

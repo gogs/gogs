@@ -46,7 +46,6 @@ func TestAccessTokens(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(AccessToken)}
@@ -95,7 +94,12 @@ func accessTokensCreate(t *testing.T, db *accessTokens) {
 
 	// Try create second access token with same name should fail
 	_, err = db.Create(ctx, token.UserID, token.Name)
-	wantErr := ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": token.UserID, "name": token.Name}}
+	wantErr := ErrAccessTokenAlreadyExist{
+		args: errutil.Args{
+			"userID": token.UserID,
+			"name":   token.Name,
+		},
+	}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -113,8 +117,6 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 	// We should be able to get it back
 	_, err = db.GetBySHA1(ctx, token.Sha1)
 	require.NoError(t, err)
-	_, err = db.GetBySHA1(ctx, token.Sha1)
-	require.NoError(t, err)
 
 	// Now delete this token with correct user ID
 	err = db.DeleteByID(ctx, token.UserID, token.ID)
@@ -122,7 +124,11 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 
 	// We should get token not found error
 	_, err = db.GetBySHA1(ctx, token.Sha1)
-	wantErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": token.Sha1}}
+	wantErr := ErrAccessTokenNotExist{
+		args: errutil.Args{
+			"sha": token.Sha1,
+		},
+	}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -139,7 +145,11 @@ func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
 
 	// Try to get a non-existent token
 	_, err = db.GetBySHA1(ctx, "bad_sha")
-	wantErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
+	wantErr := ErrAccessTokenNotExist{
+		args: errutil.Args{
+			"sha": "bad_sha",
+		},
+	}
 	assert.Equal(t, wantErr, err)
 }
 
