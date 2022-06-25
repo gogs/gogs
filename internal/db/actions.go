@@ -84,9 +84,9 @@ func NewActionsStore(db *gorm.DB) ActionsStore {
 	return &actions{DB: db}
 }
 
-func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
+func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, afterID int64) *gorm.DB {
 	/*
-		Equivalent SQL for Postgres:
+		Equivalent SQL for PostgreSQL:
 
 		SELECT * FROM "action"
 		WHERE
@@ -104,8 +104,7 @@ func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, after
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
-	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
-	return actions, db.WithContext(ctx).
+	return db.WithContext(ctx).
 		Where("user_id = ?", orgID).
 		Where(db.
 			// Not apply when afterID is not given
@@ -124,9 +123,12 @@ func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, after
 				Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
 		).
 		Limit(conf.UI.User.NewsFeedPagingNum).
-		Order("id DESC").
-		Find(&actions).
-		Error
+		Order("id DESC")
+}
+
+func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
+	actions := make([]*Action, 0, conf.UI.User.NewsFeedPagingNum)
+	return actions, db.listByOrganization(ctx, orgID, actorID, afterID).Find(&actions).Error
 }
 
 func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) *gorm.DB {

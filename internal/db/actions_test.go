@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -304,11 +305,55 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 }
 
 func actionsListByOrganization(t *testing.T, db *actions) {
-	// todo
+	if os.Getenv("GOGS_DATABASE_TYPE") != "postgres" {
+		t.Skip("Skipping testing with not using PostgreSQL")
+		return
+	}
+
+	ctx := context.Background()
+
+	conf.SetMockUI(t,
+		conf.UIOpts{
+			User: conf.UIUserOpts{
+				NewsFeedPagingNum: 20,
+			},
+		},
+	)
+
+	tests := []struct {
+		name    string
+		orgID   int64
+		actorID int64
+		afterID int64
+		want    string
+	}{
+		{
+			name:    "no afterID",
+			orgID:   1,
+			actorID: 1,
+			afterID: 0,
+			want:    `SELECT * FROM "action" WHERE user_id = 1 AND (true OR id < 0) AND repo_id IN (SELECT repository.id FROM "repository" JOIN team_repo ON repository.id = team_repo.repo_id WHERE team_repo.team_id IN (SELECT team_id FROM "team_user" WHERE team_user.org_id = 1 AND uid = 1) OR (repository.is_private = false AND repository.is_unlisted = false)) ORDER BY id DESC LIMIT 20`,
+		},
+		{
+			name:    "has afterID",
+			orgID:   1,
+			actorID: 1,
+			afterID: 5,
+			want:    `SELECT * FROM "action" WHERE user_id = 1 AND (false OR id < 5) AND repo_id IN (SELECT repository.id FROM "repository" JOIN team_repo ON repository.id = team_repo.repo_id WHERE team_repo.team_id IN (SELECT team_id FROM "team_user" WHERE team_user.org_id = 1 AND uid = 1) OR (repository.is_private = false AND repository.is_unlisted = false)) ORDER BY id DESC LIMIT 20`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := db.DB.ToSQL(func(tx *gorm.DB) *gorm.DB {
+				return NewActionsStore(tx).(*actions).listByOrganization(ctx, test.orgID, test.actorID, test.afterID).Find(new(Action))
+			})
+			assert.Equal(t, test.want, got)
+		})
+	}
 }
 
 func actionsListByUser(t *testing.T, db *actions) {
-	if !conf.UsePostgreSQL {
+	if os.Getenv("GOGS_DATABASE_TYPE") != "postgres" {
 		t.Skip("Skipping testing with not using PostgreSQL")
 		return
 	}

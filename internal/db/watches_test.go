@@ -43,5 +43,5 @@ func TestWatches(t *testing.T) {
 }
 
 func watchesListByRepo(t *testing.T, db *watches) {
-	// todo
+	// TODO: Add tests once WatchRepo is migrated to GORM.
 }
