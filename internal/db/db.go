@@ -126,7 +126,7 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	Repos = NewReposStore(db)
 	TwoFactors = &twoFactors{DB: db}
 	Users = NewUsersStore(db)
-	Watches = &watches{DB: db}
+	Watches = NewWatchesStore(db)
 
 	return db, nil
 }

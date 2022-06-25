@@ -22,6 +22,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/lazyregexp"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 )
@@ -154,7 +155,7 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
 func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := Watches.ListByRepo(ctx, act.RepoID)
+	watches, err := NewWatchesStore(db.DB).ListByRepo(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}
@@ -235,7 +236,7 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 		commits.Commits = commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
-	apiCommits, err := commits.ToApiPayloadCommits(ctx, repo.RepoPath(), repo.HTMLURL())
+	apiCommits, err := commits.APIFormat(ctx, repo.RepoPath(), repo.HTMLURL())
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
@@ -453,9 +454,9 @@ func updateCommitReferencesToIssues(doer *User, repo *Repository, commits []*Pus
 }
 
 type CommitRepoOptions struct {
+	Owner       *User
+	Repo        *Repository
 	PusherName  string
-	RepoOwnerID int64
-	RepoName    string
 	RefFullName string
 	OldCommitID string
 	NewCommitID string
@@ -463,20 +464,14 @@ type CommitRepoOptions struct {
 }
 
 func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
+	err := NewReposStore(db.DB).Touch(ctx, opts.Repo.ID)
+	if err != nil {
+		return errors.Wrap(err, "touch repository")
+	}
+
 	pusher, err := NewUsersStore(db.DB).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
-	}
-
-	repo, err := NewReposStore(db.DB).GetByName(ctx, opts.RepoOwnerID, opts.RepoName)
-	if err != nil {
-		return errors.Wrapf(err, "get repository [owner_id: %d, name: %s]", opts.RepoOwnerID, opts.RepoName)
-	}
-
-	// Change repository bare status and update last updated time.
-	repo.IsBare = false
-	if err = UpdateRepository(repo, false); err != nil {
-		return errors.Wrap(err, "update repository")
 	}
 
 	isNewRef := opts.OldCommitID == git.EmptyID
@@ -484,24 +479,26 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 
 	// If not the first commit, set the compare URL.
 	if !isNewRef && !isDelRef {
-		opts.Commits.CompareURL = repo.ComposeCompareURL(opts.OldCommitID, opts.NewCommitID)
+		opts.Commits.CompareURL = repoutil.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
 	}
 
 	refName := git.RefShortName(opts.RefFullName)
 	action := &Action{
 		ActUserID:    pusher.ID,
 		ActUserName:  pusher.Name,
-		RepoID:       repo.ID,
-		RepoUserName: repo.Owner.Name,
-		RepoName:     repo.Name,
+		RepoID:       opts.Repo.ID,
+		RepoUserName: opts.Owner.Name,
+		RepoName:     opts.Repo.Name,
 		RefName:      refName,
-		IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+		IsPrivate:    opts.Repo.IsPrivate || opts.Repo.IsUnlisted,
 	}
 
-	apiRepo := repo.APIFormat(nil)
+	apiRepo := opts.Repo.APIFormat(opts.Owner)
 	apiPusher := pusher.APIFormat()
 	if isDelRef {
-		err = PrepareWebhooks(repo, HOOK_EVENT_DELETE,
+		err = PrepareWebhooks(
+			opts.Repo,
+			HOOK_EVENT_DELETE,
 			&api.DeletePayload{
 				Ref:        refName,
 				RefType:    "branch",
@@ -525,8 +522,8 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	}
 
 	// Only update issues via commits when internal issue tracker is enabled
-	if repo.EnableIssues && !repo.EnableExternalTracker {
-		if err = updateCommitReferencesToIssues(pusher, repo, opts.Commits.Commits); err != nil {
+	if opts.Repo.EnableIssues && !opts.Repo.EnableExternalTracker {
+		if err = updateCommitReferencesToIssues(pusher, opts.Repo, opts.Commits.Commits); err != nil {
 			log.Error("update commit references to issues: %v", err)
 		}
 	}
@@ -543,11 +540,13 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 
 	var compareURL string
 	if isNewRef {
-		err = PrepareWebhooks(repo, HOOK_EVENT_CREATE,
+		err = PrepareWebhooks(
+			opts.Repo,
+			HOOK_EVENT_CREATE,
 			&api.CreatePayload{
 				Ref:           refName,
 				RefType:       "branch",
-				DefaultBranch: repo.DefaultBranch,
+				DefaultBranch: opts.Repo.DefaultBranch,
 				Repo:          apiRepo,
 				Sender:        apiPusher,
 			},
@@ -565,21 +564,28 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 		compareURL = conf.Server.ExternalURL + opts.Commits.CompareURL
 	}
 
-	commits, err := opts.Commits.ToApiPayloadCommits(ctx, repo.RepoPath(), repo.HTMLURL())
+	commits, err := opts.Commits.APIFormat(ctx,
+		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
+		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	err = PrepareWebhooks(repo, HOOK_EVENT_PUSH, &api.PushPayload{
-		Ref:        opts.RefFullName,
-		Before:     opts.OldCommitID,
-		After:      opts.NewCommitID,
-		CompareURL: compareURL,
-		Commits:    commits,
-		Repo:       apiRepo,
-		Pusher:     apiPusher,
-		Sender:     apiPusher,
-	})
+	err = PrepareWebhooks(
+		opts.Repo,
+		HOOK_EVENT_PUSH,
+		&api.PushPayload{
+			Ref:        opts.RefFullName,
+			Before:     opts.OldCommitID,
+			After:      opts.NewCommitID,
+			CompareURL: compareURL,
+			Commits:    commits,
+			Repo:       apiRepo,
+			Pusher:     apiPusher,
+			Sender:     apiPusher,
+		},
+	)
 	if err != nil {
 		return errors.Wrap(err, "prepare webhooks for new commit")
 	}
@@ -732,7 +738,6 @@ func (a *Action) BeforeCreate(tx *gorm.DB) error {
 	if a.CreatedUnix <= 0 {
 		a.CreatedUnix = tx.NowFunc().Unix()
 	}
-	fmt.Println("a.CreatedUnix", a.CreatedUnix)
 	return nil
 }
 
@@ -848,7 +853,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) ToApiPayloadCommits(ctx context.Context, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+func (pcs *PushCommits) APIFormat(ctx context.Context, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {

@@ -26,6 +26,12 @@ type watches struct {
 	*gorm.DB
 }
 
+// NewWatchesStore returns a persistent interface for watches with given
+// database connection.
+func NewWatchesStore(db *gorm.DB) WatchesStore {
+	return &watches{DB: db}
+}
+
 func (db *watches) ListByRepo(ctx context.Context, repoID int64) ([]*Watch, error) {
 	var watches []*Watch
 	return watches, db.WithContext(ctx).Where("repo_id = ?", repoID).Find(&watches).Error

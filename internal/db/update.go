@@ -129,9 +129,9 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 
 	err = Actions.CommitRepo(ctx,
 		CommitRepoOptions{
+			Owner:       owner,
+			Repo:        repo,
 			PusherName:  opts.PusherName,
-			RepoOwnerID: owner.ID,
-			RepoName:    repo.Name,
 			RefFullName: opts.FullRefspec,
 			OldCommitID: opts.OldCommitID,
 			NewCommitID: opts.NewCommitID,
