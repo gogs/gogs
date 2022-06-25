@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 	"time"
 
@@ -695,8 +696,13 @@ func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhook
 }
 
 func (t *HookTask) deliver() {
-	if netutil.IsBlockedLocalHostname(t.URL, conf.Security.LocalNetworkAllowlist) {
-		t.ResponseContent = "Payload URL resolved to a local network address that is implicitly blocked."
+	payloadURL, err := url.Parse(t.URL)
+	if err != nil {
+		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
+		return
+	}
+	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		t.ResponseContent = `{"body": "Payload URL resolved to a local network address that is implicitly blocked."}`
 		return
 	}
 
