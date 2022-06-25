@@ -163,7 +163,7 @@ func SetEngine() (*gorm.DB, error) {
 	x.SetConnMaxLifetime(time.Second)
 
 	if conf.IsProdMode() {
-		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_WARNING))
+		x.SetLogger(xorm.NewSimpleLogger3(fileWriter, xorm.DEFAULT_LOG_PREFIX, xorm.DEFAULT_LOG_FLAG, core.LOG_ERR))
 	} else {
 		x.SetLogger(xorm.NewSimpleLogger(fileWriter))
 	}
