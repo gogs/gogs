@@ -33,6 +33,7 @@ func TestRepos(t *testing.T) {
 	}{
 		{"Create", reposCreate},
 		{"GetByName", reposGetByName},
+		{"Touch", reposTouch},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -106,4 +107,32 @@ func reposGetByName(t *testing.T, db *repos) {
 	_, err = db.GetByName(ctx, 1, "bad_name")
 	wantErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
 	assert.Equal(t, wantErr, err)
+}
+
+func reposTouch(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	repo, err := db.Create(ctx, 1,
+		createRepoOpts{
+			Name: "repo1",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.WithContext(ctx).Model(new(Repository)).Where("id = ?", repo.ID).Update("is_bare", true).Error
+	require.NoError(t, err)
+
+	// Make sure it is bare
+	got, err := db.GetByName(ctx, repo.OwnerID, repo.Name)
+	require.NoError(t, err)
+	assert.True(t, got.IsBare)
+
+	// Touch it
+	err = db.Touch(ctx, repo.ID)
+	require.NoError(t, err)
+
+	// It should not be bare anymore
+	got, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
+	require.NoError(t, err)
+	assert.False(t, got.IsBare)
 }

@@ -10,9 +10,11 @@ import (
 	"strings"
 	"time"
 
+	api "github.com/gogs/go-gogs-client"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 // ReposStore is the persistent interface for repositories.
@@ -27,6 +29,9 @@ type ReposStore interface {
 	// GetByName returns the repository with given owner and name. It returns
 	// ErrRepoNotExist when not found.
 	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
+	// Touch updates the updated time to the current time and removes the bare state
+	// of the given repository.
+	Touch(ctx context.Context, id int64) error
 }
 
 var Repos ReposStore
@@ -50,6 +55,46 @@ func (r *Repository) AfterFind(_ *gorm.DB) error {
 	r.Created = time.Unix(r.CreatedUnix, 0).Local()
 	r.Updated = time.Unix(r.UpdatedUnix, 0).Local()
 	return nil
+}
+
+type RepositoryAPIFormatOptions struct {
+	Permission *api.Permission
+	Parent     *api.Repository
+}
+
+// APIFormat returns the API format of a repository.
+func (r *Repository) APIFormat(owner *User, opts ...RepositoryAPIFormatOptions) *api.Repository {
+	var opt RepositoryAPIFormatOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	cloneLink := repoutil.NewCloneLink(owner.Name, r.Name, false)
+	return &api.Repository{
+		ID:            r.ID,
+		Owner:         owner.APIFormat(),
+		Name:          r.Name,
+		FullName:      owner.Name + "/" + r.Name,
+		Description:   r.Description,
+		Private:       r.IsPrivate,
+		Fork:          r.IsFork,
+		Parent:        opt.Parent,
+		Empty:         r.IsBare,
+		Mirror:        r.IsMirror,
+		Size:          r.Size,
+		HTMLURL:       repoutil.HTMLURL(owner.Name, r.Name),
+		SSHURL:        cloneLink.SSH,
+		CloneURL:      cloneLink.HTTPS,
+		Website:       r.Website,
+		Stars:         r.NumStars,
+		Forks:         r.NumForks,
+		Watchers:      r.NumWatches,
+		OpenIssues:    r.NumOpenIssues,
+		DefaultBranch: r.DefaultBranch,
+		Created:       r.Created,
+		Updated:       r.Updated,
+		Permissions:   opt.Permission,
+	}
 }
 
 var _ ReposStore = (*repos)(nil)
@@ -162,4 +207,15 @@ func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Re
 		return nil, err
 	}
 	return repo, nil
+}
+
+func (db *repos) Touch(ctx context.Context, id int64) error {
+	return db.WithContext(ctx).
+		Model(new(Repository)).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"is_bare":      false,
+			"updated_unix": db.NowFunc().Unix(),
+		}).
+		Error
 }

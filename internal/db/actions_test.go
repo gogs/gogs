@@ -5,9 +5,11 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/gogs/git-module"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -44,7 +46,7 @@ func TestActions(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Action)}
+	tables := []interface{}{new(Action), new(User), new(Repository), new(EmailAddress), new(Watch)}
 	db := &actions{
 		DB: dbtest.NewDB(t, "actions", tables...),
 	}
@@ -79,7 +81,70 @@ func TestActions(t *testing.T) {
 }
 
 func actionsCommitRepo(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		createRepoOpts{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.CommitRepo(ctx,
+		CommitRepoOptions{
+			PusherName:  alice.Name,
+			Owner:       alice,
+			Repo:        repo,
+			RefFullName: "refs/heads/main",
+			OldCommitID: "ca82a6dff817ec66f44342007202690a93763949",
+			NewCommitID: "085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7",
+			Commits: CommitsToPushCommits(
+				[]*git.Commit{
+					{
+						ID: git.MustIDFromString("085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"),
+						Author: &git.Signature{
+							Name:  "alice",
+							Email: "alice@example.com",
+							When:  db.NowFunc(),
+						},
+						Committer: &git.Signature{
+							Name:  "alice",
+							Email: "alice@example.com",
+							When:  db.NowFunc(),
+						},
+						Message: "A random commit",
+					},
+				},
+			),
+		},
+	)
+	require.NoError(t, err)
+
+	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	require.NoError(t, err)
+
+	want := []*Action{
+		{
+			ID:           1,
+			UserID:       alice.ID,
+			OpType:       ActionCommitRepo,
+			ActUserID:    alice.ID,
+			ActUserName:  alice.Name,
+			ActAvatar:    "",
+			RepoID:       repo.ID,
+			RepoUserName: alice.Name,
+			RepoName:     repo.Name,
+			RefName:      "main",
+			IsPrivate:    false,
+			Content:      `{"Len":1,"Commits":[],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
+			CreatedUnix:  db.NowFunc().Unix(),
+		},
+	}
+	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+	assert.Equal(t, want, got)
 }
 
 func actionsListByOrganization(t *testing.T, db *actions) {
