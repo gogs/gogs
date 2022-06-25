@@ -119,7 +119,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		return
 	}
 
-	repo, err := db.CreateRepository(c.User, ctxUser, db.CreateRepoOptions{
+	repo, err := db.CreateRepository(c.User, ctxUser, db.CreateRepoOptionsLegacy{
 		Name:        f.RepoName,
 		Description: f.Description,
 		Gitignores:  f.Gitignores,

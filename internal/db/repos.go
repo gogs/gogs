@@ -25,7 +25,7 @@ type ReposStore interface {
 	// ErrNameNotAllowed when the repository name is not allowed, or
 	// ErrRepoAlreadyExist when a repository with same name already exists for the
 	// owner.
-	Create(ctx context.Context, ownerID int64, opts createRepoOpts) (*Repository, error)
+	Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error)
 	// GetByName returns the repository with given owner and name. It returns
 	// ErrRepoNotExist when not found.
 	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
@@ -122,7 +122,7 @@ func (err ErrRepoAlreadyExist) Error() string {
 	return fmt.Sprintf("repository already exists: %v", err.args)
 }
 
-type createRepoOpts struct {
+type CreateRepoOptions struct {
 	Name          string
 	Description   string
 	DefaultBranch string
@@ -135,7 +135,7 @@ type createRepoOpts struct {
 	ForkID        int64
 }
 
-func (db *repos) Create(ctx context.Context, ownerID int64, opts createRepoOpts) (*Repository, error) {
+func (db *repos) Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error) {
 	err := isRepoNameAllowed(opts.Name)
 	if err != nil {
 		return nil, err

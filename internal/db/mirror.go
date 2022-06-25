@@ -419,7 +419,17 @@ func SyncMirrors() {
 				newCommitID = refNewCommit.ID.String()
 			}
 
-			if err = Actions.MirrorSyncPush(ctx, m.Repo.MustOwner(), m.Repo, result.refName, oldCommitID, newCommitID, CommitsToPushCommits(commits)); err != nil {
+			err = Actions.MirrorSyncPush(ctx,
+				MirrorSyncPushOptions{
+					Owner:       m.Repo.MustOwner(),
+					Repo:        m.Repo,
+					RefName:     result.refName,
+					OldCommitID: oldCommitID,
+					NewCommitID: newCommitID,
+					Commits:     CommitsToPushCommits(commits),
+				},
+			);
+			if err != nil {
 				log.Error("Failed to create action for mirror sync push [repo_id: %d]: %v", m.RepoID, err)
 				continue
 			}

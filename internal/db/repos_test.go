@@ -54,7 +54,7 @@ func reposCreate(t *testing.T, db *repos) {
 	t.Run("name not allowed", func(t *testing.T) {
 		_, err := db.Create(ctx,
 			1,
-			createRepoOpts{
+			CreateRepoOptions{
 				Name: "my.git",
 			},
 		)
@@ -64,14 +64,14 @@ func reposCreate(t *testing.T, db *repos) {
 
 	t.Run("already exists", func(t *testing.T) {
 		_, err := db.Create(ctx, 2,
-			createRepoOpts{
+			CreateRepoOptions{
 				Name: "repo1",
 			},
 		)
 		require.NoError(t, err)
 
 		_, err = db.Create(ctx, 2,
-			createRepoOpts{
+			CreateRepoOptions{
 				Name: "repo1",
 			},
 		)
@@ -80,7 +80,7 @@ func reposCreate(t *testing.T, db *repos) {
 	})
 
 	repo, err := db.Create(ctx, 3,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "repo2",
 		},
 	)
@@ -95,7 +95,7 @@ func reposGetByName(t *testing.T, db *repos) {
 	ctx := context.Background()
 
 	repo, err := db.Create(ctx, 1,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "repo1",
 		},
 	)
@@ -113,7 +113,7 @@ func reposTouch(t *testing.T, db *repos) {
 	ctx := context.Background()
 
 	repo, err := db.Create(ctx, 1,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "repo1",
 		},
 	)

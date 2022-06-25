@@ -154,7 +154,7 @@ func ListOrgRepositories(c *context.APIContext) {
 }
 
 func CreateUserRepo(c *context.APIContext, owner *db.User, opt api.CreateRepoOption) {
-	repo, err := db.CreateRepository(c.User, owner, db.CreateRepoOptions{
+	repo, err := db.CreateRepository(c.User, owner, db.CreateRepoOptionsLegacy{
 		Name:        opt.Name,
 		Description: opt.Description,
 		Gitignores:  opt.Gitignores,

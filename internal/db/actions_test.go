@@ -113,11 +113,11 @@ func TestActions(t *testing.T) {
 func actionsCommitRepo(t *testing.T, db *actions) {
 	ctx := context.Background()
 
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
 		alice.ID,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "example",
 		},
 	)
@@ -187,11 +187,11 @@ func actionsListByUser(t *testing.T, db *actions) {
 func actionsMergePullRequest(t *testing.T, db *actions) {
 	ctx := context.Background()
 
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
 		alice.ID,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "example",
 		},
 	)
@@ -233,11 +233,11 @@ func actionsMergePullRequest(t *testing.T, db *actions) {
 func actionsMirrorSyncCreate(t *testing.T, db *actions) {
 	ctx := context.Background()
 
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
 		alice.ID,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "example",
 		},
 	)
@@ -275,11 +275,11 @@ func actionsMirrorSyncCreate(t *testing.T, db *actions) {
 func actionsMirrorSyncDelete(t *testing.T, db *actions) {
 	ctx := context.Background()
 
-	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,
 		alice.ID,
-		createRepoOpts{
+		CreateRepoOptions{
 			Name: "example",
 		},
 	)

@@ -1508,7 +1508,7 @@ type MockReposStore struct {
 func NewMockReposStore() *MockReposStore {
 	return &MockReposStore{
 		CreateFunc: &ReposStoreCreateFunc{
-			defaultHook: func(context.Context, int64, db.createRepoOpts) (r0 *db.Repository, r1 error) {
+			defaultHook: func(context.Context, int64, db.CreateRepoOptions) (r0 *db.Repository, r1 error) {
 				return
 			},
 		},
@@ -1530,7 +1530,7 @@ func NewMockReposStore() *MockReposStore {
 func NewStrictMockReposStore() *MockReposStore {
 	return &MockReposStore{
 		CreateFunc: &ReposStoreCreateFunc{
-			defaultHook: func(context.Context, int64, db.createRepoOpts) (*db.Repository, error) {
+			defaultHook: func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
 				panic("unexpected invocation of MockReposStore.Create")
 			},
 		},
@@ -1566,15 +1566,15 @@ func NewMockReposStoreFrom(i db.ReposStore) *MockReposStore {
 // ReposStoreCreateFunc describes the behavior when the Create method of the
 // parent MockReposStore instance is invoked.
 type ReposStoreCreateFunc struct {
-	defaultHook func(context.Context, int64, db.createRepoOpts) (*db.Repository, error)
-	hooks       []func(context.Context, int64, db.createRepoOpts) (*db.Repository, error)
+	defaultHook func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)
+	hooks       []func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)
 	history     []ReposStoreCreateFuncCall
 	mutex       sync.Mutex
 }
 
 // Create delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockReposStore) Create(v0 context.Context, v1 int64, v2 db.createRepoOpts) (*db.Repository, error) {
+func (m *MockReposStore) Create(v0 context.Context, v1 int64, v2 db.CreateRepoOptions) (*db.Repository, error) {
 	r0, r1 := m.CreateFunc.nextHook()(v0, v1, v2)
 	m.CreateFunc.appendCall(ReposStoreCreateFuncCall{v0, v1, v2, r0, r1})
 	return r0, r1
@@ -1582,7 +1582,7 @@ func (m *MockReposStore) Create(v0 context.Context, v1 int64, v2 db.createRepoOp
 
 // SetDefaultHook sets function that is called when the Create method of the
 // parent MockReposStore instance is invoked and the hook queue is empty.
-func (f *ReposStoreCreateFunc) SetDefaultHook(hook func(context.Context, int64, db.createRepoOpts) (*db.Repository, error)) {
+func (f *ReposStoreCreateFunc) SetDefaultHook(hook func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)) {
 	f.defaultHook = hook
 }
 
@@ -1590,7 +1590,7 @@ func (f *ReposStoreCreateFunc) SetDefaultHook(hook func(context.Context, int64, 
 // Create method of the parent MockReposStore instance invokes the hook at
 // the front of the queue and discards it. After the queue is empty, the
 // default hook function is invoked for any future action.
-func (f *ReposStoreCreateFunc) PushHook(hook func(context.Context, int64, db.createRepoOpts) (*db.Repository, error)) {
+func (f *ReposStoreCreateFunc) PushHook(hook func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error)) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -1599,19 +1599,19 @@ func (f *ReposStoreCreateFunc) PushHook(hook func(context.Context, int64, db.cre
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *ReposStoreCreateFunc) SetDefaultReturn(r0 *db.Repository, r1 error) {
-	f.SetDefaultHook(func(context.Context, int64, db.createRepoOpts) (*db.Repository, error) {
+	f.SetDefaultHook(func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
 		return r0, r1
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *ReposStoreCreateFunc) PushReturn(r0 *db.Repository, r1 error) {
-	f.PushHook(func(context.Context, int64, db.createRepoOpts) (*db.Repository, error) {
+	f.PushHook(func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
 		return r0, r1
 	})
 }
 
-func (f *ReposStoreCreateFunc) nextHook() func(context.Context, int64, db.createRepoOpts) (*db.Repository, error) {
+func (f *ReposStoreCreateFunc) nextHook() func(context.Context, int64, db.CreateRepoOptions) (*db.Repository, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -1652,7 +1652,7 @@ type ReposStoreCreateFuncCall struct {
 	Arg1 int64
 	// Arg2 is the value of the 3rd argument passed to this method
 	// invocation.
-	Arg2 db.createRepoOpts
+	Arg2 db.CreateRepoOptions
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 *db.Repository
@@ -2320,7 +2320,7 @@ func NewMockUsersStore() *MockUsersStore {
 			},
 		},
 		CreateFunc: &UsersStoreCreateFunc{
-			defaultHook: func(context.Context, string, string, db.CreateUserOpts) (r0 *db.User, r1 error) {
+			defaultHook: func(context.Context, string, string, db.CreateUserOptions) (r0 *db.User, r1 error) {
 				return
 			},
 		},
@@ -2352,7 +2352,7 @@ func NewStrictMockUsersStore() *MockUsersStore {
 			},
 		},
 		CreateFunc: &UsersStoreCreateFunc{
-			defaultHook: func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+			defaultHook: func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.Create")
 			},
 		},
@@ -2513,15 +2513,15 @@ func (c UsersStoreAuthenticateFuncCall) Results() []interface{} {
 // UsersStoreCreateFunc describes the behavior when the Create method of the
 // parent MockUsersStore instance is invoked.
 type UsersStoreCreateFunc struct {
-	defaultHook func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)
-	hooks       []func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)
+	defaultHook func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)
+	hooks       []func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)
 	history     []UsersStoreCreateFuncCall
 	mutex       sync.Mutex
 }
 
 // Create delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockUsersStore) Create(v0 context.Context, v1 string, v2 string, v3 db.CreateUserOpts) (*db.User, error) {
+func (m *MockUsersStore) Create(v0 context.Context, v1 string, v2 string, v3 db.CreateUserOptions) (*db.User, error) {
 	r0, r1 := m.CreateFunc.nextHook()(v0, v1, v2, v3)
 	m.CreateFunc.appendCall(UsersStoreCreateFuncCall{v0, v1, v2, v3, r0, r1})
 	return r0, r1
@@ -2529,7 +2529,7 @@ func (m *MockUsersStore) Create(v0 context.Context, v1 string, v2 string, v3 db.
 
 // SetDefaultHook sets function that is called when the Create method of the
 // parent MockUsersStore instance is invoked and the hook queue is empty.
-func (f *UsersStoreCreateFunc) SetDefaultHook(hook func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)) {
+func (f *UsersStoreCreateFunc) SetDefaultHook(hook func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)) {
 	f.defaultHook = hook
 }
 
@@ -2537,7 +2537,7 @@ func (f *UsersStoreCreateFunc) SetDefaultHook(hook func(context.Context, string,
 // Create method of the parent MockUsersStore instance invokes the hook at
 // the front of the queue and discards it. After the queue is empty, the
 // default hook function is invoked for any future action.
-func (f *UsersStoreCreateFunc) PushHook(hook func(context.Context, string, string, db.CreateUserOpts) (*db.User, error)) {
+func (f *UsersStoreCreateFunc) PushHook(hook func(context.Context, string, string, db.CreateUserOptions) (*db.User, error)) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -2546,19 +2546,19 @@ func (f *UsersStoreCreateFunc) PushHook(hook func(context.Context, string, strin
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *UsersStoreCreateFunc) SetDefaultReturn(r0 *db.User, r1 error) {
-	f.SetDefaultHook(func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+	f.SetDefaultHook(func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 		return r0, r1
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *UsersStoreCreateFunc) PushReturn(r0 *db.User, r1 error) {
-	f.PushHook(func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+	f.PushHook(func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 		return r0, r1
 	})
 }
 
-func (f *UsersStoreCreateFunc) nextHook() func(context.Context, string, string, db.CreateUserOpts) (*db.User, error) {
+func (f *UsersStoreCreateFunc) nextHook() func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -2602,7 +2602,7 @@ type UsersStoreCreateFuncCall struct {
 	Arg2 string
 	// Arg3 is the value of the 4th argument passed to this method
 	// invocation.
-	Arg3 db.CreateUserOpts
+	Arg3 db.CreateUserOptions
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 *db.User

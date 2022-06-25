@@ -54,7 +54,7 @@ type ActionsStore interface {
 	MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error
 	// MirrorSyncPush creates an action for mirror synchronization of pushed
 	// commits.
-	MirrorSyncPush(ctx context.Context, owner *User, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error
+	MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error
 	// NewRepo creates an action for creating a new repository. The action type
 	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
 	// is a fork.
@@ -231,26 +231,40 @@ func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, owne
 	)
 }
 
-func (db *actions) MirrorSyncPush(ctx context.Context, owner *User, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error {
-	if len(commits.Commits) > conf.UI.FeedMaxCommitNum {
-		commits.Commits = commits.Commits[:conf.UI.FeedMaxCommitNum]
+type MirrorSyncPushOptions struct {
+	Owner       *User
+	Repo        *Repository
+	RefName     string
+	OldCommitID string
+	NewCommitID string
+	Commits     *PushCommits
+}
+
+func (db *actions) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOptions) error {
+	if len(opts.Commits.Commits) > conf.UI.FeedMaxCommitNum {
+		opts.Commits.Commits = opts.Commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
 
-	apiCommits, err := commits.APIFormat(ctx, repo.RepoPath(), repo.HTMLURL())
+	apiCommits, err := opts.Commits.APIFormat(ctx,
+		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
+		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
+	)
 	if err != nil {
 		return errors.Wrap(err, "convert commits to API format")
 	}
 
-	commits.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
-	apiPusher := owner.APIFormat()
-	err = PrepareWebhooks(repo, HOOK_EVENT_PUSH,
+	opts.Commits.CompareURL = repoutil.CompareCommitsPath(opts.Owner.Name, opts.Repo.Name, opts.OldCommitID, opts.NewCommitID)
+	apiPusher := opts.Owner.APIFormat()
+	err = PrepareWebhooks(
+		opts.Repo,
+		HOOK_EVENT_PUSH,
 		&api.PushPayload{
-			Ref:        refName,
-			Before:     oldCommitID,
-			After:      newCommitID,
-			CompareURL: conf.Server.ExternalURL + commits.CompareURL,
+			Ref:        opts.RefName,
+			Before:     opts.OldCommitID,
+			After:      opts.NewCommitID,
+			CompareURL: conf.Server.ExternalURL + opts.Commits.CompareURL,
 			Commits:    apiCommits,
-			Repo:       repo.APIFormat(owner),
+			Repo:       opts.Repo.APIFormat(opts.Owner),
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
 		},
@@ -259,12 +273,12 @@ func (db *actions) MirrorSyncPush(ctx context.Context, owner *User, repo *Reposi
 		return errors.Wrap(err, "prepare webhooks")
 	}
 
-	data, err := jsoniter.Marshal(commits)
+	data, err := jsoniter.Marshal(opts.Commits)
 	if err != nil {
 		return errors.Wrap(err, "marshal JSON")
 	}
 
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, owner, repo, refName, data)
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, opts.Owner, opts.Repo, opts.RefName, data)
 }
 
 func (db *actions) MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error {

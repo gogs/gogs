@@ -35,7 +35,7 @@ func Authentications(c *context.Context) {
 	c.PageIs("AdminAuthentications")
 
 	var err error
-	c.Data["Sources"], err = db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	c.Data["Sources"], err = db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -160,7 +160,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	}
 
 	source, err := db.LoginSources.Create(c.Req.Context(),
-		db.CreateLoginSourceOpts{
+		db.CreateLoginSourceOptions{
 			Type:      auth.Type(f.Type),
 			Name:      f.Name,
 			Activated: f.IsActive,

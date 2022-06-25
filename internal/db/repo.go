@@ -756,7 +756,7 @@ func wikiRemoteURL(remote string) string {
 
 // MigrateRepository migrates a existing repository from other project hosting.
 func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository, error) {
-	repo, err := CreateRepository(doer, owner, CreateRepoOptions{
+	repo, err := CreateRepository(doer, owner, CreateRepoOptionsLegacy{
 		Name:        opts.Name,
 		Description: opts.Description,
 		IsPrivate:   opts.IsPrivate,
@@ -928,7 +928,7 @@ func initRepoCommit(tmpPath string, sig *git.Signature) (err error) {
 	return nil
 }
 
-type CreateRepoOptions struct {
+type CreateRepoOptionsLegacy struct {
 	Name        string
 	Description string
 	Gitignores  string
@@ -951,7 +951,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	return embedConf.Files.ReadFile(relPath)
 }
 
-func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptions) error {
+func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRepoOptionsLegacy) error {
 	// Clone to temporary path and do the init commit.
 	_, stderr, err := process.Exec(
 		fmt.Sprintf("initRepository(git clone): %s", repoPath), "git", "clone", repoPath, tmpDir)
@@ -1014,7 +1014,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 }
 
 // initRepository performs initial commit with chosen setup files on behave of doer.
-func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptions) (err error) {
+func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opts CreateRepoOptionsLegacy) (err error) {
 	// Somehow the directory could exist.
 	if com.IsExist(repoPath) {
 		return fmt.Errorf("initRepository: path already exists: %s", repoPath)
@@ -1157,7 +1157,7 @@ func (err ErrReachLimitOfRepo) Error() string {
 }
 
 // CreateRepository creates a repository for given user or organization.
-func CreateRepository(doer, owner *User, opts CreateRepoOptions) (_ *Repository, err error) {
+func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	if !owner.CanCreateRepo() {
 		return nil, ErrReachLimitOfRepo{Limit: owner.RepoCreationNum()}
 	}
