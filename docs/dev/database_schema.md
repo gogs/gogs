@@ -31,6 +31,30 @@ Indexes:
 	"idx_access_token_user_id" (uid)
 ```
 
+# Table "action"
+
+```
+     FIELD     |     COLUMN     |           POSTGRESQL           |             MYSQL              |            SQLITE3              
+---------------+----------------+--------------------------------+--------------------------------+---------------------------------
+  ID           | id             | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER                         
+  UserID       | user_id        | BIGINT                         | BIGINT                         | INTEGER                         
+  OpType       | op_type        | BIGINT                         | BIGINT                         | INTEGER                         
+  ActUserID    | act_user_id    | BIGINT                         | BIGINT                         | INTEGER                         
+  ActUserName  | act_user_name  | TEXT                           | LONGTEXT                       | TEXT                            
+  RepoID       | repo_id        | BIGINT                         | BIGINT                         | INTEGER                         
+  RepoUserName | repo_user_name | TEXT                           | LONGTEXT                       | TEXT                            
+  RepoName     | repo_name      | TEXT                           | LONGTEXT                       | TEXT                            
+  RefName      | ref_name       | TEXT                           | LONGTEXT                       | TEXT                            
+  IsPrivate    | is_private     | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE  
+  Content      | content        | TEXT                           | LONGTEXT                       | TEXT                            
+  CreatedUnix  | created_unix   | BIGINT                         | BIGINT                         | INTEGER                         
+
+Primary keys: id
+Indexes: 
+	"idx_action_repo_id" (repo_id)
+	"idx_action_user_id" (user_id)
+```
+
 # Table "lfs_object"
 
 ```

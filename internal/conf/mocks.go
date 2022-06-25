@@ -8,10 +8,42 @@ import (
 	"testing"
 )
 
+func SetMockApp(t *testing.T, opts AppOpts) {
+	before := App
+	App = opts
+	t.Cleanup(func() {
+		App = before
+	})
+}
+
 func SetMockServer(t *testing.T, opts ServerOpts) {
 	before := Server
 	Server = opts
 	t.Cleanup(func() {
 		Server = before
+	})
+}
+
+func SetMockSSH(t *testing.T, opts SSHOpts) {
+	before := SSH
+	SSH = opts
+	t.Cleanup(func() {
+		SSH = before
+	})
+}
+
+func SetMockRepository(t *testing.T, opts RepositoryOpts) {
+	before := Repository
+	Repository = opts
+	t.Cleanup(func() {
+		Repository = before
+	})
+}
+
+func SetMockUI(t *testing.T, opts UIOpts) {
+	before := UI
+	UI = opts
+	t.Cleanup(func() {
+		UI = before
 	})
 }

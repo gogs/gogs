@@ -53,9 +53,17 @@ func getDashboardContextUser(c *context.Context) *db.User {
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
 func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile bool) {
-	actions, err := db.GetFeeds(ctxUser, userID, c.QueryInt64("after_id"), isProfile)
+	afterID := c.QueryInt64("after_id")
+
+	var err error
+	var actions []*db.Action
+	if ctxUser.IsOrganization() {
+		actions, err = db.Actions.ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
+	} else {
+		actions, err = db.Actions.ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
+	}
 	if err != nil {
-		c.Error(err, "get feeds")
+		c.Error(err, "list actions")
 		return
 	}
 

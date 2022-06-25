@@ -18,6 +18,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -37,7 +38,9 @@ func ToWikiPageName(urlString string) string {
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
-func (repo *Repository) WikiCloneLink() (cl *CloneLink) {
+//
+// Deprecated: Use repoutil.NewCloneLink instead.
+func (repo *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
 	return repo.cloneLink(true)
 }
 

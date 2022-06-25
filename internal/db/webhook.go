@@ -26,6 +26,7 @@ import (
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/netutil"
 	"gogs.io/gogs/internal/sync"
+	"gogs.io/gogs/internal/testutil"
 )
 
 var HookQueue = sync.NewUniqueQueue(1000)
@@ -676,6 +677,11 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 
 // PrepareWebhooks adds all active webhooks to task queue.
 func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
+	// choose to ignore this function in tests.
+	if x == nil && testutil.InTest {
+		return nil
+	}
 	return prepareWebhooks(x, repo, event, p)
 }
 

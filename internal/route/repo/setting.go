@@ -100,8 +100,8 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
-			if err := db.RenameRepoAction(c.User, oldRepoName, repo); err != nil {
-				log.Error("RenameRepoAction: %v", err)
+			if err := db.Actions.RenameRepo(c.Req.Context(), c.User, repo.MustOwner(), oldRepoName, repo); err != nil {
+				log.Error("create rename repository action: %v", err)
 			}
 		}
 

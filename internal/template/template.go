@@ -27,6 +27,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -106,7 +107,7 @@ func FuncMap() []template.FuncMap {
 				return str[start:end]
 			},
 			"Join":                  strings.Join,
-			"EllipsisString":        tool.EllipsisString,
+			"EllipsisString":        strutil.Ellipsis,
 			"DiffFileTypeToStr":     DiffFileTypeToStr,
 			"DiffLineTypeToStr":     DiffLineTypeToStr,
 			"Sha1":                  Sha1,

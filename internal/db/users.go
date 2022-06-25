@@ -38,7 +38,7 @@ type UsersStore interface {
 	// Create creates a new user and persists to database. It returns
 	// ErrUserAlreadyExist when a user with same name already exists, or
 	// ErrEmailAlreadyUsed if the email has been used by another user.
-	Create(ctx context.Context, username, email string, opts CreateUserOpts) (*User, error)
+	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
 	// GetByEmail returns the user (not organization) with given email. It ignores
 	// records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(ctx context.Context, email string) (*User, error)
@@ -72,6 +72,12 @@ var _ UsersStore = (*users)(nil)
 
 type users struct {
 	*gorm.DB
+}
+
+// NewUsersStore returns a persistent interface for users with given database
+// connection.
+func NewUsersStore(db *gorm.DB) UsersStore {
+	return &users{DB: db}
 }
 
 type ErrLoginSourceMismatch struct {
@@ -154,7 +160,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 	}
 
 	return db.Create(ctx, extAccount.Name, extAccount.Email,
-		CreateUserOpts{
+		CreateUserOptions{
 			FullName:    extAccount.FullName,
 			LoginSource: authSourceID,
 			LoginName:   extAccount.Login,
@@ -166,7 +172,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 	)
 }
 
-type CreateUserOpts struct {
+type CreateUserOptions struct {
 	FullName    string
 	Password    string
 	LoginSource int64
@@ -211,7 +217,7 @@ func (err ErrEmailAlreadyUsed) Error() string {
 	return fmt.Sprintf("email has been used: %v", err.args)
 }
 
-func (db *users) Create(ctx context.Context, username, email string, opts CreateUserOpts) (*User, error) {
+func (db *users) Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error) {
 	err := isUsernameAllowed(username)
 	if err != nil {
 		return nil, err

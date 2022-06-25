@@ -66,7 +66,7 @@ func Search(c *context.APIContext) {
 
 	results := make([]*api.Repository, len(repos))
 	for i := range repos {
-		results[i] = repos[i].APIFormat(nil)
+		results[i] = repos[i].APIFormatLegacy(nil)
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
@@ -110,7 +110,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 	if c.User.ID != user.ID {
 		repos := make([]*api.Repository, len(ownRepos))
 		for i := range ownRepos {
-			repos[i] = ownRepos[i].APIFormat(&api.Permission{Admin: true, Push: true, Pull: true})
+			repos[i] = ownRepos[i].APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true})
 		}
 		c.JSONSuccess(&repos)
 		return
@@ -125,12 +125,12 @@ func listUserRepositories(c *context.APIContext, username string) {
 	numOwnRepos := len(ownRepos)
 	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
 	for i := range ownRepos {
-		repos[i] = ownRepos[i].APIFormat(&api.Permission{Admin: true, Push: true, Pull: true})
+		repos[i] = ownRepos[i].APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true})
 	}
 
 	i := numOwnRepos
 	for repo, access := range accessibleRepos {
-		repos[i] = repo.APIFormat(&api.Permission{
+		repos[i] = repo.APIFormatLegacy(&api.Permission{
 			Admin: access >= db.AccessModeAdmin,
 			Push:  access >= db.AccessModeWrite,
 			Pull:  true,
@@ -154,7 +154,7 @@ func ListOrgRepositories(c *context.APIContext) {
 }
 
 func CreateUserRepo(c *context.APIContext, owner *db.User, opt api.CreateRepoOption) {
-	repo, err := db.CreateRepository(c.User, owner, db.CreateRepoOptions{
+	repo, err := db.CreateRepository(c.User, owner, db.CreateRepoOptionsLegacy{
 		Name:        opt.Name,
 		Description: opt.Description,
 		Gitignores:  opt.Gitignores,
@@ -178,7 +178,7 @@ func CreateUserRepo(c *context.APIContext, owner *db.User, opt api.CreateRepoOpt
 		return
 	}
 
-	c.JSON(201, repo.APIFormat(&api.Permission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, repo.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 func Create(c *context.APIContext, opt api.CreateRepoOption) {
@@ -282,7 +282,7 @@ func Migrate(c *context.APIContext, f form.MigrateRepo) {
 	}
 
 	log.Trace("Repository migrated: %s/%s", ctxUser.Name, f.RepoName)
-	c.JSON(201, repo.APIFormat(&api.Permission{Admin: true, Push: true, Pull: true}))
+	c.JSON(201, repo.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
 }
 
 // FIXME: inject in the handler chain
@@ -312,7 +312,7 @@ func Get(c *context.APIContext) {
 		return
 	}
 
-	c.JSONSuccess(repo.APIFormat(&api.Permission{
+	c.JSONSuccess(repo.APIFormatLegacy(&api.Permission{
 		Admin: c.Repo.IsAdmin(),
 		Push:  c.Repo.IsWriter(),
 		Pull:  true,
@@ -352,7 +352,7 @@ func ListForks(c *context.APIContext) {
 			c.Error(err, "get owner")
 			return
 		}
-		apiForks[i] = forks[i].APIFormat(&api.Permission{
+		apiForks[i] = forks[i].APIFormatLegacy(&api.Permission{
 			Admin: c.User.IsAdminOfRepo(forks[i]),
 			Push:  c.User.IsWriterOfRepo(forks[i]),
 			Pull:  true,
