@@ -5,6 +5,7 @@
 package repoutil
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,6 +93,11 @@ func TestCompareCommitsPath(t *testing.T) {
 }
 
 func TestUserPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
 	conf.SetMockRepository(t,
 		conf.RepositoryOpts{
 			Root: "/home/git/gogs-repositories",
@@ -104,6 +110,11 @@ func TestUserPath(t *testing.T) {
 }
 
 func TestRepositoryPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
 	conf.SetMockRepository(t,
 		conf.RepositoryOpts{
 			Root: "/home/git/gogs-repositories",
