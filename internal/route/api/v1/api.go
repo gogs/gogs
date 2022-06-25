@@ -281,7 +281,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 						m.Get("/:sha", repo.GetRepoGitTree)
 					})
 					m.Group("/blobs", func() {
-						m.Get("/:sha", repo.GetRepoGitBlob)
+						m.Get("/:sha", repo.RepoGitBlob)
 					})
 				})
 				m.Get("/forks", repo.ListForks)
