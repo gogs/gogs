@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/strutil"
+	"gogs.io/gogs/internal/testutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -58,7 +59,7 @@ type ActionsStore interface {
 	// NewRepo creates an action for creating a new repository. The action type
 	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
 	// is a fork.
-	NewRepo(ctx context.Context, doer *User, repo *Repository) error
+	NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error
 	// PushTag creates an action for pushing tags to the repository. An action with
 	// the type ActionDeleteTag is created if the push deletes a tag. Otherwise, an
 	// action with the type ActionPushTag is created for a regular push.
@@ -181,7 +182,7 @@ func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
 	return db.Create(actions).Error
 }
 
-func (db *actions) NewRepo(ctx context.Context, doer *User, repo *Repository) error {
+func (db *actions) NewRepo(ctx context.Context, doer, owner *User, repo *Repository) error {
 	opType := ActionCreateRepo
 	if repo.IsFork {
 		opType = ActionForkRepo
@@ -193,7 +194,7 @@ func (db *actions) NewRepo(ctx context.Context, doer *User, repo *Repository) er
 			ActUserName:  doer.Name,
 			OpType:       opType,
 			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
+			RepoUserName: owner.Name,
 			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 		},
@@ -246,6 +247,7 @@ func (db *actions) MirrorSyncPush(ctx context.Context, opts MirrorSyncPushOption
 	}
 
 	apiCommits, err := opts.Commits.APIFormat(ctx,
+		NewUsersStore(db.DB),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -579,6 +581,7 @@ func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error
 	}
 
 	commits, err := opts.Commits.APIFormat(ctx,
+		NewUsersStore(db.DB),
 		repoutil.RepositoryPath(opts.Owner.Name, opts.Repo.Name),
 		repoutil.HTMLURL(opts.Owner.Name, opts.Repo.Name),
 	)
@@ -867,7 +870,7 @@ func NewPushCommits() *PushCommits {
 	}
 }
 
-func (pcs *PushCommits) APIFormat(ctx context.Context, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
+func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore UsersStore, repoPath, repoURL string) ([]*api.PayloadCommit, error) {
 	// NOTE: We cache query results in case there are many commits in a single push.
 	usernameByEmail := make(map[string]string)
 	getUsernameByEmail := func(email string) (string, error) {
@@ -876,7 +879,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, repoPath, repoURL string)
 			return username, nil
 		}
 
-		user, err := Users.GetByEmail(ctx, email)
+		user, err := usersStore.GetByEmail(ctx, email)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				usernameByEmail[email] = ""
@@ -901,9 +904,12 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, repoPath, repoURL string)
 			return nil, errors.Wrap(err, "get committer username")
 		}
 
-		nameStatus, err := git.RepoShowNameStatus(repoPath, commit.Sha1)
-		if err != nil {
-			return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
+		nameStatus := &git.NameStatus{}
+		if !testutil.InTest {
+			nameStatus, err = git.ShowNameStatus(repoPath, commit.Sha1)
+			if err != nil {
+				return nil, errors.Wrapf(err, "show name status [commit_sha1: %s]", commit.Sha1)
+			}
 		}
 
 		commits[i] = &api.PayloadCommit{

@@ -123,6 +123,8 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 	)
 	require.NoError(t, err)
 
+	now := time.Unix(1588568886, 0).UTC()
+
 	t.Run("new commit", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
@@ -144,12 +146,12 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 							Author: &git.Signature{
 								Name:  "alice",
 								Email: "alice@example.com",
-								When:  db.NowFunc(),
+								When:  now,
 							},
 							Committer: &git.Signature{
 								Name:  "alice",
 								Email: "alice@example.com",
-								When:  db.NowFunc(),
+								When:  now,
 							},
 							Message: "A random commit",
 						},
@@ -174,7 +176,7 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 				RepoName:     repo.Name,
 				RefName:      "main",
 				IsPrivate:    false,
-				Content:      `{"Len":1,"Commits":[],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
+				Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
 				CreatedUnix:  db.NowFunc().Unix(),
 			},
 		}
@@ -203,12 +205,12 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 							Author: &git.Signature{
 								Name:  "alice",
 								Email: "alice@example.com",
-								When:  db.NowFunc(),
+								When:  now,
 							},
 							Committer: &git.Signature{
 								Name:  "alice",
 								Email: "alice@example.com",
-								When:  db.NowFunc(),
+								When:  now,
 							},
 							Message: "A random commit",
 						},
@@ -233,7 +235,7 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 				RepoName:     repo.Name,
 				RefName:      "main",
 				IsPrivate:    false,
-				Content:      `{"Len":1,"Commits":[],"CompareURL":""}`,
+				Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":""}`,
 				CreatedUnix:  db.NowFunc().Unix(),
 			},
 			{
@@ -247,7 +249,7 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 				RepoName:     repo.Name,
 				RefName:      "main",
 				IsPrivate:    false,
-				Content:      `{"Len":1,"Commits":[],"CompareURL":""}`,
+				Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":""}`,
 				CreatedUnix:  db.NowFunc().Unix(),
 			},
 		}
@@ -448,6 +450,7 @@ func actionsMirrorSyncPush(t *testing.T, db *actions) {
 	)
 	require.NoError(t, err)
 
+	now := time.Unix(1588568886, 0).UTC()
 	err = db.MirrorSyncPush(ctx,
 		MirrorSyncPushOptions{
 			Owner:       alice,
@@ -462,12 +465,12 @@ func actionsMirrorSyncPush(t *testing.T, db *actions) {
 						Author: &git.Signature{
 							Name:  "alice",
 							Email: "alice@example.com",
-							When:  db.NowFunc(),
+							When:  now,
 						},
 						Committer: &git.Signature{
 							Name:  "alice",
 							Email: "alice@example.com",
-							When:  db.NowFunc(),
+							When:  now,
 						},
 						Message: "A random commit",
 					},
@@ -492,7 +495,7 @@ func actionsMirrorSyncPush(t *testing.T, db *actions) {
 			RepoName:     repo.Name,
 			RefName:      "main",
 			IsPrivate:    false,
-			Content:      `{"Len":1,"Commits":[],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
+			Content:      `{"Len":1,"Commits":[{"Sha1":"085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7","Message":"A random commit","AuthorEmail":"alice@example.com","AuthorName":"alice","CommitterEmail":"alice@example.com","CommitterName":"alice","Timestamp":"2020-05-04T05:08:06Z"}],"CompareURL":"alice/example/compare/ca82a6dff817ec66f44342007202690a93763949...085bb3bcb608e1e8451d4b2432f8ecbe6306e7e7"}`,
 			CreatedUnix:  db.NowFunc().Unix(),
 		},
 	}
@@ -501,7 +504,78 @@ func actionsMirrorSyncPush(t *testing.T, db *actions) {
 }
 
 func actionsNewRepo(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		CreateRepoOptions{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	t.Run("new repo", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			require.NoError(t, err)
+		})
+
+		err = db.NewRepo(ctx, alice, alice, repo)
+		require.NoError(t, err)
+
+		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		require.NoError(t, err)
+
+		want := []*Action{
+			{
+				ID:           1,
+				UserID:       alice.ID,
+				OpType:       ActionCreateRepo,
+				ActUserID:    alice.ID,
+				ActUserName:  alice.Name,
+				RepoID:       repo.ID,
+				RepoUserName: alice.Name,
+				RepoName:     repo.Name,
+				IsPrivate:    false,
+				CreatedUnix:  db.NowFunc().Unix(),
+			},
+		}
+		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("fork repo", func(t *testing.T) {
+		t.Cleanup(func() {
+			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
+			require.NoError(t, err)
+		})
+
+		repo.IsFork = true
+		err = db.NewRepo(ctx, alice, alice, repo)
+		require.NoError(t, err)
+
+		got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+		require.NoError(t, err)
+
+		want := []*Action{
+			{
+				ID:           1,
+				UserID:       alice.ID,
+				OpType:       ActionForkRepo,
+				ActUserID:    alice.ID,
+				ActUserName:  alice.Name,
+				RepoID:       repo.ID,
+				RepoUserName: alice.Name,
+				RepoName:     repo.Name,
+				IsPrivate:    false,
+				CreatedUnix:  db.NowFunc().Unix(),
+			},
+		}
+		want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+		assert.Equal(t, want, got)
+	})
 }
 
 func actionsPushTag(t *testing.T, db *actions) {
