@@ -19,16 +19,12 @@ All notable changes to Gogs are documented in this file.
 - MSSQL as database backend is deprecated, installation page no longer shows it as an option. Existing installations and manually craft configuration file continue to work. [#6295](https://github.com/gogs/gogs/pull/6295)
 - Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
 - The required Go version to compile source code changed to 1.16.
+- Access tokens are now stored using their SHA256 hashes instead of raw values. [#7008](https://github.com/gogs/gogs/pull/7008)
 
 ### Fixed
 
-- _Security:_ OS Command Injection in file editor. [#7000](https://github.com/gogs/gogs/issues/7000)
-- _Security:_ Sanitize `DisplayName` in repository issue list. [#7009](https://github.com/gogs/gogs/pull/7009)
-- _Security:_ Path Traversal in file editor on Windows. [#7001](https://github.com/gogs/gogs/issues/7001)
-- _Security:_ Path Traversal in Git HTTP endpoints. [#7002](https://github.com/gogs/gogs/issues/7002)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
-- Unable to init repository during creation on Windows. [#6967](https://github.com/gogs/gogs/issues/6967)
-- Mysterious panic on `Value not found for type *repo.HTTPContext`. [#6963](https://github.com/gogs/gogs/issues/6963)
+- Unable to send webhooks to local network addresses after configured `[security] LOCAL_NETWORK_ALLOWLIST`. [#7074](https://github.com/gogs/gogs/issues/7074)
 
 ### Removed
 
@@ -49,6 +45,17 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
 - Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
+
+## 0.12.9
+
+### Fixed
+
+- _Security:_ OS Command Injection in file editor. [#7000](https://github.com/gogs/gogs/issues/7000)
+- _Security:_ Sanitize `DisplayName` in repository issue list. [#7009](https://github.com/gogs/gogs/pull/7009)
+- _Security:_ Path Traversal in file editor on Windows. [#7001](https://github.com/gogs/gogs/issues/7001)
+- _Security:_ Path Traversal in Git HTTP endpoints. [#7002](https://github.com/gogs/gogs/issues/7002)
+- Unable to init repository during creation on Windows. [#6967](https://github.com/gogs/gogs/issues/6967)
+- Mysterious panic on `Value not found for type *repo.HTTPContext`. [#6963](https://github.com/gogs/gogs/issues/6963)
 
 ## 0.12.8
 
