@@ -353,7 +353,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 		Action:     api.HOOK_ISSUE_COMMENT_CREATED,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
-		Repository: repo.APIFormat(nil),
+		Repository: repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
@@ -494,7 +494,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 				From: oldContent,
 			},
 		},
-		Repository: c.Issue.Repo.APIFormat(nil),
+		Repository: c.Issue.Repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
@@ -544,7 +544,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		Action:     api.HOOK_ISSUE_COMMENT_DELETED,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),
-		Repository: comment.Issue.Repo.APIFormat(nil),
+		Repository: comment.Issue.Repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)

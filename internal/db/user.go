@@ -908,6 +908,8 @@ func DeleteInactivateUsers() (err error) {
 }
 
 // UserPath returns the path absolute path of user repositories.
+//
+// Deprecated: Use repoutil.UserPath instead.
 func UserPath(username string) string {
 	return filepath.Join(conf.Repository.Root, strings.ToLower(username))
 }

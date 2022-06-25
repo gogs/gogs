@@ -39,6 +39,7 @@ import (
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/process"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/semverutil"
 	"gogs.io/gogs/internal/sync"
 )
@@ -291,6 +292,7 @@ func (repo *Repository) FullName() string {
 	return repo.MustOwner().Name + "/" + repo.Name
 }
 
+// Deprecated: Use repoutil.HTMLURL instead.
 func (repo *Repository) HTMLURL() string {
 	return conf.Server.ExternalURL + repo.FullName()
 }
@@ -357,7 +359,9 @@ func (repo *Repository) DeleteAvatar() error {
 // This method assumes following fields have been assigned with valid values:
 // Required - BaseRepo (if fork)
 // Arguments that are allowed to be nil: permission
-func (repo *Repository) APIFormat(permission *api.Permission, user ...*User) *api.Repository {
+//
+// Deprecated: Use APIFormat instead.
+func (repo *Repository) APIFormatLegacy(permission *api.Permission, user ...*User) *api.Repository {
 	cloneLink := repo.CloneLink()
 	apiRepo := &api.Repository{
 		ID:            repo.ID,
@@ -391,7 +395,7 @@ func (repo *Repository) APIFormat(permission *api.Permission, user ...*User) *ap
 			p.Admin = user[0].IsAdminOfRepo(repo)
 			p.Push = user[0].IsWriterOfRepo(repo)
 		}
-		apiRepo.Parent = repo.BaseRepo.APIFormat(p)
+		apiRepo.Parent = repo.BaseRepo.APIFormatLegacy(p)
 	}
 	return apiRepo
 }
@@ -538,6 +542,7 @@ func (repo *Repository) repoPath(e Engine) string {
 	return RepoPath(repo.mustOwner(e).Name, repo.Name)
 }
 
+// Deprecated: Use repoutil.RepositoryPath instead.
 func (repo *Repository) RepoPath() string {
 	return repo.repoPath(x)
 }
@@ -554,6 +559,7 @@ func (repo *Repository) Link() string {
 	return conf.Server.Subpath + "/" + repo.FullName()
 }
 
+// Deprecated: Use repoutil.ComparePath instead.
 func (repo *Repository) ComposeCompareURL(oldCommitID, newCommitID string) string {
 	return fmt.Sprintf("%s/%s/compare/%s...%s", repo.MustOwner().Name, repo.Name, oldCommitID, newCommitID)
 }
@@ -695,37 +701,28 @@ func IsRepositoryExist(u *User, repoName string) (bool, error) {
 	return isRepositoryExist(x, u, repoName)
 }
 
-// CloneLink represents different types of clone URLs of repository.
-type CloneLink struct {
-	SSH   string
-	HTTPS string
-	Git   string
-}
-
-// ComposeHTTPSCloneURL returns HTTPS clone URL based on given owner and repository name.
-func ComposeHTTPSCloneURL(owner, repo string) string {
-	return fmt.Sprintf("%s%s/%s.git", conf.Server.ExternalURL, owner, repo)
-}
-
-func (repo *Repository) cloneLink(isWiki bool) *CloneLink {
+// Deprecated: Use repoutil.NewCloneLink instead.
+func (repo *Repository) cloneLink(isWiki bool) *repoutil.CloneLink {
 	repoName := repo.Name
 	if isWiki {
 		repoName += ".wiki"
 	}
 
 	repo.Owner = repo.MustOwner()
-	cl := new(CloneLink)
+	cl := new(repoutil.CloneLink)
 	if conf.SSH.Port != 22 {
 		cl.SSH = fmt.Sprintf("ssh://%s@%s:%d/%s/%s.git", conf.App.RunUser, conf.SSH.Domain, conf.SSH.Port, repo.Owner.Name, repoName)
 	} else {
 		cl.SSH = fmt.Sprintf("%s@%s:%s/%s.git", conf.App.RunUser, conf.SSH.Domain, repo.Owner.Name, repoName)
 	}
-	cl.HTTPS = ComposeHTTPSCloneURL(repo.Owner.Name, repoName)
+	cl.HTTPS = repoutil.HTTPSCloneURL(repo.Owner.Name, repoName)
 	return cl
 }
 
 // CloneLink returns clone URLs of repository.
-func (repo *Repository) CloneLink() (cl *CloneLink) {
+//
+// Deprecated: Use repoutil.NewCloneLink instead.
+func (repo *Repository) CloneLink() (cl *repoutil.CloneLink) {
 	return repo.cloneLink(false)
 }
 
@@ -1288,6 +1285,8 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 }
 
 // RepoPath returns repository path by given user and repository name.
+//
+// Deprecated: Use repoutil.RepositoryPath instead.
 func RepoPath(userName, repoName string) string {
 	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
 }
@@ -2523,8 +2522,8 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 		log.Error("UpdateSize [repo_id: %d]: %v", repo.ID, err)
 	}
 	if err = PrepareWebhooks(baseRepo, HOOK_EVENT_FORK, &api.ForkPayload{
-		Forkee: repo.APIFormat(nil),
-		Repo:   baseRepo.APIFormat(nil),
+		Forkee: repo.APIFormatLegacy(nil),
+		Repo:   baseRepo.APIFormatLegacy(nil),
 		Sender: doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [repo_id: %d]: %v", baseRepo.ID, err)
