@@ -54,6 +54,8 @@ var migrations = []Migration{
 
 	// v19 -> v20:v0.13.0
 	NewMigration("migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
+	// v20 -> v21:v0.13.0
+	NewMigration("add index to action.user_id", addIndexToActionUserID),
 }
 
 // Migrate migrates the database schema and/or data to the current version.

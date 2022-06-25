@@ -21,6 +21,7 @@ func TestTwoFactor_BeforeCreate(t *testing.T) {
 	now := time.Now()
 	db := &gorm.DB{
 		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
 			NowFunc: func() time.Time {
 				return now
 			},
