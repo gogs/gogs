@@ -45,7 +45,7 @@ type ActionsStore interface {
 	// permissions should be considered.
 	ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error)
 	// MergePullRequest creates an action for merging a pull request.
-	MergePullRequest(ctx context.Context, doer *User, repo *Repository, pull *Issue) error
+	MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error
 	// MirrorSyncCreate creates an action for mirror synchronization of a new
 	// reference.
 	MirrorSyncCreate(ctx context.Context, repo *Repository, refName string) error
@@ -275,7 +275,7 @@ func (db *actions) MirrorSyncDelete(ctx context.Context, repo *Repository, refNa
 	return db.mirrorSyncAction(ctx, ActionMirrorSyncDelete, repo, refName, nil)
 }
 
-func (db *actions) MergePullRequest(ctx context.Context, doer *User, repo *Repository, pull *Issue) error {
+func (db *actions) MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error {
 	return db.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
@@ -283,7 +283,7 @@ func (db *actions) MergePullRequest(ctx context.Context, doer *User, repo *Repos
 			OpType:       ActionMergePullRequest,
 			Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
 			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
+			RepoUserName: owner.Name,
 			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 		},

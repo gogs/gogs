@@ -2350,6 +2350,10 @@ func (repo *Repository) GetWatchers(page int) ([]*User, error) {
 
 // Deprecated: Use Actions.notifyWatchers instead.
 func notifyWatchers(e Engine, act *Action) error {
+	if act.CreatedUnix <= 0 {
+		act.CreatedUnix = time.Now().Unix()
+	}
+
 	// Add feeds for user self and all watchers.
 	watchers, err := getWatchers(e, act.RepoID)
 	if err != nil {

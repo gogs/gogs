@@ -17,6 +17,36 @@ import (
 	"gogs.io/gogs/internal/dbtest"
 )
 
+func TestIssueReferencePattern(t *testing.T) {
+	tests := []struct {
+		name    string
+		message string
+		want    []string
+	}{
+		{
+			name:    "no match",
+			message: "Hello world!",
+			want:    nil,
+		},
+		{
+			name:    "contains issue numbers",
+			message: "#123 is fixed, and #456 is WIP",
+			want:    []string{"#123", " #456"},
+		},
+		{
+			name:    "contains full issue references",
+			message: "#123 is fixed, and user/repo#456 is WIP",
+			want:    []string{"#123", " user/repo#456"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := issueReferencePattern.FindAllString(test.message, -1)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
 func TestAction_BeforeCreate(t *testing.T) {
 	now := time.Now()
 	db := &gorm.DB{
@@ -156,7 +186,50 @@ func actionsListByUser(t *testing.T, db *actions) {
 }
 
 func actionsMergePullRequest(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		createRepoOpts{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.MergePullRequest(ctx,
+		alice,
+		alice,
+		repo,
+		&Issue{
+			Index: 1,
+			Title: "Fix issue 1",
+		},
+	)
+	require.NoError(t, err)
+
+	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	require.NoError(t, err)
+
+	want := []*Action{
+		{
+			ID:           1,
+			UserID:       alice.ID,
+			OpType:       ActionMergePullRequest,
+			ActUserID:    alice.ID,
+			ActUserName:  alice.Name,
+			ActAvatar:    "",
+			RepoID:       repo.ID,
+			RepoUserName: alice.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    false,
+			Content:      `1|Fix issue 1`,
+			CreatedUnix:  db.NowFunc().Unix(),
+		},
+	}
+	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+	assert.Equal(t, want, got)
 }
 
 func actionsMirrorSyncCreate(t *testing.T, db *actions) {
