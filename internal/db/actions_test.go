@@ -721,5 +721,42 @@ func actionsRenameRepo(t *testing.T, db *actions) {
 }
 
 func actionsTransferRepo(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := NewUsersStore(db.DB).Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		CreateRepoOptions{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.TransferRepo(ctx, alice, alice, bob, repo)
+	require.NoError(t, err)
+
+	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	got[0].ID = 0
+
+	want := []*Action{
+		{
+			UserID:       alice.ID,
+			OpType:       ActionTransferRepo,
+			ActUserID:    alice.ID,
+			ActUserName:  alice.Name,
+			RepoID:       repo.ID,
+			RepoUserName: bob.Name,
+			RepoName:     repo.Name,
+			IsPrivate:    false,
+			Content:      "alice/example",
+			CreatedUnix:  db.NowFunc().Unix(),
+		},
+	}
+	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+	assert.Equal(t, want, got)
 }

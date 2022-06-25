@@ -67,7 +67,7 @@ type ActionsStore interface {
 	// RenameRepo creates an action for renaming a repository.
 	RenameRepo(ctx context.Context, doer, owner *User, oldRepoName string, repo *Repository) error
 	// TransferRepo creates an action for transferring a repository to a new owner.
-	TransferRepo(ctx context.Context, doer, oldOwner *User, repo *Repository) error
+	TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error
 }
 
 var Actions ActionsStore
@@ -306,17 +306,17 @@ func (db *actions) MergePullRequest(ctx context.Context, doer, owner *User, repo
 	)
 }
 
-func (db *actions) TransferRepo(ctx context.Context, doer, oldOwner *User, repo *Repository) error {
+func (db *actions) TransferRepo(ctx context.Context, doer, oldOwner, newOwner *User, repo *Repository) error {
 	return db.notifyWatchers(ctx,
 		&Action{
 			ActUserID:    doer.ID,
 			ActUserName:  doer.Name,
 			OpType:       ActionTransferRepo,
 			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
+			RepoUserName: newOwner.Name,
 			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
-			Content:      path.Join(oldOwner.Name, repo.Name),
+			Content:      oldOwner.Name + "/" + repo.Name,
 		},
 	)
 }
