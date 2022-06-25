@@ -428,7 +428,7 @@ func SyncMirrors() {
 					NewCommitID: newCommitID,
 					Commits:     CommitsToPushCommits(commits),
 				},
-			);
+			)
 			if err != nil {
 				log.Error("Failed to create action for mirror sync push [repo_id: %d]: %v", m.RepoID, err)
 				continue
