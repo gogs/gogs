@@ -31,7 +31,7 @@ func TestRepos(t *testing.T) {
 		name string
 		test func(*testing.T, *repos)
 	}{
-		{"create", reposCreate},
+		{"Create", reposCreate},
 		{"GetByName", reposGetByName},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -51,7 +51,7 @@ func reposCreate(t *testing.T, db *repos) {
 	ctx := context.Background()
 
 	t.Run("name not allowed", func(t *testing.T) {
-		_, err := db.create(ctx,
+		_, err := db.Create(ctx,
 			1,
 			createRepoOpts{
 				Name: "my.git",
@@ -62,14 +62,14 @@ func reposCreate(t *testing.T, db *repos) {
 	})
 
 	t.Run("already exists", func(t *testing.T) {
-		_, err := db.create(ctx, 2,
+		_, err := db.Create(ctx, 2,
 			createRepoOpts{
 				Name: "repo1",
 			},
 		)
 		require.NoError(t, err)
 
-		_, err = db.create(ctx, 2,
+		_, err = db.Create(ctx, 2,
 			createRepoOpts{
 				Name: "repo1",
 			},
@@ -78,7 +78,7 @@ func reposCreate(t *testing.T, db *repos) {
 		assert.Equal(t, wantErr, err)
 	})
 
-	repo, err := db.create(ctx, 3,
+	repo, err := db.Create(ctx, 3,
 		createRepoOpts{
 			Name: "repo2",
 		},
@@ -93,7 +93,7 @@ func reposCreate(t *testing.T, db *repos) {
 func reposGetByName(t *testing.T, db *repos) {
 	ctx := context.Background()
 
-	repo, err := db.create(ctx, 1,
+	repo, err := db.Create(ctx, 1,
 		createRepoOpts{
 			Name: "repo1",
 		},

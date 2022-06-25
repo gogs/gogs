@@ -1136,6 +1136,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 			RepoUserName: repo.Owner.Name,
 			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
+			CreatedUnix:  time.Now().Unix(),
 		})
 	}
 	if err = newRepoAction(e, doer, repo); err != nil {
@@ -1407,6 +1408,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			RepoName:     repo.Name,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
 			Content:      path.Join(oldOwner.Name, repo.Name),
+			CreatedUnix:  time.Now().Unix(),
 		})
 	}
 	if err = transferRepoAction(sess, doer, owner, repo); err != nil {

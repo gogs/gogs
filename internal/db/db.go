@@ -123,9 +123,9 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}
-	Repos = &repos{DB: db}
+	Repos = NewReposStore(db)
 	TwoFactors = &twoFactors{DB: db}
-	Users = &users{DB: db}
+	Users = NewUsersStore(db)
 	Watches = &watches{DB: db}
 
 	return db, nil

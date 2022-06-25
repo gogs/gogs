@@ -74,6 +74,12 @@ type users struct {
 	*gorm.DB
 }
 
+// NewUsersStore returns a persistent interface for users with given database
+// connection.
+func NewUsersStore(db *gorm.DB) UsersStore {
+	return &users{DB: db}
+}
+
 type ErrLoginSourceMismatch struct {
 	args errutil.Args
 }

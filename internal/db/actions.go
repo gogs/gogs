@@ -463,12 +463,12 @@ type CommitRepoOptions struct {
 }
 
 func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
-	pusher, err := Users.GetByUsername(ctx, opts.PusherName)
+	pusher, err := NewUsersStore(db.DB).GetByUsername(ctx, opts.PusherName)
 	if err != nil {
 		return errors.Wrapf(err, "get pusher [name: %s]", opts.PusherName)
 	}
 
-	repo, err := Repos.GetByName(ctx, opts.RepoOwnerID, opts.RepoName)
+	repo, err := NewReposStore(db.DB).GetByName(ctx, opts.RepoOwnerID, opts.RepoName)
 	if err != nil {
 		return errors.Wrapf(err, "get repository [owner_id: %d, name: %s]", opts.RepoOwnerID, opts.RepoName)
 	}
@@ -729,14 +729,15 @@ type Action struct {
 
 // BeforeCreate implements the GORM create hook.
 func (a *Action) BeforeCreate(tx *gorm.DB) error {
-	if a.CreatedUnix == 0 {
+	if a.CreatedUnix <= 0 {
 		a.CreatedUnix = tx.NowFunc().Unix()
 	}
+	fmt.Println("a.CreatedUnix", a.CreatedUnix)
 	return nil
 }
 
 // AfterFind implements the GORM query hook.
-func (a *Action) AfterFind(tx *gorm.DB) error {
+func (a *Action) AfterFind(_ *gorm.DB) error {
 	a.Created = time.Unix(a.CreatedUnix, 0).Local()
 	return nil
 }

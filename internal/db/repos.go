@@ -19,6 +19,11 @@ import (
 //
 // NOTE: All methods are sorted in alphabetical order.
 type ReposStore interface {
+	// Create creates a new repository record in the database. It returns
+	// ErrNameNotAllowed when the repository name is not allowed, or
+	// ErrRepoAlreadyExist when a repository with same name already exists for the
+	// owner.
+	Create(ctx context.Context, ownerID int64, opts createRepoOpts) (*Repository, error)
 	// GetByName returns the repository with given owner and name. It returns
 	// ErrRepoNotExist when not found.
 	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
@@ -53,6 +58,12 @@ type repos struct {
 	*gorm.DB
 }
 
+// NewReposStore returns a persistent interface for repositories with given
+// database connection.
+func NewReposStore(db *gorm.DB) ReposStore {
+	return &repos{DB: db}
+}
+
 type ErrRepoAlreadyExist struct {
 	args errutil.Args
 }
@@ -79,10 +90,7 @@ type createRepoOpts struct {
 	ForkID        int64
 }
 
-// create creates a new repository record in the database. Fields of "repo" will be updated
-// in place upon insertion. It returns ErrNameNotAllowed when the repository name is not allowed,
-// or ErrRepoAlreadyExist when a repository with same name already exists for the owner.
-func (db *repos) create(ctx context.Context, ownerID int64, opts createRepoOpts) (*Repository, error) {
+func (db *repos) Create(ctx context.Context, ownerID int64, opts createRepoOpts) (*Repository, error) {
 	err := isRepoNameAllowed(opts.Name)
 	if err != nil {
 		return nil, err
