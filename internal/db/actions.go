@@ -48,13 +48,13 @@ type ActionsStore interface {
 	MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error
 	// MirrorSyncCreate creates an action for mirror synchronization of a new
 	// reference.
-	MirrorSyncCreate(ctx context.Context, repo *Repository, refName string) error
+	MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error
 	// MirrorSyncDelete creates an action for mirror synchronization of a reference
 	// deletion.
-	MirrorSyncDelete(ctx context.Context, repo *Repository, refName string) error
+	MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error
 	// MirrorSyncPush creates an action for mirror synchronization of pushed
 	// commits.
-	MirrorSyncPush(ctx context.Context, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error
+	MirrorSyncPush(ctx context.Context, owner *User, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error
 	// NewRepo creates an action for creating a new repository. The action type
 	// could be ActionCreateRepo or ActionForkRepo based on whether the repository
 	// is a fork.
@@ -215,15 +215,15 @@ func (db *actions) RenameRepo(ctx context.Context, doer *User, oldRepoName strin
 	)
 }
 
-func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, repo *Repository, refName string, content []byte) error {
+func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, owner *User, repo *Repository, refName string, content []byte) error {
 	return db.notifyWatchers(ctx,
 		&Action{
-			ActUserID:    repo.OwnerID,
-			ActUserName:  repo.Owner.Name,
+			ActUserID:    owner.ID,
+			ActUserName:  owner.Name,
 			OpType:       opType,
 			Content:      string(content),
 			RepoID:       repo.ID,
-			RepoUserName: repo.Owner.Name,
+			RepoUserName: owner.Name,
 			RepoName:     repo.Name,
 			RefName:      refName,
 			IsPrivate:    repo.IsPrivate || repo.IsUnlisted,
@@ -231,7 +231,7 @@ func (db *actions) mirrorSyncAction(ctx context.Context, opType ActionType, repo
 	)
 }
 
-func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error {
+func (db *actions) MirrorSyncPush(ctx context.Context, owner *User, repo *Repository, refName, oldCommitID, newCommitID string, commits *PushCommits) error {
 	if len(commits.Commits) > conf.UI.FeedMaxCommitNum {
 		commits.Commits = commits.Commits[:conf.UI.FeedMaxCommitNum]
 	}
@@ -242,7 +242,7 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 	}
 
 	commits.CompareURL = repo.ComposeCompareURL(oldCommitID, newCommitID)
-	apiPusher := repo.Owner.APIFormat()
+	apiPusher := owner.APIFormat()
 	err = PrepareWebhooks(repo, HOOK_EVENT_PUSH,
 		&api.PushPayload{
 			Ref:        refName,
@@ -250,7 +250,7 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 			After:      newCommitID,
 			CompareURL: conf.Server.ExternalURL + commits.CompareURL,
 			Commits:    apiCommits,
-			Repo:       repo.APIFormat(nil),
+			Repo:       repo.APIFormat(owner),
 			Pusher:     apiPusher,
 			Sender:     apiPusher,
 		},
@@ -264,15 +264,15 @@ func (db *actions) MirrorSyncPush(ctx context.Context, repo *Repository, refName
 		return errors.Wrap(err, "marshal JSON")
 	}
 
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, repo, refName, data)
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncPush, owner, repo, refName, data)
 }
 
-func (db *actions) MirrorSyncCreate(ctx context.Context, repo *Repository, refName string) error {
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncCreate, repo, refName, nil)
+func (db *actions) MirrorSyncCreate(ctx context.Context, owner *User, repo *Repository, refName string) error {
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncCreate, owner, repo, refName, nil)
 }
 
-func (db *actions) MirrorSyncDelete(ctx context.Context, repo *Repository, refName string) error {
-	return db.mirrorSyncAction(ctx, ActionMirrorSyncDelete, repo, refName, nil)
+func (db *actions) MirrorSyncDelete(ctx context.Context, owner *User, repo *Repository, refName string) error {
+	return db.mirrorSyncAction(ctx, ActionMirrorSyncDelete, owner, repo, refName, nil)
 }
 
 func (db *actions) MergePullRequest(ctx context.Context, doer, owner *User, repo *Repository, pull *Issue) error {

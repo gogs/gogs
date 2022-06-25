@@ -163,7 +163,6 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 			OpType:       ActionCommitRepo,
 			ActUserID:    alice.ID,
 			ActUserName:  alice.Name,
-			ActAvatar:    "",
 			RepoID:       repo.ID,
 			RepoUserName: alice.Name,
 			RepoName:     repo.Name,
@@ -219,7 +218,6 @@ func actionsMergePullRequest(t *testing.T, db *actions) {
 			OpType:       ActionMergePullRequest,
 			ActUserID:    alice.ID,
 			ActUserName:  alice.Name,
-			ActAvatar:    "",
 			RepoID:       repo.ID,
 			RepoUserName: alice.Name,
 			RepoName:     repo.Name,
@@ -233,11 +231,87 @@ func actionsMergePullRequest(t *testing.T, db *actions) {
 }
 
 func actionsMirrorSyncCreate(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		createRepoOpts{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.MirrorSyncCreate(ctx,
+		alice,
+		repo,
+		"main",
+	)
+	require.NoError(t, err)
+
+	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	require.NoError(t, err)
+
+	want := []*Action{
+		{
+			ID:           1,
+			UserID:       alice.ID,
+			OpType:       ActionMirrorSyncCreate,
+			ActUserID:    alice.ID,
+			ActUserName:  alice.Name,
+			RepoID:       repo.ID,
+			RepoUserName: alice.Name,
+			RepoName:     repo.Name,
+			RefName:      "main",
+			IsPrivate:    false,
+			CreatedUnix:  db.NowFunc().Unix(),
+		},
+	}
+	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+	assert.Equal(t, want, got)
 }
 
 func actionsMirrorSyncDelete(t *testing.T, db *actions) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOpts{})
+	require.NoError(t, err)
+	repo, err := NewReposStore(db.DB).Create(ctx,
+		alice.ID,
+		createRepoOpts{
+			Name: "example",
+		},
+	)
+	require.NoError(t, err)
+
+	err = db.MirrorSyncDelete(ctx,
+		alice,
+		repo,
+		"main",
+	)
+	require.NoError(t, err)
+
+	got, err := db.ListByUser(ctx, alice.ID, alice.ID, 0, false)
+	require.NoError(t, err)
+
+	want := []*Action{
+		{
+			ID:           1,
+			UserID:       alice.ID,
+			OpType:       ActionMirrorSyncDelete,
+			ActUserID:    alice.ID,
+			ActUserName:  alice.Name,
+			RepoID:       repo.ID,
+			RepoUserName: alice.Name,
+			RepoName:     repo.Name,
+			RefName:      "main",
+			IsPrivate:    false,
+			CreatedUnix:  db.NowFunc().Unix(),
+		},
+	}
+	want[0].Created = time.Unix(want[0].CreatedUnix, 0)
+	assert.Equal(t, want, got)
 }
 
 func actionsMirrorSyncPush(t *testing.T, db *actions) {
