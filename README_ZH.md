@@ -31,7 +31,7 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 - 开启两步验证（2FA）登录
 - 自定义 HTML 模板、静态文件和许多其它组件
 - 多样的数据库后端，包括 PostgreSQL、MySQL、SQLite3 和 [TiDB](https://github.com/pingcap/tidb)
-- 超过[30 种语言](https://crowdin.com/project/gogs)的本地化
+- 超过 [31 种语言](https://crowdin.com/project/gogs)的本地化
 
 ## 硬件要求
 
