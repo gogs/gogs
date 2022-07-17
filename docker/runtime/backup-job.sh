@@ -21,6 +21,8 @@ execute_backup_job() {
 		BACKUP_ARGS="${BACKUP_ARGS} ${BACKUP_EXTRA_ARGS}"
 	fi
 
+	# NOTE: We actually need word splitting to be able to pass multiple arguments.
+	# shellcheck disable=SC2086
 	./gogs backup ${BACKUP_ARGS} || echo "Error: Backup job returned non-successful code." && exit 1
 }
 
