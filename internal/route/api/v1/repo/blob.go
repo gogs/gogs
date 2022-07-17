@@ -8,7 +8,6 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/gitutil"
-	"gogs.io/gogs/internal/repoutil"
 )
 
 func RepoGitBlob(c *context.APIContext) {
