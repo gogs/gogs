@@ -12,6 +12,7 @@ All notable changes to Gogs are documented in this file.
 - Support specifying custom schema for PostgreSQL. [#6695](https://github.com/gogs/gogs/pull/6695)
 - Support rendering Mermaid diagrams in Markdown. [#6776](https://github.com/gogs/gogs/pull/6776)
 - New languages support: Mongolian. [#6510](https://github.com/gogs/gogs/pull/6510)
+- Docker: Allow passing extra arguments to the `backup` command. [#7060](https://github.com/gogs/gogs/pull/7060)
 
 ### Changed
 
