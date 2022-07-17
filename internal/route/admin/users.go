@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -136,7 +136,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 		c.Data["LoginSource"] = &db.LoginSource{}
 	}
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return nil

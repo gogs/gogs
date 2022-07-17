@@ -49,14 +49,14 @@ const (
 
 // User represents the object of individual and member of organization.
 type User struct {
-	ID        int64
-	LowerName string `xorm:"UNIQUE NOT NULL" gorm:"UNIQUE"`
-	Name      string `xorm:"UNIQUE NOT NULL" gorm:"NOT NULL"`
+	ID        int64  `gorm:"primaryKey"`
+	LowerName string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
+	Name      string `xorm:"UNIQUE NOT NULL" gorm:"not null"`
 	FullName  string
 	// Email is the primary email address (to be used for communication)
-	Email       string `xorm:"NOT NULL" gorm:"NOT NULL"`
-	Passwd      string `xorm:"NOT NULL" gorm:"NOT NULL"`
-	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	Email       string `xorm:"NOT NULL" gorm:"not null"`
+	Passwd      string `xorm:"NOT NULL" gorm:"not null"`
+	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	LoginName   string
 	Type        UserType
 	OwnedOrgs   []*User       `xorm:"-" gorm:"-" json:"-"`
@@ -64,8 +64,8 @@ type User struct {
 	Repos       []*Repository `xorm:"-" gorm:"-" json:"-"`
 	Location    string
 	Website     string
-	Rands       string `xorm:"VARCHAR(10)" gorm:"TYPE:VARCHAR(10)"`
-	Salt        string `xorm:"VARCHAR(10)" gorm:"TYPE:VARCHAR(10)"`
+	Rands       string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`
+	Salt        string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`
 
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
@@ -75,7 +75,7 @@ type User struct {
 	// Remember visibility choice for convenience, true for private
 	LastRepoVisibility bool
 	// Maximum repository creation limit, -1 means use global default
-	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1" gorm:"NOT NULL;DEFAULT:-1"`
+	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1" gorm:"not null;default:-1"`
 
 	// Permissions
 	IsActive         bool // Activate primary email
@@ -85,13 +85,13 @@ type User struct {
 	ProhibitLogin    bool
 
 	// Avatar
-	Avatar          string `xorm:"VARCHAR(2048) NOT NULL" gorm:"TYPE:VARCHAR(2048);NOT NULL"`
-	AvatarEmail     string `xorm:"NOT NULL" gorm:"NOT NULL"`
+	Avatar          string `xorm:"VARCHAR(2048) NOT NULL" gorm:"type:VARCHAR(2048);not null"`
+	AvatarEmail     string `xorm:"NOT NULL" gorm:"not null"`
 	UseCustomAvatar bool
 
 	// Counters
 	NumFollowers int
-	NumFollowing int `xorm:"NOT NULL DEFAULT 0" gorm:"NOT NULL;DEFAULT:0"`
+	NumFollowing int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	NumStars     int
 	NumRepos     int
 
@@ -466,7 +466,7 @@ func (u *User) DisplayName() string {
 }
 
 func (u *User) ShortName(length int) string {
-	return tool.EllipsisString(u.Name, length)
+	return strutil.Ellipsis(u.Name, length)
 }
 
 // IsMailable checks if a user is eligible
@@ -908,6 +908,8 @@ func DeleteInactivateUsers() (err error) {
 }
 
 // UserPath returns the path absolute path of user repositories.
+//
+// Deprecated: Use repoutil.UserPath instead.
 func UserPath(username string) string {
 	return filepath.Join(conf.Repository.Root, strings.ToLower(username))
 }

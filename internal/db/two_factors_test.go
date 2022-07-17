@@ -11,16 +11,40 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
+func TestTwoFactor_BeforeCreate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	t.Run("CreatedUnix has been set", func(t *testing.T) {
+		tf := &TwoFactor{CreatedUnix: 1}
+		_ = tf.BeforeCreate(db)
+		assert.Equal(t, int64(1), tf.CreatedUnix)
+	})
+
+	t.Run("CreatedUnix has not been set", func(t *testing.T) {
+		tf := &TwoFactor{}
+		_ = tf.BeforeCreate(db)
+		assert.Equal(t, db.NowFunc().Unix(), tf.CreatedUnix)
+	})
+}
+
 func TestTwoFactors(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(TwoFactor), new(TwoFactorRecoveryCode)}

@@ -16,9 +16,9 @@ import (
 // primary email address, but is not obligatory.
 type EmailAddress struct {
 	ID          int64
-	UID         int64  `xorm:"INDEX NOT NULL" gorm:"INDEX"`
-	Email       string `xorm:"UNIQUE NOT NULL" gorm:"UNIQUE"`
-	IsActivated bool   `gorm:"NOT NULL;DEFAULT:FALSE"`
+	UID         int64  `xorm:"INDEX NOT NULL" gorm:"index;not null"`
+	Email       string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
+	IsActivated bool   `gorm:"not null;default:FALSE"`
 	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
 }
 

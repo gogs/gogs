@@ -1,0 +1,3 @@
+{"ID":1,"UserID":1,"OpType":16,"ActUserID":1,"ActUserName":"alice","RepoID":1,"RepoUserName":"alice","RepoName":"example","RefName":"main","IsPrivate":false,"Content":"{\"Len\":1,\"Commits\":[],\"CompareURL\":\"\"}","CreatedUnix":1588568886}
+{"ID":2,"UserID":1,"OpType":5,"ActUserID":1,"ActUserName":"alice","RepoID":1,"RepoUserName":"alice","RepoName":"example","RefName":"main","IsPrivate":false,"Content":"{\"Len\":1,\"Commits\":[],\"CompareURL\":\"\"}","CreatedUnix":1588568886}
+{"ID":3,"UserID":1,"OpType":17,"ActUserID":1,"ActUserName":"alice","RepoID":1,"RepoUserName":"alice","RepoName":"example","RefName":"main","IsPrivate":false,"Content":"","CreatedUnix":1588568886}

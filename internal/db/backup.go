@@ -221,7 +221,7 @@ func importTable(ctx context.Context, db *gorm.DB, table interface{}, r io.Reade
 	// PostgreSQL needs manually reset table sequence for auto increment keys
 	if conf.UsePostgreSQL && !skipResetIDSeq[rawTableName] {
 		seqName := rawTableName + "_id_seq"
-		if _, err = x.Context(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false);`, seqName, rawTableName)); err != nil {
+		if err = db.WithContext(ctx).Exec(fmt.Sprintf(`SELECT setval('%s', COALESCE((SELECT MAX(id)+1 FROM "%s"), 1), false)`, seqName, rawTableName)).Error; err != nil {
 			return errors.Wrapf(err, "reset table %q.%q", rawTableName, seqName)
 		}
 	}

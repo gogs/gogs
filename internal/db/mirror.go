@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -314,6 +315,8 @@ func MirrorUpdate() {
 // SyncMirrors checks and syncs mirrors.
 // TODO: sync more mirrors at same time.
 func SyncMirrors() {
+	ctx := context.Background()
+
 	// Start listening on new sync requests.
 	for repoID := range MirrorQueue.Queue() {
 		log.Trace("SyncMirrors [repo_id: %s]", repoID)
@@ -358,8 +361,8 @@ func SyncMirrors() {
 
 			// Delete reference
 			if result.newCommitID == gitShortEmptyID {
-				if err = MirrorSyncDeleteAction(m.Repo, result.refName); err != nil {
-					log.Error("MirrorSyncDeleteAction [repo_id: %d]: %v", m.RepoID, err)
+				if err = Actions.MirrorSyncDelete(ctx, m.Repo.MustOwner(), m.Repo, result.refName); err != nil {
+					log.Error("Failed to create action for mirror sync delete [repo_id: %d]: %v", m.RepoID, err)
 				}
 				continue
 			}
@@ -367,8 +370,8 @@ func SyncMirrors() {
 			// New reference
 			isNewRef := false
 			if result.oldCommitID == gitShortEmptyID {
-				if err = MirrorSyncCreateAction(m.Repo, result.refName); err != nil {
-					log.Error("MirrorSyncCreateAction [repo_id: %d]: %v", m.RepoID, err)
+				if err = Actions.MirrorSyncCreate(ctx, m.Repo.MustOwner(), m.Repo, result.refName); err != nil {
+					log.Error("Failed to create action for mirror sync create [repo_id: %d]: %v", m.RepoID, err)
 					continue
 				}
 				isNewRef = true
@@ -416,13 +419,18 @@ func SyncMirrors() {
 				newCommitID = refNewCommit.ID.String()
 			}
 
-			if err = MirrorSyncPushAction(m.Repo, MirrorSyncPushActionOptions{
-				RefName:     result.refName,
-				OldCommitID: oldCommitID,
-				NewCommitID: newCommitID,
-				Commits:     CommitsToPushCommits(commits),
-			}); err != nil {
-				log.Error("MirrorSyncPushAction [repo_id: %d]: %v", m.RepoID, err)
+			err = Actions.MirrorSyncPush(ctx,
+				MirrorSyncPushOptions{
+					Owner:       m.Repo.MustOwner(),
+					Repo:        m.Repo,
+					RefName:     result.refName,
+					OldCommitID: oldCommitID,
+					NewCommitID: newCommitID,
+					Commits:     CommitsToPushCommits(commits),
+				},
+			)
+			if err != nil {
+				log.Error("Failed to create action for mirror sync push [repo_id: %d]: %v", m.RepoID, err)
 				continue
 			}
 		}

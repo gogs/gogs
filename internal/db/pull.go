@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -138,7 +139,7 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 			Name: "deleted",
 		}
 	} else {
-		apiHeadRepo = pr.HeadRepo.APIFormat(nil)
+		apiHeadRepo = pr.HeadRepo.APIFormatLegacy(nil)
 	}
 
 	apiIssue := pr.Issue.APIFormat()
@@ -156,7 +157,7 @@ func (pr *PullRequest) APIFormat() *api.PullRequest {
 		HeadBranch: pr.HeadBranch,
 		HeadRepo:   apiHeadRepo,
 		BaseBranch: pr.BaseBranch,
-		BaseRepo:   pr.BaseRepo.APIFormat(nil),
+		BaseRepo:   pr.BaseRepo.APIFormatLegacy(nil),
 		HTMLURL:    pr.Issue.HTMLURL(),
 		HasMerged:  pr.HasMerged,
 	}
@@ -195,6 +196,8 @@ const (
 // Merge merges pull request to base repository.
 // FIXME: add repoWorkingPull make sure two merges does not happen at same time.
 func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle MergeStyle, commitDescription string) (err error) {
+	ctx := context.TODO()
+
 	defer func() {
 		go HookQueue.Add(pr.BaseRepo.ID)
 		go AddTestPullRequestTask(doer, pr.BaseRepo.ID, pr.BaseBranch, false)
@@ -334,8 +337,8 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		return fmt.Errorf("Commit: %v", err)
 	}
 
-	if err = MergePullRequestAction(doer, pr.Issue.Repo, pr.Issue); err != nil {
-		log.Error("MergePullRequestAction [%d]: %v", pr.ID, err)
+	if err = Actions.MergePullRequest(ctx, doer, pr.Issue.Repo.Owner, pr.Issue.Repo, pr.Issue); err != nil {
+		log.Error("Failed to create action for merge pull request, pull_request_id: %d, error: %v", pr.ID, err)
 	}
 
 	// Reload pull request information.
@@ -347,7 +350,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		Action:      api.HOOK_ISSUE_CLOSED,
 		Index:       pr.Index,
 		PullRequest: pr.APIFormat(),
-		Repository:  pr.Issue.Repo.APIFormat(nil),
+		Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
 		Sender:      doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
@@ -372,7 +375,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		commits = append([]*git.Commit{mergeCommit}, commits...)
 	}
 
-	pcs, err := CommitsToPushCommits(commits).ToApiPayloadCommits(pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
+	pcs, err := CommitsToPushCommits(commits).APIFormat(ctx, Users, pr.BaseRepo.RepoPath(), pr.BaseRepo.HTMLURL())
 	if err != nil {
 		log.Error("Failed to convert to API payload commits: %v", err)
 		return nil
@@ -384,7 +387,7 @@ func (pr *PullRequest) Merge(doer *User, baseGitRepo *git.Repository, mergeStyle
 		After:      mergeCommit.ID.String(),
 		CompareURL: conf.Server.ExternalURL + pr.BaseRepo.ComposeCompareURL(pr.MergeBase, pr.MergedCommitID),
 		Commits:    pcs,
-		Repo:       pr.BaseRepo.APIFormat(nil),
+		Repo:       pr.BaseRepo.APIFormatLegacy(nil),
 		Pusher:     pr.HeadRepo.MustOwner().APIFormat(),
 		Sender:     doer.APIFormat(),
 	}
@@ -487,7 +490,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 	if err = NotifyWatchers(&Action{
 		ActUserID:    pull.Poster.ID,
 		ActUserName:  pull.Poster.Name,
-		OpType:       ACTION_CREATE_PULL_REQUEST,
+		OpType:       ActionCreatePullRequest,
 		Content:      fmt.Sprintf("%d|%s", pull.Index, pull.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -506,7 +509,7 @@ func NewPullRequest(repo *Repository, pull *Issue, labelIDs []int64, uuids []str
 		Action:      api.HOOK_ISSUE_OPENED,
 		Index:       pull.Index,
 		PullRequest: pr.APIFormat(),
-		Repository:  repo.APIFormat(nil),
+		Repository:  repo.APIFormatLegacy(nil),
 		Sender:      pull.Poster.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
@@ -798,7 +801,7 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 					Action:      api.HOOK_ISSUE_SYNCHRONIZED,
 					Index:       pr.Issue.Index,
 					PullRequest: pr.Issue.PullRequest.APIFormat(),
-					Repository:  pr.Issue.Repo.APIFormat(nil),
+					Repository:  pr.Issue.Repo.APIFormatLegacy(nil),
 					Sender:      doer.APIFormat(),
 				}); err != nil {
 					log.Error("PrepareWebhooks [pull_id: %v]: %v", pr.ID, err)

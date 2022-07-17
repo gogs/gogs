@@ -9,14 +9,13 @@ targets:
     <<: *debian
   debian-11:
     <<: *debian
-  ubuntu-16.04:
-    <<: *debian
-    build_dependencies:
-      - bzr
-      - mercurial
   ubuntu-18.04:
     <<: *debian
-  centos-7:
+  ubuntu-20.04:
+    <<: *debian
+  ubuntu-22.04:
+    <<: *debian
+  centos-7: &centos
     build_dependencies:
       - pam-devel
       # required for Go buildpack
@@ -24,6 +23,8 @@ targets:
     dependencies:
       - pam
       - git
+  centos-8:
+    <<: *centos
 before:
   - mv .packager/Procfile .
 after:

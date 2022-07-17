@@ -5,11 +5,13 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
 
 	"github.com/gogs/git-module"
+	"github.com/pkg/errors"
 )
 
 // CommitToPushCommit transforms a git.Commit to PushCommit type.
@@ -50,6 +52,8 @@ type PushUpdateOptions struct {
 // PushUpdate must be called for any push actions in order to
 // generates necessary push action history feeds.
 func PushUpdate(opts PushUpdateOptions) (err error) {
+	ctx := context.TODO()
+
 	isNewRef := strings.HasPrefix(opts.OldCommitID, git.EmptyID)
 	isDelRef := strings.HasPrefix(opts.NewCommitID, git.EmptyID)
 	if isNewRef && isDelRef {
@@ -85,16 +89,17 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 
 	// Push tags
 	if strings.HasPrefix(opts.FullRefspec, git.RefsTags) {
-		if err := CommitRepoAction(CommitRepoActionOptions{
-			PusherName:  opts.PusherName,
-			RepoOwnerID: owner.ID,
-			RepoName:    repo.Name,
-			RefFullName: opts.FullRefspec,
-			OldCommitID: opts.OldCommitID,
-			NewCommitID: opts.NewCommitID,
-			Commits:     &PushCommits{},
-		}); err != nil {
-			return fmt.Errorf("CommitRepoAction.(tag): %v", err)
+		err := Actions.PushTag(ctx,
+			PushTagOptions{
+				Owner:       owner,
+				Repo:        repo,
+				PusherName:  opts.PusherName,
+				RefFullName: opts.FullRefspec,
+				NewCommitID: opts.NewCommitID,
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "create action for push tag")
 		}
 		return nil
 	}
@@ -122,16 +127,19 @@ func PushUpdate(opts PushUpdateOptions) (err error) {
 		}
 	}
 
-	if err := CommitRepoAction(CommitRepoActionOptions{
-		PusherName:  opts.PusherName,
-		RepoOwnerID: owner.ID,
-		RepoName:    repo.Name,
-		RefFullName: opts.FullRefspec,
-		OldCommitID: opts.OldCommitID,
-		NewCommitID: opts.NewCommitID,
-		Commits:     CommitsToPushCommits(commits),
-	}); err != nil {
-		return fmt.Errorf("CommitRepoAction.(branch): %v", err)
+	err = Actions.CommitRepo(ctx,
+		CommitRepoOptions{
+			Owner:       owner,
+			Repo:        repo,
+			PusherName:  opts.PusherName,
+			RefFullName: opts.FullRefspec,
+			OldCommitID: opts.OldCommitID,
+			NewCommitID: opts.NewCommitID,
+			Commits:     CommitsToPushCommits(commits),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "create action for commit push")
 	}
 	return nil
 }
