@@ -8,10 +8,11 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 func RepoGitBlob(c *context.APIContext) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	gitRepo, err := git.Open(repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame")))
 	if err != nil {
 		c.Error(err, "open repository")
 		return
