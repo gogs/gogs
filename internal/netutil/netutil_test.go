@@ -31,6 +31,8 @@ func TestIsLocalHostname(t *testing.T) {
 
 		{hostname: "192.168.123.45", allowlist: []string{"10.0.0.17"}, want: true}, // #11
 		{hostname: "gogs.local", allowlist: []string{"gogs.local"}, want: false},   // #12
+
+		{hostname: "192.168.123.45", allowlist: []string{"*"}, want: false}, // #13
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {

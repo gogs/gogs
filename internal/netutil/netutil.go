@@ -52,7 +52,7 @@ func init() {
 // allowlist).
 func IsBlockedLocalHostname(hostname string, allowlist []string) bool {
 	for _, allow := range allowlist {
-		if hostname == allow {
+		if hostname == allow || allow == "*" {
 			return false
 		}
 	}

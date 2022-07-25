@@ -21,6 +21,7 @@ All notable changes to Gogs are documented in this file.
 - Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
 - The required Go version to compile source code changed to 1.16.
 - Access tokens are now stored using their SHA256 hashes instead of raw values. [#7008](https://github.com/gogs/gogs/pull/7008)
+- Support using `[security] LOCAL_NETWORK_ALLOWLIST = *` to allow all hostnames. [#7111](https://github.com/gogs/gogs/pull/7111)
 
 ### Fixed
 
