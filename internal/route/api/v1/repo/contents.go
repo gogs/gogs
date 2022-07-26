@@ -7,9 +7,13 @@ package repo
 import (
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"path"
+	"path/filepath"
+	"time"
 
 	"github.com/gogs/git-module"
+	"github.com/gogs/go-gogs-client"
 	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/context"
@@ -164,4 +168,130 @@ func GetContents(c *context.APIContext) {
 		contents = append(contents, content)
 	}
 	c.JSONSuccess(contents)
+}
+
+type PutContentRequest struct {
+	Message  string           "json:accept"
+	Content  string           "json:message"
+	Sha      string           "json:sha"
+	Branch   string           "json:branch"
+	Commiter *gogs.CommitUser "json:commiter"
+	Author   *gogs.CommitUser "json:author"
+}
+
+type CommitPayload struct {
+	Sha      string           "json:sha"
+	NodeID   string           "json:node_id"
+	Url      string           "json:url"
+	HtmlUrl  string           "json:html_url"
+	Commiter *gogs.CommitUser "json:commiter"
+	Author   *gogs.CommitUser "json:author"
+	Message  string           "json:message"
+}
+
+type ContentPayload struct {
+	Name        string "json:name"
+	Path        string "json:path"
+	Sha         string "json:sha"
+	Size        string "json:size"
+	Url         string "json:url"
+	HtmlUrl     string "json:html_url"
+	GitUrl      string "json:git_url"
+	Type        string "json:type"
+	DownloadUrl string "json:download_url"
+}
+
+type PutContentResponse struct {
+	Content ContentPayload
+	Commit  CommitPayload
+}
+
+func ToJsonPayload(s *git.Signature) *gogs.CommitUser {
+	return &gogs.CommitUser{
+		Name:  s.Name,
+		Email: s.Email,
+		Date:  s.When.String(),
+	}
+}
+
+func PutContents(c *context.APIContext, form *PutContentRequest) {
+	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	if err != nil {
+		c.Error(err, "open repository")
+		return
+	}
+
+	content, err := base64.StdEncoding.DecodeString(form.Content)
+	if err != nil {
+		c.Error(err, "decoding base64")
+		return
+	}
+	treePath := c.Params("*")
+	filename := filepath.Join(gitRepo.Path(), treePath)
+
+	// checkout
+	var branch string = form.Branch
+	if form.Branch == "" {
+		branch = c.Repo.Repository.DefaultBranch
+	}
+	gitRepo.Checkout(branch)
+
+	// add
+	ioutil.WriteFile(filename, content, 0644)
+	gitRepo.Add(git.AddOptions{
+		Pathsepcs: []string{filename},
+	})
+
+	commitDate, err := time.Parse(time.RFC3339, form.Commiter.Date)
+	if err != nil {
+		commitDate = time.Now()
+	}
+
+	var commiter = git.Signature{
+		Name:  c.User.FullName,
+		Email: c.User.Email,
+		When:  commitDate,
+	}
+
+	if form.Commiter != nil {
+		commiter.Name = form.Commiter.Name
+		commiter.Email = form.Commiter.Email
+	}
+
+	authorDate, err := time.Parse(time.RFC3339, form.Author.Date)
+	if err != nil {
+		authorDate = time.Now()
+	}
+
+	var author = git.Signature{
+		Name:  c.User.FullName,
+		Email: c.User.Email,
+		When:  authorDate,
+	}
+
+	if form.Commiter != nil {
+		author.Name = form.Author.Name
+		author.Email = form.Author.Email
+	}
+
+	// commit
+	gitRepo.Commit(&commiter, form.Message, git.CommitOptions{
+		Author: &author,
+	})
+
+	commit, err := gitRepo.BranchCommit(branch)
+
+	responseObj := PutContentResponse{
+		Content: ContentPayload{},
+		Commit: CommitPayload{
+			Sha:      commit.ID.String(),
+			Url:      c.Req.RequestURI,
+			Commiter: ToJsonPayload(&commiter),
+			Author:   ToJsonPayload(&author),
+			Message:  commit.Message,
+		},
+	}
+
+	c.JSONSuccess(responseObj)
+    return
 }
