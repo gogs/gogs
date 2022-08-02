@@ -31,6 +31,7 @@
 	$ docker manifest push gogs/gogs:${MINOR_RELEASE}
 
 	$ echo ${GITHUB_CR_PAT} | docker login ghcr.io -u <USERNAME> --password-stdin
+	$ docker manifest rm ghcr.io/gogs/gogs:${MINOR_RELEASE}
 	$ docker manifest create \
 		ghcr.io/gogs/gogs:${MINOR_RELEASE} \
 		gogs/gogs:${MINOR_RELEASE}-amd64 \
