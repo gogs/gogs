@@ -21,12 +21,10 @@ All notable changes to Gogs are documented in this file.
 - Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
 - The required Go version to compile source code changed to 1.16.
 - Access tokens are now stored using their SHA256 hashes instead of raw values. [#7008](https://github.com/gogs/gogs/pull/7008)
-- Support using `[security] LOCAL_NETWORK_ALLOWLIST = *` to allow all hostnames. [#7111](https://github.com/gogs/gogs/pull/7111)
 
 ### Fixed
 
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
-- Unable to send webhooks to local network addresses after configured `[security] LOCAL_NETWORK_ALLOWLIST`. [#7074](https://github.com/gogs/gogs/issues/7074)
 
 ### Removed
 
@@ -47,6 +45,16 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
 - Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
+
+## 0.12.10
+
+### Changed
+
+- Support using `[security] LOCAL_NETWORK_ALLOWLIST = *` to allow all hostnames. [#7111](https://github.com/gogs/gogs/pull/7111)
+
+### Fixed
+
+- Unable to send webhooks to local network addresses after configured `[security] LOCAL_NETWORK_ALLOWLIST`. [#7074](https://github.com/gogs/gogs/issues/7074)
 
 ## 0.12.9
 
