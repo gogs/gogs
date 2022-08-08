@@ -943,7 +943,7 @@ func (pcs *PushCommits) APIFormat(ctx context.Context, usersStore UsersStore, re
 // avatars, and falls back to general avatar link.
 //
 // FIXME: This method does not belong to PushCommits, should be a pure template
-// 	function.
+// function.
 func (pcs *PushCommits) AvatarLink(email string) string {
 	_, ok := pcs.avatars[email]
 	if !ok {
