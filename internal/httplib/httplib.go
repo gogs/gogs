@@ -11,7 +11,6 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net"
@@ -199,9 +198,9 @@ func (r *Request) SetTransport(transport http.RoundTripper) *Request {
 // example:
 //
 //	func(req *http.Request) (*url.URL, error) {
-// 		u, _ := url.ParseRequestURI("http://127.0.0.1:8118")
-// 		return u, nil
-// 	}
+//		u, _ := url.ParseRequestURI("http://127.0.0.1:8118")
+//		return u, nil
+//	}
 func (r *Request) SetProxy(proxy func(*http.Request) (*url.URL, error)) *Request {
 	r.setting.Proxy = proxy
 	return r
@@ -225,11 +224,11 @@ func (r *Request) Body(data interface{}) *Request {
 	switch t := data.(type) {
 	case string:
 		bf := bytes.NewBufferString(t)
-		r.req.Body = ioutil.NopCloser(bf)
+		r.req.Body = io.NopCloser(bf)
 		r.req.ContentLength = int64(len(t))
 	case []byte:
 		bf := bytes.NewBuffer(t)
-		r.req.Body = ioutil.NopCloser(bf)
+		r.req.Body = io.NopCloser(bf)
 		r.req.ContentLength = int64(len(t))
 	}
 	return r
@@ -286,7 +285,7 @@ func (r *Request) getResponse() (*http.Response, error) {
 				_ = pw.Close()
 			}()
 			r.Header("Content-Type", bodyWriter.FormDataContentType())
-			r.req.Body = ioutil.NopCloser(pr)
+			r.req.Body = io.NopCloser(pr)
 		} else if len(paramBody) > 0 {
 			r.Header("Content-Type", "application/x-www-form-urlencoded")
 			r.Body(paramBody)
@@ -384,7 +383,7 @@ func (r *Request) Bytes() ([]byte, error) {
 		return nil, nil
 	}
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}

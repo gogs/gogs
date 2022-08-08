@@ -11,7 +11,6 @@ import (
 	"image"
 	_ "image/jpeg"
 	"image/png"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -681,7 +680,7 @@ func (repo *Repository) SavePatch(index int64, patch []byte) error {
 	if err = os.MkdirAll(filepath.Dir(patchPath), os.ModePerm); err != nil {
 		return err
 	}
-	if err = ioutil.WriteFile(patchPath, patch, 0644); err != nil {
+	if err = os.WriteFile(patchPath, patch, 0644); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 
@@ -736,8 +735,8 @@ type MigrateRepoOptions struct {
 }
 
 /*
-	GitHub, GitLab, Gogs: *.wiki.git
-	BitBucket: *.git/wiki
+- GitHub, GitLab, Gogs: *.wiki.git
+- BitBucket: *.git/wiki
 */
 var commonWikiURLSuffixes = []string{".wiki.git", ".git/wiki"}
 
@@ -871,7 +870,7 @@ var hooksTpls = map[git.HookName]string{
 func createDelegateHooks(repoPath string) (err error) {
 	for _, name := range git.ServerSideHooks {
 		hookPath := filepath.Join(repoPath, "hooks", string(name))
-		if err = ioutil.WriteFile(hookPath,
+		if err = os.WriteFile(hookPath,
 			[]byte(fmt.Sprintf(hooksTpls[name], conf.Repository.ScriptType, conf.AppPath(), conf.CustomConf)),
 			os.ModePerm); err != nil {
 			return fmt.Errorf("create delegate hook '%s': %v", hookPath, err)
@@ -946,7 +945,7 @@ func getRepoInitFile(tp, name string) ([]byte, error) {
 	// Use custom file when available.
 	customPath := filepath.Join(conf.CustomDir(), "conf", relPath)
 	if osutil.IsFile(customPath) {
-		return ioutil.ReadFile(customPath)
+		return os.ReadFile(customPath)
 	}
 	return embedConf.Files.ReadFile(relPath)
 }
@@ -972,7 +971,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		"CloneURL.SSH":   cloneLink.SSH,
 		"CloneURL.HTTPS": cloneLink.HTTPS,
 	}
-	if err = ioutil.WriteFile(filepath.Join(tmpDir, "README.md"),
+	if err = os.WriteFile(filepath.Join(tmpDir, "README.md"),
 		[]byte(com.Expand(string(data), match)), 0644); err != nil {
 		return fmt.Errorf("write README.md: %v", err)
 	}
@@ -992,7 +991,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 		}
 
 		if buf.Len() > 0 {
-			if err = ioutil.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0644); err != nil {
+			if err = os.WriteFile(filepath.Join(tmpDir, ".gitignore"), buf.Bytes(), 0644); err != nil {
 				return fmt.Errorf("write .gitignore: %v", err)
 			}
 		}
@@ -1005,7 +1004,7 @@ func prepareRepoCommit(repo *Repository, tmpDir, repoPath string, opts CreateRep
 			return fmt.Errorf("getRepoInitFile[%s]: %v", opts.License, err)
 		}
 
-		if err = ioutil.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0644); err != nil {
+		if err = os.WriteFile(filepath.Join(tmpDir, "LICENSE"), data, 0644); err != nil {
 			return fmt.Errorf("write LICENSE: %v", err)
 		}
 	}
