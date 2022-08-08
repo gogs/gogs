@@ -49,7 +49,7 @@ func Test_users(t *testing.T) {
 }
 
 // TODO: Only local account is tested, tests for external account will be added
-//  along with addressing https://github.com/gogs/gogs/issues/6115.
+// along with addressing https://github.com/gogs/gogs/issues/6115.
 func test_users_Authenticate(t *testing.T, db *users) {
 	password := "pa$$word"
 	alice, err := db.Create(CreateUserOpts{

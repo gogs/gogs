@@ -197,9 +197,9 @@ func (r *Request) SetTransport(transport http.RoundTripper) *Request {
 // example:
 //
 //	func(req *http.Request) (*url.URL, error) {
-// 		u, _ := url.ParseRequestURI("http://127.0.0.1:8118")
-// 		return u, nil
-// 	}
+//		u, _ := url.ParseRequestURI("http://127.0.0.1:8118")
+//		return u, nil
+//	}
 func (r *Request) SetProxy(proxy func(*http.Request) (*url.URL, error)) *Request {
 	r.setting.Proxy = proxy
 	return r
