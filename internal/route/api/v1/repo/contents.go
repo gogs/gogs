@@ -18,10 +18,12 @@ import (
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 func GetContents(c *context.APIContext) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -171,39 +173,39 @@ func GetContents(c *context.APIContext) {
 }
 
 type PutContentRequest struct {
-	Message  string           "json:accept"
-	Content  string           "json:message"
-	Sha      string           "json:sha"
-	Branch   string           "json:branch"
-	Commiter *gogs.CommitUser "json:commiter"
-	Author   *gogs.CommitUser "json:author"
+	Message  string           `json:"accept"`
+	Content  string           `json:"message"`
+	Sha      string           `json:"sha"`
+	Branch   string           `json:"branch"`
+	Commiter *gogs.CommitUser `json:"commiter"`
+	Author   *gogs.CommitUser `json:"author"`
 }
 
-type CommitPayload struct {
-	Sha      string           "json:sha"
-	NodeID   string           "json:node_id"
-	Url      string           "json:url"
-	HtmlUrl  string           "json:html_url"
-	Commiter *gogs.CommitUser "json:commiter"
-	Author   *gogs.CommitUser "json:author"
-	Message  string           "json:message"
+type commitPayload struct {
+	Sha      string           `json:"sha"`
+	NodeID   string           `json:"node_id"`
+	Url      string           `json:"url"`
+	HtmlUrl  string           `json:"html_url"`
+	Commiter *gogs.CommitUser `json:"commiter"`
+	Author   *gogs.CommitUser `json:"author"`
+	Message  string           `json:"message"`
 }
 
-type ContentPayload struct {
-	Name        string "json:name"
-	Path        string "json:path"
-	Sha         string "json:sha"
-	Size        string "json:size"
-	Url         string "json:url"
-	HtmlUrl     string "json:html_url"
-	GitUrl      string "json:git_url"
-	Type        string "json:type"
-	DownloadUrl string "json:download_url"
+type contentPayload struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Sha         string `json:"sha"`
+	Size        string `json:"size"`
+	Url         string `json:"url"`
+	HtmlUrl     string `json:"html_url"`
+	GitUrl      string `json:"git_url"`
+	Type        string `json:"type"`
+	DownloadUrl string `json:"download_url"`
 }
 
-type PutContentResponse struct {
-	Content ContentPayload
-	Commit  CommitPayload
+type putContentResponse struct {
+	Content contentPayload
+	Commit  commitPayload
 }
 
 func ToJsonPayload(s *git.Signature) *gogs.CommitUser {
@@ -215,7 +217,8 @@ func ToJsonPayload(s *git.Signature) *gogs.CommitUser {
 }
 
 func PutContents(c *context.APIContext, form *PutContentRequest) {
-	gitRepo, err := git.Open(c.Repo.Repository.RepoPath())
+	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
+	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")
 		return
@@ -237,7 +240,9 @@ func PutContents(c *context.APIContext, form *PutContentRequest) {
 	gitRepo.Checkout(branch)
 
 	// add
-	ioutil.WriteFile(filename, content, 0644)
+	localPath := c.Repo.Repository.LocalCopyPath()
+	ioutil.WriteFile(path.Join(localPath, filename), content, 0644)
+
 	gitRepo.Add(git.AddOptions{
 		Pathsepcs: []string{filename},
 	})
@@ -280,10 +285,14 @@ func PutContents(c *context.APIContext, form *PutContentRequest) {
 	})
 
 	commit, err := gitRepo.BranchCommit(branch)
+	if err != nil {
+		c.Error(err, "git branch commit not found")
+		return
+	}
 
-	responseObj := PutContentResponse{
-		Content: ContentPayload{},
-		Commit: CommitPayload{
+	responseObj := putContentResponse{
+		Content: contentPayload{},
+		Commit: commitPayload{
 			Sha:      commit.ID.String(),
 			Url:      c.Req.RequestURI,
 			Commiter: ToJsonPayload(&commiter),
@@ -293,5 +302,4 @@ func PutContents(c *context.APIContext, form *PutContentRequest) {
 	}
 
 	c.JSONSuccess(responseObj)
-    return
 }
