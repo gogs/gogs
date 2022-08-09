@@ -17,6 +17,7 @@ import (
 	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/context"
+	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/repoutil"
 )
@@ -216,6 +217,25 @@ func ToJsonPayload(s *git.Signature) *gogs.CommitUser {
 	}
 }
 
+func setSignature(u *db.User, cu *gogs.CommitUser) *git.Signature {
+	when, err := time.Parse(time.RFC3339, cu.Date)
+	if err != nil {
+		when = time.Now()
+	}
+	var sig = git.Signature{
+		Name:  u.FullName,
+		Email: u.Email,
+		When:  when,
+	}
+
+	if cu != nil {
+		sig.Name = cu.Name
+		sig.Email = cu.Email
+	}
+
+	return &sig
+}
+
 func PutContents(c *context.APIContext, form *PutContentRequest) {
 	repoPath := repoutil.RepositoryPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
@@ -239,49 +259,21 @@ func PutContents(c *context.APIContext, form *PutContentRequest) {
 	}
 	gitRepo.Checkout(branch)
 
-	// add
+	// git add
 	localPath := c.Repo.Repository.LocalCopyPath()
-	ioutil.WriteFile(path.Join(localPath, filename), content, 0644)
+	filePath := path.Join(localPath, filename)
+	ioutil.WriteFile(filePath, content, 0644)
 
 	gitRepo.Add(git.AddOptions{
 		Pathsepcs: []string{filename},
 	})
 
-	commitDate, err := time.Parse(time.RFC3339, form.Commiter.Date)
-	if err != nil {
-		commitDate = time.Now()
-	}
+	commiter := setSignature(c.User, form.Commiter)
+	author := setSignature(c.User, form.Author)
 
-	var commiter = git.Signature{
-		Name:  c.User.FullName,
-		Email: c.User.Email,
-		When:  commitDate,
-	}
-
-	if form.Commiter != nil {
-		commiter.Name = form.Commiter.Name
-		commiter.Email = form.Commiter.Email
-	}
-
-	authorDate, err := time.Parse(time.RFC3339, form.Author.Date)
-	if err != nil {
-		authorDate = time.Now()
-	}
-
-	var author = git.Signature{
-		Name:  c.User.FullName,
-		Email: c.User.Email,
-		When:  authorDate,
-	}
-
-	if form.Commiter != nil {
-		author.Name = form.Author.Name
-		author.Email = form.Author.Email
-	}
-
-	// commit
-	gitRepo.Commit(&commiter, form.Message, git.CommitOptions{
-		Author: &author,
+	// git commit
+	gitRepo.Commit(commiter, form.Message, git.CommitOptions{
+		Author: author,
 	})
 
 	commit, err := gitRepo.BranchCommit(branch)
@@ -295,8 +287,8 @@ func PutContents(c *context.APIContext, form *PutContentRequest) {
 		Commit: commitPayload{
 			Sha:      commit.ID.String(),
 			Url:      c.Req.RequestURI,
-			Commiter: ToJsonPayload(&commiter),
-			Author:   ToJsonPayload(&author),
+			Commiter: ToJsonPayload(commiter),
+			Author:   ToJsonPayload(author),
 			Message:  commit.Message,
 		},
 	}
