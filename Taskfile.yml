@@ -38,7 +38,7 @@ tasks:
     method: timestamp
 
   generate-schemadoc:
-    desc: Generate database schema documentation
+    desc: Generate database schema documentationtest
     cmds:
       - go generate ./internal/db/schemadoc
 
