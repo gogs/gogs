@@ -47,7 +47,7 @@ require (
 	golang.org/x/text v0.3.7
 	gopkg.in/DATA-DOG/go-sqlmock.v2 v2.0.0-20180914054222-c19298f520d0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
-	gopkg.in/ini.v1 v1.66.6
+	gopkg.in/ini.v1 v1.67.0
 	gopkg.in/macaron.v1 v1.4.0
 	gorm.io/driver/mysql v1.3.6
 	gorm.io/driver/postgres v1.3.8
