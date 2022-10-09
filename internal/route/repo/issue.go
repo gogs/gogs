@@ -68,7 +68,7 @@ func MustAllowPulls(c *context.Context) {
 	}
 
 	// User can send pull request if owns a forked repository.
-	if c.IsLogged && c.User.HasForkedRepo(c.Repo.Repository.ID) {
+	if c.IsLogged && db.Users.HasForkedRepository(c.Req.Context(), c.User.ID, c.Repo.Repository.ID) {
 		c.Repo.PullRequest.Allowed = true
 		c.Repo.PullRequest.HeadInfo = c.User.Name + ":" + c.Repo.BranchName
 	}

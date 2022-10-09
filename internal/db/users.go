@@ -48,6 +48,8 @@ type UsersStore interface {
 	// GetByUsername returns the user with given username. It returns
 	// ErrUserNotExist when not found.
 	GetByUsername(ctx context.Context, username string) (*User, error)
+	// HasForkedRepository returns true if the user has forked given repository.
+	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
 }
 
 var Users UsersStore
@@ -66,6 +68,11 @@ func (u *User) AfterFind(_ *gorm.DB) error {
 	u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	return nil
+}
+
+// IsLocal returns true if user is created as local account.
+func (u *User) IsLocal() bool {
+	return u.LoginSource <= 0
 }
 
 var _ UsersStore = (*users)(nil)
@@ -343,4 +350,10 @@ func (db *users) GetByUsername(ctx context.Context, username string) (*User, err
 		return nil, err
 	}
 	return user, nil
+}
+
+func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) bool {
+	var count int64
+	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
+	return count > 0
 }

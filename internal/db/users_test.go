@@ -24,7 +24,7 @@ func TestUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(User), new(EmailAddress)}
+	tables := []interface{}{new(User), new(EmailAddress), new(Repository)}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
 	}
@@ -38,6 +38,7 @@ func TestUsers(t *testing.T) {
 		{"GetByEmail", usersGetByEmail},
 		{"GetByID", usersGetByID},
 		{"GetByUsername", usersGetByUsername},
+		{"HasForkedRepository", usersHasForkedRepository},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -274,4 +275,24 @@ func usersGetByUsername(t *testing.T, db *users) {
 	_, err = db.GetByUsername(ctx, "bad_username")
 	wantErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}
 	assert.Equal(t, wantErr, err)
+}
+
+func usersHasForkedRepository(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	has := db.HasForkedRepository(ctx, 1, 1)
+	assert.False(t, has)
+
+	_, err := NewReposStore(db.DB).Create(
+		ctx,
+		1,
+		CreateRepoOptions{
+			Name:   "repo1",
+			ForkID: 1,
+		},
+	)
+	require.NoError(t, err)
+
+	has = db.HasForkedRepository(ctx, 1, 1)
+	assert.True(t, has)
 }
