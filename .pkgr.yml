@@ -15,7 +15,7 @@ targets:
     <<: *debian
   ubuntu-22.04:
     <<: *debian
-  centos-7: &centos
+  centos-8:
     build_dependencies:
       - pam-devel
       # required for Go buildpack
@@ -23,8 +23,6 @@ targets:
     dependencies:
       - pam
       - git
-  centos-8:
-    <<: *centos
 before:
   - mv .packager/Procfile .
 after:
