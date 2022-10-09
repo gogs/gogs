@@ -124,11 +124,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// IDStr returns string representation of user's ID.
-func (u *User) IDStr() string {
-	return com.ToStr(u.ID)
-}
-
 func (u *User) APIFormat() *api.User {
 	return &api.User{
 		ID:        u.ID,
@@ -138,17 +133,6 @@ func (u *User) APIFormat() *api.User {
 		Email:     u.Email,
 		AvatarUrl: u.AvatarLink(),
 	}
-}
-
-// returns true if user login type is LoginPlain.
-func (u *User) IsLocal() bool {
-	return u.LoginSource <= 0
-}
-
-// HasForkedRepo checks if user has already forked a repository with given ID.
-func (u *User) HasForkedRepo(repoID int64) bool {
-	_, has, _ := HasForkedRepo(u.ID, repoID)
-	return has
 }
 
 func (u *User) RepoCreationNum() int {
