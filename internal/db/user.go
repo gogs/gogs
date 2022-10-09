@@ -135,7 +135,6 @@ func (u *User) APIFormat() *api.User {
 	}
 }
 
-
 func (u *User) RepoCreationNum() int {
 	if u.MaxRepoCreation <= -1 {
 		return conf.Repository.MaxCreationLimit
