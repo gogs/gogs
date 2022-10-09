@@ -55,7 +55,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [ 1.17.x, 1.18.x, 1.19.x ]
+        go-version: [ 1.18.x, 1.19.x ]
         platform: [ ubuntu-latest, macos-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -95,7 +95,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [ 1.17.x, 1.18.x, 1.19.x ]
+        go-version: [ 1.18.x, 1.19.x ]
         platform: [ windows-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -133,7 +133,7 @@ jobs:
     name: Postgres
     strategy:
       matrix:
-        go-version: [ 1.17.x, 1.18.x, 1.19.x ]
+        go-version: [ 1.18.x, 1.19.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     services:
@@ -169,7 +169,7 @@ jobs:
     name: MySQL
     strategy:
       matrix:
-        go-version: [ 1.17.x, 1.18.x, 1.19.x ]
+        go-version: [ 1.18.x, 1.19.x ]
         platform: [ ubuntu-18.04 ]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -194,7 +194,7 @@ jobs:
     name: SQLite - Go
     strategy:
       matrix:
-        go-version: [ 1.17.x, 1.18.x, 1.19.x ]
+        go-version: [ 1.18.x, 1.19.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     steps:

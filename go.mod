@@ -1,6 +1,6 @@
 module gogs.io/gogs
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
@@ -134,5 +134,5 @@ require (
 	modernc.org/token v1.0.1 // indirect
 )
 
-// +heroku goVersion go1.17
+// +heroku goVersion go1.18
 // +heroku install ./
