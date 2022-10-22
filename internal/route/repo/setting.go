@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -269,7 +270,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-		c.Redirect(c.Repo.Owner.DashboardLink())
+		c.Redirect(userutil.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
 
 	case "delete-wiki":
 		if !c.Repo.IsOwner() {

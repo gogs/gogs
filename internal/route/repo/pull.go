@@ -135,7 +135,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case db.IsErrReachLimitOfRepo(err):
-			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", c.User.RepoCreationNum()), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(db.ErrReachLimitOfRepo).Limit), FORK, &f)
 		case db.IsErrRepoAlreadyExist(err):
 			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
 		case db.IsErrNameNotAllowed(err):

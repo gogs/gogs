@@ -16,6 +16,14 @@ func SetMockApp(t *testing.T, opts AppOpts) {
 	})
 }
 
+func SetMockAuth(t *testing.T, otps AuthOpts) {
+	before := Auth
+	Auth = otps
+	t.Cleanup(func() {
+		Auth = before
+	})
+}
+
 func SetMockServer(t *testing.T, opts ServerOpts) {
 	before := Server
 	Server = opts

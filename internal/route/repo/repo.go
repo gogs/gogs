@@ -86,10 +86,10 @@ func Create(c *context.Context) {
 	c.Success(CREATE)
 }
 
-func handleCreateError(c *context.Context, owner *db.User, err error, name, tpl string, form interface{}) {
+func handleCreateError(c *context.Context, err error, name, tpl string, form interface{}) {
 	switch {
 	case db.IsErrReachLimitOfRepo(err):
-		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
+		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(db.ErrReachLimitOfRepo).Limit), tpl, form)
 	case db.IsErrRepoAlreadyExist(err):
 		c.Data["Err_RepoName"] = true
 		c.RenderWithErr(c.Tr("form.repo_name_been_taken"), tpl, form)
@@ -141,7 +141,7 @@ func CreatePost(c *context.Context, f form.CreateRepo) {
 		}
 	}
 
-	handleCreateError(c, ctxUser, err, "CreatePost", CREATE, &f)
+	handleCreateError(c, err, "CreatePost", CREATE, &f)
 }
 
 func Migrate(c *context.Context) {
@@ -227,7 +227,7 @@ func MigratePost(c *context.Context, f form.MigrateRepo) {
 		return
 	}
 
-	handleCreateError(c, ctxUser, err, "MigratePost", MIGRATE, &f)
+	handleCreateError(c, err, "MigratePost", MIGRATE, &f)
 }
 
 func Action(c *context.Context) {

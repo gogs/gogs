@@ -5,6 +5,8 @@ vars:
     sh: echo '{{if eq OS "windows"}}.exe{{end}}'
 
 tasks:
+  default:
+    deps: [build]
   web:
     desc: Build the binary and start the web server
     deps: [build]

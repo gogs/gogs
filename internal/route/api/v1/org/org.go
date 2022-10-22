@@ -27,7 +27,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		Website:     apiForm.Website,
 		Location:    apiForm.Location,
 		IsActive:    true,
-		Type:        db.UserOrganization,
+		Type:        db.UserTypeOrganization,
 	}
 	if err := db.CreateOrganization(org, user); err != nil {
 		if db.IsErrUserAlreadyExist(err) ||

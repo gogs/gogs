@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/go-macaron/binding"
+	api "github.com/gogs/go-gogs-client"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
 )
@@ -53,27 +55,6 @@ type UsersStore interface {
 }
 
 var Users UsersStore
-
-// BeforeCreate implements the GORM create hook.
-func (u *User) BeforeCreate(tx *gorm.DB) error {
-	if u.CreatedUnix == 0 {
-		u.CreatedUnix = tx.NowFunc().Unix()
-		u.UpdatedUnix = u.CreatedUnix
-	}
-	return nil
-}
-
-// AfterFind implements the GORM query hook.
-func (u *User) AfterFind(_ *gorm.DB) error {
-	u.Created = time.Unix(u.CreatedUnix, 0).Local()
-	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
-	return nil
-}
-
-// IsLocal returns true if user is created as local account.
-func (u *User) IsLocal() bool {
-	return u.LoginSource <= 0
-}
 
 var _ UsersStore = (*users)(nil)
 
@@ -303,7 +284,7 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 	// First try to find the user by primary email
 	user := new(User)
 	err := db.WithContext(ctx).
-		Where("email = ? AND type = ? AND is_active = ?", email, UserIndividual, true).
+		Where("email = ? AND type = ? AND is_active = ?", email, UserTypeIndividual, true).
 		First(user).
 		Error
 	if err == nil {
@@ -356,4 +337,148 @@ func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) 
 	var count int64
 	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
 	return count > 0
+}
+
+// UserType indicates the type of the user account.
+type UserType int
+
+const (
+	UserTypeIndividual UserType = iota // NOTE: Historic reason to make it starts at 0.
+	UserTypeOrganization
+)
+
+// User represents the object of an individual or an organization.
+type User struct {
+	ID        int64  `gorm:"primaryKey"`
+	LowerName string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
+	Name      string `xorm:"UNIQUE NOT NULL" gorm:"not null"`
+	FullName  string
+	// Email is the primary email address (to be used for communication)
+	Email       string `xorm:"NOT NULL" gorm:"not null"`
+	Passwd      string `xorm:"NOT NULL" gorm:"not null"`
+	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
+	LoginName   string
+	Type        UserType
+	OwnedOrgs   []*User       `xorm:"-" gorm:"-" json:"-"`
+	Orgs        []*User       `xorm:"-" gorm:"-" json:"-"`
+	Repos       []*Repository `xorm:"-" gorm:"-" json:"-"`
+	Location    string
+	Website     string
+	Rands       string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`
+	Salt        string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`
+
+	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
+	CreatedUnix int64
+	Updated     time.Time `xorm:"-" gorm:"-" json:"-"`
+	UpdatedUnix int64
+
+	// Remember visibility choice for convenience, true for private
+	LastRepoVisibility bool
+	// Maximum repository creation limit, -1 means use global default
+	MaxRepoCreation int `xorm:"NOT NULL DEFAULT -1" gorm:"not null;default:-1"`
+
+	// Permissions
+	IsActive         bool // Activate primary email
+	IsAdmin          bool
+	AllowGitHook     bool
+	AllowImportLocal bool // Allow migrate repository by local path
+	ProhibitLogin    bool
+
+	// Avatar
+	Avatar          string `xorm:"VARCHAR(2048) NOT NULL" gorm:"type:VARCHAR(2048);not null"`
+	AvatarEmail     string `xorm:"NOT NULL" gorm:"not null"`
+	UseCustomAvatar bool
+
+	// Counters
+	NumFollowers int
+	NumFollowing int `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
+	NumStars     int
+	NumRepos     int
+
+	// For organization
+	Description string
+	NumTeams    int
+	NumMembers  int
+	Teams       []*Team `xorm:"-" gorm:"-" json:"-"`
+	Members     []*User `xorm:"-" gorm:"-" json:"-"`
+}
+
+// BeforeCreate implements the GORM create hook.
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.CreatedUnix == 0 {
+		u.CreatedUnix = tx.NowFunc().Unix()
+		u.UpdatedUnix = u.CreatedUnix
+	}
+	return nil
+}
+
+// AfterFind implements the GORM query hook.
+func (u *User) AfterFind(_ *gorm.DB) error {
+	u.Created = time.Unix(u.CreatedUnix, 0).Local()
+	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
+	return nil
+}
+
+// IsLocal returns true if user is created as local account.
+func (u *User) IsLocal() bool {
+	return u.LoginSource <= 0
+}
+
+// APIFormat returns the API format of a user.
+func (u *User) APIFormat() *api.User {
+	return &api.User{
+		ID:        u.ID,
+		UserName:  u.Name,
+		Login:     u.Name,
+		FullName:  u.FullName,
+		Email:     u.Email,
+		AvatarUrl: u.AvatarLink(),
+	}
+}
+
+// maxNumRepos returns the maximum number of repositories that the user can have
+// direct ownership.
+func (u *User) maxNumRepos() int {
+	if u.MaxRepoCreation <= -1 {
+		return conf.Repository.MaxCreationLimit
+	}
+	return u.MaxRepoCreation
+}
+
+// canCreateRepo returns true if the user can create a repository.
+func (u *User) canCreateRepo() bool {
+	return u.maxNumRepos() <= -1 || u.NumRepos < u.maxNumRepos()
+}
+
+// CanCreateOrganization returns true if user can create organizations.
+func (u *User) CanCreateOrganization() bool {
+	return !conf.Admin.DisableRegularOrgCreation || u.IsAdmin
+}
+
+// CanEditGitHook returns true if user can edit Git hooks.
+func (u *User) CanEditGitHook() bool {
+	return u.IsAdmin || u.AllowGitHook
+}
+
+// CanImportLocal returns true if user can migrate repositories by local path.
+func (u *User) CanImportLocal() bool {
+	return conf.Repository.EnableLocalPathMigration && (u.IsAdmin || u.AllowImportLocal)
+}
+
+// HomeURLPath returns the URL path to the user or organization home page.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User` and move this to the "userutil"
+// package.
+func (u *User) HomeURLPath() string {
+	return conf.Server.Subpath + "/" + u.Name
+}
+
+// HTMLURL returns the HTML URL to the user or organization home page.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User` and move this to the "userutil"
+// package.
+func (u *User) HTMLURL() string {
+	return conf.Server.ExternalURL + u.Name
 }
