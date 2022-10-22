@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/unknwon/paginater"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -49,8 +50,11 @@ func (c *APIContext) ErrorStatus(status int, err error) {
 
 // Error renders the 500 response.
 func (c *APIContext) Error(err error, msg string) {
-	log.ErrorDepth(5, "%s: %v", msg, err)
-	c.ErrorStatus(http.StatusInternalServerError, err)
+	log.ErrorDepth(4, "%s: %v", msg, err)
+	c.ErrorStatus(
+		http.StatusInternalServerError,
+		errors.New("Something went wrong, please check the server logs for more information."),
+	)
 }
 
 // Errorf renders the 500 response with formatted message.
