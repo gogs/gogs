@@ -7,7 +7,6 @@ package db
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"os"
 	"os/exec"
@@ -178,7 +177,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		}
 	}
 
-	if err = ioutil.WriteFile(filePath, []byte(opts.Content), 0666); err != nil {
+	if err = os.WriteFile(filePath, []byte(opts.Content), 0600); err != nil {
 		return fmt.Errorf("write file: %v", err)
 	}
 
@@ -224,7 +223,7 @@ func (repo *Repository) GetDiffPreview(branch, treePath, content string) (diff *
 	if err = os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 		return nil, err
 	}
-	if err = ioutil.WriteFile(filePath, []byte(content), 0666); err != nil {
+	if err = os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		return nil, fmt.Errorf("write file: %v", err)
 	}
 
@@ -364,7 +363,7 @@ func NewUpload(name string, buf []byte, file multipart.File) (_ *Upload, err err
 	if err != nil {
 		return nil, fmt.Errorf("create: %v", err)
 	}
-	defer fw.Close()
+	defer func() { _ = fw.Close() }()
 
 	if _, err = fw.Write(buf); err != nil {
 		return nil, fmt.Errorf("write: %v", err)
