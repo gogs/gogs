@@ -12,6 +12,12 @@ import (
 	"github.com/gogs/go-libravatar"
 )
 
+const (
+	// UsersAvatarURLPath is used to identify whether a URL is to access user
+	// avatars.
+	UsersAvatarURLPath = "avatars"
+)
+
 // ℹ️ README: This file contains static values that should only be set at initialization time.
 //
 // ⚠️ WARNING: After changing any options, do not forget to update template of
@@ -69,20 +75,6 @@ var (
 
 		// Derived from other static values
 		FromEmail string `ini:"-"` // Parsed email address of From without person's name.
-	}
-
-	// Authentication settings
-	Auth struct {
-		ActivateCodeLives         int
-		ResetPasswordCodeLives    int
-		RequireEmailConfirmation  bool
-		RequireSigninView         bool
-		DisableRegistration       bool
-		EnableRegistrationCaptcha bool
-
-		EnableReverseProxyAuthentication   bool
-		EnableReverseProxyAutoRegistration bool
-		ReverseProxyAuthenticationHeader   string
 	}
 
 	// User settings
@@ -267,6 +259,22 @@ type AppOpts struct {
 
 // Application settings
 var App AppOpts
+
+type AuthOpts struct {
+	ActivateCodeLives         int
+	ResetPasswordCodeLives    int
+	RequireEmailConfirmation  bool
+	RequireSigninView         bool
+	DisableRegistration       bool
+	EnableRegistrationCaptcha bool
+
+	EnableReverseProxyAuthentication   bool
+	EnableReverseProxyAutoRegistration bool
+	ReverseProxyAuthenticationHeader   string
+}
+
+// Authentication settings
+var Auth AuthOpts
 
 type ServerOpts struct {
 	ExternalURL          string `ini:"EXTERNAL_URL"`

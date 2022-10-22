@@ -198,7 +198,7 @@ func usersGetByEmail(t *testing.T, db *users) {
 		org, err := db.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOptions{})
 		require.NoError(t, err)
 
-		err = db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserOrganization).Error
+		err = db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserTypeOrganization).Error
 		require.NoError(t, err)
 
 		_, err = db.GetByEmail(ctx, org.Email)

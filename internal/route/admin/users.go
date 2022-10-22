@@ -30,7 +30,7 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.UserIndividual,
+		Type:     db.UserTypeIndividual,
 		Counter:  db.CountUsers,
 		Ranger:   db.ListUsers,
 		PageSize: conf.UI.Admin.UserPagingNum,

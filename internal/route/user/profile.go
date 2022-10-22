@@ -118,7 +118,7 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 
 	redirectTo := c.Query("redirect_to")
 	if !tool.IsSameSiteURLPath(redirectTo) {
-		redirectTo = puser.HomeLink()
+		redirectTo = puser.HomeURLPath()
 	}
 	c.Redirect(redirectTo)
 }

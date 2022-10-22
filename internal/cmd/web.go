@@ -99,7 +99,7 @@ func newMacaron() *macaron.Macaron {
 		conf.Picture.AvatarUploadPath,
 		macaron.StaticOptions{
 			ETag:        true,
-			Prefix:      db.USER_AVATAR_URL_PREFIX,
+			Prefix:      conf.UsersAvatarURLPath,
 			SkipLogging: conf.Server.DisableRouterLog,
 		},
 	))
