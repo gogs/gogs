@@ -3,7 +3,7 @@
 	<div class="ui container">
 		<div class="ui grid">
 			<div class="ui sixteen wide column">
-				<img class="ui left" id="org-avatar" src="{{.Org.RelAvatarLink}}?s=140"/>
+				<img class="ui left" id="org-avatar" src="{{.Org.AvatarURLPath}}?s=140"/>
 				<div id="org-info">
 					<div class="ui header">
 						{{.Org.DisplayName}}
@@ -48,7 +48,7 @@
 					{{$isMember := .IsOrganizationMember}}
 					{{range .Members}}
 						{{if or $isMember (.IsPublicMember $.Org.ID)}}
-							<a href="{{.HomeLink}}" title="{{.Name}}{{if .FullName}} ({{.FullName}}){{end}}"><img class="ui avatar" src="{{.RelAvatarLink}}"></a>
+							<a href="{{.HomeURLPath}}" title="{{.Name}}{{if .FullName}} ({{.FullName}}){{end}}"><img class="ui avatar" src="{{.AvatarURLPath}}"></a>
 						{{end}}
 					{{end}}
 				</div>

@@ -27,6 +27,7 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -144,8 +145,8 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) er
 	} else {
 		// No avatar is uploaded but setting has been changed to enable,
 		// generate a random one when needed.
-		if ctxUser.UseCustomAvatar && !com.IsFile(ctxUser.CustomAvatarPath()) {
-			if err := ctxUser.GenerateRandomAvatar(); err != nil {
+		if ctxUser.UseCustomAvatar && !com.IsFile(userutil.CustomAvatarPath(ctxUser.ID)) {
+			if err := userutil.GenerateRandomAvatar(ctxUser.ID, ctxUser.Name, ctxUser.Email); err != nil {
 				log.Error("generate random avatar [%d]: %v", ctxUser.ID, err)
 			}
 		}

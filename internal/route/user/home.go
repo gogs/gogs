@@ -82,7 +82,7 @@ func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile
 				c.Error(err, "get user by name")
 				return
 			}
-			unameAvatars[act.ActUserName] = u.RelAvatarLink()
+			unameAvatars[act.ActUserName] = u.AvatarURLPath()
 		}
 
 		act.ActAvatar = unameAvatars[act.ActUserName]

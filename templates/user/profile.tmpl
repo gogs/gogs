@@ -6,11 +6,11 @@
 				<div class="ui card">
 					{{if eq .LoggedUserName .Owner.Name}}
 						<a class="profile-avatar image poping up" href="{{AppSubURL}}/user/settings/avatar" id="profile-avatar" data-content="{{.i18n.Tr "user.change_avatar"}}" data-variation="inverted tiny" data-position="bottom center">
-							<img src="{{AppendAvatarSize .Owner.RelAvatarLink 287}}" title="{{.Owner.Name}}"/>
+							<img src="{{AppendAvatarSize .Owner.AvatarURLPath 287}}" title="{{.Owner.Name}}"/>
 						</a>
 					{{else}}
 						<span class="profile-avatar image">
-							<img src="{{AppendAvatarSize .Owner.RelAvatarLink 287}}" title="{{.Owner.Name}}"/>
+							<img src="{{AppendAvatarSize .Owner.AvatarURLPath 287}}" title="{{.Owner.Name}}"/>
 						</span>
 					{{end}}
 					<div class="content">
@@ -37,11 +37,11 @@
 							<li><i class="octicon octicon-clock"></i> {{.i18n.Tr "user.join_on"}} {{DateFmtShort .Owner.Created}}</li>
 							<li>
 								<i class="octicon octicon-person"></i>
-								<a href="{{.Owner.HomeLink}}/followers">
+								<a href="{{.Owner.HomeURLPath}}/followers">
 									{{.Owner.NumFollowers}} {{.i18n.Tr "user.followers"}}
 								</a>
 								-
-								<a href="{{.Owner.HomeLink}}/following">
+								<a href="{{.Owner.HomeURLPath}}/following">
 									{{.Owner.NumFollowing}} {{.i18n.Tr "user.following"}}
 								</a>
 							</li>
@@ -56,7 +56,7 @@
 							{{if .Orgs}}
 							<li>
 								{{range .Orgs}}
-									<a href="{{.HomeURLPath}}"><img class="ui mini image poping up" src="{{.RelAvatarLink}}" data-content="{{.Name}}" data-position="top center" data-variation="tiny inverted"></a>
+									<a href="{{.HomeURLPath}}"><img class="ui mini image poping up" src="{{.AvatarURLPath}}" data-content="{{.Name}}" data-position="top center" data-variation="tiny inverted"></a>
 								{{end}}
 							</li>
 							{{end}}
@@ -85,11 +85,11 @@
 			</div>
 			<div class="ui eleven wide column">
 				<div class="ui secondary pointing menu">
-					<a class="{{if ne .TabName "activity"}}active{{end}} item" href="{{.Owner.HomeLink}}">
+					<a class="{{if ne .TabName "activity"}}active{{end}} item" href="{{.Owner.HomeURLPath}}">
 						<i class="octicon octicon-repo"></i> {{.i18n.Tr "user.repositories"}}
 					</a>
 					<a class="item">
-						<a class="{{if eq .TabName "activity"}}active{{end}} item" href="{{.Owner.HomeLink}}?tab=activity">
+						<a class="{{if eq .TabName "activity"}}active{{end}} item" href="{{.Owner.HomeURLPath}}?tab=activity">
 							<i class="octicon octicon-rss"></i> {{.i18n.Tr "user.activity"}}
 						</a>
 					</a>

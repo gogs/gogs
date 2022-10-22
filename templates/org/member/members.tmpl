@@ -14,10 +14,10 @@
 			{{range .Members}}
 				<div class="item ui grid">
 					<div class="ui one wide column">
-						<img class="ui avatar" src="{{AppendAvatarSize .RelAvatarLink 48}}">
+						<img class="ui avatar" src="{{AppendAvatarSize .AvatarURLPath 48}}">
 					</div>
 					<div class="ui three wide column">
-						<div class="meta"><a href="{{.HomeLink}}">{{.Name}}</a></div>
+						<div class="meta"><a href="{{.HomeURLPath}}">{{.Name}}</a></div>
 						<div class="meta">{{.FullName}}</div>
 					</div>
 					<div class="ui five wide column center">

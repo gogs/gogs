@@ -1,8 +1,8 @@
 {{with .Owner}}
 <div class="ui container">
-	<img class="ui avatar image" src="{{.RelAvatarLink}}">
+	<img class="ui avatar image" src="{{.AvatarURLPath}}">
 	<span class="header name">
-		<a href="{{.HomeLink}}">{{.Name}}</a>
+		<a href="{{.HomeURLPath}}">{{.Name}}</a>
 		{{with .FullName}}({{.}}){{end}}
 	</span>
 
@@ -11,9 +11,9 @@
 			{{if and $.IsLogged (ne $.LoggedUserName .Name)}}
 				<div class="follow">
 					{{if $.LoggedUser.IsFollowing .ID}}
-					<a class="ui small basic red button" href="{{.HomeLink}}/action/unfollow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{$.i18n.Tr "user.unfollow"}}</a>
+					<a class="ui small basic red button" href="{{.HomeURLPath}}/action/unfollow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{$.i18n.Tr "user.unfollow"}}</a>
 					{{else}}
-					<a class="ui small basic green button" href="{{.HomeLink}}/action/follow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{$.i18n.Tr "user.follow"}}</a>
+					<a class="ui small basic green button" href="{{.HomeURLPath}}/action/follow?redirect_to={{$.Link}}"><i class="octicon octicon-person"></i> {{$.i18n.Tr "user.follow"}}</a>
 					{{end}}
 				</div>
 			{{end}}
