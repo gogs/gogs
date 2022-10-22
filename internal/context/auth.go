@@ -185,7 +185,7 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 						u := &db.User{
 							Name:     webAuthUser,
 							Email:    gouuid.NewV4().String() + "@localhost",
-							Passwd:   webAuthUser,
+							Password: webAuthUser,
 							IsActive: true,
 						}
 						if err = db.CreateUser(u); err != nil {

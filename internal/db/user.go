@@ -168,15 +168,15 @@ func (u *User) NewGitSig() *git.Signature {
 
 // EncodePassword encodes password to safe format.
 func (u *User) EncodePassword() {
-	newPasswd := pbkdf2.Key([]byte(u.Passwd), []byte(u.Salt), 10000, 50, sha256.New)
-	u.Passwd = fmt.Sprintf("%x", newPasswd)
+	newPasswd := pbkdf2.Key([]byte(u.Password), []byte(u.Salt), 10000, 50, sha256.New)
+	u.Password = fmt.Sprintf("%x", newPasswd)
 }
 
 // ValidatePassword checks if given password matches the one belongs to the user.
 func (u *User) ValidatePassword(passwd string) bool {
-	newUser := &User{Passwd: passwd, Salt: u.Salt}
+	newUser := &User{Password: passwd, Salt: u.Salt}
 	newUser.EncodePassword()
-	return subtle.ConstantTimeCompare([]byte(u.Passwd), []byte(newUser.Passwd)) == 1
+	return subtle.ConstantTimeCompare([]byte(u.Password), []byte(newUser.Password)) == 1
 }
 
 // UploadAvatar saves custom avatar for user.
@@ -499,7 +499,7 @@ func VerifyUserActiveCode(code string) (user *User) {
 	if user = parseUserFromCode(code); user != nil {
 		// time limit code
 		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
-		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Passwd + user.Rands
+		data := com.ToStr(user.ID) + user.Email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
 			return user
@@ -515,7 +515,7 @@ func VerifyActiveEmailCode(code, email string) *EmailAddress {
 	if user := parseUserFromCode(code); user != nil {
 		// time limit code
 		prefix := code[:tool.TIME_LIMIT_CODE_LENGTH]
-		data := com.ToStr(user.ID) + email + user.LowerName + user.Passwd + user.Rands
+		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
 			emailAddress := &EmailAddress{Email: email}

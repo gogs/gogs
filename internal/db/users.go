@@ -230,7 +230,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		Name:            username,
 		FullName:        opts.FullName,
 		Email:           email,
-		Passwd:          opts.Password,
+		Password:        opts.Password,
 		LoginSource:     opts.LoginSource,
 		LoginName:       opts.LoginName,
 		Location:        opts.Location,
@@ -355,7 +355,7 @@ type User struct {
 	FullName  string
 	// Email is the primary email address (to be used for communication)
 	Email       string `xorm:"NOT NULL" gorm:"not null"`
-	Passwd      string `xorm:"NOT NULL" gorm:"not null"`
+	Password    string `xorm:"passwd NOT NULL" gorm:"column:passwd;not null"`
 	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	LoginName   string
 	Type        UserType

@@ -41,7 +41,7 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		Name:     form.Username,
 		FullName: form.FullName,
 		Email:    form.Email,
-		Passwd:   form.Password,
+		Password: form.Password,
 		IsActive: true,
 	}
 
@@ -82,7 +82,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 	}
 
 	if len(form.Password) > 0 {
-		u.Passwd = form.Password
+		u.Password = form.Password
 		var err error
 		if u.Salt, err = db.GetUserSalt(); err != nil {
 			c.Error(err, "get user salt")
