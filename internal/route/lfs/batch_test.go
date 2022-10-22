@@ -7,7 +7,7 @@ package lfs
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -138,7 +138,7 @@ func Test_serveBatch(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
