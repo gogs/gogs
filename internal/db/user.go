@@ -34,6 +34,7 @@ import (
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 // TODO(unknwon): Delete me once refactoring is done.
@@ -58,75 +59,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
-}
-
-// CustomAvatarPath returns user custom avatar file path.
-func (u *User) CustomAvatarPath() string {
-	return filepath.Join(conf.Picture.AvatarUploadPath, com.ToStr(u.ID))
-}
-
-// GenerateRandomAvatar generates a random avatar for user.
-func (u *User) GenerateRandomAvatar() error {
-	seed := u.Email
-	if seed == "" {
-		seed = u.Name
-	}
-
-	img, err := avatar.RandomImage([]byte(seed))
-	if err != nil {
-		return fmt.Errorf("RandomImage: %v", err)
-	}
-	if err = os.MkdirAll(filepath.Dir(u.CustomAvatarPath()), os.ModePerm); err != nil {
-		return fmt.Errorf("MkdirAll: %v", err)
-	}
-	fw, err := os.Create(u.CustomAvatarPath())
-	if err != nil {
-		return fmt.Errorf("Create: %v", err)
-	}
-	defer fw.Close()
-
-	if err = png.Encode(fw, img); err != nil {
-		return fmt.Errorf("Encode: %v", err)
-	}
-
-	log.Info("New random avatar created: %d", u.ID)
-	return nil
-}
-
-// RelAvatarLink returns relative avatar link to the site domain,
-// which includes app sub-url as prefix. However, it is possible
-// to return full URL if user enables Gravatar-like service.
-func (u *User) RelAvatarLink() string {
-	defaultImgUrl := conf.Server.Subpath + "/img/avatar_default.png"
-	if u.ID == -1 {
-		return defaultImgUrl
-	}
-
-	switch {
-	case u.UseCustomAvatar:
-		if !com.IsExist(u.CustomAvatarPath()) {
-			return defaultImgUrl
-		}
-		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarURLPath, u.ID)
-	case conf.Picture.DisableGravatar:
-		if !com.IsExist(u.CustomAvatarPath()) {
-			if err := u.GenerateRandomAvatar(); err != nil {
-				log.Error("GenerateRandomAvatar: %v", err)
-			}
-		}
-
-		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarURLPath, u.ID)
-	}
-	return tool.AvatarLink(u.AvatarEmail)
-}
-
-// AvatarLink returns user avatar absolute link.
-func (u *User) AvatarLink() string {
-	link := u.RelAvatarLink()
-	if link[0] == '/' && link[1] != '/' {
-		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
-	}
-	return link
 }
 
 // User.GetFollowers returns range of user's followers.
@@ -188,7 +120,7 @@ func (u *User) UploadAvatar(data []byte) error {
 	}
 
 	_ = os.MkdirAll(conf.Picture.AvatarUploadPath, os.ModePerm)
-	fw, err := os.Create(u.CustomAvatarPath())
+	fw, err := os.Create(userutil.CustomAvatarPath(u.ID))
 	if err != nil {
 		return fmt.Errorf("create custom avatar directory: %v", err)
 	}
@@ -204,8 +136,9 @@ func (u *User) UploadAvatar(data []byte) error {
 
 // DeleteAvatar deletes the user's custom avatar.
 func (u *User) DeleteAvatar() error {
-	log.Trace("DeleteAvatar [%d]: %s", u.ID, u.CustomAvatarPath())
-	if err := os.Remove(u.CustomAvatarPath()); err != nil {
+	avatarPath := userutil.CustomAvatarPath(u.ID)
+	log.Trace("DeleteAvatar [%d]: %s", u.ID, avatarPath)
+	if err := os.Remove(avatarPath); err != nil {
 		return err
 	}
 
@@ -705,7 +638,7 @@ func deleteUser(e *xorm.Session, u *User) error {
 	//	so just keep error logs of those operations.
 
 	_ = os.RemoveAll(UserPath(u.Name))
-	_ = os.Remove(u.CustomAvatarPath())
+	_ = os.Remove(userutil.CustomAvatarPath(u.ID))
 
 	return nil
 }

@@ -120,7 +120,7 @@ func ToDeployKey(apiLink string, key *db.DeployKey) *api.DeployKey {
 func ToOrganization(org *db.User) *api.Organization {
 	return &api.Organization{
 		ID:          org.ID,
-		AvatarUrl:   org.AvatarLink(),
+		AvatarUrl:   org.AvatarURL(),
 		UserName:    org.Name,
 		FullName:    org.FullName,
 		Description: org.Description,

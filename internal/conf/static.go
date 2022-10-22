@@ -12,12 +12,6 @@ import (
 	"github.com/gogs/go-libravatar"
 )
 
-const (
-	// UsersAvatarURLPath is used to identify whether a URL is to access user
-	// avatars.
-	UsersAvatarURLPath = "avatars"
-)
-
 // ℹ️ README: This file contains static values that should only be set at initialization time.
 //
 // ⚠️ WARNING: After changing any options, do not forget to update template of
@@ -130,18 +124,6 @@ var (
 
 		// Derived from other static values
 		FormatLayout string `ini:"-"` // Actual layout of the Format.
-	}
-
-	// Picture settings
-	Picture struct {
-		AvatarUploadPath           string
-		RepositoryAvatarUploadPath string
-		GravatarSource             string
-		DisableGravatar            bool
-		EnableFederatedAvatar      bool
-
-		// Derived from other static values
-		LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
 	}
 
 	// Mirror settings
@@ -408,6 +390,20 @@ type UIOpts struct {
 // UI settings
 var UI UIOpts
 
+type PictureOpts struct {
+	AvatarUploadPath           string
+	RepositoryAvatarUploadPath string
+	GravatarSource             string
+	DisableGravatar            bool
+	EnableFederatedAvatar      bool
+
+	// Derived from other static values
+	LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
+}
+
+// Picture settings
+var Picture PictureOpts
+
 type i18nConf struct {
 	Langs     []string          `delim:","`
 	Names     []string          `delim:","`
@@ -448,3 +444,11 @@ var (
 	UsePostgreSQL bool
 	UseMSSQL      bool
 )
+
+// UsersAvatarPathPrefix is the path prefix to user avatars.
+const UsersAvatarPathPrefix = "avatars"
+
+// UserDefaultAvatarURLPath returns the URL path of the default user avatar.
+func UserDefaultAvatarURLPath() string {
+	return Server.Subpath + "/img/avatar_default.png"
+}

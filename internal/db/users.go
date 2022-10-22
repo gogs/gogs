@@ -14,11 +14,15 @@ import (
 	api "github.com/gogs/go-gogs-client"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 // UsersStore is the persistent interface for users.
@@ -432,7 +436,7 @@ func (u *User) APIFormat() *api.User {
 		Login:     u.Name,
 		FullName:  u.FullName,
 		Email:     u.Email,
-		AvatarUrl: u.AvatarLink(),
+		AvatarUrl: u.AvatarURL(),
 	}
 }
 
@@ -474,11 +478,55 @@ func (u *User) HomeURLPath() string {
 	return conf.Server.Subpath + "/" + u.Name
 }
 
-// HTMLURL returns the HTML URL to the user or organization home page.
+// HTMLURL returns the full URL to the user or organization home page.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User` and move this to the "userutil"
 // package.
 func (u *User) HTMLURL() string {
 	return conf.Server.ExternalURL + u.Name
+}
+
+// AvatarURLPath returns the URL path to the user or organization avatar. If the
+// user enables Gravatar-like service, then an external URL will be returned.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User` and move this to the "userutil"
+// package.
+func (u *User) AvatarURLPath() string {
+	defaultURLPath := conf.UserDefaultAvatarURLPath()
+	if u.ID <= 0 {
+		return defaultURLPath
+	}
+
+	hasCustomAvatar := osutil.IsFile(userutil.CustomAvatarPath(u.ID))
+	switch {
+	case u.UseCustomAvatar:
+		if !hasCustomAvatar {
+			return defaultURLPath
+		}
+		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
+	case conf.Picture.DisableGravatar:
+		if !hasCustomAvatar {
+			if err := userutil.GenerateRandomAvatar(u.ID, u.Name, u.Email); err != nil {
+				log.Error("Failed to generate random avatar [user_id: %d]: %v", u.ID, err)
+			}
+		}
+		return fmt.Sprintf("%s/%s/%d", conf.Server.Subpath, conf.UsersAvatarPathPrefix, u.ID)
+	}
+	return tool.AvatarLink(u.AvatarEmail)
+}
+
+// AvatarURL returns the full URL to the user or organization avatar. If the
+// user enables Gravatar-like service, then an external URL will be returned.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User` and move this to the "userutil"
+// package.
+func (u *User) AvatarURL() string {
+	link := u.AvatarURLPath()
+	if link[0] == '/' && link[1] != '/' {
+		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
+	}
+	return link
 }

@@ -55,3 +55,11 @@ func SetMockUI(t *testing.T, opts UIOpts) {
 		UI = before
 	})
 }
+
+func SetMockPicture(t *testing.T, opts PictureOpts) {
+	before := Picture
+	Picture = opts
+	t.Cleanup(func() {
+		Picture = before
+	})
+}
