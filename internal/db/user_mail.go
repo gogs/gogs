@@ -69,7 +69,7 @@ func isEmailUsed(e Engine, email string) (bool, error) {
 	}
 
 	// We need to check primary email of users as well.
-	return e.Where("type=?", UserIndividual).And("email=?", email).Get(new(User))
+	return e.Where("type=?", UserTypeIndividual).And("email=?", email).Get(new(User))
 }
 
 // IsEmailUsed returns true if the email has been used.

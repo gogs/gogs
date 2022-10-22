@@ -48,7 +48,7 @@
 							{{/*
 							<li>
 								<i class="octicon octicon-star"></i>
-								<a href="{{.Owner.HomeLink}}/stars">
+								<a href="{{.Owner.HomeURLPath}}/stars">
 									{{.Owner.NumStars}} {{.i18n.Tr "user.starred"}}
 								</a>
 							</li>
@@ -56,7 +56,7 @@
 							{{if .Orgs}}
 							<li>
 								{{range .Orgs}}
-									<a href="{{.HomeLink}}"><img class="ui mini image poping up" src="{{.RelAvatarLink}}" data-content="{{.Name}}" data-position="top center" data-variation="tiny inverted"></a>
+									<a href="{{.HomeURLPath}}"><img class="ui mini image poping up" src="{{.RelAvatarLink}}" data-content="{{.Name}}" data-position="top center" data-variation="tiny inverted"></a>
 								{{end}}
 							</li>
 							{{end}}

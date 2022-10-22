@@ -86,7 +86,6 @@ type User interface {
 	ID() int64
 	DisplayName() string
 	Email() string
-	GenerateActivateCode() string
 	GenerateEmailActivateCode(string) string
 }
 
@@ -122,11 +121,11 @@ func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
 }
 
 func SendActivateAccountMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, u.GenerateActivateCode(), c.Tr("mail.activate_account"), "activate account")
+	SendUserMail(c, u, MAIL_AUTH_ACTIVATE, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.activate_account"), "activate account")
 }
 
 func SendResetPasswordMail(c *macaron.Context, u User) {
-	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, u.GenerateActivateCode(), c.Tr("mail.reset_password"), "reset password")
+	SendUserMail(c, u, MAIL_AUTH_RESET_PASSWORD, u.GenerateEmailActivateCode(u.Email()), c.Tr("mail.reset_password"), "reset password")
 }
 
 // SendActivateAccountMail sends confirmation email.
