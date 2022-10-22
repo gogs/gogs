@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"image/png"
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/pquerna/otp"
@@ -132,7 +132,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) er
 			_ = r.Close()
 		}()
 
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("read avatar content: %v", err)
 		}

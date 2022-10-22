@@ -6,7 +6,7 @@ package repo
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -339,7 +339,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *db.Reposito
 		}
 		defer r.Close()
 
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("read avatar content: %v", err)
 		}
