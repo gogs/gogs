@@ -1158,7 +1158,7 @@ func (err ErrReachLimitOfRepo) Error() string {
 // CreateRepository creates a repository for given user or organization.
 func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repository, err error) {
 	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.MaxNumRepos()}
+		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
 
 	repo := &Repository{
@@ -2468,7 +2468,7 @@ func HasForkedRepo(ownerID, repoID int64) (*Repository, bool, error) {
 // ForkRepository creates a fork of target repository under another user domain.
 func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) (_ *Repository, err error) {
 	if !owner.canCreateRepo() {
-		return nil, ErrReachLimitOfRepo{Limit: owner.MaxNumRepos()}
+		return nil, ErrReachLimitOfRepo{Limit: owner.maxNumRepos()}
 	}
 
 	repo := &Repository{
