@@ -154,7 +154,7 @@ func runCreateUser(c *cli.Context) error {
 	if err := db.CreateUser(&db.User{
 		Name:     c.String("name"),
 		Email:    c.String("email"),
-		Passwd:   c.String("password"),
+		Password: c.String("password"),
 		IsActive: true,
 		IsAdmin:  c.Bool("admin"),
 	}); err != nil {
