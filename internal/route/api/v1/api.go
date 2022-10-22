@@ -273,7 +273,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Group("/contents", func() {
 					m.Get("", repo.GetContents)
-					m.Get("/*", repo.GetContents)
+					m.Combo("/*").
+						Get(repo.GetContents).
+						Put(bind(repo.PutContentsRequest{}), repo.PutContents)
 				})
 				m.Get("/archive/*", repo.GetArchive)
 				m.Group("/git", func() {
