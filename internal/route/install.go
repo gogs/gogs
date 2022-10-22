@@ -390,7 +390,7 @@ func InstallPost(c *context.Context, f form.Install) {
 		u := &db.User{
 			Name:     f.AdminName,
 			Email:    f.AdminEmail,
-			Passwd:   f.AdminPasswd,
+			Password: f.AdminPasswd,
 			IsAdmin:  true,
 			IsActive: true,
 		}

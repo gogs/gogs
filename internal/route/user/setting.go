@@ -202,7 +202,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))
 	} else {
-		c.User.Passwd = f.Password
+		c.User.Password = f.Password
 		var err error
 		if c.User.Salt, err = db.GetUserSalt(); err != nil {
 			c.Errorf(err, "get user salt")

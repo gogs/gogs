@@ -60,7 +60,7 @@ func AutoLogin(c *context.Context) (bool, error) {
 		return false, nil
 	}
 
-	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName); !ok || val != u.Name {
+	if val, ok := c.GetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName); !ok || val != u.Name {
 		return false, nil
 	}
 
@@ -122,7 +122,7 @@ func afterLogin(c *context.Context, u *db.User, remember bool) {
 	if remember {
 		days := 86400 * conf.Security.LoginRememberDays
 		c.SetCookie(conf.Security.CookieUsername, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
-		c.SetSuperSecureCookie(u.Rands+u.Passwd, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
+		c.SetSuperSecureCookie(u.Rands+u.Password, conf.Security.CookieRememberName, u.Name, days, conf.Server.Subpath, "", conf.Security.CookieSecure, true)
 	}
 
 	_ = c.Session.Set("uid", u.ID)
@@ -334,7 +334,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	u := &db.User{
 		Name:     f.UserName,
 		Email:    f.Email,
-		Passwd:   f.Password,
+		Password: f.Password,
 		IsActive: !conf.Auth.RequireEmailConfirmation,
 	}
 	if err := db.CreateUser(u); err != nil {
@@ -544,7 +544,7 @@ func ResetPasswdPost(c *context.Context) {
 			return
 		}
 
-		u.Passwd = passwd
+		u.Password = passwd
 		var err error
 		if u.Rands, err = db.GetUserSalt(); err != nil {
 			c.Error(err, "get user salt")

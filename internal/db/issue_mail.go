@@ -42,7 +42,7 @@ func (this mailerUser) GenerateEmailActivateCode(email string) string {
 		this.user.ID,
 		email,
 		this.user.Name,
-		this.user.Passwd,
+		this.user.Password,
 		this.user.Rands,
 	)
 }
