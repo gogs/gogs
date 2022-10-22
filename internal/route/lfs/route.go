@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/authutil"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -70,29 +72,26 @@ func authenticate() macaron.Handler {
 			return
 		}
 
-		// If username and password authentication failed, try again using username as an access token.
+		// If username and password combination failed, try again using either username
+		// or password as the token.
 		if auth.IsErrBadCredentials(err) {
-			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), username)
-			if err != nil {
-				if db.IsErrAccessTokenNotExist(err) {
-					askCredentials(c.Resp)
-				} else {
-					internalServerError(c.Resp)
-					log.Error("Failed to get access token [sha: %s]: %v", username, err)
-				}
-				return
-			}
-			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
-				log.Error("Failed to touch access token: %v", err)
-			}
-
-			user, err = db.Users.GetByID(c.Req.Context(), token.UserID)
-			if err != nil {
-				// Once we found the token, we're supposed to find its related user,
-				// thus any error is unexpected.
+			user, err = context.AuthenticateByToken(c.Req.Context(), username)
+			if err != nil && !db.IsErrAccessTokenNotExist(errors.Cause(err)) {
 				internalServerError(c.Resp)
-				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
+			} else if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+				// Try again using the password field as the token.
+				user, err = context.AuthenticateByToken(c.Req.Context(), password)
+				if err != nil {
+					if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+						askCredentials(c.Resp)
+					} else {
+						c.Status(http.StatusInternalServerError)
+						log.Error("Failed to authenticate by access token via password: %v", err)
+					}
+					return
+				}
 			}
 		}
 

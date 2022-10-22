@@ -144,6 +144,11 @@ func (ErrAccessTokenNotExist) NotFound() bool {
 }
 
 func (db *accessTokens) GetBySHA1(ctx context.Context, sha1 string) (*AccessToken, error) {
+	// No need to waste a query for an empty SHA1.
+	if sha1 == "" {
+		return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
+	}
+
 	sha256 := cryptoutil.SHA256(sha1)
 	token := new(AccessToken)
 	err := db.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error

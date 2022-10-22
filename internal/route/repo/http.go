@@ -17,11 +17,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/pathutil"
@@ -130,29 +132,26 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		// If username and password combination failed, try again using username as a token.
+		// If username and password combination failed, try again using either username
+		// or password as the token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), authUsername)
-			if err != nil {
-				if db.IsErrAccessTokenNotExist(err) {
-					askCredentials(c, http.StatusUnauthorized, "")
-				} else {
-					c.Status(http.StatusInternalServerError)
-					log.Error("Failed to get access token [sha: %s]: %v", authUsername, err)
-				}
-				return
-			}
-			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
-				log.Error("Failed to touch access token: %v", err)
-			}
-
-			authUser, err = db.Users.GetByID(c.Req.Context(), token.UserID)
-			if err != nil {
-				// Once we found token, we're supposed to find its related user,
-				// thus any error is unexpected.
+			authUser, err = context.AuthenticateByToken(c.Req.Context(), authUsername)
+			if err != nil && !db.IsErrAccessTokenNotExist(errors.Cause(err)) {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
+			} else if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+				// Try again using the password field as the token.
+				authUser, err = context.AuthenticateByToken(c.Req.Context(), authPassword)
+				if err != nil {
+					if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+						askCredentials(c, http.StatusUnauthorized, "")
+					} else {
+						c.Status(http.StatusInternalServerError)
+						log.Error("Failed to authenticate by access token via password: %v", err)
+					}
+					return
+				}
 			}
 		} else if authUser.IsEnabledTwoFactor() {
 			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password

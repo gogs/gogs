@@ -108,7 +108,7 @@ func Test_authenticate(t *testing.T) {
 			expBody:       "ID: 1, Name: unknwon",
 		},
 		{
-			name: "authenticate by access token",
+			name: "authenticate by access token via username",
 			header: http.Header{
 				"Authorization": []string{"Basic dXNlcm5hbWU="},
 			},
@@ -121,6 +121,31 @@ func Test_authenticate(t *testing.T) {
 			mockAccessTokensStore: func() db.AccessTokensStore {
 				mock := NewMockAccessTokensStore()
 				mock.GetBySHA1Func.SetDefaultReturn(&db.AccessToken{}, nil)
+				return mock
+			},
+			expStatusCode: http.StatusOK,
+			expHeader:     http.Header{},
+			expBody:       "ID: 1, Name: unknwon",
+		},
+		{
+			name: "authenticate by access token via password",
+			header: http.Header{
+				"Authorization": []string{"Basic dXNlcm5hbWU6cGFzc3dvcmQ="},
+			},
+			mockUsersStore: func() db.UsersStore {
+				mock := NewMockUsersStore()
+				mock.AuthenticateFunc.SetDefaultReturn(nil, auth.ErrBadCredentials{})
+				mock.GetByIDFunc.SetDefaultReturn(&db.User{ID: 1, Name: "unknwon"}, nil)
+				return mock
+			},
+			mockAccessTokensStore: func() db.AccessTokensStore {
+				mock := NewMockAccessTokensStore()
+				mock.GetBySHA1Func.SetDefaultHook(func(ctx context.Context, sha1 string) (*db.AccessToken, error) {
+					if sha1 == "password" {
+						return &db.AccessToken{}, nil
+					}
+					return nil, db.ErrAccessTokenNotExist{}
+				})
 				return mock
 			},
 			expStatusCode: http.StatusOK,
