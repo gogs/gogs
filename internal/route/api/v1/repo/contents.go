@@ -24,6 +24,7 @@ type links struct {
 	Self string `json:"self"`
 	HTML string `json:"html"`
 }
+
 type repoContent struct {
 	Type            string `json:"type"`
 	Target          string `json:"target,omitempty"`
@@ -169,6 +170,7 @@ func GetContents(c *context.APIContext) {
 	c.JSONSuccess(contents)
 }
 
+// PutContentsRequest is the API message for creating or updating a file.
 type PutContentsRequest struct {
 	Message string `json:"message" binding:"Required"`
 	Content string `json:"content" binding:"Required"`
