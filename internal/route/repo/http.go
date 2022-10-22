@@ -7,6 +7,7 @@ package repo
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -130,28 +131,46 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		// If username and password combination failed, try again using username as a token.
+		// If username and password combination failed, try again using token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), authUsername)
-			if err != nil {
-				if db.IsErrAccessTokenNotExist(err) {
-					askCredentials(c, http.StatusUnauthorized, "")
-				} else {
+			authenticateByToken := func(authUsername, authTokenString string) (authUser *db.User, err error) {
+				token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), authTokenString)
+				if err != nil {
+					if db.IsErrAccessTokenNotExist(err) {
+						askCredentials(c, http.StatusUnauthorized, "")
+					} else {
+						c.Status(http.StatusInternalServerError)
+						log.Error("Failed to get access token [sha: %s]: %v", authPassword, err)
+					}
+					return
+				}
+				if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
+					log.Error("Failed to touch access token: %v", err)
+				}
+				authUser, err = db.Users.GetByID(c.Req.Context(), token.UserID)
+				if err != nil {
+					// Once we found token, we're supposed to find its related user,
+					// thus any error is unexpected.
 					c.Status(http.StatusInternalServerError)
-					log.Error("Failed to get access token [sha: %s]: %v", authUsername, err)
+					log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+					return
+				}
+				if authUsername != "" && authUsername != authUser.Name {
+					err = errors.New("username does not match")
+					log.Error("Failed to authenticate with token for user [name: %s]: %v", "", err)
+					return
 				}
 				return
 			}
-			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
-				log.Error("Failed to touch access token: %v", err)
-			}
 
-			authUser, err = db.Users.GetByID(c.Req.Context(), token.UserID)
+			// Try to authenticate with password as token first, this also verifies username
+			authUser, err = authenticateByToken(authUsername, authPassword)
 			if err != nil {
-				// Once we found token, we're supposed to find its related user,
-				// thus any error is unexpected.
-				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				// Try to authenticate with username as token instead
+				authUser, err = authenticateByToken("", authUsername)
+			}
+			if err != nil {
+				log.Error("Failed to authticate by token")
 				return
 			}
 		} else if authUser.IsEnabledTwoFactor() {
