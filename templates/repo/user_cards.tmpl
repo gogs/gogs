@@ -5,10 +5,10 @@
 	<ul class="list">
 		{{range .Cards}}
 			<li class="item ui segment">
-				<a href="{{.HomeLink}}">
-					<img class="avatar" src="{{.RelAvatarLink}}"/>
+				<a href="{{.HomeURLPath}}">
+					<img class="avatar" src="{{.AvatarURLPath}}"/>
 				</a>
-				<h3 class="name"><a href="{{.HomeLink}}">{{.DisplayName}}</a></h3>
+				<h3 class="name"><a href="{{.HomeURLPath}}">{{.DisplayName}}</a></h3>
 
 				<div class="meta">
 					{{if .Website}}

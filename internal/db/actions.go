@@ -954,7 +954,7 @@ func (pcs *PushCommits) AvatarLink(email string) string {
 				log.Error("Failed to get user [email: %s]: %v", email, err)
 			}
 		} else {
-			pcs.avatars[email] = u.RelAvatarLink()
+			pcs.avatars[email] = u.AvatarURLPath()
 		}
 	}
 

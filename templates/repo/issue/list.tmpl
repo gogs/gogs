@@ -61,7 +61,7 @@
 				<div class="menu">
 					<a class="item" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{.SelectLabels}}&milestone={{$.MilestoneID}}">{{.i18n.Tr "repo.issues.filter_assginee_no_select"}}</a>
 					{{range .Assignees}}
-						<a class="{{if eq $.AssigneeID .ID}}active selected{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{.ID}}"><img src="{{.RelAvatarLink}}"> {{.DisplayName}}</a>
+						<a class="{{if eq $.AssigneeID .ID}}active selected{{end}} item" href="{{$.Link}}?type={{$.ViewType}}&sort={{$.SortType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{$.MilestoneID}}&assignee={{.ID}}"><img src="{{.AvatarURLPath}}"> {{.DisplayName}}</a>
 					{{end}}
 				</div>
 			</div>
@@ -113,15 +113,15 @@
 					{{end}}
 
 					<p class="desc">
-						{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.HomeLink .Poster.DisplayName | Sanitize | Safe}}
+						{{$.i18n.Tr "repo.issues.opened_by" $timeStr .Poster.HomeURLPath .Poster.DisplayName | Sanitize | Safe}}
 						{{if .Milestone}}
 							<a class="milestone" href="{{$.Link}}?type={{$.ViewType}}&state={{$.State}}&labels={{$.SelectLabels}}&milestone={{.Milestone.ID}}&assignee={{$.AssigneeID}}">
 								<span class="octicon octicon-milestone"></span> {{.Milestone.Name | Sanitize}}
 							</a>
 						{{end}}
 						{{if .Assignee}}
-							<a class="ui right assignee poping up" href="{{.Assignee.HomeLink}}" data-content="{{.Assignee.DisplayName}}" data-variation="inverted" data-position="left center">
-								<img class="ui avatar image" src="{{.Assignee.RelAvatarLink}}">
+							<a class="ui right assignee poping up" href="{{.Assignee.HomeURLPath}}" data-content="{{.Assignee.DisplayName}}" data-variation="inverted" data-position="left center">
+								<img class="ui avatar image" src="{{.Assignee.AvatarURLPath}}">
 							</a>
 						{{end}}
 					</p>

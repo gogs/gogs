@@ -42,7 +42,7 @@
 							{{end}}
 							{{if gt .ContextUser.NumRepos .MaxShowRepoNum}}
 							<li>
-								<a href="{{.ContextUser.HomeLink}}">{{.i18n.Tr "home.show_more_repos"}}</a>
+								<a href="{{.ContextUser.HomeURLPath}}">{{.i18n.Tr "home.show_more_repos"}}</a>
 							</li>
 							{{end}}
 						</ul>

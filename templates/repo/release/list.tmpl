@@ -39,7 +39,7 @@
 							</h3>
 							<p class="text grey">
 								<span class="author">
-									<img class="img-10" src="{{.Publisher.RelAvatarLink}}">
+									<img class="img-10" src="{{.Publisher.AvatarURLPath}}">
 									<a href="{{AppSubURL}}/{{.Publisher.Name}}">{{.Publisher.DisplayName}}</a>
 								</span>
 								{{if .Created}}<span class="time">{{TimeSince .Created $.Lang}}</span>{{end}}

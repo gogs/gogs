@@ -40,7 +40,7 @@ func Search(c *context.APIContext) {
 		results[i] = &api.User{
 			ID:        users[i].ID,
 			UserName:  users[i].Name,
-			AvatarUrl: users[i].AvatarLink(),
+			AvatarUrl: users[i].AvatarURL(),
 			FullName:  markup.Sanitize(users[i].FullName),
 		}
 		if c.IsLogged {
