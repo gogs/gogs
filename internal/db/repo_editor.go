@@ -109,14 +109,13 @@ func (repo *Repository) CheckoutNewBranch(oldBranch, newBranch string) error {
 }
 
 type UpdateRepoFileOptions struct {
-	LastCommitID string
-	OldBranch    string
-	NewBranch    string
-	OldTreeName  string
-	NewTreeName  string
-	Message      string
-	Content      string
-	IsNewFile    bool
+	OldBranch   string
+	NewBranch   string
+	OldTreeName string
+	NewTreeName string
+	Message     string
+	Content     string
+	IsNewFile   bool
 }
 
 // UpdateRepoFile adds or updates a file in repository.
