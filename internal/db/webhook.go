@@ -10,7 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -775,7 +775,7 @@ func (t *HookTask) deliver() {
 		t.ResponseInfo.Headers[k] = strings.Join(vals, ",")
 	}
 
-	p, err := ioutil.ReadAll(resp.Body)
+	p, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.ResponseInfo.Body = fmt.Sprintf("read body: %s", err)
 		return

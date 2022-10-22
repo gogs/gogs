@@ -7,7 +7,7 @@ package lfs
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +24,7 @@ func Test_authenticate(t *testing.T) {
 	m := macaron.New()
 	m.Use(macaron.Renderer())
 	m.Get("/", authenticate(), func(w http.ResponseWriter, user *db.User) {
-		fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
+		_, _ = fmt.Fprintf(w, "ID: %d, Name: %s", user.ID, user.Name)
 	})
 
 	tests := []struct {
@@ -153,7 +153,7 @@ func Test_authenticate(t *testing.T) {
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 			assert.Equal(t, test.expHeader, resp.Header)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -286,7 +286,7 @@ func Test_authorize(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -377,7 +377,7 @@ func Test_verifyOID(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -393,7 +393,7 @@ func Test_internalServerError(t *testing.T) {
 	resp := rr.Result()
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
