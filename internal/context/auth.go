@@ -5,12 +5,14 @@
 package context
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
+	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -228,4 +230,24 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
+}
+
+// AuthenticateByToken attempts to authenticate a user by the given access
+// token. It returns db.ErrAccessTokenNotExist when the access token does not
+// exist.
+func AuthenticateByToken(ctx context.Context, token string) (*db.User, error) {
+	t, err := db.AccessTokens.GetBySHA1(ctx, token)
+	if err != nil {
+		return nil, errors.Wrap(err, "get access token by SHA1")
+	}
+	if err = db.AccessTokens.Touch(ctx, t.ID); err != nil {
+		// NOTE: There is no need to fail the auth flow if we can't touch the token.
+		log.Error("Failed to touch access token [id: %d]: %v", t.ID, err)
+	}
+
+	user, err := db.Users.GetByID(ctx, t.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "get user by ID [user_id: %d]", t.UserID)
+	}
+	return user, nil
 }
