@@ -31,7 +31,6 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 	var cleanup func(db *gorm.DB)
 	switch dbType {
 	case "mysql":
-		conf.UseMySQL = true
 		dbOpts = conf.DatabaseOpts{
 			Type:     "mysql",
 			Host:     os.ExpandEnv("$MYSQL_HOST:$MYSQL_PORT"),
@@ -61,7 +60,6 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 			_ = sqlDB.Close()
 		}
 	case "postgres":
-		conf.UsePostgreSQL = true
 		dbOpts = conf.DatabaseOpts{
 			Type:     "postgres",
 			Host:     os.ExpandEnv("$PGHOST:$PGPORT"),
@@ -93,7 +91,6 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 			_ = sqlDB.Close()
 		}
 	case "sqlite":
-		conf.UseSQLite3 = true
 		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
 		dbOpts = conf.DatabaseOpts{
 			Type: "sqlite",
@@ -107,7 +104,6 @@ func NewDB(t *testing.T, suite string, tables ...interface{}) *gorm.DB {
 			_ = os.Remove(dbName)
 		}
 	default:
-		conf.UseSQLite3 = true
 		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
 		dbOpts = conf.DatabaseOpts{
 			Type: "sqlite3",
