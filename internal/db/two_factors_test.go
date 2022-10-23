@@ -58,7 +58,7 @@ func TestTwoFactors(t *testing.T) {
 	}{
 		{"Create", twoFactorsCreate},
 		{"GetByUserID", twoFactorsGetByUserID},
-		{"IsUserEnabled", twoFactorsIsUserEnabled},
+		{"IsEnabled", twoFactorsIsEnabled},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -109,13 +109,13 @@ func twoFactorsGetByUserID(t *testing.T, db *twoFactors) {
 	assert.Equal(t, wantErr, err)
 }
 
-func twoFactorsIsUserEnabled(t *testing.T, db *twoFactors) {
+func twoFactorsIsEnabled(t *testing.T, db *twoFactors) {
 	ctx := context.Background()
 
 	// Create a 2FA token for user 1
 	err := db.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
 
-	assert.True(t, db.IsUserEnabled(ctx, 1))
-	assert.False(t, db.IsUserEnabled(ctx, 2))
+	assert.True(t, db.IsEnabled(ctx, 1))
+	assert.False(t, db.IsEnabled(ctx, 2))
 }

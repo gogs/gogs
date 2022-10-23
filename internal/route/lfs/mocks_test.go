@@ -1898,9 +1898,9 @@ type MockTwoFactorsStore struct {
 	// GetByUserIDFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByUserID.
 	GetByUserIDFunc *TwoFactorsStoreGetByUserIDFunc
-	// IsUserEnabledFunc is an instance of a mock function object
-	// controlling the behavior of the method IsUserEnabled.
-	IsUserEnabledFunc *TwoFactorsStoreIsUserEnabledFunc
+	// IsEnabledFunc is an instance of a mock function object controlling
+	// the behavior of the method IsEnabled.
+	IsEnabledFunc *TwoFactorsStoreIsEnabledFunc
 }
 
 // NewMockTwoFactorsStore creates a new mock of the TwoFactorsStore
@@ -1918,7 +1918,7 @@ func NewMockTwoFactorsStore() *MockTwoFactorsStore {
 				return
 			},
 		},
-		IsUserEnabledFunc: &TwoFactorsStoreIsUserEnabledFunc{
+		IsEnabledFunc: &TwoFactorsStoreIsEnabledFunc{
 			defaultHook: func(context.Context, int64) (r0 bool) {
 				return
 			},
@@ -1940,9 +1940,9 @@ func NewStrictMockTwoFactorsStore() *MockTwoFactorsStore {
 				panic("unexpected invocation of MockTwoFactorsStore.GetByUserID")
 			},
 		},
-		IsUserEnabledFunc: &TwoFactorsStoreIsUserEnabledFunc{
+		IsEnabledFunc: &TwoFactorsStoreIsEnabledFunc{
 			defaultHook: func(context.Context, int64) bool {
-				panic("unexpected invocation of MockTwoFactorsStore.IsUserEnabled")
+				panic("unexpected invocation of MockTwoFactorsStore.IsEnabled")
 			},
 		},
 	}
@@ -1959,8 +1959,8 @@ func NewMockTwoFactorsStoreFrom(i db.TwoFactorsStore) *MockTwoFactorsStore {
 		GetByUserIDFunc: &TwoFactorsStoreGetByUserIDFunc{
 			defaultHook: i.GetByUserID,
 		},
-		IsUserEnabledFunc: &TwoFactorsStoreIsUserEnabledFunc{
-			defaultHook: i.IsUserEnabled,
+		IsEnabledFunc: &TwoFactorsStoreIsEnabledFunc{
+			defaultHook: i.IsEnabled,
 		},
 	}
 }
@@ -2184,36 +2184,35 @@ func (c TwoFactorsStoreGetByUserIDFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
-// TwoFactorsStoreIsUserEnabledFunc describes the behavior when the
-// IsUserEnabled method of the parent MockTwoFactorsStore instance is
-// invoked.
-type TwoFactorsStoreIsUserEnabledFunc struct {
+// TwoFactorsStoreIsEnabledFunc describes the behavior when the IsEnabled
+// method of the parent MockTwoFactorsStore instance is invoked.
+type TwoFactorsStoreIsEnabledFunc struct {
 	defaultHook func(context.Context, int64) bool
 	hooks       []func(context.Context, int64) bool
-	history     []TwoFactorsStoreIsUserEnabledFuncCall
+	history     []TwoFactorsStoreIsEnabledFuncCall
 	mutex       sync.Mutex
 }
 
-// IsUserEnabled delegates to the next hook function in the queue and stores
-// the parameter and result values of this invocation.
-func (m *MockTwoFactorsStore) IsUserEnabled(v0 context.Context, v1 int64) bool {
-	r0 := m.IsUserEnabledFunc.nextHook()(v0, v1)
-	m.IsUserEnabledFunc.appendCall(TwoFactorsStoreIsUserEnabledFuncCall{v0, v1, r0})
+// IsEnabled delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockTwoFactorsStore) IsEnabled(v0 context.Context, v1 int64) bool {
+	r0 := m.IsEnabledFunc.nextHook()(v0, v1)
+	m.IsEnabledFunc.appendCall(TwoFactorsStoreIsEnabledFuncCall{v0, v1, r0})
 	return r0
 }
 
-// SetDefaultHook sets function that is called when the IsUserEnabled method
-// of the parent MockTwoFactorsStore instance is invoked and the hook queue
-// is empty.
-func (f *TwoFactorsStoreIsUserEnabledFunc) SetDefaultHook(hook func(context.Context, int64) bool) {
+// SetDefaultHook sets function that is called when the IsEnabled method of
+// the parent MockTwoFactorsStore instance is invoked and the hook queue is
+// empty.
+func (f *TwoFactorsStoreIsEnabledFunc) SetDefaultHook(hook func(context.Context, int64) bool) {
 	f.defaultHook = hook
 }
 
 // PushHook adds a function to the end of hook queue. Each invocation of the
-// IsUserEnabled method of the parent MockTwoFactorsStore instance invokes
-// the hook at the front of the queue and discards it. After the queue is
-// empty, the default hook function is invoked for any future action.
-func (f *TwoFactorsStoreIsUserEnabledFunc) PushHook(hook func(context.Context, int64) bool) {
+// IsEnabled method of the parent MockTwoFactorsStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *TwoFactorsStoreIsEnabledFunc) PushHook(hook func(context.Context, int64) bool) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -2221,20 +2220,20 @@ func (f *TwoFactorsStoreIsUserEnabledFunc) PushHook(hook func(context.Context, i
 
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
-func (f *TwoFactorsStoreIsUserEnabledFunc) SetDefaultReturn(r0 bool) {
+func (f *TwoFactorsStoreIsEnabledFunc) SetDefaultReturn(r0 bool) {
 	f.SetDefaultHook(func(context.Context, int64) bool {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
-func (f *TwoFactorsStoreIsUserEnabledFunc) PushReturn(r0 bool) {
+func (f *TwoFactorsStoreIsEnabledFunc) PushReturn(r0 bool) {
 	f.PushHook(func(context.Context, int64) bool {
 		return r0
 	})
 }
 
-func (f *TwoFactorsStoreIsUserEnabledFunc) nextHook() func(context.Context, int64) bool {
+func (f *TwoFactorsStoreIsEnabledFunc) nextHook() func(context.Context, int64) bool {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -2247,26 +2246,26 @@ func (f *TwoFactorsStoreIsUserEnabledFunc) nextHook() func(context.Context, int6
 	return hook
 }
 
-func (f *TwoFactorsStoreIsUserEnabledFunc) appendCall(r0 TwoFactorsStoreIsUserEnabledFuncCall) {
+func (f *TwoFactorsStoreIsEnabledFunc) appendCall(r0 TwoFactorsStoreIsEnabledFuncCall) {
 	f.mutex.Lock()
 	f.history = append(f.history, r0)
 	f.mutex.Unlock()
 }
 
-// History returns a sequence of TwoFactorsStoreIsUserEnabledFuncCall
-// objects describing the invocations of this function.
-func (f *TwoFactorsStoreIsUserEnabledFunc) History() []TwoFactorsStoreIsUserEnabledFuncCall {
+// History returns a sequence of TwoFactorsStoreIsEnabledFuncCall objects
+// describing the invocations of this function.
+func (f *TwoFactorsStoreIsEnabledFunc) History() []TwoFactorsStoreIsEnabledFuncCall {
 	f.mutex.Lock()
-	history := make([]TwoFactorsStoreIsUserEnabledFuncCall, len(f.history))
+	history := make([]TwoFactorsStoreIsEnabledFuncCall, len(f.history))
 	copy(history, f.history)
 	f.mutex.Unlock()
 
 	return history
 }
 
-// TwoFactorsStoreIsUserEnabledFuncCall is an object that describes an
-// invocation of method IsUserEnabled on an instance of MockTwoFactorsStore.
-type TwoFactorsStoreIsUserEnabledFuncCall struct {
+// TwoFactorsStoreIsEnabledFuncCall is an object that describes an
+// invocation of method IsEnabled on an instance of MockTwoFactorsStore.
+type TwoFactorsStoreIsEnabledFuncCall struct {
 	// Arg0 is the value of the 1st argument passed to this method
 	// invocation.
 	Arg0 context.Context
@@ -2280,13 +2279,13 @@ type TwoFactorsStoreIsUserEnabledFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c TwoFactorsStoreIsUserEnabledFuncCall) Args() []interface{} {
+func (c TwoFactorsStoreIsEnabledFuncCall) Args() []interface{} {
 	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c TwoFactorsStoreIsUserEnabledFuncCall) Results() []interface{} {
+func (c TwoFactorsStoreIsEnabledFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 

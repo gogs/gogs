@@ -391,8 +391,17 @@ func (repo *Repository) APIFormatLegacy(permission *api.Permission, user ...*Use
 	if repo.IsFork {
 		p := &api.Permission{Pull: true}
 		if len(user) != 0 {
-			p.Admin = user[0].IsAdminOfRepo(repo)
-			p.Push = user[0].IsWriterOfRepo(repo)
+			accessMode := Perms.AccessMode(
+				context.TODO(),
+				user[0].ID,
+				repo.ID,
+				AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			)
+			p.Admin = accessMode >= AccessModeAdmin
+			p.Push = accessMode >= AccessModeWrite
 		}
 		apiRepo.Parent = repo.BaseRepo.APIFormatLegacy(p)
 	}

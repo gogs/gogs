@@ -53,46 +53,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// IsAdminOfRepo returns true if user has admin or higher access of repository.
-func (u *User) IsAdminOfRepo(repo *Repository) bool {
-	return Perms.Authorize(context.TODO(), u.ID, repo.ID, AccessModeAdmin,
-		AccessModeOptions{
-			OwnerID: repo.OwnerID,
-			Private: repo.IsPrivate,
-		},
-	)
-}
-
-// IsWriterOfRepo returns true if user has write access to given repository.
-func (u *User) IsWriterOfRepo(repo *Repository) bool {
-	return Perms.Authorize(context.TODO(), u.ID, repo.ID, AccessModeWrite,
-		AccessModeOptions{
-			OwnerID: repo.OwnerID,
-			Private: repo.IsPrivate,
-		},
-	)
-}
-
-// IsOrganization returns true if user is actually a organization.
-func (u *User) IsOrganization() bool {
-	return u.Type == UserTypeOrganization
-}
-
-// IsUserOrgOwner returns true if user is in the owner team of given organization.
-func (u *User) IsUserOrgOwner(orgId int64) bool {
-	return IsOrganizationOwner(orgId, u.ID)
-}
-
-// IsPublicMember returns true if user public his/her membership in give organization.
-func (u *User) IsPublicMember(orgId int64) bool {
-	return IsPublicMembership(orgId, u.ID)
-}
-
-// IsEnabledTwoFactor returns true if user has enabled two-factor authentication.
-func (u *User) IsEnabledTwoFactor() bool {
-	return TwoFactors.IsUserEnabled(context.TODO(), u.ID)
-}
-
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
 }
