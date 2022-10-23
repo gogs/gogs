@@ -1040,7 +1040,15 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		}
 
 		// Apply changes and commit.
-		if err = initRepoCommit(tmpDir, doer.NewGitSig()); err != nil {
+		err = initRepoCommit(
+			tmpDir,
+			&git.Signature{
+				Name:  doer.DisplayName(),
+				Email: doer.Email,
+				When:  time.Now(),
+			},
+		)
+		if err != nil {
 			return fmt.Errorf("initRepoCommit: %v", err)
 		}
 	}

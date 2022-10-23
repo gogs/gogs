@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -475,8 +476,12 @@ func TestWebhook(c *context.Context) {
 		commitID = git.EmptyID
 		commitMessage = "This is a fake commit"
 		ghost := db.NewGhostUser()
-		author = ghost.NewGitSig()
-		committer = ghost.NewGitSig()
+		author = &git.Signature{
+			Name:  ghost.DisplayName(),
+			Email: ghost.Email,
+			When:  time.Now(),
+		}
+		committer = author
 		authorUsername = ghost.Name
 		committerUsername = ghost.Name
 		nameStatus = &git.NameStatus{}

@@ -16,6 +16,7 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route"
+	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -192,7 +193,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePassword()
+		u.Password = userutil.EncodePassword(u.Password, u.Salt)
 	}
 
 	u.LoginName = f.LoginName

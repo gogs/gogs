@@ -5,6 +5,8 @@
 package userutil
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"image/png"
@@ -14,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/pbkdf2"
 
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
@@ -76,4 +79,17 @@ func GenerateRandomAvatar(userID int64, name, email string) error {
 		return errors.Wrap(err, "encode avatar image to file")
 	}
 	return nil
+}
+
+// EncodePassword encodes password using PBKDF2 SHA256 with given salt.
+func EncodePassword(password, salt string) string {
+	newPasswd := pbkdf2.Key([]byte(password), []byte(salt), 10000, 50, sha256.New)
+	return fmt.Sprintf("%x", newPasswd)
+}
+
+// ValidatePassword returns true if the given password matches the encoded
+// version with given salt.
+func ValidatePassword(encoded, salt, password string) bool {
+	got := EncodePassword(password, salt)
+	return subtle.ConstantTimeCompare([]byte(encoded), []byte(got)) == 1
 }
