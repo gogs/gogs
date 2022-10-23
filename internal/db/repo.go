@@ -336,7 +336,7 @@ func (repo *Repository) UploadAvatar(data []byte) error {
 	}
 	defer fw.Close()
 
-	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
+	m := resize.Resize(avatar.DefaultSize, avatar.DefaultSize, img, resize.NearestNeighbor)
 	if err = png.Encode(fw, m); err != nil {
 		return fmt.Errorf("encode image: %v", err)
 	}

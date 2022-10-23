@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -45,6 +46,9 @@ type UsersStore interface {
 	// ErrUserAlreadyExist when a user with same name already exists, or
 	// ErrEmailAlreadyUsed if the email has been used by another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
+	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
+	// use look up avatar by email.
+	DeleteCustomAvatar(ctx context.Context, userID int64) error
 	// GetByEmail returns the user (not organization) with given email. It ignores
 	// records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(ctx context.Context, email string) (*User, error)
@@ -64,6 +68,8 @@ type UsersStore interface {
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
 	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
+	// UseCustomAvatar uses the given avatar as the user custom avatar.
+	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
 }
 
 var Users UsersStore
@@ -267,6 +273,18 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 	return user, db.WithContext(ctx).Create(user).Error
 }
 
+func (db *users) DeleteCustomAvatar(ctx context.Context, userID int64) error {
+	_ = os.Remove(userutil.CustomAvatarPath(userID))
+	return db.WithContext(ctx).
+		Model(&User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"use_custom_avatar": false,
+			"updated_unix":      db.NowFunc().Unix(),
+		}).
+		Error
+}
+
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
 
 type ErrUserNotExist struct {
@@ -395,6 +413,22 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 		tx.Joins(`LEFT JOIN follow ON follow.follow_id = user.id`)
 	}
 	return users, tx.Find(&users).Error
+}
+
+func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
+	err := userutil.SaveAvatar(userID, avatar)
+	if err != nil {
+		return errors.Wrap(err, "save avatar")
+	}
+
+	return db.WithContext(ctx).
+		Model(&User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"use_custom_avatar": true,
+			"updated_unix":      db.NowFunc().Unix(),
+		}).
+		Error
 }
 
 // UserType indicates the type of the user account.

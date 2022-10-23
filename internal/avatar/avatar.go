@@ -14,11 +14,11 @@ import (
 	"github.com/issue9/identicon"
 )
 
-const AVATAR_SIZE = 290
+const DefaultSize = 290
 
-// RandomImage generates and returns a random avatar image unique to input data
-// in custom size (height and width).
-func RandomImageSize(size int, data []byte) (image.Image, error) {
+// RandomImageWithSize generates and returns a random avatar image unique to
+// input data in custom size (height and width).
+func RandomImageWithSize(size int, data []byte) (image.Image, error) {
 	randExtent := len(palette.WebSafe) - 32
 	rand.Seed(time.Now().UnixNano())
 	colorIndex := rand.Intn(randExtent)
@@ -37,7 +37,7 @@ func RandomImageSize(size int, data []byte) (image.Image, error) {
 }
 
 // RandomImage generates and returns a random avatar image unique to input data
-// in default size (height and width).
+// in DefaultSize (height and width).
 func RandomImage(data []byte) (image.Image, error) {
-	return RandomImageSize(AVATAR_SIZE, data)
+	return RandomImageWithSize(DefaultSize, data)
 }
