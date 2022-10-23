@@ -58,7 +58,7 @@ func Test_authenticate(t *testing.T) {
 			},
 			mockTwoFactorsStore: func() db.TwoFactorsStore {
 				mock := NewMockTwoFactorsStore()
-				mock.IsUserEnabledFunc.SetDefaultReturn(true)
+				mock.IsEnabledFunc.SetDefaultReturn(true)
 				return mock
 			},
 			expStatusCode: http.StatusBadRequest,
@@ -100,7 +100,7 @@ func Test_authenticate(t *testing.T) {
 			},
 			mockTwoFactorsStore: func() db.TwoFactorsStore {
 				mock := NewMockTwoFactorsStore()
-				mock.IsUserEnabledFunc.SetDefaultReturn(false)
+				mock.IsEnabledFunc.SetDefaultReturn(false)
 				return mock
 			},
 			expStatusCode: http.StatusOK,

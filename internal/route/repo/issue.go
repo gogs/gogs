@@ -612,7 +612,16 @@ func viewIssue(c *context.Context, isPullList bool) {
 			if repo.IsOwnedBy(comment.PosterID) ||
 				(repo.Owner.IsOrganization() && repo.Owner.IsOwnedBy(comment.PosterID)) {
 				comment.ShowTag = db.COMMENT_TAG_OWNER
-			} else if comment.Poster.IsWriterOfRepo(repo) {
+			} else if db.Perms.Authorize(
+				c.Req.Context(),
+				comment.PosterID,
+				repo.ID,
+				db.AccessModeWrite,
+				db.AccessModeOptions{
+					OwnerID: repo.OwnerID,
+					Private: repo.IsPrivate,
+				},
+			) {
 				comment.ShowTag = db.COMMENT_TAG_WRITER
 			} else if comment.PosterID == issue.PosterID {
 				comment.ShowTag = db.COMMENT_TAG_POSTER

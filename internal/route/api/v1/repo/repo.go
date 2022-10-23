@@ -352,11 +352,24 @@ func ListForks(c *context.APIContext) {
 			c.Error(err, "get owner")
 			return
 		}
-		apiForks[i] = forks[i].APIFormatLegacy(&api.Permission{
-			Admin: c.User.IsAdminOfRepo(forks[i]),
-			Push:  c.User.IsWriterOfRepo(forks[i]),
-			Pull:  true,
-		})
+
+		accessMode := db.Perms.AccessMode(
+			c.Req.Context(),
+			c.User.ID,
+			forks[i].ID,
+			db.AccessModeOptions{
+				OwnerID: forks[i].OwnerID,
+				Private: forks[i].IsPrivate,
+			},
+		)
+
+		apiForks[i] = forks[i].APIFormatLegacy(
+			&api.Permission{
+				Admin: accessMode >= db.AccessModeAdmin,
+				Push:  accessMode >= db.AccessModeWrite,
+				Pull:  true,
+			},
+		)
 	}
 
 	c.JSONSuccess(&apiForks)

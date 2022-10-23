@@ -386,7 +386,7 @@ func SettingsSecurity(c *context.Context) {
 }
 
 func SettingsTwoFactorEnable(c *context.Context) {
-	if c.User.IsEnabledTwoFactor() {
+	if db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -456,7 +456,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {
-	if !c.User.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -475,7 +475,7 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
-	if !c.User.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -490,7 +490,7 @@ func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
 }
 
 func SettingsTwoFactorDisable(c *context.Context) {
-	if !c.User.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}

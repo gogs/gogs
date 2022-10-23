@@ -511,9 +511,14 @@ func (u *User) AfterFind(_ *gorm.DB) error {
 	return nil
 }
 
-// IsLocal returns true if user is created as local account.
+// IsLocal returns true if the user is created as local account.
 func (u *User) IsLocal() bool {
 	return u.LoginSource <= 0
+}
+
+// IsOrganization returns true if the user is an organization.
+func (u *User) IsOrganization() bool {
+	return u.Type == UserTypeOrganization
 }
 
 // APIFormat returns the API format of a user.
@@ -625,4 +630,22 @@ func (u *User) AvatarURL() string {
 // having a dedicated type `template.User`.
 func (u *User) IsFollowing(followID int64) bool {
 	return Follows.IsFollowing(context.TODO(), u.ID, followID)
+}
+
+// IsUserOrgOwner returns true if the user is in the owner team of the given
+// organization.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User`.
+func (u *User) IsUserOrgOwner(orgId int64) bool {
+	return IsOrganizationOwner(orgId, u.ID)
+}
+
+// IsPublicMember returns true if the user has public membership of the given
+// organization.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User`.
+func (u *User) IsPublicMember(orgId int64) bool {
+	return IsPublicMembership(orgId, u.ID)
 }
