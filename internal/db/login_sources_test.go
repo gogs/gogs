@@ -16,7 +16,9 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
+	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
+	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
@@ -63,7 +65,9 @@ func TestLoginSource_BeforeCreate(t *testing.T) {
 	}
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
-		s := &LoginSource{CreatedUnix: 1}
+		s := &LoginSource{
+			CreatedUnix: 1,
+		}
 		_ = s.BeforeCreate(db)
 		assert.Equal(t, int64(1), s.CreatedUnix)
 		assert.Equal(t, int64(0), s.UpdatedUnix)
@@ -75,6 +79,82 @@ func TestLoginSource_BeforeCreate(t *testing.T) {
 		assert.Equal(t, db.NowFunc().Unix(), s.CreatedUnix)
 		assert.Equal(t, db.NowFunc().Unix(), s.UpdatedUnix)
 	})
+}
+
+func TestLoginSource_BeforeUpdate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	s := &LoginSource{}
+	_ = s.BeforeUpdate(db)
+	assert.Equal(t, db.NowFunc().Unix(), s.UpdatedUnix)
+}
+
+func TestLoginSource_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	tests := []struct {
+		name     string
+		authType auth.Type
+		wantType any
+	}{
+		{
+			name:     "LDAP",
+			authType: auth.LDAP,
+			wantType: &ldap.Provider{},
+		},
+		{
+			name:     "DLDAP",
+			authType: auth.DLDAP,
+			wantType: &ldap.Provider{},
+		},
+		{
+			name:     "SMTP",
+			authType: auth.SMTP,
+			wantType: &smtp.Provider{},
+		},
+		{
+			name:     "PAM",
+			authType: auth.PAM,
+			wantType: &pam.Provider{},
+		},
+		{
+			name:     "GitHub",
+			authType: auth.GitHub,
+			wantType: &github.Provider{},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := LoginSource{
+				Type:        test.authType,
+				Config:      `{}`,
+				CreatedUnix: now.Unix(),
+				UpdatedUnix: now.Unix(),
+			}
+			err := s.AfterFind(db)
+			require.NoError(t, err)
+
+			assert.Equal(t, s.CreatedUnix, s.Created.Unix())
+			assert.Equal(t, s.UpdatedUnix, s.Updated.Unix())
+			assert.IsType(t, test.wantType, s.Provider)
+		})
+	}
 }
 
 func Test_loginSources(t *testing.T) {

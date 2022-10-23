@@ -11,10 +11,73 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
+
+func TestRepository_BeforeCreate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	t.Run("CreatedUnix has been set", func(t *testing.T) {
+		repo := &Repository{
+			CreatedUnix: 1,
+		}
+		_ = repo.BeforeCreate(db)
+		assert.Equal(t, int64(1), repo.CreatedUnix)
+	})
+
+	t.Run("CreatedUnix has not been set", func(t *testing.T) {
+		repo := &Repository{}
+		_ = repo.BeforeCreate(db)
+		assert.Equal(t, db.NowFunc().Unix(), repo.CreatedUnix)
+	})
+}
+
+func TestRepository_BeforeUpdate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	repo := &Repository{}
+	_ = repo.BeforeUpdate(db)
+	assert.Equal(t, db.NowFunc().Unix(), repo.UpdatedUnix)
+}
+
+func TestRepository_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	repo := &Repository{
+		CreatedUnix: now.Unix(),
+		UpdatedUnix: now.Unix(),
+	}
+	_ = repo.AfterFind(db)
+	assert.Equal(t, repo.CreatedUnix, repo.Created.Unix())
+	assert.Equal(t, repo.UpdatedUnix, repo.Updated.Unix())
+}
 
 func TestRepos(t *testing.T) {
 	if testing.Short() {

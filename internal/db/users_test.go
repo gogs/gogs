@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/dbtest"
@@ -21,6 +22,54 @@ import (
 	"gogs.io/gogs/internal/userutil"
 	"gogs.io/gogs/public"
 )
+
+func TestUser_BeforeCreate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	t.Run("CreatedUnix has been set", func(t *testing.T) {
+		user := &User{
+			CreatedUnix: 1,
+		}
+		_ = user.BeforeCreate(db)
+		assert.Equal(t, int64(1), user.CreatedUnix)
+		assert.Equal(t, int64(0), user.UpdatedUnix)
+	})
+
+	t.Run("CreatedUnix has not been set", func(t *testing.T) {
+		user := &User{}
+		_ = user.BeforeCreate(db)
+		assert.Equal(t, db.NowFunc().Unix(), user.CreatedUnix)
+		assert.Equal(t, db.NowFunc().Unix(), user.UpdatedUnix)
+	})
+}
+
+func TestUser_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	user := &User{
+		CreatedUnix: now.Unix(),
+		UpdatedUnix: now.Unix(),
+	}
+	_ = user.AfterFind(db)
+	assert.Equal(t, user.CreatedUnix, user.Created.Unix())
+	assert.Equal(t, user.UpdatedUnix, user.Updated.Unix())
+}
 
 func TestUsers(t *testing.T) {
 	if testing.Short() {

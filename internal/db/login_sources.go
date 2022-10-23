@@ -52,11 +52,11 @@ var LoginSources LoginSourcesStore
 type LoginSource struct {
 	ID        int64 `gorm:"primaryKey"`
 	Type      auth.Type
-	Name      string        `xorm:"UNIQUE" gorm:"UNIQUE"`
-	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"NOT NULL"`
+	Name      string        `xorm:"UNIQUE" gorm:"unique"`
+	IsActived bool          `xorm:"NOT NULL DEFAULT false" gorm:"not null"`
 	IsDefault bool          `xorm:"DEFAULT false"`
 	Provider  auth.Provider `xorm:"-" gorm:"-"`
-	Config    string        `xorm:"TEXT cfg" gorm:"COLUMN:cfg;TYPE:TEXT" json:"RawConfig"`
+	Config    string        `xorm:"TEXT cfg" gorm:"column:cfg;type:TEXT" json:"RawConfig"`
 
 	Created     time.Time `xorm:"-" gorm:"-" json:"-"`
 	CreatedUnix int64
