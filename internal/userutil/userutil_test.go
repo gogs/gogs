@@ -62,6 +62,11 @@ func TestCustomAvatarPath(t *testing.T) {
 }
 
 func TestGenerateRandomAvatar(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
 	conf.SetMockPicture(t,
 		conf.PictureOpts{
 			AvatarUploadPath: os.TempDir(),
@@ -78,6 +83,11 @@ func TestGenerateRandomAvatar(t *testing.T) {
 }
 
 func TestSaveAvatar(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
 	conf.SetMockPicture(t,
 		conf.PictureOpts{
 			AvatarUploadPath: os.TempDir(),
