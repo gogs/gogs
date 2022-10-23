@@ -15,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/route/api/v1/user"
+	"gogs.io/gogs/internal/userutil"
 )
 
 func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginName string) {
@@ -88,7 +89,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePassword()
+		u.Password = userutil.EncodePassword(u.Password, u.Salt)
 	}
 
 	u.LoginName = form.LoginName

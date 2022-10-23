@@ -7,8 +7,6 @@ package db
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"image"
@@ -22,7 +20,6 @@ import (
 
 	"github.com/nfnt/resize"
 	"github.com/unknwon/com"
-	"golang.org/x/crypto/pbkdf2"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -59,28 +56,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
-}
-
-// NewGitSig generates and returns the signature of given user.
-func (u *User) NewGitSig() *git.Signature {
-	return &git.Signature{
-		Name:  u.DisplayName(),
-		Email: u.Email,
-		When:  time.Now(),
-	}
-}
-
-// EncodePassword encodes password to safe format.
-func (u *User) EncodePassword() {
-	newPasswd := pbkdf2.Key([]byte(u.Password), []byte(u.Salt), 10000, 50, sha256.New)
-	u.Password = fmt.Sprintf("%x", newPasswd)
-}
-
-// ValidatePassword checks if given password matches the one belongs to the user.
-func (u *User) ValidatePassword(passwd string) bool {
-	newUser := &User{Password: passwd, Salt: u.Salt}
-	newUser.EncodePassword()
-	return subtle.ConstantTimeCompare([]byte(u.Password), []byte(newUser.Password)) == 1
 }
 
 // UploadAvatar saves custom avatar for user.
@@ -343,7 +318,7 @@ func CreateUser(u *User) (err error) {
 	if u.Salt, err = GetUserSalt(); err != nil {
 		return err
 	}
-	u.EncodePassword()
+	u.Password = userutil.EncodePassword(u.Password, u.Salt)
 	u.MaxRepoCreation = -1
 
 	sess := x.NewSession()

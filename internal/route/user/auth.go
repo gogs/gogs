@@ -19,6 +19,7 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -554,7 +555,7 @@ func ResetPasswdPost(c *context.Context) {
 			c.Error(err, "get user salt")
 			return
 		}
-		u.EncodePassword()
+		u.Password = userutil.EncodePassword(u.Password, u.Salt)
 		if err := db.UpdateUser(u); err != nil {
 			c.Error(err, "update user")
 			return
