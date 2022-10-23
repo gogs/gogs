@@ -15,6 +15,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/public"
 )
 
 func TestDashboardURLPath(t *testing.T) {
@@ -72,9 +73,36 @@ func TestGenerateRandomAvatar(t *testing.T) {
 		},
 	)
 
+	avatarPath := CustomAvatarPath(1)
+	defer func() { _ = os.Remove(avatarPath) }()
+
 	err := GenerateRandomAvatar(1, "alice", "alice@example.com")
 	require.NoError(t, err)
-	got := osutil.IsFile(CustomAvatarPath(1))
+	got := osutil.IsFile(avatarPath)
+	assert.True(t, got)
+}
+
+func TestSaveAvatar(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
+	conf.SetMockPicture(t,
+		conf.PictureOpts{
+			AvatarUploadPath: os.TempDir(),
+		},
+	)
+
+	avatar, err := public.Files.ReadFile("img/avatar_default.png")
+	require.NoError(t, err)
+
+	avatarPath := CustomAvatarPath(1)
+	defer func() { _ = os.Remove(avatarPath) }()
+
+	err = SaveAvatar(1, avatar)
+	require.NoError(t, err)
+	got := osutil.IsFile(avatarPath)
 	assert.True(t, got)
 }
 

@@ -96,7 +96,7 @@ func SettingsAvatar(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	if err := c.Org.Organization.DeleteAvatar(); err != nil {
+	if err := db.Users.DeleteCustomAvatar(c.Req.Context(), c.Org.Organization.ID); err != nil {
 		c.Flash.Error(err.Error())
 	}
 

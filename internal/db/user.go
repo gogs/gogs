@@ -5,27 +5,22 @@
 package db
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
-	"image"
 	_ "image/jpeg"
-	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/nfnt/resize"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
@@ -56,41 +51,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
-}
-
-// UploadAvatar saves custom avatar for user.
-// FIXME: split uploads to different subdirs in case we have massive number of users.
-func (u *User) UploadAvatar(data []byte) error {
-	img, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		return fmt.Errorf("decode image: %v", err)
-	}
-
-	_ = os.MkdirAll(conf.Picture.AvatarUploadPath, os.ModePerm)
-	fw, err := os.Create(userutil.CustomAvatarPath(u.ID))
-	if err != nil {
-		return fmt.Errorf("create custom avatar directory: %v", err)
-	}
-	defer fw.Close()
-
-	m := resize.Resize(avatar.AVATAR_SIZE, avatar.AVATAR_SIZE, img, resize.NearestNeighbor)
-	if err = png.Encode(fw, m); err != nil {
-		return fmt.Errorf("encode image: %v", err)
-	}
-
-	return nil
-}
-
-// DeleteAvatar deletes the user's custom avatar.
-func (u *User) DeleteAvatar() error {
-	avatarPath := userutil.CustomAvatarPath(u.ID)
-	log.Trace("DeleteAvatar [%d]: %s", u.ID, avatarPath)
-	if err := os.Remove(avatarPath); err != nil {
-		return err
-	}
-
-	u.UseCustomAvatar = false
-	return UpdateUser(u)
 }
 
 // IsAdminOfRepo returns true if user has admin or higher access of repository.
