@@ -24,7 +24,7 @@ func TestUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(User), new(EmailAddress), new(Repository)}
+	tables := []interface{}{new(User), new(EmailAddress), new(Repository), new(Follow)}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
 	}
@@ -39,6 +39,8 @@ func TestUsers(t *testing.T) {
 		{"GetByID", usersGetByID},
 		{"GetByUsername", usersGetByUsername},
 		{"HasForkedRepository", usersHasForkedRepository},
+		{"ListFollowers", usersListFollowers},
+		{"ListFollowings", usersListFollowings},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -295,4 +297,72 @@ func usersHasForkedRepository(t *testing.T, db *users) {
 
 	has = db.HasForkedRepository(ctx, 1, 1)
 	assert.True(t, has)
+}
+
+func usersListFollowers(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	john, err := db.Create(ctx, "john", "john@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	got, err := db.ListFollowers(ctx, john.ID, 1, 1)
+	require.NoError(t, err)
+	assert.Empty(t, got)
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	followsStore := NewFollowsStore(db.DB)
+	err = followsStore.Follow(ctx, alice.ID, john.ID)
+	require.NoError(t, err)
+	err = followsStore.Follow(ctx, bob.ID, john.ID)
+	require.NoError(t, err)
+
+	// First page only has bob
+	got, err = db.ListFollowers(ctx, john.ID, 1, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, bob.ID, got[0].ID)
+
+	// Second page only has alice
+	got, err = db.ListFollowers(ctx, john.ID, 2, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, alice.ID, got[0].ID)
+}
+
+func usersListFollowings(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	john, err := db.Create(ctx, "john", "john@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	got, err := db.ListFollowers(ctx, john.ID, 1, 1)
+	require.NoError(t, err)
+	assert.Empty(t, got)
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	followsStore := NewFollowsStore(db.DB)
+	err = followsStore.Follow(ctx, john.ID, alice.ID)
+	require.NoError(t, err)
+	err = followsStore.Follow(ctx, john.ID, bob.ID)
+	require.NoError(t, err)
+
+	// First page only has bob
+	got, err = db.ListFollowings(ctx, john.ID, 1, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, bob.ID, got[0].ID)
+
+	// Second page only has alice
+	got, err = db.ListFollowings(ctx, john.ID, 2, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, alice.ID, got[0].ID)
 }

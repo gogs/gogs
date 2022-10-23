@@ -55,6 +55,20 @@ Indexes:
 	"idx_action_user_id" (user_id)
 ```
 
+# Table "follow"
+
+```
+   FIELD   |  COLUMN   |   POSTGRESQL    |         MYSQL         |     SQLITE3       
+-----------+-----------+-----------------+-----------------------+-------------------
+  ID       | id        | BIGSERIAL       | BIGINT AUTO_INCREMENT | INTEGER           
+  UserID   | user_id   | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
+  FollowID | follow_id | BIGINT NOT NULL | BIGINT NOT NULL       | INTEGER NOT NULL  
+
+Primary keys: id
+Indexes: 
+	"follow_user_follow_unique" UNIQUE (user_id, follow_id)
+```
+
 # Table "lfs_object"
 
 ```

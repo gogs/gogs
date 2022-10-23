@@ -88,7 +88,14 @@ func Followers(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("Followers")
 	c.Data["CardsTitle"] = c.Tr("user.followers")
 	c.Data["Owner"] = puser
-	repo.RenderUserCards(c, puser.NumFollowers, puser.GetFollowers, FOLLOWERS)
+	repo.RenderUserCards(
+		c,
+		puser.NumFollowers,
+		func(page int) ([]*db.User, error) {
+			return db.Users.ListFollowers(c.Req.Context(), puser.ID, page, db.ItemsPerPage)
+		},
+		FOLLOWERS,
+	)
 }
 
 func Following(c *context.Context, puser *context.ParamsUser) {
@@ -96,7 +103,14 @@ func Following(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("Following")
 	c.Data["CardsTitle"] = c.Tr("user.following")
 	c.Data["Owner"] = puser
-	repo.RenderUserCards(c, puser.NumFollowing, puser.GetFollowing, FOLLOWERS)
+	repo.RenderUserCards(
+		c,
+		puser.NumFollowing,
+		func(page int) ([]*db.User, error) {
+			return db.Users.ListFollowings(c.Req.Context(), puser.ID, page, db.ItemsPerPage)
+		},
+		FOLLOWERS,
+	)
 }
 
 func Stars(_ *context.Context) {
@@ -106,9 +120,9 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	var err error
 	switch c.Params(":action") {
 	case "follow":
-		err = db.FollowUser(c.UserID(), puser.ID)
+		err = db.Follows.Follow(c.Req.Context(), c.UserID(), puser.ID)
 	case "unfollow":
-		err = db.UnfollowUser(c.UserID(), puser.ID)
+		err = db.Follows.Unfollow(c.Req.Context(), c.UserID(), puser.ID)
 	}
 
 	if err != nil {
