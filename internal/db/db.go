@@ -42,6 +42,7 @@ func newLogWriter() (logger.Writer, error) {
 // NOTE: Lines are sorted in alphabetical order, each letter in its own line.
 var Tables = []interface{}{
 	new(Access), new(AccessToken), new(Action),
+	new(Follow),
 	new(LFSObject), new(LoginSource),
 }
 
@@ -120,6 +121,7 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	// Initialize stores, sorted in alphabetical order.
 	AccessTokens = &accessTokens{DB: db}
 	Actions = NewActionsStore(db)
+	Follows = NewFollowsStore(db)
 	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Perms = &perms{DB: db}
