@@ -352,6 +352,15 @@ func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) 
 }
 
 func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN follow ON follow.user_id = "user".id
+		WHERE follow.follow_id = @userID
+		ORDER BY follow.id DESC
+		LIMIT @limit OFFSET @offset
+	*/
 	users := make([]*User, 0, pageSize)
 	tx := db.WithContext(ctx).
 		Where("follow.follow_id = ?", userID).
@@ -366,6 +375,15 @@ func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize
 }
 
 func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN follow ON follow.user_id = "user".id
+		WHERE follow.user_id = @userID
+		ORDER BY follow.id DESC
+		LIMIT @limit OFFSET @offset
+	*/
 	users := make([]*User, 0, pageSize)
 	tx := db.WithContext(ctx).
 		Where("follow.user_id = ?", userID).
