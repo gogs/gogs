@@ -61,34 +61,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-// User.GetFollowers returns range of user's followers.
-func (u *User) GetFollowers(page int) ([]*User, error) {
-	users := make([]*User, 0, ItemsPerPage)
-	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.follow_id=?", u.ID)
-	if conf.UsePostgreSQL {
-		sess = sess.Join("LEFT", "follow", `"user".id=follow.user_id`)
-	} else {
-		sess = sess.Join("LEFT", "follow", "user.id=follow.user_id")
-	}
-	return users, sess.Find(&users)
-}
-
-func (u *User) IsFollowing(followID int64) bool {
-	return IsFollowing(u.ID, followID)
-}
-
-// GetFollowing returns range of user's following.
-func (u *User) GetFollowing(page int) ([]*User, error) {
-	users := make([]*User, 0, ItemsPerPage)
-	sess := x.Limit(ItemsPerPage, (page-1)*ItemsPerPage).Where("follow.user_id=?", u.ID)
-	if conf.UsePostgreSQL {
-		sess = sess.Join("LEFT", "follow", `"user".id=follow.follow_id`)
-	} else {
-		sess = sess.Join("LEFT", "follow", "user.id=follow.follow_id")
-	}
-	return users, sess.Find(&users)
-}
-
 // NewGitSig generates and returns the signature of given user.
 func (u *User) NewGitSig() *git.Signature {
 	return &git.Signature{
@@ -885,77 +857,6 @@ func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error)
 		sess.OrderBy(opts.OrderBy)
 	}
 	return users, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&users)
-}
-
-// ___________    .__  .__
-// \_   _____/___ |  | |  |   ______  _  __
-//  |    __)/  _ \|  | |  |  /  _ \ \/ \/ /
-//  |     \(  <_> )  |_|  |_(  <_> )     /
-//  \___  / \____/|____/____/\____/ \/\_/
-//      \/
-
-// Follow represents relations of user and his/her followers.
-type Follow struct {
-	ID       int64
-	UserID   int64 `xorm:"UNIQUE(follow)"`
-	FollowID int64 `xorm:"UNIQUE(follow)"`
-}
-
-func IsFollowing(userID, followID int64) bool {
-	has, _ := x.Get(&Follow{UserID: userID, FollowID: followID})
-	return has
-}
-
-// FollowUser marks someone be another's follower.
-func FollowUser(userID, followID int64) (err error) {
-	if userID == followID || IsFollowing(userID, followID) {
-		return nil
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Insert(&Follow{UserID: userID, FollowID: followID}); err != nil {
-		return err
-	}
-
-	if _, err = sess.Exec("UPDATE `user` SET num_followers = num_followers + 1 WHERE id = ?", followID); err != nil {
-		return err
-	}
-
-	if _, err = sess.Exec("UPDATE `user` SET num_following = num_following + 1 WHERE id = ?", userID); err != nil {
-		return err
-	}
-	return sess.Commit()
-}
-
-// UnfollowUser unmarks someone be another's follower.
-func UnfollowUser(userID, followID int64) (err error) {
-	if userID == followID || !IsFollowing(userID, followID) {
-		return nil
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Delete(&Follow{UserID: userID, FollowID: followID}); err != nil {
-		return err
-	}
-
-	if _, err = sess.Exec("UPDATE `user` SET num_followers = num_followers - 1 WHERE id = ?", followID); err != nil {
-		return err
-	}
-
-	if _, err = sess.Exec("UPDATE `user` SET num_following = num_following - 1 WHERE id = ?", userID); err != nil {
-		return err
-	}
-	return sess.Commit()
 }
 
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.

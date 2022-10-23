@@ -31,8 +31,8 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	if len(Tables) != 5 {
-		t.Fatalf("New table has added (want 5 got %d), please add new tests for the table and update this check", len(Tables))
+	if len(Tables) != 6 {
+		t.Fatalf("New table has added (want 6 got %d), please add new tests for the table and update this check", len(Tables))
 	}
 
 	db := dbtest.NewDB(t, "dumpAndImport", Tables...)
@@ -129,6 +129,17 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			RefName:      "main",
 			IsPrivate:    false,
 			CreatedUnix:  1588568886,
+		},
+
+		&Follow{
+			ID:       1,
+			UserID:   1,
+			FollowID: 2,
+		},
+		&Follow{
+			ID:       2,
+			UserID:   2,
+			FollowID: 1,
 		},
 
 		&LFSObject{

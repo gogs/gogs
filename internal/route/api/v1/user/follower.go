@@ -20,9 +20,9 @@ func responseApiUsers(c *context.APIContext, users []*db.User) {
 }
 
 func listUserFollowers(c *context.APIContext, u *db.User) {
-	users, err := u.GetFollowers(c.QueryInt("page"))
+	users, err := db.Users.ListFollowers(c.Req.Context(), u.ID, c.QueryInt("page"), db.ItemsPerPage)
 	if err != nil {
-		c.Error(err, "get followers")
+		c.Error(err, "list followers")
 		return
 	}
 	responseApiUsers(c, users)
@@ -41,9 +41,9 @@ func ListFollowers(c *context.APIContext) {
 }
 
 func listUserFollowing(c *context.APIContext, u *db.User) {
-	users, err := u.GetFollowing(c.QueryInt("page"))
+	users, err := db.Users.ListFollowings(c.Req.Context(), u.ID, c.QueryInt("page"), db.ItemsPerPage)
 	if err != nil {
-		c.Error(err, "get following")
+		c.Error(err, "list followings")
 		return
 	}
 	responseApiUsers(c, users)
@@ -62,7 +62,7 @@ func ListFollowing(c *context.APIContext) {
 }
 
 func checkUserFollowing(c *context.APIContext, u *db.User, followID int64) {
-	if u.IsFollowing(followID) {
+	if db.Follows.IsFollowing(c.Req.Context(), u.ID, followID) {
 		c.NoContent()
 	} else {
 		c.NotFound()
@@ -94,7 +94,7 @@ func Follow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := db.FollowUser(c.User.ID, target.ID); err != nil {
+	if err := db.Follows.Follow(c.Req.Context(), c.User.ID, target.ID); err != nil {
 		c.Error(err, "follow user")
 		return
 	}
@@ -106,7 +106,7 @@ func Unfollow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := db.UnfollowUser(c.User.ID, target.ID); err != nil {
+	if err := db.Follows.Unfollow(c.Req.Context(), c.User.ID, target.ID); err != nil {
 		c.Error(err, "unfollow user")
 		return
 	}

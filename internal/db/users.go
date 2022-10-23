@@ -56,6 +56,14 @@ type UsersStore interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	// HasForkedRepository returns true if the user has forked given repository.
 	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
+	// ListFollowers returns a list of users that are following the given user.
+	// Results are paginated by given page and page size, and sorted by the time of
+	// follow in descending order.
+	ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
+	// ListFollowings returns a list of users that are followed by the given user.
+	// Results are paginated by given page and page size, and sorted by the time of
+	// follow in descending order.
+	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
 }
 
 var Users UsersStore
@@ -343,6 +351,52 @@ func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) 
 	return count > 0
 }
 
+func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN follow ON follow.user_id = "user".id
+		WHERE follow.follow_id = @userID
+		ORDER BY follow.id DESC
+		LIMIT @limit OFFSET @offset
+	*/
+	users := make([]*User, 0, pageSize)
+	tx := db.WithContext(ctx).
+		Where("follow.follow_id = ?", userID).
+		Limit(pageSize).Offset((page - 1) * pageSize).
+		Order("follow.id DESC")
+	if conf.UsePostgreSQL {
+		tx.Joins(`LEFT JOIN follow ON follow.user_id = "user".id`)
+	} else {
+		tx.Joins(`LEFT JOIN follow ON follow.user_id = user.id`)
+	}
+	return users, tx.Find(&users).Error
+}
+
+func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN follow ON follow.user_id = "user".id
+		WHERE follow.user_id = @userID
+		ORDER BY follow.id DESC
+		LIMIT @limit OFFSET @offset
+	*/
+	users := make([]*User, 0, pageSize)
+	tx := db.WithContext(ctx).
+		Where("follow.user_id = ?", userID).
+		Limit(pageSize).Offset((page - 1) * pageSize).
+		Order("follow.id DESC")
+	if conf.UsePostgreSQL {
+		tx.Joins(`LEFT JOIN follow ON follow.follow_id = "user".id`)
+	} else {
+		tx.Joins(`LEFT JOIN follow ON follow.follow_id = user.id`)
+	}
+	return users, tx.Find(&users).Error
+}
+
 // UserType indicates the type of the user account.
 type UserType int
 
@@ -529,4 +583,12 @@ func (u *User) AvatarURL() string {
 		return conf.Server.ExternalURL + strings.TrimPrefix(link, conf.Server.Subpath)[1:]
 	}
 	return link
+}
+
+// IsFollowing returns true if the user is following the given user.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User`.
+func (u *User) IsFollowing(followID int64) bool {
+	return Follows.IsFollowing(context.TODO(), u.ID, followID)
 }
