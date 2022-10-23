@@ -184,7 +184,7 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		return
 	}
 
-	if !u.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), u.ID) {
 		afterLogin(c, u, f.Remember)
 		return
 	}

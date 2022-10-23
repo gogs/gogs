@@ -510,7 +510,16 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 		headGitRepo = c.Repo.GitRepo
 	}
 
-	if !c.User.IsWriterOfRepo(headRepo) && !c.User.IsAdmin {
+	if !db.Perms.Authorize(
+		c.Req.Context(),
+		c.User.ID,
+		headRepo.ID,
+		db.AccessModeWrite,
+		db.AccessModeOptions{
+			OwnerID: headRepo.OwnerID,
+			Private: headRepo.IsPrivate,
+		},
+	) && !c.User.IsAdmin {
 		log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have write access or site admin", baseRepo.ID)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""
