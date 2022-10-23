@@ -61,7 +61,9 @@ func TestAction_BeforeCreate(t *testing.T) {
 	}
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
-		action := &Action{CreatedUnix: 1}
+		action := &Action{
+			CreatedUnix: 1,
+		}
 		_ = action.BeforeCreate(db)
 		assert.Equal(t, int64(1), action.CreatedUnix)
 	})
@@ -71,6 +73,24 @@ func TestAction_BeforeCreate(t *testing.T) {
 		_ = action.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), action.CreatedUnix)
 	})
+}
+
+func TestAction_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	action := &Action{
+		CreatedUnix: now.Unix(),
+	}
+	_ = action.AfterFind(db)
+	assert.Equal(t, action.CreatedUnix, action.Created.Unix())
 }
 
 func TestActions(t *testing.T) {

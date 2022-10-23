@@ -21,6 +21,7 @@ func TestAccessToken_BeforeCreate(t *testing.T) {
 	now := time.Now()
 	db := &gorm.DB{
 		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
 			NowFunc: func() time.Time {
 				return now
 			},
@@ -28,17 +29,66 @@ func TestAccessToken_BeforeCreate(t *testing.T) {
 	}
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
-		token := &AccessToken{CreatedUnix: 1}
+		token := &AccessToken{
+			CreatedUnix: 1,
+		}
 		_ = token.BeforeCreate(db)
 		assert.Equal(t, int64(1), token.CreatedUnix)
-		assert.Equal(t, int64(0), token.UpdatedUnix)
+		assert.Equal(t, int64(0), token.UpdatedUnix) // Do not set UpdatedUnix until it is used.
 	})
 
 	t.Run("CreatedUnix has not been set", func(t *testing.T) {
 		token := &AccessToken{}
 		_ = token.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), token.CreatedUnix)
-		assert.Equal(t, int64(0), token.UpdatedUnix)
+		assert.Equal(t, int64(0), token.UpdatedUnix) // Do not set UpdatedUnix until it is used.
+	})
+}
+
+func TestAccessToken_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	t.Run("UpdatedUnix has been set and within 7 days", func(t *testing.T) {
+		token := &AccessToken{
+			CreatedUnix: now.Unix(),
+			UpdatedUnix: now.Add(time.Second).Unix(),
+		}
+		_ = token.AfterFind(db)
+		assert.Equal(t, token.CreatedUnix, token.Created.Unix())
+		assert.Equal(t, token.UpdatedUnix, token.Updated.Unix())
+		assert.True(t, token.HasUsed)
+		assert.True(t, token.HasRecentActivity)
+	})
+
+	t.Run("UpdatedUnix has been set and not within 7 days", func(t *testing.T) {
+		token := &AccessToken{
+			CreatedUnix: now.Add(-1 * 9 * 24 * time.Hour).Unix(),
+			UpdatedUnix: now.Add(-1 * 8 * 24 * time.Hour).Unix(),
+		}
+		_ = token.AfterFind(db)
+		assert.Equal(t, token.CreatedUnix, token.Created.Unix())
+		assert.Equal(t, token.UpdatedUnix, token.Updated.Unix())
+		assert.True(t, token.HasUsed)
+		assert.False(t, token.HasRecentActivity)
+	})
+
+	t.Run("UpdatedUnix has not been set", func(t *testing.T) {
+		token := &AccessToken{
+			CreatedUnix: now.Unix(),
+		}
+		_ = token.AfterFind(db)
+		assert.Equal(t, token.CreatedUnix, token.Created.Unix())
+		assert.True(t, token.Updated.IsZero())
+		assert.False(t, token.HasUsed)
+		assert.False(t, token.HasRecentActivity)
 	})
 }
 

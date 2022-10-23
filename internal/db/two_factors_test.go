@@ -29,7 +29,9 @@ func TestTwoFactor_BeforeCreate(t *testing.T) {
 	}
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
-		tf := &TwoFactor{CreatedUnix: 1}
+		tf := &TwoFactor{
+			CreatedUnix: 1,
+		}
 		_ = tf.BeforeCreate(db)
 		assert.Equal(t, int64(1), tf.CreatedUnix)
 	})
@@ -39,6 +41,24 @@ func TestTwoFactor_BeforeCreate(t *testing.T) {
 		_ = tf.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), tf.CreatedUnix)
 	})
+}
+
+func TestTwoFactor_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	tf := &TwoFactor{
+		CreatedUnix: now.Unix(),
+	}
+	_ = tf.AfterFind(db)
+	assert.Equal(t, tf.CreatedUnix, tf.Created.Unix())
 }
 
 func TestTwoFactors(t *testing.T) {
