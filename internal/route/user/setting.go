@@ -198,7 +198,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 		return
 	}
 
-	if !c.User.ValidatePassword(f.OldPassword) {
+	if !userutil.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
 		c.Flash.Error(c.Tr("settings.password_incorrect"))
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))
@@ -209,7 +209,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 			c.Errorf(err, "get user salt")
 			return
 		}
-		c.User.EncodePassword()
+		c.User.Password = userutil.EncodePassword(c.User.Password, c.User.Salt)
 		if err := db.UpdateUser(c.User); err != nil {
 			c.Errorf(err, "update user")
 			return

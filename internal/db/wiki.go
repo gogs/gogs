@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/unknwon/com"
 
@@ -130,7 +131,18 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	}
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("add all changes: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("push: %v", err)
@@ -166,7 +178,18 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("add all changes: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("push: %v", err)

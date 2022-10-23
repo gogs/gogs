@@ -117,7 +117,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 
 		// Validate password hash fetched from database for local accounts.
 		if user.IsLocal() {
-			if user.ValidatePassword(password) {
+			if userutil.ValidatePassword(user.Password, user.Salt, password) {
 				return user, nil
 			}
 
@@ -262,7 +262,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 	if err != nil {
 		return nil, err
 	}
-	user.EncodePassword()
+	user.Password = userutil.EncodePassword(user.Password, user.Salt)
 
 	return user, db.WithContext(ctx).Create(user).Error
 }

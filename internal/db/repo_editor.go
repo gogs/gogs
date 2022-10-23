@@ -183,7 +183,18 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		opts.Message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
@@ -294,7 +305,18 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		opts.Message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes to %q: %v", localPath, err)
 	}
 
@@ -531,7 +553,18 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("git add --all: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), opts.Message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		opts.Message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes on %q: %v", localPath, err)
 	}
 
