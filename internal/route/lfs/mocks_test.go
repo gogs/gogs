@@ -2299,6 +2299,9 @@ type MockUsersStore struct {
 	// CreateFunc is an instance of a mock function object controlling the
 	// behavior of the method Create.
 	CreateFunc *UsersStoreCreateFunc
+	// DeleteCustomAvatarFunc is an instance of a mock function object
+	// controlling the behavior of the method DeleteCustomAvatar.
+	DeleteCustomAvatarFunc *UsersStoreDeleteCustomAvatarFunc
 	// GetByEmailFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByEmail.
 	GetByEmailFunc *UsersStoreGetByEmailFunc
@@ -2317,6 +2320,9 @@ type MockUsersStore struct {
 	// ListFollowingsFunc is an instance of a mock function object
 	// controlling the behavior of the method ListFollowings.
 	ListFollowingsFunc *UsersStoreListFollowingsFunc
+	// UseCustomAvatarFunc is an instance of a mock function object
+	// controlling the behavior of the method UseCustomAvatar.
+	UseCustomAvatarFunc *UsersStoreUseCustomAvatarFunc
 }
 
 // NewMockUsersStore creates a new mock of the UsersStore interface. All
@@ -2330,6 +2336,11 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		CreateFunc: &UsersStoreCreateFunc{
 			defaultHook: func(context.Context, string, string, db.CreateUserOptions) (r0 *db.User, r1 error) {
+				return
+			},
+		},
+		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
+			defaultHook: func(context.Context, int64) (r0 error) {
 				return
 			},
 		},
@@ -2363,6 +2374,11 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
+		UseCustomAvatarFunc: &UsersStoreUseCustomAvatarFunc{
+			defaultHook: func(context.Context, int64, []byte) (r0 error) {
+				return
+			},
+		},
 	}
 }
 
@@ -2378,6 +2394,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 		CreateFunc: &UsersStoreCreateFunc{
 			defaultHook: func(context.Context, string, string, db.CreateUserOptions) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.Create")
+			},
+		},
+		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
+			defaultHook: func(context.Context, int64) error {
+				panic("unexpected invocation of MockUsersStore.DeleteCustomAvatar")
 			},
 		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
@@ -2410,6 +2431,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.ListFollowings")
 			},
 		},
+		UseCustomAvatarFunc: &UsersStoreUseCustomAvatarFunc{
+			defaultHook: func(context.Context, int64, []byte) error {
+				panic("unexpected invocation of MockUsersStore.UseCustomAvatar")
+			},
+		},
 	}
 }
 
@@ -2422,6 +2448,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		CreateFunc: &UsersStoreCreateFunc{
 			defaultHook: i.Create,
+		},
+		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
+			defaultHook: i.DeleteCustomAvatar,
 		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
 			defaultHook: i.GetByEmail,
@@ -2440,6 +2469,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: i.ListFollowings,
+		},
+		UseCustomAvatarFunc: &UsersStoreUseCustomAvatarFunc{
+			defaultHook: i.UseCustomAvatar,
 		},
 	}
 }
@@ -2669,6 +2701,112 @@ func (c UsersStoreCreateFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreCreateFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreDeleteCustomAvatarFunc describes the behavior when the
+// DeleteCustomAvatar method of the parent MockUsersStore instance is
+// invoked.
+type UsersStoreDeleteCustomAvatarFunc struct {
+	defaultHook func(context.Context, int64) error
+	hooks       []func(context.Context, int64) error
+	history     []UsersStoreDeleteCustomAvatarFuncCall
+	mutex       sync.Mutex
+}
+
+// DeleteCustomAvatar delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockUsersStore) DeleteCustomAvatar(v0 context.Context, v1 int64) error {
+	r0 := m.DeleteCustomAvatarFunc.nextHook()(v0, v1)
+	m.DeleteCustomAvatarFunc.appendCall(UsersStoreDeleteCustomAvatarFuncCall{v0, v1, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the DeleteCustomAvatar
+// method of the parent MockUsersStore instance is invoked and the hook
+// queue is empty.
+func (f *UsersStoreDeleteCustomAvatarFunc) SetDefaultHook(hook func(context.Context, int64) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// DeleteCustomAvatar method of the parent MockUsersStore instance invokes
+// the hook at the front of the queue and discards it. After the queue is
+// empty, the default hook function is invoked for any future action.
+func (f *UsersStoreDeleteCustomAvatarFunc) PushHook(hook func(context.Context, int64) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreDeleteCustomAvatarFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreDeleteCustomAvatarFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreDeleteCustomAvatarFunc) nextHook() func(context.Context, int64) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreDeleteCustomAvatarFunc) appendCall(r0 UsersStoreDeleteCustomAvatarFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreDeleteCustomAvatarFuncCall
+// objects describing the invocations of this function.
+func (f *UsersStoreDeleteCustomAvatarFunc) History() []UsersStoreDeleteCustomAvatarFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreDeleteCustomAvatarFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreDeleteCustomAvatarFuncCall is an object that describes an
+// invocation of method DeleteCustomAvatar on an instance of MockUsersStore.
+type UsersStoreDeleteCustomAvatarFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreDeleteCustomAvatarFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreDeleteCustomAvatarFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreGetByEmailFunc describes the behavior when the GetByEmail
@@ -3331,4 +3469,112 @@ func (c UsersStoreListFollowingsFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreListFollowingsFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreUseCustomAvatarFunc describes the behavior when the
+// UseCustomAvatar method of the parent MockUsersStore instance is invoked.
+type UsersStoreUseCustomAvatarFunc struct {
+	defaultHook func(context.Context, int64, []byte) error
+	hooks       []func(context.Context, int64, []byte) error
+	history     []UsersStoreUseCustomAvatarFuncCall
+	mutex       sync.Mutex
+}
+
+// UseCustomAvatar delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockUsersStore) UseCustomAvatar(v0 context.Context, v1 int64, v2 []byte) error {
+	r0 := m.UseCustomAvatarFunc.nextHook()(v0, v1, v2)
+	m.UseCustomAvatarFunc.appendCall(UsersStoreUseCustomAvatarFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the UseCustomAvatar
+// method of the parent MockUsersStore instance is invoked and the hook
+// queue is empty.
+func (f *UsersStoreUseCustomAvatarFunc) SetDefaultHook(hook func(context.Context, int64, []byte) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// UseCustomAvatar method of the parent MockUsersStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *UsersStoreUseCustomAvatarFunc) PushHook(hook func(context.Context, int64, []byte) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreUseCustomAvatarFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, []byte) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreUseCustomAvatarFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, []byte) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreUseCustomAvatarFunc) nextHook() func(context.Context, int64, []byte) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreUseCustomAvatarFunc) appendCall(r0 UsersStoreUseCustomAvatarFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreUseCustomAvatarFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreUseCustomAvatarFunc) History() []UsersStoreUseCustomAvatarFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreUseCustomAvatarFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreUseCustomAvatarFuncCall is an object that describes an
+// invocation of method UseCustomAvatar on an instance of MockUsersStore.
+type UsersStoreUseCustomAvatarFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 []byte
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreUseCustomAvatarFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreUseCustomAvatarFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
