@@ -235,12 +235,12 @@ func LoginTwoFactorPost(c *context.Context) {
 	}
 
 	// Prevent same passcode from being reused
-	if c.Cache.IsExist(u.TwoFactorCacheKey(passcode)) {
+	if c.Cache.IsExist(userutil.TwoFactorCacheKey(u.ID, passcode)) {
 		c.Flash.Error(c.Tr("settings.two_factor_reused_passcode"))
 		c.RedirectSubpath("/user/login/two_factor")
 		return
 	}
-	if err = c.Cache.Put(u.TwoFactorCacheKey(passcode), 1, 60); err != nil {
+	if err = c.Cache.Put(userutil.TwoFactorCacheKey(u.ID, passcode), 1, 60); err != nil {
 		log.Error("Failed to put cache 'two factor passcode': %v", err)
 	}
 
@@ -374,7 +374,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 		c.Success(ACTIVATE)
 
-		if err := c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
+		if err := c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
 			log.Error("Failed to put cache key 'mail resend': %v", err)
 		}
 		return
@@ -393,13 +393,13 @@ func Activate(c *context.Context) {
 		}
 		// Resend confirmation email.
 		if conf.Auth.RequireEmailConfirmation {
-			if c.Cache.IsExist(c.User.MailResendCacheKey()) {
+			if c.Cache.IsExist(userutil.MailResendCacheKey(c.User.ID)) {
 				c.Data["ResendLimited"] = true
 			} else {
 				c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 				email.SendActivateAccountMail(c.Context, db.NewMailerUser(c.User))
 
-				if err := c.Cache.Put(c.User.MailResendCacheKey(), 1, 180); err != nil {
+				if err := c.Cache.Put(userutil.MailResendCacheKey(c.User.ID), 1, 180); err != nil {
 					log.Error("Failed to put cache key 'mail resend': %v", err)
 				}
 			}
@@ -496,14 +496,14 @@ func ForgotPasswdPost(c *context.Context) {
 		return
 	}
 
-	if c.Cache.IsExist(u.MailResendCacheKey()) {
+	if c.Cache.IsExist(userutil.MailResendCacheKey(u.ID)) {
 		c.Data["ResendLimited"] = true
 		c.Success(FORGOT_PASSWORD)
 		return
 	}
 
 	email.SendResetPasswordMail(c.Context, db.NewMailerUser(u))
-	if err = c.Cache.Put(u.MailResendCacheKey(), 1, 180); err != nil {
+	if err = c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
 		log.Error("Failed to put cache key 'mail resend': %v", err)
 	}
 
