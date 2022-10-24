@@ -181,3 +181,13 @@ func TestValidatePassword(t *testing.T) {
 		})
 	}
 }
+
+func TestMailResendCacheKey(t *testing.T) {
+	got := MailResendCacheKey(1)
+	assert.Equal(t, "mailResend::1", got)
+}
+
+func TestTwoFactorCacheKey(t *testing.T) {
+	got := TwoFactorCacheKey(1, "113654")
+	assert.Equal(t, "twoFactor::1::113654", got)
+}

@@ -122,3 +122,13 @@ func ValidatePassword(encoded, salt, password string) bool {
 	got := EncodePassword(password, salt)
 	return subtle.ConstantTimeCompare([]byte(encoded), []byte(got)) == 1
 }
+
+// MailResendCacheKey returns the key used for caching mail resend.
+func MailResendCacheKey(userID int64) string {
+	return fmt.Sprintf("mailResend::%d", userID)
+}
+
+// TwoFactorCacheKey returns the key used for caching two factor passcode.
+func TwoFactorCacheKey(userID int64, passcode string) string {
+	return fmt.Sprintf("twoFactor::%d::%s", userID, passcode)
+}
