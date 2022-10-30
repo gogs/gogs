@@ -105,7 +105,7 @@ func TestAccessTokens(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *accessTokens)
+		test func(t *testing.T, db *accessTokens)
 	}{
 		{"Create", accessTokensCreate},
 		{"DeleteByID", accessTokensDeleteByID},

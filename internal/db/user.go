@@ -53,35 +53,11 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// Deprecated: Use OrgsUsers.CountByUser instead.
+//
+// TODO(unknwon): Delete me once no more call sites.
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
-}
-
-// GetOrganizationCount returns count of membership of organization of user.
-func (u *User) GetOrganizationCount() (int64, error) {
-	return u.getOrganizationCount(x)
-}
-
-// GetRepositories returns repositories that user owns, including private repositories.
-func (u *User) GetRepositories(page, pageSize int) (err error) {
-	u.Repos, err = GetUserRepositories(&UserRepoOptions{
-		UserID:   u.ID,
-		Private:  true,
-		Page:     page,
-		PageSize: pageSize,
-	})
-	return err
-}
-
-// GetRepositories returns mirror repositories that user owns, including private repositories.
-func (u *User) GetMirrorRepositories() ([]*Repository, error) {
-	return GetUserMirrorRepositories(u.ID)
-}
-
-// GetOwnedOrganizations returns all organizations that user owns.
-func (u *User) GetOwnedOrganizations() (err error) {
-	u.OwnedOrgs, err = GetOwnedOrgsByUserID(u.ID)
-	return err
 }
 
 // GetOrganizations returns all organizations that user belongs to.
@@ -99,25 +75,6 @@ func (u *User) GetOrganizations(showPrivate bool) error {
 		return err
 	}
 	return nil
-}
-
-// DisplayName returns full name if it's not empty,
-// returns username otherwise.
-func (u *User) DisplayName() string {
-	if len(u.FullName) > 0 {
-		return u.FullName
-	}
-	return u.Name
-}
-
-func (u *User) ShortName(length int) string {
-	return strutil.Ellipsis(u.Name, length)
-}
-
-// IsMailable checks if a user is eligible
-// to receive emails.
-func (u *User) IsMailable() bool {
-	return u.IsActive
 }
 
 // IsUserExist checks if given user name exist,

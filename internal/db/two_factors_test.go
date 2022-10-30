@@ -74,7 +74,7 @@ func TestTwoFactors(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *twoFactors)
+		test func(t *testing.T, db *twoFactors)
 	}{
 		{"Create", twoFactorsCreate},
 		{"GetByUserID", twoFactorsGetByUserID},

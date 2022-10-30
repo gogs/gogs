@@ -235,14 +235,14 @@ func DeleteOrganization(org *User) (err error) {
 // \_______  /__|  \___  /|______//____  >\___  >__|
 //         \/     /_____/              \/     \/
 
-// OrgUser represents an organization-user relation.
+// OrgUser represents relations of organizations and their members.
 type OrgUser struct {
-	ID       int64
-	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
-	OrgID    int64 `xorm:"INDEX UNIQUE(s)"`
-	IsPublic bool
-	IsOwner  bool
-	NumTeams int
+	ID       int64 `gorm:"primaryKey"`
+	Uid      int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
+	OrgID    int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
+	IsPublic bool  `gorm:"not null;default:FALSE"`
+	IsOwner  bool  `gorm:"not null;default:FALSE"`
+	NumTeams int   `gorm:"not null;default:0"`
 }
 
 // IsOrganizationOwner returns true if given user is in the owner team.
@@ -276,12 +276,6 @@ func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, e
 // has joined.
 func GetOrgsByUserID(userID int64, showAll bool) ([]*User, error) {
 	return getOrgsByUserID(x.NewSession(), userID, showAll)
-}
-
-// GetOrgsByUserIDDesc returns a list of organizations that the given user ID
-// has joined, ordered descending by the given condition.
-func GetOrgsByUserIDDesc(userID int64, desc string, showAll bool) ([]*User, error) {
-	return getOrgsByUserID(x.NewSession().Desc(desc), userID, showAll)
 }
 
 func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
