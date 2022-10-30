@@ -92,7 +92,7 @@ func TestRepos(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *repos)
+		test func(t *testing.T, db *repos)
 	}{
 		{"Create", reposCreate},
 		{"GetByName", reposGetByName},

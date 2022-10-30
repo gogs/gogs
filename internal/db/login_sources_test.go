@@ -157,7 +157,7 @@ func TestLoginSource_AfterFind(t *testing.T) {
 	}
 }
 
-func Test_loginSources(t *testing.T) {
+func TestLoginSources(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -170,7 +170,7 @@ func Test_loginSources(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *loginSources)
+		test func(t *testing.T, db *loginSources)
 	}{
 		{"Create", loginSourcesCreate},
 		{"Count", loginSourcesCount},

@@ -25,7 +25,7 @@ func TestWatches(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *watches)
+		test func(t *testing.T, db *watches)
 	}{
 		{"ListByRepo", watchesListByRepo},
 	} {

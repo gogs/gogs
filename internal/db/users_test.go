@@ -84,7 +84,7 @@ func TestUsers(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *users)
+		test func(t *testing.T, db *users)
 	}{
 		{"Authenticate", usersAuthenticate},
 		{"Create", usersCreate},
