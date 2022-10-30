@@ -452,8 +452,7 @@ type User struct {
 	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	LoginName   string
 	Type        UserType
-	Orgs        []*User       `xorm:"-" gorm:"-" json:"-"`
-	Repos       []*Repository `xorm:"-" gorm:"-" json:"-"`
+	Orgs        []*User `xorm:"-" gorm:"-" json:"-"`
 	Location    string
 	Website     string
 	Rands       string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`

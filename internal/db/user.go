@@ -60,17 +60,6 @@ func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
 }
 
-// GetRepositories returns repositories that user owns, including private repositories.
-func (u *User) GetRepositories(page, pageSize int) (err error) {
-	u.Repos, err = GetUserRepositories(&UserRepoOptions{
-		UserID:   u.ID,
-		Private:  true,
-		Page:     page,
-		PageSize: pageSize,
-	})
-	return err
-}
-
 // GetRepositories returns mirror repositories that user owns, including private repositories.
 func (u *User) GetMirrorRepositories() ([]*Repository, error) {
 	return GetUserMirrorRepositories(u.ID)
