@@ -76,12 +76,6 @@ func (u *User) GetMirrorRepositories() ([]*Repository, error) {
 	return GetUserMirrorRepositories(u.ID)
 }
 
-// GetOwnedOrganizations returns all organizations that user owns.
-func (u *User) GetOwnedOrganizations() (err error) {
-	u.OwnedOrgs, err = GetOwnedOrgsByUserID(u.ID)
-	return err
-}
-
 // GetOrganizations returns all organizations that user belongs to.
 func (u *User) GetOrganizations(showPrivate bool) error {
 	orgIDs, err := GetOrgIDsByUserID(u.ID, showPrivate)
@@ -97,25 +91,6 @@ func (u *User) GetOrganizations(showPrivate bool) error {
 		return err
 	}
 	return nil
-}
-
-// DisplayName returns full name if it's not empty,
-// returns username otherwise.
-func (u *User) DisplayName() string {
-	if len(u.FullName) > 0 {
-		return u.FullName
-	}
-	return u.Name
-}
-
-func (u *User) ShortName(length int) string {
-	return strutil.Ellipsis(u.Name, length)
-}
-
-// IsMailable checks if a user is eligible
-// to receive emails.
-func (u *User) IsMailable() bool {
-	return u.IsActive
 }
 
 // IsUserExist checks if given user name exist,

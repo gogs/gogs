@@ -278,12 +278,6 @@ func GetOrgsByUserID(userID int64, showAll bool) ([]*User, error) {
 	return getOrgsByUserID(x.NewSession(), userID, showAll)
 }
 
-// GetOrgsByUserIDDesc returns a list of organizations that the given user ID
-// has joined, ordered descending by the given condition.
-func GetOrgsByUserIDDesc(userID int64, desc string, showAll bool) ([]*User, error) {
-	return getOrgsByUserID(x.NewSession().Desc(desc), userID, showAll)
-}
-
 func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 	orgs := make([]*User, 0, 10)
 	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).

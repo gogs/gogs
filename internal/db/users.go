@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
 )
@@ -451,7 +452,6 @@ type User struct {
 	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	LoginName   string
 	Type        UserType
-	OwnedOrgs   []*User       `xorm:"-" gorm:"-" json:"-"`
 	Orgs        []*User       `xorm:"-" gorm:"-" json:"-"`
 	Repos       []*Repository `xorm:"-" gorm:"-" json:"-"`
 	Location    string
@@ -521,6 +521,11 @@ func (u *User) IsOrganization() bool {
 	return u.Type == UserTypeOrganization
 }
 
+// IsMailable returns true if the user is eligible to receive emails.
+func (u *User) IsMailable() bool {
+	return u.IsActive
+}
+
 // APIFormat returns the API format of a user.
 func (u *User) APIFormat() *api.User {
 	return &api.User{
@@ -560,6 +565,15 @@ func (u *User) CanEditGitHook() bool {
 // CanImportLocal returns true if user can migrate repositories by local path.
 func (u *User) CanImportLocal() bool {
 	return conf.Repository.EnableLocalPathMigration && (u.IsAdmin || u.AllowImportLocal)
+}
+
+// DisplayName returns the full name of the user if it's not empty, returns the
+// username otherwise.
+func (u *User) DisplayName() string {
+	if len(u.FullName) > 0 {
+		return u.FullName
+	}
+	return u.Name
 }
 
 // HomeURLPath returns the URL path to the user or organization home page.
@@ -657,4 +671,12 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // having a dedicated type `template.User`.
 func (u *User) GetOrganizationCount() (int64, error) {
 	return OrgUsers.CountByUser(context.TODO(), u.ID)
+}
+
+// ShortName truncates and returns the username at most in given length.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User`.
+func (u *User) ShortName(length int) string {
+	return strutil.Ellipsis(u.Name, length)
 }
