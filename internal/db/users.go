@@ -649,3 +649,12 @@ func (u *User) IsUserOrgOwner(orgId int64) bool {
 func (u *User) IsPublicMember(orgId int64) bool {
 	return IsPublicMembership(orgId, u.ID)
 }
+
+// GetOrganizationCount returns the count of organization membership that the
+// user has.
+//
+// TODO(unknwon): This is also used in templates, which should be fixed by
+// having a dedicated type `template.User`.
+func (u *User) GetOrganizationCount() (int64, error) {
+	return OrgUsers.CountByUser(context.TODO(), u.ID)
+}

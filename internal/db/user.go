@@ -53,13 +53,11 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// Deprecated: Use OrgsUsers.CountByUser instead.
+//
+// TODO(unknwon): Delete me once no more call sites.
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
-}
-
-// GetOrganizationCount returns count of membership of organization of user.
-func (u *User) GetOrganizationCount() (int64, error) {
-	return u.getOrganizationCount(x)
 }
 
 // GetRepositories returns repositories that user owns, including private repositories.
