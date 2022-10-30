@@ -27,7 +27,7 @@ func TestPerms(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *perms)
+		test func(t *testing.T, db *perms)
 	}{
 		{"AccessMode", permsAccessMode},
 		{"Authorize", permsAuthorize},

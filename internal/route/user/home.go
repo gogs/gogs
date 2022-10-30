@@ -145,14 +145,21 @@ func Dashboard(c *context.Context) {
 			return
 		}
 	} else {
-		if err = ctxUser.GetRepositories(1, conf.UI.User.RepoPagingNum); err != nil {
+		repos, err = db.GetUserRepositories(
+			&db.UserRepoOptions{
+				UserID:   ctxUser.ID,
+				Private:  true,
+				Page:     1,
+				PageSize: conf.UI.User.RepoPagingNum,
+			},
+		)
+		if err != nil {
 			c.Error(err, "get repositories")
 			return
 		}
-		repos = ctxUser.Repos
 		repoCount = int64(ctxUser.NumRepos)
 
-		mirrors, err = ctxUser.GetMirrorRepositories()
+		mirrors, err = db.GetUserMirrorRepositories(ctxUser.ID)
 		if err != nil {
 			c.Error(err, "get mirror repositories")
 			return
@@ -228,11 +235,18 @@ func Issues(c *context.Context) {
 			return
 		}
 	} else {
-		if err := ctxUser.GetRepositories(1, c.User.NumRepos); err != nil {
+		repos, err = db.GetUserRepositories(
+			&db.UserRepoOptions{
+				UserID:   ctxUser.ID,
+				Private:  true,
+				Page:     1,
+				PageSize: ctxUser.NumRepos,
+			},
+		)
+		if err != nil {
 			c.Error(err, "get repositories")
 			return
 		}
-		repos = ctxUser.Repos
 	}
 
 	userRepoIDs = make([]int64, 0, len(repos))

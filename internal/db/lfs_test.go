@@ -30,7 +30,7 @@ func TestLFS(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *lfs)
+		test func(t *testing.T, db *lfs)
 	}{
 		{"CreateObject", lfsCreateObject},
 		{"GetObjectByOID", lfsGetObjectByOID},

@@ -12,22 +12,22 @@ import (
 	"gogs.io/gogs/internal/dbtest"
 )
 
-func TestWatches(t *testing.T) {
+func TestOrgUsers(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Watch)}
-	db := &watches{
-		DB: dbtest.NewDB(t, "watches", tables...),
+	tables := []interface{}{new(OrgUser)}
+	db := &orgUsers{
+		DB: dbtest.NewDB(t, "orgUsers", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *watches)
+		test func(t *testing.T, db *orgUsers)
 	}{
-		{"ListByRepo", watchesListByRepo},
+		{"CountByUser", orgUsersCountByUser},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -42,6 +42,10 @@ func TestWatches(t *testing.T) {
 	}
 }
 
-func watchesListByRepo(_ *testing.T, _ *watches) {
-	// TODO: Add tests once WatchRepo is migrated to GORM.
+func orgUsersCountByUser(t *testing.T, db *orgUsers) {
+	// TODO: Use OrgUsers.Join to replace SQL hack when the method is available.
+	err := db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
+	require.NoError(t, err)
+	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 2, 1).Error
+	require.NoError(t, err)
 }

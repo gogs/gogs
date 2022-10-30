@@ -106,7 +106,7 @@ func TestActions(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *actions)
+		test func(t *testing.T, db *actions)
 	}{
 		{"CommitRepo", actionsCommitRepo},
 		{"ListByOrganization", actionsListByOrganization},

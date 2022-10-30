@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// FollowsStore is the persistent interface for follows.
+// FollowsStore is the persistent interface for user follows.
 //
 // NOTE: All methods are sorted in alphabetical order.
 type FollowsStore interface {
@@ -31,7 +31,7 @@ type follows struct {
 	*gorm.DB
 }
 
-// NewFollowsStore returns a persistent interface for follows with given
+// NewFollowsStore returns a persistent interface for user follows with given
 // database connection.
 func NewFollowsStore(db *gorm.DB) FollowsStore {
 	return &follows{DB: db}
