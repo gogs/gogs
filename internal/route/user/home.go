@@ -159,7 +159,7 @@ func Dashboard(c *context.Context) {
 		}
 		repoCount = int64(ctxUser.NumRepos)
 
-		mirrors, err = ctxUser.GetMirrorRepositories()
+		mirrors, err = db.GetUserMirrorRepositories(ctxUser.ID)
 		if err != nil {
 			c.Error(err, "get mirror repositories")
 			return
