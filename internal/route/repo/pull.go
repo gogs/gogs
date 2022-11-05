@@ -71,7 +71,7 @@ func parseBaseRepository(c *context.Context) *db.Repository {
 
 	orgs, err := db.Orgs.List(
 		c.Req.Context(),
-		db.ListOrgOptions{
+		db.ListOrgsOptions{
 			MemberID:              c.User.ID,
 			IncludePrivateMembers: true,
 		},
@@ -466,7 +466,7 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 		headBranch = headInfos[0]
 
 	} else if len(headInfos) == 2 {
-		headUser, err = db.GetUserByName(headInfos[0])
+		headUser, err = db.Users.GetByUsername(c.Req.Context(), headInfos[0])
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return nil, nil, nil, nil, "", ""

@@ -47,7 +47,7 @@ func checkContextUser(c *context.Context, uid int64) *db.User {
 		return c.User
 	}
 
-	org, err := db.GetUserByID(uid)
+	org, err := db.Users.GetByID(c.Req.Context(), uid)
 	if db.IsErrUserNotExist(err) {
 		return c.User
 	}

@@ -45,7 +45,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
 	orgs, err := db.Orgs.List(
 		c.Req.Context(),
-		db.ListOrgOptions{
+		db.ListOrgsOptions{
 			MemberID:              u.ID,
 			IncludePrivateMembers: all,
 		},

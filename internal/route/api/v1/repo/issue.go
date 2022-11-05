@@ -83,7 +83,7 @@ func CreateIssue(c *context.APIContext, form api.CreateIssueOption) {
 
 	if c.Repo.IsWriter() {
 		if len(form.Assignee) > 0 {
-			assignee, err := db.GetUserByName(form.Assignee)
+			assignee, err := db.Users.GetByUsername(c.Req.Context(), form.Assignee)
 			if err != nil {
 				if db.IsErrUserNotExist(err) {
 					c.ErrorStatus(http.StatusUnprocessableEntity, fmt.Errorf("assignee does not exist: [name: %s]", form.Assignee))
@@ -145,7 +145,7 @@ func EditIssue(c *context.APIContext, form api.EditIssueOption) {
 		if *form.Assignee == "" {
 			issue.AssigneeID = 0
 		} else {
-			assignee, err := db.GetUserByName(*form.Assignee)
+			assignee, err := db.Users.GetByUsername(c.Req.Context(), *form.Assignee)
 			if err != nil {
 				if db.IsErrUserNotExist(err) {
 					c.ErrorStatus(http.StatusUnprocessableEntity, fmt.Errorf("assignee does not exist: [name: %s]", *form.Assignee))

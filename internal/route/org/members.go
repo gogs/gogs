@@ -97,7 +97,7 @@ func Invitation(c *context.Context) {
 
 	if c.Req.Method == "POST" {
 		uname := c.Query("uname")
-		u, err := db.GetUserByName(uname)
+		u, err := db.Users.GetByUsername(c.Req.Context(), uname)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))

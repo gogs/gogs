@@ -38,7 +38,7 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	emails := make([]*db.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &db.EmailAddress{
-			UID:         c.User.ID,
+			UserID:      c.User.ID,
 			Email:       form.Emails[i],
 			IsActivated: !conf.Auth.RequireEmailConfirmation,
 		}
@@ -69,8 +69,8 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	emails := make([]*db.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &db.EmailAddress{
-			UID:   c.User.ID,
-			Email: form.Emails[i],
+			UserID: c.User.ID,
+			Email:  form.Emails[i],
 		}
 	}
 

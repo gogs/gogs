@@ -256,7 +256,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	emailAddr := &db.EmailAddress{
-		UID:         c.User.ID,
+		UserID:      c.User.ID,
 		Email:       f.Email,
 		IsActivated: !conf.Auth.RequireEmailConfirmation,
 	}
@@ -286,8 +286,8 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 func DeleteEmail(c *context.Context) {
 	if err := db.DeleteEmailAddress(&db.EmailAddress{
-		ID:  c.QueryInt64("id"),
-		UID: c.User.ID,
+		ID:     c.QueryInt64("id"),
+		UserID: c.User.ID,
 	}); err != nil {
 		c.Errorf(err, "delete email address")
 		return

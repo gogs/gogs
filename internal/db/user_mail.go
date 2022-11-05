@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -16,8 +17,8 @@ import (
 // EmailAddresses is the list of all email addresses of a user. Can contain the
 // primary email address, but is not obligatory.
 type EmailAddress struct {
-	ID          int64
-	UID         int64  `xorm:"INDEX NOT NULL" gorm:"index;not null"`
+	ID          int64  `gorm:"primaryKey"`
+	UserID      int64  `xorm:"uid INDEX NOT NULL" gorm:"column:uid;index;not null"`
 	Email       string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
 	IsActivated bool   `gorm:"not null;default:FALSE"`
 	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
@@ -30,7 +31,7 @@ func GetEmailAddresses(uid int64) ([]*EmailAddress, error) {
 		return nil, err
 	}
 
-	u, err := GetUserByID(uid)
+	u, err := Users.GetByID(context.TODO(), uid)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +120,7 @@ func AddEmailAddresses(emails []*EmailAddress) error {
 }
 
 func (email *EmailAddress) Activate() error {
-	user, err := GetUserByID(email.UID)
+	user, err := Users.GetByID(context.TODO(), email.UserID)
 	if err != nil {
 		return err
 	}
@@ -170,7 +171,7 @@ func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 		return errors.EmailNotFound{Email: email.Email}
 	}
 
-	if email.UID != userID {
+	if email.UserID != userID {
 		return errors.New("not the owner of the email")
 	}
 
@@ -178,12 +179,12 @@ func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 		return errors.EmailNotVerified{Email: email.Email}
 	}
 
-	user := &User{ID: email.UID}
+	user := &User{ID: email.UserID}
 	has, err = x.Get(user)
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrUserNotExist{args: map[string]interface{}{"userID": email.UID}}
+		return ErrUserNotExist{args: map[string]interface{}{"userID": email.UserID}}
 	}
 
 	// Make sure the former primary email doesn't disappear.
@@ -200,7 +201,7 @@ func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 	}
 
 	if !has {
-		formerPrimaryEmail.UID = user.ID
+		formerPrimaryEmail.UserID = user.ID
 		formerPrimaryEmail.IsActivated = user.IsActive
 		if _, err = sess.Insert(formerPrimaryEmail); err != nil {
 			return err

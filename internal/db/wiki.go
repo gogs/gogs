@@ -47,7 +47,7 @@ func (repo *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
 
 // WikiPath returns wiki data path by given user and repository name.
 func WikiPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".wiki.git")
+	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
 }
 
 func (repo *Repository) WikiPath() string {
