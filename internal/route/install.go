@@ -387,27 +387,35 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	// Create admin account
 	if len(f.AdminName) > 0 {
-		u := &db.User{
-			Name:     f.AdminName,
-			Email:    f.AdminEmail,
-			Password: f.AdminPasswd,
-			IsAdmin:  true,
-			IsActive: true,
-		}
-		if err := db.CreateUser(u); err != nil {
+		user, err := db.Users.Create(
+			c.Req.Context(),
+			f.AdminName,
+			f.AdminEmail,
+			db.CreateUserOptions{
+				Password:  f.AdminPasswd,
+				Activated: true,
+				Admin:     true,
+			},
+		)
+		if err != nil {
 			if !db.IsErrUserAlreadyExist(err) {
 				conf.Security.InstallLock = false
 				c.FormErr("AdminName", "AdminEmail")
 				c.RenderWithErr(c.Tr("install.invalid_admin_setting", err), INSTALL, &f)
 				return
 			}
+
 			log.Info("Admin account already exist")
-			u, _ = db.GetUserByName(u.Name)
+			user, err = db.Users.GetByUsername(c.Req.Context(), f.AdminName)
+			if err != nil {
+				c.Error(err, "get user by name")
+				return
+			}
 		}
 
 		// Auto-login for admin
-		_ = c.Session.Set("uid", u.ID)
-		_ = c.Session.Set("uname", u.Name)
+		_ = c.Session.Set("uid", user.ID)
+		_ = c.Session.Set("uname", user.Name)
 	}
 
 	log.Info("First-time run install finished!")

@@ -6,6 +6,7 @@ package user
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/go-macaron/captcha"
@@ -311,7 +312,7 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	c.Data["EnableCaptcha"] = conf.Auth.EnableRegistrationCaptcha
 
 	if conf.Auth.DisableRegistration {
-		c.Status(403)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
@@ -332,13 +333,16 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		return
 	}
 
-	u := &db.User{
-		Name:     f.UserName,
-		Email:    f.Email,
-		Password: f.Password,
-		IsActive: !conf.Auth.RequireEmailConfirmation,
-	}
-	if err := db.CreateUser(u); err != nil {
+	user, err := db.Users.Create(
+		c.Req.Context(),
+		f.UserName,
+		f.Email,
+		db.CreateUserOptions{
+			Password:  f.Password,
+			Activated: !conf.Auth.RequireEmailConfirmation,
+		},
+	)
+	if err != nil {
 		switch {
 		case db.IsErrUserAlreadyExist(err):
 			c.FormErr("UserName")
@@ -354,27 +358,27 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 		}
 		return
 	}
-	log.Trace("Account created: %s", u.Name)
+	log.Trace("Account created: %s", user.Name)
 
 	// Auto-set admin for the only user.
 	if db.CountUsers() == 1 {
-		u.IsAdmin = true
-		u.IsActive = true
-		if err := db.UpdateUser(u); err != nil {
+		user.IsAdmin = true
+		user.IsActive = true
+		if err := db.UpdateUser(user); err != nil {
 			c.Error(err, "update user")
 			return
 		}
 	}
 
 	// Send confirmation email.
-	if conf.Auth.RequireEmailConfirmation && u.ID > 1 {
-		email.SendActivateAccountMail(c.Context, db.NewMailerUser(u))
+	if conf.Auth.RequireEmailConfirmation && user.ID > 1 {
+		email.SendActivateAccountMail(c.Context, db.NewMailerUser(user))
 		c.Data["IsSendRegisterMail"] = true
-		c.Data["Email"] = u.Email
+		c.Data["Email"] = user.Email
 		c.Data["Hours"] = conf.Auth.ActivateCodeLives / 60
 		c.Success(ACTIVATE)
 
-		if err := c.Cache.Put(userutil.MailResendCacheKey(u.ID), 1, 180); err != nil {
+		if err := c.Cache.Put(userutil.MailResendCacheKey(user.ID), 1, 180); err != nil {
 			log.Error("Failed to put cache key 'mail resend': %v", err)
 		}
 		return

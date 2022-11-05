@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-macaron/binding"
 	api "github.com/gogs/go-gogs-client"
@@ -234,12 +235,20 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 	}
 
 	if db.IsUsernameUsed(ctx, username) {
-		return nil, ErrUserAlreadyExist{args: errutil.Args{"name": username}}
+		return nil, ErrUserAlreadyExist{
+			args: errutil.Args{
+				"name": username,
+			},
+		}
 	}
 
 	_, err = db.GetByEmail(ctx, email)
 	if err == nil {
-		return nil, ErrEmailAlreadyUsed{args: errutil.Args{"email": email}}
+		return nil, ErrEmailAlreadyUsed{
+			args: errutil.Args{
+				"email": email,
+			},
+		}
 	} else if !IsErrUserNotExist(err) {
 		return nil, err
 	}
@@ -257,7 +266,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		MaxRepoCreation: -1,
 		IsActive:        opts.Activated,
 		IsAdmin:         opts.Admin,
-		Avatar:          cryptoutil.MD5(email),
+		Avatar:          cryptoutil.MD5(email), // Gravatar URL uses the MD5 hash of the email, see https://en.gravatar.com/site/implement/hash/
 		AvatarEmail:     email,
 	}
 
@@ -579,16 +588,6 @@ func (u *User) DisplayName() string {
 	return u.Name
 }
 
-// NewGhostUser creates and returns a fake user for people who has deleted their
-// accounts.
-func NewGhostUser() *User {
-	return &User{
-		ID:        -1,
-		Name:      "Ghost",
-		LowerName: "ghost",
-	}
-}
-
 // HomeURLPath returns the URL path to the user or organization home page.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
@@ -692,4 +691,120 @@ func (u *User) GetOrganizationCount() (int64, error) {
 // having a dedicated type `template.User`.
 func (u *User) ShortName(length int) string {
 	return strutil.Ellipsis(u.Name, length)
+}
+
+// NewGhostUser creates and returns a fake user for people who has deleted their
+// accounts.
+//
+// TODO: Once migrated to unknwon.dev/i18n, pass in the `i18n.Locale` to
+// translate the text to local language.
+func NewGhostUser() *User {
+	return &User{
+		ID:        -1,
+		Name:      "Ghost",
+		LowerName: "ghost",
+	}
+}
+
+var (
+	reservedUsernames = map[string]struct{}{
+		"-":        {},
+		"explore":  {},
+		"create":   {},
+		"assets":   {},
+		"css":      {},
+		"img":      {},
+		"js":       {},
+		"less":     {},
+		"plugins":  {},
+		"debug":    {},
+		"raw":      {},
+		"install":  {},
+		"api":      {},
+		"avatar":   {},
+		"user":     {},
+		"org":      {},
+		"help":     {},
+		"stars":    {},
+		"issues":   {},
+		"pulls":    {},
+		"commits":  {},
+		"repo":     {},
+		"template": {},
+		"admin":    {},
+		"new":      {},
+		".":        {},
+		"..":       {},
+	}
+	reservedUsernamePatterns = []string{"*.keys"}
+)
+
+type ErrNameNotAllowed struct {
+	args errutil.Args
+}
+
+func IsErrNameNotAllowed(err error) bool {
+	_, ok := err.(ErrNameNotAllowed)
+	return ok
+}
+
+func (err ErrNameNotAllowed) Value() string {
+	val, ok := err.args["name"].(string)
+	if ok {
+		return val
+	}
+
+	val, ok = err.args["pattern"].(string)
+	if ok {
+		return val
+	}
+
+	return "<value not found>"
+}
+
+func (err ErrNameNotAllowed) Error() string {
+	return fmt.Sprintf("name is not allowed: %v", err.args)
+}
+
+// isNameAllowed checks if the name is reserved or pattern of the name is not
+// allowed based on given reserved names and patterns. Names are exact match,
+// patterns can be prefix or suffix match with the wildcard ("*").
+func isNameAllowed(names map[string]struct{}, patterns []string, name string) error {
+	name = strings.TrimSpace(strings.ToLower(name))
+	if utf8.RuneCountInString(name) == 0 {
+		return ErrNameNotAllowed{
+			args: errutil.Args{
+				"reason": "empty name",
+			},
+		}
+	}
+
+	if _, ok := names[name]; ok {
+		return ErrNameNotAllowed{
+			args: errutil.Args{
+				"reason": "reserved",
+				"name":   name,
+			},
+		}
+	}
+
+	for _, pattern := range patterns {
+		if pattern[0] == '*' && strings.HasSuffix(name, pattern[1:]) ||
+			(pattern[len(pattern)-1] == '*' && strings.HasPrefix(name, pattern[:len(pattern)-1])) {
+			return ErrNameNotAllowed{
+				args: errutil.Args{
+					"reason":  "reserved",
+					"pattern": pattern,
+				},
+			}
+		}
+	}
+
+	return nil
+}
+
+// isUsernameAllowed returns ErrNameNotAllowed if the given name or pattern of
+// the name is not allowed as a username.
+func isUsernameAllowed(name string) error {
+	return isNameAllowed(reservedUsernames, reservedUsernamePatterns, name)
 }
