@@ -1310,12 +1310,12 @@ func FilterRepositoryWithIssues(repoIDs []int64) ([]int64, error) {
 //
 // Deprecated: Use repoutil.RepositoryPath instead.
 func RepoPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".git")
+	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".git")
 }
 
 // TransferOwnership transfers all corresponding setting from old user to new one.
 func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error {
-	newOwner, err := GetUserByName(newOwnerName)
+	newOwner, err := Users.GetByUsername(context.TODO(), newOwnerName)
 	if err != nil {
 		return fmt.Errorf("get new owner '%s': %v", newOwnerName, err)
 	}
@@ -1437,7 +1437,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	}
 
 	// Rename remote repository to new path and delete local copy.
-	if err = os.MkdirAll(UserPath(newOwner.Name), os.ModePerm); err != nil {
+	if err = os.MkdirAll(repoutil.UserPath(newOwner.Name), os.ModePerm); err != nil {
 		return err
 	}
 	if err = os.Rename(RepoPath(owner.Name, repo.Name), RepoPath(newOwner.Name, repo.Name)); err != nil {
@@ -1606,7 +1606,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 	}
 
 	// In case is a organization.
-	org, err := GetUserByID(ownerID)
+	org, err := Users.GetByID(context.TODO(), ownerID)
 	if err != nil {
 		return err
 	}
@@ -1724,7 +1724,7 @@ func GetRepositoryByRef(ref string) (*Repository, error) {
 	}
 
 	userName, repoName := ref[:n], ref[n+1:]
-	user, err := GetUserByName(userName)
+	user, err := Users.GetByUsername(context.TODO(), userName)
 	if err != nil {
 		return nil, err
 	}

@@ -58,14 +58,14 @@ func orgsList(t *testing.T, db *orgs) {
 	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET %s = ? WHERE id = ?", "user", "type"),
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
 		UserTypeOrganization, org1.ID,
 	).Error
 	require.NoError(t, err)
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET %s = ? WHERE id = ?", "user", "type"),
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
 		UserTypeOrganization, org2.ID,
 	).Error
 	require.NoError(t, err)
@@ -80,12 +80,12 @@ func orgsList(t *testing.T, db *orgs) {
 
 	tests := []struct {
 		name         string
-		opts         ListOrgOptions
+		opts         ListOrgsOptions
 		wantOrgNames []string
 	}{
 		{
 			name: "only public memberships for a user",
-			opts: ListOrgOptions{
+			opts: ListOrgsOptions{
 				MemberID:              alice.ID,
 				IncludePrivateMembers: false,
 			},
@@ -93,7 +93,7 @@ func orgsList(t *testing.T, db *orgs) {
 		},
 		{
 			name: "all memberships for a user",
-			opts: ListOrgOptions{
+			opts: ListOrgsOptions{
 				MemberID:              alice.ID,
 				IncludePrivateMembers: true,
 			},
@@ -101,7 +101,7 @@ func orgsList(t *testing.T, db *orgs) {
 		},
 		{
 			name: "no membership for a non-existent user",
-			opts: ListOrgOptions{
+			opts: ListOrgsOptions{
 				MemberID:              404,
 				IncludePrivateMembers: true,
 			},

@@ -71,7 +71,7 @@ func TeamsAction(c *context.Context) {
 		}
 		uname := c.Query("uname")
 		var u *db.User
-		u, err = db.GetUserByName(uname)
+		u, err = db.Users.GetByUsername(c.Req.Context(), uname)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Flash.Error(c.Tr("form.user_not_exist"))

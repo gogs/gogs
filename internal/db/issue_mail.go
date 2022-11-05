@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/unknwon/com"
@@ -124,7 +125,7 @@ func mailIssueCommentToParticipants(issue *Issue, doer *User, mentions []string)
 			continue
 		}
 
-		to, err := GetUserByID(watchers[i].UserID)
+		to, err := Users.GetByID(context.TODO(), watchers[i].UserID)
 		if err != nil {
 			return fmt.Errorf("GetUserByID [%d]: %v", watchers[i].UserID, err)
 		}

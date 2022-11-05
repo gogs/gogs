@@ -5,6 +5,8 @@
 package admin
 
 import (
+	gocontext "context"
+
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
@@ -21,9 +23,13 @@ func Organizations(c *context.Context) {
 	c.Data["PageIsAdminOrganizations"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.UserTypeOrganization,
-		Counter:  db.CountOrganizations,
-		Ranger:   db.Organizations,
+		Type: db.UserTypeOrganization,
+		Counter: func(gocontext.Context) int64 {
+			return db.CountOrganizations()
+		},
+		Ranger: func(_ gocontext.Context, page, pageSize int) ([]*db.User, error) {
+			return db.Organizations(page, pageSize)
+		},
 		PageSize: conf.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  ORGS,

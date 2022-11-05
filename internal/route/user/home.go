@@ -31,7 +31,7 @@ func getDashboardContextUser(c *context.Context) *db.User {
 	orgName := c.Params(":org")
 	if len(orgName) > 0 {
 		// Organization.
-		org, err := db.GetUserByName(orgName)
+		org, err := db.Users.GetByUsername(c.Req.Context(), orgName)
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return nil
@@ -42,7 +42,7 @@ func getDashboardContextUser(c *context.Context) *db.User {
 
 	orgs, err := db.Orgs.List(
 		c.Req.Context(),
-		db.ListOrgOptions{
+		db.ListOrgsOptions{
 			MemberID:              c.User.ID,
 			IncludePrivateMembers: true,
 		},
@@ -81,7 +81,7 @@ func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile
 		// Cache results to reduce queries.
 		_, ok := unameAvatars[act.ActUserName]
 		if !ok {
-			u, err := db.GetUserByName(act.ActUserName)
+			u, err := db.Users.GetByUsername(c.Req.Context(), act.ActUserName)
 			if err != nil {
 				if db.IsErrUserNotExist(err) {
 					continue
@@ -444,7 +444,7 @@ func showOrgProfile(c *context.Context) {
 }
 
 func Email2User(c *context.Context) {
-	u, err := db.GetUserByEmail(c.Query("email"))
+	u, err := db.Users.GetByEmail(c.Req.Context(), c.Query("email"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by email")
 		return

@@ -55,7 +55,7 @@ func Search(c *context.APIContext) {
 }
 
 func GetInfo(c *context.APIContext) {
-	u, err := db.GetUserByName(c.Params(":username"))
+	u, err := db.Users.GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return
