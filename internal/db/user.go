@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
@@ -57,115 +56,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 // TODO(unknwon): Delete me once no more call sites in this file.
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
-}
-
-var (
-	reservedUsernames    = []string{"-", "explore", "create", "assets", "css", "img", "js", "less", "plugins", "debug", "raw", "install", "api", "avatar", "user", "org", "help", "stars", "issues", "pulls", "commits", "repo", "template", "admin", "new", ".", ".."}
-	reservedUserPatterns = []string{"*.keys"}
-)
-
-type ErrNameNotAllowed struct {
-	args errutil.Args
-}
-
-func IsErrNameNotAllowed(err error) bool {
-	_, ok := err.(ErrNameNotAllowed)
-	return ok
-}
-
-func (err ErrNameNotAllowed) Value() string {
-	val, ok := err.args["name"].(string)
-	if ok {
-		return val
-	}
-
-	val, ok = err.args["pattern"].(string)
-	if ok {
-		return val
-	}
-
-	return "<value not found>"
-}
-
-func (err ErrNameNotAllowed) Error() string {
-	return fmt.Sprintf("name is not allowed: %v", err.args)
-}
-
-// isNameAllowed checks if name is reserved or pattern of name is not allowed
-// based on given reserved names and patterns.
-// Names are exact match, patterns can be prefix or suffix match with placeholder '*'.
-func isNameAllowed(names, patterns []string, name string) error {
-	name = strings.TrimSpace(strings.ToLower(name))
-	if utf8.RuneCountInString(name) == 0 {
-		return ErrNameNotAllowed{args: errutil.Args{"reason": "empty name"}}
-	}
-
-	for i := range names {
-		if name == names[i] {
-			return ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": name}}
-		}
-	}
-
-	for _, pat := range patterns {
-		if pat[0] == '*' && strings.HasSuffix(name, pat[1:]) ||
-			(pat[len(pat)-1] == '*' && strings.HasPrefix(name, pat[:len(pat)-1])) {
-			return ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "pattern": pat}}
-		}
-	}
-
-	return nil
-}
-
-// isUsernameAllowed return an error if given name is a reserved name or pattern for users.
-func isUsernameAllowed(name string) error {
-	return isNameAllowed(reservedUsernames, reservedUserPatterns, name)
-}
-
-// CreateUser creates record of a new user.
-//
-// Deprecated: Use Users.Create instead.
-func CreateUser(u *User) (err error) {
-	if err = isUsernameAllowed(u.Name); err != nil {
-		return err
-	}
-
-	if Users.IsUsernameUsed(context.TODO(), u.Name) {
-		return ErrUserAlreadyExist{args: errutil.Args{"name": u.Name}}
-	}
-
-	u.Email = strings.ToLower(u.Email)
-	isExist, err := IsEmailUsed(u.Email)
-	if err != nil {
-		return err
-	} else if isExist {
-		return ErrEmailAlreadyUsed{args: errutil.Args{"email": u.Email}}
-	}
-
-	u.LowerName = strings.ToLower(u.Name)
-	u.AvatarEmail = u.Email
-	u.Avatar = tool.HashEmail(u.AvatarEmail)
-	if u.Rands, err = userutil.RandomSalt(); err != nil {
-		return err
-	}
-	if u.Salt, err = userutil.RandomSalt(); err != nil {
-		return err
-	}
-	u.Password = userutil.EncodePassword(u.Password, u.Salt)
-	u.MaxRepoCreation = -1
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if _, err = sess.Insert(u); err != nil {
-		return err
-	} else if err = os.MkdirAll(UserPath(u.Name), os.ModePerm); err != nil {
-		return err
-	}
-
-	return sess.Commit()
 }
 
 func countUsers(e Engine) int64 {

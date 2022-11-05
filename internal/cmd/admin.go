@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -151,17 +152,21 @@ func runCreateUser(c *cli.Context) error {
 		return errors.Wrap(err, "set engine")
 	}
 
-	if err := db.CreateUser(&db.User{
-		Name:     c.String("name"),
-		Email:    c.String("email"),
-		Password: c.String("password"),
-		IsActive: true,
-		IsAdmin:  c.Bool("admin"),
-	}); err != nil {
-		return fmt.Errorf("CreateUser: %v", err)
+	user, err := db.Users.Create(
+		context.Background(),
+		c.String("name"),
+		c.String("email"),
+		db.CreateUserOptions{
+			Password:  c.String("password"),
+			Activated: true,
+			Admin:     c.Bool("admin"),
+		},
+	)
+	if err != nil {
+		return errors.Wrap(err, "create user")
 	}
 
-	fmt.Printf("New user '%s' has been successfully created!\n", c.String("name"))
+	fmt.Printf("New user %q has been successfully created!\n", user.Name)
 	return nil
 }
 

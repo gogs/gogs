@@ -1081,8 +1081,14 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 }
 
 var (
-	reservedRepoNames    = []string{".", ".."}
-	reservedRepoPatterns = []string{"*.git", "*.wiki"}
+	reservedRepoNames = map[string]struct{}{
+		".":  {},
+		"..": {},
+	}
+	reservedRepoPatterns = []string{
+		"*.git",
+		"*.wiki",
+	}
 )
 
 // isRepoNameAllowed return an error if given name is a reserved name or pattern for repositories.

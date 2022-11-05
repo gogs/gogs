@@ -18,12 +18,12 @@ import (
 	"gogs.io/gogs/internal/userutil"
 )
 
-func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginName string) {
+func parseLoginSource(c *context.APIContext, sourceID int64) {
 	if sourceID == 0 {
 		return
 	}
 
-	source, err := db.LoginSources.GetByID(c.Req.Context(), sourceID)
+	_, err := db.LoginSources.GetByID(c.Req.Context(), sourceID)
 	if err != nil {
 		if db.IsErrLoginSourceNotExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
@@ -32,26 +32,27 @@ func parseLoginSource(c *context.APIContext, u *db.User, sourceID int64, loginNa
 		}
 		return
 	}
-
-	u.LoginSource = source.ID
-	u.LoginName = loginName
 }
 
 func CreateUser(c *context.APIContext, form api.CreateUserOption) {
-	u := &db.User{
-		Name:     form.Username,
-		FullName: form.FullName,
-		Email:    form.Email,
-		Password: form.Password,
-		IsActive: true,
-	}
-
-	parseLoginSource(c, u, form.SourceID, form.LoginName)
+	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
 	}
 
-	if err := db.CreateUser(u); err != nil {
+	user, err := db.Users.Create(
+		c.Req.Context(),
+		form.Username,
+		form.Email,
+		db.CreateUserOptions{
+			FullName:    form.FullName,
+			Password:    form.Password,
+			LoginSource: form.SourceID,
+			LoginName:   form.LoginName,
+			Activated:   true,
+		},
+	)
+	if err != nil {
 		if db.IsErrUserAlreadyExist(err) ||
 			db.IsErrEmailAlreadyUsed(err) ||
 			db.IsErrNameNotAllowed(err) {
@@ -61,14 +62,14 @@ func CreateUser(c *context.APIContext, form api.CreateUserOption) {
 		}
 		return
 	}
-	log.Trace("Account created by admin %q: %s", c.User.Name, u.Name)
+	log.Trace("Account %q created by admin %q", user.Name, c.User.Name)
 
 	// Send email notification.
 	if form.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(u))
+		email.SendRegisterNotifyMail(c.Context.Context, db.NewMailerUser(user))
 	}
 
-	c.JSON(http.StatusCreated, u.APIFormat())
+	c.JSON(http.StatusCreated, user.APIFormat())
 }
 
 func EditUser(c *context.APIContext, form api.EditUserOption) {
@@ -77,7 +78,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		return
 	}
 
-	parseLoginSource(c, u, form.SourceID, form.LoginName)
+	parseLoginSource(c, form.SourceID)
 	if c.Written() {
 		return
 	}
@@ -92,6 +93,7 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		u.Password = userutil.EncodePassword(u.Password, u.Salt)
 	}
 
+	u.LoginSource = form.SourceID
 	u.LoginName = form.LoginName
 	u.FullName = form.FullName
 	u.Email = form.Email
