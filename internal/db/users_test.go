@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -211,7 +212,10 @@ func usersAuthenticate(t *testing.T, db *users) {
 func usersCreate(t *testing.T, db *users) {
 	ctx := context.Background()
 
-	alice, err := db.Create(ctx, "alice", "alice@example.com",
+	alice, err := db.Create(
+		ctx,
+		"alice",
+		"alice@example.com",
 		CreateUserOptions{
 			Activated: true,
 		},
@@ -220,19 +224,32 @@ func usersCreate(t *testing.T, db *users) {
 
 	t.Run("name not allowed", func(t *testing.T) {
 		_, err := db.Create(ctx, "-", "", CreateUserOptions{})
-		wantErr := ErrNameNotAllowed{args: errutil.Args{"reason": "reserved", "name": "-"}}
+		wantErr := ErrNameNotAllowed{
+			args: errutil.Args{
+				"reason": "reserved",
+				"name":   "-",
+			},
+		}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
 		_, err := db.Create(ctx, alice.Name, "", CreateUserOptions{})
-		wantErr := ErrUserAlreadyExist{args: errutil.Args{"name": alice.Name}}
+		wantErr := ErrUserAlreadyExist{
+			args: errutil.Args{
+				"name": alice.Name,
+			},
+		}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("email already exists", func(t *testing.T) {
 		_, err := db.Create(ctx, "bob", alice.Email, CreateUserOptions{})
-		wantErr := ErrEmailAlreadyUsed{args: errutil.Args{"email": alice.Email}}
+		wantErr := ErrEmailAlreadyUsed{
+			args: errutil.Args{
+				"email": alice.Email,
+			},
+		}
 		assert.Equal(t, wantErr, err)
 	})
 
@@ -494,4 +511,19 @@ func usersUseCustomAvatar(t *testing.T, db *users) {
 	alice, err = db.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
 	assert.True(t, alice.UseCustomAvatar)
+}
+
+func TestIsUsernameAllowed(t *testing.T) {
+	for name := range reservedUsernames {
+		t.Run(name, func(t *testing.T) {
+			assert.True(t, IsErrNameNotAllowed(isUsernameAllowed(name)))
+		})
+	}
+
+	for _, pattern := range reservedUsernamePatterns {
+		t.Run(pattern, func(t *testing.T) {
+			username := strings.ReplaceAll(pattern, "*", "alice")
+			assert.True(t, IsErrNameNotAllowed(isUsernameAllowed(username)))
+		})
+	}
 }
