@@ -198,7 +198,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	} else {
 		c.User.Password = f.Password
 		var err error
-		if c.User.Salt, err = db.GetUserSalt(); err != nil {
+		if c.User.Salt, err = userutil.RandomSalt(); err != nil {
 			c.Errorf(err, "get user salt")
 			return
 		}

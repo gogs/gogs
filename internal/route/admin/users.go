@@ -189,7 +189,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 	if len(f.Password) > 0 {
 		u.Password = f.Password
 		var err error
-		if u.Salt, err = db.GetUserSalt(); err != nil {
+		if u.Salt, err = userutil.RandomSalt(); err != nil {
 			c.Error(err, "get user salt")
 			return
 		}

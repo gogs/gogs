@@ -93,6 +93,7 @@ func TestUsers(t *testing.T) {
 		{"GetByID", usersGetByID},
 		{"GetByUsername", usersGetByUsername},
 		{"HasForkedRepository", usersHasForkedRepository},
+		{"IsUsernameUsed", usersIsUsernameUsed},
 		{"ListFollowers", usersListFollowers},
 		{"ListFollowings", usersListFollowings},
 		{"UseCustomAvatar", usersUseCustomAvatar},
@@ -388,6 +389,18 @@ func usersHasForkedRepository(t *testing.T, db *users) {
 
 	has = db.HasForkedRepository(ctx, 1, 1)
 	assert.True(t, has)
+}
+
+func usersIsUsernameUsed(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	got := db.IsUsernameUsed(ctx, alice.Name)
+	assert.True(t, got)
+	got = db.IsUsernameUsed(ctx, "bob")
+	assert.False(t, got)
 }
 
 func usersListFollowers(t *testing.T, db *users) {

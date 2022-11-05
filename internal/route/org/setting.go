@@ -41,15 +41,11 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 	// Check if organization name has been changed.
 	if org.LowerName != strings.ToLower(f.Name) {
-		isExist, err := db.IsUserExist(org.ID, f.Name)
-		if err != nil {
-			c.Error(err, "check if user exists")
-			return
-		} else if isExist {
+		if db.Users.IsUsernameUsed(c.Req.Context(), f.Name) {
 			c.Data["OrgName"] = true
 			c.RenderWithErr(c.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &f)
 			return
-		} else if err = db.ChangeUserName(org, f.Name); err != nil {
+		} else if err := db.ChangeUserName(org, f.Name); err != nil {
 			c.Data["OrgName"] = true
 			switch {
 			case db.IsErrNameNotAllowed(err):

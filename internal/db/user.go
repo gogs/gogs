@@ -24,7 +24,6 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
 )
@@ -55,34 +54,9 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 
 // Deprecated: Use OrgsUsers.CountByUser instead.
 //
-// TODO(unknwon): Delete me once no more call sites.
+// TODO(unknwon): Delete me once no more call sites in this file.
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
-}
-
-// IsUserExist checks if given user name exist,
-// the user name should be noncased unique.
-// If uid is presented, then check will rule out that one,
-// it is used when update a user name in settings page.
-func IsUserExist(uid int64, name string) (bool, error) {
-	if name == "" {
-		return false, nil
-	}
-	return x.Where("id != ?", uid).Get(&User{LowerName: strings.ToLower(name)})
-}
-
-// GetUserSalt returns a random user salt token.
-func GetUserSalt() (string, error) {
-	return strutil.RandomChars(10)
-}
-
-// NewGhostUser creates and returns a fake user for someone who has deleted his/her account.
-func NewGhostUser() *User {
-	return &User{
-		ID:        -1,
-		Name:      "Ghost",
-		LowerName: "ghost",
-	}
 }
 
 var (
@@ -148,21 +122,19 @@ func isUsernameAllowed(name string) error {
 }
 
 // CreateUser creates record of a new user.
+//
 // Deprecated: Use Users.Create instead.
 func CreateUser(u *User) (err error) {
 	if err = isUsernameAllowed(u.Name); err != nil {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, u.Name)
-	if err != nil {
-		return err
-	} else if isExist {
+	if Users.IsUsernameUsed(context.TODO(), u.Name) {
 		return ErrUserAlreadyExist{args: errutil.Args{"name": u.Name}}
 	}
 
 	u.Email = strings.ToLower(u.Email)
-	isExist, err = IsEmailUsed(u.Email)
+	isExist, err := IsEmailUsed(u.Email)
 	if err != nil {
 		return err
 	} else if isExist {
@@ -172,10 +144,10 @@ func CreateUser(u *User) (err error) {
 	u.LowerName = strings.ToLower(u.Name)
 	u.AvatarEmail = u.Email
 	u.Avatar = tool.HashEmail(u.AvatarEmail)
-	if u.Rands, err = GetUserSalt(); err != nil {
+	if u.Rands, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
-	if u.Salt, err = GetUserSalt(); err != nil {
+	if u.Salt, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
 	u.Password = userutil.EncodePassword(u.Password, u.Salt)
@@ -273,10 +245,7 @@ func ChangeUserName(u *User, newUserName string) (err error) {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, newUserName)
-	if err != nil {
-		return err
-	} else if isExist {
+	if Users.IsUsernameUsed(context.TODO(), newUserName) {
 		return ErrUserAlreadyExist{args: errutil.Args{"name": newUserName}}
 	}
 

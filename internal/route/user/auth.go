@@ -414,7 +414,7 @@ func Activate(c *context.Context) {
 	if user := db.VerifyUserActiveCode(code); user != nil {
 		user.IsActive = true
 		var err error
-		if user.Rands, err = db.GetUserSalt(); err != nil {
+		if user.Rands, err = userutil.RandomSalt(); err != nil {
 			c.Error(err, "get user salt")
 			return
 		}
@@ -547,11 +547,11 @@ func ResetPasswdPost(c *context.Context) {
 
 		u.Password = passwd
 		var err error
-		if u.Rands, err = db.GetUserSalt(); err != nil {
+		if u.Rands, err = userutil.RandomSalt(); err != nil {
 			c.Error(err, "get user salt")
 			return
 		}
-		if u.Salt, err = db.GetUserSalt(); err != nil {
+		if u.Salt, err = userutil.RandomSalt(); err != nil {
 			c.Error(err, "get user salt")
 			return
 		}
