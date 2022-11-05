@@ -69,11 +69,18 @@ func parseBaseRepository(c *context.Context) *db.Repository {
 	}
 	c.Data["ForkFrom"] = baseRepo.Owner.Name + "/" + baseRepo.Name
 
-	if err := c.User.GetOrganizations(true); err != nil {
-		c.Error(err, "get organizations")
+	orgs, err := db.Orgs.List(
+		c.Req.Context(),
+		db.ListOrgOptions{
+			MemberID:              c.User.ID,
+			IncludePrivateMembers: true,
+		},
+	)
+	if err != nil {
+		c.Error(err, "list organizations")
 		return nil
 	}
-	c.Data["Orgs"] = c.User.Orgs
+	c.Data["Orgs"] = orgs
 
 	return baseRepo
 }

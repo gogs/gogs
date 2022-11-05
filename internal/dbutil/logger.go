@@ -15,5 +15,5 @@ type Logger struct {
 }
 
 func (l *Logger) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(l.Writer, format, args...)
+	_, _ = fmt.Fprintf(l.Writer, format, args...)
 }

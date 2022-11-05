@@ -60,23 +60,6 @@ func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
 }
 
-// GetOrganizations returns all organizations that user belongs to.
-func (u *User) GetOrganizations(showPrivate bool) error {
-	orgIDs, err := GetOrgIDsByUserID(u.ID, showPrivate)
-	if err != nil {
-		return fmt.Errorf("GetOrgIDsByUserID: %v", err)
-	}
-	if len(orgIDs) == 0 {
-		return nil
-	}
-
-	u.Orgs = make([]*User, 0, len(orgIDs))
-	if err = x.Where("type = ?", UserTypeOrganization).In("id", orgIDs).Find(&u.Orgs); err != nil {
-		return err
-	}
-	return nil
-}
-
 // IsUserExist checks if given user name exist,
 // the user name should be noncased unique.
 // If uid is presented, then check will rule out that one,

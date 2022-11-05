@@ -43,14 +43,21 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 }
 
 func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
-	if err := u.GetOrganizations(all); err != nil {
-		c.Error(err, "get organization")
+	orgs, err := db.Orgs.List(
+		c.Req.Context(),
+		db.ListOrgOptions{
+			MemberID:              u.ID,
+			IncludePrivateMembers: all,
+		},
+	)
+	if err != nil {
+		c.Error(err, "list organizations")
 		return
 	}
 
-	apiOrgs := make([]*api.Organization, len(u.Orgs))
-	for i := range u.Orgs {
-		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
+	apiOrgs := make([]*api.Organization, len(orgs))
+	for i := range orgs {
+		apiOrgs[i] = convert.ToOrganization(orgs[i])
 	}
 	c.JSONSuccess(&apiOrgs)
 }
