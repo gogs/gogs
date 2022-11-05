@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -104,18 +105,19 @@ func CreateOrganization(org, owner *User) (err error) {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, org.Name)
-	if err != nil {
-		return err
-	} else if isExist {
-		return ErrUserAlreadyExist{args: errutil.Args{"name": org.Name}}
+	if Users.IsUsernameUsed(context.TODO(), org.Name) {
+		return ErrUserAlreadyExist{
+			args: errutil.Args{
+				"name": org.Name,
+			},
+		}
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
-	if org.Rands, err = GetUserSalt(); err != nil {
+	if org.Rands, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
-	if org.Salt, err = GetUserSalt(); err != nil {
+	if org.Salt, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
 	org.UseCustomAvatar = true

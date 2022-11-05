@@ -23,6 +23,7 @@ import (
 
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -131,4 +132,10 @@ func MailResendCacheKey(userID int64) string {
 // TwoFactorCacheKey returns the key used for caching two factor passcode.
 func TwoFactorCacheKey(userID int64, passcode string) string {
 	return fmt.Sprintf("twoFactor::%d::%s", userID, passcode)
+}
+
+// RandomSalt returns randomly generated 10-character string that can be used as
+// the user salt.
+func RandomSalt() (string, error) {
+	return strutil.RandomChars(10)
 }
