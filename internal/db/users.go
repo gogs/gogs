@@ -62,6 +62,8 @@ type UsersStore interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	// HasForkedRepository returns true if the user has forked given repository.
 	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
+	// IsUsernameUsed returns true if the given username has been used.
+	IsUsernameUsed(ctx context.Context, username string) bool
 	// ListFollowers returns a list of users that are following the given user.
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
@@ -231,11 +233,8 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		return nil, err
 	}
 
-	_, err = db.GetByUsername(ctx, username)
-	if err == nil {
+	if db.IsUsernameUsed(ctx, username) {
 		return nil, ErrUserAlreadyExist{args: errutil.Args{"name": username}}
-	} else if !IsErrUserNotExist(err) {
-		return nil, err
 	}
 
 	_, err = db.GetByEmail(ctx, email)
@@ -262,11 +261,11 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		AvatarEmail:     email,
 	}
 
-	user.Rands, err = GetUserSalt()
+	user.Rands, err = userutil.RandomSalt()
 	if err != nil {
 		return nil, err
 	}
-	user.Salt, err = GetUserSalt()
+	user.Salt, err = userutil.RandomSalt()
 	if err != nil {
 		return nil, err
 	}
@@ -369,6 +368,17 @@ func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) 
 	var count int64
 	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
 	return count > 0
+}
+
+func (db *users) IsUsernameUsed(ctx context.Context, username string) bool {
+	if username == "" {
+		return false
+	}
+	return db.WithContext(ctx).
+		Select("id").
+		Where("lower_name = ?", strings.ToLower(username)).
+		First(&User{}).
+		Error != gorm.ErrRecordNotFound
 }
 
 func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
@@ -567,6 +577,16 @@ func (u *User) DisplayName() string {
 		return u.FullName
 	}
 	return u.Name
+}
+
+// NewGhostUser creates and returns a fake user for people who has deleted their
+// accounts.
+func NewGhostUser() *User {
+	return &User{
+		ID:        -1,
+		Name:      "Ghost",
+		LowerName: "ghost",
+	}
 }
 
 // HomeURLPath returns the URL path to the user or organization home page.

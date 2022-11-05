@@ -225,16 +225,12 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		newOwner := c.Query("new_owner_name")
-		isExist, err := db.IsUserExist(0, newOwner)
-		if err != nil {
-			c.Error(err, "check if user exists")
-			return
-		} else if !isExist {
+		if !db.Users.IsUsernameUsed(c.Req.Context(), newOwner) {
 			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
 
-		if err = db.TransferOwnership(c.User, newOwner, repo); err != nil {
+		if err := db.TransferOwnership(c.User, newOwner, repo); err != nil {
 			if db.IsErrRepoAlreadyExist(err) {
 				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {

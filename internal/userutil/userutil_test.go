@@ -191,3 +191,11 @@ func TestTwoFactorCacheKey(t *testing.T) {
 	got := TwoFactorCacheKey(1, "113654")
 	assert.Equal(t, "twoFactor::1::113654", got)
 }
+
+func TestRandomSalt(t *testing.T) {
+	salt1, err := RandomSalt()
+	require.NoError(t, err)
+	salt2, err := RandomSalt()
+	require.NoError(t, err)
+	assert.NotEqual(t, salt1, salt2)
+}

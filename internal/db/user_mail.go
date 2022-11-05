@@ -10,6 +10,7 @@ import (
 
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/userutil"
 )
 
 // EmailAddresses is the list of all email addresses of a user. Can contain the
@@ -122,7 +123,7 @@ func (email *EmailAddress) Activate() error {
 	if err != nil {
 		return err
 	}
-	if user.Rands, err = GetUserSalt(); err != nil {
+	if user.Rands, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
 
