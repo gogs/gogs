@@ -2295,6 +2295,9 @@ type MockUsersStore struct {
 	// AuthenticateFunc is an instance of a mock function object controlling
 	// the behavior of the method Authenticate.
 	AuthenticateFunc *UsersStoreAuthenticateFunc
+	// CountFunc is an instance of a mock function object controlling the
+	// behavior of the method Count.
+	CountFunc *UsersStoreCountFunc
 	// CreateFunc is an instance of a mock function object controlling the
 	// behavior of the method Create.
 	CreateFunc *UsersStoreCreateFunc
@@ -2316,6 +2319,9 @@ type MockUsersStore struct {
 	// IsUsernameUsedFunc is an instance of a mock function object
 	// controlling the behavior of the method IsUsernameUsed.
 	IsUsernameUsedFunc *UsersStoreIsUsernameUsedFunc
+	// ListFunc is an instance of a mock function object controlling the
+	// behavior of the method List.
+	ListFunc *UsersStoreListFunc
 	// ListFollowersFunc is an instance of a mock function object
 	// controlling the behavior of the method ListFollowers.
 	ListFollowersFunc *UsersStoreListFollowersFunc
@@ -2333,6 +2339,11 @@ func NewMockUsersStore() *MockUsersStore {
 	return &MockUsersStore{
 		AuthenticateFunc: &UsersStoreAuthenticateFunc{
 			defaultHook: func(context.Context, string, string, int64) (r0 *db.User, r1 error) {
+				return
+			},
+		},
+		CountFunc: &UsersStoreCountFunc{
+			defaultHook: func(context.Context) (r0 int64) {
 				return
 			},
 		},
@@ -2371,6 +2382,11 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
+		ListFunc: &UsersStoreListFunc{
+			defaultHook: func(context.Context, int, int) (r0 []*db.User, r1 error) {
+				return
+			},
+		},
 		ListFollowersFunc: &UsersStoreListFollowersFunc{
 			defaultHook: func(context.Context, int64, int, int) (r0 []*db.User, r1 error) {
 				return
@@ -2396,6 +2412,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 		AuthenticateFunc: &UsersStoreAuthenticateFunc{
 			defaultHook: func(context.Context, string, string, int64) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.Authenticate")
+			},
+		},
+		CountFunc: &UsersStoreCountFunc{
+			defaultHook: func(context.Context) int64 {
+				panic("unexpected invocation of MockUsersStore.Count")
 			},
 		},
 		CreateFunc: &UsersStoreCreateFunc{
@@ -2433,6 +2454,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.IsUsernameUsed")
 			},
 		},
+		ListFunc: &UsersStoreListFunc{
+			defaultHook: func(context.Context, int, int) ([]*db.User, error) {
+				panic("unexpected invocation of MockUsersStore.List")
+			},
+		},
 		ListFollowersFunc: &UsersStoreListFollowersFunc{
 			defaultHook: func(context.Context, int64, int, int) ([]*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.ListFollowers")
@@ -2458,6 +2484,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		AuthenticateFunc: &UsersStoreAuthenticateFunc{
 			defaultHook: i.Authenticate,
 		},
+		CountFunc: &UsersStoreCountFunc{
+			defaultHook: i.Count,
+		},
 		CreateFunc: &UsersStoreCreateFunc{
 			defaultHook: i.Create,
 		},
@@ -2478,6 +2507,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		IsUsernameUsedFunc: &UsersStoreIsUsernameUsedFunc{
 			defaultHook: i.IsUsernameUsed,
+		},
+		ListFunc: &UsersStoreListFunc{
+			defaultHook: i.List,
 		},
 		ListFollowersFunc: &UsersStoreListFollowersFunc{
 			defaultHook: i.ListFollowers,
@@ -2603,6 +2635,107 @@ func (c UsersStoreAuthenticateFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreAuthenticateFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreCountFunc describes the behavior when the Count method of the
+// parent MockUsersStore instance is invoked.
+type UsersStoreCountFunc struct {
+	defaultHook func(context.Context) int64
+	hooks       []func(context.Context) int64
+	history     []UsersStoreCountFuncCall
+	mutex       sync.Mutex
+}
+
+// Count delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) Count(v0 context.Context) int64 {
+	r0 := m.CountFunc.nextHook()(v0)
+	m.CountFunc.appendCall(UsersStoreCountFuncCall{v0, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Count method of the
+// parent MockUsersStore instance is invoked and the hook queue is empty.
+func (f *UsersStoreCountFunc) SetDefaultHook(hook func(context.Context) int64) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Count method of the parent MockUsersStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreCountFunc) PushHook(hook func(context.Context) int64) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreCountFunc) SetDefaultReturn(r0 int64) {
+	f.SetDefaultHook(func(context.Context) int64 {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreCountFunc) PushReturn(r0 int64) {
+	f.PushHook(func(context.Context) int64 {
+		return r0
+	})
+}
+
+func (f *UsersStoreCountFunc) nextHook() func(context.Context) int64 {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreCountFunc) appendCall(r0 UsersStoreCountFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreCountFuncCall objects describing
+// the invocations of this function.
+func (f *UsersStoreCountFunc) History() []UsersStoreCountFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreCountFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreCountFuncCall is an object that describes an invocation of
+// method Count on an instance of MockUsersStore.
+type UsersStoreCountFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 int64
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreCountFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreCountFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreCreateFunc describes the behavior when the Create method of the
@@ -3361,6 +3494,116 @@ func (c UsersStoreIsUsernameUsedFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreIsUsernameUsedFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
+}
+
+// UsersStoreListFunc describes the behavior when the List method of the
+// parent MockUsersStore instance is invoked.
+type UsersStoreListFunc struct {
+	defaultHook func(context.Context, int, int) ([]*db.User, error)
+	hooks       []func(context.Context, int, int) ([]*db.User, error)
+	history     []UsersStoreListFuncCall
+	mutex       sync.Mutex
+}
+
+// List delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) List(v0 context.Context, v1 int, v2 int) ([]*db.User, error) {
+	r0, r1 := m.ListFunc.nextHook()(v0, v1, v2)
+	m.ListFunc.appendCall(UsersStoreListFuncCall{v0, v1, v2, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the List method of the
+// parent MockUsersStore instance is invoked and the hook queue is empty.
+func (f *UsersStoreListFunc) SetDefaultHook(hook func(context.Context, int, int) ([]*db.User, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// List method of the parent MockUsersStore instance invokes the hook at the
+// front of the queue and discards it. After the queue is empty, the default
+// hook function is invoked for any future action.
+func (f *UsersStoreListFunc) PushHook(hook func(context.Context, int, int) ([]*db.User, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreListFunc) SetDefaultReturn(r0 []*db.User, r1 error) {
+	f.SetDefaultHook(func(context.Context, int, int) ([]*db.User, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreListFunc) PushReturn(r0 []*db.User, r1 error) {
+	f.PushHook(func(context.Context, int, int) ([]*db.User, error) {
+		return r0, r1
+	})
+}
+
+func (f *UsersStoreListFunc) nextHook() func(context.Context, int, int) ([]*db.User, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreListFunc) appendCall(r0 UsersStoreListFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreListFuncCall objects describing
+// the invocations of this function.
+func (f *UsersStoreListFunc) History() []UsersStoreListFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreListFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreListFuncCall is an object that describes an invocation of
+// method List on an instance of MockUsersStore.
+type UsersStoreListFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []*db.User
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreListFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreListFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreListFollowersFunc describes the behavior when the ListFollowers

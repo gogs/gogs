@@ -5,6 +5,7 @@
 package route
 
 import (
+	gocontext "context"
 	"fmt"
 	"net/http"
 
@@ -84,8 +85,8 @@ func ExploreRepos(c *context.Context) {
 
 type UserSearchOptions struct {
 	Type     db.UserType
-	Counter  func() int64
-	Ranger   func(int, int) ([]*db.User, error)
+	Counter  func(ctx gocontext.Context) int64
+	Ranger   func(ctx gocontext.Context, page, pageSize int) ([]*db.User, error)
 	PageSize int
 	OrderBy  string
 	TplName  string
@@ -105,12 +106,12 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 
 	keyword := c.Query("q")
 	if keyword == "" {
-		users, err = opts.Ranger(page, opts.PageSize)
+		users, err = opts.Ranger(c.Req.Context(), page, opts.PageSize)
 		if err != nil {
 			c.Error(err, "ranger")
 			return
 		}
-		count = opts.Counter()
+		count = opts.Counter(c.Req.Context())
 	} else {
 		users, count, err = db.SearchUserByName(&db.SearchUserOptions{
 			Keyword:  keyword,
@@ -139,8 +140,8 @@ func ExploreUsers(c *context.Context) {
 
 	RenderUserSearch(c, &UserSearchOptions{
 		Type:     db.UserTypeIndividual,
-		Counter:  db.CountUsers,
-		Ranger:   db.ListUsers,
+		Counter:  db.Users.Count,
+		Ranger:   db.Users.List,
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_USERS,
@@ -153,9 +154,13 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type:     db.UserTypeOrganization,
-		Counter:  db.CountOrganizations,
-		Ranger:   db.Organizations,
+		Type: db.UserTypeOrganization,
+		Counter: func(gocontext.Context) int64 {
+			return db.CountOrganizations()
+		},
+		Ranger: func(_ gocontext.Context, page, pageSize int) ([]*db.User, error) {
+			return db.Organizations(page, pageSize)
+		},
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",
 		TplName:  EXPLORE_ORGANIZATIONS,

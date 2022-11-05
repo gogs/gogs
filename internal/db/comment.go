@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -94,7 +95,7 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 
 func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Poster == nil {
-		c.Poster, err = GetUserByID(c.PosterID)
+		c.Poster, err = Users.GetByID(context.TODO(), c.PosterID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				c.PosterID = -1

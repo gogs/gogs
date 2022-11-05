@@ -380,7 +380,7 @@ func SettingsCollaborationPost(c *context.Context) {
 		return
 	}
 
-	u, err := db.GetUserByName(name)
+	u, err := db.Users.GetByUsername(c.Req.Context(), name)
 	if err != nil {
 		if db.IsErrUserNotExist(err) {
 			c.Flash.Error(c.Tr("form.user_not_exist"))

@@ -18,6 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/dbtest"
+	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/userutil"
@@ -88,6 +89,7 @@ func TestUsers(t *testing.T) {
 		test func(t *testing.T, db *users)
 	}{
 		{"Authenticate", usersAuthenticate},
+		{"Count", usersCount},
 		{"Create", usersCreate},
 		{"DeleteCustomAvatar", usersDeleteCustomAvatar},
 		{"GetByEmail", usersGetByEmail},
@@ -95,6 +97,7 @@ func TestUsers(t *testing.T) {
 		{"GetByUsername", usersGetByUsername},
 		{"HasForkedRepository", usersHasForkedRepository},
 		{"IsUsernameUsed", usersIsUsernameUsed},
+		{"List", usersList},
 		{"ListFollowers", usersListFollowers},
 		{"ListFollowings", usersListFollowings},
 		{"UseCustomAvatar", usersUseCustomAvatar},
@@ -207,6 +210,31 @@ func usersAuthenticate(t *testing.T, db *users) {
 		require.NoError(t, err)
 		assert.Equal(t, "cindy@example.com", user.Email)
 	})
+}
+
+func usersCount(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	// Has no user initially
+	got := db.Count(ctx)
+	assert.Equal(t, int64(0), got)
+
+	_, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	got = db.Count(ctx)
+	assert.Equal(t, int64(1), got)
+
+	// Create an organization shouldn't count
+	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
+	org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	err = db.Exec(
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
+		UserTypeOrganization, org1.ID,
+	).Error
+	require.NoError(t, err)
+	got = db.Count(ctx)
+	assert.Equal(t, int64(1), got)
 }
 
 func usersCreate(t *testing.T, db *users) {
@@ -418,6 +446,41 @@ func usersIsUsernameUsed(t *testing.T, db *users) {
 	assert.True(t, got)
 	got = db.IsUsernameUsed(ctx, "bob")
 	assert.False(t, got)
+}
+
+func usersList(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	// Create an organization shouldn't count
+	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
+	org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	err = db.Exec(
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
+		UserTypeOrganization, org1.ID,
+	).Error
+	require.NoError(t, err)
+
+	got, err := db.List(ctx, 1, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, alice.ID, got[0].ID)
+
+	got, err = db.List(ctx, 2, 1)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, bob.ID, got[0].ID)
+
+	got, err = db.List(ctx, 1, 3)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, alice.ID, got[0].ID)
+	assert.Equal(t, bob.ID, got[1].ID)
 }
 
 func usersListFollowers(t *testing.T, db *users) {

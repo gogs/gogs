@@ -18,7 +18,7 @@ import (
 // NOTE: All methods are sorted in alphabetical order.
 type OrgsStore interface {
 	// List returns a list of organizations filtered by options.
-	List(ctx context.Context, opts ListOrgOptions) ([]*Organization, error)
+	List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error)
 }
 
 var Orgs OrgsStore
@@ -35,14 +35,14 @@ func NewOrgsStore(db *gorm.DB) OrgsStore {
 	return &orgs{DB: db}
 }
 
-type ListOrgOptions struct {
+type ListOrgsOptions struct {
 	// Filter by the membership with the given user ID.
 	MemberID int64
 	// Whether to include private memberships.
 	IncludePrivateMembers bool
 }
 
-func (db *orgs) List(ctx context.Context, opts ListOrgOptions) ([]*Organization, error) {
+func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error) {
 	if opts.MemberID <= 0 {
 		return nil, errors.New("MemberID must be greater than 0")
 	}

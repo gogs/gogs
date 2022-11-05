@@ -33,8 +33,8 @@ func Users(c *context.Context) {
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
 		Type:     db.UserTypeIndividual,
-		Counter:  db.CountUsers,
-		Ranger:   db.ListUsers,
+		Counter:  db.Users.Count,
+		Ranger:   db.Users.List,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -119,7 +119,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 }
 
 func prepareUserInfo(c *context.Context) *db.User {
-	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := db.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return nil
@@ -223,7 +223,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := db.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return

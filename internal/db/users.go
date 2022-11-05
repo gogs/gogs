@@ -45,6 +45,8 @@ type UsersStore interface {
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
 	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
+	// Count returns the total number of users.
+	Count(ctx context.Context) int64
 	// Create creates a new user and persists to database. It returns
 	// ErrUserAlreadyExist when a user with same name already exists, or
 	// ErrEmailAlreadyUsed if the email has been used by another user.
@@ -65,6 +67,9 @@ type UsersStore interface {
 	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
 	// IsUsernameUsed returns true if the given username has been used.
 	IsUsernameUsed(ctx context.Context, username string) bool
+	// List returns a list of users. Results are paginated by given page and page
+	// size, and sorted by primary key (id) in ascending order.
+	List(ctx context.Context, page, pageSize int) ([]*User, error)
 	// ListFollowers returns a list of users that are following the given user.
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
@@ -183,6 +188,12 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 	)
 }
 
+func (db *users) Count(ctx context.Context) int64 {
+	var count int64
+	db.WithContext(ctx).Model(&User{}).Where("type = ?", UserTypeIndividual).Count(&count)
+	return count
+}
+
 type CreateUserOptions struct {
 	FullName    string
 	Password    string
@@ -242,6 +253,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		}
 	}
 
+	email = strings.ToLower(email)
 	_, err = db.GetByEmail(ctx, email)
 	if err == nil {
 		return nil, ErrEmailAlreadyUsed{
@@ -315,11 +327,10 @@ func (ErrUserNotExist) NotFound() bool {
 }
 
 func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
-	email = strings.ToLower(email)
-
 	if email == "" {
 		return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 	}
+	email = strings.ToLower(email)
 
 	// First try to find the user by primary email
 	user := new(User)
@@ -346,7 +357,7 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 		return nil, err
 	}
 
-	return db.GetByID(ctx, emailAddress.UID)
+	return db.GetByID(ctx, emailAddress.UserID)
 }
 
 func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
@@ -388,6 +399,16 @@ func (db *users) IsUsernameUsed(ctx context.Context, username string) bool {
 		Where("lower_name = ?", strings.ToLower(username)).
 		First(&User{}).
 		Error != gorm.ErrRecordNotFound
+}
+
+func (db *users) List(ctx context.Context, page, pageSize int) ([]*User, error) {
+	users := make([]*User, 0, pageSize)
+	return users, db.WithContext(ctx).
+		Where("type = ?", UserTypeIndividual).
+		Limit(pageSize).Offset((page - 1) * pageSize).
+		Order("id ASC").
+		Find(&users).
+		Error
 }
 
 func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {

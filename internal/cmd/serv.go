@@ -161,7 +161,7 @@ func runServ(c *cli.Context) error {
 	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
 	repoName = strings.TrimSuffix(repoName, ".wiki")
 
-	owner, err := db.GetUserByName(ownerName)
+	owner, err := db.Users.GetByUsername(context.Background(), ownerName)
 	if err != nil {
 		if db.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
