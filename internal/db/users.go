@@ -20,6 +20,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/strutil"
@@ -381,16 +382,13 @@ func (db *users) ListFollowers(ctx context.Context, userID int64, page, pageSize
 		LIMIT @limit OFFSET @offset
 	*/
 	users := make([]*User, 0, pageSize)
-	tx := db.WithContext(ctx).
+	return users, db.WithContext(ctx).
+		Joins(dbutil.Quote("LEFT JOIN follow ON follow.user_id = %s.id", "user")).
 		Where("follow.follow_id = ?", userID).
 		Limit(pageSize).Offset((page - 1) * pageSize).
-		Order("follow.id DESC")
-	if conf.UsePostgreSQL {
-		tx.Joins(`LEFT JOIN follow ON follow.user_id = "user".id`)
-	} else {
-		tx.Joins(`LEFT JOIN follow ON follow.user_id = user.id`)
-	}
-	return users, tx.Find(&users).Error
+		Order("follow.id DESC").
+		Find(&users).
+		Error
 }
 
 func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error) {
@@ -404,16 +402,13 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 		LIMIT @limit OFFSET @offset
 	*/
 	users := make([]*User, 0, pageSize)
-	tx := db.WithContext(ctx).
+	return users, db.WithContext(ctx).
+		Joins(dbutil.Quote("LEFT JOIN follow ON follow.follow_id = %s.id", "user")).
 		Where("follow.user_id = ?", userID).
 		Limit(pageSize).Offset((page - 1) * pageSize).
-		Order("follow.id DESC")
-	if conf.UsePostgreSQL {
-		tx.Joins(`LEFT JOIN follow ON follow.follow_id = "user".id`)
-	} else {
-		tx.Joins(`LEFT JOIN follow ON follow.follow_id = user.id`)
-	}
-	return users, tx.Find(&users).Error
+		Order("follow.id DESC").
+		Find(&users).
+		Error
 }
 
 func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
@@ -452,7 +447,6 @@ type User struct {
 	LoginSource int64  `xorm:"NOT NULL DEFAULT 0" gorm:"not null;default:0"`
 	LoginName   string
 	Type        UserType
-	Orgs        []*User `xorm:"-" gorm:"-" json:"-"`
 	Location    string
 	Website     string
 	Rands       string `xorm:"VARCHAR(10)" gorm:"type:VARCHAR(10)"`

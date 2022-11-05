@@ -297,17 +297,6 @@ func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
 }
 
-// GetOrgIDsByUserID returns a list of organization IDs that user belongs to.
-// The showPrivate indicates whether to include private memberships.
-func GetOrgIDsByUserID(userID int64, showPrivate bool) ([]int64, error) {
-	orgIDs := make([]int64, 0, 5)
-	sess := x.Table("org_user").Where("uid = ?", userID)
-	if !showPrivate {
-		sess.And("is_public = ?", true)
-	}
-	return orgIDs, sess.Distinct("org_id").Find(&orgIDs)
-}
-
 func getOrgUsersByOrgID(e Engine, orgID int64, limit int) ([]*OrgUser, error) {
 	orgUsers := make([]*OrgUser, 0, 10)
 
