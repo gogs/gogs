@@ -375,6 +375,7 @@ func (db *users) IsUsernameUsed(ctx context.Context, username string) bool {
 		return false
 	}
 	return db.WithContext(ctx).
+		Select("id").
 		Where("lower_name = ?", strings.ToLower(username)).
 		First(&User{}).
 		Error != gorm.ErrRecordNotFound
