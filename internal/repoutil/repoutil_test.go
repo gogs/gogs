@@ -125,3 +125,39 @@ func TestRepositoryPath(t *testing.T) {
 	want := "/home/git/gogs-repositories/alice/example.git"
 	assert.Equal(t, want, got)
 }
+
+func TestRepositoryLocalPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
+	conf.SetMockServer(
+		t,
+		conf.ServerOpts{
+			AppDataPath: "data",
+		},
+	)
+
+	got := RepositoryLocalPath(1)
+	want := "data/tmp/local-repo/1"
+	assert.Equal(t, want, got)
+}
+
+func TestRepositoryLocalWikiPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing on Windows")
+		return
+	}
+
+	conf.SetMockServer(
+		t,
+		conf.ServerOpts{
+			AppDataPath: "data",
+		},
+	)
+
+	got := RepositoryLocalWikiPath(1)
+	want := "data/tmp/local-wiki/1"
+	assert.Equal(t, want, got)
+}

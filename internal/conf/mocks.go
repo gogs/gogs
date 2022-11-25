@@ -5,6 +5,7 @@
 package conf
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -24,11 +25,15 @@ func SetMockAuth(t *testing.T, otps AuthOpts) {
 	})
 }
 
+var mockServer sync.Mutex
+
 func SetMockServer(t *testing.T, opts ServerOpts) {
+	mockServer.Lock()
 	before := Server
 	Server = opts
 	t.Cleanup(func() {
 		Server = before
+		mockServer.Unlock()
 	})
 }
 
@@ -40,11 +45,15 @@ func SetMockSSH(t *testing.T, opts SSHOpts) {
 	})
 }
 
+var mockRepository sync.Mutex
+
 func SetMockRepository(t *testing.T, opts RepositoryOpts) {
+	mockRepository.Lock()
 	before := Repository
 	Repository = opts
 	t.Cleanup(func() {
 		Repository = before
+		mockRepository.Unlock()
 	})
 }
 

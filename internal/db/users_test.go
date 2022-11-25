@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -17,10 +18,12 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/userutil"
 	"gogs.io/gogs/public"
 )
@@ -79,7 +82,7 @@ func TestUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(User), new(EmailAddress), new(Repository), new(Follow)}
+	tables := []interface{}{new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest)}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
 	}
@@ -89,6 +92,7 @@ func TestUsers(t *testing.T) {
 		test func(t *testing.T, db *users)
 	}{
 		{"Authenticate", usersAuthenticate},
+		{"ChangeUsername", usersChangeUsername},
 		{"Count", usersCount},
 		{"Create", usersCreate},
 		{"DeleteCustomAvatar", usersDeleteCustomAvatar},
@@ -210,6 +214,107 @@ func usersAuthenticate(t *testing.T, db *users) {
 		require.NoError(t, err)
 		assert.Equal(t, "cindy@example.com", user.Email)
 	})
+}
+
+func usersChangeUsername(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	alice, err := db.Create(
+		ctx,
+		"alice",
+		"alice@example.com",
+		CreateUserOptions{
+			Activated: true,
+		},
+	)
+	require.NoError(t, err)
+
+	t.Run("name not allowed", func(t *testing.T) {
+		err := db.ChangeUsername(ctx, alice.ID, "-")
+		wantErr := ErrNameNotAllowed{
+			args: errutil.Args{
+				"reason": "reserved",
+				"name":   "-",
+			},
+		}
+		assert.Equal(t, wantErr, err)
+	})
+
+	t.Run("name already exists", func(t *testing.T) {
+		err := db.ChangeUsername(ctx, alice.ID, alice.Name)
+		wantErr := ErrUserAlreadyExist{
+			args: errutil.Args{
+				"name": alice.Name,
+			},
+		}
+		assert.Equal(t, wantErr, err)
+	})
+
+	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersChangeUsername-tempRepositoryRoot")
+	conf.SetMockRepository(
+		t,
+		conf.RepositoryOpts{
+			Root: tempRepositoryRoot,
+		},
+	)
+	err = os.RemoveAll(tempRepositoryRoot)
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
+
+	tempServerAppDataPath := filepath.Join(os.TempDir(), "usersChangeUsername-tempServerAppDataPath")
+	conf.SetMockServer(
+		t,
+		conf.ServerOpts{
+			AppDataPath: tempServerAppDataPath,
+		},
+	)
+	err = os.RemoveAll(tempServerAppDataPath)
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(tempServerAppDataPath) }()
+
+	repo, err := NewReposStore(db.DB).Create(
+		ctx,
+		alice.ID,
+		CreateRepoOptions{
+			Name: "test-repo-1",
+		},
+	)
+	require.NoError(t, err)
+
+	// TODO: Use PullRequests.Create to replace SQL hack when the method is available.
+	err = db.Exec(`INSERT INTO pull_request (head_user_name) VALUES (?)`, alice.Name).Error
+	require.NoError(t, err)
+
+	err = os.MkdirAll(repoutil.UserPath(alice.Name), os.ModePerm)
+	require.NoError(t, err)
+	err = os.MkdirAll(repoutil.RepositoryLocalPath(repo.ID), os.ModePerm)
+	require.NoError(t, err)
+	err = os.MkdirAll(repoutil.RepositoryLocalWikiPath(repo.ID), os.ModePerm)
+	require.NoError(t, err)
+
+	// Make sure mock data is set up correctly
+	assert.True(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
+	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
+	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+
+	const newUsername = "alice-new"
+	err = db.ChangeUsername(ctx, alice.ID, newUsername)
+	require.NoError(t, err)
+
+	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
+	var headUserName string
+	err = db.Select("head_user_name").Table("pull_request").Row().Scan(&headUserName)
+	require.NoError(t, err)
+	assert.Equal(t, headUserName, newUsername)
+
+	assert.True(t, osutil.IsExist(repoutil.UserPath(newUsername)))
+	assert.False(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
+	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
+	assert.False(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
+
+	alice, err = db.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, newUsername, alice.Name)
 }
 
 func usersCount(t *testing.T, db *users) {
