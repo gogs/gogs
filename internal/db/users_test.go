@@ -285,6 +285,9 @@ func usersChangeUsername(t *testing.T, db *users) {
 	err = db.Exec(`INSERT INTO pull_request (head_user_name) VALUES (?)`, alice.Name).Error
 	require.NoError(t, err)
 
+	err = db.Model(&User{}).Where("id = ?", alice.ID).Update("updated_unix", 0).Error
+	require.NoError(t, err)
+
 	err = os.MkdirAll(repoutil.UserPath(alice.Name), os.ModePerm)
 	require.NoError(t, err)
 	err = os.MkdirAll(repoutil.RepositoryLocalPath(repo.ID), os.ModePerm)
@@ -293,6 +296,17 @@ func usersChangeUsername(t *testing.T, db *users) {
 	require.NoError(t, err)
 
 	// Make sure mock data is set up correctly
+	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
+	var headUserName string
+	err = db.Model(&PullRequest{}).Select("head_user_name").Row().Scan(&headUserName)
+	require.NoError(t, err)
+	assert.Equal(t, headUserName, alice.Name)
+
+	var updatedUnix int64
+	err = db.Model(&User{}).Select("updated_unix").Row().Scan(&updatedUnix)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), updatedUnix)
+
 	assert.True(t, osutil.IsExist(repoutil.UserPath(alice.Name)))
 	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalPath(repo.ID)))
 	assert.True(t, osutil.IsExist(repoutil.RepositoryLocalWikiPath(repo.ID)))
@@ -302,8 +316,7 @@ func usersChangeUsername(t *testing.T, db *users) {
 	require.NoError(t, err)
 
 	// TODO: Use PullRequests.GetByID to replace SQL hack when the method is available.
-	var headUserName string
-	err = db.Select("head_user_name").Table("pull_request").Row().Scan(&headUserName)
+	err = db.Model(&PullRequest{}).Select("head_user_name").Row().Scan(&headUserName)
 	require.NoError(t, err)
 	assert.Equal(t, headUserName, newUsername)
 
@@ -315,6 +328,7 @@ func usersChangeUsername(t *testing.T, db *users) {
 	alice, err = db.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
 	assert.Equal(t, newUsername, alice.Name)
+	assert.Equal(t, db.NowFunc().Unix(), alice.UpdatedUnix)
 }
 
 func usersCount(t *testing.T, db *users) {
