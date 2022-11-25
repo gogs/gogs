@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
@@ -55,40 +54,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 // TODO(unknwon): Delete me once no more call sites in this file.
 func (u *User) getOrganizationCount(e Engine) (int64, error) {
 	return e.Where("uid=?", u.ID).Count(new(OrgUser))
-}
-
-// ChangeUserName changes all corresponding setting from old user name to new one.
-func ChangeUserName(u *User, newUserName string) (err error) {
-	if err = isUsernameAllowed(newUserName); err != nil {
-		return err
-	}
-
-	if Users.IsUsernameUsed(context.TODO(), newUserName) {
-		return ErrUserAlreadyExist{args: errutil.Args{"name": newUserName}}
-	}
-
-	if err = ChangeUsernameInPullRequests(u.Name, newUserName); err != nil {
-		return fmt.Errorf("ChangeUsernameInPullRequests: %v", err)
-	}
-
-	// Delete all local copies of repositories and wikis the user owns.
-	if err = x.Where("owner_id=?", u.ID).Iterate(new(Repository), func(idx int, bean interface{}) error {
-		repo := bean.(*Repository)
-		deleteRepoLocalCopy(repo)
-		// TODO: By the same reasoning, shouldn't we also sync access to the local wiki path?
-		RemoveAllWithNotice("Delete repository wiki local copy", repo.LocalWikiPath())
-		return nil
-	}); err != nil {
-		return fmt.Errorf("delete repository and wiki local copy: %v", err)
-	}
-
-	// Rename or create user base directory
-	baseDir := repoutil.UserPath(u.Name)
-	newBaseDir := repoutil.UserPath(newUserName)
-	if com.IsExist(baseDir) {
-		return os.Rename(baseDir, newBaseDir)
-	}
-	return os.MkdirAll(newBaseDir, os.ModePerm)
 }
 
 func updateUser(e Engine, u *User) error {

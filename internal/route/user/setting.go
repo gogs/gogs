@@ -71,13 +71,13 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 	if c.User.IsLocal() {
 		// Check if username characters have been changed
 		if c.User.LowerName != strings.ToLower(f.Name) {
-			if err := db.ChangeUserName(c.User, f.Name); err != nil {
+			if err := db.Users.ChangeUsername(c.Req.Context(), c.User.ID, f.Name); err != nil {
 				c.FormErr("Name")
 				var msg string
 				switch {
-				case db.IsErrUserAlreadyExist(err):
+				case db.IsErrUserAlreadyExist(errors.Cause(err)):
 					msg = c.Tr("form.username_been_taken")
-				case db.IsErrNameNotAllowed(err):
+				case db.IsErrNameNotAllowed(errors.Cause(err)):
 					msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 				default:
 					c.Error(err, "change user name")
