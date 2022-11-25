@@ -31,14 +31,6 @@ func (u *User) BeforeInsert() {
 	u.UpdatedUnix = u.CreatedUnix
 }
 
-// TODO(unknwon): Refactoring together with methods that do updates.
-func (u *User) BeforeUpdate() {
-	if u.MaxRepoCreation < -1 {
-		u.MaxRepoCreation = -1
-	}
-	u.UpdatedUnix = time.Now().Unix()
-}
-
 // TODO(unknwon): Delete me once refactoring is done.
 func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	switch colName {
@@ -47,13 +39,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
-}
-
-// Deprecated: Use OrgsUsers.CountByUser instead.
-//
-// TODO(unknwon): Delete me once no more call sites in this file.
-func (u *User) getOrganizationCount(e Engine) (int64, error) {
-	return e.Where("uid=?", u.ID).Count(new(OrgUser))
 }
 
 func updateUser(e Engine, u *User) error {
@@ -80,6 +65,14 @@ func updateUser(e Engine, u *User) error {
 
 	_, err := e.ID(u.ID).AllCols().Update(u)
 	return err
+}
+
+// TODO(unknwon): Refactoring together with methods that do updates.
+func (u *User) BeforeUpdate() {
+	if u.MaxRepoCreation < -1 {
+		u.MaxRepoCreation = -1
+	}
+	u.UpdatedUnix = time.Now().Unix()
 }
 
 // UpdateUser updates user's information.
@@ -200,6 +193,13 @@ func deleteUser(e *xorm.Session, u *User) error {
 	_ = os.Remove(userutil.CustomAvatarPath(u.ID))
 
 	return nil
+}
+
+// Deprecated: Use OrgsUsers.CountByUser instead.
+//
+// TODO(unknwon): Delete me once no more call sites in this file.
+func (u *User) getOrganizationCount(e Engine) (int64, error) {
+	return e.Where("uid=?", u.ID).Count(new(OrgUser))
 }
 
 // DeleteUser completely and permanently deletes everything of a user,

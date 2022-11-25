@@ -218,8 +218,9 @@ func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername s
 		err := tx.Model(&User{}).
 			Where("id = ?", user.ID).
 			Updates(map[string]any{
-				"lower_name": strings.ToLower(newUsername),
-				"name":       newUsername,
+				"lower_name":   strings.ToLower(newUsername),
+				"name":         newUsername,
+				"updated_unix": tx.NowFunc().Unix(),
 			}).Error
 		if err != nil {
 			return errors.Wrap(err, "update user name")
