@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
@@ -45,11 +46,17 @@ type UsersStore interface {
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
 	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
+	// ChangeUsername changes the username of the given user and updates all
+	// references to the old username. It returns ErrNameNotAllowed if the given
+	// name or pattern of the name is not allowed as a username, or
+	// ErrUserAlreadyExist when another user with same name already exists.
+	ChangeUsername(ctx context.Context, userID int64, newUsername string) error
 	// Count returns the total number of users.
 	Count(ctx context.Context) int64
 	// Create creates a new user and persists to database. It returns
-	// ErrUserAlreadyExist when a user with same name already exists, or
-	// ErrEmailAlreadyUsed if the email has been used by another user.
+	// ErrNameNotAllowed if the given name or pattern of the name is not allowed as
+	// a username, or ErrUserAlreadyExist when a user with same name already exists,
+	// or ErrEmailAlreadyUsed if the email has been used by another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
 	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
 	// use look up avatar by email.
@@ -186,6 +193,81 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 			Admin:       extAccount.Admin,
 		},
 	)
+}
+
+func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername string) error {
+	err := isUsernameAllowed(newUsername)
+	if err != nil {
+		return err
+	}
+
+	if db.IsUsernameUsed(ctx, newUsername) {
+		return ErrUserAlreadyExist{
+			args: errutil.Args{
+				"name": newUsername,
+			},
+		}
+	}
+
+	user, err := db.GetByID(ctx, userID)
+	if err != nil {
+		return errors.Wrap(err, "get user")
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&User{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]any{
+				"lower_name": strings.ToLower(newUsername),
+				"name":       newUsername,
+			}).Error
+		if err != nil {
+			return errors.Wrap(err, "update user name")
+		}
+
+		// Update all references to the user name in pull requests
+		err = tx.Model(&PullRequest{}).
+			Where("head_user_name = ?", user.LowerName).
+			Update("head_user_name", strings.ToLower(newUsername)).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `update "pull_request.head_user_name"`)
+		}
+
+		// Delete local copies of repositories and their wikis that are owned by the user
+		rows, err := tx.Model(&Repository{}).Where("owner_id = ?", user.ID).Rows()
+		if err != nil {
+			return errors.Wrap(err, "iterate repositories")
+		}
+		defer func() { _ = rows.Close() }()
+
+		for rows.Next() {
+			var repo struct {
+				ID int64
+			}
+			err = tx.ScanRows(rows, &repo)
+			if err != nil {
+				return errors.Wrap(err, "scan rows")
+			}
+
+			deleteRepoLocalCopy(repo.ID)
+			RemoveAllWithNotice(fmt.Sprintf("Delete repository %d wiki local copy", repo.ID), repoutil.RepositoryLocalWikiPath(repo.ID))
+		}
+		if err = rows.Err(); err != nil {
+			return errors.Wrap(err, "check rows.Err")
+		}
+
+		// Rename user directory if exists
+		userPath := repoutil.UserPath(user.Name)
+		if osutil.IsExist(userPath) {
+			newUserPath := repoutil.UserPath(newUsername)
+			err = os.Rename(userPath, newUserPath)
+			if err != nil {
+				return errors.Wrap(err, "rename user directory")
+			}
+		}
+		return nil
+	})
 }
 
 func (db *users) Count(ctx context.Context) int64 {

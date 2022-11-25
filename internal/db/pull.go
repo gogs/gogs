@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/unknwon/com"
@@ -45,28 +44,28 @@ const (
 
 // PullRequest represents relation between pull request and repositories.
 type PullRequest struct {
-	ID     int64
+	ID     int64 `gorm:"primaryKey"`
 	Type   PullRequestType
 	Status PullRequestStatus
 
-	IssueID int64  `xorm:"INDEX"`
-	Issue   *Issue `xorm:"-" json:"-"`
+	IssueID int64  `xorm:"INDEX" gorm:"index"`
+	Issue   *Issue `xorm:"-" json:"-" gorm:"-"`
 	Index   int64
 
 	HeadRepoID   int64
-	HeadRepo     *Repository `xorm:"-" json:"-"`
+	HeadRepo     *Repository `xorm:"-" json:"-" gorm:"-"`
 	BaseRepoID   int64
-	BaseRepo     *Repository `xorm:"-" json:"-"`
+	BaseRepo     *Repository `xorm:"-" json:"-" gorm:"-"`
 	HeadUserName string
 	HeadBranch   string
 	BaseBranch   string
-	MergeBase    string `xorm:"VARCHAR(40)"`
+	MergeBase    string `xorm:"VARCHAR(40)" gorm:"type:VARCHAR(40)"`
 
 	HasMerged      bool
-	MergedCommitID string `xorm:"VARCHAR(40)"`
+	MergedCommitID string `xorm:"VARCHAR(40)" gorm:"type:VARCHAR(40)"`
 	MergerID       int64
-	Merger         *User     `xorm:"-" json:"-"`
-	Merged         time.Time `xorm:"-" json:"-"`
+	Merger         *User     `xorm:"-" json:"-" gorm:"-"`
+	Merged         time.Time `xorm:"-" json:"-" gorm:"-"`
 	MergedUnix     int64
 }
 
@@ -821,14 +820,6 @@ func AddTestPullRequestTask(doer *User, repoID int64, branch string, isSync bool
 	for _, pr := range prs {
 		pr.AddToTaskQueue()
 	}
-}
-
-func ChangeUsernameInPullRequests(oldUserName, newUserName string) error {
-	pr := PullRequest{
-		HeadUserName: strings.ToLower(newUserName),
-	}
-	_, err := x.Cols("head_user_name").Where("head_user_name = ?", strings.ToLower(oldUserName)).Update(pr)
-	return err
 }
 
 // checkAndUpdateStatus checks if pull request is possible to leaving checking status,
