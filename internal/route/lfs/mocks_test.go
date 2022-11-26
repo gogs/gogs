@@ -2331,6 +2331,9 @@ type MockUsersStore struct {
 	// ListFollowingsFunc is an instance of a mock function object
 	// controlling the behavior of the method ListFollowings.
 	ListFollowingsFunc *UsersStoreListFollowingsFunc
+	// UpdateFunc is an instance of a mock function object controlling the
+	// behavior of the method Update.
+	UpdateFunc *UsersStoreUpdateFunc
 	// UseCustomAvatarFunc is an instance of a mock function object
 	// controlling the behavior of the method UseCustomAvatar.
 	UseCustomAvatarFunc *UsersStoreUseCustomAvatarFunc
@@ -2386,7 +2389,7 @@ func NewMockUsersStore() *MockUsersStore {
 			},
 		},
 		IsUsernameUsedFunc: &UsersStoreIsUsernameUsedFunc{
-			defaultHook: func(context.Context, string) (r0 bool) {
+			defaultHook: func(context.Context, string, int64) (r0 bool) {
 				return
 			},
 		},
@@ -2402,6 +2405,11 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: func(context.Context, int64, int, int) (r0 []*db.User, r1 error) {
+				return
+			},
+		},
+		UpdateFunc: &UsersStoreUpdateFunc{
+			defaultHook: func(context.Context, int64, db.UpdateUserOptions) (r0 error) {
 				return
 			},
 		},
@@ -2463,7 +2471,7 @@ func NewStrictMockUsersStore() *MockUsersStore {
 			},
 		},
 		IsUsernameUsedFunc: &UsersStoreIsUsernameUsedFunc{
-			defaultHook: func(context.Context, string) bool {
+			defaultHook: func(context.Context, string, int64) bool {
 				panic("unexpected invocation of MockUsersStore.IsUsernameUsed")
 			},
 		},
@@ -2480,6 +2488,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: func(context.Context, int64, int, int) ([]*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.ListFollowings")
+			},
+		},
+		UpdateFunc: &UsersStoreUpdateFunc{
+			defaultHook: func(context.Context, int64, db.UpdateUserOptions) error {
+				panic("unexpected invocation of MockUsersStore.Update")
 			},
 		},
 		UseCustomAvatarFunc: &UsersStoreUseCustomAvatarFunc{
@@ -2532,6 +2545,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: i.ListFollowings,
+		},
+		UpdateFunc: &UsersStoreUpdateFunc{
+			defaultHook: i.Update,
 		},
 		UseCustomAvatarFunc: &UsersStoreUseCustomAvatarFunc{
 			defaultHook: i.UseCustomAvatar,
@@ -3518,24 +3534,24 @@ func (c UsersStoreHasForkedRepositoryFuncCall) Results() []interface{} {
 // UsersStoreIsUsernameUsedFunc describes the behavior when the
 // IsUsernameUsed method of the parent MockUsersStore instance is invoked.
 type UsersStoreIsUsernameUsedFunc struct {
-	defaultHook func(context.Context, string) bool
-	hooks       []func(context.Context, string) bool
+	defaultHook func(context.Context, string, int64) bool
+	hooks       []func(context.Context, string, int64) bool
 	history     []UsersStoreIsUsernameUsedFuncCall
 	mutex       sync.Mutex
 }
 
 // IsUsernameUsed delegates to the next hook function in the queue and
 // stores the parameter and result values of this invocation.
-func (m *MockUsersStore) IsUsernameUsed(v0 context.Context, v1 string) bool {
-	r0 := m.IsUsernameUsedFunc.nextHook()(v0, v1)
-	m.IsUsernameUsedFunc.appendCall(UsersStoreIsUsernameUsedFuncCall{v0, v1, r0})
+func (m *MockUsersStore) IsUsernameUsed(v0 context.Context, v1 string, v2 int64) bool {
+	r0 := m.IsUsernameUsedFunc.nextHook()(v0, v1, v2)
+	m.IsUsernameUsedFunc.appendCall(UsersStoreIsUsernameUsedFuncCall{v0, v1, v2, r0})
 	return r0
 }
 
 // SetDefaultHook sets function that is called when the IsUsernameUsed
 // method of the parent MockUsersStore instance is invoked and the hook
 // queue is empty.
-func (f *UsersStoreIsUsernameUsedFunc) SetDefaultHook(hook func(context.Context, string) bool) {
+func (f *UsersStoreIsUsernameUsedFunc) SetDefaultHook(hook func(context.Context, string, int64) bool) {
 	f.defaultHook = hook
 }
 
@@ -3543,7 +3559,7 @@ func (f *UsersStoreIsUsernameUsedFunc) SetDefaultHook(hook func(context.Context,
 // IsUsernameUsed method of the parent MockUsersStore instance invokes the
 // hook at the front of the queue and discards it. After the queue is empty,
 // the default hook function is invoked for any future action.
-func (f *UsersStoreIsUsernameUsedFunc) PushHook(hook func(context.Context, string) bool) {
+func (f *UsersStoreIsUsernameUsedFunc) PushHook(hook func(context.Context, string, int64) bool) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -3552,19 +3568,19 @@ func (f *UsersStoreIsUsernameUsedFunc) PushHook(hook func(context.Context, strin
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *UsersStoreIsUsernameUsedFunc) SetDefaultReturn(r0 bool) {
-	f.SetDefaultHook(func(context.Context, string) bool {
+	f.SetDefaultHook(func(context.Context, string, int64) bool {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *UsersStoreIsUsernameUsedFunc) PushReturn(r0 bool) {
-	f.PushHook(func(context.Context, string) bool {
+	f.PushHook(func(context.Context, string, int64) bool {
 		return r0
 	})
 }
 
-func (f *UsersStoreIsUsernameUsedFunc) nextHook() func(context.Context, string) bool {
+func (f *UsersStoreIsUsernameUsedFunc) nextHook() func(context.Context, string, int64) bool {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -3603,6 +3619,9 @@ type UsersStoreIsUsernameUsedFuncCall struct {
 	// Arg1 is the value of the 2nd argument passed to this method
 	// invocation.
 	Arg1 string
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 bool
@@ -3611,7 +3630,7 @@ type UsersStoreIsUsernameUsedFuncCall struct {
 // Args returns an interface slice containing the arguments of this
 // invocation.
 func (c UsersStoreIsUsernameUsedFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
@@ -3956,6 +3975,113 @@ func (c UsersStoreListFollowingsFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreListFollowingsFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreUpdateFunc describes the behavior when the Update method of the
+// parent MockUsersStore instance is invoked.
+type UsersStoreUpdateFunc struct {
+	defaultHook func(context.Context, int64, db.UpdateUserOptions) error
+	hooks       []func(context.Context, int64, db.UpdateUserOptions) error
+	history     []UsersStoreUpdateFuncCall
+	mutex       sync.Mutex
+}
+
+// Update delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) Update(v0 context.Context, v1 int64, v2 db.UpdateUserOptions) error {
+	r0 := m.UpdateFunc.nextHook()(v0, v1, v2)
+	m.UpdateFunc.appendCall(UsersStoreUpdateFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Update method of the
+// parent MockUsersStore instance is invoked and the hook queue is empty.
+func (f *UsersStoreUpdateFunc) SetDefaultHook(hook func(context.Context, int64, db.UpdateUserOptions) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Update method of the parent MockUsersStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreUpdateFunc) PushHook(hook func(context.Context, int64, db.UpdateUserOptions) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreUpdateFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, db.UpdateUserOptions) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreUpdateFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, db.UpdateUserOptions) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreUpdateFunc) nextHook() func(context.Context, int64, db.UpdateUserOptions) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreUpdateFunc) appendCall(r0 UsersStoreUpdateFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreUpdateFuncCall objects describing
+// the invocations of this function.
+func (f *UsersStoreUpdateFunc) History() []UsersStoreUpdateFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreUpdateFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreUpdateFuncCall is an object that describes an invocation of
+// method Update on an instance of MockUsersStore.
+type UsersStoreUpdateFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 db.UpdateUserOptions
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreUpdateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreUpdateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreUseCustomAvatarFunc describes the behavior when the

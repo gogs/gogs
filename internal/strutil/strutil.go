@@ -54,3 +54,12 @@ func Ellipsis(str string, threshold int) string {
 	}
 	return str[:threshold] + "..."
 }
+
+// Truncate returns a truncated string if its length is over the limit.
+// Otherwise, it returns the original string.
+func Truncate(str string, limit int) string {
+	if len(str) < limit {
+		return str
+	}
+	return str[:limit]
+}

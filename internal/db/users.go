@@ -72,8 +72,10 @@ type UsersStore interface {
 	GetByUsername(ctx context.Context, username string) (*User, error)
 	// HasForkedRepository returns true if the user has forked given repository.
 	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
-	// IsUsernameUsed returns true if the given username has been used.
-	IsUsernameUsed(ctx context.Context, username string) bool
+	// IsUsernameUsed returns true if the given username has been used other than
+	// the excluded user (a non-positive ID effectively meaning check against all
+	// users).
+	IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool
 	// List returns a list of users. Results are paginated by given page and page
 	// size, and sorted by primary key (id) in ascending order.
 	List(ctx context.Context, page, pageSize int) ([]*User, error)
@@ -85,6 +87,9 @@ type UsersStore interface {
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
 	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
+	// Update updates all fields for the given user, all values are persisted as-is
+	// (i.e. empty values would overwrite/wipe out existing values).
+	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
 	// UseCustomAvatar uses the given avatar as the user custom avatar.
 	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
 }
@@ -201,7 +206,7 @@ func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername s
 		return err
 	}
 
-	if db.IsUsernameUsed(ctx, newUsername) {
+	if db.IsUsernameUsed(ctx, newUsername, userID) {
 		return ErrUserAlreadyExist{
 			args: errutil.Args{
 				"name": newUsername,
@@ -224,6 +229,11 @@ func (db *users) ChangeUsername(ctx context.Context, userID int64, newUsername s
 			}).Error
 		if err != nil {
 			return errors.Wrap(err, "update user name")
+		}
+
+		// Stop here if it's just a case-change of the username
+		if strings.EqualFold(user.Name, newUsername) {
+			return nil
 		}
 
 		// Update all references to the user name in pull requests
@@ -328,7 +338,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		return nil, err
 	}
 
-	if db.IsUsernameUsed(ctx, username) {
+	if db.IsUsernameUsed(ctx, username, 0) {
 		return nil, ErrUserAlreadyExist{
 			args: errutil.Args{
 				"name": username,
@@ -428,18 +438,13 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 	}
 
 	// Otherwise, check activated email addresses
-	emailAddress := new(EmailAddress)
-	err = db.WithContext(ctx).
-		Where("email = ? AND is_activated = ?", email, true).
-		First(emailAddress).
-		Error
+	emailAddress, err := NewEmailAddressesStore(db.DB).GetByEmail(ctx, email, true)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if IsErrEmailAddressNotExist(err) {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
 	}
-
 	return db.GetByID(ctx, emailAddress.UserID)
 }
 
@@ -473,13 +478,13 @@ func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) 
 	return count > 0
 }
 
-func (db *users) IsUsernameUsed(ctx context.Context, username string) bool {
+func (db *users) IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool {
 	if username == "" {
 		return false
 	}
 	return db.WithContext(ctx).
 		Select("id").
-		Where("lower_name = ?", strings.ToLower(username)).
+		Where("lower_name = ? AND id != ?", strings.ToLower(username), excludeUserId).
 		First(&User{}).
 		Error != gorm.ErrRecordNotFound
 }
@@ -531,6 +536,33 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 		Limit(pageSize).Offset((page - 1) * pageSize).
 		Order("follow.id DESC").
 		Find(&users).
+		Error
+}
+
+type UpdateUserOptions struct {
+	FullName    string
+	Website     string
+	Location    string
+	Description string
+
+	MaxRepoCreation int
+}
+
+func (db *users) Update(ctx context.Context, userID int64, opts UpdateUserOptions) error {
+	if opts.MaxRepoCreation < -1 {
+		opts.MaxRepoCreation = -1
+	}
+	return db.WithContext(ctx).
+		Model(&User{}).
+		Where("id = ?", userID).
+		Updates(map[string]any{
+			"full_name":         strutil.Truncate(opts.FullName, 255),
+			"website":           strutil.Truncate(opts.Website, 255),
+			"location":          strutil.Truncate(opts.Location, 255),
+			"description":       strutil.Truncate(opts.Description, 255),
+			"max_repo_creation": opts.MaxRepoCreation,
+			"updated_unix":      db.NowFunc().Unix(),
+		}).
 		Error
 }
 

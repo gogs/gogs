@@ -439,7 +439,7 @@ func verifyActiveEmailCode(code, email string) *db.EmailAddress {
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			emailAddress, err := db.EmailAddresses.GetByEmail(gocontext.TODO(), email)
+			emailAddress, err := db.EmailAddresses.GetByEmail(gocontext.TODO(), email, false)
 			if err == nil {
 				return emailAddress
 			}

@@ -5,7 +5,6 @@
 package tool
 
 import (
-	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
@@ -23,6 +22,7 @@ import (
 	"github.com/gogs/chardet"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/cryptoutil"
 )
 
 // ShortSHA1 truncates SHA1 string length to at most 10.
@@ -125,10 +125,7 @@ func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string 
 // HashEmail hashes email address to MD5 string.
 // https://en.gravatar.com/site/implement/hash/
 func HashEmail(email string) string {
-	email = strings.ToLower(strings.TrimSpace(email))
-	h := md5.New()
-	_, _ = h.Write([]byte(email))
-	return hex.EncodeToString(h.Sum(nil))
+	return cryptoutil.MD5(strings.ToLower(strings.TrimSpace(email)))
 }
 
 // AvatarLink returns relative avatar link to the site domain by given email,
@@ -356,15 +353,6 @@ func Subtract(left, right interface{}) interface{} {
 	} else {
 		return fleft + float64(rleft) - (fright + float64(rright))
 	}
-}
-
-// TruncateString returns a truncated string with given limit,
-// it returns input string if length is not reached limit.
-func TruncateString(str string, limit int) string {
-	if len(str) < limit {
-		return str
-	}
-	return str[:limit]
 }
 
 // StringsToInt64s converts a slice of string to a slice of int64.
