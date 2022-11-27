@@ -112,6 +112,13 @@ type ErrLoginSourceMismatch struct {
 	args errutil.Args
 }
 
+// IsErrLoginSourceMismatch returns true if the underlying error has the type
+// ErrLoginSourceMismatch.
+func IsErrLoginSourceMismatch(err error) bool {
+	_, ok := errors.Cause(err).(ErrLoginSourceMismatch)
+	return ok
+}
+
 func (err ErrLoginSourceMismatch) Error() string {
 	return fmt.Sprintf("login source mismatch: %v", err.args)
 }
@@ -302,8 +309,10 @@ type ErrUserAlreadyExist struct {
 	args errutil.Args
 }
 
+// IsErrUserAlreadyExist returns true if the underlying error has the type
+// ErrUserAlreadyExist.
 func IsErrUserAlreadyExist(err error) bool {
-	_, ok := err.(ErrUserAlreadyExist)
+	_, ok := errors.Cause(err).(ErrUserAlreadyExist)
 	return ok
 }
 
@@ -879,8 +888,10 @@ type ErrNameNotAllowed struct {
 	args errutil.Args
 }
 
+// IsErrNameNotAllowed returns true if the underlying error has the type
+// ErrNameNotAllowed.
 func IsErrNameNotAllowed(err error) bool {
-	_, ok := err.(ErrNameNotAllowed)
+	_, ok := errors.Cause(err).(ErrNameNotAllowed)
 	return ok
 }
 

@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -136,15 +135,15 @@ func HTTPContexter() macaron.Handler {
 		// or password as the token.
 		if authUser == nil {
 			authUser, err = context.AuthenticateByToken(c.Req.Context(), authUsername)
-			if err != nil && !db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+			if err != nil && !db.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
 				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
-			} else if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+			} else if db.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
 				authUser, err = context.AuthenticateByToken(c.Req.Context(), authPassword)
 				if err != nil {
-					if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+					if db.IsErrAccessTokenNotExist(err) {
 						askCredentials(c, http.StatusUnauthorized, "")
 					} else {
 						c.Status(http.StatusInternalServerError)

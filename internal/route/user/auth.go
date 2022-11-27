@@ -12,7 +12,6 @@ import (
 	"net/url"
 
 	"github.com/go-macaron/captcha"
-	"github.com/pkg/errors"
 	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
@@ -168,11 +167,11 @@ func LoginPost(c *context.Context, f form.SignIn) {
 
 	u, err := db.Users.Authenticate(c.Req.Context(), f.UserName, f.Password, f.LoginSource)
 	if err != nil {
-		switch errors.Cause(err).(type) {
-		case auth.ErrBadCredentials:
+		switch {
+		case auth.IsErrBadCredentials(err):
 			c.FormErr("UserName", "Password")
 			c.RenderWithErr(c.Tr("form.username_password_incorrect"), LOGIN, &f)
-		case db.ErrLoginSourceMismatch:
+		case db.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), LOGIN, &f)
 

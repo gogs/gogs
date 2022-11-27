@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
 
@@ -76,15 +75,15 @@ func authenticate() macaron.Handler {
 		// or password as the token.
 		if auth.IsErrBadCredentials(err) {
 			user, err = context.AuthenticateByToken(c.Req.Context(), username)
-			if err != nil && !db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+			if err != nil && !db.IsErrAccessTokenNotExist(err) {
 				internalServerError(c.Resp)
 				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
-			} else if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+			} else if db.IsErrAccessTokenNotExist(err) {
 				// Try again using the password field as the token.
 				user, err = context.AuthenticateByToken(c.Req.Context(), password)
 				if err != nil {
-					if db.IsErrAccessTokenNotExist(errors.Cause(err)) {
+					if db.IsErrAccessTokenNotExist(err) {
 						askCredentials(c.Resp)
 					} else {
 						c.Status(http.StatusInternalServerError)
