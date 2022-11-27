@@ -5,8 +5,6 @@
 package org
 
 import (
-	"strings"
-
 	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
@@ -40,43 +38,47 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 	org := c.Org.Organization
 
-	// Check if organization name has been changed.
-	if org.LowerName != strings.ToLower(f.Name) {
-		if db.Users.IsUsernameUsed(c.Req.Context(), f.Name) {
+	// Check if the organization username (including cases) had been changed
+	if org.Name != f.Name {
+		err := db.Users.ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
+		if err != nil {
 			c.Data["OrgName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &f)
-			return
-		} else if err := db.Users.ChangeUsername(c.Req.Context(), org.ID, f.Name); err != nil {
-			c.Data["OrgName"] = true
+			var msg string
 			switch {
+			case db.IsErrUserAlreadyExist(errors.Cause(err)):
+				msg = c.Tr("form.username_been_taken")
 			case db.IsErrNameNotAllowed(errors.Cause(err)):
-				c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SETTINGS_OPTIONS, &f)
+				msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 			default:
 				c.Error(err, "change organization name")
+				return
 			}
+
+			c.RenderWithErr(msg, SETTINGS_OPTIONS, &f)
 			return
 		}
+
 		// reset c.org.OrgLink with new name
 		c.Org.OrgLink = conf.Server.Subpath + "/org/" + f.Name
 		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
-	// In case it's just a case change.
-	org.Name = f.Name
-	org.LowerName = strings.ToLower(f.Name)
 
-	if c.User.IsAdmin {
-		org.MaxRepoCreation = f.MaxRepoCreation
+	opts := db.UpdateUserOptions{
+		FullName:        f.FullName,
+		Website:         f.Website,
+		Location:        f.Location,
+		Description:     f.Description,
+		MaxRepoCreation: org.MaxRepoCreation,
 	}
-
-	org.FullName = f.FullName
-	org.Description = f.Description
-	org.Website = f.Website
-	org.Location = f.Location
-	if err := db.UpdateUser(org); err != nil {
-		c.Error(err, "update user")
+	if c.User.IsAdmin {
+		opts.MaxRepoCreation = f.MaxRepoCreation
+	}
+	err := db.Users.Update(c.Req.Context(), c.User.ID, opts)
+	if err != nil {
+		c.Error(err, "update organization")
 		return
 	}
-	log.Trace("Organization setting updated: %s", org.Name)
+
 	c.Flash.Success(c.Tr("org.settings.update_setting_success"))
 	c.Redirect(c.Org.OrgLink + "/settings")
 }

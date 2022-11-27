@@ -11,7 +11,6 @@ import (
 	"html/template"
 	"image/png"
 	"io"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/pquerna/otp"
@@ -69,9 +68,10 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 
 	// Non-local users are not allowed to change their username
 	if c.User.IsLocal() {
-		// Check if username characters have been changed
-		if c.User.LowerName != strings.ToLower(f.Name) {
-			if err := db.Users.ChangeUsername(c.Req.Context(), c.User.ID, f.Name); err != nil {
+		// Check if the username (including cases) had been changed
+		if c.User.Name != f.Name {
+			err := db.Users.ChangeUsername(c.Req.Context(), c.User.ID, f.Name)
+			if err != nil {
 				c.FormErr("Name")
 				var msg string
 				switch {
@@ -90,23 +90,20 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 
 			log.Trace("Username changed: %s -> %s", c.User.Name, f.Name)
 		}
-
-		// In case it's just a case change
-		c.User.Name = f.Name
-		c.User.LowerName = strings.ToLower(f.Name)
 	}
 
-	c.User.FullName = f.FullName
-	c.User.Email = f.Email
-	c.User.Website = f.Website
-	c.User.Location = f.Location
-	if err := db.UpdateUser(c.User); err != nil {
-		if db.IsErrEmailAlreadyUsed(err) {
-			msg := c.Tr("form.email_been_used")
-			c.RenderWithErr(msg, SETTINGS_PROFILE, &f)
-			return
-		}
-		c.Errorf(err, "update user")
+	err := db.Users.Update(
+		c.Req.Context(),
+		c.User.ID,
+		db.UpdateUserOptions{
+			FullName:        f.FullName,
+			Website:         f.Website,
+			Location:        f.Location,
+			MaxRepoCreation: c.User.MaxRepoCreation,
+		},
+	)
+	if err != nil {
+		c.Error(err, "update user")
 		return
 	}
 

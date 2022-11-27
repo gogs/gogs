@@ -225,7 +225,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		newOwner := c.Query("new_owner_name")
-		if !db.Users.IsUsernameUsed(c.Req.Context(), newOwner) {
+		if !db.Users.IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
 			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
 		}

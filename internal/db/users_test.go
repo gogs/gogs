@@ -104,6 +104,7 @@ func TestUsers(t *testing.T) {
 		{"List", usersList},
 		{"ListFollowers", usersListFollowers},
 		{"ListFollowings", usersListFollowings},
+		{"Update", usersUpdate},
 		{"UseCustomAvatar", usersUseCustomAvatar},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -241,10 +242,20 @@ func usersChangeUsername(t *testing.T, db *users) {
 	})
 
 	t.Run("name already exists", func(t *testing.T) {
-		err := db.ChangeUsername(ctx, alice.ID, alice.Name)
+		bob, err := db.Create(
+			ctx,
+			"bob",
+			"bob@example.com",
+			CreateUserOptions{
+				Activated: true,
+			},
+		)
+		require.NoError(t, err)
+
+		err = db.ChangeUsername(ctx, alice.ID, bob.Name)
 		wantErr := ErrUserAlreadyExist{
 			args: errutil.Args{
-				"name": alice.Name,
+				"name": bob.Name,
 			},
 		}
 		assert.Equal(t, wantErr, err)
@@ -303,7 +314,7 @@ func usersChangeUsername(t *testing.T, db *users) {
 	assert.Equal(t, headUserName, alice.Name)
 
 	var updatedUnix int64
-	err = db.Model(&User{}).Select("updated_unix").Row().Scan(&updatedUnix)
+	err = db.Model(&User{}).Select("updated_unix").Where("id = ?", alice.ID).Row().Scan(&updatedUnix)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), updatedUnix)
 
@@ -329,6 +340,13 @@ func usersChangeUsername(t *testing.T, db *users) {
 	require.NoError(t, err)
 	assert.Equal(t, newUsername, alice.Name)
 	assert.Equal(t, db.NowFunc().Unix(), alice.UpdatedUnix)
+
+	// Change the cases of the username should just be fine
+	err = db.ChangeUsername(ctx, alice.ID, strings.ToUpper(newUsername))
+	require.NoError(t, err)
+	alice, err = db.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, strings.ToUpper(newUsername), alice.Name)
 }
 
 func usersCount(t *testing.T, db *users) {
@@ -561,10 +579,50 @@ func usersIsUsernameUsed(t *testing.T, db *users) {
 	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	got := db.IsUsernameUsed(ctx, alice.Name)
-	assert.True(t, got)
-	got = db.IsUsernameUsed(ctx, "bob")
-	assert.False(t, got)
+	tests := []struct {
+		name          string
+		username      string
+		excludeUserID int64
+		want          bool
+	}{
+		{
+			name:          "no change",
+			username:      alice.Name,
+			excludeUserID: alice.ID,
+			want:          false,
+		},
+		{
+			name:          "change case",
+			username:      strings.ToUpper(alice.Name),
+			excludeUserID: alice.ID,
+			want:          false,
+		},
+		{
+			name:          "not used",
+			username:      "bob",
+			excludeUserID: alice.ID,
+			want:          false,
+		},
+		{
+			name:          "not used when not excluded",
+			username:      "bob",
+			excludeUserID: 0,
+			want:          false,
+		},
+
+		{
+			name:          "used when not excluded",
+			username:      alice.Name,
+			excludeUserID: 0,
+			want:          true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := db.IsUsernameUsed(ctx, test.username, test.excludeUserID)
+			assert.Equal(t, test.want, got)
+		})
+	}
 }
 
 func usersList(t *testing.T, db *users) {
@@ -668,6 +726,50 @@ func usersListFollowings(t *testing.T, db *users) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	assert.Equal(t, alice.ID, got[0].ID)
+}
+
+func usersUpdate(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	overLimitStr := strings.Repeat("a", 300)
+	opts := UpdateUserOptions{
+		FullName:        overLimitStr,
+		Website:         overLimitStr,
+		Location:        overLimitStr,
+		Description:     overLimitStr,
+		MaxRepoCreation: 1,
+	}
+	err = db.Update(ctx, alice.ID, opts)
+	require.NoError(t, err)
+
+	alice, err = db.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+
+	wantStr := strings.Repeat("a", 255)
+	assert.Equal(t, wantStr, alice.FullName)
+	assert.Equal(t, wantStr, alice.Website)
+	assert.Equal(t, wantStr, alice.Location)
+	assert.Equal(t, wantStr, alice.Description)
+	assert.Equal(t, 1, alice.MaxRepoCreation)
+
+	// Test empty values
+	opts = UpdateUserOptions{
+		FullName: "Alice John",
+		Website:  "https://gogs.io",
+	}
+	err = db.Update(ctx, alice.ID, opts)
+	require.NoError(t, err)
+
+	alice, err = db.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, opts.FullName, alice.FullName)
+	assert.Equal(t, opts.Website, alice.Website)
+	assert.Empty(t, alice.Location)
+	assert.Empty(t, alice.Description)
+	assert.Empty(t, alice.MaxRepoCreation)
 }
 
 func usersUseCustomAvatar(t *testing.T, db *users) {

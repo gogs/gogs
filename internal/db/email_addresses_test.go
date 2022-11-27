@@ -49,7 +49,7 @@ func emailAddressesGetByEmail(t *testing.T, db *emailAddresses) {
 	ctx := context.Background()
 
 	const testEmail = "alice@example.com"
-	_, err := db.GetByEmail(ctx, testEmail)
+	_, err := db.GetByEmail(ctx, testEmail, false)
 	wantErr := ErrEmailNotExist{
 		args: errutil.Args{
 			"email": testEmail,
@@ -58,9 +58,20 @@ func emailAddressesGetByEmail(t *testing.T, db *emailAddresses) {
 	assert.Equal(t, wantErr, err)
 
 	// TODO: Use EmailAddresses.Create to replace SQL hack when the method is available.
-	err = db.Exec(`INSERT INTO email_address (uid, email) VALUES (1, ?)`, testEmail).Error
+	err = db.Exec(`INSERT INTO email_address (uid, email, is_activated) VALUES (1, ?, FALSE)`, testEmail).Error
 	require.NoError(t, err)
-	got, err := db.GetByEmail(ctx, testEmail)
+	got, err := db.GetByEmail(ctx, testEmail, false)
+	require.NoError(t, err)
+	assert.Equal(t, testEmail, got.Email)
+
+	// Should not return if we only want activated emails
+	_, err = db.GetByEmail(ctx, testEmail, true)
+	assert.Equal(t, wantErr, err)
+
+	// TODO: Use EmailAddresses.MarkActivated to replace SQL hack when the method is available.
+	err = db.Exec(`UPDATE email_address SET is_activated = TRUE WHERE email = ?`, testEmail).Error
+	require.NoError(t, err)
+	got, err = db.GetByEmail(ctx, testEmail, true)
 	require.NoError(t, err)
 	assert.Equal(t, testEmail, got.Email)
 }
