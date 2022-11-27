@@ -367,9 +367,16 @@ func SignUpPost(c *context.Context, cpt *captcha.Captcha, f form.Register) {
 	//
 	// Auto-set admin for the only user.
 	if db.Users.Count(c.Req.Context()) == 1 {
-		user.IsAdmin = true
-		user.IsActive = true
-		if err := db.UpdateUser(user); err != nil {
+		v := true
+		err := db.Users.Update(
+			c.Req.Context(),
+			user.ID,
+			db.UpdateUserOptions{
+				IsActivated: &v,
+				IsAdmin:     &v,
+			},
+		)
+		if err != nil {
 			c.Error(err, "update user")
 			return
 		}
@@ -476,13 +483,16 @@ func Activate(c *context.Context) {
 
 	// Verify code.
 	if user := verifyUserActiveCode(code); user != nil {
-		user.IsActive = true
-		var err error
-		if user.Rands, err = userutil.RandomSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		if err := db.UpdateUser(user); err != nil {
+		v := true
+		err := db.Users.Update(
+			c.Req.Context(),
+			user.ID,
+			db.UpdateUserOptions{
+				GenerateNewRands: true,
+				IsActivated:      &v,
+			},
+		)
+		if err != nil {
 			c.Error(err, "update user")
 			return
 		}
@@ -601,26 +611,16 @@ func ResetPasswdPost(c *context.Context) {
 
 	if u := verifyUserActiveCode(code); u != nil {
 		// Validate password length.
-		passwd := c.Query("password")
-		if len(passwd) < 6 {
+		password := c.Query("password")
+		if len(password) < 6 {
 			c.Data["IsResetForm"] = true
 			c.Data["Err_Password"] = true
 			c.RenderWithErr(c.Tr("auth.password_too_short"), RESET_PASSWORD, nil)
 			return
 		}
 
-		u.Password = passwd
-		var err error
-		if u.Rands, err = userutil.RandomSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		if u.Salt, err = userutil.RandomSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		u.Password = userutil.EncodePassword(u.Password, u.Salt)
-		if err := db.UpdateUser(u); err != nil {
+		err := db.Users.Update(c.Req.Context(), u.ID, db.UpdateUserOptions{Password: &password})
+		if err != nil {
 			c.Error(err, "update user")
 			return
 		}

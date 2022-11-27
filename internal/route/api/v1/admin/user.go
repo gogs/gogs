@@ -15,7 +15,6 @@ import (
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/route/api/v1/user"
-	"gogs.io/gogs/internal/userutil"
 )
 
 func parseLoginSource(c *context.APIContext, sourceID int64) {
@@ -83,39 +82,30 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		return
 	}
 
-	if len(form.Password) > 0 {
-		u.Password = form.Password
-		var err error
-		if u.Salt, err = userutil.RandomSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		u.Password = userutil.EncodePassword(u.Password, u.Salt)
+	opts := db.UpdateUserOptions{
+		LoginSource:      &form.SourceID,
+		LoginName:        &form.LoginName,
+		FullName:         &form.FullName,
+		Website:          &form.Website,
+		Location:         &form.Location,
+		MaxRepoCreation:  form.MaxRepoCreation,
+		IsActivated:      form.Active,
+		IsAdmin:          form.Admin,
+		AllowGitHook:     form.AllowGitHook,
+		AllowImportLocal: form.AllowImportLocal,
+		ProhibitLogin:    nil, // TODO: Add this option to API
 	}
 
-	u.LoginSource = form.SourceID
-	u.LoginName = form.LoginName
-	u.FullName = form.FullName
-	u.Email = form.Email
-	u.Website = form.Website
-	u.Location = form.Location
-	if form.Active != nil {
-		u.IsActive = *form.Active
-	}
-	if form.Admin != nil {
-		u.IsAdmin = *form.Admin
-	}
-	if form.AllowGitHook != nil {
-		u.AllowGitHook = *form.AllowGitHook
-	}
-	if form.AllowImportLocal != nil {
-		u.AllowImportLocal = *form.AllowImportLocal
-	}
-	if form.MaxRepoCreation != nil {
-		u.MaxRepoCreation = *form.MaxRepoCreation
+	if form.Password != "" {
+		opts.Password = &form.Password
 	}
 
-	if err := db.UpdateUser(u); err != nil {
+	if u.Email != form.Email {
+		opts.Email = &form.Email
+	}
+
+	err := db.Users.Update(c.Req.Context(), u.ID, opts)
+	if err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
@@ -123,8 +113,13 @@ func EditUser(c *context.APIContext, form api.EditUserOption) {
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin %q: %s", c.User.Name, u.Name)
+	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
+	u, err = db.Users.GetByID(c.Req.Context(), u.ID)
+	if err != nil {
+		c.Error(err, "get user")
+		return
+	}
 	c.JSONSuccess(u.APIFormat())
 }
 

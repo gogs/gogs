@@ -34,6 +34,7 @@ import (
 	"gogs.io/gogs/internal/avatar"
 	"gogs.io/gogs/internal/conf"
 	dberrors "gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
@@ -1112,11 +1113,9 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 		return err
 	}
 
-	owner.NumRepos++
-	// Remember visibility preference.
-	owner.LastRepoVisibility = repo.IsPrivate
-	if err = updateUser(e, owner); err != nil {
-		return fmt.Errorf("updateUser: %v", err)
+	_, err = e.Exec(dbutil.Quote("UPDATE %s SET num_repos = num_repos + 1 WHERE id = ?", "user"), owner.ID)
+	if err != nil {
+		return errors.Wrap(err, "increase owned repository count")
 	}
 
 	// Give access to all members in owner team.
@@ -1222,8 +1221,17 @@ func CreateRepository(doer, owner *User, opts CreateRepoOptionsLegacy) (_ *Repos
 			return nil, fmt.Errorf("CreateRepository 'git update-server-info': %s", stderr)
 		}
 	}
+	if err = sess.Commit(); err != nil {
+		return nil, err
+	}
 
-	return repo, sess.Commit()
+	// Remember visibility preference
+	err = Users.Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
+	if err != nil {
+		return nil, errors.Wrap(err, "update user")
+	}
+
+	return repo, nil
 }
 
 func countRepositories(userID int64, private bool) int64 {
@@ -2542,6 +2550,12 @@ func ForkRepository(doer, owner *User, baseRepo *Repository, name, desc string) 
 
 	if err = sess.Commit(); err != nil {
 		return nil, fmt.Errorf("Commit: %v", err)
+	}
+
+	// Remember visibility preference
+	err = Users.Update(context.TODO(), owner.ID, UpdateUserOptions{LastRepoVisibility: &repo.IsPrivate})
+	if err != nil {
+		return nil, errors.Wrap(err, "update user")
 	}
 
 	if err = repo.UpdateSize(); err != nil {

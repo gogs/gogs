@@ -63,16 +63,15 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 	}
 
 	opts := db.UpdateUserOptions{
-		FullName:        f.FullName,
-		Website:         f.Website,
-		Location:        f.Location,
-		Description:     f.Description,
-		MaxRepoCreation: org.MaxRepoCreation,
+		FullName:    &f.FullName,
+		Website:     &f.Website,
+		Location:    &f.Location,
+		Description: &f.Description,
 	}
 	if c.User.IsAdmin {
-		opts.MaxRepoCreation = f.MaxRepoCreation
+		opts.MaxRepoCreation = &f.MaxRepoCreation
 	}
-	err := db.Users.Update(c.Req.Context(), c.User.ID, opts)
+	err := db.Users.Update(c.Req.Context(), c.Org.Organization.ID, opts)
 	if err != nil {
 		c.Error(err, "update organization")
 		return
@@ -83,7 +82,7 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 }
 
 func SettingsAvatar(c *context.Context, f form.Avatar) {
-	f.Source = form.AVATAR_LOCAL
+	f.Source = form.AvatarLocal
 	if err := user.UpdateAvatarSetting(c, f, c.Org.Organization); err != nil {
 		c.Flash.Error(err.Error())
 	} else {

@@ -309,7 +309,7 @@ func SettingsAvatar(c *context.Context) {
 }
 
 func SettingsAvatarPost(c *context.Context, f form.Avatar) {
-	f.Source = form.AVATAR_LOCAL
+	f.Source = form.AvatarLocal
 	if err := UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
 		c.Flash.Error(err.Error())
 	} else {

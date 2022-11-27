@@ -104,8 +104,8 @@ func (f *UpdateProfile) Validate(ctx *macaron.Context, errs binding.Errors) bind
 }
 
 const (
-	AVATAR_LOCAL  string = "local"
-	AVATAR_BYMAIL string = "bymail"
+	AvatarLocal  string = "local"
+	AvatarLookup string = "lookup"
 )
 
 type Avatar struct {
