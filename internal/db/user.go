@@ -19,10 +19,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
-	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/repoutil"
-	"gogs.io/gogs/internal/strutil"
-	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
 )
 
@@ -40,48 +37,6 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	case "updated_unix":
 		u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	}
-}
-
-// TODO(unknwon): Update call sites to use refactored methods and delete this one.
-func updateUser(e Engine, u *User) error {
-	// Organization does not need email
-	if !u.IsOrganization() {
-		u.Email = strings.ToLower(u.Email)
-		has, err := e.Where("id!=?", u.ID).And("type=?", u.Type).And("email=?", u.Email).Get(new(User))
-		if err != nil {
-			return err
-		} else if has {
-			return ErrEmailAlreadyUsed{args: errutil.Args{"email": u.Email}}
-		}
-
-		if u.AvatarEmail == "" {
-			u.AvatarEmail = u.Email
-		}
-		u.Avatar = tool.HashEmail(u.AvatarEmail)
-	}
-
-	u.LowerName = strings.ToLower(u.Name)
-	u.Location = strutil.Truncate(u.Location, 255)
-	u.Website = strutil.Truncate(u.Website, 255)
-	u.Description = strutil.Truncate(u.Description, 255)
-
-	_, err := e.ID(u.ID).AllCols().Update(u)
-	return err
-}
-
-// TODO(unknwon): Refactoring together with methods that do updates.
-func (u *User) BeforeUpdate() {
-	if u.MaxRepoCreation < -1 {
-		u.MaxRepoCreation = -1
-	}
-	u.UpdatedUnix = time.Now().Unix()
-}
-
-// UpdateUser updates user's information.
-//
-// TODO(unknwon): Update call sites to use refactored methods and delete this one.
-func UpdateUser(u *User) error {
-	return updateUser(x, u)
 }
 
 // deleteBeans deletes all given beans, beans should contain delete conditions.

@@ -232,6 +232,10 @@ func NewContext() {
 // It returns without confirmation (mail processed asynchronously) in normal cases,
 // but waits/blocks under hook mode to make sure mail has been sent.
 func Send(msg *Message) {
+	if !conf.Email.Enabled {
+		return
+	}
+
 	mailQueue <- msg
 
 	if conf.HookMode {

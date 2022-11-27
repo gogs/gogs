@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -17,7 +16,6 @@ import (
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/route"
-	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -176,38 +174,37 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		return
 	}
 
+	opts := db.UpdateUserOptions{
+		LoginName:        &f.LoginName,
+		FullName:         &f.FullName,
+		Website:          &f.Website,
+		Location:         &f.Location,
+		MaxRepoCreation:  &f.MaxRepoCreation,
+		IsActivated:      &f.Active,
+		IsAdmin:          &f.Admin,
+		AllowGitHook:     &f.AllowGitHook,
+		AllowImportLocal: &f.AllowImportLocal,
+		ProhibitLogin:    &f.ProhibitLogin,
+	}
+
 	fields := strings.Split(f.LoginType, "-")
 	if len(fields) == 2 {
-		loginSource := com.StrTo(fields[1]).MustInt64()
-
+		loginSource, _ := strconv.ParseInt(fields[1], 10, 64)
 		if u.LoginSource != loginSource {
-			u.LoginSource = loginSource
+			opts.LoginSource = &loginSource
 		}
 	}
 
-	if len(f.Password) > 0 {
-		u.Password = f.Password
-		var err error
-		if u.Salt, err = userutil.RandomSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		u.Password = userutil.EncodePassword(u.Password, u.Salt)
+	if f.Password != "" {
+		opts.Password = &f.Password
 	}
 
-	u.LoginName = f.LoginName
-	u.FullName = f.FullName
-	u.Email = f.Email
-	u.Website = f.Website
-	u.Location = f.Location
-	u.MaxRepoCreation = f.MaxRepoCreation
-	u.IsActive = f.Active
-	u.IsAdmin = f.Admin
-	u.AllowGitHook = f.AllowGitHook
-	u.AllowImportLocal = f.AllowImportLocal
-	u.ProhibitLogin = f.ProhibitLogin
+	if u.Email != f.Email {
+		opts.Email = &f.Email
+	}
 
-	if err := db.UpdateUser(u); err != nil {
+	err := db.Users.Update(c.Req.Context(), u.ID, opts)
+	if err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
@@ -216,7 +213,7 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))

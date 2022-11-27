@@ -27,6 +27,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
+- Unable to choose "Lookup Avatar by mail" in user settings without deleting custom avatar. [#7267](https://github.com/gogs/gogs/pull/7267)
 
 ### Removed
 
