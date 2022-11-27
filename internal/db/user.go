@@ -21,6 +21,7 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 	"gogs.io/gogs/internal/userutil"
 )
@@ -41,6 +42,7 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// TODO(unknwon): Update call sites to use refactored methods and delete this one.
 func updateUser(e Engine, u *User) error {
 	// Organization does not need email
 	if !u.IsOrganization() {
@@ -59,9 +61,9 @@ func updateUser(e Engine, u *User) error {
 	}
 
 	u.LowerName = strings.ToLower(u.Name)
-	u.Location = tool.TruncateString(u.Location, 255)
-	u.Website = tool.TruncateString(u.Website, 255)
-	u.Description = tool.TruncateString(u.Description, 255)
+	u.Location = strutil.Truncate(u.Location, 255)
+	u.Website = strutil.Truncate(u.Website, 255)
+	u.Description = strutil.Truncate(u.Description, 255)
 
 	_, err := e.ID(u.ID).AllCols().Update(u)
 	return err
@@ -76,6 +78,8 @@ func (u *User) BeforeUpdate() {
 }
 
 // UpdateUser updates user's information.
+//
+// TODO(unknwon): Update call sites to use refactored methods and delete this one.
 func UpdateUser(u *User) error {
 	return updateUser(x, u)
 }

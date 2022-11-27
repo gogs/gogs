@@ -106,7 +106,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		return err
 	}
 
-	if Users.IsUsernameUsed(context.TODO(), org.Name) {
+	if Users.IsUsernameUsed(context.TODO(), org.Name, 0) {
 		return ErrUserAlreadyExist{
 			args: errutil.Args{
 				"name": org.Name,
