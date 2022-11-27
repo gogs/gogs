@@ -45,6 +45,8 @@ type ErrEmailNotExist struct {
 	args errutil.Args
 }
 
+// IsErrEmailAddressNotExist returns true if the underlying error has the type
+// ErrEmailNotExist.
 func IsErrEmailAddressNotExist(err error) bool {
 	_, ok := errors.Cause(err).(ErrEmailNotExist)
 	return ok
