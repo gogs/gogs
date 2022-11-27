@@ -6,6 +6,7 @@ package gitutil
 
 import (
 	"github.com/gogs/git-module"
+	"github.com/pkg/errors"
 
 	"gogs.io/gogs/internal/errutil"
 )
@@ -27,17 +28,19 @@ func NewError(err error) error {
 	return Error{error: err}
 }
 
-// IsErrSubmoduleNotExist returns true if the error is git.ErrSubmoduleNotExist.
+// IsErrSubmoduleNotExist returns true if the underlying error is
+// git.ErrSubmoduleNotExist.
 func IsErrSubmoduleNotExist(err error) bool {
-	return err == git.ErrSubmoduleNotExist
+	return errors.Cause(err) == git.ErrSubmoduleNotExist
 }
 
-// IsErrRevisionNotExist returns true if the error is git.ErrRevisionNotExist.
+// IsErrRevisionNotExist returns true if the underlying error is
+// git.ErrRevisionNotExist.
 func IsErrRevisionNotExist(err error) bool {
-	return err == git.ErrRevisionNotExist
+	return errors.Cause(err) == git.ErrRevisionNotExist
 }
 
-// IsErrNoMergeBase returns true if the error is git.ErrNoMergeBase.
+// IsErrNoMergeBase returns true if the underlying error is git.ErrNoMergeBase.
 func IsErrNoMergeBase(err error) bool {
-	return err == git.ErrNoMergeBase
+	return errors.Cause(err) == git.ErrNoMergeBase
 }

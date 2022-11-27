@@ -5,7 +5,6 @@
 package org
 
 import (
-	"github.com/pkg/errors"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -45,9 +44,9 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 			c.Data["OrgName"] = true
 			var msg string
 			switch {
-			case db.IsErrUserAlreadyExist(errors.Cause(err)):
+			case db.IsErrUserAlreadyExist(err):
 				msg = c.Tr("form.username_been_taken")
-			case db.IsErrNameNotAllowed(errors.Cause(err)):
+			case db.IsErrNameNotAllowed(err):
 				msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 			default:
 				c.Error(err, "change organization name")

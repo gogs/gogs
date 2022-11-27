@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"gorm.io/gorm"
 
@@ -130,8 +131,10 @@ type ErrAccessTokenNotExist struct {
 	args errutil.Args
 }
 
+// IsErrAccessTokenNotExist returns true if the underlying error has the type
+// ErrAccessTokenNotExist.
 func IsErrAccessTokenNotExist(err error) bool {
-	_, ok := err.(ErrAccessTokenNotExist)
+	_, ok := errors.Cause(err).(ErrAccessTokenNotExist)
 	return ok
 }
 
