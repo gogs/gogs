@@ -96,10 +96,9 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 		c.Req.Context(),
 		c.User.ID,
 		db.UpdateUserOptions{
-			FullName:        f.FullName,
-			Website:         f.Website,
-			Location:        f.Location,
-			MaxRepoCreation: c.User.MaxRepoCreation,
+			FullName: &f.FullName,
+			Website:  &f.Website,
+			Location: &f.Location,
 		},
 	)
 	if err != nil {
@@ -113,13 +112,23 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 
 // FIXME: limit upload size
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) error {
-	if f.Source == form.AVATAR_BYMAIL && len(f.Gravatar) > 0 {
-		ctxUser.UseCustomAvatar = false
-		ctxUser.Avatar = cryptoutil.MD5(f.Gravatar)
-		ctxUser.AvatarEmail = f.Gravatar
+	if f.Source == form.AvatarLookup && f.Gravatar != "" {
+		avatar := cryptoutil.MD5(f.Gravatar)
+		err := db.Users.Update(
+			c.Req.Context(),
+			ctxUser.ID,
+			db.UpdateUserOptions{
+				Avatar:      &avatar,
+				AvatarEmail: &f.Gravatar,
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "update user")
+		}
 
-		if err := db.UpdateUser(ctxUser); err != nil {
-			return fmt.Errorf("update user: %v", err)
+		err = db.Users.DeleteCustomAvatar(c.Req.Context(), c.User.ID)
+		if err != nil {
+			return errors.Wrap(err, "delete custom avatar")
 		}
 		return nil
 	}
@@ -193,14 +202,14 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))
 	} else {
-		c.User.Password = f.Password
-		var err error
-		if c.User.Salt, err = userutil.RandomSalt(); err != nil {
-			c.Errorf(err, "get user salt")
-			return
-		}
-		c.User.Password = userutil.EncodePassword(c.User.Password, c.User.Salt)
-		if err := db.UpdateUser(c.User); err != nil {
+		err := db.Users.Update(
+			c.Req.Context(),
+			c.User.ID,
+			db.UpdateUserOptions{
+				Password: &f.Password,
+			},
+		)
+		if err != nil {
 			c.Errorf(err, "update user")
 			return
 		}

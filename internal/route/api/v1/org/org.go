@@ -89,14 +89,25 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	org.FullName = form.FullName
-	org.Description = form.Description
-	org.Website = form.Website
-	org.Location = form.Location
-	if err := db.UpdateUser(org); err != nil {
-		c.Error(err, "update user")
+	err := db.Users.Update(
+		c.Req.Context(),
+		c.Org.Organization.ID,
+		db.UpdateUserOptions{
+			FullName:    &form.FullName,
+			Website:     &form.Website,
+			Location:    &form.Location,
+			Description: &form.Description,
+		},
+	)
+	if err != nil {
+		c.Error(err, "update organization")
 		return
 	}
 
+	org, err = db.GetOrgByName(org.Name)
+	if err != nil {
+		c.Error(err, "get organization")
+		return
+	}
 	c.JSONSuccess(convert.ToOrganization(org))
 }

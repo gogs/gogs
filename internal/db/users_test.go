@@ -731,16 +731,69 @@ func usersListFollowings(t *testing.T, db *users) {
 func usersUpdate(t *testing.T, db *users) {
 	ctx := context.Background()
 
-	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	const oldPassword = "Password"
+	alice, err := db.Create(
+		ctx,
+		"alice",
+		"alice@example.com",
+		CreateUserOptions{
+			FullName:    "FullName",
+			Password:    oldPassword,
+			LoginSource: 9,
+			LoginName:   "LoginName",
+			Location:    "Location",
+			Website:     "Website",
+			Activated:   false,
+			Admin:       false,
+		},
+	)
 	require.NoError(t, err)
 
-	overLimitStr := strings.Repeat("a", 300)
+	t.Run("update password", func(t *testing.T) {
+		got := userutil.ValidatePassword(alice.Password, alice.Salt, oldPassword)
+		require.True(t, got)
+
+		newPassword := "NewPassword"
+		err = db.Update(ctx, alice.ID, UpdateUserOptions{Password: &newPassword})
+		require.NoError(t, err)
+		alice, err = db.GetByID(ctx, alice.ID)
+		require.NoError(t, err)
+
+		got = userutil.ValidatePassword(alice.Password, alice.Salt, oldPassword)
+		assert.False(t, got, "Old password should stop working")
+
+		got = userutil.ValidatePassword(alice.Password, alice.Salt, newPassword)
+		assert.True(t, got, "New password should work")
+	})
+
+	t.Run("update email but already used", func(t *testing.T) {
+		// todo
+	})
+
+	loginSource := int64(1)
+	maxRepoCreation := 99
+	lastRepoVisibility := true
+	overLimitStr := strings.Repeat("a", 2050)
 	opts := UpdateUserOptions{
-		FullName:        overLimitStr,
-		Website:         overLimitStr,
-		Location:        overLimitStr,
-		Description:     overLimitStr,
-		MaxRepoCreation: 1,
+		LoginSource: &loginSource,
+		LoginName:   &alice.Name,
+
+		FullName:    &overLimitStr,
+		Website:     &overLimitStr,
+		Location:    &overLimitStr,
+		Description: &overLimitStr,
+
+		MaxRepoCreation:    &maxRepoCreation,
+		LastRepoVisibility: &lastRepoVisibility,
+
+		IsActivated:      &lastRepoVisibility,
+		IsAdmin:          &lastRepoVisibility,
+		AllowGitHook:     &lastRepoVisibility,
+		AllowImportLocal: &lastRepoVisibility,
+		ProhibitLogin:    &lastRepoVisibility,
+
+		Avatar:      &overLimitStr,
+		AvatarEmail: &overLimitStr,
 	}
 	err = db.Update(ctx, alice.ID, opts)
 	require.NoError(t, err)
@@ -748,28 +801,34 @@ func usersUpdate(t *testing.T, db *users) {
 	alice, err = db.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
 
-	wantStr := strings.Repeat("a", 255)
-	assert.Equal(t, wantStr, alice.FullName)
-	assert.Equal(t, wantStr, alice.Website)
-	assert.Equal(t, wantStr, alice.Location)
-	assert.Equal(t, wantStr, alice.Description)
-	assert.Equal(t, 1, alice.MaxRepoCreation)
-
-	// Test empty values
-	opts = UpdateUserOptions{
-		FullName: "Alice John",
-		Website:  "https://gogs.io",
+	assertValues := func() {
+		assert.Equal(t, loginSource, alice.LoginSource)
+		assert.Equal(t, alice.Name, alice.LoginName)
+		wantStr255 := strings.Repeat("a", 255)
+		assert.Equal(t, wantStr255, alice.FullName)
+		assert.Equal(t, wantStr255, alice.Website)
+		assert.Equal(t, wantStr255, alice.Location)
+		assert.Equal(t, wantStr255, alice.Description)
+		assert.Equal(t, maxRepoCreation, alice.MaxRepoCreation)
+		assert.Equal(t, lastRepoVisibility, alice.LastRepoVisibility)
+		assert.Equal(t, lastRepoVisibility, alice.IsActive)
+		assert.Equal(t, lastRepoVisibility, alice.IsAdmin)
+		assert.Equal(t, lastRepoVisibility, alice.AllowGitHook)
+		assert.Equal(t, lastRepoVisibility, alice.AllowImportLocal)
+		assert.Equal(t, lastRepoVisibility, alice.ProhibitLogin)
+		wantStr2048 := strings.Repeat("a", 2048)
+		assert.Equal(t, wantStr2048, alice.Avatar)
+		assert.Equal(t, wantStr255, alice.AvatarEmail)
 	}
-	err = db.Update(ctx, alice.ID, opts)
+	assertValues()
+
+	// Test ignored values
+	err = db.Update(ctx, alice.ID, UpdateUserOptions{})
 	require.NoError(t, err)
 
 	alice, err = db.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
-	assert.Equal(t, opts.FullName, alice.FullName)
-	assert.Equal(t, opts.Website, alice.Website)
-	assert.Empty(t, alice.Location)
-	assert.Empty(t, alice.Description)
-	assert.Empty(t, alice.MaxRepoCreation)
+	assertValues()
 }
 
 func usersUseCustomAvatar(t *testing.T, db *users) {

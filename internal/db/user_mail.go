@@ -11,7 +11,6 @@ import (
 
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
-	"gogs.io/gogs/internal/userutil"
 )
 
 // EmailAddresses is the list of all email addresses of a user. Can contain the
@@ -120,28 +119,11 @@ func AddEmailAddresses(emails []*EmailAddress) error {
 }
 
 func (email *EmailAddress) Activate() error {
-	user, err := Users.GetByID(context.TODO(), email.UserID)
-	if err != nil {
-		return err
-	}
-	if user.Rands, err = userutil.RandomSalt(); err != nil {
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
 	email.IsActivated = true
-	if _, err := sess.ID(email.ID).AllCols().Update(email); err != nil {
-		return err
-	} else if err = updateUser(sess, user); err != nil {
+	if _, err := x.ID(email.ID).AllCols().Update(email); err != nil {
 		return err
 	}
-
-	return sess.Commit()
+	return Users.Update(context.TODO(), email.UserID, UpdateUserOptions{GenerateNewRands: true})
 }
 
 func DeleteEmailAddress(email *EmailAddress) (err error) {

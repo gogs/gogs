@@ -87,8 +87,7 @@ type UsersStore interface {
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
 	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
-	// Update updates all fields for the given user, all values are persisted as-is
-	// (i.e. empty values would overwrite/wipe out existing values).
+	// Update updates fields for the given user.
 	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
 	// UseCustomAvatar uses the given avatar as the user custom avatar.
 	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
@@ -324,8 +323,10 @@ type ErrEmailAlreadyUsed struct {
 	args errutil.Args
 }
 
+// IsErrEmailAlreadyUsed returns true if the underlying error has the type
+// ErrEmailAlreadyUsed.
 func IsErrEmailAlreadyUsed(err error) bool {
-	_, ok := err.(ErrEmailAlreadyUsed)
+	_, ok := errors.Cause(err).(ErrEmailAlreadyUsed)
 	return ok
 }
 
@@ -415,8 +416,10 @@ type ErrUserNotExist struct {
 	args errutil.Args
 }
 
+// IsErrUserNotExist returns true if the underlying error has the type
+// ErrUserNotExist.
 func IsErrUserNotExist(err error) bool {
-	_, ok := err.(ErrUserNotExist)
+	_, ok := errors.Cause(err).(ErrUserNotExist)
 	return ok
 }
 
@@ -549,30 +552,117 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 }
 
 type UpdateUserOptions struct {
-	FullName    string
-	Website     string
-	Location    string
-	Description string
+	LoginSource *int64
+	LoginName   *string
 
-	MaxRepoCreation int
+	Password *string
+	// GenerateNewRands indicates whether to force generate new rands for the user.
+	GenerateNewRands bool
+
+	FullName    *string
+	Email       *string
+	Website     *string
+	Location    *string
+	Description *string
+
+	MaxRepoCreation    *int
+	LastRepoVisibility *bool
+
+	IsActivated      *bool
+	IsAdmin          *bool
+	AllowGitHook     *bool
+	AllowImportLocal *bool
+	ProhibitLogin    *bool
+
+	Avatar      *string
+	AvatarEmail *string
 }
 
 func (db *users) Update(ctx context.Context, userID int64, opts UpdateUserOptions) error {
-	if opts.MaxRepoCreation < -1 {
-		opts.MaxRepoCreation = -1
+	updates := map[string]any{
+		"updated_unix": db.NowFunc().Unix(),
 	}
-	return db.WithContext(ctx).
-		Model(&User{}).
-		Where("id = ?", userID).
-		Updates(map[string]any{
-			"full_name":         strutil.Truncate(opts.FullName, 255),
-			"website":           strutil.Truncate(opts.Website, 255),
-			"location":          strutil.Truncate(opts.Location, 255),
-			"description":       strutil.Truncate(opts.Description, 255),
-			"max_repo_creation": opts.MaxRepoCreation,
-			"updated_unix":      db.NowFunc().Unix(),
-		}).
-		Error
+
+	if opts.LoginSource != nil {
+		updates["login_source"] = *opts.LoginSource
+	}
+	if opts.LoginName != nil {
+		updates["login_name"] = *opts.LoginName
+	}
+
+	if opts.Password != nil {
+		salt, err := userutil.RandomSalt()
+		if err != nil {
+			return errors.Wrap(err, "generate salt")
+		}
+		updates["salt"] = salt
+		updates["passwd"] = userutil.EncodePassword(*opts.Password, salt)
+		opts.GenerateNewRands = true
+	}
+	if opts.GenerateNewRands {
+		rands, err := userutil.RandomSalt()
+		if err != nil {
+			return errors.Wrap(err, "generate rands")
+		}
+		updates["rands"] = rands
+	}
+
+	if opts.FullName != nil {
+		updates["full_name"] = strutil.Truncate(*opts.FullName, 255)
+	}
+	if opts.Email != nil {
+		_, err := db.GetByEmail(ctx, *opts.Email)
+		if err == nil {
+			return ErrEmailAlreadyUsed{args: errutil.Args{"email": *opts.Email}}
+		} else if !IsErrUserNotExist(err) {
+			return errors.Wrap(err, "check email")
+		}
+		updates["email"] = *opts.Email
+	}
+	if opts.Website != nil {
+		updates["website"] = strutil.Truncate(*opts.Website, 255)
+	}
+	if opts.Location != nil {
+		updates["location"] = strutil.Truncate(*opts.Location, 255)
+	}
+	if opts.Description != nil {
+		updates["description"] = strutil.Truncate(*opts.Description, 255)
+	}
+
+	if opts.MaxRepoCreation != nil {
+		if *opts.MaxRepoCreation < -1 {
+			*opts.MaxRepoCreation = -1
+		}
+		updates["max_repo_creation"] = *opts.MaxRepoCreation
+	}
+	if opts.LastRepoVisibility != nil {
+		updates["last_repo_visibility"] = *opts.LastRepoVisibility
+	}
+
+	if opts.IsActivated != nil {
+		updates["is_active"] = *opts.IsActivated
+	}
+	if opts.IsAdmin != nil {
+		updates["is_admin"] = *opts.IsAdmin
+	}
+	if opts.AllowGitHook != nil {
+		updates["allow_git_hook"] = *opts.AllowGitHook
+	}
+	if opts.AllowImportLocal != nil {
+		updates["allow_import_local"] = *opts.AllowImportLocal
+	}
+	if opts.ProhibitLogin != nil {
+		updates["prohibit_login"] = *opts.ProhibitLogin
+	}
+
+	if opts.Avatar != nil {
+		updates["avatar"] = strutil.Truncate(*opts.Avatar, 2048)
+	}
+	if opts.AvatarEmail != nil {
+		updates["avatar_email"] = strutil.Truncate(*opts.AvatarEmail, 255)
+	}
+
+	return db.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(updates).Error
 }
 
 func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error {
