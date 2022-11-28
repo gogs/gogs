@@ -834,7 +834,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 	return issue, issue.LoadAttributes()
 }
 
-// GetIssueByIndex returns raw issue without loading attributes by index in a repository.
+// GetRawIssueByIndex returns raw issue without loading attributes by index in a repository.
 func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	issue := &Issue{
 		RepoID: repoID,
