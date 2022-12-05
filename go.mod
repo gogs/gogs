@@ -44,7 +44,7 @@ require (
 	github.com/urfave/cli v1.22.10
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b
 	golang.org/x/net v0.0.0-20221002022538-bcab6841153b
-	golang.org/x/text v0.4.0
+	golang.org/x/text v0.5.0
 	gopkg.in/DATA-DOG/go-sqlmock.v2 v2.0.0-20180914054222-c19298f520d0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/ini.v1 v1.67.0
