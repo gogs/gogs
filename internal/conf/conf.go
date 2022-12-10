@@ -22,7 +22,7 @@ import (
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
-	"gogs.io/gogs/conf"
+	"gogs.io/gogs/internal/assets/conf"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/semverutil"
 )
@@ -33,6 +33,21 @@ func init() {
 	if err != nil {
 		panic("init console logger: " + err.Error())
 	}
+}
+
+// Asset is a wrapper for getting conf assets.
+func Asset(name string) ([]byte, error) {
+	return conf.Asset(name)
+}
+
+// AssetDir is a wrapper for getting conf assets.
+func AssetDir(name string) ([]string, error) {
+	return conf.AssetDir(name)
+}
+
+// MustAsset is a wrapper for getting conf assets.
+func MustAsset(name string) []byte {
+	return conf.MustAsset(name)
 }
 
 // File is the configuration object.
@@ -47,16 +62,12 @@ var File *ini.File
 //
 // ⚠️ WARNING: Do not print anything in this function other than warnings.
 func Init(customConf string) error {
-	data, err := conf.Files.ReadFile("app.ini")
-	if err != nil {
-		return errors.Wrap(err, `read default "app.ini"`)
-	}
-
+	var err error
 	File, err = ini.LoadSources(ini.LoadOptions{
 		IgnoreInlineComment: true,
-	}, data)
+	}, conf.MustAsset("conf/app.ini"))
 	if err != nil {
-		return errors.Wrap(err, `parse "app.ini"`)
+		return errors.Wrap(err, "parse 'conf/app.ini'")
 	}
 	File.NameMapper = ini.SnackCase
 
@@ -203,6 +214,10 @@ func Init(customConf string) error {
 	if err = File.Section("email").MapTo(&Email); err != nil {
 		return errors.Wrap(err, "mapping [email] section")
 	}
+	// LEGACY [0.13]: In case there are values with old section name.
+	if err = File.Section("mailer").MapTo(&Email); err != nil {
+		return errors.Wrap(err, "mapping [mailer] section")
+	}
 
 	if Email.Enabled {
 		if Email.From == "" {
@@ -222,6 +237,10 @@ func Init(customConf string) error {
 
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
+	}
+	// LEGACY [0.13]: In case there are values with old section name.
+	if err = File.Section("service").MapTo(&Auth); err != nil {
+		return errors.Wrap(err, "mapping [service] section")
 	}
 
 	// *************************
@@ -348,6 +367,12 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [lfs] section")
 	}
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
+
+	// ****************************
+	// ----- Webhook settings -----
+	// ****************************
+	Webhook.SlackBackticksTitle = false;
+	Webhook.SlackBackticksAuthor = false;
 
 	handleDeprecated()
 

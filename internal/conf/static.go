@@ -13,9 +13,6 @@ import (
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
-//
-// ⚠️ WARNING: After changing any options, do not forget to update template of
-// "/admin/config" page as well.
 
 // HasMinWinSvc is whether the application is built with Windows Service support.
 //
@@ -33,7 +30,69 @@ var (
 // CustomConf returns the absolute path of custom configuration file that is used.
 var CustomConf string
 
+// ⚠️ WARNING: After changing the following section, do not forget to update template of
+// "/admin/config" page as well.
 var (
+	// Application settings
+	App struct {
+		// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
+		Version string `ini:"-"`
+
+		BrandName string
+		RunUser   string
+		RunMode   string
+
+		// Deprecated: Use BrandName instead, will be removed in 0.13.
+		AppName string
+	}
+
+	// SSH settings
+	SSH struct {
+		Disabled                     bool   `ini:"DISABLE_SSH"`
+		Domain                       string `ini:"SSH_DOMAIN"`
+		Port                         int    `ini:"SSH_PORT"`
+		RootPath                     string `ini:"SSH_ROOT_PATH"`
+		KeygenPath                   string `ini:"SSH_KEYGEN_PATH"`
+		KeyTestPath                  string `ini:"SSH_KEY_TEST_PATH"`
+		MinimumKeySizeCheck          bool
+		MinimumKeySizes              map[string]int `ini:"-"` // Load from [ssh.minimum_key_sizes]
+		RewriteAuthorizedKeysAtStart bool
+
+		StartBuiltinServer bool     `ini:"START_SSH_SERVER"`
+		ListenHost         string   `ini:"SSH_LISTEN_HOST"`
+		ListenPort         int      `ini:"SSH_LISTEN_PORT"`
+		ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
+	}
+
+	// Repository settings
+	Repository struct {
+		Root                     string
+		ScriptType               string
+		ANSICharset              string `ini:"ANSI_CHARSET"`
+		ForcePrivate             bool
+		MaxCreationLimit         int
+		PreferredLicenses        []string
+		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
+		EnableLocalPathMigration bool
+		EnableRawFileRenderMode  bool
+		CommitsFetchConcurrency  int
+
+		// Repository editor settings
+		Editor struct {
+			LineWrapExtensions   []string
+			PreviewableFileModes []string
+		} `ini:"repository.editor"`
+
+		// Repository upload settings
+		Upload struct {
+			Enabled      bool
+			TempPath     string
+			AllowedTypes []string `delim:"|"`
+			FileMaxSize  int64
+			MaxFiles     int
+		} `ini:"repository.upload"`
+	}
+
 	// Security settings
 	Security struct {
 		InstallLock             bool
@@ -45,6 +104,9 @@ var (
 		EnableLoginStatusCookie bool
 		LoginStatusCookieName   string
 		LocalNetworkAllowlist   []string `delim:","`
+
+		// Deprecated: Use Auth.ReverseProxyAuthenticationHeader instead, will be removed in 0.13.
+		ReverseProxyAuthenticationUser string
 	}
 
 	// Email settings
@@ -69,6 +131,34 @@ var (
 
 		// Derived from other static values
 		FromEmail string `ini:"-"` // Parsed email address of From without person's name.
+
+		// Deprecated: Use Password instead, will be removed in 0.13.
+		Passwd string
+	}
+
+	// Authentication settings
+	Auth struct {
+		ActivateCodeLives         int
+		ResetPasswordCodeLives    int
+		RequireEmailConfirmation  bool
+		RequireSigninView         bool
+		DisableRegistration       bool
+		EnableRegistrationCaptcha bool
+
+		EnableReverseProxyAuthentication   bool
+		EnableReverseProxyAutoRegistration bool
+		ReverseProxyAuthenticationHeader   string
+
+		// Deprecated: Use ActivateCodeLives instead, will be removed in 0.13.
+		ActiveCodeLiveMinutes int
+		// Deprecated: Use ResetPasswordCodeLives instead, will be removed in 0.13.
+		ResetPasswdCodeLiveMinutes int
+		// Deprecated: Use RequireEmailConfirmation instead, will be removed in 0.13.
+		RegisterEmailConfirm bool
+		// Deprecated: Use EnableRegistrationCaptcha instead, will be removed in 0.13.
+		EnableCaptcha bool
+		// Deprecated: Use User.EnableEmailNotification instead, will be removed in 0.13.
+		EnableNotifyMail bool
 	}
 
 	// User settings
@@ -85,6 +175,11 @@ var (
 		GCInterval     int64 `ini:"GC_INTERVAL"`
 		MaxLifeTime    int64
 		CSRFCookieName string `ini:"CSRF_COOKIE_NAME"`
+
+		// Deprecated: Use GCInterval instead, will be removed in 0.13.
+		GCIntervalTime int64 `ini:"GC_INTERVAL_TIME"`
+		// Deprecated: Use MaxLifeTime instead, will be removed in 0.13.
+		SessionLifeTime int64
 	}
 
 	// Cache settings
@@ -126,6 +221,18 @@ var (
 		FormatLayout string `ini:"-"` // Actual layout of the Format.
 	}
 
+	// Picture settings
+	Picture struct {
+		AvatarUploadPath           string
+		RepositoryAvatarUploadPath string
+		GravatarSource             string
+		DisableGravatar            bool
+		EnableFederatedAvatar      bool
+
+		// Derived from other static values
+		LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
+	}
+
 	// Mirror settings
 	Mirror struct {
 		DefaultInterval int
@@ -137,6 +244,8 @@ var (
 		DeliverTimeout int
 		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
 		PagingNum      int
+		SlackBackticksTitle	bool `ini:"SLACK_BACKTICKS_TITLE"`
+		SlackBackticksAuthor	bool `ini:"SLACK_BACKTICKS_AUTHOR"`
 	}
 
 	// Markdown settings
@@ -202,7 +311,6 @@ var (
 			Mirror  int
 			Clone   int
 			Pull    int
-			Diff    int
 			GC      int `ini:"GC"`
 		} `ini:"git.timeout"`
 	}
@@ -210,6 +318,27 @@ var (
 	// API settings
 	API struct {
 		MaxResponseItems int
+	}
+
+	// UI settings
+	UI struct {
+		ExplorePagingNum   int
+		IssuePagingNum     int
+		FeedMaxCommitNum   int
+		ThemeColorMetaTag  string
+		MaxDisplayFileSize int64
+
+		Admin struct {
+			UserPagingNum   int
+			RepoPagingNum   int
+			NoticePagingNum int
+			OrgPagingNum    int
+		} `ini:"ui.admin"`
+		User struct {
+			RepoPagingNum     int
+			NewsFeedPagingNum int
+			CommitsPagingNum  int
+		} `ini:"ui.user"`
 	}
 
 	// Prometheus settings
@@ -229,34 +358,6 @@ var (
 	// Global setting
 	HasRobotsTxt bool
 )
-
-type AppOpts struct {
-	// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
-	Version string `ini:"-"`
-
-	BrandName string
-	RunUser   string
-	RunMode   string
-}
-
-// Application settings
-var App AppOpts
-
-type AuthOpts struct {
-	ActivateCodeLives         int
-	ResetPasswordCodeLives    int
-	RequireEmailConfirmation  bool
-	RequireSigninView         bool
-	DisableRegistration       bool
-	EnableRegistrationCaptcha bool
-
-	EnableReverseProxyAuthentication   bool
-	EnableReverseProxyAutoRegistration bool
-	ReverseProxyAuthenticationHeader   string
-}
-
-// Authentication settings
-var Auth AuthOpts
 
 type ServerOpts struct {
 	ExternalURL          string `ini:"EXTERNAL_URL"`
@@ -284,74 +385,31 @@ type ServerOpts struct {
 	Subpath        string      `ini:"-"` // Subpath found the ExternalURL. Should be empty when not found.
 	SubpathDepth   int         `ini:"-"` // The number of slashes found in the Subpath.
 	UnixSocketMode os.FileMode `ini:"-"` // Parsed file mode of UnixSocketPermission.
+
+	// Deprecated: Use ExternalURL instead, will be removed in 0.13.
+	RootURL string `ini:"ROOT_URL"`
+	// Deprecated: Use LandingURL instead, will be removed in 0.13.
+	LangdingPage string `ini:"LANDING_PAGE"`
 }
 
 // Server settings
 var Server ServerOpts
 
-type SSHOpts struct {
-	Disabled                     bool   `ini:"DISABLE_SSH"`
-	Domain                       string `ini:"SSH_DOMAIN"`
-	Port                         int    `ini:"SSH_PORT"`
-	RootPath                     string `ini:"SSH_ROOT_PATH"`
-	KeygenPath                   string `ini:"SSH_KEYGEN_PATH"`
-	KeyTestPath                  string `ini:"SSH_KEY_TEST_PATH"`
-	MinimumKeySizeCheck          bool
-	MinimumKeySizes              map[string]int `ini:"-"` // Load from [ssh.minimum_key_sizes]
-	RewriteAuthorizedKeysAtStart bool
-
-	StartBuiltinServer bool     `ini:"START_SSH_SERVER"`
-	ListenHost         string   `ini:"SSH_LISTEN_HOST"`
-	ListenPort         int      `ini:"SSH_LISTEN_PORT"`
-	ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
-	ServerMACs         []string `ini:"SSH_SERVER_MACS"`
-}
-
-// SSH settings
-var SSH SSHOpts
-
-type RepositoryOpts struct {
-	Root                     string
-	ScriptType               string
-	ANSICharset              string `ini:"ANSI_CHARSET"`
-	ForcePrivate             bool
-	MaxCreationLimit         int
-	PreferredLicenses        []string
-	DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
-	EnableLocalPathMigration bool
-	EnableRawFileRenderMode  bool
-	CommitsFetchConcurrency  int
-
-	// Repository editor settings
-	Editor struct {
-		LineWrapExtensions   []string
-		PreviewableFileModes []string
-	} `ini:"repository.editor"`
-
-	// Repository upload settings
-	Upload struct {
-		Enabled      bool
-		TempPath     string
-		AllowedTypes []string `delim:"|"`
-		FileMaxSize  int64
-		MaxFiles     int
-	} `ini:"repository.upload"`
-}
-
-// Repository settings
-var Repository RepositoryOpts
-
 type DatabaseOpts struct {
 	Type         string
 	Host         string
 	Name         string
-	Schema       string
 	User         string
 	Password     string
 	SSLMode      string `ini:"SSL_MODE"`
 	Path         string
 	MaxOpenConns int
 	MaxIdleConns int
+
+	// Deprecated: Use Type instead, will be removed in 0.13.
+	DbType string
+	// Deprecated: Use Password instead, will be removed in 0.13.
+	Passwd string
 }
 
 // Database settings
@@ -364,45 +422,6 @@ type LFSOpts struct {
 
 // LFS settings
 var LFS LFSOpts
-
-type UIUserOpts struct {
-	RepoPagingNum     int
-	NewsFeedPagingNum int
-	CommitsPagingNum  int
-}
-
-type UIOpts struct {
-	ExplorePagingNum   int
-	IssuePagingNum     int
-	FeedMaxCommitNum   int
-	ThemeColorMetaTag  string
-	MaxDisplayFileSize int64
-
-	Admin struct {
-		UserPagingNum   int
-		RepoPagingNum   int
-		NoticePagingNum int
-		OrgPagingNum    int
-	} `ini:"ui.admin"`
-	User UIUserOpts `ini:"ui.user"`
-}
-
-// UI settings
-var UI UIOpts
-
-type PictureOpts struct {
-	AvatarUploadPath           string
-	RepositoryAvatarUploadPath string
-	GravatarSource             string
-	DisableGravatar            bool
-	EnableFederatedAvatar      bool
-
-	// Derived from other static values
-	LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
-}
-
-// Picture settings
-var Picture PictureOpts
 
 type i18nConf struct {
 	Langs     []string          `delim:","`
@@ -424,11 +443,68 @@ var I18n *i18nConf
 
 // handleDeprecated transfers deprecated values to the new ones when set.
 func handleDeprecated() {
-	// Add fallback logic here, example:
-	// if App.AppName != "" {
-	// 	App.BrandName = App.AppName
-	// 	App.AppName = ""
-	// }
+	if App.AppName != "" {
+		App.BrandName = App.AppName
+		App.AppName = ""
+	}
+
+	if Server.RootURL != "" {
+		Server.ExternalURL = Server.RootURL
+		Server.RootURL = ""
+	}
+	if Server.LangdingPage == "explore" {
+		Server.LandingURL = "/explore"
+		Server.LangdingPage = ""
+	}
+
+	if Database.DbType != "" {
+		Database.Type = Database.DbType
+		Database.DbType = ""
+	}
+	if Database.Passwd != "" {
+		Database.Password = Database.Passwd
+		Database.Passwd = ""
+	}
+
+	if Email.Passwd != "" {
+		Email.Password = Email.Passwd
+		Email.Passwd = ""
+	}
+
+	if Auth.ActiveCodeLiveMinutes > 0 {
+		Auth.ActivateCodeLives = Auth.ActiveCodeLiveMinutes
+		Auth.ActiveCodeLiveMinutes = 0
+	}
+	if Auth.ResetPasswdCodeLiveMinutes > 0 {
+		Auth.ResetPasswordCodeLives = Auth.ResetPasswdCodeLiveMinutes
+		Auth.ResetPasswdCodeLiveMinutes = 0
+	}
+	if Auth.RegisterEmailConfirm {
+		Auth.RequireEmailConfirmation = true
+		Auth.RegisterEmailConfirm = false
+	}
+	if Auth.EnableCaptcha {
+		Auth.EnableRegistrationCaptcha = true
+		Auth.EnableCaptcha = false
+	}
+	if Security.ReverseProxyAuthenticationUser != "" {
+		Auth.ReverseProxyAuthenticationHeader = Security.ReverseProxyAuthenticationUser
+		Security.ReverseProxyAuthenticationUser = ""
+	}
+
+	if Auth.EnableNotifyMail {
+		User.EnableEmailNotification = true
+		Auth.EnableNotifyMail = false
+	}
+
+	if Session.GCIntervalTime > 0 {
+		Session.GCInterval = Session.GCIntervalTime
+		Session.GCIntervalTime = 0
+	}
+	if Session.SessionLifeTime > 0 {
+		Session.MaxLifeTime = Session.SessionLifeTime
+		Session.SessionLifeTime = 0
+	}
 }
 
 // HookMode indicates whether program starts as Git server-side hook callback.
@@ -444,11 +520,3 @@ var (
 	UsePostgreSQL bool
 	UseMSSQL      bool
 )
-
-// UsersAvatarPathPrefix is the path prefix to user avatars.
-const UsersAvatarPathPrefix = "avatars"
-
-// UserDefaultAvatarURLPath returns the URL path of the default user avatar.
-func UserDefaultAvatarURLPath() string {
-	return Server.Subpath + "/img/avatar_default.png"
-}

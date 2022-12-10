@@ -101,8 +101,6 @@
 							<dd>{{.SSH.ListenPort}}</dd>
 							<dt>{{.i18n.Tr "admin.config.ssh.server_ciphers"}}</dt>
 							<dd><code>{{.SSH.ServerCiphers}}</code></dd>
-							<dt>{{.i18n.Tr "admin.config.ssh.server_macs"}}</dt>
-							<dd><code>{{.SSH.ServerMACs}}</code></dd>
 						{{end}}
 					</dl>
 				</div>
@@ -174,8 +172,6 @@
 						<dd>{{.Database.Host}}</dd>
 						<dt>{{.i18n.Tr "admin.config.db.name"}}</dt>
 						<dd>{{.Database.Name}}</dd>
-						<dt>{{.i18n.Tr "admin.config.db.schema"}}</dt>
-						<dd>{{.Database.Schema}} {{.i18n.Tr "admin.config.db.schema_helper"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.db.user"}}</dt>
 						<dd>{{.Database.User}}</dd>
 						<dt>{{.i18n.Tr "admin.config.db.ssl_mode"}}</dt>
@@ -459,6 +455,10 @@
 						<dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.webhook.skip_tls_verify"}}</dt>
 						<dd><i class="fa fa{{if .Webhook.SkipTLSVerify}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.webhook.slack_backticks_author"}}</dt>
+						<dd><i class="fa fa{{if .Webhook.SlackBackticksAuthor}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.webhook.slack_backticks_title"}}</dt>
+						<dd><i class="fa fa{{if .Webhook.SlackBackticksTitle}}-check{{end}}-square-o"></i></dd>
 					</dl>
 				</div>
 
