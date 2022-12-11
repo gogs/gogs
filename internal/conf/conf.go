@@ -349,6 +349,12 @@ func Init(customConf string) error {
 	}
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
 
+	// ****************************
+	// ----- Webhook settings -----
+	// ****************************
+	Webhook.SlackBackticksTitle = false;
+	Webhook.SlackBackticksAuthor = false;
+
 	handleDeprecated()
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {

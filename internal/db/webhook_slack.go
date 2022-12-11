@@ -71,6 +71,24 @@ func SlackLinkFormatter(url, text string) string {
 	return fmt.Sprintf("<%s|%s>", url, SlackTextFormatter(text))
 }
 
+func SlackEncloseAuthor(author string) string {
+	enclose := conf.Webhook.SlackBackticksAuthor;
+	f := "%s"
+	if enclose {
+		f = "`" + f + "`"
+	}
+	return fmt.Sprintf(f, author)
+}
+
+func SlackEncloseTitle(title string) string {
+	enclose := conf.Webhook.SlackBackticksTitle;
+	f := "%s"
+	if enclose {
+		f = "`" + f + "`"
+	}
+	return fmt.Sprintf(f, title)
+}
+
 // getSlackCreatePayload composes Slack payload for create new branch or tag.
 func getSlackCreatePayload(p *api.CreatePayload) *SlackPayload {
 	refName := git.RefShortName(p.Ref)
@@ -128,7 +146,7 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) *SlackPayload {
 	var attachmentText string
 	// for each commit, generate attachment text
 	for i, commit := range p.Commits {
-		attachmentText += fmt.Sprintf("%s: %s - %s", SlackLinkFormatter(commit.URL, commit.ID[:7]), SlackShortTextFormatter(commit.Message), SlackTextFormatter(commit.Author.Name))
+		attachmentText += fmt.Sprintf("%s: %s - %s", SlackLinkFormatter(commit.URL, commit.ID[:7]), SlackEncloseTitle(SlackShortTextFormatter(commit.Message)), SlackEncloseAuthor(SlackTextFormatter(commit.Author.Name)))
 		// add linebreak to each commit but the last
 		if i < len(p.Commits)-1 {
 			attachmentText += "\n"
@@ -150,7 +168,7 @@ func getSlackPushPayload(p *api.PushPayload, slack *SlackMeta) *SlackPayload {
 func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) *SlackPayload {
 	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Index),
-		fmt.Sprintf("#%d %s", p.Index, p.Issue.Title))
+		fmt.Sprintf("#%d %s", p.Index, SlackEncloseTitle(p.Issue.Title)))
 	var text, title, attachmentText string
 	switch p.Action {
 	case api.HOOK_ISSUE_OPENED:
@@ -196,7 +214,7 @@ func getSlackIssuesPayload(p *api.IssuesPayload, slack *SlackMeta) *SlackPayload
 func getSlackIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) *SlackPayload {
 	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/issues/%d#%s", p.Repository.HTMLURL, p.Issue.Index, CommentHashTag(p.Comment.ID)),
-		fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title))
+		fmt.Sprintf("#%d %s", p.Issue.Index, SlackEncloseTitle(p.Issue.Title)))
 	var text, title, attachmentText string
 	switch p.Action {
 	case api.HOOK_ISSUE_COMMENT_CREATED:
@@ -210,7 +228,7 @@ func getSlackIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) *
 	case api.HOOK_ISSUE_COMMENT_DELETED:
 		text = fmt.Sprintf("[%s] Comment deleted by %s", p.Repository.FullName, senderLink)
 		title = SlackLinkFormatter(fmt.Sprintf("%s/issues/%d", p.Repository.HTMLURL, p.Issue.Index),
-			fmt.Sprintf("#%d %s", p.Issue.Index, p.Issue.Title))
+			fmt.Sprintf("#%d %s", p.Issue.Index, SlackEncloseTitle(p.Issue.Title)))
 		attachmentText = SlackTextFormatter(p.Comment.Body)
 	}
 
@@ -230,7 +248,7 @@ func getSlackIssueCommentPayload(p *api.IssueCommentPayload, slack *SlackMeta) *
 func getSlackPullRequestPayload(p *api.PullRequestPayload, slack *SlackMeta) *SlackPayload {
 	senderLink := SlackLinkFormatter(conf.Server.ExternalURL+p.Sender.UserName, p.Sender.UserName)
 	titleLink := SlackLinkFormatter(fmt.Sprintf("%s/pulls/%d", p.Repository.HTMLURL, p.Index),
-		fmt.Sprintf("#%d %s", p.Index, p.PullRequest.Title))
+		fmt.Sprintf("#%d %s", p.Index, SlackEncloseTitle(p.PullRequest.Title)))
 	var text, title, attachmentText string
 	switch p.Action {
 	case api.HOOK_ISSUE_OPENED:

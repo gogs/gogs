@@ -133,10 +133,12 @@ var (
 
 	// Webhook settings
 	Webhook struct {
-		Types          []string
-		DeliverTimeout int
-		SkipTLSVerify  bool `ini:"SKIP_TLS_VERIFY"`
-		PagingNum      int
+		Types                   []string
+		DeliverTimeout          int
+		SkipTLSVerify           bool `ini:"SKIP_TLS_VERIFY"`
+		PagingNum               int
+		SlackBackticksAuthor    bool `ini:"SLACK_BACKTICKS_AUTHOR"`
+		SlackBackticksTitle     bool `ini:"SLACK_BACKTICKS_TITLE"`
 	}
 
 	// Markdown settings
