@@ -20,7 +20,7 @@ func TestIsLocalHostname(t *testing.T) {
 		{hostname: "127.0.0.1", want: true},       // #01
 		{hostname: "::1", want: true},             // #02
 		{hostname: "0:0:0:0:0:0:0:1", want: true}, // #03
-		{hostname: "fuf.me", want: true},          // #04
+		{hostname: "*.fuf.me", want: true},          // #04
 		{hostname: "127.0.0.95", want: true},      // #05
 		{hostname: "0.0.0.0", want: true},         // #06
 		{hostname: "192.168.123.45", want: true},  // #07
