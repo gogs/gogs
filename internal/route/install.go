@@ -161,6 +161,7 @@ func Install(c *context.Context) {
 	f.HTTPPort = conf.Server.HTTPPort
 	f.AppUrl = conf.Server.ExternalURL
 	f.LogRootPath = conf.Log.RootPath
+	f.DefaultBranchName = conf.Repository.DefaultBranchName
 
 	// E-mail service settings
 	if conf.Email.Enabled {
@@ -254,6 +255,8 @@ func InstallPost(c *context.Context, f form.Install) {
 		c.RenderWithErr(c.Tr("install.invalid_log_root_path", err), INSTALL, &f)
 		return
 	}
+
+	conf.Repository.DefaultBranchName = f.DefaultBranchName
 
 	currentUser, match := conf.CheckRunUser(f.RunUser)
 	if !match {
@@ -355,6 +358,8 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
 	cfg.Section("session").Key("PROVIDER").SetValue("file")
+
+	cfg.Section("repository").Key("DEFAULT_BRANCH_NAME").SetValue(conf.Repository.DefaultBranchName)
 
 	mode := "file"
 	if f.EnableConsoleMode {

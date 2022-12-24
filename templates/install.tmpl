@@ -130,7 +130,10 @@
 							<input name="enable_console_mode" type="checkbox" {{if .enable_console_mode}}checked{{end}}>
 						</div>
 					</div>
-
+					<div class="inline required field">
+						<label for="default_branch_name">{{.i18n.Tr "install.default_branch_name"}}</label>
+						<input id="default_branch_name" name="default_branch_name" value="{{.default_branch_name}}" required>
+					</div>
 
 					<!-- Optional Settings -->
 					<h4 class="ui dividing header">{{.i18n.Tr "install.optional_title"}}</h4>
