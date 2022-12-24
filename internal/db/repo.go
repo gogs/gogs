@@ -223,15 +223,16 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	case "default_branch":
 		// FIXME: use db migration to solve all at once.
 		if repo.DefaultBranch == "" {
-			repo.DefaultBranch = "master"
+			repo.DefaultBranch = conf.Repository.DefaultBranchName
 		}
 	case "num_closed_issues":
 		repo.NumOpenIssues = repo.NumIssues - repo.NumClosedIssues
 	case "num_closed_pulls":
 		repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
 	case "num_closed_milestones":
-		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
 	case "external_tracker_style":
+		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
+
 		if repo.ExternalTrackerStyle == "" {
 			repo.ExternalTrackerStyle = markup.IssueNameStyleNumeric
 		}
@@ -1073,7 +1074,7 @@ func initRepository(e Engine, repoPath string, doer *User, repo *Repository, opt
 		repo.IsBare = true
 	}
 
-	repo.DefaultBranch = "master"
+	repo.DefaultBranch = conf.Repository.DefaultBranchName
 	if err = updateRepository(e, repo, false); err != nil {
 		return fmt.Errorf("updateRepository: %v", err)
 	}
