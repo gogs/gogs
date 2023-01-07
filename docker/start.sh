@@ -6,7 +6,7 @@ create_socat_links() {
     while read -r NAME ADDR PORT; do
         if test -z "$NAME$ADDR$PORT"; then
             continue
-        elif echo $USED_PORT | grep -E "(^|:)$PORT($|:)" > /dev/null; then
+        elif echo "$USED_PORT" | grep -E "(^|:)$PORT($|:)" > /dev/null; then
             echo "init:socat  | Can't bind linked container ${NAME} to localhost, port ${PORT} already in use" 1>&2
         else
             SERV_FOLDER=/app/gogs/docker/s6/SOCAT_${NAME}_${PORT}
