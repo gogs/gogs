@@ -1,3 +1,7 @@
+﻿# My new changes
+
+README.md's typo corrected!
+
 # Changelog
 
 All notable changes to Gogs are documented in this file.
