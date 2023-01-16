@@ -41,7 +41,7 @@ require (
 	github.com/unknwon/com v1.0.1
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
 	github.com/unknwon/paginater v0.0.0-20170405233947-45e5d631308e
-	github.com/urfave/cli v1.22.10
+	github.com/urfave/cli v1.22.11
 	golang.org/x/crypto v0.5.0
 	golang.org/x/net v0.5.0
 	golang.org/x/text v0.6.0
