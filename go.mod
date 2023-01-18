@@ -35,7 +35,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/russross/blackfriday v1.6.0
 	github.com/satori/go.uuid v1.2.0
-	github.com/sergi/go-diff v1.2.0
+	github.com/sergi/go-diff v1.3.1
 	github.com/stretchr/testify v1.8.1
 	github.com/unknwon/cae v1.0.2
 	github.com/unknwon/com v1.0.1
