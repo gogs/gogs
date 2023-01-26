@@ -38,6 +38,8 @@ jobs:
           args: --timeout=30m
       - name: Install Task
         uses: arduino/setup-task@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check Go module tidiness and generated files
         shell: bash
         run: |
