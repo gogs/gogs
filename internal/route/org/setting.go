@@ -5,8 +5,6 @@
 package org
 
 import (
-	"strings"
-
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -39,53 +37,52 @@ func SettingsPost(c *context.Context, f form.UpdateOrgSetting) {
 
 	org := c.Org.Organization
 
-	// Check if organization name has been changed.
-	if org.LowerName != strings.ToLower(f.Name) {
-		isExist, err := db.IsUserExist(org.ID, f.Name)
+	// Check if the organization username (including cases) had been changed
+	if org.Name != f.Name {
+		err := db.Users.ChangeUsername(c.Req.Context(), c.Org.Organization.ID, f.Name)
 		if err != nil {
-			c.Error(err, "check if user exists")
-			return
-		} else if isExist {
 			c.Data["OrgName"] = true
-			c.RenderWithErr(c.Tr("form.username_been_taken"), SETTINGS_OPTIONS, &f)
-			return
-		} else if err = db.ChangeUserName(org, f.Name); err != nil {
-			c.Data["OrgName"] = true
+			var msg string
 			switch {
+			case db.IsErrUserAlreadyExist(err):
+				msg = c.Tr("form.username_been_taken")
 			case db.IsErrNameNotAllowed(err):
-				c.RenderWithErr(c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), SETTINGS_OPTIONS, &f)
+				msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 			default:
-				c.Error(err, "change user name")
+				c.Error(err, "change organization name")
+				return
 			}
+
+			c.RenderWithErr(msg, SETTINGS_OPTIONS, &f)
 			return
 		}
+
 		// reset c.org.OrgLink with new name
 		c.Org.OrgLink = conf.Server.Subpath + "/org/" + f.Name
 		log.Trace("Organization name changed: %s -> %s", org.Name, f.Name)
 	}
-	// In case it's just a case change.
-	org.Name = f.Name
-	org.LowerName = strings.ToLower(f.Name)
 
-	if c.User.IsAdmin {
-		org.MaxRepoCreation = f.MaxRepoCreation
+	opts := db.UpdateUserOptions{
+		FullName:    &f.FullName,
+		Website:     &f.Website,
+		Location:    &f.Location,
+		Description: &f.Description,
 	}
-
-	org.FullName = f.FullName
-	org.Description = f.Description
-	org.Website = f.Website
-	org.Location = f.Location
-	if err := db.UpdateUser(org); err != nil {
-		c.Error(err, "update user")
+	if c.User.IsAdmin {
+		opts.MaxRepoCreation = &f.MaxRepoCreation
+	}
+	err := db.Users.Update(c.Req.Context(), c.Org.Organization.ID, opts)
+	if err != nil {
+		c.Error(err, "update organization")
 		return
 	}
-	log.Trace("Organization setting updated: %s", org.Name)
+
 	c.Flash.Success(c.Tr("org.settings.update_setting_success"))
 	c.Redirect(c.Org.OrgLink + "/settings")
 }
 
 func SettingsAvatar(c *context.Context, f form.Avatar) {
-	f.Source = form.AVATAR_LOCAL
+	f.Source = form.AvatarLocal
 	if err := user.UpdateAvatarSetting(c, f, c.Org.Organization); err != nil {
 		c.Flash.Error(err.Error())
 	} else {
@@ -96,7 +93,7 @@ func SettingsAvatar(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	if err := c.Org.Organization.DeleteAvatar(); err != nil {
+	if err := db.Users.DeleteCustomAvatar(c.Req.Context(), c.Org.Organization.ID); err != nil {
 		c.Flash.Error(err.Error())
 	}
 
@@ -109,7 +106,7 @@ func SettingsDelete(c *context.Context) {
 
 	org := c.Org.Organization
 	if c.Req.Method == "POST" {
-		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.Users.Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {

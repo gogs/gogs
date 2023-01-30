@@ -31,7 +31,7 @@ func getDashboardContextUser(c *context.Context) *db.User {
 	orgName := c.Params(":org")
 	if len(orgName) > 0 {
 		// Organization.
-		org, err := db.GetUserByName(orgName)
+		org, err := db.Users.GetByUsername(c.Req.Context(), orgName)
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return nil
@@ -40,11 +40,18 @@ func getDashboardContextUser(c *context.Context) *db.User {
 	}
 	c.Data["ContextUser"] = ctxUser
 
-	if err := c.User.GetOrganizations(true); err != nil {
-		c.Error(err, "get organizations")
+	orgs, err := db.Orgs.List(
+		c.Req.Context(),
+		db.ListOrgsOptions{
+			MemberID:              c.User.ID,
+			IncludePrivateMembers: true,
+		},
+	)
+	if err != nil {
+		c.Error(err, "list organizations")
 		return nil
 	}
-	c.Data["Orgs"] = c.User.Orgs
+	c.Data["Orgs"] = orgs
 
 	return ctxUser
 }
@@ -53,9 +60,17 @@ func getDashboardContextUser(c *context.Context) *db.User {
 // The user could be organization so it is not always the logged in user,
 // which is why we have to explicitly pass the context user ID.
 func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile bool) {
-	actions, err := db.GetFeeds(ctxUser, userID, c.QueryInt64("after_id"), isProfile)
+	afterID := c.QueryInt64("after_id")
+
+	var err error
+	var actions []*db.Action
+	if ctxUser.IsOrganization() {
+		actions, err = db.Actions.ListByOrganization(c.Req.Context(), ctxUser.ID, userID, afterID)
+	} else {
+		actions, err = db.Actions.ListByUser(c.Req.Context(), ctxUser.ID, userID, afterID, isProfile)
+	}
 	if err != nil {
-		c.Error(err, "get feeds")
+		c.Error(err, "list actions")
 		return
 	}
 
@@ -66,7 +81,7 @@ func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile
 		// Cache results to reduce queries.
 		_, ok := unameAvatars[act.ActUserName]
 		if !ok {
-			u, err := db.GetUserByName(act.ActUserName)
+			u, err := db.Users.GetByUsername(c.Req.Context(), act.ActUserName)
 			if err != nil {
 				if db.IsErrUserNotExist(err) {
 					continue
@@ -74,7 +89,7 @@ func retrieveFeeds(c *context.Context, ctxUser *db.User, userID int64, isProfile
 				c.Error(err, "get user by name")
 				return
 			}
-			unameAvatars[act.ActUserName] = u.RelAvatarLink()
+			unameAvatars[act.ActUserName] = u.AvatarURLPath()
 		}
 
 		act.ActAvatar = unameAvatars[act.ActUserName]
@@ -137,14 +152,21 @@ func Dashboard(c *context.Context) {
 			return
 		}
 	} else {
-		if err = ctxUser.GetRepositories(1, conf.UI.User.RepoPagingNum); err != nil {
+		repos, err = db.GetUserRepositories(
+			&db.UserRepoOptions{
+				UserID:   ctxUser.ID,
+				Private:  true,
+				Page:     1,
+				PageSize: conf.UI.User.RepoPagingNum,
+			},
+		)
+		if err != nil {
 			c.Error(err, "get repositories")
 			return
 		}
-		repos = ctxUser.Repos
 		repoCount = int64(ctxUser.NumRepos)
 
-		mirrors, err = ctxUser.GetMirrorRepositories()
+		mirrors, err = db.GetUserMirrorRepositories(ctxUser.ID)
 		if err != nil {
 			c.Error(err, "get mirror repositories")
 			return
@@ -220,11 +242,18 @@ func Issues(c *context.Context) {
 			return
 		}
 	} else {
-		if err := ctxUser.GetRepositories(1, c.User.NumRepos); err != nil {
+		repos, err = db.GetUserRepositories(
+			&db.UserRepoOptions{
+				UserID:   ctxUser.ID,
+				Private:  true,
+				Page:     1,
+				PageSize: ctxUser.NumRepos,
+			},
+		)
+		if err != nil {
 			c.Error(err, "get repositories")
 			return
 		}
-		repos = ctxUser.Repos
 	}
 
 	userRepoIDs = make([]int64, 0, len(repos))
@@ -415,7 +444,7 @@ func showOrgProfile(c *context.Context) {
 }
 
 func Email2User(c *context.Context) {
-	u, err := db.GetUserByEmail(c.Query("email"))
+	u, err := db.Users.GetByEmail(c.Req.Context(), c.Query("email"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by email")
 		return

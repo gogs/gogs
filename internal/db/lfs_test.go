@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -20,17 +21,16 @@ func TestLFS(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(LFSObject)}
 	db := &lfs{
-		DB: initTestDB(t, "lfs", tables...),
+		DB: dbtest.NewDB(t, "lfs", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *lfs)
+		test func(t *testing.T, db *lfs)
 	}{
 		{"CreateObject", lfsCreateObject},
 		{"GetObjectByOID", lfsGetObjectByOID},

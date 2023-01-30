@@ -12,12 +12,14 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/unknwon/com"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/sync"
 )
 
@@ -37,13 +39,15 @@ func ToWikiPageName(urlString string) string {
 }
 
 // WikiCloneLink returns clone URLs of repository wiki.
-func (repo *Repository) WikiCloneLink() (cl *CloneLink) {
+//
+// Deprecated: Use repoutil.NewCloneLink instead.
+func (repo *Repository) WikiCloneLink() (cl *repoutil.CloneLink) {
 	return repo.cloneLink(true)
 }
 
 // WikiPath returns wiki data path by given user and repository name.
 func WikiPath(userName, repoName string) string {
-	return filepath.Join(UserPath(userName), strings.ToLower(repoName)+".wiki.git")
+	return filepath.Join(repoutil.UserPath(userName), strings.ToLower(repoName)+".wiki.git")
 }
 
 func (repo *Repository) WikiPath() string {
@@ -127,7 +131,18 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	}
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("add all changes: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("push: %v", err)
@@ -163,7 +178,18 @@ func (repo *Repository) DeleteWikiPage(doer *User, title string) (err error) {
 
 	if err = git.Add(localPath, git.AddOptions{All: true}); err != nil {
 		return fmt.Errorf("add all changes: %v", err)
-	} else if err = git.CreateCommit(localPath, doer.NewGitSig(), message); err != nil {
+	}
+
+	err = git.CreateCommit(
+		localPath,
+		&git.Signature{
+			Name:  doer.DisplayName(),
+			Email: doer.Email,
+			When:  time.Now(),
+		},
+		message,
+	)
+	if err != nil {
 		return fmt.Errorf("commit changes: %v", err)
 	} else if err = git.Push(localPath, "origin", "master"); err != nil {
 		return fmt.Errorf("push: %v", err)

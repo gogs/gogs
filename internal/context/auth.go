@@ -5,12 +5,14 @@
 package context
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/go-macaron/csrf"
 	"github.com/go-macaron/session"
+	"github.com/pkg/errors"
 	gouuid "github.com/satori/go.uuid"
 	"gopkg.in/macaron.v1"
 	log "unknwon.dev/clog/v2"
@@ -149,7 +151,8 @@ func authenticatedUserID(c *macaron.Context, sess session.Store) (_ int64, isTok
 		return 0, false
 	}
 	if id, ok := uid.(int64); ok {
-		if _, err := db.GetUserByID(id); err != nil {
+		_, err := db.Users.GetByID(c.Req.Context(), id)
+		if err != nil {
 			if !db.IsErrUserNotExist(err) {
 				log.Error("Failed to get user by ID: %v", err)
 			}
@@ -173,7 +176,7 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 		if conf.Auth.EnableReverseProxyAuthentication {
 			webAuthUser := ctx.Req.Header.Get(conf.Auth.ReverseProxyAuthenticationHeader)
 			if len(webAuthUser) > 0 {
-				u, err := db.GetUserByName(webAuthUser)
+				user, err := db.Users.GetByUsername(ctx.Req.Context(), webAuthUser)
 				if err != nil {
 					if !db.IsErrUserNotExist(err) {
 						log.Error("Failed to get user by name: %v", err)
@@ -182,22 +185,21 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 
 					// Check if enabled auto-registration.
 					if conf.Auth.EnableReverseProxyAutoRegistration {
-						u := &db.User{
-							Name:     webAuthUser,
-							Email:    gouuid.NewV4().String() + "@localhost",
-							Passwd:   webAuthUser,
-							IsActive: true,
-						}
-						if err = db.CreateUser(u); err != nil {
-							// FIXME: should I create a system notice?
-							log.Error("Failed to create user: %v", err)
+						user, err = db.Users.Create(
+							ctx.Req.Context(),
+							webAuthUser,
+							gouuid.NewV4().String()+"@localhost",
+							db.CreateUserOptions{
+								Activated: true,
+							},
+						)
+						if err != nil {
+							log.Error("Failed to create user %q: %v", webAuthUser, err)
 							return nil, false, false
-						} else {
-							return u, false, false
 						}
 					}
 				}
-				return u, false, false
+				return user, false, false
 			}
 		}
 
@@ -208,7 +210,7 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 			if len(auths) == 2 && auths[0] == "Basic" {
 				uname, passwd, _ := tool.BasicAuthDecode(auths[1])
 
-				u, err := db.Users.Authenticate(uname, passwd, -1)
+				u, err := db.Users.Authenticate(ctx.Req.Context(), uname, passwd, -1)
 				if err != nil {
 					if !auth.IsErrBadCredentials(err) {
 						log.Error("Failed to authenticate user: %v", err)
@@ -222,10 +224,30 @@ func authenticatedUser(ctx *macaron.Context, sess session.Store) (_ *db.User, is
 		return nil, false, false
 	}
 
-	u, err := db.GetUserByID(uid)
+	u, err := db.Users.GetByID(ctx.Req.Context(), uid)
 	if err != nil {
 		log.Error("GetUserByID: %v", err)
 		return nil, false, false
 	}
 	return u, false, isTokenAuth
+}
+
+// AuthenticateByToken attempts to authenticate a user by the given access
+// token. It returns db.ErrAccessTokenNotExist when the access token does not
+// exist.
+func AuthenticateByToken(ctx context.Context, token string) (*db.User, error) {
+	t, err := db.AccessTokens.GetBySHA1(ctx, token)
+	if err != nil {
+		return nil, errors.Wrap(err, "get access token by SHA1")
+	}
+	if err = db.AccessTokens.Touch(ctx, t.ID); err != nil {
+		// NOTE: There is no need to fail the auth flow if we can't touch the token.
+		log.Error("Failed to touch access token [id: %d]: %v", t.ID, err)
+	}
+
+	user, err := db.Users.GetByID(ctx, t.UserID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "get user by ID [user_id: %d]", t.UserID)
+	}
+	return user, nil
 }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
@@ -475,8 +476,12 @@ func TestWebhook(c *context.Context) {
 		commitID = git.EmptyID
 		commitMessage = "This is a fake commit"
 		ghost := db.NewGhostUser()
-		author = ghost.NewGitSig()
-		committer = ghost.NewGitSig()
+		author = &git.Signature{
+			Name:  ghost.DisplayName(),
+			Email: ghost.Email,
+			When:  time.Now(),
+		}
+		committer = author
 		authorUsername = ghost.Name
 		committerUsername = ghost.Name
 		nameStatus = &git.NameStatus{}
@@ -488,7 +493,7 @@ func TestWebhook(c *context.Context) {
 		committer = c.Repo.Commit.Committer
 
 		// Try to match email with a real user.
-		author, err := db.GetUserByEmail(c.Repo.Commit.Author.Email)
+		author, err := db.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Author.Email)
 		if err == nil {
 			authorUsername = author.Name
 		} else if !db.IsErrUserNotExist(err) {
@@ -496,7 +501,7 @@ func TestWebhook(c *context.Context) {
 			return
 		}
 
-		user, err := db.GetUserByEmail(c.Repo.Commit.Committer.Email)
+		user, err := db.Users.GetByEmail(c.Req.Context(), c.Repo.Commit.Committer.Email)
 		if err == nil {
 			committerUsername = user.Name
 		} else if !db.IsErrUserNotExist(err) {
@@ -536,7 +541,7 @@ func TestWebhook(c *context.Context) {
 				Modified: nameStatus.Modified,
 			},
 		},
-		Repo:   c.Repo.Repository.APIFormat(nil),
+		Repo:   c.Repo.Repository.APIFormatLegacy(nil),
 		Pusher: apiUser,
 		Sender: apiUser,
 	}

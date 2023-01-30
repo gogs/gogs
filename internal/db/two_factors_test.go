@@ -5,40 +5,85 @@
 package db
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
-func Test_twoFactors(t *testing.T) {
+func TestTwoFactor_BeforeCreate(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	t.Run("CreatedUnix has been set", func(t *testing.T) {
+		tf := &TwoFactor{
+			CreatedUnix: 1,
+		}
+		_ = tf.BeforeCreate(db)
+		assert.Equal(t, int64(1), tf.CreatedUnix)
+	})
+
+	t.Run("CreatedUnix has not been set", func(t *testing.T) {
+		tf := &TwoFactor{}
+		_ = tf.BeforeCreate(db)
+		assert.Equal(t, db.NowFunc().Unix(), tf.CreatedUnix)
+	})
+}
+
+func TestTwoFactor_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	tf := &TwoFactor{
+		CreatedUnix: now.Unix(),
+	}
+	_ = tf.AfterFind(db)
+	assert.Equal(t, tf.CreatedUnix, tf.Created.Unix())
+}
+
+func TestTwoFactors(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(TwoFactor), new(TwoFactorRecoveryCode)}
 	db := &twoFactors{
-		DB: initTestDB(t, "twoFactors", tables...),
+		DB: dbtest.NewDB(t, "twoFactors", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *twoFactors)
+		test func(t *testing.T, db *twoFactors)
 	}{
-		{"Create", test_twoFactors_Create},
-		{"GetByUserID", test_twoFactors_GetByUserID},
-		{"IsUserEnabled", test_twoFactors_IsUserEnabled},
+		{"Create", twoFactorsCreate},
+		{"GetByUserID", twoFactorsGetByUserID},
+		{"IsEnabled", twoFactorsIsEnabled},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
 				err := clearTables(t, db.DB, tables...)
-				if err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, err)
 			})
 			tc.test(t, db)
 		})
@@ -48,55 +93,49 @@ func Test_twoFactors(t *testing.T) {
 	}
 }
 
-func test_twoFactors_Create(t *testing.T, db *twoFactors) {
+func twoFactorsCreate(t *testing.T, db *twoFactors) {
+	ctx := context.Background()
+
 	// Create a 2FA token
-	err := db.Create(1, "secure-key", "secure-secret")
-	if err != nil {
-		t.Fatal(err)
-	}
+	err := db.Create(ctx, 1, "secure-key", "secure-secret")
+	require.NoError(t, err)
 
 	// Get it back and check the Created field
-	tf, err := db.GetByUserID(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tf, err := db.GetByUserID(ctx, 1)
+	require.NoError(t, err)
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), tf.Created.UTC().Format(time.RFC3339))
 
 	// Verify there are 10 recover codes generated
 	var count int64
 	err = db.Model(new(TwoFactorRecoveryCode)).Count(&count).Error
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	assert.Equal(t, int64(10), count)
 }
 
-func test_twoFactors_GetByUserID(t *testing.T, db *twoFactors) {
+func twoFactorsGetByUserID(t *testing.T, db *twoFactors) {
+	ctx := context.Background()
+
 	// Create a 2FA token for user 1
-	err := db.Create(1, "secure-key", "secure-secret")
-	if err != nil {
-		t.Fatal(err)
-	}
+	err := db.Create(ctx, 1, "secure-key", "secure-secret")
+	require.NoError(t, err)
 
 	// We should be able to get it back
-	_, err = db.GetByUserID(1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, err = db.GetByUserID(ctx, 1)
+	require.NoError(t, err)
 
 	// Try to get a non-existent 2FA token
-	_, err = db.GetByUserID(2)
-	expErr := ErrTwoFactorNotFound{args: errutil.Args{"userID": int64(2)}}
-	assert.Equal(t, expErr, err)
+	_, err = db.GetByUserID(ctx, 2)
+	wantErr := ErrTwoFactorNotFound{args: errutil.Args{"userID": int64(2)}}
+	assert.Equal(t, wantErr, err)
 }
 
-func test_twoFactors_IsUserEnabled(t *testing.T, db *twoFactors) {
-	// Create a 2FA token for user 1
-	err := db.Create(1, "secure-key", "secure-secret")
-	if err != nil {
-		t.Fatal(err)
-	}
+func twoFactorsIsEnabled(t *testing.T, db *twoFactors) {
+	ctx := context.Background()
 
-	assert.True(t, db.IsUserEnabled(1))
-	assert.False(t, db.IsUserEnabled(2))
+	// Create a 2FA token for user 1
+	err := db.Create(ctx, 1, "secure-key", "secure-secret")
+	require.NoError(t, err)
+
+	assert.True(t, db.IsEnabled(ctx, 1))
+	assert.False(t, db.IsEnabled(ctx, 2))
 }

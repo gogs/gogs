@@ -19,7 +19,7 @@ import (
 func Search(c *context.APIContext) {
 	opts := &db.SearchUserOptions{
 		Keyword:  c.Query("q"),
-		Type:     db.UserIndividual,
+		Type:     db.UserTypeIndividual,
 		PageSize: com.StrTo(c.Query("limit")).MustInt(),
 	}
 	if opts.PageSize == 0 {
@@ -40,7 +40,7 @@ func Search(c *context.APIContext) {
 		results[i] = &api.User{
 			ID:        users[i].ID,
 			UserName:  users[i].Name,
-			AvatarUrl: users[i].AvatarLink(),
+			AvatarUrl: users[i].AvatarURL(),
 			FullName:  markup.Sanitize(users[i].FullName),
 		}
 		if c.IsLogged {
@@ -55,7 +55,7 @@ func Search(c *context.APIContext) {
 }
 
 func GetInfo(c *context.APIContext) {
-	u, err := db.GetUserByName(c.Params(":username"))
+	u, err := db.Users.GetByUsername(c.Req.Context(), c.Params(":username"))
 	if err != nil {
 		c.NotFoundOrError(err, "get user by name")
 		return

@@ -262,14 +262,13 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 	}
 
 	if err := c.Repo.Repository.UpdateRepoFile(c.User, db.UpdateRepoFileOptions{
-		LastCommitID: lastCommit,
-		OldBranch:    oldBranchName,
-		NewBranch:    branchName,
-		OldTreeName:  oldTreePath,
-		NewTreeName:  f.TreePath,
-		Message:      message,
-		Content:      strings.ReplaceAll(f.Content, "\r", ""),
-		IsNewFile:    isNewFile,
+		OldBranch:   oldBranchName,
+		NewBranch:   branchName,
+		OldTreeName: oldTreePath,
+		NewTreeName: f.TreePath,
+		Message:     message,
+		Content:     strings.ReplaceAll(f.Content, "\r", ""),
+		IsNewFile:   isNewFile,
 	}); err != nil {
 		log.Error("Failed to update repo file: %v", err)
 		c.FormErr("TreePath")

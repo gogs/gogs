@@ -10,7 +10,8 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"net/url"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"gogs.io/gogs/internal/httplib"
 	"gogs.io/gogs/internal/netutil"
 	"gogs.io/gogs/internal/sync"
+	"gogs.io/gogs/internal/testutil"
 )
 
 var HookQueue = sync.NewUniqueQueue(1000)
@@ -676,6 +678,11 @@ func prepareWebhooks(e Engine, repo *Repository, event HookEventType, p api.Payl
 
 // PrepareWebhooks adds all active webhooks to task queue.
 func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) error {
+	// NOTE: To prevent too many cascading changes in a single refactoring PR, we
+	// choose to ignore this function in tests.
+	if x == nil && testutil.InTest {
+		return nil
+	}
 	return prepareWebhooks(x, repo, event, p)
 }
 
@@ -689,8 +696,13 @@ func TestWebhook(repo *Repository, event HookEventType, p api.Payloader, webhook
 }
 
 func (t *HookTask) deliver() {
-	if netutil.IsBlockedLocalHostname(t.URL, conf.Security.LocalNetworkAllowlist) {
-		t.ResponseContent = "Payload URL resolved to a local network address that is implicitly blocked."
+	payloadURL, err := url.Parse(t.URL)
+	if err != nil {
+		t.ResponseContent = fmt.Sprintf(`{"body": "Cannot parse payload URL: %v"}`, err)
+		return
+	}
+	if netutil.IsBlockedLocalHostname(payloadURL.Hostname(), conf.Security.LocalNetworkAllowlist) {
+		t.ResponseContent = `{"body": "Payload URL resolved to a local network address that is implicitly blocked."}`
 		return
 	}
 
@@ -763,7 +775,7 @@ func (t *HookTask) deliver() {
 		t.ResponseInfo.Headers[k] = strings.Join(vals, ",")
 	}
 
-	p, err := ioutil.ReadAll(resp.Body)
+	p, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.ResponseInfo.Body = fmt.Sprintf("read body: %s", err)
 		return

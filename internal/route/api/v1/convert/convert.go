@@ -5,6 +5,7 @@
 package convert
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/unknwon/com"
@@ -44,12 +45,12 @@ func ToTag(b *db.Tag, c *git.Commit) *Tag {
 
 func ToCommit(c *git.Commit) *api.PayloadCommit {
 	authorUsername := ""
-	author, err := db.GetUserByEmail(c.Author.Email)
+	author, err := db.Users.GetByEmail(context.TODO(), c.Author.Email)
 	if err == nil {
 		authorUsername = author.Name
 	}
 	committerUsername := ""
-	committer, err := db.GetUserByEmail(c.Committer.Email)
+	committer, err := db.Users.GetByEmail(context.TODO(), c.Committer.Email)
 	if err == nil {
 		committerUsername = committer.Name
 	}
@@ -120,7 +121,7 @@ func ToDeployKey(apiLink string, key *db.DeployKey) *api.DeployKey {
 func ToOrganization(org *db.User) *api.Organization {
 	return &api.Organization{
 		ID:          org.ID,
-		AvatarUrl:   org.AvatarLink(),
+		AvatarUrl:   org.AvatarURL(),
 		UserName:    org.Name,
 		FullName:    org.FullName,
 		Description: org.Description,

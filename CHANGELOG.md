@@ -6,24 +6,28 @@ All notable changes to Gogs are documented in this file.
 
 ### Added
 
+- Support using personal access token in the password field. [#3866](https://github.com/gogs/gogs/issues/3866)
 - An unlisted option is added when create or migrate a repository. Unlisted repositories are public but not being listed for users without direct access in the UI. [#5733](https://github.com/gogs/gogs/issues/5733)
+- New API endpoint `PUT /repos/:owner/:repo/contents/:path` for creating and update repository contents. [#5967](https://github.com/gogs/gogs/issues/5967)
 - New configuration option `[git.timeout] DIFF` for customizing operation timeout of `git diff`. [#6315](https://github.com/gogs/gogs/issues/6315)
 - New configuration option `[server] SSH_SERVER_MACS` for setting list of accepted MACs for connections to builtin SSH server. [#6434](https://github.com/gogs/gogs/issues/6434)
 - Support specifying custom schema for PostgreSQL. [#6695](https://github.com/gogs/gogs/pull/6695)
 - Support rendering Mermaid diagrams in Markdown. [#6776](https://github.com/gogs/gogs/pull/6776)
-- New languages support: Mongolian. [#6510](https://github.com/gogs/gogs/pull/6510)
+- Docker: Allow passing extra arguments to the `backup` command. [#7060](https://github.com/gogs/gogs/pull/7060)
+- New languages support: Mongolian, Romanian. [#6510](https://github.com/gogs/gogs/pull/6510) [#7082](https://github.com/gogs/gogs/pull/7082)
 
 ### Changed
 
 - The default branch has been changed to `main`. [#6285](https://github.com/gogs/gogs/pull/6285)
 - MSSQL as database backend is deprecated, installation page no longer shows it as an option. Existing installations and manually craft configuration file continue to work. [#6295](https://github.com/gogs/gogs/pull/6295)
 - Use [Task](https://github.com/go-task/task) as the build tool. [#6297](https://github.com/gogs/gogs/pull/6297)
-- The required Go version to compile source code changed to 1.16.
+- The required Go version to compile source code changed to 1.18.
 - Access tokens are now stored using their SHA256 hashes instead of raw values. [#7008](https://github.com/gogs/gogs/pull/7008)
 
 ### Fixed
 
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
+- Unable to choose "Lookup Avatar by mail" in user settings without deleting custom avatar. [#7267](https://github.com/gogs/gogs/pull/7267)
 
 ### Removed
 
@@ -44,6 +48,16 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
 - Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
+
+## 0.12.10
+
+### Changed
+
+- Support using `[security] LOCAL_NETWORK_ALLOWLIST = *` to allow all hostnames. [#7111](https://github.com/gogs/gogs/pull/7111)
+
+### Fixed
+
+- Unable to send webhooks to local network addresses after configured `[security] LOCAL_NETWORK_ALLOWLIST`. [#7074](https://github.com/gogs/gogs/issues/7074)
 
 ## 0.12.9
 

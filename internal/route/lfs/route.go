@@ -14,6 +14,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/authutil"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -58,41 +59,38 @@ func authenticate() macaron.Handler {
 			return
 		}
 
-		user, err := db.Users.Authenticate(username, password, -1)
+		user, err := db.Users.Authenticate(c.Req.Context(), username, password, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			internalServerError(c.Resp)
 			log.Error("Failed to authenticate user [name: %s]: %v", username, err)
 			return
 		}
 
-		if err == nil && user.IsEnabledTwoFactor() {
+		if err == nil && db.TwoFactors.IsEnabled(c.Req.Context(), user.ID) {
 			c.Error(http.StatusBadRequest, "Users with 2FA enabled are not allowed to authenticate via username and password.")
 			return
 		}
 
-		// If username and password authentication failed, try again using username as an access token.
+		// If username and password combination failed, try again using either username
+		// or password as the token.
 		if auth.IsErrBadCredentials(err) {
-			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), username)
-			if err != nil {
-				if db.IsErrAccessTokenNotExist(err) {
-					askCredentials(c.Resp)
-				} else {
-					internalServerError(c.Resp)
-					log.Error("Failed to get access token [sha: %s]: %v", username, err)
-				}
-				return
-			}
-			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
-				log.Error("Failed to touch access token: %v", err)
-			}
-
-			user, err = db.Users.GetByID(token.UserID)
-			if err != nil {
-				// Once we found the token, we're supposed to find its related user,
-				// thus any error is unexpected.
+			user, err = context.AuthenticateByToken(c.Req.Context(), username)
+			if err != nil && !db.IsErrAccessTokenNotExist(err) {
 				internalServerError(c.Resp)
-				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
+			} else if db.IsErrAccessTokenNotExist(err) {
+				// Try again using the password field as the token.
+				user, err = context.AuthenticateByToken(c.Req.Context(), password)
+				if err != nil {
+					if db.IsErrAccessTokenNotExist(err) {
+						askCredentials(c.Resp)
+					} else {
+						c.Status(http.StatusInternalServerError)
+						log.Error("Failed to authenticate by access token via password: %v", err)
+					}
+					return
+				}
 			}
 		}
 
@@ -108,7 +106,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 		username := c.Params(":username")
 		reponame := strings.TrimSuffix(c.Params(":reponame"), ".git")
 
-		owner, err := db.Users.GetByUsername(username)
+		owner, err := db.Users.GetByUsername(c.Req.Context(), username)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -119,7 +117,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(owner.ID, reponame)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)

@@ -6,34 +6,36 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/cryptoutil"
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/lfsutil"
 	"gogs.io/gogs/internal/testutil"
 )
 
-func Test_dumpAndImport(t *testing.T) {
+func TestDumpAndImport(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
-	if len(Tables) != 4 {
-		t.Fatalf("New table has added (want 4 got %d), please add new tests for the table and update this check", len(Tables))
+	if len(Tables) != 6 {
+		t.Fatalf("New table has added (want 6 got %d), please add new tests for the table and update this check", len(Tables))
 	}
 
-	db := initTestDB(t, "dumpAndImport", Tables...)
+	db := dbtest.NewDB(t, "dumpAndImport", Tables...)
 	setupDBToDump(t, db)
 	dumpTables(t, db)
 	importTables(t, db)
@@ -43,8 +45,6 @@ func Test_dumpAndImport(t *testing.T) {
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {
-	t.Helper()
-
 	vals := []interface{}{
 		&Access{
 			ID:     1,
@@ -89,6 +89,59 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			CreatedUnix: 1588568886,
 		},
 
+		&Action{
+			ID:           1,
+			UserID:       1,
+			OpType:       ActionCreateBranch,
+			ActUserID:    1,
+			ActUserName:  "alice",
+			RepoID:       1,
+			RepoUserName: "alice",
+			RepoName:     "example",
+			RefName:      "main",
+			IsPrivate:    false,
+			Content:      `{"Len":1,"Commits":[],"CompareURL":""}`,
+			CreatedUnix:  1588568886,
+		},
+		&Action{
+			ID:           2,
+			UserID:       1,
+			OpType:       ActionCommitRepo,
+			ActUserID:    1,
+			ActUserName:  "alice",
+			RepoID:       1,
+			RepoUserName: "alice",
+			RepoName:     "example",
+			RefName:      "main",
+			IsPrivate:    false,
+			Content:      `{"Len":1,"Commits":[],"CompareURL":""}`,
+			CreatedUnix:  1588568886,
+		},
+		&Action{
+			ID:           3,
+			UserID:       1,
+			OpType:       ActionDeleteBranch,
+			ActUserID:    1,
+			ActUserName:  "alice",
+			RepoID:       1,
+			RepoUserName: "alice",
+			RepoName:     "example",
+			RefName:      "main",
+			IsPrivate:    false,
+			CreatedUnix:  1588568886,
+		},
+
+		&Follow{
+			ID:       1,
+			UserID:   1,
+			FollowID: 2,
+		},
+		&Follow{
+			ID:       2,
+			UserID:   2,
+			FollowID: 1,
+		},
+
 		&LFSObject{
 			RepoID:    1,
 			OID:       "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
@@ -126,31 +179,29 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 	}
 	for _, val := range vals {
 		err := db.Create(val).Error
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 }
 
 func dumpTables(t *testing.T, db *gorm.DB) {
-	t.Helper()
+	ctx := context.Background()
 
 	for _, table := range Tables {
 		tableName := getTableType(table)
 
 		var buf bytes.Buffer
-		err := dumpTable(db, table, &buf)
+		err := dumpTable(ctx, db, table, &buf)
 		if err != nil {
 			t.Fatalf("%s: %v", tableName, err)
 		}
 
 		golden := filepath.Join("testdata", "backup", tableName+".golden.json")
-		testutil.AssertGolden(t, golden, testutil.Update("Test_dumpAndImport"), buf.String())
+		testutil.AssertGolden(t, golden, testutil.Update("TestDumpAndImport"), buf.String())
 	}
 }
 
 func importTables(t *testing.T, db *gorm.DB) {
-	t.Helper()
+	ctx := context.Background()
 
 	for _, table := range Tables {
 		tableName := getTableType(table)
@@ -163,7 +214,7 @@ func importTables(t *testing.T, db *gorm.DB) {
 			}
 			defer func() { _ = f.Close() }()
 
-			return importTable(db, table, f)
+			return importTable(ctx, db, table, f)
 		}()
 		if err != nil {
 			t.Fatalf("%s: %v", tableName, err)

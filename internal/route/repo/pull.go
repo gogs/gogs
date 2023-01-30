@@ -69,11 +69,18 @@ func parseBaseRepository(c *context.Context) *db.Repository {
 	}
 	c.Data["ForkFrom"] = baseRepo.Owner.Name + "/" + baseRepo.Name
 
-	if err := c.User.GetOrganizations(true); err != nil {
-		c.Error(err, "get organizations")
+	orgs, err := db.Orgs.List(
+		c.Req.Context(),
+		db.ListOrgsOptions{
+			MemberID:              c.User.ID,
+			IncludePrivateMembers: true,
+		},
+	)
+	if err != nil {
+		c.Error(err, "list organizations")
 		return nil
 	}
-	c.Data["Orgs"] = c.User.Orgs
+	c.Data["Orgs"] = orgs
 
 	return baseRepo
 }
@@ -135,7 +142,7 @@ func ForkPost(c *context.Context, f form.CreateRepo) {
 		c.Data["Err_RepoName"] = true
 		switch {
 		case db.IsErrReachLimitOfRepo(err):
-			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", c.User.RepoCreationNum()), FORK, &f)
+			c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(db.ErrReachLimitOfRepo).Limit), FORK, &f)
 		case db.IsErrRepoAlreadyExist(err):
 			c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), FORK, &f)
 		case db.IsErrNameNotAllowed(err):
@@ -459,7 +466,7 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 		headBranch = headInfos[0]
 
 	} else if len(headInfos) == 2 {
-		headUser, err = db.GetUserByName(headInfos[0])
+		headUser, err = db.Users.GetByUsername(c.Req.Context(), headInfos[0])
 		if err != nil {
 			c.NotFoundOrError(err, "get user by name")
 			return nil, nil, nil, nil, "", ""
@@ -510,7 +517,16 @@ func ParseCompareInfo(c *context.Context) (*db.User, *db.Repository, *git.Reposi
 		headGitRepo = c.Repo.GitRepo
 	}
 
-	if !c.User.IsWriterOfRepo(headRepo) && !c.User.IsAdmin {
+	if !db.Perms.Authorize(
+		c.Req.Context(),
+		c.User.ID,
+		headRepo.ID,
+		db.AccessModeWrite,
+		db.AccessModeOptions{
+			OwnerID: headRepo.OwnerID,
+			Private: headRepo.IsPrivate,
+		},
+	) && !c.User.IsAdmin {
 		log.Trace("ParseCompareInfo [base_repo_id: %d]: does not have write access or site admin", baseRepo.ID)
 		c.NotFound()
 		return nil, nil, nil, nil, "", ""

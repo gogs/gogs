@@ -5,9 +5,9 @@
 package admin
 
 import (
+	"strconv"
 	"strings"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
@@ -30,9 +30,9 @@ func Users(c *context.Context) {
 	c.Data["PageIsAdminUsers"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type:     db.UserIndividual,
-		Counter:  db.CountUsers,
-		Ranger:   db.ListUsers,
+		Type:     db.UserTypeIndividual,
+		Counter:  db.Users.Count,
+		Ranger:   db.Users.List,
 		PageSize: conf.UI.Admin.UserPagingNum,
 		OrderBy:  "id ASC",
 		TplName:  USERS,
@@ -46,7 +46,7 @@ func NewUser(c *context.Context) {
 
 	c.Data["login_type"] = "0-0"
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -62,7 +62,7 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 	c.Data["PageIsAdmin"] = true
 	c.Data["PageIsAdminUsers"] = true
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return
@@ -76,22 +76,20 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		return
 	}
 
-	u := &db.User{
-		Name:     f.UserName,
-		Email:    f.Email,
-		Passwd:   f.Password,
-		IsActive: true,
+	createUserOpts := db.CreateUserOptions{
+		Password:  f.Password,
+		Activated: true,
 	}
-
 	if len(f.LoginType) > 0 {
 		fields := strings.Split(f.LoginType, "-")
 		if len(fields) == 2 {
-			u.LoginSource = com.StrTo(fields[1]).MustInt64()
-			u.LoginName = f.LoginName
+			createUserOpts.LoginSource, _ = strconv.ParseInt(fields[1], 10, 64)
+			createUserOpts.LoginName = f.LoginName
 		}
 	}
 
-	if err := db.CreateUser(u); err != nil {
+	user, err := db.Users.Create(c.Req.Context(), f.UserName, f.Email, createUserOpts)
+	if err != nil {
 		switch {
 		case db.IsErrUserAlreadyExist(err):
 			c.Data["Err_UserName"] = true
@@ -107,19 +105,19 @@ func NewUserPost(c *context.Context, f form.AdminCrateUser) {
 		}
 		return
 	}
-	log.Trace("Account created by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account %q created by admin %q", user.Name, c.User.Name)
 
 	// Send email notification.
 	if f.SendNotify && conf.Email.Enabled {
-		email.SendRegisterNotifyMail(c.Context, db.NewMailerUser(u))
+		email.SendRegisterNotifyMail(c.Context, db.NewMailerUser(user))
 	}
 
-	c.Flash.Success(c.Tr("admin.users.new_success", u.Name))
-	c.Redirect(conf.Server.Subpath + "/admin/users/" + com.ToStr(u.ID))
+	c.Flash.Success(c.Tr("admin.users.new_success", user.Name))
+	c.Redirect(conf.Server.Subpath + "/admin/users/" + strconv.FormatInt(user.ID, 10))
 }
 
 func prepareUserInfo(c *context.Context) *db.User {
-	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := db.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return nil
@@ -136,7 +134,7 @@ func prepareUserInfo(c *context.Context) *db.User {
 		c.Data["LoginSource"] = &db.LoginSource{}
 	}
 
-	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOpts{})
+	sources, err := db.LoginSources.List(c.Req.Context(), db.ListLoginSourceOptions{})
 	if err != nil {
 		c.Error(err, "list login sources")
 		return nil
@@ -176,38 +174,37 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		return
 	}
 
+	opts := db.UpdateUserOptions{
+		LoginName:        &f.LoginName,
+		FullName:         &f.FullName,
+		Website:          &f.Website,
+		Location:         &f.Location,
+		MaxRepoCreation:  &f.MaxRepoCreation,
+		IsActivated:      &f.Active,
+		IsAdmin:          &f.Admin,
+		AllowGitHook:     &f.AllowGitHook,
+		AllowImportLocal: &f.AllowImportLocal,
+		ProhibitLogin:    &f.ProhibitLogin,
+	}
+
 	fields := strings.Split(f.LoginType, "-")
 	if len(fields) == 2 {
-		loginSource := com.StrTo(fields[1]).MustInt64()
-
+		loginSource, _ := strconv.ParseInt(fields[1], 10, 64)
 		if u.LoginSource != loginSource {
-			u.LoginSource = loginSource
+			opts.LoginSource = &loginSource
 		}
 	}
 
-	if len(f.Password) > 0 {
-		u.Passwd = f.Password
-		var err error
-		if u.Salt, err = db.GetUserSalt(); err != nil {
-			c.Error(err, "get user salt")
-			return
-		}
-		u.EncodePassword()
+	if f.Password != "" {
+		opts.Password = &f.Password
 	}
 
-	u.LoginName = f.LoginName
-	u.FullName = f.FullName
-	u.Email = f.Email
-	u.Website = f.Website
-	u.Location = f.Location
-	u.MaxRepoCreation = f.MaxRepoCreation
-	u.IsActive = f.Active
-	u.IsAdmin = f.Admin
-	u.AllowGitHook = f.AllowGitHook
-	u.AllowImportLocal = f.AllowImportLocal
-	u.ProhibitLogin = f.ProhibitLogin
+	if u.Email != f.Email {
+		opts.Email = &f.Email
+	}
 
-	if err := db.UpdateUser(u); err != nil {
+	err := db.Users.Update(c.Req.Context(), u.ID, opts)
+	if err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
 			c.Data["Err_Email"] = true
 			c.RenderWithErr(c.Tr("form.email_been_used"), USER_EDIT, &f)
@@ -216,14 +213,14 @@ func EditUserPost(c *context.Context, f form.AdminEditUser) {
 		}
 		return
 	}
-	log.Trace("Account profile updated by admin (%s): %s", c.User.Name, u.Name)
+	log.Trace("Account updated by admin %q: %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.update_profile_success"))
 	c.Redirect(conf.Server.Subpath + "/admin/users/" + c.Params(":userid"))
 }
 
 func DeleteUser(c *context.Context) {
-	u, err := db.GetUserByID(c.ParamsInt64(":userid"))
+	u, err := db.Users.GetByID(c.Req.Context(), c.ParamsInt64(":userid"))
 	if err != nil {
 		c.Error(err, "get user by ID")
 		return

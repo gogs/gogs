@@ -27,7 +27,7 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		Website:     apiForm.Website,
 		Location:    apiForm.Location,
 		IsActive:    true,
-		Type:        db.UserOrganization,
+		Type:        db.UserTypeOrganization,
 	}
 	if err := db.CreateOrganization(org, user); err != nil {
 		if db.IsErrUserAlreadyExist(err) ||
@@ -43,14 +43,21 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 }
 
 func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
-	if err := u.GetOrganizations(all); err != nil {
-		c.Error(err, "get organization")
+	orgs, err := db.Orgs.List(
+		c.Req.Context(),
+		db.ListOrgsOptions{
+			MemberID:              u.ID,
+			IncludePrivateMembers: all,
+		},
+	)
+	if err != nil {
+		c.Error(err, "list organizations")
 		return
 	}
 
-	apiOrgs := make([]*api.Organization, len(u.Orgs))
-	for i := range u.Orgs {
-		apiOrgs[i] = convert.ToOrganization(u.Orgs[i])
+	apiOrgs := make([]*api.Organization, len(orgs))
+	for i := range orgs {
+		apiOrgs[i] = convert.ToOrganization(orgs[i])
 	}
 	c.JSONSuccess(&apiOrgs)
 }
@@ -82,14 +89,25 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	org.FullName = form.FullName
-	org.Description = form.Description
-	org.Website = form.Website
-	org.Location = form.Location
-	if err := db.UpdateUser(org); err != nil {
-		c.Error(err, "update user")
+	err := db.Users.Update(
+		c.Req.Context(),
+		c.Org.Organization.ID,
+		db.UpdateUserOptions{
+			FullName:    &form.FullName,
+			Website:     &form.Website,
+			Location:    &form.Location,
+			Description: &form.Description,
+		},
+	)
+	if err != nil {
+		c.Error(err, "update organization")
 		return
 	}
 
+	org, err = db.GetOrgByName(org.Name)
+	if err != nil {
+		c.Error(err, "get organization")
+		return
+	}
 	c.JSONSuccess(convert.ToOrganization(org))
 }

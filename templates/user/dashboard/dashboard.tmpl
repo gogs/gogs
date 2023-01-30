@@ -42,7 +42,7 @@
 							{{end}}
 							{{if gt .ContextUser.NumRepos .MaxShowRepoNum}}
 							<li>
-								<a href="{{.ContextUser.HomeLink}}">{{.i18n.Tr "home.show_more_repos"}}</a>
+								<a href="{{.ContextUser.HomeURLPath}}">{{.i18n.Tr "home.show_more_repos"}}</a>
 							</li>
 							{{end}}
 						</ul>
@@ -87,7 +87,7 @@
 						</div>
 						<div class="ui attached table segment">
 							<ul class="repo-owner-name-list">
-								{{range .ContextUser.Orgs}}
+								{{range .Orgs}}
 									<li>
 										<a href="{{AppSubURL}}/{{.Name}}">
 											<i class="octicon octicon-organization"></i>

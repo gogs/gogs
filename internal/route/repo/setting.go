@@ -6,7 +6,7 @@ package repo
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -22,6 +22,7 @@ import (
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -100,8 +101,8 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository basic settings updated: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		if isNameChanged {
-			if err := db.RenameRepoAction(c.User, oldRepoName, repo); err != nil {
-				log.Error("RenameRepoAction: %v", err)
+			if err := db.Actions.RenameRepo(c.Req.Context(), c.User, repo.MustOwner(), oldRepoName, repo); err != nil {
+				log.Error("create rename repository action: %v", err)
 			}
 		}
 
@@ -224,16 +225,12 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		}
 
 		newOwner := c.Query("new_owner_name")
-		isExist, err := db.IsUserExist(0, newOwner)
-		if err != nil {
-			c.Error(err, "check if user exists")
-			return
-		} else if !isExist {
+		if !db.Users.IsUsernameUsed(c.Req.Context(), newOwner, c.Repo.Owner.ID) {
 			c.RenderWithErr(c.Tr("form.enterred_invalid_owner_name"), SETTINGS_OPTIONS, nil)
 			return
 		}
 
-		if err = db.TransferOwnership(c.User, newOwner, repo); err != nil {
+		if err := db.TransferOwnership(c.User, newOwner, repo); err != nil {
 			if db.IsErrRepoAlreadyExist(err) {
 				c.RenderWithErr(c.Tr("repo.settings.new_owner_has_same_repo"), SETTINGS_OPTIONS, nil)
 			} else {
@@ -269,7 +266,7 @@ func SettingsPost(c *context.Context, f form.RepoSetting) {
 		log.Trace("Repository deleted: %s/%s", c.Repo.Owner.Name, repo.Name)
 
 		c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-		c.Redirect(c.Repo.Owner.DashboardLink())
+		c.Redirect(userutil.DashboardURLPath(c.Repo.Owner.Name, c.Repo.Owner.IsOrganization()))
 
 	case "delete-wiki":
 		if !c.Repo.IsOwner() {
@@ -312,7 +309,7 @@ func SettingsAvatar(c *context.Context) {
 }
 
 func SettingsAvatarPost(c *context.Context, f form.Avatar) {
-	f.Source = form.AVATAR_LOCAL
+	f.Source = form.AvatarLocal
 	if err := UpdateAvatarSetting(c, f, c.Repo.Repository); err != nil {
 		c.Flash.Error(err.Error())
 	} else {
@@ -338,7 +335,7 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxRepo *db.Reposito
 		}
 		defer r.Close()
 
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("read avatar content: %v", err)
 		}
@@ -383,7 +380,7 @@ func SettingsCollaborationPost(c *context.Context) {
 		return
 	}
 
-	u, err := db.GetUserByName(name)
+	u, err := db.Users.GetByUsername(c.Req.Context(), name)
 	if err != nil {
 		if db.IsErrUserNotExist(err) {
 			c.Flash.Error(c.Tr("form.user_not_exist"))

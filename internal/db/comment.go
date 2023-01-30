@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -94,7 +95,7 @@ func (c *Comment) AfterSet(colName string, _ xorm.Cell) {
 
 func (c *Comment) loadAttributes(e Engine) (err error) {
 	if c.Poster == nil {
-		c.Poster, err = GetUserByID(c.PosterID)
+		c.Poster, err = Users.GetByID(context.TODO(), c.PosterID)
 		if err != nil {
 			if IsErrUserNotExist(err) {
 				c.PosterID = -1
@@ -172,11 +173,11 @@ func (cmt *Comment) mailParticipants(e Engine, opType ActionType, issue *Issue) 
 	}
 
 	switch opType {
-	case ACTION_COMMENT_ISSUE:
+	case ActionCommentIssue:
 		issue.Content = cmt.Content
-	case ACTION_CLOSE_ISSUE:
+	case ActionCloseIssue:
 		issue.Content = fmt.Sprintf("Closed #%d", issue.Index)
-	case ACTION_REOPEN_ISSUE:
+	case ActionReopenIssue:
 		issue.Content = fmt.Sprintf("Reopened #%d", issue.Index)
 	}
 	if err = mailIssueCommentToParticipants(issue, cmt.Poster, mentions); err != nil {
@@ -216,7 +217,7 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 	// Check comment type.
 	switch opts.Type {
 	case COMMENT_TYPE_COMMENT:
-		act.OpType = ACTION_COMMENT_ISSUE
+		act.OpType = ActionCommentIssue
 
 		if _, err = e.Exec("UPDATE `issue` SET num_comments=num_comments+1 WHERE id=?", opts.Issue.ID); err != nil {
 			return nil, err
@@ -245,9 +246,9 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		}
 
 	case COMMENT_TYPE_REOPEN:
-		act.OpType = ACTION_REOPEN_ISSUE
+		act.OpType = ActionReopenIssue
 		if opts.Issue.IsPull {
-			act.OpType = ACTION_REOPEN_PULL_REQUEST
+			act.OpType = ActionReopenPullRequest
 		}
 
 		if opts.Issue.IsPull {
@@ -260,9 +261,9 @@ func createComment(e *xorm.Session, opts *CreateCommentOptions) (_ *Comment, err
 		}
 
 	case COMMENT_TYPE_CLOSE:
-		act.OpType = ACTION_CLOSE_ISSUE
+		act.OpType = ActionCloseIssue
 		if opts.Issue.IsPull {
-			act.OpType = ACTION_CLOSE_PULL_REQUEST
+			act.OpType = ActionClosePullRequest
 		}
 
 		if opts.Issue.IsPull {
@@ -353,7 +354,7 @@ func CreateIssueComment(doer *User, repo *Repository, issue *Issue, content stri
 		Action:     api.HOOK_ISSUE_COMMENT_CREATED,
 		Issue:      issue.APIFormat(),
 		Comment:    comment.APIFormat(),
-		Repository: repo.APIFormat(nil),
+		Repository: repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)
@@ -494,7 +495,7 @@ func UpdateComment(doer *User, c *Comment, oldContent string) (err error) {
 				From: oldContent,
 			},
 		},
-		Repository: c.Issue.Repo.APIFormat(nil),
+		Repository: c.Issue.Repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [comment_id: %d]: %v", c.ID, err)
@@ -544,7 +545,7 @@ func DeleteCommentByID(doer *User, id int64) error {
 		Action:     api.HOOK_ISSUE_COMMENT_DELETED,
 		Issue:      comment.Issue.APIFormat(),
 		Comment:    comment.APIFormat(),
-		Repository: comment.Issue.Repo.APIFormat(nil),
+		Repository: comment.Issue.Repo.APIFormatLegacy(nil),
 		Sender:     doer.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks [comment_id: %d]: %v", comment.ID, err)

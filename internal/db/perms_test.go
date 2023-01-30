@@ -10,23 +10,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"gogs.io/gogs/internal/dbtest"
 )
 
 func TestPerms(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(Access)}
 	db := &perms{
-		DB: initTestDB(t, "perms", tables...),
+		DB: dbtest.NewDB(t, "perms", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *perms)
+		test func(t *testing.T, db *perms)
 	}{
 		{"AccessMode", permsAccessMode},
 		{"Authorize", permsAuthorize},

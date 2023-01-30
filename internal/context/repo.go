@@ -18,6 +18,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/repoutil"
 )
 
 type PullRequest struct {
@@ -43,7 +44,7 @@ type Repository struct {
 	TreePath     string
 	CommitID     string
 	RepoLink     string
-	CloneLink    db.CloneLink
+	CloneLink    repoutil.CloneLink
 	CommitsCount int64
 	Mirror       *db.Mirror
 
@@ -144,7 +145,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.LowerName == strings.ToLower(ownerName) {
 			owner = c.User
 		} else {
-			owner, err = db.GetUserByName(ownerName)
+			owner, err = db.Users.GetByUsername(c.Req.Context(), ownerName)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return
@@ -402,7 +403,7 @@ func RepoRef() macaron.Handler {
 		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
-		if c.Repo.IsWriter() || (c.IsLogged && c.User.HasForkedRepo(c.Repo.Repository.ID)) {
+		if c.Repo.IsWriter() || (c.IsLogged && db.Users.HasForkedRepository(c.Req.Context(), c.User.ID, c.Repo.Repository.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if c.Repo.Repository.BaseRepo != nil {

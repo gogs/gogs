@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -237,7 +238,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 			Action:      api.HOOK_ISSUE_LABEL_UPDATED,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormat(nil),
+			Repository:  issue.Repo.APIFormatLegacy(nil),
 			Sender:      doer.APIFormat(),
 		})
 	} else {
@@ -245,7 +246,7 @@ func (issue *Issue) sendLabelUpdatedWebhook(doer *User) {
 			Action:     api.HOOK_ISSUE_LABEL_UPDATED,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
@@ -350,7 +351,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 			Action:      api.HOOK_ISSUE_LABEL_CLEARED,
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormat(nil),
+			Repository:  issue.Repo.APIFormatLegacy(nil),
 			Sender:      doer.APIFormat(),
 		})
 	} else {
@@ -358,7 +359,7 @@ func (issue *Issue) ClearLabels(doer *User) (err error) {
 			Action:     api.HOOK_ISSUE_LABEL_CLEARED,
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
@@ -391,7 +392,7 @@ func (issue *Issue) GetAssignee() (err error) {
 		return nil
 	}
 
-	issue.Assignee, err = GetUserByID(issue.AssigneeID)
+	issue.Assignee, err = Users.GetByID(context.TODO(), issue.AssigneeID)
 	if IsErrUserNotExist(err) {
 		return nil
 	}
@@ -477,7 +478,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		apiPullRequest := &api.PullRequestPayload{
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  repo.APIFormat(nil),
+			Repository:  repo.APIFormatLegacy(nil),
 			Sender:      doer.APIFormat(),
 		}
 		if isClosed {
@@ -490,7 +491,7 @@ func (issue *Issue) ChangeStatus(doer *User, repo *Repository, isClosed bool) (e
 		apiIssues := &api.IssuesPayload{
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: repo.APIFormat(nil),
+			Repository: repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		}
 		if isClosed {
@@ -525,7 +526,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 					From: oldTitle,
 				},
 			},
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		})
 	} else {
@@ -538,7 +539,7 @@ func (issue *Issue) ChangeTitle(doer *User, title string) (err error) {
 					From: oldTitle,
 				},
 			},
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
@@ -567,7 +568,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 					From: oldContent,
 				},
 			},
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		})
 	} else {
@@ -580,7 +581,7 @@ func (issue *Issue) ChangeContent(doer *User, content string) (err error) {
 					From: oldContent,
 				},
 			},
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		})
 	}
@@ -597,7 +598,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		return fmt.Errorf("UpdateIssueUserByAssignee: %v", err)
 	}
 
-	issue.Assignee, err = GetUserByID(issue.AssigneeID)
+	issue.Assignee, err = Users.GetByID(context.TODO(), issue.AssigneeID)
 	if err != nil && !IsErrUserNotExist(err) {
 		log.Error("Failed to get user by ID: %v", err)
 		return nil
@@ -610,7 +611,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		apiPullRequest := &api.PullRequestPayload{
 			Index:       issue.Index,
 			PullRequest: issue.PullRequest.APIFormat(),
-			Repository:  issue.Repo.APIFormat(nil),
+			Repository:  issue.Repo.APIFormatLegacy(nil),
 			Sender:      doer.APIFormat(),
 		}
 		if isRemoveAssignee {
@@ -623,7 +624,7 @@ func (issue *Issue) ChangeAssignee(doer *User, assigneeID int64) (err error) {
 		apiIssues := &api.IssuesPayload{
 			Index:      issue.Index,
 			Issue:      issue.APIFormat(),
-			Repository: issue.Repo.APIFormat(nil),
+			Repository: issue.Repo.APIFormatLegacy(nil),
 			Sender:     doer.APIFormat(),
 		}
 		if isRemoveAssignee {
@@ -763,7 +764,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 	if err = NotifyWatchers(&Action{
 		ActUserID:    issue.Poster.ID,
 		ActUserName:  issue.Poster.Name,
-		OpType:       ACTION_CREATE_ISSUE,
+		OpType:       ActionCreateIssue,
 		Content:      fmt.Sprintf("%d|%s", issue.Index, issue.Title),
 		RepoID:       repo.ID,
 		RepoUserName: repo.Owner.Name,
@@ -780,7 +781,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 		Action:     api.HOOK_ISSUE_OPENED,
 		Index:      issue.Index,
 		Issue:      issue.APIFormat(),
-		Repository: repo.APIFormat(nil),
+		Repository: repo.APIFormatLegacy(nil),
 		Sender:     issue.Poster.APIFormat(),
 	}); err != nil {
 		log.Error("PrepareWebhooks: %v", err)
@@ -833,7 +834,7 @@ func GetIssueByRef(ref string) (*Issue, error) {
 	return issue, issue.LoadAttributes()
 }
 
-// GetIssueByIndex returns raw issue without loading attributes by index in a repository.
+// GetRawIssueByIndex returns raw issue without loading attributes by index in a repository.
 func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	issue := &Issue{
 		RepoID: repoID,

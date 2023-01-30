@@ -22,6 +22,7 @@ import (
 
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/db"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/pathutil"
@@ -65,7 +66,7 @@ func HTTPContexter() macaron.Handler {
 			strings.HasSuffix(c.Req.URL.Path, "git-upload-pack") ||
 			c.Req.Method == "GET"
 
-		owner, err := db.Users.GetByUsername(ownerName)
+		owner, err := db.Users.GetByUsername(c.Req.Context(), ownerName)
 		if err != nil {
 			if db.IsErrUserNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -76,7 +77,7 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(owner.ID, repoName)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
 		if err != nil {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)
@@ -123,38 +124,35 @@ func HTTPContexter() macaron.Handler {
 			return
 		}
 
-		authUser, err := db.Users.Authenticate(authUsername, authPassword, -1)
+		authUser, err := db.Users.Authenticate(c.Req.Context(), authUsername, authPassword, -1)
 		if err != nil && !auth.IsErrBadCredentials(err) {
 			c.Status(http.StatusInternalServerError)
 			log.Error("Failed to authenticate user [name: %s]: %v", authUsername, err)
 			return
 		}
 
-		// If username and password combination failed, try again using username as a token.
+		// If username and password combination failed, try again using either username
+		// or password as the token.
 		if authUser == nil {
-			token, err := db.AccessTokens.GetBySHA1(c.Req.Context(), authUsername)
-			if err != nil {
-				if db.IsErrAccessTokenNotExist(err) {
-					askCredentials(c, http.StatusUnauthorized, "")
-				} else {
-					c.Status(http.StatusInternalServerError)
-					log.Error("Failed to get access token [sha: %s]: %v", authUsername, err)
-				}
-				return
-			}
-			if err = db.AccessTokens.Touch(c.Req.Context(), token.ID); err != nil {
-				log.Error("Failed to touch access token: %v", err)
-			}
-
-			authUser, err = db.Users.GetByID(token.UserID)
-			if err != nil {
-				// Once we found token, we're supposed to find its related user,
-				// thus any error is unexpected.
+			authUser, err = context.AuthenticateByToken(c.Req.Context(), authUsername)
+			if err != nil && !db.IsErrAccessTokenNotExist(err) {
 				c.Status(http.StatusInternalServerError)
-				log.Error("Failed to get user [id: %d]: %v", token.UserID, err)
+				log.Error("Failed to authenticate by access token via username: %v", err)
 				return
+			} else if db.IsErrAccessTokenNotExist(err) {
+				// Try again using the password field as the token.
+				authUser, err = context.AuthenticateByToken(c.Req.Context(), authPassword)
+				if err != nil {
+					if db.IsErrAccessTokenNotExist(err) {
+						askCredentials(c, http.StatusUnauthorized, "")
+					} else {
+						c.Status(http.StatusInternalServerError)
+						log.Error("Failed to authenticate by access token via password: %v", err)
+					}
+					return
+				}
 			}
-		} else if authUser.IsEnabledTwoFactor() {
+		} else if db.TwoFactors.IsEnabled(c.Req.Context(), authUser.ID) {
 			askCredentials(c, http.StatusUnauthorized, `User with two-factor authentication enabled cannot perform HTTP/HTTPS operations via plain username and password
 Please create and use personal access token on user settings page`)
 			return

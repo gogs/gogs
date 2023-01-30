@@ -1,3 +1,7 @@
+// Copyright 2020 The Gogs Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package dbutil
 
 import (
@@ -11,5 +15,5 @@ type Logger struct {
 }
 
 func (l *Logger) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(l.Writer, format, args...)
+	_, _ = fmt.Fprintf(l.Writer, format, args...)
 }

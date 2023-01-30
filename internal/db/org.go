@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,8 @@ import (
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/userutil"
 )
 
 var ErrOrgNotExist = errors.New("Organization does not exist")
@@ -70,7 +73,7 @@ func (org *User) GetMembers(limit int) error {
 
 	org.Members = make([]*User, len(ous))
 	for i, ou := range ous {
-		org.Members[i], err = GetUserByID(ou.Uid)
+		org.Members[i], err = Users.GetByID(context.TODO(), ou.Uid)
 		if err != nil {
 			return err
 		}
@@ -103,18 +106,19 @@ func CreateOrganization(org, owner *User) (err error) {
 		return err
 	}
 
-	isExist, err := IsUserExist(0, org.Name)
-	if err != nil {
-		return err
-	} else if isExist {
-		return ErrUserAlreadyExist{args: errutil.Args{"name": org.Name}}
+	if Users.IsUsernameUsed(context.TODO(), org.Name, 0) {
+		return ErrUserAlreadyExist{
+			args: errutil.Args{
+				"name": org.Name,
+			},
+		}
 	}
 
 	org.LowerName = strings.ToLower(org.Name)
-	if org.Rands, err = GetUserSalt(); err != nil {
+	if org.Rands, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
-	if org.Salt, err = GetUserSalt(); err != nil {
+	if org.Salt, err = userutil.RandomSalt(); err != nil {
 		return err
 	}
 	org.UseCustomAvatar = true
@@ -131,7 +135,7 @@ func CreateOrganization(org, owner *User) (err error) {
 	if _, err = sess.Insert(org); err != nil {
 		return fmt.Errorf("insert organization: %v", err)
 	}
-	_ = org.GenerateRandomAvatar()
+	_ = userutil.GenerateRandomAvatar(org.ID, org.Name, org.Email)
 
 	// Add initial creator to organization and owner team.
 	if _, err = sess.Insert(&OrgUser{
@@ -163,7 +167,7 @@ func CreateOrganization(org, owner *User) (err error) {
 		return fmt.Errorf("insert team-user relation: %v", err)
 	}
 
-	if err = os.MkdirAll(UserPath(org.Name), os.ModePerm); err != nil {
+	if err = os.MkdirAll(repoutil.UserPath(org.Name), os.ModePerm); err != nil {
 		return fmt.Errorf("create directory: %v", err)
 	}
 
@@ -177,7 +181,7 @@ func GetOrgByName(name string) (*User, error) {
 	}
 	u := &User{
 		LowerName: strings.ToLower(name),
-		Type:      UserOrganization,
+		Type:      UserTypeOrganization,
 	}
 	has, err := x.Get(u)
 	if err != nil {
@@ -234,14 +238,14 @@ func DeleteOrganization(org *User) (err error) {
 // \_______  /__|  \___  /|______//____  >\___  >__|
 //         \/     /_____/              \/     \/
 
-// OrgUser represents an organization-user relation.
+// OrgUser represents relations of organizations and their members.
 type OrgUser struct {
-	ID       int64
-	Uid      int64 `xorm:"INDEX UNIQUE(s)"`
-	OrgID    int64 `xorm:"INDEX UNIQUE(s)"`
-	IsPublic bool
-	IsOwner  bool
-	NumTeams int
+	ID       int64 `gorm:"primaryKey"`
+	Uid      int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
+	OrgID    int64 `xorm:"INDEX UNIQUE(s)" gorm:"uniqueIndex:org_user_user_org_unique;index;not null"`
+	IsPublic bool  `gorm:"not null;default:FALSE"`
+	IsOwner  bool  `gorm:"not null;default:FALSE"`
+	NumTeams int   `gorm:"not null;default:0"`
 }
 
 // IsOrganizationOwner returns true if given user is in the owner team.
@@ -277,12 +281,6 @@ func GetOrgsByUserID(userID int64, showAll bool) ([]*User, error) {
 	return getOrgsByUserID(x.NewSession(), userID, showAll)
 }
 
-// GetOrgsByUserIDDesc returns a list of organizations that the given user ID
-// has joined, ordered descending by the given condition.
-func GetOrgsByUserIDDesc(userID int64, desc string, showAll bool) ([]*User, error) {
-	return getOrgsByUserID(x.NewSession().Desc(desc), userID, showAll)
-}
-
 func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 	orgs := make([]*User, 0, 10)
 	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
@@ -300,17 +298,6 @@ func GetOwnedOrgsByUserID(userID int64) ([]*User, error) {
 func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
 	sess := x.NewSession()
 	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
-}
-
-// GetOrgIDsByUserID returns a list of organization IDs that user belongs to.
-// The showPrivate indicates whether to include private memberships.
-func GetOrgIDsByUserID(userID int64, showPrivate bool) ([]int64, error) {
-	orgIDs := make([]int64, 0, 5)
-	sess := x.Table("org_user").Where("uid = ?", userID)
-	if !showPrivate {
-		sess.And("is_public = ?", true)
-	}
-	return orgIDs, sess.Distinct("org_id").Find(&orgIDs)
 }
 
 func getOrgUsersByOrgID(e Engine, orgID int64, limit int) ([]*OrgUser, error) {
@@ -380,11 +367,11 @@ func RemoveOrgUser(orgID, userID int64) error {
 		return nil
 	}
 
-	user, err := GetUserByID(userID)
+	user, err := Users.GetByID(context.TODO(), userID)
 	if err != nil {
 		return fmt.Errorf("GetUserByID [%d]: %v", userID, err)
 	}
-	org, err := GetUserByID(orgID)
+	org, err := Users.GetByID(context.TODO(), orgID)
 	if err != nil {
 		return fmt.Errorf("GetUserByID [%d]: %v", orgID, err)
 	}

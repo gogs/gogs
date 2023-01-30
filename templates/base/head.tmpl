@@ -19,13 +19,13 @@
 		<meta property="og:type" content="profile" />
 		<meta property="og:title" content="{{.Owner.Name}}{{if .Owner.FullName}} ({{.Owner.FullName}}){{end}}">
 		<meta property="og:description" content="{{.Owner.Name}} has {{.Owner.NumFollowers}} followers and is following {{.Owner.NumFollowing}} people.">
-		<meta property="og:image" content="{{.Owner.AvatarLink}}" />
+		<meta property="og:image" content="{{.Owner.AvatarURL}}" />
 	{{else if .Repository}}
 		<meta property="og:url" content="{{.Repository.HTMLURL}}" />
 		<meta property="og:type" content="object" />
 		<meta property="og:title" content="{{.Repository.FullName}}">
 		<meta property="og:description" content="{{.Repository.Description}}">
-		<meta property="og:image" content="{{.Repository.Owner.AvatarLink}}" />
+		<meta property="og:image" content="{{.Repository.Owner.AvatarURL}}" />
 	{{else}}
 		<meta property="og:url" content="{{AppURL}}" />
 		<meta property="og:type" content="website" />
@@ -132,7 +132,7 @@
 
 										<div class="ui dropdown head link jump item poping up" tabindex="-1" data-content="{{.i18n.Tr "user_profile_and_more"}}" data-variation="tiny inverted">
 											<span class="text avatar">
-												<img class="ui small rounded image" src="{{.LoggedUser.RelAvatarLink}}">
+												<img class="ui small rounded image" src="{{.LoggedUser.AvatarURLPath}}">
 												<span class="sr-only">{{.i18n.Tr "user_profile_and_more"}}</span>
 												<i class="octicon octicon-triangle-down" tabindex="-1"></i>
 											</span>

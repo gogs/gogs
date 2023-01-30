@@ -1,5 +1,4 @@
 //go:build minwinsvc
-// +build minwinsvc
 
 // Copyright 2015 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style

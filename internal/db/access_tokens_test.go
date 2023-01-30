@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -20,6 +21,7 @@ func TestAccessToken_BeforeCreate(t *testing.T) {
 	now := time.Now()
 	db := &gorm.DB{
 		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
 			NowFunc: func() time.Time {
 				return now
 			},
@@ -27,17 +29,66 @@ func TestAccessToken_BeforeCreate(t *testing.T) {
 	}
 
 	t.Run("CreatedUnix has been set", func(t *testing.T) {
-		token := &AccessToken{CreatedUnix: 1}
+		token := &AccessToken{
+			CreatedUnix: 1,
+		}
 		_ = token.BeforeCreate(db)
 		assert.Equal(t, int64(1), token.CreatedUnix)
-		assert.Equal(t, int64(0), token.UpdatedUnix)
+		assert.Equal(t, int64(0), token.UpdatedUnix) // Do not set UpdatedUnix until it is used.
 	})
 
 	t.Run("CreatedUnix has not been set", func(t *testing.T) {
 		token := &AccessToken{}
 		_ = token.BeforeCreate(db)
 		assert.Equal(t, db.NowFunc().Unix(), token.CreatedUnix)
-		assert.Equal(t, int64(0), token.UpdatedUnix)
+		assert.Equal(t, int64(0), token.UpdatedUnix) // Do not set UpdatedUnix until it is used.
+	})
+}
+
+func TestAccessToken_AfterFind(t *testing.T) {
+	now := time.Now()
+	db := &gorm.DB{
+		Config: &gorm.Config{
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return now
+			},
+		},
+	}
+
+	t.Run("UpdatedUnix has been set and within 7 days", func(t *testing.T) {
+		token := &AccessToken{
+			CreatedUnix: now.Unix(),
+			UpdatedUnix: now.Add(time.Second).Unix(),
+		}
+		_ = token.AfterFind(db)
+		assert.Equal(t, token.CreatedUnix, token.Created.Unix())
+		assert.Equal(t, token.UpdatedUnix, token.Updated.Unix())
+		assert.True(t, token.HasUsed)
+		assert.True(t, token.HasRecentActivity)
+	})
+
+	t.Run("UpdatedUnix has been set and not within 7 days", func(t *testing.T) {
+		token := &AccessToken{
+			CreatedUnix: now.Add(-1 * 9 * 24 * time.Hour).Unix(),
+			UpdatedUnix: now.Add(-1 * 8 * 24 * time.Hour).Unix(),
+		}
+		_ = token.AfterFind(db)
+		assert.Equal(t, token.CreatedUnix, token.Created.Unix())
+		assert.Equal(t, token.UpdatedUnix, token.Updated.Unix())
+		assert.True(t, token.HasUsed)
+		assert.False(t, token.HasRecentActivity)
+	})
+
+	t.Run("UpdatedUnix has not been set", func(t *testing.T) {
+		token := &AccessToken{
+			CreatedUnix: now.Unix(),
+		}
+		_ = token.AfterFind(db)
+		assert.Equal(t, token.CreatedUnix, token.Created.Unix())
+		assert.True(t, token.Updated.IsZero())
+		assert.False(t, token.HasUsed)
+		assert.False(t, token.HasRecentActivity)
 	})
 }
 
@@ -45,17 +96,16 @@ func TestAccessTokens(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-
 	t.Parallel()
 
 	tables := []interface{}{new(AccessToken)}
 	db := &accessTokens{
-		DB: initTestDB(t, "accessTokens", tables...),
+		DB: dbtest.NewDB(t, "accessTokens", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(*testing.T, *accessTokens)
+		test func(t *testing.T, db *accessTokens)
 	}{
 		{"Create", accessTokensCreate},
 		{"DeleteByID", accessTokensDeleteByID},
@@ -94,7 +144,12 @@ func accessTokensCreate(t *testing.T, db *accessTokens) {
 
 	// Try create second access token with same name should fail
 	_, err = db.Create(ctx, token.UserID, token.Name)
-	wantErr := ErrAccessTokenAlreadyExist{args: errutil.Args{"userID": token.UserID, "name": token.Name}}
+	wantErr := ErrAccessTokenAlreadyExist{
+		args: errutil.Args{
+			"userID": token.UserID,
+			"name":   token.Name,
+		},
+	}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -112,8 +167,6 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 	// We should be able to get it back
 	_, err = db.GetBySHA1(ctx, token.Sha1)
 	require.NoError(t, err)
-	_, err = db.GetBySHA1(ctx, token.Sha1)
-	require.NoError(t, err)
 
 	// Now delete this token with correct user ID
 	err = db.DeleteByID(ctx, token.UserID, token.ID)
@@ -121,7 +174,11 @@ func accessTokensDeleteByID(t *testing.T, db *accessTokens) {
 
 	// We should get token not found error
 	_, err = db.GetBySHA1(ctx, token.Sha1)
-	wantErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": token.Sha1}}
+	wantErr := ErrAccessTokenNotExist{
+		args: errutil.Args{
+			"sha": token.Sha1,
+		},
+	}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -138,7 +195,11 @@ func accessTokensGetBySHA(t *testing.T, db *accessTokens) {
 
 	// Try to get a non-existent token
 	_, err = db.GetBySHA1(ctx, "bad_sha")
-	wantErr := ErrAccessTokenNotExist{args: errutil.Args{"sha": "bad_sha"}}
+	wantErr := ErrAccessTokenNotExist{
+		args: errutil.Args{
+			"sha": "bad_sha",
+		},
+	}
 	assert.Equal(t, wantErr, err)
 }
 

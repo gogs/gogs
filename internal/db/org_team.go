@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -245,7 +246,9 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	return sess.Commit()
 }
 
-var reservedTeamNames = []string{"new"}
+var reservedTeamNames = map[string]struct{}{
+	"new": {},
+}
 
 // IsUsableTeamName return an error if given name is a reserved name or pattern.
 func IsUsableTeamName(name string) error {
@@ -415,7 +418,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	// Get organization.
-	org, err := GetUserByID(t.OrgID)
+	org, err := Users.GetByID(context.TODO(), t.OrgID)
 	if err != nil {
 		return err
 	}

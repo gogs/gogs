@@ -7,7 +7,6 @@ package lfs
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -69,7 +68,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 		{
 			name: "object does not exist",
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
 				return mock
 			},
@@ -82,7 +81,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 		{
 			name: "storage not found",
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{Storage: "bad_storage"}, nil)
 				return mock
 			},
@@ -97,7 +96,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 			name:    "object exists",
 			content: "Hello world!",
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(
 					&db.LFSObject{
 						Size:    12,
@@ -133,7 +132,7 @@ func Test_basicHandler_serveDownload(t *testing.T) {
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 			assert.Equal(t, test.expHeader, resp.Header)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -168,7 +167,7 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 		{
 			name: "object already exists",
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{}, nil)
 				return mock
 			},
@@ -177,7 +176,7 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 		{
 			name: "new object",
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
 				return mock
 			},
@@ -199,7 +198,7 @@ func Test_basicHandler_serveUpload(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -233,7 +232,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			name: "object does not exist",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"}`,
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(nil, db.ErrLFSObjectNotExist{})
 				return mock
 			},
@@ -244,7 +243,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			name: "object size mismatch",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f"}`,
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{Size: 12}, nil)
 				return mock
 			},
@@ -256,7 +255,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			name: "object exists",
 			body: `{"oid":"ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", "size":12}`,
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectByOIDFunc.SetDefaultReturn(&db.LFSObject{Size: 12}, nil)
 				return mock
 			},
@@ -280,7 +279,7 @@ func Test_basicHandler_serveVerify(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

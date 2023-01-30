@@ -120,6 +120,14 @@ This container has some options available via environment variables, these optio
   - <u>Action:</u>
       Used by backup system. If defined, supplies `--exclude-repos` argument to `gogs backup`.\
       See: [Backup System](#backup-system)
+- **BACKUP_EXTRA_ARGS**:
+  - <u>Possible value:</u>
+      `--verbose --exclude-mirror-repos`
+  - <u>Default:</u>
+      `null`
+  - <u>Action:</u>
+      Used by backup system. If defined, append content to arguments to `gogs backup`.\
+      See: [Backup System](#backup-system)
 
 ## Backup system
 

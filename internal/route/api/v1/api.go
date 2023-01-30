@@ -37,7 +37,7 @@ func repoAssignment() macaron.Handler {
 		if c.IsLogged && c.User.LowerName == strings.ToLower(username) {
 			owner = c.User
 		} else {
-			owner, err = db.GetUserByName(username)
+			owner, err = db.Users.GetByUsername(c.Req.Context(), username)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return
@@ -45,7 +45,7 @@ func repoAssignment() macaron.Handler {
 		}
 		c.Repo.Owner = owner
 
-		repo, err := db.Repos.GetByName(owner.ID, reponame)
+		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			c.NotFoundOrError(err, "get repository by name")
 			return
@@ -91,7 +91,7 @@ func orgAssignment(args ...bool) macaron.Handler {
 
 		var err error
 		if assignOrg {
-			c.Org.Organization, err = db.GetUserByName(c.Params(":orgname"))
+			c.Org.Organization, err = db.Users.GetByUsername(c.Req.Context(), c.Params(":orgname"))
 			if err != nil {
 				c.NotFoundOrError(err, "get organization by name")
 				return
@@ -273,11 +273,18 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
 				m.Group("/contents", func() {
 					m.Get("", repo.GetContents)
-					m.Get("/*", repo.GetContents)
+					m.Combo("/*").
+						Get(repo.GetContents).
+						Put(bind(repo.PutContentsRequest{}), repo.PutContents)
 				})
 				m.Get("/archive/*", repo.GetArchive)
-				m.Group("/git/trees", func() {
-					m.Get("/:sha", repo.GetRepoGitTree)
+				m.Group("/git", func() {
+					m.Group("/trees", func() {
+						m.Get("/:sha", repo.GetRepoGitTree)
+					})
+					m.Group("/blobs", func() {
+						m.Get("/:sha", repo.RepoGitBlob)
+					})
 				})
 				m.Get("/forks", repo.ListForks)
 				m.Get("/tags", repo.ListTags)

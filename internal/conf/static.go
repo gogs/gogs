@@ -13,6 +13,9 @@ import (
 )
 
 // ℹ️ README: This file contains static values that should only be set at initialization time.
+//
+// ⚠️ WARNING: After changing any options, do not forget to update template of
+// "/admin/config" page as well.
 
 // HasMinWinSvc is whether the application is built with Windows Service support.
 //
@@ -30,67 +33,7 @@ var (
 // CustomConf returns the absolute path of custom configuration file that is used.
 var CustomConf string
 
-// ⚠️ WARNING: After changing the following section, do not forget to update template of
-// "/admin/config" page as well.
 var (
-	// Application settings
-	App struct {
-		// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
-		Version string `ini:"-"`
-
-		BrandName string
-		RunUser   string
-		RunMode   string
-	}
-
-	// SSH settings
-	SSH struct {
-		Disabled                     bool   `ini:"DISABLE_SSH"`
-		Domain                       string `ini:"SSH_DOMAIN"`
-		Port                         int    `ini:"SSH_PORT"`
-		RootPath                     string `ini:"SSH_ROOT_PATH"`
-		KeygenPath                   string `ini:"SSH_KEYGEN_PATH"`
-		KeyTestPath                  string `ini:"SSH_KEY_TEST_PATH"`
-		MinimumKeySizeCheck          bool
-		MinimumKeySizes              map[string]int `ini:"-"` // Load from [ssh.minimum_key_sizes]
-		RewriteAuthorizedKeysAtStart bool
-
-		StartBuiltinServer bool     `ini:"START_SSH_SERVER"`
-		ListenHost         string   `ini:"SSH_LISTEN_HOST"`
-		ListenPort         int      `ini:"SSH_LISTEN_PORT"`
-		ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
-		ServerMACs         []string `ini:"SSH_SERVER_MACS"`
-	}
-
-	// Repository settings
-	Repository struct {
-		Root                     string
-		ScriptType               string
-		ANSICharset              string `ini:"ANSI_CHARSET"`
-		ForcePrivate             bool
-		MaxCreationLimit         int
-		PreferredLicenses        []string
-		DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
-		EnableLocalPathMigration bool
-		EnableRawFileRenderMode  bool
-		CommitsFetchConcurrency  int
-
-		// Repository editor settings
-		Editor struct {
-			LineWrapExtensions   []string
-			PreviewableFileModes []string
-		} `ini:"repository.editor"`
-
-		// Repository upload settings
-		Upload struct {
-			Enabled      bool
-			TempPath     string
-			AllowedTypes []string `delim:"|"`
-			FileMaxSize  int64
-			MaxFiles     int
-		} `ini:"repository.upload"`
-	}
-
 	// Security settings
 	Security struct {
 		InstallLock             bool
@@ -126,20 +69,6 @@ var (
 
 		// Derived from other static values
 		FromEmail string `ini:"-"` // Parsed email address of From without person's name.
-	}
-
-	// Authentication settings
-	Auth struct {
-		ActivateCodeLives         int
-		ResetPasswordCodeLives    int
-		RequireEmailConfirmation  bool
-		RequireSigninView         bool
-		DisableRegistration       bool
-		EnableRegistrationCaptcha bool
-
-		EnableReverseProxyAuthentication   bool
-		EnableReverseProxyAutoRegistration bool
-		ReverseProxyAuthenticationHeader   string
 	}
 
 	// User settings
@@ -195,18 +124,6 @@ var (
 
 		// Derived from other static values
 		FormatLayout string `ini:"-"` // Actual layout of the Format.
-	}
-
-	// Picture settings
-	Picture struct {
-		AvatarUploadPath           string
-		RepositoryAvatarUploadPath string
-		GravatarSource             string
-		DisableGravatar            bool
-		EnableFederatedAvatar      bool
-
-		// Derived from other static values
-		LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
 	}
 
 	// Mirror settings
@@ -295,27 +212,6 @@ var (
 		MaxResponseItems int
 	}
 
-	// UI settings
-	UI struct {
-		ExplorePagingNum   int
-		IssuePagingNum     int
-		FeedMaxCommitNum   int
-		ThemeColorMetaTag  string
-		MaxDisplayFileSize int64
-
-		Admin struct {
-			UserPagingNum   int
-			RepoPagingNum   int
-			NoticePagingNum int
-			OrgPagingNum    int
-		} `ini:"ui.admin"`
-		User struct {
-			RepoPagingNum     int
-			NewsFeedPagingNum int
-			CommitsPagingNum  int
-		} `ini:"ui.user"`
-	}
-
 	// Prometheus settings
 	Prometheus struct {
 		Enabled           bool
@@ -333,6 +229,34 @@ var (
 	// Global setting
 	HasRobotsTxt bool
 )
+
+type AppOpts struct {
+	// ⚠️ WARNING: Should only be set by the main package (i.e. "gogs.go").
+	Version string `ini:"-"`
+
+	BrandName string
+	RunUser   string
+	RunMode   string
+}
+
+// Application settings
+var App AppOpts
+
+type AuthOpts struct {
+	ActivateCodeLives         int
+	ResetPasswordCodeLives    int
+	RequireEmailConfirmation  bool
+	RequireSigninView         bool
+	DisableRegistration       bool
+	EnableRegistrationCaptcha bool
+
+	EnableReverseProxyAuthentication   bool
+	EnableReverseProxyAutoRegistration bool
+	ReverseProxyAuthenticationHeader   string
+}
+
+// Authentication settings
+var Auth AuthOpts
 
 type ServerOpts struct {
 	ExternalURL          string `ini:"EXTERNAL_URL"`
@@ -365,6 +289,58 @@ type ServerOpts struct {
 // Server settings
 var Server ServerOpts
 
+type SSHOpts struct {
+	Disabled                     bool   `ini:"DISABLE_SSH"`
+	Domain                       string `ini:"SSH_DOMAIN"`
+	Port                         int    `ini:"SSH_PORT"`
+	RootPath                     string `ini:"SSH_ROOT_PATH"`
+	KeygenPath                   string `ini:"SSH_KEYGEN_PATH"`
+	KeyTestPath                  string `ini:"SSH_KEY_TEST_PATH"`
+	MinimumKeySizeCheck          bool
+	MinimumKeySizes              map[string]int `ini:"-"` // Load from [ssh.minimum_key_sizes]
+	RewriteAuthorizedKeysAtStart bool
+
+	StartBuiltinServer bool     `ini:"START_SSH_SERVER"`
+	ListenHost         string   `ini:"SSH_LISTEN_HOST"`
+	ListenPort         int      `ini:"SSH_LISTEN_PORT"`
+	ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
+	ServerMACs         []string `ini:"SSH_SERVER_MACS"`
+}
+
+// SSH settings
+var SSH SSHOpts
+
+type RepositoryOpts struct {
+	Root                     string
+	ScriptType               string
+	ANSICharset              string `ini:"ANSI_CHARSET"`
+	ForcePrivate             bool
+	MaxCreationLimit         int
+	PreferredLicenses        []string
+	DisableHTTPGit           bool `ini:"DISABLE_HTTP_GIT"`
+	EnableLocalPathMigration bool
+	EnableRawFileRenderMode  bool
+	CommitsFetchConcurrency  int
+
+	// Repository editor settings
+	Editor struct {
+		LineWrapExtensions   []string
+		PreviewableFileModes []string
+	} `ini:"repository.editor"`
+
+	// Repository upload settings
+	Upload struct {
+		Enabled      bool
+		TempPath     string
+		AllowedTypes []string `delim:"|"`
+		FileMaxSize  int64
+		MaxFiles     int
+	} `ini:"repository.upload"`
+}
+
+// Repository settings
+var Repository RepositoryOpts
+
 type DatabaseOpts struct {
 	Type         string
 	Host         string
@@ -388,6 +364,45 @@ type LFSOpts struct {
 
 // LFS settings
 var LFS LFSOpts
+
+type UIUserOpts struct {
+	RepoPagingNum     int
+	NewsFeedPagingNum int
+	CommitsPagingNum  int
+}
+
+type UIOpts struct {
+	ExplorePagingNum   int
+	IssuePagingNum     int
+	FeedMaxCommitNum   int
+	ThemeColorMetaTag  string
+	MaxDisplayFileSize int64
+
+	Admin struct {
+		UserPagingNum   int
+		RepoPagingNum   int
+		NoticePagingNum int
+		OrgPagingNum    int
+	} `ini:"ui.admin"`
+	User UIUserOpts `ini:"ui.user"`
+}
+
+// UI settings
+var UI UIOpts
+
+type PictureOpts struct {
+	AvatarUploadPath           string
+	RepositoryAvatarUploadPath string
+	GravatarSource             string
+	DisableGravatar            bool
+	EnableFederatedAvatar      bool
+
+	// Derived from other static values
+	LibravatarService *libravatar.Libravatar `ini:"-"` // Initialized client for federated avatar.
+}
+
+// Picture settings
+var Picture PictureOpts
 
 type i18nConf struct {
 	Langs     []string          `delim:","`
@@ -429,3 +444,11 @@ var (
 	UsePostgreSQL bool
 	UseMSSQL      bool
 )
+
+// UsersAvatarPathPrefix is the path prefix to user avatars.
+const UsersAvatarPathPrefix = "avatars"
+
+// UserDefaultAvatarURLPath returns the URL path of the default user avatar.
+func UserDefaultAvatarURLPath() string {
+	return Server.Subpath + "/img/avatar_default.png"
+}

@@ -26,7 +26,7 @@ func TriggerTask(c *macaron.Context) {
 	username := c.Params(":username")
 	reponame := c.Params(":reponame")
 
-	owner, err := db.Users.GetByUsername(username)
+	owner, err := db.Users.GetByUsername(c.Req.Context(), username)
 	if err != nil {
 		if db.IsErrUserNotExist(err) {
 			c.Error(http.StatusBadRequest, "Owner does not exist")
@@ -44,7 +44,7 @@ func TriggerTask(c *macaron.Context) {
 		return
 	}
 
-	repo, err := db.Repos.GetByName(owner.ID, reponame)
+	repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
 	if err != nil {
 		if db.IsErrRepoNotExist(err) {
 			c.Error(http.StatusBadRequest, "Repository does not exist")
@@ -55,7 +55,7 @@ func TriggerTask(c *macaron.Context) {
 		return
 	}
 
-	pusher, err := db.Users.GetByID(pusherID)
+	pusher, err := db.Users.GetByID(c.Req.Context(), pusherID)
 	if err != nil {
 		if db.IsErrUserNotExist(err) {
 			c.Error(http.StatusBadRequest, "Pusher does not exist")

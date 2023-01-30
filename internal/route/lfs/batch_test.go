@@ -7,7 +7,7 @@ package lfs
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -83,7 +83,7 @@ func Test_serveBatch(t *testing.T) {
 	{"oid": "5cac0a318669fadfee734fb340a5f5b70b428ac57a9f4b109cb6e150b2ba7e57", "size": 456}
 ]}`,
 			mockLFSStore: func() db.LFSStore {
-				mock := db.NewMockLFSStore()
+				mock := NewMockLFSStore()
 				mock.GetObjectsByOIDsFunc.SetDefaultReturn(
 					[]*db.LFSObject{
 						{
@@ -138,7 +138,7 @@ func Test_serveBatch(t *testing.T) {
 			resp := rr.Result()
 			assert.Equal(t, test.expStatusCode, resp.StatusCode)
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

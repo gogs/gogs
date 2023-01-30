@@ -10,12 +10,11 @@ import (
 	"fmt"
 	"html/template"
 	"image/png"
-	"io/ioutil"
-	"strings"
+	"io"
 
+	"github.com/pkg/errors"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/auth"
@@ -23,10 +22,10 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/tool"
+	"gogs.io/gogs/internal/userutil"
 )
 
 const (
@@ -69,15 +68,16 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 
 	// Non-local users are not allowed to change their username
 	if c.User.IsLocal() {
-		// Check if username characters have been changed
-		if c.User.LowerName != strings.ToLower(f.Name) {
-			if err := db.ChangeUserName(c.User, f.Name); err != nil {
+		// Check if the username (including cases) had been changed
+		if c.User.Name != f.Name {
+			err := db.Users.ChangeUsername(c.Req.Context(), c.User.ID, f.Name)
+			if err != nil {
 				c.FormErr("Name")
 				var msg string
 				switch {
-				case db.IsErrUserAlreadyExist(err):
+				case db.IsErrUserAlreadyExist(errors.Cause(err)):
 					msg = c.Tr("form.username_been_taken")
-				case db.IsErrNameNotAllowed(err):
+				case db.IsErrNameNotAllowed(errors.Cause(err)):
 					msg = c.Tr("user.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value())
 				default:
 					c.Error(err, "change user name")
@@ -90,23 +90,19 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 
 			log.Trace("Username changed: %s -> %s", c.User.Name, f.Name)
 		}
-
-		// In case it's just a case change
-		c.User.Name = f.Name
-		c.User.LowerName = strings.ToLower(f.Name)
 	}
 
-	c.User.FullName = f.FullName
-	c.User.Email = f.Email
-	c.User.Website = f.Website
-	c.User.Location = f.Location
-	if err := db.UpdateUser(c.User); err != nil {
-		if db.IsErrEmailAlreadyUsed(err) {
-			msg := c.Tr("form.email_been_used")
-			c.RenderWithErr(msg, SETTINGS_PROFILE, &f)
-			return
-		}
-		c.Errorf(err, "update user")
+	err := db.Users.Update(
+		c.Req.Context(),
+		c.User.ID,
+		db.UpdateUserOptions{
+			FullName: &f.FullName,
+			Website:  &f.Website,
+			Location: &f.Location,
+		},
+	)
+	if err != nil {
+		c.Error(err, "update user")
 		return
 	}
 
@@ -116,10 +112,25 @@ func SettingsPost(c *context.Context, f form.UpdateProfile) {
 
 // FIXME: limit upload size
 func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) error {
-	ctxUser.UseCustomAvatar = f.Source == form.AVATAR_LOCAL
-	if len(f.Gravatar) > 0 {
-		ctxUser.Avatar = cryptoutil.MD5(f.Gravatar)
-		ctxUser.AvatarEmail = f.Gravatar
+	if f.Source == form.AvatarLookup && f.Gravatar != "" {
+		avatar := cryptoutil.MD5(f.Gravatar)
+		err := db.Users.Update(
+			c.Req.Context(),
+			ctxUser.ID,
+			db.UpdateUserOptions{
+				Avatar:      &avatar,
+				AvatarEmail: &f.Gravatar,
+			},
+		)
+		if err != nil {
+			return errors.Wrap(err, "update user")
+		}
+
+		err = db.Users.DeleteCustomAvatar(c.Req.Context(), c.User.ID)
+		if err != nil {
+			return errors.Wrap(err, "delete custom avatar")
+		}
+		return nil
 	}
 
 	if f.Avatar != nil && f.Avatar.Filename != "" {
@@ -127,34 +138,22 @@ func UpdateAvatarSetting(c *context.Context, f form.Avatar, ctxUser *db.User) er
 		if err != nil {
 			return fmt.Errorf("open avatar reader: %v", err)
 		}
-		defer func() {
-			_ = r.Close()
-		}()
+		defer func() { _ = r.Close() }()
 
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		if err != nil {
 			return fmt.Errorf("read avatar content: %v", err)
 		}
 		if !tool.IsImageFile(data) {
 			return errors.New(c.Tr("settings.uploaded_avatar_not_a_image"))
 		}
-		if err = ctxUser.UploadAvatar(data); err != nil {
-			return fmt.Errorf("upload avatar: %v", err)
-		}
-	} else {
-		// No avatar is uploaded but setting has been changed to enable,
-		// generate a random one when needed.
-		if ctxUser.UseCustomAvatar && !com.IsFile(ctxUser.CustomAvatarPath()) {
-			if err := ctxUser.GenerateRandomAvatar(); err != nil {
-				log.Error("generate random avatar [%d]: %v", ctxUser.ID, err)
-			}
-		}
-	}
 
-	if err := db.UpdateUser(ctxUser); err != nil {
-		return fmt.Errorf("update user: %v", err)
+		err = db.Users.UseCustomAvatar(c.Req.Context(), ctxUser.ID, data)
+		if err != nil {
+			return errors.Wrap(err, "save avatar")
+		}
+		return nil
 	}
-
 	return nil
 }
 
@@ -175,7 +174,8 @@ func SettingsAvatarPost(c *context.Context, f form.Avatar) {
 }
 
 func SettingsDeleteAvatar(c *context.Context) {
-	if err := c.User.DeleteAvatar(); err != nil {
+	err := db.Users.DeleteCustomAvatar(c.Req.Context(), c.User.ID)
+	if err != nil {
 		c.Flash.Error(fmt.Sprintf("Failed to delete avatar: %v", err))
 	}
 
@@ -197,19 +197,19 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 		return
 	}
 
-	if !c.User.ValidatePassword(f.OldPassword) {
+	if !userutil.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
 		c.Flash.Error(c.Tr("settings.password_incorrect"))
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))
 	} else {
-		c.User.Passwd = f.Password
-		var err error
-		if c.User.Salt, err = db.GetUserSalt(); err != nil {
-			c.Errorf(err, "get user salt")
-			return
-		}
-		c.User.EncodePassword()
-		if err := db.UpdateUser(c.User); err != nil {
+		err := db.Users.Update(
+			c.Req.Context(),
+			c.User.ID,
+			db.UpdateUserOptions{
+				Password: &f.Password,
+			},
+		)
+		if err != nil {
 			c.Errorf(err, "update user")
 			return
 		}
@@ -262,7 +262,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	emailAddr := &db.EmailAddress{
-		UID:         c.User.ID,
+		UserID:      c.User.ID,
 		Email:       f.Email,
 		IsActivated: !conf.Auth.RequireEmailConfirmation,
 	}
@@ -292,8 +292,8 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 func DeleteEmail(c *context.Context) {
 	if err := db.DeleteEmailAddress(&db.EmailAddress{
-		ID:  c.QueryInt64("id"),
-		UID: c.User.ID,
+		ID:     c.QueryInt64("id"),
+		UserID: c.User.ID,
 	}); err != nil {
 		c.Errorf(err, "delete email address")
 		return
@@ -381,7 +381,7 @@ func SettingsSecurity(c *context.Context) {
 	c.Title("settings.security")
 	c.PageIs("SettingsSecurity")
 
-	t, err := db.TwoFactors.GetByUserID(c.UserID())
+	t, err := db.TwoFactors.GetByUserID(c.Req.Context(), c.UserID())
 	if err != nil && !db.IsErrTwoFactorNotFound(err) {
 		c.Errorf(err, "get two factor by user ID")
 		return
@@ -392,7 +392,7 @@ func SettingsSecurity(c *context.Context) {
 }
 
 func SettingsTwoFactorEnable(c *context.Context) {
-	if c.User.IsEnabledTwoFactor() {
+	if db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -449,7 +449,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 		return
 	}
 
-	if err := db.TwoFactors.Create(c.UserID(), conf.Security.SecretKey, secret); err != nil {
+	if err := db.TwoFactors.Create(c.Req.Context(), c.UserID(), conf.Security.SecretKey, secret); err != nil {
 		c.Flash.Error(c.Tr("settings.two_factor_enable_error", err))
 		c.RedirectSubpath("/user/settings/security/two_factor_enable")
 		return
@@ -462,7 +462,7 @@ func SettingsTwoFactorEnablePost(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodes(c *context.Context) {
-	if !c.User.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -481,7 +481,7 @@ func SettingsTwoFactorRecoveryCodes(c *context.Context) {
 }
 
 func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
-	if !c.User.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -496,7 +496,7 @@ func SettingsTwoFactorRecoveryCodesPost(c *context.Context) {
 }
 
 func SettingsTwoFactorDisable(c *context.Context) {
-	if !c.User.IsEnabledTwoFactor() {
+	if !db.TwoFactors.IsEnabled(c.Req.Context(), c.User.ID) {
 		c.NotFound()
 		return
 	}
@@ -640,7 +640,7 @@ func SettingsDelete(c *context.Context) {
 	c.PageIs("SettingsDelete")
 
 	if c.Req.Method == "POST" {
-		if _, err := db.Users.Authenticate(c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
+		if _, err := db.Users.Authenticate(c.Req.Context(), c.User.Name, c.Query("password"), c.User.LoginSource); err != nil {
 			if auth.IsErrBadCredentials(err) {
 				c.RenderWithErr(c.Tr("form.enterred_invalid_password"), SETTINGS_DELETE, nil)
 			} else {
