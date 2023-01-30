@@ -1,4 +1,4 @@
-FROM golang:alpine3.16 AS binarybuilder
+FROM golang:alpine3.17 AS binarybuilder
 RUN apk --no-cache --no-progress add --virtual \
   build-deps \
   build-base \
@@ -11,7 +11,7 @@ COPY . .
 RUN ./docker/build/install-task.sh
 RUN TAGS="cert pam" task build
 
-FROM alpine:3.16
+FROM alpine:3.17
 RUN apk --no-cache --no-progress add \
   bash \
   ca-certificates \
