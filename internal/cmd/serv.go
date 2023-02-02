@@ -133,6 +133,7 @@ var allowedCommands = map[string]db.AccessMode{
 }
 
 func runServ(c *cli.Context) error {
+	ctx := context.Background()
 	setup(c, "serv.log", true)
 
 	if conf.SSH.Disabled {
@@ -161,7 +162,7 @@ func runServ(c *cli.Context) error {
 	repoName := strings.TrimSuffix(strings.ToLower(repoFields[1]), ".git")
 	repoName = strings.TrimSuffix(repoName, ".wiki")
 
-	owner, err := db.Users.GetByUsername(context.Background(), ownerName)
+	owner, err := db.Users.GetByUsername(ctx, ownerName)
 	if err != nil {
 		if db.IsErrUserNotExist(err) {
 			fail("Repository owner does not exist", "Unregistered owner: %s", ownerName)
@@ -204,12 +205,12 @@ func runServ(c *cli.Context) error {
 			}
 			checkDeployKey(key, repo)
 		} else {
-			user, err = db.GetUserByKeyID(key.ID)
+			user, err = db.Users.GetByKeyID(ctx, key.ID)
 			if err != nil {
 				fail("Internal error", "Failed to get user by key ID '%d': %v", key.ID, err)
 			}
 
-			mode := db.Perms.AccessMode(context.Background(), user.ID, repo.ID,
+			mode := db.Perms.AccessMode(ctx, user.ID, repo.ID,
 				db.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
