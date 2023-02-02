@@ -93,7 +93,7 @@ const TIME_LIMIT_CODE_LENGTH = 12 + 6 + 40
 
 // CreateTimeLimitCode generates a time limit code based on given input data.
 // Format: 12 length date time string + 6 minutes string + 40 sha1 encoded string
-func CreateTimeLimitCode(data string, minutes int, startInf interface{}) string {
+func CreateTimeLimitCode(data string, minutes int, startInf any) string {
 	format := "200601021504"
 
 	var start, end time.Time
@@ -306,7 +306,7 @@ func TimeSince(t time.Time, lang string) template.HTML {
 }
 
 // Subtract deals with subtraction of all types of number.
-func Subtract(left, right interface{}) interface{} {
+func Subtract(left, right any) any {
 	var rleft, rright int64
 	var fleft, fright float64
 	isInt := true

@@ -86,7 +86,7 @@ func Create(c *context.Context) {
 	c.Success(CREATE)
 }
 
-func handleCreateError(c *context.Context, err error, name, tpl string, form interface{}) {
+func handleCreateError(c *context.Context, err error, name, tpl string, form any) {
 	switch {
 	case db.IsErrReachLimitOfRepo(err):
 		c.RenderWithErr(c.Tr("repo.form.reach_limit_of_creation", err.(db.ErrReachLimitOfRepo).Limit), tpl, form)

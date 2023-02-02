@@ -81,7 +81,7 @@ func DeleteRepo(c *context.Context) {
 	log.Trace("Repository deleted: %s/%s", repo.MustOwner().Name, repo.Name)
 
 	c.Flash.Success(c.Tr("repo.settings.deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/admin/repos?page=" + c.Query("page"),
 	})
 }

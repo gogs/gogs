@@ -20,7 +20,7 @@ func TestFollows(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(User), new(EmailAddress), new(Follow)}
+	tables := []any{new(User), new(EmailAddress), new(Follow)}
 	db := &follows{
 		DB: dbtest.NewDB(t, "follows", tables...),
 	}

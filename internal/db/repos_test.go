@@ -85,7 +85,7 @@ func TestRepos(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Repository)}
+	tables := []any{new(Repository)}
 	db := &repos{
 		DB: dbtest.NewDB(t, "repos", tables...),
 	}

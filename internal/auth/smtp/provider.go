@@ -34,7 +34,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	if p.config.AllowedDomains != "" {
 		fields := strings.SplitN(login, "@", 3)
 		if len(fields) != 2 {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 		domain := fields[1]
 
@@ -47,7 +47,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 		}
 
 		if !isAllowed {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 	}
 
@@ -68,7 +68,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 		tperr, ok := err.(*textproto.Error)
 		if (ok && tperr.Code == 535) ||
 			strings.Contains(err.Error(), "Username and Password not accepted") {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}, nil
 }
 
-func (p *Provider) Config() interface{} {
+func (p *Provider) Config() any {
 	return p.config
 }
 

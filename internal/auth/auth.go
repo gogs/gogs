@@ -84,7 +84,7 @@ type Provider interface {
 	Authenticate(login, password string) (*ExternalAccount, error)
 
 	// Config returns the underlying configuration of the authenticate provider.
-	Config() interface{}
+	Config() any
 	// HasTLS returns true if the authenticate provider supports TLS.
 	HasTLS() bool
 	// UseTLS returns true if the authenticate provider is configured to use TLS.

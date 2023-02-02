@@ -28,23 +28,23 @@ import (
 
 // Engine represents a XORM engine or session.
 type Engine interface {
-	Delete(interface{}) (int64, error)
-	Exec(...interface{}) (sql.Result, error)
-	Find(interface{}, ...interface{}) error
-	Get(interface{}) (bool, error)
-	ID(interface{}) *xorm.Session
-	In(string, ...interface{}) *xorm.Session
-	Insert(...interface{}) (int64, error)
-	InsertOne(interface{}) (int64, error)
-	Iterate(interface{}, xorm.IterFunc) error
-	Sql(string, ...interface{}) *xorm.Session
-	Table(interface{}) *xorm.Session
-	Where(interface{}, ...interface{}) *xorm.Session
+	Delete(any) (int64, error)
+	Exec(...any) (sql.Result, error)
+	Find(any, ...any) error
+	Get(any) (bool, error)
+	ID(any) *xorm.Session
+	In(string, ...any) *xorm.Session
+	Insert(...any) (int64, error)
+	InsertOne(any) (int64, error)
+	Iterate(any, xorm.IterFunc) error
+	Sql(string, ...any) *xorm.Session
+	Table(any) *xorm.Session
+	Where(any, ...any) *xorm.Session
 }
 
 var (
 	x            *xorm.Engine
-	legacyTables []interface{}
+	legacyTables []any
 	HasEngine    bool
 )
 

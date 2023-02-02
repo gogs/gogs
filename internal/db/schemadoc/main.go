@@ -135,7 +135,7 @@ func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
 	}
 
 	m := conn.Migrator().(interface {
-		RunWithValue(value interface{}, fc func(*gorm.Statement) error) error
+		RunWithValue(value any, fc func(*gorm.Statement) error) error
 		FullDataTypeOf(*schema.Field) clause.Expr
 	})
 	tableInfos := make([]*tableInfo, 0, len(db.Tables))

@@ -158,7 +158,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 				return user, nil
 			}
 
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login, "userID": user.ID}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login, "userID": user.ID}}
 		}
 
 		authSourceID = user.LoginSource
@@ -166,7 +166,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 	} else {
 		// Non-local login source is always greater than 0.
 		if loginSourceID <= 0 {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 
 		authSourceID = loginSourceID
@@ -406,7 +406,7 @@ func (db *users) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 	return db.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"use_custom_avatar": false,
 			"updated_unix":      db.NowFunc().Unix(),
 		}).
@@ -693,7 +693,7 @@ func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byt
 	return db.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"use_custom_avatar": true,
 			"updated_unix":      db.NowFunc().Unix(),
 		}).

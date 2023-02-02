@@ -82,7 +82,7 @@ func TestUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey)}
+	tables := []any{new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey)}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
 	}
@@ -134,13 +134,13 @@ func usersAuthenticate(t *testing.T, db *users) {
 
 	t.Run("user not found", func(t *testing.T) {
 		_, err := db.Authenticate(ctx, "bob", password, -1)
-		wantErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": "bob"}}
+		wantErr := auth.ErrBadCredentials{Args: map[string]any{"login": "bob"}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
 		_, err := db.Authenticate(ctx, alice.Name, "bad_password", -1)
-		wantErr := auth.ErrBadCredentials{Args: map[string]interface{}{"login": alice.Name, "userID": alice.ID}}
+		wantErr := auth.ErrBadCredentials{Args: map[string]any{"login": alice.Name, "userID": alice.ID}}
 		assert.Equal(t, wantErr, err)
 	})
 
@@ -159,7 +159,7 @@ func usersAuthenticate(t *testing.T, db *users) {
 	t.Run("login source mismatch", func(t *testing.T) {
 		_, err := db.Authenticate(ctx, alice.Email, password, 1)
 		gotErr := fmt.Sprintf("%v", err)
-		wantErr := ErrLoginSourceMismatch{args: map[string]interface{}{"actual": 0, "expect": 1}}.Error()
+		wantErr := ErrLoginSourceMismatch{args: map[string]any{"actual": 0, "expect": 1}}.Error()
 		assert.Equal(t, wantErr, gotErr)
 	})
 
