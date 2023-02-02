@@ -44,20 +44,20 @@ const (
 
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
-	ID          int64
-	OwnerID     int64      `xorm:"INDEX NOT NULL"`
-	Name        string     `xorm:"NOT NULL"`
-	Fingerprint string     `xorm:"NOT NULL"`
-	Content     string     `xorm:"TEXT NOT NULL"`
-	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2"`
-	Type        KeyType    `xorm:"NOT NULL DEFAULT 1"`
+	ID          int64      `gorm:"primaryKey"`
+	OwnerID     int64      `xorm:"INDEX NOT NULL" gorm:"index;not null"`
+	Name        string     `xorm:"NOT NULL" gorm:"not null"`
+	Fingerprint string     `xorm:"NOT NULL" gorm:"not null"`
+	Content     string     `xorm:"TEXT NOT NULL" gorm:"type:TEXT;not null"`
+	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2" gorm:"not null;default:2"`
+	Type        KeyType    `xorm:"NOT NULL DEFAULT 1" gorm:"not null;default:1"`
 
-	Created           time.Time `xorm:"-" json:"-"`
+	Created           time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-" gorm:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-"`
-	HasUsed           bool `xorm:"-" json:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-" gorm:"-"`
+	HasUsed           bool `xorm:"-" json:"-" gorm:"-"`
 }
 
 func (k *PublicKey) BeforeInsert() {

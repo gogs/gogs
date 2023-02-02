@@ -524,7 +524,20 @@ func (repo *Repository) GetAssignees() (_ []*User, err error) {
 
 // GetAssigneeByID returns the user that has write access of repository by given ID.
 func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
-	return GetAssigneeByID(repo, userID)
+	ctx := context.TODO()
+	if !Perms.Authorize(
+		ctx,
+		userID,
+		repo.ID,
+		AccessModeRead,
+		AccessModeOptions{
+			OwnerID: repo.OwnerID,
+			Private: repo.IsPrivate,
+		},
+	) {
+		return nil, ErrUserNotExist{args: errutil.Args{"userID": userID}}
+	}
+	return Users.GetByID(ctx, userID)
 }
 
 // GetWriters returns all users that have write access to the repository.

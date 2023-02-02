@@ -70,6 +70,9 @@ type UsersStore interface {
 	// GetByUsername returns the user with given username. It returns
 	// ErrUserNotExist when not found.
 	GetByUsername(ctx context.Context, username string) (*User, error)
+	// GetByKeyID returns the owner of given public key ID. It returns
+	// ErrUserNotExist when not found.
+	GetByKeyID(ctx context.Context, keyID int64) (*User, error)
 	// HasForkedRepository returns true if the user has forked given repository.
 	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
 	// IsUsernameUsed returns true if the given username has been used other than
@@ -478,6 +481,22 @@ func (db *users) GetByUsername(ctx context.Context, username string) (*User, err
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
+func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
+	user := new(User)
+	err := db.WithContext(ctx).
+		Joins(dbutil.Quote("JOIN public_key ON public_key.owner_id = %s.id", "user")).
+		Where("public_key.id = ?", keyID).
+		First(user).
+		Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrUserNotExist{args: errutil.Args{"keyID": keyID}}
 		}
 		return nil, err
 	}
