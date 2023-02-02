@@ -225,14 +225,14 @@ type AccessTokensStoreCreateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c AccessTokensStoreCreateFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c AccessTokensStoreCreateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c AccessTokensStoreCreateFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c AccessTokensStoreCreateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // AccessTokensStoreDeleteByIDFunc describes the behavior when the
@@ -334,14 +334,14 @@ type AccessTokensStoreDeleteByIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c AccessTokensStoreDeleteByIDFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c AccessTokensStoreDeleteByIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c AccessTokensStoreDeleteByIDFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c AccessTokensStoreDeleteByIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // AccessTokensStoreGetBySHA1Func describes the behavior when the GetBySHA1
@@ -442,14 +442,14 @@ type AccessTokensStoreGetBySHA1FuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c AccessTokensStoreGetBySHA1FuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c AccessTokensStoreGetBySHA1FuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c AccessTokensStoreGetBySHA1FuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c AccessTokensStoreGetBySHA1FuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // AccessTokensStoreListFunc describes the behavior when the List method of
@@ -550,14 +550,14 @@ type AccessTokensStoreListFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c AccessTokensStoreListFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c AccessTokensStoreListFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c AccessTokensStoreListFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c AccessTokensStoreListFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // AccessTokensStoreTouchFunc describes the behavior when the Touch method
@@ -655,14 +655,14 @@ type AccessTokensStoreTouchFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c AccessTokensStoreTouchFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c AccessTokensStoreTouchFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c AccessTokensStoreTouchFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c AccessTokensStoreTouchFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // MockLFSStore is a mock implementation of the LFSStore interface (from the
@@ -843,14 +843,14 @@ type LFSStoreCreateObjectFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LFSStoreCreateObjectFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
+func (c LFSStoreCreateObjectFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LFSStoreCreateObjectFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c LFSStoreCreateObjectFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // LFSStoreGetObjectByOIDFunc describes the behavior when the GetObjectByOID
@@ -954,14 +954,14 @@ type LFSStoreGetObjectByOIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LFSStoreGetObjectByOIDFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c LFSStoreGetObjectByOIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LFSStoreGetObjectByOIDFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c LFSStoreGetObjectByOIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // LFSStoreGetObjectsByOIDsFunc describes the behavior when the
@@ -1067,19 +1067,19 @@ type LFSStoreGetObjectsByOIDsFuncCall struct {
 // invocation. The variadic slice argument is flattened in this array such
 // that one positional argument and three variadic arguments would result in
 // a slice of four, not two.
-func (c LFSStoreGetObjectsByOIDsFuncCall) Args() []any {
-	trailing := []any{}
+func (c LFSStoreGetObjectsByOIDsFuncCall) Args() []interface{} {
+	trailing := []interface{}{}
 	for _, val := range c.Arg2 {
 		trailing = append(trailing, val)
 	}
 
-	return append([]any{c.Arg0, c.Arg1}, trailing...)
+	return append([]interface{}{c.Arg0, c.Arg1}, trailing...)
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LFSStoreGetObjectsByOIDsFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c LFSStoreGetObjectsByOIDsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // MockPermsStore is a mock implementation of the PermsStore interface (from
@@ -1257,14 +1257,14 @@ type PermsStoreAccessModeFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c PermsStoreAccessModeFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+func (c PermsStoreAccessModeFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c PermsStoreAccessModeFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c PermsStoreAccessModeFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // PermsStoreAuthorizeFunc describes the behavior when the Authorize method
@@ -1371,14 +1371,14 @@ type PermsStoreAuthorizeFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c PermsStoreAuthorizeFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
+func (c PermsStoreAuthorizeFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c PermsStoreAuthorizeFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c PermsStoreAuthorizeFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // PermsStoreSetRepoPermsFunc describes the behavior when the SetRepoPerms
@@ -1479,14 +1479,14 @@ type PermsStoreSetRepoPermsFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c PermsStoreSetRepoPermsFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c PermsStoreSetRepoPermsFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c PermsStoreSetRepoPermsFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c PermsStoreSetRepoPermsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // MockReposStore is a mock implementation of the ReposStore interface (from
@@ -1663,14 +1663,14 @@ type ReposStoreCreateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ReposStoreCreateFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c ReposStoreCreateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ReposStoreCreateFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c ReposStoreCreateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // ReposStoreGetByNameFunc describes the behavior when the GetByName method
@@ -1774,14 +1774,14 @@ type ReposStoreGetByNameFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ReposStoreGetByNameFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c ReposStoreGetByNameFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ReposStoreGetByNameFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c ReposStoreGetByNameFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // ReposStoreTouchFunc describes the behavior when the Touch method of the
@@ -1878,14 +1878,14 @@ type ReposStoreTouchFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ReposStoreTouchFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c ReposStoreTouchFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ReposStoreTouchFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c ReposStoreTouchFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // MockTwoFactorsStore is a mock implementation of the TwoFactorsStore
@@ -2066,14 +2066,14 @@ type TwoFactorsStoreCreateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c TwoFactorsStoreCreateFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+func (c TwoFactorsStoreCreateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c TwoFactorsStoreCreateFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c TwoFactorsStoreCreateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // TwoFactorsStoreGetByUserIDFunc describes the behavior when the
@@ -2174,14 +2174,14 @@ type TwoFactorsStoreGetByUserIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c TwoFactorsStoreGetByUserIDFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c TwoFactorsStoreGetByUserIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c TwoFactorsStoreGetByUserIDFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c TwoFactorsStoreGetByUserIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // TwoFactorsStoreIsEnabledFunc describes the behavior when the IsEnabled
@@ -2279,14 +2279,14 @@ type TwoFactorsStoreIsEnabledFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c TwoFactorsStoreIsEnabledFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c TwoFactorsStoreIsEnabledFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c TwoFactorsStoreIsEnabledFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c TwoFactorsStoreIsEnabledFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // MockUsersStore is a mock implementation of the UsersStore interface (from
@@ -2659,14 +2659,14 @@ type UsersStoreAuthenticateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreAuthenticateFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+func (c UsersStoreAuthenticateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreAuthenticateFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreAuthenticateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreChangeUsernameFunc describes the behavior when the
@@ -2767,14 +2767,14 @@ type UsersStoreChangeUsernameFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreChangeUsernameFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c UsersStoreChangeUsernameFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreChangeUsernameFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreChangeUsernameFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreCountFunc describes the behavior when the Count method of the
@@ -2868,14 +2868,14 @@ type UsersStoreCountFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreCountFuncCall) Args() []any {
-	return []any{c.Arg0}
+func (c UsersStoreCountFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreCountFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreCountFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreCreateFunc describes the behavior when the Create method of the
@@ -2981,14 +2981,14 @@ type UsersStoreCreateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreCreateFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+func (c UsersStoreCreateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreCreateFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreCreateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreDeleteCustomAvatarFunc describes the behavior when the
@@ -3087,14 +3087,14 @@ type UsersStoreDeleteCustomAvatarFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreDeleteCustomAvatarFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c UsersStoreDeleteCustomAvatarFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreDeleteCustomAvatarFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreDeleteCustomAvatarFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreGetByEmailFunc describes the behavior when the GetByEmail
@@ -3195,14 +3195,14 @@ type UsersStoreGetByEmailFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreGetByEmailFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c UsersStoreGetByEmailFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreGetByEmailFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreGetByEmailFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreGetByIDFunc describes the behavior when the GetByID method of
@@ -3303,14 +3303,14 @@ type UsersStoreGetByIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreGetByIDFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c UsersStoreGetByIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreGetByIDFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreGetByIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreGetByUsernameFunc describes the behavior when the GetByUsername
@@ -3411,14 +3411,14 @@ type UsersStoreGetByUsernameFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreGetByUsernameFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1}
+func (c UsersStoreGetByUsernameFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreGetByUsernameFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreGetByUsernameFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreHasForkedRepositoryFunc describes the behavior when the
@@ -3521,14 +3521,14 @@ type UsersStoreHasForkedRepositoryFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreHasForkedRepositoryFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c UsersStoreHasForkedRepositoryFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreHasForkedRepositoryFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreHasForkedRepositoryFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreIsUsernameUsedFunc describes the behavior when the
@@ -3629,14 +3629,14 @@ type UsersStoreIsUsernameUsedFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreIsUsernameUsedFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c UsersStoreIsUsernameUsedFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreIsUsernameUsedFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreIsUsernameUsedFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreListFunc describes the behavior when the List method of the
@@ -3739,14 +3739,14 @@ type UsersStoreListFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreListFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c UsersStoreListFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreListFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreListFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreListFollowersFunc describes the behavior when the ListFollowers
@@ -3853,14 +3853,14 @@ type UsersStoreListFollowersFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreListFollowersFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+func (c UsersStoreListFollowersFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreListFollowersFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreListFollowersFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreListFollowingsFunc describes the behavior when the
@@ -3967,14 +3967,14 @@ type UsersStoreListFollowingsFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreListFollowingsFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+func (c UsersStoreListFollowingsFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreListFollowingsFuncCall) Results() []any {
-	return []any{c.Result0, c.Result1}
+func (c UsersStoreListFollowingsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
 }
 
 // UsersStoreUpdateFunc describes the behavior when the Update method of the
@@ -4074,14 +4074,14 @@ type UsersStoreUpdateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreUpdateFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c UsersStoreUpdateFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreUpdateFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreUpdateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreUseCustomAvatarFunc describes the behavior when the
@@ -4182,12 +4182,12 @@ type UsersStoreUseCustomAvatarFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreUseCustomAvatarFuncCall) Args() []any {
-	return []any{c.Arg0, c.Arg1, c.Arg2}
+func (c UsersStoreUseCustomAvatarFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreUseCustomAvatarFuncCall) Results() []any {
-	return []any{c.Result0}
+func (c UsersStoreUseCustomAvatarFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
