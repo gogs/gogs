@@ -2313,6 +2313,9 @@ type MockUsersStore struct {
 	// GetByIDFunc is an instance of a mock function object controlling the
 	// behavior of the method GetByID.
 	GetByIDFunc *UsersStoreGetByIDFunc
+	// GetByKeyIDFunc is an instance of a mock function object controlling
+	// the behavior of the method GetByKeyID.
+	GetByKeyIDFunc *UsersStoreGetByKeyIDFunc
 	// GetByUsernameFunc is an instance of a mock function object
 	// controlling the behavior of the method GetByUsername.
 	GetByUsernameFunc *UsersStoreGetByUsernameFunc
@@ -2374,6 +2377,11 @@ func NewMockUsersStore() *MockUsersStore {
 			},
 		},
 		GetByIDFunc: &UsersStoreGetByIDFunc{
+			defaultHook: func(context.Context, int64) (r0 *db.User, r1 error) {
+				return
+			},
+		},
+		GetByKeyIDFunc: &UsersStoreGetByKeyIDFunc{
 			defaultHook: func(context.Context, int64) (r0 *db.User, r1 error) {
 				return
 			},
@@ -2460,6 +2468,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.GetByID")
 			},
 		},
+		GetByKeyIDFunc: &UsersStoreGetByKeyIDFunc{
+			defaultHook: func(context.Context, int64) (*db.User, error) {
+				panic("unexpected invocation of MockUsersStore.GetByKeyID")
+			},
+		},
 		GetByUsernameFunc: &UsersStoreGetByUsernameFunc{
 			defaultHook: func(context.Context, string) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.GetByUsername")
@@ -2527,6 +2540,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		GetByIDFunc: &UsersStoreGetByIDFunc{
 			defaultHook: i.GetByID,
+		},
+		GetByKeyIDFunc: &UsersStoreGetByKeyIDFunc{
+			defaultHook: i.GetByKeyID,
 		},
 		GetByUsernameFunc: &UsersStoreGetByUsernameFunc{
 			defaultHook: i.GetByUsername,
@@ -3310,6 +3326,114 @@ func (c UsersStoreGetByIDFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c UsersStoreGetByIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreGetByKeyIDFunc describes the behavior when the GetByKeyID
+// method of the parent MockUsersStore instance is invoked.
+type UsersStoreGetByKeyIDFunc struct {
+	defaultHook func(context.Context, int64) (*db.User, error)
+	hooks       []func(context.Context, int64) (*db.User, error)
+	history     []UsersStoreGetByKeyIDFuncCall
+	mutex       sync.Mutex
+}
+
+// GetByKeyID delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockUsersStore) GetByKeyID(v0 context.Context, v1 int64) (*db.User, error) {
+	r0, r1 := m.GetByKeyIDFunc.nextHook()(v0, v1)
+	m.GetByKeyIDFunc.appendCall(UsersStoreGetByKeyIDFuncCall{v0, v1, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the GetByKeyID method of
+// the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreGetByKeyIDFunc) SetDefaultHook(hook func(context.Context, int64) (*db.User, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetByKeyID method of the parent MockUsersStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreGetByKeyIDFunc) PushHook(hook func(context.Context, int64) (*db.User, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreGetByKeyIDFunc) SetDefaultReturn(r0 *db.User, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64) (*db.User, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreGetByKeyIDFunc) PushReturn(r0 *db.User, r1 error) {
+	f.PushHook(func(context.Context, int64) (*db.User, error) {
+		return r0, r1
+	})
+}
+
+func (f *UsersStoreGetByKeyIDFunc) nextHook() func(context.Context, int64) (*db.User, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreGetByKeyIDFunc) appendCall(r0 UsersStoreGetByKeyIDFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreGetByKeyIDFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreGetByKeyIDFunc) History() []UsersStoreGetByKeyIDFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreGetByKeyIDFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreGetByKeyIDFuncCall is an object that describes an invocation of
+// method GetByKeyID on an instance of MockUsersStore.
+type UsersStoreGetByKeyIDFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 *db.User
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreGetByKeyIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreGetByKeyIDFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
