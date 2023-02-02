@@ -20,7 +20,7 @@ func TestOrgUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(OrgUser)}
+	tables := []any{new(OrgUser)}
 	db := &orgUsers{
 		DB: dbtest.NewDB(t, "orgUsers", tables...),
 	}

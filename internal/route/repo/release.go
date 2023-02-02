@@ -320,7 +320,7 @@ func DeleteRelease(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.release.deletion_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.RepoLink + "/releases",
 	})
 }

@@ -247,14 +247,14 @@ type LoginSourcesStoreCountFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreCountFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0}
+func (c LoginSourcesStoreCountFuncCall) Args() []any {
+	return []any{c.Arg0}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreCountFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourcesStoreCountFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourcesStoreCreateFunc describes the behavior when the Create method
@@ -355,14 +355,14 @@ type LoginSourcesStoreCreateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreCreateFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourcesStoreCreateFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreCreateFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0, c.Result1}
+func (c LoginSourcesStoreCreateFuncCall) Results() []any {
+	return []any{c.Result0, c.Result1}
 }
 
 // LoginSourcesStoreDeleteByIDFunc describes the behavior when the
@@ -461,14 +461,14 @@ type LoginSourcesStoreDeleteByIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreDeleteByIDFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourcesStoreDeleteByIDFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreDeleteByIDFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourcesStoreDeleteByIDFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourcesStoreGetByIDFunc describes the behavior when the GetByID
@@ -569,14 +569,14 @@ type LoginSourcesStoreGetByIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreGetByIDFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourcesStoreGetByIDFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreGetByIDFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0, c.Result1}
+func (c LoginSourcesStoreGetByIDFuncCall) Results() []any {
+	return []any{c.Result0, c.Result1}
 }
 
 // LoginSourcesStoreListFunc describes the behavior when the List method of
@@ -677,14 +677,14 @@ type LoginSourcesStoreListFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreListFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourcesStoreListFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreListFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0, c.Result1}
+func (c LoginSourcesStoreListFuncCall) Results() []any {
+	return []any{c.Result0, c.Result1}
 }
 
 // LoginSourcesStoreResetNonDefaultFunc describes the behavior when the
@@ -785,14 +785,14 @@ type LoginSourcesStoreResetNonDefaultFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreResetNonDefaultFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourcesStoreResetNonDefaultFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreResetNonDefaultFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourcesStoreResetNonDefaultFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourcesStoreSaveFunc describes the behavior when the Save method of
@@ -890,14 +890,14 @@ type LoginSourcesStoreSaveFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourcesStoreSaveFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourcesStoreSaveFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourcesStoreSaveFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourcesStoreSaveFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // MockLoginSourceFileStore is a mock implementation of the
@@ -926,7 +926,7 @@ func NewMockLoginSourceFileStore() *MockLoginSourceFileStore {
 			},
 		},
 		SetConfigFunc: &LoginSourceFileStoreSetConfigFunc{
-			defaultHook: func(interface{}) (r0 error) {
+			defaultHook: func(any) (r0 error) {
 				return
 			},
 		},
@@ -949,7 +949,7 @@ func NewStrictMockLoginSourceFileStore() *MockLoginSourceFileStore {
 			},
 		},
 		SetConfigFunc: &LoginSourceFileStoreSetConfigFunc{
-			defaultHook: func(interface{}) error {
+			defaultHook: func(any) error {
 				panic("unexpected invocation of MockLoginSourceFileStore.SetConfig")
 			},
 		},
@@ -966,7 +966,7 @@ func NewStrictMockLoginSourceFileStore() *MockLoginSourceFileStore {
 // here as it is unexported in the source package.
 type surrogateMockLoginSourceFileStore interface {
 	Save() error
-	SetConfig(interface{}) error
+	SetConfig(any) error
 	SetGeneral(string, string)
 }
 
@@ -1076,29 +1076,29 @@ type LoginSourceFileStoreSaveFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFileStoreSaveFuncCall) Args() []interface{} {
-	return []interface{}{}
+func (c LoginSourceFileStoreSaveFuncCall) Args() []any {
+	return []any{}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFileStoreSaveFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourceFileStoreSaveFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourceFileStoreSetConfigFunc describes the behavior when the
 // SetConfig method of the parent MockLoginSourceFileStore instance is
 // invoked.
 type LoginSourceFileStoreSetConfigFunc struct {
-	defaultHook func(interface{}) error
-	hooks       []func(interface{}) error
+	defaultHook func(any) error
+	hooks       []func(any) error
 	history     []LoginSourceFileStoreSetConfigFuncCall
 	mutex       sync.Mutex
 }
 
 // SetConfig delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockLoginSourceFileStore) SetConfig(v0 interface{}) error {
+func (m *MockLoginSourceFileStore) SetConfig(v0 any) error {
 	r0 := m.SetConfigFunc.nextHook()(v0)
 	m.SetConfigFunc.appendCall(LoginSourceFileStoreSetConfigFuncCall{v0, r0})
 	return r0
@@ -1107,7 +1107,7 @@ func (m *MockLoginSourceFileStore) SetConfig(v0 interface{}) error {
 // SetDefaultHook sets function that is called when the SetConfig method of
 // the parent MockLoginSourceFileStore instance is invoked and the hook
 // queue is empty.
-func (f *LoginSourceFileStoreSetConfigFunc) SetDefaultHook(hook func(interface{}) error) {
+func (f *LoginSourceFileStoreSetConfigFunc) SetDefaultHook(hook func(any) error) {
 	f.defaultHook = hook
 }
 
@@ -1115,7 +1115,7 @@ func (f *LoginSourceFileStoreSetConfigFunc) SetDefaultHook(hook func(interface{}
 // SetConfig method of the parent MockLoginSourceFileStore instance invokes
 // the hook at the front of the queue and discards it. After the queue is
 // empty, the default hook function is invoked for any future action.
-func (f *LoginSourceFileStoreSetConfigFunc) PushHook(hook func(interface{}) error) {
+func (f *LoginSourceFileStoreSetConfigFunc) PushHook(hook func(any) error) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -1124,19 +1124,19 @@ func (f *LoginSourceFileStoreSetConfigFunc) PushHook(hook func(interface{}) erro
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
 func (f *LoginSourceFileStoreSetConfigFunc) SetDefaultReturn(r0 error) {
-	f.SetDefaultHook(func(interface{}) error {
+	f.SetDefaultHook(func(any) error {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
 func (f *LoginSourceFileStoreSetConfigFunc) PushReturn(r0 error) {
-	f.PushHook(func(interface{}) error {
+	f.PushHook(func(any) error {
 		return r0
 	})
 }
 
-func (f *LoginSourceFileStoreSetConfigFunc) nextHook() func(interface{}) error {
+func (f *LoginSourceFileStoreSetConfigFunc) nextHook() func(any) error {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -1172,7 +1172,7 @@ func (f *LoginSourceFileStoreSetConfigFunc) History() []LoginSourceFileStoreSetC
 type LoginSourceFileStoreSetConfigFuncCall struct {
 	// Arg0 is the value of the 1st argument passed to this method
 	// invocation.
-	Arg0 interface{}
+	Arg0 any
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
 	Result0 error
@@ -1180,14 +1180,14 @@ type LoginSourceFileStoreSetConfigFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFileStoreSetConfigFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0}
+func (c LoginSourceFileStoreSetConfigFuncCall) Args() []any {
+	return []any{c.Arg0}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFileStoreSetConfigFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourceFileStoreSetConfigFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourceFileStoreSetGeneralFunc describes the behavior when the
@@ -1284,14 +1284,14 @@ type LoginSourceFileStoreSetGeneralFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFileStoreSetGeneralFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c LoginSourceFileStoreSetGeneralFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFileStoreSetGeneralFuncCall) Results() []interface{} {
-	return []interface{}{}
+func (c LoginSourceFileStoreSetGeneralFuncCall) Results() []any {
+	return []any{}
 }
 
 // MockLoginSourceFilesStore is a mock implementation of the
@@ -1493,14 +1493,14 @@ type LoginSourceFilesStoreGetByIDFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFilesStoreGetByIDFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0}
+func (c LoginSourceFilesStoreGetByIDFuncCall) Args() []any {
+	return []any{c.Arg0}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFilesStoreGetByIDFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0, c.Result1}
+func (c LoginSourceFilesStoreGetByIDFuncCall) Results() []any {
+	return []any{c.Result0, c.Result1}
 }
 
 // LoginSourceFilesStoreLenFunc describes the behavior when the Len method
@@ -1592,14 +1592,14 @@ type LoginSourceFilesStoreLenFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFilesStoreLenFuncCall) Args() []interface{} {
-	return []interface{}{}
+func (c LoginSourceFilesStoreLenFuncCall) Args() []any {
+	return []any{}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFilesStoreLenFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourceFilesStoreLenFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourceFilesStoreListFunc describes the behavior when the List method
@@ -1694,14 +1694,14 @@ type LoginSourceFilesStoreListFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFilesStoreListFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0}
+func (c LoginSourceFilesStoreListFuncCall) Args() []any {
+	return []any{c.Arg0}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFilesStoreListFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c LoginSourceFilesStoreListFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // LoginSourceFilesStoreUpdateFunc describes the behavior when the Update
@@ -1793,14 +1793,14 @@ type LoginSourceFilesStoreUpdateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c LoginSourceFilesStoreUpdateFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0}
+func (c LoginSourceFilesStoreUpdateFuncCall) Args() []any {
+	return []any{c.Arg0}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c LoginSourceFilesStoreUpdateFuncCall) Results() []interface{} {
-	return []interface{}{}
+func (c LoginSourceFilesStoreUpdateFuncCall) Results() []any {
+	return []any{}
 }
 
 // MockProvider is a mock implementation of the Provider interface (from the
@@ -1833,7 +1833,7 @@ func NewMockProvider() *MockProvider {
 			},
 		},
 		ConfigFunc: &ProviderConfigFunc{
-			defaultHook: func() (r0 interface{}) {
+			defaultHook: func() (r0 any) {
 				return
 			},
 		},
@@ -1865,7 +1865,7 @@ func NewStrictMockProvider() *MockProvider {
 			},
 		},
 		ConfigFunc: &ProviderConfigFunc{
-			defaultHook: func() interface{} {
+			defaultHook: func() any {
 				panic("unexpected invocation of MockProvider.Config")
 			},
 		},
@@ -2007,28 +2007,28 @@ type ProviderAuthenticateFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ProviderAuthenticateFuncCall) Args() []interface{} {
-	return []interface{}{c.Arg0, c.Arg1}
+func (c ProviderAuthenticateFuncCall) Args() []any {
+	return []any{c.Arg0, c.Arg1}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ProviderAuthenticateFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0, c.Result1}
+func (c ProviderAuthenticateFuncCall) Results() []any {
+	return []any{c.Result0, c.Result1}
 }
 
 // ProviderConfigFunc describes the behavior when the Config method of the
 // parent MockProvider instance is invoked.
 type ProviderConfigFunc struct {
-	defaultHook func() interface{}
-	hooks       []func() interface{}
+	defaultHook func() any
+	hooks       []func() any
 	history     []ProviderConfigFuncCall
 	mutex       sync.Mutex
 }
 
 // Config delegates to the next hook function in the queue and stores the
 // parameter and result values of this invocation.
-func (m *MockProvider) Config() interface{} {
+func (m *MockProvider) Config() any {
 	r0 := m.ConfigFunc.nextHook()()
 	m.ConfigFunc.appendCall(ProviderConfigFuncCall{r0})
 	return r0
@@ -2036,7 +2036,7 @@ func (m *MockProvider) Config() interface{} {
 
 // SetDefaultHook sets function that is called when the Config method of the
 // parent MockProvider instance is invoked and the hook queue is empty.
-func (f *ProviderConfigFunc) SetDefaultHook(hook func() interface{}) {
+func (f *ProviderConfigFunc) SetDefaultHook(hook func() any) {
 	f.defaultHook = hook
 }
 
@@ -2044,7 +2044,7 @@ func (f *ProviderConfigFunc) SetDefaultHook(hook func() interface{}) {
 // Config method of the parent MockProvider instance invokes the hook at the
 // front of the queue and discards it. After the queue is empty, the default
 // hook function is invoked for any future action.
-func (f *ProviderConfigFunc) PushHook(hook func() interface{}) {
+func (f *ProviderConfigFunc) PushHook(hook func() any) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -2052,20 +2052,20 @@ func (f *ProviderConfigFunc) PushHook(hook func() interface{}) {
 
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
-func (f *ProviderConfigFunc) SetDefaultReturn(r0 interface{}) {
-	f.SetDefaultHook(func() interface{} {
+func (f *ProviderConfigFunc) SetDefaultReturn(r0 any) {
+	f.SetDefaultHook(func() any {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
-func (f *ProviderConfigFunc) PushReturn(r0 interface{}) {
-	f.PushHook(func() interface{} {
+func (f *ProviderConfigFunc) PushReturn(r0 any) {
+	f.PushHook(func() any {
 		return r0
 	})
 }
 
-func (f *ProviderConfigFunc) nextHook() func() interface{} {
+func (f *ProviderConfigFunc) nextHook() func() any {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -2100,19 +2100,19 @@ func (f *ProviderConfigFunc) History() []ProviderConfigFuncCall {
 type ProviderConfigFuncCall struct {
 	// Result0 is the value of the 1st result returned from this method
 	// invocation.
-	Result0 interface{}
+	Result0 any
 }
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ProviderConfigFuncCall) Args() []interface{} {
-	return []interface{}{}
+func (c ProviderConfigFuncCall) Args() []any {
+	return []any{}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ProviderConfigFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c ProviderConfigFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // ProviderHasTLSFunc describes the behavior when the HasTLS method of the
@@ -2203,14 +2203,14 @@ type ProviderHasTLSFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ProviderHasTLSFuncCall) Args() []interface{} {
-	return []interface{}{}
+func (c ProviderHasTLSFuncCall) Args() []any {
+	return []any{}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ProviderHasTLSFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c ProviderHasTLSFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // ProviderSkipTLSVerifyFunc describes the behavior when the SkipTLSVerify
@@ -2302,14 +2302,14 @@ type ProviderSkipTLSVerifyFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ProviderSkipTLSVerifyFuncCall) Args() []interface{} {
-	return []interface{}{}
+func (c ProviderSkipTLSVerifyFuncCall) Args() []any {
+	return []any{}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ProviderSkipTLSVerifyFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c ProviderSkipTLSVerifyFuncCall) Results() []any {
+	return []any{c.Result0}
 }
 
 // ProviderUseTLSFunc describes the behavior when the UseTLS method of the
@@ -2400,12 +2400,12 @@ type ProviderUseTLSFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c ProviderUseTLSFuncCall) Args() []interface{} {
-	return []interface{}{}
+func (c ProviderUseTLSFuncCall) Args() []any {
+	return []any{}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c ProviderUseTLSFuncCall) Results() []interface{} {
-	return []interface{}{c.Result0}
+func (c ProviderUseTLSFuncCall) Results() []any {
+	return []any{c.Result0}
 }

@@ -45,7 +45,7 @@ func TestDumpAndImport(t *testing.T) {
 }
 
 func setupDBToDump(t *testing.T, db *gorm.DB) {
-	vals := []interface{}{
+	vals := []any{
 		&Access{
 			ID:     1,
 			UserID: 1,

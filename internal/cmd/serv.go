@@ -38,7 +38,7 @@ var Serv = cli.Command{
 // fail prints user message to the Git client (i.e. os.Stderr) and
 // logs error message on the server side. When not in "prod" mode,
 // error message is also printed to the client for easier debugging.
-func fail(userMessage, errMessage string, args ...interface{}) {
+func fail(userMessage, errMessage string, args ...any) {
 	_, _ = fmt.Fprintln(os.Stderr, "Gogs:", userMessage)
 
 	if len(errMessage) > 0 {

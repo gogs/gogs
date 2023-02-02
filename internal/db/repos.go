@@ -213,7 +213,7 @@ func (db *repos) Touch(ctx context.Context, id int64) error {
 	return db.WithContext(ctx).
 		Model(new(Repository)).
 		Where("id = ?", id).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"is_bare":      false,
 			"updated_unix": db.NowFunc().Unix(),
 		}).

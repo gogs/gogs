@@ -194,7 +194,7 @@ type CreateLoginSourceOptions struct {
 	Name      string
 	Activated bool
 	Default   bool
-	Config    interface{}
+	Config    any
 }
 
 type ErrLoginSourceAlreadyExist struct {
@@ -297,7 +297,7 @@ func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) 
 	err := db.WithContext(ctx).
 		Model(new(LoginSource)).
 		Where("id != ?", dflt.ID).
-		Updates(map[string]interface{}{"is_default": false}).
+		Updates(map[string]any{"is_default": false}).
 		Error
 	if err != nil {
 		return err

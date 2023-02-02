@@ -18,7 +18,7 @@ func TestWatches(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Watch)}
+	tables := []any{new(Watch)}
 	db := &watches{
 		DB: dbtest.NewDB(t, "watches", tables...),
 	}

@@ -591,7 +591,7 @@ func DeleteWebhook(c *context.Context, orCtx *orgRepoContext) {
 	}
 	c.Flash.Success(c.Tr("repo.settings.webhook_deletion_success"))
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": orCtx.Link + "/settings/hooks",
 	})
 }

@@ -28,7 +28,7 @@ func Search(c *context.APIContext) {
 
 	users, _, err := db.SearchUserByName(opts)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
 			"error": err.Error(),
 		})
@@ -48,7 +48,7 @@ func Search(c *context.APIContext) {
 		}
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"ok":   true,
 		"data": results,
 	})

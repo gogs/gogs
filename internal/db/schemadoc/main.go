@@ -67,7 +67,7 @@ func main() {
 		for j, f := range ti.Fields {
 			table.Append([]string{
 				f.Name, f.Column,
-				strings.ToUpper(f.Type),                         // PostgreSQL
+				strings.ToUpper(f.Type), // PostgreSQL
 				strings.ToUpper(collected[1][i].Fields[j].Type), // MySQL
 				strings.ToUpper(collected[2][i].Fields[j].Type), // SQLite3
 			})
@@ -135,7 +135,7 @@ func generate(dialector gorm.Dialector) ([]*tableInfo, error) {
 	}
 
 	m := conn.Migrator().(interface {
-		RunWithValue(value interface{}, fc func(*gorm.Statement) error) error
+		RunWithValue(value any, fc func(*gorm.Statement) error) error
 		FullDataTypeOf(*schema.Field) clause.Expr
 	})
 	tableInfos := make([]*tableInfo, 0, len(db.Tables))

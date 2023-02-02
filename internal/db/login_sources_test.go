@@ -163,7 +163,7 @@ func TestLoginSources(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(LoginSource), new(User)}
+	tables := []any{new(LoginSource), new(User)}
 	db := &loginSources{
 		DB: dbtest.NewDB(t, "loginSources", tables...),
 	}

@@ -34,7 +34,7 @@ func Search(c *context.APIContext) {
 		} else {
 			u, err := db.Users.GetByID(c.Req.Context(), opts.OwnerID)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, map[string]interface{}{
+				c.JSON(http.StatusInternalServerError, map[string]any{
 					"ok":    false,
 					"error": err.Error(),
 				})
@@ -49,7 +49,7 @@ func Search(c *context.APIContext) {
 
 	repos, count, err := db.SearchRepositoryByName(opts)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
 			"error": err.Error(),
 		})
@@ -57,7 +57,7 @@ func Search(c *context.APIContext) {
 	}
 
 	if err = db.RepositoryList(repos).LoadAttributes(); err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]interface{}{
+		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
 			"error": err.Error(),
 		})
@@ -70,7 +70,7 @@ func Search(c *context.APIContext) {
 	}
 
 	c.SetLinkHeader(int(count), opts.PageSize)
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"ok":   true,
 		"data": results,
 	})

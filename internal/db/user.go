@@ -40,7 +40,7 @@ func (u *User) AfterSet(colName string, _ xorm.Cell) {
 }
 
 // deleteBeans deletes all given beans, beans should contain delete conditions.
-func deleteBeans(e Engine, beans ...interface{}) (err error) {
+func deleteBeans(e Engine, beans ...any) (err error) {
 	for i := range beans {
 		if _, err = e.Delete(beans[i]); err != nil {
 			return err
@@ -220,7 +220,7 @@ func getUserByID(e Engine, id int64) (*User, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": id}}
+		return nil, ErrUserNotExist{args: map[string]any{"userID": id}}
 	}
 	return u, nil
 }
@@ -234,7 +234,7 @@ func GetAssigneeByID(repo *Repository, userID int64) (*User, error) {
 			Private: repo.IsPrivate,
 		},
 	) {
-		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": userID}}
+		return nil, ErrUserNotExist{args: map[string]any{"userID": userID}}
 	}
 	return Users.GetByID(ctx, userID)
 }

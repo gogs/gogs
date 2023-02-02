@@ -38,13 +38,13 @@ var (
 )
 
 // render renders a mail template with given data.
-func render(tpl string, data map[string]interface{}) (string, error) {
+func render(tpl string, data map[string]any) (string, error) {
 	tplRenderOnce.Do(func() {
 		opt := &macaron.RenderOptions{
 			Directory:         filepath.Join(conf.WorkDir(), "templates", "mail"),
 			AppendDirectories: []string{filepath.Join(conf.CustomDir(), "templates", "mail")},
 			Extensions:        []string{".tmpl", ".html"},
-			Funcs: []template.FuncMap{map[string]interface{}{
+			Funcs: []template.FuncMap{map[string]any{
 				"AppName": func() string {
 					return conf.App.BrandName
 				},
@@ -102,7 +102,7 @@ type Issue interface {
 }
 
 func SendUserMail(_ *macaron.Context, u User, tpl, code, subject, info string) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Username":          u.DisplayName(),
 		"ActiveCodeLives":   conf.Auth.ActivateCodeLives / 60,
 		"ResetPwdCodeLives": conf.Auth.ResetPasswordCodeLives / 60,
@@ -130,7 +130,7 @@ func SendResetPasswordMail(c *macaron.Context, u User) {
 
 // SendActivateAccountMail sends confirmation email.
 func SendActivateEmailMail(c *macaron.Context, u User, email string) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Username":        u.DisplayName(),
 		"ActiveCodeLives": conf.Auth.ActivateCodeLives / 60,
 		"Code":            u.GenerateEmailActivateCode(email),
@@ -150,7 +150,7 @@ func SendActivateEmailMail(c *macaron.Context, u User, email string) {
 
 // SendRegisterNotifyMail triggers a notify e-mail by admin created a account.
 func SendRegisterNotifyMail(c *macaron.Context, u User) {
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Username": u.DisplayName(),
 	}
 	body, err := render(MAIL_AUTH_REGISTER_NOTIFY, data)
@@ -169,7 +169,7 @@ func SendRegisterNotifyMail(c *macaron.Context, u User) {
 func SendCollaboratorMail(u, doer User, repo Repository) {
 	subject := fmt.Sprintf("%s added you to %s", doer.DisplayName(), repo.FullName())
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Subject":  subject,
 		"RepoName": repo.FullName(),
 		"Link":     repo.HTMLURL(),
@@ -186,8 +186,8 @@ func SendCollaboratorMail(u, doer User, repo Repository) {
 	Send(msg)
 }
 
-func composeTplData(subject, body, link string) map[string]interface{} {
-	data := make(map[string]interface{}, 10)
+func composeTplData(subject, body, link string) map[string]any {
+	data := make(map[string]any, 10)
 	data["Subject"] = subject
 	data["Body"] = body
 	data["Link"] = link

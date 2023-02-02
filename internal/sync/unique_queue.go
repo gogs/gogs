@@ -38,13 +38,13 @@ func (q *UniqueQueue) Queue() <-chan string {
 
 // Exist returns true if there is an instance with given indentity
 // exists in the queue.
-func (q *UniqueQueue) Exist(id interface{}) bool {
+func (q *UniqueQueue) Exist(id any) bool {
 	return q.table.IsRunning(com.ToStr(id))
 }
 
 // AddFunc adds new instance to the queue with a custom runnable function,
 // the queue is blocked until the function exits.
-func (q *UniqueQueue) AddFunc(id interface{}, fn func()) {
+func (q *UniqueQueue) AddFunc(id any, fn func()) {
 	if q.Exist(id) {
 		return
 	}
@@ -60,11 +60,11 @@ func (q *UniqueQueue) AddFunc(id interface{}, fn func()) {
 }
 
 // Add adds new instance to the queue.
-func (q *UniqueQueue) Add(id interface{}) {
+func (q *UniqueQueue) Add(id any) {
 	q.AddFunc(id, nil)
 }
 
 // Remove removes instance from the queue.
-func (q *UniqueQueue) Remove(id interface{}) {
+func (q *UniqueQueue) Remove(id any) {
 	q.table.Stop(com.ToStr(id))
 }

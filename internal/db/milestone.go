@@ -134,7 +134,7 @@ func NewMilestone(m *Milestone) (err error) {
 var _ errutil.NotFound = (*ErrMilestoneNotExist)(nil)
 
 type ErrMilestoneNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrMilestoneNotExist(err error) bool {
@@ -159,7 +159,7 @@ func getMilestoneByRepoID(e Engine, repoID, id int64) (*Milestone, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrMilestoneNotExist{args: map[string]interface{}{"repoID": repoID, "milestoneID": id}}
+		return nil, ErrMilestoneNotExist{args: map[string]any{"repoID": repoID, "milestoneID": id}}
 	}
 	return m, nil
 }

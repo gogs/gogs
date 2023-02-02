@@ -793,7 +793,7 @@ func NewIssue(repo *Repository, issue *Issue, labelIDs []int64, uuids []string) 
 var _ errutil.NotFound = (*ErrIssueNotExist)(nil)
 
 type ErrIssueNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrIssueNotExist(err error) bool {
@@ -813,12 +813,12 @@ func (ErrIssueNotExist) NotFound() bool {
 func GetIssueByRef(ref string) (*Issue, error) {
 	n := strings.IndexByte(ref, byte('#'))
 	if n == -1 {
-		return nil, ErrIssueNotExist{args: map[string]interface{}{"ref": ref}}
+		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
 
 	index := com.StrTo(ref[n+1:]).MustInt64()
 	if index == 0 {
-		return nil, ErrIssueNotExist{args: map[string]interface{}{"ref": ref}}
+		return nil, ErrIssueNotExist{args: map[string]any{"ref": ref}}
 	}
 
 	repo, err := GetRepositoryByRef(ref[:n])
@@ -844,7 +844,7 @@ func GetRawIssueByIndex(repoID, index int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrIssueNotExist{args: map[string]interface{}{"repoID": repoID, "index": index}}
+		return nil, ErrIssueNotExist{args: map[string]any{"repoID": repoID, "index": index}}
 	}
 	return issue, nil
 }
@@ -864,7 +864,7 @@ func getRawIssueByID(e Engine, id int64) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrIssueNotExist{args: map[string]interface{}{"issueID": id}}
+		return nil, ErrIssueNotExist{args: map[string]any{"issueID": id}}
 	}
 	return issue, nil
 }

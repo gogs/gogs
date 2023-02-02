@@ -26,7 +26,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	fullname, email, website, location, err := p.config.doAuth(login, password)
 	if err != nil {
 		if strings.Contains(err.Error(), "401") {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, 
 	}, nil
 }
 
-func (p *Provider) Config() interface{} {
+func (p *Provider) Config() any {
 	return p.config
 }
 

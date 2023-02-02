@@ -300,7 +300,7 @@ func DeleteEmail(c *context.Context) {
 	}
 
 	c.Flash.Success(c.Tr("settings.email_deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/user/settings/email",
 	})
 }
@@ -372,7 +372,7 @@ func DeleteSSHKey(c *context.Context) {
 		c.Flash.Success(c.Tr("settings.ssh_key_deletion_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/user/settings/ssh",
 	})
 }
@@ -507,7 +507,7 @@ func SettingsTwoFactorDisable(c *context.Context) {
 	}
 
 	c.Flash.Success(c.Tr("settings.two_factor_disable_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/user/settings/security",
 	})
 }
@@ -543,7 +543,7 @@ func SettingsLeaveRepo(c *context.Context) {
 	}
 
 	c.Flash.Success(c.Tr("settings.repos.leave_success", repo.FullName()))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/user/settings/repositories",
 	})
 }
@@ -572,7 +572,7 @@ func SettingsLeaveOrganization(c *context.Context) {
 		}
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/user/settings/organizations",
 	})
 }
@@ -630,7 +630,7 @@ func SettingsDeleteApplication(c *context.Context) {
 		c.Flash.Success(c.Tr("settings.delete_token_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/user/settings/applications",
 	})
 }

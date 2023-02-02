@@ -230,12 +230,12 @@ func DeleteUser(c *context.Context) {
 		switch {
 		case db.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))
-			c.JSONSuccess(map[string]interface{}{
+			c.JSONSuccess(map[string]any{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		case db.IsErrUserHasOrgs(err):
 			c.Flash.Error(c.Tr("admin.users.still_has_org"))
-			c.JSONSuccess(map[string]interface{}{
+			c.JSONSuccess(map[string]any{
 				"redirect": conf.Server.Subpath + "/admin/users/" + c.Params(":userid"),
 			})
 		default:
@@ -246,7 +246,7 @@ func DeleteUser(c *context.Context) {
 	log.Trace("Account deleted by admin (%s): %s", c.User.Name, u.Name)
 
 	c.Flash.Success(c.Tr("admin.users.deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/admin/users",
 	})
 }
