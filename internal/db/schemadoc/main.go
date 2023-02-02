@@ -67,7 +67,7 @@ func main() {
 		for j, f := range ti.Fields {
 			table.Append([]string{
 				f.Name, f.Column,
-				strings.ToUpper(f.Type), // PostgreSQL
+				strings.ToUpper(f.Type),                         // PostgreSQL
 				strings.ToUpper(collected[1][i].Fields[j].Type), // MySQL
 				strings.ToUpper(collected[2][i].Fields[j].Type), // SQLite3
 			})
