@@ -395,7 +395,7 @@ func CreateRefComment(doer *User, repo *Repository, issue *Issue, content, commi
 var _ errutil.NotFound = (*ErrCommentNotExist)(nil)
 
 type ErrCommentNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrCommentNotExist(err error) bool {
@@ -418,7 +418,7 @@ func GetCommentByID(id int64) (*Comment, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrCommentNotExist{args: map[string]interface{}{"commentID": id}}
+		return nil, ErrCommentNotExist{args: map[string]any{"commentID": id}}
 	}
 	return c, c.LoadAttributes()
 }

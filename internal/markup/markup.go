@@ -335,7 +335,7 @@ func Detect(filename string) Type {
 }
 
 // Render takes a string or []byte and renders to sanitized HTML in given type of syntax with special links.
-func Render(typ Type, input interface{}, urlPrefix string, metas map[string]string) []byte {
+func Render(typ Type, input any, urlPrefix string, metas map[string]string) []byte {
 	var rawBytes []byte
 	switch v := input.(type) {
 	case []byte:

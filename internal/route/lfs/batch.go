@@ -170,7 +170,7 @@ type responseError struct {
 
 const contentType = "application/vnd.git-lfs+json"
 
-func responseJSON(w http.ResponseWriter, status int, v interface{}) {
+func responseJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(status)
 

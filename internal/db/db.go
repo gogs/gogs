@@ -40,7 +40,7 @@ func newLogWriter() (logger.Writer, error) {
 // Tables is the list of struct-to-table mappings.
 //
 // NOTE: Lines are sorted in alphabetical order, each letter in its own line.
-var Tables = []interface{}{
+var Tables = []any{
 	new(Access), new(AccessToken), new(Action),
 	new(Follow),
 	new(LFSObject), new(LoginSource),

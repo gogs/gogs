@@ -1623,7 +1623,7 @@ func DeleteRepository(ownerID, repoID int64) error {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrRepoNotExist{args: map[string]interface{}{"ownerID": ownerID, "repoID": repoID}}
+		return ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "repoID": repoID}}
 	}
 
 	// In case is a organization.
@@ -1764,7 +1764,7 @@ func GetRepositoryByName(ownerID int64, name string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist{args: map[string]interface{}{"ownerID": ownerID, "name": name}}
+		return nil, ErrRepoNotExist{args: map[string]any{"ownerID": ownerID, "name": name}}
 	}
 	return repo, repo.LoadAttributes()
 }
@@ -1775,7 +1775,7 @@ func getRepositoryByID(e Engine, id int64) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrRepoNotExist{args: map[string]interface{}{"repoID": id}}
+		return nil, ErrRepoNotExist{args: map[string]any{"repoID": id}}
 	}
 	return repo, repo.loadAttributes(e)
 }
@@ -1909,7 +1909,7 @@ func DeleteOldRepositoryArchives() {
 	formats := []string{"zip", "targz"}
 	oldestTime := time.Now().Add(-conf.Cron.RepoArchiveCleanup.OlderThan)
 	if err := x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			basePath := filepath.Join(repo.RepoPath(), "archives")
 			for _, format := range formats {
@@ -1962,7 +1962,7 @@ func DeleteRepositoryArchives() error {
 	defer taskStatusTable.Stop(_CLEAN_OLD_ARCHIVES)
 
 	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			return os.RemoveAll(filepath.Join(repo.RepoPath(), "archives"))
 		})
@@ -1971,7 +1971,7 @@ func DeleteRepositoryArchives() error {
 func gatherMissingRepoRecords() ([]*Repository, error) {
 	repos := make([]*Repository, 0, 10)
 	if err := x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			if !com.IsDir(repo.RepoPath()) {
 				repos = append(repos, repo)
@@ -2033,7 +2033,7 @@ func ReinitMissingRepositories() error {
 // to make sure the binary and custom conf path are up-to-date.
 func SyncRepositoryHooks() error {
 	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			if err := createDelegateHooks(repo.RepoPath()); err != nil {
 				return err
@@ -2067,7 +2067,7 @@ func GitFsck() {
 	log.Trace("Doing: GitFsck")
 
 	if err := x.Where("id>0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			repoPath := repo.RepoPath()
 			err := git.Fsck(repoPath, git.FsckOptions{
@@ -2092,7 +2092,7 @@ func GitFsck() {
 func GitGcRepos() error {
 	args := append([]string{"gc"}, conf.Git.GCArgs...)
 	return x.Where("id > 0").Iterate(new(Repository),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			repo := bean.(*Repository)
 			if err := repo.GetOwner(); err != nil {
 				return err

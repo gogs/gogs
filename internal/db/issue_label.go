@@ -107,7 +107,7 @@ func NewLabels(labels ...*Label) error {
 var _ errutil.NotFound = (*ErrLabelNotExist)(nil)
 
 type ErrLabelNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrLabelNotExist(err error) bool {
@@ -128,7 +128,7 @@ func (ErrLabelNotExist) NotFound() bool {
 // and can return arbitrary label with any valid ID.
 func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, error) {
 	if len(labelName) <= 0 {
-		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID}}
+		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID}}
 	}
 
 	l := &Label{
@@ -139,7 +139,7 @@ func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, err
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID}}
+		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID}}
 	}
 	return l, nil
 }
@@ -149,7 +149,7 @@ func getLabelOfRepoByName(e Engine, repoID int64, labelName string) (*Label, err
 // and can return arbitrary label with any valid ID.
 func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 	if labelID <= 0 {
-		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID, "labelID": labelID}}
+		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID, "labelID": labelID}}
 	}
 
 	l := &Label{
@@ -160,7 +160,7 @@ func getLabelOfRepoByID(e Engine, repoID, labelID int64) (*Label, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrLabelNotExist{args: map[string]interface{}{"repoID": repoID, "labelID": labelID}}
+		return nil, ErrLabelNotExist{args: map[string]any{"repoID": repoID, "labelID": labelID}}
 	}
 	return l, nil
 }

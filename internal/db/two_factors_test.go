@@ -67,7 +67,7 @@ func TestTwoFactors(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(TwoFactor), new(TwoFactorRecoveryCode)}
+	tables := []any{new(TwoFactor), new(TwoFactorRecoveryCode)}
 	db := &twoFactors{
 		DB: dbtest.NewDB(t, "twoFactors", tables...),
 	}

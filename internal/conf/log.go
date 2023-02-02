@@ -16,7 +16,7 @@ import (
 
 type loggerConf struct {
 	Buffer int64
-	Config interface{}
+	Config any
 }
 
 type logConf struct {

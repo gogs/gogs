@@ -719,7 +719,7 @@ func UpdateIssueTitle(c *context.Context) {
 		return
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"title": issue.Title,
 	})
 }
@@ -778,7 +778,7 @@ func UpdateIssueLabel(c *context.Context) {
 		}
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"ok": true,
 	})
 }
@@ -792,7 +792,7 @@ func UpdateIssueMilestone(c *context.Context) {
 	oldMilestoneID := issue.MilestoneID
 	milestoneID := c.QueryInt64("id")
 	if oldMilestoneID == milestoneID {
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"ok": true,
 		})
 		return
@@ -805,7 +805,7 @@ func UpdateIssueMilestone(c *context.Context) {
 		return
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"ok": true,
 	})
 }
@@ -818,7 +818,7 @@ func UpdateIssueAssignee(c *context.Context) {
 
 	assigneeID := c.QueryInt64("id")
 	if issue.AssigneeID == assigneeID {
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"ok": true,
 		})
 		return
@@ -829,7 +829,7 @@ func UpdateIssueAssignee(c *context.Context) {
 		return
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"ok": true,
 	})
 }
@@ -943,7 +943,7 @@ func UpdateCommentContent(c *context.Context) {
 	oldContent := comment.Content
 	comment.Content = c.Query("content")
 	if comment.Content == "" {
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"content": "",
 		})
 		return
@@ -1062,7 +1062,7 @@ func DeleteLabel(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.issues.label_deletion_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.MakeURL("labels"),
 	})
 }
@@ -1260,7 +1260,7 @@ func DeleteMilestone(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.milestones.deletion_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.MakeURL("milestones"),
 	})
 }

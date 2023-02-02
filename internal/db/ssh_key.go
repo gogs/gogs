@@ -533,7 +533,7 @@ func RewriteAuthorizedKeys() error {
 	}
 	defer os.Remove(tmpPath)
 
-	err = x.Iterate(new(PublicKey), func(idx int, bean interface{}) (err error) {
+	err = x.Iterate(new(PublicKey), func(idx int, bean any) (err error) {
 		_, err = f.WriteString((bean.(*PublicKey)).AuthorizedString())
 		return err
 	})
@@ -688,7 +688,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 var _ errutil.NotFound = (*ErrDeployKeyNotExist)(nil)
 
 type ErrDeployKeyNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrDeployKeyNotExist(err error) bool {
@@ -711,7 +711,7 @@ func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"deployKeyID": id}}
+		return nil, ErrDeployKeyNotExist{args: map[string]any{"deployKeyID": id}}
 	}
 	return key, nil
 }
@@ -726,7 +726,7 @@ func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"keyID": keyID, "repoID": repoID}}
+		return nil, ErrDeployKeyNotExist{args: map[string]any{"keyID": keyID, "repoID": repoID}}
 	}
 	return key, nil
 }

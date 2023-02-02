@@ -99,7 +99,7 @@ func TestActions(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Action), new(User), new(Repository), new(EmailAddress), new(Watch)}
+	tables := []any{new(Action), new(User), new(Repository), new(EmailAddress), new(Watch)}
 	db := &actions{
 		DB: dbtest.NewDB(t, "actions", tables...),
 	}

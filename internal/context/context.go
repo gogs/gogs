@@ -138,7 +138,7 @@ func (c *Context) Success(name string) {
 }
 
 // JSONSuccess responses JSON with status http.StatusOK.
-func (c *Context) JSONSuccess(data interface{}) {
+func (c *Context) JSONSuccess(data any) {
 	c.JSON(http.StatusOK, data)
 }
 
@@ -160,7 +160,7 @@ func (c *Context) RedirectSubpath(location string, status ...int) {
 }
 
 // RenderWithErr used for page has form validation but need to prompt error to users.
-func (c *Context) RenderWithErr(msg, tpl string, f interface{}) {
+func (c *Context) RenderWithErr(msg, tpl string, f any) {
 	if f != nil {
 		form.Assign(f, c.Data)
 	}
@@ -189,7 +189,7 @@ func (c *Context) Error(err error, msg string) {
 }
 
 // Errorf renders the 500 response with formatted message.
-func (c *Context) Errorf(err error, format string, args ...interface{}) {
+func (c *Context) Errorf(err error, format string, args ...any) {
 	c.Error(err, fmt.Sprintf(format, args...))
 }
 
@@ -203,7 +203,7 @@ func (c *Context) NotFoundOrError(err error, msg string) {
 }
 
 // NotFoundOrErrorf is same as NotFoundOrError but with formatted message.
-func (c *Context) NotFoundOrErrorf(err error, format string, args ...interface{}) {
+func (c *Context) NotFoundOrErrorf(err error, format string, args ...any) {
 	c.NotFoundOrError(err, fmt.Sprintf(format, args...))
 }
 
@@ -211,7 +211,7 @@ func (c *Context) PlainText(status int, msg string) {
 	c.Render.PlainText(status, []byte(msg))
 }
 
-func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...interface{}) {
+func (c *Context) ServeContent(name string, r io.ReadSeeker, params ...any) {
 	modtime := time.Now()
 	for _, p := range params {
 		switch v := p.(type) {

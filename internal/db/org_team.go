@@ -304,7 +304,7 @@ func NewTeam(t *Team) error {
 var _ errutil.NotFound = (*ErrTeamNotExist)(nil)
 
 type ErrTeamNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrTeamNotExist(err error) bool {
@@ -329,7 +329,7 @@ func getTeamOfOrgByName(e Engine, orgID int64, name string) (*Team, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrTeamNotExist{args: map[string]interface{}{"orgID": orgID, "name": name}}
+		return nil, ErrTeamNotExist{args: map[string]any{"orgID": orgID, "name": name}}
 	}
 	return t, nil
 }
@@ -345,7 +345,7 @@ func getTeamByID(e Engine, teamID int64) (*Team, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrTeamNotExist{args: map[string]interface{}{"teamID": teamID}}
+		return nil, ErrTeamNotExist{args: map[string]any{"teamID": teamID}}
 	}
 	return t, nil
 }

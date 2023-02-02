@@ -429,7 +429,7 @@ func DeleteCollaboration(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.remove_collaborator_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.RepoLink + "/settings/collaboration",
 	})
 }
@@ -682,7 +682,7 @@ func DeleteDeployKey(c *context.Context) {
 		c.Flash.Success(c.Tr("repo.settings.deploy_key_deletion_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.RepoLink + "/settings/keys",
 	})
 }

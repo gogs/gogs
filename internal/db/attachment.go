@@ -87,7 +87,7 @@ func NewAttachment(name string, buf []byte, file multipart.File) (_ *Attachment,
 var _ errutil.NotFound = (*ErrAttachmentNotExist)(nil)
 
 type ErrAttachmentNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrAttachmentNotExist(err error) bool {
@@ -109,7 +109,7 @@ func getAttachmentByUUID(e Engine, uuid string) (*Attachment, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrAttachmentNotExist{args: map[string]interface{}{"uuid": uuid}}
+		return nil, ErrAttachmentNotExist{args: map[string]any{"uuid": uuid}}
 	}
 	return attach, nil
 }

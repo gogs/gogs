@@ -263,7 +263,7 @@ func DeleteWikiPagePost(c *context.Context) {
 		return
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Repo.RepoLink + "/wiki/",
 	})
 }

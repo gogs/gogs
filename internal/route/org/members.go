@@ -76,7 +76,7 @@ func MembersAction(c *context.Context) {
 
 	if err != nil {
 		log.Error("Action(%s): %v", c.Params(":action"), err)
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"ok":  false,
 			"err": err.Error(),
 		})

@@ -220,7 +220,7 @@ func (r *Request) PostFile(formname, filename string) *Request {
 
 // Body adds request raw body.
 // it supports string and []byte.
-func (r *Request) Body(data interface{}) *Request {
+func (r *Request) Body(data any) *Request {
 	switch t := data.(type) {
 	case string:
 		bf := bytes.NewBufferString(t)
@@ -414,7 +414,7 @@ func (r *Request) ToFile(filename string) error {
 
 // ToJson returns the map that marshals from the body bytes as json in response .
 // it calls Response inner.
-func (r *Request) ToJson(v interface{}) error {
+func (r *Request) ToJson(v any) error {
 	data, err := r.Bytes()
 	if err != nil {
 		return err
@@ -424,7 +424,7 @@ func (r *Request) ToJson(v interface{}) error {
 
 // ToXml returns the map that marshals from the body bytes as xml in response .
 // it calls Response inner.
-func (r *Request) ToXml(v interface{}) error {
+func (r *Request) ToXml(v any) error {
 	data, err := r.Bytes()
 	if err != nil {
 		return err

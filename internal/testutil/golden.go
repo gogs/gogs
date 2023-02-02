@@ -29,7 +29,7 @@ func Update(name string) bool {
 
 // AssertGolden compares what's got and what's in the golden file. It updates
 // the golden file on-demand. It does nothing when the runtime is "windows".
-func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
+func AssertGolden(t testing.TB, path string, update bool, got any) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping testing on Windows")
 		return
@@ -59,7 +59,7 @@ func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
 	assert.Equal(t, string(golden), string(data))
 }
 
-func marshal(t testing.TB, v interface{}) []byte {
+func marshal(t testing.TB, v any) []byte {
 	t.Helper()
 
 	switch v2 := v.(type) {

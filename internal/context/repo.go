@@ -96,7 +96,7 @@ func (r *Repository) Editorconfig() (*editorconfig.Editorconfig, error) {
 }
 
 // MakeURL accepts a string or url.URL as argument and returns escaped URL prepended with repository URL.
-func (r *Repository) MakeURL(location interface{}) string {
+func (r *Repository) MakeURL(location any) string {
 	switch location := location.(type) {
 	case string:
 		tempURL := url.URL{
