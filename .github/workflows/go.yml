@@ -31,11 +31,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: latest
-          args: --timeout=30m
       - name: Install Task
         uses: arduino/setup-task@v1
         with:
@@ -52,6 +47,11 @@ jobs:
             echo "Run 'go mod tidy' or 'task generate' commit them"
             exit 1
           fi
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: latest
+          args: --timeout=30m
 
   test:
     name: Test
