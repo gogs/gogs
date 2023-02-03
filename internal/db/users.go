@@ -90,6 +90,12 @@ type UsersStore interface {
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
 	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
+	// SearchByName returns a list of users whose username or full name matches the
+	// given keyword case-insensitively. Results are paginated by given page and
+	// page size, and sorted by the given order (e.g. "id DESC"). A total count of
+	// all results is also returned. If the order is not given, it's up to the
+	// database to decide.
+	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error)
 	// Update updates fields for the given user.
 	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
 	// UseCustomAvatar uses the given avatar as the user custom avatar.
@@ -568,6 +574,29 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 		Order("follow.id DESC").
 		Find(&users).
 		Error
+}
+
+func searchUserByName(ctx context.Context, db *gorm.DB, userType UserType, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
+	if keyword == "" {
+		return []*User{}, 0, nil
+	}
+	keyword = "%" + strings.ToLower(keyword) + "%"
+
+	tx := db.WithContext(ctx).
+		Where("type = ? AND (lower_name LIKE ? OR LOWER(full_name) LIKE ?)", userType, keyword, keyword)
+
+	var count int64
+	err := tx.Model(&User{}).Count(&count).Error
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "count")
+	}
+
+	users := make([]*User, 0, pageSize)
+	return users, count, tx.Order(orderBy).Limit(pageSize).Offset((page - 1) * pageSize).Find(&users).Error
+}
+
+func (db *users) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
+	return searchUserByName(ctx, db.DB, UserTypeIndividual, keyword, page, pageSize, orderBy)
 }
 
 type UpdateUserOptions struct {

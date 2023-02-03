@@ -31,6 +31,7 @@ func TestOrgs(t *testing.T) {
 		test func(t *testing.T, db *orgs)
 	}{
 		{"List", orgsList},
+		{"SearchByName", orgsSearchByName},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -57,16 +58,11 @@ func orgsList(t *testing.T, db *orgs) {
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
-		UserTypeOrganization, org1.ID,
-	).Error
-	require.NoError(t, err)
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
-		UserTypeOrganization, org2.ID,
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
+		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)
 
@@ -120,4 +116,51 @@ func orgsList(t *testing.T, db *orgs) {
 			assert.Equal(t, test.wantOrgNames, gotOrgNames)
 		})
 	}
+}
+
+func orgsSearchByName(t *testing.T, db *orgs) {
+	ctx := context.Background()
+
+	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
+	usersStore := NewUsersStore(db.DB)
+	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{FullName: "Acme Corp"})
+	require.NoError(t, err)
+	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{FullName: "Acme Corp 2"})
+	require.NoError(t, err)
+	err = db.Exec(
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
+		UserTypeOrganization, org1.ID, org2.ID,
+	).Error
+	require.NoError(t, err)
+
+	t.Run("search for username org1", func(t *testing.T) {
+		orgs, count, err := db.SearchByName(ctx, "G1", 1, 1, "")
+		require.NoError(t, err)
+		require.Len(t, orgs, int(count))
+		assert.Equal(t, int64(1), count)
+		assert.Equal(t, org1.ID, orgs[0].ID)
+	})
+
+	t.Run("search for username org2", func(t *testing.T) {
+		orgs, count, err := db.SearchByName(ctx, "G2", 1, 1, "")
+		require.NoError(t, err)
+		require.Len(t, orgs, int(count))
+		assert.Equal(t, int64(1), count)
+		assert.Equal(t, org2.ID, orgs[0].ID)
+	})
+
+	t.Run("search for full name acme", func(t *testing.T) {
+		orgs, count, err := db.SearchByName(ctx, "ACME", 1, 10, "")
+		require.NoError(t, err)
+		require.Len(t, orgs, int(count))
+		assert.Equal(t, int64(2), count)
+	})
+
+	t.Run("search for full name acme ORDER BY id DESC LIMIT 1", func(t *testing.T) {
+		orgs, count, err := db.SearchByName(ctx, "ACME", 1, 1, "id DESC")
+		require.NoError(t, err)
+		require.Len(t, orgs, 1)
+		assert.Equal(t, int64(2), count)
+		assert.Equal(t, org2.ID, orgs[0].ID)
+	})
 }

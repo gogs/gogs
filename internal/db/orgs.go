@@ -19,6 +19,12 @@ import (
 type OrgsStore interface {
 	// List returns a list of organizations filtered by options.
 	List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error)
+	// SearchByName returns a list of organizations whose username or full name
+	// matches the given keyword case-insensitively. Results are paginated by given
+	// page and page size, and sorted by the given order (e.g. "id DESC"). A total
+	// count of all results is also returned. If the order is not given, it's up to
+	// the database to decide.
+	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error)
 }
 
 var Orgs OrgsStore
@@ -67,6 +73,10 @@ func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization
 
 	var orgs []*Organization
 	return orgs, tx.Find(&orgs).Error
+}
+
+func (db *orgs) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {
+	return searchUserByName(ctx, db.DB, UserTypeOrganization, keyword, page, pageSize, orderBy)
 }
 
 type Organization = User

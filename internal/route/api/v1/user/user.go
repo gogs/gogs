@@ -7,8 +7,6 @@ package user
 import (
 	"net/http"
 
-	"github.com/unknwon/com"
-
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
@@ -17,16 +15,11 @@ import (
 )
 
 func Search(c *context.APIContext) {
-	opts := &db.SearchUserOptions{
-		Keyword:  c.Query("q"),
-		Type:     db.UserTypeIndividual,
-		PageSize: com.StrTo(c.Query("limit")).MustInt(),
+	pageSize := c.QueryInt("limit")
+	if pageSize <= 0 {
+		pageSize = 10
 	}
-	if opts.PageSize == 0 {
-		opts.PageSize = 10
-	}
-
-	users, _, err := db.SearchUserByName(opts)
+	users, _, err := db.Users.SearchByName(c.Req.Context(), c.Query("q"), 1, pageSize, "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]any{
 			"ok":    false,
