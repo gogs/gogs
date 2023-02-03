@@ -2334,6 +2334,9 @@ type MockUsersStore struct {
 	// ListFollowingsFunc is an instance of a mock function object
 	// controlling the behavior of the method ListFollowings.
 	ListFollowingsFunc *UsersStoreListFollowingsFunc
+	// SearchByNameFunc is an instance of a mock function object controlling
+	// the behavior of the method SearchByName.
+	SearchByNameFunc *UsersStoreSearchByNameFunc
 	// UpdateFunc is an instance of a mock function object controlling the
 	// behavior of the method Update.
 	UpdateFunc *UsersStoreUpdateFunc
@@ -2413,6 +2416,11 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: func(context.Context, int64, int, int) (r0 []*db.User, r1 error) {
+				return
+			},
+		},
+		SearchByNameFunc: &UsersStoreSearchByNameFunc{
+			defaultHook: func(context.Context, string, int, int, string) (r0 []*db.User, r1 int64, r2 error) {
 				return
 			},
 		},
@@ -2503,6 +2511,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.ListFollowings")
 			},
 		},
+		SearchByNameFunc: &UsersStoreSearchByNameFunc{
+			defaultHook: func(context.Context, string, int, int, string) ([]*db.User, int64, error) {
+				panic("unexpected invocation of MockUsersStore.SearchByName")
+			},
+		},
 		UpdateFunc: &UsersStoreUpdateFunc{
 			defaultHook: func(context.Context, int64, db.UpdateUserOptions) error {
 				panic("unexpected invocation of MockUsersStore.Update")
@@ -2561,6 +2574,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: i.ListFollowings,
+		},
+		SearchByNameFunc: &UsersStoreSearchByNameFunc{
+			defaultHook: i.SearchByName,
 		},
 		UpdateFunc: &UsersStoreUpdateFunc{
 			defaultHook: i.Update,
@@ -4099,6 +4115,126 @@ func (c UsersStoreListFollowingsFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreListFollowingsFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreSearchByNameFunc describes the behavior when the SearchByName
+// method of the parent MockUsersStore instance is invoked.
+type UsersStoreSearchByNameFunc struct {
+	defaultHook func(context.Context, string, int, int, string) ([]*db.User, int64, error)
+	hooks       []func(context.Context, string, int, int, string) ([]*db.User, int64, error)
+	history     []UsersStoreSearchByNameFuncCall
+	mutex       sync.Mutex
+}
+
+// SearchByName delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockUsersStore) SearchByName(v0 context.Context, v1 string, v2 int, v3 int, v4 string) ([]*db.User, int64, error) {
+	r0, r1, r2 := m.SearchByNameFunc.nextHook()(v0, v1, v2, v3, v4)
+	m.SearchByNameFunc.appendCall(UsersStoreSearchByNameFuncCall{v0, v1, v2, v3, v4, r0, r1, r2})
+	return r0, r1, r2
+}
+
+// SetDefaultHook sets function that is called when the SearchByName method
+// of the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreSearchByNameFunc) SetDefaultHook(hook func(context.Context, string, int, int, string) ([]*db.User, int64, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// SearchByName method of the parent MockUsersStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *UsersStoreSearchByNameFunc) PushHook(hook func(context.Context, string, int, int, string) ([]*db.User, int64, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreSearchByNameFunc) SetDefaultReturn(r0 []*db.User, r1 int64, r2 error) {
+	f.SetDefaultHook(func(context.Context, string, int, int, string) ([]*db.User, int64, error) {
+		return r0, r1, r2
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreSearchByNameFunc) PushReturn(r0 []*db.User, r1 int64, r2 error) {
+	f.PushHook(func(context.Context, string, int, int, string) ([]*db.User, int64, error) {
+		return r0, r1, r2
+	})
+}
+
+func (f *UsersStoreSearchByNameFunc) nextHook() func(context.Context, string, int, int, string) ([]*db.User, int64, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreSearchByNameFunc) appendCall(r0 UsersStoreSearchByNameFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreSearchByNameFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreSearchByNameFunc) History() []UsersStoreSearchByNameFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreSearchByNameFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreSearchByNameFuncCall is an object that describes an invocation
+// of method SearchByName on an instance of MockUsersStore.
+type UsersStoreSearchByNameFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 string
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 int
+	// Arg4 is the value of the 5th argument passed to this method
+	// invocation.
+	Arg4 string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []*db.User
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 int64
+	// Result2 is the value of the 3rd result returned from this method
+	// invocation.
+	Result2 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreSearchByNameFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3, c.Arg4}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreSearchByNameFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1, c.Result2}
 }
 
 // UsersStoreUpdateFunc describes the behavior when the Update method of the
