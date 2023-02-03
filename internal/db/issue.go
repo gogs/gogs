@@ -79,6 +79,18 @@ func (issue *Issue) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// Deprecated: Use Users.GetByID instead.
+func getUserByID(e Engine, id int64) (*User, error) {
+	u := new(User)
+	has, err := e.ID(id).Get(u)
+	if err != nil {
+		return nil, err
+	} else if !has {
+		return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
+	}
+	return u, nil
+}
+
 func (issue *Issue) loadAttributes(e Engine) (err error) {
 	if issue.Repo == nil {
 		issue.Repo, err = getRepositoryByID(e, issue.RepoID)
