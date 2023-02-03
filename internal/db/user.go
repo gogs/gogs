@@ -9,7 +9,6 @@ import (
 	"fmt"
 	_ "image/jpeg"
 	"os"
-	"strings"
 	"time"
 
 	log "unknwon.dev/clog/v2"
@@ -17,7 +16,6 @@ import (
 
 	"github.com/gogs/git-module"
 
-	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/userutil"
 )
@@ -202,17 +200,6 @@ func DeleteInactivateUsers() (err error) {
 	return err
 }
 
-func getUserByID(e Engine, id int64) (*User, error) {
-	u := new(User)
-	has, err := e.ID(id).Get(u)
-	if err != nil {
-		return nil, err
-	} else if !has {
-		return nil, ErrUserNotExist{args: map[string]any{"userID": id}}
-	}
-	return u, nil
-}
-
 // GetUserEmailsByNames returns a list of e-mails corresponds to names.
 func GetUserEmailsByNames(names []string) []string {
 	mails := make([]string, 0, len(names))
@@ -262,48 +249,6 @@ func ValidateCommitsWithEmails(oldCommits []*git.Commit) []*UserCommit {
 		}
 	}
 	return newCommits
-}
-
-type SearchUserOptions struct {
-	Keyword  string
-	Type     UserType
-	OrderBy  string
-	Page     int
-	PageSize int // Can be smaller than or equal to setting.UI.ExplorePagingNum
-}
-
-// SearchUserByName takes keyword and part of user name to search,
-// it returns results in given range and number of total results.
-func SearchUserByName(opts *SearchUserOptions) (users []*User, _ int64, _ error) {
-	if opts.Keyword == "" {
-		return users, 0, nil
-	}
-	opts.Keyword = strings.ToLower(opts.Keyword)
-
-	if opts.PageSize <= 0 || opts.PageSize > conf.UI.ExplorePagingNum {
-		opts.PageSize = conf.UI.ExplorePagingNum
-	}
-	if opts.Page <= 0 {
-		opts.Page = 1
-	}
-
-	searchQuery := "%" + opts.Keyword + "%"
-	users = make([]*User, 0, opts.PageSize)
-	// Append conditions
-	sess := x.Where("LOWER(lower_name) LIKE ?", searchQuery).
-		Or("LOWER(full_name) LIKE ?", searchQuery).
-		And("type = ?", opts.Type)
-
-	countSess := *sess
-	count, err := countSess.Count(new(User))
-	if err != nil {
-		return nil, 0, fmt.Errorf("Count: %v", err)
-	}
-
-	if len(opts.OrderBy) > 0 {
-		sess.OrderBy(opts.OrderBy)
-	}
-	return users, count, sess.Limit(opts.PageSize, (opts.Page-1)*opts.PageSize).Find(&users)
 }
 
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
