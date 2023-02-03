@@ -7,7 +7,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -66,7 +65,7 @@ func runBackup(c *cli.Context) error {
 	if !com.IsExist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
-	rootDir, err := ioutil.TempDir(tmpDir, "gogs-backup-")
+	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
 	if err != nil {
 		log.Fatal("Failed to create backup root directory '%s': %v", rootDir, err)
 	}

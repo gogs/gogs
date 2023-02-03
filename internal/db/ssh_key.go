@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
@@ -181,7 +180,7 @@ func parseKeyString(content string) (string, error) {
 // writeTmpKeyFile writes key content to a temporary file
 // and returns the name of that file, along with any possible errors.
 func writeTmpKeyFile(content string) (string, error) {
-	tmpFile, err := ioutil.TempFile(conf.SSH.KeyTestPath, "gogs_keytest")
+	tmpFile, err := os.CreateTemp(conf.SSH.KeyTestPath, "gogs_keytest")
 	if err != nil {
 		return "", fmt.Errorf("TempFile: %v", err)
 	}
@@ -377,7 +376,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
 	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
 	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
-	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
+	if err = os.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
 

@@ -7,7 +7,6 @@ package testutil
 import (
 	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -45,13 +44,13 @@ func AssertGolden(t testing.TB, path string, update bool, got any) {
 			t.Fatalf("create directories for golden file %q: %v", path, err)
 		}
 
-		err = ioutil.WriteFile(path, data, 0640)
+		err = os.WriteFile(path, data, 0640)
 		if err != nil {
 			t.Fatalf("update golden file %q: %v", path, err)
 		}
 	}
 
-	golden, err := ioutil.ReadFile(path)
+	golden, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read golden file %q: %v", path, err)
 	}
