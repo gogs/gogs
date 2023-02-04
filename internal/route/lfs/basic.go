@@ -122,16 +122,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
 func (*basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 	var request basicVerifyRequest
-	
-	defer func() {
-		err := c.Req.Request.Body.Close()
-		if err != nil {
-			responseJSON(c.Resp, http.StatusBadRequest, responseError{
-				Message: strutil.ToUpperFirst(err.Error()),
-			})
-			return
-		}
-	}()
+	defer func() { _ = c.Req.Request.Body.Close() }()
 
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 	if err != nil {
