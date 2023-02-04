@@ -450,27 +450,35 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 	}
 	email = strings.ToLower(email)
 
-	// First try to find the user by primary email
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN email_address ON email_address.uid = "user".id
+		WHERE
+			"user".type = @userType
+		AND (
+				"user".email = @email AND "user".is_active = TRUE
+			OR  email_address.email = @email AND email_address.is_activated = TRUE
+		)
+	*/
 	user := new(User)
 	err := db.WithContext(ctx).
-		Where("email = ? AND type = ? AND is_active = ?", email, UserTypeIndividual, true).
-		First(user).
+		Joins(dbutil.Quote("LEFT JOIN email_address ON email_address.uid = %s.id", "user"), true).
+		Where(dbutil.Quote("%s.type = ?", "user"), UserTypeIndividual).
+		Where(db.
+			Where(dbutil.Quote("%[1]s.email = ? AND %[1]s.is_active = ?", "user"), email, true).
+			Or("email_address.email = ? AND email_address.is_activated = ?", email, true),
+		).
+		First(&user).
 		Error
-	if err == nil {
-		return user, nil
-	} else if err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	// Otherwise, check activated email addresses
-	emailAddress, err := NewEmailAddressesStore(db.DB).GetByEmail(ctx, email, true)
 	if err != nil {
-		if IsErrEmailAddressNotExist(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
 	}
-	return db.GetByID(ctx, emailAddress.UserID)
+	return user, nil
 }
 
 func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {

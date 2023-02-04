@@ -593,7 +593,7 @@ func usersGetMailableEmailsByUsernames(t *testing.T, db *users) {
 	_, err = db.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
 	require.NoError(t, err)
 
-	got, err := db.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, "404"})
+	got, err := db.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, "ignore-non-exist"})
 	require.NoError(t, err)
 	want := []string{bob.Email}
 	assert.Equal(t, want, got)
