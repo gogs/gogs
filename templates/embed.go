@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -73,7 +73,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		var data []byte
 		fpath := path.Join(customDir, name)
 		if osutil.IsFile(fpath) {
-			data, err = ioutil.ReadFile(fpath)
+			data, err = os.ReadFile(fpath)
 		} else {
 			data, err = files.ReadFile(name)
 		}
