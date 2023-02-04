@@ -73,6 +73,10 @@ type UsersStore interface {
 	// GetByKeyID returns the owner of given public key ID. It returns
 	// ErrUserNotExist when not found.
 	GetByKeyID(ctx context.Context, keyID int64) (*User, error)
+	// GetMailableEmailsByUsernames returns a list of verified primary email
+	// addresses (where email notifications are sent to) of users with given list of
+	// usernames. Non-existing usernames are ignored.
+	GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error)
 	// HasForkedRepository returns true if the user has forked given repository.
 	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
 	// IsUsernameUsed returns true if the given username has been used other than
@@ -509,6 +513,15 @@ func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
 	return user, nil
 }
 
+func (db *users) GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error) {
+	emails := make([]string, 0, len(usernames))
+	return emails, db.WithContext(ctx).
+		Model(&User{}).
+		Select("email").
+		Where("lower_name IN (?) AND is_active = ?", usernames, true).
+		Find(&emails).Error
+}
+
 func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) bool {
 	var count int64
 	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
@@ -814,11 +827,6 @@ func (u *User) IsLocal() bool {
 // IsOrganization returns true if the user is an organization.
 func (u *User) IsOrganization() bool {
 	return u.Type == UserTypeOrganization
-}
-
-// IsMailable returns true if the user is eligible to receive emails.
-func (u *User) IsMailable() bool {
-	return u.IsActive
 }
 
 // APIFormat returns the API format of a user.

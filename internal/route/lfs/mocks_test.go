@@ -2319,6 +2319,10 @@ type MockUsersStore struct {
 	// GetByUsernameFunc is an instance of a mock function object
 	// controlling the behavior of the method GetByUsername.
 	GetByUsernameFunc *UsersStoreGetByUsernameFunc
+	// GetMailableEmailsByUsernamesFunc is an instance of a mock function
+	// object controlling the behavior of the method
+	// GetMailableEmailsByUsernames.
+	GetMailableEmailsByUsernamesFunc *UsersStoreGetMailableEmailsByUsernamesFunc
 	// HasForkedRepositoryFunc is an instance of a mock function object
 	// controlling the behavior of the method HasForkedRepository.
 	HasForkedRepositoryFunc *UsersStoreHasForkedRepositoryFunc
@@ -2391,6 +2395,11 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		GetByUsernameFunc: &UsersStoreGetByUsernameFunc{
 			defaultHook: func(context.Context, string) (r0 *db.User, r1 error) {
+				return
+			},
+		},
+		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
+			defaultHook: func(context.Context, []string) (r0 []string, r1 error) {
 				return
 			},
 		},
@@ -2486,6 +2495,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.GetByUsername")
 			},
 		},
+		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
+			defaultHook: func(context.Context, []string) ([]string, error) {
+				panic("unexpected invocation of MockUsersStore.GetMailableEmailsByUsernames")
+			},
+		},
 		HasForkedRepositoryFunc: &UsersStoreHasForkedRepositoryFunc{
 			defaultHook: func(context.Context, int64, int64) bool {
 				panic("unexpected invocation of MockUsersStore.HasForkedRepository")
@@ -2559,6 +2573,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		GetByUsernameFunc: &UsersStoreGetByUsernameFunc{
 			defaultHook: i.GetByUsername,
+		},
+		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
+			defaultHook: i.GetMailableEmailsByUsernames,
 		},
 		HasForkedRepositoryFunc: &UsersStoreHasForkedRepositoryFunc{
 			defaultHook: i.HasForkedRepository,
@@ -3558,6 +3575,118 @@ func (c UsersStoreGetByUsernameFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c UsersStoreGetByUsernameFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreGetMailableEmailsByUsernamesFunc describes the behavior when
+// the GetMailableEmailsByUsernames method of the parent MockUsersStore
+// instance is invoked.
+type UsersStoreGetMailableEmailsByUsernamesFunc struct {
+	defaultHook func(context.Context, []string) ([]string, error)
+	hooks       []func(context.Context, []string) ([]string, error)
+	history     []UsersStoreGetMailableEmailsByUsernamesFuncCall
+	mutex       sync.Mutex
+}
+
+// GetMailableEmailsByUsernames delegates to the next hook function in the
+// queue and stores the parameter and result values of this invocation.
+func (m *MockUsersStore) GetMailableEmailsByUsernames(v0 context.Context, v1 []string) ([]string, error) {
+	r0, r1 := m.GetMailableEmailsByUsernamesFunc.nextHook()(v0, v1)
+	m.GetMailableEmailsByUsernamesFunc.appendCall(UsersStoreGetMailableEmailsByUsernamesFuncCall{v0, v1, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the
+// GetMailableEmailsByUsernames method of the parent MockUsersStore instance
+// is invoked and the hook queue is empty.
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) SetDefaultHook(hook func(context.Context, []string) ([]string, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetMailableEmailsByUsernames method of the parent MockUsersStore instance
+// invokes the hook at the front of the queue and discards it. After the
+// queue is empty, the default hook function is invoked for any future
+// action.
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) PushHook(hook func(context.Context, []string) ([]string, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) SetDefaultReturn(r0 []string, r1 error) {
+	f.SetDefaultHook(func(context.Context, []string) ([]string, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) PushReturn(r0 []string, r1 error) {
+	f.PushHook(func(context.Context, []string) ([]string, error) {
+		return r0, r1
+	})
+}
+
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) nextHook() func(context.Context, []string) ([]string, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) appendCall(r0 UsersStoreGetMailableEmailsByUsernamesFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of
+// UsersStoreGetMailableEmailsByUsernamesFuncCall objects describing the
+// invocations of this function.
+func (f *UsersStoreGetMailableEmailsByUsernamesFunc) History() []UsersStoreGetMailableEmailsByUsernamesFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreGetMailableEmailsByUsernamesFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreGetMailableEmailsByUsernamesFuncCall is an object that
+// describes an invocation of method GetMailableEmailsByUsernames on an
+// instance of MockUsersStore.
+type UsersStoreGetMailableEmailsByUsernamesFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 []string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []string
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreGetMailableEmailsByUsernamesFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreGetMailableEmailsByUsernamesFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
