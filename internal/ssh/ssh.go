@@ -7,7 +7,6 @@ package ssh
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -190,7 +189,7 @@ func Listen(host string, port int, ciphers, macs []string) {
 		log.Trace("SSH: New private key is generateed: %s", keyPath)
 	}
 
-	privateBytes, err := ioutil.ReadFile(keyPath)
+	privateBytes, err := os.ReadFile(keyPath)
 	if err != nil {
 		panic("SSH: Failed to load private key: " + err.Error())
 	}

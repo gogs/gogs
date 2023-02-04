@@ -6,7 +6,6 @@ package db
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -122,7 +121,7 @@ func (repo *Repository) updateWikiPage(doer *User, oldTitle, title, content, mes
 	// The new file we created will be in normal text format.
 	os.Remove(filename)
 
-	if err = ioutil.WriteFile(filename, []byte(content), 0666); err != nil {
+	if err = os.WriteFile(filename, []byte(content), 0666); err != nil {
 		return fmt.Errorf("WriteFile: %v", err)
 	}
 

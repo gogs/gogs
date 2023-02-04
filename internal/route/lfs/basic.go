@@ -7,7 +7,6 @@ package lfs
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -82,7 +81,7 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid 
 	_, err := db.LFS.GetObjectByOID(c.Req.Context(), repo.ID, oid)
 	if err == nil {
 		// Object exists, drain the request body and we're good.
-		_, _ = io.Copy(ioutil.Discard, c.Req.Request.Body)
+		_, _ = io.Copy(io.Discard, c.Req.Request.Body)
 		c.Req.Request.Body.Close()
 		c.Status(http.StatusOK)
 		return
@@ -123,7 +122,8 @@ func (h *basicHandler) serveUpload(c *macaron.Context, repo *db.Repository, oid 
 // POST /{owner}/{repo}.git/info/lfs/object/basic/verify
 func (*basicHandler) serveVerify(c *macaron.Context, repo *db.Repository) {
 	var request basicVerifyRequest
-	defer c.Req.Request.Body.Close()
+	defer func() { _ = c.Req.Request.Body.Close() }()
+
 	err := json.NewDecoder(c.Req.Request.Body).Decode(&request)
 	if err != nil {
 		responseJSON(c.Resp, http.StatusBadRequest, responseError{
