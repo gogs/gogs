@@ -5,7 +5,6 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	_ "image/jpeg"
 	"os"
@@ -13,8 +12,6 @@ import (
 
 	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
-
-	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/userutil"
@@ -198,33 +195,6 @@ func DeleteInactivateUsers() (err error) {
 
 	_, err = x.Where("is_activated = ?", false).Delete(new(EmailAddress))
 	return err
-}
-
-// UserCommit represents a commit with validation of user.
-type UserCommit struct {
-	User *User
-	*git.Commit
-}
-
-// ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
-func ValidateCommitsWithEmails(oldCommits []*git.Commit) []*UserCommit {
-	emails := make(map[string]*User)
-	newCommits := make([]*UserCommit, len(oldCommits))
-	for i := range oldCommits {
-		var u *User
-		if v, ok := emails[oldCommits[i].Author.Email]; !ok {
-			u, _ = Users.GetByEmail(context.TODO(), oldCommits[i].Author.Email)
-			emails[oldCommits[i].Author.Email] = u
-		} else {
-			u = v
-		}
-
-		newCommits[i] = &UserCommit{
-			User:   u,
-			Commit: oldCommits[i],
-		}
-	}
-	return newCommits
 }
 
 // GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.

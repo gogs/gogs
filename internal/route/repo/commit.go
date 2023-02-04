@@ -61,7 +61,7 @@ func renderCommits(c *context.Context, filename string) {
 	}
 
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 
 	if page > 1 {
 		c.Data["HasPrevious"] = true
@@ -98,7 +98,7 @@ func SearchCommits(c *context.Context) {
 	}
 
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 
 	c.Data["Keyword"] = keyword
 	c.Data["Username"] = c.Repo.Owner.Name
@@ -188,6 +188,31 @@ func RawDiff(c *context.Context) {
 	}
 }
 
+type userCommit struct {
+	User *db.User
+	*git.Commit
+}
+
+// matchUsersWithCommitEmails matches existing users using commit author emails.
+func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit) []*userCommit {
+	emailToUsers := make(map[string]*db.User)
+	newCommits := make([]*userCommit, len(oldCommits))
+	for i := range oldCommits {
+		var u *db.User
+		if v, ok := emailToUsers[oldCommits[i].Author.Email]; !ok {
+			emailToUsers[oldCommits[i].Author.Email], _ = db.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
+		} else {
+			u = v
+		}
+
+		newCommits[i] = &userCommit{
+			User:   u,
+			Commit: oldCommits[i],
+		}
+	}
+	return newCommits
+}
+
 func CompareDiff(c *context.Context) {
 	c.Data["IsDiffCompare"] = true
 	userName := c.Repo.Owner.Name
@@ -218,7 +243,7 @@ func CompareDiff(c *context.Context) {
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["CommitRepoLink"] = c.Repo.RepoLink
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 	c.Data["BeforeCommitID"] = beforeCommitID
 	c.Data["AfterCommitID"] = afterCommitID
