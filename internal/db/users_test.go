@@ -100,6 +100,7 @@ func TestUsers(t *testing.T) {
 		{"GetByID", usersGetByID},
 		{"GetByUsername", usersGetByUsername},
 		{"GetByKeyID", usersGetByKeyID},
+		{"GetMailableEmailsByUsernames", usersGetMailableEmailsByUsernames},
 		{"HasForkedRepository", usersHasForkedRepository},
 		{"IsUsernameUsed", usersIsUsernameUsed},
 		{"List", usersList},
@@ -580,6 +581,22 @@ func usersGetByKeyID(t *testing.T, db *users) {
 	_, err = db.GetByKeyID(ctx, publicKey.ID+1)
 	wantErr := ErrUserNotExist{args: errutil.Args{"keyID": publicKey.ID + 1}}
 	assert.Equal(t, wantErr, err)
+}
+
+func usersGetMailableEmailsByUsernames(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := db.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+	_, err = db.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+
+	got, err := db.GetMailableEmailsByUsernames(ctx, []string{alice.Name, bob.Name, "404"})
+	require.NoError(t, err)
+	want := []string{bob.Email}
+	assert.Equal(t, want, got)
 }
 
 func usersHasForkedRepository(t *testing.T, db *users) {

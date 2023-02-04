@@ -111,7 +111,7 @@ func renderDirectory(c *context.Context, treeLink string) {
 		}
 	}
 	c.Data["LatestCommit"] = latestCommit
-	c.Data["LatestCommitUser"] = db.ValidateCommitWithEmail(latestCommit)
+	c.Data["LatestCommitUser"] = tryGetUserByEmail(c.Req.Context(), latestCommit.Author.Email)
 
 	if c.Repo.CanEnableEditor() {
 		c.Data["CanAddFile"] = true

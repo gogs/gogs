@@ -5,6 +5,7 @@
 package repo
 
 import (
+	gocontext "context"
 	"path"
 	"time"
 
@@ -110,6 +111,13 @@ func FileHistory(c *context.Context) {
 	renderCommits(c, c.Repo.TreePath)
 }
 
+// tryGetUserByEmail returns a non-nil value if the email is corresponding to an
+// existing user.
+func tryGetUserByEmail(ctx gocontext.Context, email string) *db.User {
+	user, _ := db.Users.GetByEmail(ctx, email)
+	return user
+}
+
 func Diff(c *context.Context) {
 	c.PageIs("Diff")
 	c.RequireHighlightJS()
@@ -156,7 +164,7 @@ func Diff(c *context.Context) {
 	c.Data["IsImageFile"] = commit.IsImageFile
 	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 	c.Data["Commit"] = commit
-	c.Data["Author"] = db.ValidateCommitWithEmail(commit)
+	c.Data["Author"] = tryGetUserByEmail(c.Req.Context(), commit.Author.Email)
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0

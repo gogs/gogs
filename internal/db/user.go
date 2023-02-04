@@ -200,34 +200,10 @@ func DeleteInactivateUsers() (err error) {
 	return err
 }
 
-// GetUserEmailsByNames returns a list of e-mails corresponds to names.
-func GetUserEmailsByNames(names []string) []string {
-	mails := make([]string, 0, len(names))
-	for _, name := range names {
-		u, err := Users.GetByUsername(context.TODO(), name)
-		if err != nil {
-			continue
-		}
-		if u.IsMailable() {
-			mails = append(mails, u.Email)
-		}
-	}
-	return mails
-}
-
 // UserCommit represents a commit with validation of user.
 type UserCommit struct {
 	User *User
 	*git.Commit
-}
-
-// ValidateCommitWithEmail checks if author's e-mail of commit is corresponding to a user.
-func ValidateCommitWithEmail(c *git.Commit) *User {
-	u, err := Users.GetByEmail(context.TODO(), c.Author.Email)
-	if err != nil {
-		return nil
-	}
-	return u
 }
 
 // ValidateCommitsWithEmails checks if authors' e-mails of commits are corresponding to users.
