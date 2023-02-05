@@ -1495,6 +1495,13 @@ type MockReposStore struct {
 	// CreateFunc is an instance of a mock function object controlling the
 	// behavior of the method Create.
 	CreateFunc *ReposStoreCreateFunc
+	// GetByCollaboratorIDFunc is an instance of a mock function object
+	// controlling the behavior of the method GetByCollaboratorID.
+	GetByCollaboratorIDFunc *ReposStoreGetByCollaboratorIDFunc
+	// GetByCollaboratorIDWithAccessModeFunc is an instance of a mock
+	// function object controlling the behavior of the method
+	// GetByCollaboratorIDWithAccessMode.
+	GetByCollaboratorIDWithAccessModeFunc *ReposStoreGetByCollaboratorIDWithAccessModeFunc
 	// GetByNameFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByName.
 	GetByNameFunc *ReposStoreGetByNameFunc
@@ -1509,6 +1516,16 @@ func NewMockReposStore() *MockReposStore {
 	return &MockReposStore{
 		CreateFunc: &ReposStoreCreateFunc{
 			defaultHook: func(context.Context, int64, db.CreateRepoOptions) (r0 *db.Repository, r1 error) {
+				return
+			},
+		},
+		GetByCollaboratorIDFunc: &ReposStoreGetByCollaboratorIDFunc{
+			defaultHook: func(context.Context, int64, int, string) (r0 []*db.Repository, r1 error) {
+				return
+			},
+		},
+		GetByCollaboratorIDWithAccessModeFunc: &ReposStoreGetByCollaboratorIDWithAccessModeFunc{
+			defaultHook: func(context.Context, int64) (r0 map[*db.Repository]db.AccessMode, r1 error) {
 				return
 			},
 		},
@@ -1534,6 +1551,16 @@ func NewStrictMockReposStore() *MockReposStore {
 				panic("unexpected invocation of MockReposStore.Create")
 			},
 		},
+		GetByCollaboratorIDFunc: &ReposStoreGetByCollaboratorIDFunc{
+			defaultHook: func(context.Context, int64, int, string) ([]*db.Repository, error) {
+				panic("unexpected invocation of MockReposStore.GetByCollaboratorID")
+			},
+		},
+		GetByCollaboratorIDWithAccessModeFunc: &ReposStoreGetByCollaboratorIDWithAccessModeFunc{
+			defaultHook: func(context.Context, int64) (map[*db.Repository]db.AccessMode, error) {
+				panic("unexpected invocation of MockReposStore.GetByCollaboratorIDWithAccessMode")
+			},
+		},
 		GetByNameFunc: &ReposStoreGetByNameFunc{
 			defaultHook: func(context.Context, int64, string) (*db.Repository, error) {
 				panic("unexpected invocation of MockReposStore.GetByName")
@@ -1553,6 +1580,12 @@ func NewMockReposStoreFrom(i db.ReposStore) *MockReposStore {
 	return &MockReposStore{
 		CreateFunc: &ReposStoreCreateFunc{
 			defaultHook: i.Create,
+		},
+		GetByCollaboratorIDFunc: &ReposStoreGetByCollaboratorIDFunc{
+			defaultHook: i.GetByCollaboratorID,
+		},
+		GetByCollaboratorIDWithAccessModeFunc: &ReposStoreGetByCollaboratorIDWithAccessModeFunc{
+			defaultHook: i.GetByCollaboratorIDWithAccessMode,
 		},
 		GetByNameFunc: &ReposStoreGetByNameFunc{
 			defaultHook: i.GetByName,
@@ -1670,6 +1703,234 @@ func (c ReposStoreCreateFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c ReposStoreCreateFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// ReposStoreGetByCollaboratorIDFunc describes the behavior when the
+// GetByCollaboratorID method of the parent MockReposStore instance is
+// invoked.
+type ReposStoreGetByCollaboratorIDFunc struct {
+	defaultHook func(context.Context, int64, int, string) ([]*db.Repository, error)
+	hooks       []func(context.Context, int64, int, string) ([]*db.Repository, error)
+	history     []ReposStoreGetByCollaboratorIDFuncCall
+	mutex       sync.Mutex
+}
+
+// GetByCollaboratorID delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockReposStore) GetByCollaboratorID(v0 context.Context, v1 int64, v2 int, v3 string) ([]*db.Repository, error) {
+	r0, r1 := m.GetByCollaboratorIDFunc.nextHook()(v0, v1, v2, v3)
+	m.GetByCollaboratorIDFunc.appendCall(ReposStoreGetByCollaboratorIDFuncCall{v0, v1, v2, v3, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the GetByCollaboratorID
+// method of the parent MockReposStore instance is invoked and the hook
+// queue is empty.
+func (f *ReposStoreGetByCollaboratorIDFunc) SetDefaultHook(hook func(context.Context, int64, int, string) ([]*db.Repository, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetByCollaboratorID method of the parent MockReposStore instance invokes
+// the hook at the front of the queue and discards it. After the queue is
+// empty, the default hook function is invoked for any future action.
+func (f *ReposStoreGetByCollaboratorIDFunc) PushHook(hook func(context.Context, int64, int, string) ([]*db.Repository, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreGetByCollaboratorIDFunc) SetDefaultReturn(r0 []*db.Repository, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64, int, string) ([]*db.Repository, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreGetByCollaboratorIDFunc) PushReturn(r0 []*db.Repository, r1 error) {
+	f.PushHook(func(context.Context, int64, int, string) ([]*db.Repository, error) {
+		return r0, r1
+	})
+}
+
+func (f *ReposStoreGetByCollaboratorIDFunc) nextHook() func(context.Context, int64, int, string) ([]*db.Repository, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreGetByCollaboratorIDFunc) appendCall(r0 ReposStoreGetByCollaboratorIDFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of ReposStoreGetByCollaboratorIDFuncCall
+// objects describing the invocations of this function.
+func (f *ReposStoreGetByCollaboratorIDFunc) History() []ReposStoreGetByCollaboratorIDFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreGetByCollaboratorIDFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreGetByCollaboratorIDFuncCall is an object that describes an
+// invocation of method GetByCollaboratorID on an instance of
+// MockReposStore.
+type ReposStoreGetByCollaboratorIDFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []*db.Repository
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreGetByCollaboratorIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreGetByCollaboratorIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
+// ReposStoreGetByCollaboratorIDWithAccessModeFunc describes the behavior
+// when the GetByCollaboratorIDWithAccessMode method of the parent
+// MockReposStore instance is invoked.
+type ReposStoreGetByCollaboratorIDWithAccessModeFunc struct {
+	defaultHook func(context.Context, int64) (map[*db.Repository]db.AccessMode, error)
+	hooks       []func(context.Context, int64) (map[*db.Repository]db.AccessMode, error)
+	history     []ReposStoreGetByCollaboratorIDWithAccessModeFuncCall
+	mutex       sync.Mutex
+}
+
+// GetByCollaboratorIDWithAccessMode delegates to the next hook function in
+// the queue and stores the parameter and result values of this invocation.
+func (m *MockReposStore) GetByCollaboratorIDWithAccessMode(v0 context.Context, v1 int64) (map[*db.Repository]db.AccessMode, error) {
+	r0, r1 := m.GetByCollaboratorIDWithAccessModeFunc.nextHook()(v0, v1)
+	m.GetByCollaboratorIDWithAccessModeFunc.appendCall(ReposStoreGetByCollaboratorIDWithAccessModeFuncCall{v0, v1, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the
+// GetByCollaboratorIDWithAccessMode method of the parent MockReposStore
+// instance is invoked and the hook queue is empty.
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) SetDefaultHook(hook func(context.Context, int64) (map[*db.Repository]db.AccessMode, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetByCollaboratorIDWithAccessMode method of the parent MockReposStore
+// instance invokes the hook at the front of the queue and discards it.
+// After the queue is empty, the default hook function is invoked for any
+// future action.
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) PushHook(hook func(context.Context, int64) (map[*db.Repository]db.AccessMode, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) SetDefaultReturn(r0 map[*db.Repository]db.AccessMode, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64) (map[*db.Repository]db.AccessMode, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) PushReturn(r0 map[*db.Repository]db.AccessMode, r1 error) {
+	f.PushHook(func(context.Context, int64) (map[*db.Repository]db.AccessMode, error) {
+		return r0, r1
+	})
+}
+
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) nextHook() func(context.Context, int64) (map[*db.Repository]db.AccessMode, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) appendCall(r0 ReposStoreGetByCollaboratorIDWithAccessModeFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of
+// ReposStoreGetByCollaboratorIDWithAccessModeFuncCall objects describing
+// the invocations of this function.
+func (f *ReposStoreGetByCollaboratorIDWithAccessModeFunc) History() []ReposStoreGetByCollaboratorIDWithAccessModeFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreGetByCollaboratorIDWithAccessModeFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreGetByCollaboratorIDWithAccessModeFuncCall is an object that
+// describes an invocation of method GetByCollaboratorIDWithAccessMode on an
+// instance of MockReposStore.
+type ReposStoreGetByCollaboratorIDWithAccessModeFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 map[*db.Repository]db.AccessMode
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreGetByCollaboratorIDWithAccessModeFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreGetByCollaboratorIDWithAccessModeFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
