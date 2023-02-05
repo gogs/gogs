@@ -85,7 +85,7 @@ func TestRepos(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []any{new(Repository)}
+	tables := []any{new(Repository), new(Access)}
 	db := &repos{
 		DB: dbtest.NewDB(t, "repos", tables...),
 	}
@@ -95,6 +95,8 @@ func TestRepos(t *testing.T) {
 		test func(t *testing.T, db *repos)
 	}{
 		{"Create", reposCreate},
+		{"GetByCollaboratorID", reposGetByCollaboratorID},
+		{"GetByCollaboratorIDWithAccessMode", reposGetByCollaboratorIDWithAccessMode},
 		{"GetByName", reposGetByName},
 		{"Touch", reposTouch},
 	} {
@@ -152,6 +154,64 @@ func reposCreate(t *testing.T, db *repos) {
 	repo, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
+}
+
+func reposGetByCollaboratorID(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+
+	permsStore := NewPermsStore(db.DB)
+	err = permsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
+	require.NoError(t, err)
+	err = permsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{4: AccessModeAdmin})
+	require.NoError(t, err)
+
+	t.Run("user 3 is a collaborator of repo1", func(t *testing.T) {
+		got, err := db.GetByCollaboratorID(ctx, 3, 10, "")
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, repo1.ID, got[0].ID)
+	})
+
+	t.Run("do not return directly owned repository", func(t *testing.T) {
+		got, err := db.GetByCollaboratorID(ctx, 1, 10, "")
+		require.NoError(t, err)
+		require.Len(t, got, 0)
+	})
+}
+
+func reposGetByCollaboratorIDWithAccessMode(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+	repo3, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo3"})
+	require.NoError(t, err)
+
+	permsStore := NewPermsStore(db.DB)
+	err = permsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{3: AccessModeRead})
+	require.NoError(t, err)
+	err = permsStore.SetRepoPerms(ctx, repo2.ID, map[int64]AccessMode{3: AccessModeAdmin, 4: AccessModeWrite})
+	require.NoError(t, err)
+	err = permsStore.SetRepoPerms(ctx, repo3.ID, map[int64]AccessMode{4: AccessModeWrite})
+	require.NoError(t, err)
+
+	got, err := db.GetByCollaboratorIDWithAccessMode(ctx, 3)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+
+	accessModes := make(map[int64]AccessMode)
+	for repo, mode := range got {
+		accessModes[repo.ID] = mode
+	}
+	assert.Equal(t, AccessModeRead, accessModes[repo1.ID])
+	assert.Equal(t, AccessModeAdmin, accessModes[repo2.ID])
 }
 
 func reposGetByName(t *testing.T, db *repos) {

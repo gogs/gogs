@@ -127,7 +127,7 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	LFS = &lfs{DB: db}
 	Orgs = NewOrgsStore(db)
 	OrgUsers = NewOrgUsersStore(db)
-	Perms = &perms{DB: db}
+	Perms = NewPermsStore(db)
 	Repos = NewReposStore(db)
 	TwoFactors = &twoFactors{DB: db}
 	Users = NewUsersStore(db)

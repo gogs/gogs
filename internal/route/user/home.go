@@ -125,9 +125,9 @@ func Dashboard(c *context.Context) {
 
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
-		collaborateRepos, err := c.User.GetAccessibleRepositories(conf.UI.User.RepoPagingNum)
+		collaborateRepos, err := db.Repos.GetByCollaboratorID(c.Req.Context(), c.User.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
 		if err != nil {
-			c.Error(err, "get accessible repositories")
+			c.Error(err, "get accessible repositories by collaborator")
 			return
 		} else if err = db.RepositoryList(collaborateRepos).LoadAttributes(); err != nil {
 			c.Error(err, "load attributes")
