@@ -2565,9 +2565,15 @@ type MockUsersStore struct {
 	// CreateFunc is an instance of a mock function object controlling the
 	// behavior of the method Create.
 	CreateFunc *UsersStoreCreateFunc
+	// DeleteByIDFunc is an instance of a mock function object controlling
+	// the behavior of the method DeleteByID.
+	DeleteByIDFunc *UsersStoreDeleteByIDFunc
 	// DeleteCustomAvatarFunc is an instance of a mock function object
 	// controlling the behavior of the method DeleteCustomAvatar.
 	DeleteCustomAvatarFunc *UsersStoreDeleteCustomAvatarFunc
+	// DeleteInactivatedFunc is an instance of a mock function object
+	// controlling the behavior of the method DeleteInactivated.
+	DeleteInactivatedFunc *UsersStoreDeleteInactivatedFunc
 	// GetByEmailFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByEmail.
 	GetByEmailFunc *UsersStoreGetByEmailFunc
@@ -2634,8 +2640,18 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
+		DeleteByIDFunc: &UsersStoreDeleteByIDFunc{
+			defaultHook: func(context.Context, int64, bool) (r0 error) {
+				return
+			},
+		},
 		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
 			defaultHook: func(context.Context, int64) (r0 error) {
+				return
+			},
+		},
+		DeleteInactivatedFunc: &UsersStoreDeleteInactivatedFunc{
+			defaultHook: func() (r0 error) {
 				return
 			},
 		},
@@ -2731,9 +2747,19 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.Create")
 			},
 		},
+		DeleteByIDFunc: &UsersStoreDeleteByIDFunc{
+			defaultHook: func(context.Context, int64, bool) error {
+				panic("unexpected invocation of MockUsersStore.DeleteByID")
+			},
+		},
 		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
 			defaultHook: func(context.Context, int64) error {
 				panic("unexpected invocation of MockUsersStore.DeleteCustomAvatar")
+			},
+		},
+		DeleteInactivatedFunc: &UsersStoreDeleteInactivatedFunc{
+			defaultHook: func() error {
+				panic("unexpected invocation of MockUsersStore.DeleteInactivated")
 			},
 		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
@@ -2820,8 +2846,14 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		CreateFunc: &UsersStoreCreateFunc{
 			defaultHook: i.Create,
 		},
+		DeleteByIDFunc: &UsersStoreDeleteByIDFunc{
+			defaultHook: i.DeleteByID,
+		},
 		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
 			defaultHook: i.DeleteCustomAvatar,
+		},
+		DeleteInactivatedFunc: &UsersStoreDeleteInactivatedFunc{
+			defaultHook: i.DeleteInactivated,
 		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
 			defaultHook: i.GetByEmail,
@@ -3301,6 +3333,114 @@ func (c UsersStoreCreateFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
+// UsersStoreDeleteByIDFunc describes the behavior when the DeleteByID
+// method of the parent MockUsersStore instance is invoked.
+type UsersStoreDeleteByIDFunc struct {
+	defaultHook func(context.Context, int64, bool) error
+	hooks       []func(context.Context, int64, bool) error
+	history     []UsersStoreDeleteByIDFuncCall
+	mutex       sync.Mutex
+}
+
+// DeleteByID delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockUsersStore) DeleteByID(v0 context.Context, v1 int64, v2 bool) error {
+	r0 := m.DeleteByIDFunc.nextHook()(v0, v1, v2)
+	m.DeleteByIDFunc.appendCall(UsersStoreDeleteByIDFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the DeleteByID method of
+// the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreDeleteByIDFunc) SetDefaultHook(hook func(context.Context, int64, bool) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// DeleteByID method of the parent MockUsersStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreDeleteByIDFunc) PushHook(hook func(context.Context, int64, bool) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreDeleteByIDFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, bool) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreDeleteByIDFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, bool) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreDeleteByIDFunc) nextHook() func(context.Context, int64, bool) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreDeleteByIDFunc) appendCall(r0 UsersStoreDeleteByIDFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreDeleteByIDFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreDeleteByIDFunc) History() []UsersStoreDeleteByIDFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreDeleteByIDFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreDeleteByIDFuncCall is an object that describes an invocation of
+// method DeleteByID on an instance of MockUsersStore.
+type UsersStoreDeleteByIDFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 bool
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreDeleteByIDFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreDeleteByIDFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
 // UsersStoreDeleteCustomAvatarFunc describes the behavior when the
 // DeleteCustomAvatar method of the parent MockUsersStore instance is
 // invoked.
@@ -3404,6 +3544,106 @@ func (c UsersStoreDeleteCustomAvatarFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c UsersStoreDeleteCustomAvatarFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// UsersStoreDeleteInactivatedFunc describes the behavior when the
+// DeleteInactivated method of the parent MockUsersStore instance is
+// invoked.
+type UsersStoreDeleteInactivatedFunc struct {
+	defaultHook func() error
+	hooks       []func() error
+	history     []UsersStoreDeleteInactivatedFuncCall
+	mutex       sync.Mutex
+}
+
+// DeleteInactivated delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockUsersStore) DeleteInactivated() error {
+	r0 := m.DeleteInactivatedFunc.nextHook()()
+	m.DeleteInactivatedFunc.appendCall(UsersStoreDeleteInactivatedFuncCall{r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the DeleteInactivated
+// method of the parent MockUsersStore instance is invoked and the hook
+// queue is empty.
+func (f *UsersStoreDeleteInactivatedFunc) SetDefaultHook(hook func() error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// DeleteInactivated method of the parent MockUsersStore instance invokes
+// the hook at the front of the queue and discards it. After the queue is
+// empty, the default hook function is invoked for any future action.
+func (f *UsersStoreDeleteInactivatedFunc) PushHook(hook func() error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreDeleteInactivatedFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func() error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreDeleteInactivatedFunc) PushReturn(r0 error) {
+	f.PushHook(func() error {
+		return r0
+	})
+}
+
+func (f *UsersStoreDeleteInactivatedFunc) nextHook() func() error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreDeleteInactivatedFunc) appendCall(r0 UsersStoreDeleteInactivatedFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreDeleteInactivatedFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreDeleteInactivatedFunc) History() []UsersStoreDeleteInactivatedFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreDeleteInactivatedFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreDeleteInactivatedFuncCall is an object that describes an
+// invocation of method DeleteInactivated on an instance of MockUsersStore.
+type UsersStoreDeleteInactivatedFuncCall struct {
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreDeleteInactivatedFuncCall) Args() []interface{} {
+	return []interface{}{}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreDeleteInactivatedFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 
