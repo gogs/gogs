@@ -26,36 +26,36 @@ var ErrMissingIssueNumber = errors.New("No issue number specified")
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
-	ID              int64
-	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
-	Repo            *Repository `xorm:"-" json:"-"`
-	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
-	PosterID        int64
-	Poster          *User    `xorm:"-" json:"-"`
-	Title           string   `xorm:"name"`
-	Content         string   `xorm:"TEXT"`
-	RenderedContent string   `xorm:"-" json:"-"`
-	Labels          []*Label `xorm:"-" json:"-"`
-	MilestoneID     int64
-	Milestone       *Milestone `xorm:"-" json:"-"`
+	ID              int64       `gorm:"primaryKey"`
+	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)" gorm:"index;uniqueIndex:issue_repo_index_unique;not null"`
+	Repo            *Repository `xorm:"-" json:"-" gorm:"-"`
+	Index           int64       `xorm:"UNIQUE(repo_index)" gorm:"uniqueIndex:issue_repo_index_unique;not null"` // Index in one repository.
+	PosterID        int64       `gorm:"index"`
+	Poster          *User       `xorm:"-" json:"-" gorm:"-"`
+	Title           string      `xorm:"name" gorm:"name"`
+	Content         string      `xorm:"TEXT" gorm:"type:TEXT"`
+	RenderedContent string      `xorm:"-" json:"-" gorm:"-"`
+	Labels          []*Label    `xorm:"-" json:"-" gorm:"-"`
+	MilestoneID     int64       `gorm:"index"`
+	Milestone       *Milestone  `xorm:"-" json:"-" gorm:"-"`
 	Priority        int
-	AssigneeID      int64
-	Assignee        *User `xorm:"-" json:"-"`
+	AssigneeID      int64 `gorm:"index"`
+	Assignee        *User `xorm:"-" json:"-" gorm:"-"`
 	IsClosed        bool
-	IsRead          bool         `xorm:"-" json:"-"`
+	IsRead          bool         `xorm:"-" json:"-" gorm:"-"`
 	IsPull          bool         // Indicates whether is a pull request or not.
-	PullRequest     *PullRequest `xorm:"-" json:"-"`
+	PullRequest     *PullRequest `xorm:"-" json:"-" gorm:"-"`
 	NumComments     int
 
-	Deadline     time.Time `xorm:"-" json:"-"`
+	Deadline     time.Time `xorm:"-" json:"-" gorm:"-"`
 	DeadlineUnix int64
-	Created      time.Time `xorm:"-" json:"-"`
+	Created      time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix  int64
-	Updated      time.Time `xorm:"-" json:"-"`
+	Updated      time.Time `xorm:"-" json:"-" gorm:"-"`
 	UpdatedUnix  int64
 
-	Attachments []*Attachment `xorm:"-" json:"-"`
-	Comments    []*Comment    `xorm:"-" json:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
+	Comments    []*Comment    `xorm:"-" json:"-" gorm:"-"`
 }
 
 func (issue *Issue) BeforeInsert() {

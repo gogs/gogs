@@ -129,7 +129,7 @@ func DeleteUser(c *context.APIContext) {
 		return
 	}
 
-	if err := db.DeleteUser(u); err != nil {
+	if err := db.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
 		if db.IsErrUserOwnRepos(err) ||
 			db.IsErrUserHasOrgs(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)

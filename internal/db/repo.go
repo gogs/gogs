@@ -1839,15 +1839,6 @@ func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	return append(repos, ownRepos...), nil
 }
 
-func getRepositoryCount(_ Engine, u *User) (int64, error) {
-	return x.Count(&Repository{OwnerID: u.ID})
-}
-
-// GetRepositoryCount returns the total number of repositories of user.
-func GetRepositoryCount(u *User) (int64, error) {
-	return getRepositoryCount(x, u)
-}
-
 type SearchRepoOptions struct {
 	Keyword  string
 	OwnerID  int64
