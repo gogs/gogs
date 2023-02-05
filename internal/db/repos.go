@@ -26,6 +26,16 @@ type ReposStore interface {
 	// ErrRepoAlreadyExist when a repository with same name already exists for the
 	// owner.
 	Create(ctx context.Context, ownerID int64, opts CreateRepoOptions) (*Repository, error)
+	// GetByCollaboratorID returns a list of repositories that the given
+	// collaborator has access to. Results are limited to the given limit and sorted
+	// by the given order (e.g. "updated_unix DESC"). Repositories that are owned
+	// directly by the given collaborator are not included.
+	GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error)
+	// GetByCollaboratorIDWithAccessMode returns a list of repositories and
+	// corresponding access mode that the given collaborator has access to.
+	// Repositories that are owned directly by the given collaborator are not
+	// included.
+	GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error)
 	// GetByName returns the repository with given owner and name. It returns
 	// ErrRepoNotExist when not found.
 	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
@@ -168,6 +178,59 @@ func (db *repos) Create(ctx context.Context, ownerID int64, opts CreateRepoOptio
 		ForkID:        opts.ForkID,
 	}
 	return repo, db.WithContext(ctx).Create(repo).Error
+}
+
+func (db *repos) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM repository
+		JOIN access ON access.repo_id = repository.id AND access.user_id = @collaboratorID
+		WHERE access.mode >= @accessModeRead
+		ORDER BY @orderBy
+		LIMIT @limit
+	*/
+	var repos []*Repository
+	return repos, db.WithContext(ctx).
+		Joins("JOIN access ON access.repo_id = repository.id AND access.user_id = ?", collaboratorID).
+		Where("access.mode >= ?", AccessModeRead).
+		Order(orderBy).
+		Limit(limit).
+		Find(&repos).
+		Error
+}
+
+func (db *repos) GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT
+			repository.*,
+			access.mode
+		FROM repository
+		JOIN access ON access.repo_id = repository.id AND access.user_id = @collaboratorID
+		WHERE access.mode >= @accessModeRead
+	*/
+	var reposWithAccessMode []*struct {
+		*Repository
+		Mode AccessMode
+	}
+	err := db.WithContext(ctx).
+		Select("repository.*", "access.mode").
+		Table("repository").
+		Joins("JOIN access ON access.repo_id = repository.id AND access.user_id = ?", collaboratorID).
+		Where("access.mode >= ?", AccessModeRead).
+		Find(&reposWithAccessMode).
+		Error
+	if err != nil {
+		return nil, err
+	}
+
+	repos := make(map[*Repository]AccessMode, len(reposWithAccessMode))
+	for _, repoWithAccessMode := range reposWithAccessMode {
+		repos[repoWithAccessMode.Repository] = repoWithAccessMode.Mode
+	}
+	return repos, nil
 }
 
 var _ errutil.NotFound = (*ErrRepoNotExist)(nil)

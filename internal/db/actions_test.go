@@ -720,6 +720,10 @@ func actionsNewRepo(t *testing.T, db *actions) {
 func actionsPushTag(t *testing.T, db *actions) {
 	ctx := context.Background()
 
+	// NOTE: We set a noop mock here to avoid data race with other tests that writes
+	// to the mock server because this function holds a lock.
+	conf.SetMockServer(t, conf.ServerOpts{})
+
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo, err := NewReposStore(db.DB).Create(ctx,

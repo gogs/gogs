@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	log "unknwon.dev/clog/v2"
 	"xorm.io/xorm"
 
 	"gogs.io/gogs/internal/repoutil"
@@ -195,42 +194,4 @@ func DeleteInactivateUsers() (err error) {
 
 	_, err = x.Where("is_activated = ?", false).Delete(new(EmailAddress))
 	return err
-}
-
-// GetRepositoryAccesses finds all repositories with their access mode where a user has access but does not own.
-func (u *User) GetRepositoryAccesses() (map[*Repository]AccessMode, error) {
-	accesses := make([]*Access, 0, 10)
-	if err := x.Find(&accesses, &Access{UserID: u.ID}); err != nil {
-		return nil, err
-	}
-
-	repos := make(map[*Repository]AccessMode, len(accesses))
-	for _, access := range accesses {
-		repo, err := GetRepositoryByID(access.RepoID)
-		if err != nil {
-			if IsErrRepoNotExist(err) {
-				log.Error("Failed to get repository by ID: %v", err)
-				continue
-			}
-			return nil, err
-		}
-		if repo.OwnerID == u.ID {
-			continue
-		}
-		repos[repo] = access.Mode
-	}
-	return repos, nil
-}
-
-// GetAccessibleRepositories finds repositories which the user has access but does not own.
-// If limit is smaller than 1 means returns all found results.
-func (user *User) GetAccessibleRepositories(limit int) (repos []*Repository, _ error) {
-	sess := x.Where("owner_id !=? ", user.ID).Desc("updated_unix")
-	if limit > 0 {
-		sess.Limit(limit)
-		repos = make([]*Repository, 0, limit)
-	} else {
-		repos = make([]*Repository, 0, 10)
-	}
-	return repos, sess.Join("INNER", "access", "access.user_id = ? AND access.repo_id = repository.id", user.ID).Find(&repos)
 }

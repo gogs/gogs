@@ -82,6 +82,12 @@ type perms struct {
 	*gorm.DB
 }
 
+// NewPermsStore returns a persistent interface for permissions with given
+// database connection.
+func NewPermsStore(db *gorm.DB) PermsStore {
+	return &perms{DB: db}
+}
+
 type AccessModeOptions struct {
 	OwnerID int64 // The ID of the repository owner.
 	Private bool  // Whether the repository is private.

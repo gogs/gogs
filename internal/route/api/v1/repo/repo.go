@@ -116,26 +116,26 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
-	accessibleRepos, err := user.GetRepositoryAccesses()
+	accessibleRepos, err := db.Repos.GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
 	if err != nil {
-		c.Error(err, "get repositories accesses")
+		c.Error(err, "get repositories accesses by collaborator")
 		return
 	}
 
 	numOwnRepos := len(ownRepos)
-	repos := make([]*api.Repository, numOwnRepos+len(accessibleRepos))
-	for i := range ownRepos {
-		repos[i] = ownRepos[i].APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true})
+	repos := make([]*api.Repository, 0, numOwnRepos+len(accessibleRepos))
+	for _, r := range ownRepos {
+		repos = append(repos, r.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
 	}
 
-	i := numOwnRepos
 	for repo, access := range accessibleRepos {
-		repos[i] = repo.APIFormatLegacy(&api.Permission{
-			Admin: access >= db.AccessModeAdmin,
-			Push:  access >= db.AccessModeWrite,
-			Pull:  true,
-		})
-		i++
+		repos = append(repos,
+			repo.APIFormatLegacy(&api.Permission{
+				Admin: access >= db.AccessModeAdmin,
+				Push:  access >= db.AccessModeWrite,
+				Pull:  true,
+			}),
+		)
 	}
 
 	c.JSONSuccess(&repos)
