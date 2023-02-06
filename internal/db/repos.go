@@ -11,6 +11,7 @@ import (
 	"time"
 
 	api "github.com/gogs/go-gogs-client"
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errutil"
@@ -36,6 +37,9 @@ type ReposStore interface {
 	// Repositories that are owned directly by the given collaborator are not
 	// included.
 	GetByCollaboratorIDWithAccessMode(ctx context.Context, collaboratorID int64) (map[*Repository]AccessMode, error)
+	// GetByID returns the repository with given ID. It returns ErrRepoNotExist when
+	// not found.
+	GetByID(ctx context.Context, id int64) (*Repository, error)
 	// GetByName returns the repository with given owner and name. It returns
 	// ErrRepoNotExist when not found.
 	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
@@ -177,7 +181,18 @@ func (db *repos) Create(ctx context.Context, ownerID int64, opts CreateRepoOptio
 		IsFork:        opts.Fork,
 		ForkID:        opts.ForkID,
 	}
-	return repo, db.WithContext(ctx).Create(repo).Error
+	return repo, db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err = tx.Create(repo).Error
+		if err != nil {
+			return errors.Wrap(err, "create")
+		}
+
+		err = NewWatchesStore(tx).Watch(ctx, ownerID, repo.ID)
+		if err != nil {
+			return errors.Wrap(err, "watch")
+		}
+		return nil
+	})
 }
 
 func (db *repos) GetByCollaboratorID(ctx context.Context, collaboratorID int64, limit int, orderBy string) ([]*Repository, error) {
@@ -250,6 +265,18 @@ func (err ErrRepoNotExist) Error() string {
 
 func (ErrRepoNotExist) NotFound() bool {
 	return true
+}
+
+func (db *repos) GetByID(ctx context.Context, id int64) (*Repository, error) {
+	repo := new(Repository)
+	err := db.WithContext(ctx).Where("id = ?", id).First(repo).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrRepoNotExist{errutil.Args{"repoID": id}}
+		}
+		return nil, err
+	}
+	return repo, nil
 }
 
 func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error) {

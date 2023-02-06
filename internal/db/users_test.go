@@ -82,7 +82,7 @@ func TestUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []any{new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey)}
+	tables := []any{new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey), new(OrgUser), new(Watch)}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
 	}
@@ -96,6 +96,8 @@ func TestUsers(t *testing.T) {
 		{"Count", usersCount},
 		{"Create", usersCreate},
 		{"DeleteCustomAvatar", usersDeleteCustomAvatar},
+		{"DeleteByID", usersDeleteByID},
+		{"DeleteInactivated", usersDeleteInactivated},
 		{"GetByEmail", usersGetByEmail},
 		{"GetByID", usersGetByID},
 		{"GetByUsername", usersGetByUsername},
@@ -461,6 +463,66 @@ func usersDeleteCustomAvatar(t *testing.T, db *users) {
 	alice, err = db.GetByID(ctx, alice.ID)
 	require.NoError(t, err)
 	assert.False(t, alice.UseCustomAvatar)
+}
+
+func usersDeleteByID(t *testing.T, db *users) {
+	ctx := context.Background()
+	reposStore := NewReposStore(db.DB)
+
+	t.Run("user still has repository ownership", func(t *testing.T) {
+		alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+		require.NoError(t, err)
+
+		_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
+		require.NoError(t, err)
+
+		err = db.DeleteByID(ctx, alice.ID, false)
+		wantErr := ErrUserOwnRepos{errutil.Args{"userID": alice.ID}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	t.Run("user still has organization membership", func(t *testing.T) {
+		bob, err := db.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+		require.NoError(t, err)
+
+		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
+		org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
+		require.NoError(t, err)
+		err = db.Exec(
+			dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
+			UserTypeOrganization, org1.ID,
+		).Error
+		require.NoError(t, err)
+
+		// TODO: Use OrgUsers.Join to replace SQL hack when the method is available.
+		err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
+		require.NoError(t, err)
+
+		err = db.DeleteByID(ctx, bob.ID, false)
+		wantErr := ErrUserHasOrgs{errutil.Args{"userID": bob.ID}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	// Set up watches
+	cindy, err := db.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	repo2, err := reposStore.Create(ctx, cindy.ID, CreateRepoOptions{Name: "repo2"})
+	require.NoError(t, err)
+
+	david, err := db.Create(ctx, "david", "david@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	err = NewWatchesStore(db.DB).Watch(ctx, david.ID, repo2.ID)
+	require.NoError(t, err)
+	repo2, err = reposStore.GetByID(ctx, repo2.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, repo2.NumWatches) // Verify mock data
+
+	// Set up stars
+	// todo
+}
+
+func usersDeleteInactivated(t *testing.T, db *users) {
+	// todo
 }
 
 func usersGetByEmail(t *testing.T, db *users) {

@@ -85,7 +85,7 @@ func TestRepos(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []any{new(Repository), new(Access)}
+	tables := []any{new(Repository), new(Access), new(Watch)}
 	db := &repos{
 		DB: dbtest.NewDB(t, "repos", tables...),
 	}
@@ -97,6 +97,7 @@ func TestRepos(t *testing.T) {
 		{"Create", reposCreate},
 		{"GetByCollaboratorID", reposGetByCollaboratorID},
 		{"GetByCollaboratorIDWithAccessMode", reposGetByCollaboratorIDWithAccessMode},
+		{"GetByID", reposGetByID},
 		{"GetByName", reposGetByName},
 		{"Touch", reposTouch},
 	} {
@@ -154,6 +155,7 @@ func reposCreate(t *testing.T, db *repos) {
 	repo, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), repo.Created.UTC().Format(time.RFC3339))
+	assert.Equal(t, 1, repo.NumWatches) // The owner is watching the repo by default.
 }
 
 func reposGetByCollaboratorID(t *testing.T, db *repos) {
@@ -212,6 +214,21 @@ func reposGetByCollaboratorIDWithAccessMode(t *testing.T, db *repos) {
 	}
 	assert.Equal(t, AccessModeRead, accessModes[repo1.ID])
 	assert.Equal(t, AccessModeAdmin, accessModes[repo2.ID])
+}
+
+func reposGetByID(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+
+	got, err := db.GetByID(ctx, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, repo1.Name, got.Name)
+
+	_, err = db.GetByID(ctx, 404)
+	wantErr := ErrRepoNotExist{args: errutil.Args{"repoID": int64(404)}}
+	assert.Equal(t, wantErr, err)
 }
 
 func reposGetByName(t *testing.T, db *repos) {

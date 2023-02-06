@@ -2353,6 +2353,8 @@ func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
 }
 
 // Watch or unwatch repository.
+//
+// Deprecated: Use Watches.Watch instead.
 func WatchRepo(userID, repoID int64, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
