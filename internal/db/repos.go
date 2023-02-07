@@ -43,6 +43,8 @@ type ReposStore interface {
 	// GetByName returns the repository with given owner and name. It returns
 	// ErrRepoNotExist when not found.
 	GetByName(ctx context.Context, ownerID int64, name string) (*Repository, error)
+	// Star marks the user to star the repository.
+	Star(ctx context.Context, userID, repoID int64) error
 	// Touch updates the updated time to the current time and removes the bare state
 	// of the given repository.
 	Touch(ctx context.Context, id int64) error
@@ -297,6 +299,66 @@ func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Re
 		return nil, err
 	}
 	return repo, nil
+}
+
+func (db *repos) recountStars(tx *gorm.DB, userID, repoID int64) error {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		UPDATE repository
+		SET num_stars = (
+			SELECT COUNT(*) FROM star WHERE repo_id = @repoID
+		)
+		WHERE id = @repoID
+	*/
+	err := tx.Model(&Repository{}).
+		Where("id = ?", repoID).
+		Update(
+			"num_stars",
+			tx.Model(&Star{}).Select("COUNT(*)").Where("repo_id = ?", repoID),
+		).
+		Error
+	if err != nil {
+		return errors.Wrap(err, `update "repository.num_stars"`)
+	}
+
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		UPDATE "user"
+		SET num_stars = (
+			SELECT COUNT(*) FROM star WHERE uid = @userID
+		)
+		WHERE id = @userID
+	*/
+	err = tx.Model(&User{}).
+		Where("id = ?", userID).
+		Update(
+			"num_stars",
+			tx.Model(&Star{}).Select("COUNT(*)").Where("uid = ?", userID),
+		).
+		Error
+	if err != nil {
+		return errors.Wrap(err, `update "user.num_stars"`)
+	}
+	return nil
+}
+
+func (db *repos) Star(ctx context.Context, userID, repoID int64) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		s := &Star{
+			UserID: userID,
+			RepoID: repoID,
+		}
+		result := tx.FirstOrCreate(s, s)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, "upsert")
+		} else if result.RowsAffected <= 0 {
+			return nil // Relation already exists
+		}
+
+		return db.recountStars(tx, userID, repoID)
+	})
 }
 
 func (db *repos) Touch(ctx context.Context, id int64) error {

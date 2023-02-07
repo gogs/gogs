@@ -1036,10 +1036,10 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
-	ID          int64
-	UID         int64 `xorm:"INDEX"` // User ID.
+	ID          int64 `gorm:"primary_key"`
+	UserID      int64 `xorm:"uid INDEX" gorm:"column:uid;index"`
 	IssueID     int64
-	RepoID      int64 `xorm:"INDEX"`
+	RepoID      int64 `xorm:"INDEX" gorm:"index"`
 	MilestoneID int64
 	IsRead      bool
 	IsAssigned  bool
@@ -1065,7 +1065,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 		issueUsers = append(issueUsers, &IssueUser{
 			IssueID:    issue.ID,
 			RepoID:     repo.ID,
-			UID:        assignee.ID,
+			UserID:     assignee.ID,
 			IsPoster:   isPoster,
 			IsAssigned: assignee.ID == issue.AssigneeID,
 		})
@@ -1077,7 +1077,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 		issueUsers = append(issueUsers, &IssueUser{
 			IssueID:  issue.ID,
 			RepoID:   repo.ID,
-			UID:      issue.PosterID,
+			UserID:   issue.PosterID,
 			IsPoster: true,
 		})
 	}
@@ -1107,7 +1107,7 @@ func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 	for i := range ius {
 		if ius[i].IssueID == issueId &&
-			ius[i].UID == uid {
+			ius[i].UserID == uid {
 			return i
 		}
 	}
@@ -1117,7 +1117,7 @@ func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 // GetIssueUsers returns issue-user pairs by given repository and user.
 func GetIssueUsers(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
-	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UID: uid})
+	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UserID: uid})
 	return ius, err
 }
 
@@ -1442,7 +1442,7 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 func updateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
 	for _, uid := range uids {
 		iu := &IssueUser{
-			UID:     uid,
+			UserID:  uid,
 			IssueID: issueID,
 		}
 		has, err := e.Get(iu)

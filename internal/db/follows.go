@@ -55,7 +55,7 @@ func (*follows) updateFollowingCount(tx *gorm.DB, userID, followID int64) error 
 		).
 		Error
 	if err != nil {
-		return errors.Wrap(err, `update "num_followers"`)
+		return errors.Wrap(err, `update "user.num_followers"`)
 	}
 
 	/*
@@ -75,7 +75,7 @@ func (*follows) updateFollowingCount(tx *gorm.DB, userID, followID int64) error 
 		).
 		Error
 	if err != nil {
-		return errors.Wrap(err, `update "num_following"`)
+		return errors.Wrap(err, `update "user.num_following"`)
 	}
 	return nil
 }

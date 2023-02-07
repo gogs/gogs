@@ -85,7 +85,7 @@ func TestRepos(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []any{new(Repository), new(Access), new(Watch)}
+	tables := []any{new(Repository), new(Access), new(Watch), new(User), new(EmailAddress), new(Star)}
 	db := &repos{
 		DB: dbtest.NewDB(t, "repos", tables...),
 	}
@@ -99,6 +99,7 @@ func TestRepos(t *testing.T) {
 		{"GetByCollaboratorIDWithAccessMode", reposGetByCollaboratorIDWithAccessMode},
 		{"GetByID", reposGetByID},
 		{"GetByName", reposGetByName},
+		{"Star", reposStar},
 		{"Touch", reposTouch},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -247,6 +248,27 @@ func reposGetByName(t *testing.T, db *repos) {
 	_, err = db.GetByName(ctx, 1, "bad_name")
 	wantErr := ErrRepoNotExist{args: errutil.Args{"ownerID": int64(1), "name": "bad_name"}}
 	assert.Equal(t, wantErr, err)
+}
+
+func reposStar(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	err = db.Star(ctx, alice.ID, repo1.ID)
+	require.NoError(t, err)
+
+	repo1, err = db.GetByID(ctx, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, repo1.NumStars)
+
+	alice, err = usersStore.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, alice.NumStars)
 }
 
 func reposTouch(t *testing.T, db *repos) {

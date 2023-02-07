@@ -82,7 +82,11 @@ func TestUsers(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []any{new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey), new(OrgUser), new(Watch)}
+	tables := []any{
+		new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey), new(OrgUser),
+		new(Watch), new(Star), new(Issue), new(AccessToken), new(Collaboration), new(Action), new(IssueUser),
+		new(Access),
+	}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
 	}
@@ -494,7 +498,7 @@ func usersDeleteByID(t *testing.T, db *users) {
 		).Error
 		require.NoError(t, err)
 
-		// TODO: Use OrgUsers.Join to replace SQL hack when the method is available.
+		// TODO: Use Orgs.Join to replace SQL hack when the method is available.
 		err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
 		require.NoError(t, err)
 
@@ -503,22 +507,112 @@ func usersDeleteByID(t *testing.T, db *users) {
 		assert.Equal(t, wantErr, err)
 	})
 
-	// Set up watches
 	cindy, err := db.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	frank, err := db.Create(ctx, "frank", "frank@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 	repo2, err := reposStore.Create(ctx, cindy.ID, CreateRepoOptions{Name: "repo2"})
 	require.NoError(t, err)
 
-	david, err := db.Create(ctx, "david", "david@exmaple.com", CreateUserOptions{})
+	testUser, err := db.Create(ctx, "testUser", "testUser@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = NewWatchesStore(db.DB).Watch(ctx, david.ID, repo2.ID)
+	err = NewWatchesStore(db.DB).Watch(ctx, testUser.ID, repo2.ID) // Set up watches
 	require.NoError(t, err)
+	err = reposStore.Star(ctx, testUser.ID, repo2.ID) // Set up stars
+	require.NoError(t, err)
+	followsStore := NewFollowsStore(db.DB)
+	err = followsStore.Follow(ctx, testUser.ID, cindy.ID) // Set up follows
+	require.NoError(t, err)
+	err = followsStore.Follow(ctx, frank.ID, testUser.ID)
+	require.NoError(t, err)
+
+	// Set up issue assignee
+	// TODO: Use Issues.Assign to replace SQL hack when the method is available.
+	issue1 := &Issue{
+		RepoID:     repo2.ID,
+		Index:      1,
+		PosterID:   cindy.ID,
+		Title:      "test-issue-1",
+		AssigneeID: testUser.ID,
+	}
+	err = db.DB.Create(issue1).Error
+	require.NoError(t, err)
+
+	// Set up random entries in related tables
+	for _, table := range []any{
+		&AccessToken{UserID: testUser.ID},
+		&Collaboration{UserID: testUser.ID},
+		&Access{UserID: testUser.ID},
+		&Action{UserID: testUser.ID},
+		&IssueUser{UserID: testUser.ID},
+		&EmailAddress{UserID: testUser.ID},
+	} {
+		err = db.DB.Create(table).Error
+		require.NoError(t, err, "table for %T", table)
+	}
+
+	// todo: delete user dir, delete user avatar, RewriteAuthorizedKeys
+
+	// Verify mock data
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
 	require.NoError(t, err)
-	assert.Equal(t, 2, repo2.NumWatches) // Verify mock data
+	assert.Equal(t, 2, repo2.NumWatches) // The owner is watching the repo by default.
+	assert.Equal(t, 1, repo2.NumStars)
 
-	// Set up stars
-	// todo
+	cindy, err = db.GetByID(ctx, cindy.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, cindy.NumFollowers)
+	frank, err = db.GetByID(ctx, frank.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, frank.NumFollowing)
+
+	// TODO: Use Issues.GetByID to replace SQL hack when the method is available.
+	err = db.DB.First(issue1, issue1.ID).Error
+	require.NoError(t, err)
+	assert.Equal(t, testUser.ID, issue1.AssigneeID)
+
+	err = db.DeleteByID(ctx, testUser.ID, false)
+	require.NoError(t, err)
+
+	// Verify after-the-fact data
+	repo2, err = reposStore.GetByID(ctx, repo2.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, repo2.NumWatches) // The owner is watching the repo by default.
+	assert.Equal(t, 0, repo2.NumStars)
+
+	cindy, err = db.GetByID(ctx, cindy.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, cindy.NumFollowers)
+	frank, err = db.GetByID(ctx, frank.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, frank.NumFollowing)
+
+	// TODO: Use Issues.GetByID to replace SQL hack when the method is available.
+	err = db.DB.First(issue1, issue1.ID).Error
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), issue1.AssigneeID)
+
+	for _, table := range []any{
+		&Watch{UserID: testUser.ID},
+		&Star{UserID: testUser.ID},
+		&Follow{UserID: testUser.ID},
+		&PublicKey{OwnerID: testUser.ID},
+		&AccessToken{UserID: testUser.ID},
+		&Collaboration{UserID: testUser.ID},
+		&Access{UserID: testUser.ID},
+		&Action{UserID: testUser.ID},
+		&IssueUser{UserID: testUser.ID},
+		&EmailAddress{UserID: testUser.ID},
+	} {
+		var count int64
+		err = db.DB.Model(table).Where(table).Count(&count).Error
+		require.NoError(t, err, "table for %T", table)
+		assert.Equal(t, int64(0), count, "table for %T", table)
+	}
+
+	_, err = db.GetByID(ctx, testUser.ID)
+	wantErr := ErrUserNotExist{errutil.Args{"userID": testUser.ID}}
+	assert.Equal(t, wantErr, err)
 }
 
 func usersDeleteInactivated(t *testing.T, db *users) {

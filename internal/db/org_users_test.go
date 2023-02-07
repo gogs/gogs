@@ -47,7 +47,7 @@ func TestOrgUsers(t *testing.T) {
 func orgUsersCountByUser(t *testing.T, db *orgUsers) {
 	ctx := context.Background()
 
-	// TODO: Use OrgUsers.Join to replace SQL hack when the method is available.
+	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
 	err := db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
 	require.NoError(t, err)
 	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 2, 1).Error
