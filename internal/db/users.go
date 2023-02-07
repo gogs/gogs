@@ -643,7 +643,11 @@ func (db *users) DeleteInactivated() error {
 			return errors.Wrapf(err, "delete user with ID %d", userID)
 		}
 	}
-	return RewriteAuthorizedKeys()
+	err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+	if err != nil {
+		return errors.Wrap(err, `rewrite "authorized_keys" file`)
+	}
+	return nil
 }
 
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)

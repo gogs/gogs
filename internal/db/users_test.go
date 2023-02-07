@@ -682,7 +682,51 @@ func usersDeleteByID(t *testing.T, db *users) {
 }
 
 func usersDeleteInactivated(t *testing.T, db *users) {
-	// todo
+	ctx := context.Background()
+
+	// User with repository ownership should be skipped
+	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	reposStore := NewReposStore(db.DB)
+	_, err = reposStore.Create(ctx, alice.ID, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+
+	// User with organization membership should be skipped
+	bob, err := db.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
+	org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	err = db.Exec(
+		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
+		UserTypeOrganization, org1.ID,
+	).Error
+	require.NoError(t, err)
+	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
+	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
+	require.NoError(t, err)
+
+	// User activated state should be skipped
+	_, err = db.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{Activated: true})
+	require.NoError(t, err)
+
+	// User meant to be deleted
+	david, err := db.Create(ctx, "david", "david@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteInactivated-tempSSHRootPath")
+	conf.SetMockSSH(t, conf.SSHOpts{RootPath: tempSSHRootPath})
+
+	err = db.DeleteInactivated()
+	require.NoError(t, err)
+
+	_, err = db.GetByID(ctx, david.ID)
+	wantErr := ErrUserNotExist{errutil.Args{"userID": david.ID}}
+	assert.Equal(t, wantErr, err)
+
+	users, err := db.List(ctx, 1, 10)
+	require.NoError(t, err)
+	require.Len(t, users, 3)
 }
 
 func usersGetByEmail(t *testing.T, db *users) {

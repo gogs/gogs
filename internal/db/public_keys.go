@@ -56,7 +56,10 @@ func (db *publicKeys) RewriteAuthorizedKeys() error {
 	if err != nil {
 		return errors.Wrap(err, "create temporary file")
 	}
-	defer func() { _ = os.Remove(tempPath) }()
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(tempPath)
+	}()
 
 	// NOTE: More recently updated keys are more likely to be used more frequently,
 	// putting them in the earlier lines could speed up the key lookup by SSHD.
@@ -82,6 +85,10 @@ func (db *publicKeys) RewriteAuthorizedKeys() error {
 		return errors.Wrap(err, "check rows.Err")
 	}
 
+	err = f.Close()
+	if err != nil {
+		return errors.Wrap(err, "close temporary file")
+	}
 	if osutil.IsExist(fpath) {
 		err = os.Remove(fpath)
 		if err != nil {
