@@ -111,16 +111,16 @@ func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, after
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
-		Where("repo_id IN (?)",
-			db.Select("repository.id").
-				Table("repository").
-				Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
-				Where("team_repo.team_id IN (?)",
-					db.Select("team_id").
-						Table("team_user").
-						Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
-				).
-				Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
+		Where("repo_id IN (?)", db.
+			Select("repository.id").
+			Table("repository").
+			Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
+			Where("team_repo.team_id IN (?)", db.
+				Select("team_id").
+				Table("team_user").
+				Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
+			).
+			Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
 		).
 		Limit(conf.UI.User.NewsFeedPagingNum).
 		Order("id DESC")

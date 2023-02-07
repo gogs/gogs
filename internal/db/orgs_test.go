@@ -66,7 +66,7 @@ func orgsList(t *testing.T, db *orgs) {
 	).Error
 	require.NoError(t, err)
 
-	// TODO: Use OrgUsers.Join to replace SQL hack when the method is available.
+	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
 	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org1.ID, false).Error
 	require.NoError(t, err)
 	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org2.ID, true).Error

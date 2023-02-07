@@ -204,9 +204,20 @@ func Organizations(page, pageSize int) ([]*User, error) {
 	return orgs, x.Limit(pageSize, (page-1)*pageSize).Where("type=1").Asc("id").Find(&orgs)
 }
 
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(e Engine, beans ...any) (err error) {
+	for i := range beans {
+		if _, err = e.Delete(beans[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // DeleteOrganization completely and permanently deletes everything of organization.
-func DeleteOrganization(org *User) (err error) {
-	if err := DeleteUser(org); err != nil {
+func DeleteOrganization(org *User) error {
+	err := Users.DeleteByID(context.TODO(), org.ID, false)
+	if err != nil {
 		return err
 	}
 
@@ -223,11 +234,6 @@ func DeleteOrganization(org *User) (err error) {
 	); err != nil {
 		return fmt.Errorf("deleteBeans: %v", err)
 	}
-
-	if err = deleteUser(sess, org); err != nil {
-		return fmt.Errorf("deleteUser: %v", err)
-	}
-
 	return sess.Commit()
 }
 
