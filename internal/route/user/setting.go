@@ -649,7 +649,7 @@ func SettingsDelete(c *context.Context) {
 			return
 		}
 
-		if err := db.DeleteUser(c.User); err != nil {
+		if err := db.Users.DeleteByID(c.Req.Context(), c.User.ID, false); err != nil {
 			switch {
 			case db.IsErrUserOwnRepos(err):
 				c.Flash.Error(c.Tr("form.still_own_repo"))

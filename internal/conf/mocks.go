@@ -37,11 +37,15 @@ func SetMockServer(t *testing.T, opts ServerOpts) {
 	})
 }
 
+var mockSSH sync.Mutex
+
 func SetMockSSH(t *testing.T, opts SSHOpts) {
+	mockSSH.Lock()
 	before := SSH
 	SSH = opts
 	t.Cleanup(func() {
 		SSH = before
+		mockSSH.Unlock()
 	})
 }
 
@@ -65,10 +69,14 @@ func SetMockUI(t *testing.T, opts UIOpts) {
 	})
 }
 
+var mockPicture sync.Mutex
+
 func SetMockPicture(t *testing.T, opts PictureOpts) {
+	mockPicture.Lock()
 	before := Picture
 	Picture = opts
 	t.Cleanup(func() {
 		Picture = before
+		mockPicture.Unlock()
 	})
 }

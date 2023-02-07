@@ -226,7 +226,7 @@ func DeleteUser(c *context.Context) {
 		return
 	}
 
-	if err = db.DeleteUser(u); err != nil {
+	if err = db.Users.DeleteByID(c.Req.Context(), u.ID, false); err != nil {
 		switch {
 		case db.IsErrUserOwnRepos(err):
 			c.Flash.Error(c.Tr("admin.users.still_own_repo"))

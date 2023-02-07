@@ -1839,15 +1839,6 @@ func GetUserAndCollaborativeRepositories(userID int64) ([]*Repository, error) {
 	return append(repos, ownRepos...), nil
 }
 
-func getRepositoryCount(_ Engine, u *User) (int64, error) {
-	return x.Count(&Repository{OwnerID: u.ID})
-}
-
-// GetRepositoryCount returns the total number of repositories of user.
-func GetRepositoryCount(u *User) (int64, error) {
-	return getRepositoryCount(x, u)
-}
-
 type SearchRepoOptions struct {
 	Keyword  string
 	OwnerID  int64
@@ -2362,6 +2353,8 @@ func watchRepo(e Engine, userID, repoID int64, watch bool) (err error) {
 }
 
 // Watch or unwatch repository.
+//
+// Deprecated: Use Watches.Watch instead.
 func WatchRepo(userID, repoID int64, watch bool) (err error) {
 	return watchRepo(x, userID, repoID, watch)
 }
@@ -2441,18 +2434,20 @@ func NotifyWatchers(act *Action) error {
 //         \/           \/
 
 type Star struct {
-	ID     int64
-	UID    int64 `xorm:"UNIQUE(s)"`
-	RepoID int64 `xorm:"UNIQUE(s)"`
+	ID     int64 `gorm:"primaryKey"`
+	UserID int64 `xorm:"uid UNIQUE(s)" gorm:"column:uid;uniqueIndex:star_user_repo_unique;not null"`
+	RepoID int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:star_user_repo_unique;not null"`
 }
 
 // Star or unstar repository.
+//
+// Deprecated: Use Stars.Star instead.
 func StarRepo(userID, repoID int64, star bool) (err error) {
 	if star {
 		if IsStaring(userID, repoID) {
 			return nil
 		}
-		if _, err = x.Insert(&Star{UID: userID, RepoID: repoID}); err != nil {
+		if _, err = x.Insert(&Star{UserID: userID, RepoID: repoID}); err != nil {
 			return err
 		} else if _, err = x.Exec("UPDATE `repository` SET num_stars = num_stars + 1 WHERE id = ?", repoID); err != nil {
 			return err

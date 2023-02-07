@@ -26,36 +26,36 @@ var ErrMissingIssueNumber = errors.New("No issue number specified")
 
 // Issue represents an issue or pull request of repository.
 type Issue struct {
-	ID              int64
-	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)"`
-	Repo            *Repository `xorm:"-" json:"-"`
-	Index           int64       `xorm:"UNIQUE(repo_index)"` // Index in one repository.
-	PosterID        int64
-	Poster          *User    `xorm:"-" json:"-"`
-	Title           string   `xorm:"name"`
-	Content         string   `xorm:"TEXT"`
-	RenderedContent string   `xorm:"-" json:"-"`
-	Labels          []*Label `xorm:"-" json:"-"`
-	MilestoneID     int64
-	Milestone       *Milestone `xorm:"-" json:"-"`
+	ID              int64       `gorm:"primaryKey"`
+	RepoID          int64       `xorm:"INDEX UNIQUE(repo_index)" gorm:"index;uniqueIndex:issue_repo_index_unique;not null"`
+	Repo            *Repository `xorm:"-" json:"-" gorm:"-"`
+	Index           int64       `xorm:"UNIQUE(repo_index)" gorm:"uniqueIndex:issue_repo_index_unique;not null"` // Index in one repository.
+	PosterID        int64       `gorm:"index"`
+	Poster          *User       `xorm:"-" json:"-" gorm:"-"`
+	Title           string      `xorm:"name" gorm:"name"`
+	Content         string      `xorm:"TEXT" gorm:"type:TEXT"`
+	RenderedContent string      `xorm:"-" json:"-" gorm:"-"`
+	Labels          []*Label    `xorm:"-" json:"-" gorm:"-"`
+	MilestoneID     int64       `gorm:"index"`
+	Milestone       *Milestone  `xorm:"-" json:"-" gorm:"-"`
 	Priority        int
-	AssigneeID      int64
-	Assignee        *User `xorm:"-" json:"-"`
+	AssigneeID      int64 `gorm:"index"`
+	Assignee        *User `xorm:"-" json:"-" gorm:"-"`
 	IsClosed        bool
-	IsRead          bool         `xorm:"-" json:"-"`
+	IsRead          bool         `xorm:"-" json:"-" gorm:"-"`
 	IsPull          bool         // Indicates whether is a pull request or not.
-	PullRequest     *PullRequest `xorm:"-" json:"-"`
+	PullRequest     *PullRequest `xorm:"-" json:"-" gorm:"-"`
 	NumComments     int
 
-	Deadline     time.Time `xorm:"-" json:"-"`
+	Deadline     time.Time `xorm:"-" json:"-" gorm:"-"`
 	DeadlineUnix int64
-	Created      time.Time `xorm:"-" json:"-"`
+	Created      time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix  int64
-	Updated      time.Time `xorm:"-" json:"-"`
+	Updated      time.Time `xorm:"-" json:"-" gorm:"-"`
 	UpdatedUnix  int64
 
-	Attachments []*Attachment `xorm:"-" json:"-"`
-	Comments    []*Comment    `xorm:"-" json:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
+	Comments    []*Comment    `xorm:"-" json:"-" gorm:"-"`
 }
 
 func (issue *Issue) BeforeInsert() {
@@ -1036,10 +1036,10 @@ func GetParticipantsByIssueID(issueID int64) ([]*User, error) {
 
 // IssueUser represents an issue-user relation.
 type IssueUser struct {
-	ID          int64
-	UID         int64 `xorm:"INDEX"` // User ID.
+	ID          int64 `gorm:"primary_key"`
+	UserID      int64 `xorm:"uid INDEX" gorm:"column:uid;index"`
 	IssueID     int64
-	RepoID      int64 `xorm:"INDEX"`
+	RepoID      int64 `xorm:"INDEX" gorm:"index"`
 	MilestoneID int64
 	IsRead      bool
 	IsAssigned  bool
@@ -1065,7 +1065,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 		issueUsers = append(issueUsers, &IssueUser{
 			IssueID:    issue.ID,
 			RepoID:     repo.ID,
-			UID:        assignee.ID,
+			UserID:     assignee.ID,
 			IsPoster:   isPoster,
 			IsAssigned: assignee.ID == issue.AssigneeID,
 		})
@@ -1077,7 +1077,7 @@ func newIssueUsers(e *xorm.Session, repo *Repository, issue *Issue) error {
 		issueUsers = append(issueUsers, &IssueUser{
 			IssueID:  issue.ID,
 			RepoID:   repo.ID,
-			UID:      issue.PosterID,
+			UserID:   issue.PosterID,
 			IsPoster: true,
 		})
 	}
@@ -1107,7 +1107,7 @@ func NewIssueUsers(repo *Repository, issue *Issue) (err error) {
 func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 	for i := range ius {
 		if ius[i].IssueID == issueId &&
-			ius[i].UID == uid {
+			ius[i].UserID == uid {
 			return i
 		}
 	}
@@ -1117,7 +1117,7 @@ func PairsContains(ius []*IssueUser, issueId, uid int64) int {
 // GetIssueUsers returns issue-user pairs by given repository and user.
 func GetIssueUsers(rid, uid int64, isClosed bool) ([]*IssueUser, error) {
 	ius := make([]*IssueUser, 0, 10)
-	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UID: uid})
+	err := x.Where("is_closed=?", isClosed).Find(&ius, &IssueUser{RepoID: rid, UserID: uid})
 	return ius, err
 }
 
@@ -1442,7 +1442,7 @@ func UpdateIssueUserByRead(uid, issueID int64) error {
 func updateIssueUsersByMentions(e Engine, issueID int64, uids []int64) error {
 	for _, uid := range uids {
 		iu := &IssueUser{
-			UID:     uid,
+			UserID:  uid,
 			IssueID: issueID,
 		}
 		has, err := e.Get(iu)

@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -61,6 +62,14 @@ type UsersStore interface {
 	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
 	// use look up avatar by email.
 	DeleteCustomAvatar(ctx context.Context, userID int64) error
+	// DeleteByID deletes the given user and all their resources. It returns
+	// ErrUserOwnRepos when the user still has repository ownership, or returns
+	// ErrUserHasOrgs when the user still has organization membership. It is more
+	// performant to skip rewriting the "authorized_keys" file for individual
+	// deletion in a batch operation.
+	DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error
+	// DeleteInactivated deletes all inactivated users.
+	DeleteInactivated() error
 	// GetByEmail returns the user (not organization) with given email. It ignores
 	// records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(ctx context.Context, email string) (*User, error)
@@ -421,6 +430,224 @@ func (db *users) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 			"updated_unix":      db.NowFunc().Unix(),
 		}).
 		Error
+}
+
+type ErrUserOwnRepos struct {
+	args errutil.Args
+}
+
+// IsErrUserOwnRepos returns true if the underlying error has the type
+// ErrUserOwnRepos.
+func IsErrUserOwnRepos(err error) bool {
+	_, ok := errors.Cause(err).(ErrUserOwnRepos)
+	return ok
+}
+
+func (err ErrUserOwnRepos) Error() string {
+	return fmt.Sprintf("user still has repository ownership: %v", err.args)
+}
+
+type ErrUserHasOrgs struct {
+	args errutil.Args
+}
+
+// IsErrUserHasOrgs returns true if the underlying error has the type
+// ErrUserHasOrgs.
+func IsErrUserHasOrgs(err error) bool {
+	_, ok := errors.Cause(err).(ErrUserHasOrgs)
+	return ok
+}
+
+func (err ErrUserHasOrgs) Error() string {
+	return fmt.Sprintf("user still has organization membership: %v", err.args)
+}
+
+func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error {
+	user, err := db.GetByID(ctx, userID)
+	if err != nil {
+		if IsErrUserNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "get user")
+	}
+
+	// Double check the user is not a direct owner of any repository and not a
+	// member of any organization.
+	var count int64
+	err = db.WithContext(ctx).Model(&Repository{}).Where("owner_id = ?", userID).Count(&count).Error
+	if err != nil {
+		return errors.Wrap(err, "count repositories")
+	} else if count > 0 {
+		return ErrUserOwnRepos{args: errutil.Args{"userID": userID}}
+	}
+
+	err = db.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
+	if err != nil {
+		return errors.Wrap(err, "count organization membership")
+	} else if count > 0 {
+		return ErrUserHasOrgs{args: errutil.Args{"userID": userID}}
+	}
+
+	needsRewriteAuthorizedKeys := false
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE repository
+			SET num_watches = num_watches - 1
+			WHERE id IN (
+				SELECT repo_id FROM watch WHERE user_id = @userID
+			)
+		*/
+		err = tx.Table("repository").
+			Where("id IN (?)", tx.
+				Select("repo_id").
+				Table("watch").
+				Where("user_id = ?", userID),
+			).
+			UpdateColumn("num_watches", gorm.Expr("num_watches - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "repository.num_watches"`)
+		}
+
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE repository
+			SET num_stars = num_stars - 1
+			WHERE id IN (
+				SELECT repo_id FROM star WHERE uid = @userID
+			)
+		*/
+		err = tx.Table("repository").
+			Where("id IN (?)", tx.
+				Select("repo_id").
+				Table("star").
+				Where("uid = ?", userID),
+			).
+			UpdateColumn("num_stars", gorm.Expr("num_stars - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "repository.num_stars"`)
+		}
+
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE user
+			SET num_followers = num_followers - 1
+			WHERE id IN (
+				SELECT follow_id FROM follow WHERE user_id = @userID
+			)
+		*/
+		err = tx.Table("user").
+			Where("id IN (?)", tx.
+				Select("follow_id").
+				Table("follow").
+				Where("user_id = ?", userID),
+			).
+			UpdateColumn("num_followers", gorm.Expr("num_followers - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "user.num_followers"`)
+		}
+
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE user
+			SET num_following = num_following - 1
+			WHERE id IN (
+				SELECT user_id FROM follow WHERE follow_id = @userID
+			)
+		*/
+		err = tx.Table("user").
+			Where("id IN (?)", tx.
+				Select("user_id").
+				Table("follow").
+				Where("follow_id = ?", userID),
+			).
+			UpdateColumn("num_following", gorm.Expr("num_following - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "user.num_following"`)
+		}
+
+		if !skipRewriteAuthorizedKeys {
+			// We need to rewrite "authorized_keys" file if the user owns any public keys.
+			needsRewriteAuthorizedKeys = tx.Where("owner_id = ?", userID).First(&PublicKey{}).Error != gorm.ErrRecordNotFound
+		}
+
+		err = tx.Model(&Issue{}).Where("assignee_id = ?", userID).Update("assignee_id", 0).Error
+		if err != nil {
+			return errors.Wrap(err, "clear assignees")
+		}
+
+		for _, t := range []struct {
+			table any
+			where string
+		}{
+			{&Watch{}, "user_id = @userID"},
+			{&Star{}, "uid = @userID"},
+			{&Follow{}, "user_id = @userID OR follow_id = @userID"},
+			{&PublicKey{}, "owner_id = @userID"},
+
+			{&AccessToken{}, "uid = @userID"},
+			{&Collaboration{}, "user_id = @userID"},
+			{&Access{}, "user_id = @userID"},
+			{&Action{}, "user_id = @userID"},
+			{&IssueUser{}, "uid = @userID"},
+			{&EmailAddress{}, "uid = @userID"},
+			{&User{}, "id = @userID"},
+		} {
+			err = tx.Where(t.where, sql.Named("userID", userID)).Delete(t.table).Error
+			if err != nil {
+				return errors.Wrapf(err, "clean up table %T", t.table)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	_ = os.RemoveAll(repoutil.UserPath(user.Name))
+	_ = os.Remove(userutil.CustomAvatarPath(userID))
+
+	if needsRewriteAuthorizedKeys {
+		err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+		if err != nil {
+			return errors.Wrap(err, `rewrite "authorized_keys" file`)
+		}
+	}
+	return nil
+}
+
+// NOTE: We do not take context.Context here because this operation in practice
+// could much longer than the general request timeout (e.g. one minute).
+func (db *users) DeleteInactivated() error {
+	var userIDs []int64
+	err := db.Model(&User{}).Where("is_active = ?", false).Pluck("id", &userIDs).Error
+	if err != nil {
+		return errors.Wrap(err, "get inactivated user IDs")
+	}
+
+	for _, userID := range userIDs {
+		err = db.DeleteByID(context.Background(), userID, true)
+		if err != nil {
+			// Skip users that may had set to inactivated by admins.
+			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
+				continue
+			}
+			return errors.Wrapf(err, "delete user with ID %d", userID)
+		}
+	}
+	err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+	if err != nil {
+		return errors.Wrap(err, `rewrite "authorized_keys" file`)
+	}
+	return nil
 }
 
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
