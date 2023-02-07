@@ -516,29 +516,46 @@ func usersDeleteByID(t *testing.T, db *users) {
 
 	testUser, err := db.Create(ctx, "testUser", "testUser@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = NewWatchesStore(db.DB).Watch(ctx, testUser.ID, repo2.ID) // Set up watches
+
+	// Mock watches, stars and follows
+	err = NewWatchesStore(db.DB).Watch(ctx, testUser.ID, repo2.ID)
 	require.NoError(t, err)
-	err = reposStore.Star(ctx, testUser.ID, repo2.ID) // Set up stars
+	err = reposStore.Star(ctx, testUser.ID, repo2.ID)
 	require.NoError(t, err)
 	followsStore := NewFollowsStore(db.DB)
-	err = followsStore.Follow(ctx, testUser.ID, cindy.ID) // Set up follows
+	err = followsStore.Follow(ctx, testUser.ID, cindy.ID)
 	require.NoError(t, err)
 	err = followsStore.Follow(ctx, frank.ID, testUser.ID)
 	require.NoError(t, err)
 
-	// Set up issue assignee
+	// Mock "authorized_keys" file
+	// TODO: Use PublicKeys.Add to replace SQL hack when the method is available.
+	publicKey := &PublicKey{
+		OwnerID:     testUser.ID,
+		Name:        "test-key",
+		Fingerprint: "12:f8:7e:78:61:b4:bf:e2:de:24:15:96:4e:d4:72:53",
+		Content:     "test-key-content",
+	}
+	err = db.DB.Create(publicKey).Error
+	require.NoError(t, err)
+	tempSSHRootPath := filepath.Join(os.TempDir(), "usersDeleteByID-tempSSHRootPath")
+	conf.SetMockSSH(t, conf.SSHOpts{RootPath: tempSSHRootPath})
+	err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+	require.NoError(t, err)
+
+	// Mock issue assignee
 	// TODO: Use Issues.Assign to replace SQL hack when the method is available.
-	issue1 := &Issue{
+	issue := &Issue{
 		RepoID:     repo2.ID,
 		Index:      1,
 		PosterID:   cindy.ID,
-		Title:      "test-issue-1",
+		Title:      "test-issue",
 		AssigneeID: testUser.ID,
 	}
-	err = db.DB.Create(issue1).Error
+	err = db.DB.Create(issue).Error
 	require.NoError(t, err)
 
-	// Set up random entries in related tables
+	// Mock random entries in related tables
 	for _, table := range []any{
 		&AccessToken{UserID: testUser.ID},
 		&Collaboration{UserID: testUser.ID},
@@ -551,7 +568,21 @@ func usersDeleteByID(t *testing.T, db *users) {
 		require.NoError(t, err, "table for %T", table)
 	}
 
-	// todo: delete user dir, delete user avatar, RewriteAuthorizedKeys
+	// Mock user directory
+	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersDeleteByID-tempRepositoryRoot")
+	conf.SetMockRepository(t, conf.RepositoryOpts{Root: tempRepositoryRoot})
+	tempUserPath := repoutil.UserPath(testUser.Name)
+	err = os.MkdirAll(tempUserPath, os.ModePerm)
+	require.NoError(t, err)
+
+	// Mock user custom avatar
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "usersDeleteByID-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+	err = os.MkdirAll(tempPictureAvatarUploadPath, os.ModePerm)
+	require.NoError(t, err)
+	tempCustomAvatarPath := userutil.CustomAvatarPath(testUser.ID)
+	err = os.WriteFile(tempCustomAvatarPath, []byte("test"), 0600)
+	require.NoError(t, err)
 
 	// Verify mock data
 	repo2, err = reposStore.GetByID(ctx, repo2.ID)
@@ -566,11 +597,39 @@ func usersDeleteByID(t *testing.T, db *users) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, frank.NumFollowing)
 
-	// TODO: Use Issues.GetByID to replace SQL hack when the method is available.
-	err = db.DB.First(issue1, issue1.ID).Error
+	authorizedKeys, err := os.ReadFile(authorizedKeysPath())
 	require.NoError(t, err)
-	assert.Equal(t, testUser.ID, issue1.AssigneeID)
+	assert.Contains(t, string(authorizedKeys), fmt.Sprintf("key-%d", publicKey.ID))
+	assert.Contains(t, string(authorizedKeys), publicKey.Content)
 
+	// TODO: Use Issues.GetByID to replace SQL hack when the method is available.
+	err = db.DB.First(issue, issue.ID).Error
+	require.NoError(t, err)
+	assert.Equal(t, testUser.ID, issue.AssigneeID)
+
+	relatedTables := []any{
+		&Watch{UserID: testUser.ID},
+		&Star{UserID: testUser.ID},
+		&Follow{UserID: testUser.ID},
+		&PublicKey{OwnerID: testUser.ID},
+		&AccessToken{UserID: testUser.ID},
+		&Collaboration{UserID: testUser.ID},
+		&Access{UserID: testUser.ID},
+		&Action{UserID: testUser.ID},
+		&IssueUser{UserID: testUser.ID},
+		&EmailAddress{UserID: testUser.ID},
+	}
+	for _, table := range relatedTables {
+		var count int64
+		err = db.DB.Model(table).Where(table).Count(&count).Error
+		require.NoError(t, err, "table for %T", table)
+		assert.NotZero(t, count, "table for %T", table)
+	}
+
+	assert.True(t, osutil.IsExist(tempUserPath))
+	assert.True(t, osutil.IsExist(tempCustomAvatarPath))
+
+	// Pull the trigger
 	err = db.DeleteByID(ctx, testUser.ID, false)
 	require.NoError(t, err)
 
@@ -587,10 +646,14 @@ func usersDeleteByID(t *testing.T, db *users) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, frank.NumFollowing)
 
-	// TODO: Use Issues.GetByID to replace SQL hack when the method is available.
-	err = db.DB.First(issue1, issue1.ID).Error
+	authorizedKeys, err = os.ReadFile(authorizedKeysPath())
 	require.NoError(t, err)
-	assert.Equal(t, int64(0), issue1.AssigneeID)
+	assert.Empty(t, authorizedKeys)
+
+	// TODO: Use Issues.GetByID to replace SQL hack when the method is available.
+	err = db.DB.First(issue, issue.ID).Error
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), issue.AssigneeID)
 
 	for _, table := range []any{
 		&Watch{UserID: testUser.ID},
@@ -609,6 +672,9 @@ func usersDeleteByID(t *testing.T, db *users) {
 		require.NoError(t, err, "table for %T", table)
 		assert.Equal(t, int64(0), count, "table for %T", table)
 	}
+
+	assert.False(t, osutil.IsExist(tempUserPath))
+	assert.False(t, osutil.IsExist(tempCustomAvatarPath))
 
 	_, err = db.GetByID(ctx, testUser.ID)
 	wantErr := ErrUserNotExist{errutil.Args{"userID": testUser.ID}}

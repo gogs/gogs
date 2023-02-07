@@ -517,6 +517,8 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 // RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
 // Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
 // outside any session scope independently.
+//
+// Deprecated: Use PublicKeys.RewriteAuthorizedKeys instead.
 func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
@@ -524,7 +526,7 @@ func RewriteAuthorizedKeys() error {
 	log.Trace("Doing: RewriteAuthorizedKeys")
 
 	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
-	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
+	fpath := authorizedKeysPath()
 	tmpPath := fpath + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
