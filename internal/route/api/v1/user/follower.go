@@ -62,7 +62,7 @@ func ListFollowing(c *context.APIContext) {
 }
 
 func checkUserFollowing(c *context.APIContext, u *db.User, followID int64) {
-	if db.Follows.IsFollowing(c.Req.Context(), u.ID, followID) {
+	if db.Users.IsFollowing(c.Req.Context(), u.ID, followID) {
 		c.NoContent()
 	} else {
 		c.NotFound()
@@ -94,7 +94,7 @@ func Follow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := db.Follows.Follow(c.Req.Context(), c.User.ID, target.ID); err != nil {
+	if err := db.Users.Follow(c.Req.Context(), c.User.ID, target.ID); err != nil {
 		c.Error(err, "follow user")
 		return
 	}
@@ -106,7 +106,7 @@ func Unfollow(c *context.APIContext) {
 	if c.Written() {
 		return
 	}
-	if err := db.Follows.Unfollow(c.Req.Context(), c.User.ID, target.ID); err != nil {
+	if err := db.Users.Unfollow(c.Req.Context(), c.User.ID, target.ID); err != nil {
 		c.Error(err, "unfollow user")
 		return
 	}

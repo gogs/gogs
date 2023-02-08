@@ -23,8 +23,6 @@ import (
 )
 
 // LoginSourcesStore is the persistent interface for login sources.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type LoginSourcesStore interface {
 	// Create creates a new login source and persist to database. It returns
 	// ErrLoginSourceAlreadyExist when a login source with same name already exists.

@@ -32,6 +32,7 @@ func TestOrgs(t *testing.T) {
 	}{
 		{"List", orgsList},
 		{"SearchByName", orgsSearchByName},
+		{"CountByUser", orgsCountByUser},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -163,4 +164,22 @@ func orgsSearchByName(t *testing.T, db *orgs) {
 		assert.Equal(t, int64(2), count)
 		assert.Equal(t, org2.ID, orgs[0].ID)
 	})
+}
+
+func orgsCountByUser(t *testing.T, db *orgs) {
+	ctx := context.Background()
+
+	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
+	err := db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
+	require.NoError(t, err)
+	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 2, 1).Error
+	require.NoError(t, err)
+
+	got, err := db.CountByUser(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), got)
+
+	got, err = db.CountByUser(ctx, 404)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), got)
 }
