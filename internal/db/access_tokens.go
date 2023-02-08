@@ -18,8 +18,6 @@ import (
 )
 
 // AccessTokensStore is the persistent interface for access tokens.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type AccessTokensStore interface {
 	// Create creates a new access token and persist to database. It returns
 	// ErrAccessTokenAlreadyExist when an access token with same name already exists

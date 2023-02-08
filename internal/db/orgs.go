@@ -14,8 +14,6 @@ import (
 )
 
 // OrgsStore is the persistent interface for organizations.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type OrgsStore interface {
 	// List returns a list of organizations filtered by options.
 	List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error)
@@ -25,6 +23,9 @@ type OrgsStore interface {
 	// count of all results is also returned. If the order is not given, it's up to
 	// the database to decide.
 	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error)
+
+	// CountByUser returns the number of organizations the user is a member of.
+	CountByUser(ctx context.Context, userID int64) (int64, error)
 }
 
 var Orgs OrgsStore
@@ -77,6 +78,11 @@ func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization
 
 func (db *orgs) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {
 	return searchUserByName(ctx, db.DB, UserTypeOrganization, keyword, page, pageSize, orderBy)
+}
+
+func (db *orgs) CountByUser(ctx context.Context, userID int64) (int64, error) {
+	var count int64
+	return count, db.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
 }
 
 type Organization = User

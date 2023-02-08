@@ -101,6 +101,9 @@ func TestRepos(t *testing.T) {
 		{"GetByName", reposGetByName},
 		{"Star", reposStar},
 		{"Touch", reposTouch},
+		{"ListByRepo", reposListWatches},
+		{"Watch", reposWatch},
+		{"HasForkedBy", reposHasForkedBy},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -297,4 +300,66 @@ func reposTouch(t *testing.T, db *repos) {
 	got, err = db.GetByName(ctx, repo.OwnerID, repo.Name)
 	require.NoError(t, err)
 	assert.False(t, got.IsBare)
+}
+
+func reposListWatches(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	err := db.Watch(ctx, 1, 1)
+	require.NoError(t, err)
+	err = db.Watch(ctx, 2, 1)
+	require.NoError(t, err)
+	err = db.Watch(ctx, 2, 2)
+	require.NoError(t, err)
+
+	got, err := db.ListWatches(ctx, 1)
+	require.NoError(t, err)
+	for _, w := range got {
+		w.ID = 0
+	}
+
+	want := []*Watch{
+		{UserID: 1, RepoID: 1},
+		{UserID: 2, RepoID: 1},
+	}
+	assert.Equal(t, want, got)
+}
+
+func reposWatch(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	reposStore := NewReposStore(db.DB)
+	repo1, err := reposStore.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+	require.NoError(t, err)
+
+	err = db.Watch(ctx, 2, repo1.ID)
+	require.NoError(t, err)
+
+	// It is OK to watch multiple times and just be noop.
+	err = db.Watch(ctx, 2, repo1.ID)
+	require.NoError(t, err)
+
+	repo1, err = reposStore.GetByID(ctx, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, repo1.NumWatches) // The owner is watching the repo by default.
+}
+
+func reposHasForkedBy(t *testing.T, db *repos) {
+	ctx := context.Background()
+
+	has := db.HasForkedBy(ctx, 1, 2)
+	assert.False(t, has)
+
+	_, err := NewReposStore(db.DB).Create(
+		ctx,
+		2,
+		CreateRepoOptions{
+			Name:   "repo1",
+			ForkID: 1,
+		},
+	)
+	require.NoError(t, err)
+
+	has = db.HasForkedBy(ctx, 1, 2)
+	assert.True(t, has)
 }

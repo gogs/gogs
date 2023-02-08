@@ -1508,12 +1508,21 @@ type MockReposStore struct {
 	// GetByNameFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByName.
 	GetByNameFunc *ReposStoreGetByNameFunc
+	// HasForkedByFunc is an instance of a mock function object controlling
+	// the behavior of the method HasForkedBy.
+	HasForkedByFunc *ReposStoreHasForkedByFunc
+	// ListWatchesFunc is an instance of a mock function object controlling
+	// the behavior of the method ListWatches.
+	ListWatchesFunc *ReposStoreListWatchesFunc
 	// StarFunc is an instance of a mock function object controlling the
 	// behavior of the method Star.
 	StarFunc *ReposStoreStarFunc
 	// TouchFunc is an instance of a mock function object controlling the
 	// behavior of the method Touch.
 	TouchFunc *ReposStoreTouchFunc
+	// WatchFunc is an instance of a mock function object controlling the
+	// behavior of the method Watch.
+	WatchFunc *ReposStoreWatchFunc
 }
 
 // NewMockReposStore creates a new mock of the ReposStore interface. All
@@ -1545,6 +1554,16 @@ func NewMockReposStore() *MockReposStore {
 				return
 			},
 		},
+		HasForkedByFunc: &ReposStoreHasForkedByFunc{
+			defaultHook: func(context.Context, int64, int64) (r0 bool) {
+				return
+			},
+		},
+		ListWatchesFunc: &ReposStoreListWatchesFunc{
+			defaultHook: func(context.Context, int64) (r0 []*db.Watch, r1 error) {
+				return
+			},
+		},
 		StarFunc: &ReposStoreStarFunc{
 			defaultHook: func(context.Context, int64, int64) (r0 error) {
 				return
@@ -1552,6 +1571,11 @@ func NewMockReposStore() *MockReposStore {
 		},
 		TouchFunc: &ReposStoreTouchFunc{
 			defaultHook: func(context.Context, int64) (r0 error) {
+				return
+			},
+		},
+		WatchFunc: &ReposStoreWatchFunc{
+			defaultHook: func(context.Context, int64, int64) (r0 error) {
 				return
 			},
 		},
@@ -1587,6 +1611,16 @@ func NewStrictMockReposStore() *MockReposStore {
 				panic("unexpected invocation of MockReposStore.GetByName")
 			},
 		},
+		HasForkedByFunc: &ReposStoreHasForkedByFunc{
+			defaultHook: func(context.Context, int64, int64) bool {
+				panic("unexpected invocation of MockReposStore.HasForkedBy")
+			},
+		},
+		ListWatchesFunc: &ReposStoreListWatchesFunc{
+			defaultHook: func(context.Context, int64) ([]*db.Watch, error) {
+				panic("unexpected invocation of MockReposStore.ListWatches")
+			},
+		},
 		StarFunc: &ReposStoreStarFunc{
 			defaultHook: func(context.Context, int64, int64) error {
 				panic("unexpected invocation of MockReposStore.Star")
@@ -1595,6 +1629,11 @@ func NewStrictMockReposStore() *MockReposStore {
 		TouchFunc: &ReposStoreTouchFunc{
 			defaultHook: func(context.Context, int64) error {
 				panic("unexpected invocation of MockReposStore.Touch")
+			},
+		},
+		WatchFunc: &ReposStoreWatchFunc{
+			defaultHook: func(context.Context, int64, int64) error {
+				panic("unexpected invocation of MockReposStore.Watch")
 			},
 		},
 	}
@@ -1619,11 +1658,20 @@ func NewMockReposStoreFrom(i db.ReposStore) *MockReposStore {
 		GetByNameFunc: &ReposStoreGetByNameFunc{
 			defaultHook: i.GetByName,
 		},
+		HasForkedByFunc: &ReposStoreHasForkedByFunc{
+			defaultHook: i.HasForkedBy,
+		},
+		ListWatchesFunc: &ReposStoreListWatchesFunc{
+			defaultHook: i.ListWatches,
+		},
 		StarFunc: &ReposStoreStarFunc{
 			defaultHook: i.Star,
 		},
 		TouchFunc: &ReposStoreTouchFunc{
 			defaultHook: i.Touch,
+		},
+		WatchFunc: &ReposStoreWatchFunc{
+			defaultHook: i.Watch,
 		},
 	}
 }
@@ -2185,6 +2233,222 @@ func (c ReposStoreGetByNameFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
+// ReposStoreHasForkedByFunc describes the behavior when the HasForkedBy
+// method of the parent MockReposStore instance is invoked.
+type ReposStoreHasForkedByFunc struct {
+	defaultHook func(context.Context, int64, int64) bool
+	hooks       []func(context.Context, int64, int64) bool
+	history     []ReposStoreHasForkedByFuncCall
+	mutex       sync.Mutex
+}
+
+// HasForkedBy delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockReposStore) HasForkedBy(v0 context.Context, v1 int64, v2 int64) bool {
+	r0 := m.HasForkedByFunc.nextHook()(v0, v1, v2)
+	m.HasForkedByFunc.appendCall(ReposStoreHasForkedByFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the HasForkedBy method
+// of the parent MockReposStore instance is invoked and the hook queue is
+// empty.
+func (f *ReposStoreHasForkedByFunc) SetDefaultHook(hook func(context.Context, int64, int64) bool) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// HasForkedBy method of the parent MockReposStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *ReposStoreHasForkedByFunc) PushHook(hook func(context.Context, int64, int64) bool) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreHasForkedByFunc) SetDefaultReturn(r0 bool) {
+	f.SetDefaultHook(func(context.Context, int64, int64) bool {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreHasForkedByFunc) PushReturn(r0 bool) {
+	f.PushHook(func(context.Context, int64, int64) bool {
+		return r0
+	})
+}
+
+func (f *ReposStoreHasForkedByFunc) nextHook() func(context.Context, int64, int64) bool {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreHasForkedByFunc) appendCall(r0 ReposStoreHasForkedByFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of ReposStoreHasForkedByFuncCall objects
+// describing the invocations of this function.
+func (f *ReposStoreHasForkedByFunc) History() []ReposStoreHasForkedByFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreHasForkedByFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreHasForkedByFuncCall is an object that describes an invocation
+// of method HasForkedBy on an instance of MockReposStore.
+type ReposStoreHasForkedByFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 bool
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreHasForkedByFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreHasForkedByFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// ReposStoreListWatchesFunc describes the behavior when the ListWatches
+// method of the parent MockReposStore instance is invoked.
+type ReposStoreListWatchesFunc struct {
+	defaultHook func(context.Context, int64) ([]*db.Watch, error)
+	hooks       []func(context.Context, int64) ([]*db.Watch, error)
+	history     []ReposStoreListWatchesFuncCall
+	mutex       sync.Mutex
+}
+
+// ListWatches delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockReposStore) ListWatches(v0 context.Context, v1 int64) ([]*db.Watch, error) {
+	r0, r1 := m.ListWatchesFunc.nextHook()(v0, v1)
+	m.ListWatchesFunc.appendCall(ReposStoreListWatchesFuncCall{v0, v1, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the ListWatches method
+// of the parent MockReposStore instance is invoked and the hook queue is
+// empty.
+func (f *ReposStoreListWatchesFunc) SetDefaultHook(hook func(context.Context, int64) ([]*db.Watch, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// ListWatches method of the parent MockReposStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *ReposStoreListWatchesFunc) PushHook(hook func(context.Context, int64) ([]*db.Watch, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreListWatchesFunc) SetDefaultReturn(r0 []*db.Watch, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64) ([]*db.Watch, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreListWatchesFunc) PushReturn(r0 []*db.Watch, r1 error) {
+	f.PushHook(func(context.Context, int64) ([]*db.Watch, error) {
+		return r0, r1
+	})
+}
+
+func (f *ReposStoreListWatchesFunc) nextHook() func(context.Context, int64) ([]*db.Watch, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreListWatchesFunc) appendCall(r0 ReposStoreListWatchesFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of ReposStoreListWatchesFuncCall objects
+// describing the invocations of this function.
+func (f *ReposStoreListWatchesFunc) History() []ReposStoreListWatchesFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreListWatchesFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreListWatchesFuncCall is an object that describes an invocation
+// of method ListWatches on an instance of MockReposStore.
+type ReposStoreListWatchesFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []*db.Watch
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreListWatchesFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreListWatchesFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
 // ReposStoreStarFunc describes the behavior when the Star method of the
 // parent MockReposStore instance is invoked.
 type ReposStoreStarFunc struct {
@@ -2393,6 +2657,113 @@ func (c ReposStoreTouchFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c ReposStoreTouchFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// ReposStoreWatchFunc describes the behavior when the Watch method of the
+// parent MockReposStore instance is invoked.
+type ReposStoreWatchFunc struct {
+	defaultHook func(context.Context, int64, int64) error
+	hooks       []func(context.Context, int64, int64) error
+	history     []ReposStoreWatchFuncCall
+	mutex       sync.Mutex
+}
+
+// Watch delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockReposStore) Watch(v0 context.Context, v1 int64, v2 int64) error {
+	r0 := m.WatchFunc.nextHook()(v0, v1, v2)
+	m.WatchFunc.appendCall(ReposStoreWatchFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Watch method of the
+// parent MockReposStore instance is invoked and the hook queue is empty.
+func (f *ReposStoreWatchFunc) SetDefaultHook(hook func(context.Context, int64, int64) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Watch method of the parent MockReposStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *ReposStoreWatchFunc) PushHook(hook func(context.Context, int64, int64) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *ReposStoreWatchFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, int64) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *ReposStoreWatchFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, int64) error {
+		return r0
+	})
+}
+
+func (f *ReposStoreWatchFunc) nextHook() func(context.Context, int64, int64) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *ReposStoreWatchFunc) appendCall(r0 ReposStoreWatchFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of ReposStoreWatchFuncCall objects describing
+// the invocations of this function.
+func (f *ReposStoreWatchFunc) History() []ReposStoreWatchFuncCall {
+	f.mutex.Lock()
+	history := make([]ReposStoreWatchFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// ReposStoreWatchFuncCall is an object that describes an invocation of
+// method Watch on an instance of MockReposStore.
+type ReposStoreWatchFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c ReposStoreWatchFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c ReposStoreWatchFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 
@@ -2821,6 +3192,9 @@ type MockUsersStore struct {
 	// DeleteInactivatedFunc is an instance of a mock function object
 	// controlling the behavior of the method DeleteInactivated.
 	DeleteInactivatedFunc *UsersStoreDeleteInactivatedFunc
+	// FollowFunc is an instance of a mock function object controlling the
+	// behavior of the method Follow.
+	FollowFunc *UsersStoreFollowFunc
 	// GetByEmailFunc is an instance of a mock function object controlling
 	// the behavior of the method GetByEmail.
 	GetByEmailFunc *UsersStoreGetByEmailFunc
@@ -2837,9 +3211,9 @@ type MockUsersStore struct {
 	// object controlling the behavior of the method
 	// GetMailableEmailsByUsernames.
 	GetMailableEmailsByUsernamesFunc *UsersStoreGetMailableEmailsByUsernamesFunc
-	// HasForkedRepositoryFunc is an instance of a mock function object
-	// controlling the behavior of the method HasForkedRepository.
-	HasForkedRepositoryFunc *UsersStoreHasForkedRepositoryFunc
+	// IsFollowingFunc is an instance of a mock function object controlling
+	// the behavior of the method IsFollowing.
+	IsFollowingFunc *UsersStoreIsFollowingFunc
 	// IsUsernameUsedFunc is an instance of a mock function object
 	// controlling the behavior of the method IsUsernameUsed.
 	IsUsernameUsedFunc *UsersStoreIsUsernameUsedFunc
@@ -2855,6 +3229,9 @@ type MockUsersStore struct {
 	// SearchByNameFunc is an instance of a mock function object controlling
 	// the behavior of the method SearchByName.
 	SearchByNameFunc *UsersStoreSearchByNameFunc
+	// UnfollowFunc is an instance of a mock function object controlling the
+	// behavior of the method Unfollow.
+	UnfollowFunc *UsersStoreUnfollowFunc
 	// UpdateFunc is an instance of a mock function object controlling the
 	// behavior of the method Update.
 	UpdateFunc *UsersStoreUpdateFunc
@@ -2902,6 +3279,11 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
+		FollowFunc: &UsersStoreFollowFunc{
+			defaultHook: func(context.Context, int64, int64) (r0 error) {
+				return
+			},
+		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
 			defaultHook: func(context.Context, string) (r0 *db.User, r1 error) {
 				return
@@ -2927,7 +3309,7 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
-		HasForkedRepositoryFunc: &UsersStoreHasForkedRepositoryFunc{
+		IsFollowingFunc: &UsersStoreIsFollowingFunc{
 			defaultHook: func(context.Context, int64, int64) (r0 bool) {
 				return
 			},
@@ -2954,6 +3336,11 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
 			defaultHook: func(context.Context, string, int, int, string) (r0 []*db.User, r1 int64, r2 error) {
+				return
+			},
+		},
+		UnfollowFunc: &UsersStoreUnfollowFunc{
+			defaultHook: func(context.Context, int64, int64) (r0 error) {
 				return
 			},
 		},
@@ -3009,6 +3396,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.DeleteInactivated")
 			},
 		},
+		FollowFunc: &UsersStoreFollowFunc{
+			defaultHook: func(context.Context, int64, int64) error {
+				panic("unexpected invocation of MockUsersStore.Follow")
+			},
+		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
 			defaultHook: func(context.Context, string) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.GetByEmail")
@@ -3034,9 +3426,9 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.GetMailableEmailsByUsernames")
 			},
 		},
-		HasForkedRepositoryFunc: &UsersStoreHasForkedRepositoryFunc{
+		IsFollowingFunc: &UsersStoreIsFollowingFunc{
 			defaultHook: func(context.Context, int64, int64) bool {
-				panic("unexpected invocation of MockUsersStore.HasForkedRepository")
+				panic("unexpected invocation of MockUsersStore.IsFollowing")
 			},
 		},
 		IsUsernameUsedFunc: &UsersStoreIsUsernameUsedFunc{
@@ -3062,6 +3454,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
 			defaultHook: func(context.Context, string, int, int, string) ([]*db.User, int64, error) {
 				panic("unexpected invocation of MockUsersStore.SearchByName")
+			},
+		},
+		UnfollowFunc: &UsersStoreUnfollowFunc{
+			defaultHook: func(context.Context, int64, int64) error {
+				panic("unexpected invocation of MockUsersStore.Unfollow")
 			},
 		},
 		UpdateFunc: &UsersStoreUpdateFunc{
@@ -3102,6 +3499,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		DeleteInactivatedFunc: &UsersStoreDeleteInactivatedFunc{
 			defaultHook: i.DeleteInactivated,
 		},
+		FollowFunc: &UsersStoreFollowFunc{
+			defaultHook: i.Follow,
+		},
 		GetByEmailFunc: &UsersStoreGetByEmailFunc{
 			defaultHook: i.GetByEmail,
 		},
@@ -3117,8 +3517,8 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
 			defaultHook: i.GetMailableEmailsByUsernames,
 		},
-		HasForkedRepositoryFunc: &UsersStoreHasForkedRepositoryFunc{
-			defaultHook: i.HasForkedRepository,
+		IsFollowingFunc: &UsersStoreIsFollowingFunc{
+			defaultHook: i.IsFollowing,
 		},
 		IsUsernameUsedFunc: &UsersStoreIsUsernameUsedFunc{
 			defaultHook: i.IsUsernameUsed,
@@ -3134,6 +3534,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
 			defaultHook: i.SearchByName,
+		},
+		UnfollowFunc: &UsersStoreUnfollowFunc{
+			defaultHook: i.Unfollow,
 		},
 		UpdateFunc: &UsersStoreUpdateFunc{
 			defaultHook: i.Update,
@@ -3894,6 +4297,113 @@ func (c UsersStoreDeleteInactivatedFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 
+// UsersStoreFollowFunc describes the behavior when the Follow method of the
+// parent MockUsersStore instance is invoked.
+type UsersStoreFollowFunc struct {
+	defaultHook func(context.Context, int64, int64) error
+	hooks       []func(context.Context, int64, int64) error
+	history     []UsersStoreFollowFuncCall
+	mutex       sync.Mutex
+}
+
+// Follow delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) Follow(v0 context.Context, v1 int64, v2 int64) error {
+	r0 := m.FollowFunc.nextHook()(v0, v1, v2)
+	m.FollowFunc.appendCall(UsersStoreFollowFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Follow method of the
+// parent MockUsersStore instance is invoked and the hook queue is empty.
+func (f *UsersStoreFollowFunc) SetDefaultHook(hook func(context.Context, int64, int64) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Follow method of the parent MockUsersStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreFollowFunc) PushHook(hook func(context.Context, int64, int64) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreFollowFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, int64) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreFollowFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, int64) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreFollowFunc) nextHook() func(context.Context, int64, int64) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreFollowFunc) appendCall(r0 UsersStoreFollowFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreFollowFuncCall objects describing
+// the invocations of this function.
+func (f *UsersStoreFollowFunc) History() []UsersStoreFollowFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreFollowFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreFollowFuncCall is an object that describes an invocation of
+// method Follow on an instance of MockUsersStore.
+type UsersStoreFollowFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreFollowFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreFollowFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
 // UsersStoreGetByEmailFunc describes the behavior when the GetByEmail
 // method of the parent MockUsersStore instance is invoked.
 type UsersStoreGetByEmailFunc struct {
@@ -4438,36 +4948,35 @@ func (c UsersStoreGetMailableEmailsByUsernamesFuncCall) Results() []interface{} 
 	return []interface{}{c.Result0, c.Result1}
 }
 
-// UsersStoreHasForkedRepositoryFunc describes the behavior when the
-// HasForkedRepository method of the parent MockUsersStore instance is
-// invoked.
-type UsersStoreHasForkedRepositoryFunc struct {
+// UsersStoreIsFollowingFunc describes the behavior when the IsFollowing
+// method of the parent MockUsersStore instance is invoked.
+type UsersStoreIsFollowingFunc struct {
 	defaultHook func(context.Context, int64, int64) bool
 	hooks       []func(context.Context, int64, int64) bool
-	history     []UsersStoreHasForkedRepositoryFuncCall
+	history     []UsersStoreIsFollowingFuncCall
 	mutex       sync.Mutex
 }
 
-// HasForkedRepository delegates to the next hook function in the queue and
-// stores the parameter and result values of this invocation.
-func (m *MockUsersStore) HasForkedRepository(v0 context.Context, v1 int64, v2 int64) bool {
-	r0 := m.HasForkedRepositoryFunc.nextHook()(v0, v1, v2)
-	m.HasForkedRepositoryFunc.appendCall(UsersStoreHasForkedRepositoryFuncCall{v0, v1, v2, r0})
+// IsFollowing delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockUsersStore) IsFollowing(v0 context.Context, v1 int64, v2 int64) bool {
+	r0 := m.IsFollowingFunc.nextHook()(v0, v1, v2)
+	m.IsFollowingFunc.appendCall(UsersStoreIsFollowingFuncCall{v0, v1, v2, r0})
 	return r0
 }
 
-// SetDefaultHook sets function that is called when the HasForkedRepository
-// method of the parent MockUsersStore instance is invoked and the hook
-// queue is empty.
-func (f *UsersStoreHasForkedRepositoryFunc) SetDefaultHook(hook func(context.Context, int64, int64) bool) {
+// SetDefaultHook sets function that is called when the IsFollowing method
+// of the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreIsFollowingFunc) SetDefaultHook(hook func(context.Context, int64, int64) bool) {
 	f.defaultHook = hook
 }
 
 // PushHook adds a function to the end of hook queue. Each invocation of the
-// HasForkedRepository method of the parent MockUsersStore instance invokes
-// the hook at the front of the queue and discards it. After the queue is
-// empty, the default hook function is invoked for any future action.
-func (f *UsersStoreHasForkedRepositoryFunc) PushHook(hook func(context.Context, int64, int64) bool) {
+// IsFollowing method of the parent MockUsersStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreIsFollowingFunc) PushHook(hook func(context.Context, int64, int64) bool) {
 	f.mutex.Lock()
 	f.hooks = append(f.hooks, hook)
 	f.mutex.Unlock()
@@ -4475,20 +4984,20 @@ func (f *UsersStoreHasForkedRepositoryFunc) PushHook(hook func(context.Context, 
 
 // SetDefaultReturn calls SetDefaultHook with a function that returns the
 // given values.
-func (f *UsersStoreHasForkedRepositoryFunc) SetDefaultReturn(r0 bool) {
+func (f *UsersStoreIsFollowingFunc) SetDefaultReturn(r0 bool) {
 	f.SetDefaultHook(func(context.Context, int64, int64) bool {
 		return r0
 	})
 }
 
 // PushReturn calls PushHook with a function that returns the given values.
-func (f *UsersStoreHasForkedRepositoryFunc) PushReturn(r0 bool) {
+func (f *UsersStoreIsFollowingFunc) PushReturn(r0 bool) {
 	f.PushHook(func(context.Context, int64, int64) bool {
 		return r0
 	})
 }
 
-func (f *UsersStoreHasForkedRepositoryFunc) nextHook() func(context.Context, int64, int64) bool {
+func (f *UsersStoreIsFollowingFunc) nextHook() func(context.Context, int64, int64) bool {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
@@ -4501,27 +5010,26 @@ func (f *UsersStoreHasForkedRepositoryFunc) nextHook() func(context.Context, int
 	return hook
 }
 
-func (f *UsersStoreHasForkedRepositoryFunc) appendCall(r0 UsersStoreHasForkedRepositoryFuncCall) {
+func (f *UsersStoreIsFollowingFunc) appendCall(r0 UsersStoreIsFollowingFuncCall) {
 	f.mutex.Lock()
 	f.history = append(f.history, r0)
 	f.mutex.Unlock()
 }
 
-// History returns a sequence of UsersStoreHasForkedRepositoryFuncCall
-// objects describing the invocations of this function.
-func (f *UsersStoreHasForkedRepositoryFunc) History() []UsersStoreHasForkedRepositoryFuncCall {
+// History returns a sequence of UsersStoreIsFollowingFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreIsFollowingFunc) History() []UsersStoreIsFollowingFuncCall {
 	f.mutex.Lock()
-	history := make([]UsersStoreHasForkedRepositoryFuncCall, len(f.history))
+	history := make([]UsersStoreIsFollowingFuncCall, len(f.history))
 	copy(history, f.history)
 	f.mutex.Unlock()
 
 	return history
 }
 
-// UsersStoreHasForkedRepositoryFuncCall is an object that describes an
-// invocation of method HasForkedRepository on an instance of
-// MockUsersStore.
-type UsersStoreHasForkedRepositoryFuncCall struct {
+// UsersStoreIsFollowingFuncCall is an object that describes an invocation
+// of method IsFollowing on an instance of MockUsersStore.
+type UsersStoreIsFollowingFuncCall struct {
 	// Arg0 is the value of the 1st argument passed to this method
 	// invocation.
 	Arg0 context.Context
@@ -4538,13 +5046,13 @@ type UsersStoreHasForkedRepositoryFuncCall struct {
 
 // Args returns an interface slice containing the arguments of this
 // invocation.
-func (c UsersStoreHasForkedRepositoryFuncCall) Args() []interface{} {
+func (c UsersStoreIsFollowingFuncCall) Args() []interface{} {
 	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
 }
 
 // Results returns an interface slice containing the results of this
 // invocation.
-func (c UsersStoreHasForkedRepositoryFuncCall) Results() []interface{} {
+func (c UsersStoreIsFollowingFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 
@@ -5112,6 +5620,114 @@ func (c UsersStoreSearchByNameFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreSearchByNameFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1, c.Result2}
+}
+
+// UsersStoreUnfollowFunc describes the behavior when the Unfollow method of
+// the parent MockUsersStore instance is invoked.
+type UsersStoreUnfollowFunc struct {
+	defaultHook func(context.Context, int64, int64) error
+	hooks       []func(context.Context, int64, int64) error
+	history     []UsersStoreUnfollowFuncCall
+	mutex       sync.Mutex
+}
+
+// Unfollow delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) Unfollow(v0 context.Context, v1 int64, v2 int64) error {
+	r0 := m.UnfollowFunc.nextHook()(v0, v1, v2)
+	m.UnfollowFunc.appendCall(UsersStoreUnfollowFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the Unfollow method of
+// the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreUnfollowFunc) SetDefaultHook(hook func(context.Context, int64, int64) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// Unfollow method of the parent MockUsersStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreUnfollowFunc) PushHook(hook func(context.Context, int64, int64) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreUnfollowFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, int64) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreUnfollowFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, int64) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreUnfollowFunc) nextHook() func(context.Context, int64, int64) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreUnfollowFunc) appendCall(r0 UsersStoreUnfollowFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreUnfollowFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreUnfollowFunc) History() []UsersStoreUnfollowFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreUnfollowFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreUnfollowFuncCall is an object that describes an invocation of
+// method Unfollow on an instance of MockUsersStore.
+type UsersStoreUnfollowFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreUnfollowFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreUnfollowFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreUpdateFunc describes the behavior when the Update method of the

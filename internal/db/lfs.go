@@ -16,8 +16,6 @@ import (
 )
 
 // LFSStore is the persistent interface for LFS objects.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type LFSStore interface {
 	// CreateObject creates a LFS object record in database.
 	CreateObject(ctx context.Context, repoID int64, oid lfsutil.OID, size int64, storage lfsutil.Storage) error

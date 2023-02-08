@@ -32,8 +32,6 @@ import (
 )
 
 // UsersStore is the persistent interface for users.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type UsersStore interface {
 	// Authenticate validates username and password via given login source ID. It
 	// returns ErrUserNotExist when the user was not found.
@@ -47,29 +45,12 @@ type UsersStore interface {
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
 	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
-	// ChangeUsername changes the username of the given user and updates all
-	// references to the old username. It returns ErrNameNotAllowed if the given
-	// name or pattern of the name is not allowed as a username, or
-	// ErrUserAlreadyExist when another user with same name already exists.
-	ChangeUsername(ctx context.Context, userID int64, newUsername string) error
-	// Count returns the total number of users.
-	Count(ctx context.Context) int64
 	// Create creates a new user and persists to database. It returns
 	// ErrNameNotAllowed if the given name or pattern of the name is not allowed as
 	// a username, or ErrUserAlreadyExist when a user with same name already exists,
 	// or ErrEmailAlreadyUsed if the email has been used by another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
-	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
-	// use look up avatar by email.
-	DeleteCustomAvatar(ctx context.Context, userID int64) error
-	// DeleteByID deletes the given user and all their resources. It returns
-	// ErrUserOwnRepos when the user still has repository ownership, or returns
-	// ErrUserHasOrgs when the user still has organization membership. It is more
-	// performant to skip rewriting the "authorized_keys" file for individual
-	// deletion in a batch operation.
-	DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error
-	// DeleteInactivated deletes all inactivated users.
-	DeleteInactivated() error
+
 	// GetByEmail returns the user (not organization) with given email. It ignores
 	// records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(ctx context.Context, email string) (*User, error)
@@ -86,15 +67,45 @@ type UsersStore interface {
 	// addresses (where email notifications are sent to) of users with given list of
 	// usernames. Non-existing usernames are ignored.
 	GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error)
-	// HasForkedRepository returns true if the user has forked given repository.
-	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
+	// SearchByName returns a list of users whose username or full name matches the
+	// given keyword case-insensitively. Results are paginated by given page and
+	// page size, and sorted by the given order (e.g. "id DESC"). A total count of
+	// all results is also returned. If the order is not given, it's up to the
+	// database to decide.
+	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error)
+
 	// IsUsernameUsed returns true if the given username has been used other than
 	// the excluded user (a non-positive ID effectively meaning check against all
 	// users).
 	IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool
-	// List returns a list of users. Results are paginated by given page and page
-	// size, and sorted by primary key (id) in ascending order.
-	List(ctx context.Context, page, pageSize int) ([]*User, error)
+	// ChangeUsername changes the username of the given user and updates all
+	// references to the old username. It returns ErrNameNotAllowed if the given
+	// name or pattern of the name is not allowed as a username, or
+	// ErrUserAlreadyExist when another user with same name already exists.
+	ChangeUsername(ctx context.Context, userID int64, newUsername string) error
+	// Update updates fields for the given user.
+	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
+	// UseCustomAvatar uses the given avatar as the user custom avatar.
+	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
+
+	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
+	// use look up avatar by email.
+	DeleteCustomAvatar(ctx context.Context, userID int64) error
+	// DeleteByID deletes the given user and all their resources. It returns
+	// ErrUserOwnRepos when the user still has repository ownership, or returns
+	// ErrUserHasOrgs when the user still has organization membership. It is more
+	// performant to skip rewriting the "authorized_keys" file for individual
+	// deletion in a batch operation.
+	DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error
+	// DeleteInactivated deletes all inactivated users.
+	DeleteInactivated() error
+
+	// Follow marks the user to follow the other user.
+	Follow(ctx context.Context, userID, followID int64) error
+	// Unfollow removes the mark the user to follow the other user.
+	Unfollow(ctx context.Context, userID, followID int64) error
+	// IsFollowing returns true if the user is following the other user.
+	IsFollowing(ctx context.Context, userID, followID int64) bool
 	// ListFollowers returns a list of users that are following the given user.
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
@@ -103,16 +114,12 @@ type UsersStore interface {
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
 	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
-	// SearchByName returns a list of users whose username or full name matches the
-	// given keyword case-insensitively. Results are paginated by given page and
-	// page size, and sorted by the given order (e.g. "id DESC"). A total count of
-	// all results is also returned. If the order is not given, it's up to the
-	// database to decide.
-	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error)
-	// Update updates fields for the given user.
-	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
-	// UseCustomAvatar uses the given avatar as the user custom avatar.
-	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
+
+	// List returns a list of users. Results are paginated by given page and page
+	// size, and sorted by primary key (id) in ascending order.
+	List(ctx context.Context, page, pageSize int) ([]*User, error)
+	// Count returns the total number of users.
+	Count(ctx context.Context) int64
 }
 
 var Users UsersStore
@@ -650,6 +657,88 @@ func (db *users) DeleteInactivated() error {
 	return nil
 }
 
+func (*users) recountFollows(tx *gorm.DB, userID, followID int64) error {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		UPDATE "user"
+		SET num_followers = (
+			SELECT COUNT(*) FROM follow WHERE follow_id = @followID
+		)
+		WHERE id = @followID
+	*/
+	err := tx.Model(&User{}).
+		Where("id = ?", followID).
+		Update(
+			"num_followers",
+			tx.Model(&Follow{}).Select("COUNT(*)").Where("follow_id = ?", followID),
+		).
+		Error
+	if err != nil {
+		return errors.Wrap(err, `update "user.num_followers"`)
+	}
+
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		UPDATE "user"
+		SET num_following = (
+			SELECT COUNT(*) FROM follow WHERE user_id = @userID
+		)
+		WHERE id = @userID
+	*/
+	err = tx.Model(&User{}).
+		Where("id = ?", userID).
+		Update(
+			"num_following",
+			tx.Model(&Follow{}).Select("COUNT(*)").Where("user_id = ?", userID),
+		).
+		Error
+	if err != nil {
+		return errors.Wrap(err, `update "user.num_following"`)
+	}
+	return nil
+}
+
+func (db *users) Follow(ctx context.Context, userID, followID int64) error {
+	if userID == followID {
+		return nil
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		f := &Follow{
+			UserID:   userID,
+			FollowID: followID,
+		}
+		result := tx.FirstOrCreate(f, f)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, "upsert")
+		} else if result.RowsAffected <= 0 {
+			return nil // Relation already exists
+		}
+
+		return db.recountFollows(tx, userID, followID)
+	})
+}
+
+func (db *users) Unfollow(ctx context.Context, userID, followID int64) error {
+	if userID == followID {
+		return nil
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("user_id = ? AND follow_id = ?", userID, followID).Delete(&Follow{}).Error
+		if err != nil {
+			return errors.Wrap(err, "delete")
+		}
+		return db.recountFollows(tx, userID, followID)
+	})
+}
+
+func (db *users) IsFollowing(ctx context.Context, userID, followID int64) bool {
+	return db.WithContext(ctx).Where("user_id = ? AND follow_id = ?", userID, followID).First(&Follow{}).Error == nil
+}
+
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
 
 type ErrUserNotExist struct {
@@ -755,12 +844,6 @@ func (db *users) GetMailableEmailsByUsernames(ctx context.Context, usernames []s
 		Select("email").
 		Where("lower_name IN (?) AND is_active = ?", usernames, true).
 		Find(&emails).Error
-}
-
-func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) bool {
-	var count int64
-	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
-	return count > 0
 }
 
 func (db *users) IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool {
@@ -1181,7 +1264,7 @@ func (u *User) AvatarURL() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) IsFollowing(followID int64) bool {
-	return Follows.IsFollowing(context.TODO(), u.ID, followID)
+	return Users.IsFollowing(context.TODO(), u.ID, followID)
 }
 
 // IsUserOrgOwner returns true if the user is in the owner team of the given
@@ -1208,7 +1291,7 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return OrgUsers.CountByUser(context.TODO(), u.ID)
+	return Orgs.CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.
@@ -1335,4 +1418,11 @@ func isNameAllowed(names map[string]struct{}, patterns []string, name string) er
 // the name is not allowed as a username.
 func isUsernameAllowed(name string) error {
 	return isNameAllowed(reservedUsernames, reservedUsernamePatterns, name)
+}
+
+// Follow represents relations of users and their followers.
+type Follow struct {
+	ID       int64 `gorm:"primaryKey"`
+	UserID   int64 `xorm:"UNIQUE(follow)" gorm:"uniqueIndex:follow_user_follow_unique;not null"`
+	FollowID int64 `xorm:"UNIQUE(follow)" gorm:"uniqueIndex:follow_user_follow_unique;not null"`
 }

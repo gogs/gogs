@@ -122,16 +122,13 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	AccessTokens = &accessTokens{DB: db}
 	Actions = NewActionsStore(db)
 	EmailAddresses = NewEmailAddressesStore(db)
-	Follows = NewFollowsStore(db)
 	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Orgs = NewOrgsStore(db)
-	OrgUsers = NewOrgUsersStore(db)
 	Perms = NewPermsStore(db)
 	Repos = NewReposStore(db)
 	TwoFactors = &twoFactors{DB: db}
 	Users = NewUsersStore(db)
-	Watches = NewWatchesStore(db)
 
 	return db, nil
 }
