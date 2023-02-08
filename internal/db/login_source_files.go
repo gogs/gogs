@@ -25,8 +25,6 @@ import (
 )
 
 // loginSourceFilesStore is the in-memory interface for login source files stored on file system.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type loginSourceFilesStore interface {
 	// GetByID returns a clone of login source by given ID.
 	GetByID(id int64) (*LoginSource, error)

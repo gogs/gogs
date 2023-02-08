@@ -9,8 +9,6 @@ import (
 )
 
 // ModuleStore is the interface for Git operations.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type ModuleStore interface {
 	// RemoteAdd adds a new remote to the repository in given path.
 	RemoteAdd(repoPath, name, url string, opts ...git.RemoteAddOptions) error

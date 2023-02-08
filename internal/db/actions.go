@@ -29,8 +29,6 @@ import (
 )
 
 // ActionsStore is the persistent interface for actions.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
 	// CommitRepo creates actions for pushing commits to the repository. An action
 	// with the type ActionDeleteBranch is created if the push deletes a branch; an
@@ -166,7 +164,7 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
 func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := NewWatchesStore(db.DB).ListByRepo(ctx, act.RepoID)
+	watches, err := NewReposStore(db.DB).ListWatches(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}

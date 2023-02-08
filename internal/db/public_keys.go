@@ -16,8 +16,6 @@ import (
 )
 
 // PublicKeysStore is the persistent interface for public keys.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type PublicKeysStore interface {
 	// RewriteAuthorizedKeys rewrites the "authorized_keys" file under the SSH root
 	// path with all public keys stored in the database.
