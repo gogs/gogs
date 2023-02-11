@@ -101,15 +101,14 @@ func runBackup(c *cli.Context) error {
 		log.Fatal("Failed to include 'db': %v", err)
 	}
 
-	// Custom files
 	if !c.Bool("database-only") {
-		if err = z.AddDir(archiveRootDir+"/custom", conf.CustomDir()); err != nil {
-			log.Fatal("Failed to include 'custom': %v", err)
+		// Custom files
+		err = addCustomDirToBackup(z)
+		if err != nil {
+			log.Fatal("Failed to add custom directory to backup: %v", err)
 		}
-	}
 
-	// Data files
-	if !c.Bool("database-only") {
+		// Data files
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
 			if !com.IsDir(dirPath) {
@@ -164,5 +163,35 @@ func runBackup(c *cli.Context) error {
 	_ = os.RemoveAll(rootDir)
 	log.Info("Backup succeed! Archive is located at: %s", archiveName)
 	log.Stop()
+	return nil
+}
+
+func addCustomDirToBackup(z *zip.ZipArchive) error {
+	customDir := conf.CustomDir()
+	entries, err := os.ReadDir(customDir)
+	if err != nil {
+		return errors.Wrap(err, "list custom directory entries")
+	}
+
+	for _, e := range entries {
+		if e.Name() == "data" {
+			// Skip the "data" directory because it lives under the "custom" directory in
+			// the Docker setup and will be backed up separately.
+			log.Trace(`Skipping "data" directory in custom directory`)
+			continue
+		}
+
+		add := z.AddFile
+		if e.IsDir() {
+			add = z.AddDir
+		}
+		err = add(
+			fmt.Sprintf("%s/custom/%s", archiveRootDir, e.Name()),
+			filepath.Join(customDir, e.Name()),
+		)
+		if err != nil {
+			return errors.Wrapf(err, "add %q", e.Name())
+		}
+	}
 	return nil
 }

@@ -119,8 +119,8 @@ func runRestore(c *cli.Context) error {
 		log.Fatal("Failed to import database: %v", err)
 	}
 
-	// Custom files
 	if !c.Bool("database-only") {
+		// Custom files
 		if osutil.IsDir(conf.CustomDir()) {
 			if err = os.Rename(conf.CustomDir(), conf.CustomDir()+".bak"); err != nil {
 				log.Fatal("Failed to backup current 'custom': %v", err)
@@ -129,10 +129,8 @@ func runRestore(c *cli.Context) error {
 		if err = os.Rename(filepath.Join(archivePath, "custom"), conf.CustomDir()); err != nil {
 			log.Fatal("Failed to import 'custom': %v", err)
 		}
-	}
 
-	// Data files
-	if !c.Bool("database-only") {
+		// Data files
 		_ = os.MkdirAll(conf.Server.AppDataPath, os.ModePerm)
 		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
 			// Skip if backup archive does not have corresponding data
