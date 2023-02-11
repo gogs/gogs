@@ -256,8 +256,6 @@ func InstallPost(c *context.Context, f form.Install) {
 		return
 	}
 
-	conf.Repository.DefaultBranchName = f.DefaultBranchName
-
 	currentUser, match := conf.CheckRunUser(f.RunUser)
 	if !match {
 		c.FormErr("RunUser")
@@ -324,7 +322,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	cfg.Section("").Key("BRAND_NAME").SetValue(f.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(f.RepoRootPath)
-	cfg.Section("repository").Key("DEFAULT_BRANCH_NAME").SetValue(conf.Repository.DefaultBranchName)
+	cfg.Section("repository").Key("DEFAULT_BRANCH_NAME").SetValue(f.DefaultBranchName)
 	cfg.Section("").Key("RUN_USER").SetValue(f.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(f.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(f.HTTPPort)
