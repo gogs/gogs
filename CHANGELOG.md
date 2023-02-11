@@ -11,6 +11,7 @@ All notable changes to Gogs are documented in this file.
 - New API endpoint `PUT /repos/:owner/:repo/contents/:path` for creating and update repository contents. [#5967](https://github.com/gogs/gogs/issues/5967)
 - New configuration option `[git.timeout] DIFF` for customizing operation timeout of `git diff`. [#6315](https://github.com/gogs/gogs/issues/6315)
 - New configuration option `[server] SSH_SERVER_MACS` for setting list of accepted MACs for connections to builtin SSH server. [#6434](https://github.com/gogs/gogs/issues/6434)
+- New configuration option `[repository] DEFAULT_BRANCH` for setting default branch name for new repositories. [#7291](https://github.com/gogs/gogs/issues/7291)
 - Support specifying custom schema for PostgreSQL. [#6695](https://github.com/gogs/gogs/pull/6695)
 - Support rendering Mermaid diagrams in Markdown. [#6776](https://github.com/gogs/gogs/pull/6776)
 - Docker: Allow passing extra arguments to the `backup` command. [#7060](https://github.com/gogs/gogs/pull/7060)
