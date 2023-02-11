@@ -39,7 +39,7 @@ var (
 // FuncMap returns a list of user-defined template functions.
 func FuncMap() []template.FuncMap {
 	funcMapOnce.Do(func() {
-		funcMap = []template.FuncMap{map[string]interface{}{
+		funcMap = []template.FuncMap{map[string]any{
 			"BuildCommit": func() string {
 				return conf.BuildCommit
 			},

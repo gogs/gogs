@@ -52,8 +52,8 @@ to make automatic initialization process more smoothly`,
 		Name:  "delete-inactive-users",
 		Usage: "Delete all inactive accounts",
 		Action: adminDashboardOperation(
-			db.DeleteInactivateUsers,
-			"All inactivate accounts have been deleted successfully",
+			func() error { return db.Users.DeleteInactivated() },
+			"All inactivated accounts have been deleted successfully",
 		),
 		Flags: []cli.Flag{
 			stringFlag("config, c", "", "Custom configuration file path"),

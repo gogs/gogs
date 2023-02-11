@@ -241,7 +241,7 @@ func CreateWebhook(w *Webhook) error {
 var _ errutil.NotFound = (*ErrWebhookNotExist)(nil)
 
 type ErrWebhookNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrWebhookNotExist(err error) bool {
@@ -264,7 +264,7 @@ func getWebhook(bean *Webhook) (*Webhook, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrWebhookNotExist{args: map[string]interface{}{"webhookID": bean.ID}}
+		return nil, ErrWebhookNotExist{args: map[string]any{"webhookID": bean.ID}}
 	}
 	return bean, nil
 }
@@ -494,7 +494,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (t *HookTask) ToJSON(v interface{}) string {
+func (t *HookTask) ToJSON(v any) string {
 	p, err := jsoniter.Marshal(v)
 	if err != nil {
 		log.Error("Marshal [%d]: %v", t.ID, err)
@@ -524,7 +524,7 @@ func createHookTask(e Engine, t *HookTask) error {
 var _ errutil.NotFound = (*ErrHookTaskNotExist)(nil)
 
 type ErrHookTaskNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsHookTaskNotExist(err error) bool {
@@ -550,7 +550,7 @@ func GetHookTaskOfWebhookByUUID(webhookID int64, uuid string) (*HookTask, error)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrHookTaskNotExist{args: map[string]interface{}{"webhookID": webhookID, "uuid": uuid}}
+		return nil, ErrHookTaskNotExist{args: map[string]any{"webhookID": webhookID, "uuid": uuid}}
 	}
 	return hookTask, nil
 }
@@ -788,7 +788,7 @@ func (t *HookTask) deliver() {
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
 	_ = x.Where("is_delivered = ?", false).Iterate(new(HookTask),
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			t := bean.(*HookTask)
 			t.deliver()
 			tasks = append(tasks, t)

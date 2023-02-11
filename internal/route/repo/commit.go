@@ -5,6 +5,7 @@
 package repo
 
 import (
+	gocontext "context"
 	"path"
 	"time"
 
@@ -60,7 +61,7 @@ func renderCommits(c *context.Context, filename string) {
 	}
 
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 
 	if page > 1 {
 		c.Data["HasPrevious"] = true
@@ -97,7 +98,7 @@ func SearchCommits(c *context.Context) {
 	}
 
 	commits = RenderIssueLinks(commits, c.Repo.RepoLink)
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 
 	c.Data["Keyword"] = keyword
 	c.Data["Username"] = c.Repo.Owner.Name
@@ -108,6 +109,13 @@ func SearchCommits(c *context.Context) {
 
 func FileHistory(c *context.Context) {
 	renderCommits(c, c.Repo.TreePath)
+}
+
+// tryGetUserByEmail returns a non-nil value if the email is corresponding to an
+// existing user.
+func tryGetUserByEmail(ctx gocontext.Context, email string) *db.User {
+	user, _ := db.Users.GetByEmail(ctx, email)
+	return user
 }
 
 func Diff(c *context.Context) {
@@ -156,7 +164,7 @@ func Diff(c *context.Context) {
 	c.Data["IsImageFile"] = commit.IsImageFile
 	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
 	c.Data["Commit"] = commit
-	c.Data["Author"] = db.ValidateCommitWithEmail(commit)
+	c.Data["Author"] = tryGetUserByEmail(c.Req.Context(), commit.Author.Email)
 	c.Data["Diff"] = diff
 	c.Data["Parents"] = parents
 	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
@@ -178,6 +186,31 @@ func RawDiff(c *context.Context) {
 		c.NotFoundOrError(gitutil.NewError(err), "get raw diff")
 		return
 	}
+}
+
+type userCommit struct {
+	User *db.User
+	*git.Commit
+}
+
+// matchUsersWithCommitEmails matches existing users using commit author emails.
+func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit) []*userCommit {
+	emailToUsers := make(map[string]*db.User)
+	newCommits := make([]*userCommit, len(oldCommits))
+	for i := range oldCommits {
+		var u *db.User
+		if v, ok := emailToUsers[oldCommits[i].Author.Email]; !ok {
+			emailToUsers[oldCommits[i].Author.Email], _ = db.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
+		} else {
+			u = v
+		}
+
+		newCommits[i] = &userCommit{
+			User:   u,
+			Commit: oldCommits[i],
+		}
+	}
+	return newCommits
 }
 
 func CompareDiff(c *context.Context) {
@@ -210,7 +243,7 @@ func CompareDiff(c *context.Context) {
 
 	c.Data["IsSplitStyle"] = c.Query("style") == "split"
 	c.Data["CommitRepoLink"] = c.Repo.RepoLink
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 	c.Data["BeforeCommitID"] = beforeCommitID
 	c.Data["AfterCommitID"] = afterCommitID

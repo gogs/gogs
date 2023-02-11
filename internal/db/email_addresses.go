@@ -15,8 +15,6 @@ import (
 )
 
 // EmailAddressesStore is the persistent interface for email addresses.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type EmailAddressesStore interface {
 	// GetByEmail returns the email address with given email. If `needsActivated` is
 	// true, only activated email will be returned, otherwise, it may return

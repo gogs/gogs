@@ -526,7 +526,7 @@ func GetUnmergedPullRequest(headRepoID, baseRepoID int64, headBranch, baseBranch
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{args: map[string]interface{}{
+		return nil, ErrPullRequestNotExist{args: map[string]any{
 			"headRepoID": headRepoID,
 			"baseRepoID": baseRepoID,
 			"headBranch": headBranch,
@@ -558,7 +558,7 @@ func GetUnmergedPullRequestsByBaseInfo(repoID int64, branch string) ([]*PullRequ
 var _ errutil.NotFound = (*ErrPullRequestNotExist)(nil)
 
 type ErrPullRequestNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrPullRequestNotExist(err error) bool {
@@ -580,7 +580,7 @@ func getPullRequestByID(e Engine, id int64) (*PullRequest, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{args: map[string]interface{}{"pullRequestID": id}}
+		return nil, ErrPullRequestNotExist{args: map[string]any{"pullRequestID": id}}
 	}
 	return pr, pr.loadAttributes(e)
 }
@@ -598,7 +598,7 @@ func getPullRequestByIssueID(e Engine, issueID int64) (*PullRequest, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrPullRequestNotExist{args: map[string]interface{}{"issueID": issueID}}
+		return nil, ErrPullRequestNotExist{args: map[string]any{"issueID": issueID}}
 	}
 	return pr, pr.loadAttributes(e)
 }
@@ -845,7 +845,7 @@ func TestPullRequests() {
 	_ = x.Iterate(PullRequest{
 		Status: PULL_REQUEST_STATUS_CHECKING,
 	},
-		func(idx int, bean interface{}) error {
+		func(idx int, bean any) error {
 			pr := bean.(*PullRequest)
 
 			if err := pr.LoadAttributes(); err != nil {

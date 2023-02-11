@@ -120,9 +120,9 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	var err error
 	switch c.Params(":action") {
 	case "follow":
-		err = db.Follows.Follow(c.Req.Context(), c.UserID(), puser.ID)
+		err = db.Users.Follow(c.Req.Context(), c.UserID(), puser.ID)
 	case "unfollow":
-		err = db.Follows.Unfollow(c.Req.Context(), c.UserID(), puser.ID)
+		err = db.Users.Unfollow(c.Req.Context(), c.UserID(), puser.ID)
 	}
 
 	if err != nil {

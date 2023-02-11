@@ -145,7 +145,7 @@ func Operation(c *context.Context) {
 	switch AdminOperation(c.QueryInt("op")) {
 	case CleanInactivateUser:
 		success = c.Tr("admin.dashboard.delete_inactivate_accounts_success")
-		err = db.DeleteInactivateUsers()
+		err = db.Users.DeleteInactivated()
 	case CleanRepoArchives:
 		success = c.Tr("admin.dashboard.delete_repo_archives_success")
 		err = db.DeleteRepositoryArchives()

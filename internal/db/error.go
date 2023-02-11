@@ -8,39 +8,6 @@ import (
 	"fmt"
 )
 
-//  ____ ___
-// |    |   \______ ___________
-// |    |   /  ___// __ \_  __ \
-// |    |  /\___ \\  ___/|  | \/
-// |______//____  >\___  >__|
-//              \/     \/
-
-type ErrUserOwnRepos struct {
-	UID int64
-}
-
-func IsErrUserOwnRepos(err error) bool {
-	_, ok := err.(ErrUserOwnRepos)
-	return ok
-}
-
-func (err ErrUserOwnRepos) Error() string {
-	return fmt.Sprintf("user still has ownership of repositories [uid: %d]", err.UID)
-}
-
-type ErrUserHasOrgs struct {
-	UID int64
-}
-
-func IsErrUserHasOrgs(err error) bool {
-	_, ok := err.(ErrUserHasOrgs)
-	return ok
-}
-
-func (err ErrUserHasOrgs) Error() string {
-	return fmt.Sprintf("user still has membership of organizations [uid: %d]", err.UID)
-}
-
 //  __      __.__ __   .__
 // /  \    /  \__|  | _|__|
 // \   \/\/   /  |  |/ /  |

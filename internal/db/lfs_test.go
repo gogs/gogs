@@ -23,7 +23,7 @@ func TestLFS(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(LFSObject)}
+	tables := []any{new(LFSObject)}
 	db := &lfs{
 		DB: dbtest.NewDB(t, "lfs", tables...),
 	}

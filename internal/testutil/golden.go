@@ -7,7 +7,6 @@ package testutil
 import (
 	"encoding/json"
 	"flag"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +28,7 @@ func Update(name string) bool {
 
 // AssertGolden compares what's got and what's in the golden file. It updates
 // the golden file on-demand. It does nothing when the runtime is "windows".
-func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
+func AssertGolden(t testing.TB, path string, update bool, got any) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping testing on Windows")
 		return
@@ -45,13 +44,13 @@ func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
 			t.Fatalf("create directories for golden file %q: %v", path, err)
 		}
 
-		err = ioutil.WriteFile(path, data, 0640)
+		err = os.WriteFile(path, data, 0640)
 		if err != nil {
 			t.Fatalf("update golden file %q: %v", path, err)
 		}
 	}
 
-	golden, err := ioutil.ReadFile(path)
+	golden, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read golden file %q: %v", path, err)
 	}
@@ -59,7 +58,7 @@ func AssertGolden(t testing.TB, path string, update bool, got interface{}) {
 	assert.Equal(t, string(golden), string(data))
 }
 
-func marshal(t testing.TB, v interface{}) []byte {
+func marshal(t testing.TB, v any) []byte {
 	t.Helper()
 
 	switch v2 := v.(type) {

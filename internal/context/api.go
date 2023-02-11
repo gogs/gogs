@@ -58,7 +58,7 @@ func (c *APIContext) Error(err error, msg string) {
 }
 
 // Errorf renders the 500 response with formatted message.
-func (c *APIContext) Errorf(err error, format string, args ...interface{}) {
+func (c *APIContext) Errorf(err error, format string, args ...any) {
 	c.Error(err, fmt.Sprintf(format, args...))
 }
 

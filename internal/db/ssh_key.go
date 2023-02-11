@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
@@ -44,20 +43,20 @@ const (
 
 // PublicKey represents a user or deploy SSH public key.
 type PublicKey struct {
-	ID          int64
-	OwnerID     int64      `xorm:"INDEX NOT NULL"`
-	Name        string     `xorm:"NOT NULL"`
-	Fingerprint string     `xorm:"NOT NULL"`
-	Content     string     `xorm:"TEXT NOT NULL"`
-	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2"`
-	Type        KeyType    `xorm:"NOT NULL DEFAULT 1"`
+	ID          int64      `gorm:"primaryKey"`
+	OwnerID     int64      `xorm:"INDEX NOT NULL" gorm:"index;not null"`
+	Name        string     `xorm:"NOT NULL" gorm:"not null"`
+	Fingerprint string     `xorm:"NOT NULL" gorm:"not null"`
+	Content     string     `xorm:"TEXT NOT NULL" gorm:"type:TEXT;not null"`
+	Mode        AccessMode `xorm:"NOT NULL DEFAULT 2" gorm:"not null;default:2"`
+	Type        KeyType    `xorm:"NOT NULL DEFAULT 1" gorm:"not null;default:1"`
 
-	Created           time.Time `xorm:"-" json:"-"`
+	Created           time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix       int64
-	Updated           time.Time `xorm:"-" json:"-"` // Note: Updated must below Created for AfterSet.
+	Updated           time.Time `xorm:"-" json:"-" gorm:"-"` // Note: Updated must below Created for AfterSet.
 	UpdatedUnix       int64
-	HasRecentActivity bool `xorm:"-" json:"-"`
-	HasUsed           bool `xorm:"-" json:"-"`
+	HasRecentActivity bool `xorm:"-" json:"-" gorm:"-"`
+	HasUsed           bool `xorm:"-" json:"-" gorm:"-"`
 }
 
 func (k *PublicKey) BeforeInsert() {
@@ -181,7 +180,7 @@ func parseKeyString(content string) (string, error) {
 // writeTmpKeyFile writes key content to a temporary file
 // and returns the name of that file, along with any possible errors.
 func writeTmpKeyFile(content string) (string, error) {
-	tmpFile, err := ioutil.TempFile(conf.SSH.KeyTestPath, "gogs_keytest")
+	tmpFile, err := os.CreateTemp(conf.SSH.KeyTestPath, "gogs_keytest")
 	if err != nil {
 		return "", fmt.Errorf("TempFile: %v", err)
 	}
@@ -377,7 +376,7 @@ func addKey(e Engine, key *PublicKey) (err error) {
 	// Calculate fingerprint.
 	tmpPath := strings.ReplaceAll(path.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "id_rsa.pub"), "\\", "/")
 	_ = os.MkdirAll(path.Dir(tmpPath), os.ModePerm)
-	if err = ioutil.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
+	if err = os.WriteFile(tmpPath, []byte(key.Content), 0644); err != nil {
 		return err
 	}
 
@@ -518,6 +517,8 @@ func DeletePublicKey(doer *User, id int64) (err error) {
 // RewriteAuthorizedKeys removes any authorized key and rewrite all keys from database again.
 // Note: x.Iterate does not get latest data after insert/delete, so we have to call this function
 // outside any session scope independently.
+//
+// Deprecated: Use PublicKeys.RewriteAuthorizedKeys instead.
 func RewriteAuthorizedKeys() error {
 	sshOpLocker.Lock()
 	defer sshOpLocker.Unlock()
@@ -525,7 +526,7 @@ func RewriteAuthorizedKeys() error {
 	log.Trace("Doing: RewriteAuthorizedKeys")
 
 	_ = os.MkdirAll(conf.SSH.RootPath, os.ModePerm)
-	fpath := filepath.Join(conf.SSH.RootPath, "authorized_keys")
+	fpath := authorizedKeysPath()
 	tmpPath := fpath + ".tmp"
 	f, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -533,7 +534,7 @@ func RewriteAuthorizedKeys() error {
 	}
 	defer os.Remove(tmpPath)
 
-	err = x.Iterate(new(PublicKey), func(idx int, bean interface{}) (err error) {
+	err = x.Iterate(new(PublicKey), func(idx int, bean any) (err error) {
 		_, err = f.WriteString((bean.(*PublicKey)).AuthorizedString())
 		return err
 	})
@@ -688,7 +689,7 @@ func AddDeployKey(repoID int64, name, content string) (*DeployKey, error) {
 var _ errutil.NotFound = (*ErrDeployKeyNotExist)(nil)
 
 type ErrDeployKeyNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrDeployKeyNotExist(err error) bool {
@@ -711,7 +712,7 @@ func GetDeployKeyByID(id int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"deployKeyID": id}}
+		return nil, ErrDeployKeyNotExist{args: map[string]any{"deployKeyID": id}}
 	}
 	return key, nil
 }
@@ -726,7 +727,7 @@ func GetDeployKeyByRepo(keyID, repoID int64) (*DeployKey, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrDeployKeyNotExist{args: map[string]interface{}{"keyID": keyID, "repoID": repoID}}
+		return nil, ErrDeployKeyNotExist{args: map[string]any{"keyID": keyID, "repoID": repoID}}
 	}
 	return key, nil
 }

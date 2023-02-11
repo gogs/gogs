@@ -47,7 +47,7 @@ func Authentications(c *context.Context) {
 
 type dropdownItem struct {
 	Name string
-	Type interface{}
+	Type any
 }
 
 var (
@@ -130,7 +130,7 @@ func NewAuthSourcePost(c *context.Context, f form.Authentication) {
 	c.Data["SMTPAuths"] = smtp.AuthTypes
 
 	hasTLS := false
-	var config interface{}
+	var config any
 	switch auth.Type(f.Type) {
 	case auth.LDAP, auth.DLDAP:
 		config = parseLDAPConfig(f)
@@ -284,7 +284,7 @@ func DeleteAuthSource(c *context.Context) {
 		} else {
 			c.Flash.Error(fmt.Sprintf("DeleteSource: %v", err))
 		}
-		c.JSONSuccess(map[string]interface{}{
+		c.JSONSuccess(map[string]any{
 			"redirect": conf.Server.Subpath + "/admin/auths/" + c.Params(":authid"),
 		})
 		return
@@ -292,7 +292,7 @@ func DeleteAuthSource(c *context.Context) {
 	log.Trace("Authentication deleted by admin(%s): %d", c.User.Name, id)
 
 	c.Flash.Success(c.Tr("admin.auths.deletion_success"))
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": conf.Server.Subpath + "/admin/auths",
 	})
 }

@@ -209,7 +209,7 @@ func NewRelease(gitRepo *git.Repository, r *Release, uuids []string) error {
 var _ errutil.NotFound = (*ErrReleaseNotExist)(nil)
 
 type ErrReleaseNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrReleaseNotExist(err error) bool {
@@ -231,7 +231,7 @@ func GetRelease(repoID int64, tagName string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	} else if !isExist {
-		return nil, ErrReleaseNotExist{args: map[string]interface{}{"tag": tagName}}
+		return nil, ErrReleaseNotExist{args: map[string]any{"tag": tagName}}
 	}
 
 	r := &Release{RepoID: repoID, LowerTagName: strings.ToLower(tagName)}
@@ -249,7 +249,7 @@ func GetReleaseByID(id int64) (*Release, error) {
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrReleaseNotExist{args: map[string]interface{}{"releaseID": id}}
+		return nil, ErrReleaseNotExist{args: map[string]any{"releaseID": id}}
 	}
 
 	return r, r.LoadAttributes()

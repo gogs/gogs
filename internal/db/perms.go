@@ -12,8 +12,6 @@ import (
 )
 
 // PermsStore is the persistent interface for permissions.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type PermsStore interface {
 	// AccessMode returns the access mode of given user has to the repository.
 	AccessMode(ctx context.Context, userID, repoID int64, opts AccessModeOptions) AccessMode
@@ -80,6 +78,12 @@ var _ PermsStore = (*perms)(nil)
 
 type perms struct {
 	*gorm.DB
+}
+
+// NewPermsStore returns a persistent interface for permissions with given
+// database connection.
+func NewPermsStore(db *gorm.DB) PermsStore {
+	return &perms{DB: db}
 }
 
 type AccessModeOptions struct {

@@ -29,8 +29,6 @@ import (
 )
 
 // ActionsStore is the persistent interface for actions.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type ActionsStore interface {
 	// CommitRepo creates actions for pushing commits to the repository. An action
 	// with the type ActionDeleteBranch is created if the push deletes a branch; an
@@ -111,16 +109,16 @@ func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, after
 			Where("?", afterID <= 0).
 			Or("id < ?", afterID),
 		).
-		Where("repo_id IN (?)",
-			db.Select("repository.id").
-				Table("repository").
-				Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
-				Where("team_repo.team_id IN (?)",
-					db.Select("team_id").
-						Table("team_user").
-						Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
-				).
-				Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
+		Where("repo_id IN (?)", db.
+			Select("repository.id").
+			Table("repository").
+			Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
+			Where("team_repo.team_id IN (?)", db.
+				Select("team_id").
+				Table("team_user").
+				Where("team_user.org_id = ? AND uid = ?", orgID, actorID),
+			).
+			Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
 		).
 		Limit(conf.UI.User.NewsFeedPagingNum).
 		Order("id DESC")
@@ -166,7 +164,7 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
 func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := NewWatchesStore(db.DB).ListByRepo(ctx, act.RepoID)
+	watches, err := NewReposStore(db.DB).ListWatches(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}

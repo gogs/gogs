@@ -2,7 +2,7 @@
 Description=Gogs
 After=syslog.target
 After=network.target
-After=mariadb.service mysqld.service postgresql.service memcached.service redis.service
+After=mariadb.service mysql.service mysqld.service postgresql.service memcached.service redis.service
 
 [Service]
 # Modify these two values and uncomment them if you have

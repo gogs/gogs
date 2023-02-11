@@ -20,7 +20,7 @@ func TestPerms(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Access)}
+	tables := []any{new(Access)}
 	db := &perms{
 		DB: dbtest.NewDB(t, "perms", tables...),
 	}

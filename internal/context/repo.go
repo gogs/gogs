@@ -96,7 +96,7 @@ func (r *Repository) Editorconfig() (*editorconfig.Editorconfig, error) {
 }
 
 // MakeURL accepts a string or url.URL as argument and returns escaped URL prepended with repository URL.
-func (r *Repository) MakeURL(location interface{}) string {
+func (r *Repository) MakeURL(location any) string {
 	switch location := location.(type) {
 	case string:
 		tempURL := url.URL{
@@ -403,7 +403,7 @@ func RepoRef() macaron.Handler {
 		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
-		if c.Repo.IsWriter() || (c.IsLogged && db.Users.HasForkedRepository(c.Req.Context(), c.User.ID, c.Repo.Repository.ID)) {
+		if c.Repo.IsWriter() || (c.IsLogged && db.Repos.HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if c.Repo.Repository.BaseRepo != nil {

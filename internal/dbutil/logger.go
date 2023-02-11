@@ -14,6 +14,6 @@ type Logger struct {
 	io.Writer
 }
 
-func (l *Logger) Printf(format string, args ...interface{}) {
+func (l *Logger) Printf(format string, args ...any) {
 	_, _ = fmt.Fprintf(l.Writer, format, args...)
 }

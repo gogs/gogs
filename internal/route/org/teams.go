@@ -91,7 +91,7 @@ func TeamsAction(c *context.Context) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {
 			log.Error("Action(%s): %v", c.Params(":action"), err)
-			c.JSONSuccess(map[string]interface{}{
+			c.JSONSuccess(map[string]any{
 				"ok":  false,
 				"err": err.Error(),
 			})
@@ -265,7 +265,7 @@ func DeleteTeam(c *context.Context) {
 		c.Flash.Success(c.Tr("org.teams.delete_team_success"))
 	}
 
-	c.JSONSuccess(map[string]interface{}{
+	c.JSONSuccess(map[string]any{
 		"redirect": c.Org.OrgLink + "/teams",
 	})
 }

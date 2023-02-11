@@ -12,13 +12,13 @@ var _ macaron.Locale = (*Locale)(nil)
 
 type Locale struct {
 	MockLang string
-	MockTr   func(string, ...interface{}) string
+	MockTr   func(string, ...any) string
 }
 
 func (l *Locale) Language() string {
 	return l.MockLang
 }
 
-func (l *Locale) Tr(format string, args ...interface{}) string {
+func (l *Locale) Tr(format string, args ...any) string {
 	return l.MockTr(format, args...)
 }

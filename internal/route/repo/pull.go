@@ -298,7 +298,7 @@ func ViewPullCommits(c *context.Context) {
 		commits = prInfo.Commits
 	}
 
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), commits)
 	c.Data["CommitsCount"] = len(commits)
 
 	c.Success(PULL_COMMITS)
@@ -606,7 +606,7 @@ func PrepareCompareDiff(
 		return false
 	}
 
-	c.Data["Commits"] = db.ValidateCommitsWithEmails(meta.Commits)
+	c.Data["Commits"] = matchUsersWithCommitEmails(c.Req.Context(), meta.Commits)
 	c.Data["CommitCount"] = len(meta.Commits)
 	c.Data["Username"] = headUser.Name
 	c.Data["Reponame"] = headRepo.Name

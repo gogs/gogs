@@ -6,7 +6,7 @@ package lfsutil
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -79,7 +79,7 @@ func TestLocalStorage_Upload(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			written, err := s.Upload(test.oid, ioutil.NopCloser(strings.NewReader(test.content)))
+			written, err := s.Upload(test.oid, io.NopCloser(strings.NewReader(test.content)))
 			assert.Equal(t, test.expWritten, written)
 			assert.Equal(t, test.expErr, err)
 		})
@@ -100,7 +100,7 @@ func TestLocalStorage_Download(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ioutil.WriteFile(fpath, []byte("Hello world!"), os.ModePerm)
+	err = os.WriteFile(fpath, []byte("Hello world!"), os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -16,7 +16,7 @@ import (
 func Test_validateWebhook(t *testing.T) {
 	l := &mocks.Locale{
 		MockLang: "en",
-		MockTr: func(s string, _ ...interface{}) string {
+		MockTr: func(s string, _ ...any) string {
 			return s
 		},
 	}

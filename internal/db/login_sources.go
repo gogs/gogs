@@ -23,8 +23,6 @@ import (
 )
 
 // LoginSourcesStore is the persistent interface for login sources.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type LoginSourcesStore interface {
 	// Create creates a new login source and persist to database. It returns
 	// ErrLoginSourceAlreadyExist when a login source with same name already exists.
@@ -194,7 +192,7 @@ type CreateLoginSourceOptions struct {
 	Name      string
 	Activated bool
 	Default   bool
-	Config    interface{}
+	Config    any
 }
 
 type ErrLoginSourceAlreadyExist struct {
@@ -297,7 +295,7 @@ func (db *loginSources) ResetNonDefault(ctx context.Context, dflt *LoginSource) 
 	err := db.WithContext(ctx).
 		Model(new(LoginSource)).
 		Where("id != ?", dflt.ID).
-		Updates(map[string]interface{}{"is_default": false}).
+		Updates(map[string]any{"is_default": false}).
 		Error
 	if err != nil {
 		return err

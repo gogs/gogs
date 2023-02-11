@@ -29,7 +29,7 @@ func TestInit(t *testing.T) {
 
 	for _, v := range []struct {
 		section string
-		config  interface{}
+		config  any
 	}{
 		{"", &App},
 		{"server", &Server},

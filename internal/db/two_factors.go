@@ -21,8 +21,6 @@ import (
 )
 
 // TwoFactorsStore is the persistent interface for 2FA.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type TwoFactorsStore interface {
 	// Create creates a new 2FA token and recovery codes for given user. The "key"
 	// is used to encrypt and later decrypt given "secret", which should be

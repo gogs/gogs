@@ -161,6 +161,6 @@ func RawMarkdown(body []byte, urlPrefix string) []byte {
 }
 
 // Markdown takes a string or []byte and renders to HTML in Markdown syntax with special links.
-func Markdown(input interface{}, urlPrefix string, metas map[string]string) []byte {
+func Markdown(input any, urlPrefix string, metas map[string]string) []byte {
 	return Render(TypeMarkdown, input, urlPrefix, metas)
 }

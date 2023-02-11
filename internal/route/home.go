@@ -113,15 +113,13 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 		}
 		count = opts.Counter(c.Req.Context())
 	} else {
-		users, count, err = db.SearchUserByName(&db.SearchUserOptions{
-			Keyword:  keyword,
-			Type:     opts.Type,
-			OrderBy:  opts.OrderBy,
-			Page:     page,
-			PageSize: opts.PageSize,
-		})
+		search := db.Users.SearchByName
+		if opts.Type == db.UserTypeOrganization {
+			search = db.Orgs.SearchByName
+		}
+		users, count, err = search(c.Req.Context(), keyword, page, opts.PageSize, opts.OrderBy)
 		if err != nil {
-			c.Error(err, "search user by name")
+			c.Error(err, "search by name")
 			return
 		}
 	}

@@ -6,6 +6,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strings"
@@ -31,8 +32,6 @@ import (
 )
 
 // UsersStore is the persistent interface for users.
-//
-// NOTE: All methods are sorted in alphabetical order.
 type UsersStore interface {
 	// Authenticate validates username and password via given login source ID. It
 	// returns ErrUserNotExist when the user was not found.
@@ -46,21 +45,12 @@ type UsersStore interface {
 	// When the "loginSourceID" is positive, it tries to authenticate via given
 	// login source and creates a new user when not yet exists in the database.
 	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
-	// ChangeUsername changes the username of the given user and updates all
-	// references to the old username. It returns ErrNameNotAllowed if the given
-	// name or pattern of the name is not allowed as a username, or
-	// ErrUserAlreadyExist when another user with same name already exists.
-	ChangeUsername(ctx context.Context, userID int64, newUsername string) error
-	// Count returns the total number of users.
-	Count(ctx context.Context) int64
 	// Create creates a new user and persists to database. It returns
 	// ErrNameNotAllowed if the given name or pattern of the name is not allowed as
 	// a username, or ErrUserAlreadyExist when a user with same name already exists,
 	// or ErrEmailAlreadyUsed if the email has been used by another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
-	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
-	// use look up avatar by email.
-	DeleteCustomAvatar(ctx context.Context, userID int64) error
+
 	// GetByEmail returns the user (not organization) with given email. It ignores
 	// records with unverified emails and returns ErrUserNotExist when not found.
 	GetByEmail(ctx context.Context, email string) (*User, error)
@@ -70,15 +60,52 @@ type UsersStore interface {
 	// GetByUsername returns the user with given username. It returns
 	// ErrUserNotExist when not found.
 	GetByUsername(ctx context.Context, username string) (*User, error)
-	// HasForkedRepository returns true if the user has forked given repository.
-	HasForkedRepository(ctx context.Context, userID, repoID int64) bool
+	// GetByKeyID returns the owner of given public key ID. It returns
+	// ErrUserNotExist when not found.
+	GetByKeyID(ctx context.Context, keyID int64) (*User, error)
+	// GetMailableEmailsByUsernames returns a list of verified primary email
+	// addresses (where email notifications are sent to) of users with given list of
+	// usernames. Non-existing usernames are ignored.
+	GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error)
+	// SearchByName returns a list of users whose username or full name matches the
+	// given keyword case-insensitively. Results are paginated by given page and
+	// page size, and sorted by the given order (e.g. "id DESC"). A total count of
+	// all results is also returned. If the order is not given, it's up to the
+	// database to decide.
+	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error)
+
 	// IsUsernameUsed returns true if the given username has been used other than
 	// the excluded user (a non-positive ID effectively meaning check against all
 	// users).
 	IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool
-	// List returns a list of users. Results are paginated by given page and page
-	// size, and sorted by primary key (id) in ascending order.
-	List(ctx context.Context, page, pageSize int) ([]*User, error)
+	// ChangeUsername changes the username of the given user and updates all
+	// references to the old username. It returns ErrNameNotAllowed if the given
+	// name or pattern of the name is not allowed as a username, or
+	// ErrUserAlreadyExist when another user with same name already exists.
+	ChangeUsername(ctx context.Context, userID int64, newUsername string) error
+	// Update updates fields for the given user.
+	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
+	// UseCustomAvatar uses the given avatar as the user custom avatar.
+	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
+
+	// DeleteCustomAvatar deletes the current user custom avatar and falls back to
+	// use look up avatar by email.
+	DeleteCustomAvatar(ctx context.Context, userID int64) error
+	// DeleteByID deletes the given user and all their resources. It returns
+	// ErrUserOwnRepos when the user still has repository ownership, or returns
+	// ErrUserHasOrgs when the user still has organization membership. It is more
+	// performant to skip rewriting the "authorized_keys" file for individual
+	// deletion in a batch operation.
+	DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error
+	// DeleteInactivated deletes all inactivated users.
+	DeleteInactivated() error
+
+	// Follow marks the user to follow the other user.
+	Follow(ctx context.Context, userID, followID int64) error
+	// Unfollow removes the mark the user to follow the other user.
+	Unfollow(ctx context.Context, userID, followID int64) error
+	// IsFollowing returns true if the user is following the other user.
+	IsFollowing(ctx context.Context, userID, followID int64) bool
 	// ListFollowers returns a list of users that are following the given user.
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
@@ -87,10 +114,12 @@ type UsersStore interface {
 	// Results are paginated by given page and page size, and sorted by the time of
 	// follow in descending order.
 	ListFollowings(ctx context.Context, userID int64, page, pageSize int) ([]*User, error)
-	// Update updates fields for the given user.
-	Update(ctx context.Context, userID int64, opts UpdateUserOptions) error
-	// UseCustomAvatar uses the given avatar as the user custom avatar.
-	UseCustomAvatar(ctx context.Context, userID int64, avatar []byte) error
+
+	// List returns a list of users. Results are paginated by given page and page
+	// size, and sorted by primary key (id) in ascending order.
+	List(ctx context.Context, page, pageSize int) ([]*User, error)
+	// Count returns the total number of users.
+	Count(ctx context.Context) int64
 }
 
 var Users UsersStore
@@ -155,7 +184,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 				return user, nil
 			}
 
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login, "userID": user.ID}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login, "userID": user.ID}}
 		}
 
 		authSourceID = user.LoginSource
@@ -163,7 +192,7 @@ func (db *users) Authenticate(ctx context.Context, login, password string, login
 	} else {
 		// Non-local login source is always greater than 0.
 		if loginSourceID <= 0 {
-			return nil, auth.ErrBadCredentials{Args: map[string]interface{}{"login": login}}
+			return nil, auth.ErrBadCredentials{Args: map[string]any{"login": login}}
 		}
 
 		authSourceID = loginSourceID
@@ -403,11 +432,311 @@ func (db *users) DeleteCustomAvatar(ctx context.Context, userID int64) error {
 	return db.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"use_custom_avatar": false,
 			"updated_unix":      db.NowFunc().Unix(),
 		}).
 		Error
+}
+
+type ErrUserOwnRepos struct {
+	args errutil.Args
+}
+
+// IsErrUserOwnRepos returns true if the underlying error has the type
+// ErrUserOwnRepos.
+func IsErrUserOwnRepos(err error) bool {
+	_, ok := errors.Cause(err).(ErrUserOwnRepos)
+	return ok
+}
+
+func (err ErrUserOwnRepos) Error() string {
+	return fmt.Sprintf("user still has repository ownership: %v", err.args)
+}
+
+type ErrUserHasOrgs struct {
+	args errutil.Args
+}
+
+// IsErrUserHasOrgs returns true if the underlying error has the type
+// ErrUserHasOrgs.
+func IsErrUserHasOrgs(err error) bool {
+	_, ok := errors.Cause(err).(ErrUserHasOrgs)
+	return ok
+}
+
+func (err ErrUserHasOrgs) Error() string {
+	return fmt.Sprintf("user still has organization membership: %v", err.args)
+}
+
+func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error {
+	user, err := db.GetByID(ctx, userID)
+	if err != nil {
+		if IsErrUserNotExist(err) {
+			return nil
+		}
+		return errors.Wrap(err, "get user")
+	}
+
+	// Double check the user is not a direct owner of any repository and not a
+	// member of any organization.
+	var count int64
+	err = db.WithContext(ctx).Model(&Repository{}).Where("owner_id = ?", userID).Count(&count).Error
+	if err != nil {
+		return errors.Wrap(err, "count repositories")
+	} else if count > 0 {
+		return ErrUserOwnRepos{args: errutil.Args{"userID": userID}}
+	}
+
+	err = db.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
+	if err != nil {
+		return errors.Wrap(err, "count organization membership")
+	} else if count > 0 {
+		return ErrUserHasOrgs{args: errutil.Args{"userID": userID}}
+	}
+
+	needsRewriteAuthorizedKeys := false
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE repository
+			SET num_watches = num_watches - 1
+			WHERE id IN (
+				SELECT repo_id FROM watch WHERE user_id = @userID
+			)
+		*/
+		err = tx.Table("repository").
+			Where("id IN (?)", tx.
+				Select("repo_id").
+				Table("watch").
+				Where("user_id = ?", userID),
+			).
+			UpdateColumn("num_watches", gorm.Expr("num_watches - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "repository.num_watches"`)
+		}
+
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE repository
+			SET num_stars = num_stars - 1
+			WHERE id IN (
+				SELECT repo_id FROM star WHERE uid = @userID
+			)
+		*/
+		err = tx.Table("repository").
+			Where("id IN (?)", tx.
+				Select("repo_id").
+				Table("star").
+				Where("uid = ?", userID),
+			).
+			UpdateColumn("num_stars", gorm.Expr("num_stars - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "repository.num_stars"`)
+		}
+
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE user
+			SET num_followers = num_followers - 1
+			WHERE id IN (
+				SELECT follow_id FROM follow WHERE user_id = @userID
+			)
+		*/
+		err = tx.Table("user").
+			Where("id IN (?)", tx.
+				Select("follow_id").
+				Table("follow").
+				Where("user_id = ?", userID),
+			).
+			UpdateColumn("num_followers", gorm.Expr("num_followers - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "user.num_followers"`)
+		}
+
+		/*
+			Equivalent SQL for PostgreSQL:
+
+			UPDATE user
+			SET num_following = num_following - 1
+			WHERE id IN (
+				SELECT user_id FROM follow WHERE follow_id = @userID
+			)
+		*/
+		err = tx.Table("user").
+			Where("id IN (?)", tx.
+				Select("user_id").
+				Table("follow").
+				Where("follow_id = ?", userID),
+			).
+			UpdateColumn("num_following", gorm.Expr("num_following - 1")).
+			Error
+		if err != nil {
+			return errors.Wrap(err, `decrease "user.num_following"`)
+		}
+
+		if !skipRewriteAuthorizedKeys {
+			// We need to rewrite "authorized_keys" file if the user owns any public keys.
+			needsRewriteAuthorizedKeys = tx.Where("owner_id = ?", userID).First(&PublicKey{}).Error != gorm.ErrRecordNotFound
+		}
+
+		err = tx.Model(&Issue{}).Where("assignee_id = ?", userID).Update("assignee_id", 0).Error
+		if err != nil {
+			return errors.Wrap(err, "clear assignees")
+		}
+
+		for _, t := range []struct {
+			table any
+			where string
+		}{
+			{&Watch{}, "user_id = @userID"},
+			{&Star{}, "uid = @userID"},
+			{&Follow{}, "user_id = @userID OR follow_id = @userID"},
+			{&PublicKey{}, "owner_id = @userID"},
+
+			{&AccessToken{}, "uid = @userID"},
+			{&Collaboration{}, "user_id = @userID"},
+			{&Access{}, "user_id = @userID"},
+			{&Action{}, "user_id = @userID"},
+			{&IssueUser{}, "uid = @userID"},
+			{&EmailAddress{}, "uid = @userID"},
+			{&User{}, "id = @userID"},
+		} {
+			err = tx.Where(t.where, sql.Named("userID", userID)).Delete(t.table).Error
+			if err != nil {
+				return errors.Wrapf(err, "clean up table %T", t.table)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	_ = os.RemoveAll(repoutil.UserPath(user.Name))
+	_ = os.Remove(userutil.CustomAvatarPath(userID))
+
+	if needsRewriteAuthorizedKeys {
+		err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+		if err != nil {
+			return errors.Wrap(err, `rewrite "authorized_keys" file`)
+		}
+	}
+	return nil
+}
+
+// NOTE: We do not take context.Context here because this operation in practice
+// could much longer than the general request timeout (e.g. one minute).
+func (db *users) DeleteInactivated() error {
+	var userIDs []int64
+	err := db.Model(&User{}).Where("is_active = ?", false).Pluck("id", &userIDs).Error
+	if err != nil {
+		return errors.Wrap(err, "get inactivated user IDs")
+	}
+
+	for _, userID := range userIDs {
+		err = db.DeleteByID(context.Background(), userID, true)
+		if err != nil {
+			// Skip users that may had set to inactivated by admins.
+			if IsErrUserOwnRepos(err) || IsErrUserHasOrgs(err) {
+				continue
+			}
+			return errors.Wrapf(err, "delete user with ID %d", userID)
+		}
+	}
+	err = NewPublicKeysStore(db.DB).RewriteAuthorizedKeys()
+	if err != nil {
+		return errors.Wrap(err, `rewrite "authorized_keys" file`)
+	}
+	return nil
+}
+
+func (*users) recountFollows(tx *gorm.DB, userID, followID int64) error {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		UPDATE "user"
+		SET num_followers = (
+			SELECT COUNT(*) FROM follow WHERE follow_id = @followID
+		)
+		WHERE id = @followID
+	*/
+	err := tx.Model(&User{}).
+		Where("id = ?", followID).
+		Update(
+			"num_followers",
+			tx.Model(&Follow{}).Select("COUNT(*)").Where("follow_id = ?", followID),
+		).
+		Error
+	if err != nil {
+		return errors.Wrap(err, `update "user.num_followers"`)
+	}
+
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		UPDATE "user"
+		SET num_following = (
+			SELECT COUNT(*) FROM follow WHERE user_id = @userID
+		)
+		WHERE id = @userID
+	*/
+	err = tx.Model(&User{}).
+		Where("id = ?", userID).
+		Update(
+			"num_following",
+			tx.Model(&Follow{}).Select("COUNT(*)").Where("user_id = ?", userID),
+		).
+		Error
+	if err != nil {
+		return errors.Wrap(err, `update "user.num_following"`)
+	}
+	return nil
+}
+
+func (db *users) Follow(ctx context.Context, userID, followID int64) error {
+	if userID == followID {
+		return nil
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		f := &Follow{
+			UserID:   userID,
+			FollowID: followID,
+		}
+		result := tx.FirstOrCreate(f, f)
+		if result.Error != nil {
+			return errors.Wrap(result.Error, "upsert")
+		} else if result.RowsAffected <= 0 {
+			return nil // Relation already exists
+		}
+
+		return db.recountFollows(tx, userID, followID)
+	})
+}
+
+func (db *users) Unfollow(ctx context.Context, userID, followID int64) error {
+	if userID == followID {
+		return nil
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Where("user_id = ? AND follow_id = ?", userID, followID).Delete(&Follow{}).Error
+		if err != nil {
+			return errors.Wrap(err, "delete")
+		}
+		return db.recountFollows(tx, userID, followID)
+	})
+}
+
+func (db *users) IsFollowing(ctx context.Context, userID, followID int64) bool {
+	return db.WithContext(ctx).Where("user_id = ? AND follow_id = ?", userID, followID).First(&Follow{}).Error == nil
 }
 
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
@@ -437,27 +766,35 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 	}
 	email = strings.ToLower(email)
 
-	// First try to find the user by primary email
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "user"
+		LEFT JOIN email_address ON email_address.uid = "user".id
+		WHERE
+			"user".type = @userType
+		AND (
+				"user".email = @email AND "user".is_active = TRUE
+			OR  email_address.email = @email AND email_address.is_activated = TRUE
+		)
+	*/
 	user := new(User)
 	err := db.WithContext(ctx).
-		Where("email = ? AND type = ? AND is_active = ?", email, UserTypeIndividual, true).
-		First(user).
+		Joins(dbutil.Quote("LEFT JOIN email_address ON email_address.uid = %s.id", "user"), true).
+		Where(dbutil.Quote("%s.type = ?", "user"), UserTypeIndividual).
+		Where(db.
+			Where(dbutil.Quote("%[1]s.email = ? AND %[1]s.is_active = ?", "user"), email, true).
+			Or("email_address.email = ? AND email_address.is_activated = ?", email, true),
+		).
+		First(&user).
 		Error
-	if err == nil {
-		return user, nil
-	} else if err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	// Otherwise, check activated email addresses
-	emailAddress, err := NewEmailAddressesStore(db.DB).GetByEmail(ctx, email, true)
 	if err != nil {
-		if IsErrEmailAddressNotExist(err) {
+		if err == gorm.ErrRecordNotFound {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
 	}
-	return db.GetByID(ctx, emailAddress.UserID)
+	return user, nil
 }
 
 func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
@@ -484,10 +821,29 @@ func (db *users) GetByUsername(ctx context.Context, username string) (*User, err
 	return user, nil
 }
 
-func (db *users) HasForkedRepository(ctx context.Context, userID, repoID int64) bool {
-	var count int64
-	db.WithContext(ctx).Model(new(Repository)).Where("owner_id = ? AND fork_id = ?", userID, repoID).Count(&count)
-	return count > 0
+func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
+	user := new(User)
+	err := db.WithContext(ctx).
+		Joins(dbutil.Quote("JOIN public_key ON public_key.owner_id = %s.id", "user")).
+		Where("public_key.id = ?", keyID).
+		First(user).
+		Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrUserNotExist{args: errutil.Args{"keyID": keyID}}
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
+func (db *users) GetMailableEmailsByUsernames(ctx context.Context, usernames []string) ([]string, error) {
+	emails := make([]string, 0, len(usernames))
+	return emails, db.WithContext(ctx).
+		Model(&User{}).
+		Select("email").
+		Where("lower_name IN (?) AND is_active = ?", usernames, true).
+		Find(&emails).Error
 }
 
 func (db *users) IsUsernameUsed(ctx context.Context, username string, excludeUserId int64) bool {
@@ -549,6 +905,29 @@ func (db *users) ListFollowings(ctx context.Context, userID int64, page, pageSiz
 		Order("follow.id DESC").
 		Find(&users).
 		Error
+}
+
+func searchUserByName(ctx context.Context, db *gorm.DB, userType UserType, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
+	if keyword == "" {
+		return []*User{}, 0, nil
+	}
+	keyword = "%" + strings.ToLower(keyword) + "%"
+
+	tx := db.WithContext(ctx).
+		Where("type = ? AND (lower_name LIKE ? OR LOWER(full_name) LIKE ?)", userType, keyword, keyword)
+
+	var count int64
+	err := tx.Model(&User{}).Count(&count).Error
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "count")
+	}
+
+	users := make([]*User, 0, pageSize)
+	return users, count, tx.Order(orderBy).Limit(pageSize).Offset((page - 1) * pageSize).Find(&users).Error
+}
+
+func (db *users) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*User, int64, error) {
+	return searchUserByName(ctx, db.DB, UserTypeIndividual, keyword, page, pageSize, orderBy)
 }
 
 type UpdateUserOptions struct {
@@ -674,7 +1053,7 @@ func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byt
 	return db.WithContext(ctx).
 		Model(&User{}).
 		Where("id = ?", userID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"use_custom_avatar": true,
 			"updated_unix":      db.NowFunc().Unix(),
 		}).
@@ -766,11 +1145,6 @@ func (u *User) IsLocal() bool {
 // IsOrganization returns true if the user is an organization.
 func (u *User) IsOrganization() bool {
 	return u.Type == UserTypeOrganization
-}
-
-// IsMailable returns true if the user is eligible to receive emails.
-func (u *User) IsMailable() bool {
-	return u.IsActive
 }
 
 // APIFormat returns the API format of a user.
@@ -890,7 +1264,7 @@ func (u *User) AvatarURL() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) IsFollowing(followID int64) bool {
-	return Follows.IsFollowing(context.TODO(), u.ID, followID)
+	return Users.IsFollowing(context.TODO(), u.ID, followID)
 }
 
 // IsUserOrgOwner returns true if the user is in the owner team of the given
@@ -917,7 +1291,7 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return OrgUsers.CountByUser(context.TODO(), u.ID)
+	return Orgs.CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.
@@ -1044,4 +1418,11 @@ func isNameAllowed(names map[string]struct{}, patterns []string, name string) er
 // the name is not allowed as a username.
 func isUsernameAllowed(name string) error {
 	return isNameAllowed(reservedUsernames, reservedUsernamePatterns, name)
+}
+
+// Follow represents relations of users and their followers.
+type Follow struct {
+	ID       int64 `gorm:"primaryKey"`
+	UserID   int64 `xorm:"UNIQUE(follow)" gorm:"uniqueIndex:follow_user_follow_unique;not null"`
+	FollowID int64 `xorm:"UNIQUE(follow)" gorm:"uniqueIndex:follow_user_follow_unique;not null"`
 }

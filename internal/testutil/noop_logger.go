@@ -26,6 +26,6 @@ func (*noopLogger) Write(log.Messager) error {
 }
 
 // InitNoopLogger is a init function to initialize a noop logger.
-var InitNoopLogger = func(name string, vs ...interface{}) (log.Logger, error) {
+var InitNoopLogger = func(name string, vs ...any) (log.Logger, error) {
 	return &noopLogger{}, nil
 }

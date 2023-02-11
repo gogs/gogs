@@ -48,7 +48,7 @@ func GetBranchesByPath(path string) ([]*Branch, error) {
 var _ errutil.NotFound = (*ErrBranchNotExist)(nil)
 
 type ErrBranchNotExist struct {
-	args map[string]interface{}
+	args map[string]any
 }
 
 func IsErrBranchNotExist(err error) bool {
@@ -66,7 +66,7 @@ func (ErrBranchNotExist) NotFound() bool {
 
 func (repo *Repository) GetBranch(name string) (*Branch, error) {
 	if !git.RepoHasBranch(repo.RepoPath(), name) {
-		return nil, ErrBranchNotExist{args: map[string]interface{}{"name": name}}
+		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return &Branch{
 		RepoPath: repo.RepoPath(),
@@ -122,7 +122,7 @@ func GetProtectBranchOfRepoByName(repoID int64, name string) (*ProtectBranch, er
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrBranchNotExist{args: map[string]interface{}{"name": name}}
+		return nil, ErrBranchNotExist{args: map[string]any{"name": name}}
 	}
 	return protectBranch, nil
 }

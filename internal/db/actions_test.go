@@ -99,7 +99,7 @@ func TestActions(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(Action), new(User), new(Repository), new(EmailAddress), new(Watch)}
+	tables := []any{new(Action), new(User), new(Repository), new(EmailAddress), new(Watch)}
 	db := &actions{
 		DB: dbtest.NewDB(t, "actions", tables...),
 	}
@@ -719,6 +719,10 @@ func actionsNewRepo(t *testing.T, db *actions) {
 
 func actionsPushTag(t *testing.T, db *actions) {
 	ctx := context.Background()
+
+	// NOTE: We set a noop mock here to avoid data race with other tests that writes
+	// to the mock server because this function holds a lock.
+	conf.SetMockServer(t, conf.ServerOpts{})
 
 	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)

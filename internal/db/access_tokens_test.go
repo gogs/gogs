@@ -98,7 +98,7 @@ func TestAccessTokens(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(AccessToken)}
+	tables := []any{new(AccessToken)}
 	db := &accessTokens{
 		DB: dbtest.NewDB(t, "accessTokens", tables...),
 	}

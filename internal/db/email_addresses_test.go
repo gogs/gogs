@@ -21,7 +21,7 @@ func TestEmailAddresses(t *testing.T) {
 	}
 	t.Parallel()
 
-	tables := []interface{}{new(EmailAddress)}
+	tables := []any{new(EmailAddress)}
 	db := &emailAddresses{
 		DB: dbtest.NewDB(t, "emailAddresses", tables...),
 	}
