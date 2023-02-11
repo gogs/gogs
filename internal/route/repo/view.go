@@ -231,6 +231,7 @@ func Home(c *context.Context) {
 	c.Data["PageIsViewFiles"] = true
 
 	if c.Repo.Repository.IsBare {
+		fmt.Println(111, c.Repo.Repository.DefaultBranch)
 		c.Success(BARE)
 		return
 	}

@@ -132,9 +132,6 @@ func FuncMap() []template.FuncMap {
 				return "tab-size-8"
 			},
 			"InferSubmoduleURL": gitutil.InferSubmoduleURL,
-			"DefaultBranchName": func() string {
-				return conf.Repository.DefaultBranchName
-			},
 		}}
 	})
 	return funcMap

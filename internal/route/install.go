@@ -324,6 +324,7 @@ func InstallPost(c *context.Context, f form.Install) {
 
 	cfg.Section("").Key("BRAND_NAME").SetValue(f.AppName)
 	cfg.Section("repository").Key("ROOT").SetValue(f.RepoRootPath)
+	cfg.Section("repository").Key("DEFAULT_BRANCH_NAME").SetValue(conf.Repository.DefaultBranchName)
 	cfg.Section("").Key("RUN_USER").SetValue(f.RunUser)
 	cfg.Section("server").Key("DOMAIN").SetValue(f.Domain)
 	cfg.Section("server").Key("HTTP_PORT").SetValue(f.HTTPPort)
@@ -358,8 +359,6 @@ func InstallPost(c *context.Context, f form.Install) {
 	cfg.Section("").Key("RUN_MODE").SetValue("prod")
 
 	cfg.Section("session").Key("PROVIDER").SetValue("file")
-
-	cfg.Section("repository").Key("DEFAULT_BRANCH_NAME").SetValue(conf.Repository.DefaultBranchName)
 
 	mode := "file"
 	if f.EnableConsoleMode {

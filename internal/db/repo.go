@@ -230,9 +230,8 @@ func (repo *Repository) AfterSet(colName string, _ xorm.Cell) {
 	case "num_closed_pulls":
 		repo.NumOpenPulls = repo.NumPulls - repo.NumClosedPulls
 	case "num_closed_milestones":
-	case "external_tracker_style":
 		repo.NumOpenMilestones = repo.NumMilestones - repo.NumClosedMilestones
-
+	case "external_tracker_style":
 		if repo.ExternalTrackerStyle == "" {
 			repo.ExternalTrackerStyle = markup.IssueNameStyleNumeric
 		}
