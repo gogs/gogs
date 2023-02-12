@@ -98,10 +98,11 @@ func GlobalInit(customConf string) error {
 	}
 
 	if conf.SSH.StartBuiltinServer {
-		ssh.Listen(conf.SSH.ListenHost, conf.SSH.ListenPort, conf.SSH.ServerCiphers, conf.SSH.ServerMACs)
+		ssh.Listen(conf.SSH, conf.Server.AppDataPath)
 		log.Info("SSH server started on %s:%v", conf.SSH.ListenHost, conf.SSH.ListenPort)
 		log.Trace("SSH server cipher list: %v", conf.SSH.ServerCiphers)
 		log.Trace("SSH server MAC list: %v", conf.SSH.ServerMACs)
+		log.Trace("SSH server algorithms: %v", conf.SSH.ServerAlgorithms)
 	}
 
 	if conf.SSH.RewriteAuthorizedKeysAtStart {

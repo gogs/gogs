@@ -305,6 +305,7 @@ type SSHOpts struct {
 	ListenPort         int      `ini:"SSH_LISTEN_PORT"`
 	ServerCiphers      []string `ini:"SSH_SERVER_CIPHERS"`
 	ServerMACs         []string `ini:"SSH_SERVER_MACS"`
+	ServerAlgorithms   []string `ini:"SSH_SERVER_ALGORITHMS"`
 }
 
 // SSH settings
