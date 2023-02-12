@@ -10,17 +10,18 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/unknwon/cae/zip"
-	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/osutil"
 )
 
 var Backup = cli.Command{
@@ -62,7 +63,7 @@ func runBackup(c *cli.Context) error {
 	}
 
 	tmpDir := c.String("tempdir")
-	if !com.IsExist(tmpDir) {
+	if !osutil.IsExist(tmpDir) {
 		log.Fatal("'--tempdir' does not exist: %s", tmpDir)
 	}
 	rootDir, err := os.MkdirTemp(tmpDir, "gogs-backup-")
@@ -74,7 +75,7 @@ func runBackup(c *cli.Context) error {
 	// Metadata
 	metaFile := path.Join(rootDir, "metadata.ini")
 	metadata := ini.Empty()
-	metadata.Section("").Key("VERSION").SetValue(com.ToStr(currentBackupFormatVersion))
+	metadata.Section("").Key("VERSION").SetValue(strconv.Itoa(currentBackupFormatVersion))
 	metadata.Section("").Key("DATE_TIME").SetValue(time.Now().String())
 	metadata.Section("").Key("GOGS_VERSION").SetValue(conf.App.Version)
 	if err = metadata.SaveTo(metaFile); err != nil {
@@ -109,9 +110,9 @@ func runBackup(c *cli.Context) error {
 		}
 
 		// Data files
-		for _, dir := range []string{"attachments", "avatars", "repo-avatars"} {
+		for _, dir := range []string{"ssh", "attachments", "avatars", "repo-avatars"} {
 			dirPath := filepath.Join(conf.Server.AppDataPath, dir)
-			if !com.IsDir(dirPath) {
+			if !osutil.IsDir(dirPath) {
 				continue
 			}
 
