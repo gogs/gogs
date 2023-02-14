@@ -28,7 +28,7 @@
 				{{if .Submodule}}
 					<td>
 						<span class="octicon octicon-file-submodule"></span>
-						<a href="{{InferSubmoduleURL $.RepoLink .Submodule}}">{{.Entry.Name}} @ {{ShortSHA1 .Submodule.Commit}}</a>
+						<a href="{{InferSubmoduleURL $.RepoLink .Submodule}}">{{.Entry.Name}} {{if .Submodule.Commit}}@ {{ShortSHA1 .Submodule.Commit}}{{end}}</a>
 					</td>
 				{{else}}
 					<td class="name">
