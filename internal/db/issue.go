@@ -19,6 +19,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -88,6 +89,9 @@ func getUserByID(e Engine, id int64) (*User, error) {
 	} else if !has {
 		return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 	}
+
+	// TODO(unknwon): Rely on AfterFind hook to sanitize user full name.
+	u.FullName = markup.Sanitize(u.FullName)
 	return u, nil
 }
 

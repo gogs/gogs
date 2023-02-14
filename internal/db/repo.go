@@ -503,6 +503,11 @@ func (repo *Repository) getUsersWithAccesMode(e Engine, mode AccessMode) (_ []*U
 		if err = e.In("id", userIDs).Find(&users); err != nil {
 			return nil, err
 		}
+
+		// TODO(unknwon): Rely on AfterFind hook to sanitize user full name.
+		for _, u := range users {
+			u.FullName = markup.Sanitize(u.FullName)
+		}
 	}
 	if !repo.Owner.IsOrganization() {
 		users = append(users, repo.Owner)
