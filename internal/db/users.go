@@ -24,6 +24,7 @@ import (
 	"gogs.io/gogs/internal/cryptoutil"
 	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/strutil"
@@ -1132,6 +1133,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 
 // AfterFind implements the GORM query hook.
 func (u *User) AfterFind(_ *gorm.DB) error {
+	u.FullName = markup.Sanitize(u.FullName)
 	u.Created = time.Unix(u.CreatedUnix, 0).Local()
 	u.Updated = time.Unix(u.UpdatedUnix, 0).Local()
 	return nil
