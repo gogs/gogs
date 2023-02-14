@@ -32,6 +32,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/db/errors"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/strutil"
 	"gogs.io/gogs/internal/tool"
 )
@@ -920,14 +921,18 @@ func GetUserByKeyID(keyID int64) (*User, error) {
 	return user, nil
 }
 
+// Deprecated: Use Users.GetByID instead.
 func getUserByID(e Engine, id int64) (*User, error) {
 	u := new(User)
 	has, err := e.ID(id).Get(u)
 	if err != nil {
 		return nil, err
 	} else if !has {
-		return nil, ErrUserNotExist{args: map[string]interface{}{"userID": id}}
+		return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 	}
+
+	// TODO(unknwon): Rely on AfterFind hook to sanitize user full name.
+	u.FullName = markup.Sanitize(u.FullName)
 	return u, nil
 }
 
