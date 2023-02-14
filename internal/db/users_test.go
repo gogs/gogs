@@ -68,10 +68,12 @@ func TestUser_AfterFind(t *testing.T) {
 	}
 
 	user := &User{
+		FullName:    "user1<script src=http://localhost:8181/xss.js>",
 		CreatedUnix: now.Unix(),
 		UpdatedUnix: now.Unix(),
 	}
 	_ = user.AfterFind(db)
+	assert.Equal(t, "user1", user.FullName)
 	assert.Equal(t, user.CreatedUnix, user.Created.Unix())
 	assert.Equal(t, user.UpdatedUnix, user.Updated.Unix())
 }
