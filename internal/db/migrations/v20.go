@@ -12,14 +12,18 @@ import (
 )
 
 func migrateAccessTokenToSHA256(db *gorm.DB) error {
+	type accessToken struct {
+		ID     int64
+		Sha1   string
+		SHA256 string `gorm:"TYPE:VARCHAR(64)"`
+	}
+
+	if db.Migrator().HasColumn(&accessToken{}, "SHA256") {
+		return errMigrationSkipped
+	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		// 1. Add column without constraints because all rows have NULL values for the
 		// "sha256" column.
-		type accessToken struct {
-			ID     int64
-			Sha1   string
-			SHA256 string `gorm:"TYPE:VARCHAR(64)"`
-		}
 		err := tx.Migrator().AddColumn(&accessToken{}, "SHA256")
 		if err != nil {
 			return errors.Wrap(err, "add column")

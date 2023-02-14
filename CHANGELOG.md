@@ -33,6 +33,7 @@ All notable changes to Gogs are documented in this file.
 - Unable to choose "Lookup Avatar by mail" in user settings without deleting custom avatar. [#7267](https://github.com/gogs/gogs/pull/7267)
 - Mistakenly include the "data" directory under the custom directory in the Docker setup. [#7343](https://github.com/gogs/gogs/pull/7343)
 - Unable to render repository pages with implicit submodules (e.g. `get submodule "REDACTED": revision does not exist`). [#6436](https://github.com/gogs/gogs/issues/6436)
+- Unable to start after data recovery with an outdated migration version. [#7125](https://github.com/gogs/gogs/issues/7125)
 
 ### Removed
 

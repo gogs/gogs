@@ -67,4 +67,8 @@ func TestMigrateAccessTokenToSHA256(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "73da7bb9d2a475bbc2ab79da7d4e94940cb9f9d5", got.Sha1)
 	assert.Equal(t, "ab144c7bd170691bb9bb995f1541c608e33a78b40174f30fc8a1616c0bc3a477", got.SHA256)
+
+	// Re-run should be skipped
+	err = migrateAccessTokenToSHA256(db)
+	require.Equal(t, errMigrationSkipped, err)
 }

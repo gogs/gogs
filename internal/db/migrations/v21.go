@@ -13,7 +13,7 @@ func addIndexToActionUserID(db *gorm.DB) error {
 		UserID string `gorm:"index"`
 	}
 	if db.Migrator().HasIndex(&action{}, "UserID") {
-		return nil
+		return errMigrationSkipped
 	}
 	return db.Migrator().CreateIndex(&action{}, "UserID")
 }
