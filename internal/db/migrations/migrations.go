@@ -56,7 +56,16 @@ var migrations = []Migration{
 	NewMigration("migrate access tokens to store SHA56", migrateAccessTokenToSHA256),
 	// v20 -> v21:v0.13.0
 	NewMigration("add index to action.user_id", addIndexToActionUserID),
+	// v21 -> v22:v0.13.0
+	//
+	// NOTE: There was a bug in calculating the value of the `version.version`
+	// column after a migration is done, thus some instances are on v21 but some are
+	// on v22. Let's make a noop v22 to make sure every instance will not miss a
+	// real future migration.
+	NewMigration("noop", func(*gorm.DB) error { return nil }),
 }
+
+var errMigrationSkipped = errors.New("the migration has been skipped")
 
 // Migrate migrates the database schema and/or data to the current version.
 func Migrate(db *gorm.DB) error {
@@ -121,13 +130,16 @@ In case you're stilling getting this notice, go through instructions again until
 		return db.Where("id = ?", current.ID).Updates(current).Error
 	}
 
-	for i, m := range migrations[current.Version-minDBVersion:] {
+	for _, m := range migrations[current.Version-minDBVersion:] {
 		log.Info("Migration: %s", m.Description())
 		if err = m.Migrate(db); err != nil {
-			return errors.Wrap(err, "do migrate")
+			if err != errMigrationSkipped {
+				return errors.Wrap(err, "do migrate")
+			}
+			log.Trace("The migration %q has been skipped", m.Description())
 		}
 
-		current.Version += int64(i) + 1
+		current.Version++
 		err = db.Where("id = ?", current.ID).Updates(current).Error
 		if err != nil {
 			return errors.Wrap(err, "update the version record")
