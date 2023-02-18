@@ -485,7 +485,10 @@ type UploadRepoFileOptions struct {
 
 // isRepositoryGitPath returns true if given path is or resides inside ".git"
 // path of the repository.
+//
+// TODO(unknwon): Move to repoutil during refactoring for this file.
 func isRepositoryGitPath(path string) bool {
+	path = strings.ToLower(path)
 	return strings.HasSuffix(path, ".git") ||
 		strings.Contains(path, ".git/") ||
 		strings.Contains(path, `.git\`) ||
