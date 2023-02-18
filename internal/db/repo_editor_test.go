@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_isRepositoryGitPath(t *testing.T) {
+func TestIsRepositoryGitPath(t *testing.T) {
 	tests := []struct {
 		path    string
 		wantVal bool
@@ -20,6 +20,13 @@ func Test_isRepositoryGitPath(t *testing.T) {
 		{path: ".git/hooks/pre-commit", wantVal: true},
 		{path: ".git/hooks", wantVal: true},
 		{path: "dir/.git", wantVal: true},
+
+		// Case-insensitive file system
+		{path: ".Git", wantVal: true},
+		{path: "./.Git", wantVal: true},
+		{path: ".Git/hooks/pre-commit", wantVal: true},
+		{path: ".Git/hooks", wantVal: true},
+		{path: "dir/.Git", wantVal: true},
 
 		{path: ".gitignore", wantVal: false},
 		{path: "dir/.gitkeep", wantVal: false},
