@@ -29,6 +29,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - _Security:_ Stored XSS for issue assignees. [#7145](https://github.com/gogs/gogs/issues/7145)
+- _Security:_ OS Command Injection in repo editor on case-insensitive file systems. [#7030](https://github.com/gogs/gogs/issues/7030)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 - Unable to choose "Lookup Avatar by mail" in user settings without deleting custom avatar. [#7267](https://github.com/gogs/gogs/pull/7267)
 - Mistakenly include the "data" directory under the custom directory in the Docker setup. [#7343](https://github.com/gogs/gogs/pull/7343)
