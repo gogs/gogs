@@ -27,20 +27,22 @@ func Exec(helper string, envs ...string) (string, error) {
 	cmd.Env = append(cmd.Env, envs...)
 	out, err := cmd.CombinedOutput()
 	str := string(out)
+
+	// The error is quite confusing even when tests passed, so let's check whether
+	// it is passed first.
+	if strings.Contains(str, "PASS") {
+		// Collect helper result
+		result := str[:strings.Index(str, "PASS")]
+		result = strings.TrimSpace(result)
+		return result, nil
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("%v - %s", err, str)
-	}
-
-	if strings.Contains(str, "no tests to run") {
+	} else if strings.Contains(str, "no tests to run") {
 		return "", errors.New("no tests to run")
-	} else if !strings.Contains(str, "PASS") {
-		return "", errors.New(str)
 	}
-
-	// Collect helper result
-	result := str[:strings.Index(str, "PASS")]
-	result = strings.TrimSpace(result)
-	return result, nil
+	return "", errors.New(str)
 }
 
 // WantHelperProcess returns true if current process is in helper mode.
