@@ -20,24 +20,27 @@ import (
 //  2. Call fmt.Fprintln(os.Stdout, ...) to print results for the main test to collect.
 func Exec(helper string, envs ...string) (string, error) {
 	cmd := exec.Command(os.Args[0], "-test.run="+helper, "--")
-	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	cmd.Env = []string{
+		"GO_WANT_HELPER_PROCESS=1",
+		"GOCOVERDIR=" + os.TempDir(),
+	}
 	cmd.Env = append(cmd.Env, envs...)
 	out, err := cmd.CombinedOutput()
 	str := string(out)
+
+	// The error is quite confusing even when tests passed, so let's check whether
+	// it is passed first.
+	if strings.Contains(str, "no tests to run") {
+		return "", errors.New("no tests to run")
+	} else if i := strings.Index(str, "PASS"); i >= 0 {
+		// Collect helper result
+		return strings.TrimSpace(str[:i]), nil
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("%v - %s", err, str)
 	}
-
-	if strings.Contains(str, "no tests to run") {
-		return "", errors.New("no tests to run")
-	} else if !strings.Contains(str, "PASS") {
-		return "", errors.New(str)
-	}
-
-	// Collect helper result
-	result := str[:strings.Index(str, "PASS")]
-	result = strings.TrimSpace(result)
-	return result, nil
+	return "", errors.New(str)
 }
 
 // WantHelperProcess returns true if current process is in helper mode.
