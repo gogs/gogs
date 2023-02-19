@@ -30,11 +30,9 @@ func Exec(helper string, envs ...string) (string, error) {
 
 	// The error is quite confusing even when tests passed, so let's check whether
 	// it is passed first.
-	if strings.Contains(str, "PASS") {
+	if i := strings.Index(str, "PASS"); i >= 0 {
 		// Collect helper result
-		result := str[:strings.Index(str, "PASS")]
-		result = strings.TrimSpace(result)
-		return result, nil
+		return strings.TrimSpace(str[:i]), nil
 	}
 
 	if err != nil {
