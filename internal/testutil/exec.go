@@ -20,7 +20,10 @@ import (
 //  2. Call fmt.Fprintln(os.Stdout, ...) to print results for the main test to collect.
 func Exec(helper string, envs ...string) (string, error) {
 	cmd := exec.Command(os.Args[0], "-test.run="+helper, "--")
-	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	cmd.Env = []string{
+		"GO_WANT_HELPER_PROCESS=1",
+		"GOCOVERDIR=" + os.TempDir(),
+	}
 	cmd.Env = append(cmd.Env, envs...)
 	out, err := cmd.CombinedOutput()
 	str := string(out)
