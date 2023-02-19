@@ -30,15 +30,15 @@ func Exec(helper string, envs ...string) (string, error) {
 
 	// The error is quite confusing even when tests passed, so let's check whether
 	// it is passed first.
-	if i := strings.Index(str, "PASS"); i >= 0 {
+	if strings.Contains(str, "no tests to run") {
+		return "", errors.New("no tests to run")
+	} else if i := strings.Index(str, "PASS"); i >= 0 {
 		// Collect helper result
 		return strings.TrimSpace(str[:i]), nil
 	}
 
 	if err != nil {
 		return "", fmt.Errorf("%v - %s", err, str)
-	} else if strings.Contains(str, "no tests to run") {
-		return "", errors.New("no tests to run")
 	}
 	return "", errors.New(str)
 }
