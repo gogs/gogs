@@ -155,8 +155,8 @@ github.com/go-macaron/session v0.0.0-20190805070824-1a3cdc6f5659/go.mod h1:tLd0Q
 github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6 h1:x/v1iUWlqXTKVg17ulB0qCgcM2s+eysAbr/dseKLLss=
 github.com/go-macaron/toolbox v0.0.0-20190813233741-94defb8383c6/go.mod h1:YFNJ/JT4yLnpuIXTFef30SZkxGHUczjGZGFaZpPcdn0=
 github.com/go-sql-driver/mysql v1.4.1/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
-github.com/go-sql-driver/mysql v1.6.0 h1:BCTh4TKNUYmOmMUcQ3IipzF5prigylS7XXjEkfCHuOE=
-github.com/go-sql-driver/mysql v1.6.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
+github.com/go-sql-driver/mysql v1.7.0 h1:ueSltNNllEqE3qcWBTD0iQd3IpL/6U+mJxLkazJ7YPc=
+github.com/go-sql-driver/mysql v1.7.0/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/go-xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a h1:9wScpmSP5A3Bk8V3XHWUcJmYTh+ZnlHVyc+A4oZYS3Y=
 github.com/go-xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a/go.mod h1:56xuuqnHyryaerycW3BfssRdxQstACi0Epw/yC5E2xM=
@@ -850,8 +850,8 @@ gopkg.in/yaml.v3 v3.0.0-20210105161348-2e78108cf5f8/go.mod h1:K4uyk7z7BCEPqu6E+C
 gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-gorm.io/driver/mysql v1.4.3 h1:/JhWJhO2v17d8hjApTltKNADm7K7YI2ogkR7avJUL3k=
-gorm.io/driver/mysql v1.4.3/go.mod h1:sSIebwZAVPiT+27jK9HIwvsqOGKx3YMPmrA3mBJR10c=
+gorm.io/driver/mysql v1.4.7 h1:rY46lkCspzGHn7+IYsNpSfEv9tA+SU4SkkB+GFX125Y=
+gorm.io/driver/mysql v1.4.7/go.mod h1:SxzItlnT1cb6e1e4ZRpgJN2VYtcqJgqnHxWr4wsP8oc=
 gorm.io/driver/postgres v1.4.8 h1:NDWizaclb7Q2aupT0jkwK8jx1HVCNzt+PQ8v/VnxviA=
 gorm.io/driver/postgres v1.4.8/go.mod h1:O9MruWGNLUBUWVYfWuBClpf3HeGjOoybY0SNmCs3wsw=
 gorm.io/driver/sqlite v1.4.2 h1:F6vYJcmR4Cnh0ErLyoY8JSfabBGyR0epIGuhgHJuNws=
