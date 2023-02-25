@@ -197,7 +197,7 @@ func (repo *Repository) UpdateRepoFile(doer *User, opts UpdateRepoFileOptions) (
 		RepoName:  repo.Name,
 		RepoPath:  repo.RepoPath(),
 	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{CommandOptions: git.CommandOptions{Envs: envs}}); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -302,7 +302,7 @@ func (repo *Repository) DeleteRepoFile(doer *User, opts DeleteRepoFileOptions) (
 		RepoName:  repo.Name,
 		RepoPath:  repo.RepoPath(),
 	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{CommandOptions: git.CommandOptions{Envs: envs}}); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 	return nil
@@ -536,7 +536,7 @@ func (repo *Repository) UploadRepoFiles(doer *User, opts UploadRepoFileOptions) 
 		RepoName:  repo.Name,
 		RepoPath:  repo.RepoPath(),
 	})
-	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{Envs: envs}); err != nil {
+	if err = git.RepoPush(localPath, "origin", opts.NewBranch, git.PushOptions{CommandOptions: git.CommandOptions{Envs: envs}}); err != nil {
 		return fmt.Errorf("git push origin %s: %v", opts.NewBranch, err)
 	}
 
