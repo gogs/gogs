@@ -68,7 +68,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage -covermode=atomic ./...
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v1.5.0
         with:
@@ -108,7 +108,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -coverprofile=coverage -covermode=atomic ./...
+        run: go test -shuffle=on -v -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v1.5.0
         with:
@@ -158,7 +158,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
           GOGS_DATABASE_TYPE: postgres
           PGPORT: 5432
@@ -184,7 +184,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
+        run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
           GOGS_DATABASE_TYPE: mysql
           MYSQL_USER: root
@@ -207,6 +207,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests with coverage
-        run: go test -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db/...
+        run: go test -shuffle=on -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
           GOGS_DATABASE_TYPE: sqlite
