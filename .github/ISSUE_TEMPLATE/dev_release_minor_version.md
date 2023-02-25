@@ -1,5 +1,5 @@
 ---
-name: Dev: Release a minor version
+name: "Dev: Release a minor version"
 about: ONLY USED BY MAINTAINERS.
 title: "Release [VERSION]"
 labels: 📸 release
