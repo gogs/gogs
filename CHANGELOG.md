@@ -28,12 +28,9 @@ All notable changes to Gogs are documented in this file.
 
 ### Fixed
 
-- _Security:_ Stored XSS for issue assignees. [#7145](https://github.com/gogs/gogs/issues/7145)
-- _Security:_ OS Command Injection in repo editor on case-insensitive file systems. [#7030](https://github.com/gogs/gogs/issues/7030)
 - Unable to use LDAP authentication on ARM machines. [#6761](https://github.com/gogs/gogs/issues/6761)
 - Unable to choose "Lookup Avatar by mail" in user settings without deleting custom avatar. [#7267](https://github.com/gogs/gogs/pull/7267)
 - Mistakenly include the "data" directory under the custom directory in the Docker setup. [#7343](https://github.com/gogs/gogs/pull/7343)
-- Unable to render repository pages with implicit submodules (e.g. `get submodule "REDACTED": revision does not exist`). [#6436](https://github.com/gogs/gogs/issues/6436)
 - Unable to start after data recovery with an outdated migration version. [#7125](https://github.com/gogs/gogs/issues/7125)
 
 ### Removed
@@ -55,6 +52,14 @@ All notable changes to Gogs are documented in this file.
 - Configuration option `[database] DB_TYPE` is no longer used, please use `[database] TYPE`.
 - Configuration option `[database] PASSWD` is no longer used, please use `[database] PASSWORD`.
 - Remove option to use Makefile as the build tool. [#6980](https://github.com/gogs/gogs/pull/6980)
+
+## 0.12.11
+
+### Fixed
+
+- _Security:_ Stored XSS for issue assignees. [#7145](https://github.com/gogs/gogs/issues/7145)
+- _Security:_ OS Command Injection in repo editor on case-insensitive file systems. [#7030](https://github.com/gogs/gogs/issues/7030)
+- Unable to render repository pages with implicit submodules (e.g. `get submodule "REDACTED": revision does not exist`). [#6436](https://github.com/gogs/gogs/issues/6436)
 
 ## 0.12.10
 
