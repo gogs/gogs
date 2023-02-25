@@ -1,5 +1,5 @@
 ---
-name: Dev: Release a patch version
+name: "Dev: Release a patch version"
 about: ONLY USED BY MAINTAINERS.
 title: "Release [VERSION]"
 labels: 📸 release
