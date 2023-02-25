@@ -48,5 +48,6 @@ On the `main` branch:
 - [ ] Send a tweet on the [official Twitter account](https://twitter.com/GogsHQ) for the minor release.
 - [ ] Send out release announcement emails via [Mailchimp](https://mailchimp.com/).
 - [ ] Publish a new release article on [OSChina](http://my.oschina.net/Obahua/admin/releases).
+- [ ] Close the minor milestone.
 - [ ] [Bump the hard-coded version](https://github.com/gogs/gogs/commit/05477f1d294dc43f36c4a3b3b9575a96aea66a67) to the new develop version, e.g. `0.12.0+dev` -> `0.13.0+dev`.
 - [ ] Run `task legacy` to identify deprecated code that is aimed to be removed in current develop version.
