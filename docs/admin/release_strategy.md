@@ -16,7 +16,7 @@ Each minor release has its own release branch with prefix `release/`, e.g. `rele
 
 If you're running Gogs with any version below 0.12, please upgrade to 0.12 to run necessary migrations.
 
-### After 0.12
+### Since 0.12
 
 We maintain one minor version backwards compatibility, patch releases are disregarded.
 
