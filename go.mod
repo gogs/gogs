@@ -37,7 +37,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sergi/go-diff v1.3.1
 	github.com/sourcegraph/run v0.12.0
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/unknwon/cae v1.0.2
 	github.com/unknwon/com v1.0.1
 	github.com/unknwon/i18n v0.0.0-20190805065654-5c6446a380b6
