@@ -51,12 +51,12 @@ func InferSubmoduleURL(baseURL string, mod *git.Submodule) string {
 		raw = parsed.String()
 	case "ssh":
 		split := strings.Split(parsed.Host, ":")
-		if len(split) !=1{
-		raw = fmt.Sprintf("http://%s%s",split[0],parsed.Path)
-	    
-	}else {
-		raw = fmt.Sprintf("http://%s%s", parsed.Host, parsed.Path)
-	}
+		if len(split) != 1 {
+			raw = fmt.Sprintf("http://%s%s", split[0], parsed.Path)
+
+		} else {
+			raw = fmt.Sprintf("http://%s%s", parsed.Host, parsed.Path)
+		}
 	default:
 		return raw
 	}
