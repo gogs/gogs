@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.14.0+dev (`main`)
 
+### Fixed
+
+- Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
+
 ## 0.13.0
 
 ### Added
