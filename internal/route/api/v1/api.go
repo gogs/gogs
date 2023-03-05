@@ -395,6 +395,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
 					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
+					m.Combo("/emails").
+						Get(admin.ListUserEmails).
+						Post(bind(api.CreateEmailOption{}), admin.AddUserEmail).
+						Delete(bind(api.CreateEmailOption{}), admin.DeleteUserEmail)
 				})
 			})
 
