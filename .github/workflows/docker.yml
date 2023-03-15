@@ -20,7 +20,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Canel previous runs
+      - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.9.1
         with:
           all_but_latest: true
