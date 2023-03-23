@@ -10,9 +10,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/gogs/git-module"
 	"github.com/unknwon/com"
 	"github.com/urfave/cli"
 	log "unknwon.dev/clog/v2"
@@ -131,6 +133,8 @@ var allowedCommands = map[string]db.AccessMode{
 	"git-upload-archive": db.AccessModeRead,
 	"git-receive-pack":   db.AccessModeWrite,
 }
+
+var reWikiRepo = regexp.MustCompile("\\.wiki(?:\\.git)?$")
 
 func runServ(c *cli.Context) error {
 	ctx := context.Background()
@@ -252,6 +256,17 @@ func runServ(c *cli.Context) error {
 	// Special handle for Windows.
 	if conf.IsWindowsRuntime() {
 		verb = strings.Replace(verb, "-", " ", 1)
+	}
+
+	repoFsPath := fmt.Sprintf("%s/%s.git", conf.Repository.Root, strings.TrimSuffix(repoFullName, ".git"))
+	if _, err := os.Stat(repoFsPath); err != nil {
+		if conf.Repository.AutocreateWiki && repo.EnableWiki && reWikiRepo.MatchString(repoFullName) && requestMode == db.AccessModeWrite {
+			if err = git.Init(repoFsPath, git.InitOptions{ Bare: true }); err != nil {
+				fail("Internal error", "Failed to initialize new git repo %s: %v", repoFullName, err)
+			}
+		} else {
+			fail("Internal error", "Repository %v doesn't exist!", repoFullName)
+		}
 	}
 
 	var gitCmd *exec.Cmd
