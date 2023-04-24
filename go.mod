@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/derision-test/go-mockgen v1.3.7
-	github.com/editorconfig/editorconfig-core-go/v2 v2.5.1
+	github.com/editorconfig/editorconfig-core-go/v2 v2.5.2
 	github.com/go-ldap/ldap/v3 v3.4.4
 	github.com/go-macaron/binding v1.2.0
 	github.com/go-macaron/cache v0.0.0-20190810181446-10f7c57e2196
@@ -123,7 +123,7 @@ require (
 	go.bobheadxi.dev/streamline v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.11.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.0 // indirect
-	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
