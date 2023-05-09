@@ -1,0 +1,38 @@
+name: SCIP
+on:
+  push:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - '.github/workflows/scip.yml'
+env:
+  GOPROXY: "https://proxy.golang.org"
+
+jobs:
+  scip-go:
+    if: github.repository == 'gogs/gogs'
+    runs-on: ubuntu-latest
+    container: sourcegraph/scip-go
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set directory to safe for git
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+      - name: Get src-cli
+        run: |
+          curl -L https://sourcegraph.com/.api/src-cli/src_linux_amd64 -o /usr/local/bin/src
+          chmod +x /usr/local/bin/src
+      - name: Generate SCIP data
+        run: scip-go --no-animation
+      - name: Upload SCIP data to sourcegraph.com
+        run: src code-intel upload -github-token='${{ secrets.GITHUB_TOKEN }}' -no-progress -repo=github.com/gogs/gogs
+        env:
+          SRC_ENDPOINT: https://sourcegraph.com/
+      - name: Upload SCIP data to S2
+        run: src code-intel upload -github-token='${{ secrets.GITHUB_TOKEN }}' -no-progress -repo=github.com/gogs/gogs
+        env:
+          SRC_ENDPOINT: https://sourcegraph.sourcegraph.com/
+      - name: Upload SCIP data to cs.unknwon.dev
+        run: src code-intel upload -github-token='${{ secrets.GITHUB_TOKEN }}' -no-progress -repo=github.com/gogs/gogs
+        env:
+          SRC_ENDPOINT: https://cs.unknwon.dev/
