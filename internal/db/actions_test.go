@@ -148,6 +148,8 @@ func actionsCommitRepo(t *testing.T, db *actions) {
 
 	now := time.Unix(1588568886, 0).UTC()
 
+	conf.SetMockSSH(t, conf.SSHOpts{})
+
 	t.Run("new commit", func(t *testing.T) {
 		t.Cleanup(func() {
 			err := db.Session(&gorm.Session{AllowGlobalUpdate: true}).WithContext(ctx).Delete(new(Action)).Error
