@@ -1157,6 +1157,8 @@ func (u *User) APIFormat() *api.User {
 		Login:     u.Name,
 		FullName:  u.FullName,
 		Email:     u.Email,
+		Location:  u.Location,
+		Website:   u.Website,
 		AvatarUrl: u.AvatarURL(),
 	}
 }

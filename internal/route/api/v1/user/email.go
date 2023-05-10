@@ -16,8 +16,8 @@ import (
 	"gogs.io/gogs/internal/route/api/v1/convert"
 )
 
-func ListEmails(c *context.APIContext) {
-	emails, err := db.GetEmailAddresses(c.User.ID)
+func ListUserEmails(c *context.APIContext, uid int64) {
+	emails, err := db.GetEmailAddresses(uid)
 	if err != nil {
 		c.Error(err, "get email addresses")
 		return
@@ -29,7 +29,11 @@ func ListEmails(c *context.APIContext) {
 	c.JSONSuccess(&apiEmails)
 }
 
-func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
+func ListEmails(c *context.APIContext) {
+	ListUserEmails(c, c.User.ID)
+}
+
+func AddUserEmail(c *context.APIContext, form api.CreateEmailOption, uid int64) {
 	if len(form.Emails) == 0 {
 		c.Status(http.StatusUnprocessableEntity)
 		return
@@ -38,7 +42,7 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	emails := make([]*db.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &db.EmailAddress{
-			UserID:      c.User.ID,
+			UserID:      uid,
 			Email:       form.Emails[i],
 			IsActivated: !conf.Auth.RequireEmailConfirmation,
 		}
@@ -60,7 +64,11 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 	c.JSON(http.StatusCreated, &apiEmails)
 }
 
-func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
+func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
+	AddUserEmail(c, form, c.User.ID)
+}
+
+func DeleteUserEmail(c *context.APIContext, form api.CreateEmailOption, uid int64) {
 	if len(form.Emails) == 0 {
 		c.NoContent()
 		return
@@ -69,7 +77,7 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 	emails := make([]*db.EmailAddress, len(form.Emails))
 	for i := range form.Emails {
 		emails[i] = &db.EmailAddress{
-			UserID: c.User.ID,
+			UserID: uid,
 			Email:  form.Emails[i],
 		}
 	}
@@ -79,4 +87,8 @@ func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
 		return
 	}
 	c.NoContent()
+}
+
+func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
+	DeleteUserEmail(c, form, c.User.ID)
 }

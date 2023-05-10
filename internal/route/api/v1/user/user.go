@@ -35,6 +35,8 @@ func Search(c *context.APIContext) {
 			UserName:  users[i].Name,
 			AvatarUrl: users[i].AvatarURL(),
 			FullName:  markup.Sanitize(users[i].FullName),
+			Location:  users[i].Location,
+			Website:   users[i].Website,
 		}
 		if c.IsLogged {
 			results[i].Email = users[i].Email

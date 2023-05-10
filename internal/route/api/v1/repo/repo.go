@@ -375,6 +375,36 @@ func ListForks(c *context.APIContext) {
 	c.JSONSuccess(&apiForks)
 }
 
+func EditRepo(c *context.APIContext, form api.EditRepoOption) {
+	_, repo := parseOwnerAndRepo(c)
+	if c.Written() {
+		return
+	}
+
+	if form.Description != nil {
+		repo.Description = *form.Description
+	}
+	if form.Private != nil {
+		repo.IsPrivate = *form.Private
+	}
+
+	if form.Unlisted != nil {
+		repo.IsUnlisted = *form.Unlisted
+	}
+
+	if form.DefaultBranch != nil {
+		repo.DefaultBranch = *form.DefaultBranch
+	}
+
+
+	if err := db.UpdateRepository(repo, false); err != nil {
+		c.Error(err, "update repository")
+		return
+	}
+
+	c.JSON(201, repo.APIFormatLegacy(&api.Permission{Admin: true, Push: true, Pull: true}))
+}
+
 func IssueTracker(c *context.APIContext, form api.EditIssueTrackerOption) {
 	_, repo := parseOwnerAndRepo(c)
 	if c.Written() {

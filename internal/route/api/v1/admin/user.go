@@ -150,3 +150,27 @@ func CreatePublicKey(c *context.APIContext, form api.CreateKeyOption) {
 	}
 	user.CreateUserPublicKey(c, form, u.ID)
 }
+
+func ListUserEmails(c *context.APIContext) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
+		return
+	}
+	user.ListUserEmails(c, u.ID)
+}
+
+func AddUserEmail(c *context.APIContext, form api.CreateEmailOption) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
+		return
+	}
+	user.AddUserEmail(c, form, u.ID)
+}
+
+func DeleteUserEmail(c *context.APIContext, form api.CreateEmailOption) {
+	u := user.GetUserByParams(c)
+	if c.Written() {
+		return
+	}
+	user.DeleteUserEmail(c, form, u.ID)
+}
