@@ -115,6 +115,8 @@ type UsersStore interface {
 	// MarkEmailActivated marks the email address of the given user as activated,
 	// and new rands are generated for the user.
 	MarkEmailActivated(ctx context.Context, userID int64, email string) error
+	// DeleteEmail deletes the email address of the given user.
+	DeleteEmail(ctx context.Context, userID int64, email string) error
 
 	// Follow marks the user to follow the other user.
 	Follow(ctx context.Context, userID, followID int64) error
@@ -1186,6 +1188,10 @@ func (db *users) MarkEmailActivated(ctx context.Context, userID int64, email str
 
 		return NewUsersStore(tx).Update(ctx, userID, UpdateUserOptions{GenerateNewRands: true})
 	})
+}
+
+func (db *users) DeleteEmail(ctx context.Context, userID int64, email string) error {
+	return db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).Delete(&EmailAddress{}).Error
 }
 
 // UserType indicates the type of the user account.

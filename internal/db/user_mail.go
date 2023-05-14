@@ -8,25 +8,6 @@ import (
 	"gogs.io/gogs/internal/db/errors"
 )
 
-func DeleteEmailAddress(email *EmailAddress) (err error) {
-	if email.ID > 0 {
-		_, err = x.Id(email.ID).Delete(new(EmailAddress))
-	} else {
-		_, err = x.Where("email=?", email.Email).Delete(new(EmailAddress))
-	}
-	return err
-}
-
-func DeleteEmailAddresses(emails []*EmailAddress) (err error) {
-	for i := range emails {
-		if err = DeleteEmailAddress(emails[i]); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func MakeEmailPrimary(userID int64, email *EmailAddress) error {
 	has, err := x.Get(email)
 	if err != nil {

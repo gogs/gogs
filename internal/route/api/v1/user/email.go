@@ -58,22 +58,17 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 }
 
 func DeleteEmail(c *context.APIContext, form api.CreateEmailOption) {
-	if len(form.Emails) == 0 {
-		c.NoContent()
-		return
-	}
-
-	emails := make([]*db.EmailAddress, len(form.Emails))
-	for i := range form.Emails {
-		emails[i] = &db.EmailAddress{
-			UserID: c.User.ID,
-			Email:  form.Emails[i],
+	for _, email := range form.Emails {
+		if email == c.User.Email {
+			c.ErrorStatus(http.StatusBadRequest, errors.Errorf("cannot delete primary email %q", email))
+			return
 		}
-	}
 
-	if err := db.DeleteEmailAddresses(emails); err != nil {
-		c.Error(err, "delete email addresses")
-		return
+		err := db.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
+		if err != nil {
+			c.Error(err, "delete email addresses")
+			return
+		}
 	}
 	c.NoContent()
 }

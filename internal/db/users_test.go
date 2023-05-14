@@ -120,6 +120,7 @@ func TestUsers(t *testing.T) {
 		{"GetEmail", usersGetEmail},
 		{"ListEmails", usersListEmails},
 		{"MarkEmailActivated", usersMarkEmailActivated},
+		{"DeleteEmail", usersDeleteEmail},
 		{"Follow", usersFollow},
 		{"IsFollowing", usersIsFollowing},
 		{"Unfollow", usersUnfollow},
@@ -1251,6 +1252,10 @@ func usersListEmails(t *testing.T, db *users) {
 }
 
 func usersMarkEmailActivated(t *testing.T, db *users) {
+	// todo
+}
+
+func usersDeleteEmail(t *testing.T, db *users) {
 	// todo
 }
 

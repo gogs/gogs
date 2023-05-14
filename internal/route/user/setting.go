@@ -287,11 +287,18 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 }
 
 func DeleteEmail(c *context.Context) {
-	if err := db.DeleteEmailAddress(&db.EmailAddress{
-		ID:     c.QueryInt64("id"),
-		UserID: c.User.ID,
-	}); err != nil {
-		c.Errorf(err, "delete email address")
+	email := c.Query("id") // The "id" here is the actual email address
+	if c.User.Email == email {
+		c.Flash.Error(c.Tr("settings.email_deletion_primary"))
+		c.JSONSuccess(map[string]any{
+			"redirect": conf.Server.Subpath + "/user/settings/email",
+		})
+		return
+	}
+
+	err := db.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
+	if err != nil {
+		c.Error(err, "delete email address")
 		return
 	}
 
