@@ -115,6 +115,10 @@ type UsersStore interface {
 	// MarkEmailActivated marks the email address of the given user as activated,
 	// and new rands are generated for the user.
 	MarkEmailActivated(ctx context.Context, userID int64, email string) error
+	// MarkEmailPrimary marks the email address of the given user as primary. It
+	// returns ErrEmailNotExist when the email is not found for the user, and
+	// ErrEmailNotActivated when the email is not activated.
+	MarkEmailPrimary(ctx context.Context, userID int64, email string) error
 	// DeleteEmail deletes the email address of the given user.
 	DeleteEmail(ctx context.Context, userID int64, email string) error
 
@@ -1187,6 +1191,67 @@ func (db *users) MarkEmailActivated(ctx context.Context, userID int64, email str
 		}
 
 		return NewUsersStore(tx).Update(ctx, userID, UpdateUserOptions{GenerateNewRands: true})
+	})
+}
+
+type ErrEmailNotVerified struct {
+	args errutil.Args
+}
+
+// IsErrEmailNotVerified returns true if the underlying error has the type
+// ErrEmailNotVerified.
+func IsErrEmailNotVerified(err error) bool {
+	_, ok := errors.Cause(err).(ErrEmailNotVerified)
+	return ok
+}
+
+func (err ErrEmailNotVerified) Error() string {
+	return fmt.Sprintf("email has not been verified: %v", err.args)
+}
+
+func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email string) error {
+	var emailAddress EmailAddress
+	err := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrEmailNotExist{args: errutil.Args{"email": email}}
+		}
+		return errors.Wrap(err, "get email address")
+	}
+
+	if !emailAddress.IsActivated {
+		return ErrEmailNotVerified{args: errutil.Args{"email": email}}
+	}
+
+	user, err := db.GetByID(ctx, userID)
+	if err != nil {
+		return errors.Wrap(err, "get user")
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Make sure the former primary email doesn't disappear.
+		err = tx.FirstOrCreate(
+			&EmailAddress{
+				UserID:      user.ID,
+				Email:       user.Email,
+				IsActivated: user.IsActive,
+			},
+			&EmailAddress{
+				UserID: user.ID,
+				Email:  user.Email,
+			},
+		).Error
+		if err != nil {
+			return errors.Wrap(err, "upsert former primary email address")
+		}
+
+		return tx.Model(&User{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]any{
+				"email":        email,
+				"updated_unix": tx.NowFunc().Unix(),
+			},
+			).Error
 	})
 }
 

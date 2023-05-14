@@ -29,7 +29,7 @@
 												<form action="{{$.Link}}" method="post">
 													{{$.CSRFTokenHTML}}
 													<input name="_method" type="hidden" value="PRIMARY">
-													<input name="id" type="hidden" value="{{.ID}}">
+													<input name="email" type="hidden" value="{{.Email}}">
 													<button class="ui green tiny basic button">{{$.i18n.Tr "settings.primary_email"}}</button>
 												</form>
 											</div>
