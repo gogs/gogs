@@ -1153,7 +1153,7 @@ func (db *users) ListEmails(ctx context.Context, userID int64) ([]*EmailAddress,
 	}
 
 	var emails []*EmailAddress
-	err = db.WithContext(ctx).Where("uid = ?", userID).Find(&emails).Error
+	err = db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&emails).Error
 	if err != nil {
 		return nil, errors.Wrap(err, "list emails")
 	}
@@ -1623,8 +1623,8 @@ func isUsernameAllowed(name string) error {
 // EmailAddress is an email address of a user.
 type EmailAddress struct {
 	ID          int64  `gorm:"primaryKey"`
-	UserID      int64  `xorm:"uid INDEX NOT NULL" gorm:"column:uid;index;not null"`
-	Email       string `xorm:"UNIQUE NOT NULL" gorm:"unique;not null"`
+	UserID      int64  `xorm:"uid INDEX NOT NULL" gorm:"column:uid;index;uniqueIndex:email_address_user_email_unique;not null"`
+	Email       string `xorm:"UNIQUE NOT NULL" gorm:"uniqueIndex:email_address_user_email_unique;not null"`
 	IsActivated bool   `gorm:"not null;default:FALSE"`
 	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
 }

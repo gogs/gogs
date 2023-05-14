@@ -120,6 +120,7 @@ func TestUsers(t *testing.T) {
 		{"GetEmail", usersGetEmail},
 		{"ListEmails", usersListEmails},
 		{"MarkEmailActivated", usersMarkEmailActivated},
+		{"MarkEmailPrimary", usersMarkEmailPrimary},
 		{"DeleteEmail", usersDeleteEmail},
 		{"Follow", usersFollow},
 		{"IsFollowing", usersIsFollowing},
@@ -1105,7 +1106,19 @@ func usersUpdate(t *testing.T, db *users) {
 	})
 
 	t.Run("update email but already used", func(t *testing.T) {
-		// todo
+		bob, err := db.Create(
+			ctx,
+			"bob",
+			"bob@example.com",
+			CreateUserOptions{
+				Activated: true,
+			},
+		)
+		require.NoError(t, err)
+
+		got := db.Update(ctx, alice.ID, UpdateUserOptions{Email: &bob.Email})
+		want := ErrEmailAlreadyUsed{args: errutil.Args{"email": bob.Email}}
+		assert.Equal(t, want, got)
 	})
 
 	loginSource := int64(1)
@@ -1210,7 +1223,22 @@ func TestIsUsernameAllowed(t *testing.T) {
 }
 
 func usersAddEmail(t *testing.T, db *users) {
-	// todo
+	ctx := context.Background()
+
+	t.Run("multiple users can add the same unverified email", func(t *testing.T) {
+		alice, err := db.Create(ctx, "alice", "unverified@example.com", CreateUserOptions{})
+		require.NoError(t, err)
+		err = db.AddEmail(ctx, alice.ID+1, "unverified@example.com", false)
+		require.NoError(t, err)
+	})
+
+	t.Run("only one user can add the same verified email", func(t *testing.T) {
+		bob, err := db.Create(ctx, "bob", "verified@example.com", CreateUserOptions{Activated: true})
+		require.NoError(t, err)
+		got := db.AddEmail(ctx, bob.ID+1, "verified@example.com", true)
+		want := ErrEmailAlreadyUsed{args: errutil.Args{"email": "verified@example.com"}}
+		require.Equal(t, want, got)
+	})
 }
 
 func usersGetEmail(t *testing.T, db *users) {
@@ -1248,15 +1276,85 @@ func usersGetEmail(t *testing.T, db *users) {
 }
 
 func usersListEmails(t *testing.T, db *users) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	err = db.AddEmail(ctx, alice.ID, "alice2@example.com", false)
+	require.NoError(t, err)
+
+	emails, err := db.ListEmails(ctx, alice.ID)
+	require.NoError(t, err)
+	got := make([]string, 0, len(emails))
+	for _, email := range emails {
+		got = append(got, email.Email)
+	}
+	want := []string{"alice2@example.com", "alice@example.com"}
+	assert.Equal(t, want, got)
 }
 
 func usersMarkEmailActivated(t *testing.T, db *users) {
-	// todo
+	ctx := context.Background()
+
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	err = db.AddEmail(ctx, alice.ID, "alice2@example.com", false)
+	require.NoError(t, err)
+	err = db.MarkEmailActivated(ctx, alice.ID, "alice2@example.com")
+	require.NoError(t, err)
+
+	gotEmail, err := db.GetEmail(ctx, alice.ID, "alice2@example.com", true)
+	require.NoError(t, err)
+	assert.True(t, gotEmail.IsActivated)
+
+	gotAlice, err := db.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.NotEqual(t, alice.Rands, gotAlice.Rands)
+}
+
+func usersMarkEmailPrimary(t *testing.T, db *users) {
+	ctx := context.Background()
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	err = db.AddEmail(ctx, alice.ID, "alice2@example.com", false)
+	require.NoError(t, err)
+
+	// Should fail because email not verified
+	gotError := db.MarkEmailPrimary(ctx, alice.ID, "alice2@example.com")
+	wantError := ErrEmailNotVerified{args: errutil.Args{"email": "alice2@example.com"}}
+	assert.Equal(t, wantError, gotError)
+
+	// Mark email as verified and should succeed
+	err = db.MarkEmailActivated(ctx, alice.ID, "alice2@example.com")
+	require.NoError(t, err)
+	err = db.MarkEmailPrimary(ctx, alice.ID, "alice2@example.com")
+	require.NoError(t, err)
+	gotAlice, err := db.GetByID(ctx, alice.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "alice2@example.com", gotAlice.Email)
+
+	// Former primary email should be preserved
+	gotEmail, err := db.GetEmail(ctx, alice.ID, "alice@example.com", false)
+	require.NoError(t, err)
+	assert.False(t, gotEmail.IsActivated)
 }
 
 func usersDeleteEmail(t *testing.T, db *users) {
-	// todo
+	ctx := context.Background()
+	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	err = db.AddEmail(ctx, alice.ID, "alice2@example.com", false)
+	require.NoError(t, err)
+	_, err = db.GetEmail(ctx, alice.ID, "alice2@example.com", false)
+	require.NoError(t, err)
+
+	err = db.DeleteEmail(ctx, alice.ID, "alice2@example.com")
+	require.NoError(t, err)
+	_, got := db.GetEmail(ctx, alice.ID, "alice2@example.com", false)
+	want := ErrEmailNotExist{args: errutil.Args{"email": "alice2@example.com"}}
+	require.Equal(t, want, got)
 }
 
 func usersFollow(t *testing.T, db *users) {
