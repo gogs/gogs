@@ -1624,7 +1624,7 @@ func isUsernameAllowed(name string) error {
 type EmailAddress struct {
 	ID          int64  `gorm:"primaryKey"`
 	UserID      int64  `xorm:"uid INDEX NOT NULL" gorm:"column:uid;index;uniqueIndex:email_address_user_email_unique;not null"`
-	Email       string `xorm:"UNIQUE NOT NULL" gorm:"uniqueIndex:email_address_user_email_unique;not null"`
+	Email       string `xorm:"UNIQUE NOT NULL" gorm:"uniqueIndex:email_address_user_email_unique;not null;size:254"`
 	IsActivated bool   `gorm:"not null;default:FALSE"`
 	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
 }

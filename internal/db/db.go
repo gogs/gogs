@@ -42,6 +42,7 @@ func newLogWriter() (logger.Writer, error) {
 // NOTE: Lines are sorted in alphabetical order, each letter in its own line.
 var Tables = []any{
 	new(Access), new(AccessToken), new(Action),
+	new(EmailAddress),
 	new(Follow),
 	new(LFSObject), new(LoginSource),
 }
