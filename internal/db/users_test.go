@@ -119,6 +119,7 @@ func TestUsers(t *testing.T) {
 		{"AddEmail", usersAddEmail},
 		{"GetEmail", usersGetEmail},
 		{"ListEmails", usersListEmails},
+		{"MarkEmailActivated", usersMarkEmailActivated},
 		{"Follow", usersFollow},
 		{"IsFollowing", usersIsFollowing},
 		{"Unfollow", usersUnfollow},
@@ -1238,8 +1239,7 @@ func usersGetEmail(t *testing.T, db *users) {
 	_, err = db.GetEmail(ctx, testUserID, testEmail, true)
 	assert.Equal(t, wantErr, err)
 
-	// TODO: Use Users.MarkEmailActivated to replace SQL hack when the method is available.
-	err = db.Exec(`UPDATE email_address SET is_activated = TRUE WHERE email = ?`, testEmail).Error
+	err = db.MarkEmailActivated(ctx, testUserID, testEmail)
 	require.NoError(t, err)
 	got, err = db.GetEmail(ctx, testUserID, testEmail, true)
 	require.NoError(t, err)
@@ -1247,6 +1247,10 @@ func usersGetEmail(t *testing.T, db *users) {
 }
 
 func usersListEmails(t *testing.T, db *users) {
+	// todo
+}
+
+func usersMarkEmailActivated(t *testing.T, db *users) {
 	// todo
 }
 

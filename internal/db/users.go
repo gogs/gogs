@@ -112,6 +112,9 @@ type UsersStore interface {
 	// ListEmails returns all email addresses of the given user. It always includes
 	// a primary email address.
 	ListEmails(ctx context.Context, userID int64) ([]*EmailAddress, error)
+	// MarkEmailActivated marks the email address of the given user as activated,
+	// and new rands are generated for the user.
+	MarkEmailActivated(ctx context.Context, userID int64, email string) error
 
 	// Follow marks the user to follow the other user.
 	Follow(ctx context.Context, userID, followID int64) error
@@ -1168,6 +1171,21 @@ func (db *users) ListEmails(ctx context.Context, userID int64) ([]*EmailAddress,
 		})
 	}
 	return emails, nil
+}
+
+func (db *users) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := db.WithContext(ctx).
+			Model(&EmailAddress{}).
+			Where("uid = ? AND email = ?", userID, email).
+			Update("is_activated", true).
+			Error
+		if err != nil {
+			return errors.Wrap(err, "mark email activated")
+		}
+
+		return NewUsersStore(tx).Update(ctx, userID, UpdateUserOptions{GenerateNewRands: true})
+	})
 }
 
 // UserType indicates the type of the user account.

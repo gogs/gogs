@@ -515,8 +515,10 @@ func ActivateEmail(c *context.Context) {
 
 	// Verify code.
 	if email := verifyActiveEmailCode(code, emailAddr); email != nil {
-		if err := email.Activate(); err != nil {
+		err := db.Users.MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
+		if err != nil {
 			c.Error(err, "activate email")
+			return
 		}
 
 		log.Trace("Email activated: %s", email.Email)

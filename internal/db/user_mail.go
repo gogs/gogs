@@ -5,18 +5,8 @@
 package db
 
 import (
-	"context"
-
 	"gogs.io/gogs/internal/db/errors"
 )
-
-func (email *EmailAddress) Activate() error {
-	email.IsActivated = true
-	if _, err := x.ID(email.ID).AllCols().Update(email); err != nil {
-		return err
-	}
-	return Users.Update(context.TODO(), email.UserID, UpdateUserOptions{GenerateNewRands: true})
-}
 
 func DeleteEmailAddress(email *EmailAddress) (err error) {
 	if email.ID > 0 {
