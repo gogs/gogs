@@ -3241,6 +3241,9 @@ type MockUsersStore struct {
 	// MarkEmailActivatedFunc is an instance of a mock function object
 	// controlling the behavior of the method MarkEmailActivated.
 	MarkEmailActivatedFunc *UsersStoreMarkEmailActivatedFunc
+	// MarkEmailPrimaryFunc is an instance of a mock function object
+	// controlling the behavior of the method MarkEmailPrimary.
+	MarkEmailPrimaryFunc *UsersStoreMarkEmailPrimaryFunc
 	// SearchByNameFunc is an instance of a mock function object controlling
 	// the behavior of the method SearchByName.
 	SearchByNameFunc *UsersStoreSearchByNameFunc
@@ -3370,6 +3373,11 @@ func NewMockUsersStore() *MockUsersStore {
 			},
 		},
 		MarkEmailActivatedFunc: &UsersStoreMarkEmailActivatedFunc{
+			defaultHook: func(context.Context, int64, string) (r0 error) {
+				return
+			},
+		},
+		MarkEmailPrimaryFunc: &UsersStoreMarkEmailPrimaryFunc{
 			defaultHook: func(context.Context, int64, string) (r0 error) {
 				return
 			},
@@ -3516,6 +3524,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.MarkEmailActivated")
 			},
 		},
+		MarkEmailPrimaryFunc: &UsersStoreMarkEmailPrimaryFunc{
+			defaultHook: func(context.Context, int64, string) error {
+				panic("unexpected invocation of MockUsersStore.MarkEmailPrimary")
+			},
+		},
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
 			defaultHook: func(context.Context, string, int, int, string) ([]*db.User, int64, error) {
 				panic("unexpected invocation of MockUsersStore.SearchByName")
@@ -3611,6 +3624,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		MarkEmailActivatedFunc: &UsersStoreMarkEmailActivatedFunc{
 			defaultHook: i.MarkEmailActivated,
+		},
+		MarkEmailPrimaryFunc: &UsersStoreMarkEmailPrimaryFunc{
+			defaultHook: i.MarkEmailPrimary,
 		},
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
 			defaultHook: i.SearchByName,
@@ -6129,6 +6145,114 @@ func (c UsersStoreMarkEmailActivatedFuncCall) Args() []interface{} {
 // Results returns an interface slice containing the results of this
 // invocation.
 func (c UsersStoreMarkEmailActivatedFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// UsersStoreMarkEmailPrimaryFunc describes the behavior when the
+// MarkEmailPrimary method of the parent MockUsersStore instance is invoked.
+type UsersStoreMarkEmailPrimaryFunc struct {
+	defaultHook func(context.Context, int64, string) error
+	hooks       []func(context.Context, int64, string) error
+	history     []UsersStoreMarkEmailPrimaryFuncCall
+	mutex       sync.Mutex
+}
+
+// MarkEmailPrimary delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockUsersStore) MarkEmailPrimary(v0 context.Context, v1 int64, v2 string) error {
+	r0 := m.MarkEmailPrimaryFunc.nextHook()(v0, v1, v2)
+	m.MarkEmailPrimaryFunc.appendCall(UsersStoreMarkEmailPrimaryFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the MarkEmailPrimary
+// method of the parent MockUsersStore instance is invoked and the hook
+// queue is empty.
+func (f *UsersStoreMarkEmailPrimaryFunc) SetDefaultHook(hook func(context.Context, int64, string) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// MarkEmailPrimary method of the parent MockUsersStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *UsersStoreMarkEmailPrimaryFunc) PushHook(hook func(context.Context, int64, string) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreMarkEmailPrimaryFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreMarkEmailPrimaryFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreMarkEmailPrimaryFunc) nextHook() func(context.Context, int64, string) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreMarkEmailPrimaryFunc) appendCall(r0 UsersStoreMarkEmailPrimaryFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreMarkEmailPrimaryFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreMarkEmailPrimaryFunc) History() []UsersStoreMarkEmailPrimaryFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreMarkEmailPrimaryFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreMarkEmailPrimaryFuncCall is an object that describes an
+// invocation of method MarkEmailPrimary on an instance of MockUsersStore.
+type UsersStoreMarkEmailPrimaryFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreMarkEmailPrimaryFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreMarkEmailPrimaryFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 
