@@ -116,6 +116,9 @@ func TestUsers(t *testing.T) {
 		{"SearchByName", usersSearchByName},
 		{"Update", usersUpdate},
 		{"UseCustomAvatar", usersUseCustomAvatar},
+		{"AddEmail", usersAddEmail},
+		{"GetEmail", usersGetEmail},
+		{"ListEmails", usersListEmails},
 		{"Follow", usersFollow},
 		{"IsFollowing", usersIsFollowing},
 		{"Unfollow", usersUnfollow},
@@ -1202,6 +1205,49 @@ func TestIsUsernameAllowed(t *testing.T) {
 			assert.True(t, IsErrNameNotAllowed(isUsernameAllowed(username)))
 		})
 	}
+}
+
+func usersAddEmail(t *testing.T, db *users) {
+	// todo
+}
+
+func usersGetEmail(t *testing.T, db *users) {
+	ctx := context.Background()
+
+	const testUserID = 1
+	const testEmail = "alice@example.com"
+	_, err := db.GetEmail(ctx, testUserID, testEmail, false)
+	wantErr := ErrEmailNotExist{
+		args: errutil.Args{
+			"email": testEmail,
+		},
+	}
+	assert.Equal(t, wantErr, err)
+
+	err = db.AddEmail(ctx, testUserID, testEmail, false)
+	require.NoError(t, err)
+	got, err := db.GetEmail(ctx, testUserID, testEmail, false)
+	require.NoError(t, err)
+	assert.Equal(t, testEmail, got.Email)
+
+	// Should not return if we ask for a different user
+	_, err = db.GetEmail(ctx, testUserID+1, testEmail, false)
+	assert.Equal(t, wantErr, err)
+
+	// Should not return if we only want activated emails
+	_, err = db.GetEmail(ctx, testUserID, testEmail, true)
+	assert.Equal(t, wantErr, err)
+
+	// TODO: Use Users.MarkEmailActivated to replace SQL hack when the method is available.
+	err = db.Exec(`UPDATE email_address SET is_activated = TRUE WHERE email = ?`, testEmail).Error
+	require.NoError(t, err)
+	got, err = db.GetEmail(ctx, testUserID, testEmail, true)
+	require.NoError(t, err)
+	assert.Equal(t, testEmail, got.Email)
+}
+
+func usersListEmails(t *testing.T, db *users) {
+	// todo
 }
 
 func usersFollow(t *testing.T, db *users) {

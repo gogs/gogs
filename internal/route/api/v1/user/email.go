@@ -17,7 +17,7 @@ import (
 )
 
 func ListEmails(c *context.APIContext) {
-	emails, err := db.GetEmailAddresses(c.User.ID)
+	emails, err := db.Users.ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "get email addresses")
 		return
@@ -35,27 +35,24 @@ func AddEmail(c *context.APIContext, form api.CreateEmailOption) {
 		return
 	}
 
-	emails := make([]*db.EmailAddress, len(form.Emails))
-	for i := range form.Emails {
-		emails[i] = &db.EmailAddress{
-			UserID:      c.User.ID,
-			Email:       form.Emails[i],
-			IsActivated: !conf.Auth.RequireEmailConfirmation,
+	apiEmails := make([]*api.Email, 0, len(form.Emails))
+	for _, email := range form.Emails {
+		err := db.Users.AddEmail(c.Req.Context(), c.User.ID, email, !conf.Auth.RequireEmailConfirmation)
+		if err != nil {
+			if db.IsErrEmailAlreadyUsed(err) {
+				c.ErrorStatus(http.StatusUnprocessableEntity, errors.Errorf("email address has been used: %s", err.(db.ErrEmailAlreadyUsed).Email()))
+			} else {
+				c.Error(err, "add email addresses")
+			}
+			return
 		}
-	}
 
-	if err := db.AddEmailAddresses(emails); err != nil {
-		if db.IsErrEmailAlreadyUsed(err) {
-			c.ErrorStatus(http.StatusUnprocessableEntity, errors.New("email address has been used: "+err.(db.ErrEmailAlreadyUsed).Email()))
-		} else {
-			c.Error(err, "add email addresses")
-		}
-		return
-	}
-
-	apiEmails := make([]*api.Email, len(emails))
-	for i := range emails {
-		apiEmails[i] = convert.ToEmail(emails[i])
+		apiEmails = append(apiEmails,
+			&api.Email{
+				Email:    email,
+				Verified: !conf.Auth.RequireEmailConfirmation,
+			},
+		)
 	}
 	c.JSON(http.StatusCreated, &apiEmails)
 }
