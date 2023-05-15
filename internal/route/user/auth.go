@@ -445,7 +445,7 @@ func verifyActiveEmailCode(code, email string) *db.EmailAddress {
 		data := com.ToStr(user.ID) + email + user.LowerName + user.Password + user.Rands
 
 		if tool.VerifyTimeLimitCode(data, minutes, prefix) {
-			emailAddress, err := db.EmailAddresses.GetByEmail(gocontext.TODO(), email, false)
+			emailAddress, err := db.Users.GetEmail(gocontext.TODO(), user.ID, email, false)
 			if err == nil {
 				return emailAddress
 			}
@@ -515,8 +515,10 @@ func ActivateEmail(c *context.Context) {
 
 	// Verify code.
 	if email := verifyActiveEmailCode(code, emailAddr); email != nil {
-		if err := email.Activate(); err != nil {
+		err := db.Users.MarkEmailActivated(c.Req.Context(), email.UserID, email.Email)
+		if err != nil {
 			c.Error(err, "activate email")
+			return
 		}
 
 		log.Trace("Email activated: %s", email.Email)

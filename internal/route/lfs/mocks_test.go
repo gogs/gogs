@@ -3171,6 +3171,9 @@ func (c TwoFactorsStoreIsEnabledFuncCall) Results() []interface{} {
 // MockUsersStore is a mock implementation of the UsersStore interface (from
 // the package gogs.io/gogs/internal/db) used for unit testing.
 type MockUsersStore struct {
+	// AddEmailFunc is an instance of a mock function object controlling the
+	// behavior of the method AddEmail.
+	AddEmailFunc *UsersStoreAddEmailFunc
 	// AuthenticateFunc is an instance of a mock function object controlling
 	// the behavior of the method Authenticate.
 	AuthenticateFunc *UsersStoreAuthenticateFunc
@@ -3189,6 +3192,9 @@ type MockUsersStore struct {
 	// DeleteCustomAvatarFunc is an instance of a mock function object
 	// controlling the behavior of the method DeleteCustomAvatar.
 	DeleteCustomAvatarFunc *UsersStoreDeleteCustomAvatarFunc
+	// DeleteEmailFunc is an instance of a mock function object controlling
+	// the behavior of the method DeleteEmail.
+	DeleteEmailFunc *UsersStoreDeleteEmailFunc
 	// DeleteInactivatedFunc is an instance of a mock function object
 	// controlling the behavior of the method DeleteInactivated.
 	DeleteInactivatedFunc *UsersStoreDeleteInactivatedFunc
@@ -3207,6 +3213,9 @@ type MockUsersStore struct {
 	// GetByUsernameFunc is an instance of a mock function object
 	// controlling the behavior of the method GetByUsername.
 	GetByUsernameFunc *UsersStoreGetByUsernameFunc
+	// GetEmailFunc is an instance of a mock function object controlling the
+	// behavior of the method GetEmail.
+	GetEmailFunc *UsersStoreGetEmailFunc
 	// GetMailableEmailsByUsernamesFunc is an instance of a mock function
 	// object controlling the behavior of the method
 	// GetMailableEmailsByUsernames.
@@ -3220,12 +3229,21 @@ type MockUsersStore struct {
 	// ListFunc is an instance of a mock function object controlling the
 	// behavior of the method List.
 	ListFunc *UsersStoreListFunc
+	// ListEmailsFunc is an instance of a mock function object controlling
+	// the behavior of the method ListEmails.
+	ListEmailsFunc *UsersStoreListEmailsFunc
 	// ListFollowersFunc is an instance of a mock function object
 	// controlling the behavior of the method ListFollowers.
 	ListFollowersFunc *UsersStoreListFollowersFunc
 	// ListFollowingsFunc is an instance of a mock function object
 	// controlling the behavior of the method ListFollowings.
 	ListFollowingsFunc *UsersStoreListFollowingsFunc
+	// MarkEmailActivatedFunc is an instance of a mock function object
+	// controlling the behavior of the method MarkEmailActivated.
+	MarkEmailActivatedFunc *UsersStoreMarkEmailActivatedFunc
+	// MarkEmailPrimaryFunc is an instance of a mock function object
+	// controlling the behavior of the method MarkEmailPrimary.
+	MarkEmailPrimaryFunc *UsersStoreMarkEmailPrimaryFunc
 	// SearchByNameFunc is an instance of a mock function object controlling
 	// the behavior of the method SearchByName.
 	SearchByNameFunc *UsersStoreSearchByNameFunc
@@ -3244,6 +3262,11 @@ type MockUsersStore struct {
 // methods return zero values for all results, unless overwritten.
 func NewMockUsersStore() *MockUsersStore {
 	return &MockUsersStore{
+		AddEmailFunc: &UsersStoreAddEmailFunc{
+			defaultHook: func(context.Context, int64, string, bool) (r0 error) {
+				return
+			},
+		},
 		AuthenticateFunc: &UsersStoreAuthenticateFunc{
 			defaultHook: func(context.Context, string, string, int64) (r0 *db.User, r1 error) {
 				return
@@ -3271,6 +3294,11 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
 			defaultHook: func(context.Context, int64) (r0 error) {
+				return
+			},
+		},
+		DeleteEmailFunc: &UsersStoreDeleteEmailFunc{
+			defaultHook: func(context.Context, int64, string) (r0 error) {
 				return
 			},
 		},
@@ -3304,6 +3332,11 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
+		GetEmailFunc: &UsersStoreGetEmailFunc{
+			defaultHook: func(context.Context, int64, string, bool) (r0 *db.EmailAddress, r1 error) {
+				return
+			},
+		},
 		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
 			defaultHook: func(context.Context, []string) (r0 []string, r1 error) {
 				return
@@ -3324,6 +3357,11 @@ func NewMockUsersStore() *MockUsersStore {
 				return
 			},
 		},
+		ListEmailsFunc: &UsersStoreListEmailsFunc{
+			defaultHook: func(context.Context, int64) (r0 []*db.EmailAddress, r1 error) {
+				return
+			},
+		},
 		ListFollowersFunc: &UsersStoreListFollowersFunc{
 			defaultHook: func(context.Context, int64, int, int) (r0 []*db.User, r1 error) {
 				return
@@ -3331,6 +3369,16 @@ func NewMockUsersStore() *MockUsersStore {
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: func(context.Context, int64, int, int) (r0 []*db.User, r1 error) {
+				return
+			},
+		},
+		MarkEmailActivatedFunc: &UsersStoreMarkEmailActivatedFunc{
+			defaultHook: func(context.Context, int64, string) (r0 error) {
+				return
+			},
+		},
+		MarkEmailPrimaryFunc: &UsersStoreMarkEmailPrimaryFunc{
+			defaultHook: func(context.Context, int64, string) (r0 error) {
 				return
 			},
 		},
@@ -3361,6 +3409,11 @@ func NewMockUsersStore() *MockUsersStore {
 // All methods panic on invocation, unless overwritten.
 func NewStrictMockUsersStore() *MockUsersStore {
 	return &MockUsersStore{
+		AddEmailFunc: &UsersStoreAddEmailFunc{
+			defaultHook: func(context.Context, int64, string, bool) error {
+				panic("unexpected invocation of MockUsersStore.AddEmail")
+			},
+		},
 		AuthenticateFunc: &UsersStoreAuthenticateFunc{
 			defaultHook: func(context.Context, string, string, int64) (*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.Authenticate")
@@ -3389,6 +3442,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
 			defaultHook: func(context.Context, int64) error {
 				panic("unexpected invocation of MockUsersStore.DeleteCustomAvatar")
+			},
+		},
+		DeleteEmailFunc: &UsersStoreDeleteEmailFunc{
+			defaultHook: func(context.Context, int64, string) error {
+				panic("unexpected invocation of MockUsersStore.DeleteEmail")
 			},
 		},
 		DeleteInactivatedFunc: &UsersStoreDeleteInactivatedFunc{
@@ -3421,6 +3479,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.GetByUsername")
 			},
 		},
+		GetEmailFunc: &UsersStoreGetEmailFunc{
+			defaultHook: func(context.Context, int64, string, bool) (*db.EmailAddress, error) {
+				panic("unexpected invocation of MockUsersStore.GetEmail")
+			},
+		},
 		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
 			defaultHook: func(context.Context, []string) ([]string, error) {
 				panic("unexpected invocation of MockUsersStore.GetMailableEmailsByUsernames")
@@ -3441,6 +3504,11 @@ func NewStrictMockUsersStore() *MockUsersStore {
 				panic("unexpected invocation of MockUsersStore.List")
 			},
 		},
+		ListEmailsFunc: &UsersStoreListEmailsFunc{
+			defaultHook: func(context.Context, int64) ([]*db.EmailAddress, error) {
+				panic("unexpected invocation of MockUsersStore.ListEmails")
+			},
+		},
 		ListFollowersFunc: &UsersStoreListFollowersFunc{
 			defaultHook: func(context.Context, int64, int, int) ([]*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.ListFollowers")
@@ -3449,6 +3517,16 @@ func NewStrictMockUsersStore() *MockUsersStore {
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: func(context.Context, int64, int, int) ([]*db.User, error) {
 				panic("unexpected invocation of MockUsersStore.ListFollowings")
+			},
+		},
+		MarkEmailActivatedFunc: &UsersStoreMarkEmailActivatedFunc{
+			defaultHook: func(context.Context, int64, string) error {
+				panic("unexpected invocation of MockUsersStore.MarkEmailActivated")
+			},
+		},
+		MarkEmailPrimaryFunc: &UsersStoreMarkEmailPrimaryFunc{
+			defaultHook: func(context.Context, int64, string) error {
+				panic("unexpected invocation of MockUsersStore.MarkEmailPrimary")
 			},
 		},
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
@@ -3478,6 +3556,9 @@ func NewStrictMockUsersStore() *MockUsersStore {
 // All methods delegate to the given implementation, unless overwritten.
 func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 	return &MockUsersStore{
+		AddEmailFunc: &UsersStoreAddEmailFunc{
+			defaultHook: i.AddEmail,
+		},
 		AuthenticateFunc: &UsersStoreAuthenticateFunc{
 			defaultHook: i.Authenticate,
 		},
@@ -3495,6 +3576,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		},
 		DeleteCustomAvatarFunc: &UsersStoreDeleteCustomAvatarFunc{
 			defaultHook: i.DeleteCustomAvatar,
+		},
+		DeleteEmailFunc: &UsersStoreDeleteEmailFunc{
+			defaultHook: i.DeleteEmail,
 		},
 		DeleteInactivatedFunc: &UsersStoreDeleteInactivatedFunc{
 			defaultHook: i.DeleteInactivated,
@@ -3514,6 +3598,9 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		GetByUsernameFunc: &UsersStoreGetByUsernameFunc{
 			defaultHook: i.GetByUsername,
 		},
+		GetEmailFunc: &UsersStoreGetEmailFunc{
+			defaultHook: i.GetEmail,
+		},
 		GetMailableEmailsByUsernamesFunc: &UsersStoreGetMailableEmailsByUsernamesFunc{
 			defaultHook: i.GetMailableEmailsByUsernames,
 		},
@@ -3526,11 +3613,20 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 		ListFunc: &UsersStoreListFunc{
 			defaultHook: i.List,
 		},
+		ListEmailsFunc: &UsersStoreListEmailsFunc{
+			defaultHook: i.ListEmails,
+		},
 		ListFollowersFunc: &UsersStoreListFollowersFunc{
 			defaultHook: i.ListFollowers,
 		},
 		ListFollowingsFunc: &UsersStoreListFollowingsFunc{
 			defaultHook: i.ListFollowings,
+		},
+		MarkEmailActivatedFunc: &UsersStoreMarkEmailActivatedFunc{
+			defaultHook: i.MarkEmailActivated,
+		},
+		MarkEmailPrimaryFunc: &UsersStoreMarkEmailPrimaryFunc{
+			defaultHook: i.MarkEmailPrimary,
 		},
 		SearchByNameFunc: &UsersStoreSearchByNameFunc{
 			defaultHook: i.SearchByName,
@@ -3545,6 +3641,117 @@ func NewMockUsersStoreFrom(i db.UsersStore) *MockUsersStore {
 			defaultHook: i.UseCustomAvatar,
 		},
 	}
+}
+
+// UsersStoreAddEmailFunc describes the behavior when the AddEmail method of
+// the parent MockUsersStore instance is invoked.
+type UsersStoreAddEmailFunc struct {
+	defaultHook func(context.Context, int64, string, bool) error
+	hooks       []func(context.Context, int64, string, bool) error
+	history     []UsersStoreAddEmailFuncCall
+	mutex       sync.Mutex
+}
+
+// AddEmail delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) AddEmail(v0 context.Context, v1 int64, v2 string, v3 bool) error {
+	r0 := m.AddEmailFunc.nextHook()(v0, v1, v2, v3)
+	m.AddEmailFunc.appendCall(UsersStoreAddEmailFuncCall{v0, v1, v2, v3, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the AddEmail method of
+// the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreAddEmailFunc) SetDefaultHook(hook func(context.Context, int64, string, bool) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// AddEmail method of the parent MockUsersStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreAddEmailFunc) PushHook(hook func(context.Context, int64, string, bool) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreAddEmailFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, string, bool) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreAddEmailFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, string, bool) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreAddEmailFunc) nextHook() func(context.Context, int64, string, bool) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreAddEmailFunc) appendCall(r0 UsersStoreAddEmailFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreAddEmailFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreAddEmailFunc) History() []UsersStoreAddEmailFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreAddEmailFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreAddEmailFuncCall is an object that describes an invocation of
+// method AddEmail on an instance of MockUsersStore.
+type UsersStoreAddEmailFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 bool
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreAddEmailFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreAddEmailFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreAuthenticateFunc describes the behavior when the Authenticate
@@ -4197,6 +4404,114 @@ func (c UsersStoreDeleteCustomAvatarFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0}
 }
 
+// UsersStoreDeleteEmailFunc describes the behavior when the DeleteEmail
+// method of the parent MockUsersStore instance is invoked.
+type UsersStoreDeleteEmailFunc struct {
+	defaultHook func(context.Context, int64, string) error
+	hooks       []func(context.Context, int64, string) error
+	history     []UsersStoreDeleteEmailFuncCall
+	mutex       sync.Mutex
+}
+
+// DeleteEmail delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockUsersStore) DeleteEmail(v0 context.Context, v1 int64, v2 string) error {
+	r0 := m.DeleteEmailFunc.nextHook()(v0, v1, v2)
+	m.DeleteEmailFunc.appendCall(UsersStoreDeleteEmailFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the DeleteEmail method
+// of the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreDeleteEmailFunc) SetDefaultHook(hook func(context.Context, int64, string) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// DeleteEmail method of the parent MockUsersStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreDeleteEmailFunc) PushHook(hook func(context.Context, int64, string) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreDeleteEmailFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreDeleteEmailFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreDeleteEmailFunc) nextHook() func(context.Context, int64, string) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreDeleteEmailFunc) appendCall(r0 UsersStoreDeleteEmailFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreDeleteEmailFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreDeleteEmailFunc) History() []UsersStoreDeleteEmailFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreDeleteEmailFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreDeleteEmailFuncCall is an object that describes an invocation
+// of method DeleteEmail on an instance of MockUsersStore.
+type UsersStoreDeleteEmailFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreDeleteEmailFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreDeleteEmailFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
 // UsersStoreDeleteInactivatedFunc describes the behavior when the
 // DeleteInactivated method of the parent MockUsersStore instance is
 // invoked.
@@ -4836,6 +5151,120 @@ func (c UsersStoreGetByUsernameFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
+// UsersStoreGetEmailFunc describes the behavior when the GetEmail method of
+// the parent MockUsersStore instance is invoked.
+type UsersStoreGetEmailFunc struct {
+	defaultHook func(context.Context, int64, string, bool) (*db.EmailAddress, error)
+	hooks       []func(context.Context, int64, string, bool) (*db.EmailAddress, error)
+	history     []UsersStoreGetEmailFuncCall
+	mutex       sync.Mutex
+}
+
+// GetEmail delegates to the next hook function in the queue and stores the
+// parameter and result values of this invocation.
+func (m *MockUsersStore) GetEmail(v0 context.Context, v1 int64, v2 string, v3 bool) (*db.EmailAddress, error) {
+	r0, r1 := m.GetEmailFunc.nextHook()(v0, v1, v2, v3)
+	m.GetEmailFunc.appendCall(UsersStoreGetEmailFuncCall{v0, v1, v2, v3, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the GetEmail method of
+// the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreGetEmailFunc) SetDefaultHook(hook func(context.Context, int64, string, bool) (*db.EmailAddress, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// GetEmail method of the parent MockUsersStore instance invokes the hook at
+// the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreGetEmailFunc) PushHook(hook func(context.Context, int64, string, bool) (*db.EmailAddress, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreGetEmailFunc) SetDefaultReturn(r0 *db.EmailAddress, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64, string, bool) (*db.EmailAddress, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreGetEmailFunc) PushReturn(r0 *db.EmailAddress, r1 error) {
+	f.PushHook(func(context.Context, int64, string, bool) (*db.EmailAddress, error) {
+		return r0, r1
+	})
+}
+
+func (f *UsersStoreGetEmailFunc) nextHook() func(context.Context, int64, string, bool) (*db.EmailAddress, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreGetEmailFunc) appendCall(r0 UsersStoreGetEmailFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreGetEmailFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreGetEmailFunc) History() []UsersStoreGetEmailFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreGetEmailFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreGetEmailFuncCall is an object that describes an invocation of
+// method GetEmail on an instance of MockUsersStore.
+type UsersStoreGetEmailFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
+	// Arg3 is the value of the 4th argument passed to this method
+	// invocation.
+	Arg3 bool
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 *db.EmailAddress
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreGetEmailFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2, c.Arg3}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreGetEmailFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
 // UsersStoreGetMailableEmailsByUsernamesFunc describes the behavior when
 // the GetMailableEmailsByUsernames method of the parent MockUsersStore
 // instance is invoked.
@@ -5274,6 +5703,114 @@ func (c UsersStoreListFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
 }
 
+// UsersStoreListEmailsFunc describes the behavior when the ListEmails
+// method of the parent MockUsersStore instance is invoked.
+type UsersStoreListEmailsFunc struct {
+	defaultHook func(context.Context, int64) ([]*db.EmailAddress, error)
+	hooks       []func(context.Context, int64) ([]*db.EmailAddress, error)
+	history     []UsersStoreListEmailsFuncCall
+	mutex       sync.Mutex
+}
+
+// ListEmails delegates to the next hook function in the queue and stores
+// the parameter and result values of this invocation.
+func (m *MockUsersStore) ListEmails(v0 context.Context, v1 int64) ([]*db.EmailAddress, error) {
+	r0, r1 := m.ListEmailsFunc.nextHook()(v0, v1)
+	m.ListEmailsFunc.appendCall(UsersStoreListEmailsFuncCall{v0, v1, r0, r1})
+	return r0, r1
+}
+
+// SetDefaultHook sets function that is called when the ListEmails method of
+// the parent MockUsersStore instance is invoked and the hook queue is
+// empty.
+func (f *UsersStoreListEmailsFunc) SetDefaultHook(hook func(context.Context, int64) ([]*db.EmailAddress, error)) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// ListEmails method of the parent MockUsersStore instance invokes the hook
+// at the front of the queue and discards it. After the queue is empty, the
+// default hook function is invoked for any future action.
+func (f *UsersStoreListEmailsFunc) PushHook(hook func(context.Context, int64) ([]*db.EmailAddress, error)) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreListEmailsFunc) SetDefaultReturn(r0 []*db.EmailAddress, r1 error) {
+	f.SetDefaultHook(func(context.Context, int64) ([]*db.EmailAddress, error) {
+		return r0, r1
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreListEmailsFunc) PushReturn(r0 []*db.EmailAddress, r1 error) {
+	f.PushHook(func(context.Context, int64) ([]*db.EmailAddress, error) {
+		return r0, r1
+	})
+}
+
+func (f *UsersStoreListEmailsFunc) nextHook() func(context.Context, int64) ([]*db.EmailAddress, error) {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreListEmailsFunc) appendCall(r0 UsersStoreListEmailsFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreListEmailsFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreListEmailsFunc) History() []UsersStoreListEmailsFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreListEmailsFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreListEmailsFuncCall is an object that describes an invocation of
+// method ListEmails on an instance of MockUsersStore.
+type UsersStoreListEmailsFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 []*db.EmailAddress
+	// Result1 is the value of the 2nd result returned from this method
+	// invocation.
+	Result1 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreListEmailsFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreListEmailsFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0, c.Result1}
+}
+
 // UsersStoreListFollowersFunc describes the behavior when the ListFollowers
 // method of the parent MockUsersStore instance is invoked.
 type UsersStoreListFollowersFunc struct {
@@ -5500,6 +6037,223 @@ func (c UsersStoreListFollowingsFuncCall) Args() []interface{} {
 // invocation.
 func (c UsersStoreListFollowingsFuncCall) Results() []interface{} {
 	return []interface{}{c.Result0, c.Result1}
+}
+
+// UsersStoreMarkEmailActivatedFunc describes the behavior when the
+// MarkEmailActivated method of the parent MockUsersStore instance is
+// invoked.
+type UsersStoreMarkEmailActivatedFunc struct {
+	defaultHook func(context.Context, int64, string) error
+	hooks       []func(context.Context, int64, string) error
+	history     []UsersStoreMarkEmailActivatedFuncCall
+	mutex       sync.Mutex
+}
+
+// MarkEmailActivated delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockUsersStore) MarkEmailActivated(v0 context.Context, v1 int64, v2 string) error {
+	r0 := m.MarkEmailActivatedFunc.nextHook()(v0, v1, v2)
+	m.MarkEmailActivatedFunc.appendCall(UsersStoreMarkEmailActivatedFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the MarkEmailActivated
+// method of the parent MockUsersStore instance is invoked and the hook
+// queue is empty.
+func (f *UsersStoreMarkEmailActivatedFunc) SetDefaultHook(hook func(context.Context, int64, string) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// MarkEmailActivated method of the parent MockUsersStore instance invokes
+// the hook at the front of the queue and discards it. After the queue is
+// empty, the default hook function is invoked for any future action.
+func (f *UsersStoreMarkEmailActivatedFunc) PushHook(hook func(context.Context, int64, string) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreMarkEmailActivatedFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreMarkEmailActivatedFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreMarkEmailActivatedFunc) nextHook() func(context.Context, int64, string) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreMarkEmailActivatedFunc) appendCall(r0 UsersStoreMarkEmailActivatedFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreMarkEmailActivatedFuncCall
+// objects describing the invocations of this function.
+func (f *UsersStoreMarkEmailActivatedFunc) History() []UsersStoreMarkEmailActivatedFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreMarkEmailActivatedFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreMarkEmailActivatedFuncCall is an object that describes an
+// invocation of method MarkEmailActivated on an instance of MockUsersStore.
+type UsersStoreMarkEmailActivatedFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreMarkEmailActivatedFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreMarkEmailActivatedFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
+}
+
+// UsersStoreMarkEmailPrimaryFunc describes the behavior when the
+// MarkEmailPrimary method of the parent MockUsersStore instance is invoked.
+type UsersStoreMarkEmailPrimaryFunc struct {
+	defaultHook func(context.Context, int64, string) error
+	hooks       []func(context.Context, int64, string) error
+	history     []UsersStoreMarkEmailPrimaryFuncCall
+	mutex       sync.Mutex
+}
+
+// MarkEmailPrimary delegates to the next hook function in the queue and
+// stores the parameter and result values of this invocation.
+func (m *MockUsersStore) MarkEmailPrimary(v0 context.Context, v1 int64, v2 string) error {
+	r0 := m.MarkEmailPrimaryFunc.nextHook()(v0, v1, v2)
+	m.MarkEmailPrimaryFunc.appendCall(UsersStoreMarkEmailPrimaryFuncCall{v0, v1, v2, r0})
+	return r0
+}
+
+// SetDefaultHook sets function that is called when the MarkEmailPrimary
+// method of the parent MockUsersStore instance is invoked and the hook
+// queue is empty.
+func (f *UsersStoreMarkEmailPrimaryFunc) SetDefaultHook(hook func(context.Context, int64, string) error) {
+	f.defaultHook = hook
+}
+
+// PushHook adds a function to the end of hook queue. Each invocation of the
+// MarkEmailPrimary method of the parent MockUsersStore instance invokes the
+// hook at the front of the queue and discards it. After the queue is empty,
+// the default hook function is invoked for any future action.
+func (f *UsersStoreMarkEmailPrimaryFunc) PushHook(hook func(context.Context, int64, string) error) {
+	f.mutex.Lock()
+	f.hooks = append(f.hooks, hook)
+	f.mutex.Unlock()
+}
+
+// SetDefaultReturn calls SetDefaultHook with a function that returns the
+// given values.
+func (f *UsersStoreMarkEmailPrimaryFunc) SetDefaultReturn(r0 error) {
+	f.SetDefaultHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+// PushReturn calls PushHook with a function that returns the given values.
+func (f *UsersStoreMarkEmailPrimaryFunc) PushReturn(r0 error) {
+	f.PushHook(func(context.Context, int64, string) error {
+		return r0
+	})
+}
+
+func (f *UsersStoreMarkEmailPrimaryFunc) nextHook() func(context.Context, int64, string) error {
+	f.mutex.Lock()
+	defer f.mutex.Unlock()
+
+	if len(f.hooks) == 0 {
+		return f.defaultHook
+	}
+
+	hook := f.hooks[0]
+	f.hooks = f.hooks[1:]
+	return hook
+}
+
+func (f *UsersStoreMarkEmailPrimaryFunc) appendCall(r0 UsersStoreMarkEmailPrimaryFuncCall) {
+	f.mutex.Lock()
+	f.history = append(f.history, r0)
+	f.mutex.Unlock()
+}
+
+// History returns a sequence of UsersStoreMarkEmailPrimaryFuncCall objects
+// describing the invocations of this function.
+func (f *UsersStoreMarkEmailPrimaryFunc) History() []UsersStoreMarkEmailPrimaryFuncCall {
+	f.mutex.Lock()
+	history := make([]UsersStoreMarkEmailPrimaryFuncCall, len(f.history))
+	copy(history, f.history)
+	f.mutex.Unlock()
+
+	return history
+}
+
+// UsersStoreMarkEmailPrimaryFuncCall is an object that describes an
+// invocation of method MarkEmailPrimary on an instance of MockUsersStore.
+type UsersStoreMarkEmailPrimaryFuncCall struct {
+	// Arg0 is the value of the 1st argument passed to this method
+	// invocation.
+	Arg0 context.Context
+	// Arg1 is the value of the 2nd argument passed to this method
+	// invocation.
+	Arg1 int64
+	// Arg2 is the value of the 3rd argument passed to this method
+	// invocation.
+	Arg2 string
+	// Result0 is the value of the 1st result returned from this method
+	// invocation.
+	Result0 error
+}
+
+// Args returns an interface slice containing the arguments of this
+// invocation.
+func (c UsersStoreMarkEmailPrimaryFuncCall) Args() []interface{} {
+	return []interface{}{c.Arg0, c.Arg1, c.Arg2}
+}
+
+// Results returns an interface slice containing the results of this
+// invocation.
+func (c UsersStoreMarkEmailPrimaryFuncCall) Results() []interface{} {
+	return []interface{}{c.Result0}
 }
 
 // UsersStoreSearchByNameFunc describes the behavior when the SearchByName

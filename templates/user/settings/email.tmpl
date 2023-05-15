@@ -20,7 +20,7 @@
 									{{if .IsPrimary}}<span class="ui green tiny primary label">{{$.i18n.Tr "settings.primary"}}</span>{{end}}
 									{{if not .IsPrimary}}
 										<div class="ui right">
-											<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.ID}}">
+											<button class="ui red tiny basic button delete-button" data-url="{{$.Link}}/delete" data-id="{{.Email}}">
 												{{$.i18n.Tr "settings.delete_email"}}
 											</button>
 										</div>
@@ -29,7 +29,7 @@
 												<form action="{{$.Link}}" method="post">
 													{{$.CSRFTokenHTML}}
 													<input name="_method" type="hidden" value="PRIMARY">
-													<input name="id" type="hidden" value="{{.ID}}">
+													<input name="email" type="hidden" value="{{.Email}}">
 													<button class="ui green tiny basic button">{{$.i18n.Tr "settings.primary_email"}}</button>
 												</form>
 											</div>
