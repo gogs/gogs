@@ -1278,19 +1278,39 @@ func usersGetEmail(t *testing.T, db *users) {
 func usersListEmails(t *testing.T, db *users) {
 	ctx := context.Background()
 
-	alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
-	require.NoError(t, err)
-	err = db.AddEmail(ctx, alice.ID, "alice2@example.com", false)
-	require.NoError(t, err)
+	t.Run("list emails with primary email", func(t *testing.T) {
+		alice, err := db.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+		require.NoError(t, err)
+		err = db.AddEmail(ctx, alice.ID, "alice2@example.com", true)
+		require.NoError(t, err)
+		err = db.MarkEmailPrimary(ctx, alice.ID, "alice2@example.com")
+		require.NoError(t, err)
 
-	emails, err := db.ListEmails(ctx, alice.ID)
-	require.NoError(t, err)
-	got := make([]string, 0, len(emails))
-	for _, email := range emails {
-		got = append(got, email.Email)
-	}
-	want := []string{"alice2@example.com", "alice@example.com"}
-	assert.Equal(t, want, got)
+		emails, err := db.ListEmails(ctx, alice.ID)
+		require.NoError(t, err)
+		got := make([]string, 0, len(emails))
+		for _, email := range emails {
+			got = append(got, email.Email)
+		}
+		want := []string{"alice2@example.com", "alice@example.com"}
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("list emails without primary email", func(t *testing.T) {
+		bob, err := db.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+		require.NoError(t, err)
+		err = db.AddEmail(ctx, bob.ID, "bob2@example.com", false)
+		require.NoError(t, err)
+
+		emails, err := db.ListEmails(ctx, bob.ID)
+		require.NoError(t, err)
+		got := make([]string, 0, len(emails))
+		for _, email := range emails {
+			got = append(got, email.Email)
+		}
+		want := []string{"bob2@example.com", "bob@example.com"}
+		assert.Equal(t, want, got)
+	})
 }
 
 func usersMarkEmailActivated(t *testing.T, db *users) {
