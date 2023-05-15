@@ -55,6 +55,22 @@ Indexes:
 	"idx_action_user_id" (user_id)
 ```
 
+# Table "email_address"
+
+```
+     FIELD    |    COLUMN    |           POSTGRESQL           |             MYSQL              |            SQLITE3              
+--------------+--------------+--------------------------------+--------------------------------+---------------------------------
+  ID          | id           | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER                         
+  UserID      | uid          | BIGINT NOT NULL                | BIGINT NOT NULL                | INTEGER NOT NULL                
+  Email       | email        | VARCHAR(254) NOT NULL          | VARCHAR(254) NOT NULL          | TEXT NOT NULL                   
+  IsActivated | is_activated | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE  
+
+Primary keys: id
+Indexes: 
+	"email_address_user_email_unique" UNIQUE (uid, email)
+	"idx_email_address_user_id" (uid)
+```
+
 # Table "follow"
 
 ```

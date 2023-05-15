@@ -223,7 +223,7 @@ func SettingsEmails(c *context.Context) {
 	c.Title("settings.emails")
 	c.PageIs("SettingsEmails")
 
-	emails, err := db.GetEmailAddresses(c.User.ID)
+	emails, err := db.Users.ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Errorf(err, "get email addresses")
 		return
@@ -237,9 +237,9 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	c.Title("settings.emails")
 	c.PageIs("SettingsEmails")
 
-	// Make emailaddress primary.
 	if c.Query("_method") == "PRIMARY" {
-		if err := db.MakeEmailPrimary(c.UserID(), &db.EmailAddress{ID: c.QueryInt64("id")}); err != nil {
+		err := db.Users.MarkEmailPrimary(c.Req.Context(), c.User.ID, c.Query("email"))
+		if err != nil {
 			c.Errorf(err, "make email primary")
 			return
 		}
@@ -249,7 +249,7 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 	}
 
 	// Add Email address.
-	emails, err := db.GetEmailAddresses(c.User.ID)
+	emails, err := db.Users.ListEmails(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Errorf(err, "get email addresses")
 		return
@@ -261,12 +261,8 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 		return
 	}
 
-	emailAddr := &db.EmailAddress{
-		UserID:      c.User.ID,
-		Email:       f.Email,
-		IsActivated: !conf.Auth.RequireEmailConfirmation,
-	}
-	if err := db.AddEmailAddress(emailAddr); err != nil {
+	err = db.Users.AddEmail(c.Req.Context(), c.User.ID, f.Email, !conf.Auth.RequireEmailConfirmation)
+	if err != nil {
 		if db.IsErrEmailAlreadyUsed(err) {
 			c.RenderWithErr(c.Tr("form.email_been_used"), SETTINGS_EMAILS, &f)
 		} else {
@@ -277,12 +273,12 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 
 	// Send confirmation email
 	if conf.Auth.RequireEmailConfirmation {
-		email.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), emailAddr.Email)
+		email.SendActivateEmailMail(c.Context, db.NewMailerUser(c.User), f.Email)
 
 		if err := c.Cache.Put("MailResendLimit_"+c.User.LowerName, c.User.LowerName, 180); err != nil {
 			log.Error("Set cache 'MailResendLimit' failed: %v", err)
 		}
-		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", emailAddr.Email, conf.Auth.ActivateCodeLives/60))
+		c.Flash.Info(c.Tr("settings.add_email_confirmation_sent", f.Email, conf.Auth.ActivateCodeLives/60))
 	} else {
 		c.Flash.Success(c.Tr("settings.add_email_success"))
 	}
@@ -291,11 +287,18 @@ func SettingsEmailPost(c *context.Context, f form.AddEmail) {
 }
 
 func DeleteEmail(c *context.Context) {
-	if err := db.DeleteEmailAddress(&db.EmailAddress{
-		ID:     c.QueryInt64("id"),
-		UserID: c.User.ID,
-	}); err != nil {
-		c.Errorf(err, "delete email address")
+	email := c.Query("id") // The "id" here is the actual email address
+	if c.User.Email == email {
+		c.Flash.Error(c.Tr("settings.email_deletion_primary"))
+		c.JSONSuccess(map[string]any{
+			"redirect": conf.Server.Subpath + "/user/settings/email",
+		})
+		return
+	}
+
+	err := db.Users.DeleteEmail(c.Req.Context(), c.User.ID, email)
+	if err != nil {
+		c.Error(err, "delete email address")
 		return
 	}
 

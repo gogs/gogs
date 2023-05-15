@@ -49,7 +49,7 @@ type UsersStore interface {
 	// Create creates a new user and persists to database. It returns
 	// ErrNameNotAllowed if the given name or pattern of the name is not allowed as
 	// a username, or ErrUserAlreadyExist when a user with same name already exists,
-	// or ErrEmailAlreadyUsed if the email has been used by another user.
+	// or ErrEmailAlreadyUsed if the email has been verified by another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
 
 	// GetByEmail returns the user (not organization) with given email. It ignores
@@ -100,6 +100,27 @@ type UsersStore interface {
 	DeleteByID(ctx context.Context, userID int64, skipRewriteAuthorizedKeys bool) error
 	// DeleteInactivated deletes all inactivated users.
 	DeleteInactivated() error
+
+	// AddEmail adds a new email address to given user. It returns
+	// ErrEmailAlreadyUsed if the email has been verified by another user.
+	AddEmail(ctx context.Context, userID int64, email string, isActivated bool) error
+	// GetEmail returns the email address of the given user. If `needsActivated` is
+	// true, only activated email will be returned, otherwise, it may return
+	// inactivated email addresses. It returns ErrEmailNotExist when no qualified
+	// email is not found.
+	GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error)
+	// ListEmails returns all email addresses of the given user. It always includes
+	// a primary email address.
+	ListEmails(ctx context.Context, userID int64) ([]*EmailAddress, error)
+	// MarkEmailActivated marks the email address of the given user as activated,
+	// and new rands are generated for the user.
+	MarkEmailActivated(ctx context.Context, userID int64, email string) error
+	// MarkEmailPrimary marks the email address of the given user as primary. It
+	// returns ErrEmailNotExist when the email is not found for the user, and
+	// ErrEmailNotActivated when the email is not activated.
+	MarkEmailPrimary(ctx context.Context, userID int64, email string) error
+	// DeleteEmail deletes the email address of the given user.
+	DeleteEmail(ctx context.Context, userID int64, email string) error
 
 	// Follow marks the user to follow the other user.
 	Follow(ctx context.Context, userID, followID int64) error
@@ -386,7 +407,7 @@ func (db *users) Create(ctx context.Context, username, email string, opts Create
 		}
 	}
 
-	email = strings.ToLower(email)
+	email = strings.ToLower(strings.TrimSpace(email))
 	_, err = db.GetByEmail(ctx, email)
 	if err == nil {
 		return nil, ErrEmailAlreadyUsed{
@@ -1061,6 +1082,183 @@ func (db *users) UseCustomAvatar(ctx context.Context, userID int64, avatar []byt
 		Error
 }
 
+func (db *users) AddEmail(ctx context.Context, userID int64, email string, isActivated bool) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	_, err := db.GetByEmail(ctx, email)
+	if err == nil {
+		return ErrEmailAlreadyUsed{
+			args: errutil.Args{
+				"email": email,
+			},
+		}
+	} else if !IsErrUserNotExist(err) {
+		return errors.Wrap(err, "check user by email")
+	}
+
+	return db.WithContext(ctx).Create(
+		&EmailAddress{
+			UserID:      userID,
+			Email:       email,
+			IsActivated: isActivated,
+		},
+	).Error
+}
+
+var _ errutil.NotFound = (*ErrEmailNotExist)(nil)
+
+type ErrEmailNotExist struct {
+	args errutil.Args
+}
+
+// IsErrEmailAddressNotExist returns true if the underlying error has the type
+// ErrEmailNotExist.
+func IsErrEmailAddressNotExist(err error) bool {
+	_, ok := errors.Cause(err).(ErrEmailNotExist)
+	return ok
+}
+
+func (err ErrEmailNotExist) Error() string {
+	return fmt.Sprintf("email address does not exist: %v", err.args)
+}
+
+func (ErrEmailNotExist) NotFound() bool {
+	return true
+}
+
+func (db *users) GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error) {
+	tx := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
+	if needsActivated {
+		tx = tx.Where("is_activated = ?", true)
+	}
+
+	emailAddress := new(EmailAddress)
+	err := tx.First(emailAddress).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrEmailNotExist{
+				args: errutil.Args{
+					"email": email,
+				},
+			}
+		}
+		return nil, err
+	}
+	return emailAddress, nil
+}
+
+func (db *users) ListEmails(ctx context.Context, userID int64) ([]*EmailAddress, error) {
+	user, err := db.GetByID(ctx, userID)
+	if err != nil {
+		return nil, errors.Wrap(err, "get user")
+	}
+
+	var emails []*EmailAddress
+	err = db.WithContext(ctx).Where("uid = ?", userID).Order("id ASC").Find(&emails).Error
+	if err != nil {
+		return nil, errors.Wrap(err, "list emails")
+	}
+
+	isPrimaryFound := false
+	for _, email := range emails {
+		if email.Email == user.Email {
+			isPrimaryFound = true
+			email.IsPrimary = true
+			break
+		}
+	}
+
+	// We always want the primary email address displayed, even if it's not in the
+	// email_address table yet.
+	if !isPrimaryFound {
+		emails = append(emails, &EmailAddress{
+			Email:       user.Email,
+			IsActivated: user.IsActive,
+			IsPrimary:   true,
+		})
+	}
+	return emails, nil
+}
+
+func (db *users) MarkEmailActivated(ctx context.Context, userID int64, email string) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := db.WithContext(ctx).
+			Model(&EmailAddress{}).
+			Where("uid = ? AND email = ?", userID, email).
+			Update("is_activated", true).
+			Error
+		if err != nil {
+			return errors.Wrap(err, "mark email activated")
+		}
+
+		return NewUsersStore(tx).Update(ctx, userID, UpdateUserOptions{GenerateNewRands: true})
+	})
+}
+
+type ErrEmailNotVerified struct {
+	args errutil.Args
+}
+
+// IsErrEmailNotVerified returns true if the underlying error has the type
+// ErrEmailNotVerified.
+func IsErrEmailNotVerified(err error) bool {
+	_, ok := errors.Cause(err).(ErrEmailNotVerified)
+	return ok
+}
+
+func (err ErrEmailNotVerified) Error() string {
+	return fmt.Sprintf("email has not been verified: %v", err.args)
+}
+
+func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email string) error {
+	var emailAddress EmailAddress
+	err := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return ErrEmailNotExist{args: errutil.Args{"email": email}}
+		}
+		return errors.Wrap(err, "get email address")
+	}
+
+	if !emailAddress.IsActivated {
+		return ErrEmailNotVerified{args: errutil.Args{"email": email}}
+	}
+
+	user, err := db.GetByID(ctx, userID)
+	if err != nil {
+		return errors.Wrap(err, "get user")
+	}
+
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Make sure the former primary email doesn't disappear.
+		err = tx.FirstOrCreate(
+			&EmailAddress{
+				UserID:      user.ID,
+				Email:       user.Email,
+				IsActivated: user.IsActive,
+			},
+			&EmailAddress{
+				UserID: user.ID,
+				Email:  user.Email,
+			},
+		).Error
+		if err != nil {
+			return errors.Wrap(err, "upsert former primary email address")
+		}
+
+		return tx.Model(&User{}).
+			Where("id = ?", user.ID).
+			Updates(map[string]any{
+				"email":        email,
+				"updated_unix": tx.NowFunc().Unix(),
+			},
+			).Error
+	})
+}
+
+func (db *users) DeleteEmail(ctx context.Context, userID int64, email string) error {
+	return db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).Delete(&EmailAddress{}).Error
+}
+
 // UserType indicates the type of the user account.
 type UserType int
 
@@ -1420,6 +1618,15 @@ func isNameAllowed(names map[string]struct{}, patterns []string, name string) er
 // the name is not allowed as a username.
 func isUsernameAllowed(name string) error {
 	return isNameAllowed(reservedUsernames, reservedUsernamePatterns, name)
+}
+
+// EmailAddress is an email address of a user.
+type EmailAddress struct {
+	ID          int64  `gorm:"primaryKey"`
+	UserID      int64  `xorm:"uid INDEX NOT NULL" gorm:"column:uid;index;uniqueIndex:email_address_user_email_unique;not null"`
+	Email       string `xorm:"UNIQUE NOT NULL" gorm:"uniqueIndex:email_address_user_email_unique;not null;size:254"`
+	IsActivated bool   `gorm:"not null;default:FALSE"`
+	IsPrimary   bool   `xorm:"-" gorm:"-" json:"-"`
 }
 
 // Follow represents relations of users and their followers.
