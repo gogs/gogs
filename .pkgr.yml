@@ -1,12 +1,10 @@
 targets:
-  debian-9: &debian
+  debian-10: &debian
     build_dependencies:
       - libpam0g-dev
     dependencies:
       - libpam0g
       - git
-  debian-10:
-    <<: *debian
   debian-11:
     <<: *debian
   ubuntu-18.04:
