@@ -34,7 +34,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.20.x
+          go-version: 1.21.x
       - name: Install Task
         uses: arduino/setup-task@v1
         with:
@@ -61,16 +61,16 @@ jobs:
     name: Test
     strategy:
       matrix:
-        go-version: [ 1.19.x, 1.20.x ]
+        go-version: [ 1.20.x, 1.21.x ]
         platform: [ ubuntu-latest, macos-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Run tests with coverage
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
@@ -98,19 +98,19 @@ jobs:
   # Running tests with race detection consumes too much memory on Windows,
   # see https://github.com/golang/go/issues/46099 for details.
   test-windows:
-    name: Test
+    name: Test Windows
     strategy:
       matrix:
-        go-version: [ 1.19.x, 1.20.x ]
+        go-version: [ 1.20.x, 1.21.x ]
         platform: [ windows-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Run tests with coverage
         run: go test -shuffle=on -v -coverprofile=coverage -covermode=atomic ./...
       - name: Upload coverage report to Codecov
@@ -139,7 +139,7 @@ jobs:
     name: Postgres
     strategy:
       matrix:
-        go-version: [ 1.19.x, 1.20.x ]
+        go-version: [ 1.20.x, 1.21.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     services:
@@ -155,12 +155,12 @@ jobs:
         ports:
           - 5432:5432
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Run tests with coverage
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
@@ -175,18 +175,18 @@ jobs:
     name: MySQL
     strategy:
       matrix:
-        go-version: [ 1.19.x, 1.20.x ]
+        go-version: [ 1.20.x, 1.21.x ]
         platform: [ ubuntu-20.04 ]
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Start MySQL server
         run: sudo systemctl start mysql
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Run tests with coverage
         run: go test -shuffle=on -v -race -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
@@ -200,16 +200,16 @@ jobs:
     name: SQLite - Go
     strategy:
       matrix:
-        go-version: [ 1.19.x, 1.20.x ]
+        go-version: [ 1.20.x, 1.21.x ]
         platform: [ ubuntu-latest ]
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Run tests with coverage
         run: go test -shuffle=on -v -race -parallel=1 -coverprofile=coverage -covermode=atomic ./internal/db/...
         env:
