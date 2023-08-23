@@ -116,3 +116,16 @@ Primary keys: repo_id, oid
 Primary keys: id
 ```
 
+# Table "notice"
+
+```
+     FIELD    |    COLUMN    | POSTGRESQL |         MYSQL         | SQLITE3  
+--------------+--------------+------------+-----------------------+----------
+  ID          | id           | BIGSERIAL  | BIGINT AUTO_INCREMENT | INTEGER  
+  Type        | type         | BIGINT     | BIGINT                | INTEGER  
+  Description | description  | TEXT       | TEXT                  | TEXT     
+  CreatedUnix | created_unix | BIGINT     | BIGINT                | INTEGER  
+
+Primary keys: id
+```
+

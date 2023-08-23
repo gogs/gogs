@@ -215,7 +215,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	// good condition to prevent long blocking on URL resolution without syncing anything.
 	if !git.IsURLAccessible(time.Minute, m.RawAddress()) {
 		desc := fmt.Sprintf("Source URL of mirror repository '%s' is not accessible: %s", m.Repo.FullName(), m.MosaicsAddress())
-		if err := CreateRepositoryNotice(desc); err != nil {
+		if err := Notices.Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
 		}
 		return nil, false
@@ -231,7 +231,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 	if err != nil {
 		desc := fmt.Sprintf("Failed to update mirror repository '%s': %s", repoPath, stderr)
 		log.Error(desc)
-		if err = CreateRepositoryNotice(desc); err != nil {
+		if err = Notices.Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 			log.Error("CreateRepositoryNotice: %v", err)
 		}
 		return nil, false
@@ -249,7 +249,7 @@ func (m *Mirror) runSync() ([]*mirrorSyncResult, bool) {
 			"git", "remote", "update", "--prune"); err != nil {
 			desc := fmt.Sprintf("Failed to update mirror wiki repository '%s': %s", wikiPath, stderr)
 			log.Error(desc)
-			if err = CreateRepositoryNotice(desc); err != nil {
+			if err = Notices.Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 				log.Error("CreateRepositoryNotice: %v", err)
 			}
 		}
