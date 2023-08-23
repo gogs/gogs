@@ -32,7 +32,3 @@ jobs:
         run: src code-intel upload -github-token='${{ secrets.GITHUB_TOKEN }}' -no-progress -repo=github.com/gogs/gogs
         env:
           SRC_ENDPOINT: https://sourcegraph.sourcegraph.com/
-      - name: Upload SCIP data to cs.unknwon.dev
-        run: src code-intel upload -github-token='${{ secrets.GITHUB_TOKEN }}' -no-progress -repo=github.com/gogs/gogs
-        env:
-          SRC_ENDPOINT: https://cs.unknwon.dev/

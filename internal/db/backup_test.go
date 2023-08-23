@@ -31,7 +31,7 @@ func TestDumpAndImport(t *testing.T) {
 	}
 	t.Parallel()
 
-	const wantTables = 7
+	const wantTables = 8
 	if len(Tables) != wantTables {
 		t.Fatalf("New table has added (want %d got %d), please add new tests for the table and update this check", wantTables, len(Tables))
 	}
@@ -188,6 +188,13 @@ func setupDBToDump(t *testing.T, db *gorm.DB) {
 			Provider: github.NewProvider(&github.Config{
 				APIEndpoint: "https://api.github.com",
 			}),
+			CreatedUnix: 1588568886,
+		},
+
+		&Notice{
+			ID:          1,
+			Type:        NoticeTypeRepository,
+			Description: "This is a notice",
 			CreatedUnix: 1588568886,
 		},
 	}
