@@ -1947,7 +1947,7 @@ func DeleteOldRepositoryArchives() {
 					if err = os.Remove(archivePath); err != nil {
 						desc := fmt.Sprintf("Failed to health delete archive '%s': %v", archivePath, err)
 						log.Warn(desc)
-						if err = CreateRepositoryNotice(desc); err != nil {
+						if err = Notices.Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 							log.Error("CreateRepositoryNotice: %v", err)
 						}
 					}
@@ -1985,7 +1985,7 @@ func gatherMissingRepoRecords() ([]*Repository, error) {
 			}
 			return nil
 		}); err != nil {
-		if err2 := CreateRepositoryNotice(fmt.Sprintf("gatherMissingRepoRecords: %v", err)); err2 != nil {
+		if err2 := Notices.Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("gatherMissingRepoRecords: %v", err)); err2 != nil {
 			return nil, fmt.Errorf("CreateRepositoryNotice: %v", err)
 		}
 	}
@@ -2006,7 +2006,7 @@ func DeleteMissingRepositories() error {
 	for _, repo := range repos {
 		log.Trace("Deleting %d/%d...", repo.OwnerID, repo.ID)
 		if err := DeleteRepository(repo.OwnerID, repo.ID); err != nil {
-			if err2 := CreateRepositoryNotice(fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
+			if err2 := Notices.Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("DeleteRepository [%d]: %v", repo.ID, err)); err2 != nil {
 				return fmt.Errorf("CreateRepositoryNotice: %v", err)
 			}
 		}
@@ -2028,7 +2028,7 @@ func ReinitMissingRepositories() error {
 	for _, repo := range repos {
 		log.Trace("Initializing %d/%d...", repo.OwnerID, repo.ID)
 		if err := git.Init(repo.RepoPath(), git.InitOptions{Bare: true}); err != nil {
-			if err2 := CreateRepositoryNotice(fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
+			if err2 := Notices.Create(context.TODO(), NoticeTypeRepository, fmt.Sprintf("init repository [repo_id: %d]: %v", repo.ID, err)); err2 != nil {
 				return fmt.Errorf("create repository notice: %v", err)
 			}
 		}
@@ -2086,7 +2086,7 @@ func GitFsck() {
 			if err != nil {
 				desc := fmt.Sprintf("Failed to perform health check on repository '%s': %v", repoPath, err)
 				log.Warn(desc)
-				if err = CreateRepositoryNotice(desc); err != nil {
+				if err = Notices.Create(context.TODO(), NoticeTypeRepository, desc); err != nil {
 					log.Error("CreateRepositoryNotice: %v", err)
 				}
 			}
