@@ -133,26 +133,6 @@ func (err ErrDeployKeyNameAlreadyUsed) Error() string {
 	return fmt.Sprintf("public key already exists [repo_id: %d, name: %s]", err.RepoID, err.Name)
 }
 
-// ________                            .__                __  .__
-// \_____  \_______  _________    ____ |__|____________ _/  |_|__| ____   ____
-//  /   |   \_  __ \/ ___\__  \  /    \|  \___   /\__  \\   __\  |/  _ \ /    \
-// /    |    \  | \/ /_/  > __ \|   |  \  |/    /  / __ \|  | |  (  <_> )   |  \
-// \_______  /__|  \___  (____  /___|  /__/_____ \(____  /__| |__|\____/|___|  /
-//         \/     /_____/     \/     \/         \/     \/                    \/
-
-type ErrLastOrgOwner struct {
-	UID int64
-}
-
-func IsErrLastOrgOwner(err error) bool {
-	_, ok := err.(ErrLastOrgOwner)
-	return ok
-}
-
-func (err ErrLastOrgOwner) Error() string {
-	return fmt.Sprintf("user is the last member of owner team [uid: %d]", err.UID)
-}
-
 // __________                           .__  __
 // \______   \ ____ ______   ____  _____|__|/  |_  ___________ ___.__.
 //  |       _// __ \\____ \ /  _ \/  ___/  \   __\/  _ \_  __ <   |  |

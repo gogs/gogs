@@ -104,7 +104,7 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	org, err = db.GetOrgByName(org.Name)
+	org, err = db.Orgs.GetByName(c.Req.Context(), org.Name)
 	if err != nil {
 		c.Error(err, "get organization")
 		return

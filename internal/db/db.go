@@ -46,6 +46,7 @@ var Tables = []any{
 	new(Follow),
 	new(LFSObject), new(LoginSource),
 	new(Notice),
+	new(OrgUser),
 }
 
 // Init initializes the database with given logger.

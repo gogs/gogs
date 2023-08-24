@@ -57,7 +57,7 @@ func init() {
 		new(Label), new(IssueLabel), new(Milestone),
 		new(Mirror), new(Release), new(Webhook), new(HookTask),
 		new(ProtectBranch), new(ProtectBranchWhitelist),
-		new(Team), new(OrgUser), new(TeamUser), new(TeamRepo),
+		new(Team), new(TeamUser), new(TeamRepo),
 	)
 
 	gonicNames := []string{"SSL"}
@@ -211,7 +211,7 @@ type Statistic struct {
 
 func GetStatistic(ctx context.Context) (stats Statistic) {
 	stats.Counter.User = Users.Count(ctx)
-	stats.Counter.Org = CountOrganizations()
+	stats.Counter.Org = Orgs.Count(ctx)
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
 	stats.Counter.Repo = CountRepositories(true)
 	stats.Counter.Watch, _ = x.Count(new(Watch))

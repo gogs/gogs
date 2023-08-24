@@ -129,3 +129,22 @@ Primary keys: id
 Primary keys: id
 ```
 
+# Table "org_user"
+
+```
+   FIELD   |  COLUMN   |           POSTGRESQL           |             MYSQL              |            SQLITE3              
+-----------+-----------+--------------------------------+--------------------------------+---------------------------------
+  ID       | id        | BIGSERIAL                      | BIGINT AUTO_INCREMENT          | INTEGER                         
+  UserID   | uid       | BIGINT NOT NULL                | BIGINT NOT NULL                | INTEGER NOT NULL                
+  OrgID    | org_id    | BIGINT NOT NULL                | BIGINT NOT NULL                | INTEGER NOT NULL                
+  IsPublic | is_public | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE  
+  IsOwner  | is_owner  | BOOLEAN NOT NULL DEFAULT FALSE | BOOLEAN NOT NULL DEFAULT FALSE | NUMERIC NOT NULL DEFAULT FALSE  
+  NumTeams | num_teams | BIGINT NOT NULL DEFAULT 0      | BIGINT NOT NULL DEFAULT 0      | INTEGER NOT NULL DEFAULT 0      
+
+Primary keys: id
+Indexes: 
+	"idx_org_user_org_id" (org_id)
+	"idx_org_user_user_id" (uid)
+	"org_user_user_org_unique" UNIQUE (uid, org_id)
+```
+

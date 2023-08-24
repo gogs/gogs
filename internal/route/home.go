@@ -152,10 +152,8 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type: db.UserTypeOrganization,
-		Counter: func(gocontext.Context) int64 {
-			return db.CountOrganizations()
-		},
+		Type:    db.UserTypeOrganization,
+		Counter: db.Orgs.Count,
 		Ranger: func(_ gocontext.Context, page, pageSize int) ([]*db.User, error) {
 			return db.Organizations(page, pageSize)
 		},

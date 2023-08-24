@@ -738,7 +738,6 @@ func (db *users) Follow(ctx context.Context, userID, followID int64) error {
 		} else if result.RowsAffected <= 0 {
 			return nil // Relation already exists
 		}
-
 		return db.recountFollows(tx, userID, followID)
 	})
 }
@@ -770,8 +769,7 @@ type ErrUserNotExist struct {
 // IsErrUserNotExist returns true if the underlying error has the type
 // ErrUserNotExist.
 func IsErrUserNotExist(err error) bool {
-	_, ok := errors.Cause(err).(ErrUserNotExist)
-	return ok
+	return errors.As(err, &ErrUserNotExist{})
 }
 
 func (err ErrUserNotExist) Error() string {
@@ -811,7 +809,7 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 		First(&user).
 		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
@@ -823,7 +821,7 @@ func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
 	user := new(User)
 	err := db.WithContext(ctx).Where("id = ?", id).First(user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 		}
 		return nil, err
@@ -831,16 +829,26 @@ func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
 	return user, nil
 }
 
-func (db *users) GetByUsername(ctx context.Context, username string) (*User, error) {
+func getUserByUsername(ctx context.Context, db *gorm.DB, userType UserType, username string) (*User, error) {
+	if username == "" {
+		return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
+	}
 	user := new(User)
-	err := db.WithContext(ctx).Where("lower_name = ?", strings.ToLower(username)).First(user).Error
+	err := db.WithContext(ctx).
+		Where("type = ? AND lower_name = ?", userType, strings.ToLower(username)).
+		First(user).
+		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
 		}
 		return nil, err
 	}
 	return user, nil
+}
+
+func (db *users) GetByUsername(ctx context.Context, username string) (*User, error) {
+	return getUserByUsername(ctx, db.DB, UserTypeIndividual, username)
 }
 
 func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
@@ -851,7 +859,7 @@ func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
 		First(user).
 		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"keyID": keyID}}
 		}
 		return nil, err
@@ -1126,15 +1134,15 @@ func (ErrEmailNotExist) NotFound() bool {
 }
 
 func (db *users) GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error) {
-	tx := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
+	conds := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
 	if needsActivated {
-		tx = tx.Where("is_activated = ?", true)
+		conds.Where("is_activated = ?", true)
 	}
 
 	emailAddress := new(EmailAddress)
-	err := tx.First(emailAddress).Error
+	err := conds.First(emailAddress).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrEmailNotExist{
 				args: errutil.Args{
 					"email": email,
@@ -1213,7 +1221,7 @@ func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email strin
 	var emailAddress EmailAddress
 	err := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrEmailNotExist{args: errutil.Args{"email": email}}
 		}
 		return errors.Wrap(err, "get email address")
@@ -1317,7 +1325,6 @@ type User struct {
 	NumTeams    int
 	NumMembers  int
 	Teams       []*Team `xorm:"-" gorm:"-" json:"-"`
-	Members     []*User `xorm:"-" gorm:"-" json:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
@@ -1467,13 +1474,12 @@ func (u *User) IsFollowing(followID int64) bool {
 	return Users.IsFollowing(context.TODO(), u.ID, followID)
 }
 
-// IsUserOrgOwner returns true if the user is in the owner team of the given
-// organization.
+// IsUserOrgOwner returns true if the user is an owner of the organization.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
-func (u *User) IsUserOrgOwner(orgId int64) bool {
-	return IsOrganizationOwner(orgId, u.ID)
+func (u *User) IsUserOrgOwner(orgID int64) bool {
+	return Orgs.IsOwnedBy(context.TODO(), orgID, u.ID)
 }
 
 // IsPublicMember returns true if the user has public membership of the given
@@ -1481,8 +1487,9 @@ func (u *User) IsUserOrgOwner(orgId int64) bool {
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
-func (u *User) IsPublicMember(orgId int64) bool {
-	return IsPublicMembership(orgId, u.ID)
+func (u *User) IsPublicMember(orgID int64) bool {
+	_, public := Orgs.HasMember(context.TODO(), orgID, u.ID)
+	return public
 }
 
 // GetOrganizationCount returns the count of organization membership that the

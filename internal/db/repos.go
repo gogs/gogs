@@ -263,8 +263,7 @@ type ErrRepoNotExist struct {
 }
 
 func IsErrRepoNotExist(err error) bool {
-	_, ok := err.(ErrRepoNotExist)
-	return ok
+	return errors.As(err, &ErrRepoNotExist{})
 }
 
 func (err ErrRepoNotExist) Error() string {
@@ -279,7 +278,7 @@ func (db *repos) GetByID(ctx context.Context, id int64) (*Repository, error) {
 	repo := new(Repository)
 	err := db.WithContext(ctx).Where("id = ?", id).First(repo).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrRepoNotExist{errutil.Args{"repoID": id}}
 		}
 		return nil, err
@@ -294,7 +293,7 @@ func (db *repos) GetByName(ctx context.Context, ownerID int64, name string) (*Re
 		First(repo).
 		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrRepoNotExist{
 				args: errutil.Args{
 					"ownerID": ownerID,

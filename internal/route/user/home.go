@@ -140,7 +140,14 @@ func Dashboard(c *context.Context) {
 	var repos, mirrors []*db.Repository
 	var repoCount int64
 	if ctxUser.IsOrganization() {
-		repos, repoCount, err = ctxUser.GetUserRepositories(c.User.ID, 1, conf.UI.User.RepoPagingNum)
+		repos, repoCount, err = db.Orgs.AccessibleRepositoriesByUser(
+			c.Req.Context(),
+			ctxUser.ID,
+			c.User.ID,
+			1,
+			conf.UI.User.RepoPagingNum,
+			db.AccessibleRepositoriesByUserOptions{},
+		)
 		if err != nil {
 			c.Error(err, "get user repositories")
 			return
@@ -236,7 +243,14 @@ func Issues(c *context.Context) {
 		showRepos   = make([]*db.Repository, 0, 10)
 	)
 	if ctxUser.IsOrganization() {
-		repos, _, err = ctxUser.GetUserRepositories(c.User.ID, 1, ctxUser.NumRepos)
+		repos, _, err = db.Orgs.AccessibleRepositoriesByUser(
+			c.Req.Context(),
+			ctxUser.ID,
+			c.User.ID,
+			1,
+			ctxUser.NumRepos,
+			db.AccessibleRepositoriesByUserOptions{SkipCount: true},
+		)
 		if err != nil {
 			c.Error(err, "get repositories")
 			return
@@ -409,7 +423,14 @@ func showOrgProfile(c *context.Context) {
 		err   error
 	)
 	if c.IsLogged && !c.User.IsAdmin {
-		repos, count, err = org.GetUserRepositories(c.User.ID, page, conf.UI.User.RepoPagingNum)
+		repos, count, err = db.Orgs.AccessibleRepositoriesByUser(
+			c.Req.Context(),
+			org.ID,
+			c.User.ID,
+			page,
+			conf.UI.User.RepoPagingNum,
+			db.AccessibleRepositoriesByUserOptions{},
+		)
 		if err != nil {
 			c.Error(err, "get user repositories")
 			return
@@ -432,11 +453,12 @@ func showOrgProfile(c *context.Context) {
 	}
 	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 
-	if err := org.GetMembers(12); err != nil {
-		c.Error(err, "get members")
+	members, err := db.Orgs.ListMembers(c.Req.Context(), org.ID, db.ListOrgMembersOptions{Limit: 12})
+	if err != nil {
+		c.Error(err, "list members")
 		return
 	}
-	c.Data["Members"] = org.Members
+	c.Data["Members"] = members
 
 	c.Data["Teams"] = org.Teams
 

@@ -104,7 +104,7 @@ func (db *twoFactors) GetByUserID(ctx context.Context, userID int64) (*TwoFactor
 	tf := new(TwoFactor)
 	err := db.WithContext(ctx).Where("user_id = ?", userID).First(tf).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrTwoFactorNotFound{args: errutil.Args{"userID": userID}}
 		}
 		return nil, err

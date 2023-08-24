@@ -801,16 +801,23 @@ func usersGetByID(t *testing.T, ctx context.Context, db *users) {
 }
 
 func usersGetByUsername(t *testing.T, ctx context.Context, db *users) {
-	alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
-	require.NoError(t, err)
+	t.Run("correct user type", func(t *testing.T) {
+		alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
+		require.NoError(t, err)
 
-	user, err := db.GetByUsername(ctx, alice.Name)
-	require.NoError(t, err)
-	assert.Equal(t, alice.Name, user.Name)
+		user, err := db.GetByUsername(ctx, alice.Name)
+		require.NoError(t, err)
+		assert.Equal(t, alice.Name, user.Name)
 
-	_, err = db.GetByUsername(ctx, "bad_username")
-	wantErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}
-	assert.Equal(t, wantErr, err)
+		_, err = db.GetByUsername(ctx, "bad_username")
+		wantErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	t.Run("wrong user type", func(t *testing.T) {
+		// org1,err:=NewOrgsStore(db.DB).Create(ctx,"org1","// TODO: Use Orgs.Create
+	})
+
 }
 
 func usersGetByKeyID(t *testing.T, ctx context.Context, db *users) {

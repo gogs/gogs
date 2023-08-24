@@ -86,19 +86,20 @@ func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, after
 	/*
 		Equivalent SQL for PostgreSQL:
 
-		SELECT * FROM "action"
+		<SELECT * FROM "action">
 		WHERE
 			user_id = @userID
 		AND (@skipAfter OR id < @afterID)
 		AND repo_id IN (
 			SELECT repository.id FROM "repository"
 			JOIN team_repo ON repository.id = team_repo.repo_id
-			WHERE team_repo.team_id IN (
+			WHERE
+				team_repo.team_id IN (
 					SELECT team_id FROM "team_user"
-					WHERE
-						team_user.org_id = @orgID AND uid = @actorID)
-					OR  (repository.is_private = FALSE AND repository.is_unlisted = FALSE)
-			)
+					WHERE team_user.org_id = @orgID AND uid = @actorID)
+				)
+			OR  (repository.is_private = FALSE AND repository.is_unlisted = FALSE)
+		)
 		ORDER BY id DESC
 		LIMIT @limit
 	*/
@@ -120,8 +121,8 @@ func (db *actions) listByOrganization(ctx context.Context, orgID, actorID, after
 			).
 			Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
 		).
-		Limit(conf.UI.User.NewsFeedPagingNum).
-		Order("id DESC")
+		Order("id DESC").
+		Limit(conf.UI.User.NewsFeedPagingNum)
 }
 
 func (db *actions) ListByOrganization(ctx context.Context, orgID, actorID, afterID int64) ([]*Action, error) {
@@ -133,7 +134,7 @@ func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int6
 	/*
 		Equivalent SQL for PostgreSQL:
 
-		SELECT * FROM "action"
+		<SELECT * FROM "action">
 		WHERE
 			user_id = @userID
 		AND (@skipAfter OR id < @afterID)
@@ -153,8 +154,8 @@ func (db *actions) listByUser(ctx context.Context, userID, actorID, afterID int6
 			Where("?", !isProfile || actorID == userID).
 			Or("is_private = ? AND act_user_id = ?", false, userID),
 		).
-		Limit(conf.UI.User.NewsFeedPagingNum).
-		Order("id DESC")
+		Order("id DESC").
+		Limit(conf.UI.User.NewsFeedPagingNum)
 }
 
 func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int64, isProfile bool) ([]*Action, error) {

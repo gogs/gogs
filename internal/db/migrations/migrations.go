@@ -80,7 +80,7 @@ func Migrate(db *gorm.DB) error {
 
 	var current Version
 	err := db.Where("id = ?", 1).First(&current).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		err = db.Create(
 			&Version{
 				ID:      1,
