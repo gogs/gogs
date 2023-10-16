@@ -66,6 +66,7 @@ There are 6 ways to install Gogs:
 - [DPlatform](https://github.com/DFabric/DPlatform-Shell)
 - [LunaNode](https://github.com/LunaNode/launchgogs)
 - [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
+- [Elestio](https://elest.io/open-source/gogs)
 
 ### Tutorials
 
