@@ -7,6 +7,7 @@ All notable changes to Gogs are documented in this file.
 ### Fixed
 
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
+- Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
 
 ## 0.13.0
 
