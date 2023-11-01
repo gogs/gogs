@@ -200,7 +200,7 @@ func matchUsersWithCommitEmails(ctx gocontext.Context, oldCommits []*git.Commit)
 	for i := range oldCommits {
 		var u *db.User
 		if v, ok := emailToUsers[oldCommits[i].Author.Email]; !ok {
-			u _ = db.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
+			u, _ = db.Users.GetByEmail(ctx, oldCommits[i].Author.Email)
 			emailToUsers[oldCommits[i].Author.Email] = u
 		} else {
 			u = v
