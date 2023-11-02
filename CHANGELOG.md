@@ -4,6 +4,10 @@ All notable changes to Gogs are documented in this file.
 
 ## 0.14.0+dev (`main`)
 
+### Changed
+
+- The required Go version to compile source code changed to 1.20.
+
 ### Fixed
 
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
