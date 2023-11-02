@@ -817,7 +817,6 @@ func usersGetByUsername(t *testing.T, ctx context.Context, db *users) {
 	t.Run("wrong user type", func(t *testing.T) {
 		// org1,err:=NewOrgsStore(db.DB).Create(ctx,"org1","// TODO: Use Orgs.Create
 	})
-
 }
 
 func usersGetByKeyID(t *testing.T, ctx context.Context, db *users) {
