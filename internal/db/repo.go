@@ -798,7 +798,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	wikiPath := WikiPath(owner.Name, opts.Name)
 
 	if owner.IsOrganization() {
-		t, err := Orgs.GetTeamByName(context.TODO(), owner.ID, TeamNameOwners)
+		t, err := Organizations.GetTeamByName(context.TODO(), owner.ID, TeamNameOwners)
 		if err != nil {
 			return nil, err
 		}
@@ -1135,7 +1135,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
+		return ErrRepositoryAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
 	if _, err = e.Insert(repo); err != nil {
@@ -1311,14 +1311,14 @@ func CountUserRepositories(userID int64, private bool) int64 {
 	return countRepositories(userID, private)
 }
 
-func Repositories(page, pageSize int) (_ []*Repository, err error) {
+func ListRepositories(page, pageSize int) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
 	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
 // RepositoriesWithUsers returns number of repos in given page.
 func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
-	repos, err := Repositories(page, pageSize)
+	repos, err := ListRepositories(page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("Repositories: %v", err)
 	}
@@ -1379,7 +1379,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
+		return ErrRepositoryAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
 	}
 
 	sess := x.NewSession()
@@ -1411,7 +1411,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	for _, c := range collaborators {
 		collaboration.UserID = c.ID
 		if c.ID == newOwner.ID ||
-			(newOwner.IsOrganization() && func() bool { member, _ := Orgs.HasMember(context.TODO(), newOwner.ID, c.ID); return member }()) {
+			(newOwner.IsOrganization() && func() bool { member, _ := Organizations.HasMember(context.TODO(), newOwner.ID, c.ID); return member }()) {
 			if _, err = sess.Delete(collaboration); err != nil {
 				return fmt.Errorf("remove collaborator '%d': %v", c.ID, err)
 			}
@@ -1552,7 +1552,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
+		return ErrRepositoryAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
 	}
 
 	repo, err := GetRepositoryByName(u.ID, oldRepoName)

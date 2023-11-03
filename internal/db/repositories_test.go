@@ -87,13 +87,13 @@ func TestRepos(t *testing.T) {
 
 	ctx := context.Background()
 	tables := []any{new(Repository), new(Access), new(Watch), new(User), new(EmailAddress), new(Star)}
-	db := &repos{
+	db := &repositories{
 		DB: dbtest.NewDB(t, "repos", tables...),
 	}
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, ctx context.Context, db *repos)
+		test func(t *testing.T, ctx context.Context, db *repositories)
 	}{
 		{"Create", reposCreate},
 		{"GetByCollaboratorID", reposGetByCollaboratorID},
@@ -119,7 +119,7 @@ func TestRepos(t *testing.T) {
 	}
 }
 
-func reposCreate(t *testing.T, ctx context.Context, db *repos) {
+func reposCreate(t *testing.T, ctx context.Context, db *repositories) {
 	t.Run("name not allowed", func(t *testing.T) {
 		_, err := db.Create(ctx,
 			1,
@@ -144,7 +144,7 @@ func reposCreate(t *testing.T, ctx context.Context, db *repos) {
 				Name: "repo1",
 			},
 		)
-		wantErr := ErrRepoAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
+		wantErr := ErrRepositoryAlreadyExist{args: errutil.Args{"ownerID": int64(2), "name": "repo1"}}
 		assert.Equal(t, wantErr, err)
 	})
 
@@ -161,7 +161,7 @@ func reposCreate(t *testing.T, ctx context.Context, db *repos) {
 	assert.Equal(t, 1, repo.NumWatches) // The owner is watching the repo by default.
 }
 
-func reposGetByCollaboratorID(t *testing.T, ctx context.Context, db *repos) {
+func reposGetByCollaboratorID(t *testing.T, ctx context.Context, db *repositories) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
@@ -187,7 +187,7 @@ func reposGetByCollaboratorID(t *testing.T, ctx context.Context, db *repos) {
 	})
 }
 
-func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, db *repos) {
+func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, db *repositories) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
@@ -215,7 +215,7 @@ func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, d
 	assert.Equal(t, AccessModeAdmin, accessModes[repo2.ID])
 }
 
-func reposGetByID(t *testing.T, ctx context.Context, db *repos) {
+func reposGetByID(t *testing.T, ctx context.Context, db *repositories) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
@@ -228,7 +228,7 @@ func reposGetByID(t *testing.T, ctx context.Context, db *repos) {
 	assert.Equal(t, wantErr, err)
 }
 
-func reposGetByName(t *testing.T, ctx context.Context, db *repos) {
+func reposGetByName(t *testing.T, ctx context.Context, db *repositories) {
 	repo, err := db.Create(ctx, 1,
 		CreateRepoOptions{
 			Name: "repo1",
@@ -244,7 +244,7 @@ func reposGetByName(t *testing.T, ctx context.Context, db *repos) {
 	assert.Equal(t, wantErr, err)
 }
 
-func reposStar(t *testing.T, ctx context.Context, db *repos) {
+func reposStar(t *testing.T, ctx context.Context, db *repositories) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	usersStore := NewUsersStore(db.DB)
@@ -263,7 +263,7 @@ func reposStar(t *testing.T, ctx context.Context, db *repos) {
 	assert.Equal(t, 1, alice.NumStars)
 }
 
-func reposTouch(t *testing.T, ctx context.Context, db *repos) {
+func reposTouch(t *testing.T, ctx context.Context, db *repositories) {
 	repo, err := db.Create(ctx, 1,
 		CreateRepoOptions{
 			Name: "repo1",
@@ -289,7 +289,7 @@ func reposTouch(t *testing.T, ctx context.Context, db *repos) {
 	assert.False(t, got.IsBare)
 }
 
-func reposListWatches(t *testing.T, ctx context.Context, db *repos) {
+func reposListWatches(t *testing.T, ctx context.Context, db *repositories) {
 	err := db.Watch(ctx, 1, 1)
 	require.NoError(t, err)
 	err = db.Watch(ctx, 2, 1)
@@ -310,9 +310,8 @@ func reposListWatches(t *testing.T, ctx context.Context, db *repos) {
 	assert.Equal(t, want, got)
 }
 
-func reposWatch(t *testing.T, ctx context.Context, db *repos) {
-	reposStore := NewReposStore(db.DB)
-	repo1, err := reposStore.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
+func reposWatch(t *testing.T, ctx context.Context, db *repositories) {
+	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
 	err = db.Watch(ctx, 2, repo1.ID)
@@ -322,16 +321,16 @@ func reposWatch(t *testing.T, ctx context.Context, db *repos) {
 	err = db.Watch(ctx, 2, repo1.ID)
 	require.NoError(t, err)
 
-	repo1, err = reposStore.GetByID(ctx, repo1.ID)
+	repo1, err = db.GetByID(ctx, repo1.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, repo1.NumWatches) // The owner is watching the repo by default.
 }
 
-func reposHasForkedBy(t *testing.T, ctx context.Context, db *repos) {
+func reposHasForkedBy(t *testing.T, ctx context.Context, db *repositories) {
 	has := db.HasForkedBy(ctx, 1, 2)
 	assert.False(t, has)
 
-	_, err := NewReposStore(db.DB).Create(
+	_, err := NewRepositoriesStore(db.DB).Create(
 		ctx,
 		2,
 		CreateRepoOptions{

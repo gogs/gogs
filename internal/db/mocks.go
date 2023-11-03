@@ -48,11 +48,11 @@ func SetMockPermsStore(t *testing.T, mock PermsStore) {
 	})
 }
 
-func SetMockReposStore(t *testing.T, mock ReposStore) {
-	before := Repos
-	Repos = mock
+func SetMockReposStore(t *testing.T, mock RepositoriesStore) {
+	before := Repositories
+	Repositories = mock
 	t.Cleanup(func() {
-		Repos = before
+		Repositories = before
 	})
 }
 

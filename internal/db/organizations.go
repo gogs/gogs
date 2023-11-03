@@ -7,6 +7,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -14,10 +15,32 @@ import (
 
 	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/userutil"
 )
 
-// OrgsStore is the persistent interface for organizations.
-type OrgsStore interface {
+// OrganizationsStore is the persistent interface for organizations.
+type OrganizationsStore interface {
+	// Create creates a new organization with the initial owner and persists to
+	// database. It returns ErrNameNotAllowed if the given name or pattern of the
+	// name is not allowed as an organization name, or ErrOrganizationAlreadyExist
+	// when a user or an organization with same name already exists.
+	Create(ctx context.Context, name string, ownerID int64, opts CreateOrganizationOptions) (*Organization, error)
+	// GetByName returns the organization with given name.
+	GetByName(ctx context.Context, name string) (*Organization, error)
+	// SearchByName returns a list of organizations whose username or full name
+	// matches the given keyword case-insensitively. Results are paginated by given
+	// page and page size, and sorted by the given order (e.g. "id DESC"). A total
+	// count of all results is also returned. If the order is not given, it's up to
+	// the database to decide.
+	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error)
+	// List returns a list of organizations filtered by options.
+	List(ctx context.Context, opts ListOrganizationsOptions) ([]*Organization, error)
+	// CountByUser returns the number of organizations the user is a member of.
+	CountByUser(ctx context.Context, userID int64) (int64, error)
+	// Count returns the total number of organizations.
+	Count(ctx context.Context) int64
+
 	// AddMember adds a new member to the given organization.
 	AddMember(ctx context.Context, orgID, userID int64) error
 	// RemoveMember removes a member from the given organization.
@@ -33,21 +56,6 @@ type OrgsStore interface {
 	// SetMemberVisibility sets the visibility of the given user in the organization.
 	SetMemberVisibility(ctx context.Context, orgID, userID int64, public bool) error
 
-	// GetByName returns the organization with given name.
-	GetByName(ctx context.Context, name string) (*Organization, error)
-	// SearchByName returns a list of organizations whose username or full name
-	// matches the given keyword case-insensitively. Results are paginated by given
-	// page and page size, and sorted by the given order (e.g. "id DESC"). A total
-	// count of all results is also returned. If the order is not given, it's up to
-	// the database to decide.
-	SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error)
-	// List returns a list of organizations filtered by options.
-	List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error)
-	// CountByUser returns the number of organizations the user is a member of.
-	CountByUser(ctx context.Context, userID int64) (int64, error)
-	// Count returns the total number of organizations.
-	Count(ctx context.Context) int64
-
 	// GetTeamByName returns the team with given name under the given organization.
 	// It returns ErrTeamNotExist whe not found.
 	GetTeamByName(ctx context.Context, orgID int64, name string) (*Team, error)
@@ -59,21 +67,21 @@ type OrgsStore interface {
 	AccessibleRepositoriesByUser(ctx context.Context, orgID, userID int64, page, pageSize int, opts AccessibleRepositoriesByUserOptions) ([]*Repository, int64, error)
 }
 
-var Orgs OrgsStore
+var Organizations OrganizationsStore
 
-var _ OrgsStore = (*orgs)(nil)
+var _ OrganizationsStore = (*organizations)(nil)
 
-type orgs struct {
+type organizations struct {
 	*gorm.DB
 }
 
-// NewOrgsStore returns a persistent interface for orgs with given database
-// connection.
-func NewOrgsStore(db *gorm.DB) OrgsStore {
-	return &orgs{DB: db}
+// NewOrganizationsStore returns a persistent interface for orgs with given
+// database connection.
+func NewOrganizationsStore(db *gorm.DB) OrganizationsStore {
+	return &organizations{DB: db}
 }
 
-func (*orgs) recountMembers(tx *gorm.DB, orgID int64) error {
+func (*organizations) recountMembers(tx *gorm.DB, orgID int64) error {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -96,7 +104,7 @@ func (*orgs) recountMembers(tx *gorm.DB, orgID int64) error {
 	return nil
 }
 
-func (db *orgs) AddMember(ctx context.Context, orgID, userID int64) error {
+func (db *organizations) AddMember(ctx context.Context, orgID, userID int64) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		ou := &OrgUser{
 			UserID: userID,
@@ -124,7 +132,7 @@ func (err ErrLastOrgOwner) Error() string {
 	return fmt.Sprintf("user is the last owner of the organization: %v", err.args)
 }
 
-func (db *orgs) RemoveMember(ctx context.Context, orgID, userID int64) error {
+func (db *organizations) RemoveMember(ctx context.Context, orgID, userID int64) error {
 	ou, err := db.getOrgUser(ctx, orgID, userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -210,7 +218,7 @@ type accessibleRepositoriesByUserOptions struct {
 	pageSize int
 }
 
-func (*orgs) accessibleRepositoriesByUser(tx *gorm.DB, orgID, userID int64, opts accessibleRepositoriesByUserOptions) *gorm.DB {
+func (*organizations) accessibleRepositoriesByUser(tx *gorm.DB, orgID, userID int64, opts accessibleRepositoriesByUserOptions) *gorm.DB {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -252,7 +260,7 @@ type AccessibleRepositoriesByUserOptions struct {
 	SkipCount bool
 }
 
-func (db *orgs) AccessibleRepositoriesByUser(ctx context.Context, orgID, userID int64, page, pageSize int, opts AccessibleRepositoriesByUserOptions) ([]*Repository, int64, error) {
+func (db *organizations) AccessibleRepositoriesByUser(ctx context.Context, orgID, userID int64, page, pageSize int, opts AccessibleRepositoriesByUserOptions) ([]*Repository, int64, error) {
 	conds := db.accessibleRepositoriesByUser(
 		db.DB,
 		orgID,
@@ -281,21 +289,21 @@ func (db *orgs) AccessibleRepositoriesByUser(ctx context.Context, orgID, userID 
 	return repos, count, nil
 }
 
-func (db *orgs) getOrgUser(ctx context.Context, orgID, userID int64) (*OrgUser, error) {
+func (db *organizations) getOrgUser(ctx context.Context, orgID, userID int64) (*OrgUser, error) {
 	var ou OrgUser
 	return &ou, db.WithContext(ctx).Where("org_id = ? AND uid = ?", orgID, userID).First(&ou).Error
 }
 
-func (db *orgs) IsOwnedBy(ctx context.Context, orgID, userID int64) bool {
+func (db *organizations) IsOwnedBy(ctx context.Context, orgID, userID int64) bool {
 	ou, err := db.getOrgUser(ctx, orgID, userID)
 	return err == nil && ou.IsOwner
 }
 
-func (db *orgs) SetMemberVisibility(ctx context.Context, orgID, userID int64, public bool) error {
+func (db *organizations) SetMemberVisibility(ctx context.Context, orgID, userID int64, public bool) error {
 	return db.Table("org_user").Where("org_id = ? AND uid = ?", orgID, userID).UpdateColumn("is_public", public).Error
 }
 
-func (db *orgs) HasMember(ctx context.Context, orgID, userID int64) (bool, bool) {
+func (db *organizations) HasMember(ctx context.Context, orgID, userID int64) (bool, bool) {
 	ou, err := db.getOrgUser(ctx, orgID, userID)
 	return err == nil, ou != nil && ou.IsPublic
 }
@@ -305,7 +313,7 @@ type ListOrgMembersOptions struct {
 	Limit int
 }
 
-func (db *orgs) ListMembers(ctx context.Context, orgID int64, opts ListOrgMembersOptions) ([]*User, error) {
+func (db *organizations) ListMembers(ctx context.Context, orgID int64, opts ListOrgMembersOptions) ([]*User, error) {
 	/*
 		Equivalent SQL for PostgreSQL:
 
@@ -327,14 +335,18 @@ func (db *orgs) ListMembers(ctx context.Context, orgID int64, opts ListOrgMember
 	return users, conds.Find(&users).Error
 }
 
-type ListOrgsOptions struct {
+type ListOrganizationsOptions struct {
 	// Filter by the membership with the given user ID.
 	MemberID int64
 	// Whether to include private memberships.
 	IncludePrivateMembers bool
+	// 1-based page number.
+	Page int
+	// Number of results per page.
+	PageSize int
 }
 
-func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization, error) {
+func (db *organizations) List(ctx context.Context, opts ListOrganizationsOptions) ([]*Organization, error) {
 	if opts.MemberID <= 0 {
 		return nil, errors.New("MemberID must be greater than 0")
 	}
@@ -343,22 +355,142 @@ func (db *orgs) List(ctx context.Context, opts ListOrgsOptions) ([]*Organization
 		Equivalent SQL for PostgreSQL:
 
 		SELECT * FROM "user"
-		JOIN org_user ON org_user.org_id = user.id
+		[JOIN org_user ON org_user.org_id = user.id]
 		WHERE
-			org_user.uid = @memberID
-		[AND org_user.is_public = @includePrivateMembers]
+			type = @type
+		[AND org_user.uid = @memberID
+		AND org_user.is_public = @includePrivateMembers]
 		ORDER BY user.id ASC
+		[LIMIT @limit OFFSET @offset]
 	*/
 	conds := db.WithContext(ctx).
-		Joins(dbutil.Quote("JOIN org_user ON org_user.org_id = %s.id", "user")).
-		Where("org_user.uid = ?", opts.MemberID).
+		Where("type = ?", UserTypeOrganization).
 		Order(dbutil.Quote("%s.id ASC", "user"))
+
+	if opts.MemberID > 0 || !opts.IncludePrivateMembers {
+		conds.Joins(dbutil.Quote("JOIN org_user ON org_user.org_id = %s.id", "user"))
+	}
+	if opts.MemberID > 0 {
+		conds.Where("org_user.uid = ?", opts.MemberID)
+	}
 	if !opts.IncludePrivateMembers {
 		conds.Where("org_user.is_public = ?", true)
+	}
+	if opts.Page > 0 && opts.PageSize > 0 {
+		conds.Limit(opts.PageSize).Offset((opts.Page - 1) * opts.PageSize)
 	}
 
 	var orgs []*Organization
 	return orgs, conds.Find(&orgs).Error
+}
+
+type CreateOrganizationOptions struct {
+	FullName    string
+	Location    string
+	Website     string
+	Description string
+}
+
+type ErrOrganizationAlreadyExist struct {
+	args errutil.Args
+}
+
+// IsErrOrganizationAlreadyExist returns true if the underlying error has the
+// type ErrOrganizationAlreadyExist.
+func IsErrOrganizationAlreadyExist(err error) bool {
+	return errors.As(err, &ErrOrganizationAlreadyExist{})
+}
+
+func (err ErrOrganizationAlreadyExist) Error() string {
+	return fmt.Sprintf("organization already exists: %v", err.args)
+}
+
+func (db *organizations) Create(ctx context.Context, name string, ownerID int64, opts CreateOrganizationOptions) (*Organization, error) {
+	err := isUsernameAllowed(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if Users.IsUsernameUsed(ctx, name, 0) {
+		return nil, ErrOrganizationAlreadyExist{
+			args: errutil.Args{
+				"name": name,
+			},
+		}
+	}
+
+	org := &Organization{
+		LowerName:       strings.ToLower(name),
+		Name:            name,
+		FullName:        opts.FullName,
+		Type:            UserTypeOrganization,
+		Location:        opts.Location,
+		Website:         opts.Website,
+		MaxRepoCreation: -1,
+		IsActive:        true,
+		UseCustomAvatar: true,
+		Description:     opts.Description,
+		NumTeams:        1, // The default "owners" team
+		NumMembers:      1, // The initial owner
+	}
+
+	org.Rands, err = userutil.RandomSalt()
+	if err != nil {
+		return nil, err
+	}
+	org.Salt, err = userutil.RandomSalt()
+	if err != nil {
+		return nil, err
+	}
+
+	return org, db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(org).Error
+		if err != nil {
+			return errors.Wrap(err, "create organization")
+		}
+
+		err = tx.Create(&OrgUser{
+			UserID:   ownerID,
+			OrgID:    org.ID,
+			IsOwner:  true,
+			NumTeams: 1,
+		}).Error
+		if err != nil {
+			return errors.Wrap(err, "create org-user relation")
+		}
+
+		team := &Team{
+			OrgID:      org.ID,
+			LowerName:  strings.ToLower(TeamNameOwners),
+			Name:       TeamNameOwners,
+			Authorize:  AccessModeOwner,
+			NumMembers: 1,
+		}
+		err = tx.Create(team).Error
+		if err != nil {
+			return errors.Wrap(err, "create owner team")
+		}
+
+		err = tx.Create(&TeamUser{
+			UID:    ownerID,
+			OrgID:  org.ID,
+			TeamID: team.ID,
+		}).Error
+		if err != nil {
+			return errors.Wrap(err, "create team-user relation")
+		}
+
+		err = userutil.GenerateRandomAvatar(org.ID, org.Name, org.Email)
+		if err != nil {
+			return errors.Wrap(err, "generate organization avatar")
+		}
+
+		err = os.MkdirAll(repoutil.UserPath(org.Name), os.ModePerm)
+		if err != nil {
+			return errors.Wrap(err, "create organization directory")
+		}
+		return nil
+	})
 }
 
 var _ errutil.NotFound = (*ErrUserNotExist)(nil)
@@ -381,7 +513,7 @@ func (ErrOrganizationNotExist) NotFound() bool {
 	return true
 }
 
-func (db *orgs) GetByName(ctx context.Context, name string) (*Organization, error) {
+func (db *organizations) GetByName(ctx context.Context, name string) (*Organization, error) {
 	org, err := getUserByUsername(ctx, db.DB, UserTypeOrganization, name)
 	if err != nil {
 		if IsErrUserNotExist(err) {
@@ -392,16 +524,16 @@ func (db *orgs) GetByName(ctx context.Context, name string) (*Organization, erro
 	return org, nil
 }
 
-func (db *orgs) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {
+func (db *organizations) SearchByName(ctx context.Context, keyword string, page, pageSize int, orderBy string) ([]*Organization, int64, error) {
 	return searchUserByName(ctx, db.DB, UserTypeOrganization, keyword, page, pageSize, orderBy)
 }
 
-func (db *orgs) CountByUser(ctx context.Context, userID int64) (int64, error) {
+func (db *organizations) CountByUser(ctx context.Context, userID int64) (int64, error) {
 	var count int64
 	return count, db.WithContext(ctx).Model(&OrgUser{}).Where("uid = ?", userID).Count(&count).Error
 }
 
-func (db *orgs) Count(ctx context.Context) int64 {
+func (db *organizations) Count(ctx context.Context) int64 {
 	var count int64
 	db.WithContext(ctx).Model(&User{}).Where("type = ?", UserTypeOrganization).Count(&count)
 	return count
@@ -425,7 +557,7 @@ func (ErrTeamNotExist) NotFound() bool {
 	return true
 }
 
-func (db *orgs) GetTeamByName(ctx context.Context, orgID int64, name string) (*Team, error) {
+func (db *organizations) GetTeamByName(ctx context.Context, orgID int64, name string) (*Team, error) {
 	var team Team
 	err := db.WithContext(ctx).Where("org_id = ? AND lower_name = ?", orgID, strings.ToLower(name)).First(&team).Error
 	if err != nil {
@@ -448,7 +580,7 @@ func (u *Organization) TableName() string {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.Organization`.
 func (u *Organization) IsOwnedBy(userID int64) bool {
-	return Orgs.IsOwnedBy(context.TODO(), u.ID, userID)
+	return Organizations.IsOwnedBy(context.TODO(), u.ID, userID)
 }
 
 // OrgUser represents relations of organizations and their members.

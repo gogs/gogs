@@ -40,5 +40,5 @@ mocks:
           - UsersStore
           - TwoFactorsStore
           - AccessTokensStore
-          - ReposStore
+          - RepositoriesStore
           - PermsStore

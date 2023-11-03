@@ -87,7 +87,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 	// or an organization isn't a member of.
 	var ownRepos []*db.Repository
 	if user.IsOrganization() {
-		ownRepos, _, err = db.Orgs.AccessibleRepositoriesByUser(
+		ownRepos, _, err = db.Organizations.AccessibleRepositoriesByUser(
 			c.Req.Context(),
 			user.ID,
 			c.User.ID,
@@ -123,7 +123,7 @@ func listUserRepositories(c *context.APIContext, username string) {
 		return
 	}
 
-	accessibleRepos, err := db.Repos.GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
+	accessibleRepos, err := db.Repositories.GetByCollaboratorIDWithAccessMode(c.Req.Context(), user.ID)
 	if err != nil {
 		c.Error(err, "get repositories accesses by collaborator")
 		return
@@ -198,7 +198,7 @@ func Create(c *context.APIContext, opt api.CreateRepoOption) {
 }
 
 func CreateOrgRepo(c *context.APIContext, opt api.CreateRepoOption) {
-	org, err := db.Orgs.GetByName(c.Req.Context(), c.Params(":org"))
+	org, err := db.Organizations.GetByName(c.Req.Context(), c.Params(":org"))
 	if err != nil {
 		c.NotFoundOrError(err, "get organization by name")
 		return

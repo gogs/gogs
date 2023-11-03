@@ -20,17 +20,19 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		return
 	}
 
-	org := &db.User{
-		Name:        apiForm.UserName,
-		FullName:    apiForm.FullName,
-		Description: apiForm.Description,
-		Website:     apiForm.Website,
-		Location:    apiForm.Location,
-		IsActive:    true,
-		Type:        db.UserTypeOrganization,
-	}
-	if err := db.CreateOrganization(org, user); err != nil {
-		if db.IsErrUserAlreadyExist(err) ||
+	org, err := db.Organizations.Create(
+		c.Req.Context(),
+		apiForm.UserName,
+		user.ID,
+		db.CreateOrganizationOptions{
+			FullName:    apiForm.FullName,
+			Location:    apiForm.Location,
+			Website:     apiForm.Website,
+			Description: apiForm.Description,
+		},
+	)
+	if err != nil {
+		if db.IsErrOrganizationAlreadyExist(err) ||
 			db.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
@@ -39,13 +41,13 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 		return
 	}
 
-	c.JSON(201, convert.ToOrganization(org))
+	c.JSON(http.StatusCreated, convert.ToOrganization(org))
 }
 
 func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
-	orgs, err := db.Orgs.List(
+	orgs, err := db.Organizations.List(
 		c.Req.Context(),
-		db.ListOrgsOptions{
+		db.ListOrganizationsOptions{
 			MemberID:              u.ID,
 			IncludePrivateMembers: all,
 		},
@@ -104,7 +106,7 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	org, err = db.Orgs.GetByName(c.Req.Context(), org.Name)
+	org, err = db.Organizations.GetByName(c.Req.Context(), org.Name)
 	if err != nil {
 		c.Error(err, "get organization")
 		return

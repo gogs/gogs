@@ -29,16 +29,16 @@ func CreatePost(c *context.Context, f form.CreateOrg) {
 		return
 	}
 
-	org := &db.User{
-		Name:     f.OrgName,
-		IsActive: true,
-		Type:     db.UserTypeOrganization,
-	}
-
-	if err := db.CreateOrganization(org, c.User); err != nil {
+	org, err := db.Organizations.Create(
+		c.Req.Context(),
+		f.OrgName,
+		c.User.ID,
+		db.CreateOrganizationOptions{},
+	)
+	if err != nil {
 		c.Data["Err_OrgName"] = true
 		switch {
-		case db.IsErrUserAlreadyExist(err):
+		case db.IsErrOrganizationAlreadyExist(err):
 			c.RenderWithErr(c.Tr("form.org_name_been_taken"), CREATE, &f)
 		case db.IsErrNameNotAllowed(err):
 			c.RenderWithErr(c.Tr("org.form.name_not_allowed", err.(db.ErrNameNotAllowed).Value()), CREATE, &f)

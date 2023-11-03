@@ -40,9 +40,9 @@ func getDashboardContextUser(c *context.Context) *db.User {
 	}
 	c.Data["ContextUser"] = ctxUser
 
-	orgs, err := db.Orgs.List(
+	orgs, err := db.Organizations.List(
 		c.Req.Context(),
-		db.ListOrgsOptions{
+		db.ListOrganizationsOptions{
 			MemberID:              c.User.ID,
 			IncludePrivateMembers: true,
 		},
@@ -125,7 +125,7 @@ func Dashboard(c *context.Context) {
 
 	// Only user can have collaborative repositories.
 	if !ctxUser.IsOrganization() {
-		collaborateRepos, err := db.Repos.GetByCollaboratorID(c.Req.Context(), c.User.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
+		collaborateRepos, err := db.Repositories.GetByCollaboratorID(c.Req.Context(), c.User.ID, conf.UI.User.RepoPagingNum, "updated_unix DESC")
 		if err != nil {
 			c.Error(err, "get accessible repositories by collaborator")
 			return
@@ -140,7 +140,7 @@ func Dashboard(c *context.Context) {
 	var repos, mirrors []*db.Repository
 	var repoCount int64
 	if ctxUser.IsOrganization() {
-		repos, repoCount, err = db.Orgs.AccessibleRepositoriesByUser(
+		repos, repoCount, err = db.Organizations.AccessibleRepositoriesByUser(
 			c.Req.Context(),
 			ctxUser.ID,
 			c.User.ID,
@@ -243,7 +243,7 @@ func Issues(c *context.Context) {
 		showRepos   = make([]*db.Repository, 0, 10)
 	)
 	if ctxUser.IsOrganization() {
-		repos, _, err = db.Orgs.AccessibleRepositoriesByUser(
+		repos, _, err = db.Organizations.AccessibleRepositoriesByUser(
 			c.Req.Context(),
 			ctxUser.ID,
 			c.User.ID,
@@ -423,7 +423,7 @@ func showOrgProfile(c *context.Context) {
 		err   error
 	)
 	if c.IsLogged && !c.User.IsAdmin {
-		repos, count, err = db.Orgs.AccessibleRepositoriesByUser(
+		repos, count, err = db.Organizations.AccessibleRepositoriesByUser(
 			c.Req.Context(),
 			org.ID,
 			c.User.ID,
@@ -453,7 +453,7 @@ func showOrgProfile(c *context.Context) {
 	}
 	c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 
-	members, err := db.Orgs.ListMembers(c.Req.Context(), org.ID, db.ListOrgMembersOptions{Limit: 12})
+	members, err := db.Organizations.ListMembers(c.Req.Context(), org.ID, db.ListOrgMembersOptions{Limit: 12})
 	if err != nil {
 		c.Error(err, "list members")
 		return

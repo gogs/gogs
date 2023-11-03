@@ -165,7 +165,7 @@ func (db *actions) ListByUser(ctx context.Context, userID, actorID, afterID int6
 
 // notifyWatchers creates rows in action table for watchers who are able to see the action.
 func (db *actions) notifyWatchers(ctx context.Context, act *Action) error {
-	watches, err := NewReposStore(db.DB).ListWatches(ctx, act.RepoID)
+	watches, err := NewRepositoriesStore(db.DB).ListWatches(ctx, act.RepoID)
 	if err != nil {
 		return errors.Wrap(err, "list watches")
 	}
@@ -489,7 +489,7 @@ type CommitRepoOptions struct {
 }
 
 func (db *actions) CommitRepo(ctx context.Context, opts CommitRepoOptions) error {
-	err := NewReposStore(db.DB).Touch(ctx, opts.Repo.ID)
+	err := NewRepositoriesStore(db.DB).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}
@@ -633,7 +633,7 @@ type PushTagOptions struct {
 }
 
 func (db *actions) PushTag(ctx context.Context, opts PushTagOptions) error {
-	err := NewReposStore(db.DB).Touch(ctx, opts.Repo.ID)
+	err := NewRepositoriesStore(db.DB).Touch(ctx, opts.Repo.ID)
 	if err != nil {
 		return errors.Wrap(err, "touch repository")
 	}

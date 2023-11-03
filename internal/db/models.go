@@ -211,7 +211,7 @@ type Statistic struct {
 
 func GetStatistic(ctx context.Context) (stats Statistic) {
 	stats.Counter.User = Users.Count(ctx)
-	stats.Counter.Org = Orgs.Count(ctx)
+	stats.Counter.Org = Organizations.Count(ctx)
 	stats.Counter.PublicKey, _ = x.Count(new(PublicKey))
 	stats.Counter.Repo = CountRepositories(true)
 	stats.Counter.Watch, _ = x.Count(new(Watch))

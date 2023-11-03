@@ -192,7 +192,7 @@ func Test_authorize(t *testing.T) {
 		name           string
 		authroize      macaron.Handler
 		mockUsersStore func() db.UsersStore
-		mockReposStore func() db.ReposStore
+		mockReposStore func() db.RepositoriesStore
 		mockPermsStore func() db.PermsStore
 		expStatusCode  int
 		expBody        string
@@ -217,8 +217,8 @@ func Test_authorize(t *testing.T) {
 				})
 				return mock
 			},
-			mockReposStore: func() db.ReposStore {
-				mock := NewMockReposStore()
+			mockReposStore: func() db.RepositoriesStore {
+				mock := NewMockRepositoriesStore()
 				mock.GetByNameFunc.SetDefaultReturn(nil, db.ErrRepoNotExist{})
 				return mock
 			},
@@ -234,8 +234,8 @@ func Test_authorize(t *testing.T) {
 				})
 				return mock
 			},
-			mockReposStore: func() db.ReposStore {
-				mock := NewMockReposStore()
+			mockReposStore: func() db.RepositoriesStore {
+				mock := NewMockRepositoriesStore()
 				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return &db.Repository{Name: name}, nil
 				})
@@ -261,8 +261,8 @@ func Test_authorize(t *testing.T) {
 				})
 				return mock
 			},
-			mockReposStore: func() db.ReposStore {
-				mock := NewMockReposStore()
+			mockReposStore: func() db.RepositoriesStore {
+				mock := NewMockRepositoriesStore()
 				mock.GetByNameFunc.SetDefaultHook(func(ctx context.Context, ownerID int64, name string) (*db.Repository, error) {
 					return &db.Repository{Name: name}, nil
 				})

@@ -486,7 +486,7 @@ func AddTeamMember(orgID, teamID, userID int64) error {
 		return nil
 	}
 
-	if err := Orgs.AddMember(context.TODO(), orgID, userID); err != nil {
+	if err := Organizations.AddMember(context.TODO(), orgID, userID); err != nil {
 		return err
 	}
 

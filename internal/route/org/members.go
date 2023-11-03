@@ -23,7 +23,7 @@ func Members(c *context.Context) {
 	c.Data["Title"] = org.FullName
 	c.Data["PageIsOrgMembers"] = true
 
-	members, err := db.Orgs.ListMembers(c.Req.Context(), org.ID, db.ListOrgMembersOptions{})
+	members, err := db.Organizations.ListMembers(c.Req.Context(), org.ID, db.ListOrgMembersOptions{})
 	if err != nil {
 		c.Error(err, "list members")
 		return
@@ -48,26 +48,26 @@ func MembersAction(c *context.Context) {
 			c.NotFound()
 			return
 		}
-		err = db.Orgs.SetMemberVisibility(c.Req.Context(), org.ID, uid, false)
+		err = db.Organizations.SetMemberVisibility(c.Req.Context(), org.ID, uid, false)
 	case "public":
 		if c.User.ID != uid && !c.Org.IsOwner {
 			c.NotFound()
 			return
 		}
-		err = db.Orgs.SetMemberVisibility(c.Req.Context(), org.ID, uid, true)
+		err = db.Organizations.SetMemberVisibility(c.Req.Context(), org.ID, uid, true)
 	case "remove":
 		if !c.Org.IsOwner {
 			c.NotFound()
 			return
 		}
-		err = db.Orgs.RemoveMember(c.Req.Context(), org.ID, uid)
+		err = db.Organizations.RemoveMember(c.Req.Context(), org.ID, uid)
 		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
 			return
 		}
 	case "leave":
-		err = db.Orgs.RemoveMember(c.Req.Context(), org.ID, c.User.ID)
+		err = db.Organizations.RemoveMember(c.Req.Context(), org.ID, c.User.ID)
 		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 			c.Redirect(c.Org.OrgLink + "/members")
@@ -109,7 +109,7 @@ func Invitation(c *context.Context) {
 			return
 		}
 
-		if err = db.Orgs.AddMember(c.Req.Context(), org.ID, u.ID); err != nil {
+		if err = db.Organizations.AddMember(c.Req.Context(), org.ID, u.ID); err != nil {
 			c.Error(err, "add member")
 			return
 		}

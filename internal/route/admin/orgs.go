@@ -24,9 +24,15 @@ func Organizations(c *context.Context) {
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
 		Type:    db.UserTypeOrganization,
-		Counter: db.Orgs.Count,
-		Ranger: func(_ gocontext.Context, page, pageSize int) ([]*db.User, error) {
-			return db.Organizations(page, pageSize)
+		Counter: db.Organizations.Count,
+		Ranger: func(ctx gocontext.Context, page, pageSize int) ([]*db.User, error) {
+			return db.Organizations.List(
+				ctx,
+				db.ListOrganizationsOptions{
+					Page:     page,
+					PageSize: pageSize,
+				},
+			)
 		},
 		PageSize: conf.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",

@@ -48,8 +48,9 @@ type UsersStore interface {
 	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
 	// Create creates a new user and persists to database. It returns
 	// ErrNameNotAllowed if the given name or pattern of the name is not allowed as
-	// a username, or ErrUserAlreadyExist when a user with same name already exists,
-	// or ErrEmailAlreadyUsed if the email has been verified by another user.
+	// a username, or ErrUserAlreadyExist when a user or an organization with same
+	// name already exists, or ErrEmailAlreadyUsed if the email has been verified by
+	// another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
 
 	// GetByEmail returns the user (not organization) with given email. It ignores
@@ -362,8 +363,7 @@ type ErrUserAlreadyExist struct {
 // IsErrUserAlreadyExist returns true if the underlying error has the type
 // ErrUserAlreadyExist.
 func IsErrUserAlreadyExist(err error) bool {
-	_, ok := errors.Cause(err).(ErrUserAlreadyExist)
-	return ok
+	return errors.As(err, &ErrUserAlreadyExist{})
 }
 
 func (err ErrUserAlreadyExist) Error() string {
@@ -377,8 +377,7 @@ type ErrEmailAlreadyUsed struct {
 // IsErrEmailAlreadyUsed returns true if the underlying error has the type
 // ErrEmailAlreadyUsed.
 func IsErrEmailAlreadyUsed(err error) bool {
-	_, ok := errors.Cause(err).(ErrEmailAlreadyUsed)
-	return ok
+	return errors.As(err, &ErrEmailAlreadyUsed{})
 }
 
 func (err ErrEmailAlreadyUsed) Email() string {
@@ -880,11 +879,13 @@ func (db *users) IsUsernameUsed(ctx context.Context, username string, excludeUse
 	if username == "" {
 		return false
 	}
-	return db.WithContext(ctx).
+
+	err := db.WithContext(ctx).
 		Select("id").
 		Where("lower_name = ? AND id != ?", strings.ToLower(username), excludeUserId).
 		First(&User{}).
-		Error != gorm.ErrRecordNotFound
+		Error
+	return !errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 func (db *users) List(ctx context.Context, page, pageSize int) ([]*User, error) {
@@ -1479,7 +1480,7 @@ func (u *User) IsFollowing(followID int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) IsUserOrgOwner(orgID int64) bool {
-	return Orgs.IsOwnedBy(context.TODO(), orgID, u.ID)
+	return Organizations.IsOwnedBy(context.TODO(), orgID, u.ID)
 }
 
 // IsPublicMember returns true if the user has public membership of the given
@@ -1488,7 +1489,7 @@ func (u *User) IsUserOrgOwner(orgID int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) IsPublicMember(orgID int64) bool {
-	_, public := Orgs.HasMember(context.TODO(), orgID, u.ID)
+	_, public := Organizations.HasMember(context.TODO(), orgID, u.ID)
 	return public
 }
 
@@ -1498,7 +1499,7 @@ func (u *User) IsPublicMember(orgID int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return Orgs.CountByUser(context.TODO(), u.ID)
+	return Organizations.CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.
