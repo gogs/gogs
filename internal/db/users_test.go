@@ -20,7 +20,6 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
-	"gogs.io/gogs/internal/dbutil"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/osutil"
 	"gogs.io/gogs/internal/repoutil"
@@ -88,7 +87,7 @@ func TestUsers(t *testing.T) {
 	tables := []any{
 		new(User), new(EmailAddress), new(Repository), new(Follow), new(PullRequest), new(PublicKey), new(OrgUser),
 		new(Watch), new(Star), new(Issue), new(AccessToken), new(Collaboration), new(Action), new(IssueUser),
-		new(Access),
+		new(Access), new(Team), new(TeamUser),
 	}
 	db := &users{
 		DB: dbtest.NewDB(t, "users", tables...),
@@ -375,15 +374,13 @@ func usersCount(t *testing.T, ctx context.Context, db *users) {
 	got = db.Count(ctx)
 	assert.Equal(t, int64(1), got)
 
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
 	// Create an organization shouldn't count
-	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-	org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
+	_, err = NewOrganizationsStore(db.DB).Create(ctx, "org1", 1, CreateOrganizationOptions{})
 	require.NoError(t, err)
-	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
-		UserTypeOrganization, org1.ID,
-	).Error
-	require.NoError(t, err)
+
 	got = db.Count(ctx)
 	assert.Equal(t, int64(1), got)
 }
@@ -489,17 +486,10 @@ func usersDeleteByID(t *testing.T, ctx context.Context, db *users) {
 		bob, err := db.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
 		require.NoError(t, err)
 
-		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
-		require.NoError(t, err)
-		err = db.Exec(
-			dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
-			UserTypeOrganization, org1.ID,
-		).Error
-		require.NoError(t, err)
+		tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+		conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
-		// TODO: Use Orgs.Join to replace SQL hack when the method is available.
-		err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
+		_, err = NewOrganizationsStore(db.DB).Create(ctx, "org1", bob.ID, CreateOrganizationOptions{})
 		require.NoError(t, err)
 
 		err = db.DeleteByID(ctx, bob.ID, false)
@@ -691,16 +681,11 @@ func usersDeleteInactivated(t *testing.T, ctx context.Context, db *users) {
 	// User with organization membership should be skipped
 	bob, err := db.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
-	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-	org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
-	require.NoError(t, err)
-	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?)", "user"),
-		UserTypeOrganization, org1.ID,
-	).Error
-	require.NoError(t, err)
-	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
-	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, bob.ID, org1.ID).Error
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	_, err = NewOrganizationsStore(db.DB).Create(ctx, "org1", bob.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
 
 	// User activated state should be skipped
@@ -734,11 +719,10 @@ func usersGetByEmail(t *testing.T, ctx context.Context, db *users) {
 	})
 
 	t.Run("ignore organization", func(t *testing.T) {
-		// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-		org, err := db.Create(ctx, "gogs", "gogs@exmaple.com", CreateUserOptions{})
-		require.NoError(t, err)
+		tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+		conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
-		err = db.Model(&User{}).Where("id", org.ID).UpdateColumn("type", UserTypeOrganization).Error
+		org, err := NewOrganizationsStore(db.DB).Create(ctx, "gogs", 1, CreateOrganizationOptions{Email: "gogs@example.com"})
 		require.NoError(t, err)
 
 		_, err = db.GetByEmail(ctx, org.Email)
@@ -815,7 +799,15 @@ func usersGetByUsername(t *testing.T, ctx context.Context, db *users) {
 	})
 
 	t.Run("wrong user type", func(t *testing.T) {
-		// org1,err:=NewOrganizationsStore(db.DB).Create(ctx,"org1","// TODO: Use Orgs.Create
+		tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+		conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+		org1, err := NewOrganizationsStore(db.DB).Create(ctx, "org1", 1, CreateOrganizationOptions{})
+		require.NoError(t, err)
+
+		_, err = db.GetByUsername(ctx, org1.Name)
+		wantErr := ErrUserNotExist{args: errutil.Args{"name": org1.Name}}
+		assert.Equal(t, wantErr, err)
 	})
 }
 
@@ -915,13 +907,10 @@ func usersList(t *testing.T, ctx context.Context, db *users) {
 	require.NoError(t, err)
 
 	// Create an organization shouldn't count
-	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-	org1, err := db.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
-	require.NoError(t, err)
-	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id = ?", "user"),
-		UserTypeOrganization, org1.ID,
-	).Error
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	_, err = NewOrganizationsStore(db.DB).Create(ctx, "org1", bob.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
 
 	got, err := db.List(ctx, 1, 1)

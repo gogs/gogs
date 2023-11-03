@@ -386,6 +386,7 @@ func (db *organizations) List(ctx context.Context, opts ListOrganizationsOptions
 
 type CreateOrganizationOptions struct {
 	FullName    string
+	Email       string
 	Location    string
 	Website     string
 	Description string
@@ -411,7 +412,7 @@ func (db *organizations) Create(ctx context.Context, name string, ownerID int64,
 		return nil, err
 	}
 
-	if Users.IsUsernameUsed(ctx, name, 0) {
+	if NewUsersStore(db.DB).IsUsernameUsed(ctx, name, 0) {
 		return nil, ErrOrganizationAlreadyExist{
 			args: errutil.Args{
 				"name": name,
@@ -423,6 +424,7 @@ func (db *organizations) Create(ctx context.Context, name string, ownerID int64,
 		LowerName:       strings.ToLower(name),
 		Name:            name,
 		FullName:        opts.FullName,
+		Email:           opts.Email,
 		Type:            UserTypeOrganization,
 		Location:        opts.Location,
 		Website:         opts.Website,

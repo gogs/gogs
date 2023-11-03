@@ -420,10 +420,10 @@ func DeleteTeam(t *Team) error {
 
 // TeamUser represents an team-user relation.
 type TeamUser struct {
-	ID     int64
-	OrgID  int64 `xorm:"INDEX"`
-	TeamID int64 `xorm:"UNIQUE(s)"`
-	UID    int64 `xorm:"UNIQUE(s)"`
+	ID     int64 `gorm:"primaryKey"`
+	OrgID  int64 `xorm:"INDEX" gorm:"index"`
+	TeamID int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:team_user_unique"`
+	UID    int64 `xorm:"UNIQUE(s)" gorm:"uniqueIndex:team_user_unique"`
 }
 
 func isTeamMember(e Engine, orgID, teamID, uid int64) bool {

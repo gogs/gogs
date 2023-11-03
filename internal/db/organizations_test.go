@@ -6,13 +6,15 @@ package db
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/dbtest"
-	"gogs.io/gogs/internal/dbutil"
 )
 
 func TestOrgs(t *testing.T) {
@@ -22,7 +24,7 @@ func TestOrgs(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(User), new(EmailAddress), new(OrgUser)}
+	tables := []any{new(User), new(EmailAddress), new(OrgUser), new(Team), new(TeamUser)}
 	db := &organizations{
 		DB: dbtest.NewDB(t, "orgs", tables...),
 	}
@@ -55,23 +57,18 @@ func orgsList(t *testing.T, ctx context.Context, db *organizations) {
 	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{})
-	require.NoError(t, err)
-	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{})
-	require.NoError(t, err)
-	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
-		UserTypeOrganization, org1.ID, org2.ID,
-	).Error
-	require.NoError(t, err)
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
-	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
-	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org1.ID, false).Error
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
-	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, alice.ID, org2.ID, true).Error
+	org2, err := db.Create(ctx, "org2", alice.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
-	err = db.Exec(`INSERT INTO org_user (uid, org_id, is_public) VALUES (?, ?, ?)`, bob.ID, org2.ID, true).Error
+	err = db.SetMemberVisibility(ctx, org2.ID, alice.ID, true)
+	require.NoError(t, err)
+	err = db.AddMember(ctx, org2.ID, bob.ID)
+	require.NoError(t, err)
+	err = db.SetMemberVisibility(ctx, org2.ID, alice.ID, true)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -119,16 +116,12 @@ func orgsList(t *testing.T, ctx context.Context, db *organizations) {
 }
 
 func orgsSearchByName(t *testing.T, ctx context.Context, db *organizations) {
-	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
-	usersStore := NewUsersStore(db.DB)
-	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{FullName: "Acme Corp"})
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", 1, CreateOrganizationOptions{FullName: "Acme Corp"})
 	require.NoError(t, err)
-	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{FullName: "Acme Corp 2"})
-	require.NoError(t, err)
-	err = db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
-		UserTypeOrganization, org1.ID, org2.ID,
-	).Error
+	org2, err := db.Create(ctx, "org2", 1, CreateOrganizationOptions{FullName: "Acme Corp 2"})
 	require.NoError(t, err)
 
 	t.Run("search for username org1", func(t *testing.T) {
