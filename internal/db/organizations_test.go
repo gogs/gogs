@@ -157,10 +157,18 @@ func orgsSearchByName(t *testing.T, ctx context.Context, db *organizations) {
 }
 
 func orgsCountByUser(t *testing.T, ctx context.Context, db *organizations) {
-	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
-	err := db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
-	err = db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 2, 1).Error
+	bob, err := usersStore.Create(ctx, "bob", "bob@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+	err = db.AddMember(ctx, org1.ID, bob.ID)
 	require.NoError(t, err)
 
 	got, err := db.CountByUser(ctx, 1)
