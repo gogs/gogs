@@ -467,8 +467,7 @@ type ErrUserOwnRepos struct {
 // IsErrUserOwnRepos returns true if the underlying error has the type
 // ErrUserOwnRepos.
 func IsErrUserOwnRepos(err error) bool {
-	_, ok := errors.Cause(err).(ErrUserOwnRepos)
-	return ok
+	return errors.As(errors.Cause(err), &ErrUserOwnRepos{})
 }
 
 func (err ErrUserOwnRepos) Error() string {

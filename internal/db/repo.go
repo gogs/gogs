@@ -1791,6 +1791,16 @@ func DeleteRepository(ownerID, repoID int64) error {
 	return nil
 }
 
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(e Engine, beans ...any) (err error) {
+	for i := range beans {
+		if _, err = e.Delete(beans[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetRepositoryByRef returns a Repository specified by a GFM reference.
 // See https://help.github.com/articles/writing-on-github#references for more information on the syntax.
 func GetRepositoryByRef(ref string) (*Repository, error) {

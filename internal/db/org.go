@@ -5,45 +5,11 @@
 package db
 
 import (
-	"context"
 	"fmt"
 
 	"xorm.io/builder"
 	"xorm.io/xorm"
 )
-
-// deleteBeans deletes all given beans, beans should contain delete conditions.
-func deleteBeans(e Engine, beans ...any) (err error) {
-	for i := range beans {
-		if _, err = e.Delete(beans[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// DeleteOrganization completely and permanently deletes everything of organization.
-func DeleteOrganization(org *User) error {
-	err := Users.DeleteByID(context.TODO(), org.ID, false)
-	if err != nil {
-		return err
-	}
-
-	sess := x.NewSession()
-	defer sess.Close()
-	if err = sess.Begin(); err != nil {
-		return err
-	}
-
-	if err = deleteBeans(sess,
-		&Team{OrgID: org.ID},
-		&OrgUser{OrgID: org.ID},
-		&TeamUser{OrgID: org.ID},
-	); err != nil {
-		return fmt.Errorf("deleteBeans: %v", err)
-	}
-	return sess.Commit()
-}
 
 func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, error) {
 	orgs := make([]*User, 0, 10)

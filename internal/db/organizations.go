@@ -40,6 +40,9 @@ type OrganizationsStore interface {
 	CountByUser(ctx context.Context, userID int64) (int64, error)
 	// Count returns the total number of organizations.
 	Count(ctx context.Context) int64
+	// DeleteByID deletes the given organization and all their resources. It returns
+	// ErrOrganizationOwnRepos when the user still has repository ownership.
+	DeleteByID(ctx context.Context, orgID int64) error
 
 	// AddMember adds a new member to the given organization.
 	AddMember(ctx context.Context, orgID, userID int64) error
@@ -539,6 +542,37 @@ func (db *organizations) Count(ctx context.Context) int64 {
 	var count int64
 	db.WithContext(ctx).Model(&User{}).Where("type = ?", UserTypeOrganization).Count(&count)
 	return count
+}
+
+type ErrOrganizationOwnRepos struct {
+	args errutil.Args
+}
+
+// IsErrOrganizationOwnRepos returns true if the underlying error has the type
+// ErrOrganizationOwnRepos.
+func IsErrOrganizationOwnRepos(err error) bool {
+	return errors.As(errors.Cause(err), &ErrOrganizationOwnRepos{})
+}
+
+func (err ErrOrganizationOwnRepos) Error() string {
+	return fmt.Sprintf("organization still has repository ownership: %v", err.args)
+}
+
+func (db *organizations) DeleteByID(ctx context.Context, orgID int64) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, t := range []any{&Team{}, &OrgUser{}, &TeamUser{}} {
+			err := tx.Where("org_id = ?", orgID).Delete(t).Error
+			if err != nil {
+				return errors.Wrapf(err, "clean up table %T", t)
+			}
+		}
+
+		err := NewUsersStore(tx).DeleteByID(ctx, orgID, false)
+		if err != nil {
+			return errors.Wrap(err, "delete organization")
+		}
+		return nil
+	})
 }
 
 var _ errutil.NotFound = (*ErrTeamNotExist)(nil)
