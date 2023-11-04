@@ -171,7 +171,7 @@ func orgsCountByUser(t *testing.T, ctx context.Context, db *organizations) {
 	err = db.AddMember(ctx, org1.ID, bob.ID)
 	require.NoError(t, err)
 
-	got, err := db.CountByUser(ctx, 1)
+	got, err := db.CountByUser(ctx, alice.ID)
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), got)
 
