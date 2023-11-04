@@ -440,6 +440,9 @@ func usersDeleteCustomAvatar(t *testing.T, ctx context.Context, db *users) {
 	avatar, err := public.Files.ReadFile("img/avatar_default.png")
 	require.NoError(t, err)
 
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
 	avatarPath := userutil.CustomAvatarPath(alice.ID)
 	_ = os.Remove(avatarPath)
 	defer func() { _ = os.Remove(avatarPath) }()
