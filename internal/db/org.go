@@ -11,21 +11,6 @@ import (
 	"xorm.io/xorm"
 )
 
-func getOrgsByUserID(sess *xorm.Session, userID int64, showAll bool) ([]*User, error) {
-	orgs := make([]*User, 0, 10)
-	if !showAll {
-		sess.And("`org_user`.is_public=?", true)
-	}
-	return orgs, sess.And("`org_user`.uid=?", userID).
-		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
-}
-
-// GetOrgsByUserID returns a list of organizations that the given user ID
-// has joined.
-func GetOrgsByUserID(userID int64, showAll bool) ([]*User, error) {
-	return getOrgsByUserID(x.NewSession(), userID, showAll)
-}
-
 // getOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
 func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
 	orgs := make([]*User, 0, 10)

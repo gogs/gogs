@@ -555,9 +555,15 @@ func SettingsOrganizations(c *context.Context) {
 	c.Title("settings.orgs")
 	c.PageIs("SettingsOrganizations")
 
-	orgs, err := db.GetOrgsByUserID(c.User.ID, true)
+	orgs, err := db.Organizations.List(
+		c.Req.Context(),
+		db.ListOrganizationsOptions{
+			MemberID:              c.User.ID,
+			IncludePrivateMembers: true,
+		},
+	)
 	if err != nil {
-		c.Errorf(err, "get organizations by user ID")
+		c.Errorf(err, "list organizations by user ID")
 		return
 	}
 	c.Data["Orgs"] = orgs
