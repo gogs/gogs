@@ -65,9 +65,11 @@ type OrganizationsStore interface {
 
 	// AccessibleRepositoriesByUser returns a range of repositories in the
 	// organization that the user has access to and the total number of it. Results
-	// are paginated by given page and page size, and sorted by the given order
-	// (e.g. "updated_unix DESC").
+	// are paginated by given page and page size, and OrderByUpdatedDesc is used.
 	AccessibleRepositoriesByUser(ctx context.Context, orgID, userID int64, page, pageSize int, opts AccessibleRepositoriesByUserOptions) ([]*Repository, int64, error)
+	// MirrorRepositoriesByUser returns a list of mirror repositories of the
+	// organization which the user has access to.
+	MirrorRepositoriesByUser(ctx context.Context, orgID, userID int64) ([]*Repository, error)
 }
 
 var Organizations OrganizationsStore
@@ -297,6 +299,40 @@ func (db *organizations) AccessibleRepositoriesByUser(ctx context.Context, orgID
 		return nil, 0, errors.Wrap(err, "count repositories")
 	}
 	return repos, count, nil
+}
+
+func (db *organizations) MirrorRepositoriesByUser(ctx context.Context, orgID, userID int64) ([]*Repository, error) {
+	/*
+		Equivalent SQL for PostgreSQL:
+
+		SELECT * FROM "repository"
+		JOIN team_repo ON repository.id = team_repo.repo_id
+		WHERE
+			owner_id = @orgID
+		AND repository.is_mirror = TRUE
+		AND (
+				team_repo.team_id IN (
+					SELECT team_id FROM "team_user"
+					WHERE team_user.org_id = @orgID AND uid = @userID)
+				)
+			OR  repository.is_private = FALSE
+		)
+		ORDER BY updated_unix DESC
+	*/
+	var repos []*Repository
+	return repos, db.WithContext(ctx).
+		Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
+		Where("owner_id = ? AND repository.is_mirror = ? AND (?)", orgID, true, db.
+			Where("team_repo.team_id IN (?)", db.
+				Select("team_id").
+				Table("team_user").
+				Where("team_user.org_id = ? AND uid = ?", orgID, userID),
+			).
+			Or("repository.is_private = ?", false),
+		).
+		Order("updated_unix DESC").
+		Find(&repos).
+		Error
 }
 
 func (db *organizations) getOrgUser(ctx context.Context, orgID, userID int64) (*OrgUser, error) {

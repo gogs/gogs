@@ -153,7 +153,7 @@ func Dashboard(c *context.Context) {
 			return
 		}
 
-		mirrors, err = ctxUser.GetUserMirrorRepositories(c.User.ID)
+		mirrors, err = db.Organizations.MirrorRepositoriesByUser(c.Req.Context(), ctxUser.ID, c.User.ID)
 		if err != nil {
 			c.Error(err, "get user mirror repositories")
 			return

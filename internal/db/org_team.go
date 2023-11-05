@@ -689,20 +689,6 @@ func (u *User) getUserTeams(e Engine, userID int64, cols ...string) ([]*Team, er
 		Cols(cols...).Find(&teams)
 }
 
-// GetUserTeamIDs returns of all team IDs of the organization that user is member of.
-func (u *User) GetUserTeamIDs(userID int64) ([]int64, error) {
-	teams, err := u.getUserTeams(x, userID, "team.id")
-	if err != nil {
-		return nil, fmt.Errorf("getUserTeams [%d]: %v", userID, err)
-	}
-
-	teamIDs := make([]int64, len(teams))
-	for i := range teams {
-		teamIDs[i] = teams[i].ID
-	}
-	return teamIDs, nil
-}
-
 // GetTeams returns all teams that belong to organization,
 // and that the user has joined.
 func (u *User) GetUserTeams(userID int64) ([]*Team, error) {
