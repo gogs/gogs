@@ -797,9 +797,9 @@ func usersGetByUsername(t *testing.T, ctx context.Context, db *users) {
 		alice, err := db.Create(ctx, "alice", "alice@exmaple.com", CreateUserOptions{})
 		require.NoError(t, err)
 
-		user, err := db.GetByUsername(ctx, alice.Name)
+		got, err := db.GetByUsername(ctx, alice.Name)
 		require.NoError(t, err)
-		assert.Equal(t, alice.Name, user.Name)
+		assert.Equal(t, alice.Name, got.Name)
 
 		_, err = db.GetByUsername(ctx, "bad_username")
 		wantErr := ErrUserNotExist{args: errutil.Args{"name": "bad_username"}}

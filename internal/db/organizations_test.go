@@ -36,6 +36,7 @@ func TestOrganizations(t *testing.T) {
 		test func(t *testing.T, ctx context.Context, db *organizations)
 	}{
 		{"Create", orgsCreate},
+		{"GetByName", orgsGetByName},
 		{"List", orgsList},
 		{"SearchByName", orgsSearchByName},
 		{"CountByUser", orgsCountByUser},
@@ -110,6 +111,33 @@ func orgsCreate(t *testing.T, ctx context.Context, db *organizations) {
 	assert.Equal(t, 1, got.NumMembers)
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), got.Created.UTC().Format(time.RFC3339))
 	assert.Equal(t, db.NowFunc().Format(time.RFC3339), got.Updated.UTC().Format(time.RFC3339))
+}
+
+func orgsGetByName(t *testing.T, ctx context.Context, db *organizations) {
+	t.Run("correct user type", func(t *testing.T) {
+		tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "usersGetByUsername-tempPictureAvatarUploadPath")
+		conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+		org1, err := db.Create(ctx, "org1", 1, CreateOrganizationOptions{})
+		require.NoError(t, err)
+
+		got, err := db.GetByName(ctx, org1.Name)
+		require.NoError(t, err)
+		assert.Equal(t, org1.Name, got.Name)
+
+		_, err = db.GetByName(ctx, "bad_name")
+		wantErr := ErrOrganizationNotExist{args: errutil.Args{"name": "bad_name"}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	t.Run("wrong user type", func(t *testing.T) {
+		alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+		require.NoError(t, err)
+
+		_, err = db.GetByName(ctx, alice.Name)
+		wantErr := ErrOrganizationNotExist{args: errutil.Args{"name": alice.Name}}
+		assert.Equal(t, wantErr, err)
+	})
 }
 
 func orgsList(t *testing.T, ctx context.Context, db *organizations) {
