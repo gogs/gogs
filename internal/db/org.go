@@ -8,22 +8,7 @@ import (
 	"fmt"
 
 	"xorm.io/builder"
-	"xorm.io/xorm"
 )
-
-// getOwnedOrgsByUserID returns a list of organizations are owned by given user ID.
-func getOwnedOrgsByUserID(sess *xorm.Session, userID int64) ([]*User, error) {
-	orgs := make([]*User, 0, 10)
-	return orgs, sess.Where("`org_user`.uid=?", userID).And("`org_user`.is_owner=?", true).
-		Join("INNER", "`org_user`", "`org_user`.org_id=`user`.id").Find(&orgs)
-}
-
-// GetOwnedOrganizationsByUserIDDesc returns a list of organizations are owned by
-// given user ID, ordered descending by the given condition.
-func GetOwnedOrgsByUserIDDesc(userID int64, desc string) ([]*User, error) {
-	sess := x.NewSession()
-	return getOwnedOrgsByUserID(sess.Desc(desc), userID)
-}
 
 // getOrgUsersByOrgID returns all organization-user relations by organization ID.
 func getOrgUsersByOrgID(e Engine, orgID int64, limit int) ([]*OrgUser, error) {

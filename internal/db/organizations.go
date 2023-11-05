@@ -215,8 +215,15 @@ func (db *organizations) RemoveMember(ctx context.Context, orgID, userID int64) 
 	})
 }
 
+type OrderBy int
+
+const (
+	OrderByIDAsc OrderBy = iota + 1
+	OrderByUpdatedDesc
+)
+
 type accessibleRepositoriesByUserOptions struct {
-	orderBy  string
+	orderBy  OrderBy
 	page     int
 	pageSize int
 }
@@ -249,8 +256,8 @@ func (*organizations) accessibleRepositoriesByUser(tx *gorm.DB, orgID, userID in
 			).
 			Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
 		)
-	if opts.orderBy != "" {
-		conds.Order(opts.orderBy)
+	if opts.orderBy == OrderByUpdatedDesc {
+		conds.Order("updated_unix DESC")
 	}
 	if opts.page > 0 && opts.pageSize > 0 {
 		conds.Limit(opts.pageSize).Offset((opts.page - 1) * opts.pageSize)
@@ -269,7 +276,7 @@ func (db *organizations) AccessibleRepositoriesByUser(ctx context.Context, orgID
 		orgID,
 		userID,
 		accessibleRepositoriesByUserOptions{
-			orderBy:  "updated_unix DESC",
+			orderBy:  OrderByUpdatedDesc,
 			page:     page,
 			pageSize: pageSize,
 		},
@@ -339,10 +346,18 @@ func (db *organizations) ListMembers(ctx context.Context, orgID int64, opts List
 }
 
 type ListOrganizationsOptions struct {
-	// Filter by the membership with the given user ID.
+	// Filter by the membership with the given user ID. It cannot be set when the
+	// OwnerID is also set.
 	MemberID int64
+	// Filter by the ownership with the given user ID. It cannot be set when the
+	// MemberID is also set.
+	OwnerID int64
 	// Whether to include private memberships.
 	IncludePrivateMembers bool
+
+	// Order by the given field and direction. Default is OrderByIDAsc.
+	OrderBy OrderBy
+
 	// 1-based page number.
 	Page int
 	// Number of results per page.
@@ -350,8 +365,8 @@ type ListOrganizationsOptions struct {
 }
 
 func (db *organizations) List(ctx context.Context, opts ListOrganizationsOptions) ([]*Organization, error) {
-	if opts.MemberID <= 0 {
-		return nil, errors.New("MemberID must be greater than 0")
+	if opts.MemberID > 0 && opts.OwnerID > 0 {
+		return nil, errors.New("cannot filter by both MemberID and OwnerID")
 	}
 
 	/*
@@ -361,24 +376,32 @@ func (db *organizations) List(ctx context.Context, opts ListOrganizationsOptions
 		[JOIN org_user ON org_user.org_id = user.id]
 		WHERE
 			type = @type
-		[AND org_user.uid = @memberID
-		AND org_user.is_public = @includePrivateMembers]
-		ORDER BY user.id ASC
+		[AND org_user.uid = (@memberID | @ownerID)
+		AND org_user.is_public = @includePrivateMembers
+		AND org_user.is_owner = @ownerID > 0]
+		ORDER BY (user.id ASC | user.updated_unix DESC)
 		[LIMIT @limit OFFSET @offset]
 	*/
-	conds := db.WithContext(ctx).
-		Where("type = ?", UserTypeOrganization).
-		Order(dbutil.Quote("%s.id ASC", "user"))
+	conds := db.WithContext(ctx).Where("type = ?", UserTypeOrganization)
 
-	if opts.MemberID > 0 || !opts.IncludePrivateMembers {
+	if opts.MemberID > 0 || opts.OwnerID > 0 || !opts.IncludePrivateMembers {
 		conds.Joins(dbutil.Quote("JOIN org_user ON org_user.org_id = %s.id", "user"))
 	}
 	if opts.MemberID > 0 {
 		conds.Where("org_user.uid = ?", opts.MemberID)
+	} else if opts.OwnerID > 0 {
+		conds.Where("org_user.uid = ? AND org_user.is_owner = ?", opts.OwnerID, true)
 	}
 	if !opts.IncludePrivateMembers {
 		conds.Where("org_user.is_public = ?", true)
 	}
+
+	if opts.OrderBy == OrderByUpdatedDesc {
+		conds.Order(dbutil.Quote("%s.updated_unix DESC", "user"))
+	} else {
+		conds.Order(dbutil.Quote("%s.id ASC", "user"))
+	}
+
 	if opts.Page > 0 && opts.PageSize > 0 {
 		conds.Limit(opts.PageSize).Offset((opts.Page - 1) * opts.PageSize)
 	}
