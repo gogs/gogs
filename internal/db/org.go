@@ -10,17 +10,6 @@ import (
 	"xorm.io/builder"
 )
 
-// getOrgUsersByOrgID returns all organization-user relations by organization ID.
-func getOrgUsersByOrgID(e Engine, orgID int64, limit int) ([]*OrgUser, error) {
-	orgUsers := make([]*OrgUser, 0, 10)
-
-	sess := e.Where("org_id=?", orgID)
-	if limit > 0 {
-		sess = sess.Limit(limit)
-	}
-	return orgUsers, sess.Find(&orgUsers)
-}
-
 // GetUserMirrorRepositories returns mirror repositories of the organization which the user has access to.
 func (u *User) GetUserMirrorRepositories(userID int64) ([]*Repository, error) {
 	teamIDs, err := u.GetUserTeamIDs(userID)

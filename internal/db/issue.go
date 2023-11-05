@@ -1180,12 +1180,13 @@ func updateIssueMentions(e Engine, issueID int64, mentions []string) error {
 			continue
 		}
 
-		memberIDs := make([]int64, 0, user.NumMembers)
-		orgUsers, err := getOrgUsersByOrgID(e, user.ID, 0)
+		orgUsers := make([]*OrgUser, 0, 10)
+		err := e.Where("org_id=?", user.ID).Find(&orgUsers)
 		if err != nil {
 			return fmt.Errorf("getOrgUsersByOrgID [%d]: %v", user.ID, err)
 		}
 
+		memberIDs := make([]int64, 0, user.NumMembers)
 		for _, orgUser := range orgUsers {
 			memberIDs = append(memberIDs, orgUser.ID)
 		}
