@@ -77,7 +77,7 @@ func (s *DiffSection) ComputedInlineDiffFor(line *git.DiffLine) template.HTML {
 func diffsToHTML(diffs []diffmatchpatch.Diff, lineType git.DiffLineType) template.HTML {
 	buf := bytes.NewBuffer(nil)
 
-	// Reproduce signs which are cutted for inline diff before.
+	// Reproduce signs which are cut for inline diff before.
 	switch lineType {
 	case git.DiffLineAdd:
 		buf.WriteByte('+')

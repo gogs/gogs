@@ -10,7 +10,7 @@
 :: this script.
 :: And, please, read carefully the installation docs first:
 :: https://gogs.io/docs/installation
-:: To unistall the service, run "nssm remove gogs" and restart Windows.
+:: To uninstall the service, run "nssm remove gogs" and restart Windows.
 
 :: Set the folder where you extracted Gogs. Omit the last slash.
 SET gogspath=C:\gogs
