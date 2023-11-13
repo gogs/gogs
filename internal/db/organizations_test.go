@@ -37,8 +37,8 @@ func TestOrganizations(t *testing.T) {
 	}{
 		{"Create", orgsCreate},
 		{"GetByName", orgsGetByName},
-		{"List", orgsList},
 		{"SearchByName", orgsSearchByName},
+		{"List", orgsList},
 		{"CountByUser", orgsCountByUser},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -150,15 +150,17 @@ func orgsList(t *testing.T, ctx context.Context, db *organizations) {
 	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsList-tempPictureAvatarUploadPath")
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
-	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	org1, err := db.Create(ctx, "org1-alice-owned", alice.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
-	org2, err := db.Create(ctx, "org2", alice.ID, CreateOrganizationOptions{})
+
+	org2, err := db.Create(ctx, "org2-alice-owned", alice.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
 	err = db.SetMemberVisibility(ctx, org2.ID, alice.ID, true)
 	require.NoError(t, err)
 	err = db.AddMember(ctx, org2.ID, bob.ID)
 	require.NoError(t, err)
-	err = db.SetMemberVisibility(ctx, org2.ID, alice.ID, true)
+
+	org3, err := db.Create(ctx, "org3-bob-owned", bob.ID, CreateOrganizationOptions{})
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -178,6 +180,22 @@ func orgsList(t *testing.T, ctx context.Context, db *organizations) {
 			name: "all memberships for a user",
 			opts: ListOrganizationsOptions{
 				MemberID:              alice.ID,
+				IncludePrivateMembers: true,
+			},
+			wantOrgNames: []string{org1.Name, org2.Name},
+		},
+		{
+			name: "only public ownership for a user",
+			opts: ListOrganizationsOptions{
+				OwnerID:               alice.ID,
+				IncludePrivateMembers: false,
+			},
+			wantOrgNames: []string{org2.Name},
+		},
+		{
+			name: "all ownership for a user",
+			opts: ListOrganizationsOptions{
+				OwnerID:               alice.ID,
 				IncludePrivateMembers: true,
 			},
 			wantOrgNames: []string{org1.Name, org2.Name},
@@ -203,6 +221,25 @@ func orgsList(t *testing.T, ctx context.Context, db *organizations) {
 			assert.Equal(t, test.wantOrgNames, gotOrgNames)
 		})
 	}
+
+	t.Run("pagination", func(t *testing.T) {
+		got, err := db.List(ctx, ListOrganizationsOptions{Page: 1, PageSize: 1})
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, org1.ID, got[0].ID)
+
+		got, err = db.List(ctx, ListOrganizationsOptions{Page: 2, PageSize: 1})
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, org2.ID, got[0].ID)
+
+		got, err = db.List(ctx, ListOrganizationsOptions{Page: 1, PageSize: 4})
+		require.NoError(t, err)
+		require.Len(t, got, 3)
+		assert.Equal(t, org1.ID, got[0].ID)
+		assert.Equal(t, org2.ID, got[1].ID)
+		assert.Equal(t, org3.ID, got[2].ID)
+	})
 }
 
 func orgsSearchByName(t *testing.T, ctx context.Context, db *organizations) {
