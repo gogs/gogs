@@ -208,6 +208,8 @@ func orgsList(t *testing.T, ctx context.Context, db *organizations) {
 func orgsSearchByName(t *testing.T, ctx context.Context, db *organizations) {
 	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsSearchByName-tempPictureAvatarUploadPath")
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+	tempRepositoryRoot := filepath.Join(os.TempDir(), "orgsSearchByName-tempRepositoryRoot")
+	conf.SetMockRepository(t, conf.RepositoryOpts{Root: tempRepositoryRoot})
 
 	org1, err := db.Create(ctx, "org1", 1, CreateOrganizationOptions{FullName: "Acme Corp"})
 	require.NoError(t, err)

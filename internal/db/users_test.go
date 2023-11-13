@@ -277,12 +277,7 @@ func usersChangeUsername(t *testing.T, ctx context.Context, db *users) {
 	})
 
 	tempRepositoryRoot := filepath.Join(os.TempDir(), "usersChangeUsername-tempRepositoryRoot")
-	conf.SetMockRepository(
-		t,
-		conf.RepositoryOpts{
-			Root: tempRepositoryRoot,
-		},
-	)
+	conf.SetMockRepository(t, conf.RepositoryOpts{Root: tempRepositoryRoot})
 	err = os.RemoveAll(tempRepositoryRoot)
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tempRepositoryRoot) }()
