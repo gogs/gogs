@@ -420,7 +420,7 @@ func (db *organizations) List(ctx context.Context, opts ListOrganizationsOptions
 	*/
 	conds := db.WithContext(ctx).Where("type = ?", UserTypeOrganization)
 
-	if opts.MemberID > 0 || opts.OwnerID > 0 || !opts.IncludePrivateMembers {
+	if opts.MemberID > 0 || opts.OwnerID > 0 {
 		conds.Joins(dbutil.Quote("JOIN org_user ON org_user.org_id = %s.id", "user"))
 	}
 	if opts.MemberID > 0 {
@@ -428,7 +428,7 @@ func (db *organizations) List(ctx context.Context, opts ListOrganizationsOptions
 	} else if opts.OwnerID > 0 {
 		conds.Where("org_user.uid = ? AND org_user.is_owner = ?", opts.OwnerID, true)
 	}
-	if !opts.IncludePrivateMembers {
+	if (opts.MemberID > 0 || opts.OwnerID > 0) && !opts.IncludePrivateMembers {
 		conds.Where("org_user.is_public = ?", true)
 	}
 
