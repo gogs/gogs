@@ -55,7 +55,12 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 
 		dbOpts.Name = dbName
 
-		cleanup = func(_ *gorm.DB) {
+		cleanup = func(db *gorm.DB) {
+			testDB, err := db.DB()
+			if err == nil {
+				_ = testDB.Close()
+			}
+
 			_, _ = sqlDB.Exec(fmt.Sprintf("DROP DATABASE `%s`", dbName))
 			_ = sqlDB.Close()
 		}
@@ -86,7 +91,12 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 
 		dbOpts.Name = dbName
 
-		cleanup = func(_ *gorm.DB) {
+		cleanup = func(db *gorm.DB) {
+			testDB, err := db.DB()
+			if err == nil {
+				_ = testDB.Close()
+			}
+
 			_, _ = sqlDB.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
 			_ = sqlDB.Close()
 		}
