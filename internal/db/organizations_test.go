@@ -26,7 +26,11 @@ func TestOrganizations(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(User), new(EmailAddress), new(OrgUser), new(Team), new(TeamUser)}
+	tables := []any{
+		new(User), new(EmailAddress), new(OrgUser), new(Team), new(TeamUser), new(Repository), new(Watch), new(Star),
+		new(Follow), new(Issue), new(PublicKey), new(AccessToken), new(Collaboration), new(Access), new(Action),
+		new(IssueUser),
+	}
 	db := &organizations{
 		DB: dbtest.NewDB(t, "orgs", tables...),
 	}
@@ -41,6 +45,7 @@ func TestOrganizations(t *testing.T) {
 		{"List", orgsList},
 		{"CountByUser", orgsCountByUser},
 		{"Count", orgsCount},
+		{"DeleteByID", orgsDeleteByID},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -328,4 +333,67 @@ func orgsCount(t *testing.T, db *organizations) {
 	require.NoError(t, err)
 	got = db.Count(ctx)
 	assert.Equal(t, int64(1), got)
+}
+
+func orgsDeleteByID(t *testing.T, db *organizations) {
+	ctx := context.Background()
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsDeleteByID-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	t.Run("organization still has repository ownership", func(t *testing.T) {
+		org1, err := db.Create(ctx, "org1", 404, CreateOrganizationOptions{})
+		require.NoError(t, err)
+
+		_, err = NewRepositoriesStore(db.DB).Create(ctx, org1.ID, CreateRepoOptions{Name: "repo1"})
+		require.NoError(t, err)
+
+		err = db.DeleteByID(ctx, org1.ID)
+		wantErr := ErrOrganizationOwnRepos{errutil.Args{"orgID": org1.ID}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	alice, err := NewUsersStore(db.DB).Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	org2, err := db.Create(ctx, "org2", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+
+	// Mock team membership
+	// TODO: Use Organizations.CreateTeam to replace SQL hack when the method is available.
+	team1 := &Team{
+		OrgID:      org2.ID,
+		LowerName:  "team1",
+		Name:       "team1",
+		NumMembers: 1,
+	}
+	err = db.DB.Create(team1).Error
+	require.NoError(t, err)
+	// TODO: Use Organizations.AddTeamMember to replace SQL hack when the method is available.
+	err = db.DB.Create(
+		&TeamUser{
+			OrgID:  org2.ID,
+			TeamID: team1.ID,
+			UID:    alice.ID,
+		},
+	).Error
+	require.NoError(t, err)
+
+	// Pull the trigger
+	err = db.DeleteByID(ctx, org2.ID)
+	require.NoError(t, err)
+
+	// Verify after-the-fact data
+	for _, table := range []any{
+		&Team{OrgID: org2.ID},
+		&TeamUser{OrgID: org2.ID},
+	} {
+		var count int64
+		err = db.DB.Model(table).Where(table).Count(&count).Error
+		require.NoError(t, err, "table for %T", table)
+		assert.Equal(t, int64(0), count, "table for %T", table)
+	}
+
+	_, err = db.GetByName(ctx, org2.Name)
+	wantErr := ErrOrganizationNotExist{errutil.Args{"name": org2.Name}}
+	assert.Equal(t, wantErr, err)
 }

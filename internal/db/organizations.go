@@ -26,7 +26,8 @@ type OrganizationsStore interface {
 	// name is not allowed as an organization name, or ErrOrganizationAlreadyExist
 	// when a user or an organization with same name already exists.
 	Create(ctx context.Context, name string, ownerID int64, opts CreateOrganizationOptions) (*Organization, error)
-	// GetByName returns the organization with given name.
+	// GetByName returns the organization with given name. It returns
+	// ErrOrganizationNotExist when not found.
 	GetByName(ctx context.Context, name string) (*Organization, error)
 	// SearchByName returns a list of organizations whose username or full name
 	// matches the given keyword case-insensitively. Results are paginated by given
@@ -628,6 +629,9 @@ func (db *organizations) DeleteByID(ctx context.Context, orgID int64) error {
 
 		err := NewUsersStore(tx).DeleteByID(ctx, orgID, false)
 		if err != nil {
+			if IsErrUserOwnRepos(err) {
+				return ErrOrganizationOwnRepos{args: map[string]any{"orgID": orgID}}
+			}
 			return errors.Wrap(err, "delete organization")
 		}
 		return nil
