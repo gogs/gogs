@@ -29,7 +29,7 @@ func TestOrganizations(t *testing.T) {
 	tables := []any{
 		new(User), new(EmailAddress), new(OrgUser), new(Team), new(TeamUser), new(Repository), new(Watch), new(Star),
 		new(Follow), new(Issue), new(PublicKey), new(AccessToken), new(Collaboration), new(Access), new(Action),
-		new(IssueUser),
+		new(IssueUser), new(TeamRepo),
 	}
 	db := &organizations{
 		DB: dbtest.NewDB(t, "orgs", tables...),
@@ -47,6 +47,7 @@ func TestOrganizations(t *testing.T) {
 		{"Count", orgsCount},
 		{"DeleteByID", orgsDeleteByID},
 		{"AddMember", orgsAddMember},
+		{"RemoveMember", orgsRemoveMember},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -415,21 +416,129 @@ func orgsAddMember(t *testing.T, db *organizations) {
 	require.NoError(t, err)
 
 	// Not yet a member
-	got, err := db.List(ctx, ListOrganizationsOptions{MemberID: bob.ID, IncludePrivateMembers: true})
+	gotOrgs, err := db.List(ctx, ListOrganizationsOptions{MemberID: bob.ID, IncludePrivateMembers: true})
 	require.NoError(t, err)
-	assert.Len(t, got, 0)
+	assert.Len(t, gotOrgs, 0)
 
 	// Add member
 	err = db.AddMember(ctx, org1.ID, bob.ID)
 	require.NoError(t, err)
 
 	// Now a member
-	got, err = db.List(ctx, ListOrganizationsOptions{MemberID: bob.ID, IncludePrivateMembers: true})
+	gotOrgs, err = db.List(ctx, ListOrganizationsOptions{MemberID: bob.ID, IncludePrivateMembers: true})
 	require.NoError(t, err)
-	assert.Len(t, got, 1)
-	assert.Equal(t, org1.ID, got[0].ID)
+	assert.Len(t, gotOrgs, 1)
+	assert.Equal(t, org1.ID, gotOrgs[0].ID)
 
 	// Add member again shouldn't fail
 	err = db.AddMember(ctx, org1.ID, bob.ID)
 	require.NoError(t, err)
+
+	gotOrg, err := db.GetByName(ctx, org1.Name)
+	require.NoError(t, err)
+	assert.Equal(t, 2, gotOrg.NumMembers)
+}
+
+func orgsRemoveMember(t *testing.T, db *organizations) {
+	ctx := context.Background()
+
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsRemoveMember-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+
+	t.Run("remove non-existent member", func(t *testing.T) {
+		err = db.RemoveMember(ctx, org1.ID, bob.ID)
+		require.NoError(t, err)
+	})
+
+	t.Run("remove last owner", func(t *testing.T) {
+		err = db.RemoveMember(ctx, org1.ID, alice.ID)
+		wantErr := ErrLastOrgOwner{errutil.Args{"orgID": org1.ID, "userID": alice.ID}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	err = db.AddMember(ctx, org1.ID, bob.ID)
+	require.NoError(t, err)
+
+	// Mock repository, watches, accesses and collaborations
+	reposStore := NewRepositoriesStore(db.DB)
+	repo1, err := reposStore.Create(ctx, org1.ID, CreateRepoOptions{Name: "repo1", Private: true})
+	require.NoError(t, err)
+	err = reposStore.Watch(ctx, bob.ID, repo1.ID)
+	require.NoError(t, err)
+	permsStore := NewPermsStore(db.DB)
+	err = permsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{bob.ID: AccessModeRead})
+	require.NoError(t, err)
+	// TODO: Use Repositories.AddCollaborator to replace SQL hack when the method is available.
+	err = db.DB.Create(
+		&Collaboration{
+			UserID: bob.ID,
+			RepoID: repo1.ID,
+			Mode:   AccessModeRead,
+		},
+	).Error
+	require.NoError(t, err)
+
+	// Mock team membership
+	// TODO: Use Organizations.CreateTeam to replace SQL hack when the method is available.
+	team1 := &Team{
+		OrgID:      org1.ID,
+		LowerName:  "team1",
+		Name:       "team1",
+		NumMembers: 1,
+	}
+	err = db.DB.Create(team1).Error
+	require.NoError(t, err)
+	// TODO: Use Organizations.AddTeamMember to replace SQL hack when the method is available.
+	err = db.DB.Create(
+		&TeamUser{
+			OrgID:  org1.ID,
+			TeamID: team1.ID,
+			UID:    bob.ID,
+		},
+	).Error
+	require.NoError(t, err)
+	// TODO: Use Organizations.AddTeamRepository to replace SQL hack when the method is available.
+	err = db.DB.Create(
+		&TeamRepo{
+			OrgID:  org1.ID,
+			TeamID: team1.ID,
+			RepoID: repo1.ID,
+		},
+	).Error
+	require.NoError(t, err)
+
+	// Pull the trigger
+	err = db.RemoveMember(ctx, org1.ID, bob.ID)
+	require.NoError(t, err)
+
+	// Verify after-the-fact data
+	gotRepo, err := reposStore.GetByID(ctx, repo1.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, gotRepo.NumWatches)
+
+	gotAccessMode := permsStore.AccessMode(ctx, repo1.ID, bob.ID, AccessModeOptions{Private: repo1.IsPrivate})
+	assert.Equal(t, AccessModeNone, gotAccessMode)
+
+	// TODO: Use Repositories.ListCollaborators to replace SQL hack when the method is available.
+	var count int64
+	err = db.DB.Model(&Collaboration{}).Where(&Collaboration{RepoID: repo1.ID}).Count(&count).Error
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), count)
+
+	gotTeam, err := db.GetTeamByName(ctx, org1.ID, team1.Name)
+	require.NoError(t, err)
+	assert.Equal(t, 0, gotTeam.NumMembers)
+
+	gotOrg, err := db.GetByName(ctx, org1.Name)
+	require.NoError(t, err)
+	assert.Equal(t, 1, gotOrg.NumMembers)
 }

@@ -526,7 +526,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT repo_id FROM watch WHERE user_id = @userID
 			)
 		*/
-		err = tx.Table("repository").
+		err = tx.
+			Table("repository").
 			Where("id IN (?)", tx.
 				Select("repo_id").
 				Table("watch").
@@ -547,7 +548,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT repo_id FROM star WHERE uid = @userID
 			)
 		*/
-		err = tx.Table("repository").
+		err = tx.
+			Table("repository").
 			Where("id IN (?)", tx.
 				Select("repo_id").
 				Table("star").
@@ -568,7 +570,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT follow_id FROM follow WHERE user_id = @userID
 			)
 		*/
-		err = tx.Table("user").
+		err = tx.
+			Table("user").
 			Where("id IN (?)", tx.
 				Select("follow_id").
 				Table("follow").
@@ -589,7 +592,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT user_id FROM follow WHERE follow_id = @userID
 			)
 		*/
-		err = tx.Table("user").
+		err = tx.
+			Table("user").
 			Where("id IN (?)", tx.
 				Select("user_id").
 				Table("follow").

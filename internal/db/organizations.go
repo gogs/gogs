@@ -153,7 +153,7 @@ func (db *organizations) RemoveMember(ctx context.Context, orgID, userID int64) 
 		if err != nil {
 			return errors.Wrap(err, "get owners team")
 		} else if t.NumMembers == 1 {
-			return ErrLastOrgOwner{args: map[string]any{"orgID": orgID, "userID": userID}}
+			return ErrLastOrgOwner{args: errutil.Args{"orgID": orgID, "userID": userID}}
 		}
 	}
 
@@ -165,7 +165,8 @@ func (db *organizations) RemoveMember(ctx context.Context, orgID, userID int64) 
 			return errors.Wrap(err, "unwatch repositories")
 		}
 
-		err = tx.Table("repository").
+		err = tx.
+			Table("repository").
 			Where("id IN (?)", repoIDsConds).
 			UpdateColumn("num_watches", gorm.Expr("num_watches - 1")).
 			Error
@@ -193,8 +194,9 @@ func (db *organizations) RemoveMember(ctx context.Context, orgID, userID int64) 
 				WHERE team_user.org_id = @orgID AND uid = @userID)
 			)
 		*/
-		err = tx.Table("team").
-			Where(`id IN (?)`, tx.
+		err = tx.
+			Table("team").
+			Where("id IN (?)", tx.
 				Select("team_id").
 				Table("team_user").
 				Where("org_id = ? AND uid = ?", orgID, userID),
@@ -235,7 +237,7 @@ func (*organizations) accessibleRepositoriesByUser(tx *gorm.DB, orgID, userID in
 	/*
 		Equivalent SQL for PostgreSQL:
 
-		<SELECT * FROM "repository">
+		SELECT * FROM "repository"
 		JOIN team_repo ON repository.id = team_repo.repo_id
 		WHERE
 			owner_id = @orgID
@@ -250,14 +252,14 @@ func (*organizations) accessibleRepositoriesByUser(tx *gorm.DB, orgID, userID in
 		[LIMIT @limit OFFSET @offset]
 	*/
 	conds := tx.
+		Table("repository").
 		Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
-		Where("owner_id = ? AND (?)", orgID, tx.
-			Where("team_repo.team_id IN (?)", tx.
-				Select("team_id").
+		Where("owner_id = ? AND (team_repo.team_id IN (?) OR (repository.is_private = ? AND repository.is_unlisted = ?))",
+			orgID,
+			tx.Select("team_id").
 				Table("team_user").
 				Where("team_user.org_id = ? AND uid = ?", orgID, userID),
-			).
-			Or("repository.is_private = ? AND repository.is_unlisted = ?", false, false),
+			false, false,
 		)
 	if opts.orderBy == OrderByUpdatedDesc {
 		conds.Order("updated_unix DESC")
