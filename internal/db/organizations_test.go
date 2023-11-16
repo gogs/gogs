@@ -561,7 +561,7 @@ func orgsHasMember(t *testing.T, db *organizations) {
 
 	err := db.AddMember(ctx, 1, 1)
 	require.NoError(t, err)
-	
+
 	got, _ = db.HasMember(ctx, 1, 1)
 	assert.True(t, got)
 }
