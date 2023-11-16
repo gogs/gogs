@@ -513,7 +513,15 @@ func usersDeleteByID(t *testing.T, ctx context.Context, db *users) {
 	require.NoError(t, err)
 
 	// Mock watches, stars and follows
-	err = reposStore.Watch(ctx, testUser.ID, repo2.ID)
+	err = reposStore.Watch(
+		ctx,
+		WatchRepositoryOptions{
+			UserID:        testUser.ID,
+			RepoID:        repo2.ID,
+			RepoOwnerID:   repo2.OwnerID,
+			RepoIsPrivate: repo2.IsPrivate,
+		},
+	)
 	require.NoError(t, err)
 	err = reposStore.Star(ctx, testUser.ID, repo2.ID)
 	require.NoError(t, err)

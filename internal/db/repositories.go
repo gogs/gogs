@@ -50,7 +50,7 @@ type RepositoriesStore interface {
 	// ListWatches returns all watches of the given repository.
 	ListWatches(ctx context.Context, repoID int64) ([]*Watch, error)
 	// Watch marks the user to watch the repository.
-	Watch(ctx context.Context, userID, repoID int64) error
+	Watch(ctx context.Context, opts WatchRepositoryOptions) error
 
 	// HasForkedBy returns true if the given repository has forked by the given user.
 	HasForkedBy(ctx context.Context, repoID, userID int64) bool
@@ -194,7 +194,15 @@ func (db *repositories) Create(ctx context.Context, ownerID int64, opts CreateRe
 			return errors.Wrap(err, "create")
 		}
 
-		err = NewRepositoriesStore(tx).Watch(ctx, ownerID, repo.ID)
+		err = NewRepositoriesStore(tx).Watch(
+			ctx,
+			WatchRepositoryOptions{
+				UserID:        ownerID,
+				RepoID:        repo.ID,
+				RepoOwnerID:   ownerID,
+				RepoIsPrivate: repo.IsPrivate,
+			},
+		)
 		if err != nil {
 			return errors.Wrap(err, "watch")
 		}
@@ -400,11 +408,34 @@ func (db *repositories) recountWatches(tx *gorm.DB, repoID int64) error {
 		Error
 }
 
-func (db *repositories) Watch(ctx context.Context, userID, repoID int64) error {
+type WatchRepositoryOptions struct {
+	UserID        int64
+	RepoID        int64
+	RepoOwnerID   int64
+	RepoIsPrivate bool
+}
+
+func (db *repositories) Watch(ctx context.Context, opts WatchRepositoryOptions) error {
+	// Make sure the user has access to the private repository
+	if opts.RepoIsPrivate &&
+		opts.UserID != opts.RepoOwnerID &&
+		!NewPermsStore(db.DB).Authorize(
+			ctx,
+			opts.UserID,
+			opts.RepoID,
+			AccessModeRead,
+			AccessModeOptions{
+				OwnerID: opts.RepoOwnerID,
+				Private: true,
+			},
+		) {
+		return errors.New("user does not have access to the repository")
+	}
+
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		w := &Watch{
-			UserID: userID,
-			RepoID: repoID,
+			UserID: opts.UserID,
+			RepoID: opts.RepoID,
 		}
 		result := tx.FirstOrCreate(w, w)
 		if result.Error != nil {
@@ -413,7 +444,7 @@ func (db *repositories) Watch(ctx context.Context, userID, repoID int64) error {
 			return nil // Relation already exists
 		}
 
-		return db.recountWatches(tx, repoID)
+		return db.recountWatches(tx, opts.RepoID)
 	})
 }
 
