@@ -49,6 +49,7 @@ func TestOrganizations(t *testing.T) {
 		{"AddMember", orgsAddMember},
 		{"RemoveMember", orgsRemoveMember},
 		{"HasMember", orgsHasMember},
+		{"ListMembers", orgsListMembers},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -564,4 +565,33 @@ func orgsHasMember(t *testing.T, db *organizations) {
 
 	got, _ = db.HasMember(ctx, 1, 1)
 	assert.True(t, got)
+}
+
+func orgsListMembers(t *testing.T, db *organizations) {
+	ctx := context.Background()
+
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsListMembers-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+	err = db.AddMember(ctx, org1.ID, bob.ID)
+	require.NoError(t, err)
+
+	got, err := db.ListMembers(ctx, org1.ID, ListOrgMembersOptions{Limit: 1})
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, alice.ID, got[0].ID)
+
+	got, err = db.ListMembers(ctx, org1.ID, ListOrgMembersOptions{})
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, alice.ID, got[0].ID)
+	assert.Equal(t, bob.ID, got[1].ID)
 }
