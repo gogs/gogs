@@ -51,6 +51,7 @@ func TestOrganizations(t *testing.T) {
 		{"HasMember", orgsHasMember},
 		{"ListMembers", orgsListMembers},
 		{"IsOwnedBy", orgsIsOwnedBy},
+		{"SetMemberVisibility", orgsSetMemberVisibility},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -622,4 +623,28 @@ func orgsIsOwnedBy(t *testing.T, db *organizations) {
 	assert.False(t, got)
 	got = db.IsOwnedBy(ctx, org1.ID, cindy.ID)
 	assert.False(t, got)
+}
+
+func orgsSetMemberVisibility(t *testing.T, db *organizations) {
+	ctx := context.Background()
+
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsListMembers-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+
+	got, err := db.List(ctx, ListOrganizationsOptions{MemberID: alice.ID})
+	require.NoError(t, err)
+	assert.Len(t, got, 0)
+
+	err = db.SetMemberVisibility(ctx, org1.ID, alice.ID, true)
+	require.NoError(t, err)
+	got, err = db.List(ctx, ListOrganizationsOptions{MemberID: alice.ID})
+	require.NoError(t, err)
+	assert.Len(t, got, 1)
 }
