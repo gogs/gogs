@@ -50,6 +50,7 @@ func TestOrganizations(t *testing.T) {
 		{"RemoveMember", orgsRemoveMember},
 		{"HasMember", orgsHasMember},
 		{"ListMembers", orgsListMembers},
+		{"IsOwnedBy", orgsIsOwnedBy},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -594,4 +595,31 @@ func orgsListMembers(t *testing.T, db *organizations) {
 	require.Len(t, got, 2)
 	assert.Equal(t, alice.ID, got[0].ID)
 	assert.Equal(t, bob.ID, got[1].ID)
+}
+
+func orgsIsOwnedBy(t *testing.T, db *organizations) {
+	ctx := context.Background()
+
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+	bob, err := usersStore.Create(ctx, "bob", "bob@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+	cindy, err := usersStore.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsListMembers-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+	err = db.AddMember(ctx, org1.ID, bob.ID)
+	require.NoError(t, err)
+
+	got := db.IsOwnedBy(ctx, org1.ID, alice.ID)
+	assert.True(t, got)
+	got = db.IsOwnedBy(ctx, org1.ID, bob.ID)
+	assert.False(t, got)
+	got = db.IsOwnedBy(ctx, org1.ID, cindy.ID)
+	assert.False(t, got)
 }
