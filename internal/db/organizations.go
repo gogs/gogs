@@ -238,28 +238,30 @@ func (*organizations) accessibleRepositoriesByUser(tx *gorm.DB, orgID, userID in
 		Equivalent SQL for PostgreSQL:
 
 		SELECT * FROM "repository"
-		JOIN team_repo ON repository.id = team_repo.repo_id
 		WHERE
 			owner_id = @orgID
 		AND (
-				team_repo.team_id IN (
-					SELECT team_id FROM "team_user"
-					WHERE team_user.org_id = @orgID AND uid = @userID)
+				id IN (
+					SELECT repo_id
+					FROM "team_repo"
+					JOIN "team_user" ON team_user.org_id = team_repo.org_id
+					WHERE team_repo.org_id = @orgID AND team_user.uid = @userID
 				)
-			OR  (repository.is_private = FALSE AND repository.is_unlisted = FALSE)
+			OR  (is_private = FALSE AND is_unlisted = FALSE)
 		)
 		[ORDER BY updated_unix DESC]
 		[LIMIT @limit OFFSET @offset]
 	*/
 	conds := tx.
 		Table("repository").
-		Joins("JOIN team_repo ON repository.id = team_repo.repo_id").
-		Where("owner_id = ? AND (team_repo.team_id IN (?) OR (repository.is_private = ? AND repository.is_unlisted = ?))",
+		Where("owner_id = ? AND (id IN (?) OR (is_private = ? AND is_unlisted = ?))",
 			orgID,
-			tx.Select("team_id").
-				Table("team_user").
-				Where("team_user.org_id = ? AND uid = ?", orgID, userID),
-			false, false,
+			tx.Select("repo_id").
+				Table("team_repo").
+				Joins("JOIN team_user ON team_user.org_id = team_repo.org_id").
+				Where("team_repo.org_id = ? AND team_user.uid = ?", orgID, userID),
+			false,
+			false,
 		)
 	if opts.orderBy == OrderByUpdatedDesc {
 		conds.Order("updated_unix DESC")
@@ -297,7 +299,7 @@ func (db *organizations) AccessibleRepositoriesByUser(ctx context.Context, orgID
 		return repos, 0, nil
 	}
 	var count int64
-	err = conds.Model(&Repository{}).Count(&count).Error
+	err = conds.Count(&count).Error
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "count repositories")
 	}

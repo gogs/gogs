@@ -52,6 +52,9 @@ func TestOrganizations(t *testing.T) {
 		{"ListMembers", orgsListMembers},
 		{"IsOwnedBy", orgsIsOwnedBy},
 		{"SetMemberVisibility", orgsSetMemberVisibility},
+		{"GetTeamByName", orgsGetTeamByName},
+		{"AccessibleRepositoriesByUser", orgsAccessibleRepositoriesByUser},
+		{"MirrorRepositoriesByUser", orgsMirrorRepositoriesByUser},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
@@ -472,7 +475,7 @@ func orgsRemoveMember(t *testing.T, db *organizations) {
 	err = db.AddMember(ctx, org1.ID, bob.ID)
 	require.NoError(t, err)
 
-	// Mock repository, watches, accesses and collaborations
+	// Mock repository, watches and collaborations
 	reposStore := NewRepositoriesStore(db.DB)
 	repo1, err := reposStore.Create(ctx, org1.ID, CreateRepoOptions{Name: "repo1", Private: true})
 	require.NoError(t, err)
@@ -515,6 +518,7 @@ func orgsRemoveMember(t *testing.T, db *organizations) {
 	).Error
 	require.NoError(t, err)
 
+	// Mock accesses
 	permsStore := NewPermsStore(db.DB)
 	err = permsStore.SetRepoPerms(ctx, repo1.ID, map[int64]AccessMode{bob.ID: AccessModeRead})
 	require.NoError(t, err)
@@ -609,7 +613,7 @@ func orgsIsOwnedBy(t *testing.T, db *organizations) {
 	cindy, err := usersStore.Create(ctx, "cindy", "cindy@exmaple.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsListMembers-tempPictureAvatarUploadPath")
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsIsOwnedBy-tempPictureAvatarUploadPath")
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
 	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
@@ -632,7 +636,7 @@ func orgsSetMemberVisibility(t *testing.T, db *organizations) {
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 
-	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsListMembers-tempPictureAvatarUploadPath")
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsSetMemberVisibility-tempPictureAvatarUploadPath")
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
 	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
@@ -647,4 +651,54 @@ func orgsSetMemberVisibility(t *testing.T, db *organizations) {
 	got, err = db.List(ctx, ListOrganizationsOptions{MemberID: alice.ID})
 	require.NoError(t, err)
 	assert.Len(t, got, 1)
+}
+
+func orgsGetTeamByName(t *testing.T, db *organizations) {
+	ctx := context.Background()
+
+	usersStore := NewUsersStore(db.DB)
+	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
+	require.NoError(t, err)
+
+	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsGetTeamByName-tempPictureAvatarUploadPath")
+	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
+
+	org1, err := db.Create(ctx, "org1", alice.ID, CreateOrganizationOptions{})
+	require.NoError(t, err)
+
+	t.Run("non-existent team", func(t *testing.T) {
+		_, err := db.GetTeamByName(ctx, org1.ID, "non-existent")
+		wantErr := ErrTeamNotExist{errutil.Args{"orgID": org1.ID, "name": "non-existent"}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	t.Run("team of another organization", func(t *testing.T) {
+		org2, err := db.Create(ctx, "org2", alice.ID, CreateOrganizationOptions{})
+		require.NoError(t, err)
+
+		// TODO: Use Organizations.CreateTeam to replace SQL hack when the method is available.
+		team1 := &Team{
+			OrgID:      org2.ID,
+			LowerName:  "team1",
+			Name:       "team1",
+			NumMembers: 1,
+		}
+		err = db.DB.Create(team1).Error
+		require.NoError(t, err)
+
+		_, err = db.GetTeamByName(ctx, org1.ID, team1.Name)
+		wantErr := ErrTeamNotExist{errutil.Args{"orgID": org1.ID, "name": team1.Name}}
+		assert.Equal(t, wantErr, err)
+	})
+
+	_, err = db.GetTeamByName(ctx, org1.ID, TeamNameOwners)
+	require.NoError(t, err)
+}
+
+func orgsAccessibleRepositoriesByUser(t *testing.T, db *organizations) {
+	// todo
+}
+
+func orgsMirrorRepositoriesByUser(t *testing.T, db *organizations) {
+	// todo
 }
