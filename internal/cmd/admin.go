@@ -25,6 +25,8 @@ var (
 to make automatic initialization process more smoothly`,
 		Subcommands: []cli.Command{
 			subcmdCreateUser,
+			subcmdCreateRepo,
+
 			subcmdDeleteInactivateUsers,
 			subcmdDeleteRepositoryArchives,
 			subcmdDeleteMissingRepositories,
@@ -44,6 +46,20 @@ to make automatic initialization process more smoothly`,
 			stringFlag("password", "", "User password"),
 			stringFlag("email", "", "User email address"),
 			boolFlag("admin", "User is an admin"),
+			stringFlag("config, c", "", "Custom configuration file path"),
+		},
+	}
+	subcmdCreateRepo = cli.Command{
+		Name:   "create-repo",
+		Usage:  "Create a new repo in database for a user",
+		Action: runCreateRepo,
+		Flags: []cli.Flag{
+			stringFlag("username", "", "Username of repository's owner"),
+			stringFlag("repository_name", "", "Repository name"),
+			stringFlag("private", "false", "Private repository"),
+			stringFlag("unlisted", "false", "Listable repository"),
+			stringFlag("mirror", "false", "Whether the repository is a mirror"),
+
 			stringFlag("config, c", "", "Custom configuration file path"),
 		},
 	}
@@ -167,6 +183,50 @@ func runCreateUser(c *cli.Context) error {
 	}
 
 	fmt.Printf("New user %q has been successfully created!\n", user.Name)
+	return nil
+}
+
+func runCreateRepo(c *cli.Context) error {
+	if !c.IsSet("username") {
+		return errors.New("Username is not specified")
+	} else if !c.IsSet("repository_name") {
+		return errors.New("Respository name is not specified")
+	}
+
+	err := conf.Init(c.String("config"))
+	if err != nil {
+		return errors.Wrap(err, "init configuration")
+	}
+	conf.InitLogging(true)
+
+	if _, err = db.SetEngine(); err != nil {
+		return errors.Wrap(err, "set engine")
+	}
+	//	find user by username
+	user, err := db.Users.GetByUsername(
+		context.Background(),
+		c.String("username"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "No user was found with "+c.String("username"))
+	}
+
+	repo, err := db.CreateRepository(
+		user,
+		user,
+		db.CreateRepoOptionsLegacy{
+			Name:        c.String("repository_name"),
+			Description: "",
+			IsPrivate:   c.Bool("private") || conf.Repository.ForcePrivate,
+			IsUnlisted:  c.Bool("unlisted"),
+			IsMirror:    c.Bool("mirror"),
+		})
+
+	if err != nil {
+		return errors.Wrap(err, "Repo")
+	}
+
+	fmt.Printf("New repo %q has been successfully created!\n", repo.Name)
 	return nil
 }
 
