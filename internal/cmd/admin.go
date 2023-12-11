@@ -50,7 +50,7 @@ to make automatic initialization process more smoothly`,
 		},
 	}
 	subcmdCreateRepo = cli.Command{
-		Name:   "create-repo",
+		Name:   "create-repository",
 		Usage:  "Create a new repo in database for a user",
 		Action: runCreateRepo,
 		Flags: []cli.Flag{
@@ -226,7 +226,7 @@ func runCreateRepo(c *cli.Context) error {
 		return errors.Wrap(err, "Repo")
 	}
 
-	fmt.Printf("New repo %q has been successfully created!\n", repo.Name)
+	fmt.Printf("New repository %q has been successfully created!\n", repo.Name)
 	return nil
 }
 
