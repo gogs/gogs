@@ -320,9 +320,6 @@ func reposListWatches(t *testing.T, ctx context.Context, db *repositories) {
 }
 
 func reposWatch(t *testing.T, ctx context.Context, db *repositories) {
-	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
-	require.NoError(t, err)
-
 	t.Run("user does not have access to the repository", func(t *testing.T) {
 		repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1", Private: true})
 		require.NoError(t, err)

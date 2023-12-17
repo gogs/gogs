@@ -324,9 +324,7 @@ func orgsCountByUser(t *testing.T, ctx context.Context, db *organizations) {
 	assert.Equal(t, int64(0), got)
 }
 
-func orgsCount(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsCount(t *testing.T, ctx context.Context, db *organizations) {
 	// Has no organization initially
 	got := db.Count(ctx)
 	assert.Equal(t, int64(0), got)
@@ -344,9 +342,7 @@ func orgsCount(t *testing.T, db *organizations) {
 	assert.Equal(t, int64(1), got)
 }
 
-func orgsDeleteByID(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsDeleteByID(t *testing.T, ctx context.Context, db *organizations) {
 	tempPictureAvatarUploadPath := filepath.Join(os.TempDir(), "orgsDeleteByID-tempPictureAvatarUploadPath")
 	conf.SetMockPicture(t, conf.PictureOpts{AvatarUploadPath: tempPictureAvatarUploadPath})
 
@@ -407,9 +403,7 @@ func orgsDeleteByID(t *testing.T, db *organizations) {
 	assert.Equal(t, wantErr, err)
 }
 
-func orgsAddMember(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsAddMember(t *testing.T, ctx context.Context, db *organizations) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -446,9 +440,7 @@ func orgsAddMember(t *testing.T, db *organizations) {
 	assert.Equal(t, 2, gotOrg.NumMembers)
 }
 
-func orgsRemoveMember(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsRemoveMember(t *testing.T, ctx context.Context, db *organizations) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -560,9 +552,7 @@ func orgsRemoveMember(t *testing.T, db *organizations) {
 	assert.Equal(t, 1, gotOrg.NumMembers)
 }
 
-func orgsHasMember(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsHasMember(t *testing.T, ctx context.Context, db *organizations) {
 	got, _ := db.HasMember(ctx, 1, 1)
 	assert.False(t, got)
 
@@ -573,9 +563,7 @@ func orgsHasMember(t *testing.T, db *organizations) {
 	assert.True(t, got)
 }
 
-func orgsListMembers(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsListMembers(t *testing.T, ctx context.Context, db *organizations) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -602,9 +590,7 @@ func orgsListMembers(t *testing.T, db *organizations) {
 	assert.Equal(t, bob.ID, got[1].ID)
 }
 
-func orgsIsOwnedBy(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsIsOwnedBy(t *testing.T, ctx context.Context, db *organizations) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -629,9 +615,7 @@ func orgsIsOwnedBy(t *testing.T, db *organizations) {
 	assert.False(t, got)
 }
 
-func orgsSetMemberVisibility(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsSetMemberVisibility(t *testing.T, ctx context.Context, db *organizations) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -653,9 +637,7 @@ func orgsSetMemberVisibility(t *testing.T, db *organizations) {
 	assert.Len(t, got, 1)
 }
 
-func orgsGetTeamByName(t *testing.T, db *organizations) {
-	ctx := context.Background()
-
+func orgsGetTeamByName(t *testing.T, ctx context.Context, db *organizations) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -695,10 +677,10 @@ func orgsGetTeamByName(t *testing.T, db *organizations) {
 	require.NoError(t, err)
 }
 
-func orgsAccessibleRepositoriesByUser(t *testing.T, db *organizations) {
+func orgsAccessibleRepositoriesByUser(t *testing.T, ctx context.Context, db *organizations) {
 	// todo
 }
 
-func orgsMirrorRepositoriesByUser(t *testing.T, db *organizations) {
+func orgsMirrorRepositoriesByUser(t *testing.T, ctx context.Context, db *organizations) {
 	// todo
 }
