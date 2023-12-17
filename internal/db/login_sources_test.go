@@ -163,6 +163,7 @@ func TestLoginSources(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(LoginSource), new(User)}
 	db := &loginSources{
 		DB: dbtest.NewDB(t, "loginSources", tables...),
@@ -170,7 +171,7 @@ func TestLoginSources(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *loginSources)
+		test func(t *testing.T, ctx context.Context, db *loginSources)
 	}{
 		{"Create", loginSourcesCreate},
 		{"Count", loginSourcesCount},
@@ -185,7 +186,7 @@ func TestLoginSources(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -193,9 +194,7 @@ func TestLoginSources(t *testing.T) {
 	}
 }
 
-func loginSourcesCreate(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesCreate(t *testing.T, ctx context.Context, db *loginSources) {
 	// Create first login source with name "GitHub"
 	source, err := db.Create(ctx,
 		CreateLoginSourceOptions{
@@ -222,9 +221,7 @@ func loginSourcesCreate(t *testing.T, db *loginSources) {
 	assert.Equal(t, wantErr, err)
 }
 
-func loginSourcesCount(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesCount(t *testing.T, ctx context.Context, db *loginSources) {
 	// Create two login sources, one in database and one as source file.
 	_, err := db.Create(ctx,
 		CreateLoginSourceOptions{
@@ -246,9 +243,7 @@ func loginSourcesCount(t *testing.T, db *loginSources) {
 	assert.Equal(t, int64(3), db.Count(ctx))
 }
 
-func loginSourcesDeleteByID(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesDeleteByID(t *testing.T, ctx context.Context, db *loginSources) {
 	t.Run("delete but in used", func(t *testing.T) {
 		source, err := db.Create(ctx,
 			CreateLoginSourceOptions{
@@ -315,9 +310,7 @@ func loginSourcesDeleteByID(t *testing.T, db *loginSources) {
 	assert.Equal(t, wantErr, err)
 }
 
-func loginSourcesGetByID(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesGetByID(t *testing.T, ctx context.Context, db *loginSources) {
 	mock := NewMockLoginSourceFilesStore()
 	mock.GetByIDFunc.SetDefaultHook(func(id int64) (*LoginSource, error) {
 		if id != 101 {
@@ -353,9 +346,7 @@ func loginSourcesGetByID(t *testing.T, db *loginSources) {
 	require.NoError(t, err)
 }
 
-func loginSourcesList(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesList(t *testing.T, ctx context.Context, db *loginSources) {
 	mock := NewMockLoginSourceFilesStore()
 	mock.ListFunc.SetDefaultHook(func(opts ListLoginSourceOptions) []*LoginSource {
 		if opts.OnlyActivated {
@@ -404,9 +395,7 @@ func loginSourcesList(t *testing.T, db *loginSources) {
 	assert.Equal(t, 2, len(sources), "number of sources")
 }
 
-func loginSourcesResetNonDefault(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesResetNonDefault(t *testing.T, ctx context.Context, db *loginSources) {
 	mock := NewMockLoginSourceFilesStore()
 	mock.ListFunc.SetDefaultHook(func(opts ListLoginSourceOptions) []*LoginSource {
 		mockFile := NewMockLoginSourceFileStore()
@@ -461,9 +450,7 @@ func loginSourcesResetNonDefault(t *testing.T, db *loginSources) {
 	assert.False(t, source2.IsDefault)
 }
 
-func loginSourcesSave(t *testing.T, db *loginSources) {
-	ctx := context.Background()
-
+func loginSourcesSave(t *testing.T, ctx context.Context, db *loginSources) {
 	t.Run("save to database", func(t *testing.T) {
 		// Create a login source with name "GitHub"
 		source, err := db.Create(ctx,
