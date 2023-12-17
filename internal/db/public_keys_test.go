@@ -5,6 +5,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ func TestPublicKeys(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(PublicKey)}
 	db := &publicKeys{
 		DB: dbtest.NewDB(t, "publicKeys", tables...),
@@ -30,7 +32,7 @@ func TestPublicKeys(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *publicKeys)
+		test func(t *testing.T, ctx context.Context, db *publicKeys)
 	}{
 		{"RewriteAuthorizedKeys", publicKeysRewriteAuthorizedKeys},
 	} {
@@ -39,7 +41,7 @@ func TestPublicKeys(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -47,7 +49,7 @@ func TestPublicKeys(t *testing.T) {
 	}
 }
 
-func publicKeysRewriteAuthorizedKeys(t *testing.T, db *publicKeys) {
+func publicKeysRewriteAuthorizedKeys(t *testing.T, ctx context.Context, db *publicKeys) {
 	// TODO: Use PublicKeys.Add to replace SQL hack when the method is available.
 	publicKey := &PublicKey{
 		OwnerID:     1,

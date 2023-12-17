@@ -85,6 +85,7 @@ func TestRepos(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(Repository), new(Access), new(Watch), new(User), new(EmailAddress), new(Star)}
 	db := &repos{
 		DB: dbtest.NewDB(t, "repos", tables...),
@@ -92,7 +93,7 @@ func TestRepos(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *repos)
+		test func(t *testing.T, ctx context.Context, db *repos)
 	}{
 		{"Create", reposCreate},
 		{"GetByCollaboratorID", reposGetByCollaboratorID},
@@ -110,7 +111,7 @@ func TestRepos(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -118,9 +119,7 @@ func TestRepos(t *testing.T) {
 	}
 }
 
-func reposCreate(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposCreate(t *testing.T, ctx context.Context, db *repos) {
 	t.Run("name not allowed", func(t *testing.T) {
 		_, err := db.Create(ctx,
 			1,
@@ -162,9 +161,7 @@ func reposCreate(t *testing.T, db *repos) {
 	assert.Equal(t, 1, repo.NumWatches) // The owner is watching the repo by default.
 }
 
-func reposGetByCollaboratorID(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposGetByCollaboratorID(t *testing.T, ctx context.Context, db *repos) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
@@ -190,9 +187,7 @@ func reposGetByCollaboratorID(t *testing.T, db *repos) {
 	})
 }
 
-func reposGetByCollaboratorIDWithAccessMode(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposGetByCollaboratorIDWithAccessMode(t *testing.T, ctx context.Context, db *repos) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	repo2, err := db.Create(ctx, 2, CreateRepoOptions{Name: "repo2"})
@@ -220,9 +215,7 @@ func reposGetByCollaboratorIDWithAccessMode(t *testing.T, db *repos) {
 	assert.Equal(t, AccessModeAdmin, accessModes[repo2.ID])
 }
 
-func reposGetByID(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposGetByID(t *testing.T, ctx context.Context, db *repos) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 
@@ -235,9 +228,7 @@ func reposGetByID(t *testing.T, db *repos) {
 	assert.Equal(t, wantErr, err)
 }
 
-func reposGetByName(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposGetByName(t *testing.T, ctx context.Context, db *repos) {
 	repo, err := db.Create(ctx, 1,
 		CreateRepoOptions{
 			Name: "repo1",
@@ -253,9 +244,7 @@ func reposGetByName(t *testing.T, db *repos) {
 	assert.Equal(t, wantErr, err)
 }
 
-func reposStar(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposStar(t *testing.T, ctx context.Context, db *repos) {
 	repo1, err := db.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
 	usersStore := NewUsersStore(db.DB)
@@ -274,9 +263,7 @@ func reposStar(t *testing.T, db *repos) {
 	assert.Equal(t, 1, alice.NumStars)
 }
 
-func reposTouch(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposTouch(t *testing.T, ctx context.Context, db *repos) {
 	repo, err := db.Create(ctx, 1,
 		CreateRepoOptions{
 			Name: "repo1",
@@ -302,9 +289,7 @@ func reposTouch(t *testing.T, db *repos) {
 	assert.False(t, got.IsBare)
 }
 
-func reposListWatches(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposListWatches(t *testing.T, ctx context.Context, db *repos) {
 	err := db.Watch(ctx, 1, 1)
 	require.NoError(t, err)
 	err = db.Watch(ctx, 2, 1)
@@ -325,9 +310,7 @@ func reposListWatches(t *testing.T, db *repos) {
 	assert.Equal(t, want, got)
 }
 
-func reposWatch(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposWatch(t *testing.T, ctx context.Context, db *repos) {
 	reposStore := NewReposStore(db.DB)
 	repo1, err := reposStore.Create(ctx, 1, CreateRepoOptions{Name: "repo1"})
 	require.NoError(t, err)
@@ -344,9 +327,7 @@ func reposWatch(t *testing.T, db *repos) {
 	assert.Equal(t, 2, repo1.NumWatches) // The owner is watching the repo by default.
 }
 
-func reposHasForkedBy(t *testing.T, db *repos) {
-	ctx := context.Background()
-
+func reposHasForkedBy(t *testing.T, ctx context.Context, db *repos) {
 	has := db.HasForkedBy(ctx, 1, 2)
 	assert.False(t, has)
 

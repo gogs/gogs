@@ -66,6 +66,7 @@ func TestNotices(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(Notice)}
 	db := &notices{
 		DB: dbtest.NewDB(t, "notices", tables...),
@@ -73,7 +74,7 @@ func TestNotices(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *notices)
+		test func(t *testing.T, ctx context.Context, db *notices)
 	}{
 		{"Create", noticesCreate},
 		{"DeleteByIDs", noticesDeleteByIDs},
@@ -86,7 +87,7 @@ func TestNotices(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -94,9 +95,7 @@ func TestNotices(t *testing.T) {
 	}
 }
 
-func noticesCreate(t *testing.T, db *notices) {
-	ctx := context.Background()
-
+func noticesCreate(t *testing.T, ctx context.Context, db *notices) {
 	err := db.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
@@ -104,9 +103,7 @@ func noticesCreate(t *testing.T, db *notices) {
 	assert.Equal(t, int64(1), count)
 }
 
-func noticesDeleteByIDs(t *testing.T, db *notices) {
-	ctx := context.Background()
-
+func noticesDeleteByIDs(t *testing.T, ctx context.Context, db *notices) {
 	err := db.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
@@ -126,9 +123,7 @@ func noticesDeleteByIDs(t *testing.T, db *notices) {
 	assert.Equal(t, int64(0), count)
 }
 
-func noticesDeleteAll(t *testing.T, db *notices) {
-	ctx := context.Background()
-
+func noticesDeleteAll(t *testing.T, ctx context.Context, db *notices) {
 	err := db.Create(ctx, NoticeTypeRepository, "test")
 	require.NoError(t, err)
 
@@ -139,9 +134,7 @@ func noticesDeleteAll(t *testing.T, db *notices) {
 	assert.Equal(t, int64(0), count)
 }
 
-func noticesList(t *testing.T, db *notices) {
-	ctx := context.Background()
-
+func noticesList(t *testing.T, ctx context.Context, db *notices) {
 	err := db.Create(ctx, NoticeTypeRepository, "test 1")
 	require.NoError(t, err)
 	err = db.Create(ctx, NoticeTypeRepository, "test 2")
@@ -161,9 +154,7 @@ func noticesList(t *testing.T, db *notices) {
 	require.Len(t, got, 2)
 }
 
-func noticesCount(t *testing.T, db *notices) {
-	ctx := context.Background()
-
+func noticesCount(t *testing.T, ctx context.Context, db *notices) {
 	count := db.Count(ctx)
 	assert.Equal(t, int64(0), count)
 
