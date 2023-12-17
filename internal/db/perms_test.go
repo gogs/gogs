@@ -20,6 +20,7 @@ func TestPerms(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(Access)}
 	db := &perms{
 		DB: dbtest.NewDB(t, "perms", tables...),
@@ -27,7 +28,7 @@ func TestPerms(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *perms)
+		test func(t *testing.T, ctx context.Context, db *perms)
 	}{
 		{"AccessMode", permsAccessMode},
 		{"Authorize", permsAuthorize},
@@ -38,7 +39,7 @@ func TestPerms(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -46,9 +47,7 @@ func TestPerms(t *testing.T) {
 	}
 }
 
-func permsAccessMode(t *testing.T, db *perms) {
-	ctx := context.Background()
-
+func permsAccessMode(t *testing.T, ctx context.Context, db *perms) {
 	// Set up permissions
 	err := db.SetRepoPerms(ctx, 1,
 		map[int64]AccessMode{
@@ -159,9 +158,7 @@ func permsAccessMode(t *testing.T, db *perms) {
 	}
 }
 
-func permsAuthorize(t *testing.T, db *perms) {
-	ctx := context.Background()
-
+func permsAuthorize(t *testing.T, ctx context.Context, db *perms) {
 	// Set up permissions
 	err := db.SetRepoPerms(ctx, 1,
 		map[int64]AccessMode{
@@ -247,9 +244,7 @@ func permsAuthorize(t *testing.T, db *perms) {
 	}
 }
 
-func permsSetRepoPerms(t *testing.T, db *perms) {
-	ctx := context.Background()
-
+func permsSetRepoPerms(t *testing.T, ctx context.Context, db *perms) {
 	for _, update := range []struct {
 		repoID    int64
 		accessMap map[int64]AccessMode

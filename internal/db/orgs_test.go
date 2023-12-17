@@ -21,6 +21,7 @@ func TestOrgs(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(User), new(EmailAddress), new(OrgUser)}
 	db := &orgs{
 		DB: dbtest.NewDB(t, "orgs", tables...),
@@ -28,7 +29,7 @@ func TestOrgs(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *orgs)
+		test func(t *testing.T, ctx context.Context, db *orgs)
 	}{
 		{"List", orgsList},
 		{"SearchByName", orgsSearchByName},
@@ -39,7 +40,7 @@ func TestOrgs(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -47,9 +48,7 @@ func TestOrgs(t *testing.T) {
 	}
 }
 
-func orgsList(t *testing.T, db *orgs) {
-	ctx := context.Background()
-
+func orgsList(t *testing.T, ctx context.Context, db *orgs) {
 	usersStore := NewUsersStore(db.DB)
 	alice, err := usersStore.Create(ctx, "alice", "alice@example.com", CreateUserOptions{})
 	require.NoError(t, err)
@@ -119,9 +118,7 @@ func orgsList(t *testing.T, db *orgs) {
 	}
 }
 
-func orgsSearchByName(t *testing.T, db *orgs) {
-	ctx := context.Background()
-
+func orgsSearchByName(t *testing.T, ctx context.Context, db *orgs) {
 	// TODO: Use Orgs.Create to replace SQL hack when the method is available.
 	usersStore := NewUsersStore(db.DB)
 	org1, err := usersStore.Create(ctx, "org1", "org1@example.com", CreateUserOptions{FullName: "Acme Corp"})
@@ -166,9 +163,7 @@ func orgsSearchByName(t *testing.T, db *orgs) {
 	})
 }
 
-func orgsCountByUser(t *testing.T, db *orgs) {
-	ctx := context.Background()
-
+func orgsCountByUser(t *testing.T, ctx context.Context, db *orgs) {
 	// TODO: Use Orgs.Join to replace SQL hack when the method is available.
 	err := db.Exec(`INSERT INTO org_user (uid, org_id) VALUES (?, ?)`, 1, 1).Error
 	require.NoError(t, err)

@@ -67,6 +67,7 @@ func TestTwoFactors(t *testing.T) {
 	}
 	t.Parallel()
 
+	ctx := context.Background()
 	tables := []any{new(TwoFactor), new(TwoFactorRecoveryCode)}
 	db := &twoFactors{
 		DB: dbtest.NewDB(t, "twoFactors", tables...),
@@ -74,7 +75,7 @@ func TestTwoFactors(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		test func(t *testing.T, db *twoFactors)
+		test func(t *testing.T, ctx context.Context, db *twoFactors)
 	}{
 		{"Create", twoFactorsCreate},
 		{"GetByUserID", twoFactorsGetByUserID},
@@ -85,7 +86,7 @@ func TestTwoFactors(t *testing.T) {
 				err := clearTables(t, db.DB, tables...)
 				require.NoError(t, err)
 			})
-			tc.test(t, db)
+			tc.test(t, ctx, db)
 		})
 		if t.Failed() {
 			break
@@ -93,9 +94,7 @@ func TestTwoFactors(t *testing.T) {
 	}
 }
 
-func twoFactorsCreate(t *testing.T, db *twoFactors) {
-	ctx := context.Background()
-
+func twoFactorsCreate(t *testing.T, ctx context.Context, db *twoFactors) {
 	// Create a 2FA token
 	err := db.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
@@ -112,9 +111,7 @@ func twoFactorsCreate(t *testing.T, db *twoFactors) {
 	assert.Equal(t, int64(10), count)
 }
 
-func twoFactorsGetByUserID(t *testing.T, db *twoFactors) {
-	ctx := context.Background()
-
+func twoFactorsGetByUserID(t *testing.T, ctx context.Context, db *twoFactors) {
 	// Create a 2FA token for user 1
 	err := db.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
@@ -129,9 +126,7 @@ func twoFactorsGetByUserID(t *testing.T, db *twoFactors) {
 	assert.Equal(t, wantErr, err)
 }
 
-func twoFactorsIsEnabled(t *testing.T, db *twoFactors) {
-	ctx := context.Background()
-
+func twoFactorsIsEnabled(t *testing.T, ctx context.Context, db *twoFactors) {
 	// Create a 2FA token for user 1
 	err := db.Create(ctx, 1, "secure-key", "secure-secret")
 	require.NoError(t, err)
