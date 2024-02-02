@@ -88,9 +88,8 @@ Gogs（`/gɑgz/`）项目旨在打造一个以最简便的方式搭建简单、�
 ## 特别鸣谢
 
 - 感谢 [Egon Elbre](https://twitter.com/egonelbre) 设计的 Logo。
+- 感谢 [DigitalOcean](https://www.digitalocean.com) 和 [MonoVM](https://monovm.com) 提供服务器赞助。
 - 感谢 [Crowdin](https://crowdin.com/project/gogs) 提供免费的开源项目本地化支持。
-- 感谢 [DigitalOcean](https://www.digitalocean.com)、[VPSServer](https://www.vpsserver.com/)、[Hosted.nl](https://www.hosted.nl/)、[MonoVM](https://monovm.com) 和 [BitLaunch](https://bitlaunch.io) 提供服务器赞助。
-- 感谢 [KeyCDN](https://www.keycdn.com/) 提供 CDN 服务赞助。
 - 感谢 [Buildkite](https://buildkite.com) 提供免费的开源项目 CI/CD 支持。
 
 ## 贡献成员
