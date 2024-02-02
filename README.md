@@ -89,10 +89,18 @@ There are 6 ways to install Gogs:
 
 ## 🙇‍♂️ Acknowledgments
 
+<p>This project is proundly supported by:</p>
+<p>
+  <a href="https://www.digitalocean.com/">
+    <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" width="201px">
+  </a>
+</p>
+
+Other acknowledgments:
+
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing the original version of the logo.
 - Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
-- Thanks [DigitalOcean](https://www.digitalocean.com), [VPSServer](https://www.vpsserver.com/), [Hosted.nl](https://www.hosted.nl/), [BitLaunch](https://bitlaunch.io), and [MonoVM](https://monovm.com/linux-vps/) for sponsoring VPS services.
-- Thanks [KeyCDN](https://www.keycdn.com/) for sponsoring CDN service.
+- Thanks [MonoVM](https://monovm.com/linux-vps/) for sponsoring VPS services.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
 ## 👋 Contributors
