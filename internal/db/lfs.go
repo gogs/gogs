@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/errutil"
@@ -75,7 +76,7 @@ func (db *lfs) GetObjectByOID(ctx context.Context, repoID int64, oid lfsutil.OID
 	object := new(LFSObject)
 	err := db.WithContext(ctx).Where("repo_id = ? AND oid = ?", repoID, oid).First(object).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrLFSObjectNotExist{args: errutil.Args{"repoID": repoID, "oid": oid}}
 		}
 		return nil, err

@@ -154,7 +154,7 @@ func (db *accessTokens) GetBySHA1(ctx context.Context, sha1 string) (*AccessToke
 	token := new(AccessToken)
 	err := db.WithContext(ctx).Where("sha256 = ?", sha256).First(token).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrAccessTokenNotExist{args: errutil.Args{"sha": sha1}}
 		}
 		return nil, err

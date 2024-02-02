@@ -115,7 +115,7 @@ func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
 	} else {
 		search := db.Users.SearchByName
 		if opts.Type == db.UserTypeOrganization {
-			search = db.Orgs.SearchByName
+			search = db.Organizations.SearchByName
 		}
 		users, count, err = search(c.Req.Context(), keyword, page, opts.PageSize, opts.OrderBy)
 		if err != nil {
@@ -152,12 +152,16 @@ func ExploreOrganizations(c *context.Context) {
 	c.Data["PageIsExploreOrganizations"] = true
 
 	RenderUserSearch(c, &UserSearchOptions{
-		Type: db.UserTypeOrganization,
-		Counter: func(gocontext.Context) int64 {
-			return db.CountOrganizations()
-		},
-		Ranger: func(_ gocontext.Context, page, pageSize int) ([]*db.User, error) {
-			return db.Organizations(page, pageSize)
+		Type:    db.UserTypeOrganization,
+		Counter: db.Organizations.Count,
+		Ranger: func(ctx gocontext.Context, page, pageSize int) ([]*db.User, error) {
+			return db.Organizations.List(
+				ctx,
+				db.ListOrganizationsOptions{
+					Page:     page,
+					PageSize: pageSize,
+				},
+			)
 		},
 		PageSize: conf.UI.ExplorePagingNum,
 		OrderBy:  "updated_unix DESC",

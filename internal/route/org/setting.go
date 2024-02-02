@@ -115,8 +115,9 @@ func SettingsDelete(c *context.Context) {
 			return
 		}
 
-		if err := db.DeleteOrganization(org); err != nil {
-			if db.IsErrUserOwnRepos(err) {
+		err := db.Organizations.DeleteByID(c.Req.Context(), org.ID)
+		if err != nil {
+			if db.IsErrOrganizationOwnRepos(err) {
 				c.Flash.Error(c.Tr("form.org_still_own_repo"))
 				c.Redirect(c.Org.OrgLink + "/settings/delete")
 			} else {

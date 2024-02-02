@@ -46,6 +46,7 @@ var Tables = []any{
 	new(Follow),
 	new(LFSObject), new(LoginSource),
 	new(Notice),
+	new(OrgUser),
 }
 
 // Init initializes the database with given logger.
@@ -126,9 +127,9 @@ func Init(w logger.Writer) (*gorm.DB, error) {
 	LoginSources = &loginSources{DB: db, files: sourceFiles}
 	LFS = &lfs{DB: db}
 	Notices = NewNoticesStore(db)
-	Orgs = NewOrgsStore(db)
+	Organizations = NewOrganizationsStore(db)
 	Perms = NewPermsStore(db)
-	Repos = NewReposStore(db)
+	Repositories = NewRepositoriesStore(db)
 	TwoFactors = &twoFactors{DB: db}
 	Users = NewUsersStore(db)
 

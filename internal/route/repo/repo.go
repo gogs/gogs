@@ -35,7 +35,13 @@ func MustBeNotBare(c *context.Context) {
 }
 
 func checkContextUser(c *context.Context, uid int64) *db.User {
-	orgs, err := db.GetOwnedOrgsByUserIDDesc(c.User.ID, "updated_unix")
+	orgs, err := db.Organizations.List(
+		c.Req.Context(),
+		db.ListOrganizationsOptions{
+			OwnerID: c.User.ID,
+			OrderBy: db.OrderByUpdatedDesc,
+		},
+	)
 	if err != nil {
 		c.Error(err, "get owned organization by user ID")
 		return nil

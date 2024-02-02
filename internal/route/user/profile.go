@@ -42,9 +42,15 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("UserProfile")
 	c.Data["Owner"] = puser
 
-	orgs, err := db.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
+	orgs, err := db.Organizations.List(
+		c.Req.Context(),
+		db.ListOrganizationsOptions{
+			MemberID:              puser.ID,
+			IncludePrivateMembers: c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID),
+		},
+	)
 	if err != nil {
-		c.Error(err, "get organizations by user ID")
+		c.Error(err, "list organizations by user ID")
 		return
 	}
 

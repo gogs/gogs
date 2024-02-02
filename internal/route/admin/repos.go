@@ -35,7 +35,7 @@ func Repos(c *context.Context) {
 
 	keyword := c.Query("q")
 	if keyword == "" {
-		repos, err = db.Repositories(page, conf.UI.Admin.RepoPagingNum)
+		repos, err = db.ListRepositories(page, conf.UI.Admin.RepoPagingNum)
 		if err != nil {
 			c.Error(err, "list repositories")
 			return

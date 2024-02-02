@@ -48,8 +48,9 @@ type UsersStore interface {
 	Authenticate(ctx context.Context, username, password string, loginSourceID int64) (*User, error)
 	// Create creates a new user and persists to database. It returns
 	// ErrNameNotAllowed if the given name or pattern of the name is not allowed as
-	// a username, or ErrUserAlreadyExist when a user with same name already exists,
-	// or ErrEmailAlreadyUsed if the email has been verified by another user.
+	// a username, or ErrUserAlreadyExist when a user or an organization with same
+	// name already exists, or ErrEmailAlreadyUsed if the email has been verified by
+	// another user.
 	Create(ctx context.Context, username, email string, opts CreateUserOptions) (*User, error)
 
 	// GetByEmail returns the user (not organization) with given email. It ignores
@@ -362,8 +363,7 @@ type ErrUserAlreadyExist struct {
 // IsErrUserAlreadyExist returns true if the underlying error has the type
 // ErrUserAlreadyExist.
 func IsErrUserAlreadyExist(err error) bool {
-	_, ok := errors.Cause(err).(ErrUserAlreadyExist)
-	return ok
+	return errors.As(err, &ErrUserAlreadyExist{})
 }
 
 func (err ErrUserAlreadyExist) Error() string {
@@ -377,8 +377,7 @@ type ErrEmailAlreadyUsed struct {
 // IsErrEmailAlreadyUsed returns true if the underlying error has the type
 // ErrEmailAlreadyUsed.
 func IsErrEmailAlreadyUsed(err error) bool {
-	_, ok := errors.Cause(err).(ErrEmailAlreadyUsed)
-	return ok
+	return errors.As(err, &ErrEmailAlreadyUsed{})
 }
 
 func (err ErrEmailAlreadyUsed) Email() string {
@@ -468,8 +467,7 @@ type ErrUserOwnRepos struct {
 // IsErrUserOwnRepos returns true if the underlying error has the type
 // ErrUserOwnRepos.
 func IsErrUserOwnRepos(err error) bool {
-	_, ok := errors.Cause(err).(ErrUserOwnRepos)
-	return ok
+	return errors.As(errors.Cause(err), &ErrUserOwnRepos{})
 }
 
 func (err ErrUserOwnRepos) Error() string {
@@ -528,7 +526,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT repo_id FROM watch WHERE user_id = @userID
 			)
 		*/
-		err = tx.Table("repository").
+		err = tx.
+			Table("repository").
 			Where("id IN (?)", tx.
 				Select("repo_id").
 				Table("watch").
@@ -549,7 +548,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT repo_id FROM star WHERE uid = @userID
 			)
 		*/
-		err = tx.Table("repository").
+		err = tx.
+			Table("repository").
 			Where("id IN (?)", tx.
 				Select("repo_id").
 				Table("star").
@@ -570,7 +570,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT follow_id FROM follow WHERE user_id = @userID
 			)
 		*/
-		err = tx.Table("user").
+		err = tx.
+			Table("user").
 			Where("id IN (?)", tx.
 				Select("follow_id").
 				Table("follow").
@@ -591,7 +592,8 @@ func (db *users) DeleteByID(ctx context.Context, userID int64, skipRewriteAuthor
 				SELECT user_id FROM follow WHERE follow_id = @userID
 			)
 		*/
-		err = tx.Table("user").
+		err = tx.
+			Table("user").
 			Where("id IN (?)", tx.
 				Select("user_id").
 				Table("follow").
@@ -738,7 +740,6 @@ func (db *users) Follow(ctx context.Context, userID, followID int64) error {
 		} else if result.RowsAffected <= 0 {
 			return nil // Relation already exists
 		}
-
 		return db.recountFollows(tx, userID, followID)
 	})
 }
@@ -770,8 +771,7 @@ type ErrUserNotExist struct {
 // IsErrUserNotExist returns true if the underlying error has the type
 // ErrUserNotExist.
 func IsErrUserNotExist(err error) bool {
-	_, ok := errors.Cause(err).(ErrUserNotExist)
-	return ok
+	return errors.As(err, &ErrUserNotExist{})
 }
 
 func (err ErrUserNotExist) Error() string {
@@ -811,7 +811,7 @@ func (db *users) GetByEmail(ctx context.Context, email string) (*User, error) {
 		First(&user).
 		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"email": email}}
 		}
 		return nil, err
@@ -823,7 +823,7 @@ func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
 	user := new(User)
 	err := db.WithContext(ctx).Where("id = ?", id).First(user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"userID": id}}
 		}
 		return nil, err
@@ -831,16 +831,26 @@ func (db *users) GetByID(ctx context.Context, id int64) (*User, error) {
 	return user, nil
 }
 
-func (db *users) GetByUsername(ctx context.Context, username string) (*User, error) {
+func getUserByUsername(ctx context.Context, db *gorm.DB, userType UserType, username string) (*User, error) {
+	if username == "" {
+		return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
+	}
 	user := new(User)
-	err := db.WithContext(ctx).Where("lower_name = ?", strings.ToLower(username)).First(user).Error
+	err := db.WithContext(ctx).
+		Where("type = ? AND lower_name = ?", userType, strings.ToLower(username)).
+		First(user).
+		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"name": username}}
 		}
 		return nil, err
 	}
 	return user, nil
+}
+
+func (db *users) GetByUsername(ctx context.Context, username string) (*User, error) {
+	return getUserByUsername(ctx, db.DB, UserTypeIndividual, username)
 }
 
 func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
@@ -851,7 +861,7 @@ func (db *users) GetByKeyID(ctx context.Context, keyID int64) (*User, error) {
 		First(user).
 		Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotExist{args: errutil.Args{"keyID": keyID}}
 		}
 		return nil, err
@@ -872,11 +882,13 @@ func (db *users) IsUsernameUsed(ctx context.Context, username string, excludeUse
 	if username == "" {
 		return false
 	}
-	return db.WithContext(ctx).
+
+	err := db.WithContext(ctx).
 		Select("id").
 		Where("lower_name = ? AND id != ?", strings.ToLower(username), excludeUserId).
 		First(&User{}).
-		Error != gorm.ErrRecordNotFound
+		Error
+	return !errors.Is(err, gorm.ErrRecordNotFound)
 }
 
 func (db *users) List(ctx context.Context, page, pageSize int) ([]*User, error) {
@@ -1126,15 +1138,15 @@ func (ErrEmailNotExist) NotFound() bool {
 }
 
 func (db *users) GetEmail(ctx context.Context, userID int64, email string, needsActivated bool) (*EmailAddress, error) {
-	tx := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
+	conds := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email)
 	if needsActivated {
-		tx = tx.Where("is_activated = ?", true)
+		conds.Where("is_activated = ?", true)
 	}
 
 	emailAddress := new(EmailAddress)
-	err := tx.First(emailAddress).Error
+	err := conds.First(emailAddress).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrEmailNotExist{
 				args: errutil.Args{
 					"email": email,
@@ -1213,7 +1225,7 @@ func (db *users) MarkEmailPrimary(ctx context.Context, userID int64, email strin
 	var emailAddress EmailAddress
 	err := db.WithContext(ctx).Where("uid = ? AND email = ?", userID, email).First(&emailAddress).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrEmailNotExist{args: errutil.Args{"email": email}}
 		}
 		return errors.Wrap(err, "get email address")
@@ -1317,7 +1329,6 @@ type User struct {
 	NumTeams    int
 	NumMembers  int
 	Teams       []*Team `xorm:"-" gorm:"-" json:"-"`
-	Members     []*User `xorm:"-" gorm:"-" json:"-"`
 }
 
 // BeforeCreate implements the GORM create hook.
@@ -1467,13 +1478,12 @@ func (u *User) IsFollowing(followID int64) bool {
 	return Users.IsFollowing(context.TODO(), u.ID, followID)
 }
 
-// IsUserOrgOwner returns true if the user is in the owner team of the given
-// organization.
+// IsUserOrgOwner returns true if the user is an owner of the organization.
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
-func (u *User) IsUserOrgOwner(orgId int64) bool {
-	return IsOrganizationOwner(orgId, u.ID)
+func (u *User) IsUserOrgOwner(orgID int64) bool {
+	return Organizations.IsOwnedBy(context.TODO(), orgID, u.ID)
 }
 
 // IsPublicMember returns true if the user has public membership of the given
@@ -1481,8 +1491,9 @@ func (u *User) IsUserOrgOwner(orgId int64) bool {
 //
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
-func (u *User) IsPublicMember(orgId int64) bool {
-	return IsPublicMembership(orgId, u.ID)
+func (u *User) IsPublicMember(orgID int64) bool {
+	_, public := Organizations.HasMember(context.TODO(), orgID, u.ID)
+	return public
 }
 
 // GetOrganizationCount returns the count of organization membership that the
@@ -1491,7 +1502,7 @@ func (u *User) IsPublicMember(orgId int64) bool {
 // TODO(unknwon): This is also used in templates, which should be fixed by
 // having a dedicated type `template.User`.
 func (u *User) GetOrganizationCount() (int64, error) {
-	return Orgs.CountByUser(context.TODO(), u.ID)
+	return Organizations.CountByUser(context.TODO(), u.ID)
 }
 
 // ShortName truncates and returns the username at most in given length.

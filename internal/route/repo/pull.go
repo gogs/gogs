@@ -69,9 +69,9 @@ func parseBaseRepository(c *context.Context) *db.Repository {
 	}
 	c.Data["ForkFrom"] = baseRepo.Owner.Name + "/" + baseRepo.Name
 
-	orgs, err := db.Orgs.List(
+	orgs, err := db.Organizations.List(
 		c.Req.Context(),
-		db.ListOrgsOptions{
+		db.ListOrganizationsOptions{
 			MemberID:              c.User.ID,
 			IncludePrivateMembers: true,
 		},

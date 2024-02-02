@@ -117,7 +117,7 @@ func authorize(mode db.AccessMode) macaron.Handler {
 			return
 		}
 
-		repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, reponame)
+		repo, err := db.Repositories.GetByName(c.Req.Context(), owner.ID, reponame)
 		if err != nil {
 			if db.IsErrRepoNotExist(err) {
 				c.Status(http.StatusNotFound)

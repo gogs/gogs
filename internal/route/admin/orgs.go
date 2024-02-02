@@ -23,12 +23,16 @@ func Organizations(c *context.Context) {
 	c.Data["PageIsAdminOrganizations"] = true
 
 	route.RenderUserSearch(c, &route.UserSearchOptions{
-		Type: db.UserTypeOrganization,
-		Counter: func(gocontext.Context) int64 {
-			return db.CountOrganizations()
-		},
-		Ranger: func(_ gocontext.Context, page, pageSize int) ([]*db.User, error) {
-			return db.Organizations(page, pageSize)
+		Type:    db.UserTypeOrganization,
+		Counter: db.Organizations.Count,
+		Ranger: func(ctx gocontext.Context, page, pageSize int) ([]*db.User, error) {
+			return db.Organizations.List(
+				ctx,
+				db.ListOrganizationsOptions{
+					Page:     page,
+					PageSize: pageSize,
+				},
+			)
 		},
 		PageSize: conf.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",

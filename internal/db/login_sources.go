@@ -264,7 +264,7 @@ func (db *loginSources) GetByID(ctx context.Context, id int64) (*LoginSource, er
 	source := new(LoginSource)
 	err := db.WithContext(ctx).Where("id = ?", id).First(source).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return db.files.GetByID(id)
 		}
 		return nil, err

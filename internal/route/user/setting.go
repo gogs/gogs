@@ -555,9 +555,15 @@ func SettingsOrganizations(c *context.Context) {
 	c.Title("settings.orgs")
 	c.PageIs("SettingsOrganizations")
 
-	orgs, err := db.GetOrgsByUserID(c.User.ID, true)
+	orgs, err := db.Organizations.List(
+		c.Req.Context(),
+		db.ListOrganizationsOptions{
+			MemberID:              c.User.ID,
+			IncludePrivateMembers: true,
+		},
+	)
 	if err != nil {
-		c.Errorf(err, "get organizations by user ID")
+		c.Errorf(err, "list organizations by user ID")
 		return
 	}
 	c.Data["Orgs"] = orgs
@@ -566,7 +572,7 @@ func SettingsOrganizations(c *context.Context) {
 }
 
 func SettingsLeaveOrganization(c *context.Context) {
-	if err := db.RemoveOrgUser(c.QueryInt64("id"), c.User.ID); err != nil {
+	if err := db.Organizations.RemoveMember(c.Req.Context(), c.QueryInt64("id"), c.User.ID); err != nil {
 		if db.IsErrLastOrgOwner(err) {
 			c.Flash.Error(c.Tr("form.last_org_owner"))
 		} else {

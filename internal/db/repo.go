@@ -798,7 +798,7 @@ func MigrateRepository(doer, owner *User, opts MigrateRepoOptions) (*Repository,
 	wikiPath := WikiPath(owner.Name, opts.Name)
 
 	if owner.IsOrganization() {
-		t, err := owner.GetOwnerTeam()
+		t, err := Organizations.GetTeamByName(context.TODO(), owner.ID, TeamNameOwners)
 		if err != nil {
 			return nil, err
 		}
@@ -1135,7 +1135,7 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
+		return ErrRepositoryAlreadyExist{args: errutil.Args{"ownerID": owner.ID, "name": repo.Name}}
 	}
 
 	if _, err = e.Insert(repo); err != nil {
@@ -1149,7 +1149,24 @@ func createRepository(e *xorm.Session, doer, owner *User, repo *Repository) (err
 
 	// Give access to all members in owner team.
 	if owner.IsOrganization() {
-		t, err := owner.getOwnerTeam(e)
+		// FIXME: This is identical to Orgs.GetTeamByName but we are not yet able to
+		// wrap transaction with different ORM objects, should delete this once migrated
+		// to GORM for this part of logic.
+		getTeamOfOrgByName := func(e Engine, orgID int64, name string) (*Team, error) {
+			t := &Team{
+				OrgID:     orgID,
+				LowerName: strings.ToLower(name),
+			}
+			has, err := e.Get(t)
+			if err != nil {
+				return nil, err
+			} else if !has {
+				return nil, ErrTeamNotExist{args: map[string]any{"orgID": orgID, "name": name}}
+			}
+			return t, nil
+		}
+
+		t, err := getTeamOfOrgByName(e, owner.ID, TeamNameOwners)
 		if err != nil {
 			return fmt.Errorf("getOwnerTeam: %v", err)
 		} else if err = t.addRepository(e, repo); err != nil {
@@ -1294,14 +1311,14 @@ func CountUserRepositories(userID int64, private bool) int64 {
 	return countRepositories(userID, private)
 }
 
-func Repositories(page, pageSize int) (_ []*Repository, err error) {
+func ListRepositories(page, pageSize int) (_ []*Repository, err error) {
 	repos := make([]*Repository, 0, pageSize)
 	return repos, x.Limit(pageSize, (page-1)*pageSize).Asc("id").Find(&repos)
 }
 
 // RepositoriesWithUsers returns number of repos in given page.
 func RepositoriesWithUsers(page, pageSize int) (_ []*Repository, err error) {
-	repos, err := Repositories(page, pageSize)
+	repos, err := ListRepositories(page, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("Repositories: %v", err)
 	}
@@ -1362,7 +1379,7 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
+		return ErrRepositoryAlreadyExist{args: errutil.Args{"ownerName": newOwnerName, "name": repo.Name}}
 	}
 
 	sess := x.NewSession()
@@ -1393,7 +1410,8 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 	collaboration := &Collaboration{RepoID: repo.ID}
 	for _, c := range collaborators {
 		collaboration.UserID = c.ID
-		if c.ID == newOwner.ID || newOwner.IsOrgMember(c.ID) {
+		if c.ID == newOwner.ID ||
+			(newOwner.IsOrganization() && func() bool { member, _ := Organizations.HasMember(context.TODO(), newOwner.ID, c.ID); return member }()) {
 			if _, err = sess.Delete(collaboration); err != nil {
 				return fmt.Errorf("remove collaborator '%d': %v", c.ID, err)
 			}
@@ -1416,13 +1434,34 @@ func TransferOwnership(doer *User, newOwnerName string, repo *Repository) error 
 			}
 		}
 
-		if err = owner.removeOrgRepo(sess, repo.ID); err != nil {
+		_, err := sess.Delete(&TeamRepo{
+			OrgID:  owner.ID,
+			RepoID: repo.ID,
+		})
+		if err != nil {
 			return fmt.Errorf("removeOrgRepo: %v", err)
 		}
 	}
 
 	if newOwner.IsOrganization() {
-		t, err := newOwner.getOwnerTeam(sess)
+		// FIXME: This is identical to Orgs.GetTeamByName but we are not yet able to
+		// wrap transaction with different ORM objects, should delete this once migrated
+		// to GORM for this part of logic.
+		getTeamOfOrgByName := func(e Engine, orgID int64, name string) (*Team, error) {
+			t := &Team{
+				OrgID:     orgID,
+				LowerName: strings.ToLower(name),
+			}
+			has, err := e.Get(t)
+			if err != nil {
+				return nil, err
+			} else if !has {
+				return nil, ErrTeamNotExist{args: map[string]any{"orgID": orgID, "name": name}}
+			}
+			return t, nil
+		}
+
+		t, err := getTeamOfOrgByName(sess, owner.ID, TeamNameOwners)
 		if err != nil {
 			return fmt.Errorf("getOwnerTeam: %v", err)
 		} else if err = t.addRepository(sess, repo); err != nil {
@@ -1513,7 +1552,7 @@ func ChangeRepositoryName(u *User, oldRepoName, newRepoName string) (err error) 
 	if err != nil {
 		return fmt.Errorf("IsRepositoryExist: %v", err)
 	} else if has {
-		return ErrRepoAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
+		return ErrRepositoryAlreadyExist{args: errutil.Args{"ownerID": u.ID, "name": newRepoName}}
 	}
 
 	repo, err := GetRepositoryByName(u.ID, oldRepoName)
@@ -1749,6 +1788,16 @@ func DeleteRepository(ownerID, repoID int64) error {
 		}
 	}
 
+	return nil
+}
+
+// deleteBeans deletes all given beans, beans should contain delete conditions.
+func deleteBeans(e Engine, beans ...any) (err error) {
+	for i := range beans {
+		if _, err = e.Delete(beans[i]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
