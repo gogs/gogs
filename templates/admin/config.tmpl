@@ -461,6 +461,10 @@
 						<dd>{{.Webhook.DeliverTimeout}} {{.i18n.Tr "tool.raw_seconds"}}</dd>
 						<dt>{{.i18n.Tr "admin.config.webhook.skip_tls_verify"}}</dt>
 						<dd><i class="fa fa{{if .Webhook.SkipTLSVerify}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.webhook.slack_backticks_author"}}</dt>
+						<dd><i class="fa fa{{if .Webhook.SlackBackticksAuthor}}-check{{end}}-square-o"></i></dd>
+						<dt>{{.i18n.Tr "admin.config.webhook.slack_backticks_title"}}</dt>
+						<dd><i class="fa fa{{if .Webhook.SlackBackticksTitle}}-check{{end}}-square-o"></i></dd>
 					</dl>
 				</div>
 
