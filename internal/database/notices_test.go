@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
-
-	"gogs.io/gogs/internal/dbtest"
 )
 
 func TestNotice_BeforeCreate(t *testing.T) {
@@ -67,9 +65,8 @@ func TestNotices(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(Notice)}
 	db := &notices{
-		DB: dbtest.NewDB(t, "notices", tables...),
+		DB: newTestDB(t, "notices"),
 	}
 
 	for _, tc := range []struct {
@@ -84,7 +81,7 @@ func TestNotices(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

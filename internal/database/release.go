@@ -24,24 +24,24 @@ import (
 type Release struct {
 	ID               int64
 	RepoID           int64
-	Repo             *Repository `xorm:"-" json:"-"`
+	Repo             *Repository `xorm:"-" json:"-" gorm:"-"`
 	PublisherID      int64
-	Publisher        *User `xorm:"-" json:"-"`
+	Publisher        *User `xorm:"-" json:"-" gorm:"-"`
 	TagName          string
 	LowerTagName     string
 	Target           string
 	Title            string
 	Sha1             string `xorm:"VARCHAR(40)"`
 	NumCommits       int64
-	NumCommitsBehind int64  `xorm:"-" json:"-"`
+	NumCommitsBehind int64  `xorm:"-" json:"-" gorm:"-"`
 	Note             string `xorm:"TEXT"`
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
 	IsPrerelease     bool
 
-	Created     time.Time `xorm:"-" json:"-"`
+	Created     time.Time `xorm:"-" json:"-" gorm:"-"`
 	CreatedUnix int64
 
-	Attachments []*Attachment `xorm:"-" json:"-"`
+	Attachments []*Attachment `xorm:"-" json:"-" gorm:"-"`
 }
 
 func (r *Release) BeforeInsert() {

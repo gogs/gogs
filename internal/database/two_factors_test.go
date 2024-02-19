@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -68,9 +67,8 @@ func TestTwoFactors(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(TwoFactor), new(TwoFactorRecoveryCode)}
 	db := &twoFactors{
-		DB: dbtest.NewDB(t, "twoFactors", tables...),
+		DB: newTestDB(t, "twoFactors"),
 	}
 
 	for _, tc := range []struct {
@@ -83,7 +81,7 @@ func TestTwoFactors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

@@ -30,14 +30,14 @@ var MirrorQueue = sync.NewUniqueQueue(1000)
 type Mirror struct {
 	ID          int64
 	RepoID      int64
-	Repo        *Repository `xorm:"-" json:"-"`
+	Repo        *Repository `xorm:"-" json:"-" gorm:"-"`
 	Interval    int         // Hour.
 	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
 
 	// Last and next sync time of Git data from upstream
-	LastSync     time.Time `xorm:"-" json:"-"`
+	LastSync     time.Time `xorm:"-" json:"-" gorm:"-"`
 	LastSyncUnix int64     `xorm:"updated_unix"`
-	NextSync     time.Time `xorm:"-" json:"-"`
+	NextSync     time.Time `xorm:"-" json:"-" gorm:"-"`
 	NextSyncUnix int64     `xorm:"next_update_unix"`
 
 	address string `xorm:"-"`

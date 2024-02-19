@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/dbutil"
 )
 
@@ -22,9 +21,8 @@ func TestOrgs(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(User), new(EmailAddress), new(OrgUser)}
 	db := &orgs{
-		DB: dbtest.NewDB(t, "orgs", tables...),
+		DB: newTestDB(t, "orgs"),
 	}
 
 	for _, tc := range []struct {
@@ -37,7 +35,7 @@ func TestOrgs(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

@@ -16,7 +16,6 @@ import (
 	"gorm.io/gorm"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbtest"
 )
 
 func TestIssueReferencePattern(t *testing.T) {
@@ -100,9 +99,8 @@ func TestActions(t *testing.T) {
 
 	ctx := context.Background()
 	t.Parallel()
-	tables := []any{new(Action), new(User), new(Repository), new(EmailAddress), new(Watch)}
 	db := &actions{
-		DB: dbtest.NewDB(t, "actions", tables...),
+		DB: newTestDB(t, "actions"),
 	}
 
 	for _, tc := range []struct {
@@ -123,7 +121,7 @@ func TestActions(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

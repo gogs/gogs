@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 	"gogs.io/gogs/internal/lfsutil"
 )
@@ -24,9 +23,8 @@ func TestLFS(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(LFSObject)}
 	db := &lfs{
-		DB: dbtest.NewDB(t, "lfs", tables...),
+		DB: newTestDB(t, "lfs"),
 	}
 
 	for _, tc := range []struct {
@@ -39,7 +37,7 @@ func TestLFS(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)

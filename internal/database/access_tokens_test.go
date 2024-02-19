@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/dbtest"
 	"gogs.io/gogs/internal/errutil"
 )
 
@@ -99,9 +98,8 @@ func TestAccessTokens(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	tables := []any{new(AccessToken)}
 	db := &accessTokens{
-		DB: dbtest.NewDB(t, "accessTokens", tables...),
+		DB: newTestDB(t, "accessTokens"),
 	}
 
 	for _, tc := range []struct {
@@ -116,7 +114,7 @@ func TestAccessTokens(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				err := clearTables(t, db.DB, tables...)
+				err := clearTables(t, db.DB)
 				require.NoError(t, err)
 			})
 			tc.test(t, ctx, db)
