@@ -15,7 +15,7 @@ jobs:
     container: sourcegraph/scip-go
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set directory to safe for git
         run: git config --global --add safe.directory $GITHUB_WORKSPACE
       - name: Get src-cli
