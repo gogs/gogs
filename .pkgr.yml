@@ -7,13 +7,15 @@ targets:
       - git
   debian-11:
     <<: *debian
+  debian-12:
+    <<: *debian
   ubuntu-18.04:
     <<: *debian
   ubuntu-20.04:
     <<: *debian
   ubuntu-22.04:
     <<: *debian
-  centos-8:
+  centos-9:
     build_dependencies:
       - pam-devel
       # required for Go buildpack
