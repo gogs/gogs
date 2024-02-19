@@ -14,8 +14,8 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
-	"gogs.io/gogs/internal/db/errors"
+	"gogs.io/gogs/internal/database"
+	"gogs.io/gogs/internal/database/errors"
 	"gogs.io/gogs/internal/form"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/pathutil"
@@ -261,7 +261,7 @@ func editFilePost(c *context.Context, f form.EditRepoFile, isNewFile bool) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UpdateRepoFile(c.User, db.UpdateRepoFileOptions{
+	if err := c.Repo.Repository.UpdateRepoFile(c.User, database.UpdateRepoFileOptions{
 		OldBranch:   oldBranchName,
 		NewBranch:   branchName,
 		OldTreeName: oldTreePath,
@@ -370,7 +370,7 @@ func DeleteFilePost(c *context.Context, f form.DeleteRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.DeleteRepoFile(c.User, db.DeleteRepoFileOptions{
+	if err := c.Repo.Repository.DeleteRepoFile(c.User, database.DeleteRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -489,7 +489,7 @@ func UploadFilePost(c *context.Context, f form.UploadRepoFile) {
 		message += "\n\n" + f.CommitMessage
 	}
 
-	if err := c.Repo.Repository.UploadRepoFiles(c.User, db.UploadRepoFileOptions{
+	if err := c.Repo.Repository.UploadRepoFiles(c.User, database.UploadRepoFileOptions{
 		LastCommitID: c.Repo.CommitID,
 		OldBranch:    oldBranchName,
 		NewBranch:    branchName,
@@ -541,7 +541,7 @@ func UploadFileToServer(c *context.Context) {
 		}
 	}
 
-	upload, err := db.NewUpload(header.Filename, buf, file)
+	upload, err := database.NewUpload(header.Filename, buf, file)
 	if err != nil {
 		c.Error(err, "new upload")
 		return
@@ -559,7 +559,7 @@ func RemoveUploadFileFromServer(c *context.Context, f form.RemoveUploadFile) {
 		return
 	}
 
-	if err := db.DeleteUploadByUUID(f.File); err != nil {
+	if err := database.DeleteUploadByUUID(f.File); err != nil {
 		c.Error(err, "delete upload by UUID")
 		return
 	}

@@ -10,11 +10,11 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
 func ListAccessTokens(c *context.APIContext) {
-	tokens, err := db.AccessTokens.List(c.Req.Context(), c.User.ID)
+	tokens, err := database.AccessTokens.List(c.Req.Context(), c.User.ID)
 	if err != nil {
 		c.Error(err, "list access tokens")
 		return
@@ -28,9 +28,9 @@ func ListAccessTokens(c *context.APIContext) {
 }
 
 func CreateAccessToken(c *context.APIContext, form api.CreateAccessTokenOption) {
-	t, err := db.AccessTokens.Create(c.Req.Context(), c.User.ID, form.Name)
+	t, err := database.AccessTokens.Create(c.Req.Context(), c.User.ID, form.Name)
 	if err != nil {
-		if db.IsErrAccessTokenAlreadyExist(err) {
+		if database.IsErrAccessTokenAlreadyExist(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "new access token")

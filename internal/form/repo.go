@@ -13,7 +13,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/netutil"
 )
 
@@ -60,7 +60,7 @@ func (f *MigrateRepo) Validate(ctx *macaron.Context, errs binding.Errors) bindin
 // and returns composed URL with needed username and password.
 // It also checks if given user has permission when remote address
 // is actually a local path.
-func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
+func (f MigrateRepo) ParseRemoteAddr(user *database.User) (string, error) {
 	remoteAddr := strings.TrimSpace(f.CloneAddr)
 
 	// Remote address can be HTTP/HTTPS/Git URL or local path.
@@ -69,11 +69,11 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		strings.HasPrefix(remoteAddr, "git://") {
 		u, err := url.Parse(remoteAddr)
 		if err != nil {
-			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
 
 		if netutil.IsBlockedLocalHostname(u.Hostname(), conf.Security.LocalNetworkAllowlist) {
-			return "", db.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
+			return "", database.ErrInvalidCloneAddr{IsBlockedLocalAddress: true}
 		}
 
 		if len(f.AuthUsername)+len(f.AuthPassword) > 0 {
@@ -81,13 +81,13 @@ func (f MigrateRepo) ParseRemoteAddr(user *db.User) (string, error) {
 		}
 		// To prevent CRLF injection in git protocol, see https://github.com/gogs/gogs/issues/6413
 		if u.Scheme == "git" && (strings.Contains(remoteAddr, "%0d") || strings.Contains(remoteAddr, "%0a")) {
-			return "", db.ErrInvalidCloneAddr{IsURLError: true}
+			return "", database.ErrInvalidCloneAddr{IsURLError: true}
 		}
 		remoteAddr = u.String()
 	} else if !user.CanImportLocal() {
-		return "", db.ErrInvalidCloneAddr{IsPermissionDenied: true}
+		return "", database.ErrInvalidCloneAddr{IsPermissionDenied: true}
 	} else if !com.IsDir(remoteAddr) {
-		return "", db.ErrInvalidCloneAddr{IsInvalidPath: true}
+		return "", database.ErrInvalidCloneAddr{IsInvalidPath: true}
 	}
 
 	return remoteAddr, nil

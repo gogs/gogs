@@ -10,28 +10,28 @@ import (
 	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/api/v1/convert"
 	"gogs.io/gogs/internal/route/api/v1/user"
 )
 
-func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *db.User) {
+func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *database.User) {
 	if c.Written() {
 		return
 	}
 
-	org := &db.User{
+	org := &database.User{
 		Name:        apiForm.UserName,
 		FullName:    apiForm.FullName,
 		Description: apiForm.Description,
 		Website:     apiForm.Website,
 		Location:    apiForm.Location,
 		IsActive:    true,
-		Type:        db.UserTypeOrganization,
+		Type:        database.UserTypeOrganization,
 	}
-	if err := db.CreateOrganization(org, user); err != nil {
-		if db.IsErrUserAlreadyExist(err) ||
-			db.IsErrNameNotAllowed(err) {
+	if err := database.CreateOrganization(org, user); err != nil {
+		if database.IsErrUserAlreadyExist(err) ||
+			database.IsErrNameNotAllowed(err) {
 			c.ErrorStatus(http.StatusUnprocessableEntity, err)
 		} else {
 			c.Error(err, "create organization")
@@ -42,10 +42,10 @@ func CreateOrgForUser(c *context.APIContext, apiForm api.CreateOrgOption, user *
 	c.JSON(201, convert.ToOrganization(org))
 }
 
-func listUserOrgs(c *context.APIContext, u *db.User, all bool) {
-	orgs, err := db.Orgs.List(
+func listUserOrgs(c *context.APIContext, u *database.User, all bool) {
+	orgs, err := database.Orgs.List(
 		c.Req.Context(),
-		db.ListOrgsOptions{
+		database.ListOrgsOptions{
 			MemberID:              u.ID,
 			IncludePrivateMembers: all,
 		},
@@ -89,10 +89,10 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	err := db.Users.Update(
+	err := database.Users.Update(
 		c.Req.Context(),
 		c.Org.Organization.ID,
-		db.UpdateUserOptions{
+		database.UpdateUserOptions{
 			FullName:    &form.FullName,
 			Website:     &form.Website,
 			Location:    &form.Location,
@@ -104,7 +104,7 @@ func Edit(c *context.APIContext, form api.EditOrgOption) {
 		return
 	}
 
-	org, err = db.GetOrgByName(org.Name)
+	org, err = database.GetOrgByName(org.Name)
 	if err != nil {
 		c.Error(err, "get organization")
 		return

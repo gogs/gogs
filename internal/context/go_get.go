@@ -9,7 +9,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/repoutil"
 )
 
@@ -27,9 +27,9 @@ func ServeGoGet() macaron.Handler {
 		repoName := c.Params(":reponame")
 		branchName := "master"
 
-		owner, err := db.Users.GetByUsername(c.Req.Context(), ownerName)
+		owner, err := database.Users.GetByUsername(c.Req.Context(), ownerName)
 		if err == nil {
-			repo, err := db.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
+			repo, err := database.Repos.GetByName(c.Req.Context(), owner.ID, repoName)
 			if err == nil && repo.DefaultBranch != "" {
 				branchName = repo.DefaultBranch
 			}

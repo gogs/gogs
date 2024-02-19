@@ -13,13 +13,13 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/lfsutil"
 	"gogs.io/gogs/internal/strutil"
 )
 
 // POST /{owner}/{repo}.git/info/lfs/object/batch
-func serveBatch(c *macaron.Context, owner *db.User, repo *db.Repository) {
+func serveBatch(c *macaron.Context, owner *database.User, repo *database.Repository) {
 	var request batchRequest
 	defer c.Req.Request.Body.Close()
 	err := jsoniter.NewDecoder(c.Req.Request.Body).Decode(&request)
@@ -75,13 +75,13 @@ func serveBatch(c *macaron.Context, owner *db.User, repo *db.Repository) {
 		for _, obj := range request.Objects {
 			oids = append(oids, obj.Oid)
 		}
-		stored, err := db.LFS.GetObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
+		stored, err := database.LFS.GetObjectsByOIDs(c.Req.Context(), repo.ID, oids...)
 		if err != nil {
 			internalServerError(c.Resp)
 			log.Error("Failed to get objects [repo_id: %d, oids: %v]: %v", repo.ID, oids, err)
 			return
 		}
-		storedSet := make(map[lfsutil.OID]*db.LFSObject, len(stored))
+		storedSet := make(map[lfsutil.OID]*database.LFSObject, len(stored))
 		for _, obj := range stored {
 			storedSet[obj.OID] = obj
 		}

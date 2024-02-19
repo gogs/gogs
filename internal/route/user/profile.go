@@ -11,7 +11,7 @@ import (
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/route/repo"
 	"gogs.io/gogs/internal/tool"
 )
@@ -42,7 +42,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 	c.PageIs("UserProfile")
 	c.Data["Owner"] = puser
 
-	orgs, err := db.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
+	orgs, err := database.GetOrgsByUserID(puser.ID, c.IsLogged && (c.User.IsAdmin || c.User.ID == puser.ID))
 	if err != nil {
 		c.Error(err, "get organizations by user ID")
 		return
@@ -65,7 +65,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 		}
 
 		showPrivate := c.IsLogged && (puser.ID == c.User.ID || c.User.IsAdmin)
-		c.Data["Repos"], err = db.GetUserRepositories(&db.UserRepoOptions{
+		c.Data["Repos"], err = database.GetUserRepositories(&database.UserRepoOptions{
 			UserID:   puser.ID,
 			Private:  showPrivate,
 			Page:     page,
@@ -76,7 +76,7 @@ func Profile(c *context.Context, puser *context.ParamsUser) {
 			return
 		}
 
-		count := db.CountUserRepositories(puser.ID, showPrivate)
+		count := database.CountUserRepositories(puser.ID, showPrivate)
 		c.Data["Page"] = paginater.New(int(count), conf.UI.User.RepoPagingNum, page, 5)
 	}
 
@@ -91,8 +91,8 @@ func Followers(c *context.Context, puser *context.ParamsUser) {
 	repo.RenderUserCards(
 		c,
 		puser.NumFollowers,
-		func(page int) ([]*db.User, error) {
-			return db.Users.ListFollowers(c.Req.Context(), puser.ID, page, db.ItemsPerPage)
+		func(page int) ([]*database.User, error) {
+			return database.Users.ListFollowers(c.Req.Context(), puser.ID, page, database.ItemsPerPage)
 		},
 		FOLLOWERS,
 	)
@@ -106,8 +106,8 @@ func Following(c *context.Context, puser *context.ParamsUser) {
 	repo.RenderUserCards(
 		c,
 		puser.NumFollowing,
-		func(page int) ([]*db.User, error) {
-			return db.Users.ListFollowings(c.Req.Context(), puser.ID, page, db.ItemsPerPage)
+		func(page int) ([]*database.User, error) {
+			return database.Users.ListFollowings(c.Req.Context(), puser.ID, page, database.ItemsPerPage)
 		},
 		FOLLOWERS,
 	)
@@ -120,9 +120,9 @@ func Action(c *context.Context, puser *context.ParamsUser) {
 	var err error
 	switch c.Params(":action") {
 	case "follow":
-		err = db.Users.Follow(c.Req.Context(), c.UserID(), puser.ID)
+		err = database.Users.Follow(c.Req.Context(), c.UserID(), puser.ID)
 	case "unfollow":
-		err = db.Users.Unfollow(c.Req.Context(), c.UserID(), puser.ID)
+		err = database.Users.Unfollow(c.Req.Context(), c.UserID(), puser.ID)
 	}
 
 	if err != nil {

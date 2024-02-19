@@ -17,25 +17,25 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/repoutil"
 )
 
 type PullRequest struct {
-	BaseRepo *db.Repository
+	BaseRepo *database.Repository
 	Allowed  bool
 	SameRepo bool
 	HeadInfo string // [<user>:]<branch>
 }
 
 type Repository struct {
-	AccessMode   db.AccessMode
+	AccessMode   database.AccessMode
 	IsWatching   bool
 	IsViewBranch bool
 	IsViewTag    bool
 	IsViewCommit bool
-	Repository   *db.Repository
-	Owner        *db.User
+	Repository   *database.Repository
+	Owner        *database.User
 	Commit       *git.Commit
 	Tag          *git.Tag
 	GitRepo      *git.Repository
@@ -46,29 +46,29 @@ type Repository struct {
 	RepoLink     string
 	CloneLink    repoutil.CloneLink
 	CommitsCount int64
-	Mirror       *db.Mirror
+	Mirror       *database.Mirror
 
 	PullRequest *PullRequest
 }
 
 // IsOwner returns true if current user is the owner of repository.
 func (r *Repository) IsOwner() bool {
-	return r.AccessMode >= db.AccessModeOwner
+	return r.AccessMode >= database.AccessModeOwner
 }
 
 // IsAdmin returns true if current user has admin or higher access of repository.
 func (r *Repository) IsAdmin() bool {
-	return r.AccessMode >= db.AccessModeAdmin
+	return r.AccessMode >= database.AccessModeAdmin
 }
 
 // IsWriter returns true if current user has write or higher access of repository.
 func (r *Repository) IsWriter() bool {
-	return r.AccessMode >= db.AccessModeWrite
+	return r.AccessMode >= database.AccessModeWrite
 }
 
 // HasAccess returns true if the current user has at least read access for this repository
 func (r *Repository) HasAccess() bool {
-	return r.AccessMode >= db.AccessModeRead
+	return r.AccessMode >= database.AccessModeRead
 }
 
 // CanEnableEditor returns true if repository is editable and user has proper access level.
@@ -125,7 +125,7 @@ func (r *Repository) PullRequestURL(baseBranch, headBranch string) string {
 func RepoAssignment(pages ...bool) macaron.Handler {
 	return func(c *Context) {
 		var (
-			owner        *db.User
+			owner        *database.User
 			err          error
 			isIssuesPage bool
 			isWikiPage   bool
@@ -145,7 +145,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		if c.IsLogged && c.User.LowerName == strings.ToLower(ownerName) {
 			owner = c.User
 		} else {
-			owner, err = db.Users.GetByUsername(c.Req.Context(), ownerName)
+			owner, err = database.Users.GetByUsername(c.Req.Context(), ownerName)
 			if err != nil {
 				c.NotFoundOrError(err, "get user by name")
 				return
@@ -154,7 +154,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Repo.Owner = owner
 		c.Data["Username"] = c.Repo.Owner.Name
 
-		repo, err := db.GetRepositoryByName(owner.ID, repoName)
+		repo, err := database.GetRepositoryByName(owner.ID, repoName)
 		if err != nil {
 			c.NotFoundOrError(err, "get repository by name")
 			return
@@ -169,10 +169,10 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		// Admin has super access
 		if c.IsLogged && c.User.IsAdmin {
-			c.Repo.AccessMode = db.AccessModeOwner
+			c.Repo.AccessMode = database.AccessModeOwner
 		} else {
-			c.Repo.AccessMode = db.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
-				db.AccessModeOptions{
+			c.Repo.AccessMode = database.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.ID,
+				database.AccessModeOptions{
 					OwnerID: repo.OwnerID,
 					Private: repo.IsPrivate,
 				},
@@ -181,23 +181,23 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		// If the authenticated user has no direct access, see if the repository is a fork
 		// and whether the user has access to the base repository.
-		if c.Repo.AccessMode == db.AccessModeNone && repo.BaseRepo != nil {
-			mode := db.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
-				db.AccessModeOptions{
+		if c.Repo.AccessMode == database.AccessModeNone && repo.BaseRepo != nil {
+			mode := database.Perms.AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
+				database.AccessModeOptions{
 					OwnerID: repo.BaseRepo.OwnerID,
 					Private: repo.BaseRepo.IsPrivate,
 				},
 			)
 
 			// Users shouldn't have indirect access level higher than write.
-			if mode > db.AccessModeWrite {
-				mode = db.AccessModeWrite
+			if mode > database.AccessModeWrite {
+				mode = database.AccessModeWrite
 			}
 			c.Repo.AccessMode = mode
 		}
 
 		// Check access
-		if c.Repo.AccessMode == db.AccessModeNone {
+		if c.Repo.AccessMode == database.AccessModeNone {
 			// Redirect to any accessible page if not yet on it
 			if repo.IsPartialPublic() &&
 				(!(isIssuesPage || isWikiPage) ||
@@ -227,7 +227,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		}
 
 		if repo.IsMirror {
-			c.Repo.Mirror, err = db.GetMirrorByRepoID(repo.ID)
+			c.Repo.Mirror, err = database.GetMirrorByRepoID(repo.ID)
 			if err != nil {
 				c.Error(err, "get mirror by repository ID")
 				return
@@ -237,7 +237,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 			c.Data["Mirror"] = c.Repo.Mirror
 		}
 
-		gitRepo, err := git.Open(db.RepoPath(ownerName, repoName))
+		gitRepo, err := git.Open(database.RepoPath(ownerName, repoName))
 		if err != nil {
 			c.Error(err, "open repository")
 			return
@@ -265,8 +265,8 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		c.Data["WikiCloneLink"] = repo.WikiCloneLink()
 
 		if c.IsLogged {
-			c.Data["IsWatchingRepo"] = db.IsWatching(c.User.ID, repo.ID)
-			c.Data["IsStaringRepo"] = db.IsStaring(c.User.ID, repo.ID)
+			c.Data["IsWatchingRepo"] = database.IsWatching(c.User.ID, repo.ID)
+			c.Data["IsStaringRepo"] = database.IsStaring(c.User.ID, repo.ID)
 		}
 
 		// repo is bare and display enable
@@ -314,7 +314,7 @@ func RepoRef() macaron.Handler {
 
 		// For API calls.
 		if c.Repo.GitRepo == nil {
-			repoPath := db.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
+			repoPath := database.RepoPath(c.Repo.Owner.Name, c.Repo.Repository.Name)
 			c.Repo.GitRepo, err = git.Open(repoPath)
 			if err != nil {
 				c.Error(err, "open repository")
@@ -403,7 +403,7 @@ func RepoRef() macaron.Handler {
 		c.Data["IsViewCommit"] = c.Repo.IsViewCommit
 
 		// People who have push access or have forked repository can propose a new pull request.
-		if c.Repo.IsWriter() || (c.IsLogged && db.Repos.HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
+		if c.Repo.IsWriter() || (c.IsLogged && database.Repos.HasForkedBy(c.Req.Context(), c.Repo.Repository.ID, c.User.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.
 			if c.Repo.Repository.BaseRepo != nil {

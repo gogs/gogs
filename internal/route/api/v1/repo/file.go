@@ -8,7 +8,7 @@ import (
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/context"
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/gitutil"
 	"gogs.io/gogs/internal/route/repo"
 )
@@ -35,7 +35,7 @@ func GetRawFile(c *context.APIContext) {
 }
 
 func GetArchive(c *context.APIContext) {
-	repoPath := db.RepoPath(c.Params(":username"), c.Params(":reponame"))
+	repoPath := database.RepoPath(c.Params(":username"), c.Params(":reponame"))
 	gitRepo, err := git.Open(repoPath)
 	if err != nil {
 		c.Error(err, "open repository")

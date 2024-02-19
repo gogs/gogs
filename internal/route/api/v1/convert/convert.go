@@ -13,10 +13,10 @@ import (
 	"github.com/gogs/git-module"
 	api "github.com/gogs/go-gogs-client"
 
-	"gogs.io/gogs/internal/db"
+	"gogs.io/gogs/internal/database"
 )
 
-func ToEmail(email *db.EmailAddress) *api.Email {
+func ToEmail(email *database.EmailAddress) *api.Email {
 	return &api.Email{
 		Email:    email.Email,
 		Verified: email.IsActivated,
@@ -24,7 +24,7 @@ func ToEmail(email *db.EmailAddress) *api.Email {
 	}
 }
 
-func ToBranch(b *db.Branch, c *git.Commit) *api.Branch {
+func ToBranch(b *database.Branch, c *git.Commit) *api.Branch {
 	return &api.Branch{
 		Name:   b.Name,
 		Commit: ToCommit(c),
@@ -36,7 +36,7 @@ type Tag struct {
 	Commit *api.PayloadCommit `json:"commit"`
 }
 
-func ToTag(b *db.Tag, c *git.Commit) *Tag {
+func ToTag(b *database.Tag, c *git.Commit) *Tag {
 	return &Tag{
 		Name:   b.Name,
 		Commit: ToCommit(c),
@@ -45,12 +45,12 @@ func ToTag(b *db.Tag, c *git.Commit) *Tag {
 
 func ToCommit(c *git.Commit) *api.PayloadCommit {
 	authorUsername := ""
-	author, err := db.Users.GetByEmail(context.TODO(), c.Author.Email)
+	author, err := database.Users.GetByEmail(context.TODO(), c.Author.Email)
 	if err == nil {
 		authorUsername = author.Name
 	}
 	committerUsername := ""
-	committer, err := db.Users.GetByEmail(context.TODO(), c.Committer.Email)
+	committer, err := database.Users.GetByEmail(context.TODO(), c.Committer.Email)
 	if err == nil {
 		committerUsername = committer.Name
 	}
@@ -72,7 +72,7 @@ func ToCommit(c *git.Commit) *api.PayloadCommit {
 	}
 }
 
-func ToPublicKey(apiLink string, key *db.PublicKey) *api.PublicKey {
+func ToPublicKey(apiLink string, key *database.PublicKey) *api.PublicKey {
 	return &api.PublicKey{
 		ID:      key.ID,
 		Key:     key.Content,
@@ -82,12 +82,12 @@ func ToPublicKey(apiLink string, key *db.PublicKey) *api.PublicKey {
 	}
 }
 
-func ToHook(repoLink string, w *db.Webhook) *api.Hook {
+func ToHook(repoLink string, w *database.Webhook) *api.Hook {
 	config := map[string]string{
 		"url":          w.URL,
 		"content_type": w.ContentType.Name(),
 	}
-	if w.HookTaskType == db.SLACK {
+	if w.HookTaskType == database.SLACK {
 		s := w.SlackMeta()
 		config["channel"] = s.Channel
 		config["username"] = s.Username
@@ -107,7 +107,7 @@ func ToHook(repoLink string, w *db.Webhook) *api.Hook {
 	}
 }
 
-func ToDeployKey(apiLink string, key *db.DeployKey) *api.DeployKey {
+func ToDeployKey(apiLink string, key *database.DeployKey) *api.DeployKey {
 	return &api.DeployKey{
 		ID:       key.ID,
 		Key:      key.Content,
@@ -118,7 +118,7 @@ func ToDeployKey(apiLink string, key *db.DeployKey) *api.DeployKey {
 	}
 }
 
-func ToOrganization(org *db.User) *api.Organization {
+func ToOrganization(org *database.User) *api.Organization {
 	return &api.Organization{
 		ID:          org.ID,
 		AvatarUrl:   org.AvatarURL(),
@@ -130,7 +130,7 @@ func ToOrganization(org *db.User) *api.Organization {
 	}
 }
 
-func ToTeam(team *db.Team) *api.Team {
+func ToTeam(team *database.Team) *api.Team {
 	return &api.Team{
 		ID:          team.ID,
 		Name:        team.Name,
